@@ -11,9 +11,9 @@
     GROWTH_FACTOR)                                                             \
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container) {          \
     if (!container)                                                            \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     if (!SEQUENTIAL_CONTAINER_NEED_GROW(container))                            \
-      return STATUS_NS(SUCCESS);                                               \
+      return STATUS_CONST(SUCCESS);                                               \
     if (container->capacity != 0 &&                                            \
         container->capacity > SIZE_MAX / (GROWTH_FACTOR))                     \
       return STATUS_CONST(ARITHMETIC_OVERFLOW);                                \

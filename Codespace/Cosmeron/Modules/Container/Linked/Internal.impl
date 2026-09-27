@@ -16,11 +16,11 @@
 #define LINKED_INTERNAL_IMPLEMENT_INIT(FUNCTION_NAME, CONTAINER_STRUCT)        \
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container) {          \
     if (!container)                                                            \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     container->head = NULL;                                                    \
     container->tail = NULL;                                                    \
     container->size = 0;                                                       \
-    return STATUS_NS(SUCCESS);                                                 \
+    return STATUS_CONST(SUCCESS);                                                 \
   }
 
 #define LINKED_INTERNAL_IMPLEMENT_DESTROY(FUNCTION_NAME, CONTAINER_STRUCT,     \
@@ -113,16 +113,16 @@
 #define LINKED_INTERNAL_SINGLE_CREATE_NODE(TYPE, FUNCTION_NAME, NODE_STRUCT)   \
   static inline OPSTATUS FUNCTION_NAME(NODE_STRUCT **out, TYPE value) {        \
     if (!out)                                                                  \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     void *allocated = NULL;                                                   \
     OPSTATUS status = ALLOC_FUNC(AllocArray)(                                  \
         &allocated, 1U, sizeof(NODE_STRUCT));                                 \
-    if (status != STATUS_NS(SUCCESS))                                          \
+    if (status != STATUS_CONST(SUCCESS))                                          \
       return status;                                                           \
     *out = (NODE_STRUCT *)allocated;                                           \
     (*out)->value = value;                                                     \
     (*out)->next = NULL;                                                       \
-    return STATUS_NS(SUCCESS);                                                 \
+    return STATUS_CONST(SUCCESS);                                                 \
   }
 
 #define LINKED_INTERNAL_SINGLE_LINK_FRONT(FUNCTION_NAME, CONTAINER_STRUCT,     \
@@ -165,17 +165,17 @@
 #define LINKED_INTERNAL_DOUBLE_CREATE_NODE(TYPE, FUNCTION_NAME, NODE_STRUCT)   \
   static inline OPSTATUS FUNCTION_NAME(NODE_STRUCT **out, TYPE value) {        \
     if (!out)                                                                  \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     void *allocated = NULL;                                                   \
     OPSTATUS status = ALLOC_FUNC(AllocArray)(                                  \
         &allocated, 1U, sizeof(NODE_STRUCT));                                 \
-    if (status != STATUS_NS(SUCCESS))                                          \
+    if (status != STATUS_CONST(SUCCESS))                                          \
       return status;                                                           \
     *out = (NODE_STRUCT *)allocated;                                           \
     (*out)->value = value;                                                     \
     (*out)->prev = NULL;                                                       \
     (*out)->next = NULL;                                                       \
-    return STATUS_NS(SUCCESS);                                                 \
+    return STATUS_CONST(SUCCESS);                                                 \
   }
 
 #define LINKED_INTERNAL_DOUBLE_LINK_FRONT(FUNCTION_NAME, CONTAINER_STRUCT,     \

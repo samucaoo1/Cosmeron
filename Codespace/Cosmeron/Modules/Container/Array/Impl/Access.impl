@@ -10,9 +10,9 @@
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        size_t index, TYPE *out) {              \
     if (index >= container->size)                                              \
-      return STATUS_NS(OUT_OF_RANGE);                                    \
+      return STATUS_CONST(OUT_OF_RANGE);                                    \
     *out = container->data[index];                                             \
-    return STATUS_NS(SUCCESS);                                                 \
+    return STATUS_CONST(SUCCESS);                                                 \
   }
 
 #define SEQUENTIAL_ACCESS_FRONT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)         \
