@@ -6,36 +6,46 @@
 #include <stddef.h>
 #include <string.h>
 
-#define COMPARISON_TYPE(NAME) GNS2(LIB_PREFIX(Comparison), NAME)
-#define COMPARISON_FUNC(NAME) GNS2(LIB_PREFIX(Comparison), NAME)
-#define COMPARISON_CONST(NAME) CNS2(LIB_PREFIX_CONST(COMPARISON), NAME)
+#define COMPARISON_MOD Comparison
+#define COMPARISON_CMOD COMPARISON
+
+#define COMPARISON_NS(NAME) GNS2(LIB_PREFIX(COMPARISON_MOD), NAME)
+#define COMPARISON_CNS(NAME) CNS2(LIB_PREFIX_CONST(COMPARISON_CMOD), NAME)
+#define COMPARISON_INS(NAME) GNS3(LIB_PREFIX(COMPARISON_MOD), Internal, NAME)
+#define COMPARISON_CINS(NAME) CNS3(LIB_PREFIX_CONST(COMPARISON_CMOD), INTERNAL, NAME)
+
+#define COMPARISON_TYPE(NAME) COMPARISON_NS(NAME)
+#define COMPARISON_FUNC(NAME) COMPARISON_NS(NAME)
+#define COMPARISON_CONST(NAME) COMPARISON_CNS(NAME)
 
 typedef enum COMPARISON_TYPE(Result) {
   COMPARISON_CONST(LOWER) = -1,
   COMPARISON_CONST(EQUAL) = 0,
   COMPARISON_CONST(HIGHER) = 1
-} TComparisonResult;
+} COMPARISON_TYPE(Result);
 
-typedef TComparisonResult (*TComparator)(const void *left, const void *right);
+typedef COMPARISON_TYPE(Result) CMPOUT;
+
+typedef CMPOUT (*COMPARISON_TYPE(Comparator))(const void *left, const void *right);
 
 #define COMPARISON_TABLE(X)                                                    \
   X(COMPARISON_CONST(LOWER))                                                   \
   X(COMPARISON_CONST(EQUAL))                                                   \
   X(COMPARISON_CONST(HIGHER))
 
-#define COMPARISON_DECLARE(TYPE, SUFFIX)                                       \
-  static inline TComparisonResult COMPARISON_FUNC(SUFFIX)(TYPE left, TYPE right)
+#define COMPARISON_TYPED_PROTOTYPE(TYPE, SUFFIX)                               \
+  static inline CMPOUT COMPARISON_FUNC(SUFFIX)(TYPE left, TYPE right)
 
-#define COMPARISON_DECLARE_STRING(TYPE, SUFFIX)                                \
-  static inline TComparisonResult COMPARISON_FUNC(SUFFIX)(TYPE left, TYPE right)
+#define COMPARISON_STRING_PROTOTYPE(TYPE, SUFFIX)                              \
+  static inline CMPOUT COMPARISON_FUNC(SUFFIX)(TYPE left, TYPE right)
 
 #define COMPARISON_BYTES_PROTOTYPE                                             \
-  static inline TComparisonResult COMPARISON_FUNC(Bytes)(                      \
+  static inline CMPOUT COMPARISON_FUNC(Bytes)(                                 \
       const void *left, size_t leftSize, const void *right, size_t rightSize)
 
 #define COMPARISON_INVOKE_PROTOTYPE                                            \
-  static inline TComparisonResult COMPARISON_FUNC(Invoke)(                     \
-      const void *left, const void *right, TComparator comparator)
+  static inline CMPOUT COMPARISON_FUNC(Invoke)(                                \
+      const void *left, const void *right, COMPARISON_TYPE(Comparator) comparator)
 
 COMPARISON_BYTES_PROTOTYPE;
 COMPARISON_INVOKE_PROTOTYPE;
