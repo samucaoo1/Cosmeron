@@ -1,29 +1,39 @@
-#define BIT_BYTE_WIDTH 8u
+#pragma once
 
-#define BIT_IMPLEMENT_EXTRACT(TYPE, SUFFIX, LITERAL)                            \
+#define BIT_EXTRACT_IMPLEMENT(TYPE, SUFFIX, LITERAL)                           \
   BIT_EXTRACT_PROTOTYPE(TYPE, SUFFIX) {                                        \
-    if (value == NULL || high < low || low >= SUFFIX || high >= SUFFIX)         \
-      return (TYPE)0;                                                           \
-    uint8_t width = (uint8_t)(high - low + 1u);                                 \
-    if (width == SUFFIX)                                                        \
-      return *value;                                                            \
-    TYPE mask = (TYPE)(((TYPE)(LITERAL) << width) - (TYPE)(LITERAL));           \
-    return (TYPE)((*value >> low) & mask);                                      \
+    if (outField == NULL)                                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (high < low || low >= SUFFIX || high >= SUFFIX)                        \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    uint8_t width = (uint8_t)(high - low + 1U);                                \
+    TYPE result;                                                               \
+    if (width == SUFFIX) {                                                     \
+      result = value;                                                          \
+    } else {                                                                   \
+      TYPE mask = (TYPE)(((TYPE)(LITERAL) << width) - (TYPE)(LITERAL));        \
+      result = (TYPE)((value >> low) & mask);                                  \
+    }                                                                          \
+    *outField = result;                                                        \
+    return STATUS_CONST(SUCCESS);                                              \
   }
 
-#define BIT_IMPLEMENT_INSERT(TYPE, SUFFIX, LITERAL)                             \
+#define BIT_INSERT_IMPLEMENT(TYPE, SUFFIX, LITERAL)                            \
   BIT_INSERT_PROTOTYPE(TYPE, SUFFIX) {                                         \
-    if (value == NULL || high < low || low >= SUFFIX || high >= SUFFIX)         \
-      return;                                                                   \
-    uint8_t width = (uint8_t)(high - low + 1u);                                 \
-    if (width == SUFFIX) {                                                      \
-      *value = field_value;                                                     \
-      return;                                                                   \
-    }                                                                           \
-    TYPE mask = (TYPE)(((TYPE)(LITERAL) << width) - (TYPE)(LITERAL));           \
-    field_value &= mask;                                                        \
-    TYPE shiftedMask = (TYPE)(mask << low);                                     \
-    TYPE cleared = (TYPE)(*value & (TYPE)~shiftedMask);                         \
-    *value = (TYPE)(cleared | (TYPE)(field_value << low));                      \
+    if (value == NULL)                                                         \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (high < low || low >= SUFFIX || high >= SUFFIX)                        \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    uint8_t width = (uint8_t)(high - low + 1U);                                \
+    if (width == SUFFIX) {                                                     \
+      *value = fieldValue;                                                     \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    TYPE mask = (TYPE)(((TYPE)(LITERAL) << width) - (TYPE)(LITERAL));          \
+    fieldValue &= mask;                                                        \
+    TYPE shiftedMask = (TYPE)(mask << low);                                    \
+    TYPE cleared = (TYPE)(*value & (TYPE)~shiftedMask);                        \
+    *value = (TYPE)(cleared | (TYPE)(fieldValue << low));                      \
+    return STATUS_CONST(SUCCESS);                                              \
   }
 /* EOF */
