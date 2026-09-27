@@ -9,18 +9,18 @@
 #define TBIGINT_TYPE(SUFFIX) TYPE_TYPE(TBigint, SUFFIX)
 #define TBIGINT_FUNC(SUFFIX, FUNCTION) TYPE_FUNC(TBigint, SUFFIX, FUNCTION)
 
-#if TYPE_ENABLE_VTABLE
-#define TBIGINT_VTABLE_FORWARD(SUFFIX) \
+#ifndef TYPE_DISABLE_FUNCTION_TABLE
+#define TBIGINT_FUNCTION_TABLE_FORWARD(SUFFIX) \
   struct TBIGINT_FUNC(SUFFIX, FunctionTable);
 #define TBIGINT_API_MEMBER(SUFFIX) \
   const struct TBIGINT_FUNC(SUFFIX, FunctionTable) *api;
 #else
-#define TBIGINT_VTABLE_FORWARD(SUFFIX)
+#define TBIGINT_FUNCTION_TABLE_FORWARD(SUFFIX)
 #define TBIGINT_API_MEMBER(SUFFIX)
 #endif
 
 #define TBIGINT_STRUCT(SUFFIX, TYPE, WORD_COUNT, SIZE_IN_BYTES)                \
-  TBIGINT_VTABLE_FORWARD(SUFFIX)                                                  \
+  TBIGINT_FUNCTION_TABLE_FORWARD(SUFFIX)                                                  \
   typedef struct {                                                             \
     TBIGINT_API_MEMBER(SUFFIX)                                               \
     union {                                                                    \
@@ -118,12 +118,12 @@
 
 #define TBIGINT_BITCHECK_PROTOTYPE(SUFFIX)                            \
   static inline OPSTATUS TBIGINT_FUNC(SUFFIX, BitCheck)(                           \
-      const TBIGINT_TYPE(SUFFIX) *bigint, uint32_t bit, bool *result)
+      const TBIGINT_TYPE(SUFFIX) *bigint, uint32_t bit, bool *outResult)
 
 #define TBIGINT_COMPARE_PROTOTYPE(SUFFIX)                             \
   static inline OPSTATUS TBIGINT_FUNC(SUFFIX, Compare)(                              \
       const TBIGINT_TYPE(SUFFIX) * leftBigint,                                            \
-      const TBIGINT_TYPE(SUFFIX) * rightBigint, TComparisonResult *result)
+      const TBIGINT_TYPE(SUFFIX) * rightBigint, CMPOUT *result)
 
 #define TBIGINT_EQUAL_PROTOTYPE(SUFFIX)                               \
   static inline bool TBIGINT_FUNC(SUFFIX, Equal)(                              \
@@ -176,8 +176,8 @@
 #include "Impl/Format.impl"
 #include "Impl/Shift.impl"
 #include "Impl/TBigint.impl"
-#if TYPE_ENABLE_VTABLE
-#include "VTable/TBigint.h"
+#ifndef TYPE_DISABLE_FUNCTION_TABLE
+#include "FunctionTable/TBigint.h"
 #endif
 
 #define TBIGINT_DECLARE_PROTOTYPES(SUFFIX)                                     \
@@ -213,21 +213,21 @@
   TBIGINT_TO_CSTRING_BASE_PROTOTYPE(SUFFIX);                                   \
   TBIGINT_TO_CSTRING_PROTOTYPE(SUFFIX);
 
-#if TYPE_ENABLE_VTABLE
-#define TYPE_VTABLE_DECLARE_TBIGINT(SUFFIX) \
+#ifndef TYPE_DISABLE_FUNCTION_TABLE
+#define TYPE_FUNCTION_TABLE_DECLARE_TBIGINT(SUFFIX) \
   TBIGINT_FUNCTION_TABLE(SUFFIX) \
   TBIGINT_FUNCTION_TABLE_INSTANCE(SUFFIX)
 #else
-#define TYPE_VTABLE_DECLARE_TBIGINT(SUFFIX)
+#define TYPE_FUNCTION_TABLE_DECLARE_TBIGINT(SUFFIX)
 #endif
 
 #define TBIGINT_DECLARE(SUFFIX, TYPE, WORD_COUNT, SIZE_IN_BYTES)               \
   TBIGINT_STRUCT(SUFFIX, TYPE, WORD_COUNT, SIZE_IN_BYTES)                      \
   TBIGINT_DECLARE_PROTOTYPES(SUFFIX)                                           \
   TBIGINT_IMPLEMENT(SUFFIX, TYPE)                                              \
-  TYPE_VTABLE_DECLARE_TBIGINT(SUFFIX)
+  TYPE_FUNCTION_TABLE_DECLARE_TBIGINT(SUFFIX)
 
-#if TYPE_ENABLE_VTABLE
+#ifndef TYPE_DISABLE_FUNCTION_TABLE
 #define TBigint(SUFFIX, NAME)                                                   \
   TBIGINT_TYPE(SUFFIX) NAME = {0};                                           \
   NAME.api = &TBIGINT_FUNC(SUFFIX, functions);
