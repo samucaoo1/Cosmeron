@@ -1,4 +1,4 @@
-#define TQUAD_IMPLEMENT(TYPE, SUFFIX)                                          \
+#define TQUAD_CAST_IMPLEMENT_ALL(TYPE, SUFFIX)                                          \
   TQUAD_CAST_TO_TYPE_PROTOTYPE(TYPE, SUFFIX) {                         \
     TQUAD_TYPE(SUFFIX) quad;                                                   \
     quad.value1 = value1;                                                     \
