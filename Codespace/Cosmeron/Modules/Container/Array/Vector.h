@@ -114,7 +114,7 @@
  * Complete declaration
  * ============================================================ */
 
-#define FLAT_VECTOR_DECLARE(TYPE, SUFFIX)                                      \
+#define FLAT_VECTOR_IMPLEMENT_ALL(TYPE, SUFFIX)                                      \
   FLAT_VECTOR_STRUCT(TYPE, SUFFIX)                                             \
   FLAT_VECTOR_INIT_PROTOTYPE(SUFFIX);                                 \
   FLAT_VECTOR_DESTROY_PROTOTYPE(SUFFIX);                              \
@@ -135,7 +135,7 @@
   FLAT_VECTOR_SIZE_PROTOTYPE(SUFFIX);                                 \
   FLAT_VECTOR_CAPACITY_PROTOTYPE(SUFFIX);                             \
   FLAT_VECTOR_IMPLEMENT(TYPE, SUFFIX)                                          \
-  FLAT_VECTOR_FUNCTION_TABLE(TYPE, SUFFIX)                                   \
+  FLAT_VECTOR_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                                   \
   FLAT_VECTOR_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)
 
 #include "FunctionTable/Vector.h"
@@ -158,6 +158,6 @@
 /* ============================================================
  * Instantiations
  * ============================================================ */
-FLAT_VECTOR_DECLARE(int, int)
-FLAT_VECTOR_DECLARE(float, float)
-FLAT_VECTOR_DECLARE(double, double)
+FLAT_VECTOR_IMPLEMENT_ALL(int, int)
+FLAT_VECTOR_IMPLEMENT_ALL(float, float)
+FLAT_VECTOR_IMPLEMENT_ALL(double, double)

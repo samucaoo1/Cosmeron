@@ -135,7 +135,7 @@
  * Complete declaration
  * ============================================================ */
 
-#define GRAPH_DEFINE(VERTEX_TYPE, VERTEX_SUFFIX, WEIGHT_TYPE, WEIGHT_SUFFIX) \
+#define GRAPH_IMPLEMENT_ALL(VERTEX_TYPE, VERTEX_SUFFIX, WEIGHT_TYPE, WEIGHT_SUFFIX) \
   GRAPH_EDGE_STRUCT(VERTEX_SUFFIX, WEIGHT_TYPE, WEIGHT_SUFFIX)               \
   GRAPH_VERTEX_STRUCT(VERTEX_TYPE, VERTEX_SUFFIX, WEIGHT_SUFFIX)             \
   GRAPH_STRUCT(VERTEX_SUFFIX, WEIGHT_SUFFIX)                                 \
@@ -157,7 +157,7 @@
   GRAPH_BFS_PROTOTYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX);                         \
   GRAPH_DFS_PROTOTYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX);                         \
   GRAPH_IMPLEMENT(VERTEX_TYPE, VERTEX_SUFFIX, WEIGHT_TYPE, WEIGHT_SUFFIX)    \
-  GRAPH_FUNCTION_TABLE(VERTEX_TYPE, VERTEX_SUFFIX, WEIGHT_TYPE,              \
+  GRAPH_FUNCTION_TABLE_STRUCT(VERTEX_TYPE, VERTEX_SUFFIX, WEIGHT_TYPE,              \
                        WEIGHT_SUFFIX)                                        \
   GRAPH_FUNCTION_TABLE_INSTANCE(VERTEX_TYPE, VERTEX_SUFFIX, WEIGHT_TYPE,     \
                                 WEIGHT_SUFFIX)
@@ -177,5 +177,5 @@
  * Common instantiations
  * ============================================================ */
 
-GRAPH_DEFINE(int, int, int, int)
-GRAPH_DEFINE(int, int, float, float)
+GRAPH_IMPLEMENT_ALL(int, int, int, int)
+GRAPH_IMPLEMENT_ALL(int, int, float, float)

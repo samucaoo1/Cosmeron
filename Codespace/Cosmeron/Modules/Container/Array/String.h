@@ -95,7 +95,7 @@
 #include "Impl/String.impl"
 #include "FunctionTable/String.h"
 
-#define TSTRING_DECLARE(CHAR_TYPE, SUFFIX)                                     \
+#define TSTRING_IMPLEMENT_ALL(CHAR_TYPE, SUFFIX)                                     \
   TSTRING_STRUCT(CHAR_TYPE, SUFFIX)                                            \
   TSTRING_INIT_PROTOTYPE(SUFFIX);                                     \
   TSTRING_DESTROY_PROTOTYPE(SUFFIX);                                  \
@@ -122,7 +122,7 @@
   TSTRING_FIND_STR_PROTOTYPE(CHAR_TYPE, SUFFIX);                      \
   TSTRING_DATA_PROTOTYPE(CHAR_TYPE, SUFFIX);                          \
   TSTRING_IMPLEMENT(CHAR_TYPE, SUFFIX)                                         \
-  TSTRING_FUNCTION_TABLE(CHAR_TYPE, SUFFIX)                                  \
+  TSTRING_FUNCTION_TABLE_STRUCT(CHAR_TYPE, SUFFIX)                                  \
   TSTRING_FUNCTION_TABLE_INSTANCE(CHAR_TYPE, SUFFIX)
 
 #define TSTRING_INSTANCE_DECLARE(SUFFIX, NAME)                                                  \
@@ -136,8 +136,8 @@ typedef uint8_t utf8;
 typedef uint16_t utf16;
 typedef uint32_t utf32;
 
-TSTRING_DECLARE(utf8, 8)
-TSTRING_DECLARE(utf16, 16)
-TSTRING_DECLARE(utf32, 32)
+TSTRING_IMPLEMENT_ALL(utf8, 8)
+TSTRING_IMPLEMENT_ALL(utf16, 16)
+TSTRING_IMPLEMENT_ALL(utf32, 32)
 
 

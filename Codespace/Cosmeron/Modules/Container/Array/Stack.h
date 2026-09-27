@@ -64,7 +64,7 @@
 
 #include "FunctionTable/Stack.h"
 
-#define FLAT_STACK_DECLARE(TYPE, SUFFIX)                                       \
+#define FLAT_STACK_IMPLEMENT_ALL(TYPE, SUFFIX)                                       \
   FLAT_STACK_STRUCT(TYPE, SUFFIX)                                              \
   FLAT_STACK_INIT_PROTOTYPE(SUFFIX);                                  \
   FLAT_STACK_DESTROY_PROTOTYPE(SUFFIX);                               \
@@ -77,7 +77,7 @@
   FLAT_STACK_SIZE_PROTOTYPE(SUFFIX);                                  \
   FLAT_STACK_CAPACITY_PROTOTYPE(SUFFIX);                              \
   FLAT_STACK_IMPLEMENT(TYPE, SUFFIX)                                           \
-  FLAT_STACK_FUNCTION_TABLE(TYPE, SUFFIX)                                    \
+  FLAT_STACK_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                                    \
   FLAT_STACK_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)
 
 #include "Impl/Stack.impl"
@@ -89,6 +89,6 @@
 /* Compatibility alias: prefer FLAT_STACK_INSTANCE_DECLARE. */
 #define TFlat_Stack(TYPE, NAME) FLAT_STACK_INSTANCE_DECLARE(TYPE, NAME)
 
-FLAT_STACK_DECLARE(int, int)
-FLAT_STACK_DECLARE(float, float)
-FLAT_STACK_DECLARE(double, double)
+FLAT_STACK_IMPLEMENT_ALL(int, int)
+FLAT_STACK_IMPLEMENT_ALL(float, float)
+FLAT_STACK_IMPLEMENT_ALL(double, double)

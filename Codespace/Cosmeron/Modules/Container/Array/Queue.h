@@ -73,7 +73,7 @@
 
 #include "FunctionTable/Queue.h"
 
-#define FLAT_QUEUE_DECLARE(TYPE, SUFFIX)                                       \
+#define FLAT_QUEUE_IMPLEMENT_ALL(TYPE, SUFFIX)                                       \
   FLAT_QUEUE_STRUCT(TYPE, SUFFIX)                                              \
   FLAT_QUEUE_INIT_PROTOTYPE(SUFFIX);                                  \
   FLAT_QUEUE_DESTROY_PROTOTYPE(SUFFIX);                               \
@@ -88,7 +88,7 @@
   FLAT_QUEUE_SIZE_PROTOTYPE(SUFFIX);                                  \
   FLAT_QUEUE_CAPACITY_PROTOTYPE(SUFFIX);                              \
   FLAT_QUEUE_IMPLEMENT(TYPE, SUFFIX)                                           \
-  FLAT_QUEUE_FUNCTION_TABLE(TYPE, SUFFIX)                                    \
+  FLAT_QUEUE_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                                    \
   FLAT_QUEUE_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)
 
 #include "Impl/Queue.impl"
@@ -100,6 +100,6 @@
 /* Compatibility alias: prefer FLAT_QUEUE_INSTANCE_DECLARE. */
 #define TFlat_Queue(TYPE, NAME) FLAT_QUEUE_INSTANCE_DECLARE(TYPE, NAME)
 
-FLAT_QUEUE_DECLARE(int, int)
-FLAT_QUEUE_DECLARE(float, float)
-FLAT_QUEUE_DECLARE(double, double)
+FLAT_QUEUE_IMPLEMENT_ALL(int, int)
+FLAT_QUEUE_IMPLEMENT_ALL(float, float)
+FLAT_QUEUE_IMPLEMENT_ALL(double, double)

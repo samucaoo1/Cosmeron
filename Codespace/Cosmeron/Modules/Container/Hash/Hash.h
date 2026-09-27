@@ -5,7 +5,7 @@
 /*
  * Open-addressed hash map with linear probing.
  *
- * HASH_MAP_DEFINE is the canonical typed generator. The suffix order follows
+ * HASH_MAP_IMPLEMENT_ALL is the canonical typed generator. The suffix order follows
  * the Cosmeron map convention: key type/suffix first, then value type/suffix.
  */
 
@@ -107,7 +107,7 @@
  * Complete declaration
  * ============================================================ */
 
-#define HASH_MAP_DEFINE(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX,       \
+#define HASH_MAP_IMPLEMENT_ALL(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX,       \
                         HASH_FUNCTION, EQUAL_FUNCTION)                        \
   HASH_BUCKET_STRUCT(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX)          \
   HASH_STRUCT(KEY_SUFFIX, VALUE_SUFFIX)                                       \
@@ -125,7 +125,7 @@
   HASH_CAPACITY_PROTOTYPE(KEY_SUFFIX, VALUE_SUFFIX);                          \
   HASH_IMPLEMENT(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX,              \
                  HASH_FUNCTION, EQUAL_FUNCTION)                              \
-  HASH_FUNCTION_TABLE(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX)         \
+  HASH_FUNCTION_TABLE_STRUCT(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX)         \
   HASH_FUNCTION_TABLE_INSTANCE(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX)
 
 #define HASH_MAP_DECLARE(KEY_SUFFIX, VALUE_SUFFIX, NAME)                      \
@@ -143,9 +143,9 @@
  * Common instantiations
  * ============================================================ */
 
-HASH_MAP_DEFINE(int, int, int, int, HASH_INT, HASH_EQUAL_INT)
-HASH_MAP_DEFINE(int, int, void *, ptr, HASH_INT, HASH_EQUAL_INT)
-HASH_MAP_DEFINE(const char *, cstring, int, int, HASH_CSTRING,
+HASH_MAP_IMPLEMENT_ALL(int, int, int, int, HASH_INT, HASH_EQUAL_INT)
+HASH_MAP_IMPLEMENT_ALL(int, int, void *, ptr, HASH_INT, HASH_EQUAL_INT)
+HASH_MAP_IMPLEMENT_ALL(const char *, cstring, int, int, HASH_CSTRING,
                 HASH_EQUAL_CSTRING)
-HASH_MAP_DEFINE(const char *, cstring, void *, ptr, HASH_CSTRING,
+HASH_MAP_IMPLEMENT_ALL(const char *, cstring, void *, ptr, HASH_CSTRING,
                 HASH_EQUAL_CSTRING)
