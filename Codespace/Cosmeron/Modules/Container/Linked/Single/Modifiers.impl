@@ -13,13 +13,13 @@
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        TYPE value) {                           \
     if (!container)                                                            \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     NODE_STRUCT *node;                                                         \
     OPSTATUS status = FUNCTION_CREATE_NODE(&node, value);                         \
-    if (status != STATUS_NS(SUCCESS))                                         \
+    if (status != STATUS_CONST(SUCCESS))                                         \
       return status;                                                              \
     FUNCTION_LINK_FRONT(container, node);                                      \
-    return STATUS_NS(SUCCESS);                                             \
+    return STATUS_CONST(SUCCESS);                                             \
   }
 
 /* PopFront — Remove do head e libera */
@@ -29,13 +29,13 @@
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        TYPE *outValue) {                      \
     if (!container)                                                            \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     if (!container->head)                                                      \
-      return STATUS_NS(OUT_OF_RANGE);                                      \
+      return STATUS_CONST(OUT_OF_RANGE);                                      \
     if (outValue)                                                             \
       *outValue = container->head->value;                                    \
     FUNCTION_UNLINK_FRONT(container);                                          \
-    return STATUS_NS(SUCCESS);                                             \
+    return STATUS_CONST(SUCCESS);                                             \
   }
 
 /* PushBack — Cria nó e liga no tail */
@@ -46,13 +46,13 @@
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        TYPE value) {                           \
     if (!container)                                                            \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     NODE_STRUCT *node;                                                         \
     OPSTATUS status = FUNCTION_CREATE_NODE(&node, value);                         \
-    if (status != STATUS_NS(SUCCESS))                                         \
+    if (status != STATUS_CONST(SUCCESS))                                         \
       return status;                                                              \
     FUNCTION_LINK_BACK(container, node);                                       \
-    return STATUS_NS(SUCCESS);                                             \
+    return STATUS_CONST(SUCCESS);                                             \
   }
 
 /* Clear — Destroi tudo e reinicializa */
@@ -70,15 +70,15 @@
                                        NODE_STRUCT *pos, TYPE value,           \
                                        NODE_STRUCT **outNode) {               \
     if (!container || !pos)                                                  \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     NODE_STRUCT *current = container->head;                                    \
     while (current && current != pos)                                          \
       current = current->next;                                                 \
     if (!current)                                                              \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     NODE_STRUCT *node;                                                         \
     OPSTATUS status = FUNCTION_CREATE_NODE(&node, value);                         \
-    if (status != STATUS_NS(SUCCESS))                                         \
+    if (status != STATUS_CONST(SUCCESS))                                         \
       return status;                                                              \
     node->next = pos->next;                                                    \
     pos->next = node;                                                          \
@@ -87,7 +87,7 @@
     container->size++;                                                         \
     if (outNode)                                                              \
       *outNode = node;                                                        \
-    return STATUS_NS(SUCCESS);                                             \
+    return STATUS_CONST(SUCCESS);                                             \
   }
 
 /* EraseAfter — Remove o nó após pos */
@@ -96,21 +96,21 @@
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        NODE_STRUCT *pos) {                     \
     if (!container)                                                            \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     if (!pos)                                                                  \
-      return STATUS_NS(OUT_OF_RANGE);                                          \
+      return STATUS_CONST(OUT_OF_RANGE);                                          \
     NODE_STRUCT *current = container->head;                                    \
     while (current && current != pos)                                          \
       current = current->next;                                                 \
     if (!current)                                                              \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     if (!pos->next)                                                            \
-      return STATUS_NS(OUT_OF_RANGE);                                          \
+      return STATUS_CONST(OUT_OF_RANGE);                                          \
     NODE_STRUCT *old = pos->next;                                              \
     pos->next = old->next;                                                     \
     if (container->tail == old)                                                \
       container->tail = pos;                                                   \
     Memory_Free(old);                                                         \
     container->size--;                                                         \
-    return STATUS_NS(SUCCESS);                                             \
+    return STATUS_CONST(SUCCESS);                                             \
   }

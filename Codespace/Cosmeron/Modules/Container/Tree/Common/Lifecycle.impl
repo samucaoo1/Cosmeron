@@ -7,10 +7,10 @@
 #define TTREE_IMPLEMENT_LIFECYCLE(T)                                           \
   static inline OPSTATUS TTREE_FN(T, Init)(T * tree) {                        \
     if (!tree)                                                                 \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     tree->root = NULL;                                                         \
     tree->size = 0;                                                            \
-    return STATUS_NS(SUCCESS);                                                 \
+    return STATUS_CONST(SUCCESS);                                                 \
   }                                                                            \
                                                                                \
   static inline void TTREE_FN(T, DestroyNodes)(TTREE_NODE(T) * node) {        \

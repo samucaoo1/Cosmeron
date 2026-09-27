@@ -13,13 +13,13 @@
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        TYPE value) {                           \
     if (!container)                                                            \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     NODE_STRUCT *node;                                                         \
     OPSTATUS status = FUNCTION_CREATE_NODE(&node, value);                         \
-    if (status != STATUS_NS(SUCCESS))                                         \
+    if (status != STATUS_CONST(SUCCESS))                                         \
       return status;                                                              \
     FUNCTION_LINK_FRONT(container, node);                                      \
-    return STATUS_NS(SUCCESS);                                             \
+    return STATUS_CONST(SUCCESS);                                             \
   }
 
 /* PushBack — Cria nó e liga no tail */
@@ -30,13 +30,13 @@
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        TYPE value) {                           \
     if (!container)                                                            \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     NODE_STRUCT *node;                                                         \
     OPSTATUS status = FUNCTION_CREATE_NODE(&node, value);                         \
-    if (status != STATUS_NS(SUCCESS))                                         \
+    if (status != STATUS_CONST(SUCCESS))                                         \
       return status;                                                              \
     FUNCTION_LINK_BACK(container, node);                                       \
-    return STATUS_NS(SUCCESS);                                             \
+    return STATUS_CONST(SUCCESS);                                             \
   }
 
 /* PopFront — Remove do head */
@@ -46,13 +46,13 @@
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        TYPE *outValue) {                      \
     if (!container)                                                            \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     if (!container->head)                                                      \
-      return STATUS_NS(OUT_OF_RANGE);                                      \
+      return STATUS_CONST(OUT_OF_RANGE);                                      \
     if (outValue)                                                             \
       *outValue = container->head->value;                                    \
     FUNCTION_UNLINK_FRONT(container);                                          \
-    return STATUS_NS(SUCCESS);                                             \
+    return STATUS_CONST(SUCCESS);                                             \
   }
 
 /* PopBack — Remove do tail */
@@ -62,13 +62,13 @@
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        TYPE *outValue) {                      \
     if (!container)                                                            \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     if (!container->tail)                                                      \
-      return STATUS_NS(OUT_OF_RANGE);                                      \
+      return STATUS_CONST(OUT_OF_RANGE);                                      \
     if (outValue)                                                             \
       *outValue = container->tail->value;                                    \
     FUNCTION_UNLINK_BACK(container);                                           \
-    return STATUS_NS(SUCCESS);                                             \
+    return STATUS_CONST(SUCCESS);                                             \
   }
 
 /* Insert — Insere antes de pos, ou no tail se pos==NULL */
@@ -81,17 +81,17 @@
       CONTAINER_STRUCT *container, NODE_STRUCT *pos, TYPE value,               \
       NODE_STRUCT **outNode) {                                                \
     if (!container)                                                            \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     if (pos) {                                                                 \
       NODE_STRUCT *current = container->head;                                  \
       while (current && current != pos)                                        \
         current = current->next;                                               \
       if (!current)                                                            \
-        return STATUS_NS(INVALID_ARGUMENT);                                    \
+        return STATUS_CONST(INVALID_ARGUMENT);                                    \
     }                                                                          \
     NODE_STRUCT *node;                                                         \
     OPSTATUS status = FUNCTION_CREATE_NODE(&node, value);                     \
-    if (status != STATUS_NS(SUCCESS))                                          \
+    if (status != STATUS_CONST(SUCCESS))                                          \
       return status;                                                           \
     if (!pos) {                                                                \
       FUNCTION_LINK_BACK(container, node);                                     \
@@ -100,7 +100,7 @@
     }                                                                          \
     if (outNode)                                                              \
       *outNode = node;                                                        \
-    return STATUS_NS(SUCCESS);                                             \
+    return STATUS_CONST(SUCCESS);                                             \
   }
 
 /* Erase — Remove nó arbitrário */
@@ -111,19 +111,19 @@
                                        NODE_STRUCT *pos,                       \
                                        NODE_STRUCT **out_next) {               \
     if (!container)                                                            \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     if (!pos)                                                                  \
-      return STATUS_NS(OUT_OF_RANGE);                                          \
+      return STATUS_CONST(OUT_OF_RANGE);                                          \
     NODE_STRUCT *current = container->head;                                    \
     while (current && current != pos)                                          \
       current = current->next;                                                 \
     if (!current)                                                              \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     NODE_STRUCT *next_node = pos->next;                                        \
     FUNCTION_UNLINK(container, pos);                                           \
     if (out_next)                                                              \
       *out_next = next_node;                                                   \
-    return STATUS_NS(SUCCESS);                                             \
+    return STATUS_CONST(SUCCESS);                                             \
   }
 
 /* Clear — Destroi tudo e reinicializa */

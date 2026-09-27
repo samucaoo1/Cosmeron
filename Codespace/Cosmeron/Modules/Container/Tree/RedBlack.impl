@@ -176,10 +176,10 @@ typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor;
                                                                                \
   static inline OPSTATUS TTREE_FN(T, Remove)(T * tree, KEY_TYPE key) {         \
     if (!tree)                                                                 \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     TTREE_NODE(T) *_z = TTREE_FN(T, FindNode)(tree, key);                      \
     if (!_z)                                                                   \
-      return STATUS_NS(NOT_FOUND);                                             \
+      return STATUS_CONST(NOT_FOUND);                                             \
     TTREE_NODE(T) *_y = _z;                                                    \
     TTREE_NODE(T) *_x;                                                         \
     TTREE_NODE(T) *_xp;                                                        \
@@ -213,7 +213,7 @@ typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor;
     tree->size--;                                                              \
     if (_yc == TREE_RB_BLACK)                                                       \
       TTREE_FN(T, DeleteFixup)(tree, _x, _xp);                                \
-    return STATUS_NS(SUCCESS);                                                 \
+    return STATUS_CONST(SUCCESS);                                                 \
   }
 
 /* =============================================================
@@ -226,7 +226,7 @@ typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor;
     TTREE_NODE(T) *_n;                                                        \
     void *allocated = NULL;                                                   \
     if (ALLOC_FUNC(AllocArray)(&allocated, 1U, sizeof(TTREE_NODE(T))) !=       \
-        STATUS_NS(SUCCESS))                                                   \
+        STATUS_CONST(SUCCESS))                                                   \
       return NULL;                                                             \
     _n = (TTREE_NODE(T) *)allocated;                                                             \
     _n->key = key;                                                             \
@@ -239,7 +239,7 @@ typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor;
                                                                                \
   static inline OPSTATUS TTREE_FN(T, Insert)(T * tree, KEY_TYPE key) {         \
     if (!tree)                                                                 \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     TTREE_NODE(T) *_n = TTREE_FN(T, CreateNode)(key);                          \
     if (!_n)                                                                   \
       return STATUS_CONST(OUT_OF_MEMORY);                                    \
@@ -247,7 +247,7 @@ typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor;
       _n->color = TREE_RB_BLACK;                                                   \
       tree->root = _n;                                                         \
       tree->size++;                                                            \
-      return STATUS_NS(SUCCESS);                                               \
+      return STATUS_CONST(SUCCESS);                                               \
     }                                                                          \
     TTREE_NODE(T) *_cur = tree->root;                                           \
     TTREE_NODE(T) *_par = NULL;                                                 \
@@ -270,7 +270,7 @@ typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor;
       _par->right = _n;                                                        \
     tree->size++;                                                              \
     TTREE_FN(T, InsertFixup)(tree, _n);                                        \
-    return STATUS_NS(SUCCESS);                                                 \
+    return STATUS_CONST(SUCCESS);                                                 \
   }
 
 /* =============================================================
@@ -283,7 +283,7 @@ typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor;
     TTREE_NODE(T) *_n;                                                        \
     void *allocated = NULL;                                                   \
     if (ALLOC_FUNC(AllocArray)(&allocated, 1U, sizeof(TTREE_NODE(T))) !=       \
-        STATUS_NS(SUCCESS))                                                   \
+        STATUS_CONST(SUCCESS))                                                   \
       return NULL;                                                             \
     _n = (TTREE_NODE(T) *)allocated;                                                             \
     _n->key = key;                                                             \
@@ -298,7 +298,7 @@ typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor;
   static inline OPSTATUS TTREE_FN(T, Insert)(                                 \
       T * tree, KEY_TYPE key, VALUE_TYPE value) {                              \
     if (!tree)                                                                 \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     TTREE_NODE(T) *_n = TTREE_FN(T, CreateNode)(key, value);                   \
     if (!_n)                                                                   \
       return STATUS_CONST(OUT_OF_MEMORY);                                    \
@@ -306,7 +306,7 @@ typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor;
       _n->color = TREE_RB_BLACK;                                                   \
       tree->root = _n;                                                         \
       tree->size++;                                                            \
-      return STATUS_NS(SUCCESS);                                               \
+      return STATUS_CONST(SUCCESS);                                               \
     }                                                                          \
     TTREE_NODE(T) *_cur = tree->root;                                           \
     TTREE_NODE(T) *_par = NULL;                                                 \
@@ -330,7 +330,7 @@ typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor;
       _par->right = _n;                                                        \
     tree->size++;                                                              \
     TTREE_FN(T, InsertFixup)(tree, _n);                                        \
-    return STATUS_NS(SUCCESS);                                                 \
+    return STATUS_CONST(SUCCESS);                                                 \
   }
 
 /* =============================================================

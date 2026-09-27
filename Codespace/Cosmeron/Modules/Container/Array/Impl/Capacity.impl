@@ -2,38 +2,38 @@
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        size_t newCapacity) {                  \
     if (!container)                                                            \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     if (newCapacity <= container->capacity)                                   \
-      return STATUS_NS(SUCCESS);                                               \
+      return STATUS_CONST(SUCCESS);                                               \
                                                                                \
     void *newData = container->data;                                          \
     OPSTATUS status = ALLOC_FUNC(ReallocArray)(                                \
         &newData, newCapacity, sizeof(TYPE));                                  \
-    if (status != STATUS_NS(SUCCESS))                                          \
+    if (status != STATUS_CONST(SUCCESS))                                          \
       return status;                                                           \
     container->data = (TYPE *)newData;                                         \
     container->capacity = newCapacity;                                        \
-    return STATUS_NS(SUCCESS);                                                 \
+    return STATUS_CONST(SUCCESS);                                                 \
   }
 
 #define SEQUENTIAL_CAPACITY_SHRINK_TO_FIT(TYPE, FUNCTION_NAME,                 \
                                           CONTAINER_STRUCT)                    \
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container) {          \
     if (!container)                                                            \
-      return STATUS_NS(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
     if (container->size == container->capacity)                                \
-      return STATUS_NS(SUCCESS);                                               \
+      return STATUS_CONST(SUCCESS);                                               \
                                                                                \
     if (container->size == 0) {                                                \
       Memory_Free(container->data);                                           \
       container->capacity = 0;                                                 \
-      return STATUS_NS(SUCCESS);                                               \
+      return STATUS_CONST(SUCCESS);                                               \
     }                                                                          \
                                                                                \
     void *newData = container->data;                                          \
     OPSTATUS status = ALLOC_FUNC(ReallocArray)(                                \
         &newData, container->size, sizeof(TYPE));                              \
-    if (status == STATUS_NS(SUCCESS)) {                                        \
+    if (status == STATUS_CONST(SUCCESS)) {                                        \
       container->data = (TYPE *)newData;                                       \
       container->capacity = container->size;                                   \
     }                                                                          \
