@@ -9,18 +9,18 @@
 #define TDECIMAL_TYPE(SUFFIX) TYPE_TYPE(TDecimal, SUFFIX)
 #define TDECIMAL_FUNC(SUFFIX, FUNCTION) TYPE_FUNC(TDecimal, SUFFIX, FUNCTION)
 
-#if TYPE_ENABLE_VTABLE
-#define TDECIMAL_VTABLE_FORWARD(SUFFIX) \
+#ifndef TYPE_DISABLE_FUNCTION_TABLE
+#define TDECIMAL_FUNCTION_TABLE_FORWARD(SUFFIX) \
   struct TDECIMAL_FUNC(SUFFIX, FunctionTable);
 #define TDECIMAL_API_MEMBER(SUFFIX) \
   const struct TDECIMAL_FUNC(SUFFIX, FunctionTable) *api;
 #else
-#define TDECIMAL_VTABLE_FORWARD(SUFFIX)
+#define TDECIMAL_FUNCTION_TABLE_FORWARD(SUFFIX)
 #define TDECIMAL_API_MEMBER(SUFFIX)
 #endif
 
 #define TDECIMAL_STRUCT(SUFFIX, TYPE, WORD_COUNT, SIZE_IN_BYTES)               \
-  TDECIMAL_VTABLE_FORWARD(SUFFIX)                                                  \
+  TDECIMAL_FUNCTION_TABLE_FORWARD(SUFFIX)                                                  \
   typedef struct {                                                             \
     TDECIMAL_API_MEMBER(SUFFIX)                                               \
     union {                                                                    \
@@ -120,12 +120,12 @@
 
 #define TDECIMAL_BITCHECK_PROTOTYPE(SUFFIX)                           \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, BitCheck)(                          \
-      const TDECIMAL_TYPE(SUFFIX) *decimal, uint32_t bit, bool *result)
+      const TDECIMAL_TYPE(SUFFIX) *decimal, uint32_t bit, bool *outResult)
 
 #define TDECIMAL_COMPARE_PROTOTYPE(SUFFIX)                            \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, Compare)(                              \
       const TDECIMAL_TYPE(SUFFIX) * leftDecimal,                                            \
-      const TDECIMAL_TYPE(SUFFIX) * rightDecimal, TComparisonResult *result)
+      const TDECIMAL_TYPE(SUFFIX) * rightDecimal, CMPOUT *result)
 
 #define TDECIMAL_EQUAL_PROTOTYPE(SUFFIX)                              \
   static inline bool TDECIMAL_FUNC(SUFFIX, Equal)(                             \
@@ -178,8 +178,8 @@
 #include "Impl/Format.impl"
 #include "Impl/Shift.impl"
 #include "Impl/TDecimal.impl"
-#if TYPE_ENABLE_VTABLE
-#include "VTable/TDecimal.h"
+#ifndef TYPE_DISABLE_FUNCTION_TABLE
+#include "FunctionTable/TDecimal.h"
 #endif
 
 #define TDECIMAL_DECLARE_PROTOTYPES(SUFFIX)                                    \
@@ -215,21 +215,21 @@
   TDECIMAL_TO_CSTRING_BASE_PROTOTYPE(SUFFIX);                                   \
   TDECIMAL_TO_CSTRING_PROTOTYPE(SUFFIX);
 
-#if TYPE_ENABLE_VTABLE
-#define TYPE_VTABLE_DECLARE_TDECIMAL(SUFFIX) \
+#ifndef TYPE_DISABLE_FUNCTION_TABLE
+#define TYPE_FUNCTION_TABLE_DECLARE_TDECIMAL(SUFFIX) \
   TDECIMAL_FUNCTION_TABLE(SUFFIX) \
   TDECIMAL_FUNCTION_TABLE_INSTANCE(SUFFIX)
 #else
-#define TYPE_VTABLE_DECLARE_TDECIMAL(SUFFIX)
+#define TYPE_FUNCTION_TABLE_DECLARE_TDECIMAL(SUFFIX)
 #endif
 
 #define TDECIMAL_DECLARE(SUFFIX, TYPE, WORD_COUNT, SIZE_IN_BYTES)              \
   TDECIMAL_STRUCT(SUFFIX, TYPE, WORD_COUNT, SIZE_IN_BYTES)                     \
   TDECIMAL_DECLARE_PROTOTYPES(SUFFIX)                                          \
   TDECIMAL_IMPLEMENT(SUFFIX, TYPE)                                              \
-  TYPE_VTABLE_DECLARE_TDECIMAL(SUFFIX)
+  TYPE_FUNCTION_TABLE_DECLARE_TDECIMAL(SUFFIX)
 
-#if TYPE_ENABLE_VTABLE
+#ifndef TYPE_DISABLE_FUNCTION_TABLE
 #define TDecimal(SUFFIX, NAME)                                                   \
   TDECIMAL_TYPE(SUFFIX) NAME = {0};                                           \
   NAME.api = &TDECIMAL_FUNC(SUFFIX, functions);
