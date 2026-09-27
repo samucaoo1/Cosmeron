@@ -8,7 +8,7 @@
 #define TPENTA_TYPE(SUFFIX) STRUCT_TYPE(TPenta, SUFFIX)
 #define TPENTA_FUNC(SUFFIX, FUNC) STRUCT_FUNC(TPenta, SUFFIX, FUNC)
 
-#define TPENTA_TYPE_DECLARE(TYPE, SUFFIX)                                     \
+#define TPENTA_STRUCT(TYPE, SUFFIX)                                     \
   typedef union {                                                             \
     struct {                                                                  \
       union {                                                                 \
@@ -61,37 +61,37 @@
   } TPENTA_TYPE(SUFFIX);
 
 #define TPENTA_CAST_TO_TYPE_PROTOTYPE(TYPE, SUFFIX)                     \
-  inline static TPENTA_TYPE(SUFFIX) CAST_TYPE_TO_STRUCT(SUFFIX, TPenta)(        \
+  static inline TPENTA_TYPE(SUFFIX) CAST_TYPE_TO_STRUCT(SUFFIX, TPenta)(        \
       TYPE value1, TYPE value2, TYPE value3, TYPE value4,TYPE value5)
 
 #define TPENTA_CAST_FROM_TYPE_PROTOTYPE(TYPE, SUFFIX)                   \
-  inline static void CAST_STRUCT_TO_TYPE(TPenta, SUFFIX)(                       \
+  static inline void CAST_STRUCT_TO_TYPE(TPenta, SUFFIX)(                       \
       TPENTA_TYPE(SUFFIX) penta, TYPE *var1, TYPE *var2, TYPE *var3,         \
       TYPE *var4,TYPE *var5)
 
 #include "Impl/TPenta.impl"
 
-#define TPENTA_DECLARE(TYPE, SUFFIX)                                            \
-  TPENTA_TYPE_DECLARE(TYPE, SUFFIX)                                             \
+#define TPENTA_IMPLEMENT_ALL(TYPE, SUFFIX)                                            \
+  TPENTA_STRUCT(TYPE, SUFFIX)                                             \
   TPENTA_CAST_TO_TYPE_PROTOTYPE(TYPE, SUFFIX);                          \
   TPENTA_CAST_FROM_TYPE_PROTOTYPE(TYPE, SUFFIX);                        \
-  TPENTA_IMPLEMENT(TYPE, SUFFIX)
+  TPENTA_CAST_IMPLEMENT_ALL(TYPE, SUFFIX)
 
-TPENTA_DECLARE(uint8_t, uint8)
-TPENTA_DECLARE(uint16_t, uint16)
-TPENTA_DECLARE(uint32_t, uint32)
-TPENTA_DECLARE(uint64_t, uint64)
-TPENTA_DECLARE(int8_t, int8)
-TPENTA_DECLARE(int16_t, int16)
-TPENTA_DECLARE(int32_t, int32)
-TPENTA_DECLARE(int64_t, int64)
-TPENTA_DECLARE(float, float)
-TPENTA_DECLARE(double, double)
-TPENTA_DECLARE(long double, longdouble)
+TPENTA_IMPLEMENT_ALL(uint8_t, uint8)
+TPENTA_IMPLEMENT_ALL(uint16_t, uint16)
+TPENTA_IMPLEMENT_ALL(uint32_t, uint32)
+TPENTA_IMPLEMENT_ALL(uint64_t, uint64)
+TPENTA_IMPLEMENT_ALL(int8_t, int8)
+TPENTA_IMPLEMENT_ALL(int16_t, int16)
+TPENTA_IMPLEMENT_ALL(int32_t, int32)
+TPENTA_IMPLEMENT_ALL(int64_t, int64)
+TPENTA_IMPLEMENT_ALL(float, float)
+TPENTA_IMPLEMENT_ALL(double, double)
+TPENTA_IMPLEMENT_ALL(long double, longdouble)
 
 #if !COMPILER_MSVC
-TPENTA_DECLARE(float _Complex, float_complex)
-TPENTA_DECLARE(double _Complex, double_complex)
-TPENTA_DECLARE(long double _Complex, longdouble_complex)
+TPENTA_IMPLEMENT_ALL(float _Complex, float_complex)
+TPENTA_IMPLEMENT_ALL(double _Complex, double_complex)
+TPENTA_IMPLEMENT_ALL(long double _Complex, longdouble_complex)
 #endif
 /* EOF */
