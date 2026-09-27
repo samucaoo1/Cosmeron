@@ -1,18 +1,27 @@
 #pragma once
 
-#include "../../Core/Preprocessor/Detect/OperationSystem.h"
-
+#include "../../Core/Algorithm/Comparison.h"
 #include "../../Core/Namespace.h"
 #include "../../Core/Preprocessor/Compiling.inc"
+#include "../../Core/Preprocessor/Detect/OperationSystem.h"
 
 #include <stdbool.h>
 #include <stdint.h>
 
-#define CHRONOMETRY_MOD(NAME) GNS2(LIB_PREFIX(Chronometry), NAME)
-#define CHRONOMETRY_FUNC(MODULE, NAME)                                           \
-  GNS2(CHRONOMETRY_MOD(MODULE), NAME)
-#define CHRONOMETRY_TYPE(NAME) GNS2(LIB_PREFIX(Chronometry), NAME)
-#define CHRONOMETRY_CONST(SPACE, NAME) GNS3(LIB_PREFIX_CONST(CHRONOMETRY), SPACE, NAME)
+#define CHRONOMETRY_MOD Chronometry
+#define CHRONOMETRY_CMOD CHRONOMETRY
+
+#define CHRONOMETRY_NS(NAME) GNS2(LIB_PREFIX(CHRONOMETRY_MOD), NAME)
+#define CHRONOMETRY_CNS(NAME) CNS2(LIB_PREFIX_CONST(CHRONOMETRY_CMOD), NAME)
+#define CHRONOMETRY_INS(NAME) GNS3(LIB_PREFIX(CHRONOMETRY_MOD), Internal, NAME)
+#define CHRONOMETRY_CINS(NAME) CNS3(LIB_PREFIX_CONST(CHRONOMETRY_CMOD), INTERNAL, NAME)
+
+#define CHRONOMETRY_TYPE(NAME) CHRONOMETRY_NS(NAME)
+#define CHRONOMETRY_FUNC(SPACE, NAME)                                           \
+  GNS2(GNS2(LIB_PREFIX(CHRONOMETRY_MOD), SPACE), NAME)
+#define CHRONOMETRY_CONST(SPACE, NAME)                                         \
+  CNS3(LIB_PREFIX_CONST(CHRONOMETRY_CMOD), SPACE, NAME)
+
 #define CALENDAR_CONST(NAME) CHRONOMETRY_CONST(CALENDAR, NAME)
 
 #define DURATION_FUNC(NAME) CHRONOMETRY_FUNC(Duration, NAME)
@@ -24,5 +33,4 @@
 #define EPOCH_FUNC(NAME) CHRONOMETRY_FUNC(Epoch, NAME)
 #define TIMEZONE_FUNC(NAME) CHRONOMETRY_FUNC(Timezone, NAME)
 #define CHRONOMETRY_FORMAT_FUNC(NAME) CHRONOMETRY_FUNC(Format, NAME)
-
 /* EOF */
