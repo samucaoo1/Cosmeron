@@ -1,4 +1,4 @@
-#define TPAIR_IMPLEMENT(TYPE, SUFFIX)                                          \
+#define TPAIR_CAST_IMPLEMENT_ALL(TYPE, SUFFIX)                                          \
   TPAIR_CAST_TO_TYPE_PROTOTYPE(TYPE, SUFFIX) {                         \
     TPAIR_TYPE(SUFFIX) pair;                                                   \
     pair.value1 = value1;                                                     \
