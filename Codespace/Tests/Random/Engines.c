@@ -9,7 +9,7 @@
     uint64_t y=RANDOM_ENGINE_FUNC(NAME, Next)(&b);                              \
     if (x!=y) return __LINE__;                                                  \
   }                                                                            \
-  if (RANDOM_ENGINE_FUNC(NAME, VTable).stateSize != sizeof(a)) return __LINE__;\
+  if (RANDOM_ENGINE_FUNC(NAME, FunctionTable).stateSize != sizeof(a)) return __LINE__;\
 } while (0)
 
 int main(void) {
