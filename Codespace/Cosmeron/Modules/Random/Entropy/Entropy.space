@@ -2,5 +2,5 @@
 
 #include "../Random.space"
 
-typedef bool (*TRandomEntropyFunction)(void *destination, size_t size);
+typedef bool (*RANDOM_ENTROPY_TYPE(Function))(void *destination, size_t size);
 /* EOF */
