@@ -129,7 +129,7 @@
       void *context)
 
 #include "Impl/Graph.impl"
-#include "VTable/Graph.h"
+#include "FunctionTable/Graph.h"
 
 /* ============================================================
  * Complete declaration

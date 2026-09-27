@@ -25,53 +25,53 @@
  * ============================================================ */
 
 #define FLAT_QUEUE_INIT_PROTOTYPE(SUFFIX)                             \
-  inline static OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, Init)(                        \
+  static inline OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, Init)(                        \
       FLAT_QUEUE_TYPE(SUFFIX) * queue)
 
 #define FLAT_QUEUE_DESTROY_PROTOTYPE(SUFFIX)                          \
-  inline static void FLAT_QUEUE_FUNC(SUFFIX,                                   \
+  static inline void FLAT_QUEUE_FUNC(SUFFIX,                                   \
                                      Destroy)(FLAT_QUEUE_TYPE(SUFFIX) * queue)
 
 #define FLAT_QUEUE_RESERVE_PROTOTYPE(SUFFIX)                          \
-  inline static OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, Reserve)(                     \
+  static inline OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, Reserve)(                     \
       FLAT_QUEUE_TYPE(SUFFIX) * queue, size_t newCapacity)
 
 #define FLAT_QUEUE_SHRINK_TO_FIT_PROTOTYPE(SUFFIX)                    \
-  inline static OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, ShrinkToFit)(                 \
+  static inline OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, ShrinkToFit)(                 \
       FLAT_QUEUE_TYPE(SUFFIX) * queue)
 
 #define FLAT_QUEUE_COMPACT_PROTOTYPE(SUFFIX)                          \
-  inline static OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, Compact)(                     \
+  static inline OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, Compact)(                     \
       FLAT_QUEUE_TYPE(SUFFIX) * queue)
 
 #define FLAT_QUEUE_PUSH_PROTOTYPE(TYPE, SUFFIX)                       \
-  inline static OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, Push)(                        \
+  static inline OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, Push)(                        \
       FLAT_QUEUE_TYPE(SUFFIX) * queue, TYPE value)
 
 #define FLAT_QUEUE_POP_PROTOTYPE(TYPE, SUFFIX)                        \
-  inline static OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, Pop)(                         \
+  static inline OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, Pop)(                         \
       FLAT_QUEUE_TYPE(SUFFIX) * queue, TYPE * outValue)
 
 #define FLAT_QUEUE_FRONT_PROTOTYPE(TYPE, SUFFIX)                      \
-  inline static TYPE *FLAT_QUEUE_FUNC(SUFFIX,                                  \
+  static inline TYPE *FLAT_QUEUE_FUNC(SUFFIX,                                  \
                                       Front)(FLAT_QUEUE_TYPE(SUFFIX) * queue)
 
 #define FLAT_QUEUE_BACK_PROTOTYPE(TYPE, SUFFIX)                       \
-  inline static TYPE *FLAT_QUEUE_FUNC(SUFFIX,                                  \
+  static inline TYPE *FLAT_QUEUE_FUNC(SUFFIX,                                  \
                                       Back)(FLAT_QUEUE_TYPE(SUFFIX) * queue)
 
 #define FLAT_QUEUE_EMPTY_PROTOTYPE(SUFFIX)                            \
-  inline static bool FLAT_QUEUE_FUNC(SUFFIX,                                   \
+  static inline bool FLAT_QUEUE_FUNC(SUFFIX,                                   \
                                      Empty)(const FLAT_QUEUE_TYPE(SUFFIX) * queue)
 #define FLAT_QUEUE_SIZE_PROTOTYPE(SUFFIX)                             \
-  inline static size_t FLAT_QUEUE_FUNC(SUFFIX,                                 \
+  static inline size_t FLAT_QUEUE_FUNC(SUFFIX,                                 \
                                        Size)(const FLAT_QUEUE_TYPE(SUFFIX) * queue)
 
 #define FLAT_QUEUE_CAPACITY_PROTOTYPE(SUFFIX)                         \
-  inline static size_t FLAT_QUEUE_FUNC(SUFFIX, Capacity)(                      \
+  static inline size_t FLAT_QUEUE_FUNC(SUFFIX, Capacity)(                      \
       const FLAT_QUEUE_TYPE(SUFFIX) * queue)
 
-#include "VTable/Queue.h"
+#include "FunctionTable/Queue.h"
 
 #define FLAT_QUEUE_DECLARE(TYPE, SUFFIX)                                       \
   FLAT_QUEUE_STRUCT(TYPE, SUFFIX)                                              \

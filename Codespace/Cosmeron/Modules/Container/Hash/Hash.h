@@ -101,7 +101,7 @@
       const THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) * hash)
 
 #include "Impl/Hash.impl"
-#include "VTable/Hash.h"
+#include "FunctionTable/Hash.h"
 
 /* ============================================================
  * Complete declaration

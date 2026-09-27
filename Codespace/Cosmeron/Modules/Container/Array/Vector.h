@@ -23,11 +23,11 @@
  * ============================================================ */
 
 #define FLAT_VECTOR_INIT_PROTOTYPE(SUFFIX)                            \
-  inline static OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, Init)(                       \
+  static inline OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, Init)(                       \
       FLAT_VECTOR_TYPE(SUFFIX) * vec)
 
 #define FLAT_VECTOR_DESTROY_PROTOTYPE(SUFFIX)                         \
-  inline static void FLAT_VECTOR_FUNC(SUFFIX,                                  \
+  static inline void FLAT_VECTOR_FUNC(SUFFIX,                                  \
                                       Destroy)(FLAT_VECTOR_TYPE(SUFFIX) * vec)
 
 /* ============================================================
@@ -35,11 +35,11 @@
  * ============================================================ */
 
 #define FLAT_VECTOR_RESERVE_PROTOTYPE(SUFFIX)                         \
-  inline static OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, Reserve)(                    \
+  static inline OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, Reserve)(                    \
       FLAT_VECTOR_TYPE(SUFFIX) * vec, size_t newCapacity)
 
 #define FLAT_VECTOR_SHRINK_TO_FIT_PROTOTYPE(SUFFIX)                   \
-  inline static OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, ShrinkToFit)(                \
+  static inline OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, ShrinkToFit)(                \
       FLAT_VECTOR_TYPE(SUFFIX) * vec)
 
 /* ============================================================
@@ -47,19 +47,19 @@
  * ============================================================ */
 
 #define FLAT_VECTOR_AT_PROTOTYPE(TYPE, SUFFIX)                        \
-  inline static TYPE *FLAT_VECTOR_FUNC(SUFFIX, At)(                            \
+  static inline TYPE *FLAT_VECTOR_FUNC(SUFFIX, At)(                            \
       FLAT_VECTOR_TYPE(SUFFIX) * vec, size_t index)
 
 #define FLAT_VECTOR_FRONT_PROTOTYPE(TYPE, SUFFIX)                     \
-  inline static TYPE *FLAT_VECTOR_FUNC(SUFFIX,                                 \
+  static inline TYPE *FLAT_VECTOR_FUNC(SUFFIX,                                 \
                                        Front)(FLAT_VECTOR_TYPE(SUFFIX) * vec)
 
 #define FLAT_VECTOR_BACK_PROTOTYPE(TYPE, SUFFIX)                      \
-  inline static TYPE *FLAT_VECTOR_FUNC(SUFFIX,                                 \
+  static inline TYPE *FLAT_VECTOR_FUNC(SUFFIX,                                 \
                                        Back)(FLAT_VECTOR_TYPE(SUFFIX) * vec)
 
 #define FLAT_VECTOR_DATA_PROTOTYPE(TYPE, SUFFIX)                      \
-  inline static TYPE *FLAT_VECTOR_FUNC(SUFFIX,                                 \
+  static inline TYPE *FLAT_VECTOR_FUNC(SUFFIX,                                 \
                                        Data)(FLAT_VECTOR_TYPE(SUFFIX) * vec)
 
 /* ============================================================
@@ -67,31 +67,31 @@
  * ============================================================ */
 
 #define FLAT_VECTOR_PUSH_BACK_PROTOTYPE(TYPE, SUFFIX)                 \
-  inline static OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, PushBack)(                   \
+  static inline OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, PushBack)(                   \
       FLAT_VECTOR_TYPE(SUFFIX) * vec, TYPE value)
 
 #define FLAT_VECTOR_POP_BACK_PROTOTYPE(TYPE, SUFFIX)                  \
-  inline static OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, PopBack)(                    \
+  static inline OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, PopBack)(                    \
       FLAT_VECTOR_TYPE(SUFFIX) * vec, TYPE * outValue)
 
 #define FLAT_VECTOR_INSERT_PROTOTYPE(TYPE, SUFFIX)                    \
-  inline static OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, Insert)(                     \
+  static inline OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, Insert)(                     \
       FLAT_VECTOR_TYPE(SUFFIX) * vec, size_t position, TYPE value)
 
 #define FLAT_VECTOR_ERASE_PROTOTYPE(SUFFIX)                           \
-  inline static OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, Erase)(                      \
+  static inline OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, Erase)(                      \
       FLAT_VECTOR_TYPE(SUFFIX) * vec, size_t position, size_t count)
 
 #define FLAT_VECTOR_CLEAR_PROTOTYPE(SUFFIX)                           \
-  inline static void FLAT_VECTOR_FUNC(SUFFIX,                                  \
+  static inline void FLAT_VECTOR_FUNC(SUFFIX,                                  \
                                       Clear)(FLAT_VECTOR_TYPE(SUFFIX) * vec)
 
 #define FLAT_VECTOR_PUSH_FRONT_PROTOTYPE(TYPE, SUFFIX)                \
-  inline static OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, PushFront)(                  \
+  static inline OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, PushFront)(                  \
       FLAT_VECTOR_TYPE(SUFFIX) * vec, TYPE value)
 
 #define FLAT_VECTOR_POP_FRONT_PROTOTYPE(TYPE, SUFFIX)                 \
-  inline static OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, PopFront)(                   \
+  static inline OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, PopFront)(                   \
       FLAT_VECTOR_TYPE(SUFFIX) * vec, TYPE * outValue)
 
 /* ============================================================
@@ -99,15 +99,15 @@
  * ============================================================ */
 
 #define FLAT_VECTOR_EMPTY_PROTOTYPE(SUFFIX)                           \
-  inline static bool FLAT_VECTOR_FUNC(SUFFIX,                                  \
+  static inline bool FLAT_VECTOR_FUNC(SUFFIX,                                  \
                                       Empty)(const FLAT_VECTOR_TYPE(SUFFIX) * vec)
 
 #define FLAT_VECTOR_SIZE_PROTOTYPE(SUFFIX)                            \
-  inline static size_t FLAT_VECTOR_FUNC(SUFFIX,                                \
+  static inline size_t FLAT_VECTOR_FUNC(SUFFIX,                                \
                                         Size)(const FLAT_VECTOR_TYPE(SUFFIX) * vec)
 
 #define FLAT_VECTOR_CAPACITY_PROTOTYPE(SUFFIX)                        \
-  inline static size_t FLAT_VECTOR_FUNC(SUFFIX, Capacity)(                     \
+  static inline size_t FLAT_VECTOR_FUNC(SUFFIX, Capacity)(                     \
       const FLAT_VECTOR_TYPE(SUFFIX) * vec)
 
 /* ============================================================
@@ -138,7 +138,7 @@
   FLAT_VECTOR_FUNCTION_TABLE(TYPE, SUFFIX)                                   \
   FLAT_VECTOR_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)
 
-#include "VTable/Vector.h"
+#include "FunctionTable/Vector.h"
 
 #define TVECTOR_TYPE(SUFFIX) FLAT_VECTOR_TYPE(SUFFIX)
 #define TVECTOR_FUNC(SUFFIX, FUNC) FLAT_VECTOR_FUNC(SUFFIX, FUNC)

@@ -23,46 +23,46 @@
  * ============================================================ */
 
 #define FLAT_STACK_INIT_PROTOTYPE(SUFFIX)                             \
-  inline static OPSTATUS FLAT_STACK_FUNC(SUFFIX, Init)(                        \
+  static inline OPSTATUS FLAT_STACK_FUNC(SUFFIX, Init)(                        \
       FLAT_STACK_TYPE(SUFFIX) * stack)
 
 #define FLAT_STACK_DESTROY_PROTOTYPE(SUFFIX)                          \
-  inline static void FLAT_STACK_FUNC(SUFFIX,                                   \
+  static inline void FLAT_STACK_FUNC(SUFFIX,                                   \
                                      Destroy)(FLAT_STACK_TYPE(SUFFIX) * stack)
 
 #define FLAT_STACK_RESERVE_PROTOTYPE(SUFFIX)                          \
-  inline static OPSTATUS FLAT_STACK_FUNC(SUFFIX, Reserve)(                     \
+  static inline OPSTATUS FLAT_STACK_FUNC(SUFFIX, Reserve)(                     \
       FLAT_STACK_TYPE(SUFFIX) * stack, size_t newCapacity)
 
 #define FLAT_STACK_SHRINK_TO_FIT_PROTOTYPE(SUFFIX)                    \
-  inline static OPSTATUS FLAT_STACK_FUNC(SUFFIX, ShrinkToFit)(                 \
+  static inline OPSTATUS FLAT_STACK_FUNC(SUFFIX, ShrinkToFit)(                 \
       FLAT_STACK_TYPE(SUFFIX) * stack)
 
 #define FLAT_STACK_PUSH_PROTOTYPE(TYPE, SUFFIX)                       \
-  inline static OPSTATUS FLAT_STACK_FUNC(SUFFIX, Push)(                        \
+  static inline OPSTATUS FLAT_STACK_FUNC(SUFFIX, Push)(                        \
       FLAT_STACK_TYPE(SUFFIX) * stack, TYPE value)
 
 #define FLAT_STACK_POP_PROTOTYPE(TYPE, SUFFIX)                        \
-  inline static OPSTATUS FLAT_STACK_FUNC(SUFFIX, Pop)(                         \
+  static inline OPSTATUS FLAT_STACK_FUNC(SUFFIX, Pop)(                         \
       FLAT_STACK_TYPE(SUFFIX) * stack, TYPE * outValue)
 
 #define FLAT_STACK_TOP_PROTOTYPE(TYPE, SUFFIX)                        \
-  inline static TYPE *FLAT_STACK_FUNC(SUFFIX,                                  \
+  static inline TYPE *FLAT_STACK_FUNC(SUFFIX,                                  \
                                       Top)(FLAT_STACK_TYPE(SUFFIX) * stack)
 
 #define FLAT_STACK_EMPTY_PROTOTYPE(SUFFIX)                            \
-  inline static bool FLAT_STACK_FUNC(SUFFIX,                                   \
+  static inline bool FLAT_STACK_FUNC(SUFFIX,                                   \
                                      Empty)(const FLAT_STACK_TYPE(SUFFIX) * stack)
 
 #define FLAT_STACK_SIZE_PROTOTYPE(SUFFIX)                             \
-  inline static size_t FLAT_STACK_FUNC(SUFFIX,                                 \
+  static inline size_t FLAT_STACK_FUNC(SUFFIX,                                 \
                                        Size)(const FLAT_STACK_TYPE(SUFFIX) * stack)
 
 #define FLAT_STACK_CAPACITY_PROTOTYPE(SUFFIX)                         \
-  inline static size_t FLAT_STACK_FUNC(SUFFIX, Capacity)(                      \
+  static inline size_t FLAT_STACK_FUNC(SUFFIX, Capacity)(                      \
       const FLAT_STACK_TYPE(SUFFIX) * stack)
 
-#include "VTable/Stack.h"
+#include "FunctionTable/Stack.h"
 
 #define FLAT_STACK_DECLARE(TYPE, SUFFIX)                                       \
   FLAT_STACK_STRUCT(TYPE, SUFFIX)                                              \
