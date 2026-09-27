@@ -7,12 +7,12 @@ typedef struct CHRONOMETRY_TYPE(ClockTimePoint) {
 } CHRONOMETRY_TYPE(ClockTimePoint);
 
 #define CHRONOMETRY_CLOCK_NOW_PROTOTYPE                              \
-  inline static OPSTATUS CLOCK_FUNC(Now)(                                       \
-      CHRONOMETRY_TYPE(ClockTimePoint) *result)
+  static inline OPSTATUS CLOCK_FUNC(Now)(                                       \
+      CHRONOMETRY_TYPE(ClockTimePoint) *outResult)
 #define CHRONOMETRY_CLOCK_DURATION_BETWEEN_PROTOTYPE                 \
-  inline static OPSTATUS CLOCK_FUNC(DurationBetween)(                           \
+  static inline OPSTATUS CLOCK_FUNC(DurationBetween)(                           \
       CHRONOMETRY_TYPE(ClockTimePoint) start,                                 \
       CHRONOMETRY_TYPE(ClockTimePoint) end,                                   \
-      CHRONOMETRY_TYPE(Duration) *result)
+      CHRONOMETRY_TYPE(Duration) *outResult)
 
 #include "Impl/Clock.impl"
