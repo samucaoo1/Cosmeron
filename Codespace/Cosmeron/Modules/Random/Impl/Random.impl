@@ -1,0 +1,47 @@
+inline static TRandomSource RANDOM_FUNC(SourceFromSeed)(uint64_t seed) {
+  TRandomSource source = {0};
+  RANDOM_SOURCE_FUNC(Init)(&source, &RANDOM_ENGINE_FUNC(Xoshiro, VTable), seed,
+                         NULL);
+  return source;
+}
+
+inline static uint64_t RANDOM_FUNC(U64)(void) {
+  return RANDOM_ENTROPY_FUNC(Collect)();
+}
+
+inline static uint64_t RANDOM_FUNC(U64_FromSeed)(uint64_t seed) {
+  RANDOM_ENGINE_TYPE(Xoshiro) state;
+  RANDOM_ENGINE_FUNC(Xoshiro, Seed)(&state, seed);
+  return RANDOM_ENGINE_FUNC(Xoshiro, Next)(&state);
+}
+
+inline static TRandomSource RANDOM_FUNC(_StackSource)(
+    RANDOM_ENGINE_TYPE(Xoshiro) *state, uint64_t seed) {
+  TRandomSource source = {
+      &RANDOM_ENGINE_FUNC(Xoshiro, VTable), NULL, state, sizeof(*state), false};
+  source.engine->seed(source.state, seed);
+  return source;
+}
+
+inline static uint64_t RANDOM_FUNC(RangeU64)(uint64_t minimum,
+                                           uint64_t maximum) {
+  RANDOM_ENGINE_TYPE(Xoshiro) state;
+  TRandomSource source =
+      RANDOM_FUNC(_StackSource)(&state, RANDOM_FUNC(U64)());
+  return RANDOM_DISTRIBUTION_FUNC(U64)(&source, minimum, maximum);
+}
+
+inline static int64_t RANDOM_FUNC(RangeI64)(int64_t minimum, int64_t maximum) {
+  RANDOM_ENGINE_TYPE(Xoshiro) state;
+  TRandomSource source =
+      RANDOM_FUNC(_StackSource)(&state, RANDOM_FUNC(U64)());
+  return RANDOM_DISTRIBUTION_FUNC(I64)(&source, minimum, maximum);
+}
+
+inline static double RANDOM_FUNC(F64)(void) {
+  return (double)(RANDOM_FUNC(U64)() >> 11U) * 0x1.0p-53;
+}
+
+inline static bool RANDOM_FUNC(Bool)(void) {
+  return (RANDOM_FUNC(U64)() & UINT64_C(1)) != 0U;
+}

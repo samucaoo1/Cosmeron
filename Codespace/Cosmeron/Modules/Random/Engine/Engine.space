@@ -1,0 +1,12 @@
+#pragma once
+
+#include "../Random.space"
+
+#define RANDOM_ENGINE_SEED_PROTOTYPE(ENGINE)                                  \
+  inline static void RANDOM_ENGINE_FUNC(ENGINE, Seed)(                        \
+      RANDOM_ENGINE_TYPE(ENGINE) *state, uint64_t seed)
+
+#define RANDOM_ENGINE_NEXT_PROTOTYPE(ENGINE)                                  \
+  inline static uint64_t RANDOM_ENGINE_FUNC(ENGINE, Next)(                    \
+      RANDOM_ENGINE_TYPE(ENGINE) *state)
+/* EOF */

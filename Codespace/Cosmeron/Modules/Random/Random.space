@@ -1,0 +1,28 @@
+#pragma once
+
+#include "../../Core/Namespace.h"
+#include "../../Core/Preprocessor/Compiling.inc"
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#define RANDOM_MOD(NAME) GNS2(LIB_PREFIX(Random), NAME)
+#define RANDOM_TYPE(NAME) GNS2(LIB_PREFIX(Random), NAME)
+#define RANDOM_FUNC(NAME) GNS2(LIB_PREFIX(Random), NAME)
+
+#define RANDOM_ENGINE_TYPE(NAME) GNS3(LIB_PREFIX(Random), Engine, NAME)
+#define RANDOM_ENGINE_FUNC(ENGINE, NAME) GNS4(LIB_PREFIX(Random), Engine, ENGINE, NAME)
+
+#define RANDOM_ENTROPY_TYPE(NAME) GNS3(LIB_PREFIX(Random), Entropy, NAME)
+#define RANDOM_ENTROPY_FUNC(NAME) GNS3(LIB_PREFIX(Random), Entropy, NAME)
+
+#define RANDOM_MIXER_TYPE(NAME) GNS3(LIB_PREFIX(Random), Mixer, NAME)
+#define RANDOM_MIXER_FUNC(NAME) GNS3(LIB_PREFIX(Random), Mixer, NAME)
+
+#define RANDOM_SOURCE_TYPE(NAME) GNS3(LIB_PREFIX(Random), Source, NAME)
+#define RANDOM_SOURCE_FUNC(NAME) GNS3(LIB_PREFIX(Random), Source, NAME)
+
+#define RANDOM_DISTRIBUTION_FUNC(NAME) GNS3(LIB_PREFIX(Random), Distribution, NAME)
+#define RANDOM_SHUFFLE_FUNC(NAME) GNS3(LIB_PREFIX(Random), Shuffle, NAME)
+/* EOF */

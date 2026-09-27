@@ -1,0 +1,91 @@
+#pragma once
+
+#include <stdint.h>
+
+static inline bool RANDOM_SOURCE_FUNC(_EngineValid)(
+    const RANDOM_ENGINE_VTABLE *engine) {
+  return engine != NULL && engine->nextU64 != NULL && engine->seed != NULL &&
+         engine->stateSize != 0U && engine->stateAlignment != 0U;
+}
+
+inline static OPSTATUS RANDOM_SOURCE_FUNC(InitWithState)(
+    TRandomSource *source, const RANDOM_ENGINE_VTABLE *engine,
+    void *state, size_t stateSize, uint64_t seed, RANDOM_MIXER_FUNCTION mixer) {
+  if (source == NULL || !RANDOM_SOURCE_FUNC(_EngineValid)(engine) ||
+      state == NULL || stateSize < engine->stateSize ||
+      ((uintptr_t)state % engine->stateAlignment) != 0U)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  source->engine = engine;
+  source->mixer = mixer;
+  source->state = state;
+  source->stateSize = stateSize;
+  source->ownsState = false;
+  engine->seed(source->state, seed);
+  return STATUS_CONST(SUCCESS);
+}
+
+inline static OPSTATUS RANDOM_SOURCE_FUNC(Init)(
+    TRandomSource *source, const RANDOM_ENGINE_VTABLE *engine,
+    uint64_t seed, RANDOM_MIXER_FUNCTION mixer) {
+  void *state = NULL;
+  OPSTATUS status;
+
+  if (source == NULL || !RANDOM_SOURCE_FUNC(_EngineValid)(engine) ||
+      engine->stateAlignment > MEMORY_MAX_ALIGNMENT)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  status = ALLOC_FUNC(AllocBytes)(&state, engine->stateSize);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  source->engine = engine;
+  source->mixer = mixer;
+  source->state = state;
+  source->stateSize = engine->stateSize;
+  source->ownsState = true;
+  engine->seed(source->state, seed);
+  return STATUS_CONST(SUCCESS);
+}
+
+inline static OPSTATUS RANDOM_SOURCE_FUNC(InitSystem)(
+    TRandomSource *source, const RANDOM_ENGINE_VTABLE *engine,
+    RANDOM_MIXER_FUNCTION mixer) {
+  uint64_t seed;
+  if (!RANDOM_ENTROPY_FUNC(System)(&seed, sizeof(seed)))
+    return STATUS_CONST(NOT_AVAILABLE);
+  return RANDOM_SOURCE_FUNC(Init)(source, engine, seed, mixer);
+}
+
+inline static OPSTATUS RANDOM_SOURCE_FUNC(Reseed)(TRandomSource *source,
+                                                  uint64_t seed) {
+  if (source == NULL || !RANDOM_SOURCE_FUNC(_EngineValid)(source->engine) ||
+      source->state == NULL || source->stateSize < source->engine->stateSize)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  source->engine->seed(source->state, seed);
+  return STATUS_CONST(SUCCESS);
+}
+
+inline static uint64_t RANDOM_SOURCE_FUNC(NextU64)(TRandomSource *source) {
+  uint64_t value;
+  if (source == NULL || !RANDOM_SOURCE_FUNC(_EngineValid)(source->engine) ||
+      source->state == NULL || source->stateSize < source->engine->stateSize)
+    return 0U;
+
+  value = source->engine->nextU64(source->state);
+  return source->mixer == NULL ? value : source->mixer(value);
+}
+
+inline static void RANDOM_SOURCE_FUNC(Destroy)(TRandomSource *source) {
+  if (source == NULL)
+    return;
+  if (source->ownsState)
+    Memory_Free(source->state);
+  source->engine = NULL;
+  source->mixer = NULL;
+  source->state = NULL;
+  source->stateSize = 0U;
+  source->ownsState = false;
+}
+/* EOF */

@@ -1,0 +1,6 @@
+#pragma once
+
+#include "../Random.space"
+
+typedef bool (*TRandomEntropyFunction)(void *destination, size_t size);
+/* EOF */

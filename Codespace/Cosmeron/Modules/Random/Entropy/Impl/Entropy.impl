@@ -1,0 +1,115 @@
+inline static bool RANDOM_ENTROPY_FUNC(System)(void *destination, size_t size) {
+  if (destination == NULL && size != 0U) return false;
+#if OS_WINDOWS
+  TRandom_BCryptGenRandom generator = RANDOM_ENTROPY_FUNC(_BCryptGenRandom)();
+  unsigned char *output = (unsigned char *)destination;
+  if (generator == NULL)
+    return false;
+  while (size != 0U) {
+    ULONG amount = size > (size_t)ULONG_MAX ? ULONG_MAX : (ULONG)size;
+    if (generator(NULL, (PUCHAR)output, amount,
+                  BCRYPT_USE_SYSTEM_PREFERRED_RNG) != 0)
+      return false;
+    output += (size_t)amount;
+    size -= (size_t)amount;
+  }
+  return true;
+#elif OS_LINUX
+  unsigned char *output = destination;
+  while (size != 0U) {
+    ssize_t read_size = getrandom(output, size, 0);
+    if (read_size < 0) {
+      if (errno == EINTR) continue;
+      return false;
+    }
+    output += (size_t)read_size;
+    size -= (size_t)read_size;
+  }
+  return true;
+#elif OS_MAC || OS_FREEBSD
+  unsigned char *output = destination;
+  int descriptor = open("/dev/urandom", O_RDONLY);
+  if (descriptor < 0)
+    return false;
+  while (size != 0U) {
+    ssize_t read_size = read(descriptor, output, size);
+    if (read_size < 0) {
+      if (errno == EINTR)
+        continue;
+      (void)close(descriptor);
+      return false;
+    }
+    if (read_size == 0) {
+      (void)close(descriptor);
+      return false;
+    }
+    output += (size_t)read_size;
+    size -= (size_t)read_size;
+  }
+  (void)close(descriptor);
+  return true;
+#else
+  (void)destination; (void)size;
+  return false;
+#endif
+}
+
+inline static uint64_t RANDOM_ENTROPY_FUNC(Address)(void) {
+  uintptr_t address = (uintptr_t)&address;
+  return (uint64_t)address;
+}
+inline static uint64_t RANDOM_ENTROPY_FUNC(Clock)(void) {
+  struct timespec time_point;
+  uint64_t value = (uint64_t)clock();
+  if (timespec_get(&time_point, TIME_UTC) == TIME_UTC) {
+    value ^= (uint64_t)time_point.tv_sec;
+    value ^= (uint64_t)time_point.tv_nsec << 32U;
+  }
+  return value;
+}
+inline static uint64_t RANDOM_ENTROPY_FUNC(Jitter)(void) {
+  volatile uint64_t work = (uint64_t)(uintptr_t)&work;
+  uint64_t result = RANDOM_ENTROPY_FUNC(Clock)();
+  unsigned sample;
+  for (sample = 0U; sample < 16U; ++sample) {
+    uint64_t before = RANDOM_ENTROPY_FUNC(Clock)();
+    unsigned iteration;
+    for (iteration = 0U; iteration < 8U + (unsigned)(work & 7U); ++iteration) {
+      work ^= work << 7U;
+      work ^= work >> 9U;
+      work *= UINT64_C(0x9e3779b97f4a7c15);
+    }
+    result ^= RANDOM_ENTROPY_FUNC(Clock)() - before;
+    result = (result ^ (result >> 30U)) * UINT64_C(0xbf58476d1ce4e5b9);
+  }
+  return result ^ work;
+}
+inline static uint64_t RANDOM_ENTROPY_FUNC(Time)(void) {
+  return (uint64_t)time(NULL);
+}
+inline static uint64_t RANDOM_ENTROPY_FUNC(Thread)(void) {
+#if OS_WINDOWS
+  return (uint64_t)GetCurrentThreadId();
+#elif OS_MAC || OS_FREEBSD
+  return (uint64_t)(uintptr_t)pthread_self();
+#else
+  return (uint64_t)(uintptr_t)&errno;
+#endif
+}
+
+inline static uint64_t RANDOM_ENTROPY_FUNC(Collect)(void) {
+  RANDOM_ENTROPY_TYPE(Pool) pool;
+  uint64_t stack_sample;
+
+  RANDOM_ENTROPY_FUNC(Pool_Init)(&pool);
+  stack_sample = (uint64_t)(uintptr_t)&pool ^
+                 (uint64_t)(uintptr_t)&stack_sample;
+  RANDOM_ENTROPY_FUNC(Pool_Add)(&pool, stack_sample);
+  RANDOM_ENTROPY_FUNC(Pool_Add)(&pool, RANDOM_ENTROPY_FUNC(Address)());
+  RANDOM_ENTROPY_FUNC(Pool_Add)(&pool, RANDOM_ENTROPY_FUNC(Clock)());
+  RANDOM_ENTROPY_FUNC(Pool_Add)(&pool, RANDOM_ENTROPY_FUNC(Jitter)());
+  RANDOM_ENTROPY_FUNC(Pool_Add)(&pool, RANDOM_ENTROPY_FUNC(Thread)());
+  RANDOM_ENTROPY_FUNC(Pool_Add)(&pool, RANDOM_ENTROPY_FUNC(Time)());
+  RANDOM_ENTROPY_FUNC(Pool_Add)(&pool, RANDOM_ENTROPY_FUNC(Clock)());
+  return RANDOM_ENTROPY_FUNC(Pool_Finalize)(&pool);
+}

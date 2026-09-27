@@ -1,0 +1,20 @@
+#include "../Seed.impl"
+RANDOM_ENGINE_SEED_PROTOTYPE(Xoshiro) {
+  uint64_t split = seed;
+  unsigned index;
+  for (index = 0; index < 4U; ++index) {
+    state->state[index] = RANDOM_ENGINE_SPLITMIX_STEP(split);
+  }
+}
+RANDOM_ENGINE_NEXT_PROTOTYPE(Xoshiro) {
+  uint64_t result = RANDOM_ENGINE_FUNC(Common, RotateLeft)(state->state[1] * UINT64_C(5), 7U) * UINT64_C(9);
+  uint64_t temporary = state->state[1] << 17U;
+  state->state[2] ^= state->state[0];
+  state->state[3] ^= state->state[1];
+  state->state[1] ^= state->state[2];
+  state->state[0] ^= state->state[3];
+  state->state[2] ^= temporary;
+  state->state[3] = RANDOM_ENGINE_FUNC(Common, RotateLeft)(state->state[3], 45U);
+  return result;
+}
+

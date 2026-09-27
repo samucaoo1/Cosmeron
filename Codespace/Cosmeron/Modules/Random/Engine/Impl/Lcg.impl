@@ -1,0 +1,7 @@
+#include "../Seed.impl"
+RANDOM_ENGINE_SEED_PROTOTYPE(Lcg) { state->value = seed; }
+RANDOM_ENGINE_NEXT_PROTOTYPE(Lcg) {
+  state->value = state->value * UINT64_C(6364136223846793005) + UINT64_C(1);
+  return state->value;
+}
+

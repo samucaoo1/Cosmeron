@@ -1,0 +1,21 @@
+inline static uint64_t RANDOM_ENTROPY_FUNC(Pool_Mix)(uint64_t value) {
+  value = (value ^ (value >> 30U)) * UINT64_C(0xbf58476d1ce4e5b9);
+  value = (value ^ (value >> 27U)) * UINT64_C(0x94d049bb133111eb);
+  return value ^ (value >> 31U);
+}
+inline static void RANDOM_ENTROPY_FUNC(Pool_Init)(RANDOM_ENTROPY_TYPE(Pool) *pool) {
+  if (pool == NULL) return;
+  pool->state = UINT64_C(0x6a09e667f3bcc909);
+  pool->count = 0U;
+}
+inline static void RANDOM_ENTROPY_FUNC(Pool_Add)(RANDOM_ENTROPY_TYPE(Pool) *pool,
+                                               uint64_t value) {
+  if (pool == NULL) return;
+  pool->state = RANDOM_ENTROPY_FUNC(Pool_Mix)(pool->state ^ value ^ pool->count);
+  ++pool->count;
+}
+inline static uint64_t RANDOM_ENTROPY_FUNC(Pool_Finalize)(const RANDOM_ENTROPY_TYPE(Pool) *pool) {
+  if (pool == NULL) return 0U;
+  return RANDOM_ENTROPY_FUNC(Pool_Mix)(pool->state ^ pool->count);
+}
+

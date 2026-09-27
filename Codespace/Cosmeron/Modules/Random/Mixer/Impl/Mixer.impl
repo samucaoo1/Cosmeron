@@ -1,0 +1,42 @@
+RANDOM_MIXER_PROTOTYPE(Jenkins) {
+  value += ~(value << 32U); value ^= value >> 22U;
+  value += ~(value << 13U); value ^= value >> 8U;
+  value += value << 3U; value ^= value >> 15U;
+  value += ~(value << 27U); value ^= value >> 31U;
+  return value;
+}
+RANDOM_MIXER_PROTOTYPE(Knuth) {
+  return value * UINT64_C(6364136223846793005);
+}
+RANDOM_MIXER_PROTOTYPE(Murmur3) {
+  value ^= value >> 33U; value *= UINT64_C(0xff51afd7ed558ccd);
+  value ^= value >> 33U; value *= UINT64_C(0xc4ceb9fe1a85ec53);
+  return value ^ (value >> 33U);
+}
+RANDOM_MIXER_PROTOTYPE(Splitmix64) { return RANDOM_MIXER_FUNC(Murmur3)(value); }
+RANDOM_MIXER_PROTOTYPE(Stafford) {
+  value = (value ^ (value >> 30U)) * UINT64_C(0xbf58476d1ce4e5b9);
+  value = (value ^ (value >> 27U)) * UINT64_C(0x94d049bb133111eb);
+  return value ^ (value >> 31U);
+}
+RANDOM_MIXER_PROTOTYPE(Wang) {
+  value = (~value) + (value << 21U); value ^= value >> 24U;
+  value = (value + (value << 3U)) + (value << 8U); value ^= value >> 14U;
+  value = (value + (value << 2U)) + (value << 4U); value ^= value >> 28U;
+  return value + (value << 31U);
+}
+RANDOM_MIXER_PROTOTYPE(WyHash) {
+  uint64_t a = value ^ UINT64_C(0xa0761d6478bd642f);
+  uint64_t b = value ^ UINT64_C(0xe7037ed1a0b428db);
+#if defined(__SIZEOF_INT128__)
+  __uint128_t product = (__uint128_t)a * (__uint128_t)b;
+  return (uint64_t)product ^ (uint64_t)(product >> 64U);
+#else
+  return RANDOM_MIXER_FUNC(Stafford)(a ^ b);
+#endif
+}
+RANDOM_MIXER_PROTOTYPE(Xorshift) {
+  value ^= value << 13U; value ^= value >> 7U; value ^= value << 17U;
+  return value;
+}
+

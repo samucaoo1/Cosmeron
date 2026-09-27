@@ -1,0 +1,115 @@
+#define RANDOM_SHUFFLE_SWAP_BUFFER_SIZE 64U
+
+inline static void RANDOM_SHUFFLE_FUNC(Swap)(unsigned char *first,
+                                           unsigned char *second,
+                                           size_t size) {
+  unsigned char temporary[RANDOM_SHUFFLE_SWAP_BUFFER_SIZE];
+
+  while (size != 0U) {
+    size_t chunk = size < sizeof(temporary) ? size : sizeof(temporary);
+    memcpy(temporary, first, chunk);
+    memcpy(first, second, chunk);
+    memcpy(second, temporary, chunk);
+    first += chunk;
+    second += chunk;
+    size -= chunk;
+  }
+}
+
+inline static OPSTATUS RANDOM_SHUFFLE_FUNC(VectorFromSource)(
+    void *vector,
+    size_t count,
+    size_t elementSize,
+    TRandomSource *source) {
+  unsigned char *bytes;
+  size_t index;
+  size_t totalSize;
+
+  if (source == NULL || source->engine == NULL ||
+      source->engine->nextU64 == NULL || elementSize == 0U) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  if (count == 0U) {
+    return STATUS_CONST(SUCCESS);
+  }
+
+  if (vector == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  if (count > SIZE_MAX / elementSize) {
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  }
+
+  totalSize = count * elementSize;
+  if (totalSize != 0U &&
+      (uintptr_t)vector > UINTPTR_MAX - (totalSize - 1U)) {
+    return STATUS_CONST(OUT_OF_RANGE);
+  }
+
+  if (count == 1U) {
+    return STATUS_CONST(SUCCESS);
+  }
+
+  if (sizeof(size_t) > sizeof(uint64_t) &&
+      count - 1U > (size_t)UINT64_MAX) {
+    return STATUS_CONST(OUT_OF_RANGE);
+  }
+
+  bytes = vector;
+  index = count - 1U;
+
+  while (index != 0U) {
+    uint64_t selectedU64 = RANDOM_DISTRIBUTION_FUNC(U64)(
+        source, UINT64_C(0), (uint64_t)index);
+    size_t selected = (size_t)selectedU64;
+
+    if (selected != index) {
+      RANDOM_SHUFFLE_FUNC(Swap)(bytes + index * elementSize,
+                              bytes + selected * elementSize,
+                              elementSize);
+    }
+
+    --index;
+  }
+
+  return STATUS_CONST(SUCCESS);
+}
+
+inline static OPSTATUS RANDOM_SHUFFLE_FUNC(Vector)(void *vector,
+                                                 size_t count,
+                                                 size_t elementSize) {
+  TRandomSource source;
+
+  if (elementSize == 0U) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  if (count == 0U) {
+    return STATUS_CONST(SUCCESS);
+  }
+
+  if (vector == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  if (count > SIZE_MAX / elementSize) {
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  }
+
+  {
+    OPSTATUS status = RANDOM_SOURCE_FUNC(
+        Init)(&source, &RANDOM_ENGINE_FUNC(Xoshiro, VTable),
+              RANDOM_ENTROPY_FUNC(Collect)(), NULL);
+    if (status != STATUS_CONST(SUCCESS))
+      return status;
+  }
+
+  {
+    OPSTATUS status = RANDOM_SHUFFLE_FUNC(VectorFromSource)(
+        vector, count, elementSize, &source);
+    RANDOM_SOURCE_FUNC(Destroy)(&source);
+    return status;
+  }
+}

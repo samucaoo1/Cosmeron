@@ -1,0 +1,3 @@
+inline static double RANDOM_DISTRIBUTION_FUNC(F64)(TRandomSource *source) {
+  return (double)(RANDOM_SOURCE_FUNC(NextU64)(source) >> 11U) * 0x1.0p-53;
+}
