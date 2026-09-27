@@ -14,8 +14,8 @@ int main(void) {
   uint64_t first = Random_U64_FromSeed(UINT64_C(42));
   uint64_t second = Random_U64_FromSeed(UINT64_C(42));
   uint64_t entropyBuffer = 0U;
-  TRandomSource source;
-  TRandomSource systemSource;
+  RANDOM_SOURCE_TYPE(Value) source;
+  RANDOM_SOURCE_TYPE(Value) systemSource;
   RANDOM_ENTROPY_TYPE(Pool) pool;
   int values[] = {1, 2, 3, 4, 5};
 
@@ -42,7 +42,7 @@ int main(void) {
   }
   (void)Random_Bool();
 
-  if (Random_Source_Init(&source, &Random_Engine_Xoshiro_VTable,
+  if (Random_Source_Init(&source, &Random_Engine_Xoshiro_FunctionTable,
                          UINT64_C(1234), NULL) != STATUS_CONST(SUCCESS))
     return 5;
 
@@ -56,7 +56,7 @@ int main(void) {
       STATUS_CONST(SUCCESS))
     return 8;
 
-  if (Random_Source_Init(NULL, &Random_Engine_Xoshiro_VTable,
+  if (Random_Source_Init(NULL, &Random_Engine_Xoshiro_FunctionTable,
                          UINT64_C(1), NULL) != STATUS_CONST(INVALID_ARGUMENT))
     return 9;
 
@@ -68,7 +68,7 @@ int main(void) {
 
   {
     OPSTATUS status = Random_Source_InitSystem(
-        &systemSource, &Random_Engine_Xoshiro_VTable, Random_Mixer_WyHash);
+        &systemSource, &Random_Engine_Xoshiro_FunctionTable, Random_Mixer_WyHash);
     if (status == STATUS_CONST(SUCCESS)) {
       (void)Random_Source_NextU64(&systemSource);
       Random_Source_Destroy(&systemSource);
