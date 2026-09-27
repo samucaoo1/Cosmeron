@@ -7,8 +7,8 @@
 #include "../Math.space"
 
 #define MATH_EQUATION_LINEAR_PROTOTYPE(TYPE, SUFFIX)                  \
-  inline static OPSTATUS EQUATION_TYPED_FUNC(Linear, SUFFIX)(       \
-      TYPE a, TYPE b, TYPE *result, TMathSolution *solution)
+  static inline OPSTATUS EQUATION_TYPED_FUNC(Linear, SUFFIX)(       \
+      TYPE a, TYPE b, TYPE *outResult, MATH_TYPE(Solution) *outSolution)
 
 #include "Impl/Linear.impl"
 
