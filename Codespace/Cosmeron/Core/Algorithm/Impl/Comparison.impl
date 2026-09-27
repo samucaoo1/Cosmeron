@@ -1,15 +1,15 @@
 #pragma once
 
-#define COMPARISON_DEFINE(TYPE, SUFFIX)                                        \
-  COMPARISON_DECLARE(TYPE, SUFFIX) {                                           \
+#define COMPARISON_TYPED_IMPLEMENT(TYPE, SUFFIX)                               \
+  COMPARISON_TYPED_PROTOTYPE(TYPE, SUFFIX) {                                   \
     return left < right                                                        \
                ? COMPARISON_CONST(LOWER)                                       \
                : (left > right ? COMPARISON_CONST(HIGHER)                      \
                                : COMPARISON_CONST(EQUAL));                      \
   }
 
-#define COMPARISON_DEFINE_STRING(TYPE, SUFFIX, FUNCTION)                       \
-  COMPARISON_DECLARE_STRING(TYPE, SUFFIX) {                                    \
+#define COMPARISON_STRING_IMPLEMENT(TYPE, SUFFIX, FUNCTION)                    \
+  COMPARISON_STRING_PROTOTYPE(TYPE, SUFFIX) {                                  \
     int result = FUNCTION(left, right);                                         \
     return result < 0                                                          \
                ? COMPARISON_CONST(LOWER)                                       \
@@ -37,12 +37,12 @@ COMPARISON_INVOKE_PROTOTYPE {
   return comparator(left, right);
 }
 
-COMPARISON_DEFINE(int, int)
-COMPARISON_DEFINE(float, float)
-COMPARISON_DEFINE(double, double)
-COMPARISON_DEFINE(long double, LongDouble)
-COMPARISON_DEFINE_STRING(const char *, CString, strcmp)
+COMPARISON_TYPED_IMPLEMENT(int, int)
+COMPARISON_TYPED_IMPLEMENT(float, float)
+COMPARISON_TYPED_IMPLEMENT(double, double)
+COMPARISON_TYPED_IMPLEMENT(long double, LongDouble)
+COMPARISON_STRING_IMPLEMENT(const char *, CString, strcmp)
 
-#undef COMPARISON_DEFINE
-#undef COMPARISON_DEFINE_STRING
+#undef COMPARISON_TYPED_IMPLEMENT
+#undef COMPARISON_STRING_IMPLEMENT
 /* EOF */
