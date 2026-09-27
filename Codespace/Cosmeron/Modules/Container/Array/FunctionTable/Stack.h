@@ -2,7 +2,7 @@
 
 #if CONTAINER_FUNCTION_TABLE_ENABLED
 
-#define FLAT_STACK_FUNCTION_TABLE(TYPE, SUFFIX)                              \
+#define FLAT_STACK_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                              \
   typedef struct FLAT_STACK_FUNC(SUFFIX, FunctionTable) {                   \
     /* Lifecycle */                                                            \
     OPSTATUS (*init)(FLAT_STACK_TYPE(SUFFIX) *);                               \
@@ -36,6 +36,6 @@
           .capacity = FLAT_STACK_FUNC(SUFFIX, Capacity)};
 
 #else
-#define FLAT_STACK_FUNCTION_TABLE(...)
+#define FLAT_STACK_FUNCTION_TABLE_STRUCT(...)
 #define FLAT_STACK_FUNCTION_TABLE_INSTANCE(...)
 #endif

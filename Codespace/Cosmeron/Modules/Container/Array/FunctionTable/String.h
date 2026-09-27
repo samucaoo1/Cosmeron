@@ -2,7 +2,7 @@
 
 #if CONTAINER_FUNCTION_TABLE_ENABLED
 
-#define TSTRING_FUNCTION_TABLE(CHAR_TYPE, SUFFIX)                            \
+#define TSTRING_FUNCTION_TABLE_STRUCT(CHAR_TYPE, SUFFIX)                            \
   struct TSTRING_FUNC(SUFFIX, FunctionTable) {                              \
     OPSTATUS (*init)(TSTRING_TYPE(SUFFIX) * str);                              \
     void (*destroy)(TSTRING_TYPE(SUFFIX) * str);                               \
@@ -70,6 +70,6 @@
   };
 
 #else
-#define TSTRING_FUNCTION_TABLE(...)
+#define TSTRING_FUNCTION_TABLE_STRUCT(...)
 #define TSTRING_FUNCTION_TABLE_INSTANCE(...)
 #endif

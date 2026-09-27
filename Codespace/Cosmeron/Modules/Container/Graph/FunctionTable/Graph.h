@@ -2,7 +2,7 @@
 
 #if CONTAINER_FUNCTION_TABLE_ENABLED
 
-#define GRAPH_FUNCTION_TABLE(VERTEX_TYPE, VERTEX_SUFFIX, WEIGHT_TYPE,        \
+#define GRAPH_FUNCTION_TABLE_STRUCT(VERTEX_TYPE, VERTEX_SUFFIX, WEIGHT_TYPE,        \
                              WEIGHT_SUFFIX)                                  \
   typedef struct GRAPH_OPERATION(VERTEX_SUFFIX, WEIGHT_SUFFIX, FunctionTable) {\
     OPSTATUS (*init)(TGRAPH_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) *);           \
@@ -65,7 +65,7 @@
 
 #else
 
-#define GRAPH_FUNCTION_TABLE(...)
+#define GRAPH_FUNCTION_TABLE_STRUCT(...)
 #define GRAPH_FUNCTION_TABLE_INSTANCE(...)
 
 #endif

@@ -2,7 +2,7 @@
 
 #if CONTAINER_FUNCTION_TABLE_ENABLED
 
-#define FLAT_QUEUE_FUNCTION_TABLE(TYPE, SUFFIX)                              \
+#define FLAT_QUEUE_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                              \
   typedef struct FLAT_QUEUE_FUNC(SUFFIX, FunctionTable) {                   \
     /* Lifecycle */                                                            \
     OPSTATUS (*init)(FLAT_QUEUE_TYPE(SUFFIX) *);                               \
@@ -44,6 +44,6 @@
           .capacity = FLAT_QUEUE_FUNC(SUFFIX, Capacity)};
 
 #else
-#define FLAT_QUEUE_FUNCTION_TABLE(...)
+#define FLAT_QUEUE_FUNCTION_TABLE_STRUCT(...)
 #define FLAT_QUEUE_FUNCTION_TABLE_INSTANCE(...)
 #endif
