@@ -2,10 +2,10 @@
 
 #include "../Random.space"
 
-typedef uint64_t (*RANDOM_MIXER_FUNCTION)(uint64_t value);
+typedef uint64_t (*RANDOM_MIXER_TYPE(Function))(uint64_t value);
 
 #define RANDOM_MIXER_PROTOTYPE(NAME)                                          \
-  inline static uint64_t RANDOM_MIXER_FUNC(NAME)(uint64_t value)
+  static inline uint64_t RANDOM_MIXER_FUNC(NAME)(uint64_t value)
 
 RANDOM_MIXER_PROTOTYPE(Jenkins);
 RANDOM_MIXER_PROTOTYPE(Knuth);
