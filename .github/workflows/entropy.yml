@@ -1,0 +1,133 @@
+name: Entropy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Codespace/Cosmeron/**'
+      - '.github/entropy/**'
+      - '.github/workflows/entropy.yml'
+      - '.gitattributes'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: entropy-main
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Update entropy badge
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout canonical history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require main
+        shell: bash
+        run: |
+          if [ "$GITHUB_REF_NAME" != "main" ]; then
+            echo "Entropy can only be initialized or updated from main."
+            exit 1
+          fi
+          test -d Codespace/Cosmeron
+
+      - name: Configure Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Freeze entropy origin when first published
+        shell: bash
+        run: |
+          git fetch --tags --force origin
+          if ! git rev-parse --verify --quiet refs/tags/entropy-origin >/dev/null; then
+            git tag -a entropy-origin "$GITHUB_SHA" -m "Cosmeron entropy origin"
+            git push origin refs/tags/entropy-origin
+          fi
+
+      - name: Test entropy calculator
+        run: python3 .github/entropy/test_entropy.py
+
+      - name: Calculate entropy
+        run: python3 .github/entropy/entropy.py --ref "$GITHUB_SHA" --output-dir /tmp/cosmeron-entropy
+
+      - name: Verify generated entropy state
+        shell: bash
+        run: |
+          python3 - "$GITHUB_SHA" <<'PY'
+          import json
+          import sys
+
+          expected = sys.argv[1]
+          with open("/tmp/cosmeron-entropy/state.json", encoding="utf-8") as stream:
+              state = json.load(stream)
+
+          if state["ref_commit"] != expected:
+              raise SystemExit(
+                  f"entropy ref mismatch: expected {expected}, got {state['ref_commit']}"
+              )
+
+          if state["total"] != state["initial_entropy"] + state["accumulated_change"]:
+              raise SystemExit("entropy invariant failed: total != initial + accumulated")
+
+          if state["provisional"]:
+              raise SystemExit("canonical entropy state must not be provisional")
+
+          print(
+              "Verified:",
+              state["display"],
+              "=",
+              state["initial_entropy"],
+              "+",
+              state["accumulated_change"],
+          )
+          PY
+
+      - name: Publish generated entropy state
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git fetch origin main
+          if [ "$(git rev-parse origin/main)" != "$GITHUB_SHA" ]; then
+            echo "main advanced during entropy calculation; newer run will publish it."
+            exit 0
+          fi
+
+          branch="automation/entropy-state"
+          git checkout -B "$branch" "$GITHUB_SHA"
+
+          cp /tmp/cosmeron-entropy/entropy.svg .github/badges/entropy.svg
+          cp /tmp/cosmeron-entropy/state.json .github/entropy/state.json
+          git add .github/badges/entropy.svg .github/entropy/state.json
+
+          if git diff --cached --quiet; then
+            echo "Entropy state is already current."
+            exit 0
+          fi
+
+          git commit -m "chore: update entropy state"
+          git push --force origin "$branch"
+
+          pr_number="$(
+            gh pr list               --base main               --head "$branch"               --state open               --json number               --jq '.[0].number // empty'
+          )"
+
+          if [ -z "$pr_number" ]; then
+            gh pr create               --base main               --head "$branch"               --title "chore: update entropy state [skip ci]"               --body "Automated refresh of the generated Entropy badge and machine-readable state."
+
+            pr_number="$(
+              gh pr list                 --base main                 --head "$branch"                 --state open                 --json number                 --jq '.[0].number'
+            )"
+          fi
+
+          gh pr merge "$pr_number"             --squash             --delete-branch             --subject "chore: update entropy state [skip ci]"
