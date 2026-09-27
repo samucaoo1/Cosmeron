@@ -16,21 +16,21 @@ typedef struct CHRONOMETRY_TYPE(DateTime) {
 } CHRONOMETRY_TYPE(DateTime);
 
 #define CHRONOMETRY_DATETIME_TIME_IS_VALID_PROTOTYPE                 \
-  inline static bool DATETIME_FUNC(TimeIsValid)(CHRONOMETRY_TYPE(TimeOfDay) time)
+  static inline bool DATETIME_FUNC(TimeIsValid)(CHRONOMETRY_TYPE(TimeOfDay) time)
 #define CHRONOMETRY_DATETIME_IS_VALID_PROTOTYPE                      \
-  inline static bool DATETIME_FUNC(IsValid)(                                    \
+  static inline bool DATETIME_FUNC(IsValid)(                                    \
       const CALENDAR_FUNC(Policy) *policy, CHRONOMETRY_TYPE(DateTime) value)
 #define CHRONOMETRY_DATETIME_COMPARE_PROTOTYPE                       \
-  inline static int DATETIME_FUNC(Compare)(CHRONOMETRY_TYPE(DateTime) left,     \
+  static inline CMPOUT DATETIME_FUNC(Compare)(CHRONOMETRY_TYPE(DateTime) left,     \
                                          CHRONOMETRY_TYPE(DateTime) right)
 #define CHRONOMETRY_DATETIME_ADD_DURATION_PROTOTYPE                  \
-  inline static OPSTATUS DATETIME_FUNC(AddDuration)(                            \
+  static inline OPSTATUS DATETIME_FUNC(AddDuration)(                            \
       const CALENDAR_FUNC(Policy) *policy, CHRONOMETRY_TYPE(DateTime) value,    \
       CHRONOMETRY_TYPE(Duration) duration,                                    \
-      CHRONOMETRY_TYPE(DateTime) *result)
+      CHRONOMETRY_TYPE(DateTime) *outResult)
 #define CHRONOMETRY_DATETIME_DIFFERENCE_PROTOTYPE                    \
-  inline static OPSTATUS DATETIME_FUNC(Difference)(                             \
+  static inline OPSTATUS DATETIME_FUNC(Difference)(                             \
       const CALENDAR_FUNC(Policy) *policy, CHRONOMETRY_TYPE(DateTime) left,     \
-      CHRONOMETRY_TYPE(DateTime) right, CHRONOMETRY_TYPE(Duration) *result)
+      CHRONOMETRY_TYPE(DateTime) right, CHRONOMETRY_TYPE(Duration) *outResult)
 
 #include "Impl/DateTime.impl"
