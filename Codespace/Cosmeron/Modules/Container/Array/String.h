@@ -79,7 +79,7 @@
 #define TSTRING_COMPARE_PROTOTYPE(SUFFIX)                                     \
   static inline OPSTATUS TSTRING_FUNC(SUFFIX, Compare)(                       \
       const TSTRING_TYPE(SUFFIX) *str, const TSTRING_TYPE(SUFFIX) *other,     \
-      TComparisonResult *result)
+      CMPOUT *outResult)
 #define TSTRING_FIND_PROTOTYPE(CHAR_TYPE, SUFFIX)                              \
   static inline OPSTATUS TSTRING_FUNC(SUFFIX, Find)(                          \
       const TSTRING_TYPE(SUFFIX) *str, CHAR_TYPE ch, size_t start,            \
@@ -132,12 +132,8 @@
 /* Compatibility alias: prefer TSTRING_INSTANCE_DECLARE. */
 #define TString(SUFFIX, NAME) TSTRING_INSTANCE_DECLARE(SUFFIX, NAME)
 
-typedef uint8_t utf8;
-typedef uint16_t utf16;
-typedef uint32_t utf32;
-
-TSTRING_IMPLEMENT_ALL(utf8, 8)
-TSTRING_IMPLEMENT_ALL(utf16, 16)
-TSTRING_IMPLEMENT_ALL(utf32, 32)
+TSTRING_IMPLEMENT_ALL(uint8_t, 8)
+TSTRING_IMPLEMENT_ALL(uint16_t, 16)
+TSTRING_IMPLEMENT_ALL(uint32_t, 32)
 
 

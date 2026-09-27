@@ -10,7 +10,6 @@
 #include "../Linked/Queue.h"
 #include "../Linked/Stack.h"
 
-#if CONTAINER_ENABLE_PSEUDO_METHODS
 
 #define CONTAINER_ALIAS_SELECT_2(_1, _2, NAME, ...) NAME
 #define CONTAINER_ALIAS_SELECT_4(_1, _2, _3, _4, NAME, ...) NAME
@@ -210,4 +209,3 @@
                     CONTAINER_LINKED_QUEUE_ASSOC(Destroy),                    \
                     CONTAINER_LINKED_STACK_ASSOC(Destroy))(&(self))
 
-#endif

@@ -4,7 +4,6 @@
 #include "../Tree/AVL.h"
 #include "../Tree/RedBlack.h"
 
-#if CONTAINER_ENABLE_PSEUDO_METHODS
 
 #define TREE_ALIAS_SELECT_INSERT(_1, _2, _3, NAME, ...) NAME
 
@@ -56,4 +55,3 @@
 #define TreeConstNext(self, node) _Generic(&(self), TREE_ALL_ASSOC(ConstNext))((node))
 #define TreeConstPrev(self, node) _Generic(&(self), TREE_ALL_ASSOC(ConstPrev))((node))
 
-#endif

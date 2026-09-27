@@ -31,7 +31,7 @@
                        TSTRING_TYPE(SUFFIX) * out);                            \
     OPSTATUS (*compare)(const TSTRING_TYPE(SUFFIX) *str,                      \
                         const TSTRING_TYPE(SUFFIX) *other,                     \
-                        TComparisonResult *result);                            \
+                        CMPOUT *outResult);                            \
     OPSTATUS (*find)(const TSTRING_TYPE(SUFFIX) *str, CHAR_TYPE ch,            \
                      size_t start, size_t *index);                             \
     OPSTATUS (*findStr)(const TSTRING_TYPE(SUFFIX) *str,                       \

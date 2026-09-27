@@ -223,9 +223,9 @@
 
 #define TSTRING_IMPLEMENT_COMPARE(CHAR_TYPE, SUFFIX)                          \
   TSTRING_COMPARE_PROTOTYPE(SUFFIX) {                                          \
-    if (!str || !other || !result)                                             \
+    if (!str || !other || !outResult)                                             \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
-    *result = COMPARISON_FUNC(Bytes)(                                          \
+    *outResult = COMPARISON_FUNC(Bytes)(                                          \
         str->data, str->size * sizeof(CHAR_TYPE),                              \
         other->data, other->size * sizeof(CHAR_TYPE));                         \
     return STATUS_CONST(SUCCESS);                                                 \
