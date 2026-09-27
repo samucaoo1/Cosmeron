@@ -7,9 +7,9 @@ static int sorted_sum(const int *v, size_t n) {
 }
 
 int main(void) {
-  TRandomSource source;
+  RANDOM_SOURCE_TYPE(Value) source;
   RANDOM_ENGINE_TYPE(Xoshiro) storage;
-  if (Random_Source_InitWithState(&source,&Random_Engine_Xoshiro_VTable,&storage,sizeof(storage),42U,Random_Mixer_Splitmix64)!=STATUS_CONST(SUCCESS)) return 1;
+  if (Random_Source_InitWithState(&source,&Random_Engine_Xoshiro_FunctionTable,&storage,sizeof(storage),42U,Random_Mixer_Splitmix64)!=STATUS_CONST(SUCCESS)) return 1;
   for (int i=0;i<64;++i) {
     uint64_t u=Random_Distribution_U64(&source,10U,20U);
     int64_t s=Random_Distribution_I64(&source,-10,10);
