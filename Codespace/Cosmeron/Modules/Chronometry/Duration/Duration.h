@@ -16,24 +16,24 @@ typedef struct CHRONOMETRY_TYPE(Duration) {
 } CHRONOMETRY_TYPE(Duration);
 
 #define CHRONOMETRY_DURATION_FROM_NANOSECONDS_PROTOTYPE               \
-  inline static CHRONOMETRY_TYPE(Duration) DURATION_FUNC(FromNanoseconds)(       \
+  static inline CHRONOMETRY_TYPE(Duration) DURATION_FUNC(FromNanoseconds)(       \
       int64_t nanoseconds)
 #define CHRONOMETRY_DURATION_FROM_SECONDS_PROTOTYPE                   \
-  inline static OPSTATUS DURATION_FUNC(FromSeconds)(                             \
-      int64_t seconds, CHRONOMETRY_TYPE(Duration) *result)
+  static inline OPSTATUS DURATION_FUNC(FromSeconds)(                             \
+      int64_t seconds, CHRONOMETRY_TYPE(Duration) *outResult)
 #define CHRONOMETRY_DURATION_ADD_PROTOTYPE                            \
-  inline static OPSTATUS DURATION_FUNC(Add)(CHRONOMETRY_TYPE(Duration) left,     \
+  static inline OPSTATUS DURATION_FUNC(Add)(CHRONOMETRY_TYPE(Duration) left,     \
                                           CHRONOMETRY_TYPE(Duration) right,    \
-                                          CHRONOMETRY_TYPE(Duration) *result)
+                                          CHRONOMETRY_TYPE(Duration) *outResult)
 #define CHRONOMETRY_DURATION_SUBTRACT_PROTOTYPE                       \
-  inline static OPSTATUS DURATION_FUNC(Subtract)(                                \
+  static inline OPSTATUS DURATION_FUNC(Subtract)(                                \
       CHRONOMETRY_TYPE(Duration) left, CHRONOMETRY_TYPE(Duration) right,       \
-      CHRONOMETRY_TYPE(Duration) *result)
+      CHRONOMETRY_TYPE(Duration) *outResult)
 #define CHRONOMETRY_DURATION_COMPARE_PROTOTYPE                        \
-  inline static int DURATION_FUNC(Compare)(CHRONOMETRY_TYPE(Duration) left,      \
+  static inline CMPOUT DURATION_FUNC(Compare)(CHRONOMETRY_TYPE(Duration) left,      \
                                          CHRONOMETRY_TYPE(Duration) right)
 #define CHRONOMETRY_DURATION_ABSOLUTE_PROTOTYPE                       \
-  inline static OPSTATUS DURATION_FUNC(Absolute)(                                \
-      CHRONOMETRY_TYPE(Duration) value, CHRONOMETRY_TYPE(Duration) *result)
+  static inline OPSTATUS DURATION_FUNC(Absolute)(                                \
+      CHRONOMETRY_TYPE(Duration) value, CHRONOMETRY_TYPE(Duration) *outResult)
 
 #include "Impl/Duration.impl"
