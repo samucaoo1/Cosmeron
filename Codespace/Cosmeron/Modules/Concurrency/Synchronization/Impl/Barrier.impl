@@ -1,0 +1,54 @@
+#pragma once
+#include "../Barrier.h"
+inline static OPSTATUS BARRIER_FUNC(Init)(TBarrier *barrier, unsigned count) {
+  if (barrier == NULL || count == 0) return STATUS_CONST(INVALID_ARGUMENT);
+  { OPSTATUS status = MUTEX_FUNC(Init)(&barrier->mutex); if (status != STATUS_CONST(SUCCESS)) return status; }
+  { OPSTATUS status = CONDITION_FUNC(Init)(&barrier->condition); if (status != STATUS_CONST(SUCCESS)) {
+    (void)MUTEX_FUNC(Destroy)(&barrier->mutex);
+    return status;
+  } }
+  barrier->threshold = count;
+  barrier->waiting = 0;
+  barrier->generation = 0;
+  barrier->broken = false;
+  return STATUS_CONST(SUCCESS);
+}
+inline static OPSTATUS BARRIER_FUNC(Destroy)(TBarrier *barrier) {
+  OPSTATUS status;
+  if (barrier == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  status = CONDITION_FUNC(Destroy)(&barrier->condition);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  return MUTEX_FUNC(Destroy)(&barrier->mutex);
+}
+inline static OPSTATUS BARRIER_FUNC(Wait)(TBarrier *barrier) {
+  unsigned generation;
+  if (barrier == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  { OPSTATUS status = MUTEX_FUNC(Lock)(&barrier->mutex); if (status != STATUS_CONST(SUCCESS)) return status; }
+  if (barrier->broken) {
+    (void)MUTEX_FUNC(Unlock)(&barrier->mutex);
+    return STATUS_CONST(CANCELLED);
+  }
+  generation = barrier->generation;
+  ++barrier->waiting;
+  if (barrier->waiting == barrier->threshold) {
+    barrier->waiting = 0;
+    ++barrier->generation;
+    { OPSTATUS status = CONDITION_FUNC(NotifyAll)(&barrier->condition); if (status != STATUS_CONST(SUCCESS)) { (void)MUTEX_FUNC(Unlock)(&barrier->mutex); return status; } }
+    return MUTEX_FUNC(Unlock)(&barrier->mutex);
+  }
+  while (generation == barrier->generation) {
+    { OPSTATUS status = CONDITION_FUNC(Wait)(&barrier->condition, &barrier->mutex); if (status != STATUS_CONST(SUCCESS)) {
+      barrier->broken = true;
+      barrier->waiting = 0;
+      ++barrier->generation;
+      (void)CONDITION_FUNC(NotifyAll)(&barrier->condition);
+      (void)MUTEX_FUNC(Unlock)(&barrier->mutex);
+      return status;
+    } }
+  }
+  if (barrier->broken) {
+    (void)MUTEX_FUNC(Unlock)(&barrier->mutex);
+    return STATUS_CONST(CANCELLED);
+  }
+  return MUTEX_FUNC(Unlock)(&barrier->mutex);
+}

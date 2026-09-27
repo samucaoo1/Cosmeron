@@ -1,0 +1,44 @@
+#pragma once
+#include "../RWLock.h"
+#if OS_POSIX
+#include <errno.h>
+inline static OPSTATUS RWLOCK_FUNC(Init)(TRWLock *lock) { if (lock == NULL) return STATUS_CONST(INVALID_ARGUMENT); return pthread_rwlock_init(&lock->native, NULL) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR); }
+inline static OPSTATUS RWLOCK_FUNC(Destroy)(TRWLock *lock) { if (lock == NULL) return STATUS_CONST(INVALID_ARGUMENT); return pthread_rwlock_destroy(&lock->native) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(BUSY); }
+inline static OPSTATUS RWLOCK_FUNC(ReadLock)(TRWLock *lock) { if (lock == NULL) return STATUS_CONST(INVALID_ARGUMENT); return pthread_rwlock_rdlock(&lock->native) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR); }
+inline static OPSTATUS RWLOCK_FUNC(TryReadLock)(TRWLock *lock, bool *acquired) {
+  int result;
+  if (lock == NULL || acquired == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  result = pthread_rwlock_tryrdlock(&lock->native);
+  if (result == 0) { *acquired = true; return STATUS_CONST(SUCCESS); }
+  if (result == EBUSY) { *acquired = false; return STATUS_CONST(SUCCESS); }
+  return STATUS_CONST(GENERIC_ERROR);
+}
+inline static OPSTATUS RWLOCK_FUNC(ReadUnlock)(TRWLock *lock) { if (lock == NULL) return STATUS_CONST(INVALID_ARGUMENT); return pthread_rwlock_unlock(&lock->native) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR); }
+inline static OPSTATUS RWLOCK_FUNC(WriteLock)(TRWLock *lock) { if (lock == NULL) return STATUS_CONST(INVALID_ARGUMENT); return pthread_rwlock_wrlock(&lock->native) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR); }
+inline static OPSTATUS RWLOCK_FUNC(TryWriteLock)(TRWLock *lock, bool *acquired) {
+  int result;
+  if (lock == NULL || acquired == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  result = pthread_rwlock_trywrlock(&lock->native);
+  if (result == 0) { *acquired = true; return STATUS_CONST(SUCCESS); }
+  if (result == EBUSY) { *acquired = false; return STATUS_CONST(SUCCESS); }
+  return STATUS_CONST(GENERIC_ERROR);
+}
+inline static OPSTATUS RWLOCK_FUNC(WriteUnlock)(TRWLock *lock) { if (lock == NULL) return STATUS_CONST(INVALID_ARGUMENT); return pthread_rwlock_unlock(&lock->native) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR); }
+#elif OS_WINDOWS
+inline static OPSTATUS RWLOCK_FUNC(Init)(TRWLock *lock) { if (lock == NULL) return STATUS_CONST(INVALID_ARGUMENT); InitializeSRWLock(&lock->native); return STATUS_CONST(SUCCESS); }
+inline static OPSTATUS RWLOCK_FUNC(Destroy)(TRWLock *lock) { return lock == NULL ? STATUS_CONST(INVALID_ARGUMENT) : STATUS_CONST(SUCCESS); }
+inline static OPSTATUS RWLOCK_FUNC(ReadLock)(TRWLock *lock) { if (lock == NULL) return STATUS_CONST(INVALID_ARGUMENT); AcquireSRWLockShared(&lock->native); return STATUS_CONST(SUCCESS); }
+inline static OPSTATUS RWLOCK_FUNC(TryReadLock)(TRWLock *lock, bool *acquired) {
+  if (lock == NULL || acquired == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  *acquired = TryAcquireSRWLockShared(&lock->native) != 0;
+  return STATUS_CONST(SUCCESS);
+}
+inline static OPSTATUS RWLOCK_FUNC(ReadUnlock)(TRWLock *lock) { if (lock == NULL) return STATUS_CONST(INVALID_ARGUMENT); ReleaseSRWLockShared(&lock->native); return STATUS_CONST(SUCCESS); }
+inline static OPSTATUS RWLOCK_FUNC(WriteLock)(TRWLock *lock) { if (lock == NULL) return STATUS_CONST(INVALID_ARGUMENT); AcquireSRWLockExclusive(&lock->native); return STATUS_CONST(SUCCESS); }
+inline static OPSTATUS RWLOCK_FUNC(TryWriteLock)(TRWLock *lock, bool *acquired) {
+  if (lock == NULL || acquired == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  *acquired = TryAcquireSRWLockExclusive(&lock->native) != 0;
+  return STATUS_CONST(SUCCESS);
+}
+inline static OPSTATUS RWLOCK_FUNC(WriteUnlock)(TRWLock *lock) { if (lock == NULL) return STATUS_CONST(INVALID_ARGUMENT); ReleaseSRWLockExclusive(&lock->native); return STATUS_CONST(SUCCESS); }
+#endif

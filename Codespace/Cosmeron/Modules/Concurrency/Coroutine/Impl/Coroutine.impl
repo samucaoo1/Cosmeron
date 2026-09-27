@@ -1,0 +1,60 @@
+#pragma once
+
+inline static OPSTATUS COROUTINE_FUNC(Init)(TCoroutine *coroutine,
+                                      TCoroutineFunction function,
+                                      void *argument) {
+  if (coroutine == NULL || function == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  coroutine->function = function;
+  coroutine->argument = argument;
+  coroutine->continuation = 0u;
+  coroutine->state = CONCURRENCY_COROUTINE_STATE_READY;
+  return STATUS_CONST(SUCCESS);
+}
+
+inline static OPSTATUS COROUTINE_FUNC(Resume)(TCoroutine *coroutine) {
+  if (coroutine == NULL || coroutine->function == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (coroutine->state == CONCURRENCY_COROUTINE_STATE_RUNNING)
+    return STATUS_CONST(BUSY);
+  if (coroutine->state == CONCURRENCY_COROUTINE_STATE_FINISHED)
+    return STATUS_CONST(NOT_AVAILABLE);
+
+  coroutine->function(coroutine, coroutine->argument);
+  return STATUS_CONST(SUCCESS);
+}
+
+inline static OPSTATUS COROUTINE_FUNC(Reset)(TCoroutine *coroutine) {
+  if (coroutine == NULL || coroutine->function == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (coroutine->state == CONCURRENCY_COROUTINE_STATE_RUNNING)
+    return STATUS_CONST(BUSY);
+
+  coroutine->continuation = 0u;
+  coroutine->state = CONCURRENCY_COROUTINE_STATE_READY;
+  return STATUS_CONST(SUCCESS);
+}
+
+inline static TCoroutineState
+COROUTINE_FUNC(GetState)(const TCoroutine *coroutine) {
+  return coroutine == NULL ? CONCURRENCY_COROUTINE_STATE_FINISHED : coroutine->state;
+}
+
+inline static bool COROUTINE_FUNC(IsReady)(const TCoroutine *coroutine) {
+  return coroutine != NULL && coroutine->state == CONCURRENCY_COROUTINE_STATE_READY;
+}
+
+inline static bool COROUTINE_FUNC(IsRunning)(const TCoroutine *coroutine) {
+  return coroutine != NULL && coroutine->state == CONCURRENCY_COROUTINE_STATE_RUNNING;
+}
+
+inline static bool COROUTINE_FUNC(IsSuspended)(const TCoroutine *coroutine) {
+  return coroutine != NULL && coroutine->state == CONCURRENCY_COROUTINE_STATE_SUSPENDED;
+}
+
+inline static bool COROUTINE_FUNC(IsFinished)(const TCoroutine *coroutine) {
+  return coroutine != NULL && coroutine->state == CONCURRENCY_COROUTINE_STATE_FINISHED;
+}
+
+/* EOF */

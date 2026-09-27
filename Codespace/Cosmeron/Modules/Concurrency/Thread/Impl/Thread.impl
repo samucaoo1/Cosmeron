@@ -1,0 +1,151 @@
+#pragma once
+
+#include "../Thread.h"
+#include "../../../../Core/Memory/Alloc.h"
+
+#if OS_POSIX
+
+#include <sched.h>
+
+typedef struct InternalType_ThreadStart {
+  TThreadFunction function;
+  void *argument;
+} InternalType_ThreadStart;
+
+inline static void *ConcurrencyInternal_Thread_Start(void *opaque) {
+  InternalType_ThreadStart *start = (InternalType_ThreadStart *)opaque;
+  TThreadFunction function = start->function;
+  void *argument = start->argument;
+  Memory_Free(start);
+  function(argument);
+  return NULL;
+}
+
+inline static OPSTATUS THREAD_FUNC(Create)(TThread *thread, TThreadFunction function,
+                                     void *argument) {
+  if (thread == NULL || function == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  InternalType_ThreadStart *start;
+  {
+    void *allocated = NULL;
+    if (ALLOC_FUNC(AllocBytes)(&allocated, sizeof(*start)) != STATUS_CONST(SUCCESS))
+      return STATUS_CONST(OUT_OF_MEMORY);
+    start = (InternalType_ThreadStart *)allocated;
+  }
+  start->function = function;
+  start->argument = argument;
+  if (pthread_create(&thread->native, NULL, ConcurrencyInternal_Thread_Start, start) != 0) {
+    Memory_Free(start);
+    thread->joinable = false;
+    return STATUS_CONST(GENERIC_ERROR);
+  }
+  thread->joinable = true;
+  return STATUS_CONST(SUCCESS);
+}
+
+inline static OPSTATUS THREAD_FUNC(Join)(TThread *thread) {
+  if (thread == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (!thread->joinable)
+    return STATUS_CONST(NOT_AVAILABLE);
+  if (pthread_join(thread->native, NULL) != 0)
+    return STATUS_CONST(GENERIC_ERROR);
+  thread->joinable = false;
+  return STATUS_CONST(SUCCESS);
+}
+
+inline static OPSTATUS THREAD_FUNC(Detach)(TThread *thread) {
+  if (thread == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (!thread->joinable)
+    return STATUS_CONST(NOT_AVAILABLE);
+  if (pthread_detach(thread->native) != 0)
+    return STATUS_CONST(GENERIC_ERROR);
+  thread->joinable = false;
+  return STATUS_CONST(SUCCESS);
+}
+
+inline static void THREAD_FUNC(Yield)(void) { (void)sched_yield(); }
+
+inline static TThreadNative THREAD_FUNC(Current)(void) { return pthread_self(); }
+
+inline static bool THREAD_FUNC(Equal)(TThreadNative first,
+                                    TThreadNative second) {
+  return pthread_equal(first, second) != 0;
+}
+
+#elif OS_WINDOWS
+
+typedef struct InternalType_ThreadStart {
+  TThreadFunction function;
+  void *argument;
+} InternalType_ThreadStart;
+
+inline static DWORD WINAPI ConcurrencyInternal_Thread_Start(LPVOID opaque) {
+  InternalType_ThreadStart *start = (InternalType_ThreadStart *)opaque;
+  TThreadFunction function = start->function;
+  void *argument = start->argument;
+  Memory_Free(start);
+  function(argument);
+  return 0;
+}
+
+inline static OPSTATUS THREAD_FUNC(Create)(TThread *thread, TThreadFunction function,
+                                     void *argument) {
+  InternalType_ThreadStart *start;
+  if (thread == NULL || function == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  {
+    void *allocated = NULL;
+    if (ALLOC_FUNC(AllocBytes)(&allocated, sizeof(*start)) != STATUS_CONST(SUCCESS))
+      return STATUS_CONST(OUT_OF_MEMORY);
+    start = (InternalType_ThreadStart *)allocated;
+  }
+  start->function = function;
+  start->argument = argument;
+  thread->native = CreateThread(NULL, 0, ConcurrencyInternal_Thread_Start, start, 0,
+                                NULL);
+  if (thread->native == NULL) {
+    Memory_Free(start);
+    thread->joinable = false;
+    return STATUS_CONST(GENERIC_ERROR);
+  }
+  thread->joinable = true;
+  return STATUS_CONST(SUCCESS);
+}
+
+inline static OPSTATUS THREAD_FUNC(Join)(TThread *thread) {
+  if (thread == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (!thread->joinable)
+    return STATUS_CONST(NOT_AVAILABLE);
+  if (WaitForSingleObject(thread->native, INFINITE) != WAIT_OBJECT_0)
+    return STATUS_CONST(GENERIC_ERROR);
+  CloseHandle(thread->native);
+  thread->joinable = false;
+  return STATUS_CONST(SUCCESS);
+}
+
+inline static OPSTATUS THREAD_FUNC(Detach)(TThread *thread) {
+  if (thread == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (!thread->joinable)
+    return STATUS_CONST(NOT_AVAILABLE);
+  if (!CloseHandle(thread->native))
+    return STATUS_CONST(GENERIC_ERROR);
+  thread->joinable = false;
+  return STATUS_CONST(SUCCESS);
+}
+
+inline static void THREAD_FUNC(Yield)(void) { SwitchToThread(); }
+
+inline static TThreadNative THREAD_FUNC(Current)(void) {
+  return GetCurrentThread();
+}
+
+inline static bool THREAD_FUNC(Equal)(TThreadNative first,
+                                    TThreadNative second) {
+  return GetThreadId(first) == GetThreadId(second);
+}
+
+#endif

@@ -1,0 +1,59 @@
+#pragma once
+
+#include "../Mutex.h"
+
+#if OS_POSIX
+#include <errno.h>
+inline static OPSTATUS MUTEX_FUNC(Init)(TMutex *mutex) {
+  if (mutex == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  return pthread_mutex_init(&mutex->native, NULL) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR);
+}
+inline static OPSTATUS MUTEX_FUNC(Destroy)(TMutex *mutex) {
+  if (mutex == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  return pthread_mutex_destroy(&mutex->native) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(BUSY);
+}
+inline static OPSTATUS MUTEX_FUNC(Lock)(TMutex *mutex) {
+  if (mutex == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  return pthread_mutex_lock(&mutex->native) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR);
+}
+inline static OPSTATUS MUTEX_FUNC(TryLock)(TMutex *mutex, bool *acquired) {
+  int result;
+  if (mutex == NULL || acquired == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  result = pthread_mutex_trylock(&mutex->native);
+  if (result == 0) {
+    *acquired = true;
+    return STATUS_CONST(SUCCESS);
+  }
+  if (result == EBUSY) {
+    *acquired = false;
+    return STATUS_CONST(SUCCESS);
+  }
+  return STATUS_CONST(GENERIC_ERROR);
+}
+inline static OPSTATUS MUTEX_FUNC(Unlock)(TMutex *mutex) {
+  if (mutex == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  return pthread_mutex_unlock(&mutex->native) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR);
+}
+#elif OS_WINDOWS
+inline static OPSTATUS MUTEX_FUNC(Init)(TMutex *mutex) {
+  if (mutex == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  InitializeSRWLock(&mutex->native);
+  return STATUS_CONST(SUCCESS);
+}
+inline static OPSTATUS MUTEX_FUNC(Destroy)(TMutex *mutex) { return mutex == NULL ? STATUS_CONST(INVALID_ARGUMENT) : STATUS_CONST(SUCCESS); }
+inline static OPSTATUS MUTEX_FUNC(Lock)(TMutex *mutex) {
+  if (mutex == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  AcquireSRWLockExclusive(&mutex->native);
+  return STATUS_CONST(SUCCESS);
+}
+inline static OPSTATUS MUTEX_FUNC(TryLock)(TMutex *mutex, bool *acquired) {
+  if (mutex == NULL || acquired == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  *acquired = TryAcquireSRWLockExclusive(&mutex->native) != 0;
+  return STATUS_CONST(SUCCESS);
+}
+inline static OPSTATUS MUTEX_FUNC(Unlock)(TMutex *mutex) {
+  if (mutex == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  ReleaseSRWLockExclusive(&mutex->native);
+  return STATUS_CONST(SUCCESS);
+}
+#endif

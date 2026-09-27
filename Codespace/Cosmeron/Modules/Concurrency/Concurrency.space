@@ -1,0 +1,32 @@
+#pragma once
+
+#include "../../Core/Preprocessor/Detect/OperationSystem.h"
+
+#include "../../Core/Namespace.h"
+#include "../../Core/Preprocessor/Compiling.inc"
+#include "../../Core/Preprocessor/Detect/Compiler.h"
+#include "../../Core/Preprocessor/Detect/OperationSystem.h"
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#define CONCURRENCY_MOD(NAME) GNS2(LIB_PREFIX(Concurrency), NAME)
+#define CONCURRENCY_FUNC(SPACE, NAME) GNS2(CONCURRENCY_MOD(SPACE), NAME)
+#define CONCURRENCY_TYPE(NAME) GNS2(LIB_PREFIX(Concurrency), NAME)
+#define CONCURRENCY_CONST(SPACE, NAME) GNS3(LIB_PREFIX_CONST(CONCURRENCY), SPACE, NAME)
+
+#define ATOMIC_FUNC(NAME) CONCURRENCY_FUNC(Atomic, NAME)
+#define THREAD_FUNC(NAME) CONCURRENCY_FUNC(Thread, NAME)
+#define COROUTINE_FUNC(NAME) CONCURRENCY_FUNC(Coroutine, NAME)
+#define MUTEX_FUNC(NAME) CONCURRENCY_FUNC(Mutex, NAME)
+#define RWLOCK_FUNC(NAME) CONCURRENCY_FUNC(RWLock, NAME)
+#define CONDITION_FUNC(NAME) CONCURRENCY_FUNC(Condition, NAME)
+#define ONCE_FUNC(NAME) CONCURRENCY_FUNC(Once, NAME)
+#define SEMAPHORE_FUNC(NAME) CONCURRENCY_FUNC(Semaphore, NAME)
+#define BARRIER_FUNC(NAME) CONCURRENCY_FUNC(Barrier, NAME)
+#define TASK_FUNC(NAME) CONCURRENCY_FUNC(Task, NAME)
+#define THREAD_POOL_FUNC(NAME) CONCURRENCY_FUNC(ThreadPool, NAME)
+#define FUTURE_FUNC(NAME) CONCURRENCY_FUNC(Future, NAME)
+
+/* EOF */

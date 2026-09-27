@@ -1,0 +1,82 @@
+#pragma once
+
+#include "../../Concurrency.space"
+
+#if COMPILER_GCC || COMPILER_CLANG
+
+#define ATOMIC_IMPLEMENT_SCALAR(TYPE, SUFFIX)                                  \
+  inline static TYPE ATOMIC_FUNC(SUFFIX##_Load)(                                 \
+      const TAtomic##SUFFIX *atomic, TMemoryOrder order) {                   \
+    return __atomic_load_n(&atomic->value, order);                             \
+  }                                                                            \
+  inline static void ATOMIC_FUNC(SUFFIX##_Store)(TAtomic##SUFFIX *atomic,       \
+                                                TYPE value,                     \
+                                                TMemoryOrder order) {          \
+    __atomic_store_n(&atomic->value, value, order);                            \
+  }                                                                            \
+  inline static TYPE ATOMIC_FUNC(SUFFIX##_Exchange)(TAtomic##SUFFIX *atomic,    \
+                                                   TYPE value,                  \
+                                                   TMemoryOrder order) {       \
+    return __atomic_exchange_n(&atomic->value, value, order);                  \
+  }                                                                            \
+  inline static bool ATOMIC_FUNC(SUFFIX##_CompareExchange)(                      \
+      TAtomic##SUFFIX *atomic, TYPE *expected, TYPE desired,                  \
+      TMemoryOrder success, TMemoryOrder failure) {                          \
+    return __atomic_compare_exchange_n(&atomic->value, expected, desired,      \
+                                       false, success, failure);                \
+  }
+
+#define ATOMIC_IMPLEMENT_FETCH(TYPE, SUFFIX)                                   \
+  inline static TYPE ATOMIC_FUNC(SUFFIX##_FetchAdd)(TAtomic##SUFFIX *atomic,    \
+                                                   TYPE value,                  \
+                                                   TMemoryOrder order) {       \
+    return __atomic_fetch_add(&atomic->value, value, order);                   \
+  }                                                                            \
+  inline static TYPE ATOMIC_FUNC(SUFFIX##_FetchSub)(TAtomic##SUFFIX *atomic,    \
+                                                   TYPE value,                  \
+                                                   TMemoryOrder order) {       \
+    return __atomic_fetch_sub(&atomic->value, value, order);                   \
+  }                                                                            \
+  inline static TYPE ATOMIC_FUNC(SUFFIX##_FetchAnd)(TAtomic##SUFFIX *atomic,    \
+                                                   TYPE value,                  \
+                                                   TMemoryOrder order) {       \
+    return __atomic_fetch_and(&atomic->value, value, order);                   \
+  }                                                                            \
+  inline static TYPE ATOMIC_FUNC(SUFFIX##_FetchOr)(TAtomic##SUFFIX *atomic,     \
+                                                  TYPE value,                   \
+                                                  TMemoryOrder order) {        \
+    return __atomic_fetch_or(&atomic->value, value, order);                    \
+  }                                                                            \
+  inline static TYPE ATOMIC_FUNC(SUFFIX##_FetchXor)(TAtomic##SUFFIX *atomic,    \
+                                                   TYPE value,                  \
+                                                   TMemoryOrder order) {       \
+    return __atomic_fetch_xor(&atomic->value, value, order);                   \
+  }
+
+ATOMIC_IMPLEMENT_SCALAR(uint32_t, U32)
+ATOMIC_IMPLEMENT_SCALAR(uintptr_t, Ptr)
+ATOMIC_IMPLEMENT_FETCH(uint32_t, U32)
+#if CONCURRENCY_HAS_ATOMIC_U64
+ATOMIC_IMPLEMENT_SCALAR(uint64_t, U64)
+ATOMIC_IMPLEMENT_FETCH(uint64_t, U64)
+#endif
+
+inline static bool ATOMIC_FUNC(Bool_Load)(const TAtomicBool *atomic,
+                                        TMemoryOrder order) {
+  return __atomic_load_n(&atomic->value, order) != 0;
+}
+
+inline static void ATOMIC_FUNC(Bool_Store)(TAtomicBool *atomic, bool value,
+                                         TMemoryOrder order) {
+  __atomic_store_n(&atomic->value, (uint32_t)value, order);
+}
+
+inline static bool ATOMIC_FUNC(Bool_Exchange)(TAtomicBool *atomic, bool value,
+                                             TMemoryOrder order) {
+  return __atomic_exchange_n(&atomic->value, (uint32_t)value, order) != 0;
+}
+
+#undef ATOMIC_IMPLEMENT_FETCH
+#undef ATOMIC_IMPLEMENT_SCALAR
+
+#endif

@@ -1,0 +1,43 @@
+#pragma once
+
+#if OS_WINDOWS
+#include <windows.h>
+#else
+#include <errno.h>
+#include <time.h>
+#endif
+
+THREAD_SLEEP_FOR_PROTOTYPE {
+  if (duration.nanoseconds < 0)
+    return STATUS_CONST(INVALID_ARGUMENT);
+#if OS_WINDOWS
+  DWORD milliseconds =
+      (DWORD)((duration.nanoseconds +
+               CHRONOMETRY_NANOSECONDS_PER_MILLISECOND - 1) /
+              CHRONOMETRY_NANOSECONDS_PER_MILLISECOND);
+  Sleep(milliseconds);
+#else
+  struct timespec request = {
+      (time_t)(duration.nanoseconds / CHRONOMETRY_NANOSECONDS_PER_SECOND),
+      (long)(duration.nanoseconds % CHRONOMETRY_NANOSECONDS_PER_SECOND)};
+  while (nanosleep(&request, &request) != 0) {
+    if (errno != EINTR)
+      return STATUS_CONST(GENERIC_ERROR);
+  }
+#endif
+  return STATUS_CONST(SUCCESS);
+}
+
+THREAD_SLEEP_UNTIL_PROTOTYPE {
+  CHRONOMETRY_TYPE(ClockTimePoint) now;
+  CHRONOMETRY_TYPE(Duration) remaining;
+  OPSTATUS status = CLOCK_FUNC(Now)(&now);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+  if (deadline.nanoseconds <= now.nanoseconds)
+    return STATUS_CONST(SUCCESS);
+  status = CLOCK_FUNC(DurationBetween)(now, deadline, &remaining);
+  return status == STATUS_CONST(SUCCESS) ? THREAD_FUNC(SleepFor)(remaining) : status;
+}
+
+/* EOF */

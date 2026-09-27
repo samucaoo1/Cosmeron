@@ -1,0 +1,61 @@
+#pragma once
+
+#include "../Semaphore.h"
+
+inline static OPSTATUS SEMAPHORE_FUNC(Init)(TSemaphore *semaphore, unsigned value) {
+  if (semaphore == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  { OPSTATUS status = MUTEX_FUNC(Init)(&semaphore->mutex); if (status != STATUS_CONST(SUCCESS)) return status; }
+  { OPSTATUS status = CONDITION_FUNC(Init)(&semaphore->condition); if (status != STATUS_CONST(SUCCESS)) {
+    (void)MUTEX_FUNC(Destroy)(&semaphore->mutex);
+    return status;
+  } }
+  semaphore->value = value;
+  return STATUS_CONST(SUCCESS);
+}
+
+inline static OPSTATUS SEMAPHORE_FUNC(Destroy)(TSemaphore *semaphore) {
+  OPSTATUS status;
+  if (semaphore == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  status = CONDITION_FUNC(Destroy)(&semaphore->condition);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  return MUTEX_FUNC(Destroy)(&semaphore->mutex);
+}
+
+inline static OPSTATUS SEMAPHORE_FUNC(Wait)(TSemaphore *semaphore) {
+  if (semaphore == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  { OPSTATUS status = MUTEX_FUNC(Lock)(&semaphore->mutex); if (status != STATUS_CONST(SUCCESS)) return status; }
+  while (semaphore->value == 0) {
+    { OPSTATUS status = CONDITION_FUNC(Wait)(&semaphore->condition, &semaphore->mutex); if (status != STATUS_CONST(SUCCESS)) {
+      (void)MUTEX_FUNC(Unlock)(&semaphore->mutex);
+      return status;
+    } }
+  }
+  --semaphore->value;
+  return MUTEX_FUNC(Unlock)(&semaphore->mutex);
+}
+
+inline static OPSTATUS SEMAPHORE_FUNC(TryWait)(TSemaphore *semaphore, bool *acquired) {
+  OPSTATUS status;
+  if (semaphore == NULL || acquired == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  *acquired = false;
+  status = MUTEX_FUNC(Lock)(&semaphore->mutex);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  if (semaphore->value != 0U) {
+    --semaphore->value;
+    *acquired = true;
+  }
+  status = MUTEX_FUNC(Unlock)(&semaphore->mutex);
+  return status;
+}
+
+inline static OPSTATUS SEMAPHORE_FUNC(Post)(TSemaphore *semaphore) {
+  if (semaphore == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  { OPSTATUS status = MUTEX_FUNC(Lock)(&semaphore->mutex); if (status != STATUS_CONST(SUCCESS)) return status; }
+  if (semaphore->value == UINT_MAX) {
+    (void)MUTEX_FUNC(Unlock)(&semaphore->mutex);
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  }
+  ++semaphore->value;
+  { OPSTATUS status = CONDITION_FUNC(NotifyOne)(&semaphore->condition); if (status != STATUS_CONST(SUCCESS)) { (void)MUTEX_FUNC(Unlock)(&semaphore->mutex); return status; } }
+  return MUTEX_FUNC(Unlock)(&semaphore->mutex);
+}

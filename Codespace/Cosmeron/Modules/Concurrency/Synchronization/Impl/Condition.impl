@@ -1,0 +1,15 @@
+#pragma once
+#include "../Condition.h"
+#if OS_POSIX
+inline static OPSTATUS CONDITION_FUNC(Init)(TCondition *condition) { if (condition == NULL) return STATUS_CONST(INVALID_ARGUMENT); return pthread_cond_init(&condition->native, NULL) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR); }
+inline static OPSTATUS CONDITION_FUNC(Destroy)(TCondition *condition) { if (condition == NULL) return STATUS_CONST(INVALID_ARGUMENT); return pthread_cond_destroy(&condition->native) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(BUSY); }
+inline static OPSTATUS CONDITION_FUNC(Wait)(TCondition *condition, TMutex *mutex) { if (condition == NULL || mutex == NULL) return STATUS_CONST(INVALID_ARGUMENT); return pthread_cond_wait(&condition->native, &mutex->native) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR); }
+inline static OPSTATUS CONDITION_FUNC(NotifyOne)(TCondition *condition) { if (condition == NULL) return STATUS_CONST(INVALID_ARGUMENT); return pthread_cond_signal(&condition->native) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR); }
+inline static OPSTATUS CONDITION_FUNC(NotifyAll)(TCondition *condition) { if (condition == NULL) return STATUS_CONST(INVALID_ARGUMENT); return pthread_cond_broadcast(&condition->native) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR); }
+#elif OS_WINDOWS
+inline static OPSTATUS CONDITION_FUNC(Init)(TCondition *condition) { if (condition == NULL) return STATUS_CONST(INVALID_ARGUMENT); InitializeConditionVariable(&condition->native); return STATUS_CONST(SUCCESS); }
+inline static OPSTATUS CONDITION_FUNC(Destroy)(TCondition *condition) { return condition == NULL ? STATUS_CONST(INVALID_ARGUMENT) : STATUS_CONST(SUCCESS); }
+inline static OPSTATUS CONDITION_FUNC(Wait)(TCondition *condition, TMutex *mutex) { if (condition == NULL || mutex == NULL) return STATUS_CONST(INVALID_ARGUMENT); return SleepConditionVariableSRW(&condition->native, &mutex->native, INFINITE, 0) != 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR); }
+inline static OPSTATUS CONDITION_FUNC(NotifyOne)(TCondition *condition) { if (condition == NULL) return STATUS_CONST(INVALID_ARGUMENT); WakeConditionVariable(&condition->native); return STATUS_CONST(SUCCESS); }
+inline static OPSTATUS CONDITION_FUNC(NotifyAll)(TCondition *condition) { if (condition == NULL) return STATUS_CONST(INVALID_ARGUMENT); WakeAllConditionVariable(&condition->native); return STATUS_CONST(SUCCESS); }
+#endif

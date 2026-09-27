@@ -1,0 +1,212 @@
+#pragma once
+
+#include <intrin.h>
+#include <windows.h>
+
+typedef struct { volatile LONG value; } TAtomicU32;
+#if defined(_M_X64) || defined(_M_ARM64)
+#define CONCURRENCY_HAS_ATOMIC_U64 1
+typedef struct { volatile LONG64 value; } TAtomicU64;
+#else
+#define CONCURRENCY_HAS_ATOMIC_U64 0
+#endif
+#define CONCURRENCY_HAS_ATOMIC_PTR 1
+typedef struct { void *volatile value; } TAtomicPtr;
+typedef struct { volatile LONG value; } TAtomicBool;
+
+typedef enum TMemoryOrder {
+  CONCURRENCY_ATOMIC_MEMORY_ORDER_RELAXED,
+  CONCURRENCY_ATOMIC_MEMORY_ORDER_ACQUIRE,
+  CONCURRENCY_ATOMIC_MEMORY_ORDER_RELEASE,
+  CONCURRENCY_ATOMIC_MEMORY_ORDER_ACQ_REL,
+  CONCURRENCY_ATOMIC_MEMORY_ORDER_SEQ_CST
+} TMemoryOrder;
+
+#define ATOMIC_U32_INIT(VALUE) { (LONG)(VALUE) }
+#if CONCURRENCY_HAS_ATOMIC_U64
+#define ATOMIC_U64_INIT(VALUE) { (LONG64)(VALUE) }
+#endif
+#define ATOMIC_PTR_INIT(VALUE) { (void *)(VALUE) }
+#define ATOMIC_BOOL_INIT(VALUE) { (LONG)((VALUE) != false) }
+
+/*
+ * MSVC's Interlocked family is intentionally used instead of C11 atomics.
+ * This keeps the backend header-only and avoids an external atomic runtime.
+ * The operations provide at least the ordering requested by this portable API;
+ * on this backend some weaker orders may therefore be implemented more strongly.
+ */
+
+inline static uint32_t ATOMIC_FUNC(U32_Load)(const TAtomicU32 *atomic,
+                                           TMemoryOrder order) {
+  (void)order;
+  return (uint32_t)_InterlockedCompareExchange(
+      (volatile LONG *)&atomic->value, 0, 0);
+}
+inline static void ATOMIC_FUNC(U32_Store)(TAtomicU32 *atomic, uint32_t value,
+                                        TMemoryOrder order) {
+  (void)order;
+  (void)_InterlockedExchange(&atomic->value, (LONG)value);
+}
+inline static uint32_t ATOMIC_FUNC(U32_Exchange)(TAtomicU32 *atomic,
+                                               uint32_t value,
+                                               TMemoryOrder order) {
+  (void)order;
+  return (uint32_t)_InterlockedExchange(&atomic->value, (LONG)value);
+}
+inline static bool ATOMIC_FUNC(U32_CompareExchange)(TAtomicU32 *atomic,
+                                                   uint32_t *expected,
+                                                   uint32_t desired,
+                                                   TMemoryOrder success,
+                                                   TMemoryOrder failure) {
+  LONG old;
+  (void)success;
+  (void)failure;
+  old = _InterlockedCompareExchange(&atomic->value, (LONG)desired,
+                                    (LONG)*expected);
+  if ((uint32_t)old == *expected)
+    return true;
+  *expected = (uint32_t)old;
+  return false;
+}
+inline static uint32_t ATOMIC_FUNC(U32_FetchAdd)(TAtomicU32 *atomic,
+                                                uint32_t value,
+                                                TMemoryOrder order) {
+  (void)order;
+  return (uint32_t)_InterlockedExchangeAdd(&atomic->value, (LONG)value);
+}
+inline static uint32_t ATOMIC_FUNC(U32_FetchSub)(TAtomicU32 *atomic,
+                                                uint32_t value,
+                                                TMemoryOrder order) {
+  return ATOMIC_FUNC(U32_FetchAdd)(atomic, (uint32_t)(0u - value), order);
+}
+inline static uint32_t ATOMIC_FUNC(U32_FetchAnd)(TAtomicU32 *atomic,
+                                                uint32_t value,
+                                                TMemoryOrder order) {
+  (void)order;
+  return (uint32_t)_InterlockedAnd(&atomic->value, (LONG)value);
+}
+inline static uint32_t ATOMIC_FUNC(U32_FetchOr)(TAtomicU32 *atomic,
+                                               uint32_t value,
+                                               TMemoryOrder order) {
+  (void)order;
+  return (uint32_t)_InterlockedOr(&atomic->value, (LONG)value);
+}
+inline static uint32_t ATOMIC_FUNC(U32_FetchXor)(TAtomicU32 *atomic,
+                                                uint32_t value,
+                                                TMemoryOrder order) {
+  (void)order;
+  return (uint32_t)_InterlockedXor(&atomic->value, (LONG)value);
+}
+
+#if CONCURRENCY_HAS_ATOMIC_U64
+inline static uint64_t ATOMIC_FUNC(U64_Load)(const TAtomicU64 *atomic,
+                                           TMemoryOrder order) {
+  (void)order;
+  return (uint64_t)_InterlockedCompareExchange64(
+      (volatile LONG64 *)&atomic->value, 0, 0);
+}
+inline static void ATOMIC_FUNC(U64_Store)(TAtomicU64 *atomic, uint64_t value,
+                                        TMemoryOrder order) {
+  (void)order;
+  (void)_InterlockedExchange64(&atomic->value, (LONG64)value);
+}
+inline static uint64_t ATOMIC_FUNC(U64_Exchange)(TAtomicU64 *atomic,
+                                               uint64_t value,
+                                               TMemoryOrder order) {
+  (void)order;
+  return (uint64_t)_InterlockedExchange64(&atomic->value, (LONG64)value);
+}
+inline static bool ATOMIC_FUNC(U64_CompareExchange)(TAtomicU64 *atomic,
+                                                   uint64_t *expected,
+                                                   uint64_t desired,
+                                                   TMemoryOrder success,
+                                                   TMemoryOrder failure) {
+  LONG64 old;
+  (void)success;
+  (void)failure;
+  old = _InterlockedCompareExchange64(&atomic->value, (LONG64)desired,
+                                      (LONG64)*expected);
+  if ((uint64_t)old == *expected)
+    return true;
+  *expected = (uint64_t)old;
+  return false;
+}
+inline static uint64_t ATOMIC_FUNC(U64_FetchAdd)(TAtomicU64 *atomic,
+                                                uint64_t value,
+                                                TMemoryOrder order) {
+  (void)order;
+  return (uint64_t)_InterlockedExchangeAdd64(&atomic->value, (LONG64)value);
+}
+inline static uint64_t ATOMIC_FUNC(U64_FetchSub)(TAtomicU64 *atomic,
+                                                uint64_t value,
+                                                TMemoryOrder order) {
+  return ATOMIC_FUNC(U64_FetchAdd)(atomic, (uint64_t)(0ull - value), order);
+}
+inline static uint64_t ATOMIC_FUNC(U64_FetchAnd)(TAtomicU64 *atomic,
+                                                uint64_t value,
+                                                TMemoryOrder order) {
+  (void)order;
+  return (uint64_t)_InterlockedAnd64(&atomic->value, (LONG64)value);
+}
+inline static uint64_t ATOMIC_FUNC(U64_FetchOr)(TAtomicU64 *atomic,
+                                               uint64_t value,
+                                               TMemoryOrder order) {
+  (void)order;
+  return (uint64_t)_InterlockedOr64(&atomic->value, (LONG64)value);
+}
+inline static uint64_t ATOMIC_FUNC(U64_FetchXor)(TAtomicU64 *atomic,
+                                                uint64_t value,
+                                                TMemoryOrder order) {
+  (void)order;
+  return (uint64_t)_InterlockedXor64(&atomic->value, (LONG64)value);
+}
+#endif
+
+inline static uintptr_t ATOMIC_FUNC(Ptr_Load)(const TAtomicPtr *atomic,
+                                            TMemoryOrder order) {
+  (void)order;
+  return (uintptr_t)_InterlockedCompareExchangePointer(
+      (void *volatile *)&atomic->value, NULL, NULL);
+}
+inline static void ATOMIC_FUNC(Ptr_Store)(TAtomicPtr *atomic, uintptr_t value,
+                                        TMemoryOrder order) {
+  (void)order;
+  (void)_InterlockedExchangePointer(&atomic->value, (void *)value);
+}
+inline static uintptr_t ATOMIC_FUNC(Ptr_Exchange)(TAtomicPtr *atomic,
+                                                uintptr_t value,
+                                                TMemoryOrder order) {
+  (void)order;
+  return (uintptr_t)_InterlockedExchangePointer(&atomic->value, (void *)value);
+}
+inline static bool ATOMIC_FUNC(Ptr_CompareExchange)(TAtomicPtr *atomic,
+                                                  uintptr_t *expected,
+                                                  uintptr_t desired,
+                                                  TMemoryOrder success,
+                                                  TMemoryOrder failure) {
+  void *old;
+  (void)success;
+  (void)failure;
+  old = _InterlockedCompareExchangePointer(&atomic->value, (void *)desired,
+                                           (void *)*expected);
+  if ((uintptr_t)old == *expected)
+    return true;
+  *expected = (uintptr_t)old;
+  return false;
+}
+
+inline static bool ATOMIC_FUNC(Bool_Load)(const TAtomicBool *atomic,
+                                        TMemoryOrder order) {
+  (void)order;
+  return _InterlockedCompareExchange((volatile LONG *)&atomic->value, 0, 0) != 0;
+}
+inline static void ATOMIC_FUNC(Bool_Store)(TAtomicBool *atomic, bool value,
+                                         TMemoryOrder order) {
+  (void)order;
+  (void)_InterlockedExchange(&atomic->value, (LONG)value);
+}
+inline static bool ATOMIC_FUNC(Bool_Exchange)(TAtomicBool *atomic, bool value,
+                                             TMemoryOrder order) {
+  (void)order;
+  return _InterlockedExchange(&atomic->value, (LONG)value) != 0;
+}

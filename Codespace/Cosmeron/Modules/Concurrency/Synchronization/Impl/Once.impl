@@ -1,0 +1,34 @@
+#pragma once
+
+#include "../Once.h"
+
+#if OS_POSIX
+inline static OPSTATUS ONCE_FUNC(Call)(TOnce *once, TOnceFunction function) {
+  if (once == NULL || function == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  return pthread_once(&once->native, function) == 0
+             ? STATUS_CONST(SUCCESS)
+             : STATUS_CONST(GENERIC_ERROR);
+}
+#elif OS_WINDOWS
+typedef struct TOnce_Call {
+  TOnceFunction function;
+} TOnce_Call;
+
+inline static BOOL CALLBACK ConcurrencyInternal_Once_Callback(
+    PINIT_ONCE once, PVOID parameter, PVOID *context) {
+  TOnce_Call *call = (TOnce_Call *)parameter;
+  (void)once;
+  (void)context;
+  call->function();
+  return TRUE;
+}
+inline static OPSTATUS ONCE_FUNC(Call)(TOnce *once, TOnceFunction function) {
+  TOnce_Call call;
+  if (once == NULL || function == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  call.function = function;
+  return InitOnceExecuteOnce(&once->native, ConcurrencyInternal_Once_Callback,
+                             &call, NULL) != 0
+             ? STATUS_CONST(SUCCESS)
+             : STATUS_CONST(GENERIC_ERROR);
+}
+#endif

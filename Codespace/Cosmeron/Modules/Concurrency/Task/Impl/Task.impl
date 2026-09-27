@@ -1,0 +1,19 @@
+#pragma once
+#include "../Task.h"
+
+inline static TTask TASK_FUNC(Create)(TTaskFunction function, void *argument) {
+  TTask task;
+  task.function = function;
+  task.argument = argument;
+  return task;
+}
+
+inline static bool TASK_FUNC(IsValid)(const TTask *task) {
+  return task != NULL && task->function != NULL;
+}
+
+inline static OPSTATUS TASK_FUNC(Run)(const TTask *task) {
+  if (!TASK_FUNC(IsValid)(task)) return STATUS_CONST(INVALID_ARGUMENT);
+  task->function(task->argument);
+  return STATUS_CONST(SUCCESS);
+}
