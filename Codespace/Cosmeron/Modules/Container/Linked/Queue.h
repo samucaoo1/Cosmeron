@@ -83,7 +83,7 @@
  * Complete Declaration
  * ============================================================ */
 
-#define LINKED_QUEUE_DECLARE(TYPE, SUFFIX)                                     \
+#define LINKED_QUEUE_IMPLEMENT_ALL(TYPE, SUFFIX)                                     \
   SINGLE_LINKED_NODE_STRUCT(TYPE, SUFFIX, Linked_Queue)                        \
   LINKED_QUEUE_STRUCT(TYPE, SUFFIX)                                            \
   LINKED_QUEUE_INIT_PROTOTYPE(SUFFIX);                                \
@@ -96,7 +96,7 @@
   LINKED_QUEUE_EMPTY_PROTOTYPE(SUFFIX);                               \
   LINKED_QUEUE_SIZE_PROTOTYPE(SUFFIX);                                \
   LINKED_QUEUE_IMPLEMENT(TYPE, SUFFIX)                                         \
-  LINKED_QUEUE_FUNCTION_TABLE(TYPE, SUFFIX)                                  \
+  LINKED_QUEUE_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                                  \
   LINKED_QUEUE_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)
 
 /* ============================================================
@@ -114,8 +114,8 @@
 /* ============================================================
  * Instanciações
  * ============================================================ */
-LINKED_QUEUE_DECLARE(int, int)
-LINKED_QUEUE_DECLARE(float, float)
-LINKED_QUEUE_DECLARE(double, double)
-LINKED_QUEUE_DECLARE(char, char)
+LINKED_QUEUE_IMPLEMENT_ALL(int, int)
+LINKED_QUEUE_IMPLEMENT_ALL(float, float)
+LINKED_QUEUE_IMPLEMENT_ALL(double, double)
+LINKED_QUEUE_IMPLEMENT_ALL(char, char)
 

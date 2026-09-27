@@ -95,7 +95,7 @@
  * Complete Declaration
  * ============================================================ */
 
-#define LINKED_DEQUE_DECLARE(TYPE, SUFFIX)                                     \
+#define LINKED_DEQUE_IMPLEMENT_ALL(TYPE, SUFFIX)                                     \
   DOUBLE_LINKED_NODE_STRUCT(TYPE, SUFFIX, Linked_Deque)                        \
   LINKED_DEQUE_STRUCT(TYPE, SUFFIX)                                            \
   LINKED_DEQUE_INIT_PROTOTYPE(SUFFIX);                                \
@@ -110,7 +110,7 @@
   LINKED_DEQUE_EMPTY_PROTOTYPE(SUFFIX);                               \
   LINKED_DEQUE_SIZE_PROTOTYPE(SUFFIX);                                \
   LINKED_DEQUE_IMPLEMENT(TYPE, SUFFIX)                                         \
-  LINKED_DEQUE_FUNCTION_TABLE(TYPE, SUFFIX)                                  \
+  LINKED_DEQUE_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                                  \
   LINKED_DEQUE_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)
 
 /* ============================================================
@@ -128,8 +128,8 @@
 /* ============================================================
  * Instanciações
  * ============================================================ */
-LINKED_DEQUE_DECLARE(int, int)
-LINKED_DEQUE_DECLARE(float, float)
-LINKED_DEQUE_DECLARE(double, double)
-LINKED_DEQUE_DECLARE(char, char)
+LINKED_DEQUE_IMPLEMENT_ALL(int, int)
+LINKED_DEQUE_IMPLEMENT_ALL(float, float)
+LINKED_DEQUE_IMPLEMENT_ALL(double, double)
+LINKED_DEQUE_IMPLEMENT_ALL(char, char)
 

@@ -78,7 +78,7 @@
  * Complete Declaration
  * ============================================================ */
 
-#define LINKED_STACK_DECLARE(TYPE, SUFFIX)                                     \
+#define LINKED_STACK_IMPLEMENT_ALL(TYPE, SUFFIX)                                     \
   SINGLE_LINKED_NODE_STRUCT(TYPE, SUFFIX, Linked_Stack)                        \
   LINKED_STACK_STRUCT(TYPE, SUFFIX)                                            \
   LINKED_STACK_INIT_PROTOTYPE(SUFFIX);                                \
@@ -90,7 +90,7 @@
   LINKED_STACK_EMPTY_PROTOTYPE(SUFFIX);                               \
   LINKED_STACK_SIZE_PROTOTYPE(SUFFIX);                                \
   LINKED_STACK_IMPLEMENT(TYPE, SUFFIX)                                         \
-  LINKED_STACK_FUNCTION_TABLE(TYPE, SUFFIX)                                  \
+  LINKED_STACK_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                                  \
   LINKED_STACK_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)
 
 /* ============================================================
@@ -108,8 +108,8 @@
 /* ============================================================
  * Instanciações
  * ============================================================ */
-LINKED_STACK_DECLARE(int, int)
-LINKED_STACK_DECLARE(float, float)
-LINKED_STACK_DECLARE(double, double)
-LINKED_STACK_DECLARE(char, char)
+LINKED_STACK_IMPLEMENT_ALL(int, int)
+LINKED_STACK_IMPLEMENT_ALL(float, float)
+LINKED_STACK_IMPLEMENT_ALL(double, double)
+LINKED_STACK_IMPLEMENT_ALL(char, char)
 

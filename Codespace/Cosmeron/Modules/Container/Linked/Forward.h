@@ -104,7 +104,7 @@
  * Complete Declaration
  * ============================================================ */
 
-#define LINKED_FORWARD_LIST_DECLARE(TYPE, SUFFIX)                              \
+#define LINKED_FORWARD_LIST_IMPLEMENT_ALL(TYPE, SUFFIX)                              \
   SINGLE_LINKED_NODE_STRUCT(TYPE, SUFFIX, Linked_ForwardList)                  \
   LINKED_FORWARD_LIST_STRUCT(TYPE, SUFFIX)                                     \
   LINKED_FORWARD_LIST_INIT_PROTOTYPE(SUFFIX);                         \
@@ -119,7 +119,7 @@
   LINKED_FORWARD_LIST_EMPTY_PROTOTYPE(SUFFIX);                        \
   LINKED_FORWARD_LIST_SIZE_PROTOTYPE(SUFFIX);                         \
   LINKED_FORWARD_LIST_IMPLEMENT(TYPE, SUFFIX)                                  \
-  LINKED_FORWARD_LIST_FUNCTION_TABLE(TYPE, SUFFIX)                           \
+  LINKED_FORWARD_LIST_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                           \
   LINKED_FORWARD_LIST_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)
 
 /* ============================================================
@@ -137,8 +137,8 @@
 /* ============================================================
  * Instanciações
  * ============================================================ */
-LINKED_FORWARD_LIST_DECLARE(int, int)
-LINKED_FORWARD_LIST_DECLARE(float, float)
-LINKED_FORWARD_LIST_DECLARE(double, double)
-LINKED_FORWARD_LIST_DECLARE(char, char)
+LINKED_FORWARD_LIST_IMPLEMENT_ALL(int, int)
+LINKED_FORWARD_LIST_IMPLEMENT_ALL(float, float)
+LINKED_FORWARD_LIST_IMPLEMENT_ALL(double, double)
+LINKED_FORWARD_LIST_IMPLEMENT_ALL(char, char)
 

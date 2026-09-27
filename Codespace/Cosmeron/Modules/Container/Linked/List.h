@@ -119,7 +119,7 @@
 
 #include "FunctionTable/List.h"
 
-#define LINKED_LIST_DECLARE(TYPE, SUFFIX)                                      \
+#define LINKED_LIST_IMPLEMENT_ALL(TYPE, SUFFIX)                                      \
   DOUBLE_LINKED_NODE_STRUCT(TYPE, SUFFIX, Linked_List)                         \
   LINKED_LIST_STRUCT(TYPE, SUFFIX)                                             \
   LINKED_LIST_INIT_PROTOTYPE(SUFFIX);                                 \
@@ -138,7 +138,7 @@
   LINKED_LIST_EMPTY_PROTOTYPE(SUFFIX);                                \
   LINKED_LIST_SIZE_PROTOTYPE(SUFFIX);                                 \
   LINKED_LIST_IMPLEMENT(TYPE, SUFFIX)                                          \
-  LINKED_LIST_FUNCTION_TABLE(TYPE, SUFFIX)                                   \
+  LINKED_LIST_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                                   \
   LINKED_LIST_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)
 
 #define LINKED_LIST_INSTANCE_DECLARE(TYPE, NAME)                                                \
@@ -156,9 +156,9 @@
 /* ============================================================
  * Instantiations
  * ============================================================ */
-LINKED_LIST_DECLARE(int, int)
-LINKED_LIST_DECLARE(float, float)
-LINKED_LIST_DECLARE(double, double)
-LINKED_LIST_DECLARE(char, char)
+LINKED_LIST_IMPLEMENT_ALL(int, int)
+LINKED_LIST_IMPLEMENT_ALL(float, float)
+LINKED_LIST_IMPLEMENT_ALL(double, double)
+LINKED_LIST_IMPLEMENT_ALL(char, char)
 typedef void *void_ptr;
-LINKED_LIST_DECLARE(void_ptr, void_ptr)
+LINKED_LIST_IMPLEMENT_ALL(void_ptr, void_ptr)
