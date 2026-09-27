@@ -1,5 +1,5 @@
 #pragma once
-#include "VTable.h"
+#include "FunctionTable.h"
 #include "Lcg.h"
 #include "Pcg.h"
 #include "Romu.h"
