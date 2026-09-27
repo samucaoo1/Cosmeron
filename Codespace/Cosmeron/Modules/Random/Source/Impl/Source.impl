@@ -3,14 +3,14 @@
 #include <stdint.h>
 
 static inline bool RANDOM_SOURCE_FUNC(_EngineValid)(
-    const RANDOM_ENGINE_VTABLE *engine) {
+    const RANDOM_ENGINE_TYPE(FunctionTable) *engine) {
   return engine != NULL && engine->nextU64 != NULL && engine->seed != NULL &&
          engine->stateSize != 0U && engine->stateAlignment != 0U;
 }
 
-inline static OPSTATUS RANDOM_SOURCE_FUNC(InitWithState)(
-    TRandomSource *source, const RANDOM_ENGINE_VTABLE *engine,
-    void *state, size_t stateSize, uint64_t seed, RANDOM_MIXER_FUNCTION mixer) {
+static inline OPSTATUS RANDOM_SOURCE_FUNC(InitWithState)(
+    RANDOM_SOURCE_TYPE(Value) *source, const RANDOM_ENGINE_TYPE(FunctionTable) *engine,
+    void *state, size_t stateSize, uint64_t seed, RANDOM_MIXER_TYPE(Function) mixer) {
   if (source == NULL || !RANDOM_SOURCE_FUNC(_EngineValid)(engine) ||
       state == NULL || stateSize < engine->stateSize ||
       ((uintptr_t)state % engine->stateAlignment) != 0U)
@@ -25,9 +25,9 @@ inline static OPSTATUS RANDOM_SOURCE_FUNC(InitWithState)(
   return STATUS_CONST(SUCCESS);
 }
 
-inline static OPSTATUS RANDOM_SOURCE_FUNC(Init)(
-    TRandomSource *source, const RANDOM_ENGINE_VTABLE *engine,
-    uint64_t seed, RANDOM_MIXER_FUNCTION mixer) {
+static inline OPSTATUS RANDOM_SOURCE_FUNC(Init)(
+    RANDOM_SOURCE_TYPE(Value) *source, const RANDOM_ENGINE_TYPE(FunctionTable) *engine,
+    uint64_t seed, RANDOM_MIXER_TYPE(Function) mixer) {
   void *state = NULL;
   OPSTATUS status;
 
@@ -48,16 +48,16 @@ inline static OPSTATUS RANDOM_SOURCE_FUNC(Init)(
   return STATUS_CONST(SUCCESS);
 }
 
-inline static OPSTATUS RANDOM_SOURCE_FUNC(InitSystem)(
-    TRandomSource *source, const RANDOM_ENGINE_VTABLE *engine,
-    RANDOM_MIXER_FUNCTION mixer) {
+static inline OPSTATUS RANDOM_SOURCE_FUNC(InitSystem)(
+    RANDOM_SOURCE_TYPE(Value) *source, const RANDOM_ENGINE_TYPE(FunctionTable) *engine,
+    RANDOM_MIXER_TYPE(Function) mixer) {
   uint64_t seed;
   if (!RANDOM_ENTROPY_FUNC(System)(&seed, sizeof(seed)))
     return STATUS_CONST(NOT_AVAILABLE);
   return RANDOM_SOURCE_FUNC(Init)(source, engine, seed, mixer);
 }
 
-inline static OPSTATUS RANDOM_SOURCE_FUNC(Reseed)(TRandomSource *source,
+static inline OPSTATUS RANDOM_SOURCE_FUNC(Reseed)(RANDOM_SOURCE_TYPE(Value) *source,
                                                   uint64_t seed) {
   if (source == NULL || !RANDOM_SOURCE_FUNC(_EngineValid)(source->engine) ||
       source->state == NULL || source->stateSize < source->engine->stateSize)
@@ -67,7 +67,7 @@ inline static OPSTATUS RANDOM_SOURCE_FUNC(Reseed)(TRandomSource *source,
   return STATUS_CONST(SUCCESS);
 }
 
-inline static uint64_t RANDOM_SOURCE_FUNC(NextU64)(TRandomSource *source) {
+static inline uint64_t RANDOM_SOURCE_FUNC(NextU64)(RANDOM_SOURCE_TYPE(Value) *source) {
   uint64_t value;
   if (source == NULL || !RANDOM_SOURCE_FUNC(_EngineValid)(source->engine) ||
       source->state == NULL || source->stateSize < source->engine->stateSize)
@@ -77,7 +77,7 @@ inline static uint64_t RANDOM_SOURCE_FUNC(NextU64)(TRandomSource *source) {
   return source->mixer == NULL ? value : source->mixer(value);
 }
 
-inline static void RANDOM_SOURCE_FUNC(Destroy)(TRandomSource *source) {
+static inline void RANDOM_SOURCE_FUNC(Destroy)(RANDOM_SOURCE_TYPE(Value) *source) {
   if (source == NULL)
     return;
   if (source->ownsState)
