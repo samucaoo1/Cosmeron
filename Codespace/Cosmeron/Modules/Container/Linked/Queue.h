@@ -30,11 +30,11 @@
  * ============================================================ */
 
 #define LINKED_QUEUE_INIT_PROTOTYPE(SUFFIX)                           \
-  inline static OPSTATUS LINKED_QUEUE_FUNC(SUFFIX, Init)(                      \
+  static inline OPSTATUS LINKED_QUEUE_FUNC(SUFFIX, Init)(                      \
       LINKED_QUEUE_TYPE(SUFFIX) * queue)
 
 #define LINKED_QUEUE_DESTROY_PROTOTYPE(SUFFIX)                        \
-  inline static void LINKED_QUEUE_FUNC(SUFFIX, Destroy)(                       \
+  static inline void LINKED_QUEUE_FUNC(SUFFIX, Destroy)(                       \
       LINKED_QUEUE_TYPE(SUFFIX) * queue)
 
 /* ============================================================
@@ -42,15 +42,15 @@
  * ============================================================ */
 
 #define LINKED_QUEUE_PUSH_PROTOTYPE(TYPE, SUFFIX)                     \
-  inline static OPSTATUS LINKED_QUEUE_FUNC(SUFFIX, Push)(                      \
+  static inline OPSTATUS LINKED_QUEUE_FUNC(SUFFIX, Push)(                      \
       LINKED_QUEUE_TYPE(SUFFIX) * queue, TYPE value)
 
 #define LINKED_QUEUE_POP_PROTOTYPE(TYPE, SUFFIX)                      \
-  inline static OPSTATUS LINKED_QUEUE_FUNC(SUFFIX, Pop)(                       \
+  static inline OPSTATUS LINKED_QUEUE_FUNC(SUFFIX, Pop)(                       \
       LINKED_QUEUE_TYPE(SUFFIX) * queue, TYPE * outValue)
 
 #define LINKED_QUEUE_CLEAR_PROTOTYPE(SUFFIX)                          \
-  inline static void LINKED_QUEUE_FUNC(SUFFIX, Clear)(                         \
+  static inline void LINKED_QUEUE_FUNC(SUFFIX, Clear)(                         \
       LINKED_QUEUE_TYPE(SUFFIX) * queue)
 
 /* ============================================================
@@ -58,11 +58,11 @@
  * ============================================================ */
 
 #define LINKED_QUEUE_FRONT_PROTOTYPE(TYPE, SUFFIX)                    \
-  inline static TYPE *LINKED_QUEUE_FUNC(SUFFIX, Front)(                        \
+  static inline TYPE *LINKED_QUEUE_FUNC(SUFFIX, Front)(                        \
       LINKED_QUEUE_TYPE(SUFFIX) * queue)
 
 #define LINKED_QUEUE_BACK_PROTOTYPE(TYPE, SUFFIX)                     \
-  inline static TYPE *LINKED_QUEUE_FUNC(SUFFIX, Back)(                         \
+  static inline TYPE *LINKED_QUEUE_FUNC(SUFFIX, Back)(                         \
       LINKED_QUEUE_TYPE(SUFFIX) * queue)
 
 /* ============================================================
@@ -70,14 +70,14 @@
  * ============================================================ */
 
 #define LINKED_QUEUE_EMPTY_PROTOTYPE(SUFFIX)                          \
-  inline static bool LINKED_QUEUE_FUNC(SUFFIX, Empty)(                         \
+  static inline bool LINKED_QUEUE_FUNC(SUFFIX, Empty)(                         \
       const LINKED_QUEUE_TYPE(SUFFIX) * queue)
 
 #define LINKED_QUEUE_SIZE_PROTOTYPE(SUFFIX)                           \
-  inline static size_t LINKED_QUEUE_FUNC(SUFFIX, Size)(                        \
+  static inline size_t LINKED_QUEUE_FUNC(SUFFIX, Size)(                        \
       const LINKED_QUEUE_TYPE(SUFFIX) * queue)
 
-#include "VTable/Queue.h"
+#include "FunctionTable/Queue.h"
 
 /* ============================================================
  * Complete Declaration

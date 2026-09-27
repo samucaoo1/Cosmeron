@@ -29,11 +29,11 @@
  * ============================================================ */
 
 #define LINKED_FORWARD_LIST_INIT_PROTOTYPE(SUFFIX)                    \
-  inline static OPSTATUS LINKED_FORWARD_LIST_FUNC(SUFFIX, Init)(               \
+  static inline OPSTATUS LINKED_FORWARD_LIST_FUNC(SUFFIX, Init)(               \
       LINKED_FORWARD_LIST_TYPE(SUFFIX) * container)
 
 #define LINKED_FORWARD_LIST_DESTROY_PROTOTYPE(SUFFIX)                 \
-  inline static void LINKED_FORWARD_LIST_FUNC(SUFFIX, Destroy)(                \
+  static inline void LINKED_FORWARD_LIST_FUNC(SUFFIX, Destroy)(                \
       LINKED_FORWARD_LIST_TYPE(SUFFIX) * container)
 
 /* ============================================================
@@ -41,26 +41,26 @@
  * ============================================================ */
 
 #define LINKED_FORWARD_LIST_PUSH_FRONT_PROTOTYPE(TYPE, SUFFIX)        \
-  inline static OPSTATUS LINKED_FORWARD_LIST_FUNC(SUFFIX, PushFront)(          \
+  static inline OPSTATUS LINKED_FORWARD_LIST_FUNC(SUFFIX, PushFront)(          \
       LINKED_FORWARD_LIST_TYPE(SUFFIX) * container, TYPE value)
 
 #define LINKED_FORWARD_LIST_POP_FRONT_PROTOTYPE(TYPE, SUFFIX)         \
-  inline static OPSTATUS LINKED_FORWARD_LIST_FUNC(SUFFIX, PopFront)(           \
+  static inline OPSTATUS LINKED_FORWARD_LIST_FUNC(SUFFIX, PopFront)(           \
       LINKED_FORWARD_LIST_TYPE(SUFFIX) * container, TYPE * outValue)
 
 #define LINKED_FORWARD_LIST_INSERT_AFTER_PROTOTYPE(TYPE, SUFFIX)      \
-  inline static OPSTATUS LINKED_FORWARD_LIST_FUNC(SUFFIX, InsertAfter)(        \
+  static inline OPSTATUS LINKED_FORWARD_LIST_FUNC(SUFFIX, InsertAfter)(        \
       LINKED_FORWARD_LIST_TYPE(SUFFIX) * container,                            \
       LINKED_FORWARD_LIST_NODE_TYPE(SUFFIX) * pos, TYPE value,                 \
       LINKED_FORWARD_LIST_NODE_TYPE(SUFFIX) * *outNode)
 
 #define LINKED_FORWARD_LIST_ERASE_AFTER_PROTOTYPE(SUFFIX)             \
-  inline static OPSTATUS LINKED_FORWARD_LIST_FUNC(SUFFIX, EraseAfter)(         \
+  static inline OPSTATUS LINKED_FORWARD_LIST_FUNC(SUFFIX, EraseAfter)(         \
       LINKED_FORWARD_LIST_TYPE(SUFFIX) * container,                            \
       LINKED_FORWARD_LIST_NODE_TYPE(SUFFIX) * pos)
 
 #define LINKED_FORWARD_LIST_CLEAR_PROTOTYPE(SUFFIX)                   \
-  inline static void LINKED_FORWARD_LIST_FUNC(SUFFIX, Clear)(                  \
+  static inline void LINKED_FORWARD_LIST_FUNC(SUFFIX, Clear)(                  \
       LINKED_FORWARD_LIST_TYPE(SUFFIX) * container)
 
 /* ============================================================
@@ -68,15 +68,15 @@
  * ============================================================ */
 
 #define LINKED_FORWARD_LIST_FRONT_PROTOTYPE(TYPE, SUFFIX)             \
-  inline static TYPE *LINKED_FORWARD_LIST_FUNC(SUFFIX, Front)(                 \
+  static inline TYPE *LINKED_FORWARD_LIST_FUNC(SUFFIX, Front)(                 \
       LINKED_FORWARD_LIST_TYPE(SUFFIX) * container)
 
 #define LINKED_FORWARD_LIST_BACK_PROTOTYPE(TYPE, SUFFIX)              \
-  inline static TYPE *LINKED_FORWARD_LIST_FUNC(SUFFIX, Back)(                  \
+  static inline TYPE *LINKED_FORWARD_LIST_FUNC(SUFFIX, Back)(                  \
       LINKED_FORWARD_LIST_TYPE(SUFFIX) * container)
 
 #define LINKED_FORWARD_LIST_BEGIN_PROTOTYPE(SUFFIX)                   \
-  inline static LINKED_FORWARD_LIST_NODE_TYPE(SUFFIX) *                        \
+  static inline LINKED_FORWARD_LIST_NODE_TYPE(SUFFIX) *                        \
       LINKED_FORWARD_LIST_FUNC(SUFFIX, Begin)(                                 \
           LINKED_FORWARD_LIST_TYPE(SUFFIX) * container)
 
@@ -85,14 +85,14 @@
  * ============================================================ */
 
 #define LINKED_FORWARD_LIST_EMPTY_PROTOTYPE(SUFFIX)                   \
-  inline static bool LINKED_FORWARD_LIST_FUNC(SUFFIX, Empty)(                  \
+  static inline bool LINKED_FORWARD_LIST_FUNC(SUFFIX, Empty)(                  \
       const LINKED_FORWARD_LIST_TYPE(SUFFIX) * container)
 
 #define LINKED_FORWARD_LIST_SIZE_PROTOTYPE(SUFFIX)                    \
-  inline static size_t LINKED_FORWARD_LIST_FUNC(SUFFIX, Size)(                 \
+  static inline size_t LINKED_FORWARD_LIST_FUNC(SUFFIX, Size)(                 \
       const LINKED_FORWARD_LIST_TYPE(SUFFIX) * container)
 
-#include "VTable/Forward.h"
+#include "FunctionTable/Forward.h"
 
 /* ============================================================
  * Linked_ForwardList — Lista simplesmente encadeada

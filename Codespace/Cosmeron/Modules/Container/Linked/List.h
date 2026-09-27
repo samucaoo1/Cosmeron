@@ -40,11 +40,11 @@
  * ============================================================ */
 
 #define LINKED_LIST_INIT_PROTOTYPE(SUFFIX)                            \
-  inline static OPSTATUS LINKED_LIST_FUNC(SUFFIX, Init)(                       \
+  static inline OPSTATUS LINKED_LIST_FUNC(SUFFIX, Init)(                       \
       LINKED_LIST_TYPE(SUFFIX) * list)
 
 #define LINKED_LIST_DESTROY_PROTOTYPE(SUFFIX)                         \
-  inline static void LINKED_LIST_FUNC(SUFFIX, Destroy)(                        \
+  static inline void LINKED_LIST_FUNC(SUFFIX, Destroy)(                        \
       LINKED_LIST_TYPE(SUFFIX) * list)
 
 /* ============================================================
@@ -52,19 +52,19 @@
  * ============================================================ */
 
 #define LINKED_LIST_FRONT_PROTOTYPE(TYPE, SUFFIX)                     \
-  inline static TYPE *LINKED_LIST_FUNC(SUFFIX,                                 \
+  static inline TYPE *LINKED_LIST_FUNC(SUFFIX,                                 \
                                        Front)(LINKED_LIST_TYPE(SUFFIX) * list)
 
 #define LINKED_LIST_BACK_PROTOTYPE(TYPE, SUFFIX)                      \
-  inline static TYPE *LINKED_LIST_FUNC(SUFFIX,                                 \
+  static inline TYPE *LINKED_LIST_FUNC(SUFFIX,                                 \
                                        Back)(LINKED_LIST_TYPE(SUFFIX) * list)
 
 #define LINKED_LIST_BEGIN_PROTOTYPE(SUFFIX)                           \
-  inline static LINKED_LIST_NODE_TYPE(SUFFIX) *                                \
+  static inline LINKED_LIST_NODE_TYPE(SUFFIX) *                                \
       LINKED_LIST_FUNC(SUFFIX, Begin)(LINKED_LIST_TYPE(SUFFIX) * list)
 
 #define LINKED_LIST_END_PROTOTYPE(SUFFIX)                             \
-  inline static LINKED_LIST_NODE_TYPE(SUFFIX) *                                \
+  static inline LINKED_LIST_NODE_TYPE(SUFFIX) *                                \
       LINKED_LIST_FUNC(SUFFIX, End)(LINKED_LIST_TYPE(SUFFIX) * list)
 
 /* ============================================================
@@ -72,33 +72,33 @@
  * ============================================================ */
 
 #define LINKED_LIST_PUSH_FRONT_PROTOTYPE(TYPE, SUFFIX)                \
-  inline static OPSTATUS LINKED_LIST_FUNC(SUFFIX, PushFront)(                  \
+  static inline OPSTATUS LINKED_LIST_FUNC(SUFFIX, PushFront)(                  \
       LINKED_LIST_TYPE(SUFFIX) * list, TYPE value)
 
 #define LINKED_LIST_PUSH_BACK_PROTOTYPE(TYPE, SUFFIX)                 \
-  inline static OPSTATUS LINKED_LIST_FUNC(SUFFIX, PushBack)(                   \
+  static inline OPSTATUS LINKED_LIST_FUNC(SUFFIX, PushBack)(                   \
       LINKED_LIST_TYPE(SUFFIX) * list, TYPE value)
 
 #define LINKED_LIST_POP_FRONT_PROTOTYPE(TYPE, SUFFIX)                 \
-  inline static OPSTATUS LINKED_LIST_FUNC(SUFFIX, PopFront)(                   \
+  static inline OPSTATUS LINKED_LIST_FUNC(SUFFIX, PopFront)(                   \
       LINKED_LIST_TYPE(SUFFIX) * list, TYPE * outValue)
 
 #define LINKED_LIST_POP_BACK_PROTOTYPE(TYPE, SUFFIX)                  \
-  inline static OPSTATUS LINKED_LIST_FUNC(SUFFIX, PopBack)(                    \
+  static inline OPSTATUS LINKED_LIST_FUNC(SUFFIX, PopBack)(                    \
       LINKED_LIST_TYPE(SUFFIX) * list, TYPE * outValue)
 
 #define LINKED_LIST_INSERT_PROTOTYPE(TYPE, SUFFIX)                    \
-  inline static OPSTATUS LINKED_LIST_FUNC(SUFFIX, Insert)(                     \
+  static inline OPSTATUS LINKED_LIST_FUNC(SUFFIX, Insert)(                     \
       LINKED_LIST_TYPE(SUFFIX) * list, LINKED_LIST_NODE_TYPE(SUFFIX) * pos,    \
       TYPE value, LINKED_LIST_NODE_TYPE(SUFFIX) * *outNode)
 
 #define LINKED_LIST_ERASE_PROTOTYPE(SUFFIX)                           \
-  inline static OPSTATUS LINKED_LIST_FUNC(SUFFIX, Erase)(                      \
+  static inline OPSTATUS LINKED_LIST_FUNC(SUFFIX, Erase)(                      \
       LINKED_LIST_TYPE(SUFFIX) * list, LINKED_LIST_NODE_TYPE(SUFFIX) * pos,    \
       LINKED_LIST_NODE_TYPE(SUFFIX) * *outNode)
 
 #define LINKED_LIST_CLEAR_PROTOTYPE(SUFFIX)                           \
-  inline static void LINKED_LIST_FUNC(SUFFIX,                                  \
+  static inline void LINKED_LIST_FUNC(SUFFIX,                                  \
                                       Clear)(LINKED_LIST_TYPE(SUFFIX) * list)
 
 /* ============================================================
@@ -106,18 +106,18 @@
  * ============================================================ */
 
 #define LINKED_LIST_EMPTY_PROTOTYPE(SUFFIX)                           \
-  inline static bool LINKED_LIST_FUNC(SUFFIX,                                  \
+  static inline bool LINKED_LIST_FUNC(SUFFIX,                                  \
                                       Empty)(const LINKED_LIST_TYPE(SUFFIX) * list)
 
 #define LINKED_LIST_SIZE_PROTOTYPE(SUFFIX)                            \
-  inline static size_t LINKED_LIST_FUNC(SUFFIX,                                \
+  static inline size_t LINKED_LIST_FUNC(SUFFIX,                                \
                                         Size)(const LINKED_LIST_TYPE(SUFFIX) * list)
 
 /* ============================================================
  * Complete Declaration
  * ============================================================ */
 
-#include "VTable/List.h"
+#include "FunctionTable/List.h"
 
 #define LINKED_LIST_DECLARE(TYPE, SUFFIX)                                      \
   DOUBLE_LINKED_NODE_STRUCT(TYPE, SUFFIX, Linked_List)                         \

@@ -48,11 +48,11 @@
  * ============================================================= */
 
 #ifndef TTREE_CMPOUT
-#define TTREE_CMPOUT int
+#define TTREE_CMPOUT CMPOUT
 #endif
 
 /* =============================================================
- * One-liner: declare + bind VTable + init.
+ * One-liner: declare + bind FunctionTable + init.
  *
  *   TREE_SET_DECLARE(AVL, int, s)   ->   TTREE_SET_TYPE(AVL, int) s = {
  *                                .api = &TTREE_FN(..., functions),
@@ -77,8 +77,8 @@
   }
 
 /* =============================================================
- * VTable structs — declared here (in the public header) so
- * that code using the tree can take a pointer to the VTable
+ * FunctionTable structs — declared here (in the public header) so
+ * that code using the tree can take a pointer to the FunctionTable
  * typedef without including the FunctionTable header file.
  *
  *   TTREE_FUNCTION_TABLE_SET(T, KEY_TYPE)
@@ -87,10 +87,10 @@
  *     -> same, for MAP.
  *
  * The matching `*_INSTANCE` macros (the static const vtables
- * themselves) live in VTable/Tree.h.
+ * themselves) live in FunctionTable/Tree.h.
  * ============================================================= */
 
-#if CONTAINER_ENABLE_PSEUDO_METHODS
+#if CONTAINER_FUNCTION_TABLE_ENABLED
 
 #define TTREE_FUNCTION_TABLE_SET(T, KEY_TYPE)                                          \
   typedef struct TTREE_FN(T, FunctionTable) {                               \
@@ -149,4 +149,4 @@
 #define TTREE_FUNCTION_TABLE_MAP(...)
 #endif
 
-#include "VTable/Tree.h"
+#include "FunctionTable/Tree.h"

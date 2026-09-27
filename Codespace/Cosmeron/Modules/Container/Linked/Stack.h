@@ -29,11 +29,11 @@
  * ============================================================ */
 
 #define LINKED_STACK_INIT_PROTOTYPE(SUFFIX)                           \
-  inline static OPSTATUS LINKED_STACK_FUNC(SUFFIX, Init)(                      \
+  static inline OPSTATUS LINKED_STACK_FUNC(SUFFIX, Init)(                      \
       LINKED_STACK_TYPE(SUFFIX) * stack)
 
 #define LINKED_STACK_DESTROY_PROTOTYPE(SUFFIX)                        \
-  inline static void LINKED_STACK_FUNC(SUFFIX, Destroy)(                       \
+  static inline void LINKED_STACK_FUNC(SUFFIX, Destroy)(                       \
       LINKED_STACK_TYPE(SUFFIX) * stack)
 
 /* ============================================================
@@ -41,15 +41,15 @@
  * ============================================================ */
 
 #define LINKED_STACK_PUSH_PROTOTYPE(TYPE, SUFFIX)                     \
-  inline static OPSTATUS LINKED_STACK_FUNC(SUFFIX, Push)(                      \
+  static inline OPSTATUS LINKED_STACK_FUNC(SUFFIX, Push)(                      \
       LINKED_STACK_TYPE(SUFFIX) * stack, TYPE value)
 
 #define LINKED_STACK_POP_PROTOTYPE(TYPE, SUFFIX)                      \
-  inline static OPSTATUS LINKED_STACK_FUNC(SUFFIX, Pop)(                       \
+  static inline OPSTATUS LINKED_STACK_FUNC(SUFFIX, Pop)(                       \
       LINKED_STACK_TYPE(SUFFIX) * stack, TYPE * outValue)
 
 #define LINKED_STACK_CLEAR_PROTOTYPE(SUFFIX)                          \
-  inline static void LINKED_STACK_FUNC(SUFFIX, Clear)(                         \
+  static inline void LINKED_STACK_FUNC(SUFFIX, Clear)(                         \
       LINKED_STACK_TYPE(SUFFIX) * stack)
 
 /* ============================================================
@@ -57,7 +57,7 @@
  * ============================================================ */
 
 #define LINKED_STACK_TOP_PROTOTYPE(TYPE, SUFFIX)                      \
-  inline static TYPE *LINKED_STACK_FUNC(SUFFIX, Top)(                          \
+  static inline TYPE *LINKED_STACK_FUNC(SUFFIX, Top)(                          \
       LINKED_STACK_TYPE(SUFFIX) * stack)
 
 /* ============================================================
@@ -65,14 +65,14 @@
  * ============================================================ */
 
 #define LINKED_STACK_EMPTY_PROTOTYPE(SUFFIX)                          \
-  inline static bool LINKED_STACK_FUNC(SUFFIX, Empty)(                         \
+  static inline bool LINKED_STACK_FUNC(SUFFIX, Empty)(                         \
       const LINKED_STACK_TYPE(SUFFIX) * stack)
 
 #define LINKED_STACK_SIZE_PROTOTYPE(SUFFIX)                           \
-  inline static size_t LINKED_STACK_FUNC(SUFFIX, Size)(                        \
+  static inline size_t LINKED_STACK_FUNC(SUFFIX, Size)(                        \
       const LINKED_STACK_TYPE(SUFFIX) * stack)
 
-#include "VTable/Stack.h"
+#include "FunctionTable/Stack.h"
 
 /* ============================================================
  * Complete Declaration

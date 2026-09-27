@@ -34,11 +34,11 @@
  * ============================================================ */
 
 #define LINKED_DEQUE_INIT_PROTOTYPE(SUFFIX)                           \
-  inline static OPSTATUS LINKED_DEQUE_FUNC(SUFFIX, Init)(                      \
+  static inline OPSTATUS LINKED_DEQUE_FUNC(SUFFIX, Init)(                      \
       LINKED_DEQUE_TYPE(SUFFIX) * deque)
 
 #define LINKED_DEQUE_DESTROY_PROTOTYPE(SUFFIX)                        \
-  inline static void LINKED_DEQUE_FUNC(SUFFIX, Destroy)(                       \
+  static inline void LINKED_DEQUE_FUNC(SUFFIX, Destroy)(                       \
       LINKED_DEQUE_TYPE(SUFFIX) * deque)
 
 /* ============================================================
@@ -46,23 +46,23 @@
  * ============================================================ */
 
 #define LINKED_DEQUE_PUSH_FRONT_PROTOTYPE(TYPE, SUFFIX)               \
-  inline static OPSTATUS LINKED_DEQUE_FUNC(SUFFIX, PushFront)(                 \
+  static inline OPSTATUS LINKED_DEQUE_FUNC(SUFFIX, PushFront)(                 \
       LINKED_DEQUE_TYPE(SUFFIX) * deque, TYPE value)
 
 #define LINKED_DEQUE_PUSH_BACK_PROTOTYPE(TYPE, SUFFIX)                \
-  inline static OPSTATUS LINKED_DEQUE_FUNC(SUFFIX, PushBack)(                  \
+  static inline OPSTATUS LINKED_DEQUE_FUNC(SUFFIX, PushBack)(                  \
       LINKED_DEQUE_TYPE(SUFFIX) * deque, TYPE value)
 
 #define LINKED_DEQUE_POP_FRONT_PROTOTYPE(TYPE, SUFFIX)                \
-  inline static OPSTATUS LINKED_DEQUE_FUNC(SUFFIX, PopFront)(                  \
+  static inline OPSTATUS LINKED_DEQUE_FUNC(SUFFIX, PopFront)(                  \
       LINKED_DEQUE_TYPE(SUFFIX) * deque, TYPE * outValue)
 
 #define LINKED_DEQUE_POP_BACK_PROTOTYPE(TYPE, SUFFIX)                 \
-  inline static OPSTATUS LINKED_DEQUE_FUNC(SUFFIX, PopBack)(                   \
+  static inline OPSTATUS LINKED_DEQUE_FUNC(SUFFIX, PopBack)(                   \
       LINKED_DEQUE_TYPE(SUFFIX) * deque, TYPE * outValue)
 
 #define LINKED_DEQUE_CLEAR_PROTOTYPE(SUFFIX)                          \
-  inline static void LINKED_DEQUE_FUNC(SUFFIX, Clear)(                         \
+  static inline void LINKED_DEQUE_FUNC(SUFFIX, Clear)(                         \
       LINKED_DEQUE_TYPE(SUFFIX) * deque)
 
 /* ============================================================
@@ -70,11 +70,11 @@
  * ============================================================ */
 
 #define LINKED_DEQUE_FRONT_PROTOTYPE(TYPE, SUFFIX)                    \
-  inline static TYPE *LINKED_DEQUE_FUNC(SUFFIX, Front)(                        \
+  static inline TYPE *LINKED_DEQUE_FUNC(SUFFIX, Front)(                        \
       LINKED_DEQUE_TYPE(SUFFIX) * deque)
 
 #define LINKED_DEQUE_BACK_PROTOTYPE(TYPE, SUFFIX)                     \
-  inline static TYPE *LINKED_DEQUE_FUNC(SUFFIX, Back)(                         \
+  static inline TYPE *LINKED_DEQUE_FUNC(SUFFIX, Back)(                         \
       LINKED_DEQUE_TYPE(SUFFIX) * deque)
 
 /* ============================================================
@@ -82,14 +82,14 @@
  * ============================================================ */
 
 #define LINKED_DEQUE_EMPTY_PROTOTYPE(SUFFIX)                          \
-  inline static bool LINKED_DEQUE_FUNC(SUFFIX, Empty)(                         \
+  static inline bool LINKED_DEQUE_FUNC(SUFFIX, Empty)(                         \
       const LINKED_DEQUE_TYPE(SUFFIX) * deque)
 
 #define LINKED_DEQUE_SIZE_PROTOTYPE(SUFFIX)                           \
-  inline static size_t LINKED_DEQUE_FUNC(SUFFIX, Size)(                        \
+  static inline size_t LINKED_DEQUE_FUNC(SUFFIX, Size)(                        \
       const LINKED_DEQUE_TYPE(SUFFIX) * deque)
 
-#include "VTable/Deque.h"
+#include "FunctionTable/Deque.h"
 
 /* ============================================================
  * Complete Declaration
