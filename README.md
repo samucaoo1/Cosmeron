@@ -10,7 +10,7 @@ Cosmeron continues the project previously developed as **Congro;Library**, carry
 
 **Keywords:** C11, C library, header-only C, single-header C, systems programming, portable C, data structures, containers, concurrency, coroutines, networking, sockets, Unicode, terminal UI, mathematics, memory management, metaprogramming, generic C.
 
-[Documentation](Docs/README.md) · [Roadmap](Docs/Project/ROADMAP.md) · [Pattern](Docs/Reference/PATTERN.md) · [Entropy](Docs/Project/ENTROPY.md) · [Why EUPL?](Docs/Governance/LICENSING.md) · [Code of Conduct](Docs/Governance/CODE_OF_CONDUCT.md) · [Credits](Docs/Governance/AUTHORS.md) · [Português (Brasil)](Docs/Translations/Portugues-Brasil/README.md) · [Español (Latinoamérica)](Docs/Translations/Espanol-LATAM/README.md)
+[Documentation](Docs/README.md) · [Roadmap](Docs/Project/ROADMAP.md) · [Pattern](Docs/Reference/PATTERN.md) · [Entropy](Docs/Project/ENTROPY.md) · [Contributing](Docs/Governance/CONTRIBUTING.md) · [Support](Docs/Governance/SUPPORT.md) · [Why EUPL?](Docs/Governance/LICENSING.md) · [Code of Conduct](Docs/Governance/CODE_OF_CONDUCT.md) · [Credits](Docs/Governance/AUTHORS.md) · [Português (Brasil)](Docs/Translations/Portugues-Brasil/README.md) · [Español (Latinoamérica)](Docs/Translations/Espanol-LATAM/README.md)
 
 ## What is Cosmeron?
 
@@ -79,7 +79,7 @@ The complete grammar is documented in [Cosmeron Pattern](Docs/Reference/PATTERN.
 
 ## Contributing
 
-Experiments, fixes, tests, documentation, and constructive technical criticism are welcome. Participation is governed by the [Code of Conduct](Docs/Governance/CODE_OF_CONDUCT.md).
+Experiments, fixes, tests, documentation, and constructive technical criticism are welcome. Read the [contribution guide](Docs/Governance/CONTRIBUTING.md) before changing public APIs. Participation is governed by the [Code of Conduct](Docs/Governance/CODE_OF_CONDUCT.md).
 
 ## License
 

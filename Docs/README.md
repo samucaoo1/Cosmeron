@@ -13,6 +13,8 @@ This directory contains the canonical project documentation that does not need t
 Project-level policies and legal or community documents.
 
 - [Authors and contributors](Governance/AUTHORS.md)
+- [Contributing](Governance/CONTRIBUTING.md)
+- [Support](Governance/SUPPORT.md)
 - [Code of Conduct](Governance/CODE_OF_CONDUCT.md)
 - [Licensing rationale](Governance/LICENSING.md)
 - [Security policy](Governance/SECURITY.md)
