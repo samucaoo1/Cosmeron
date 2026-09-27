@@ -16,7 +16,7 @@
  * Namespace base
  * ============================================================= */
 
-#define TREE_NS LIB_PREFIX(Tree)
+#define TREE_NS CONTAINER_NS(Tree)
 
 /* =============================================================
  * Name generators
@@ -86,7 +86,7 @@
  *   TTREE_FUNCTION_TABLE_MAP(T, KEY_TYPE, VALUE_TYPE)
  *     -> same, for MAP.
  *
- * The matching `*_INSTANCE` macros (the static const vtables
+ * The matching `*_INSTANCE` macros (the static const function tables
  * themselves) live in FunctionTable/Tree.h.
  * ============================================================= */
 

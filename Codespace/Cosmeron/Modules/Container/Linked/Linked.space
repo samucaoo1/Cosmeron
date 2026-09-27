@@ -12,4 +12,4 @@
 #include "../../../Core/Error/Status.h"
 #include "../../../Core/Memory/Alloc.h"
 
-#define LINKED_NS(NAME) GNS2(LIB_PREFIX(Linked), NAME)
+#define LINKED_NS(NAME) GNS2(CONTAINER_NS(Linked), NAME)

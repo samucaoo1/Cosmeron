@@ -12,7 +12,7 @@
 
 #include "../Container.space"
 
-#define FLAT_NS(NAME) GNS2(LIB_PREFIX(Flat), NAME)
+#define FLAT_NS(NAME) GNS2(CONTAINER_NS(Flat), NAME)
 
 #define FLAT_GROWTH_FACTOR 2
 #define FLAT_INITIAL_CAPACITY 8

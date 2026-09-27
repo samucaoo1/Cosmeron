@@ -12,7 +12,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#define HASH_NS(NAME) GNS2(LIB_PREFIX(Hash), NAME)
+#define HASH_NS(NAME) GNS2(CONTAINER_NS(Hash), NAME)
 
 #define HASH_INITIAL_CAPACITY 16u
 #define HASH_LOAD_PERCENT 75u
@@ -24,10 +24,10 @@
 #define HASH_SUFFIX(KEY_SUFFIX, VALUE_SUFFIX) GNS2(KEY_SUFFIX, VALUE_SUFFIX)
 
 #define THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX)                                  \
-  GNS2(LIB_PREFIX(THash), HASH_SUFFIX(KEY_SUFFIX, VALUE_SUFFIX))
+  GNS2(HASH_NS(THash), HASH_SUFFIX(KEY_SUFFIX, VALUE_SUFFIX))
 
 #define THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX)                           \
-  GNS2(LIB_PREFIX(THashBucket), HASH_SUFFIX(KEY_SUFFIX, VALUE_SUFFIX))
+  GNS2(HASH_NS(THashBucket), HASH_SUFFIX(KEY_SUFFIX, VALUE_SUFFIX))
 
 #define HASH_FUNC(KEY_SUFFIX, VALUE_SUFFIX, FUNC)                             \
   GNS2(GNS2(HASH_NS(HASH_SUFFIX(KEY_SUFFIX, VALUE_SUFFIX)), FUNC), Function)
@@ -38,7 +38,7 @@
 #define HASH_INT(VALUE)                                                       \
   ((size_t)((uint32_t)(VALUE) * UINT32_C(2654435761)))
 
-static inline size_t Hash_CString(const char *value) {
+static inline size_t HASH_NS(CString)(const char *value) {
   size_t hash = (size_t)UINT64_C(14695981039346656037);
   if (!value)
     return 0;
@@ -49,7 +49,7 @@ static inline size_t Hash_CString(const char *value) {
   return hash;
 }
 
-#define HASH_CSTRING(VALUE) Hash_CString((VALUE))
+#define HASH_CSTRING(VALUE) HASH_NS(CString)((VALUE))
 #define HASH_EQUAL_INT(A, B) ((A) == (B))
 #define HASH_EQUAL_CSTRING(A, B)                                              \
   (((A) == NULL || (B) == NULL) ? ((A) == (B)) : (strcmp((A), (B)) == 0))
