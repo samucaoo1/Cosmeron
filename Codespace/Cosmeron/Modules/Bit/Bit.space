@@ -7,7 +7,16 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define BIT_MOD(NAME) GNS2(LIB_PREFIX(Bit), NAME)
-#define BIT_TYPE(SUFFIX) GNS2(LIB_PREFIX(Bit), SUFFIX)
-#define BIT_FUNC(SUFFIX, FUNC) GNS3(LIB_PREFIX(Bit), SUFFIX, FUNC)
+#define BIT_MOD Bit
+#define BIT_CMOD BIT
+
+#define BIT_NS(NAME) GNS2(LIB_PREFIX(BIT_MOD), NAME)
+#define BIT_CNS(NAME) CNS2(LIB_PREFIX_CONST(BIT_CMOD), NAME)
+#define BIT_INS(NAME) GNS3(LIB_PREFIX(BIT_MOD), Internal, NAME)
+#define BIT_CINS(NAME) CNS3(LIB_PREFIX_CONST(BIT_CMOD), INTERNAL, NAME)
+
+#define BIT_TYPE(SUFFIX) PP_OP_CAT3(T, BIT_MOD, SUFFIX)
+#define BIT_FUNC(SUFFIX, NAME)                                                 \
+  GNS2(PP_OP_CAT2(LIB_PREFIX(BIT_MOD), SUFFIX), NAME)
+#define BIT_CONST(NAME) BIT_CNS(NAME)
 /* EOF */
