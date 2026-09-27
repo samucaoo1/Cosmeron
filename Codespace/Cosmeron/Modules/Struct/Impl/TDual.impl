@@ -1,4 +1,4 @@
-#define TDUAL_IMPLEMENT(TYPE, SUFFIX)                                          \
+#define TDUAL_CAST_IMPLEMENT_ALL(TYPE, SUFFIX)                                          \
   TDUAL_CAST_TO_TYPE_PROTOTYPE(TYPE, SUFFIX) {                         \
     TDUAL_TYPE(SUFFIX) dual;                                                   \
     dual.value1 = value1;                                                     \
