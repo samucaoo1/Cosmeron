@@ -1,0 +1,57 @@
+name: Feature request
+description: Propose a capability, API, module, or architectural improvement.
+title: "[Feature] "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What concrete problem should Cosmeron solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed direction
+      description: Describe the API, module, behavior, or architectural direction you have in mind.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Area
+      options:
+        - Core
+        - Bit
+        - Chronometry
+        - Concurrency
+        - Container
+        - Math
+        - Network
+        - Random
+        - Struct
+        - Text
+        - Type
+        - Documentation
+        - Build / CI
+        - New module
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Project constraints
+      options:
+        - label: I considered the Cosmeron Pattern and naming rules.
+        - label: I considered C11 portability and cross-platform behavior.
+        - label: I considered the zero-link philosophy where applicable.
+        - label: I considered ownership, error handling, and testability.

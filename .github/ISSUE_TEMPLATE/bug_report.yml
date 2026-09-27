@@ -1,0 +1,80 @@
+name: Bug report
+description: Report a reproducible defect in Cosmeron.
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve Cosmeron. Please keep security-sensitive reports out of public issues and use Private vulnerability reporting instead.
+
+  - type: input
+    id: revision
+    attributes:
+      label: Revision
+      description: Commit, branch, or Entropy release where the problem occurs.
+      placeholder: main @ <commit>
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Linux GCC
+        - Linux Clang
+        - macOS Clang
+        - Windows MinGW
+        - Windows MSVC
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: compiler
+    attributes:
+      label: Compiler version
+      placeholder: gcc 15.x / clang 21.x / MSVC 19.x
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Prefer the smallest C11 example that demonstrates the problem.
+      render: c
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: Compiler output, sanitizer report, or other useful logs.
+      render: text
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I checked the current documentation and existing issues.
+          required: true
+        - label: This report does not contain private vulnerability details, credentials, secrets, or third-party personal data.
+          required: true
