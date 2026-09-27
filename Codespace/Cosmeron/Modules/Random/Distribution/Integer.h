@@ -3,10 +3,10 @@
 #include "Distribution.space"
 #include <limits.h>
 
-inline static uint64_t RANDOM_DISTRIBUTION_FUNC(U64)(TRandomSource *source,
+static inline uint64_t RANDOM_DISTRIBUTION_FUNC(U64)(RANDOM_SOURCE_TYPE(Value) *source,
                                                    uint64_t minimum,
                                                    uint64_t maximum);
-inline static int64_t RANDOM_DISTRIBUTION_FUNC(I64)(TRandomSource *source,
+static inline int64_t RANDOM_DISTRIBUTION_FUNC(I64)(RANDOM_SOURCE_TYPE(Value) *source,
                                                   int64_t minimum,
                                                   int64_t maximum);
 
