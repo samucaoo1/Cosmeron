@@ -1,6 +1,6 @@
 #pragma once
 
-#if CONTAINER_ENABLE_PSEUDO_METHODS
+#if CONTAINER_FUNCTION_TABLE_ENABLED
 
 #define FLAT_STACK_FUNCTION_TABLE(TYPE, SUFFIX)                              \
   typedef struct FLAT_STACK_FUNC(SUFFIX, FunctionTable) {                   \

@@ -1,6 +1,6 @@
 #pragma once
 
-#if CONTAINER_ENABLE_PSEUDO_METHODS
+#if CONTAINER_FUNCTION_TABLE_ENABLED
 
 #define TSTRING_FUNCTION_TABLE(CHAR_TYPE, SUFFIX)                            \
   struct TSTRING_FUNC(SUFFIX, FunctionTable) {                              \

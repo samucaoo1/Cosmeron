@@ -1,6 +1,6 @@
 #pragma once
 
-#if CONTAINER_ENABLE_PSEUDO_METHODS
+#if CONTAINER_FUNCTION_TABLE_ENABLED
 
 #define GRAPH_FUNCTION_TABLE(VERTEX_TYPE, VERTEX_SUFFIX, WEIGHT_TYPE,        \
                              WEIGHT_SUFFIX)                                  \

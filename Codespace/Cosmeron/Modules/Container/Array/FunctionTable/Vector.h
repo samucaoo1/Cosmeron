@@ -1,6 +1,6 @@
 #pragma once
 
-#if CONTAINER_ENABLE_PSEUDO_METHODS
+#if CONTAINER_FUNCTION_TABLE_ENABLED
 
 #define FLAT_VECTOR_FUNCTION_TABLE(TYPE, SUFFIX)                             \
   typedef struct FLAT_VECTOR_FUNC(SUFFIX, FunctionTable) {                  \
