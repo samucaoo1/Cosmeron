@@ -1,6 +1,6 @@
 #pragma once
 
-#if CONTAINER_ENABLE_PSEUDO_METHODS
+#if CONTAINER_FUNCTION_TABLE_ENABLED
 
 #define LINKED_STACK_FUNCTION_TABLE(TYPE, SUFFIX)                           \
   typedef struct LINKED_STACK_FUNC(SUFFIX, FunctionTable) {               \

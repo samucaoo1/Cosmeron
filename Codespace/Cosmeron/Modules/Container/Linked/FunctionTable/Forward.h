@@ -1,6 +1,6 @@
 #pragma once
 
-#if CONTAINER_ENABLE_PSEUDO_METHODS
+#if CONTAINER_FUNCTION_TABLE_ENABLED
 
 #define LINKED_FORWARD_LIST_FUNCTION_TABLE(TYPE, SUFFIX)                           \
   typedef struct LINKED_FORWARD_LIST_FUNC(SUFFIX, FunctionTable) {               \

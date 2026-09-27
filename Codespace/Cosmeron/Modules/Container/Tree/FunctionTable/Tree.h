@@ -1,9 +1,9 @@
 #pragma once
 
-#if CONTAINER_ENABLE_PSEUDO_METHODS
+#if CONTAINER_FUNCTION_TABLE_ENABLED
 
 /* =============================================================
- * VTable instances — static const binding of functions to slots.
+ * FunctionTable instances — static const binding of functions to slots.
  *   TTREE_FUNCTION_TABLE_INSTANCE_SET(T)
  *   TTREE_FUNCTION_TABLE_INSTANCE_MAP(T)
  *
