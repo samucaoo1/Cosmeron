@@ -2,6 +2,6 @@
 
 #include "Distribution.space"
 
-inline static double RANDOM_DISTRIBUTION_FUNC(F64)(TRandomSource *source);
+static inline double RANDOM_DISTRIBUTION_FUNC(F64)(RANDOM_SOURCE_TYPE(Value) *source);
 
 #include "Impl/Real.impl"
