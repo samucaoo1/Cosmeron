@@ -3,10 +3,15 @@
 #include <limits.h>
 
 CHRONOMETRY_INSTANT_COMPARE_PROTOTYPE {
-  if (left.seconds != right.seconds)
-    return (left.seconds > right.seconds) - (left.seconds < right.seconds);
-  return (left.nanoseconds > right.nanoseconds) -
-         (left.nanoseconds < right.nanoseconds);
+  if (left.seconds < right.seconds)
+    return COMPARISON_CONST(LOWER);
+  if (left.seconds > right.seconds)
+    return COMPARISON_CONST(HIGHER);
+  if (left.nanoseconds < right.nanoseconds)
+    return COMPARISON_CONST(LOWER);
+  if (left.nanoseconds > right.nanoseconds)
+    return COMPARISON_CONST(HIGHER);
+  return COMPARISON_CONST(EQUAL);
 }
 
 CHRONOMETRY_INSTANT_ADD_DURATION_PROTOTYPE {
@@ -14,7 +19,7 @@ CHRONOMETRY_INSTANT_ADD_DURATION_PROTOTYPE {
   int64_t remainder;
   int64_t seconds;
   int64_t nanos;
-  if (result == NULL)
+  if (outResult == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
   whole = duration.nanoseconds / CHRONOMETRY_NANOSECONDS_PER_SECOND;
   remainder = duration.nanoseconds % CHRONOMETRY_NANOSECONDS_PER_SECOND;
@@ -34,14 +39,14 @@ CHRONOMETRY_INSTANT_ADD_DURATION_PROTOTYPE {
     --seconds;
     nanos += CHRONOMETRY_NANOSECONDS_PER_SECOND;
   }
-  *result = (CHRONOMETRY_TYPE(Instant)){seconds, (uint32_t)nanos};
+  *outResult = (CHRONOMETRY_TYPE(Instant)){seconds, (uint32_t)nanos};
   return STATUS_CONST(SUCCESS);
 }
 
 CHRONOMETRY_INSTANT_DURATION_BETWEEN_PROTOTYPE {
   int64_t seconds;
   int64_t nanos;
-  if (result == NULL)
+  if (outResult == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
   if ((start.seconds < 0 && end.seconds > INT64_MAX + start.seconds) ||
       (start.seconds > 0 && end.seconds < INT64_MIN + start.seconds))
@@ -59,7 +64,7 @@ CHRONOMETRY_INSTANT_DURATION_BETWEEN_PROTOTYPE {
       (seconds == INT64_MAX / CHRONOMETRY_NANOSECONDS_PER_SECOND &&
        nanos > INT64_MAX % CHRONOMETRY_NANOSECONDS_PER_SECOND))
     return STATUS_CONST(ARITHMETIC_OVERFLOW);
-  result->nanoseconds =
+  outResult->nanoseconds =
       seconds * CHRONOMETRY_NANOSECONDS_PER_SECOND + nanos;
   return STATUS_CONST(SUCCESS);
 }
