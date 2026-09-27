@@ -1,0 +1,310 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - '.github/badges/**'
+      - '.github/entropy/state.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  posix:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux / GCC
+            os: ubuntu-latest
+            cc: gcc
+          - name: Linux / Clang
+            os: ubuntu-latest
+            cc: clang
+          - name: macOS / Clang
+            os: macos-latest
+            cc: clang
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Bootstrap repository
+        if: ${{ hashFiles('Codespace/Tests/**') == '' }}
+        run: echo "Codespace/Tests is not present yet; CI is installed and waiting for the source migration."
+
+      - name: Core
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        run: make -C Codespace/Tests/Core clean run CC=${{ matrix.cc }}
+
+      - name: Bit
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        run: make -C Codespace/Tests/Bit clean run CC=${{ matrix.cc }}
+
+      - name: Chronometry
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        run: make -C Codespace/Tests/Chronometry clean run CC=${{ matrix.cc }}
+
+      - name: Container
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        run: make -C Codespace/Tests/Container clean strict multi-tu CC=${{ matrix.cc }}
+
+      - name: Math
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        run: make -C Codespace/Tests/Math clean run CC=${{ matrix.cc }}
+
+      - name: Random
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        run: make -C Codespace/Tests/Random clean run CC=${{ matrix.cc }}
+
+      - name: Struct
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        run: make -C Codespace/Tests/Struct clean run CC=${{ matrix.cc }}
+
+      - name: Text
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        run: make -C Codespace/Tests/Text clean run CC=${{ matrix.cc }} BUILD=build-${{ matrix.cc }}
+
+      - name: Type
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        run: make -C Codespace/Tests/Type clean run CC=${{ matrix.cc }}
+
+      - name: Concurrency
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        run: make -C Codespace/Tests/Concurrency clean run CC=${{ matrix.cc }} BUILD=build-${{ matrix.cc }}
+
+      - name: Network
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        run: make -C Codespace/Tests/Network clean strict CC=${{ matrix.cc }}
+
+  mingw:
+    name: Windows / MinGW
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Bootstrap repository
+        if: ${{ hashFiles('Codespace/Tests/**') == '' }}
+        shell: bash
+        run: echo "Codespace/Tests is not present yet; CI is installed and waiting for the source migration."
+
+      - name: Core
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        shell: bash
+        run: |
+          make -C Codespace/Tests/Core clean build CC=gcc CFLAGS="-std=c11 -Wall -Wextra -Wpedantic -Werror"
+          for t in Codespace/Tests/Core/.build/*.exe; do "$t"; done
+
+      - name: Bit
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        shell: bash
+        run: make -C Codespace/Tests/Bit clean run CC=gcc CFLAGS="-std=c11 -Wall -Wextra -Wpedantic -Werror"
+
+      - name: Chronometry
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        shell: bash
+        run: make -C Codespace/Tests/Chronometry clean run CC=gcc CFLAGS="-std=c11 -Wall -Wextra -Wpedantic -Werror"
+
+      - name: Container
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        shell: bash
+        run: make -C Codespace/Tests/Container clean strict multi-tu CC=gcc CFLAGS="-std=c11 -Wall -Wextra -Wpedantic -Werror"
+
+      - name: Math
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        shell: bash
+        run: make -C Codespace/Tests/Math clean run CC=gcc CFLAGS="-std=c11 -Wall -Wextra -Wpedantic -Werror"
+
+      - name: Random
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        shell: bash
+        run: make -C Codespace/Tests/Random clean run CC=gcc CFLAGS="-std=c11 -Wall -Wextra -Wpedantic -Werror"
+
+      - name: Struct
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        shell: bash
+        run: make -C Codespace/Tests/Struct clean run CC=gcc CFLAGS="-std=c11 -Wall -Wextra -Wpedantic -Werror"
+
+      - name: Text
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        shell: bash
+        run: make -C Codespace/Tests/Text clean run CC=gcc BUILD=build-windows CFLAGS="-std=c11 -Wall -Wextra -Wpedantic -Werror"
+
+      - name: Type
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        shell: bash
+        run: make -C Codespace/Tests/Type clean run CC=gcc CFLAGS="-std=c11 -Wall -Wextra -Wpedantic -Werror"
+
+      - name: Concurrency
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        shell: bash
+        run: |
+          make -C Codespace/Tests/Concurrency clean windows WINDOWS_CC=gcc
+          for t in Codespace/Tests/Concurrency/build-windows/*.exe; do "$t"; done
+
+      - name: Network
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        shell: bash
+        run: |
+          make -C Codespace/Tests/Network clean windows WINDOWS_CC=gcc
+          for t in Codespace/Tests/Network/build-windows/*.exe; do "$t"; done
+
+  msvc:
+    name: Windows / MSVC
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Bootstrap repository
+        if: ${{ hashFiles('Codespace/Tests/**') == '' }}
+        shell: pwsh
+        run: Write-Host "Codespace/Tests is not present yet; CI is installed and waiting for the source migration."
+
+      - name: Set up MSVC
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Compile and run all suites
+        if: ${{ hashFiles('Codespace/Tests/**') != '' }}
+        shell: pwsh
+        run: .github/scripts/test-msvc.ps1
+
+  standalone-headers:
+    name: Standalone headers / ${{ matrix.cc }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compile every public header independently
+        run: python3 .github/scripts/test-public-headers.py --compiler ${{ matrix.cc }}
+
+  entropy-tests:
+    name: Entropy algorithm
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Unit and history tests
+        run: python3 .github/entropy/test_entropy.py -v
+
+      - name: Preview current source snapshot
+        run: python3 .github/entropy/entropy.py --provisional --output-dir /tmp/entropy-preview
+
+  sanitizers:
+    name: Linux / Clang / ASan + UBSan
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      SAN_FLAGS: -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Core
+        run: make -C Codespace/Tests/Core clean run CC=clang CFLAGS="$SAN_FLAGS"
+      - name: Bit
+        run: make -C Codespace/Tests/Bit clean run CC=clang CFLAGS="$SAN_FLAGS"
+      - name: Chronometry
+        run: make -C Codespace/Tests/Chronometry clean run CC=clang CFLAGS="$SAN_FLAGS"
+      - name: Container
+        run: make -C Codespace/Tests/Container clean strict multi-tu CC=clang CFLAGS="$SAN_FLAGS"
+      - name: Math
+        run: make -C Codespace/Tests/Math clean run CC=clang CFLAGS="$SAN_FLAGS"
+      - name: Random
+        run: make -C Codespace/Tests/Random clean run CC=clang CFLAGS="$SAN_FLAGS"
+      - name: Struct
+        run: make -C Codespace/Tests/Struct clean run CC=clang CFLAGS="$SAN_FLAGS"
+      - name: Text
+        run: make -C Codespace/Tests/Text clean run CC=clang BUILD=build-sanitize CFLAGS="$SAN_FLAGS"
+      - name: Type
+        run: make -C Codespace/Tests/Type clean run CC=clang CFLAGS="$SAN_FLAGS"
+      - name: Concurrency
+        run: make -C Codespace/Tests/Concurrency clean run CC=clang BUILD=build-sanitize CFLAGS="$SAN_FLAGS"
+      - name: Network
+        run: make -C Codespace/Tests/Network clean strict CC=clang CFLAGS="$SAN_FLAGS"
+
+  linux-32bit:
+    name: Linux / GCC / 32-bit
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      CFLAGS32: -m32 -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install 32-bit libc
+        run: sudo apt-get update && sudo apt-get install -y gcc-multilib libc6-dev-i386
+
+      - name: Core
+        run: make -C Codespace/Tests/Core clean run CC=gcc CFLAGS="$CFLAGS32"
+      - name: Bit
+        run: make -C Codespace/Tests/Bit clean run CC=gcc CFLAGS="$CFLAGS32"
+      - name: Chronometry
+        run: make -C Codespace/Tests/Chronometry clean run CC=gcc CFLAGS="$CFLAGS32"
+      - name: Container
+        run: make -C Codespace/Tests/Container clean strict multi-tu CC=gcc CFLAGS="$CFLAGS32"
+      - name: Math
+        run: make -C Codespace/Tests/Math clean run CC=gcc CFLAGS="$CFLAGS32"
+      - name: Random
+        run: make -C Codespace/Tests/Random clean run CC=gcc CFLAGS="$CFLAGS32"
+      - name: Struct
+        run: make -C Codespace/Tests/Struct clean run CC=gcc CFLAGS="$CFLAGS32"
+      - name: Text
+        run: make -C Codespace/Tests/Text clean run CC=gcc BUILD=build-32 CFLAGS="$CFLAGS32"
+      - name: Type
+        run: make -C Codespace/Tests/Type clean run CC=gcc CFLAGS="$CFLAGS32"
+      - name: Concurrency
+        run: make -C Codespace/Tests/Concurrency clean run CC=gcc BUILD=build-32 CFLAGS="$CFLAGS32"
+      - name: Network
+        run: make -C Codespace/Tests/Network clean strict CC=gcc CFLAGS="$CFLAGS32"
+
+  thread-sanitizer:
+    name: Linux / GCC / ThreadSanitizer
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      TSAN_FLAGS: -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L -O1 -g -fsanitize=thread -fno-omit-frame-pointer
+      TSAN_OPTIONS: halt_on_error=1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Concurrency under ThreadSanitizer
+        run: make -C Codespace/Tests/Concurrency clean run CC=gcc BUILD=build-tsan CFLAGS="$TSAN_FLAGS"
