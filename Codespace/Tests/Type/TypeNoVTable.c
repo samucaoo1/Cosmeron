@@ -1,4 +1,4 @@
-#define TYPE_ENABLE_VTABLE 0
+#define TYPE_DISABLE_FUNCTION_TABLE
 
 #include "../../Cosmeron/Modules/Type/TBigint.h"
 #include "../../Cosmeron/Modules/Type/TBlock.h"
