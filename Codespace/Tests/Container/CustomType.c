@@ -19,7 +19,7 @@ int main(void) {
   for (int key = 63; key >= 0; --key) {
     TContainerTestRecord record = {.key = key, .payload = key * 2};
     TEST_ASSERT(Tree_AVL_Set_record_Insert(&records, record) ==
-                STATUS_NS(SUCCESS));
+                STATUS_CONST(SUCCESS));
   }
   TContainerTestRecord query = {.key = 17, .payload = 0};
   TContainerTestRecord *found = Tree_AVL_Set_record_Find(&records, query);

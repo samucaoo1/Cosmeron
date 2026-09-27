@@ -78,13 +78,13 @@ static int test_capacity_overflow(void) {
 static int test_queue(void) {
   TFlat_Queue(int, queue)
   for (int value = 0; value < 64; ++value)
-    TEST_ASSERT(Push(queue, value) == STATUS_NS(SUCCESS));
+    TEST_ASSERT(Push(queue, value) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(Size(queue) == 64);
   TEST_ASSERT(*Front(queue) == 0);
   TEST_ASSERT(*Back(queue) == 63);
   for (int expected = 0; expected < 64; ++expected) {
     int value = -1;
-    TEST_ASSERT(Pop(queue, &value) == STATUS_NS(SUCCESS));
+    TEST_ASSERT(Pop(queue, &value) == STATUS_CONST(SUCCESS));
     TEST_ASSERT(value == expected);
   }
   TEST_ASSERT(Empty(queue));
@@ -95,12 +95,12 @@ static int test_queue(void) {
 static int test_stack(void) {
   TFlat_Stack(int, stack)
   for (int value = 0; value < 64; ++value)
-    TEST_ASSERT(Push(stack, value) == STATUS_NS(SUCCESS));
+    TEST_ASSERT(Push(stack, value) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(Size(stack) == 64);
   TEST_ASSERT(*Top(stack) == 63);
   for (int expected = 63; expected >= 0; --expected) {
     int value = -1;
-    TEST_ASSERT(Pop(stack, &value) == STATUS_NS(SUCCESS));
+    TEST_ASSERT(Pop(stack, &value) == STATUS_CONST(SUCCESS));
     TEST_ASSERT(value == expected);
   }
   TEST_ASSERT(Empty(stack));
@@ -115,10 +115,10 @@ static int test_string(void) {
       'C', 'o', 'n', 'g', 'r', 'o', ' ', 'L',
       'i', 'b', 'r', 'a', 'r', 'y', '!', 0};
   TString(8, string)
-  TEST_ASSERT(string.api->fromCStr(&string, cosmeron) == STATUS_NS(SUCCESS));
-  TEST_ASSERT(string.api->pushBack(&string, (utf8)'!') == STATUS_NS(SUCCESS));
+  TEST_ASSERT(string.api->fromCStr(&string, cosmeron) == STATUS_CONST(SUCCESS));
+  TEST_ASSERT(string.api->pushBack(&string, (utf8)'!') == STATUS_CONST(SUCCESS));
   TEST_ASSERT(string.api->length(&string) == 7);
-  TEST_ASSERT(string.api->insertStr(&string, 6, library) == STATUS_NS(SUCCESS));
+  TEST_ASSERT(string.api->insertStr(&string, 6, library) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(string.api->length(&string) == 15);
   TEST_ASSERT(memcmp(string.api->cStr(&string), expected, sizeof(expected)) == 0);
   string.api->destroy(&string);
@@ -127,15 +127,15 @@ static int test_string(void) {
 
 static int test_deque(void) {
   TLinked_Deque(int, deque)
-  TEST_ASSERT(PushFront(deque, 2) == STATUS_NS(SUCCESS));
-  TEST_ASSERT(PushFront(deque, 1) == STATUS_NS(SUCCESS));
-  TEST_ASSERT(PushBack(deque, 3) == STATUS_NS(SUCCESS));
+  TEST_ASSERT(PushFront(deque, 2) == STATUS_CONST(SUCCESS));
+  TEST_ASSERT(PushFront(deque, 1) == STATUS_CONST(SUCCESS));
+  TEST_ASSERT(PushBack(deque, 3) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(*Front(deque) == 1);
   TEST_ASSERT(*Back(deque) == 3);
   int value = 0;
-  TEST_ASSERT(PopFront(deque, &value) == STATUS_NS(SUCCESS) && value == 1);
-  TEST_ASSERT(PopBack(deque, &value) == STATUS_NS(SUCCESS) && value == 3);
-  TEST_ASSERT(PopFront(deque, &value) == STATUS_NS(SUCCESS) && value == 2);
+  TEST_ASSERT(PopFront(deque, &value) == STATUS_CONST(SUCCESS) && value == 1);
+  TEST_ASSERT(PopBack(deque, &value) == STATUS_CONST(SUCCESS) && value == 3);
+  TEST_ASSERT(PopFront(deque, &value) == STATUS_CONST(SUCCESS) && value == 2);
   TEST_ASSERT(Empty(deque));
   Destroy(deque);
   return 0;
@@ -145,17 +145,17 @@ static int test_vector(void) {
   TVector(int, vector)
   TEST_ASSERT(Empty(vector));
   for (int value = 0; value < 1024; ++value)
-    TEST_ASSERT(PushBack(vector, value) == STATUS_NS(SUCCESS));
+    TEST_ASSERT(PushBack(vector, value) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(Size(vector) == 1024);
-  TEST_ASSERT(Insert(vector, 512, -1) == STATUS_NS(SUCCESS));
+  TEST_ASSERT(Insert(vector, 512, -1) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(*At(vector, 512) == -1);
-  TEST_ASSERT(Erase(vector, 500, 25) == STATUS_NS(SUCCESS));
+  TEST_ASSERT(Erase(vector, 500, 25) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(Size(vector) == 1000);
-  TEST_ASSERT(Erase(vector, Size(vector), 0) == STATUS_NS(SUCCESS));
-  TEST_ASSERT(Erase(vector, Size(vector), 1) == STATUS_NS(OUT_OF_RANGE));
+  TEST_ASSERT(Erase(vector, Size(vector), 0) == STATUS_CONST(SUCCESS));
+  TEST_ASSERT(Erase(vector, Size(vector), 1) == STATUS_CONST(OUT_OF_RANGE));
   int removed = -1;
-  TEST_ASSERT(PopBack(vector, &removed) == STATUS_NS(SUCCESS));
-  TEST_ASSERT(PopBack(vector) == STATUS_NS(SUCCESS));
+  TEST_ASSERT(PopBack(vector, &removed) == STATUS_CONST(SUCCESS));
+  TEST_ASSERT(PopBack(vector) == STATUS_CONST(SUCCESS));
   Destroy(vector);
   return 0;
 }
@@ -164,13 +164,13 @@ static int test_vector(void) {
 static int test_linked_node_ownership(void) {
   TLinked_List(int, first)
   TLinked_List(int, second)
-  TEST_ASSERT(PushBack(first, 1) == STATUS_NS(SUCCESS));
-  TEST_ASSERT(PushBack(second, 2) == STATUS_NS(SUCCESS));
+  TEST_ASSERT(PushBack(first, 1) == STATUS_CONST(SUCCESS));
+  TEST_ASSERT(PushBack(second, 2) == STATUS_CONST(SUCCESS));
   Linked_List_TNode_int *foreign = second.head;
   TEST_ASSERT(Linked_List_int_Insert(&first, foreign, 3, NULL) ==
-              STATUS_NS(INVALID_ARGUMENT));
+              STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Linked_List_int_Erase(&first, foreign, NULL) ==
-              STATUS_NS(INVALID_ARGUMENT));
+              STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Size(first) == 1);
   TEST_ASSERT(Size(second) == 1);
   Destroy(first);
@@ -179,15 +179,15 @@ static int test_linked_node_ownership(void) {
   TLinked_ForwardList(int, forwardA)
   TLinked_ForwardList(int, forwardB)
   TEST_ASSERT(Linked_ForwardList_int_PushFront(&forwardA, 1) ==
-              STATUS_NS(SUCCESS));
+              STATUS_CONST(SUCCESS));
   TEST_ASSERT(Linked_ForwardList_int_PushFront(&forwardB, 2) ==
-              STATUS_NS(SUCCESS));
+              STATUS_CONST(SUCCESS));
   Linked_ForwardList_TNode_int *foreignForward = forwardB.head;
   TEST_ASSERT(Linked_ForwardList_int_InsertAfter(
                   &forwardA, foreignForward, 3, NULL) ==
-              STATUS_NS(INVALID_ARGUMENT));
+              STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Linked_ForwardList_int_EraseAfter(&forwardA, foreignForward) ==
-              STATUS_NS(INVALID_ARGUMENT));
+              STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Linked_ForwardList_int_Size(&forwardA) == 1);
   TEST_ASSERT(Linked_ForwardList_int_Size(&forwardB) == 1);
   Linked_ForwardList_int_Destroy(&forwardA);
@@ -198,7 +198,7 @@ static int test_linked_node_ownership(void) {
 static int test_list(void) {
   TLinked_List(int, list)
   for (int value = 0; value < 256; ++value)
-    TEST_ASSERT(PushBack(list, value) == STATUS_NS(SUCCESS));
+    TEST_ASSERT(PushBack(list, value) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(Size(list) == 256);
   size_t count = 0;
   Linked_List_TNode_int *node = list.head;
@@ -212,10 +212,10 @@ static int test_list(void) {
   TEST_ASSERT(count == Size(list) && previous == list.tail);
   for (int expected = 0; expected < 256; ++expected) {
     int value;
-    TEST_ASSERT(PopFront(list, &value) == STATUS_NS(SUCCESS));
+    TEST_ASSERT(PopFront(list, &value) == STATUS_CONST(SUCCESS));
     TEST_ASSERT(value == expected);
   }
-  TEST_ASSERT(PopFront(list) == STATUS_NS(OUT_OF_RANGE));
+  TEST_ASSERT(PopFront(list) == STATUS_CONST(OUT_OF_RANGE));
   Destroy(list);
   return 0;
 }
@@ -228,7 +228,7 @@ static int test_bst_and_iterators(void) {
 
   const int values[] = {4, 2, 6, 1, 3, 5, 7};
   for (size_t i = 0; i < sizeof(values) / sizeof(values[0]); ++i)
-    TEST_ASSERT(TreeInsert(tree, values[i]) == STATUS_NS(SUCCESS));
+    TEST_ASSERT(TreeInsert(tree, values[i]) == STATUS_CONST(SUCCESS));
 
   int expected = 1;
   Tree_BST_Set_int_Node *node = TreeBegin(tree);
@@ -248,7 +248,7 @@ static int test_bst_and_iterators(void) {
   }
   TEST_ASSERT(expected == 0);
 
-  TEST_ASSERT(TreeRemove(tree, 4) == STATUS_NS(SUCCESS));
+  TEST_ASSERT(TreeRemove(tree, 4) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(!TreeContains(tree, 4));
   TEST_ASSERT(TreeSize(tree) == 6);
   TreeDestroy(tree);
@@ -259,13 +259,13 @@ static int test_avl(void) {
   TTree_AVL_Set(int, tree);
   for (int index = 0; index < 257; ++index) {
     int value = (index * 73) % 257;
-    TEST_ASSERT(TreeInsert(tree, value) == STATUS_NS(SUCCESS));
+    TEST_ASSERT(TreeInsert(tree, value) == STATUS_CONST(SUCCESS));
     int height;
     TEST_ASSERT(check_avl_node(tree.root, &height));
   }
   TEST_ASSERT(TreeInsert(tree, 42) == STATUS_CONST(ALREADY_EXISTS));
   for (int value = 0; value < 257; value += 2) {
-    TEST_ASSERT(TreeRemove(tree, value) == STATUS_NS(SUCCESS));
+    TEST_ASSERT(TreeRemove(tree, value) == STATUS_CONST(SUCCESS));
     int height;
     TEST_ASSERT(check_avl_node(tree.root, &height));
   }
@@ -278,13 +278,13 @@ static int test_red_black(void) {
   TTree_RB_Set(int, tree);
   for (int index = 0; index < 257; ++index) {
     int value = (index * 73) % 257;
-    TEST_ASSERT(TreeInsert(tree, value) == STATUS_NS(SUCCESS));
+    TEST_ASSERT(TreeInsert(tree, value) == STATUS_CONST(SUCCESS));
     int black_height;
     TEST_ASSERT(tree.root == NULL || tree.root->color == TREE_RB_BLACK);
     TEST_ASSERT(check_rb_node(tree.root, &black_height));
   }
   for (int value = 0; value < 257; value += 2) {
-    TEST_ASSERT(TreeRemove(tree, value) == STATUS_NS(SUCCESS));
+    TEST_ASSERT(TreeRemove(tree, value) == STATUS_CONST(SUCCESS));
     int black_height;
     TEST_ASSERT(tree.root == NULL || tree.root->color == TREE_RB_BLACK);
     TEST_ASSERT(check_rb_node(tree.root, &black_height));
@@ -297,7 +297,7 @@ static int test_red_black(void) {
 static int test_map(void) {
   TTree_AVL_Map(int, int, map);
   for (int key = 0; key < 100; ++key)
-    TEST_ASSERT(TreeInsert(map, key, key * 10) == STATUS_NS(SUCCESS));
+    TEST_ASSERT(TreeInsert(map, key, key * 10) == STATUS_CONST(SUCCESS));
   for (int key = 0; key < 100; ++key) {
     int *value = TreeFind(map, key);
     TEST_ASSERT(value != NULL && *value == key * 10);
@@ -308,36 +308,36 @@ static int test_map(void) {
 
 
 static int test_null_contracts(void) {
-  TEST_ASSERT(Flat_Vector_int_Init(NULL) == STATUS_NS(INVALID_ARGUMENT));
-  TEST_ASSERT(Flat_Vector_int_Reserve(NULL, 16U) == STATUS_NS(INVALID_ARGUMENT));
-  TEST_ASSERT(Flat_Vector_int_PopBack(NULL, NULL) == STATUS_NS(INVALID_ARGUMENT));
-  TEST_ASSERT(Flat_Vector_int_Insert(NULL, 0U, 1) == STATUS_NS(INVALID_ARGUMENT));
-  TEST_ASSERT(Flat_Vector_int_Erase(NULL, 0U, 0U) == STATUS_NS(INVALID_ARGUMENT));
+  TEST_ASSERT(Flat_Vector_int_Init(NULL) == STATUS_CONST(INVALID_ARGUMENT));
+  TEST_ASSERT(Flat_Vector_int_Reserve(NULL, 16U) == STATUS_CONST(INVALID_ARGUMENT));
+  TEST_ASSERT(Flat_Vector_int_PopBack(NULL, NULL) == STATUS_CONST(INVALID_ARGUMENT));
+  TEST_ASSERT(Flat_Vector_int_Insert(NULL, 0U, 1) == STATUS_CONST(INVALID_ARGUMENT));
+  TEST_ASSERT(Flat_Vector_int_Erase(NULL, 0U, 0U) == STATUS_CONST(INVALID_ARGUMENT));
   Flat_Vector_int_Clear(NULL);
   TEST_ASSERT(Flat_Vector_int_At(NULL, 0U) == NULL);
   TEST_ASSERT(!Flat_Vector_int_Empty(NULL));
   TEST_ASSERT(Flat_Vector_int_Size(NULL) == 0U);
   Flat_Vector_int_Destroy(NULL);
 
-  TEST_ASSERT(Flat_Queue_int_Init(NULL) == STATUS_NS(INVALID_ARGUMENT));
-  TEST_ASSERT(Flat_Queue_int_Push(NULL, 1) == STATUS_NS(INVALID_ARGUMENT));
-  TEST_ASSERT(Flat_Queue_int_Pop(NULL, NULL) == STATUS_NS(INVALID_ARGUMENT));
+  TEST_ASSERT(Flat_Queue_int_Init(NULL) == STATUS_CONST(INVALID_ARGUMENT));
+  TEST_ASSERT(Flat_Queue_int_Push(NULL, 1) == STATUS_CONST(INVALID_ARGUMENT));
+  TEST_ASSERT(Flat_Queue_int_Pop(NULL, NULL) == STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Flat_Queue_int_Front(NULL) == NULL);
   TEST_ASSERT(!Flat_Queue_int_Empty(NULL));
   TEST_ASSERT(Flat_Queue_int_Size(NULL) == 0U);
   Flat_Queue_int_Destroy(NULL);
 
-  TEST_ASSERT(Linked_List_int_Init(NULL) == STATUS_NS(INVALID_ARGUMENT));
-  TEST_ASSERT(Linked_List_int_PushBack(NULL, 1) == STATUS_NS(INVALID_ARGUMENT));
-  TEST_ASSERT(Linked_List_int_PopFront(NULL, NULL) == STATUS_NS(INVALID_ARGUMENT));
+  TEST_ASSERT(Linked_List_int_Init(NULL) == STATUS_CONST(INVALID_ARGUMENT));
+  TEST_ASSERT(Linked_List_int_PushBack(NULL, 1) == STATUS_CONST(INVALID_ARGUMENT));
+  TEST_ASSERT(Linked_List_int_PopFront(NULL, NULL) == STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Linked_List_int_Front(NULL) == NULL);
   TEST_ASSERT(!Linked_List_int_Empty(NULL));
   TEST_ASSERT(Linked_List_int_Size(NULL) == 0U);
   Linked_List_int_Destroy(NULL);
 
-  TEST_ASSERT(Tree_AVL_Set_int_Init(NULL) == STATUS_NS(INVALID_ARGUMENT));
-  TEST_ASSERT(Tree_AVL_Set_int_Insert(NULL, 1) == STATUS_NS(INVALID_ARGUMENT));
-  TEST_ASSERT(Tree_AVL_Set_int_Remove(NULL, 1) == STATUS_NS(INVALID_ARGUMENT));
+  TEST_ASSERT(Tree_AVL_Set_int_Init(NULL) == STATUS_CONST(INVALID_ARGUMENT));
+  TEST_ASSERT(Tree_AVL_Set_int_Insert(NULL, 1) == STATUS_CONST(INVALID_ARGUMENT));
+  TEST_ASSERT(Tree_AVL_Set_int_Remove(NULL, 1) == STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Tree_AVL_Set_int_Find(NULL, 1) == NULL);
   TEST_ASSERT(!Tree_AVL_Set_int_Contains(NULL, 1));
   TEST_ASSERT(Tree_AVL_Set_int_Min(NULL) == NULL);
@@ -358,40 +358,40 @@ static int test_string_contracts(void) {
   size_t index = 99U;
   TComparisonResult comparison;
 
-  TEST_ASSERT(Flat_String_8_FromCStr(&text, hello) == STATUS_NS(SUCCESS));
+  TEST_ASSERT(Flat_String_8_FromCStr(&text, hello) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(Flat_String_8_Find(&text, (utf8)'l', 0U, &index) ==
-              STATUS_NS(SUCCESS));
+              STATUS_CONST(SUCCESS));
   TEST_ASSERT(index == 2U);
   TEST_ASSERT(Flat_String_8_Find(&text, (utf8)'x', 0U, &index) ==
-              STATUS_NS(NOT_FOUND));
+              STATUS_CONST(NOT_FOUND));
   TEST_ASSERT(Flat_String_8_FindStr(&text, ell, 0U, &index) ==
-              STATUS_NS(SUCCESS));
+              STATUS_CONST(SUCCESS));
   TEST_ASSERT(index == 1U);
   TEST_ASSERT(Flat_String_8_FindStr(&text, ell, 4U, &index) ==
-              STATUS_NS(NOT_FOUND));
+              STATUS_CONST(NOT_FOUND));
 
-  TEST_ASSERT(Flat_String_8_FromCStr(&other, hello) == STATUS_NS(SUCCESS));
+  TEST_ASSERT(Flat_String_8_FromCStr(&other, hello) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(Flat_String_8_Compare(&text, &other, &comparison) ==
-              STATUS_NS(SUCCESS));
+              STATUS_CONST(SUCCESS));
   TEST_ASSERT(comparison == COMPARISON_CONST(EQUAL));
 
   TEST_ASSERT(Flat_String_8_Substr(&text, 1U, 3U, &slice) ==
-              STATUS_NS(SUCCESS));
+              STATUS_CONST(SUCCESS));
   TEST_ASSERT(slice.size == 3U);
   TEST_ASSERT(slice.data[0] == (utf8)'e' && slice.data[2] == (utf8)'l');
   TEST_ASSERT(Flat_String_8_Substr(&text, 0U, 1U, &text) ==
-              STATUS_NS(INVALID_ARGUMENT));
+              STATUS_CONST(INVALID_ARGUMENT));
 
-  TEST_ASSERT(Flat_String_8_PopBack(NULL, NULL) == STATUS_NS(INVALID_ARGUMENT));
+  TEST_ASSERT(Flat_String_8_PopBack(NULL, NULL) == STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Flat_String_8_InsertChar(NULL, 0U, (utf8)'x') ==
-              STATUS_NS(INVALID_ARGUMENT));
-  TEST_ASSERT(Flat_String_8_Append(NULL, hello) == STATUS_NS(INVALID_ARGUMENT));
+              STATUS_CONST(INVALID_ARGUMENT));
+  TEST_ASSERT(Flat_String_8_Append(NULL, hello) == STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Flat_String_8_Erase(NULL, 0U, 1U) ==
-              STATUS_NS(INVALID_ARGUMENT));
+              STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Flat_String_8_Compare(NULL, &other, &comparison) ==
-              STATUS_NS(INVALID_ARGUMENT));
+              STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Flat_String_8_Find(NULL, (utf8)'x', 0U, &index) ==
-              STATUS_NS(INVALID_ARGUMENT));
+              STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Flat_String_8_Data(NULL) == NULL);
 
   Flat_String_8_Destroy(&text);
@@ -404,9 +404,9 @@ static int test_string_contracts(void) {
 static int test_alias_single_evaluation(void) {
   FLAT_VECTOR_TYPE(int) vectors[2];
   size_t index = 0U;
-  TEST_ASSERT(Flat_Vector_int_Init(&vectors[0]) == STATUS_NS(SUCCESS));
-  TEST_ASSERT(Flat_Vector_int_Init(&vectors[1]) == STATUS_NS(SUCCESS));
-  TEST_ASSERT(PushBack(vectors[index++], 7) == STATUS_NS(SUCCESS));
+  TEST_ASSERT(Flat_Vector_int_Init(&vectors[0]) == STATUS_CONST(SUCCESS));
+  TEST_ASSERT(Flat_Vector_int_Init(&vectors[1]) == STATUS_CONST(SUCCESS));
+  TEST_ASSERT(PushBack(vectors[index++], 7) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(index == 1U);
   TEST_ASSERT(Size(vectors[0]) == 1U);
   Destroy(vectors[0]);
@@ -420,9 +420,9 @@ static int test_instance_declare_grammar(void) {
   LINKED_LIST_INSTANCE_DECLARE(int, list)
   TREE_AVL_SET_INSTANCE_DECLARE(int, tree)
 
-  TEST_ASSERT(PushBack(vector, 11) == STATUS_NS(SUCCESS));
-  TEST_ASSERT(PushBack(list, 13) == STATUS_NS(SUCCESS));
-  TEST_ASSERT(TreeInsert(tree, 17) == STATUS_NS(SUCCESS));
+  TEST_ASSERT(PushBack(vector, 11) == STATUS_CONST(SUCCESS));
+  TEST_ASSERT(PushBack(list, 13) == STATUS_CONST(SUCCESS));
+  TEST_ASSERT(TreeInsert(tree, 17) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(Size(vector) == 1U);
   TEST_ASSERT(Size(list) == 1U);
   TEST_ASSERT(TreeSize(tree) == 1U);

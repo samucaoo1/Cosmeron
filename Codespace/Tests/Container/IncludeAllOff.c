@@ -1,3 +1,3 @@
-#define CONTAINER_ENABLE_PSEUDO_METHODS 0
+#define CONTAINER_DISABLE_FUNCTION_TABLE
 #include "IncludeAll.c"
 
