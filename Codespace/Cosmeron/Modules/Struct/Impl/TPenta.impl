@@ -1,4 +1,4 @@
-#define TPENTA_IMPLEMENT(TYPE, SUFFIX)                                          \
+#define TPENTA_CAST_IMPLEMENT_ALL(TYPE, SUFFIX)                                          \
   TPENTA_CAST_TO_TYPE_PROTOTYPE(TYPE, SUFFIX) {                         \
     TPENTA_TYPE(SUFFIX) penta;                                                   \
     penta.value1 = value1;                                                     \
