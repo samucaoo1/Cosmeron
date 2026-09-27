@@ -26,8 +26,8 @@ CHRONOMETRY_CALENDAR_REFORM_POLICY_PROTOTYPE {
     return STATUS_CONST(INVALID_ARGUMENT);
   outPolicy->kind = CALENDAR_CONST(HISTORICAL_REFORM);
   outPolicy->system = CALENDAR_CONST(GREGORIAN);
-  policy->reform.before = CALENDAR_CONST(JULIAN);
-  policy->reform.after = CALENDAR_CONST(GREGORIAN);
+  outPolicy->reform.before = CALENDAR_CONST(JULIAN);
+  outPolicy->reform.after = CALENDAR_CONST(GREGORIAN);
   switch (id) {
 #define X(NAME, BEFORE_YEAR, BEFORE_MONTH, BEFORE_DAY, AFTER_YEAR,             \
           AFTER_MONTH, AFTER_DAY, SUPPRESSED)                                 \
