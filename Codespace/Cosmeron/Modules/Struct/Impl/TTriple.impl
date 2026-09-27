@@ -1,4 +1,4 @@
-#define TTRIPLE_IMPLEMENT(TYPE, SUFFIX)                                        \
+#define TTRIPLE_CAST_IMPLEMENT_ALL(TYPE, SUFFIX)                                        \
   TTRIPLE_CAST_TO_TYPE_PROTOTYPE(TYPE, SUFFIX) {                       \
     TTRIPLE_TYPE(SUFFIX) triple;                                               \
     triple.value1 = value1;                                                   \
