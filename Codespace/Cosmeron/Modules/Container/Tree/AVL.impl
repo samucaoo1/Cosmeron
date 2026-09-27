@@ -242,7 +242,7 @@
  * Full AVL SET expansion
  * ============================================================= */
 
-#define TAVL_DEFINE_SET(T, KEY_TYPE, CMP)                                     \
+#define TAVL_SET_IMPLEMENT_ALL(T, KEY_TYPE, CMP)                                     \
   TTREE_NODE_SET(T, KEY_TYPE, int height;)                                     \
   TTREE_STRUCT(T)                                                              \
   TTREE_COMMON_SET(T, KEY_TYPE, CMP)                                           \
@@ -253,7 +253,7 @@
  * Full AVL MAP expansion
  * ============================================================= */
 
-#define TAVL_DEFINE_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                         \
+#define TAVL_MAP_IMPLEMENT_ALL(T, KEY_TYPE, VALUE_TYPE, CMP)                         \
   TTREE_NODE_MAP(T, KEY_TYPE, VALUE_TYPE, int height;)                         \
   TTREE_STRUCT(T)                                                              \
   TTREE_COMMON_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                               \

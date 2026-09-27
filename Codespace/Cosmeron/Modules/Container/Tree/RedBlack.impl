@@ -337,14 +337,14 @@ typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor;
  * Full RB SET / MAP expansion
  * ============================================================= */
 
-#define TRB_DEFINE_SET(T, KEY_TYPE, CMP)                                      \
+#define TRB_SET_IMPLEMENT_ALL(T, KEY_TYPE, CMP)                                      \
   TTREE_NODE_SET(T, KEY_TYPE, TREE_RBColor color;)                                 \
   TTREE_STRUCT(T)                                                              \
   TTREE_COMMON_SET(T, KEY_TYPE, CMP)                                           \
   TRB_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                        \
   TRB_IMPLEMENT_SET(T, KEY_TYPE, CMP)
 
-#define TRB_DEFINE_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                          \
+#define TRB_MAP_IMPLEMENT_ALL(T, KEY_TYPE, VALUE_TYPE, CMP)                          \
   TTREE_NODE_MAP(T, KEY_TYPE, VALUE_TYPE, TREE_RBColor color;)                     \
   TTREE_STRUCT(T)                                                              \
   TTREE_COMMON_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                               \

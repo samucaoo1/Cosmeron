@@ -152,14 +152,14 @@
  * Full BST SET / MAP expansion
  * ============================================================= */
 
-#define TBST_DEFINE_SET(T, KEY_TYPE, CMP)                                     \
+#define TBST_SET_IMPLEMENT_ALL(T, KEY_TYPE, CMP)                                     \
   TTREE_NODE_SET(T, KEY_TYPE, )                                                \
   TTREE_STRUCT(T)                                                              \
   TTREE_COMMON_SET(T, KEY_TYPE, CMP)                                           \
   TBST_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                       \
   TBST_IMPLEMENT_SET(T, KEY_TYPE, CMP)
 
-#define TBST_DEFINE_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                         \
+#define TBST_MAP_IMPLEMENT_ALL(T, KEY_TYPE, VALUE_TYPE, CMP)                         \
   TTREE_NODE_MAP(T, KEY_TYPE, VALUE_TYPE, )                                    \
   TTREE_STRUCT(T)                                                              \
   TTREE_COMMON_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                               \
