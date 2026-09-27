@@ -1,0 +1,93 @@
+#define SEQUENTIAL_CONTAINER_IMPLEMENT_PUSH_BACK(                              \
+    TYPE, FUNCTION_NAME, FUNCTION_ENSURE_CAPACITY, CONTAINER_STRUCT)           \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       TYPE value) {                           \
+    OPSTATUS status = FUNCTION_ENSURE_CAPACITY(container);                     \
+    if (status != STATUS_NS(SUCCESS))                                          \
+      return status;                                                           \
+    container->data[container->size++] = value;                                \
+    return STATUS_NS(SUCCESS);                                                 \
+  }
+
+#define SEQUENTIAL_CONTAINER_IMPLEMENT_POP_BACK(TYPE, FUNCTION_NAME,           \
+                                                CONTAINER_STRUCT)              \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       TYPE *outValue) {                      \
+    if (!container)                                                            \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    if (container->size == 0)                                                  \
+      return STATUS_NS(OUT_OF_RANGE);                                          \
+    if (outValue)                                                             \
+      *outValue = container->data[container->size - 1];                       \
+    container->size--;                                                         \
+    return STATUS_NS(SUCCESS);                                                 \
+  }
+
+#define SEQUENTIAL_CONTAINER_IMPLEMENT_PUSH_FRONT(                             \
+    TYPE, FUNCTION_NAME, FUNCTION_INSERT, CONTAINER_STRUCT)                    \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       TYPE value) {                           \
+    return FUNCTION_INSERT(container, 0, value);                               \
+  }
+
+#define SEQUENTIAL_CONTAINER_IMPLEMENT_POP_FRONT(                              \
+    TYPE, FUNCTION_NAME, FUNCTION_ERASE, CONTAINER_STRUCT)                     \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       TYPE *outValue) {                      \
+    if (!container)                                                            \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    if (container->size == 0)                                                  \
+      return STATUS_NS(OUT_OF_RANGE);                                          \
+    if (outValue)                                                             \
+      *outValue = container->data[0];                                         \
+    return FUNCTION_ERASE(container, 0, 1);                                       \
+  }
+
+#define SEQUENTIAL_CONTAINER_IMPLEMENT_INSERT(                                 \
+    TYPE, FUNCTION_NAME, FUNCTION_ENSURE_CAPACITY, CONTAINER_STRUCT)           \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       size_t position, TYPE value) {          \
+    if (!container)                                                            \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    if (position > container->size)                                            \
+      return STATUS_NS(OUT_OF_RANGE);                                          \
+                                                                               \
+    OPSTATUS status = FUNCTION_ENSURE_CAPACITY(container);                     \
+    if (status != STATUS_NS(SUCCESS))                                          \
+      return status;                                                           \
+                                                                               \
+    if (position < container->size) {                                          \
+      memmove(&container->data[position + 1], &container->data[position],      \
+              (container->size - position) * sizeof(TYPE));                    \
+    }                                                                          \
+    container->data[position] = value;                                         \
+    container->size++;                                                         \
+    return STATUS_NS(SUCCESS);                                                 \
+  }
+
+#define SEQUENTIAL_CONTAINER_IMPLEMENT_ERASE(TYPE, FUNCTION_NAME,              \
+                                             CONTAINER_STRUCT)                 \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       size_t position, size_t count) {        \
+    if (!container)                                                            \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    if (position > container->size || count > container->size - position)                                           \
+      return STATUS_NS(OUT_OF_RANGE);                                          \
+    if (count == 0)                                                            \
+      return STATUS_NS(SUCCESS);                                               \
+                                                                               \
+    if (position + count < container->size) {                                      \
+      memmove(&container->data[position], &container->data[position + count],  \
+              (container->size - position - count) * sizeof(TYPE));                \
+    }                                                                          \
+    container->size -= count;                                                         \
+    return STATUS_NS(SUCCESS);                                                 \
+  }
+
+#define SEQUENTIAL_CONTAINER_IMPLEMENT_CLEAR(TYPE, FUNCTION_NAME,              \
+                                             CONTAINER_STRUCT)                 \
+  static inline void FUNCTION_NAME(CONTAINER_STRUCT *container) {              \
+    if (!container)                                                            \
+      return;                                                                  \
+    container->size = 0;                                                       \
+  }

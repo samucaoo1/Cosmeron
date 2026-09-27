@@ -1,0 +1,13 @@
+
+#include "../Internal.impl"
+
+/* ============================================================
+ * Double Linked — Lifecycle
+ * ============================================================ */
+
+#define DOUBLE_LINKED_IMPLEMENT_INIT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)    \
+  LINKED_INTERNAL_IMPLEMENT_INIT(FUNCTION_NAME, CONTAINER_STRUCT)
+
+#define DOUBLE_LINKED_IMPLEMENT_DESTROY(TYPE, FUNCTION_NAME, CONTAINER_STRUCT, \
+                                        NODE_STRUCT)                           \
+  LINKED_INTERNAL_IMPLEMENT_DESTROY(FUNCTION_NAME, CONTAINER_STRUCT, NODE_STRUCT)

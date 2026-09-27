@@ -1,0 +1,83 @@
+
+/* =============================================================
+ * Iterators — Begin, End, Next, Prev
+ * Shared by all algorithms and both set/map semantics.
+ * ============================================================= */
+
+#define TTREE_IMPLEMENT_ITERATORS(T)                                           \
+  static inline TTREE_NODE(T) * TTREE_FN(T, Begin)(T * tree) {                \
+    if (!tree)                                                                 \
+      return NULL;                                                             \
+    return TTREE_FN(T, MinNode)(tree->root);                                   \
+  }                                                                            \
+                                                                               \
+  static inline TTREE_NODE(T) * TTREE_FN(T, End)(T * tree) {                  \
+    (void)tree;                                                                \
+    return NULL;                                                               \
+  }                                                                            \
+                                                                               \
+  static inline TTREE_NODE(T) * TTREE_FN(T, Next)(TTREE_NODE(T) * node) {     \
+    if (!node)                                                                 \
+      return NULL;                                                             \
+    if (node->right)                                                           \
+      return TTREE_FN(T, MinNode)(node->right);                                \
+    TTREE_NODE(T) *_p = node->parent;                                          \
+    while (_p && node == _p->right) {                                          \
+      node = _p;                                                               \
+      _p = _p->parent;                                                         \
+    }                                                                          \
+    return _p;                                                                 \
+  }                                                                            \
+                                                                               \
+  static inline TTREE_NODE(T) * TTREE_FN(T, Prev)(TTREE_NODE(T) * node) {     \
+    if (!node)                                                                 \
+      return NULL;                                                             \
+    if (node->left)                                                            \
+      return TTREE_FN(T, MaxNode)(node->left);                                 \
+    TTREE_NODE(T) *_p = node->parent;                                          \
+    while (_p && node == _p->left) {                                           \
+      node = _p;                                                               \
+      _p = _p->parent;                                                         \
+    }                                                                          \
+    return _p;                                                                 \
+  }
+
+
+#define TTREE_IMPLEMENT_CONST_ITERATORS(T)                                     \
+  static inline const TTREE_NODE(T) *TTREE_FN(T, ConstBegin)(const T *tree) { \
+    const TTREE_NODE(T) *node;                                                 \
+    if (!tree) return NULL;                                                    \
+    node = tree->root;                                                         \
+    if (!node) return NULL;                                                    \
+    while (node->left) node = node->left;                                      \
+    return node;                                                               \
+  }                                                                            \
+  static inline const TTREE_NODE(T) *TTREE_FN(T, ConstEnd)(const T *tree) {   \
+    (void)tree; return NULL;                                                   \
+  }                                                                            \
+  static inline const TTREE_NODE(T) *TTREE_FN(T, ConstNext)(                  \
+      const TTREE_NODE(T) *node) {                                             \
+    const TTREE_NODE(T) *parent;                                               \
+    if (!node) return NULL;                                                    \
+    if (node->right) {                                                         \
+      node = node->right;                                                      \
+      while (node->left) node = node->left;                                    \
+      return node;                                                             \
+    }                                                                          \
+    parent = node->parent;                                                     \
+    while (parent && node == parent->right) { node = parent; parent = parent->parent; } \
+    return parent;                                                             \
+  }                                                                            \
+  static inline const TTREE_NODE(T) *TTREE_FN(T, ConstPrev)(                  \
+      const TTREE_NODE(T) *node) {                                             \
+    const TTREE_NODE(T) *parent;                                               \
+    if (!node) return NULL;                                                    \
+    if (node->left) {                                                          \
+      node = node->left;                                                       \
+      while (node->right) node = node->right;                                  \
+      return node;                                                             \
+    }                                                                          \
+    parent = node->parent;                                                     \
+    while (parent && node == parent->left) { node = parent; parent = parent->parent; } \
+    return parent;                                                             \
+  }

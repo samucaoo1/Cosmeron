@@ -1,0 +1,18 @@
+
+/* =============================================================
+ * Modifiers — Transplant
+ * Shared by all algorithms and both set/map semantics.
+ * ============================================================= */
+
+#define TTREE_IMPLEMENT_TRANSPLANT(T)                                          \
+  static inline void TTREE_FN(T, Transplant)(                                 \
+      T * tree, TTREE_NODE(T) * u, TTREE_NODE(T) * v) {                       \
+    if (!u->parent)                                                            \
+      tree->root = v;                                                          \
+    else if (u == u->parent->left)                                             \
+      u->parent->left = v;                                                     \
+    else                                                                       \
+      u->parent->right = v;                                                    \
+    if (v)                                                                     \
+      v->parent = u->parent;                                                   \
+  }

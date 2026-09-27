@@ -1,0 +1,98 @@
+
+#include "Access.impl"
+#include "Internal.impl"
+#include "Lifecycle.impl"
+#include "Modifiers.impl"
+#include "Observers.impl"
+
+/* ============================================================
+ * Linked_Stack — Container wrappers using SINGLE_LINKED_*
+ *
+ * Stack sem tail: só precisa de head + size.
+ * Mas como os internals assumem head/tail/size, mantemos tail
+ * (sempre NULL para stack puro — LinkFront trata isso).
+ * ============================================================ */
+
+/* --- Internals --- */
+
+#define LINKED_STACK_CREATE_NODE(TYPE, SUFFIX)                                 \
+  SINGLE_LINKED_CREATE_NODE(TYPE,                                              \
+      LINKED_STACK_FUNC(SUFFIX, _CreateNode),                                \
+      LINKED_STACK_NODE_TYPE(SUFFIX))
+
+#define LINKED_STACK_LINK_FRONT(TYPE, SUFFIX)                                  \
+  SINGLE_LINKED_LINK_FRONT(LINKED_STACK_FUNC(SUFFIX, _LinkFront),            \
+                           LINKED_STACK_TYPE(SUFFIX),                         \
+                           LINKED_STACK_NODE_TYPE(SUFFIX))
+
+#define LINKED_STACK_UNLINK_FRONT(TYPE, SUFFIX)                                \
+  SINGLE_LINKED_UNLINK_FRONT(LINKED_STACK_FUNC(SUFFIX, _UnlinkFront),        \
+                             LINKED_STACK_TYPE(SUFFIX),                       \
+                             LINKED_STACK_NODE_TYPE(SUFFIX))
+
+/* --- Lifecycle --- */
+
+#define LINKED_STACK_IMPLEMENT_INIT(TYPE, SUFFIX)                              \
+  SINGLE_LINKED_IMPLEMENT_INIT(TYPE,                                           \
+      LINKED_STACK_FUNC(SUFFIX, Init),                               \
+      LINKED_STACK_TYPE(SUFFIX))
+
+#define LINKED_STACK_IMPLEMENT_DESTROY(TYPE, SUFFIX)                           \
+  SINGLE_LINKED_IMPLEMENT_DESTROY(TYPE,                                        \
+      LINKED_STACK_FUNC(SUFFIX, Destroy),                            \
+      LINKED_STACK_TYPE(SUFFIX), LINKED_STACK_NODE_TYPE(SUFFIX))
+
+/* --- Modifiers --- */
+
+#define LINKED_STACK_IMPLEMENT_PUSH(TYPE, SUFFIX)                              \
+  SINGLE_LINKED_IMPLEMENT_PUSH_FRONT(TYPE,                                     \
+      LINKED_STACK_FUNC(SUFFIX, Push),                               \
+      LINKED_STACK_FUNC(SUFFIX, _CreateNode),                                \
+      LINKED_STACK_FUNC(SUFFIX, _LinkFront),                                 \
+      LINKED_STACK_TYPE(SUFFIX), LINKED_STACK_NODE_TYPE(SUFFIX))
+
+#define LINKED_STACK_IMPLEMENT_POP(TYPE, SUFFIX)                               \
+  SINGLE_LINKED_IMPLEMENT_POP_FRONT(TYPE,                                      \
+      LINKED_STACK_FUNC(SUFFIX, Pop),                                \
+      LINKED_STACK_FUNC(SUFFIX, _UnlinkFront),                              \
+      LINKED_STACK_TYPE(SUFFIX))
+
+#define LINKED_STACK_IMPLEMENT_CLEAR(TYPE, SUFFIX)                             \
+  SINGLE_LINKED_IMPLEMENT_CLEAR(TYPE,                                          \
+      LINKED_STACK_FUNC(SUFFIX, Clear),                              \
+      LINKED_STACK_FUNC(SUFFIX, Destroy),                            \
+      LINKED_STACK_TYPE(SUFFIX))
+
+/* --- Access --- */
+
+#define LINKED_STACK_IMPLEMENT_TOP(TYPE, SUFFIX)                               \
+  SINGLE_LINKED_ACCESS_FRONT(TYPE,                                             \
+      LINKED_STACK_FUNC(SUFFIX, Top),                                \
+      LINKED_STACK_TYPE(SUFFIX))
+
+/* --- Observers --- */
+
+#define LINKED_STACK_IMPLEMENT_EMPTY(TYPE, SUFFIX)                             \
+  SINGLE_LINKED_IMPLEMENT_EMPTY(TYPE,                                          \
+      LINKED_STACK_FUNC(SUFFIX, Empty),                              \
+      LINKED_STACK_TYPE(SUFFIX))
+
+#define LINKED_STACK_IMPLEMENT_SIZE(TYPE, SUFFIX)                              \
+  SINGLE_LINKED_IMPLEMENT_SIZE(TYPE,                                           \
+      LINKED_STACK_FUNC(SUFFIX, Size),                               \
+      LINKED_STACK_TYPE(SUFFIX))
+
+/* --- Aggregator --- */
+
+#define LINKED_STACK_IMPLEMENT(TYPE, SUFFIX)                                  \
+  LINKED_STACK_CREATE_NODE(TYPE, SUFFIX)                                       \
+  LINKED_STACK_LINK_FRONT(TYPE, SUFFIX)                                        \
+  LINKED_STACK_UNLINK_FRONT(TYPE, SUFFIX)                                      \
+  LINKED_STACK_IMPLEMENT_INIT(TYPE, SUFFIX)                                    \
+  LINKED_STACK_IMPLEMENT_DESTROY(TYPE, SUFFIX)                                 \
+  LINKED_STACK_IMPLEMENT_PUSH(TYPE, SUFFIX)                                    \
+  LINKED_STACK_IMPLEMENT_POP(TYPE, SUFFIX)                                     \
+  LINKED_STACK_IMPLEMENT_CLEAR(TYPE, SUFFIX)                                   \
+  LINKED_STACK_IMPLEMENT_TOP(TYPE, SUFFIX)                                     \
+  LINKED_STACK_IMPLEMENT_EMPTY(TYPE, SUFFIX)                                   \
+  LINKED_STACK_IMPLEMENT_SIZE(TYPE, SUFFIX)

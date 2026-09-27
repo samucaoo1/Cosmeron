@@ -1,0 +1,305 @@
+#include "Access.impl"
+#include "Capacity.impl"
+#include "Internal.impl"
+#include "Lifecycle.impl"
+#include "Modifiers.impl"
+#include "Observers.impl"
+
+#define TSTRING_IMPLEMENT_STRLEN(CHAR_TYPE, SUFFIX)                           \
+  static inline size_t TSTRING_FUNC(SUFFIX, StrLen)(const CHAR_TYPE *cstr) {  \
+    if (!cstr)                                                                 \
+      return 0;                                                                \
+    size_t len = 0;                                                            \
+    while (cstr[len] != 0)                                                     \
+      len++;                                                                   \
+    return len;                                                                \
+  }
+
+#define TSTRING_IMPLEMENT_ENSURE_CAPACITY(CHAR_TYPE, SUFFIX)                  \
+  SEQUENTIAL_CONTAINER_ENSURE_CAPACITY(                                       \
+      CHAR_TYPE, TSTRING_FUNC(SUFFIX, EnsureCapacity),                        \
+      TSTRING_FUNC(SUFFIX, Reserve), TSTRING_TYPE(SUFFIX),                    \
+      TSTRING_INITIAL_CAPACITY, TSTRING_GROWTH_FACTOR)
+
+#define TSTRING_IMPLEMENT_INIT(CHAR_TYPE, SUFFIX)                             \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_INIT(                                        \
+      CHAR_TYPE, TSTRING_FUNC(SUFFIX, Init), TSTRING_TYPE(SUFFIX))
+
+#define TSTRING_IMPLEMENT_DESTROY(CHAR_TYPE, SUFFIX)                          \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_DESTROY(                                     \
+      CHAR_TYPE, TSTRING_FUNC(SUFFIX, Destroy), TSTRING_TYPE(SUFFIX))
+
+#define TSTRING_IMPLEMENT_RESERVE(CHAR_TYPE, SUFFIX)                          \
+  SEQUENTIAL_CAPACITY_RESERVE(                                                \
+      CHAR_TYPE, TSTRING_FUNC(SUFFIX, Reserve), TSTRING_TYPE(SUFFIX))
+
+#define TSTRING_IMPLEMENT_AT(CHAR_TYPE, SUFFIX)                               \
+  SEQUENTIAL_ACCESS_AT(CHAR_TYPE, TSTRING_FUNC(SUFFIX, At),                   \
+                       TSTRING_TYPE(SUFFIX))
+
+#define TSTRING_IMPLEMENT_FRONT(CHAR_TYPE, SUFFIX)                            \
+  SEQUENTIAL_ACCESS_FRONT(CHAR_TYPE, TSTRING_FUNC(SUFFIX, Front),             \
+                          TSTRING_TYPE(SUFFIX))
+
+#define TSTRING_IMPLEMENT_BACK(CHAR_TYPE, SUFFIX)                             \
+  SEQUENTIAL_ACCESS_BACK(CHAR_TYPE, TSTRING_FUNC(SUFFIX, Back),               \
+                         TSTRING_TYPE(SUFFIX))
+
+#define TSTRING_IMPLEMENT_LENGTH(CHAR_TYPE, SUFFIX)                           \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_SIZE(                                        \
+      CHAR_TYPE, TSTRING_FUNC(SUFFIX, Length), TSTRING_TYPE(SUFFIX))
+
+#define TSTRING_IMPLEMENT_EMPTY(CHAR_TYPE, SUFFIX)                            \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_EMPTY(                                       \
+      CHAR_TYPE, TSTRING_FUNC(SUFFIX, Empty), TSTRING_TYPE(SUFFIX))
+
+#define TSTRING_IMPLEMENT_CLEAR(CHAR_TYPE, SUFFIX)                            \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_CLEAR(                                       \
+      CHAR_TYPE, TSTRING_FUNC(SUFFIX, Clear), TSTRING_TYPE(SUFFIX))
+
+#define TSTRING_IMPLEMENT_PUSH_BACK(CHAR_TYPE, SUFFIX)                        \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_PUSH_BACK(                                   \
+      CHAR_TYPE, TSTRING_FUNC(SUFFIX, PushBack),                              \
+      TSTRING_FUNC(SUFFIX, EnsureCapacity), TSTRING_TYPE(SUFFIX))
+
+#define TSTRING_IMPLEMENT_POP_BACK(CHAR_TYPE, SUFFIX)                         \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, PopBack)(                       \
+      TSTRING_TYPE(SUFFIX) * str, CHAR_TYPE *outValue) {                     \
+    if (!str)                                                                  \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    if (str->size == 0)                                                       \
+      return STATUS_NS(OUT_OF_RANGE);                                         \
+    str->size--;                                                              \
+    if (outValue)                                                            \
+      *outValue = str->data[str->size];                                      \
+    str->data[str->size] = (CHAR_TYPE)0;                                      \
+    return STATUS_NS(SUCCESS);                                                \
+  }
+
+#define TSTRING_IMPLEMENT_CAPACITY(SUFFIX)                                    \
+  static inline size_t TSTRING_FUNC(SUFFIX, Capacity)(                        \
+      const TSTRING_TYPE(SUFFIX) *str) {                                           \
+    return str ? str->capacity : 0U;                                                     \
+  }
+
+#define TSTRING_IMPLEMENT_INSERT_CHAR(CHAR_TYPE, SUFFIX)                      \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, InsertChar)(                    \
+      TSTRING_TYPE(SUFFIX) * str, size_t pos, CHAR_TYPE ch) {                 \
+    if (!str)                                                                  \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    if (pos > str->size)                                                      \
+      return STATUS_NS(OUT_OF_RANGE);                                         \
+    OPSTATUS status = TSTRING_FUNC(SUFFIX, Reserve)(                          \
+        str, str->size + 2);                                                  \
+    if (status != STATUS_NS(SUCCESS))                                         \
+      return status;                                                          \
+    memmove(str->data + pos + 1, str->data + pos,                             \
+            (str->size - pos) * sizeof(CHAR_TYPE));                           \
+    str->data[pos] = ch;                                                      \
+    str->size++;                                                              \
+    return STATUS_NS(SUCCESS);                                                \
+  }
+
+#define TSTRING_IMPLEMENT_FROM_CSTR(CHAR_TYPE, SUFFIX)                        \
+  TSTRING_FROM_CSTR_PROTOTYPE(CHAR_TYPE, SUFFIX) {                   \
+    if (!str)                                                                  \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    TSTRING_FUNC(SUFFIX, Clear)(str);                                         \
+    if (!cstr)                                                                 \
+      return STATUS_NS(SUCCESS);                                              \
+    size_t len = TSTRING_FUNC(SUFFIX, StrLen)(cstr);                          \
+    OPSTATUS status = TSTRING_FUNC(SUFFIX, Reserve)(str, len + 1);            \
+    if (status != STATUS_NS(SUCCESS))                                         \
+      return status;                                                          \
+    memcpy(str->data, cstr, len * sizeof(CHAR_TYPE));                         \
+    str->size = len;                                                          \
+    return STATUS_NS(SUCCESS);                                                \
+  }
+
+#define TSTRING_IMPLEMENT_CSTR(CHAR_TYPE, SUFFIX)                             \
+  TSTRING_CSTR_PROTOTYPE(CHAR_TYPE, SUFFIX) {                        \
+    if (!str)                                                                  \
+      return NULL;                                                             \
+    OPSTATUS status;                                                          \
+    if (str->size == 0 || str->data[str->size - 1] != 0) {                    \
+      status = TSTRING_FUNC(SUFFIX, Reserve)(str, str->size + 1);             \
+      if (status != STATUS_NS(SUCCESS))                                       \
+        return NULL;                                                          \
+      str->data[str->size] = 0;                                               \
+    }                                                                         \
+    return str->data;                                                         \
+  }
+
+#define TSTRING_IMPLEMENT_APPEND(CHAR_TYPE, SUFFIX)                           \
+  TSTRING_APPEND_PROTOTYPE(CHAR_TYPE, SUFFIX) {                      \
+    if (!str)                                                                  \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    if (!cstr)                                                                 \
+      return STATUS_NS(SUCCESS);                                              \
+    size_t len = TSTRING_FUNC(SUFFIX, StrLen)(cstr);                          \
+    OPSTATUS status =                                                         \
+        TSTRING_FUNC(SUFFIX, Reserve)(str, str->size + len + 1);              \
+    if (status != STATUS_NS(SUCCESS))                                         \
+      return status;                                                          \
+    memcpy(&str->data[str->size], cstr, len * sizeof(CHAR_TYPE));             \
+    str->size += len;                                                         \
+    return STATUS_NS(SUCCESS);                                                \
+  }
+
+#define TSTRING_IMPLEMENT_APPEND_STR(CHAR_TYPE, SUFFIX)                       \
+  TSTRING_APPEND_STR_PROTOTYPE(SUFFIX) {                             \
+    if (!str)                                                                  \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    if (!other || other->size == 0)                                            \
+      return STATUS_NS(SUCCESS);                                              \
+    OPSTATUS status =                                                         \
+        TSTRING_FUNC(SUFFIX, Reserve)(str, str->size + other->size + 1);      \
+    if (status != STATUS_NS(SUCCESS))                                         \
+      return status;                                                          \
+    memcpy(&str->data[str->size], other->data,                                \
+           other->size * sizeof(CHAR_TYPE));                                  \
+    str->size += other->size;                                                 \
+    return STATUS_NS(SUCCESS);                                                \
+  }
+
+#define TSTRING_IMPLEMENT_INSERT(CHAR_TYPE, SUFFIX)                           \
+  TSTRING_INSERT_PROTOTYPE(CHAR_TYPE, SUFFIX) {                      \
+    if (!str)                                                                  \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    if (!cstr)                                                                 \
+      return STATUS_NS(SUCCESS);                                              \
+    if (pos > str->size)                                                      \
+      return STATUS_NS(OUT_OF_RANGE);                                         \
+    size_t len = TSTRING_FUNC(SUFFIX, StrLen)(cstr);                          \
+    OPSTATUS status =                                                         \
+        TSTRING_FUNC(SUFFIX, Reserve)(str, str->size + len + 1);              \
+    if (status != STATUS_NS(SUCCESS))                                         \
+      return status;                                                          \
+    memmove(&str->data[pos + len], &str->data[pos],                           \
+            (str->size - pos) * sizeof(CHAR_TYPE));                           \
+    memcpy(&str->data[pos], cstr, len * sizeof(CHAR_TYPE));                   \
+    str->size += len;                                                         \
+    return STATUS_NS(SUCCESS);                                                \
+  }
+
+#define TSTRING_IMPLEMENT_ERASE(CHAR_TYPE, SUFFIX)                            \
+  TSTRING_ERASE_PROTOTYPE(SUFFIX) {                                  \
+    if (!str)                                                                  \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    if (pos >= str->size)                                                     \
+      return STATUS_NS(OUT_OF_RANGE);                                         \
+    size_t end = pos + count;                                                 \
+    if (end > str->size)                                                      \
+      end = str->size;                                                        \
+    memmove(&str->data[pos], &str->data[end],                                 \
+            (str->size - end) * sizeof(CHAR_TYPE));                           \
+    str->size -= (end - pos);                                                 \
+    return STATUS_NS(SUCCESS);                                                \
+  }
+
+#define TSTRING_IMPLEMENT_SUBSTR(CHAR_TYPE, SUFFIX)                           \
+  TSTRING_SUBSTR_PROTOTYPE(SUFFIX) {                                           \
+    if (!str || !out || str == out)                                            \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    TSTRING_TYPE(SUFFIX) result = {0};                                         \
+    if (pos < str->size) {                                                     \
+      size_t end = pos + count;                                                \
+      if (end > str->size)                                                     \
+        end = str->size;                                                       \
+      OPSTATUS status = TSTRING_FUNC(SUFFIX, Reserve)(                         \
+          &result, end - pos + 1U);                                            \
+      if (status != STATUS_NS(SUCCESS))                                        \
+        return status;                                                         \
+      memcpy(result.data, &str->data[pos],                                     \
+             (end - pos) * sizeof(CHAR_TYPE));                                 \
+      result.size = end - pos;                                                 \
+    }                                                                          \
+    Memory_Free(out->data);                                                   \
+    out->data = result.data;                                                   \
+    out->size = result.size;                                                   \
+    out->capacity = result.capacity;                                           \
+    return STATUS_NS(SUCCESS);                                                 \
+  }
+
+#define TSTRING_IMPLEMENT_COMPARE(CHAR_TYPE, SUFFIX)                          \
+  TSTRING_COMPARE_PROTOTYPE(SUFFIX) {                                          \
+    if (!str || !other || !result)                                             \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    *result = COMPARISON_FUNC(Bytes)(                                          \
+        str->data, str->size * sizeof(CHAR_TYPE),                              \
+        other->data, other->size * sizeof(CHAR_TYPE));                         \
+    return STATUS_NS(SUCCESS);                                                 \
+  }
+
+#define TSTRING_IMPLEMENT_FIND(CHAR_TYPE, SUFFIX)                             \
+  TSTRING_FIND_PROTOTYPE(CHAR_TYPE, SUFFIX) {                                  \
+    if (!str || !index)                                                        \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    for (size_t i = start; i < str->size; ++i) {                              \
+      if (COMPARISON_FUNC(Bytes)(                                              \
+              &str->data[i], sizeof(CHAR_TYPE), &ch, sizeof(CHAR_TYPE)) ==     \
+          COMPARISON_CONST(EQUAL)) {                                           \
+        *index = i;                                                            \
+        return STATUS_NS(SUCCESS);                                             \
+      }                                                                        \
+    }                                                                          \
+    return STATUS_NS(NOT_FOUND);                                               \
+  }
+
+#define TSTRING_IMPLEMENT_FIND_STR(CHAR_TYPE, SUFFIX)                         \
+  TSTRING_FIND_STR_PROTOTYPE(CHAR_TYPE, SUFFIX) {                              \
+    if (!str || !needle || !index)                                             \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    size_t needleLen = TSTRING_FUNC(SUFFIX, StrLen)(needle);                  \
+    if (needleLen == 0U) {                                                     \
+      if (start > str->size)                                                   \
+        return STATUS_NS(NOT_FOUND);                                           \
+      *index = start;                                                          \
+      return STATUS_NS(SUCCESS);                                               \
+    }                                                                          \
+    if (needleLen > str->size || start > str->size - needleLen)               \
+      return STATUS_NS(NOT_FOUND);                                             \
+    for (size_t i = start; i <= str->size - needleLen; ++i) {                 \
+      if (COMPARISON_FUNC(Bytes)(&str->data[i],                                \
+                                 needleLen * sizeof(CHAR_TYPE), needle,         \
+                                 needleLen * sizeof(CHAR_TYPE)) ==              \
+          COMPARISON_CONST(EQUAL)) {                                           \
+        *index = i;                                                            \
+        return STATUS_NS(SUCCESS);                                             \
+      }                                                                        \
+    }                                                                          \
+    return STATUS_NS(NOT_FOUND);                                               \
+  }
+
+#define TSTRING_IMPLEMENT_DATA(CHAR_TYPE, SUFFIX)                             \
+  TSTRING_DATA_PROTOTYPE(CHAR_TYPE, SUFFIX) {                        \
+    return str ? str->data : NULL;                                                          \
+  }
+
+#define TSTRING_IMPLEMENT(CHAR_TYPE, SUFFIX)                                  \
+  TSTRING_IMPLEMENT_STRLEN(CHAR_TYPE, SUFFIX)                                 \
+  TSTRING_IMPLEMENT_ENSURE_CAPACITY(CHAR_TYPE, SUFFIX)                        \
+  TSTRING_IMPLEMENT_INIT(CHAR_TYPE, SUFFIX)                                   \
+  TSTRING_IMPLEMENT_DESTROY(CHAR_TYPE, SUFFIX)                                \
+  TSTRING_IMPLEMENT_FROM_CSTR(CHAR_TYPE, SUFFIX)                              \
+  TSTRING_IMPLEMENT_CSTR(CHAR_TYPE, SUFFIX)                                   \
+  TSTRING_IMPLEMENT_LENGTH(CHAR_TYPE, SUFFIX)                                 \
+  TSTRING_IMPLEMENT_EMPTY(CHAR_TYPE, SUFFIX)                                  \
+  TSTRING_IMPLEMENT_CLEAR(CHAR_TYPE, SUFFIX)                                  \
+  TSTRING_IMPLEMENT_RESERVE(CHAR_TYPE, SUFFIX)                                \
+  TSTRING_IMPLEMENT_PUSH_BACK(CHAR_TYPE, SUFFIX)                              \
+  TSTRING_IMPLEMENT_POP_BACK(CHAR_TYPE, SUFFIX)                               \
+  TSTRING_IMPLEMENT_CAPACITY(SUFFIX)                                          \
+  TSTRING_IMPLEMENT_INSERT_CHAR(CHAR_TYPE, SUFFIX)                            \
+  TSTRING_IMPLEMENT_AT(CHAR_TYPE, SUFFIX)                                     \
+  TSTRING_IMPLEMENT_FRONT(CHAR_TYPE, SUFFIX)                                  \
+  TSTRING_IMPLEMENT_BACK(CHAR_TYPE, SUFFIX)                                   \
+  TSTRING_IMPLEMENT_APPEND(CHAR_TYPE, SUFFIX)                                 \
+  TSTRING_IMPLEMENT_APPEND_STR(CHAR_TYPE, SUFFIX)                             \
+  TSTRING_IMPLEMENT_INSERT(CHAR_TYPE, SUFFIX)                                 \
+  TSTRING_IMPLEMENT_ERASE(CHAR_TYPE, SUFFIX)                                  \
+  TSTRING_IMPLEMENT_SUBSTR(CHAR_TYPE, SUFFIX)                                 \
+  TSTRING_IMPLEMENT_COMPARE(CHAR_TYPE, SUFFIX)                                \
+  TSTRING_IMPLEMENT_FIND(CHAR_TYPE, SUFFIX)                                   \
+  TSTRING_IMPLEMENT_FIND_STR(CHAR_TYPE, SUFFIX)                               \
+  TSTRING_IMPLEMENT_DATA(CHAR_TYPE, SUFFIX)

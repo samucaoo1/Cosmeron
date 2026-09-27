@@ -1,0 +1,16 @@
+
+#include "../Internal.impl"
+
+/* ============================================================
+ * Single Linked — Access
+ * ============================================================ */
+
+#define SINGLE_LINKED_ACCESS_FRONT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)      \
+  LINKED_INTERNAL_ACCESS_FRONT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)
+
+#define SINGLE_LINKED_ACCESS_BACK(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)       \
+  LINKED_INTERNAL_ACCESS_BACK(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)
+
+#define SINGLE_LINKED_ACCESS_BEGIN(FUNCTION_NAME, CONTAINER_STRUCT,             \
+                                  NODE_STRUCT)                                  \
+  LINKED_INTERNAL_ACCESS_BEGIN(FUNCTION_NAME, CONTAINER_STRUCT, NODE_STRUCT)

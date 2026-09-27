@@ -1,0 +1,105 @@
+
+/* =============================================================
+ * Observers — FindNode, Contains, MinNode, MaxNode, Min, Max,
+ *             Empty, Size
+ * Shared by all algorithms.  CMP is baked at compile time.
+ *
+ * Find is split:
+ *   TTREE_IMPLEMENT_FIND_SET  → returns KEY_TYPE*
+ *   TTREE_IMPLEMENT_FIND_MAP  → returns VALUE_TYPE*
+ * ============================================================= */
+
+#define TTREE_IMPLEMENT_OBSERVERS(T, KEY_TYPE, CMP)                            \
+  static inline TTREE_NODE(T) *                                                \
+      TTREE_FN(T, FindNode)(T * tree, KEY_TYPE key) {                          \
+    if (!tree)                                                                 \
+      return NULL;                                                             \
+    TTREE_NODE(T) *current = tree->root;                                       \
+    while (current) {                                                          \
+      TTREE_CMPOUT _r = CMP(key, current->key);                                      \
+      if (_r < 0)                                                              \
+        current = current->left;                                               \
+      else if (_r > 0)                                                         \
+        current = current->right;                                              \
+      else                                                                     \
+        return current;                                                        \
+    }                                                                          \
+    return NULL;                                                               \
+  }                                                                            \
+                                                                               \
+  static inline bool TTREE_FN(T, Contains)(const T *tree, KEY_TYPE key) {       \
+    if (!tree)                                                                 \
+      return false;                                                            \
+    const TTREE_NODE(T) *current = tree->root;                                 \
+    while (current) {                                                          \
+      TTREE_CMPOUT result = CMP(key, current->key);                            \
+      if (result < 0) current = current->left;                                 \
+      else if (result > 0) current = current->right;                           \
+      else return true;                                                        \
+    }                                                                          \
+    return false;                                                              \
+  }                                                                            \
+                                                                               \
+  static inline TTREE_NODE(T) *                                                \
+      TTREE_FN(T, MinNode)(TTREE_NODE(T) * node) {                            \
+    if (!node)                                                                 \
+      return NULL;                                                             \
+    while (node->left)                                                         \
+      node = node->left;                                                       \
+    return node;                                                               \
+  }                                                                            \
+                                                                               \
+  static inline TTREE_NODE(T) *                                                \
+      TTREE_FN(T, MaxNode)(TTREE_NODE(T) * node) {                            \
+    if (!node)                                                                 \
+      return NULL;                                                             \
+    while (node->right)                                                        \
+      node = node->right;                                                      \
+    return node;                                                               \
+  }                                                                            \
+                                                                               \
+  static inline KEY_TYPE *TTREE_FN(T, Min)(T * tree) {                         \
+    if (!tree)                                                                 \
+      return NULL;                                                             \
+    TTREE_NODE(T) *node = TTREE_FN(T, MinNode)(tree->root);                    \
+    if (node)                                                                  \
+      return &node->key;                                                       \
+    return NULL;                                                               \
+  }                                                                            \
+                                                                               \
+  static inline KEY_TYPE *TTREE_FN(T, Max)(T * tree) {                         \
+    if (!tree)                                                                 \
+      return NULL;                                                             \
+    TTREE_NODE(T) *node = TTREE_FN(T, MaxNode)(tree->root);                    \
+    if (node)                                                                  \
+      return &node->key;                                                       \
+    return NULL;                                                               \
+  }                                                                            \
+                                                                               \
+  static inline bool TTREE_FN(T, Empty)(const T *tree) {                       \
+    return tree != NULL && tree->size == 0;                                    \
+  }                                                                            \
+                                                                               \
+  static inline size_t TTREE_FN(T, Size)(const T *tree) {                      \
+    return tree ? tree->size : 0U;                                             \
+  }
+
+/* ------ Find: SET variant (returns KEY_TYPE*) ------ */
+
+#define TTREE_IMPLEMENT_FIND_SET(T, KEY_TYPE)                                  \
+  static inline KEY_TYPE *TTREE_FN(T, Find)(T * tree, KEY_TYPE key) {          \
+    TTREE_NODE(T) *node = TTREE_FN(T, FindNode)(tree, key);                    \
+    if (node)                                                                  \
+      return &node->key;                                                       \
+    return NULL;                                                               \
+  }
+
+/* ------ Find: MAP variant (returns VALUE_TYPE*) ------ */
+
+#define TTREE_IMPLEMENT_FIND_MAP(T, KEY_TYPE, VALUE_TYPE)                      \
+  static inline VALUE_TYPE *TTREE_FN(T, Find)(T * tree, KEY_TYPE key) {        \
+    TTREE_NODE(T) *node = TTREE_FN(T, FindNode)(tree, key);                    \
+    if (node)                                                                  \
+      return &node->value;                                                     \
+    return NULL;                                                               \
+  }

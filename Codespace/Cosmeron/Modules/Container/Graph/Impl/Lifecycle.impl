@@ -1,0 +1,52 @@
+#pragma once
+
+#define GRAPH_IMPLEMENT_INIT(VERTEX_SUFFIX, WEIGHT_SUFFIX)                    \
+  GRAPH_INIT_PROTOTYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) {                        \
+    void *storage = NULL;                                                       \
+    OPSTATUS status;                                                            \
+    if (!graph)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    graph->vertices = NULL;                                                     \
+    graph->vertexCount = 0;                                                     \
+    graph->vertexCapacity = 0;                                                  \
+    graph->edgeCount = 0;                                                       \
+    status = ALLOC_FUNC(AllocArray)(                                            \
+        &storage, GRAPH_INITIAL_VERTEX_CAPACITY,                                \
+        sizeof(TGRAPH_VERTEX_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX)));             \
+    if (status != STATUS_CONST(SUCCESS))                                        \
+      return status;                                                            \
+    graph->vertices =                                                           \
+        (TGRAPH_VERTEX_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) *)storage;            \
+    memset(graph->vertices, 0,                                                  \
+           GRAPH_INITIAL_VERTEX_CAPACITY *                                      \
+               sizeof(TGRAPH_VERTEX_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX)));      \
+    graph->vertexCapacity = GRAPH_INITIAL_VERTEX_CAPACITY;                      \
+    return STATUS_CONST(SUCCESS);                                               \
+  }
+
+#define GRAPH_IMPLEMENT_DESTROY(VERTEX_SUFFIX, WEIGHT_SUFFIX)                 \
+  GRAPH_DESTROY_PROTOTYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) {                     \
+    size_t i;                                                                   \
+    if (!graph)                                                                 \
+      return;                                                                   \
+    for (i = 0; i < graph->vertexCount; ++i)                                   \
+      Memory_Free(graph->vertices[i].edges);                                   \
+    Memory_Free(graph->vertices);                                               \
+    graph->vertexCount = 0;                                                     \
+    graph->vertexCapacity = 0;                                                  \
+    graph->edgeCount = 0;                                                       \
+  }
+
+#define GRAPH_IMPLEMENT_CLEAR(VERTEX_SUFFIX, WEIGHT_SUFFIX)                   \
+  GRAPH_CLEAR_PROTOTYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) {                       \
+    size_t i;                                                                   \
+    if (!graph)                                                                 \
+      return;                                                                   \
+    for (i = 0; i < graph->vertexCount; ++i) {                                 \
+      Memory_Free(graph->vertices[i].edges);                                   \
+      graph->vertices[i].edgeCount = 0;                                        \
+      graph->vertices[i].edgeCapacity = 0;                                     \
+    }                                                                           \
+    graph->vertexCount = 0;                                                     \
+    graph->edgeCount = 0;                                                       \
+  }

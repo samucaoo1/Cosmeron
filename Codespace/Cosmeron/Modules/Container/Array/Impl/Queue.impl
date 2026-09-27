@@ -1,0 +1,171 @@
+#include "Capacity.impl"
+#include "Internal.impl"
+#include "Lifecycle.impl"
+#include "Modifiers.impl"
+#include "Observers.impl"
+#define SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue) ((queue)->size - (queue)->head)
+
+#define SEQUENTIAL_QUEUE_ENSURE_CAPACITY(TYPE, SUFFIX)                         \
+  SEQUENTIAL_CONTAINER_ENSURE_CAPACITY(                                        \
+      TYPE, FLAT_QUEUE_FUNC(SUFFIX, EnsureCapacity),                           \
+      FLAT_QUEUE_FUNC(SUFFIX, Reserve), FLAT_QUEUE_TYPE(SUFFIX),       \
+      FLAT_QUEUE_INITIAL_CAPACITY, FLAT_QUEUE_GROWTH_FACTOR)
+
+#define SEQUENTIAL_QUEUE_IMPLEMENT_COMPACT(TYPE, SUFFIX)                       \
+  static inline OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, Compact)(             \
+      FLAT_QUEUE_TYPE(SUFFIX) * queue) {                                       \
+    if (!queue)                                                                \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    if (queue->head == 0)                                                      \
+      return STATUS_NS(SUCCESS);                                               \
+    size_t logicalSize = SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue);                \
+    if (logicalSize > 0) {                                                    \
+      memmove(queue->data, &queue->data[queue->head],                          \
+              logicalSize * sizeof(TYPE));                                    \
+    }                                                                          \
+    queue->size = logicalSize;                                                \
+    queue->head = 0;                                                           \
+    return STATUS_NS(SUCCESS);                                                 \
+  }
+
+#define SEQUENTIAL_QUEUE_IMPLEMENT_INIT(TYPE, SUFFIX)                          \
+  static inline OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, Init)(                \
+      FLAT_QUEUE_TYPE(SUFFIX) * queue) {                                       \
+    if (!queue)                                                                \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    queue->data = NULL;                                                        \
+    queue->size = 0;                                                           \
+    queue->capacity = 0;                                                       \
+    queue->head = 0;                                                           \
+    return STATUS_NS(SUCCESS);                                                 \
+  }
+
+#define SEQUENTIAL_QUEUE_IMPLEMENT_DESTROY(TYPE, SUFFIX)                       \
+  static inline void FLAT_QUEUE_FUNC(SUFFIX, Destroy)(                 \
+      FLAT_QUEUE_TYPE(SUFFIX) * queue) {                                       \
+    if (!queue)                                                                \
+      return;                                                                  \
+    Memory_Free(queue->data);                                                 \
+    queue->data = NULL;                                                        \
+    queue->size = 0;                                                           \
+    queue->capacity = 0;                                                       \
+    queue->head = 0;                                                           \
+  }
+
+#define SEQUENTIAL_QUEUE_IMPLEMENT_RESERVE(TYPE, SUFFIX)                       \
+  SEQUENTIAL_CAPACITY_RESERVE(TYPE, FLAT_QUEUE_FUNC(SUFFIX, Reserve),  \
+                              FLAT_QUEUE_TYPE(SUFFIX))
+
+#define SEQUENTIAL_QUEUE_IMPLEMENT_SHRINK_TO_FIT(TYPE, SUFFIX)                 \
+  static inline OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, ShrinkToFit)(       \
+      FLAT_QUEUE_TYPE(SUFFIX) * queue) {                                       \
+    OPSTATUS status = FLAT_QUEUE_FUNC(SUFFIX, Compact)(queue);         \
+    if (status != STATUS_NS(SUCCESS))                                          \
+      return status;                                                           \
+    if (queue->size == queue->capacity)                                        \
+      return STATUS_NS(SUCCESS);                                               \
+    if (queue->size == 0) {                                                    \
+      Memory_Free(queue->data);                                               \
+      queue->capacity = 0;                                                     \
+      return STATUS_NS(SUCCESS);                                               \
+    }                                                                          \
+    {                                                                          \
+      void *newData = queue->data;                                             \
+      status = ALLOC_FUNC(ReallocArray)(&newData, queue->size, sizeof(TYPE));  \
+      if (status != STATUS_NS(SUCCESS))                                        \
+        return status;                                                         \
+      queue->data = (TYPE *)newData;                                           \
+    }                                                                          \
+    queue->capacity = queue->size;                                             \
+    return STATUS_NS(SUCCESS);                                                 \
+  }
+
+#define SEQUENTIAL_QUEUE_IMPLEMENT_PUSH(TYPE, SUFFIX)                          \
+  static inline OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, Push)(                \
+      FLAT_QUEUE_TYPE(SUFFIX) * queue, TYPE value) {                           \
+    if (!queue)                                                                \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    if (queue->head > 0 && queue->size == queue->capacity) {                   \
+      OPSTATUS status = FLAT_QUEUE_FUNC(SUFFIX, Compact)(queue);       \
+      if (status != STATUS_NS(SUCCESS))                                        \
+        return status;                                                         \
+    }                                                                          \
+    OPSTATUS status = FLAT_QUEUE_FUNC(SUFFIX, EnsureCapacity)(queue);          \
+    if (status != STATUS_NS(SUCCESS))                                          \
+      return status;                                                           \
+    queue->data[queue->size++] = value;                                        \
+    return STATUS_NS(SUCCESS);                                                 \
+  }
+
+#define SEQUENTIAL_QUEUE_IMPLEMENT_POP(TYPE, SUFFIX)                           \
+  static inline OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, Pop)(                 \
+      FLAT_QUEUE_TYPE(SUFFIX) * queue, TYPE * outValue) {                     \
+    if (!queue)                                                                \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    if (SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue) == 0)                             \
+      return STATUS_NS(OUT_OF_RANGE);                                          \
+    if (outValue)                                                             \
+      *outValue = queue->data[queue->head];                                   \
+    queue->head++;                                                             \
+    if (SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue) == 0) {                           \
+      queue->size = 0;                                                         \
+      queue->head = 0;                                                         \
+      return STATUS_NS(SUCCESS);                                               \
+    }                                                                          \
+    if (queue->head >= (queue->capacity / 2))                                  \
+      return FLAT_QUEUE_FUNC(SUFFIX, Compact)(queue);                  \
+    return STATUS_NS(SUCCESS);                                                 \
+  }
+
+#define SEQUENTIAL_QUEUE_IMPLEMENT_FRONT(TYPE, SUFFIX)                         \
+  static inline TYPE *FLAT_QUEUE_FUNC(SUFFIX, Front)(                  \
+      FLAT_QUEUE_TYPE(SUFFIX) * queue) {                                       \
+    if (!queue)                                                                \
+      return NULL;                                                             \
+    if (SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue) == 0)                             \
+      return NULL;                                                             \
+    return &queue->data[queue->head];                                          \
+  }
+
+#define SEQUENTIAL_QUEUE_IMPLEMENT_BACK(TYPE, SUFFIX)                          \
+  static inline TYPE *FLAT_QUEUE_FUNC(SUFFIX, Back)(                   \
+      FLAT_QUEUE_TYPE(SUFFIX) * queue) {                                       \
+    if (!queue)                                                                \
+      return NULL;                                                             \
+    if (SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue) == 0)                             \
+      return NULL;                                                             \
+    return &queue->data[queue->size - 1];                                      \
+  }
+
+#define SEQUENTIAL_QUEUE_IMPLEMENT_EMPTY(TYPE, SUFFIX)                         \
+  static inline bool FLAT_QUEUE_FUNC(SUFFIX, Empty)(                   \
+      const FLAT_QUEUE_TYPE(SUFFIX) * queue) {                              \
+    return queue != NULL && SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue) == 0;                          \
+  }
+
+#define SEQUENTIAL_QUEUE_IMPLEMENT_SIZE(TYPE, SUFFIX)                          \
+  static inline size_t FLAT_QUEUE_FUNC(SUFFIX, Size)(                  \
+      const FLAT_QUEUE_TYPE(SUFFIX) * queue) {                              \
+    return queue ? SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue) : 0U;                               \
+  }
+
+#define SEQUENTIAL_QUEUE_IMPLEMENT_CAPACITY(TYPE, SUFFIX)                      \
+  static inline size_t FLAT_QUEUE_FUNC(SUFFIX, Capacity)(              \
+      const FLAT_QUEUE_TYPE(SUFFIX) * queue) {                              \
+    return queue ? queue->capacity : 0U;                                                    \
+  }
+
+#define FLAT_QUEUE_IMPLEMENT(TYPE, SUFFIX)                                     \
+  SEQUENTIAL_QUEUE_ENSURE_CAPACITY(TYPE, SUFFIX)                               \
+  SEQUENTIAL_QUEUE_IMPLEMENT_COMPACT(TYPE, SUFFIX)                             \
+  SEQUENTIAL_QUEUE_IMPLEMENT_INIT(TYPE, SUFFIX)                                \
+  SEQUENTIAL_QUEUE_IMPLEMENT_DESTROY(TYPE, SUFFIX)                             \
+  SEQUENTIAL_QUEUE_IMPLEMENT_RESERVE(TYPE, SUFFIX)                             \
+  SEQUENTIAL_QUEUE_IMPLEMENT_SHRINK_TO_FIT(TYPE, SUFFIX)                       \
+  SEQUENTIAL_QUEUE_IMPLEMENT_PUSH(TYPE, SUFFIX)                                \
+  SEQUENTIAL_QUEUE_IMPLEMENT_POP(TYPE, SUFFIX)                                 \
+  SEQUENTIAL_QUEUE_IMPLEMENT_FRONT(TYPE, SUFFIX)                               \
+  SEQUENTIAL_QUEUE_IMPLEMENT_BACK(TYPE, SUFFIX)                                \
+  SEQUENTIAL_QUEUE_IMPLEMENT_EMPTY(TYPE, SUFFIX)                               \
+  SEQUENTIAL_QUEUE_IMPLEMENT_SIZE(TYPE, SUFFIX)                                \
+  SEQUENTIAL_QUEUE_IMPLEMENT_CAPACITY(TYPE, SUFFIX)

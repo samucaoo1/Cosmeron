@@ -1,0 +1,35 @@
+#pragma once
+
+#define HASH_IMPLEMENT_INIT(KEY_SUFFIX, VALUE_SUFFIX)                          \
+  HASH_INIT_PROTOTYPE(KEY_SUFFIX, VALUE_SUFFIX) {                              \
+    void *storage = NULL;                                                       \
+    OPSTATUS status;                                                            \
+    if (!hash)                                                                  \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    hash->buckets = NULL;                                                       \
+    hash->capacity = 0;                                                         \
+    hash->size = 0;                                                             \
+    hash->deleted = 0;                                                          \
+    status = ALLOC_FUNC(AllocArray)(                                            \
+        &storage, HASH_INITIAL_CAPACITY,                                        \
+        sizeof(THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX)));                  \
+    if (status != STATUS_CONST(SUCCESS))                                        \
+      return status;                                                            \
+    hash->buckets =                                                             \
+        (THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *)storage;                 \
+    memset(hash->buckets, 0,                                                    \
+           HASH_INITIAL_CAPACITY *                                              \
+               sizeof(THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX)));           \
+    hash->capacity = HASH_INITIAL_CAPACITY;                                     \
+    return STATUS_CONST(SUCCESS);                                               \
+  }
+
+#define HASH_IMPLEMENT_DESTROY(KEY_SUFFIX, VALUE_SUFFIX)                       \
+  HASH_DESTROY_PROTOTYPE(KEY_SUFFIX, VALUE_SUFFIX) {                           \
+    if (!hash)                                                                  \
+      return;                                                                   \
+    Memory_Free(hash->buckets);                                                 \
+    hash->capacity = 0;                                                         \
+    hash->size = 0;                                                             \
+    hash->deleted = 0;                                                          \
+  }

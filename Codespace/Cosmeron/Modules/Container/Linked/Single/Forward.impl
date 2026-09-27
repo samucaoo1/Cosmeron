@@ -1,0 +1,121 @@
+
+#include "Access.impl"
+#include "Internal.impl"
+#include "Lifecycle.impl"
+#include "Modifiers.impl"
+#include "Observers.impl"
+
+/* ============================================================
+ * Linked_ForwardList — Container wrappers using SINGLE_LINKED_*
+ *
+ * Forward list (como std::forward_list):
+ *   PushFront, PopFront, InsertAfter, EraseAfter, Front
+ * ============================================================ */
+
+/* --- Internals --- */
+
+#define LINKED_FORWARD_LIST_CREATE_NODE(TYPE, SUFFIX)                          \
+  SINGLE_LINKED_CREATE_NODE(TYPE, LINKED_FORWARD_LIST_FUNC(SUFFIX, _CreateNode),     \
+                            LINKED_FORWARD_LIST_NODE_TYPE(SUFFIX))
+
+#define LINKED_FORWARD_LIST_LINK_FRONT(TYPE, SUFFIX)                           \
+  SINGLE_LINKED_LINK_FRONT(LINKED_FORWARD_LIST_FUNC(SUFFIX, _LinkFront),             \
+                           LINKED_FORWARD_LIST_TYPE(SUFFIX),                         \
+                           LINKED_FORWARD_LIST_NODE_TYPE(SUFFIX))
+
+#define LINKED_FORWARD_LIST_LINK_BACK(TYPE, SUFFIX)                            \
+  SINGLE_LINKED_LINK_BACK(                                                     \
+      LINKED_FORWARD_LIST_FUNC(SUFFIX, _LinkBack), LINKED_FORWARD_LIST_TYPE(SUFFIX),       \
+      LINKED_FORWARD_LIST_NODE_TYPE(SUFFIX))
+
+#define LINKED_FORWARD_LIST_UNLINK_FRONT(TYPE, SUFFIX)                         \
+  SINGLE_LINKED_UNLINK_FRONT(LINKED_FORWARD_LIST_FUNC(SUFFIX, _UnlinkFront),         \
+                             LINKED_FORWARD_LIST_TYPE(SUFFIX),                       \
+                             LINKED_FORWARD_LIST_NODE_TYPE(SUFFIX))
+
+/* --- Lifecycle --- */
+
+#define LINKED_FORWARD_LIST_IMPLEMENT_INIT(TYPE, SUFFIX)                       \
+  SINGLE_LINKED_IMPLEMENT_INIT(TYPE, LINKED_FORWARD_LIST_FUNC(SUFFIX, Init), \
+                               LINKED_FORWARD_LIST_TYPE(SUFFIX))
+
+#define LINKED_FORWARD_LIST_IMPLEMENT_DESTROY(TYPE, SUFFIX)                    \
+  SINGLE_LINKED_IMPLEMENT_DESTROY(                                             \
+      TYPE, LINKED_FORWARD_LIST_FUNC(SUFFIX, Destroy),                       \
+      LINKED_FORWARD_LIST_TYPE(SUFFIX), LINKED_FORWARD_LIST_NODE_TYPE(SUFFIX))
+
+/* --- Modifiers --- */
+
+#define LINKED_FORWARD_LIST_IMPLEMENT_PUSH_FRONT(TYPE, SUFFIX)                 \
+  SINGLE_LINKED_IMPLEMENT_PUSH_FRONT(                                          \
+      TYPE, LINKED_FORWARD_LIST_FUNC(SUFFIX, PushFront),                    \
+      LINKED_FORWARD_LIST_FUNC(SUFFIX, _CreateNode),                                 \
+      LINKED_FORWARD_LIST_FUNC(SUFFIX, _LinkFront), LINKED_FORWARD_LIST_TYPE(SUFFIX),      \
+      LINKED_FORWARD_LIST_NODE_TYPE(SUFFIX))
+
+#define LINKED_FORWARD_LIST_IMPLEMENT_POP_FRONT(TYPE, SUFFIX)                  \
+  SINGLE_LINKED_IMPLEMENT_POP_FRONT(                                           \
+      TYPE, LINKED_FORWARD_LIST_FUNC(SUFFIX, PopFront),                     \
+      LINKED_FORWARD_LIST_FUNC(SUFFIX, _UnlinkFront), LINKED_FORWARD_LIST_TYPE(SUFFIX))
+
+#define LINKED_FORWARD_LIST_IMPLEMENT_INSERT_AFTER(TYPE, SUFFIX)               \
+  SINGLE_LINKED_IMPLEMENT_INSERT_AFTER(                                        \
+      TYPE, LINKED_FORWARD_LIST_FUNC(SUFFIX, InsertAfter),                  \
+      LINKED_FORWARD_LIST_FUNC(SUFFIX, _CreateNode), LINKED_FORWARD_LIST_TYPE(SUFFIX),     \
+      LINKED_FORWARD_LIST_NODE_TYPE(SUFFIX))
+
+#define LINKED_FORWARD_LIST_IMPLEMENT_ERASE_AFTER(TYPE, SUFFIX)                \
+  SINGLE_LINKED_IMPLEMENT_ERASE_AFTER(                                         \
+      TYPE, LINKED_FORWARD_LIST_FUNC(SUFFIX, EraseAfter),                   \
+      LINKED_FORWARD_LIST_TYPE(SUFFIX), LINKED_FORWARD_LIST_NODE_TYPE(SUFFIX))
+
+#define LINKED_FORWARD_LIST_IMPLEMENT_CLEAR(TYPE, SUFFIX)                      \
+  SINGLE_LINKED_IMPLEMENT_CLEAR(                                               \
+      TYPE, LINKED_FORWARD_LIST_FUNC(SUFFIX, Clear),                         \
+      LINKED_FORWARD_LIST_FUNC(SUFFIX, Destroy), LINKED_FORWARD_LIST_TYPE(SUFFIX))
+
+/* --- Access --- */
+
+#define LINKED_FORWARD_LIST_IMPLEMENT_FRONT(TYPE, SUFFIX)                      \
+  SINGLE_LINKED_ACCESS_FRONT(TYPE, LINKED_FORWARD_LIST_FUNC(SUFFIX, Front),  \
+                             LINKED_FORWARD_LIST_TYPE(SUFFIX))
+
+#define LINKED_FORWARD_LIST_IMPLEMENT_BACK(TYPE, SUFFIX)                       \
+  SINGLE_LINKED_ACCESS_BACK(TYPE, LINKED_FORWARD_LIST_FUNC(SUFFIX, Back),    \
+                            LINKED_FORWARD_LIST_TYPE(SUFFIX))
+
+#define LINKED_FORWARD_LIST_IMPLEMENT_BEGIN(TYPE, SUFFIX)                      \
+  SINGLE_LINKED_ACCESS_BEGIN(LINKED_FORWARD_LIST_FUNC(SUFFIX, Begin), \
+      LINKED_FORWARD_LIST_TYPE(SUFFIX),                                        \
+      LINKED_FORWARD_LIST_NODE_TYPE(SUFFIX))
+
+/* --- Observers --- */
+
+#define LINKED_FORWARD_LIST_IMPLEMENT_EMPTY(TYPE, SUFFIX)                      \
+  SINGLE_LINKED_IMPLEMENT_EMPTY(TYPE,                                          \
+                                LINKED_FORWARD_LIST_FUNC(SUFFIX, Empty),     \
+                                LINKED_FORWARD_LIST_TYPE(SUFFIX))
+
+#define LINKED_FORWARD_LIST_IMPLEMENT_SIZE(TYPE, SUFFIX)                       \
+  SINGLE_LINKED_IMPLEMENT_SIZE(TYPE, LINKED_FORWARD_LIST_FUNC(SUFFIX, Size), \
+                               LINKED_FORWARD_LIST_TYPE(SUFFIX))
+
+/* --- Aggregator --- */
+
+#define LINKED_FORWARD_LIST_IMPLEMENT(TYPE, SUFFIX)                                  \
+  LINKED_FORWARD_LIST_CREATE_NODE(TYPE, SUFFIX)                                \
+  LINKED_FORWARD_LIST_LINK_FRONT(TYPE, SUFFIX)                                 \
+  LINKED_FORWARD_LIST_LINK_BACK(TYPE, SUFFIX)                                  \
+  LINKED_FORWARD_LIST_UNLINK_FRONT(TYPE, SUFFIX)                               \
+  LINKED_FORWARD_LIST_IMPLEMENT_INIT(TYPE, SUFFIX)                             \
+  LINKED_FORWARD_LIST_IMPLEMENT_DESTROY(TYPE, SUFFIX)                          \
+  LINKED_FORWARD_LIST_IMPLEMENT_PUSH_FRONT(TYPE, SUFFIX)                       \
+  LINKED_FORWARD_LIST_IMPLEMENT_POP_FRONT(TYPE, SUFFIX)                        \
+  LINKED_FORWARD_LIST_IMPLEMENT_INSERT_AFTER(TYPE, SUFFIX)                     \
+  LINKED_FORWARD_LIST_IMPLEMENT_ERASE_AFTER(TYPE, SUFFIX)                      \
+  LINKED_FORWARD_LIST_IMPLEMENT_CLEAR(TYPE, SUFFIX)                            \
+  LINKED_FORWARD_LIST_IMPLEMENT_FRONT(TYPE, SUFFIX)                            \
+  LINKED_FORWARD_LIST_IMPLEMENT_BACK(TYPE, SUFFIX)                             \
+  LINKED_FORWARD_LIST_IMPLEMENT_BEGIN(TYPE, SUFFIX)                            \
+  LINKED_FORWARD_LIST_IMPLEMENT_EMPTY(TYPE, SUFFIX)                            \
+  LINKED_FORWARD_LIST_IMPLEMENT_SIZE(TYPE, SUFFIX)

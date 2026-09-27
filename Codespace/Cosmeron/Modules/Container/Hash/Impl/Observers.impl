@@ -1,0 +1,16 @@
+#pragma once
+
+#define HASH_IMPLEMENT_IS_EMPTY(KEY_SUFFIX, VALUE_SUFFIX)                     \
+  HASH_IS_EMPTY_PROTOTYPE(KEY_SUFFIX, VALUE_SUFFIX) {                         \
+    return !hash || hash->size == 0;                                           \
+  }
+
+#define HASH_IMPLEMENT_SIZE(KEY_SUFFIX, VALUE_SUFFIX)                         \
+  HASH_SIZE_PROTOTYPE(KEY_SUFFIX, VALUE_SUFFIX) {                             \
+    return hash ? hash->size : 0;                                              \
+  }
+
+#define HASH_IMPLEMENT_CAPACITY(KEY_SUFFIX, VALUE_SUFFIX)                     \
+  HASH_CAPACITY_PROTOTYPE(KEY_SUFFIX, VALUE_SUFFIX) {                         \
+    return hash ? hash->capacity : 0;                                          \
+  }

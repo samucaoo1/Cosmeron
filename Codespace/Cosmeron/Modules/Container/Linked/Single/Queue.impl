@@ -1,0 +1,102 @@
+
+#include "Access.impl"
+#include "Internal.impl"
+#include "Lifecycle.impl"
+#include "Modifiers.impl"
+#include "Observers.impl"
+
+/* ============================================================
+ * Linked_Queue — Container wrappers using SINGLE_LINKED_*
+ *
+ * FIFO: push no tail (LinkBack), pop no head (UnlinkFront).
+ * ============================================================ */
+
+/* --- Internals --- */
+
+#define LINKED_QUEUE_CREATE_NODE(TYPE, SUFFIX)                                 \
+  SINGLE_LINKED_CREATE_NODE(TYPE,                                              \
+      LINKED_QUEUE_FUNC(SUFFIX, _CreateNode),                                \
+      LINKED_QUEUE_NODE_TYPE(SUFFIX))
+
+#define LINKED_QUEUE_LINK_BACK(TYPE, SUFFIX)                                   \
+  SINGLE_LINKED_LINK_BACK(LINKED_QUEUE_FUNC(SUFFIX, _LinkBack),              \
+                          LINKED_QUEUE_TYPE(SUFFIX),                          \
+                          LINKED_QUEUE_NODE_TYPE(SUFFIX))
+
+#define LINKED_QUEUE_UNLINK_FRONT(TYPE, SUFFIX)                                \
+  SINGLE_LINKED_UNLINK_FRONT(LINKED_QUEUE_FUNC(SUFFIX, _UnlinkFront),        \
+                             LINKED_QUEUE_TYPE(SUFFIX),                       \
+                             LINKED_QUEUE_NODE_TYPE(SUFFIX))
+
+/* --- Lifecycle --- */
+
+#define LINKED_QUEUE_IMPLEMENT_INIT(TYPE, SUFFIX)                              \
+  SINGLE_LINKED_IMPLEMENT_INIT(TYPE,                                           \
+      LINKED_QUEUE_FUNC(SUFFIX, Init),                               \
+      LINKED_QUEUE_TYPE(SUFFIX))
+
+#define LINKED_QUEUE_IMPLEMENT_DESTROY(TYPE, SUFFIX)                           \
+  SINGLE_LINKED_IMPLEMENT_DESTROY(TYPE,                                        \
+      LINKED_QUEUE_FUNC(SUFFIX, Destroy),                            \
+      LINKED_QUEUE_TYPE(SUFFIX), LINKED_QUEUE_NODE_TYPE(SUFFIX))
+
+/* --- Modifiers --- */
+
+#define LINKED_QUEUE_IMPLEMENT_PUSH(TYPE, SUFFIX)                              \
+  SINGLE_LINKED_IMPLEMENT_PUSH_BACK(TYPE,                                      \
+      LINKED_QUEUE_FUNC(SUFFIX, Push),                               \
+      LINKED_QUEUE_FUNC(SUFFIX, _CreateNode),                                \
+      LINKED_QUEUE_FUNC(SUFFIX, _LinkBack),                                  \
+      LINKED_QUEUE_TYPE(SUFFIX), LINKED_QUEUE_NODE_TYPE(SUFFIX))
+
+#define LINKED_QUEUE_IMPLEMENT_POP(TYPE, SUFFIX)                               \
+  SINGLE_LINKED_IMPLEMENT_POP_FRONT(TYPE,                                      \
+      LINKED_QUEUE_FUNC(SUFFIX, Pop),                                \
+      LINKED_QUEUE_FUNC(SUFFIX, _UnlinkFront),                              \
+      LINKED_QUEUE_TYPE(SUFFIX))
+
+#define LINKED_QUEUE_IMPLEMENT_CLEAR(TYPE, SUFFIX)                             \
+  SINGLE_LINKED_IMPLEMENT_CLEAR(TYPE,                                          \
+      LINKED_QUEUE_FUNC(SUFFIX, Clear),                              \
+      LINKED_QUEUE_FUNC(SUFFIX, Destroy),                            \
+      LINKED_QUEUE_TYPE(SUFFIX))
+
+/* --- Access --- */
+
+#define LINKED_QUEUE_IMPLEMENT_FRONT(TYPE, SUFFIX)                             \
+  SINGLE_LINKED_ACCESS_FRONT(TYPE,                                             \
+      LINKED_QUEUE_FUNC(SUFFIX, Front),                              \
+      LINKED_QUEUE_TYPE(SUFFIX))
+
+#define LINKED_QUEUE_IMPLEMENT_BACK(TYPE, SUFFIX)                              \
+  SINGLE_LINKED_ACCESS_BACK(TYPE,                                              \
+      LINKED_QUEUE_FUNC(SUFFIX, Back),                               \
+      LINKED_QUEUE_TYPE(SUFFIX))
+
+/* --- Observers --- */
+
+#define LINKED_QUEUE_IMPLEMENT_EMPTY(TYPE, SUFFIX)                             \
+  SINGLE_LINKED_IMPLEMENT_EMPTY(TYPE,                                          \
+      LINKED_QUEUE_FUNC(SUFFIX, Empty),                              \
+      LINKED_QUEUE_TYPE(SUFFIX))
+
+#define LINKED_QUEUE_IMPLEMENT_SIZE(TYPE, SUFFIX)                              \
+  SINGLE_LINKED_IMPLEMENT_SIZE(TYPE,                                           \
+      LINKED_QUEUE_FUNC(SUFFIX, Size),                               \
+      LINKED_QUEUE_TYPE(SUFFIX))
+
+/* --- Aggregator --- */
+
+#define LINKED_QUEUE_IMPLEMENT(TYPE, SUFFIX)                                  \
+  LINKED_QUEUE_CREATE_NODE(TYPE, SUFFIX)                                       \
+  LINKED_QUEUE_LINK_BACK(TYPE, SUFFIX)                                         \
+  LINKED_QUEUE_UNLINK_FRONT(TYPE, SUFFIX)                                      \
+  LINKED_QUEUE_IMPLEMENT_INIT(TYPE, SUFFIX)                                    \
+  LINKED_QUEUE_IMPLEMENT_DESTROY(TYPE, SUFFIX)                                 \
+  LINKED_QUEUE_IMPLEMENT_PUSH(TYPE, SUFFIX)                                    \
+  LINKED_QUEUE_IMPLEMENT_POP(TYPE, SUFFIX)                                     \
+  LINKED_QUEUE_IMPLEMENT_CLEAR(TYPE, SUFFIX)                                   \
+  LINKED_QUEUE_IMPLEMENT_FRONT(TYPE, SUFFIX)                                   \
+  LINKED_QUEUE_IMPLEMENT_BACK(TYPE, SUFFIX)                                    \
+  LINKED_QUEUE_IMPLEMENT_EMPTY(TYPE, SUFFIX)                                   \
+  LINKED_QUEUE_IMPLEMENT_SIZE(TYPE, SUFFIX)

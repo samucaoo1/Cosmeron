@@ -1,0 +1,17 @@
+#define SEQUENTIAL_CONTAINER_IMPLEMENT_EMPTY(TYPE, FUNCTION_NAME,              \
+                                             CONTAINER_STRUCT)                 \
+  static inline bool FUNCTION_NAME(const CONTAINER_STRUCT *container) {              \
+    return container != NULL && container->size == 0;                                               \
+  }
+
+#define SEQUENTIAL_CONTAINER_IMPLEMENT_SIZE(TYPE, FUNCTION_NAME,               \
+                                            CONTAINER_STRUCT)                  \
+  static inline size_t FUNCTION_NAME(const CONTAINER_STRUCT *container) {            \
+    return container ? container->size : 0U;                                                    \
+  }
+
+#define SEQUENTIAL_CONTAINER_IMPLEMENT_CAPACITY(TYPE, FUNCTION_NAME,           \
+                                                CONTAINER_STRUCT)              \
+  static inline size_t FUNCTION_NAME(const CONTAINER_STRUCT *container) {            \
+    return container ? container->capacity : 0U;                                                \
+  }

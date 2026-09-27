@@ -1,0 +1,50 @@
+#pragma once
+
+#define HASH_IMPLEMENT_REHASH(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX, \
+                              HASH_FUNCTION, EQUAL_FUNCTION)                  \
+  HASH_REHASH_PROTOTYPE(KEY_SUFFIX, VALUE_SUFFIX) {                           \
+    THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *oldBuckets;                  \
+    size_t oldCapacity;                                                        \
+    size_t i;                                                                  \
+    void *storage = NULL;                                                      \
+    OPSTATUS status;                                                           \
+    (void)sizeof(KEY_TYPE);                                                    \
+    (void)sizeof(VALUE_TYPE);                                                  \
+    if (!hash || newCapacity == 0)                                             \
+      return STATUS_CONST(INVALID_ARGUMENT);                                  \
+    if (newCapacity < hash->size)                                              \
+      return STATUS_CONST(INVALID_ARGUMENT);                                  \
+    status = ALLOC_FUNC(AllocArray)(                                           \
+        &storage, newCapacity,                                                 \
+        sizeof(THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX)));                 \
+    if (status != STATUS_CONST(SUCCESS))                                       \
+      return status;                                                           \
+    memset(storage, 0,                                                         \
+           newCapacity * sizeof(THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX)));\
+    oldBuckets = hash->buckets;                                                \
+    oldCapacity = hash->capacity;                                              \
+    hash->buckets =                                                           \
+        (THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *)storage;                \
+    hash->capacity = newCapacity;                                              \
+    hash->size = 0;                                                            \
+    hash->deleted = 0;                                                         \
+    for (i = 0; i < oldCapacity; ++i) {                                        \
+      if (oldBuckets[i].state == HASH_BUCKET_OCCUPIED) {                       \
+        size_t start = (size_t)(HASH_FUNCTION(oldBuckets[i].key)) %            \
+                       hash->capacity;                                         \
+        size_t probe;                                                          \
+        for (probe = 0; probe < hash->capacity; ++probe) {                     \
+          THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *bucket =                \
+              &hash->buckets[(start + probe) % hash->capacity];                \
+          if (bucket->state != HASH_BUCKET_OCCUPIED) {                         \
+            *bucket = oldBuckets[i];                                           \
+            bucket->state = HASH_BUCKET_OCCUPIED;                              \
+            ++hash->size;                                                      \
+            break;                                                             \
+          }                                                                    \
+        }                                                                      \
+      }                                                                        \
+    }                                                                          \
+    Memory_Free(oldBuckets);                                                   \
+    return STATUS_CONST(SUCCESS);                                              \
+  }

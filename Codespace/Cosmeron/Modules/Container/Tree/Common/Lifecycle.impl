@@ -1,0 +1,36 @@
+
+/* =============================================================
+ * Lifecycle — Init, DestroyNodes, Destroy, Clear
+ * Shared by all algorithms and both set/map semantics.
+ * ============================================================= */
+
+#define TTREE_IMPLEMENT_LIFECYCLE(T)                                           \
+  static inline OPSTATUS TTREE_FN(T, Init)(T * tree) {                        \
+    if (!tree)                                                                 \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    tree->root = NULL;                                                         \
+    tree->size = 0;                                                            \
+    return STATUS_NS(SUCCESS);                                                 \
+  }                                                                            \
+                                                                               \
+  static inline void TTREE_FN(T, DestroyNodes)(TTREE_NODE(T) * node) {        \
+    if (!node)                                                                 \
+      return;                                                                  \
+    TTREE_FN(T, DestroyNodes)(node->left);                                     \
+    TTREE_FN(T, DestroyNodes)(node->right);                                    \
+    Memory_Free(node);                                                        \
+  }                                                                            \
+                                                                               \
+  static inline void TTREE_FN(T, Destroy)(T * tree) {                         \
+    if (!tree)                                                                 \
+      return;                                                                  \
+    TTREE_FN(T, DestroyNodes)(tree->root);                                     \
+    tree->root = NULL;                                                         \
+    tree->size = 0;                                                            \
+  }                                                                            \
+                                                                               \
+  static inline void TTREE_FN(T, Clear)(T * tree) {                           \
+    if (!tree)                                                                 \
+      return;                                                                  \
+    TTREE_FN(T, Destroy)(tree);                                                \
+  }

@@ -1,0 +1,23 @@
+#define SEQUENTIAL_CONTAINER_NEED_GROW(CONTAINER)                              \
+  ((CONTAINER)->size >= (CONTAINER)->capacity)
+
+#define SEQUENTIAL_CONTAINER_NEXT_CAPACITY(CONTAINER, INITIAL_CAPACITY,        \
+                                           GROWTH_FACTOR)                      \
+  ((CONTAINER)->capacity == 0 ? INITIAL_CAPACITY                               \
+                              : (CONTAINER)->capacity * GROWTH_FACTOR)
+
+#define SEQUENTIAL_CONTAINER_ENSURE_CAPACITY(                                  \
+    TYPE, FUNCTION_NAME, FUNCTION_RESERVE, CONTAINER_STRUCT, INITIAL_CAPACITY, \
+    GROWTH_FACTOR)                                                             \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container) {          \
+    if (!container)                                                            \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    if (!SEQUENTIAL_CONTAINER_NEED_GROW(container))                            \
+      return STATUS_NS(SUCCESS);                                               \
+    if (container->capacity != 0 &&                                            \
+        container->capacity > SIZE_MAX / (GROWTH_FACTOR))                     \
+      return STATUS_CONST(ARITHMETIC_OVERFLOW);                                \
+    return FUNCTION_RESERVE(container,                                         \
+                            SEQUENTIAL_CONTAINER_NEXT_CAPACITY(                \
+                                container, INITIAL_CAPACITY, GROWTH_FACTOR));  \
+  }

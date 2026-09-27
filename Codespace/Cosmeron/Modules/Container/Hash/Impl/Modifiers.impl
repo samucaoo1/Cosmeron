@@ -1,0 +1,91 @@
+#pragma once
+
+#define HASH_IMPLEMENT_INSERT(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX, \
+                              HASH_FUNCTION, EQUAL_FUNCTION)                  \
+  HASH_INSERT_PROTOTYPE(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX) {     \
+    size_t start;                                                              \
+    size_t i;                                                                  \
+    size_t firstDeleted = SIZE_MAX;                                            \
+    OPSTATUS status;                                                           \
+    if (!hash)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                  \
+    if (hash->capacity == 0) {                                                 \
+      status = HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, Init)(hash);          \
+      if (status != STATUS_CONST(SUCCESS))                                     \
+        return status;                                                         \
+    }                                                                          \
+    if ((hash->size + hash->deleted + 1u) * 100u >                             \
+        hash->capacity * HASH_LOAD_PERCENT) {                                  \
+      if (hash->capacity > SIZE_MAX / 2u)                                     \
+        return STATUS_CONST(ARITHMETIC_OVERFLOW);                             \
+      status = HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, Rehash)(              \
+          hash, hash->capacity * 2u);                                          \
+      if (status != STATUS_CONST(SUCCESS))                                     \
+        return status;                                                         \
+    }                                                                          \
+    start = (size_t)(HASH_FUNCTION(key)) % hash->capacity;                    \
+    for (i = 0; i < hash->capacity; ++i) {                                    \
+      size_t index = (start + i) % hash->capacity;                             \
+      THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *bucket =                   \
+          &hash->buckets[index];                                               \
+      if (bucket->state == HASH_BUCKET_OCCUPIED) {                             \
+        if (EQUAL_FUNCTION(bucket->key, key)) {                               \
+          bucket->value = value;                                               \
+          return STATUS_CONST(SUCCESS);                                        \
+        }                                                                      \
+        continue;                                                              \
+      }                                                                        \
+      if (bucket->state == HASH_BUCKET_DELETED) {                              \
+        if (firstDeleted == SIZE_MAX)                                          \
+          firstDeleted = index;                                                \
+        continue;                                                              \
+      }                                                                        \
+      if (firstDeleted != SIZE_MAX)                                            \
+        bucket = &hash->buckets[firstDeleted];                                \
+      bucket->key = key;                                                       \
+      bucket->value = value;                                                   \
+      if (bucket->state == HASH_BUCKET_DELETED)                               \
+        --hash->deleted;                                                       \
+      bucket->state = HASH_BUCKET_OCCUPIED;                                   \
+      ++hash->size;                                                            \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    if (firstDeleted != SIZE_MAX) {                                            \
+      THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *bucket =                   \
+          &hash->buckets[firstDeleted];                                        \
+      bucket->key = key;                                                       \
+      bucket->value = value;                                                   \
+      bucket->state = HASH_BUCKET_OCCUPIED;                                   \
+      --hash->deleted;                                                         \
+      ++hash->size;                                                            \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    return STATUS_CONST(GENERIC_ERROR);                                        \
+  }
+
+#define HASH_IMPLEMENT_REMOVE(KEY_TYPE, KEY_SUFFIX, VALUE_SUFFIX,             \
+                              HASH_FUNCTION, EQUAL_FUNCTION)                  \
+  HASH_REMOVE_PROTOTYPE(KEY_TYPE, KEY_SUFFIX, VALUE_SUFFIX) {                 \
+    THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *bucket;                      \
+    if (!hash)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                  \
+    bucket = HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, InternalFindBucket)(    \
+        hash, key);                                                            \
+    if (!bucket)                                                               \
+      return STATUS_CONST(NOT_FOUND);                                          \
+    bucket->state = HASH_BUCKET_DELETED;                                      \
+    --hash->size;                                                              \
+    ++hash->deleted;                                                           \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define HASH_IMPLEMENT_CLEAR(KEY_SUFFIX, VALUE_SUFFIX)                        \
+  HASH_CLEAR_PROTOTYPE(KEY_SUFFIX, VALUE_SUFFIX) {                            \
+    if (!hash || !hash->buckets)                                               \
+      return;                                                                  \
+    memset(hash->buckets, 0,                                                   \
+           hash->capacity *                                                    \
+               sizeof(THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX)));          \
+    hash->size = 0;                                                            \
+    hash->deleted = 0;                                                         \
+  }

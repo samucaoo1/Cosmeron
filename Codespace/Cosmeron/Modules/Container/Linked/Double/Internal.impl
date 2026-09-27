@@ -1,0 +1,40 @@
+
+#include "../Internal.impl"
+
+/* ============================================================
+ * Double Linked — Internal Helpers
+ *
+ * Funções internas para manipulação de nós em listas
+ * duplamente encadeadas. Análogas às Single, mas com prev.
+ * ============================================================ */
+
+/* CreateNode — Aloca um no e inicializa com value/prev/next */
+#define DOUBLE_LINKED_CREATE_NODE(TYPE, FUNCTION_NAME, NODE_STRUCT)            \
+  LINKED_INTERNAL_DOUBLE_CREATE_NODE(TYPE, FUNCTION_NAME, NODE_STRUCT)
+
+/* LinkFront — Liga nó no head */
+#define DOUBLE_LINKED_LINK_FRONT(FUNCTION_NAME, CONTAINER_STRUCT, NODE_STRUCT) \
+  LINKED_INTERNAL_DOUBLE_LINK_FRONT(FUNCTION_NAME, CONTAINER_STRUCT, NODE_STRUCT)
+
+/* LinkBack — Liga nó no tail */
+#define DOUBLE_LINKED_LINK_BACK(FUNCTION_NAME, CONTAINER_STRUCT, NODE_STRUCT)  \
+  LINKED_INTERNAL_DOUBLE_LINK_BACK(FUNCTION_NAME, CONTAINER_STRUCT, NODE_STRUCT)
+
+/* UnlinkFront — Remove o nó do head e libera */
+#define DOUBLE_LINKED_UNLINK_FRONT(FUNCTION_NAME, CONTAINER_STRUCT,            \
+                                   NODE_STRUCT)                                \
+  LINKED_INTERNAL_DOUBLE_UNLINK_FRONT(FUNCTION_NAME, CONTAINER_STRUCT, NODE_STRUCT)
+
+/* UnlinkBack — Remove o nó do tail e libera */
+#define DOUBLE_LINKED_UNLINK_BACK(FUNCTION_NAME, CONTAINER_STRUCT,             \
+                                  NODE_STRUCT)                                 \
+  LINKED_INTERNAL_DOUBLE_UNLINK_BACK(FUNCTION_NAME, CONTAINER_STRUCT, NODE_STRUCT)
+
+/* LinkBefore — Insere nó antes de pos */
+#define DOUBLE_LINKED_LINK_BEFORE(FUNCTION_NAME, CONTAINER_STRUCT,             \
+                                  NODE_STRUCT)                                 \
+  LINKED_INTERNAL_DOUBLE_LINK_BEFORE(FUNCTION_NAME, CONTAINER_STRUCT, NODE_STRUCT)
+
+/* Unlink — Remove nó arbitrário e libera */
+#define DOUBLE_LINKED_UNLINK(FUNCTION_NAME, CONTAINER_STRUCT, NODE_STRUCT)     \
+  LINKED_INTERNAL_DOUBLE_UNLINK(FUNCTION_NAME, CONTAINER_STRUCT, NODE_STRUCT)

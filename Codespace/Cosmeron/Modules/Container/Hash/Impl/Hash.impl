@@ -1,0 +1,28 @@
+#pragma once
+
+#define HASH_IMPLEMENT(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX,        \
+                       HASH_FUNCTION, EQUAL_FUNCTION)                         \
+  HASH_IMPLEMENT_INIT(KEY_SUFFIX, VALUE_SUFFIX)                                \
+  HASH_IMPLEMENT_DESTROY(KEY_SUFFIX, VALUE_SUFFIX)                             \
+  HASH_IMPLEMENT_REHASH(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX,        \
+                        HASH_FUNCTION, EQUAL_FUNCTION)                         \
+  HASH_IMPLEMENT_FIND(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX,          \
+                      HASH_FUNCTION, EQUAL_FUNCTION)                          \
+  HASH_IMPLEMENT_CONST_FIND(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX,    \
+                            HASH_FUNCTION, EQUAL_FUNCTION)                    \
+  HASH_IMPLEMENT_CONTAINS(KEY_TYPE, KEY_SUFFIX, VALUE_SUFFIX, HASH_FUNCTION,   \
+                          EQUAL_FUNCTION)                                      \
+  HASH_IMPLEMENT_INSERT(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX,        \
+                        HASH_FUNCTION, EQUAL_FUNCTION)                         \
+  HASH_IMPLEMENT_REMOVE(KEY_TYPE, KEY_SUFFIX, VALUE_SUFFIX, HASH_FUNCTION,     \
+                        EQUAL_FUNCTION)                                        \
+  HASH_IMPLEMENT_CLEAR(KEY_SUFFIX, VALUE_SUFFIX)                               \
+  HASH_IMPLEMENT_IS_EMPTY(KEY_SUFFIX, VALUE_SUFFIX)                            \
+  HASH_IMPLEMENT_SIZE(KEY_SUFFIX, VALUE_SUFFIX)                                \
+  HASH_IMPLEMENT_CAPACITY(KEY_SUFFIX, VALUE_SUFFIX)
+
+#include "Lifecycle.impl"
+#include "Access.impl"
+#include "Capacity.impl"
+#include "Modifiers.impl"
+#include "Observers.impl"

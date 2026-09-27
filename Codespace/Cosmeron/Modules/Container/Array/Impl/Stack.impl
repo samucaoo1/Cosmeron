@@ -1,0 +1,67 @@
+#include "Access.impl"
+#include "Capacity.impl"
+#include "Internal.impl"
+#include "Lifecycle.impl"
+#include "Modifiers.impl"
+#include "Observers.impl"
+#define SEQUENTIAL_STACK_ENSURE_CAPACITY(TYPE, SUFFIX)                         \
+  SEQUENTIAL_CONTAINER_ENSURE_CAPACITY(                                        \
+      TYPE, FLAT_STACK_FUNC(SUFFIX, EnsureCapacity),                           \
+      FLAT_STACK_FUNC(SUFFIX, Reserve), FLAT_STACK_TYPE(SUFFIX),       \
+      FLAT_STACK_INITIAL_CAPACITY, FLAT_STACK_GROWTH_FACTOR)
+
+#define SEQUENTIAL_STACK_IMPLEMENT_INIT(TYPE, SUFFIX)                          \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_INIT(                                         \
+      TYPE, FLAT_STACK_FUNC(SUFFIX, Init), FLAT_STACK_TYPE(SUFFIX))
+
+#define SEQUENTIAL_STACK_IMPLEMENT_DESTROY(TYPE, SUFFIX)                       \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_DESTROY(                                      \
+      TYPE, FLAT_STACK_FUNC(SUFFIX, Destroy), FLAT_STACK_TYPE(SUFFIX))
+
+#define SEQUENTIAL_STACK_IMPLEMENT_RESERVE(TYPE, SUFFIX)                       \
+  SEQUENTIAL_CAPACITY_RESERVE(TYPE, FLAT_STACK_FUNC(SUFFIX, Reserve),  \
+                              FLAT_STACK_TYPE(SUFFIX))
+
+#define SEQUENTIAL_STACK_IMPLEMENT_SHRINK_TO_FIT(TYPE, SUFFIX)                 \
+  SEQUENTIAL_CAPACITY_SHRINK_TO_FIT(                                           \
+      TYPE, FLAT_STACK_FUNC(SUFFIX, ShrinkToFit),                    \
+      FLAT_STACK_TYPE(SUFFIX))
+
+#define SEQUENTIAL_STACK_IMPLEMENT_PUSH(TYPE, SUFFIX)                          \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_PUSH_BACK(                                    \
+      TYPE, FLAT_STACK_FUNC(SUFFIX, Push),                             \
+      FLAT_STACK_FUNC(SUFFIX, EnsureCapacity), FLAT_STACK_TYPE(SUFFIX))
+
+#define SEQUENTIAL_STACK_IMPLEMENT_POP(TYPE, SUFFIX)                           \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_POP_BACK(                                     \
+      TYPE, FLAT_STACK_FUNC(SUFFIX, Pop), FLAT_STACK_TYPE(SUFFIX))
+
+#define SEQUENTIAL_STACK_IMPLEMENT_TOP(TYPE, SUFFIX)                           \
+  SEQUENTIAL_ACCESS_BACK(TYPE, FLAT_STACK_FUNC(SUFFIX, Top),           \
+                         FLAT_STACK_TYPE(SUFFIX))
+
+#define SEQUENTIAL_STACK_IMPLEMENT_EMPTY(TYPE, SUFFIX)                         \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_EMPTY(                                        \
+      TYPE, FLAT_STACK_FUNC(SUFFIX, Empty), FLAT_STACK_TYPE(SUFFIX))
+
+#define SEQUENTIAL_STACK_IMPLEMENT_SIZE(TYPE, SUFFIX)                          \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_SIZE(                                         \
+      TYPE, FLAT_STACK_FUNC(SUFFIX, Size), FLAT_STACK_TYPE(SUFFIX))
+
+#define SEQUENTIAL_STACK_IMPLEMENT_CAPACITY(TYPE, SUFFIX)                      \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_CAPACITY(                                     \
+      TYPE, FLAT_STACK_FUNC(SUFFIX, Capacity),                         \
+      FLAT_STACK_TYPE(SUFFIX))
+
+#define FLAT_STACK_IMPLEMENT(TYPE, SUFFIX)                                     \
+  SEQUENTIAL_STACK_ENSURE_CAPACITY(TYPE, SUFFIX)                               \
+  SEQUENTIAL_STACK_IMPLEMENT_INIT(TYPE, SUFFIX)                                \
+  SEQUENTIAL_STACK_IMPLEMENT_DESTROY(TYPE, SUFFIX)                             \
+  SEQUENTIAL_STACK_IMPLEMENT_RESERVE(TYPE, SUFFIX)                             \
+  SEQUENTIAL_STACK_IMPLEMENT_SHRINK_TO_FIT(TYPE, SUFFIX)                       \
+  SEQUENTIAL_STACK_IMPLEMENT_PUSH(TYPE, SUFFIX)                                \
+  SEQUENTIAL_STACK_IMPLEMENT_POP(TYPE, SUFFIX)                                 \
+  SEQUENTIAL_STACK_IMPLEMENT_TOP(TYPE, SUFFIX)                                 \
+  SEQUENTIAL_STACK_IMPLEMENT_EMPTY(TYPE, SUFFIX)                               \
+  SEQUENTIAL_STACK_IMPLEMENT_SIZE(TYPE, SUFFIX)                                \
+  SEQUENTIAL_STACK_IMPLEMENT_CAPACITY(TYPE, SUFFIX)

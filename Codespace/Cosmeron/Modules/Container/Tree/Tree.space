@@ -1,0 +1,152 @@
+#pragma once
+
+#include "../Container.space"
+
+#include "../../../Core/Algorithm/Comparison.h"
+#include "../../../Core/Error/Status.h"
+#include "../../../Core/Memory/Alloc.h"
+#include "../../../Core/Memory/Swap.h"
+#include "../../../Core/Namespace.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+/* =============================================================
+ * Namespace base
+ * ============================================================= */
+
+#define TREE_NS LIB_PREFIX(Tree)
+
+/* =============================================================
+ * Name generators
+ *   TTREE_SET_TYPE(AVL, int)       → Tree_AVL_Set_int
+ *   TTREE_MAP_TYPE(AVL, int, char) → Tree_AVL_Map_int_char
+ *   TTREE_NODE(T)                  → T_Node
+ *   TTREE_FN(T, Insert)            → T_Insert
+ * ============================================================= */
+
+#define TTREE_SET_TYPE(ALG, KEY) \
+  GNS2(GNS2(GNS2(TREE_NS, ALG), Set), KEY)
+
+#define TTREE_MAP_TYPE(ALG, KEY, VAL) \
+  GNS2(GNS2(GNS2(GNS2(TREE_NS, ALG), Map), KEY), VAL)
+
+#define TTREE_PUBLIC_SET_TYPE(ALG, KEY) \
+  GNS2(GNS2(GNS2(TREE_NS, ALG), TSet), KEY)
+
+#define TTREE_PUBLIC_MAP_TYPE(ALG, KEY, VAL) \
+  GNS2(GNS2(GNS2(GNS2(TREE_NS, ALG), TMap), KEY), VAL)
+
+#define TTREE_NODE(T) GNS2(T, Node)
+
+#define TTREE_FN(T, FUNC) PP_OP_CAT2(PP_OP_CAT2(T, _), FUNC)
+
+/* =============================================================
+ * Comparator output type — default is int.
+ * Override by defining TTREE_CMPOUT before including the algorithm.
+ * ============================================================= */
+
+#ifndef TTREE_CMPOUT
+#define TTREE_CMPOUT int
+#endif
+
+/* =============================================================
+ * One-liner: declare + bind VTable + init.
+ *
+ *   TREE_SET_DECLARE(AVL, int, s)   ->   TTREE_SET_TYPE(AVL, int) s = {
+ *                                .api = &TTREE_FN(..., functions),
+ *                                .root = NULL, .size = 0
+ *                              };
+ *   TREE_MAP_DECLARE(AVL, int, int, m)
+ * ============================================================= */
+
+#define TREE_SET_DECLARE(ALG, KEY, NAME)                                                  \
+  TTREE_SET_TYPE(ALG, KEY) NAME = {                                             \
+      CONTAINER_API_INITIALIZER(TTREE_FN(TTREE_SET_TYPE(ALG, KEY), functions))                    \
+      .root = NULL,                                                             \
+      .size = 0,                                                                \
+  }
+
+#define TREE_MAP_DECLARE(ALG, KEY, VAL, NAME)                                             \
+  TTREE_MAP_TYPE(ALG, KEY, VAL) NAME = {                                        \
+      CONTAINER_API_INITIALIZER(                                              \
+          TTREE_FN(TTREE_MAP_TYPE(ALG, KEY, VAL), functions))               \
+      .root = NULL,                                                             \
+      .size = 0,                                                                \
+  }
+
+/* =============================================================
+ * VTable structs — declared here (in the public header) so
+ * that code using the tree can take a pointer to the VTable
+ * typedef without including the FunctionTable header file.
+ *
+ *   TTREE_FUNCTION_TABLE_SET(T, KEY_TYPE)
+ *     -> typedef struct T_FunctionTable { ... } T_FunctionTable;
+ *   TTREE_FUNCTION_TABLE_MAP(T, KEY_TYPE, VALUE_TYPE)
+ *     -> same, for MAP.
+ *
+ * The matching `*_INSTANCE` macros (the static const vtables
+ * themselves) live in VTable/Tree.h.
+ * ============================================================= */
+
+#if CONTAINER_ENABLE_PSEUDO_METHODS
+
+#define TTREE_FUNCTION_TABLE_SET(T, KEY_TYPE)                                          \
+  typedef struct TTREE_FN(T, FunctionTable) {                               \
+    OPSTATUS (*init)(T *);                                                     \
+    void (*destroy)(T *);                                                      \
+    void (*clear)(T *);                                                        \
+    OPSTATUS (*insert)(T *, KEY_TYPE);                                         \
+    OPSTATUS (*remove)(T *, KEY_TYPE);                                         \
+    TTREE_NODE(T) * (*findNode)(T *, KEY_TYPE);                               \
+    KEY_TYPE *(*find)(T *, KEY_TYPE);                                      \
+    bool (*contains)(const T *, KEY_TYPE);                                           \
+    TTREE_NODE(T) * (*minNode)(TTREE_NODE(T) *);                              \
+    TTREE_NODE(T) * (*maxNode)(TTREE_NODE(T) *);                              \
+    KEY_TYPE *(*min)(T *);                                                     \
+    KEY_TYPE *(*max)(T *);                                                     \
+    bool (*empty)(const T *);                                                        \
+    size_t (*size)(const T *);                                                       \
+    TTREE_NODE(T) * (*begin)(T *);                                             \
+    TTREE_NODE(T) * (*end)(T *);                                               \
+    TTREE_NODE(T) * (*next)(TTREE_NODE(T) *);                                  \
+    TTREE_NODE(T) * (*prev)(TTREE_NODE(T) *);                                  \
+    const TTREE_NODE(T) *(*constBegin)(const T *);                             \
+    const TTREE_NODE(T) *(*constEnd)(const T *);                               \
+    const TTREE_NODE(T) *(*constNext)(const TTREE_NODE(T) *);                  \
+    const TTREE_NODE(T) *(*constPrev)(const TTREE_NODE(T) *);                  \
+  } TTREE_FN(T, FunctionTable);
+
+#define TTREE_FUNCTION_TABLE_MAP(T, KEY_TYPE, VALUE_TYPE)                              \
+  typedef struct TTREE_FN(T, FunctionTable) {                               \
+    OPSTATUS (*init)(T *);                                                     \
+    void (*destroy)(T *);                                                      \
+    void (*clear)(T *);                                                        \
+    OPSTATUS (*insert)(T *, KEY_TYPE, VALUE_TYPE);                             \
+    OPSTATUS (*remove)(T *, KEY_TYPE);                                         \
+    TTREE_NODE(T) * (*findNode)(T *, KEY_TYPE);                               \
+    VALUE_TYPE *(*find)(T *, KEY_TYPE);                                  \
+    bool (*contains)(const T *, KEY_TYPE);                                           \
+    TTREE_NODE(T) * (*minNode)(TTREE_NODE(T) *);                              \
+    TTREE_NODE(T) * (*maxNode)(TTREE_NODE(T) *);                              \
+    KEY_TYPE *(*min)(T *);                                                     \
+    KEY_TYPE *(*max)(T *);                                                     \
+    bool (*empty)(const T *);                                                        \
+    size_t (*size)(const T *);                                                       \
+    TTREE_NODE(T) * (*begin)(T *);                                             \
+    TTREE_NODE(T) * (*end)(T *);                                               \
+    TTREE_NODE(T) * (*next)(TTREE_NODE(T) *);                                  \
+    TTREE_NODE(T) * (*prev)(TTREE_NODE(T) *);                                  \
+    const TTREE_NODE(T) *(*constBegin)(const T *);                             \
+    const TTREE_NODE(T) *(*constEnd)(const T *);                               \
+    const TTREE_NODE(T) *(*constNext)(const TTREE_NODE(T) *);                  \
+    const TTREE_NODE(T) *(*constPrev)(const TTREE_NODE(T) *);                  \
+  } TTREE_FN(T, FunctionTable);
+
+#else
+#define TTREE_FUNCTION_TABLE_SET(...)
+#define TTREE_FUNCTION_TABLE_MAP(...)
+#endif
+
+#include "VTable/Tree.h"

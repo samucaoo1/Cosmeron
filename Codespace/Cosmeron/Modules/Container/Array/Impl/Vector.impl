@@ -1,0 +1,109 @@
+#include "Access.impl"
+#include "Capacity.impl"
+#include "Internal.impl"
+#include "Lifecycle.impl"
+#include "Modifiers.impl"
+#include "Observers.impl"
+#define FLAT_VECTOR_IMPLEMENT_ENSURE_CAPACITY(TYPE, SUFFIX)                    \
+  SEQUENTIAL_CONTAINER_ENSURE_CAPACITY(                                        \
+      TYPE, FLAT_VECTOR_FUNC(SUFFIX, EnsureCapacity),                          \
+      FLAT_VECTOR_FUNC(SUFFIX, Reserve), FLAT_VECTOR_TYPE(SUFFIX),     \
+      FLAT_VECTOR_INITIAL_CAPACITY, FLAT_VECTOR_GROWTH_FACTOR)
+
+#define FLAT_VECTOR_IMPLEMENT_INIT(TYPE, SUFFIX)                               \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_INIT(                                         \
+      TYPE, FLAT_VECTOR_FUNC(SUFFIX, Init), FLAT_VECTOR_TYPE(SUFFIX))
+
+#define FLAT_VECTOR_IMPLEMENT_DESTROY(TYPE, SUFFIX)                            \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_DESTROY(                                      \
+      TYPE, FLAT_VECTOR_FUNC(SUFFIX, Destroy), FLAT_VECTOR_TYPE(SUFFIX))
+
+#define FLAT_VECTOR_IMPLEMENT_RESERVE(TYPE, SUFFIX)                            \
+  SEQUENTIAL_CAPACITY_RESERVE(TYPE, FLAT_VECTOR_FUNC(SUFFIX, Reserve), \
+                              FLAT_VECTOR_TYPE(SUFFIX))
+
+#define FLAT_VECTOR_IMPLEMENT_SHRINK_TO_FIT(TYPE, SUFFIX)                      \
+  SEQUENTIAL_CAPACITY_SHRINK_TO_FIT(                                           \
+      TYPE, FLAT_VECTOR_FUNC(SUFFIX, ShrinkToFit),                  \
+      FLAT_VECTOR_TYPE(SUFFIX))
+
+#define FLAT_VECTOR_IMPLEMENT_AT(TYPE, SUFFIX)                                 \
+  SEQUENTIAL_ACCESS_AT(TYPE, FLAT_VECTOR_FUNC(SUFFIX, At),             \
+                       FLAT_VECTOR_TYPE(SUFFIX))
+
+#define FLAT_VECTOR_IMPLEMENT_FRONT(TYPE, SUFFIX)                              \
+  SEQUENTIAL_ACCESS_FRONT(TYPE, FLAT_VECTOR_FUNC(SUFFIX, Front),       \
+                          FLAT_VECTOR_TYPE(SUFFIX))
+
+#define FLAT_VECTOR_IMPLEMENT_BACK(TYPE, SUFFIX)                               \
+  SEQUENTIAL_ACCESS_BACK(TYPE, FLAT_VECTOR_FUNC(SUFFIX, Back),         \
+                         FLAT_VECTOR_TYPE(SUFFIX))
+
+#define FLAT_VECTOR_IMPLEMENT_DATA(TYPE, SUFFIX)                               \
+  SEQUENTIAL_ACCESS_DATA(TYPE, FLAT_VECTOR_FUNC(SUFFIX, Data),         \
+                         FLAT_VECTOR_TYPE(SUFFIX))
+
+#define FLAT_VECTOR_IMPLEMENT_PUSH_BACK(TYPE, SUFFIX)                          \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_PUSH_BACK(                                    \
+      TYPE, FLAT_VECTOR_FUNC(SUFFIX, PushBack),                       \
+      FLAT_VECTOR_FUNC(SUFFIX, EnsureCapacity), FLAT_VECTOR_TYPE(SUFFIX))
+
+#define FLAT_VECTOR_IMPLEMENT_POP_BACK(TYPE, SUFFIX)                           \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_POP_BACK(                                     \
+      TYPE, FLAT_VECTOR_FUNC(SUFFIX, PopBack), FLAT_VECTOR_TYPE(SUFFIX))
+
+#define FLAT_VECTOR_IMPLEMENT_PUSH_FRONT(TYPE, SUFFIX)                         \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_PUSH_FRONT(                                   \
+      TYPE, FLAT_VECTOR_FUNC(SUFFIX, PushFront),                      \
+      FLAT_VECTOR_FUNC(SUFFIX, Insert), FLAT_VECTOR_TYPE(SUFFIX))
+
+#define FLAT_VECTOR_IMPLEMENT_POP_FRONT(TYPE, SUFFIX)                          \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_POP_FRONT(                                    \
+      TYPE, FLAT_VECTOR_FUNC(SUFFIX, PopFront),                       \
+      FLAT_VECTOR_FUNC(SUFFIX, Erase), FLAT_VECTOR_TYPE(SUFFIX))
+
+#define FLAT_VECTOR_IMPLEMENT_INSERT(TYPE, SUFFIX)                             \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_INSERT(                                       \
+      TYPE, FLAT_VECTOR_FUNC(SUFFIX, Insert),                          \
+      FLAT_VECTOR_FUNC(SUFFIX, EnsureCapacity), FLAT_VECTOR_TYPE(SUFFIX))
+
+#define FLAT_VECTOR_IMPLEMENT_ERASE(TYPE, SUFFIX)                              \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_ERASE(                                        \
+      TYPE, FLAT_VECTOR_FUNC(SUFFIX, Erase), FLAT_VECTOR_TYPE(SUFFIX))
+
+#define FLAT_VECTOR_IMPLEMENT_CLEAR(TYPE, SUFFIX)                              \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_CLEAR(                                        \
+      TYPE, FLAT_VECTOR_FUNC(SUFFIX, Clear), FLAT_VECTOR_TYPE(SUFFIX))
+
+#define FLAT_VECTOR_IMPLEMENT_EMPTY(TYPE, SUFFIX)                              \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_EMPTY(                                        \
+      TYPE, FLAT_VECTOR_FUNC(SUFFIX, Empty), FLAT_VECTOR_TYPE(SUFFIX))
+
+#define FLAT_VECTOR_IMPLEMENT_SIZE(TYPE, SUFFIX)                               \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_SIZE(                                         \
+      TYPE, FLAT_VECTOR_FUNC(SUFFIX, Size), FLAT_VECTOR_TYPE(SUFFIX))
+
+#define FLAT_VECTOR_IMPLEMENT_CAPACITY(TYPE, SUFFIX)                           \
+  SEQUENTIAL_CONTAINER_IMPLEMENT_CAPACITY(                                     \
+      TYPE, FLAT_VECTOR_FUNC(SUFFIX, Capacity), FLAT_VECTOR_TYPE(SUFFIX))
+
+#define FLAT_VECTOR_IMPLEMENT(TYPE, SUFFIX)                                    \
+  FLAT_VECTOR_IMPLEMENT_ENSURE_CAPACITY(TYPE, SUFFIX)                          \
+  FLAT_VECTOR_IMPLEMENT_INIT(TYPE, SUFFIX)                                     \
+  FLAT_VECTOR_IMPLEMENT_DESTROY(TYPE, SUFFIX)                                  \
+  FLAT_VECTOR_IMPLEMENT_RESERVE(TYPE, SUFFIX)                                  \
+  FLAT_VECTOR_IMPLEMENT_SHRINK_TO_FIT(TYPE, SUFFIX)                            \
+  FLAT_VECTOR_IMPLEMENT_AT(TYPE, SUFFIX)                                       \
+  FLAT_VECTOR_IMPLEMENT_FRONT(TYPE, SUFFIX)                                    \
+  FLAT_VECTOR_IMPLEMENT_BACK(TYPE, SUFFIX)                                     \
+  FLAT_VECTOR_IMPLEMENT_DATA(TYPE, SUFFIX)                                     \
+  FLAT_VECTOR_IMPLEMENT_PUSH_BACK(TYPE, SUFFIX)                                \
+  FLAT_VECTOR_IMPLEMENT_POP_BACK(TYPE, SUFFIX)                                 \
+  FLAT_VECTOR_IMPLEMENT_PUSH_FRONT(TYPE, SUFFIX)                               \
+  FLAT_VECTOR_IMPLEMENT_POP_FRONT(TYPE, SUFFIX)                                \
+  FLAT_VECTOR_IMPLEMENT_INSERT(TYPE, SUFFIX)                                   \
+  FLAT_VECTOR_IMPLEMENT_ERASE(TYPE, SUFFIX)                                    \
+  FLAT_VECTOR_IMPLEMENT_CLEAR(TYPE, SUFFIX)                                    \
+  FLAT_VECTOR_IMPLEMENT_EMPTY(TYPE, SUFFIX)                                    \
+  FLAT_VECTOR_IMPLEMENT_SIZE(TYPE, SUFFIX)                                     \
+  FLAT_VECTOR_IMPLEMENT_CAPACITY(TYPE, SUFFIX)

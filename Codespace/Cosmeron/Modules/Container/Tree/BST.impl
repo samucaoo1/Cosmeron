@@ -1,0 +1,167 @@
+/* =============================================================
+ * BST — algorithm-specific implementation
+ *   CreateNode (set/map), Insert (set/map), Remove
+ *   No rotations or balancing.
+ * ============================================================= */
+
+#include "Common/Tree.impl"
+
+/* =============================================================
+ * BST core — Remove (no rebalance)
+ * ============================================================= */
+
+#define TBST_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                 \
+  static inline OPSTATUS TTREE_FN(T, Remove)(T * tree, KEY_TYPE key) {         \
+    if (!tree)                                                                 \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    TTREE_NODE(T) *_z = TTREE_FN(T, FindNode)(tree, key);                      \
+    if (!_z)                                                                   \
+      return STATUS_NS(NOT_FOUND);                                             \
+    if (!_z->left) {                                                           \
+      TTREE_FN(T, Transplant)(tree, _z, _z->right);                           \
+    } else if (!_z->right) {                                                   \
+      TTREE_FN(T, Transplant)(tree, _z, _z->left);                            \
+    } else {                                                                   \
+      TTREE_NODE(T) *_s = TTREE_FN(T, MinNode)(_z->right);                    \
+      if (_s->parent != _z) {                                                  \
+        TTREE_FN(T, Transplant)(tree, _s, _s->right);                         \
+        _s->right = _z->right;                                                 \
+        _s->right->parent = _s;                                                \
+      }                                                                        \
+      TTREE_FN(T, Transplant)(tree, _z, _s);                                  \
+      _s->left = _z->left;                                                     \
+      _s->left->parent = _s;                                                   \
+    }                                                                          \
+    Memory_Free(_z);                                                          \
+    tree->size--;                                                              \
+    return STATUS_NS(SUCCESS);                                                 \
+  }
+
+/* =============================================================
+ * CreateNode + Insert — SET
+ * ============================================================= */
+
+#define TBST_IMPLEMENT_SET(T, KEY_TYPE, CMP)                                  \
+  static inline TTREE_NODE(T) *                                                \
+      TTREE_FN(T, CreateNode)(KEY_TYPE key) {                                  \
+    TTREE_NODE(T) *_n;                                                        \
+    void *allocated = NULL;                                                   \
+    if (ALLOC_FUNC(AllocArray)(&allocated, 1U, sizeof(TTREE_NODE(T))) !=       \
+        STATUS_NS(SUCCESS))                                                   \
+      return NULL;                                                             \
+    _n = (TTREE_NODE(T) *)allocated;                                                             \
+    _n->key = key;                                                             \
+    _n->left = NULL;                                                           \
+    _n->right = NULL;                                                          \
+    _n->parent = NULL;                                                         \
+    return _n;                                                                 \
+  }                                                                            \
+                                                                               \
+  static inline OPSTATUS TTREE_FN(T, Insert)(T * tree, KEY_TYPE key) {         \
+    if (!tree)                                                                 \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    TTREE_NODE(T) *_n = TTREE_FN(T, CreateNode)(key);                          \
+    if (!_n)                                                                   \
+      return STATUS_CONST(OUT_OF_MEMORY);                                    \
+    if (!tree->root) {                                                         \
+      tree->root = _n;                                                         \
+      tree->size++;                                                            \
+      return STATUS_NS(SUCCESS);                                               \
+    }                                                                          \
+    TTREE_NODE(T) *_cur = tree->root;                                           \
+    TTREE_NODE(T) *_par = NULL;                                                 \
+    while (_cur) {                                                             \
+      _par = _cur;                                                             \
+      TTREE_CMPOUT _r = CMP(key, _cur->key);                                         \
+      if (_r < 0)                                                              \
+        _cur = _cur->left;                                                     \
+      else if (_r > 0)                                                         \
+        _cur = _cur->right;                                                    \
+      else {                                                                   \
+        Memory_Free(_n);                                                      \
+        return STATUS_CONST(ALREADY_EXISTS);                                               \
+      }                                                                        \
+    }                                                                          \
+    _n->parent = _par;                                                         \
+    if (CMP(key, _par->key) < 0)                                               \
+      _par->left = _n;                                                         \
+    else                                                                       \
+      _par->right = _n;                                                        \
+    tree->size++;                                                              \
+    return STATUS_NS(SUCCESS);                                                 \
+  }
+
+/* =============================================================
+ * CreateNode + Insert — MAP
+ * ============================================================= */
+
+#define TBST_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                      \
+  static inline TTREE_NODE(T) *                                                \
+      TTREE_FN(T, CreateNode)(KEY_TYPE key, VALUE_TYPE value) {                \
+    TTREE_NODE(T) *_n;                                                        \
+    void *allocated = NULL;                                                   \
+    if (ALLOC_FUNC(AllocArray)(&allocated, 1U, sizeof(TTREE_NODE(T))) !=       \
+        STATUS_NS(SUCCESS))                                                   \
+      return NULL;                                                             \
+    _n = (TTREE_NODE(T) *)allocated;                                                             \
+    _n->key = key;                                                             \
+    _n->value = value;                                                         \
+    _n->left = NULL;                                                           \
+    _n->right = NULL;                                                          \
+    _n->parent = NULL;                                                         \
+    return _n;                                                                 \
+  }                                                                            \
+                                                                               \
+  static inline OPSTATUS TTREE_FN(T, Insert)(                                 \
+      T * tree, KEY_TYPE key, VALUE_TYPE value) {                              \
+    if (!tree)                                                                 \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    TTREE_NODE(T) *_n = TTREE_FN(T, CreateNode)(key, value);                   \
+    if (!_n)                                                                   \
+      return STATUS_CONST(OUT_OF_MEMORY);                                    \
+    if (!tree->root) {                                                         \
+      tree->root = _n;                                                         \
+      tree->size++;                                                            \
+      return STATUS_NS(SUCCESS);                                               \
+    }                                                                          \
+    TTREE_NODE(T) *_cur = tree->root;                                           \
+    TTREE_NODE(T) *_par = NULL;                                                 \
+    while (_cur) {                                                             \
+      _par = _cur;                                                             \
+      TTREE_CMPOUT _r = CMP(key, _cur->key);                                         \
+      if (_r < 0)                                                              \
+        _cur = _cur->left;                                                     \
+      else if (_r > 0)                                                         \
+        _cur = _cur->right;                                                    \
+      else {                                                                   \
+        _cur->value = value;                                                   \
+        Memory_Free(_n);                                                      \
+        return STATUS_CONST(ALREADY_EXISTS);                                               \
+      }                                                                        \
+    }                                                                          \
+    _n->parent = _par;                                                         \
+    if (CMP(key, _par->key) < 0)                                               \
+      _par->left = _n;                                                         \
+    else                                                                       \
+      _par->right = _n;                                                        \
+    tree->size++;                                                              \
+    return STATUS_NS(SUCCESS);                                                 \
+  }
+
+/* =============================================================
+ * Full BST SET / MAP expansion
+ * ============================================================= */
+
+#define TBST_DEFINE_SET(T, KEY_TYPE, CMP)                                     \
+  TTREE_NODE_SET(T, KEY_TYPE, )                                                \
+  TTREE_STRUCT(T)                                                              \
+  TTREE_COMMON_SET(T, KEY_TYPE, CMP)                                           \
+  TBST_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                       \
+  TBST_IMPLEMENT_SET(T, KEY_TYPE, CMP)
+
+#define TBST_DEFINE_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                         \
+  TTREE_NODE_MAP(T, KEY_TYPE, VALUE_TYPE, )                                    \
+  TTREE_STRUCT(T)                                                              \
+  TTREE_COMMON_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                               \
+  TBST_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                       \
+  TBST_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)

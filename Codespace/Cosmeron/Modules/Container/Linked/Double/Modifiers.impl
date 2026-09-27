@@ -1,0 +1,134 @@
+
+/* ============================================================
+ * Double Linked — Modifiers
+ *
+ * Compostos a partir das funções internas (Internal.impl).
+ * ============================================================ */
+
+/* PushFront — Cria nó e liga no head */
+#define DOUBLE_LINKED_IMPLEMENT_PUSH_FRONT(TYPE, FUNCTION_NAME,                \
+                                           FUNCTION_CREATE_NODE,               \
+                                           FUNCTION_LINK_FRONT,                \
+                                           CONTAINER_STRUCT, NODE_STRUCT)       \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       TYPE value) {                           \
+    if (!container)                                                            \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    NODE_STRUCT *node;                                                         \
+    OPSTATUS status = FUNCTION_CREATE_NODE(&node, value);                         \
+    if (status != STATUS_NS(SUCCESS))                                         \
+      return status;                                                              \
+    FUNCTION_LINK_FRONT(container, node);                                      \
+    return STATUS_NS(SUCCESS);                                             \
+  }
+
+/* PushBack — Cria nó e liga no tail */
+#define DOUBLE_LINKED_IMPLEMENT_PUSH_BACK(TYPE, FUNCTION_NAME,                 \
+                                          FUNCTION_CREATE_NODE,                \
+                                          FUNCTION_LINK_BACK,                  \
+                                          CONTAINER_STRUCT, NODE_STRUCT)        \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       TYPE value) {                           \
+    if (!container)                                                            \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    NODE_STRUCT *node;                                                         \
+    OPSTATUS status = FUNCTION_CREATE_NODE(&node, value);                         \
+    if (status != STATUS_NS(SUCCESS))                                         \
+      return status;                                                              \
+    FUNCTION_LINK_BACK(container, node);                                       \
+    return STATUS_NS(SUCCESS);                                             \
+  }
+
+/* PopFront — Remove do head */
+#define DOUBLE_LINKED_IMPLEMENT_POP_FRONT(TYPE, FUNCTION_NAME,                 \
+                                          FUNCTION_UNLINK_FRONT,               \
+                                          CONTAINER_STRUCT)                     \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       TYPE *outValue) {                      \
+    if (!container)                                                            \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    if (!container->head)                                                      \
+      return STATUS_NS(OUT_OF_RANGE);                                      \
+    if (outValue)                                                             \
+      *outValue = container->head->value;                                    \
+    FUNCTION_UNLINK_FRONT(container);                                          \
+    return STATUS_NS(SUCCESS);                                             \
+  }
+
+/* PopBack — Remove do tail */
+#define DOUBLE_LINKED_IMPLEMENT_POP_BACK(TYPE, FUNCTION_NAME,                  \
+                                         FUNCTION_UNLINK_BACK,                 \
+                                         CONTAINER_STRUCT)                      \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       TYPE *outValue) {                      \
+    if (!container)                                                            \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    if (!container->tail)                                                      \
+      return STATUS_NS(OUT_OF_RANGE);                                      \
+    if (outValue)                                                             \
+      *outValue = container->tail->value;                                    \
+    FUNCTION_UNLINK_BACK(container);                                           \
+    return STATUS_NS(SUCCESS);                                             \
+  }
+
+/* Insert — Insere antes de pos, ou no tail se pos==NULL */
+#define DOUBLE_LINKED_IMPLEMENT_INSERT(TYPE, FUNCTION_NAME,                    \
+                                       FUNCTION_CREATE_NODE,                   \
+                                       FUNCTION_LINK_BACK,                     \
+                                       FUNCTION_LINK_BEFORE,                   \
+                                       CONTAINER_STRUCT, NODE_STRUCT)           \
+  static inline OPSTATUS FUNCTION_NAME(                                        \
+      CONTAINER_STRUCT *container, NODE_STRUCT *pos, TYPE value,               \
+      NODE_STRUCT **outNode) {                                                \
+    if (!container)                                                            \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    if (pos) {                                                                 \
+      NODE_STRUCT *current = container->head;                                  \
+      while (current && current != pos)                                        \
+        current = current->next;                                               \
+      if (!current)                                                            \
+        return STATUS_NS(INVALID_ARGUMENT);                                    \
+    }                                                                          \
+    NODE_STRUCT *node;                                                         \
+    OPSTATUS status = FUNCTION_CREATE_NODE(&node, value);                     \
+    if (status != STATUS_NS(SUCCESS))                                          \
+      return status;                                                           \
+    if (!pos) {                                                                \
+      FUNCTION_LINK_BACK(container, node);                                     \
+    } else {                                                                   \
+      FUNCTION_LINK_BEFORE(container, pos, node);                              \
+    }                                                                          \
+    if (outNode)                                                              \
+      *outNode = node;                                                        \
+    return STATUS_NS(SUCCESS);                                             \
+  }
+
+/* Erase — Remove nó arbitrário */
+#define DOUBLE_LINKED_IMPLEMENT_ERASE(TYPE, FUNCTION_NAME,                     \
+                                      FUNCTION_UNLINK,                         \
+                                      CONTAINER_STRUCT, NODE_STRUCT)            \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       NODE_STRUCT *pos,                       \
+                                       NODE_STRUCT **out_next) {               \
+    if (!container)                                                            \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    if (!pos)                                                                  \
+      return STATUS_NS(OUT_OF_RANGE);                                          \
+    NODE_STRUCT *current = container->head;                                    \
+    while (current && current != pos)                                          \
+      current = current->next;                                                 \
+    if (!current)                                                              \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    NODE_STRUCT *next_node = pos->next;                                        \
+    FUNCTION_UNLINK(container, pos);                                           \
+    if (out_next)                                                              \
+      *out_next = next_node;                                                   \
+    return STATUS_NS(SUCCESS);                                             \
+  }
+
+/* Clear — Destroi tudo e reinicializa */
+#define DOUBLE_LINKED_IMPLEMENT_CLEAR(TYPE, FUNCTION_NAME,                     \
+                                      FUNCTION_DESTROY, CONTAINER_STRUCT)      \
+  static inline void FUNCTION_NAME(CONTAINER_STRUCT *container) {              \
+    FUNCTION_DESTROY(container);                                               \
+  }

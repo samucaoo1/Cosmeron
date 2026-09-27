@@ -1,0 +1,12 @@
+
+#include "../Internal.impl"
+
+/* ============================================================
+ * Double Linked — Observers
+ * ============================================================ */
+
+#define DOUBLE_LINKED_IMPLEMENT_EMPTY(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)   \
+  LINKED_INTERNAL_IMPLEMENT_EMPTY(FUNCTION_NAME, CONTAINER_STRUCT)
+
+#define DOUBLE_LINKED_IMPLEMENT_SIZE(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)    \
+  LINKED_INTERNAL_IMPLEMENT_SIZE(FUNCTION_NAME, CONTAINER_STRUCT)

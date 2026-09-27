@@ -1,0 +1,120 @@
+#pragma once
+
+#define GRAPH_IMPLEMENT_ADD_VERTEX(VERTEX_TYPE, VERTEX_SUFFIX, WEIGHT_SUFFIX) \
+  GRAPH_ADD_VERTEX_PROTOTYPE(VERTEX_TYPE, VERTEX_SUFFIX, WEIGHT_SUFFIX) {     \
+    size_t index;                                                              \
+    if (!graph || !outIndex)                                                   \
+      return STATUS_CONST(INVALID_ARGUMENT);                                  \
+    if (graph->vertexCount == graph->vertexCapacity) {                         \
+      size_t newCapacity;                                                      \
+      void *storage;                                                           \
+      OPSTATUS status;                                                         \
+      if (graph->vertexCapacity > SIZE_MAX / 2u)                              \
+        return STATUS_CONST(ARITHMETIC_OVERFLOW);                             \
+      newCapacity = graph->vertexCapacity                                     \
+                        ? graph->vertexCapacity * 2u                           \
+                        : GRAPH_INITIAL_VERTEX_CAPACITY;                       \
+      storage = graph->vertices;                                               \
+      status = ALLOC_FUNC(ReallocArray)(                                      \
+          &storage, newCapacity,                                               \
+          sizeof(TGRAPH_VERTEX_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX)));          \
+      if (status != STATUS_CONST(SUCCESS))                                     \
+        return status;                                                         \
+      graph->vertices =                                                        \
+          (TGRAPH_VERTEX_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) *)storage;         \
+      graph->vertexCapacity = newCapacity;                                     \
+    }                                                                          \
+    index = graph->vertexCount;                                                \
+    graph->vertices[index].data = data;                                        \
+    graph->vertices[index].edges = NULL;                                       \
+    graph->vertices[index].edgeCount = 0;                                      \
+    graph->vertices[index].edgeCapacity = 0;                                   \
+    ++graph->vertexCount;                                                      \
+    *outIndex = index;                                                         \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define GRAPH_IMPLEMENT_ADD_EDGE(WEIGHT_TYPE, VERTEX_SUFFIX, WEIGHT_SUFFIX)   \
+  GRAPH_ADD_EDGE_PROTOTYPE(WEIGHT_TYPE, VERTEX_SUFFIX, WEIGHT_SUFFIX) {       \
+    TGRAPH_VERTEX_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) *vertex;                 \
+    if (!graph)                                                                \
+      return STATUS_CONST(INVALID_ARGUMENT);                                  \
+    if (source >= graph->vertexCount || destination >= graph->vertexCount)     \
+      return STATUS_CONST(OUT_OF_RANGE);                                      \
+    vertex = &graph->vertices[source];                                         \
+    if (vertex->edgeCount == vertex->edgeCapacity) {                           \
+      size_t newCapacity;                                                      \
+      void *storage;                                                           \
+      OPSTATUS status;                                                         \
+      if (vertex->edgeCapacity > SIZE_MAX / 2u)                               \
+        return STATUS_CONST(ARITHMETIC_OVERFLOW);                             \
+      newCapacity = vertex->edgeCapacity                                      \
+                        ? vertex->edgeCapacity * 2u                            \
+                        : GRAPH_INITIAL_EDGE_CAPACITY;                         \
+      storage = vertex->edges;                                                 \
+      status = ALLOC_FUNC(ReallocArray)(                                      \
+          &storage, newCapacity,                                               \
+          sizeof(TGRAPH_EDGE_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX)));            \
+      if (status != STATUS_CONST(SUCCESS))                                     \
+        return status;                                                         \
+      vertex->edges =                                                          \
+          (TGRAPH_EDGE_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) *)storage;           \
+      vertex->edgeCapacity = newCapacity;                                      \
+    }                                                                          \
+    vertex->edges[vertex->edgeCount].destination = destination;                \
+    vertex->edges[vertex->edgeCount].weight = weight;                          \
+    ++vertex->edgeCount;                                                       \
+    ++graph->edgeCount;                                                        \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define GRAPH_IMPLEMENT_REMOVE_EDGE(VERTEX_SUFFIX, WEIGHT_SUFFIX)             \
+  GRAPH_REMOVE_EDGE_PROTOTYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) {                 \
+    TGRAPH_VERTEX_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) *vertex;                 \
+    size_t i;                                                                  \
+    if (!graph)                                                                \
+      return STATUS_CONST(INVALID_ARGUMENT);                                  \
+    if (source >= graph->vertexCount || destination >= graph->vertexCount)     \
+      return STATUS_CONST(OUT_OF_RANGE);                                      \
+    vertex = &graph->vertices[source];                                         \
+    for (i = 0; i < vertex->edgeCount; ++i) {                                 \
+      if (vertex->edges[i].destination == destination) {                       \
+        vertex->edges[i] = vertex->edges[vertex->edgeCount - 1u];             \
+        --vertex->edgeCount;                                                   \
+        --graph->edgeCount;                                                    \
+        return STATUS_CONST(SUCCESS);                                          \
+      }                                                                        \
+    }                                                                          \
+    return STATUS_CONST(NOT_FOUND);                                            \
+  }
+
+#define GRAPH_IMPLEMENT_REMOVE_VERTEX(VERTEX_SUFFIX, WEIGHT_SUFFIX)           \
+  GRAPH_REMOVE_VERTEX_PROTOTYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) {               \
+    size_t i;                                                                  \
+    if (!graph)                                                                \
+      return STATUS_CONST(INVALID_ARGUMENT);                                  \
+    if (index >= graph->vertexCount)                                           \
+      return STATUS_CONST(OUT_OF_RANGE);                                      \
+    graph->edgeCount -= graph->vertices[index].edgeCount;                      \
+    Memory_Free(graph->vertices[index].edges);                                 \
+    for (i = index; i + 1u < graph->vertexCount; ++i)                         \
+      graph->vertices[i] = graph->vertices[i + 1u];                            \
+    --graph->vertexCount;                                                      \
+    for (i = 0; i < graph->vertexCount; ++i) {                                \
+      TGRAPH_VERTEX_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) *vertex =              \
+          &graph->vertices[i];                                                 \
+      size_t readIndex;                                                        \
+      size_t writeIndex = 0;                                                   \
+      for (readIndex = 0; readIndex < vertex->edgeCount; ++readIndex) {       \
+        if (vertex->edges[readIndex].destination == index) {                   \
+          --graph->edgeCount;                                                  \
+          continue;                                                            \
+        }                                                                      \
+        if (vertex->edges[readIndex].destination > index)                      \
+          --vertex->edges[readIndex].destination;                              \
+        vertex->edges[writeIndex++] = vertex->edges[readIndex];               \
+      }                                                                        \
+      vertex->edgeCount = writeIndex;                                          \
+    }                                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }

@@ -1,0 +1,30 @@
+#pragma once
+
+#include "../../../Core/Namespace.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "../../../Core/Error/Status.h"
+#include "../../../Core/Memory/Alloc.h"
+
+#include "../Container.space"
+
+#define FLAT_NS(NAME) GNS2(LIB_PREFIX(Flat), NAME)
+
+#define FLAT_GROWTH_FACTOR 2
+#define FLAT_INITIAL_CAPACITY 8
+
+#define FLAT_VECTOR_GROWTH_FACTOR FLAT_GROWTH_FACTOR
+#define FLAT_VECTOR_INITIAL_CAPACITY FLAT_INITIAL_CAPACITY
+
+#define FLAT_QUEUE_GROWTH_FACTOR FLAT_GROWTH_FACTOR
+#define FLAT_QUEUE_INITIAL_CAPACITY FLAT_INITIAL_CAPACITY
+
+#define FLAT_STACK_GROWTH_FACTOR FLAT_GROWTH_FACTOR
+#define FLAT_STACK_INITIAL_CAPACITY FLAT_INITIAL_CAPACITY
+
+#define TSTRING_GROWTH_FACTOR FLAT_GROWTH_FACTOR
+#define TSTRING_INITIAL_CAPACITY FLAT_INITIAL_CAPACITY

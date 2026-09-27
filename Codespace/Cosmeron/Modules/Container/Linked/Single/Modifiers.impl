@@ -1,0 +1,116 @@
+
+/* ============================================================
+ * Single Linked — Modifiers
+ *
+ * Compostos a partir das funções internas (Internal.impl).
+ * ============================================================ */
+
+/* PushFront — Cria nó e liga no head */
+#define SINGLE_LINKED_IMPLEMENT_PUSH_FRONT(TYPE, FUNCTION_NAME,                \
+                                           FUNCTION_CREATE_NODE,               \
+                                           FUNCTION_LINK_FRONT,                \
+                                           CONTAINER_STRUCT, NODE_STRUCT)       \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       TYPE value) {                           \
+    if (!container)                                                            \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    NODE_STRUCT *node;                                                         \
+    OPSTATUS status = FUNCTION_CREATE_NODE(&node, value);                         \
+    if (status != STATUS_NS(SUCCESS))                                         \
+      return status;                                                              \
+    FUNCTION_LINK_FRONT(container, node);                                      \
+    return STATUS_NS(SUCCESS);                                             \
+  }
+
+/* PopFront — Remove do head e libera */
+#define SINGLE_LINKED_IMPLEMENT_POP_FRONT(TYPE, FUNCTION_NAME,                 \
+                                          FUNCTION_UNLINK_FRONT,               \
+                                          CONTAINER_STRUCT)                     \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       TYPE *outValue) {                      \
+    if (!container)                                                            \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    if (!container->head)                                                      \
+      return STATUS_NS(OUT_OF_RANGE);                                      \
+    if (outValue)                                                             \
+      *outValue = container->head->value;                                    \
+    FUNCTION_UNLINK_FRONT(container);                                          \
+    return STATUS_NS(SUCCESS);                                             \
+  }
+
+/* PushBack — Cria nó e liga no tail */
+#define SINGLE_LINKED_IMPLEMENT_PUSH_BACK(TYPE, FUNCTION_NAME,                 \
+                                          FUNCTION_CREATE_NODE,                \
+                                          FUNCTION_LINK_BACK,                  \
+                                          CONTAINER_STRUCT, NODE_STRUCT)        \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       TYPE value) {                           \
+    if (!container)                                                            \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    NODE_STRUCT *node;                                                         \
+    OPSTATUS status = FUNCTION_CREATE_NODE(&node, value);                         \
+    if (status != STATUS_NS(SUCCESS))                                         \
+      return status;                                                              \
+    FUNCTION_LINK_BACK(container, node);                                       \
+    return STATUS_NS(SUCCESS);                                             \
+  }
+
+/* Clear — Destroi tudo e reinicializa */
+#define SINGLE_LINKED_IMPLEMENT_CLEAR(TYPE, FUNCTION_NAME,                     \
+                                      FUNCTION_DESTROY, CONTAINER_STRUCT)      \
+  static inline void FUNCTION_NAME(CONTAINER_STRUCT *container) {              \
+    FUNCTION_DESTROY(container);                                               \
+  }
+
+/* InsertAfter — Insere após um nó existente */
+#define SINGLE_LINKED_IMPLEMENT_INSERT_AFTER(TYPE, FUNCTION_NAME,              \
+                                             FUNCTION_CREATE_NODE,             \
+                                             CONTAINER_STRUCT, NODE_STRUCT)     \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       NODE_STRUCT *pos, TYPE value,           \
+                                       NODE_STRUCT **outNode) {               \
+    if (!container || !pos)                                                  \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    NODE_STRUCT *current = container->head;                                    \
+    while (current && current != pos)                                          \
+      current = current->next;                                                 \
+    if (!current)                                                              \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    NODE_STRUCT *node;                                                         \
+    OPSTATUS status = FUNCTION_CREATE_NODE(&node, value);                         \
+    if (status != STATUS_NS(SUCCESS))                                         \
+      return status;                                                              \
+    node->next = pos->next;                                                    \
+    pos->next = node;                                                          \
+    if (container->tail == pos)                                                \
+      container->tail = node;                                                  \
+    container->size++;                                                         \
+    if (outNode)                                                              \
+      *outNode = node;                                                        \
+    return STATUS_NS(SUCCESS);                                             \
+  }
+
+/* EraseAfter — Remove o nó após pos */
+#define SINGLE_LINKED_IMPLEMENT_ERASE_AFTER(TYPE, FUNCTION_NAME,               \
+                                            CONTAINER_STRUCT, NODE_STRUCT)      \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       NODE_STRUCT *pos) {                     \
+    if (!container)                                                            \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    if (!pos)                                                                  \
+      return STATUS_NS(OUT_OF_RANGE);                                          \
+    NODE_STRUCT *current = container->head;                                    \
+    while (current && current != pos)                                          \
+      current = current->next;                                                 \
+    if (!current)                                                              \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    if (!pos->next)                                                            \
+      return STATUS_NS(OUT_OF_RANGE);                                          \
+    NODE_STRUCT *old = pos->next;                                              \
+    pos->next = old->next;                                                     \
+    if (container->tail == old)                                                \
+      container->tail = pos;                                                   \
+    Memory_Free(old);                                                         \
+    container->size--;                                                         \
+    return STATUS_NS(SUCCESS);                                             \
+  }

@@ -1,0 +1,90 @@
+#pragma once
+
+#define GRAPH_IMPLEMENT_BFS(VERTEX_SUFFIX, WEIGHT_SUFFIX)                     \
+  GRAPH_BFS_PROTOTYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) {                         \
+    uint8_t *visited = NULL;                                                   \
+    size_t *queue = NULL;                                                      \
+    void *storage = NULL;                                                      \
+    size_t head = 0;                                                           \
+    size_t tail = 0;                                                           \
+    OPSTATUS status;                                                           \
+    if (!graph || !visitor)                                                    \
+      return STATUS_CONST(INVALID_ARGUMENT);                                  \
+    if (start >= graph->vertexCount)                                           \
+      return STATUS_CONST(OUT_OF_RANGE);                                      \
+    status = ALLOC_FUNC(AllocArray)(&storage, graph->vertexCount,             \
+                                    sizeof(*visited));                         \
+    if (status != STATUS_CONST(SUCCESS))                                       \
+      return status;                                                           \
+    visited = (uint8_t *)storage;                                              \
+    memset(visited, 0, graph->vertexCount * sizeof(*visited));                \
+    storage = NULL;                                                            \
+    status = ALLOC_FUNC(AllocArray)(&storage, graph->vertexCount,             \
+                                    sizeof(*queue));                           \
+    if (status != STATUS_CONST(SUCCESS)) {                                     \
+      Memory_Free(visited);                                                    \
+      return status;                                                           \
+    }                                                                          \
+    queue = (size_t *)storage;                                                 \
+    visited[start] = 1u;                                                       \
+    queue[tail++] = start;                                                     \
+    while (head < tail) {                                                      \
+      size_t current = queue[head++];                                          \
+      size_t i;                                                                \
+      visitor(graph, current, context);                                        \
+      for (i = 0; i < graph->vertices[current].edgeCount; ++i) {              \
+        size_t neighbor = graph->vertices[current].edges[i].destination;       \
+        if (!visited[neighbor]) {                                              \
+          visited[neighbor] = 1u;                                              \
+          queue[tail++] = neighbor;                                            \
+        }                                                                      \
+      }                                                                        \
+    }                                                                          \
+    Memory_Free(queue);                                                        \
+    Memory_Free(visited);                                                      \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define GRAPH_IMPLEMENT_DFS(VERTEX_SUFFIX, WEIGHT_SUFFIX)                     \
+  GRAPH_DFS_PROTOTYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) {                         \
+    uint8_t *visited = NULL;                                                   \
+    size_t *stack = NULL;                                                      \
+    void *storage = NULL;                                                      \
+    size_t top = 0;                                                            \
+    OPSTATUS status;                                                           \
+    if (!graph || !visitor)                                                    \
+      return STATUS_CONST(INVALID_ARGUMENT);                                  \
+    if (start >= graph->vertexCount)                                           \
+      return STATUS_CONST(OUT_OF_RANGE);                                      \
+    status = ALLOC_FUNC(AllocArray)(&storage, graph->vertexCount,             \
+                                    sizeof(*visited));                         \
+    if (status != STATUS_CONST(SUCCESS))                                       \
+      return status;                                                           \
+    visited = (uint8_t *)storage;                                              \
+    memset(visited, 0, graph->vertexCount * sizeof(*visited));                \
+    storage = NULL;                                                            \
+    status = ALLOC_FUNC(AllocArray)(&storage, graph->vertexCount,             \
+                                    sizeof(*stack));                           \
+    if (status != STATUS_CONST(SUCCESS)) {                                     \
+      Memory_Free(visited);                                                    \
+      return status;                                                           \
+    }                                                                          \
+    stack = (size_t *)storage;                                                 \
+    visited[start] = 1u;                                                       \
+    stack[top++] = start;                                                      \
+    while (top > 0) {                                                          \
+      size_t current = stack[--top];                                           \
+      size_t i = graph->vertices[current].edgeCount;                           \
+      visitor(graph, current, context);                                        \
+      while (i-- > 0) {                                                        \
+        size_t neighbor = graph->vertices[current].edges[i].destination;       \
+        if (!visited[neighbor]) {                                              \
+          visited[neighbor] = 1u;                                              \
+          stack[top++] = neighbor;                                             \
+        }                                                                      \
+      }                                                                        \
+    }                                                                          \
+    Memory_Free(stack);                                                        \
+    Memory_Free(visited);                                                      \
+    return STATUS_CONST(SUCCESS);                                              \
+  }

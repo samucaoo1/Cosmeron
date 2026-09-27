@@ -1,0 +1,352 @@
+/* =============================================================
+ * Red-Black — algorithm-specific implementation
+ *   Rotations, InsertFixup, DeleteFixup,
+ *   CreateNode (set/map), Insert (set/map), Remove
+ * ============================================================= */
+
+#include "Common/Tree.impl"
+
+/* RedBlack color — namespaced to avoid collision with anything
+ * that defines its own RED/BLACK or RBColor. Lives at file scope
+ * because RB color values must be visible inside every
+ * TRB_IMPLEMENT_* macro that follows. */
+
+typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor;
+
+/* =============================================================
+ * RB core — shared by set and map
+ * ============================================================= */
+
+#define TRB_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                  \
+  static inline bool TTREE_FN(T, IsRed)(TTREE_NODE(T) * node) {               \
+    return node != NULL && node->color == TREE_RB_RED;                             \
+  }                                                                            \
+                                                                               \
+  static inline void TTREE_FN(T, RotateLeft)(T * tree, TTREE_NODE(T) * x) {   \
+    TTREE_NODE(T) *_y = x->right;                                              \
+    x->right = _y->left;                                                       \
+    if (_y->left)                                                              \
+      _y->left->parent = x;                                                    \
+    _y->parent = x->parent;                                                    \
+    if (!x->parent)                                                            \
+      tree->root = _y;                                                         \
+    else if (x == x->parent->left)                                             \
+      x->parent->left = _y;                                                    \
+    else                                                                       \
+      x->parent->right = _y;                                                   \
+    _y->left = x;                                                              \
+    x->parent = _y;                                                            \
+  }                                                                            \
+                                                                               \
+  static inline void TTREE_FN(T, RotateRight)(T * tree, TTREE_NODE(T) * y) {  \
+    TTREE_NODE(T) *_x = y->left;                                               \
+    y->left = _x->right;                                                       \
+    if (_x->right)                                                             \
+      _x->right->parent = y;                                                   \
+    _x->parent = y->parent;                                                    \
+    if (!y->parent)                                                            \
+      tree->root = _x;                                                         \
+    else if (y == y->parent->left)                                             \
+      y->parent->left = _x;                                                    \
+    else                                                                       \
+      y->parent->right = _x;                                                   \
+    _x->right = y;                                                             \
+    y->parent = _x;                                                            \
+  }                                                                            \
+                                                                               \
+  static inline void TTREE_FN(T, InsertFixup)(T * tree,                       \
+                                              TTREE_NODE(T) * node) {          \
+    while (node->parent && node->parent->color == TREE_RB_RED) {                   \
+      if (node->parent->parent &&                                              \
+          node->parent == node->parent->parent->left) {                        \
+        TTREE_NODE(T) *_u = node->parent->parent->right;                       \
+        if (TTREE_FN(T, IsRed)(_u)) {                                         \
+          node->parent->color = TREE_RB_BLACK;                                     \
+          _u->color = TREE_RB_BLACK;                                               \
+          node->parent->parent->color = TREE_RB_RED;                               \
+          node = node->parent->parent;                                         \
+        } else {                                                               \
+          if (node == node->parent->right) {                                   \
+            node = node->parent;                                               \
+            TTREE_FN(T, RotateLeft)(tree, node);                               \
+          }                                                                    \
+          node->parent->color = TREE_RB_BLACK;                                     \
+          node->parent->parent->color = TREE_RB_RED;                               \
+          TTREE_FN(T, RotateRight)(tree, node->parent->parent);                \
+        }                                                                      \
+      } else if (node->parent->parent) {                                       \
+        TTREE_NODE(T) *_u = node->parent->parent->left;                        \
+        if (TTREE_FN(T, IsRed)(_u)) {                                         \
+          node->parent->color = TREE_RB_BLACK;                                     \
+          _u->color = TREE_RB_BLACK;                                               \
+          node->parent->parent->color = TREE_RB_RED;                               \
+          node = node->parent->parent;                                         \
+        } else {                                                               \
+          if (node == node->parent->left) {                                    \
+            node = node->parent;                                               \
+            TTREE_FN(T, RotateRight)(tree, node);                              \
+          }                                                                    \
+          node->parent->color = TREE_RB_BLACK;                                     \
+          node->parent->parent->color = TREE_RB_RED;                               \
+          TTREE_FN(T, RotateLeft)(tree, node->parent->parent);                 \
+        }                                                                      \
+      } else {                                                                 \
+        break;                                                                 \
+      }                                                                        \
+    }                                                                          \
+    tree->root->color = TREE_RB_BLACK;                                             \
+  }                                                                            \
+                                                                               \
+  static inline void TTREE_FN(T, DeleteFixup)(                                \
+      T * tree, TTREE_NODE(T) * node, TTREE_NODE(T) * par) {                  \
+    while (node != tree->root && (node == NULL || node->color == TREE_RB_BLACK)) { \
+      if (par == NULL)                                                         \
+        break;                                                                 \
+      if (node == par->left) {                                                 \
+        TTREE_NODE(T) *_s = par->right;                                        \
+        if (_s && _s->color == TREE_RB_RED) {                                      \
+          _s->color = TREE_RB_BLACK;                                               \
+          par->color = TREE_RB_RED;                                                \
+          TTREE_FN(T, RotateLeft)(tree, par);                                  \
+          _s = par->right;                                                     \
+        }                                                                      \
+        if (_s && (!_s->left || _s->left->color == TREE_RB_BLACK) &&               \
+            (!_s->right || _s->right->color == TREE_RB_BLACK)) {                   \
+          _s->color = TREE_RB_RED;                                                 \
+          node = par;                                                          \
+          par = node->parent;                                                  \
+        } else if (_s) {                                                       \
+          if (!_s->right || _s->right->color == TREE_RB_BLACK) {                   \
+            if (_s->left)                                                      \
+              _s->left->color = TREE_RB_BLACK;                                     \
+            _s->color = TREE_RB_RED;                                               \
+            TTREE_FN(T, RotateRight)(tree, _s);                                \
+            _s = par->right;                                                   \
+          }                                                                    \
+          if (_s) {                                                            \
+            _s->color = par->color;                                            \
+            par->color = TREE_RB_BLACK;                                            \
+            if (_s->right)                                                     \
+              _s->right->color = TREE_RB_BLACK;                                    \
+            TTREE_FN(T, RotateLeft)(tree, par);                                \
+          }                                                                    \
+          node = tree->root;                                                   \
+          break;                                                               \
+        } else {                                                               \
+          break;                                                               \
+        }                                                                      \
+      } else {                                                                 \
+        TTREE_NODE(T) *_s = par->left;                                         \
+        if (_s && _s->color == TREE_RB_RED) {                                      \
+          _s->color = TREE_RB_BLACK;                                               \
+          par->color = TREE_RB_RED;                                                \
+          TTREE_FN(T, RotateRight)(tree, par);                                 \
+          _s = par->left;                                                      \
+        }                                                                      \
+        if (_s && (!_s->right || _s->right->color == TREE_RB_BLACK) &&             \
+            (!_s->left || _s->left->color == TREE_RB_BLACK)) {                     \
+          _s->color = TREE_RB_RED;                                                 \
+          node = par;                                                          \
+          par = node->parent;                                                  \
+        } else if (_s) {                                                       \
+          if (!_s->left || _s->left->color == TREE_RB_BLACK) {                     \
+            if (_s->right)                                                     \
+              _s->right->color = TREE_RB_BLACK;                                    \
+            _s->color = TREE_RB_RED;                                               \
+            TTREE_FN(T, RotateLeft)(tree, _s);                                 \
+            _s = par->left;                                                    \
+          }                                                                    \
+          if (_s) {                                                            \
+            _s->color = par->color;                                            \
+            par->color = TREE_RB_BLACK;                                            \
+            if (_s->left)                                                      \
+              _s->left->color = TREE_RB_BLACK;                                     \
+            TTREE_FN(T, RotateRight)(tree, par);                               \
+          }                                                                    \
+          node = tree->root;                                                   \
+          break;                                                               \
+        } else {                                                               \
+          break;                                                               \
+        }                                                                      \
+      }                                                                        \
+    }                                                                          \
+    if (node)                                                                  \
+      node->color = TREE_RB_BLACK;                                                 \
+  }                                                                            \
+                                                                               \
+  static inline OPSTATUS TTREE_FN(T, Remove)(T * tree, KEY_TYPE key) {         \
+    if (!tree)                                                                 \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    TTREE_NODE(T) *_z = TTREE_FN(T, FindNode)(tree, key);                      \
+    if (!_z)                                                                   \
+      return STATUS_NS(NOT_FOUND);                                             \
+    TTREE_NODE(T) *_y = _z;                                                    \
+    TTREE_NODE(T) *_x;                                                         \
+    TTREE_NODE(T) *_xp;                                                        \
+    TREE_RBColor _yc = _y->color;                                                  \
+    if (!_z->left) {                                                           \
+      _x = _z->right;                                                          \
+      _xp = _z->parent;                                                        \
+      TTREE_FN(T, Transplant)(tree, _z, _z->right);                           \
+    } else if (!_z->right) {                                                   \
+      _x = _z->left;                                                           \
+      _xp = _z->parent;                                                        \
+      TTREE_FN(T, Transplant)(tree, _z, _z->left);                            \
+    } else {                                                                   \
+      _y = TTREE_FN(T, MinNode)(_z->right);                                   \
+      _yc = _y->color;                                                         \
+      _x = _y->right;                                                          \
+      if (_y->parent == _z) {                                                  \
+        _xp = _y;                                                              \
+      } else {                                                                 \
+        _xp = _y->parent;                                                      \
+        TTREE_FN(T, Transplant)(tree, _y, _y->right);                         \
+        _y->right = _z->right;                                                 \
+        _y->right->parent = _y;                                                \
+      }                                                                        \
+      TTREE_FN(T, Transplant)(tree, _z, _y);                                  \
+      _y->left = _z->left;                                                     \
+      _y->left->parent = _y;                                                   \
+      _y->color = _z->color;                                                   \
+    }                                                                          \
+    Memory_Free(_z);                                                          \
+    tree->size--;                                                              \
+    if (_yc == TREE_RB_BLACK)                                                       \
+      TTREE_FN(T, DeleteFixup)(tree, _x, _xp);                                \
+    return STATUS_NS(SUCCESS);                                                 \
+  }
+
+/* =============================================================
+ * CreateNode + Insert — SET
+ * ============================================================= */
+
+#define TRB_IMPLEMENT_SET(T, KEY_TYPE, CMP)                                   \
+  static inline TTREE_NODE(T) *                                                \
+      TTREE_FN(T, CreateNode)(KEY_TYPE key) {                                  \
+    TTREE_NODE(T) *_n;                                                        \
+    void *allocated = NULL;                                                   \
+    if (ALLOC_FUNC(AllocArray)(&allocated, 1U, sizeof(TTREE_NODE(T))) !=       \
+        STATUS_NS(SUCCESS))                                                   \
+      return NULL;                                                             \
+    _n = (TTREE_NODE(T) *)allocated;                                                             \
+    _n->key = key;                                                             \
+    _n->left = NULL;                                                           \
+    _n->right = NULL;                                                          \
+    _n->parent = NULL;                                                         \
+    _n->color = TREE_RB_RED;                                                       \
+    return _n;                                                                 \
+  }                                                                            \
+                                                                               \
+  static inline OPSTATUS TTREE_FN(T, Insert)(T * tree, KEY_TYPE key) {         \
+    if (!tree)                                                                 \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    TTREE_NODE(T) *_n = TTREE_FN(T, CreateNode)(key);                          \
+    if (!_n)                                                                   \
+      return STATUS_CONST(OUT_OF_MEMORY);                                    \
+    if (!tree->root) {                                                         \
+      _n->color = TREE_RB_BLACK;                                                   \
+      tree->root = _n;                                                         \
+      tree->size++;                                                            \
+      return STATUS_NS(SUCCESS);                                               \
+    }                                                                          \
+    TTREE_NODE(T) *_cur = tree->root;                                           \
+    TTREE_NODE(T) *_par = NULL;                                                 \
+    while (_cur) {                                                             \
+      _par = _cur;                                                             \
+      TTREE_CMPOUT _r = CMP(key, _cur->key);                                         \
+      if (_r < 0)                                                              \
+        _cur = _cur->left;                                                     \
+      else if (_r > 0)                                                         \
+        _cur = _cur->right;                                                    \
+      else {                                                                   \
+        Memory_Free(_n);                                                      \
+        return STATUS_CONST(ALREADY_EXISTS);                                               \
+      }                                                                        \
+    }                                                                          \
+    _n->parent = _par;                                                         \
+    if (CMP(key, _par->key) < 0)                                               \
+      _par->left = _n;                                                         \
+    else                                                                       \
+      _par->right = _n;                                                        \
+    tree->size++;                                                              \
+    TTREE_FN(T, InsertFixup)(tree, _n);                                        \
+    return STATUS_NS(SUCCESS);                                                 \
+  }
+
+/* =============================================================
+ * CreateNode + Insert — MAP
+ * ============================================================= */
+
+#define TRB_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                       \
+  static inline TTREE_NODE(T) *                                                \
+      TTREE_FN(T, CreateNode)(KEY_TYPE key, VALUE_TYPE value) {                \
+    TTREE_NODE(T) *_n;                                                        \
+    void *allocated = NULL;                                                   \
+    if (ALLOC_FUNC(AllocArray)(&allocated, 1U, sizeof(TTREE_NODE(T))) !=       \
+        STATUS_NS(SUCCESS))                                                   \
+      return NULL;                                                             \
+    _n = (TTREE_NODE(T) *)allocated;                                                             \
+    _n->key = key;                                                             \
+    _n->value = value;                                                         \
+    _n->left = NULL;                                                           \
+    _n->right = NULL;                                                          \
+    _n->parent = NULL;                                                         \
+    _n->color = TREE_RB_RED;                                                       \
+    return _n;                                                                 \
+  }                                                                            \
+                                                                               \
+  static inline OPSTATUS TTREE_FN(T, Insert)(                                 \
+      T * tree, KEY_TYPE key, VALUE_TYPE value) {                              \
+    if (!tree)                                                                 \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    TTREE_NODE(T) *_n = TTREE_FN(T, CreateNode)(key, value);                   \
+    if (!_n)                                                                   \
+      return STATUS_CONST(OUT_OF_MEMORY);                                    \
+    if (!tree->root) {                                                         \
+      _n->color = TREE_RB_BLACK;                                                   \
+      tree->root = _n;                                                         \
+      tree->size++;                                                            \
+      return STATUS_NS(SUCCESS);                                               \
+    }                                                                          \
+    TTREE_NODE(T) *_cur = tree->root;                                           \
+    TTREE_NODE(T) *_par = NULL;                                                 \
+    while (_cur) {                                                             \
+      _par = _cur;                                                             \
+      TTREE_CMPOUT _r = CMP(key, _cur->key);                                         \
+      if (_r < 0)                                                              \
+        _cur = _cur->left;                                                     \
+      else if (_r > 0)                                                         \
+        _cur = _cur->right;                                                    \
+      else {                                                                   \
+        _cur->value = value;                                                   \
+        Memory_Free(_n);                                                      \
+        return STATUS_CONST(ALREADY_EXISTS);                                               \
+      }                                                                        \
+    }                                                                          \
+    _n->parent = _par;                                                         \
+    if (CMP(key, _par->key) < 0)                                               \
+      _par->left = _n;                                                         \
+    else                                                                       \
+      _par->right = _n;                                                        \
+    tree->size++;                                                              \
+    TTREE_FN(T, InsertFixup)(tree, _n);                                        \
+    return STATUS_NS(SUCCESS);                                                 \
+  }
+
+/* =============================================================
+ * Full RB SET / MAP expansion
+ * ============================================================= */
+
+#define TRB_DEFINE_SET(T, KEY_TYPE, CMP)                                      \
+  TTREE_NODE_SET(T, KEY_TYPE, TREE_RBColor color;)                                 \
+  TTREE_STRUCT(T)                                                              \
+  TTREE_COMMON_SET(T, KEY_TYPE, CMP)                                           \
+  TRB_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                        \
+  TRB_IMPLEMENT_SET(T, KEY_TYPE, CMP)
+
+#define TRB_DEFINE_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                          \
+  TTREE_NODE_MAP(T, KEY_TYPE, VALUE_TYPE, TREE_RBColor color;)                     \
+  TTREE_STRUCT(T)                                                              \
+  TTREE_COMMON_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                               \
+  TRB_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                        \
+  TRB_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)

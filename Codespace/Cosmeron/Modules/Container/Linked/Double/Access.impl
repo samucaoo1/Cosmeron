@@ -1,0 +1,30 @@
+
+#include "../Internal.impl"
+
+/* ============================================================
+ * Double Linked — Access
+ * ============================================================ */
+
+#define DOUBLE_LINKED_ACCESS_FRONT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)      \
+  LINKED_INTERNAL_ACCESS_FRONT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)
+
+#define DOUBLE_LINKED_ACCESS_BACK(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)       \
+  LINKED_INTERNAL_ACCESS_BACK(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)
+
+#define DOUBLE_LINKED_ACCESS_AT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT,         \
+                                NODE_STRUCT)                                    \
+  LINKED_INTERNAL_DOUBLE_ACCESS_AT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT, NODE_STRUCT)
+
+/* Begin — Retorna ponteiro para o primeiro nó */
+#define DOUBLE_LINKED_ACCESS_BEGIN(FUNCTION_NAME, CONTAINER_STRUCT,            \
+                                   NODE_STRUCT)                                \
+  LINKED_INTERNAL_ACCESS_BEGIN(FUNCTION_NAME, CONTAINER_STRUCT, NODE_STRUCT)
+
+/* End — Retorna NULL (sentinela de fim) */
+#define DOUBLE_LINKED_ACCESS_END(FUNCTION_NAME, CONTAINER_STRUCT, NODE_STRUCT) \
+  LINKED_INTERNAL_ACCESS_END(FUNCTION_NAME, CONTAINER_STRUCT, NODE_STRUCT)
+
+/* RBegin — Retorna ponteiro para o último nó */
+#define DOUBLE_LINKED_ACCESS_RBEGIN(FUNCTION_NAME, CONTAINER_STRUCT,           \
+                                    NODE_STRUCT)                               \
+  LINKED_INTERNAL_ACCESS_RBEGIN(FUNCTION_NAME, CONTAINER_STRUCT, NODE_STRUCT)

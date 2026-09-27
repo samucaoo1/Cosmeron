@@ -1,0 +1,35 @@
+#define SEQUENTIAL_ACCESS_AT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)            \
+  static inline TYPE *FUNCTION_NAME(CONTAINER_STRUCT *container,               \
+                                    size_t index) {                            \
+    if (!container || index >= container->size)                                              \
+      return NULL;                                                             \
+    return &container->data[index];                                            \
+  }
+
+#define SEQUENTIAL_ACCESS_GET(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)           \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       size_t index, TYPE *out) {              \
+    if (index >= container->size)                                              \
+      return STATUS_NS(OUT_OF_RANGE);                                    \
+    *out = container->data[index];                                             \
+    return STATUS_NS(SUCCESS);                                                 \
+  }
+
+#define SEQUENTIAL_ACCESS_FRONT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)         \
+  static inline TYPE *FUNCTION_NAME(CONTAINER_STRUCT *container) {             \
+    if (!container || container->size == 0)                                                  \
+      return NULL;                                                             \
+    return &container->data[0];                                                \
+  }
+
+#define SEQUENTIAL_ACCESS_BACK(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)          \
+  static inline TYPE *FUNCTION_NAME(CONTAINER_STRUCT *container) {             \
+    if (container->size == 0)                                                  \
+      return NULL;                                                             \
+    return &container->data[container->size - 1];                              \
+  }
+
+#define SEQUENTIAL_ACCESS_DATA(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)          \
+  static inline TYPE *FUNCTION_NAME(CONTAINER_STRUCT *container) {             \
+    return container ? container->data : NULL;                                                    \
+  }

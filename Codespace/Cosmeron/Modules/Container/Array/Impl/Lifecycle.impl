@@ -1,0 +1,21 @@
+#define SEQUENTIAL_CONTAINER_IMPLEMENT_INIT(TYPE, FUNCTION_NAME,               \
+                                            CONTAINER_STRUCT)                  \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container) {          \
+    if (!container)                                                            \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    container->data = NULL;                                                    \
+    container->size = 0;                                                       \
+    container->capacity = 0;                                                   \
+    return STATUS_NS(SUCCESS);                                                 \
+  }
+
+#define SEQUENTIAL_CONTAINER_IMPLEMENT_DESTROY(TYPE, FUNCTION_NAME,            \
+                                               CONTAINER_STRUCT)               \
+  static inline void FUNCTION_NAME(CONTAINER_STRUCT *container) {              \
+    if (!container)                                                            \
+      return;                                                                  \
+    Memory_Free(container->data);                                             \
+    container->data = NULL;                                                    \
+    container->size = 0;                                                       \
+    container->capacity = 0;                                                   \
+  }

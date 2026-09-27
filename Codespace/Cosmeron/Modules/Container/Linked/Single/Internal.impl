@@ -1,0 +1,26 @@
+
+#include "../Internal.impl"
+
+/* ============================================================
+ * Single Linked — Internal Helpers
+ *
+ * Funções internas pequenas e reutilizáveis para manipulação
+ * de nós em listas simplesmente encadeadas.
+ * ============================================================ */
+
+/* CreateNode — Aloca um no e inicializa com value/next */
+#define SINGLE_LINKED_CREATE_NODE(TYPE, FUNCTION_NAME, NODE_STRUCT)            \
+  LINKED_INTERNAL_SINGLE_CREATE_NODE(TYPE, FUNCTION_NAME, NODE_STRUCT)
+
+/* LinkFront — Liga no no head (container precisa de head, tail, size) */
+#define SINGLE_LINKED_LINK_FRONT(FUNCTION_NAME, CONTAINER_STRUCT, NODE_STRUCT) \
+  LINKED_INTERNAL_SINGLE_LINK_FRONT(FUNCTION_NAME, CONTAINER_STRUCT, NODE_STRUCT)
+
+/* LinkBack — Liga no no tail (container precisa de head, tail, size) */
+#define SINGLE_LINKED_LINK_BACK(FUNCTION_NAME, CONTAINER_STRUCT, NODE_STRUCT)  \
+  LINKED_INTERNAL_SINGLE_LINK_BACK(FUNCTION_NAME, CONTAINER_STRUCT, NODE_STRUCT)
+
+/* UnlinkFront — Remove e libera o no do head */
+#define SINGLE_LINKED_UNLINK_FRONT(FUNCTION_NAME, CONTAINER_STRUCT,            \
+                                   NODE_STRUCT)                                \
+  LINKED_INTERNAL_SINGLE_UNLINK_FRONT(FUNCTION_NAME, CONTAINER_STRUCT, NODE_STRUCT)

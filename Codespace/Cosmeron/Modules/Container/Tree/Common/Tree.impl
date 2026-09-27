@@ -1,0 +1,27 @@
+
+#include "Iterators.impl"
+#include "Lifecycle.impl"
+#include "Transplant.impl"
+#include "Node.inc"
+#include "Observers.impl"
+#include "Struct.inc"
+
+/* =============================================================
+ * Aggregators — expand all common code for SET or MAP
+ * ============================================================= */
+
+#define TTREE_COMMON_SET(T, KEY_TYPE, CMP)                                     \
+  TTREE_IMPLEMENT_LIFECYCLE(T)                                                 \
+  TTREE_IMPLEMENT_OBSERVERS(T, KEY_TYPE, CMP)                                  \
+  TTREE_IMPLEMENT_FIND_SET(T, KEY_TYPE)                                        \
+  TTREE_IMPLEMENT_ITERATORS(T)                                                 \
+  TTREE_IMPLEMENT_CONST_ITERATORS(T)                                           \
+  TTREE_IMPLEMENT_TRANSPLANT(T)
+
+#define TTREE_COMMON_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                         \
+  TTREE_IMPLEMENT_LIFECYCLE(T)                                                 \
+  TTREE_IMPLEMENT_OBSERVERS(T, KEY_TYPE, CMP)                                  \
+  TTREE_IMPLEMENT_FIND_MAP(T, KEY_TYPE, VALUE_TYPE)                            \
+  TTREE_IMPLEMENT_ITERATORS(T)                                                 \
+  TTREE_IMPLEMENT_CONST_ITERATORS(T)                                           \
+  TTREE_IMPLEMENT_TRANSPLANT(T)

@@ -1,0 +1,263 @@
+
+/* ============================================================
+ * Linked Core Internals
+ *
+ * Shared macro helpers for single/double linked families.
+ *
+ * Contracts:
+ * - CONTAINER_STRUCT must provide fields: head, tail, size.
+ * - NODE_STRUCT must provide field: value.
+ * - Single node must provide: next.
+ * - Double node must provide: prev and next.
+ * ============================================================ */
+
+/* --- Generic lifecycle helpers --- */
+
+#define LINKED_INTERNAL_IMPLEMENT_INIT(FUNCTION_NAME, CONTAINER_STRUCT)        \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container) {          \
+    if (!container)                                                            \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    container->head = NULL;                                                    \
+    container->tail = NULL;                                                    \
+    container->size = 0;                                                       \
+    return STATUS_NS(SUCCESS);                                                 \
+  }
+
+#define LINKED_INTERNAL_IMPLEMENT_DESTROY(FUNCTION_NAME, CONTAINER_STRUCT,     \
+                                         NODE_STRUCT)                          \
+  static inline void FUNCTION_NAME(CONTAINER_STRUCT *container) {              \
+    if (!container)                                                            \
+      return;                                                                  \
+    NODE_STRUCT *current = container->head;                                    \
+    while (current) {                                                          \
+      NODE_STRUCT *next = current->next;                                       \
+      Memory_Free(current);                                                   \
+      current = next;                                                          \
+    }                                                                          \
+    container->head = NULL;                                                    \
+    container->tail = NULL;                                                    \
+    container->size = 0;                                                       \
+  }
+
+/* --- Generic access helpers --- */
+
+#define LINKED_INTERNAL_ACCESS_FRONT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)    \
+  static inline TYPE *FUNCTION_NAME(CONTAINER_STRUCT *container) {             \
+    if (!container || container->size == 0)                                                  \
+      return NULL;                                                             \
+    return &container->head->value;                                            \
+  }
+
+#define LINKED_INTERNAL_ACCESS_BACK(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)     \
+  static inline TYPE *FUNCTION_NAME(CONTAINER_STRUCT *container) {             \
+    if (!container || container->size == 0)                                                  \
+      return NULL;                                                             \
+    return &container->tail->value;                                            \
+  }
+
+#define LINKED_INTERNAL_ACCESS_BEGIN(FUNCTION_NAME, CONTAINER_STRUCT,          \
+                                    NODE_STRUCT)                               \
+  static inline NODE_STRUCT *FUNCTION_NAME(CONTAINER_STRUCT *container) {      \
+    return container ? container->head : NULL;                                                    \
+  }
+
+#define LINKED_INTERNAL_ACCESS_END(FUNCTION_NAME, CONTAINER_STRUCT,            \
+                                  NODE_STRUCT)                                 \
+  static inline NODE_STRUCT *FUNCTION_NAME(CONTAINER_STRUCT *container) {      \
+    (void)container;                                                           \
+    return NULL;                                                               \
+  }
+
+#define LINKED_INTERNAL_ACCESS_RBEGIN(FUNCTION_NAME, CONTAINER_STRUCT,         \
+                                     NODE_STRUCT)                              \
+  static inline NODE_STRUCT *FUNCTION_NAME(CONTAINER_STRUCT *container) {      \
+    return container ? container->tail : NULL;                                                    \
+  }
+
+#define LINKED_INTERNAL_DOUBLE_ACCESS_AT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT,\
+                                         NODE_STRUCT)                          \
+  static inline TYPE *FUNCTION_NAME(CONTAINER_STRUCT *container,               \
+                                    size_t index) {                            \
+    if (!container || index >= container->size)                                              \
+      return NULL;                                                             \
+    NODE_STRUCT *temp;                                                         \
+    size_t i;                                                                  \
+    if (index < container->size / 2) {                                         \
+      i = 0;                                                                   \
+      temp = container->head;                                                  \
+      while (i++ < index)                                                      \
+        temp = temp->next;                                                     \
+    } else {                                                                   \
+      i = container->size - 1;                                                 \
+      temp = container->tail;                                                  \
+      while (i-- > index)                                                      \
+        temp = temp->prev;                                                     \
+    }                                                                          \
+    return &temp->value;                                                       \
+  }
+
+/* --- Generic observers helpers --- */
+
+#define LINKED_INTERNAL_IMPLEMENT_EMPTY(FUNCTION_NAME, CONTAINER_STRUCT)       \
+  static inline bool FUNCTION_NAME(const CONTAINER_STRUCT *container) {        \
+    return container != NULL && container->size == 0;                                               \
+  }
+
+#define LINKED_INTERNAL_IMPLEMENT_SIZE(FUNCTION_NAME, CONTAINER_STRUCT)        \
+  static inline size_t FUNCTION_NAME(const CONTAINER_STRUCT *container) {      \
+    return container ? container->size : 0U;                                                    \
+  }
+
+/* --- Single linked family helpers --- */
+
+#define LINKED_INTERNAL_SINGLE_CREATE_NODE(TYPE, FUNCTION_NAME, NODE_STRUCT)   \
+  static inline OPSTATUS FUNCTION_NAME(NODE_STRUCT **out, TYPE value) {        \
+    if (!out)                                                                  \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    void *allocated = NULL;                                                   \
+    OPSTATUS status = ALLOC_FUNC(AllocArray)(                                  \
+        &allocated, 1U, sizeof(NODE_STRUCT));                                 \
+    if (status != STATUS_NS(SUCCESS))                                          \
+      return status;                                                           \
+    *out = (NODE_STRUCT *)allocated;                                           \
+    (*out)->value = value;                                                     \
+    (*out)->next = NULL;                                                       \
+    return STATUS_NS(SUCCESS);                                                 \
+  }
+
+#define LINKED_INTERNAL_SINGLE_LINK_FRONT(FUNCTION_NAME, CONTAINER_STRUCT,     \
+                                          NODE_STRUCT)                         \
+  static inline void FUNCTION_NAME(CONTAINER_STRUCT *container,                \
+                                   NODE_STRUCT *node) {                        \
+    node->next = container->head;                                              \
+    container->head = node;                                                    \
+    if (!container->tail)                                                      \
+      container->tail = node;                                                  \
+    container->size++;                                                         \
+  }
+
+#define LINKED_INTERNAL_SINGLE_LINK_BACK(FUNCTION_NAME, CONTAINER_STRUCT,      \
+                                         NODE_STRUCT)                          \
+  static inline void FUNCTION_NAME(CONTAINER_STRUCT *container,                \
+                                   NODE_STRUCT *node) {                        \
+    node->next = NULL;                                                         \
+    if (container->tail)                                                       \
+      container->tail->next = node;                                            \
+    else                                                                       \
+      container->head = node;                                                  \
+    container->tail = node;                                                    \
+    container->size++;                                                         \
+  }
+
+#define LINKED_INTERNAL_SINGLE_UNLINK_FRONT(FUNCTION_NAME, CONTAINER_STRUCT,   \
+                                            NODE_STRUCT)                       \
+  static inline void FUNCTION_NAME(CONTAINER_STRUCT *container) {              \
+    NODE_STRUCT *old = container->head;                                        \
+    container->head = old->next;                                               \
+    if (!container->head)                                                      \
+      container->tail = NULL;                                                  \
+    Memory_Free(old);                                                         \
+    container->size--;                                                         \
+  }
+
+/* --- Double linked family helpers --- */
+
+#define LINKED_INTERNAL_DOUBLE_CREATE_NODE(TYPE, FUNCTION_NAME, NODE_STRUCT)   \
+  static inline OPSTATUS FUNCTION_NAME(NODE_STRUCT **out, TYPE value) {        \
+    if (!out)                                                                  \
+      return STATUS_NS(INVALID_ARGUMENT);                                      \
+    void *allocated = NULL;                                                   \
+    OPSTATUS status = ALLOC_FUNC(AllocArray)(                                  \
+        &allocated, 1U, sizeof(NODE_STRUCT));                                 \
+    if (status != STATUS_NS(SUCCESS))                                          \
+      return status;                                                           \
+    *out = (NODE_STRUCT *)allocated;                                           \
+    (*out)->value = value;                                                     \
+    (*out)->prev = NULL;                                                       \
+    (*out)->next = NULL;                                                       \
+    return STATUS_NS(SUCCESS);                                                 \
+  }
+
+#define LINKED_INTERNAL_DOUBLE_LINK_FRONT(FUNCTION_NAME, CONTAINER_STRUCT,     \
+                                          NODE_STRUCT)                         \
+  static inline void FUNCTION_NAME(CONTAINER_STRUCT *container,                \
+                                   NODE_STRUCT *node) {                        \
+    node->prev = NULL;                                                         \
+    node->next = container->head;                                              \
+    if (container->head)                                                       \
+      container->head->prev = node;                                            \
+    else                                                                       \
+      container->tail = node;                                                  \
+    container->head = node;                                                    \
+    container->size++;                                                         \
+  }
+
+#define LINKED_INTERNAL_DOUBLE_LINK_BACK(FUNCTION_NAME, CONTAINER_STRUCT,      \
+                                         NODE_STRUCT)                          \
+  static inline void FUNCTION_NAME(CONTAINER_STRUCT *container,                \
+                                   NODE_STRUCT *node) {                        \
+    node->next = NULL;                                                         \
+    node->prev = container->tail;                                              \
+    if (container->tail)                                                       \
+      container->tail->next = node;                                            \
+    else                                                                       \
+      container->head = node;                                                  \
+    container->tail = node;                                                    \
+    container->size++;                                                         \
+  }
+
+#define LINKED_INTERNAL_DOUBLE_UNLINK_FRONT(FUNCTION_NAME, CONTAINER_STRUCT,   \
+                                            NODE_STRUCT)                       \
+  static inline void FUNCTION_NAME(CONTAINER_STRUCT *container) {              \
+    NODE_STRUCT *old = container->head;                                        \
+    container->head = old->next;                                               \
+    if (container->head)                                                       \
+      container->head->prev = NULL;                                            \
+    else                                                                       \
+      container->tail = NULL;                                                  \
+    Memory_Free(old);                                                         \
+    container->size--;                                                         \
+  }
+
+#define LINKED_INTERNAL_DOUBLE_UNLINK_BACK(FUNCTION_NAME, CONTAINER_STRUCT,    \
+                                           NODE_STRUCT)                        \
+  static inline void FUNCTION_NAME(CONTAINER_STRUCT *container) {              \
+    NODE_STRUCT *old = container->tail;                                        \
+    container->tail = old->prev;                                               \
+    if (container->tail)                                                       \
+      container->tail->next = NULL;                                            \
+    else                                                                       \
+      container->head = NULL;                                                  \
+    Memory_Free(old);                                                         \
+    container->size--;                                                         \
+  }
+
+#define LINKED_INTERNAL_DOUBLE_LINK_BEFORE(FUNCTION_NAME, CONTAINER_STRUCT,    \
+                                           NODE_STRUCT)                        \
+  static inline void FUNCTION_NAME(CONTAINER_STRUCT *container,                \
+                                   NODE_STRUCT *pos, NODE_STRUCT *node) {      \
+    node->next = pos;                                                          \
+    node->prev = pos->prev;                                                    \
+    if (pos->prev)                                                             \
+      pos->prev->next = node;                                                  \
+    else                                                                       \
+      container->head = node;                                                  \
+    pos->prev = node;                                                          \
+    container->size++;                                                         \
+  }
+
+#define LINKED_INTERNAL_DOUBLE_UNLINK(FUNCTION_NAME, CONTAINER_STRUCT,         \
+                                      NODE_STRUCT)                             \
+  static inline void FUNCTION_NAME(CONTAINER_STRUCT *container,                \
+                                   NODE_STRUCT *node) {                        \
+    if (node->prev)                                                            \
+      node->prev->next = node->next;                                           \
+    else                                                                       \
+      container->head = node->next;                                            \
+    if (node->next)                                                            \
+      node->next->prev = node->prev;                                           \
+    else                                                                       \
+      container->tail = node->prev;                                            \
+    Memory_Free(node);                                                        \
+    container->size--;                                                         \
+  }

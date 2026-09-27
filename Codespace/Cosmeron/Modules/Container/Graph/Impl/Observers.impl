@@ -1,0 +1,54 @@
+#pragma once
+
+#define GRAPH_IMPLEMENT_HAS_EDGE(VERTEX_SUFFIX, WEIGHT_SUFFIX)                \
+  GRAPH_HAS_EDGE_PROTOTYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) {                    \
+    size_t i;                                                                  \
+    if (!graph || source >= graph->vertexCount ||                             \
+        destination >= graph->vertexCount)                                     \
+      return false;                                                            \
+    for (i = 0; i < graph->vertices[source].edgeCount; ++i)                   \
+      if (graph->vertices[source].edges[i].destination == destination)         \
+        return true;                                                           \
+    return false;                                                              \
+  }
+
+#define GRAPH_IMPLEMENT_FIND_WEIGHT(WEIGHT_TYPE, VERTEX_SUFFIX, WEIGHT_SUFFIX)\
+  GRAPH_FIND_WEIGHT_PROTOTYPE(WEIGHT_TYPE, VERTEX_SUFFIX, WEIGHT_SUFFIX) {     \
+    size_t i;                                                                  \
+    if (!graph || source >= graph->vertexCount ||                             \
+        destination >= graph->vertexCount)                                     \
+      return NULL;                                                             \
+    for (i = 0; i < graph->vertices[source].edgeCount; ++i)                   \
+      if (graph->vertices[source].edges[i].destination == destination)         \
+        return &graph->vertices[source].edges[i].weight;                       \
+    return NULL;                                                               \
+  }
+
+#define GRAPH_IMPLEMENT_CONST_FIND_WEIGHT(WEIGHT_TYPE, VERTEX_SUFFIX,         \
+                                          WEIGHT_SUFFIX)                      \
+  GRAPH_CONST_FIND_WEIGHT_PROTOTYPE(WEIGHT_TYPE, VERTEX_SUFFIX,              \
+                                    WEIGHT_SUFFIX) {                           \
+    size_t i;                                                                  \
+    if (!graph || source >= graph->vertexCount ||                             \
+        destination >= graph->vertexCount)                                     \
+      return NULL;                                                             \
+    for (i = 0; i < graph->vertices[source].edgeCount; ++i)                   \
+      if (graph->vertices[source].edges[i].destination == destination)         \
+        return &graph->vertices[source].edges[i].weight;                       \
+    return NULL;                                                               \
+  }
+
+#define GRAPH_IMPLEMENT_VERTEX_COUNT(VERTEX_SUFFIX, WEIGHT_SUFFIX)            \
+  GRAPH_VERTEX_COUNT_PROTOTYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) {                \
+    return graph ? graph->vertexCount : 0;                                     \
+  }
+
+#define GRAPH_IMPLEMENT_EDGE_COUNT(VERTEX_SUFFIX, WEIGHT_SUFFIX)              \
+  GRAPH_EDGE_COUNT_PROTOTYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) {                  \
+    return graph ? graph->edgeCount : 0;                                       \
+  }
+
+#define GRAPH_IMPLEMENT_IS_EMPTY(VERTEX_SUFFIX, WEIGHT_SUFFIX)                \
+  GRAPH_IS_EMPTY_PROTOTYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) {                    \
+    return !graph || graph->vertexCount == 0;                                  \
+  }

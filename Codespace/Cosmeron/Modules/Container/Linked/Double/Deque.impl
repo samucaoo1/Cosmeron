@@ -1,0 +1,120 @@
+
+#include "Access.impl"
+#include "Internal.impl"
+#include "Lifecycle.impl"
+#include "Modifiers.impl"
+#include "Observers.impl"
+
+/* ============================================================
+ * Linked_Deque — Container wrappers using DOUBLE_LINKED_*
+ *
+ * Double-ended queue: push/pop em ambas as extremidades.
+ * ============================================================ */
+
+/* --- Internals --- */
+
+#define LINKED_DEQUE_CREATE_NODE(TYPE, SUFFIX)                                       \
+  DOUBLE_LINKED_CREATE_NODE(TYPE, LINKED_DEQUE_FUNC(SUFFIX, _CreateNode),            \
+                            LINKED_DEQUE_NODE_TYPE(SUFFIX))
+
+#define LINKED_DEQUE_LINK_FRONT(TYPE, SUFFIX)                                        \
+  DOUBLE_LINKED_LINK_FRONT(LINKED_DEQUE_FUNC(SUFFIX, _LinkFront),                    \
+                           LINKED_DEQUE_TYPE(SUFFIX),                                \
+                           LINKED_DEQUE_NODE_TYPE(SUFFIX))
+
+#define LINKED_DEQUE_LINK_BACK(TYPE, SUFFIX)                                         \
+  DOUBLE_LINKED_LINK_BACK(LINKED_DEQUE_FUNC(SUFFIX, _LinkBack),                      \
+                          LINKED_DEQUE_TYPE(SUFFIX),                                 \
+                          LINKED_DEQUE_NODE_TYPE(SUFFIX))
+
+#define LINKED_DEQUE_UNLINK_FRONT(TYPE, SUFFIX)                                      \
+  DOUBLE_LINKED_UNLINK_FRONT(LINKED_DEQUE_FUNC(SUFFIX, _UnlinkFront),               \
+                             LINKED_DEQUE_TYPE(SUFFIX),                              \
+                             LINKED_DEQUE_NODE_TYPE(SUFFIX))
+
+#define LINKED_DEQUE_UNLINK_BACK(TYPE, SUFFIX)                                       \
+  DOUBLE_LINKED_UNLINK_BACK(LINKED_DEQUE_FUNC(SUFFIX, _UnlinkBack),                 \
+                            LINKED_DEQUE_TYPE(SUFFIX),                               \
+                            LINKED_DEQUE_NODE_TYPE(SUFFIX))
+
+/* --- Lifecycle --- */
+
+#define LINKED_DEQUE_IMPLEMENT_INIT(TYPE, SUFFIX)                                    \
+  DOUBLE_LINKED_IMPLEMENT_INIT(TYPE, LINKED_DEQUE_FUNC(SUFFIX, Init),        \
+                               LINKED_DEQUE_TYPE(SUFFIX))
+
+#define LINKED_DEQUE_IMPLEMENT_DESTROY(TYPE, SUFFIX)                                 \
+  DOUBLE_LINKED_IMPLEMENT_DESTROY(TYPE, LINKED_DEQUE_FUNC(SUFFIX, Destroy),  \
+                                  LINKED_DEQUE_TYPE(SUFFIX),                         \
+                                  LINKED_DEQUE_NODE_TYPE(SUFFIX))
+
+/* --- Access --- */
+
+#define LINKED_DEQUE_IMPLEMENT_FRONT(TYPE, SUFFIX)                                   \
+  DOUBLE_LINKED_ACCESS_FRONT(TYPE, LINKED_DEQUE_FUNC(SUFFIX, Front),         \
+                             LINKED_DEQUE_TYPE(SUFFIX))
+
+#define LINKED_DEQUE_IMPLEMENT_BACK(TYPE, SUFFIX)                                    \
+  DOUBLE_LINKED_ACCESS_BACK(TYPE, LINKED_DEQUE_FUNC(SUFFIX, Back),           \
+                            LINKED_DEQUE_TYPE(SUFFIX))
+
+/* --- Modifiers --- */
+
+#define LINKED_DEQUE_IMPLEMENT_PUSH_FRONT(TYPE, SUFFIX)                              \
+  DOUBLE_LINKED_IMPLEMENT_PUSH_FRONT(                                          \
+      TYPE, LINKED_DEQUE_FUNC(SUFFIX, PushFront),                           \
+      LINKED_DEQUE_FUNC(SUFFIX, _CreateNode), LINKED_DEQUE_FUNC(SUFFIX, _LinkFront),       \
+  LINKED_DEQUE_TYPE(SUFFIX), LINKED_DEQUE_NODE_TYPE(SUFFIX))
+
+#define LINKED_DEQUE_IMPLEMENT_PUSH_BACK(TYPE, SUFFIX)                               \
+  DOUBLE_LINKED_IMPLEMENT_PUSH_BACK(                                           \
+      TYPE, LINKED_DEQUE_FUNC(SUFFIX, PushBack),                            \
+      LINKED_DEQUE_FUNC(SUFFIX, _CreateNode), LINKED_DEQUE_FUNC(SUFFIX, _LinkBack),        \
+  LINKED_DEQUE_TYPE(SUFFIX), LINKED_DEQUE_NODE_TYPE(SUFFIX))
+
+#define LINKED_DEQUE_IMPLEMENT_POP_FRONT(TYPE, SUFFIX)                               \
+  DOUBLE_LINKED_IMPLEMENT_POP_FRONT(TYPE,                                      \
+                                    LINKED_DEQUE_FUNC(SUFFIX, PopFront),    \
+                                    LINKED_DEQUE_FUNC(SUFFIX, _UnlinkFront),         \
+                                    LINKED_DEQUE_TYPE(SUFFIX))
+
+#define LINKED_DEQUE_IMPLEMENT_POP_BACK(TYPE, SUFFIX)                                \
+  DOUBLE_LINKED_IMPLEMENT_POP_BACK(TYPE,                                       \
+                                   LINKED_DEQUE_FUNC(SUFFIX, PopBack),      \
+                                   LINKED_DEQUE_FUNC(SUFFIX, _UnlinkBack),           \
+                                   LINKED_DEQUE_TYPE(SUFFIX))
+
+#define LINKED_DEQUE_IMPLEMENT_CLEAR(TYPE, SUFFIX)                                   \
+  DOUBLE_LINKED_IMPLEMENT_CLEAR(TYPE, LINKED_DEQUE_FUNC(SUFFIX, Clear),      \
+                                LINKED_DEQUE_FUNC(SUFFIX, Destroy),          \
+                                LINKED_DEQUE_TYPE(SUFFIX))
+
+/* --- Observers --- */
+
+#define LINKED_DEQUE_IMPLEMENT_EMPTY(TYPE, SUFFIX)                                   \
+  DOUBLE_LINKED_IMPLEMENT_EMPTY(TYPE, LINKED_DEQUE_FUNC(SUFFIX, Empty),      \
+                                LINKED_DEQUE_TYPE(SUFFIX))
+
+#define LINKED_DEQUE_IMPLEMENT_SIZE(TYPE, SUFFIX)                                    \
+  DOUBLE_LINKED_IMPLEMENT_SIZE(TYPE, LINKED_DEQUE_FUNC(SUFFIX, Size),        \
+                               LINKED_DEQUE_TYPE(SUFFIX))
+
+/* --- Aggregator --- */
+
+#define LINKED_DEQUE_IMPLEMENT(TYPE, SUFFIX)                                         \
+  LINKED_DEQUE_CREATE_NODE(TYPE, SUFFIX)                                             \
+  LINKED_DEQUE_LINK_FRONT(TYPE, SUFFIX)                                              \
+  LINKED_DEQUE_LINK_BACK(TYPE, SUFFIX)                                               \
+  LINKED_DEQUE_UNLINK_FRONT(TYPE, SUFFIX)                                            \
+  LINKED_DEQUE_UNLINK_BACK(TYPE, SUFFIX)                                             \
+  LINKED_DEQUE_IMPLEMENT_INIT(TYPE, SUFFIX)                                          \
+  LINKED_DEQUE_IMPLEMENT_DESTROY(TYPE, SUFFIX)                                       \
+  LINKED_DEQUE_IMPLEMENT_FRONT(TYPE, SUFFIX)                                         \
+  LINKED_DEQUE_IMPLEMENT_BACK(TYPE, SUFFIX)                                          \
+  LINKED_DEQUE_IMPLEMENT_PUSH_FRONT(TYPE, SUFFIX)                                    \
+  LINKED_DEQUE_IMPLEMENT_PUSH_BACK(TYPE, SUFFIX)                                     \
+  LINKED_DEQUE_IMPLEMENT_POP_FRONT(TYPE, SUFFIX)                                     \
+  LINKED_DEQUE_IMPLEMENT_POP_BACK(TYPE, SUFFIX)                                      \
+  LINKED_DEQUE_IMPLEMENT_CLEAR(TYPE, SUFFIX)                                         \
+  LINKED_DEQUE_IMPLEMENT_EMPTY(TYPE, SUFFIX)                                         \
+  LINKED_DEQUE_IMPLEMENT_SIZE(TYPE, SUFFIX)

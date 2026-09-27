@@ -1,0 +1,15 @@
+#pragma once
+
+#include "../Container.space"
+
+#include "../../../Core/Namespace.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "../../../Core/Error/Status.h"
+#include "../../../Core/Memory/Alloc.h"
+
+#define LINKED_NS(NAME) GNS2(LIB_PREFIX(Linked), NAME)

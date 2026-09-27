@@ -1,0 +1,74 @@
+#pragma once
+
+#define HASH_INTERNAL_FIND_BUCKET(KEY_TYPE, KEY_SUFFIX, VALUE_SUFFIX,          \
+                                  HASH_FUNCTION, EQUAL_FUNCTION)               \
+  static inline THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *                  \
+  HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, InternalFindBucket)(                \
+      THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *hash, KEY_TYPE key) {              \
+    size_t start;                                                               \
+    size_t i;                                                                   \
+    if (!hash || !hash->buckets || hash->capacity == 0)                        \
+      return NULL;                                                              \
+    start = (size_t)(HASH_FUNCTION(key)) % hash->capacity;                     \
+    for (i = 0; i < hash->capacity; ++i) {                                     \
+      THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *bucket =                    \
+          &hash->buckets[(start + i) % hash->capacity];                        \
+      if (bucket->state == HASH_BUCKET_EMPTY)                                   \
+        return NULL;                                                            \
+      if (bucket->state == HASH_BUCKET_OCCUPIED &&                              \
+          EQUAL_FUNCTION(bucket->key, key))                                    \
+        return bucket;                                                          \
+    }                                                                           \
+    return NULL;                                                                \
+  }
+
+#define HASH_INTERNAL_CONST_FIND_BUCKET(KEY_TYPE, KEY_SUFFIX, VALUE_SUFFIX,    \
+                                        HASH_FUNCTION, EQUAL_FUNCTION)         \
+  static inline const THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *            \
+  HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, InternalConstFindBucket)(           \
+      const THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *hash, KEY_TYPE key) {        \
+    size_t start;                                                               \
+    size_t i;                                                                   \
+    if (!hash || !hash->buckets || hash->capacity == 0)                        \
+      return NULL;                                                              \
+    start = (size_t)(HASH_FUNCTION(key)) % hash->capacity;                     \
+    for (i = 0; i < hash->capacity; ++i) {                                     \
+      const THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *bucket =              \
+          &hash->buckets[(start + i) % hash->capacity];                        \
+      if (bucket->state == HASH_BUCKET_EMPTY)                                   \
+        return NULL;                                                            \
+      if (bucket->state == HASH_BUCKET_OCCUPIED &&                              \
+          EQUAL_FUNCTION(bucket->key, key))                                    \
+        return bucket;                                                          \
+    }                                                                           \
+    return NULL;                                                                \
+  }
+
+#define HASH_IMPLEMENT_FIND(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX,    \
+                            HASH_FUNCTION, EQUAL_FUNCTION)                     \
+  HASH_INTERNAL_FIND_BUCKET(KEY_TYPE, KEY_SUFFIX, VALUE_SUFFIX, HASH_FUNCTION, \
+                            EQUAL_FUNCTION)                                    \
+  HASH_FIND_PROTOTYPE(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX) {        \
+    THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *bucket =                      \
+        HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, InternalFindBucket)(hash,     \
+                                                                     key);     \
+    return bucket ? &bucket->value : NULL;                                     \
+  }
+
+#define HASH_IMPLEMENT_CONST_FIND(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE,            \
+                                  VALUE_SUFFIX, HASH_FUNCTION, EQUAL_FUNCTION) \
+  HASH_INTERNAL_CONST_FIND_BUCKET(KEY_TYPE, KEY_SUFFIX, VALUE_SUFFIX,          \
+                                  HASH_FUNCTION, EQUAL_FUNCTION)               \
+  HASH_CONST_FIND_PROTOTYPE(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX) {  \
+    const THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *bucket =                \
+        HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, InternalConstFindBucket)(     \
+            hash, key);                                                        \
+    return bucket ? &bucket->value : NULL;                                     \
+  }
+
+#define HASH_IMPLEMENT_CONTAINS(KEY_TYPE, KEY_SUFFIX, VALUE_SUFFIX,            \
+                                HASH_FUNCTION, EQUAL_FUNCTION)                 \
+  HASH_CONTAINS_PROTOTYPE(KEY_TYPE, KEY_SUFFIX, VALUE_SUFFIX) {                \
+    return HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, InternalConstFindBucket)(  \
+               hash, key) != NULL;                                             \
+  }
