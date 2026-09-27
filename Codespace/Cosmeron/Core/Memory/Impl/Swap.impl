@@ -1,0 +1,43 @@
+#pragma once
+
+#include <stdint.h>
+
+SWAP_BYTES_PROTOTYPE {
+  unsigned char temporary[SWAP_BLOCK_SIZE];
+  unsigned char *leftBytes = left;
+  unsigned char *rightBytes = right;
+
+  if (size == 0)
+    return STATUS_CONST(SUCCESS);
+  if (!left || !right)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (left == right)
+    return STATUS_CONST(SUCCESS);
+
+  {
+    uintptr_t leftAddress = (uintptr_t)left;
+    uintptr_t rightAddress = (uintptr_t)right;
+    if (size > (size_t)(UINTPTR_MAX - leftAddress) ||
+        size > (size_t)(UINTPTR_MAX - rightAddress))
+      return STATUS_CONST(OUT_OF_RANGE);
+    if ((leftAddress < rightAddress && leftAddress + size > rightAddress) ||
+        (rightAddress < leftAddress && rightAddress + size > leftAddress))
+      return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  while (size != 0) {
+    size_t blockSize =
+        size > SWAP_BLOCK_SIZE ? SWAP_BLOCK_SIZE : size;
+
+    memcpy(temporary, leftBytes, blockSize);
+    memcpy(leftBytes, rightBytes, blockSize);
+    memcpy(rightBytes, temporary, blockSize);
+
+    leftBytes += blockSize;
+    rightBytes += blockSize;
+    size -= blockSize;
+  }
+
+  return STATUS_CONST(SUCCESS);
+}
+/* EOF */

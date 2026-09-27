@@ -1,0 +1,9 @@
+#pragma once
+
+#include "../Namespace.h"
+
+#define ALGORITHM_NS(NAME) GNS2(LIB_PREFIX(Algorithm), NAME)
+#define ALGORITHM_TYPE(NAME) GNS2(LIB_PREFIX(Algorithm), NAME)
+#define ALGORITHM_FUNC(NAME) GNS2(LIB_PREFIX(Algorithm), NAME)
+#define ALGORITHM_CONST(NAME) CNS2(LIB_PREFIX_CONST(ALGORITHM), NAME)
+/* EOF */

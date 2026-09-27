@@ -1,0 +1,9 @@
+#pragma once
+
+#include "../Namespace.h"
+
+#define ERROR_NS(NAME) GNS2(LIB_PREFIX(Error), NAME)
+#define ERROR_TYPE(NAME) GNS2(LIB_PREFIX(Error), NAME)
+#define ERROR_FUNC(NAME) GNS2(LIB_PREFIX(Error), NAME)
+#define ERROR_CONST(NAME) CNS2(LIB_PREFIX_CONST(ERROR), NAME)
+/* EOF */

@@ -1,0 +1,112 @@
+#pragma once
+
+ARENA_CREATE_PROTOTYPE {
+  OPSTATUS status;
+
+  if (!arena)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  {
+    void *allocated = NULL;
+    status = ALLOC_FUNC(AllocBytes)(&allocated, capacity);
+    if (status != STATUS_CONST(SUCCESS))
+      return status;
+    arena->buffer = (unsigned char *)allocated;
+  }
+
+  arena->capacity = capacity;
+  arena->offset = 0;
+  return STATUS_CONST(SUCCESS);
+}
+
+ARENA_ALLOC_ALIGNED_PROTOTYPE {
+  size_t padding;
+  size_t alignedOffset;
+
+  if (!arena || !out || alignment == 0 || alignment > ARENA_ALIGNMENT)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (size == 0) {
+    *out = NULL;
+    return STATUS_CONST(SUCCESS);
+  }
+
+  padding = (alignment - (arena->offset % alignment)) % alignment;
+
+  if (arena->offset > SIZE_MAX - padding)
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+
+  alignedOffset = arena->offset + padding;
+
+  if (alignedOffset > arena->capacity ||
+      size > arena->capacity - alignedOffset)
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  *out = arena->buffer + alignedOffset;
+  arena->offset = alignedOffset + size;
+  return STATUS_CONST(SUCCESS);
+}
+
+ARENA_ALLOC_PROTOTYPE {
+  return ARENA_FUNC(AllocAligned)(arena, out, size, ARENA_ALIGNMENT);
+}
+
+ARENA_ALLOC_ARRAY_ALIGNED_PROTOTYPE {
+  size_t size = 0;
+  OPSTATUS status;
+
+  if (!out)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  status = Memory_Internal_ArraySize(count, elementSize, &size);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  return ARENA_FUNC(AllocAligned)(arena, out, size, alignment);
+}
+
+ARENA_ALLOC_ARRAY_PROTOTYPE {
+  return ARENA_FUNC(AllocArrayAligned)(arena, out, count, elementSize,
+                                        ARENA_ALIGNMENT);
+}
+
+ARENA_ALLOC_TYPED_PROTOTYPE {
+  void *allocated = NULL;
+  OPSTATUS status;
+
+  if (!outPointerObject)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  status = ARENA_FUNC(AllocArrayAligned)(
+      arena, &allocated, count, elementSize, alignment);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  memcpy(outPointerObject, &allocated, sizeof(allocated));
+  return STATUS_CONST(SUCCESS);
+}
+
+ARENA_RESET_PROTOTYPE {
+  if (!arena)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  arena->offset = 0;
+  return STATUS_CONST(SUCCESS);
+}
+
+ARENA_DESTROY_PROTOTYPE {
+  OPSTATUS status;
+
+  if (!arena)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  {
+    void *buffer = arena->buffer;
+    status = ALLOC_FUNC(FreePointer)(&buffer);
+    arena->buffer = NULL;
+  }
+  arena->capacity = 0;
+  arena->offset = 0;
+  return status;
+}
+/* EOF */

@@ -1,0 +1,13 @@
+#pragma once
+
+#include "../../Core/Namespace.h"
+#include "../../Core/Preprocessor/Compiling.inc"
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#define BIT_MOD(NAME) GNS2(LIB_PREFIX(Bit), NAME)
+#define BIT_TYPE(SUFFIX) GNS2(LIB_PREFIX(Bit), SUFFIX)
+#define BIT_FUNC(SUFFIX, FUNC) GNS3(LIB_PREFIX(Bit), SUFFIX, FUNC)
+/* EOF */

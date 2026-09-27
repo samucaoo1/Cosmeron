@@ -1,0 +1,11 @@
+#pragma once
+
+#include "../Namespace.h"
+
+#define CAST_NS(NAME) GNS2(LIB_PREFIX(Cast), NAME)
+#define CAST_TYPE(NAME) GNS2(LIB_PREFIX(Cast), NAME)
+#define CAST_FUNC(NAME) GNS2(LIB_PREFIX(Cast), NAME)
+
+#define CAST_TYPE_TO_STRUCT(SUFFIX, TYPE) GNS4(LIB_PREFIX(Cast), SUFFIX, To, TYPE)
+#define CAST_STRUCT_TO_TYPE(TYPE, SUFFIX) GNS4(LIB_PREFIX(Cast), TYPE, To, SUFFIX)
+/* EOF */

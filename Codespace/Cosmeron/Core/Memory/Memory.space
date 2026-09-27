@@ -1,0 +1,16 @@
+#pragma once
+
+#include "../Error/Status.h"
+#include "../Namespace.h"
+
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MEMORY_NS(NAME) GNS2(LIB_PREFIX(Memory), NAME)
+#define MEMORY_TYPE(NAME) GNS2(LIB_PREFIX(Memory), NAME)
+#define MEMORY_FUNC(NAME) GNS2(LIB_PREFIX(Memory), NAME)
+#define MEMORY_CONST(NAME) CNS2(LIB_PREFIX_CONST(MEMORY), NAME)
+
+/* EOF */

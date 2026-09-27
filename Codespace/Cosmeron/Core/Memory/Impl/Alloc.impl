@@ -1,0 +1,93 @@
+#pragma once
+
+#include <stdint.h>
+
+static inline OPSTATUS Memory_Internal_ArraySize(size_t count,
+                                                 size_t elementSize,
+                                                 size_t *outSize) {
+  if (!outSize)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (elementSize != 0 && count > SIZE_MAX / elementSize)
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+
+  *outSize = count * elementSize;
+  return STATUS_CONST(SUCCESS);
+}
+
+ALLOC_BYTES_PROTOTYPE {
+  void *allocated;
+
+  if (!out)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (size == 0) {
+    *out = NULL;
+    return STATUS_CONST(SUCCESS);
+  }
+
+  allocated = malloc(size);
+  if (!allocated)
+    return STATUS_CONST(OUT_OF_MEMORY);
+
+  *out = allocated;
+  return STATUS_CONST(SUCCESS);
+}
+
+ALLOC_ARRAY_PROTOTYPE {
+  size_t size = 0;
+  OPSTATUS status;
+
+  if (!out)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  status = Memory_Internal_ArraySize(count, elementSize, &size);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  return ALLOC_FUNC(AllocBytes)(out, size);
+}
+
+REALLOC_BYTES_PROTOTYPE {
+  void *newPtr;
+
+  if (!ptr)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (size == 0) {
+    free(*ptr);
+    *ptr = NULL;
+    return STATUS_CONST(SUCCESS);
+  }
+
+  newPtr = realloc(*ptr, size);
+  if (!newPtr)
+    return STATUS_CONST(OUT_OF_MEMORY);
+
+  *ptr = newPtr;
+  return STATUS_CONST(SUCCESS);
+}
+
+REALLOC_ARRAY_PROTOTYPE {
+  size_t size = 0;
+  OPSTATUS status;
+
+  if (!ptr)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  status = Memory_Internal_ArraySize(count, elementSize, &size);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  return ALLOC_FUNC(ReallocBytes)(ptr, size);
+}
+
+FREE_POINTER_PROTOTYPE {
+  if (!ptr)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  free(*ptr);
+  *ptr = NULL;
+  return STATUS_CONST(SUCCESS);
+}
+/* EOF */

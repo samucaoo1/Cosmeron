@@ -1,0 +1,29 @@
+#define BIT_BYTE_WIDTH 8u
+
+#define BIT_IMPLEMENT_EXTRACT(TYPE, SUFFIX, LITERAL)                            \
+  BIT_EXTRACT_PROTOTYPE(TYPE, SUFFIX) {                                        \
+    if (value == NULL || high < low || low >= SUFFIX || high >= SUFFIX)         \
+      return (TYPE)0;                                                           \
+    uint8_t width = (uint8_t)(high - low + 1u);                                 \
+    if (width == SUFFIX)                                                        \
+      return *value;                                                            \
+    TYPE mask = (TYPE)(((TYPE)(LITERAL) << width) - (TYPE)(LITERAL));           \
+    return (TYPE)((*value >> low) & mask);                                      \
+  }
+
+#define BIT_IMPLEMENT_INSERT(TYPE, SUFFIX, LITERAL)                             \
+  BIT_INSERT_PROTOTYPE(TYPE, SUFFIX) {                                         \
+    if (value == NULL || high < low || low >= SUFFIX || high >= SUFFIX)         \
+      return;                                                                   \
+    uint8_t width = (uint8_t)(high - low + 1u);                                 \
+    if (width == SUFFIX) {                                                      \
+      *value = field_value;                                                     \
+      return;                                                                   \
+    }                                                                           \
+    TYPE mask = (TYPE)(((TYPE)(LITERAL) << width) - (TYPE)(LITERAL));           \
+    field_value &= mask;                                                        \
+    TYPE shiftedMask = (TYPE)(mask << low);                                     \
+    TYPE cleared = (TYPE)(*value & (TYPE)~shiftedMask);                         \
+    *value = (TYPE)(cleared | (TYPE)(field_value << low));                      \
+  }
+/* EOF */

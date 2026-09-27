@@ -1,0 +1,140 @@
+#define BIT_MASK_EVEN_ODD_U64   0x5555555555555555ULL
+#define BIT_MASK_PAIRS_U64      0x3333333333333333ULL
+#define BIT_MASK_NIBBLES_U64    0x0F0F0F0F0F0F0F0FULL
+#define BIT_MASK_BYTE_U8        0xFF
+
+#define BIT_IMPLEMENT_POPCOUNT(TYPE, SUFFIX)                                  \
+    BIT_POPCOUNT_PROTOTYPE(TYPE, SUFFIX) {                                    \
+        uint64_t temp = (uint64_t)value;                                       \
+                                                                              \
+        temp = temp - ((temp >> 1) & BIT_MASK_EVEN_ODD_U64);                  \
+        temp = (temp & BIT_MASK_PAIRS_U64) +                                  \
+               ((temp >> 2) & BIT_MASK_PAIRS_U64);                            \
+        temp = (temp + (temp >> 4)) & BIT_MASK_NIBBLES_U64;                   \
+                                                                              \
+        if (SUFFIX > 32)                                                      \
+            temp += temp >> 32;                                               \
+        if (SUFFIX > 16)                                                      \
+            temp += temp >> 16;                                               \
+        if (SUFFIX > 8)                                                       \
+            temp += temp >> 8;                                                \
+                                                                              \
+        return temp & BIT_MASK_BYTE_U8;                                        \
+    }
+
+
+#define BIT_IMPLEMENT_IS_POWER_OF_TWO(TYPE, SUFFIX)                           \
+    BIT_IS_POWER_OF_TWO_PROTOTYPE(TYPE, SUFFIX) {                    \
+        return value && !(value & (value - 1));                               \
+    }
+
+
+#define BIT_IMPLEMENT_INDEX_LSB(TYPE, SUFFIX)                                 \
+    BIT_INDEX_LSB_PROTOTYPE(TYPE, SUFFIX) {                          \
+        if (!value) {                                                         \
+            TYPE notFound = (TYPE)0;                                          \
+            --notFound;                                                       \
+            return notFound;                                                  \
+        }                                                                     \
+                                                                              \
+        TYPE pos  = 0;                                                        \
+        TYPE temp = value;                                                    \
+                                                                              \
+        if (SUFFIX > 32 && ((uint64_t)temp & 0xFFFFFFFFULL) == 0) {           \
+            pos += 32;                                                        \
+            temp = (TYPE)((uint64_t)temp >> 32);                              \
+        }                                                                     \
+                                                                              \
+        if (SUFFIX > 16 && ((uint64_t)temp & 0x0000FFFFULL) == 0) {           \
+            pos += 16;                                                        \
+            temp = (TYPE)((uint64_t)temp >> 16);                              \
+        }                                                                     \
+                                                                              \
+        if (SUFFIX > 8 && ((uint64_t)temp & 0x000000FFULL) == 0) {            \
+            pos += 8;                                                         \
+            temp = (TYPE)((uint64_t)temp >> 8);                               \
+        }                                                                     \
+                                                                              \
+        if ((temp & (TYPE)0x0000000FULL) == 0) {                              \
+            pos += 4;                                                         \
+            temp >>= 4;                                                       \
+        }                                                                     \
+                                                                              \
+        if ((temp & (TYPE)0x00000003ULL) == 0) {                              \
+            pos += 2;                                                         \
+            temp >>= 2;                                                       \
+        }                                                                     \
+                                                                              \
+        if ((temp & (TYPE)0x00000001ULL) == 0)                                \
+            pos += 1;                                                         \
+                                                                              \
+        return pos;                                                           \
+    }
+
+
+#define BIT_IMPLEMENT_INDEX_MSB(TYPE, SUFFIX)                                 \
+    BIT_INDEX_MSB_PROTOTYPE(TYPE, SUFFIX) {                                   \
+        if (!value) {                                                         \
+            TYPE notFound = (TYPE)0;                                          \
+            --notFound;                                                       \
+            return notFound;                                                  \
+        }                                                                     \
+                                                                              \
+        TYPE pos  = 0;                                                        \
+        TYPE temp = value;                                                    \
+                                                                              \
+        if (SUFFIX > 32 && ((uint64_t)temp >> 32)) {                          \
+            pos += 32;                                                        \
+            temp = (TYPE)((uint64_t)temp >> 32);                              \
+        }                                                                     \
+                                                                              \
+        if (SUFFIX > 16 && ((uint64_t)temp >> 16)) {                          \
+            pos += 16;                                                        \
+            temp = (TYPE)((uint64_t)temp >> 16);                              \
+        }                                                                     \
+                                                                              \
+        if (SUFFIX > 8 && ((uint64_t)temp >> 8)) {                            \
+            pos += 8;                                                         \
+            temp = (TYPE)((uint64_t)temp >> 8);                               \
+        }                                                                     \
+                                                                              \
+        if (temp >> 4) {                                                      \
+            pos += 4;                                                         \
+            temp >>= 4;                                                       \
+        }                                                                     \
+                                                                              \
+        if (temp >> 2) {                                                      \
+            pos += 2;                                                         \
+            temp >>= 2;                                                       \
+        }                                                                     \
+                                                                              \
+        if (temp >> 1)                                                        \
+            pos += 1;                                                         \
+                                                                              \
+        return pos;                                                           \
+    }
+
+
+#define BIT_IMPLEMENT_ROTATE_LEFT(TYPE, SUFFIX)                               \
+    BIT_ROTATE_LEFT_PROTOTYPE(TYPE, SUFFIX) {                        \
+        if (shift == 0 || shift % SUFFIX == 0)                                \
+            return value;                                                     \
+                                                                              \
+        shift %= SUFFIX;                                                      \
+                                                                              \
+        return (TYPE)((value << shift) |                                      \
+                      (value >> (SUFFIX - shift)));                           \
+    }
+
+
+#define BIT_IMPLEMENT_ROTATE_RIGHT(TYPE, SUFFIX)                              \
+    BIT_ROTATE_RIGHT_PROTOTYPE(TYPE, SUFFIX) {                       \
+        if (shift == 0 || shift % SUFFIX == 0)                                \
+            return value;                                                     \
+                                                                              \
+        shift %= SUFFIX;                                                      \
+                                                                              \
+        return (TYPE)((value >> shift) |                                      \
+                      (value << (SUFFIX - shift)));                           \
+    }
+/* EOF */

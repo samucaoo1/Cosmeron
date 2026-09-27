@@ -1,0 +1,82 @@
+#pragma once
+
+MEMORY_COPY_PROTOTYPE {
+  if (size == 0)
+    return STATUS_CONST(SUCCESS);
+  if (!destination || !source)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  memcpy(destination, source, size);
+  return STATUS_CONST(SUCCESS);
+}
+
+MEMORY_MOVE_PROTOTYPE {
+  if (size == 0)
+    return STATUS_CONST(SUCCESS);
+  if (!destination || !source)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  memmove(destination, source, size);
+  return STATUS_CONST(SUCCESS);
+}
+
+MEMORY_SET_PROTOTYPE {
+  if (size == 0)
+    return STATUS_CONST(SUCCESS);
+  if (!destination)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  memset(destination, value, size);
+  return STATUS_CONST(SUCCESS);
+}
+
+MEMORY_ZERO_PROTOTYPE {
+  return MEMORY_FUNC(Set)(destination, 0, size);
+}
+
+static inline OPSTATUS Memory_Internal_OperationArraySize(size_t count,
+                                                          size_t elementSize,
+                                                          size_t *outSize) {
+  if (!outSize)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (elementSize != 0 && count > SIZE_MAX / elementSize)
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+
+  *outSize = count * elementSize;
+  return STATUS_CONST(SUCCESS);
+}
+
+MEMORY_COPY_ARRAY_PROTOTYPE {
+  size_t size = 0;
+  OPSTATUS status =
+      Memory_Internal_OperationArraySize(count, elementSize, &size);
+
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  return MEMORY_FUNC(Copy)(destination, source, size);
+}
+
+MEMORY_MOVE_ARRAY_PROTOTYPE {
+  size_t size = 0;
+  OPSTATUS status =
+      Memory_Internal_OperationArraySize(count, elementSize, &size);
+
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  return MEMORY_FUNC(Move)(destination, source, size);
+}
+
+MEMORY_ZERO_ARRAY_PROTOTYPE {
+  size_t size = 0;
+  OPSTATUS status =
+      Memory_Internal_OperationArraySize(count, elementSize, &size);
+
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  return MEMORY_FUNC(Zero)(destination, size);
+}
+/* EOF */

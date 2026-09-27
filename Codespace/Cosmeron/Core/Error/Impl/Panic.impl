@@ -1,0 +1,27 @@
+#pragma once
+
+#if OS_WINDOWS
+#include <windows.h>
+#include "StacktraceWindows.inc"
+#elif OS_UNIX
+#include <execinfo.h>
+#include "StacktraceUnix.inc"
+#else
+PANIC_STACKTRACE_PROTOTYPE {}
+#endif
+
+PANIC_TRIGGER_PROTOTYPE {
+  fprintf(stderr, "\n");
+  fprintf(stderr, "============== PANIC ==============\n");
+  fprintf(stderr, "message : %s\n", message ? message : "unknown");
+  fprintf(stderr, "file    : %s\n", file);
+  fprintf(stderr, "line    : %d\n", line);
+  fprintf(stderr, "function: %s\n", function);
+  fprintf(stderr, "\nStacktrace:\n");
+
+  PANIC_INTERNAL_FUNC(Stacktrace)();
+
+  fprintf(stderr, "===================================\n");
+  abort();
+}
+/* EOF */
