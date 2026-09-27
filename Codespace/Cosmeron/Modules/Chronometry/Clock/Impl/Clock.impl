@@ -10,7 +10,7 @@
 #endif
 
 CHRONOMETRY_CLOCK_NOW_PROTOTYPE {
-  if (result == NULL)
+  if (outResult == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
 #if OS_WINDOWS
   LARGE_INTEGER counter;
@@ -20,7 +20,7 @@ CHRONOMETRY_CLOCK_NOW_PROTOTYPE {
     return STATUS_CONST(GENERIC_ERROR);
   uint64_t ticks = (uint64_t)counter.QuadPart;
   uint64_t hz = (uint64_t)frequency.QuadPart;
-  result->nanoseconds =
+  outResult->nanoseconds =
       (ticks / hz) * (uint64_t)CHRONOMETRY_NANOSECONDS_PER_SECOND +
       ((ticks % hz) * (uint64_t)CHRONOMETRY_NANOSECONDS_PER_SECOND) / hz;
 #elif OS_MAC
@@ -28,13 +28,13 @@ CHRONOMETRY_CLOCK_NOW_PROTOTYPE {
   uint64_t ticks = mach_absolute_time();
   if (mach_timebase_info(&timebase) != KERN_SUCCESS || timebase.denom == 0)
     return STATUS_CONST(GENERIC_ERROR);
-  result->nanoseconds = (ticks / timebase.denom) * timebase.numer +
+  outResult->nanoseconds = (ticks / timebase.denom) * timebase.numer +
       ((ticks % timebase.denom) * timebase.numer) / timebase.denom;
 #else
   struct timespec value;
   if (clock_gettime(CLOCK_MONOTONIC, &value) != 0)
     return STATUS_CONST(GENERIC_ERROR);
-  result->nanoseconds =
+  outResult->nanoseconds =
       (uint64_t)value.tv_sec *
           (uint64_t)CHRONOMETRY_NANOSECONDS_PER_SECOND +
       (uint64_t)value.tv_nsec;
@@ -44,18 +44,18 @@ CHRONOMETRY_CLOCK_NOW_PROTOTYPE {
 
 CHRONOMETRY_CLOCK_DURATION_BETWEEN_PROTOTYPE {
   uint64_t difference;
-  if (result == NULL)
+  if (outResult == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (end.nanoseconds >= start.nanoseconds) {
     difference = end.nanoseconds - start.nanoseconds;
     if (difference > INT64_MAX)
       return STATUS_CONST(ARITHMETIC_OVERFLOW);
-    result->nanoseconds = (int64_t)difference;
+    outResult->nanoseconds = (int64_t)difference;
   } else {
     difference = start.nanoseconds - end.nanoseconds;
     if (difference > (uint64_t)INT64_MAX)
       return STATUS_CONST(ARITHMETIC_OVERFLOW);
-    result->nanoseconds = -(int64_t)difference;
+    outResult->nanoseconds = -(int64_t)difference;
   }
   return STATUS_CONST(SUCCESS);
 }
