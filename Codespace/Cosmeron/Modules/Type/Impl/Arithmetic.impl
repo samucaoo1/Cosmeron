@@ -1,0 +1,194 @@
+#pragma once
+
+#include <stddef.h>
+#include <stdint.h>
+
+#define DATA_TYPE_IMPLEMENT_ADD(TYPE, FUNCTION_NAME, STRUCT_NAME)              \
+  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *destination,                   \
+                                   const STRUCT_NAME *source) {                \
+    if (!destination || !source)                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                                            \
+    const size_t limbCount =                                                  \
+        sizeof(destination->limb) / sizeof(destination->limb[0]);              \
+    STRUCT_NAME resultValue = *destination;                                    \
+    unsigned char carry = 0;                                                   \
+    for (size_t i = 0; i < limbCount; ++i) {                                  \
+      const TYPE left = resultValue.limb[i];                              \
+      const TYPE right = source->limb[i];                                      \
+      const TYPE sum = (TYPE)(left + right);                                   \
+      const unsigned char c1 = (unsigned char)(sum < left);                    \
+      const TYPE result = (TYPE)(sum + (TYPE)carry);                           \
+      const unsigned char c2 = (unsigned char)(carry && result == 0);          \
+      resultValue.limb[i] = result;                                           \
+      carry = (unsigned char)(c1 | c2);                                                                        \
+    }                                                                          \
+    if (carry)                                                                \
+      return STATUS_CONST(ARITHMETIC_OVERFLOW);                               \
+    *destination = resultValue;                                               \
+    return STATUS_CONST(SUCCESS);                                                               \
+  }
+
+#define DATA_TYPE_IMPLEMENT_SUB(TYPE, FUNCTION_NAME, STRUCT_NAME)              \
+  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *destination,                   \
+                                   const STRUCT_NAME *source) {                \
+    if (!destination || !source)                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                                            \
+    const size_t limbCount =                                                  \
+        sizeof(destination->limb) / sizeof(destination->limb[0]);              \
+    STRUCT_NAME resultValue = *destination;                                    \
+    unsigned char borrow = 0;                                                  \
+    for (size_t i = 0; i < limbCount; ++i) {                                  \
+      const TYPE left = resultValue.limb[i];                              \
+      const TYPE right = source->limb[i];                                      \
+      const TYPE difference = (TYPE)(left - right);                            \
+      const unsigned char b1 = (unsigned char)(left < right);                  \
+      const unsigned char b2 = (unsigned char)(borrow && difference == 0);     \
+      resultValue.limb[i] = (TYPE)(difference - (TYPE)borrow);                \
+      borrow = (unsigned char)(b1 | b2);                                                                        \
+    }                                                                          \
+    if (borrow)                                                               \
+      return STATUS_CONST(ARITHMETIC_OVERFLOW);                               \
+    *destination = resultValue;                                               \
+    return STATUS_CONST(SUCCESS);                                                               \
+  }
+
+#define DATA_TYPE_IMPLEMENT_INCREMENT(TYPE, FUNCTION_NAME, STRUCT_NAME)        \
+  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *target) {                  \
+    if (!target)                                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(target->limb) / sizeof(target->limb[0]);   \
+    STRUCT_NAME resultValue = *target;                                         \
+    for (size_t i = 0; i < limbCount; ++i) {                                  \
+      if (++resultValue.limb[i] != 0) {                                        \
+        *target = resultValue;                                                 \
+        return STATUS_CONST(SUCCESS);                                          \
+      }                                                                        \
+    }                                                                          \
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);                                  \
+  }
+
+#define DATA_TYPE_IMPLEMENT_DECREMENT(TYPE, FUNCTION_NAME, STRUCT_NAME)        \
+  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *target) {                  \
+    if (!target)                                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(target->limb) / sizeof(target->limb[0]);   \
+    STRUCT_NAME resultValue = *target;                                         \
+    for (size_t i = 0; i < limbCount; ++i) {                                  \
+      if (resultValue.limb[i]-- != 0) {                                        \
+        *target = resultValue;                                                 \
+        return STATUS_CONST(SUCCESS);                                          \
+      }                                                                        \
+    }                                                                          \
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);                                  \
+  }
+
+
+#define DATA_TYPE_IMPLEMENT_MUL(TYPE, FUNCTION_NAME, STRUCT_NAME, ADD_FUNC,    \
+                                SHIFT_LEFT_FUNC)                               \
+  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *destination,               \
+                                       const STRUCT_NAME *source) {            \
+    if (!destination || !source)                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount =                                                   \
+        sizeof(destination->limb) / sizeof(destination->limb[0]);              \
+    STRUCT_NAME left = *destination;                                           \
+    STRUCT_NAME result = {0};                                                  \
+    for (size_t bit = 0; bit < limbCount * sizeof(TYPE) * 8U; ++bit) {         \
+      const size_t limbIndex = bit / (sizeof(TYPE) * 8U);                      \
+      const size_t bitIndex = bit % (sizeof(TYPE) * 8U);                       \
+      if (((source->limb[limbIndex] >> bitIndex) & (TYPE)1U) != 0U) {          \
+        if (bit != 0U) {                                                       \
+          const size_t wholeLimbShift = bit / (sizeof(TYPE) * 8U);             \
+          const size_t intraLimbShift = bit % (sizeof(TYPE) * 8U);             \
+          for (size_t i = limbCount; i-- > 0;) {                               \
+            if (left.limb[i] == 0U)                                            \
+              continue;                                                        \
+            if (i + wholeLimbShift >= limbCount)                               \
+              return STATUS_CONST(ARITHMETIC_OVERFLOW);                        \
+            if (intraLimbShift != 0U &&                                       \
+                i + wholeLimbShift + 1U >= limbCount &&                        \
+                (left.limb[i] >> (sizeof(TYPE) * 8U - intraLimbShift)) != 0U)  \
+              return STATUS_CONST(ARITHMETIC_OVERFLOW);                        \
+          }                                                                    \
+        }                                                                      \
+        STRUCT_NAME shifted = left;                                            \
+        OPSTATUS status = SHIFT_LEFT_FUNC(&shifted, (unsigned)bit);            \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        status = ADD_FUNC(&result, &shifted);                                  \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+      }                                                                        \
+    }                                                                          \
+    for (size_t i = 0; i < limbCount; ++i)                                  \
+      destination->limb[i] = result.limb[i];                                   \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+
+
+#define DATA_TYPE_IMPLEMENT_DIVMOD(TYPE, FUNCTION_NAME, STRUCT_NAME,           \
+                                   IS_ZERO_FUNC, COMPARE_FUNC, SUB_FUNC,        \
+                                   SHIFT_LEFT_FUNC)                            \
+  static inline OPSTATUS FUNCTION_NAME(const STRUCT_NAME *dividend,            \
+                                       const STRUCT_NAME *divisor,             \
+                                       STRUCT_NAME *quotient,                  \
+                                       STRUCT_NAME *remainder) {               \
+    if (!dividend || !divisor || (!quotient && !remainder) ||                 \
+        (quotient && remainder && quotient == remainder))                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (IS_ZERO_FUNC(divisor))                                                 \
+      return STATUS_CONST(DIVISION_BY_ZERO);                                   \
+    STRUCT_NAME q = {0};                                                       \
+    STRUCT_NAME r = {0};                                                       \
+    const size_t limbCount =                                                   \
+        sizeof(dividend->limb) / sizeof(dividend->limb[0]);                    \
+    const size_t bitsPerLimb = sizeof(TYPE) * 8U;                              \
+    for (size_t bit = limbCount * bitsPerLimb; bit-- > 0;) {                   \
+      const bool carriedHighBit =                                             \
+          (r.limb[limbCount - 1U] >> (bitsPerLimb - 1U)) != 0U;                \
+      OPSTATUS status = SHIFT_LEFT_FUNC(&r, 1U);                               \
+      if (status != STATUS_CONST(SUCCESS))                                     \
+        return status;                                                         \
+      const size_t limbIndex = bit / bitsPerLimb;                              \
+      const size_t bitIndex = bit % bitsPerLimb;                               \
+      r.limb[0] |= (TYPE)((dividend->limb[limbIndex] >> bitIndex) & (TYPE)1U); \
+      TComparisonResult comparison = COMPARISON_CONST(LOWER);                  \
+      if (!carriedHighBit) {                                                   \
+        status = COMPARE_FUNC(&r, divisor, &comparison);                       \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+      }                                                                        \
+      if (carriedHighBit || comparison != COMPARISON_CONST(LOWER)) {           \
+        if (carriedHighBit) {                                                  \
+          unsigned char borrow = 0U;                                           \
+          for (size_t i = 0; i < limbCount; ++i) {                            \
+            const TYPE left = r.limb[i];                                       \
+            const TYPE right = divisor->limb[i];                               \
+            const TYPE difference = (TYPE)(left - right);                      \
+            const unsigned char b1 = (unsigned char)(left < right);            \
+            const unsigned char b2 =                                           \
+                (unsigned char)(borrow && difference == 0U);                   \
+            r.limb[i] = (TYPE)(difference - (TYPE)borrow);                     \
+            borrow = (unsigned char)(b1 | b2);                                 \
+          }                                                                    \
+        } else {                                                               \
+          status = SUB_FUNC(&r, divisor);                                      \
+          if (status != STATUS_CONST(SUCCESS))                                 \
+            return status;                                                     \
+        }                                                                      \
+        q.limb[limbIndex] |= (TYPE)((TYPE)1U << bitIndex);                     \
+      }                                                                        \
+    }                                                                          \
+    if (quotient) {                                                            \
+      for (size_t i = 0; i < limbCount; ++i)                                  \
+        quotient->limb[i] = q.limb[i];                                         \
+    }                                                                          \
+    if (remainder) {                                                           \
+      for (size_t i = 0; i < limbCount; ++i)                                  \
+        remainder->limb[i] = r.limb[i];                                        \
+    }                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+/* EOF */

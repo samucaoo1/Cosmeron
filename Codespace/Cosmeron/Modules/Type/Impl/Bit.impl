@@ -1,0 +1,44 @@
+#pragma once
+
+#define DATA_TYPE_IMPLEMENT_BIT_SET(TYPE, FUNCTION_NAME, STRUCT_NAME, SUFFIX)  \
+  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *target, uint32_t bit) {    \
+    if (!target)                                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t bitsPerLimb = sizeof(target->limb[0]) * 8U;                   \
+    const size_t limbIndex = bit / bitsPerLimb;                                \
+    const uint8_t intraBit = (uint8_t)(bit % bitsPerLimb);                                 \
+    if (limbIndex >= sizeof(target->limb) / sizeof(target->limb[0]))            \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    BIT_FUNC(SUFFIX, Set)(&target->limb[limbIndex], intraBit);                  \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define DATA_TYPE_IMPLEMENT_BIT_CLEAR(TYPE, FUNCTION_NAME, STRUCT_NAME,        \
+                                      SUFFIX)                                  \
+  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *target, uint32_t bit) {    \
+    if (!target)                                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t bitsPerLimb = sizeof(target->limb[0]) * 8U;                   \
+    const size_t limbIndex = bit / bitsPerLimb;                                \
+    const uint8_t intraBit = (uint8_t)(bit % bitsPerLimb);                                 \
+    if (limbIndex >= sizeof(target->limb) / sizeof(target->limb[0]))            \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    BIT_FUNC(SUFFIX, Clear)(&target->limb[limbIndex], intraBit);                \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define DATA_TYPE_IMPLEMENT_BIT_CHECK(TYPE, FUNCTION_NAME, STRUCT_NAME,        \
+                                      SUFFIX)                                  \
+  static inline OPSTATUS FUNCTION_NAME(const STRUCT_NAME *target, uint32_t bit,\
+                                       bool *result) {                          \
+    if (!target || !result)                                                    \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t bitsPerLimb = sizeof(target->limb[0]) * 8U;                   \
+    const size_t limbIndex = bit / bitsPerLimb;                                \
+    const uint8_t intraBit = (uint8_t)(bit % bitsPerLimb);                                 \
+    if (limbIndex >= sizeof(target->limb) / sizeof(target->limb[0]))            \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *result = BIT_FUNC(SUFFIX, Check)(&target->limb[limbIndex], intraBit);      \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+/* EOF */

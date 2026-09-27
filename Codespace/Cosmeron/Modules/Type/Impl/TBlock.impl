@@ -1,0 +1,32 @@
+#pragma once
+
+#define TBLOCK_IMPLEMENT(SUFFIX, TYPE, BIT_SUFFIX)                             \
+  DATA_TYPE_IMPLEMENT_CLEAR(TYPE, TBLOCK_FUNC(SUFFIX, Clear),                  \
+                            TBLOCK_TYPE(SUFFIX))                               \
+  DATA_TYPE_IMPLEMENT_AND(TYPE, TBLOCK_FUNC(SUFFIX, And),                      \
+                           TBLOCK_TYPE(SUFFIX))                                \
+  DATA_TYPE_IMPLEMENT_OR(TYPE, TBLOCK_FUNC(SUFFIX, Or),                        \
+                          TBLOCK_TYPE(SUFFIX))                                 \
+  DATA_TYPE_IMPLEMENT_XOR(TYPE, TBLOCK_FUNC(SUFFIX, Xor),                      \
+                           TBLOCK_TYPE(SUFFIX))                                \
+  DATA_TYPE_IMPLEMENT_NOT(TYPE, TBLOCK_FUNC(SUFFIX, Not),                      \
+                           TBLOCK_TYPE(SUFFIX))                                \
+  DATA_TYPE_IMPLEMENT_SHIFT_LEFT(TYPE, TBLOCK_FUNC(SUFFIX, ShiftLeft),         \
+                                  TBLOCK_TYPE(SUFFIX))                         \
+  DATA_TYPE_IMPLEMENT_SHIFT_RIGHT(TYPE, TBLOCK_FUNC(SUFFIX, ShiftRight),        \
+                                   TBLOCK_TYPE(SUFFIX))                        \
+  DATA_TYPE_IMPLEMENT_ROTATE_LEFT(TYPE, TBLOCK_FUNC(SUFFIX, RotateLeft),       \
+                                  TBLOCK_TYPE(SUFFIX),                         \
+                                  TBLOCK_FUNC(SUFFIX, ShiftLeft),              \
+                                  TBLOCK_FUNC(SUFFIX, ShiftRight))             \
+  DATA_TYPE_IMPLEMENT_ROTATE_RIGHT(TYPE, TBLOCK_FUNC(SUFFIX, RotateRight),     \
+                                   TBLOCK_TYPE(SUFFIX),                        \
+                                   TBLOCK_FUNC(SUFFIX, ShiftLeft),             \
+                                   TBLOCK_FUNC(SUFFIX, ShiftRight))            \
+  DATA_TYPE_IMPLEMENT_BIT_SET(TYPE, TBLOCK_FUNC(SUFFIX, BitSet),               \
+                              TBLOCK_TYPE(SUFFIX), BIT_SUFFIX)                 \
+  DATA_TYPE_IMPLEMENT_BIT_CLEAR(TYPE, TBLOCK_FUNC(SUFFIX, BitClear),           \
+                                TBLOCK_TYPE(SUFFIX), BIT_SUFFIX)               \
+  DATA_TYPE_IMPLEMENT_BIT_CHECK(TYPE, TBLOCK_FUNC(SUFFIX, BitCheck),           \
+                                TBLOCK_TYPE(SUFFIX), BIT_SUFFIX)
+/* EOF */

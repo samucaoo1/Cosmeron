@@ -1,0 +1,52 @@
+#pragma once
+
+#include <stddef.h>
+
+#define DATA_TYPE_IMPLEMENT_TO_CSTRING_BASE(TYPE, FUNCTION_NAME, STRUCT_NAME, \
+                                             IS_ZERO_FUNC)                     \
+  static inline OPSTATUS FUNCTION_NAME(const STRUCT_NAME *value, char *buffer, \
+                                       size_t bufferSize, unsigned base) {     \
+    if (!value || !buffer || bufferSize == 0U || base < 2U || base > 36U)      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    STRUCT_NAME current = *value;                                              \
+    char reverse[sizeof(current.byte) * 8U + 1U];                              \
+    size_t length = 0U;                                                        \
+    if (IS_ZERO_FUNC(&current)) {                                  \
+      if (bufferSize < 2U)                                                     \
+        return STATUS_CONST(OUT_OF_RANGE);                                     \
+      buffer[0] = '0';                                                         \
+      buffer[1] = '\0';                                                       \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    while (!IS_ZERO_FUNC(&current)) {                              \
+      unsigned remainder = 0U;                                                     \
+      for (size_t i = sizeof(current.limb) / sizeof(current.limb[0]);          \
+           i-- > 0;) {                                                         \
+        TYPE next = current.limb[i];                                           \
+        TYPE quotient = 0U;                                                    \
+        for (size_t bit = sizeof(TYPE) * 8U; bit-- > 0;) {                     \
+          remainder = (remainder << 1U) | (unsigned)((next >> bit) & 1U);        \
+          if (remainder >= base) {                                              \
+            remainder -= base;                               \
+            quotient |= (TYPE)((TYPE)1U << bit);                              \
+          }                                                                    \
+        }                                                                      \
+        current.limb[i] = quotient;                                            \
+      }                                                                        \
+      reverse[length++] = (char)(remainder < 10U ? '0' + remainder            \
+                                                : 'A' + remainder - 10U);                             \
+    }                                                                          \
+    if (bufferSize <= length)                                                  \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    for (size_t i = 0; i < length; ++i)                                        \
+      buffer[i] = reverse[length - i - 1U];                                    \
+    buffer[length] = '\0';                                                    \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define DATA_TYPE_IMPLEMENT_TO_CSTRING(TYPE, FUNCTION_NAME, BASE_FUNCTION,    \
+                                       STRUCT_NAME)                            \
+  static inline OPSTATUS FUNCTION_NAME(const STRUCT_NAME *value, char *buffer, \
+                                       size_t bufferSize) {                    \
+    return BASE_FUNCTION(value, buffer, bufferSize, 10U);                      \
+  }

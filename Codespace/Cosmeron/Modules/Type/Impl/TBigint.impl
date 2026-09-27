@@ -1,0 +1,93 @@
+#pragma once
+
+#define TBIGINT_IMPLEMENT(SUFFIX, TYPE)                                        \
+  DATA_TYPE_IMPLEMENT_CLEAR(TYPE, TBIGINT_FUNC(SUFFIX, Clear),                 \
+                            TBIGINT_TYPE(SUFFIX))                              \
+  DATA_TYPE_IMPLEMENT_INIT(TYPE, TBIGINT_FUNC(SUFFIX, Init),                   \
+                           TBIGINT_FUNC(SUFFIX, Clear), TBIGINT_TYPE(SUFFIX))    \
+  DATA_TYPE_IMPLEMENT_ADD(TYPE, TBIGINT_FUNC(SUFFIX, Add), TBIGINT_TYPE(SUFFIX)) \
+  DATA_TYPE_IMPLEMENT_SUB(TYPE, TBIGINT_FUNC(SUFFIX, Sub), TBIGINT_TYPE(SUFFIX)) \
+  DATA_TYPE_IMPLEMENT_AND(TYPE, TBIGINT_FUNC(SUFFIX, And), TBIGINT_TYPE(SUFFIX)) \
+  DATA_TYPE_IMPLEMENT_OR(TYPE, TBIGINT_FUNC(SUFFIX, Or), TBIGINT_TYPE(SUFFIX))   \
+  DATA_TYPE_IMPLEMENT_XOR(TYPE, TBIGINT_FUNC(SUFFIX, Xor), TBIGINT_TYPE(SUFFIX)) \
+  DATA_TYPE_IMPLEMENT_NOT(TYPE, TBIGINT_FUNC(SUFFIX, Not), TBIGINT_TYPE(SUFFIX)) \
+  DATA_TYPE_IMPLEMENT_SHIFT_LEFT(TYPE, TBIGINT_FUNC(SUFFIX, ShiftLeft),          \
+                                  TBIGINT_TYPE(SUFFIX))                        \
+  DATA_TYPE_IMPLEMENT_SHIFT_RIGHT(TYPE, TBIGINT_FUNC(SUFFIX, ShiftRight),      \
+                                   TBIGINT_TYPE(SUFFIX))                       \
+  DATA_TYPE_IMPLEMENT_ROTATE_LEFT(TYPE, TBIGINT_FUNC(SUFFIX, RotateLeft),      \
+                                  TBIGINT_TYPE(SUFFIX),                        \
+                                  TBIGINT_FUNC(SUFFIX, ShiftLeft),             \
+                                  TBIGINT_FUNC(SUFFIX, ShiftRight))            \
+  DATA_TYPE_IMPLEMENT_ROTATE_RIGHT(TYPE, TBIGINT_FUNC(SUFFIX, RotateRight),    \
+                                   TBIGINT_TYPE(SUFFIX),                       \
+                                   TBIGINT_FUNC(SUFFIX, ShiftLeft),            \
+                                   TBIGINT_FUNC(SUFFIX, ShiftRight))           \
+  DATA_TYPE_IMPLEMENT_BIT_SET(TYPE, TBIGINT_FUNC(SUFFIX, BitSet),              \
+                              TBIGINT_TYPE(SUFFIX), 64)                        \
+  DATA_TYPE_IMPLEMENT_BIT_CLEAR(TYPE, TBIGINT_FUNC(SUFFIX, BitClear),          \
+                                TBIGINT_TYPE(SUFFIX), 64)                      \
+  DATA_TYPE_IMPLEMENT_BIT_CHECK(TYPE, TBIGINT_FUNC(SUFFIX, BitCheck),          \
+                                TBIGINT_TYPE(SUFFIX), 64)                      \
+  DATA_TYPE_IMPLEMENT_MUL(TYPE, TBIGINT_FUNC(SUFFIX, Mul),                       \
+                           TBIGINT_TYPE(SUFFIX), TBIGINT_FUNC(SUFFIX, Add),          \
+                           TBIGINT_FUNC(SUFFIX, ShiftLeft))                       \
+  DATA_TYPE_IMPLEMENT_DIVMOD(TYPE, TBIGINT_FUNC(SUFFIX, DivMod),                 \
+                              TBIGINT_TYPE(SUFFIX), TBIGINT_FUNC(SUFFIX, IsZero),     \
+                              TBIGINT_FUNC(SUFFIX, Compare), TBIGINT_FUNC(SUFFIX, Sub), \
+                              TBIGINT_FUNC(SUFFIX, ShiftLeft))                    \
+  static inline OPSTATUS TBIGINT_FUNC(SUFFIX, Div)(                               \
+      TBIGINT_TYPE(SUFFIX) *dividend, const TBIGINT_TYPE(SUFFIX) *divisor) {         \
+    if (!dividend || !divisor)                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    TBIGINT_TYPE(SUFFIX) quotient;                                                \
+    OPSTATUS status = TBIGINT_FUNC(SUFFIX, DivMod)(dividend, divisor, &quotient, NULL); \
+    if (status == STATUS_CONST(SUCCESS))                                       \
+      for (size_t i = 0; i < sizeof(dividend->limb) / sizeof(dividend->limb[0]); ++i) \
+      dividend->limb[i] = quotient.limb[i];                                                    \
+    return status;                                                             \
+  }                                                                            \
+  static inline OPSTATUS TBIGINT_FUNC(SUFFIX, Mod)(                               \
+      TBIGINT_TYPE(SUFFIX) *dividend, const TBIGINT_TYPE(SUFFIX) *divisor) {         \
+    if (!dividend || !divisor)                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    TBIGINT_TYPE(SUFFIX) remainder;                                               \
+    OPSTATUS status = TBIGINT_FUNC(SUFFIX, DivMod)(dividend, divisor, NULL, &remainder); \
+    if (status == STATUS_CONST(SUCCESS))                                       \
+      for (size_t i = 0; i < sizeof(dividend->limb) / sizeof(dividend->limb[0]); ++i) \
+      dividend->limb[i] = remainder.limb[i];                                                   \
+    return status;                                                             \
+  }                                                                            \
+  DATA_TYPE_IMPLEMENT_INCREMENT(TYPE, TBIGINT_FUNC(SUFFIX, Increment),         \
+                                TBIGINT_TYPE(SUFFIX))                          \
+  DATA_TYPE_IMPLEMENT_DECREMENT(TYPE, TBIGINT_FUNC(SUFFIX, Decrement),         \
+                                TBIGINT_TYPE(SUFFIX))                          \
+  DATA_TYPE_IMPLEMENT_COMPARE(TYPE, TBIGINT_FUNC(SUFFIX, Compare),             \
+                              TBIGINT_TYPE(SUFFIX))                            \
+  DATA_TYPE_IMPLEMENT_EQUAL(TYPE, TBIGINT_FUNC(SUFFIX, Equal),                 \
+                            TBIGINT_TYPE(SUFFIX))                              \
+  DATA_TYPE_IMPLEMENT_NOTEQUAL(TYPE, TBIGINT_FUNC(SUFFIX, NotEqual),           \
+                               TBIGINT_FUNC(SUFFIX, Equal),                    \
+                               TBIGINT_TYPE(SUFFIX))                           \
+  DATA_TYPE_IMPLEMENT_LESSTHAN(TYPE, TBIGINT_FUNC(SUFFIX, LessThan),           \
+                               TBIGINT_FUNC(SUFFIX, Compare),                  \
+                               TBIGINT_TYPE(SUFFIX))                           \
+  DATA_TYPE_IMPLEMENT_GREATERTHAN(TYPE, TBIGINT_FUNC(SUFFIX, GreaterThan),     \
+                                  TBIGINT_FUNC(SUFFIX, Compare),               \
+                                  TBIGINT_TYPE(SUFFIX))                        \
+  DATA_TYPE_IMPLEMENT_LESSOREQUAL(TYPE, TBIGINT_FUNC(SUFFIX, LessOrEqual),     \
+                                  TBIGINT_FUNC(SUFFIX, Compare),               \
+                                  TBIGINT_TYPE(SUFFIX))                        \
+  DATA_TYPE_IMPLEMENT_GREATEROREQUAL(TYPE,                                     \
+                                     TBIGINT_FUNC(SUFFIX, GreaterOrEqual),     \
+                                     TBIGINT_FUNC(SUFFIX, Compare),            \
+                                     TBIGINT_TYPE(SUFFIX))                     \
+  DATA_TYPE_IMPLEMENT_ISZERO(TYPE, TBIGINT_FUNC(SUFFIX, IsZero),               \
+                             TBIGINT_TYPE(SUFFIX)) \
+  DATA_TYPE_IMPLEMENT_TO_CSTRING_BASE(TYPE, TBIGINT_FUNC(SUFFIX, ToCStringBase), \
+                                       TBIGINT_TYPE(SUFFIX),                      \
+                                       TBIGINT_FUNC(SUFFIX, IsZero)) \
+  DATA_TYPE_IMPLEMENT_TO_CSTRING(TYPE, TBIGINT_FUNC(SUFFIX, ToCString),          \
+                                  TBIGINT_FUNC(SUFFIX, ToCStringBase),            \
+                                  TBIGINT_TYPE(SUFFIX))
+/* EOF */

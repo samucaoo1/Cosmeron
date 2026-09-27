@@ -1,0 +1,100 @@
+#pragma once
+
+#include <stdbool.h>
+
+#include "../../../Core/Algorithm/Comparison.h"
+
+#define DATA_TYPE_IMPLEMENT_COMPARE(TYPE, FUNCTION_NAME, STRUCT_NAME)          \
+  static inline OPSTATUS FUNCTION_NAME(const STRUCT_NAME *left,                 \
+                                       const STRUCT_NAME *right,                \
+                                       TComparisonResult *result) {             \
+    if (!left || !right || !result)                                            \
+      return STATUS_CONST(INVALID_ARGUMENT);                                                                \
+    const size_t limbCount = sizeof(left->limb) / sizeof(left->limb[0]);      \
+    for (size_t i = limbCount; i-- > 0;) {                                    \
+      if (left->limb[i] < right->limb[i]) {                                    \
+        *result = COMPARISON_CONST(LOWER);                                     \
+        return STATUS_CONST(SUCCESS);                                          \
+      }                                                                        \
+      if (left->limb[i] > right->limb[i]) {                                    \
+        *result = COMPARISON_CONST(HIGHER);                                    \
+        return STATUS_CONST(SUCCESS);                                          \
+      }                                                              \
+    }                                                                          \
+    *result = COMPARISON_CONST(EQUAL);                                         \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define DATA_TYPE_IMPLEMENT_EQUAL(TYPE, FUNCTION_NAME, STRUCT_NAME)            \
+  static inline bool FUNCTION_NAME(const STRUCT_NAME *left,                    \
+                                   const STRUCT_NAME *right) {                 \
+    if (!left || !right)                                                       \
+      return false;                                                            \
+    const size_t limbCount = sizeof(left->limb) / sizeof(left->limb[0]);      \
+    for (size_t i = 0; i < limbCount; ++i)                                     \
+      if (left->limb[i] != right->limb[i])                                     \
+        return false;                                                          \
+    return true;           \
+  }
+
+#define DATA_TYPE_IMPLEMENT_NOTEQUAL(TYPE, FUNCTION_NAME, EQUAL_FUNC,          \
+                                     STRUCT_NAME)                              \
+  static inline bool FUNCTION_NAME(const STRUCT_NAME *left,                    \
+                                   const STRUCT_NAME *right) {                 \
+    if (!left || !right)                                                       \
+      return false;                                                            \
+    return !EQUAL_FUNC(left, right);                                           \
+  }
+
+#define DATA_TYPE_IMPLEMENT_LESSTHAN(TYPE, FUNCTION_NAME, COMPARE_FUNC,        \
+                                     STRUCT_NAME)                              \
+  static inline bool FUNCTION_NAME(const STRUCT_NAME *left,                    \
+                                   const STRUCT_NAME *right) {                 \
+    TComparisonResult result;                                                   \
+    if (COMPARE_FUNC(left, right, &result) != STATUS_CONST(SUCCESS))            \
+      return false;                                                            \
+    return result == COMPARISON_CONST(LOWER);                                      \
+  }
+
+#define DATA_TYPE_IMPLEMENT_GREATERTHAN(TYPE, FUNCTION_NAME, COMPARE_FUNC,     \
+                                        STRUCT_NAME)                           \
+  static inline bool FUNCTION_NAME(const STRUCT_NAME *left,                    \
+                                   const STRUCT_NAME *right) {                 \
+    TComparisonResult result;                                                   \
+    if (COMPARE_FUNC(left, right, &result) != STATUS_CONST(SUCCESS))            \
+      return false;                                                            \
+    return result == COMPARISON_CONST(HIGHER);                                      \
+  }
+
+#define DATA_TYPE_IMPLEMENT_LESSOREQUAL(TYPE, FUNCTION_NAME, COMPARE_FUNC,     \
+                                        STRUCT_NAME)                           \
+  static inline bool FUNCTION_NAME(const STRUCT_NAME *left,                    \
+                                   const STRUCT_NAME *right) {                 \
+    TComparisonResult result;                                                   \
+    if (COMPARE_FUNC(left, right, &result) != STATUS_CONST(SUCCESS))            \
+      return false;                                                            \
+    return result != COMPARISON_CONST(HIGHER);                                     \
+  }
+
+#define DATA_TYPE_IMPLEMENT_GREATEROREQUAL(TYPE, FUNCTION_NAME, COMPARE_FUNC,  \
+                                           STRUCT_NAME)                        \
+  static inline bool FUNCTION_NAME(const STRUCT_NAME *left,                    \
+                                   const STRUCT_NAME *right) {                 \
+    TComparisonResult result;                                                   \
+    if (COMPARE_FUNC(left, right, &result) != STATUS_CONST(SUCCESS))            \
+      return false;                                                            \
+    return result != COMPARISON_CONST(LOWER);                                     \
+  }
+
+#define DATA_TYPE_IMPLEMENT_ISZERO(TYPE, FUNCTION_NAME, STRUCT_NAME)           \
+  static inline bool FUNCTION_NAME(const STRUCT_NAME *target) {                \
+    if (!target)                                                               \
+      return false;                                                            \
+    const size_t limbCount = sizeof(target->limb) / sizeof(target->limb[0]);  \
+    for (size_t i = 0; i < limbCount; ++i) {                                  \
+      if (target->limb[i] != 0)                                                \
+        return false;                                                          \
+    }                                                                          \
+    return true;                                                               \
+  }
+/* EOF */

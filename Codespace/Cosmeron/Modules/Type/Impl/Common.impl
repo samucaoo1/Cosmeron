@@ -1,0 +1,17 @@
+#pragma once
+
+#include <string.h>
+
+#define DATA_TYPE_IMPLEMENT_CLEAR(TYPE, FUNCTION_NAME, STRUCT_NAME)            \
+  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *target) {                      \
+    if (!target) \
+      return STATUS_CONST(INVALID_ARGUMENT); \
+    memset(target->byte, 0, sizeof(target->byte));                             \
+    return STATUS_CONST(SUCCESS); \
+  }
+
+#define DATA_TYPE_IMPLEMENT_INIT(TYPE, FUNCTION_NAME, CLEAR_FUNC, STRUCT_NAME) \
+  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *target) {                      \
+    return CLEAR_FUNC(target);                                                 \
+  }
+/* EOF */

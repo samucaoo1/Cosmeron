@@ -1,0 +1,48 @@
+#pragma once
+
+#define DATA_TYPE_IMPLEMENT_AND(TYPE, FUNCTION_NAME, STRUCT_NAME)              \
+  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *destination,                   \
+                                   const STRUCT_NAME *source) {                \
+    if (!destination || !source)                                               \
+      return STATUS_CONST(INVALID_ARGUMENT); \
+    const size_t limbCount = \
+        sizeof(destination->limb) / sizeof(destination->limb[0]);              \
+    for (size_t i = 0; i < limbCount; ++i)                                    \
+      destination->limb[i] &= source->limb[i];                                 \
+    return STATUS_CONST(SUCCESS); \
+  }
+
+#define DATA_TYPE_IMPLEMENT_OR(TYPE, FUNCTION_NAME, STRUCT_NAME)               \
+  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *destination,                   \
+                                   const STRUCT_NAME *source) {                \
+    if (!destination || !source)                                               \
+      return STATUS_CONST(INVALID_ARGUMENT); \
+    const size_t limbCount = \
+        sizeof(destination->limb) / sizeof(destination->limb[0]);              \
+    for (size_t i = 0; i < limbCount; ++i)                                    \
+      destination->limb[i] |= source->limb[i];                                 \
+    return STATUS_CONST(SUCCESS); \
+  }
+
+#define DATA_TYPE_IMPLEMENT_XOR(TYPE, FUNCTION_NAME, STRUCT_NAME)              \
+  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *destination,                   \
+                                   const STRUCT_NAME *source) {                \
+    if (!destination || !source)                                               \
+      return STATUS_CONST(INVALID_ARGUMENT); \
+    const size_t limbCount = \
+        sizeof(destination->limb) / sizeof(destination->limb[0]);              \
+    for (size_t i = 0; i < limbCount; ++i)                                    \
+      destination->limb[i] ^= source->limb[i];                                 \
+    return STATUS_CONST(SUCCESS); \
+  }
+
+#define DATA_TYPE_IMPLEMENT_NOT(TYPE, FUNCTION_NAME, STRUCT_NAME)              \
+  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *target) {                      \
+    if (!target) \
+      return STATUS_CONST(INVALID_ARGUMENT); \
+    const size_t limbCount = sizeof(target->limb) / sizeof(target->limb[0]);  \
+    for (size_t i = 0; i < limbCount; ++i)                                    \
+      target->limb[i] = ~target->limb[i];                                      \
+    return STATUS_CONST(SUCCESS); \
+  }
+/* EOF */

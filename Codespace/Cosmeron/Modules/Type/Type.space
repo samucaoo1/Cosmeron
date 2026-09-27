@@ -1,0 +1,23 @@
+#pragma once
+
+#include "../../Core/Namespace.h"
+#include "../../Core/Preprocessor/Compiling.inc"
+#include "../../Core/Preprocessor/Operations.h"
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
+
+#define TYPE_MOD(NAME) GNS2(LIB_PREFIX(Type), NAME)
+#define TYPE_TYPE(NAME, SUFFIX) TYPE_MOD(PP_OP_CAT2(NAME, SUFFIX))
+#define TYPE_FUNC(NAME, SUFFIX, FUNCTION) GNS2(TYPE_TYPE(NAME, SUFFIX), FUNCTION)
+/* Optional pseudo-method tables. Direct functions are always available. */
+#ifndef TYPE_ENABLE_VTABLE
+#define TYPE_ENABLE_VTABLE 1
+#endif
+
+#if TYPE_ENABLE_VTABLE != 0 && TYPE_ENABLE_VTABLE != 1
+#error "TYPE_ENABLE_VTABLE must be 0 or 1"
+#endif
+
+/* EOF */
