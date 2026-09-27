@@ -1,0 +1,13 @@
+#define TDUAL_IMPLEMENT(TYPE, SUFFIX)                                          \
+  TDUAL_CAST_TO_TYPE_PROTOTYPE(TYPE, SUFFIX) {                         \
+    TDUAL_TYPE(SUFFIX) dual;                                                   \
+    dual.value1 = value1;                                                     \
+    dual.value2 = value2;                                                     \
+    return dual;                                                               \
+  }                                                                            \
+                                                                               \
+  TDUAL_CAST_FROM_TYPE_PROTOTYPE(TYPE, SUFFIX) {                       \
+    *var1 = dual.value1;                                                       \
+    *var2 = dual.value2;                                                       \
+  }
+/* EOF */

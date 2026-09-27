@@ -1,0 +1,61 @@
+#define MATH_VALUE_MAX_IMPLEMENT(TYPE, SUFFIX)                               \
+  MATH_VALUE_MAX_PROTOTYPE(TYPE, SUFFIX) {                         \
+    return a > b ? a : b;                                                     \
+  }
+
+#define MATH_VALUE_MIN_IMPLEMENT(TYPE, SUFFIX)                               \
+  MATH_VALUE_MIN_PROTOTYPE(TYPE, SUFFIX) {                         \
+    return a < b ? a : b;                                                     \
+  }
+
+#define MATH_VALUE_SMALLEST_IMPLEMENT(TYPE, SUFFIX, VA_ARG_TYPE)             \
+  MATH_VALUE_SMALLEST_PROTOTYPE(TYPE, SUFFIX) {                    \
+    if (result == NULL || size == 0) {                                        \
+      return STATUS_NS(INVALID_ARGUMENT);                                     \
+    }                                                                         \
+                                                                              \
+    va_list arguments;                                                        \
+    va_start(arguments, size);                                                \
+                                                                              \
+    TYPE smallest = (TYPE)va_arg(arguments, VA_ARG_TYPE);                     \
+                                                                              \
+    for (size_t i = 1; i < size; ++i) {                                      \
+      TYPE value = (TYPE)va_arg(arguments, VA_ARG_TYPE);                      \
+                                                                              \
+      if (value < smallest) {                                                 \
+        smallest = value;                                                     \
+      }                                                                       \
+    }                                                                         \
+                                                                              \
+    va_end(arguments);                                                        \
+                                                                              \
+    *result = smallest;                                                       \
+    return STATUS_NS(SUCCESS);                                                \
+  }
+
+#define MATH_VALUE_BIGGEST_IMPLEMENT(TYPE, SUFFIX, VA_ARG_TYPE)              \
+  MATH_VALUE_BIGGEST_PROTOTYPE(TYPE, SUFFIX) {                     \
+    if (result == NULL || size == 0) {                                        \
+      return STATUS_NS(INVALID_ARGUMENT);                                     \
+    }                                                                         \
+                                                                              \
+    va_list arguments;                                                        \
+    va_start(arguments, size);                                                \
+                                                                              \
+    TYPE biggest = (TYPE)va_arg(arguments, VA_ARG_TYPE);                      \
+                                                                              \
+    for (size_t i = 1; i < size; ++i) {                                      \
+      TYPE value = (TYPE)va_arg(arguments, VA_ARG_TYPE);                      \
+                                                                              \
+      if (value > biggest) {                                                  \
+        biggest = value;                                                      \
+      }                                                                       \
+    }                                                                         \
+                                                                              \
+    va_end(arguments);                                                        \
+                                                                              \
+    *result = biggest;                                                        \
+    return STATUS_NS(SUCCESS);                                                \
+  }
+
+/* EOF */

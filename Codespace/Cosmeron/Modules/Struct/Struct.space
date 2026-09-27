@@ -1,0 +1,14 @@
+#pragma once
+
+#include "../../Core/Cast/Cast.space"
+#include "../../Core/Namespace.h"
+#include "../../Core/Preprocessor/Compiling.inc"
+
+#include <complex.h>
+#include <inttypes.h>
+#include <stddef.h>
+
+#define STRUCT_MOD(NAME) GNS2(LIB_PREFIX(Struct), NAME)
+#define STRUCT_TYPE(NAME, SUFFIX) GNS2(STRUCT_MOD(NAME), SUFFIX)
+#define STRUCT_FUNC(NAME, SUFFIX, FUNC) GNS2(STRUCT_TYPE(NAME, SUFFIX), FUNC)
+/* EOF */

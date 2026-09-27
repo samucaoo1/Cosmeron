@@ -1,0 +1,43 @@
+#pragma once
+
+#include "../../Core/Namespace.h"
+#include "../../Core/Preprocessor/Compiling.inc"
+
+#include <stdint.h>
+
+#define MATH_MOD(NAME) GNS2(LIB_PREFIX(Math), NAME)
+#define MATH_TYPE(NAME) GNS2(LIB_PREFIX(Math), NAME)
+#define MATH_FUNC(SPACE, NAME) GNS3(LIB_PREFIX(Math), SPACE, NAME)
+#define MATH_TYPED_FUNC(SPACE, NAME, SUFFIX)                                   \
+  GNS4(LIB_PREFIX(Math), SPACE, NAME, SUFFIX)
+#define MATH_CONST(NAME) CNS2(LIB_PREFIX_CONST(MATH), NAME)
+#define MATH_RANGE_CONST(NAME) CNS3(LIB_PREFIX_CONST(MATH), RANGE, NAME)
+
+#define ARITHMETIC_FUNC(NAME) MATH_FUNC(Arithmetic, NAME)
+#define ARITHMETIC_TYPED_FUNC(NAME, SUFFIX)                                    \
+  MATH_TYPED_FUNC(Arithmetic, NAME, SUFFIX)
+#define VALUE_FUNC(NAME) MATH_FUNC(Value, NAME)
+#define VALUE_TYPED_FUNC(NAME, SUFFIX) MATH_TYPED_FUNC(Value, NAME, SUFFIX)
+#define EQUATION_FUNC(NAME) MATH_FUNC(Equation, NAME)
+#define EQUATION_TYPED_FUNC(NAME, SUFFIX)                                      \
+  MATH_TYPED_FUNC(Equation, NAME, SUFFIX)
+
+typedef enum {
+  MATH_CONST(SOLUTION_NONE),
+  MATH_CONST(SOLUTION_ONE),
+  MATH_CONST(SOLUTION_MULTIPLE),
+  MATH_CONST(SOLUTION_INFINITE)
+} MATH_TYPE(Solution);
+
+typedef MATH_TYPE(Solution) TMathSolution;
+
+typedef enum {
+  MATH_RANGE_CONST(BETWEEN),
+  MATH_RANGE_CONST(LOWER),
+  MATH_RANGE_CONST(HIGHER),
+  MATH_RANGE_CONST(EQUAL_MINIMUM),
+  MATH_RANGE_CONST(EQUAL_MAXIMUM)
+} MATH_TYPE(RangeResult);
+
+typedef MATH_TYPE(RangeResult) TMathRangeResult;
+/* EOF */

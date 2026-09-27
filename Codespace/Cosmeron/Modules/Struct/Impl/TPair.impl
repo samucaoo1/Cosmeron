@@ -1,0 +1,13 @@
+#define TPAIR_IMPLEMENT(TYPE, SUFFIX)                                          \
+  TPAIR_CAST_TO_TYPE_PROTOTYPE(TYPE, SUFFIX) {                         \
+    TPAIR_TYPE(SUFFIX) pair;                                                   \
+    pair.value1 = value1;                                                     \
+    pair.value2 = value2;                                                     \
+    return pair;                                                               \
+  }                                                                            \
+                                                                               \
+  TPAIR_CAST_FROM_TYPE_PROTOTYPE(TYPE, SUFFIX) {                       \
+    *var1 = pair.value1;                                                       \
+    *var2 = pair.value2;                                                       \
+  }
+/* EOF */

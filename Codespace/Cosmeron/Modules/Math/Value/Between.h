@@ -1,0 +1,36 @@
+#pragma once
+
+#include <stdbool.h>
+
+#include "../Math.space"
+
+
+#define MATH_VALUE_IS_BETWEEN_PROTOTYPE(TYPE, SUFFIX)               \
+  inline static bool VALUE_TYPED_FUNC(IsBetween, SUFFIX)(         \
+      TYPE value, TYPE minimum, TYPE maximum)
+
+#define MATH_VALUE_BETWEEN_PROTOTYPE(TYPE, SUFFIX)            \
+  inline static TMathRangeResult VALUE_TYPED_FUNC(Between, SUFFIX)(                      \
+          TYPE value, TYPE minimum, TYPE maximum)
+
+#include "Impl/Between.impl"
+
+#define MATH_VALUE_BETWEEN_INSTANTIATE(TYPE, SUFFIX)                      \
+  MATH_VALUE_IS_BETWEEN_IMPLEMENT(TYPE, SUFFIX)                              \
+  MATH_VALUE_BETWEEN_IMPLEMENT(TYPE, SUFFIX)
+
+MATH_VALUE_BETWEEN_INSTANTIATE(int8_t, I8)
+MATH_VALUE_BETWEEN_INSTANTIATE(int16_t, I16)
+MATH_VALUE_BETWEEN_INSTANTIATE(int32_t, I32)
+MATH_VALUE_BETWEEN_INSTANTIATE(int64_t, I64)
+
+MATH_VALUE_BETWEEN_INSTANTIATE(uint8_t, U8)
+MATH_VALUE_BETWEEN_INSTANTIATE(uint16_t, U16)
+MATH_VALUE_BETWEEN_INSTANTIATE(uint32_t, U32)
+MATH_VALUE_BETWEEN_INSTANTIATE(uint64_t, U64)
+
+MATH_VALUE_BETWEEN_INSTANTIATE(float, F32)
+MATH_VALUE_BETWEEN_INSTANTIATE(double, F64)
+MATH_VALUE_BETWEEN_INSTANTIATE(long double, F128)
+
+/* EOF */

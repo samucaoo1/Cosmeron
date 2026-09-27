@@ -1,0 +1,14 @@
+#define MATH_VALUE_CLAMP_IMPLEMENT(TYPE, SUFFIX)                             \
+  MATH_VALUE_CLAMP_PROTOTYPE(TYPE, SUFFIX) {                       \
+    if (value < minimum) {                                                    \
+      return minimum;                                                         \
+    }                                                                         \
+                                                                              \
+    if (value > maximum) {                                                    \
+      return maximum;                                                         \
+    }                                                                         \
+                                                                              \
+    return value;                                                             \
+  }
+
+/* EOF */

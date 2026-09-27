@@ -1,0 +1,15 @@
+#define TTRIPLE_IMPLEMENT(TYPE, SUFFIX)                                        \
+  TTRIPLE_CAST_TO_TYPE_PROTOTYPE(TYPE, SUFFIX) {                       \
+    TTRIPLE_TYPE(SUFFIX) triple;                                               \
+    triple.value1 = value1;                                                   \
+    triple.value2 = value2;                                                   \
+    triple.value3 = value3;                                                   \
+    return triple;                                                             \
+  }                                                                            \
+                                                                               \
+  TTRIPLE_CAST_FROM_TYPE_PROTOTYPE(TYPE, SUFFIX) {                     \
+    *var1 = triple.value1;                                                     \
+    *var2 = triple.value2;                                                     \
+    *var3 = triple.value3;                                                     \
+  }
+/* EOF */

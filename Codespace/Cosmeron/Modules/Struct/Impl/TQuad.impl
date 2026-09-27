@@ -1,0 +1,17 @@
+#define TQUAD_IMPLEMENT(TYPE, SUFFIX)                                          \
+  TQUAD_CAST_TO_TYPE_PROTOTYPE(TYPE, SUFFIX) {                         \
+    TQUAD_TYPE(SUFFIX) quad;                                                   \
+    quad.value1 = value1;                                                     \
+    quad.value2 = value2;                                                     \
+    quad.value3 = value3;                                                     \
+    quad.value4 = value4;                                                     \
+    return quad;                                                               \
+  }                                                                            \
+                                                                               \
+  TQUAD_CAST_FROM_TYPE_PROTOTYPE(TYPE, SUFFIX) {                       \
+    *var1 = quad.value1;                                                       \
+    *var2 = quad.value2;                                                       \
+    *var3 = quad.value3;                                                       \
+    *var4 = quad.value4;                                                       \
+  }
+/* EOF */

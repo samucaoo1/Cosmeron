@@ -1,0 +1,21 @@
+#define MATH_EQUATION_LINEAR_IMPLEMENT(TYPE, SUFFIX)                           \
+  MATH_EQUATION_LINEAR_PROTOTYPE(TYPE, SUFFIX) {                      \
+    if (result == NULL || solution == NULL) {                                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
+    }                                                                          \
+                                                                               \
+    if (a == (TYPE)0) {                                                        \
+      if (b == (TYPE)0) {                                                      \
+        *solution = MATH_CONST(SOLUTION_INFINITE);\
+        return STATUS_CONST(SUCCESS);                                  \
+      }                                                                        \
+                                                                               \
+      *solution = MATH_CONST(SOLUTION_NONE);\
+      return STATUS_CONST(SUCCESS);                                           \
+    }                                                                          \
+                                                                               \
+    *result = -b / a;                                                          \
+    *solution = MATH_CONST(SOLUTION_ONE);                                   \
+    return STATUS_CONST(SUCCESS);                                            \
+  }
+/* EOF */

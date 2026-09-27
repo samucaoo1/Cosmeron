@@ -1,0 +1,116 @@
+#define MATH_ARITHMETIC_CHECK_RESULT()                                        \
+  if (result == NULL) {                                                       \
+    return STATUS_NS(INVALID_ARGUMENT);                                       \
+  }
+
+#define MATH_ARITHMETIC_ADD_SIGNED_IMPLEMENT(TYPE, SUFFIX, MINIMUM, MAXIMUM)  \
+  MATH_ARITHMETIC_ADD_PROTOTYPE(TYPE, SUFFIX) {                               \
+    MATH_ARITHMETIC_CHECK_RESULT()                                            \
+    if ((b > (TYPE)0 && a > (TYPE)(MAXIMUM) - b) ||                           \
+        (b < (TYPE)0 && a < (TYPE)(MINIMUM) - b))                             \
+      return STATUS_NS(ARITHMETIC_OVERFLOW);                                  \
+    *result = a + b;                                                          \
+    return STATUS_NS(SUCCESS);                                                \
+  }
+
+#define MATH_ARITHMETIC_ADD_UNSIGNED_IMPLEMENT(TYPE, SUFFIX, MAXIMUM)         \
+  MATH_ARITHMETIC_ADD_PROTOTYPE(TYPE, SUFFIX) {                               \
+    MATH_ARITHMETIC_CHECK_RESULT()                                            \
+    if (a > (TYPE)(MAXIMUM) - b)                                              \
+      return STATUS_NS(ARITHMETIC_OVERFLOW);                                  \
+    *result = a + b;                                                          \
+    return STATUS_NS(SUCCESS);                                                \
+  }
+
+#define MATH_ARITHMETIC_SUB_SIGNED_IMPLEMENT(TYPE, SUFFIX, MINIMUM, MAXIMUM)  \
+  MATH_ARITHMETIC_SUB_PROTOTYPE(TYPE, SUFFIX) {                               \
+    MATH_ARITHMETIC_CHECK_RESULT()                                            \
+    if ((b > (TYPE)0 && a < (TYPE)(MINIMUM) + b) ||                           \
+        (b < (TYPE)0 && a > (TYPE)(MAXIMUM) + b))                             \
+      return STATUS_NS(ARITHMETIC_OVERFLOW);                                  \
+    *result = a - b;                                                          \
+    return STATUS_NS(SUCCESS);                                                \
+  }
+
+#define MATH_ARITHMETIC_SUB_UNSIGNED_IMPLEMENT(TYPE, SUFFIX)                  \
+  MATH_ARITHMETIC_SUB_PROTOTYPE(TYPE, SUFFIX) {                               \
+    MATH_ARITHMETIC_CHECK_RESULT()                                            \
+    if (a < b)                                                               \
+      return STATUS_NS(ARITHMETIC_OVERFLOW);                                  \
+    *result = a - b;                                                          \
+    return STATUS_NS(SUCCESS);                                                \
+  }
+
+#define MATH_ARITHMETIC_MUL_SIGNED_IMPLEMENT(TYPE, SUFFIX, MINIMUM, MAXIMUM)  \
+  MATH_ARITHMETIC_MUL_PROTOTYPE(TYPE, SUFFIX) {                               \
+    MATH_ARITHMETIC_CHECK_RESULT()                                            \
+    if (a == (TYPE)0 || b == (TYPE)0) {                                       \
+      *result = (TYPE)0;                                                      \
+      return STATUS_NS(SUCCESS);                                              \
+    }                                                                         \
+    if ((a == (TYPE)-1 && b == (TYPE)(MINIMUM)) ||                            \
+        (b == (TYPE)-1 && a == (TYPE)(MINIMUM)))                              \
+      return STATUS_NS(ARITHMETIC_OVERFLOW);                                  \
+    if (a > (TYPE)0) {                                                        \
+      if ((b > (TYPE)0 && a > (TYPE)(MAXIMUM) / b) ||                         \
+          (b < (TYPE)0 && b < (TYPE)(MINIMUM) / a))                           \
+        return STATUS_NS(ARITHMETIC_OVERFLOW);                                \
+    } else {                                                                  \
+      if ((b > (TYPE)0 && a < (TYPE)(MINIMUM) / b) ||                         \
+          (b < (TYPE)0 && a < (TYPE)(MAXIMUM) / b))                           \
+        return STATUS_NS(ARITHMETIC_OVERFLOW);                                \
+    }                                                                         \
+    *result = a * b;                                                          \
+    return STATUS_NS(SUCCESS);                                                \
+  }
+
+#define MATH_ARITHMETIC_MUL_UNSIGNED_IMPLEMENT(TYPE, SUFFIX, MAXIMUM)         \
+  MATH_ARITHMETIC_MUL_PROTOTYPE(TYPE, SUFFIX) {                               \
+    MATH_ARITHMETIC_CHECK_RESULT()                                            \
+    if (b != (TYPE)0 && a > (TYPE)(MAXIMUM) / b)                              \
+      return STATUS_NS(ARITHMETIC_OVERFLOW);                                  \
+    *result = a * b;                                                          \
+    return STATUS_NS(SUCCESS);                                                \
+  }
+
+#define MATH_ARITHMETIC_DIV_SIGNED_IMPLEMENT(TYPE, SUFFIX, MINIMUM)           \
+  MATH_ARITHMETIC_DIV_PROTOTYPE(TYPE, SUFFIX) {                               \
+    MATH_ARITHMETIC_CHECK_RESULT()                                            \
+    if (b == (TYPE)0)                                                        \
+      return STATUS_NS(DIVISION_BY_ZERO);                                     \
+    if (a == (TYPE)(MINIMUM) && b == (TYPE)-1)                                \
+      return STATUS_NS(ARITHMETIC_OVERFLOW);                                  \
+    *result = a / b;                                                          \
+    return STATUS_NS(SUCCESS);                                                \
+  }
+
+#define MATH_ARITHMETIC_DIV_UNSIGNED_IMPLEMENT(TYPE, SUFFIX)                  \
+  MATH_ARITHMETIC_DIV_PROTOTYPE(TYPE, SUFFIX) {                               \
+    MATH_ARITHMETIC_CHECK_RESULT()                                            \
+    if (b == (TYPE)0)                                                        \
+      return STATUS_NS(DIVISION_BY_ZERO);                                     \
+    *result = a / b;                                                          \
+    return STATUS_NS(SUCCESS);                                                \
+  }
+
+#define MATH_ARITHMETIC_MOD_SIGNED_IMPLEMENT(TYPE, SUFFIX, MINIMUM)           \
+  MATH_ARITHMETIC_MOD_PROTOTYPE(TYPE, SUFFIX) {                               \
+    MATH_ARITHMETIC_CHECK_RESULT()                                            \
+    if (b == (TYPE)0)                                                        \
+      return STATUS_NS(DIVISION_BY_ZERO);                                     \
+    if (a == (TYPE)(MINIMUM) && b == (TYPE)-1)                                \
+      return STATUS_NS(ARITHMETIC_OVERFLOW);                                  \
+    *result = a % b;                                                          \
+    return STATUS_NS(SUCCESS);                                                \
+  }
+
+#define MATH_ARITHMETIC_MOD_UNSIGNED_IMPLEMENT(TYPE, SUFFIX)                  \
+  MATH_ARITHMETIC_MOD_PROTOTYPE(TYPE, SUFFIX) {                               \
+    MATH_ARITHMETIC_CHECK_RESULT()                                            \
+    if (b == (TYPE)0)                                                        \
+      return STATUS_NS(DIVISION_BY_ZERO);                                     \
+    *result = a % b;                                                          \
+    return STATUS_NS(SUCCESS);                                                \
+  }
+
+/* EOF */

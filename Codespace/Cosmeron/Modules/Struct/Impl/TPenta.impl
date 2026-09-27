@@ -1,0 +1,19 @@
+#define TPENTA_IMPLEMENT(TYPE, SUFFIX)                                          \
+  TPENTA_CAST_TO_TYPE_PROTOTYPE(TYPE, SUFFIX) {                         \
+    TPENTA_TYPE(SUFFIX) penta;                                                   \
+    penta.value1 = value1;                                                     \
+    penta.value2 = value2;                                                     \
+    penta.value3 = value3;                                                     \
+    penta.value4 = value4;                                                     \
+    penta.value5 = value5;                                                     \
+    return penta;                                                               \
+  }                                                                            \
+                                                                               \
+  TPENTA_CAST_FROM_TYPE_PROTOTYPE(TYPE, SUFFIX) {                       \
+    *var1 = penta.value1;                                                       \
+    *var2 = penta.value2;                                                       \
+    *var3 = penta.value3;                                                       \
+    *var4 = penta.value4;                                                       \
+    *var5 = penta.value5;                                                       \
+  }
+/* EOF */
