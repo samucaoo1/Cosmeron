@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Docs/Assets/Brand/Cosmeron.jpg" alt="Cosmeron — modular C11 systems programming library" width="256">
+</p>
+
 # Cosmeron
 
 **Cosmeron is a modular, header-oriented C11 library for portable systems programming, experimentation, education, and reusable low-level components.** It favors readable APIs, explicit ownership, consistent naming, composable modules, and portability without hiding how the machine works.

@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Assets/Brand/Cosmeron.jpg" alt="Cosmeron" width="192">
+</p>
+
 # Cosmeron Documentation
 
 This directory contains the canonical project documentation that does not need to occupy the repository root.

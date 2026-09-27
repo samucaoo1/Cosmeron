@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="../../Assets/Brand/Cosmeron.jpg" alt="Cosmeron" width="220">
+</p>
+
 # Cosmeron
 
 **Cosmeron es una biblioteca modular C11, orientada a headers, para programación de sistemas portable, experimentación, educación y componentes reutilizables de bajo nivel.**
