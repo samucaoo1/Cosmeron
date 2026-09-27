@@ -9,18 +9,18 @@
 #define TBLOCK_TYPE(SUFFIX) TYPE_TYPE(TBlock, SUFFIX)
 #define TBLOCK_FUNC(SUFFIX, FUNCTION) TYPE_FUNC(TBlock, SUFFIX, FUNCTION)
 
-#if TYPE_ENABLE_VTABLE
-#define TBLOCK_VTABLE_FORWARD(SUFFIX) \
+#ifndef TYPE_DISABLE_FUNCTION_TABLE
+#define TBLOCK_FUNCTION_TABLE_FORWARD(SUFFIX) \
   struct TBLOCK_FUNC(SUFFIX, FunctionTable);
 #define TBLOCK_API_MEMBER(SUFFIX) \
   const struct TBLOCK_FUNC(SUFFIX, FunctionTable) *api;
 #else
-#define TBLOCK_VTABLE_FORWARD(SUFFIX)
+#define TBLOCK_FUNCTION_TABLE_FORWARD(SUFFIX)
 #define TBLOCK_API_MEMBER(SUFFIX)
 #endif
 
 #define TBLOCK_STRUCT(SUFFIX, TYPE, WORD_COUNT, SIZE_IN_BYTES)                 \
-  TBLOCK_VTABLE_FORWARD(SUFFIX)                                                  \
+  TBLOCK_FUNCTION_TABLE_FORWARD(SUFFIX)                                                  \
   typedef struct {                                                             \
     TBLOCK_API_MEMBER(SUFFIX)                                               \
     union {                                                                    \
@@ -77,15 +77,15 @@
 
 #define TBLOCK_BITCHECK_PROTOTYPE(SUFFIX)                             \
   static inline OPSTATUS TBLOCK_FUNC(SUFFIX, BitCheck)(                            \
-      const TBLOCK_TYPE(SUFFIX) *block, uint32_t bit, bool *result)
+      const TBLOCK_TYPE(SUFFIX) *block, uint32_t bit, bool *outResult)
 
 #include "Impl/Bit.impl"
 #include "Impl/Bitwise.impl"
 #include "Impl/Common.impl"
 #include "Impl/Shift.impl"
 #include "Impl/TBlock.impl"
-#if TYPE_ENABLE_VTABLE
-#include "VTable/TBlock.h"
+#ifndef TYPE_DISABLE_FUNCTION_TABLE
+#include "FunctionTable/TBlock.h"
 #endif
 
 #define TBLOCK_DECLARE_PROTOTYPES(SUFFIX)                                      \
@@ -102,21 +102,21 @@
   TBLOCK_BITCLEAR_PROTOTYPE(SUFFIX);                                  \
   TBLOCK_BITCHECK_PROTOTYPE(SUFFIX);
 
-#if TYPE_ENABLE_VTABLE
-#define TYPE_VTABLE_DECLARE_TBLOCK(SUFFIX) \
+#ifndef TYPE_DISABLE_FUNCTION_TABLE
+#define TYPE_FUNCTION_TABLE_DECLARE_TBLOCK(SUFFIX) \
   TBLOCK_FUNCTION_TABLE(SUFFIX) \
   TBLOCK_FUNCTION_TABLE_INSTANCE(SUFFIX)
 #else
-#define TYPE_VTABLE_DECLARE_TBLOCK(SUFFIX)
+#define TYPE_FUNCTION_TABLE_DECLARE_TBLOCK(SUFFIX)
 #endif
 
 #define TBLOCK_DECLARE(SUFFIX, TYPE, WORD_COUNT, SIZE_IN_BYTES, BIT_SUFFIX)    \
   TBLOCK_STRUCT(SUFFIX, TYPE, WORD_COUNT, SIZE_IN_BYTES)                       \
   TBLOCK_DECLARE_PROTOTYPES(SUFFIX)                                            \
   TBLOCK_IMPLEMENT(SUFFIX, TYPE, BIT_SUFFIX)                                              \
-  TYPE_VTABLE_DECLARE_TBLOCK(SUFFIX)
+  TYPE_FUNCTION_TABLE_DECLARE_TBLOCK(SUFFIX)
 
-#if TYPE_ENABLE_VTABLE
+#ifndef TYPE_DISABLE_FUNCTION_TABLE
 #define TBlock(SUFFIX, NAME)                                                   \
   TBLOCK_TYPE(SUFFIX) NAME = {0};                                           \
   NAME.api = &TBLOCK_FUNC(SUFFIX, functions);
