@@ -49,8 +49,8 @@ $(BUILD)/hash: Hash.c Test.h | $(BUILD)
 $(BUILD)/graph: Graph.c Test.h | $(BUILD)
 	$(CC) $(CFLAGS) Graph.c -o $@
 
-$(BUILD)/off: PseudoMethodsOff.c Test.h | $(BUILD)
-	$(CC) $(CFLAGS) PseudoMethodsOff.c -o $@
+$(BUILD)/off: FunctionTableOff.c Test.h | $(BUILD)
+	$(CC) $(CFLAGS) FunctionTableOff.c -o $@
 
 $(BUILD)/custom-type: CustomType.c Test.h | $(BUILD)
 	$(CC) $(CFLAGS) CustomType.c -o $@
