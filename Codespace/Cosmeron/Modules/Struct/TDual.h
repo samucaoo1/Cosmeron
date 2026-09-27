@@ -8,7 +8,7 @@
 #define TDUAL_TYPE(SUFFIX) STRUCT_TYPE(TDual, SUFFIX)
 #define TDUAL_FUNC(SUFFIX, FUNC) STRUCT_FUNC(TDual, SUFFIX, FUNC)
 
-#define TDUAL_TYPE_DECLARE(TYPE, SUFFIX)                                      \
+#define TDUAL_STRUCT(TYPE, SUFFIX)                                      \
   typedef union {                                                             \
     struct {                                                                  \
       union {                                                                 \
@@ -44,37 +44,37 @@
   } TDUAL_TYPE(SUFFIX);
 
 #define TDUAL_CAST_TO_TYPE_PROTOTYPE(TYPE, SUFFIX)                     \
-  inline static TDUAL_TYPE(SUFFIX)                                             \
+  static inline TDUAL_TYPE(SUFFIX)                                             \
       CAST_TYPE_TO_STRUCT(SUFFIX, TDual)(TYPE value1, TYPE value2)
 
 #define TDUAL_CAST_FROM_TYPE_PROTOTYPE(TYPE, SUFFIX)                   \
-  inline static void CAST_STRUCT_TO_TYPE(TDual, SUFFIX)(                       \
+  static inline void CAST_STRUCT_TO_TYPE(TDual, SUFFIX)(                       \
       TDUAL_TYPE(SUFFIX) dual, TYPE *var1, TYPE *var2)
 
 #include "Impl/TDual.impl"
 
-#define TDUAL_DECLARE(TYPE, SUFFIX)                                            \
-  TDUAL_TYPE_DECLARE(TYPE, SUFFIX)                                             \
+#define TDUAL_IMPLEMENT_ALL(TYPE, SUFFIX)                                            \
+  TDUAL_STRUCT(TYPE, SUFFIX)                                             \
   TDUAL_CAST_TO_TYPE_PROTOTYPE(TYPE, SUFFIX);                          \
   TDUAL_CAST_FROM_TYPE_PROTOTYPE(TYPE, SUFFIX);                        \
-  TDUAL_IMPLEMENT(TYPE, SUFFIX)
+  TDUAL_CAST_IMPLEMENT_ALL(TYPE, SUFFIX)
 
-TDUAL_DECLARE(uint8_t, uint8)
-TDUAL_DECLARE(uint16_t, uint16)
-TDUAL_DECLARE(uint32_t, uint32)
-TDUAL_DECLARE(uint64_t, uint64)
-TDUAL_DECLARE(size_t, size)
-TDUAL_DECLARE(int8_t, int8)
-TDUAL_DECLARE(int16_t, int16)
-TDUAL_DECLARE(int32_t, int32)
-TDUAL_DECLARE(int64_t, int64)
-TDUAL_DECLARE(float, float)
-TDUAL_DECLARE(double, double)
-TDUAL_DECLARE(long double, longdouble)
+TDUAL_IMPLEMENT_ALL(uint8_t, uint8)
+TDUAL_IMPLEMENT_ALL(uint16_t, uint16)
+TDUAL_IMPLEMENT_ALL(uint32_t, uint32)
+TDUAL_IMPLEMENT_ALL(uint64_t, uint64)
+TDUAL_IMPLEMENT_ALL(size_t, size)
+TDUAL_IMPLEMENT_ALL(int8_t, int8)
+TDUAL_IMPLEMENT_ALL(int16_t, int16)
+TDUAL_IMPLEMENT_ALL(int32_t, int32)
+TDUAL_IMPLEMENT_ALL(int64_t, int64)
+TDUAL_IMPLEMENT_ALL(float, float)
+TDUAL_IMPLEMENT_ALL(double, double)
+TDUAL_IMPLEMENT_ALL(long double, longdouble)
 
 #if !COMPILER_MSVC
-TDUAL_DECLARE(float _Complex, float_complex)
-TDUAL_DECLARE(double _Complex, double_complex)
-TDUAL_DECLARE(long double _Complex, longdouble_complex)
+TDUAL_IMPLEMENT_ALL(float _Complex, float_complex)
+TDUAL_IMPLEMENT_ALL(double _Complex, double_complex)
+TDUAL_IMPLEMENT_ALL(long double _Complex, longdouble_complex)
 #endif
 /* EOF */
