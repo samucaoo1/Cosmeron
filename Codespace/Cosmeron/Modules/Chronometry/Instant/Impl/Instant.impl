@@ -1,0 +1,65 @@
+#pragma once
+
+#include <limits.h>
+
+CHRONOMETRY_INSTANT_COMPARE_PROTOTYPE {
+  if (left.seconds != right.seconds)
+    return (left.seconds > right.seconds) - (left.seconds < right.seconds);
+  return (left.nanoseconds > right.nanoseconds) -
+         (left.nanoseconds < right.nanoseconds);
+}
+
+CHRONOMETRY_INSTANT_ADD_DURATION_PROTOTYPE {
+  int64_t whole;
+  int64_t remainder;
+  int64_t seconds;
+  int64_t nanos;
+  if (result == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  whole = duration.nanoseconds / CHRONOMETRY_NANOSECONDS_PER_SECOND;
+  remainder = duration.nanoseconds % CHRONOMETRY_NANOSECONDS_PER_SECOND;
+  if ((whole > 0 && instant.seconds > INT64_MAX - whole) ||
+      (whole < 0 && instant.seconds < INT64_MIN - whole))
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  seconds = instant.seconds + whole;
+  nanos = (int64_t)instant.nanoseconds + remainder;
+  if (nanos >= CHRONOMETRY_NANOSECONDS_PER_SECOND) {
+    if (seconds == INT64_MAX)
+      return STATUS_CONST(ARITHMETIC_OVERFLOW);
+    ++seconds;
+    nanos -= CHRONOMETRY_NANOSECONDS_PER_SECOND;
+  } else if (nanos < 0) {
+    if (seconds == INT64_MIN)
+      return STATUS_CONST(ARITHMETIC_OVERFLOW);
+    --seconds;
+    nanos += CHRONOMETRY_NANOSECONDS_PER_SECOND;
+  }
+  *result = (CHRONOMETRY_TYPE(Instant)){seconds, (uint32_t)nanos};
+  return STATUS_CONST(SUCCESS);
+}
+
+CHRONOMETRY_INSTANT_DURATION_BETWEEN_PROTOTYPE {
+  int64_t seconds;
+  int64_t nanos;
+  if (result == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if ((start.seconds < 0 && end.seconds > INT64_MAX + start.seconds) ||
+      (start.seconds > 0 && end.seconds < INT64_MIN + start.seconds))
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  seconds = end.seconds - start.seconds;
+  nanos = (int64_t)end.nanoseconds - (int64_t)start.nanoseconds;
+  if (nanos < 0) {
+    if (seconds == INT64_MIN)
+      return STATUS_CONST(ARITHMETIC_OVERFLOW);
+    --seconds;
+    nanos += CHRONOMETRY_NANOSECONDS_PER_SECOND;
+  }
+  if (seconds > INT64_MAX / CHRONOMETRY_NANOSECONDS_PER_SECOND ||
+      seconds < INT64_MIN / CHRONOMETRY_NANOSECONDS_PER_SECOND ||
+      (seconds == INT64_MAX / CHRONOMETRY_NANOSECONDS_PER_SECOND &&
+       nanos > INT64_MAX % CHRONOMETRY_NANOSECONDS_PER_SECOND))
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  result->nanoseconds =
+      seconds * CHRONOMETRY_NANOSECONDS_PER_SECOND + nanos;
+  return STATUS_CONST(SUCCESS);
+}

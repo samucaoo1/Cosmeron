@@ -1,0 +1,52 @@
+#pragma once
+
+#define CHRONOMETRY_TIMEZONE_MAX_OFFSET_MINUTES INT16_C(1439)
+
+CHRONOMETRY_TIMEZONE_OFFSET_IS_VALID_PROTOTYPE {
+  return offset.minutesEastOfUtc >=
+             -CHRONOMETRY_TIMEZONE_MAX_OFFSET_MINUTES &&
+         offset.minutesEastOfUtc <=
+             CHRONOMETRY_TIMEZONE_MAX_OFFSET_MINUTES;
+}
+
+CHRONOMETRY_TIMEZONE_TO_UTC_PROTOTYPE {
+  CHRONOMETRY_TYPE(Instant) local;
+  CHRONOMETRY_TYPE(Duration) offset;
+  OPSTATUS status;
+  if (instant == NULL || !TIMEZONE_FUNC(OffsetIsValid)(value.offset))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  status = EPOCH_FUNC(DateTimeToUnix)(value.local, &local);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+  status = DURATION_FUNC(FromSeconds)(
+      -(int64_t)value.offset.minutesEastOfUtc *
+          CHRONOMETRY_SECONDS_PER_MINUTE,
+      &offset);
+  return status == STATUS_CONST(SUCCESS)
+             ? INSTANT_FUNC(AddDuration)(local, offset, instant)
+             : status;
+}
+
+CHRONOMETRY_TIMEZONE_FROM_UTC_PROTOTYPE {
+  CHRONOMETRY_TYPE(Instant) local;
+  CHRONOMETRY_TYPE(Duration) duration;
+  OPSTATUS status;
+  if (value == NULL || !TIMEZONE_FUNC(OffsetIsValid)(offset))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  status = DURATION_FUNC(FromSeconds)(
+      (int64_t)offset.minutesEastOfUtc * CHRONOMETRY_SECONDS_PER_MINUTE,
+      &duration);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+  status = INSTANT_FUNC(AddDuration)(instant, duration, &local);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+  status = EPOCH_FUNC(DateTimeFromUnix)(local, &value->local);
+  if (status == STATUS_CONST(SUCCESS)) {
+    value->offset = offset;
+    value->daylightSavings = false;
+  }
+  return status;
+}
+
+#undef CHRONOMETRY_TIMEZONE_MAX_OFFSET_MINUTES

@@ -1,0 +1,56 @@
+#pragma once
+
+#include <limits.h>
+
+CHRONOMETRY_DURATION_FROM_NANOSECONDS_PROTOTYPE {
+  return (CHRONOMETRY_TYPE(Duration)){nanoseconds};
+}
+
+CHRONOMETRY_DURATION_FROM_SECONDS_PROTOTYPE {
+  if (result == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (seconds > INT64_MAX / CHRONOMETRY_NANOSECONDS_PER_SECOND ||
+      seconds < INT64_MIN / CHRONOMETRY_NANOSECONDS_PER_SECOND)
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  result->nanoseconds = seconds * CHRONOMETRY_NANOSECONDS_PER_SECOND;
+  return STATUS_CONST(SUCCESS);
+}
+
+CHRONOMETRY_DURATION_ADD_PROTOTYPE {
+  if (result == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if ((right.nanoseconds > 0 &&
+       left.nanoseconds > INT64_MAX - right.nanoseconds) ||
+      (right.nanoseconds < 0 &&
+       left.nanoseconds < INT64_MIN - right.nanoseconds))
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  result->nanoseconds = left.nanoseconds + right.nanoseconds;
+  return STATUS_CONST(SUCCESS);
+}
+
+CHRONOMETRY_DURATION_SUBTRACT_PROTOTYPE {
+  if (result == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if ((right.nanoseconds < 0 &&
+       left.nanoseconds > INT64_MAX + right.nanoseconds) ||
+      (right.nanoseconds > 0 &&
+       left.nanoseconds < INT64_MIN + right.nanoseconds))
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  result->nanoseconds = left.nanoseconds - right.nanoseconds;
+  return STATUS_CONST(SUCCESS);
+}
+
+CHRONOMETRY_DURATION_COMPARE_PROTOTYPE {
+  return (left.nanoseconds > right.nanoseconds) -
+         (left.nanoseconds < right.nanoseconds);
+}
+
+CHRONOMETRY_DURATION_ABSOLUTE_PROTOTYPE {
+  if (result == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (value.nanoseconds == INT64_MIN)
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  result->nanoseconds = value.nanoseconds < 0 ? -value.nanoseconds
+                                              : value.nanoseconds;
+  return STATUS_CONST(SUCCESS);
+}

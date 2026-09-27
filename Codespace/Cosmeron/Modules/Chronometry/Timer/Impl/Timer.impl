@@ -1,0 +1,93 @@
+#pragma once
+
+CHRONOMETRY_TIMER_START_PROTOTYPE {
+  if (timer == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  return CLOCK_FUNC(Now)(&timer->start);
+}
+
+CHRONOMETRY_TIMER_ELAPSED_PROTOTYPE {
+  CHRONOMETRY_TYPE(ClockTimePoint) now;
+  OPSTATUS status;
+  if (timer == NULL || elapsed == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  status = CLOCK_FUNC(Now)(&now);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+  return CLOCK_FUNC(DurationBetween)(timer->start, now, elapsed);
+}
+
+CHRONOMETRY_TIMER_RESTART_PROTOTYPE {
+  CHRONOMETRY_TYPE(ClockTimePoint) now;
+  OPSTATUS status;
+  if (timer == NULL || elapsed == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  status = CLOCK_FUNC(Now)(&now);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+  status = CLOCK_FUNC(DurationBetween)(timer->start, now, elapsed);
+  if (status == STATUS_CONST(SUCCESS))
+    timer->start = now;
+  return status;
+}
+
+CHRONOMETRY_DELTA_START_PROTOTYPE {
+  if (delta == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  return CLOCK_FUNC(Now)(&delta->previous);
+}
+
+CHRONOMETRY_DELTA_UPDATE_PROTOTYPE {
+  CHRONOMETRY_TYPE(ClockTimePoint) now;
+  OPSTATUS status;
+  if (delta == NULL || elapsed == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  status = CLOCK_FUNC(Now)(&now);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+  status = CLOCK_FUNC(DurationBetween)(delta->previous, now, elapsed);
+  if (status == STATUS_CONST(SUCCESS))
+    delta->previous = now;
+  return status;
+}
+
+CHRONOMETRY_FRAME_LIMITER_CREATE_PROTOTYPE {
+  if (limiter == NULL || target.nanoseconds <= 0)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  limiter->target = target;
+  limiter->frameStart.nanoseconds = 0;
+  return STATUS_CONST(SUCCESS);
+}
+
+CHRONOMETRY_FRAME_LIMITER_FROM_FPS_PROTOTYPE {
+  if (limiter == NULL || fps == 0)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  return TIMER_FUNC(FrameLimiterCreate)(
+      DURATION_FUNC(FromNanoseconds)(CHRONOMETRY_NANOSECONDS_PER_SECOND / fps),
+      limiter);
+}
+
+CHRONOMETRY_FRAME_LIMITER_BEGIN_PROTOTYPE {
+  if (limiter == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  return CLOCK_FUNC(Now)(&limiter->frameStart);
+}
+
+CHRONOMETRY_FRAME_LIMITER_REMAINING_PROTOTYPE {
+  CHRONOMETRY_TYPE(ClockTimePoint) now;
+  CHRONOMETRY_TYPE(Duration) elapsed;
+  OPSTATUS status;
+  if (limiter == NULL || remaining == NULL ||
+      limiter->frameStart.nanoseconds == 0)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  status = CLOCK_FUNC(Now)(&now);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+  status = CLOCK_FUNC(DurationBetween)(limiter->frameStart, now, &elapsed);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+  remaining->nanoseconds = limiter->target.nanoseconds - elapsed.nanoseconds;
+  if (remaining->nanoseconds < 0)
+    remaining->nanoseconds = 0;
+  return STATUS_CONST(SUCCESS);
+}

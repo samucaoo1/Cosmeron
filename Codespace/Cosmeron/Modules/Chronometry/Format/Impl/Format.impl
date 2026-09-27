@@ -1,0 +1,54 @@
+#pragma once
+
+#include <stdio.h>
+
+CHRONOMETRY_FORMAT_DATE_ISO_PROTOTYPE {
+  int written;
+  if (buffer == NULL || capacity == 0)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  written = snprintf(buffer, capacity, "%+05d-%02u-%02u", date.year,
+                     (unsigned)date.month, (unsigned)date.day);
+  return written < 0 || (size_t)written >= capacity ? STATUS_CONST(OUT_OF_RANGE)
+                                                     : STATUS_CONST(SUCCESS);
+}
+
+CHRONOMETRY_FORMAT_DATETIME_ISO_PROTOTYPE {
+  int written;
+  if (buffer == NULL || capacity == 0)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  written = snprintf(buffer, capacity,
+                     "%+05d-%02u-%02uT%02u:%02u:%02u.%03u", value.date.year,
+                     (unsigned)value.date.month, (unsigned)value.date.day,
+                     (unsigned)value.time.hour, (unsigned)value.time.minute,
+                     (unsigned)value.time.second,
+                     (unsigned)value.time.millisecond);
+  return written < 0 || (size_t)written >= capacity ? STATUS_CONST(OUT_OF_RANGE)
+                                                     : STATUS_CONST(SUCCESS);
+}
+
+CHRONOMETRY_PARSE_DATE_ISO_PROTOTYPE {
+  int year, month, day, consumed = 0;
+  if (text == NULL || date == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (sscanf(text, "%d-%d-%d%n", &year, &month, &day, &consumed) != 3 ||
+      text[consumed] != '\0' || month < 1 || month > 12 || day < 1 || day > 31)
+    return STATUS_CONST(OUT_OF_RANGE);
+  *date = (CHRONOMETRY_TYPE(Date)){year, (uint8_t)month, (uint8_t)day};
+  return STATUS_CONST(SUCCESS);
+}
+
+CHRONOMETRY_PARSE_DATETIME_ISO_PROTOTYPE {
+  int year, month, day, hour, minute, second, millisecond, consumed = 0;
+  if (text == NULL || value == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (sscanf(text, "%d-%d-%dT%d:%d:%d.%d%n", &year, &month, &day, &hour,
+             &minute, &second, &millisecond, &consumed) != 7 ||
+      text[consumed] != '\0' || month < 1 || month > 12 || day < 1 || day > 31 ||
+      hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 ||
+      second > 59 || millisecond < 0 || millisecond > 999)
+    return STATUS_CONST(OUT_OF_RANGE);
+  value->date = (CHRONOMETRY_TYPE(Date)){year, (uint8_t)month, (uint8_t)day};
+  value->time = (CHRONOMETRY_TYPE(TimeOfDay)){(uint16_t)millisecond,
+      (uint8_t)second, (uint8_t)minute, (uint8_t)hour};
+  return STATUS_CONST(SUCCESS);
+}

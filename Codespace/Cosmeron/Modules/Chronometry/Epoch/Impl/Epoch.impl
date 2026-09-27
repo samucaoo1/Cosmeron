@@ -1,0 +1,62 @@
+#pragma once
+
+#define CHRONOMETRY_UNIX_EPOCH_JDN INT64_C(2440588)
+#define CHRONOMETRY_RATA_DIE_JDN INT64_C(1721426)
+
+CHRONOMETRY_EPOCH_DATE_TO_JDN_PROTOTYPE {
+  return CALENDAR_FUNC(DateToOrdinal)(policy, date, julianDayNumber);
+}
+
+CHRONOMETRY_EPOCH_DATE_FROM_JDN_PROTOTYPE {
+  return CALENDAR_FUNC(DateFromOrdinal)(policy, julianDayNumber, date);
+}
+
+CHRONOMETRY_EPOCH_DATE_TO_RATA_DIE_PROTOTYPE {
+  CALENDAR_FUNC(Policy) gregorian =
+      CALENDAR_FUNC(SystemPolicy)(CALENDAR_CONST(GREGORIAN));
+  int64_t jdn;
+  if (rataDie == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (CALENDAR_FUNC(DateToOrdinal)(&gregorian, date, &jdn) != STATUS_CONST(SUCCESS))
+    return STATUS_CONST(OUT_OF_RANGE);
+  *rataDie = jdn - CHRONOMETRY_RATA_DIE_JDN + 1;
+  return STATUS_CONST(SUCCESS);
+}
+
+CHRONOMETRY_EPOCH_DATETIME_TO_UNIX_PROTOTYPE {
+  CALENDAR_FUNC(Policy) gregorian =
+      CALENDAR_FUNC(SystemPolicy)(CALENDAR_CONST(GREGORIAN));
+  int64_t jdn, days, seconds;
+  if (instant == NULL || !DATETIME_FUNC(IsValid)(&gregorian, value))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  CALENDAR_FUNC(DateToOrdinal)(&gregorian, value.date, &jdn);
+  days = jdn - CHRONOMETRY_UNIX_EPOCH_JDN;
+  seconds = days * INT64_C(86400) + value.time.hour * INT64_C(3600) +
+            value.time.minute * INT64_C(60) + value.time.second;
+  instant->seconds = seconds;
+  instant->nanoseconds =
+      (uint32_t)value.time.millisecond * UINT32_C(1000000);
+  return STATUS_CONST(SUCCESS);
+}
+
+CHRONOMETRY_EPOCH_DATETIME_FROM_UNIX_PROTOTYPE {
+  CALENDAR_FUNC(Policy) gregorian =
+      CALENDAR_FUNC(SystemPolicy)(CALENDAR_CONST(GREGORIAN));
+  int64_t days, seconds;
+  if (value == NULL || instant.nanoseconds >= UINT32_C(1000000000))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  days = CALENDAR_FUNC(_FloorDiv)(instant.seconds, INT64_C(86400));
+  seconds = instant.seconds - days * INT64_C(86400);
+  if (CALENDAR_FUNC(DateFromOrdinal)(&gregorian,
+          CHRONOMETRY_UNIX_EPOCH_JDN + days, &value->date) != STATUS_CONST(SUCCESS))
+    return STATUS_CONST(OUT_OF_RANGE);
+  value->time.hour = (uint8_t)(seconds / 3600);
+  seconds %= 3600;
+  value->time.minute = (uint8_t)(seconds / 60);
+  value->time.second = (uint8_t)(seconds % 60);
+  value->time.millisecond = (uint16_t)(instant.nanoseconds / UINT32_C(1000000));
+  return STATUS_CONST(SUCCESS);
+}
+
+#undef CHRONOMETRY_RATA_DIE_JDN
+#undef CHRONOMETRY_UNIX_EPOCH_JDN

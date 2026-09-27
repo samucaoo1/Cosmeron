@@ -1,0 +1,209 @@
+#pragma once
+
+enum CALENDAR_FUNC(Constants) {
+  CALENDAR_CONST(MONTHS_PER_YEAR) = 12,
+  CALENDAR_CONST(COMMON_YEAR_DAYS) = 365,
+  CALENDAR_CONST(JDN_MONTH_PIVOT) = 14,
+  CALENDAR_CONST(JDN_YEAR_OFFSET) = 4800,
+  CALENDAR_CONST(JDN_MONTH_MULTIPLIER) = 153,
+  CALENDAR_FUNC(JdnGREGORIANOffset) = 32045,
+  CALENDAR_FUNC(JdnJULIANOffset) = 32083
+};
+
+inline static int64_t CALENDAR_FUNC(_FloorDiv)(int64_t value, int64_t divisor) {
+  int64_t quotient = value / divisor;
+  int64_t remainder = value % divisor;
+  return quotient - (remainder < 0);
+}
+
+CHRONOMETRY_CALENDAR_SYSTEM_POLICY_PROTOTYPE {
+  CALENDAR_FUNC(Policy) policy = {CALENDAR_CONST(PURE_SYSTEM), system, {0}};
+  return policy;
+}
+
+CHRONOMETRY_CALENDAR_REFORM_POLICY_PROTOTYPE {
+  if (policy == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  policy->kind = CALENDAR_CONST(HISTORICAL_REFORM);
+  policy->system = CALENDAR_CONST(GREGORIAN);
+  policy->reform.before = CALENDAR_CONST(JULIAN);
+  policy->reform.after = CALENDAR_CONST(GREGORIAN);
+  switch (id) {
+#define X(NAME, BEFORE_YEAR, BEFORE_MONTH, BEFORE_DAY, AFTER_YEAR,             \
+          AFTER_MONTH, AFTER_DAY, SUPPRESSED)                                 \
+  case CALENDAR_CONST(NAME):                                                      \
+    policy->reform.lastBefore = (CHRONOMETRY_TYPE(Date)){                    \
+        BEFORE_YEAR, CALENDAR_CONST(BEFORE_MONTH), BEFORE_DAY};                   \
+    policy->reform.firstAfter = (CHRONOMETRY_TYPE(Date)){                    \
+        AFTER_YEAR, CALENDAR_CONST(AFTER_MONTH), AFTER_DAY};                      \
+    policy->reform.suppressedDays = SUPPRESSED;                              \
+    break;
+    CHRONOMETRY_CALENDAR_REFORM_TABLE(X)
+#undef X
+  default:
+    return STATUS_CONST(OUT_OF_RANGE);
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+CHRONOMETRY_CALENDAR_DATE_COMPARE_PROTOTYPE {
+  if (left.year != right.year)
+    return (left.year > right.year) - (left.year < right.year);
+  if (left.month != right.month)
+    return (left.month > right.month) - (left.month < right.month);
+  return (left.day > right.day) - (left.day < right.day);
+}
+
+CHRONOMETRY_CALENDAR_IS_LEAP_YEAR_PROTOTYPE {
+  if (system == CALENDAR_CONST(JULIAN))
+    return year % 4 == 0;
+  return year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+}
+
+CHRONOMETRY_CALENDAR_DAYS_IN_MONTH_PROTOTYPE {
+  static const uint8_t days[] = {0,
+#define X(NAME, NUMBER, DAYS) [NUMBER] = CALENDAR_FUNC(DaysIn##NAME),
+    CHRONOMETRY_CALENDAR_MONTH_TABLE(X)
+#undef X
+  };
+  if (month < CALENDAR_CONST(JANUARY) || month > CALENDAR_CONST(DECEMBER))
+    return 0;
+  return (uint8_t)(days[month] +
+      (month == CALENDAR_CONST(FEBRUARY) &&
+       CALENDAR_FUNC(IsLeapYear)(system, year)));
+}
+
+inline static CALENDAR_FUNC(System) CALENDAR_FUNC(_SystemFor)(
+    const CALENDAR_FUNC(Policy) *policy, CHRONOMETRY_TYPE(Date) date) {
+  if (policy->kind == CALENDAR_CONST(PURE_SYSTEM))
+    return policy->system;
+  return CALENDAR_FUNC(DateCompare)(date, policy->reform.firstAfter) >= 0
+             ? policy->reform.after
+             : policy->reform.before;
+}
+
+CHRONOMETRY_CALENDAR_DATE_IS_VALID_PROTOTYPE {
+  CALENDAR_FUNC(System) system;
+  uint8_t maximum;
+  if (policy == NULL || date.year <= -4800)
+    return false;
+  if (policy->kind == CALENDAR_CONST(HISTORICAL_REFORM) &&
+      CALENDAR_FUNC(DateCompare)(date, policy->reform.lastBefore) > 0 &&
+      CALENDAR_FUNC(DateCompare)(date, policy->reform.firstAfter) < 0)
+    return false;
+  system = CALENDAR_FUNC(_SystemFor)(policy, date);
+  maximum = CALENDAR_FUNC(DaysInMonth)(system, date.year, date.month);
+  return maximum != 0 && date.day > 0 && date.day <= maximum;
+}
+
+CHRONOMETRY_CALENDAR_DATE_TO_DAY_OF_YEAR_PROTOTYPE {
+  CALENDAR_FUNC(System) system;
+  uint16_t value;
+  if (dayOfYear == NULL || !CALENDAR_FUNC(DateIsValid)(policy, date))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  system = CALENDAR_FUNC(_SystemFor)(policy, date);
+  value = date.day;
+  /* Intentional fallthrough: the original cumulative month algorithm. */
+  switch (date.month) {
+  case CALENDAR_CONST(DECEMBER): value += CALENDAR_FUNC(DaysInNOVEMBER); /* fall through */
+  case CALENDAR_CONST(NOVEMBER): value += CALENDAR_FUNC(DaysInOCTOBER); /* fall through */
+  case CALENDAR_CONST(OCTOBER): value += CALENDAR_FUNC(DaysInSEPTEMBER); /* fall through */
+  case CALENDAR_CONST(SEPTEMBER): value += CALENDAR_FUNC(DaysInAUGUST); /* fall through */
+  case CALENDAR_CONST(AUGUST): value += CALENDAR_FUNC(DaysInJULY); /* fall through */
+  case CALENDAR_CONST(JULY): value += CALENDAR_FUNC(DaysInJUNE); /* fall through */
+  case CALENDAR_CONST(JUNE): value += CALENDAR_FUNC(DaysInMAY); /* fall through */
+  case CALENDAR_CONST(MAY): value += CALENDAR_FUNC(DaysInAPRIL); /* fall through */
+  case CALENDAR_CONST(APRIL): value += CALENDAR_FUNC(DaysInMARCH); /* fall through */
+  case CALENDAR_CONST(MARCH): value += (uint16_t)(CALENDAR_FUNC(DaysInFEBRUARY) +
+              CALENDAR_FUNC(IsLeapYear)(system, date.year));
+          /* fall through */
+  case CALENDAR_CONST(FEBRUARY): value += CALENDAR_FUNC(DaysInJANUARY); /* fall through */
+  case CALENDAR_CONST(JANUARY): break;
+  default: return STATUS_CONST(OUT_OF_RANGE);
+  }
+  if (policy->kind == CALENDAR_CONST(HISTORICAL_REFORM) &&
+      date.year == policy->reform.firstAfter.year &&
+      CALENDAR_FUNC(DateCompare)(date, policy->reform.firstAfter) >= 0)
+    value -= policy->reform.suppressedDays;
+  *dayOfYear = value;
+  return STATUS_CONST(SUCCESS);
+}
+
+inline static int64_t CALENDAR_FUNC(_ToJdn)(CALENDAR_FUNC(System) system,
+                                          CHRONOMETRY_TYPE(Date) date) {
+  int64_t a = CALENDAR_FUNC(_FloorDiv)(CALENDAR_CONST(JDN_MONTH_PIVOT) - date.month,
+                                      CALENDAR_CONST(MONTHS_PER_YEAR));
+  int64_t y = (int64_t)date.year + CALENDAR_CONST(JDN_YEAR_OFFSET) - a;
+  int64_t m = (int64_t)date.month + CALENDAR_CONST(MONTHS_PER_YEAR) * a - 3;
+  int64_t value = date.day +
+      (CALENDAR_CONST(JDN_MONTH_MULTIPLIER) * m + 2) / 5 +
+      CALENDAR_CONST(COMMON_YEAR_DAYS) * y + y / 4;
+  return system == CALENDAR_CONST(GREGORIAN)
+             ? value - y / 100 + y / 400 - CALENDAR_FUNC(JdnGREGORIANOffset)
+             : value - CALENDAR_FUNC(JdnJULIANOffset);
+}
+
+inline static CHRONOMETRY_TYPE(Date) CALENDAR_FUNC(_FromJdn)(
+    CALENDAR_FUNC(System) system, int64_t jdn) {
+  int64_t b, c, d, e, m;
+  if (system == CALENDAR_CONST(GREGORIAN)) {
+    int64_t a = jdn + 32044;
+    b = (4 * a + 3) / 146097;
+    c = a - (146097 * b) / 4;
+  } else {
+    b = 0;
+    c = jdn + 32082;
+  }
+  d = (4 * c + 3) / 1461;
+  e = c - (1461 * d) / 4;
+  m = (5 * e + 2) / 153;
+  return (CHRONOMETRY_TYPE(Date)){
+      (int32_t)(100 * b + d - 4800 + m / 10),
+      (uint8_t)(m + 3 - 12 * (m / 10)),
+      (uint8_t)(e - (153 * m + 2) / 5 + 1)};
+}
+
+CHRONOMETRY_CALENDAR_DATE_TO_ORDINAL_PROTOTYPE {
+  if (ordinal == NULL || !CALENDAR_FUNC(DateIsValid)(policy, date))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  *ordinal = CALENDAR_FUNC(_ToJdn)(CALENDAR_FUNC(_SystemFor)(policy, date), date);
+  return STATUS_CONST(SUCCESS);
+}
+
+CHRONOMETRY_CALENDAR_DATE_FROM_ORDINAL_PROTOTYPE {
+  CALENDAR_FUNC(System) system;
+  CHRONOMETRY_TYPE(Date) candidate;
+  CHRONOMETRY_TYPE(Date) minimumDate = {-4799, CALENDAR_CONST(JANUARY), 1};
+  CHRONOMETRY_TYPE(Date) maximumDate = {
+      4194303, CALENDAR_CONST(DECEMBER), 31};
+  int64_t minimumOrdinal;
+  int64_t maximumOrdinal;
+  if (policy == NULL || date == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  system = policy->kind == CALENDAR_CONST(PURE_SYSTEM) ? policy->system
+      : (ordinal >= CALENDAR_FUNC(_ToJdn)(policy->reform.after,
+                                        policy->reform.firstAfter)
+             ? policy->reform.after : policy->reform.before);
+  minimumOrdinal = CALENDAR_FUNC(_ToJdn)(system, minimumDate);
+  maximumOrdinal = CALENDAR_FUNC(_ToJdn)(system, maximumDate);
+  if (ordinal < minimumOrdinal || ordinal > maximumOrdinal)
+    return STATUS_CONST(OUT_OF_RANGE);
+  candidate = CALENDAR_FUNC(_FromJdn)(system, ordinal);
+  if (!CALENDAR_FUNC(DateIsValid)(policy, candidate))
+    return STATUS_CONST(OUT_OF_RANGE);
+  *date = candidate;
+  return STATUS_CONST(SUCCESS);
+}
+
+CHRONOMETRY_CALENDAR_DATE_DIFFERENCE_PROTOTYPE {
+  int64_t left_ordinal, right_ordinal;
+  if (days == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (CALENDAR_FUNC(DateToOrdinal)(policy, left, &left_ordinal) !=
+          STATUS_CONST(SUCCESS) ||
+      CALENDAR_FUNC(DateToOrdinal)(policy, right, &right_ordinal) !=
+          STATUS_CONST(SUCCESS))
+    return STATUS_CONST(OUT_OF_RANGE);
+  *days = right_ordinal - left_ordinal;
+  return STATUS_CONST(SUCCESS);
+}
