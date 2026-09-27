@@ -1,6 +1,6 @@
 #define RANDOM_SHUFFLE_SWAP_BUFFER_SIZE 64U
 
-inline static void RANDOM_SHUFFLE_FUNC(Swap)(unsigned char *first,
+static inline void RANDOM_SHUFFLE_FUNC(Swap)(unsigned char *first,
                                            unsigned char *second,
                                            size_t size) {
   unsigned char temporary[RANDOM_SHUFFLE_SWAP_BUFFER_SIZE];
@@ -16,11 +16,11 @@ inline static void RANDOM_SHUFFLE_FUNC(Swap)(unsigned char *first,
   }
 }
 
-inline static OPSTATUS RANDOM_SHUFFLE_FUNC(VectorFromSource)(
+static inline OPSTATUS RANDOM_SHUFFLE_FUNC(VectorFromSource)(
     void *vector,
     size_t count,
     size_t elementSize,
-    TRandomSource *source) {
+    RANDOM_SOURCE_TYPE(Value) *source) {
   unsigned char *bytes;
   size_t index;
   size_t totalSize;
@@ -77,10 +77,10 @@ inline static OPSTATUS RANDOM_SHUFFLE_FUNC(VectorFromSource)(
   return STATUS_CONST(SUCCESS);
 }
 
-inline static OPSTATUS RANDOM_SHUFFLE_FUNC(Vector)(void *vector,
+static inline OPSTATUS RANDOM_SHUFFLE_FUNC(Vector)(void *vector,
                                                  size_t count,
                                                  size_t elementSize) {
-  TRandomSource source;
+  RANDOM_SOURCE_TYPE(Value) source;
 
   if (elementSize == 0U) {
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -100,7 +100,7 @@ inline static OPSTATUS RANDOM_SHUFFLE_FUNC(Vector)(void *vector,
 
   {
     OPSTATUS status = RANDOM_SOURCE_FUNC(
-        Init)(&source, &RANDOM_ENGINE_FUNC(Xoshiro, VTable),
+        Init)(&source, &RANDOM_ENGINE_FUNC(Xoshiro, FunctionTable),
               RANDOM_ENTROPY_FUNC(Collect)(), NULL);
     if (status != STATUS_CONST(SUCCESS))
       return status;
