@@ -2,7 +2,7 @@
 
 #if CONTAINER_FUNCTION_TABLE_ENABLED
 
-#define LINKED_LIST_FUNCTION_TABLE(TYPE, SUFFIX)                                   \
+#define LINKED_LIST_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                                   \
   typedef struct LINKED_LIST_FUNC(SUFFIX, FunctionTable) {                   \
     /* Lifecycle */                                                            \
     OPSTATUS (*init)(LINKED_LIST_TYPE(SUFFIX) *);                                    \
@@ -55,6 +55,6 @@
           .size = LINKED_LIST_FUNC(SUFFIX, Size)};
 
 #else
-#define LINKED_LIST_FUNCTION_TABLE(...)
+#define LINKED_LIST_FUNCTION_TABLE_STRUCT(...)
 #define LINKED_LIST_FUNCTION_TABLE_INSTANCE(...)
 #endif

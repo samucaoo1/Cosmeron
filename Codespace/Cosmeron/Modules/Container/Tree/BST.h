@@ -3,7 +3,7 @@
 /* =============================================================
  * BST — plain Binary Search Tree (no balancing).
  *
- * BST does NOT auto-instantiate TREE_BST_SET_DEFINE for int /
+ * BST does NOT auto-instantiate TREE_BST_SET_IMPLEMENT_ALL for int /
  * float / double the way AVL and RedBlack do. Reason: BST has
  * worst-case O(n) height, which makes Insert / Remove / Find
  * degrade to O(n) on sorted input. AVL and RedBlack are strictly
@@ -11,7 +11,7 @@
  * reference and a baseline for correctness checks.
  *
  * If you really need a BST, define it explicitly:
- *   TREE_BST_SET_DEFINE(my_key)
+ *   TREE_BST_SET_IMPLEMENT_ALL(my_key)
  * ============================================================= */
 
 #include "Tree.space"
@@ -21,37 +21,37 @@
  * Public entry points — BST SET
  * ============================================================= */
 
-#define TREE_BST_SET_DEFINE(KEY_TYPE)                                          \
+#define TREE_BST_SET_IMPLEMENT_ALL(KEY_TYPE)                                          \
   TBST_DEFINE_SET(TTREE_SET_TYPE(BST, KEY_TYPE), KEY_TYPE, COMPARISON_FUNC(KEY_TYPE))       \
   typedef TTREE_SET_TYPE(BST, KEY_TYPE) TTREE_PUBLIC_SET_TYPE(BST, KEY_TYPE); \
-  TTREE_FUNCTION_TABLE_SET(TTREE_SET_TYPE(BST, KEY_TYPE), KEY_TYPE)                    \
+  TTREE_FUNCTION_TABLE_STRUCT_SET(TTREE_SET_TYPE(BST, KEY_TYPE), KEY_TYPE)                    \
   TTREE_FUNCTION_TABLE_INSTANCE_SET(TTREE_SET_TYPE(BST, KEY_TYPE))
 
-#define TREE_BST_SET_DEFINE_CMP(SUFFIX, KEY_TYPE, CMP)                        \
+#define TREE_BST_SET_IMPLEMENT_ALL_CMP(SUFFIX, KEY_TYPE, CMP)                        \
   TBST_DEFINE_SET(TTREE_SET_TYPE(BST, SUFFIX), KEY_TYPE, CMP)                 \
   typedef TTREE_SET_TYPE(BST, SUFFIX) TTREE_PUBLIC_SET_TYPE(BST, SUFFIX); \
-  TTREE_FUNCTION_TABLE_SET(TTREE_SET_TYPE(BST, SUFFIX), KEY_TYPE)                      \
+  TTREE_FUNCTION_TABLE_STRUCT_SET(TTREE_SET_TYPE(BST, SUFFIX), KEY_TYPE)                      \
   TTREE_FUNCTION_TABLE_INSTANCE_SET(TTREE_SET_TYPE(BST, SUFFIX))
 
 /* =============================================================
  * Public entry points — BST MAP
  * ============================================================= */
 
-#define TREE_BST_MAP_DEFINE(KEY_TYPE, VALUE_TYPE)                              \
+#define TREE_BST_MAP_IMPLEMENT_ALL(KEY_TYPE, VALUE_TYPE)                              \
   TBST_DEFINE_MAP(TTREE_MAP_TYPE(BST, KEY_TYPE, VALUE_TYPE), KEY_TYPE,        \
                    VALUE_TYPE, COMPARISON_FUNC(KEY_TYPE))                                    \
   typedef TTREE_MAP_TYPE(BST, KEY_TYPE, VALUE_TYPE)                       \
       TTREE_PUBLIC_MAP_TYPE(BST, KEY_TYPE, VALUE_TYPE);                     \
-  TTREE_FUNCTION_TABLE_MAP(TTREE_MAP_TYPE(BST, KEY_TYPE, VALUE_TYPE), KEY_TYPE,        \
+  TTREE_FUNCTION_TABLE_STRUCT_MAP(TTREE_MAP_TYPE(BST, KEY_TYPE, VALUE_TYPE), KEY_TYPE,        \
                    VALUE_TYPE)                                                 \
   TTREE_FUNCTION_TABLE_INSTANCE_MAP(TTREE_MAP_TYPE(BST, KEY_TYPE, VALUE_TYPE))
 
-#define TREE_BST_MAP_DEFINE_CMP(SUFFIX_K, KEY_TYPE, VALUE_TYPE, CMP)          \
+#define TREE_BST_MAP_IMPLEMENT_ALL_CMP(SUFFIX_K, KEY_TYPE, VALUE_TYPE, CMP)          \
   TBST_DEFINE_MAP(TTREE_MAP_TYPE(BST, SUFFIX_K, VALUE_TYPE), KEY_TYPE,        \
                    VALUE_TYPE, CMP)                                            \
   typedef TTREE_MAP_TYPE(BST, SUFFIX_K, VALUE_TYPE)                       \
       TTREE_PUBLIC_MAP_TYPE(BST, SUFFIX_K, VALUE_TYPE);                     \
-  TTREE_FUNCTION_TABLE_MAP(TTREE_MAP_TYPE(BST, SUFFIX_K, VALUE_TYPE), KEY_TYPE,        \
+  TTREE_FUNCTION_TABLE_STRUCT_MAP(TTREE_MAP_TYPE(BST, SUFFIX_K, VALUE_TYPE), KEY_TYPE,        \
                    VALUE_TYPE)                                                 \
   TTREE_FUNCTION_TABLE_INSTANCE_MAP(TTREE_MAP_TYPE(BST, SUFFIX_K, VALUE_TYPE))
 
@@ -78,9 +78,9 @@
  * Default instantiations
  * ============================================================= */
 
-TREE_BST_SET_DEFINE(int)
-TREE_BST_SET_DEFINE(float)
-TREE_BST_SET_DEFINE(double)
+TREE_BST_SET_IMPLEMENT_ALL(int)
+TREE_BST_SET_IMPLEMENT_ALL(float)
+TREE_BST_SET_IMPLEMENT_ALL(double)
 
-TREE_BST_MAP_DEFINE(int, int)
-TREE_BST_MAP_DEFINE(int, float)
+TREE_BST_MAP_IMPLEMENT_ALL(int, int)
+TREE_BST_MAP_IMPLEMENT_ALL(int, float)

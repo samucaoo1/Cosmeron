@@ -2,7 +2,7 @@
 
 #if CONTAINER_FUNCTION_TABLE_ENABLED
 
-#define LINKED_QUEUE_FUNCTION_TABLE(TYPE, SUFFIX)                           \
+#define LINKED_QUEUE_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                           \
   typedef struct LINKED_QUEUE_FUNC(SUFFIX, FunctionTable) {               \
     /* Lifecycle */                                                            \
     OPSTATUS (*init)(LINKED_QUEUE_TYPE(SUFFIX) *);                            \
@@ -37,6 +37,6 @@
           .size = LINKED_QUEUE_FUNC(SUFFIX, Size)};
 
 #else
-#define LINKED_QUEUE_FUNCTION_TABLE(...)
+#define LINKED_QUEUE_FUNCTION_TABLE_STRUCT(...)
 #define LINKED_QUEUE_FUNCTION_TABLE_INSTANCE(...)
 #endif

@@ -2,7 +2,7 @@
 
 #if CONTAINER_FUNCTION_TABLE_ENABLED
 
-#define LINKED_DEQUE_FUNCTION_TABLE(TYPE, SUFFIX)                                  \
+#define LINKED_DEQUE_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                                  \
   typedef struct LINKED_DEQUE_FUNC(SUFFIX, FunctionTable) {                       \
     /* Lifecycle */                                                            \
     OPSTATUS (*init)(LINKED_DEQUE_TYPE(SUFFIX) *);                                   \
@@ -41,6 +41,6 @@
           .size = LINKED_DEQUE_FUNC(SUFFIX, Size)};
 
 #else
-#define LINKED_DEQUE_FUNCTION_TABLE(...)
+#define LINKED_DEQUE_FUNCTION_TABLE_STRUCT(...)
 #define LINKED_DEQUE_FUNCTION_TABLE_INSTANCE(...)
 #endif
