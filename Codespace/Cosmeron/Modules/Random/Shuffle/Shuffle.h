@@ -2,13 +2,13 @@
 
 #include "Shuffle.space"
 
-inline static OPSTATUS RANDOM_SHUFFLE_FUNC(VectorFromSource)(
+static inline OPSTATUS RANDOM_SHUFFLE_FUNC(VectorFromSource)(
     void *vector,
     size_t count,
     size_t elementSize,
-    TRandomSource *source);
+    RANDOM_SOURCE_TYPE(Value) *source);
 
-inline static OPSTATUS RANDOM_SHUFFLE_FUNC(Vector)(void *vector,
+static inline OPSTATUS RANDOM_SHUFFLE_FUNC(Vector)(void *vector,
                                                  size_t count,
                                                  size_t elementSize);
 
