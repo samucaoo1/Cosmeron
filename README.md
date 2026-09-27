@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Docs/Assets/Brand/Cosmeron-Horizontal.jpg" alt="Cosmeron — modular C11 systems programming library" width="900">
+  <img src="Docs/Assets/Brand/Cosmeron-Horizontal.png" alt="Cosmeron — modular C11 systems programming library" width="900">
 </p>
 
 # Cosmeron

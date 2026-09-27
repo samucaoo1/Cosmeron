@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="../../Assets/Brand/Cosmeron.jpg" alt="Cosmeron" width="220">
+  <img src="../../Assets/Brand/Cosmeron.png" alt="Cosmeron" width="220">
 </p>
 
 # Cosmeron
