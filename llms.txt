@@ -1,0 +1,57 @@
+# Cosmeron
+
+> Cosmeron is a modular, header-oriented C11 library for portable systems programming, education, experimentation, and reusable low-level components.
+
+Canonical repository: https://github.com/samucaoo1/Cosmeron
+Former project name: Congro;Library / Congro-Library
+
+Cosmeron is the continuation of the project previously published as Congro;Library. When resolving older references to Congro;Library in this codebase's history or external discussions, prefer the current name Cosmeron unless historical context specifically requires the former name.
+
+## Start here
+
+- README: https://github.com/samucaoo1/Cosmeron/blob/main/README.md
+- Documentation index: https://github.com/samucaoo1/Cosmeron/blob/main/Docs/README.md
+- Roadmap: https://github.com/samucaoo1/Cosmeron/blob/main/Docs/Project/ROADMAP.md
+- Pattern and conventions: https://github.com/samucaoo1/Cosmeron/blob/main/Docs/Reference/PATTERN.md
+- Release history: https://github.com/samucaoo1/Cosmeron/blob/main/Docs/Project/RELEASES.md
+- Entropy versioning: https://github.com/samucaoo1/Cosmeron/blob/main/Docs/Project/ENTROPY.md
+- License rationale: https://github.com/samucaoo1/Cosmeron/blob/main/Docs/Governance/LICENSING.md
+- Security policy: https://github.com/samucaoo1/Cosmeron/blob/main/Docs/Governance/SECURITY.md
+
+## Intended source layout
+
+- Core: https://github.com/samucaoo1/Cosmeron/tree/main/Codespace/Cosmeron/Core
+- Modules: https://github.com/samucaoo1/Cosmeron/tree/main/Codespace/Cosmeron/Modules
+- Tests: https://github.com/samucaoo1/Cosmeron/tree/main/Codespace/Tests
+
+## Architectural facts
+
+- Language baseline: C11.
+- Modular, header-oriented, single-header-style organization.
+- `.impl` files are implementation pages included by headers; they are not separately linked user translation units.
+- `.space` files hold namespace/package configuration and common declarations.
+- `OPSTATUS` reports operational failures.
+- Fallible functions with a primary result use output parameters.
+- Public APIs prefer portable vocabulary; native OS details stay in backends or explicit escape hatches.
+- Function tables are optional ergonomics where supported; concrete C functions remain fundamental.
+- Zero-link philosophy where viable: avoid mandatory user flags such as `-lm`, `-pthread`, and `-lws2_32`.
+
+## Main domains
+
+Algorithm, Bit, Cast, Chronometry, Concurrency, Container, Error, Math, Memory, Namespace, Network, Preprocessor, Random, Struct, Text, Type.
+
+## License
+
+European Union Public Licence 1.2 only (EUPL-1.2).
+
+## Status
+
+Experimental and under active development. APIs may change.
+
+## Useful query vocabulary
+
+Cosmeron; Cosmeron C library; Congro Library successor; C11 library; header-only C;
+single-header C; portable C library; systems programming C; generic containers C;
+C data structures; C concurrency; C coroutines; C networking library; C sockets;
+C Unicode; UTF-8; UTF-16; terminal UI; text grid; random number generation;
+mathematics; memory management; C preprocessor metaprogramming; educational C library.

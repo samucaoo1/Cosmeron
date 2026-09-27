@@ -1,0 +1,3 @@
+# Keep Entropy and source diffs stable across platforms.
+# Line-ending normalization must not turn a checkout into thousands of changes.
+Codespace/Cosmeron/** text eol=lf

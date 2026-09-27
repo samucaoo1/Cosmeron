@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use Cosmeron in academic or technical work, please cite this repository."
+title: "Cosmeron"
+type: software
+authors:
+  - family-names: "Vinicios"
+    given-names: "Samuel"
+    alias: "okarin"
+repository-code: "https://github.com/samucaoo1/Cosmeron"
+url: "https://github.com/samucaoo1/Cosmeron"
+license: "EUPL-1.2"
+abstract: >-
+  Cosmeron is a modular, header-oriented C11 library for portable systems
+  programming, education, experimentation, and reusable low-level components.
+  It provides a consistent architecture for algorithms, data structures,
+  containers, concurrency, networking, chronometry, random generation,
+  mathematics, text and Unicode processing, memory management, bit operations,
+  preprocessing, and generic typed APIs.
+keywords:
+  - C11
+  - C library
+  - header-only
+  - systems programming
+  - portable C
+  - data structures
+  - containers
+  - concurrency
+  - networking
+  - Unicode
+  - metaprogramming
+  - educational software
