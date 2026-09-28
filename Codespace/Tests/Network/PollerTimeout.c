@@ -9,6 +9,7 @@ int main(void) {
   NETWORK_ADDRESS_TYPE(TAddress) loopback;
   NETWORK_ADDRESS_TYPE(TEndpoint) endpoint;
   CHRONOMETRY_TYPE(Duration) timeout;
+  NETWORK_POLLER_TYPE(Handle) handle = 0;
 
   NETWORK_POLLER_FUNC(Init)(&poller);
   assert(FLAT_VECTOR_FUNC(Network_Event, Init)(&events) == STATUS_CONST(SUCCESS));
@@ -17,8 +18,9 @@ int main(void) {
   NETWORK_ADDRESS_FUNC(Endpoint_Create)(&endpoint, &loopback, 0);
   assert(NETWORK_DATAGRAM_FUNC(Bind)(&datagram, &endpoint, NULL) == STATUS_CONST(SUCCESS));
   assert(NETWORK_POLLER_FUNC(AddDatagram)(
-             &poller, &datagram, NETWORK_EVENT_CONST(READ), NULL, NULL, NULL) ==
+             &poller, &datagram, NETWORK_EVENT_CONST(READ), NULL, &handle, NULL) ==
          STATUS_CONST(SUCCESS));
+  assert(handle != 0);
 
   timeout = DURATION_FUNC(FromNanoseconds)(0);
   assert(NETWORK_POLLER_FUNC(WaitFor)(&poller, &events, timeout, NULL) ==
