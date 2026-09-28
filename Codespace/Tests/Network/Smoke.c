@@ -17,11 +17,15 @@ int main(void) {
   NETWORK_ADDRESS_FUNC(Endpoint_Create)(&endpoint, &address, 0);
 
   assert(NETWORK_LISTENER_FUNC(ListenAt)(&listener, &endpoint, NULL) == STATUS_CONST(SUCCESS));
-  assert(NETWORK_LISTENER_FUNC(LocalEndpoint)(&listener)->port != 0);
+  assert(NETWORK_LISTENER_FUNC(LocalEndpoint)(&listener, &endpoint) ==
+         STATUS_CONST(SUCCESS));
+  assert(endpoint.port != 0);
   NETWORK_LISTENER_FUNC(Close)(&listener);
 
   assert(NETWORK_DATAGRAM_FUNC(Bind)(&datagram, &endpoint, NULL) == STATUS_CONST(SUCCESS));
-  assert(NETWORK_DATAGRAM_FUNC(LocalEndpoint)(&datagram)->port != 0);
+  assert(NETWORK_DATAGRAM_FUNC(LocalEndpoint)(&datagram, &endpoint) ==
+         STATUS_CONST(SUCCESS));
+  assert(endpoint.port != 0);
   NETWORK_DATAGRAM_FUNC(Close)(&datagram);
   return 0;
 }
