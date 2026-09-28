@@ -24,13 +24,13 @@ static inline OPSTATUS FUTURE_FUNC(Wait)(CONCURRENCY_TYPE(TFuture) *future);
 static inline OPSTATUS FUTURE_FUNC(Get)(CONCURRENCY_TYPE(TFuture) *future, void **outResult,
                                   OPSTATUS *outStatus);
 
-typedef struct CONCURRENCY_TYPE(CONCURRENCY_TYPE(TFuture)Task) {
+typedef struct CONCURRENCY_TYPE(TFutureTask) {
   CONCURRENCY_TYPE(TFuture) *future;
   CONCURRENCY_TYPE(FutureFunction) function;
   void *argument;
-} CONCURRENCY_TYPE(CONCURRENCY_TYPE(TFuture)Task);
+} CONCURRENCY_TYPE(TFutureTask);
 
-static inline CONCURRENCY_TYPE(TTask) FUTURE_FUNC(Task)(CONCURRENCY_TYPE(CONCURRENCY_TYPE(TFuture)Task) *futureTask, CONCURRENCY_TYPE(TFuture) *future,
+static inline CONCURRENCY_TYPE(TTask) FUTURE_FUNC(Task)(CONCURRENCY_TYPE(TFutureTask) *futureTask, CONCURRENCY_TYPE(TFuture) *future,
                                     CONCURRENCY_TYPE(FutureFunction) function, void *argument);
 
 #include "Impl/Future.impl"
