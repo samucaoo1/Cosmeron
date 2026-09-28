@@ -1,4 +1,4 @@
-#define SEQUENTIAL_CAPACITY_RESERVE(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)     \
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_CAPACITY_RESERVE(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)     \
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        size_t newCapacity) {                  \
     if (!container)                                                            \
@@ -16,7 +16,7 @@
     return STATUS_CONST(SUCCESS);                                                 \
   }
 
-#define SEQUENTIAL_CAPACITY_SHRINK_TO_FIT(TYPE, FUNCTION_NAME,                 \
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_CAPACITY_SHRINK_TO_FIT(TYPE, FUNCTION_NAME,                 \
                                           CONTAINER_STRUCT)                    \
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container) {          \
     if (!container)                                                            \
