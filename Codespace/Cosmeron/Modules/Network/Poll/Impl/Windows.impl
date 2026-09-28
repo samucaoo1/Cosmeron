@@ -180,7 +180,7 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
   for (i = 0; i < poller->registrations.size; ++i) {
     flags[i] &= poller->registrations.data[i].interests;
     if (NETWORK_POLLER_FUNC(_PushEvent)(
-            poller, events, &poller->registrations.data[i], flags[i], error) !=
+            events, &poller->registrations.data[i], flags[i], error) !=
         STATUS_CONST(SUCCESS)) {
       Memory_Free(descriptors);
       Memory_Free(registrationIndices);
