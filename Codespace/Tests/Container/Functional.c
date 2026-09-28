@@ -128,7 +128,11 @@ static int test_string(void) {
   TEST_ASSERT(string.api->length(&string) == 7);
   TEST_ASSERT(string.api->insertStr(&string, 6, library) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(string.api->length(&string) == 15);
-  TEST_ASSERT(memcmp(string.api->cStr(&string), expected, sizeof(expected)) == 0);
+  {
+    const uint8_t *cstr = NULL;
+    TEST_ASSERT(string.api->cStr(&string, &cstr) == STATUS_CONST(SUCCESS));
+    TEST_ASSERT(memcmp(cstr, expected, sizeof(expected)) == 0);
+  }
   string.api->destroy(&string);
   return 0;
 }
@@ -450,7 +454,14 @@ static int test_string_contracts(void) {
               STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Container_Flat_String_8_Find(NULL, (uint8_t)'x', 0U, &index) ==
               STATUS_CONST(INVALID_ARGUMENT));
-  TEST_ASSERT(Container_Flat_String_8_Data(NULL) == NULL);
+  {
+    uint8_t *data = (uint8_t *)(uintptr_t)1;
+    TEST_ASSERT(Container_Flat_String_8_Data(NULL, &data) ==
+                STATUS_CONST(INVALID_ARGUMENT));
+    TEST_ASSERT(data == (uint8_t *)(uintptr_t)1);
+    TEST_ASSERT(Container_Flat_String_8_Data(&text, NULL) ==
+                STATUS_CONST(INVALID_ARGUMENT));
+  }
 
   Container_Flat_String_8_Destroy(&text);
   Container_Flat_String_8_Destroy(&other);
