@@ -36,14 +36,14 @@
 
 #define TreeRemove(self, key)                                                  \
   _Generic(&(self), TREE_ALL_ASSOC(Remove))(&(self), (key))
-#define TreeFind(self, key)                                                    \
-  _Generic(&(self), TREE_ALL_ASSOC(Find))(&(self), (key))
+#define TreeFind(self, key, out)                                               \
+  _Generic(&(self), TREE_ALL_ASSOC(Find))(&(self), (key), (out))
 #define TreeFindNode(self, key)                                                \
   _Generic(&(self), TREE_ALL_ASSOC(FindNode))(&(self), (key))
 #define TreeContains(self, key)                                                \
   _Generic(&(self), TREE_ALL_ASSOC(Contains))(&(self), (key))
-#define TreeMin(self) _Generic(&(self), TREE_ALL_ASSOC(Min))(&(self))
-#define TreeMax(self) _Generic(&(self), TREE_ALL_ASSOC(Max))(&(self))
+#define TreeMin(self, out) _Generic(&(self), TREE_ALL_ASSOC(Min))(&(self), (out))
+#define TreeMax(self, out) _Generic(&(self), TREE_ALL_ASSOC(Max))(&(self), (out))
 #define TreeEmpty(self) _Generic(&(self), TREE_ALL_ASSOC(Empty))(&(self))
 #define TreeSize(self) _Generic(&(self), TREE_ALL_ASSOC(Size))(&(self))
 #define TreeBegin(self) _Generic(&(self), TREE_ALL_ASSOC(Begin))(&(self))

@@ -100,12 +100,12 @@
     OPSTATUS (*insert)(T *, KEY_TYPE);                                         \
     OPSTATUS (*remove)(T *, KEY_TYPE);                                         \
     TTREE_NODE(T) * (*findNode)(T *, KEY_TYPE);                               \
-    KEY_TYPE *(*find)(T *, KEY_TYPE);                                      \
+    OPSTATUS (*find)(T *, KEY_TYPE, KEY_TYPE **);                                      \
     bool (*contains)(const T *, KEY_TYPE);                                           \
     TTREE_NODE(T) * (*minNode)(TTREE_NODE(T) *);                              \
     TTREE_NODE(T) * (*maxNode)(TTREE_NODE(T) *);                              \
-    KEY_TYPE *(*min)(T *);                                                     \
-    KEY_TYPE *(*max)(T *);                                                     \
+    OPSTATUS (*min)(T *, KEY_TYPE **);                                                     \
+    OPSTATUS (*max)(T *, KEY_TYPE **);                                                     \
     bool (*empty)(const T *);                                                        \
     size_t (*size)(const T *);                                                       \
     TTREE_NODE(T) * (*begin)(T *);                                             \
@@ -126,12 +126,12 @@
     OPSTATUS (*insert)(T *, KEY_TYPE, VALUE_TYPE);                             \
     OPSTATUS (*remove)(T *, KEY_TYPE);                                         \
     TTREE_NODE(T) * (*findNode)(T *, KEY_TYPE);                               \
-    VALUE_TYPE *(*find)(T *, KEY_TYPE);                                  \
+    OPSTATUS (*find)(T *, KEY_TYPE, VALUE_TYPE **);                                  \
     bool (*contains)(const T *, KEY_TYPE);                                           \
     TTREE_NODE(T) * (*minNode)(TTREE_NODE(T) *);                              \
     TTREE_NODE(T) * (*maxNode)(TTREE_NODE(T) *);                              \
-    KEY_TYPE *(*min)(T *);                                                     \
-    KEY_TYPE *(*max)(T *);                                                     \
+    OPSTATUS (*min)(T *, KEY_TYPE **);                                                     \
+    OPSTATUS (*max)(T *, KEY_TYPE **);                                                     \
     bool (*empty)(const T *);                                                        \
     size_t (*size)(const T *);                                                       \
     TTREE_NODE(T) * (*begin)(T *);                                             \

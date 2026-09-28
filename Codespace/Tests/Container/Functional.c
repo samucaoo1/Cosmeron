@@ -272,6 +272,10 @@ static int test_bst_and_iterators(void) {
 
 static int test_avl(void) {
   TTree_AVL_Set(int, tree);
+  int *out = NULL;
+  TEST_ASSERT(TreeFind(tree, 42, &out) == STATUS_CONST(NOT_FOUND));
+  TEST_ASSERT(TreeMin(tree, &out) == STATUS_CONST(NOT_FOUND));
+  TEST_ASSERT(TreeMax(tree, &out) == STATUS_CONST(NOT_FOUND));
   for (int index = 0; index < 257; ++index) {
     int value = (index * 73) % 257;
     TEST_ASSERT(TreeInsert(tree, value) == STATUS_CONST(SUCCESS));
@@ -314,7 +318,8 @@ static int test_map(void) {
   for (int key = 0; key < 100; ++key)
     TEST_ASSERT(TreeInsert(map, key, key * 10) == STATUS_CONST(SUCCESS));
   for (int key = 0; key < 100; ++key) {
-    int *value = TreeFind(map, key);
+    int *value = NULL;
+    TEST_ASSERT(TreeFind(map, key, &value) == STATUS_CONST(SUCCESS));
     TEST_ASSERT(value != NULL && *value == key * 10);
   }
   TreeDestroy(map);
@@ -374,10 +379,17 @@ static int test_null_contracts(void) {
   TEST_ASSERT(Container_Tree_AVL_Set_int_Init(NULL) == STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Container_Tree_AVL_Set_int_Insert(NULL, 1) == STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Container_Tree_AVL_Set_int_Remove(NULL, 1) == STATUS_CONST(INVALID_ARGUMENT));
-  TEST_ASSERT(Container_Tree_AVL_Set_int_Find(NULL, 1) == NULL);
+  TEST_ASSERT(Container_Tree_AVL_Set_int_Find(NULL, 1, &out) ==
+              STATUS_CONST(INVALID_ARGUMENT));
+  TEST_ASSERT(out == &sentinel);
+  TEST_ASSERT(Container_Tree_AVL_Set_int_Find(NULL, 1, NULL) ==
+              STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(!Container_Tree_AVL_Set_int_Contains(NULL, 1));
-  TEST_ASSERT(Container_Tree_AVL_Set_int_Min(NULL) == NULL);
-  TEST_ASSERT(Container_Tree_AVL_Set_int_Max(NULL) == NULL);
+  TEST_ASSERT(Container_Tree_AVL_Set_int_Min(NULL, &out) ==
+              STATUS_CONST(INVALID_ARGUMENT));
+  TEST_ASSERT(Container_Tree_AVL_Set_int_Max(NULL, &out) ==
+              STATUS_CONST(INVALID_ARGUMENT));
+  TEST_ASSERT(out == &sentinel);
   TEST_ASSERT(!Container_Tree_AVL_Set_int_Empty(NULL));
   TEST_ASSERT(Container_Tree_AVL_Set_int_Size(NULL) == 0U);
   Container_Tree_AVL_Set_int_Destroy(NULL);
