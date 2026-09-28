@@ -10,7 +10,7 @@
  * AVL core — shared by set and map
  * ============================================================= */
 
-#define TAVL_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                 \
+#define COSMERON_MACRO_INTERNAL_TAVL_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                 \
   static inline int TTREE_FN(T, Height)(TTREE_NODE(T) * node) {               \
     if (!node)                                                                 \
       return 0;                                                                \
@@ -127,7 +127,7 @@
  * CreateNode + Insert — SET
  * ============================================================= */
 
-#define TAVL_IMPLEMENT_SET(T, KEY_TYPE, CMP)                                  \
+#define COSMERON_MACRO_INTERNAL_TAVL_IMPLEMENT_SET(T, KEY_TYPE, CMP)                                  \
   static inline TTREE_NODE(T) *                                                \
       TTREE_FN(T, CreateNode)(KEY_TYPE key) {                                  \
     TTREE_NODE(T) *_n;                                                        \
@@ -183,7 +183,7 @@
  * CreateNode + Insert — MAP
  * ============================================================= */
 
-#define TAVL_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                      \
+#define COSMERON_MACRO_INTERNAL_TAVL_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                      \
   static inline TTREE_NODE(T) *                                                \
       TTREE_FN(T, CreateNode)(KEY_TYPE key, VALUE_TYPE value) {                \
     TTREE_NODE(T) *_n;                                                        \
@@ -241,22 +241,22 @@
  * Full AVL SET expansion
  * ============================================================= */
 
-#define TAVL_SET_IMPLEMENT_ALL(T, KEY_TYPE, CMP)                                     \
-  TTREE_NODE_SET(T, KEY_TYPE, int height;)                                     \
-  TTREE_STRUCT(T)                                                              \
+#define COSMERON_MACRO_INTERNAL_TAVL_SET_IMPLEMENT_ALL(T, KEY_TYPE, CMP)                                     \
+  COSMERON_MACRO_INTERNAL_TTREE_NODE_SET(T, KEY_TYPE, int height;)                                     \
+  COSMERON_MACRO_INTERNAL_TTREE_STRUCT(T)                                                              \
   TTREE_SET_PROTOTYPES(T, KEY_TYPE)                                            \
-  TTREE_COMMON_SET(T, KEY_TYPE, CMP)                                           \
-  TAVL_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                       \
-  TAVL_IMPLEMENT_SET(T, KEY_TYPE, CMP)
+  COSMERON_MACRO_INTERNAL_TTREE_COMMON_SET(T, KEY_TYPE, CMP)                                           \
+  COSMERON_MACRO_INTERNAL_TAVL_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                       \
+  COSMERON_MACRO_INTERNAL_TAVL_IMPLEMENT_SET(T, KEY_TYPE, CMP)
 
 /* =============================================================
  * Full AVL MAP expansion
  * ============================================================= */
 
-#define TAVL_MAP_IMPLEMENT_ALL(T, KEY_TYPE, VALUE_TYPE, CMP)                         \
-  TTREE_NODE_MAP(T, KEY_TYPE, VALUE_TYPE, int height;)                         \
-  TTREE_STRUCT(T)                                                              \
+#define COSMERON_MACRO_INTERNAL_TAVL_MAP_IMPLEMENT_ALL(T, KEY_TYPE, VALUE_TYPE, CMP)                         \
+  COSMERON_MACRO_INTERNAL_TTREE_NODE_MAP(T, KEY_TYPE, VALUE_TYPE, int height;)                         \
+  COSMERON_MACRO_INTERNAL_TTREE_STRUCT(T)                                                              \
   TTREE_MAP_PROTOTYPES(T, KEY_TYPE, VALUE_TYPE)                                \
-  TTREE_COMMON_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                               \
-  TAVL_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                       \
-  TAVL_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)
+  COSMERON_MACRO_INTERNAL_TTREE_COMMON_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                               \
+  COSMERON_MACRO_INTERNAL_TAVL_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                       \
+  COSMERON_MACRO_INTERNAL_TAVL_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)
