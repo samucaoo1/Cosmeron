@@ -2,13 +2,13 @@ RANDOM_DISTRIBUTION_BOOL_PROTOTYPE {
   uint64_t value;
   OPSTATUS status;
 
-  if (out == NULL)
+  if (outValue == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
 
   status = RANDOM_SOURCE_FUNC(NextU64)(source, &value);
   if (status != STATUS_CONST(SUCCESS))
     return status;
 
-  *out = (value & UINT64_C(1)) != 0U;
+  *outValue = (value & UINT64_C(1)) != 0U;
   return STATUS_CONST(SUCCESS);
 }
