@@ -7,12 +7,16 @@
  * ============================================================ */
 
 #define FLAT_STACK_TYPE(SUFFIX) GNS2(FLAT_NS(TStack), SUFFIX)
-#define FLAT_STACK_FUNC(SUFFIX, FUNC) GNS2(GNS2(FLAT_NS(Stack), SUFFIX), FUNC)
+#define FLAT_STACK_NS(SUFFIX) GNS2(FLAT_NS(Stack), SUFFIX)
+#define FLAT_STACK_FUNC(SUFFIX, FUNC) GNS2(FLAT_STACK_NS(SUFFIX), FUNC)
+#define FLAT_STACK_STRUCT_TAG(SUFFIX) GNS2(FLAT_STACK_NS(SUFFIX), str)
+#define FLAT_STACK_FUNCTION_TABLE_TYPE(SUFFIX) \
+  GNS2(FLAT_STACK_NS(SUFFIX), FunctionTable)
 
 #define FLAT_STACK_STRUCT(TYPE, SUFFIX)                                        \
-  CONTAINER_API_FORWARD(FLAT_STACK_FUNC(SUFFIX, FunctionTable))                            \
-  typedef struct FLAT_STACK_FUNC(SUFFIX, str) {                                \
-    CONTAINER_API_FIELD(FLAT_STACK_FUNC(SUFFIX, FunctionTable))              \
+  CONTAINER_API_FORWARD(FLAT_STACK_FUNCTION_TABLE_TYPE(SUFFIX))                            \
+  typedef struct FLAT_STACK_STRUCT_TAG(SUFFIX) {                                \
+    CONTAINER_API_FIELD(FLAT_STACK_FUNCTION_TABLE_TYPE(SUFFIX))              \
     TYPE *data;                                                                \
     size_t size;                                                               \
     size_t capacity;                                                           \
