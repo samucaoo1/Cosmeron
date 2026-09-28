@@ -1,6 +1,6 @@
 #pragma once
 #include "Engine.space"
-#include "FunctionTable.h"
+#include "Descriptor.h"
 
 #if defined(_MSC_VER) && defined(_M_X64)
 #include <intrin.h>
@@ -10,6 +10,4 @@ typedef struct { uint64_t value; } RANDOM_ENGINE_TYPE(WyRand);
 RANDOM_ENGINE_SEED_PROTOTYPE(WyRand);
 RANDOM_ENGINE_NEXT_PROTOTYPE(WyRand);
 #include "Impl/WyRand.impl"
-#ifndef RANDOM_DISABLE_FUNCTION_TABLE
-RANDOM_ENGINE_FUNCTION_TABLE_INSTANCE(WyRand);
-#endif
+RANDOM_ENGINE_DESCRIPTOR_INSTANCE(WyRand);
