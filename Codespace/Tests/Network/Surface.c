@@ -5,7 +5,7 @@
 #include "../../Cosmeron/Modules/Network/Resolve/Resolve.h"
 
 static void test_address(void) {
-  TNetwork_Address first, second;
+  NETWORK_ADDRESS_TYPE(TAddress) first, second;
 
   NETWORK_ADDRESS_FUNC(IPv4_Create)(&first, 127, 0, 0, 1);
   NETWORK_ADDRESS_FUNC(IPv4_Any)(&second);
@@ -20,10 +20,10 @@ static void test_address(void) {
 }
 
 static void test_socket_stream(void) {
-  TNetwork_Listener listener;
-  TNetwork_Address loopback;
-  TNetwork_Endpoint endpoint, peer;
-  TSocket raw_listener, client, accepted;
+  NETWORK_LISTENER_TYPE(TListener) listener;
+  NETWORK_ADDRESS_TYPE(TAddress) loopback;
+  NETWORK_ADDRESS_TYPE(TEndpoint) endpoint, peer;
+  SOCKET_TYPE(TSocket) raw_listener, client, accepted;
   const char message[] = "surface";
   char buffer[16] = {0};
   size_t sent = 0, received = 0;
@@ -40,14 +40,14 @@ static void test_socket_stream(void) {
          NETWORK_ERROR_CONST(NONE));
 
   SOCKET_FUNC(Init)(&raw_listener);
-  assert(SOCKET_FUNC(Create)(&raw_listener, SOCKET_TYPE(FAMILY_IPV4),
-                             SOCKET_TYPE(KIND_STREAM),
-                             SOCKET_TYPE(PROTOCOL_TCP), NULL) ==
+  assert(SOCKET_FUNC(Create)(&raw_listener, SOCKET_CONST(FAMILY_IPV4),
+                             SOCKET_CONST(KIND_STREAM),
+                             SOCKET_CONST(PROTOCOL_TCP), NULL) ==
          STATUS_CONST(SUCCESS));
   assert(SOCKET_FUNC(SetReuseAddress)(&raw_listener, true, NULL) ==
          STATUS_CONST(SUCCESS));
   {
-    TNetwork_Endpoint any;
+    NETWORK_ADDRESS_TYPE(TEndpoint) any;
     NETWORK_ADDRESS_FUNC(IPv4_Loopback)(&loopback);
     NETWORK_ADDRESS_FUNC(Endpoint_Create)(&any, &loopback, 0);
     assert(SOCKET_FUNC(Bind)(&raw_listener, &any, NULL) ==
@@ -59,9 +59,9 @@ static void test_socket_stream(void) {
 
   SOCKET_FUNC(Init)(&client);
   SOCKET_FUNC(Init)(&accepted);
-  assert(SOCKET_FUNC(Create)(&client, SOCKET_TYPE(FAMILY_IPV4),
-                             SOCKET_TYPE(KIND_STREAM),
-                             SOCKET_TYPE(PROTOCOL_TCP), NULL) ==
+  assert(SOCKET_FUNC(Create)(&client, SOCKET_CONST(FAMILY_IPV4),
+                             SOCKET_CONST(KIND_STREAM),
+                             SOCKET_CONST(PROTOCOL_TCP), NULL) ==
          STATUS_CONST(SUCCESS));
   assert(SOCKET_FUNC(SetKeepAlive)(&client, true, NULL) ==
          STATUS_CONST(SUCCESS));
@@ -86,7 +86,7 @@ static void test_socket_stream(void) {
                               NULL) == STATUS_CONST(SUCCESS));
   assert(received == sizeof(message));
   assert(memcmp(buffer, message, sizeof(message)) == 0);
-  assert(SOCKET_FUNC(Shutdown)(&client, SOCKET_TYPE(SHUTDOWN_WRITE), NULL) ==
+  assert(SOCKET_FUNC(Shutdown)(&client, SOCKET_CONST(SHUTDOWN_WRITE), NULL) ==
          STATUS_CONST(SUCCESS));
 
   SOCKET_FUNC(Close)(&accepted);
@@ -95,10 +95,10 @@ static void test_socket_stream(void) {
 }
 
 static void test_socket_datagram(void) {
-  TNetwork_Datagram receiver;
-  TNetwork_Address loopback;
-  TNetwork_Endpoint any, destination, sender_endpoint;
-  TSocket sender;
+  NETWORK_DATAGRAM_TYPE(TDatagram) receiver;
+  NETWORK_ADDRESS_TYPE(TAddress) loopback;
+  NETWORK_ADDRESS_TYPE(TEndpoint) any, destination, sender_endpoint;
+  SOCKET_TYPE(TSocket) sender;
   const char message[] = "datagram";
   char buffer[16] = {0};
   size_t sent = 0, received = 0;
@@ -111,9 +111,9 @@ static void test_socket_datagram(void) {
   destination = *NETWORK_DATAGRAM_FUNC(LocalEndpoint)(&receiver);
 
   SOCKET_FUNC(Init)(&sender);
-  assert(SOCKET_FUNC(Create)(&sender, SOCKET_TYPE(FAMILY_IPV4),
-                             SOCKET_TYPE(KIND_DATAGRAM),
-                             SOCKET_TYPE(PROTOCOL_UDP), NULL) ==
+  assert(SOCKET_FUNC(Create)(&sender, SOCKET_CONST(FAMILY_IPV4),
+                             SOCKET_CONST(KIND_DATAGRAM),
+                             SOCKET_CONST(PROTOCOL_UDP), NULL) ==
          STATUS_CONST(SUCCESS));
   assert(SOCKET_FUNC(SendTo)(&sender, message, sizeof(message), &destination,
                              &sent, NULL) == STATUS_CONST(SUCCESS));
@@ -129,10 +129,10 @@ static void test_socket_datagram(void) {
 }
 
 static void test_connection(void) {
-  TNetwork_Listener listener;
-  TNetwork_Connection client, server;
-  TNetwork_Address loopback;
-  TNetwork_Endpoint endpoint;
+  NETWORK_LISTENER_TYPE(TListener) listener;
+  NETWORK_CONNECTION_TYPE(TConnection) client, server;
+  NETWORK_ADDRESS_TYPE(TAddress) loopback;
+  NETWORK_ADDRESS_TYPE(TEndpoint) endpoint;
   const char byte = 'x';
   char received_byte = 0;
   size_t count = 0;
@@ -153,7 +153,7 @@ static void test_connection(void) {
   assert(NETWORK_LISTENER_FUNC(Accept)(&listener, &server, NULL) ==
          STATUS_CONST(SUCCESS));
   assert(NETWORK_CONNECTION_FUNC(State)(&client) ==
-         NETWORK_CONNECTION_TYPE(CONNECTED));
+         NETWORK_CONNECTION_CONST(CONNECTED));
   assert(NETWORK_CONNECTION_FUNC(LastError)(&client) ==
          NETWORK_ERROR_CONST(NONE));
   assert(NETWORK_CONNECTION_FUNC(LocalEndpoint)(&client)->port != 0);
@@ -180,9 +180,9 @@ static void test_connection(void) {
 }
 
 static void test_datagram(void) {
-  TNetwork_Datagram receiver, peer;
-  TNetwork_Address loopback;
-  TNetwork_Endpoint any, destination;
+  NETWORK_DATAGRAM_TYPE(TDatagram) receiver, peer;
+  NETWORK_ADDRESS_TYPE(TAddress) loopback;
+  NETWORK_ADDRESS_TYPE(TEndpoint) any, destination;
   const char message[] = "peer";
   char buffer[16] = {0};
   size_t sent = 0, received = 0;
@@ -192,7 +192,7 @@ static void test_datagram(void) {
   NETWORK_ADDRESS_FUNC(IPv4_Loopback)(&loopback);
   NETWORK_ADDRESS_FUNC(Endpoint_Create)(&any, &loopback, 0);
 
-  assert(NETWORK_DATAGRAM_FUNC(Open)(&peer, SOCKET_TYPE(FAMILY_IPV4), NULL) ==
+  assert(NETWORK_DATAGRAM_FUNC(Open)(&peer, SOCKET_CONST(FAMILY_IPV4), NULL) ==
          STATUS_CONST(SUCCESS));
   assert(NETWORK_DATAGRAM_FUNC(LastError)(&peer) == NETWORK_ERROR_CONST(NONE));
   assert(NETWORK_DATAGRAM_FUNC(PeerEndpoint)(&peer) == NULL);
@@ -223,15 +223,15 @@ static void test_datagram(void) {
 }
 
 static void test_poller_accessors(void) {
-  TNetwork_Poller poller;
-  TNetwork_Connection connection;
-  TNetwork_Listener listener;
-  TNetwork_Datagram datagram;
-  TNetwork_Poll_Handle connection_handle = 0;
-  TNetwork_Poll_Handle listener_handle = 0;
-  TNetwork_Poll_Handle datagram_handle = 0;
+  NETWORK_POLLER_TYPE(TPoller) poller;
+  NETWORK_CONNECTION_TYPE(TConnection) connection;
+  NETWORK_LISTENER_TYPE(TListener) listener;
+  NETWORK_DATAGRAM_TYPE(TDatagram) datagram;
+  NETWORK_POLLER_TYPE(Handle) connection_handle = 0;
+  NETWORK_POLLER_TYPE(Handle) listener_handle = 0;
+  NETWORK_POLLER_TYPE(Handle) datagram_handle = 0;
   int marker = 42;
-  TNetwork_Event event;
+  NETWORK_POLLER_TYPE(TEvent) event;
 
   NETWORK_POLLER_FUNC(Init)(&poller);
   NETWORK_CONNECTION_FUNC(Init)(&connection);
@@ -284,7 +284,7 @@ static void test_poller_accessors(void) {
 }
 
 static void test_listener_listen(void) {
-  TNetwork_Listener listener;
+  NETWORK_LISTENER_TYPE(TListener) listener;
   NETWORK_LISTENER_FUNC(Init)(&listener);
   assert(NETWORK_LISTENER_FUNC(Listen)(&listener, 0, NULL) ==
          STATUS_CONST(SUCCESS));
