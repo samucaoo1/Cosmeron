@@ -1,0 +1,87 @@
+#pragma once
+
+typedef struct InternalType_TextWidthInterval {
+  uint_least32_t first;
+  uint_least32_t last;
+} InternalType_TextWidthInterval;
+
+inline static bool TEXT_WIDTH_NS(InIntervals)(
+    uint_least32_t value, const InternalType_TextWidthInterval *intervals, size_t count) {
+  size_t low = 0U;
+  size_t high = count;
+  while (low < high) {
+    size_t middle = low + (high - low) / 2U;
+    if (value < intervals[middle].first)
+      high = middle;
+    else if (value > intervals[middle].last)
+      low = middle + 1U;
+    else
+      return true;
+  }
+  return false;
+}
+
+inline static int TEXT_WIDTH_NS(Codepoint)(TText_Char32 codepoint) {
+  static const InternalType_TextWidthInterval zeroWidth[] = {
+      {0x0300U, 0x036FU}, {0x0483U, 0x0489U}, {0x0591U, 0x05BDU},
+      {0x05BFU, 0x05BFU}, {0x05C1U, 0x05C2U}, {0x05C4U, 0x05C5U},
+      {0x0610U, 0x061AU}, {0x064BU, 0x065FU}, {0x0670U, 0x0670U},
+      {0x06D6U, 0x06EDU}, {0x0711U, 0x0711U}, {0x0730U, 0x074AU},
+      {0x07A6U, 0x07B0U}, {0x07EBU, 0x07F3U}, {0x0816U, 0x082DU},
+      {0x0859U, 0x085BU}, {0x08D3U, 0x0902U}, {0x093AU, 0x093CU},
+      {0x0941U, 0x0948U}, {0x094DU, 0x094DU}, {0x0951U, 0x0957U},
+      {0x0962U, 0x0963U}, {0x1AB0U, 0x1ACEU}, {0x1DC0U, 0x1DFFU},
+      {0x200BU, 0x200FU}, {0x202AU, 0x202EU}, {0x2060U, 0x2064U},
+      {0x2066U, 0x206FU}, {0x20D0U, 0x20F0U}, {0xFE00U, 0xFE0FU},
+      {0xFE20U, 0xFE2FU}, {0xFEFFU, 0xFEFFU}, {0xFFF9U, 0xFFFBU},
+      {0xE0100U, 0xE01EFU}};
+  static const InternalType_TextWidthInterval wide[] = {
+      {0x1100U, 0x115FU}, {0x231AU, 0x231BU}, {0x2329U, 0x232AU},
+      {0x23E9U, 0x23ECU}, {0x23F0U, 0x23F0U}, {0x23F3U, 0x23F3U},
+      {0x25FDU, 0x25FEU}, {0x2614U, 0x2615U}, {0x2648U, 0x2653U},
+      {0x267FU, 0x267FU}, {0x2693U, 0x2693U}, {0x26A1U, 0x26A1U},
+      {0x26AAU, 0x26ABU}, {0x26BDU, 0x26BEU}, {0x26C4U, 0x26C5U},
+      {0x26CEU, 0x26CEU}, {0x26D4U, 0x26D4U}, {0x26EAU, 0x26EAU},
+      {0x26F2U, 0x26F3U}, {0x26F5U, 0x26F5U}, {0x26FAU, 0x26FAU},
+      {0x26FDU, 0x26FDU}, {0x2705U, 0x2705U}, {0x270AU, 0x270BU},
+      {0x2728U, 0x2728U}, {0x274CU, 0x274CU}, {0x274EU, 0x274EU},
+      {0x2753U, 0x2755U}, {0x2757U, 0x2757U}, {0x2795U, 0x2797U},
+      {0x27B0U, 0x27B0U}, {0x27BFU, 0x27BFU}, {0x2B1BU, 0x2B1CU},
+      {0x2B50U, 0x2B50U}, {0x2B55U, 0x2B55U}, {0x2E80U, 0x303EU},
+      {0x3040U, 0xA4CFU}, {0xAC00U, 0xD7A3U}, {0xF900U, 0xFAFFU},
+      {0xFE10U, 0xFE19U}, {0xFE30U, 0xFE6FU}, {0xFF00U, 0xFF60U},
+      {0xFFE0U, 0xFFE6U}, {0x1F300U, 0x1FAFFU}, {0x20000U, 0x3FFFDU}};
+  uint_least32_t value = (uint_least32_t)codepoint;
+
+  if (!TEXT_CODEPOINT_NS(IsScalar)(codepoint) ||
+      TEXT_CODEPOINT_NS(IsControl)(codepoint))
+    return -1;
+  if (value == 0U)
+    return 0;
+  if (TEXT_WIDTH_NS(InIntervals)(value, zeroWidth,
+                                 sizeof(zeroWidth) / sizeof(zeroWidth[0])))
+    return 0;
+  if (TEXT_WIDTH_NS(InIntervals)(value, wide, sizeof(wide) / sizeof(wide[0])))
+    return 2;
+  return 1;
+}
+
+inline static TText_Measure_Result TEXT_WIDTH_NS(UTF8)(
+    const unsigned char *input, size_t size) {
+  size_t offset = 0U;
+  size_t columns = 0U;
+  if (input == NULL && size != 0U)
+    return (TText_Measure_Result){0U, 0U, TEXT_ERROR_INVALID_ARGUMENT};
+  while (offset < size) {
+    TText_Decode_Result decoded = TEXT_UTF8_NS(Decode)(input + offset, size - offset);
+    int width;
+    if (decoded.error != TEXT_ERROR_NONE)
+      return (TText_Measure_Result){columns, offset, decoded.error};
+    width = TEXT_WIDTH_NS(Codepoint)(decoded.codepoint);
+    if (width < 0)
+      return (TText_Measure_Result){columns, offset, TEXT_ERROR_INVALID_SEQUENCE};
+    columns += (size_t)width;
+    offset += decoded.units;
+  }
+  return (TText_Measure_Result){columns, offset, TEXT_ERROR_NONE};
+}

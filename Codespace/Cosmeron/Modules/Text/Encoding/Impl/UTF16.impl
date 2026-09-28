@@ -1,0 +1,65 @@
+#pragma once
+
+inline static size_t TEXT_UTF16_NS(EncodedLength)(TText_Char32 codepoint) {
+  uint_least32_t value = (uint_least32_t)codepoint;
+  if (!TEXT_CODEPOINT_NS(IsScalar)(codepoint))
+    return 0U;
+  return value <= UINT32_C(0xFFFF) ? 1U : 2U;
+}
+
+inline static TText_Encode_Result TEXT_UTF16_NS(Encode)(TText_Char32 codepoint,
+                                                        TText_Char16 *output,
+                                                        size_t capacity) {
+  uint_least32_t value = (uint_least32_t)codepoint;
+  size_t length = TEXT_UTF16_NS(EncodedLength)(codepoint);
+  if (length == 0U)
+    return (TText_Encode_Result){0U, TEXT_ERROR_INVALID_SEQUENCE};
+  if (output == NULL)
+    return (TText_Encode_Result){0U, TEXT_ERROR_INVALID_ARGUMENT};
+  if (capacity < length)
+    return (TText_Encode_Result){0U, TEXT_ERROR_INSUFFICIENT_SPACE};
+  if (length == 1U) {
+    output[0] = (TText_Char16)value;
+  } else {
+    value -= UINT32_C(0x10000);
+    output[0] = (TText_Char16)(UINT32_C(0xD800) + (value >> 10U));
+    output[1] = (TText_Char16)(UINT32_C(0xDC00) + (value & UINT32_C(0x3FF)));
+  }
+  return (TText_Encode_Result){length, TEXT_ERROR_NONE};
+}
+
+inline static TText_Decode_Result TEXT_UTF16_NS(Decode)(const TText_Char16 *input,
+                                                        size_t size) {
+  uint_least32_t first;
+  if (input == NULL)
+    return (TText_Decode_Result){0, 0U, TEXT_ERROR_INVALID_ARGUMENT};
+  if (size == 0U)
+    return (TText_Decode_Result){0, 0U, TEXT_ERROR_INCOMPLETE_SEQUENCE};
+  first = (uint_least32_t)input[0];
+  if (first < UINT32_C(0xD800) || first > UINT32_C(0xDFFF))
+    return (TText_Decode_Result){(TText_Char32)first, 1U, TEXT_ERROR_NONE};
+  if (first > UINT32_C(0xDBFF))
+    return (TText_Decode_Result){0, 1U, TEXT_ERROR_INVALID_SEQUENCE};
+  if (size < 2U)
+    return (TText_Decode_Result){0, 0U, TEXT_ERROR_INCOMPLETE_SEQUENCE};
+  if ((uint_least32_t)input[1] < UINT32_C(0xDC00) ||
+      (uint_least32_t)input[1] > UINT32_C(0xDFFF))
+    return (TText_Decode_Result){0, 1U, TEXT_ERROR_INVALID_SEQUENCE};
+  return (TText_Decode_Result){
+      (TText_Char32)(UINT32_C(0x10000) + ((first - UINT32_C(0xD800)) << 10U) +
+                 ((uint_least32_t)input[1] - UINT32_C(0xDC00))),
+      2U, TEXT_ERROR_NONE};
+}
+
+inline static bool TEXT_UTF16_NS(Validate)(const TText_Char16 *input, size_t size) {
+  size_t offset = 0U;
+  if (input == NULL && size != 0U)
+    return false;
+  while (offset < size) {
+    TText_Decode_Result decoded = TEXT_UTF16_NS(Decode)(input + offset, size - offset);
+    if (decoded.error != TEXT_ERROR_NONE)
+      return false;
+    offset += decoded.units;
+  }
+  return true;
+}

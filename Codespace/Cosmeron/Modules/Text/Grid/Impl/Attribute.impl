@@ -1,0 +1,286 @@
+#pragma once
+
+#include <string.h>
+
+inline static size_t TEXT_GRID_ATTRIBUTE_FUNC(_Count)(
+    TDUAL_TYPE(uint16) size) {
+  return (size_t)size.col * (size_t)size.row;
+}
+
+inline static bool TEXT_GRID_ATTRIBUTE_FUNC(_SizeValid)(
+    TDUAL_TYPE(uint16) size) {
+  return (size.col == 0U) == (size.row == 0U);
+}
+
+inline static bool TEXT_GRID_ATTRIBUTE_FUNC(_RegionValid)(
+    const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TQUAD_TYPE(uint16) region) {
+  return TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(grid) && region.left <= region.right &&
+         region.top <= region.bottom && region.right < grid->size.col &&
+         region.bottom < grid->size.row;
+}
+
+inline static TEXT_GRID_ATTRIBUTE_TYPE(Cell)
+TEXT_GRID_ATTRIBUTE_FUNC(Default)(void) {
+  TEXT_GRID_ATTRIBUTE_TYPE(Cell) cell = {0};
+  cell.flags = TEXT_GRID_ATTRIBUTE_NS(DEFAULT_FOREGROUND) |
+               TEXT_GRID_ATTRIBUTE_NS(DEFAULT_BACKGROUND);
+  cell.underline = TEXT_GRID_UNDERLINE_NS(NONE);
+  return cell;
+}
+
+inline static const TEXT_GRID_COLOR_TYPE(RGB) *
+TEXT_GRID_COLOR_FUNC(WindowsPalette)(void) {
+  static const TEXT_GRID_COLOR_TYPE(RGB) palette[] = {
+#define X(NAME, RGB) UINT32_C(RGB),
+      TEXT_GRID_WINDOWS_COLOR_TABLE
+#undef X
+  };
+  return palette;
+}
+
+inline static bool TEXT_GRID_ATTRIBUTE_FUNC(IsEmpty)(
+    const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid) {
+  return grid != NULL && grid->data == NULL && grid->size.col == 0U &&
+         grid->size.row == 0U;
+}
+
+inline static bool TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(
+    const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid) {
+  if (grid == NULL || !TEXT_GRID_ATTRIBUTE_FUNC(_SizeValid)(grid->size))
+    return false;
+  return grid->size.col == 0U ? grid->data == NULL : grid->data != NULL;
+}
+
+inline static OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Create)(
+    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) size) {
+  size_t count;
+  OPSTATUS status;
+  if (grid == NULL || !TEXT_GRID_ATTRIBUTE_FUNC(IsEmpty)(grid) ||
+      !TEXT_GRID_ATTRIBUTE_FUNC(_SizeValid)(size))
+    return STATUS_NS(INVALID_ARGUMENT);
+  if (size.col == 0U)
+    return STATUS_NS(SUCCESS);
+  count = TEXT_GRID_ATTRIBUTE_FUNC(_Count)(size);
+  if (count > SIZE_MAX / sizeof(*grid->data))
+    return STATUS_NS(ARITHMETIC_OVERFLOW);
+  {
+    void *allocated = NULL;
+    status = ALLOC_FUNC(AllocArray)(
+        &allocated, count, sizeof(TEXT_GRID_ATTRIBUTE_TYPE(Cell)));
+    if (status != STATUS_NS(SUCCESS))
+      return status;
+    grid->data = (TEXT_GRID_ATTRIBUTE_TYPE(Cell) *)allocated;
+  }
+  grid->size = size;
+  return TEXT_GRID_ATTRIBUTE_FUNC(Clear)(grid);
+}
+
+inline static OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Destroy)(
+    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid) {
+  if (grid == NULL)
+    return STATUS_NS(INVALID_ARGUMENT);
+  Memory_Free(grid->data);
+  grid->size = (TDUAL_TYPE(uint16)){0};
+  return STATUS_NS(SUCCESS);
+}
+
+inline static OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(ClearWith)(
+    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid,
+    TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute) {
+  size_t index, count;
+  if (!TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(grid))
+    return STATUS_NS(INVALID_ARGUMENT);
+  count = TEXT_GRID_ATTRIBUTE_FUNC(_Count)(grid->size);
+  for (index = 0U; index < count; ++index)
+    grid->data[index] = attribute;
+  return STATUS_NS(SUCCESS);
+}
+
+inline static OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Clear)(
+    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid) {
+  return TEXT_GRID_ATTRIBUTE_FUNC(ClearWith)(
+      grid, TEXT_GRID_ATTRIBUTE_FUNC(Default)());
+}
+
+inline static OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Fill)(
+    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid,
+    TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute) {
+  return TEXT_GRID_ATTRIBUTE_FUNC(ClearWith)(grid, attribute);
+}
+
+inline static OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(ReadCell)(
+    const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) position,
+    TEXT_GRID_ATTRIBUTE_TYPE(Cell) *attribute) {
+  if (!TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(grid) || attribute == NULL)
+    return STATUS_NS(INVALID_ARGUMENT);
+  if (position.x >= grid->size.col || position.y >= grid->size.row)
+    return STATUS_NS(OUT_OF_RANGE);
+  *attribute = grid->data[(size_t)position.y * grid->size.col + position.x];
+  return STATUS_NS(SUCCESS);
+}
+
+inline static OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(WriteCell)(
+    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) position,
+    TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute) {
+  if (!TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(grid))
+    return STATUS_NS(INVALID_ARGUMENT);
+  if (position.x >= grid->size.col || position.y >= grid->size.row)
+    return STATUS_NS(OUT_OF_RANGE);
+  grid->data[(size_t)position.y * grid->size.col + position.x] = attribute;
+  return STATUS_NS(SUCCESS);
+}
+
+inline static OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(FillRegion)(
+    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TQUAD_TYPE(uint16) region,
+    TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute) {
+  uint32_t x, y;
+  if (!TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(grid))
+    return STATUS_NS(INVALID_ARGUMENT);
+  if (region.left > region.right || region.top > region.bottom)
+    return STATUS_NS(INVALID_ARGUMENT);
+  if (!TEXT_GRID_ATTRIBUTE_FUNC(_RegionValid)(grid, region))
+    return STATUS_NS(OUT_OF_RANGE);
+  for (y = region.top; y <= region.bottom; ++y)
+    for (x = region.left; x <= region.right; ++x)
+      grid->data[(size_t)y * grid->size.col + x] = attribute;
+  return STATUS_NS(SUCCESS);
+}
+
+inline static OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Read)(
+    const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source, TQUAD_TYPE(uint16) region,
+    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination) {
+  TEXT_GRID_ATTRIBUTE_TYPE(Grid) temporary = {0};
+  TDUAL_TYPE(uint16) size;
+  uint32_t x, y;
+  OPSTATUS status;
+  if (!TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(source) || destination == NULL ||
+      !TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(destination))
+    return STATUS_NS(INVALID_ARGUMENT);
+  if (region.left > region.right || region.top > region.bottom)
+    return STATUS_NS(INVALID_ARGUMENT);
+  if (!TEXT_GRID_ATTRIBUTE_FUNC(_RegionValid)(source, region))
+    return STATUS_NS(OUT_OF_RANGE);
+  size.col = (uint16_t)(region.right - region.left + 1U);
+  size.row = (uint16_t)(region.bottom - region.top + 1U);
+  status = TEXT_GRID_ATTRIBUTE_FUNC(Create)(&temporary, size);
+  if (status != STATUS_NS(SUCCESS))
+    return status;
+  for (y = 0U; y < size.row; ++y)
+    for (x = 0U; x < size.col; ++x)
+      temporary.data[(size_t)y * size.col + x] =
+          source->data[(size_t)(region.top + y) * source->size.col +
+                       region.left + x];
+  TEXT_GRID_ATTRIBUTE_FUNC(Destroy)(destination);
+  *destination = temporary;
+  return STATUS_NS(SUCCESS);
+}
+
+inline static OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(WriteRegion)(
+    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination,
+    TDUAL_TYPE(uint16) destinationPosition,
+    const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source,
+    TQUAD_TYPE(uint16) sourceRegion) {
+  TEXT_GRID_ATTRIBUTE_TYPE(Grid) temporary = {0};
+  uint32_t width, height, y;
+  OPSTATUS status;
+  if (!TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(destination) ||
+      !TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(source))
+    return STATUS_NS(INVALID_ARGUMENT);
+  if (sourceRegion.left > sourceRegion.right ||
+      sourceRegion.top > sourceRegion.bottom)
+    return STATUS_NS(INVALID_ARGUMENT);
+  if (!TEXT_GRID_ATTRIBUTE_FUNC(_RegionValid)(source, sourceRegion))
+    return STATUS_NS(OUT_OF_RANGE);
+  width = (uint32_t)sourceRegion.right - sourceRegion.left + 1U;
+  height = (uint32_t)sourceRegion.bottom - sourceRegion.top + 1U;
+  if ((uint32_t)destinationPosition.x + width > destination->size.col ||
+      (uint32_t)destinationPosition.y + height > destination->size.row)
+    return STATUS_NS(OUT_OF_RANGE);
+  status = TEXT_GRID_ATTRIBUTE_FUNC(Read)(source, sourceRegion, &temporary);
+  if (status != STATUS_NS(SUCCESS))
+    return status;
+  for (y = 0U; y < height; ++y)
+    memcpy(destination->data +
+               (size_t)(destinationPosition.y + y) * destination->size.col +
+               destinationPosition.x,
+           temporary.data + (size_t)y * width,
+           (size_t)width * sizeof(*temporary.data));
+  TEXT_GRID_ATTRIBUTE_FUNC(Destroy)(&temporary);
+  return STATUS_NS(SUCCESS);
+}
+
+inline static OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Write)(
+    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination,
+    TDUAL_TYPE(uint16) destinationPosition,
+    const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source) {
+  TQUAD_TYPE(uint16) region = {0};
+  if (!TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(source))
+    return STATUS_NS(INVALID_ARGUMENT);
+  if (TEXT_GRID_ATTRIBUTE_FUNC(IsEmpty)(source))
+    return STATUS_NS(SUCCESS);
+  region.right = (uint16_t)(source->size.col - 1U);
+  region.bottom = (uint16_t)(source->size.row - 1U);
+  return TEXT_GRID_ATTRIBUTE_FUNC(WriteRegion)(destination,
+                                                destinationPosition, source,
+                                                region);
+}
+
+inline static OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Resize)(
+    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) size) {
+  TEXT_GRID_ATTRIBUTE_TYPE(Grid) temporary = {0};
+  uint32_t width, height, y;
+  OPSTATUS status;
+  if (!TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(grid) ||
+      !TEXT_GRID_ATTRIBUTE_FUNC(_SizeValid)(size))
+    return STATUS_NS(INVALID_ARGUMENT);
+  status = TEXT_GRID_ATTRIBUTE_FUNC(Create)(&temporary, size);
+  if (status != STATUS_NS(SUCCESS))
+    return status == STATUS_CONST(OUT_OF_MEMORY)
+               ? STATUS_CONST(OUT_OF_MEMORY)
+               : status;
+  width = grid->size.col < size.col ? grid->size.col : size.col;
+  height = grid->size.row < size.row ? grid->size.row : size.row;
+  for (y = 0U; y < height; ++y)
+    memcpy(temporary.data + (size_t)y * size.col,
+           grid->data + (size_t)y * grid->size.col,
+           (size_t)width * sizeof(*grid->data));
+  TEXT_GRID_ATTRIBUTE_FUNC(Destroy)(grid);
+  *grid = temporary;
+  return STATUS_NS(SUCCESS);
+}
+
+inline static OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Recreate)(
+    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) size) {
+  TEXT_GRID_ATTRIBUTE_TYPE(Grid) temporary = {0};
+  OPSTATUS status;
+  if (!TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(grid))
+    return STATUS_NS(INVALID_ARGUMENT);
+  status = TEXT_GRID_ATTRIBUTE_FUNC(Create)(&temporary, size);
+  if (status != STATUS_NS(SUCCESS))
+    return status == STATUS_CONST(OUT_OF_MEMORY)
+               ? STATUS_CONST(OUT_OF_MEMORY)
+               : status;
+  TEXT_GRID_ATTRIBUTE_FUNC(Destroy)(grid);
+  *grid = temporary;
+  return STATUS_NS(SUCCESS);
+}
+
+inline static OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Clone)(
+    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination,
+    const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source) {
+  TEXT_GRID_ATTRIBUTE_TYPE(Grid) temporary = {0};
+  OPSTATUS status;
+  if (!TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(source) || destination == NULL ||
+      !TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(destination))
+    return STATUS_NS(INVALID_ARGUMENT);
+  status = TEXT_GRID_ATTRIBUTE_FUNC(Create)(&temporary, source->size);
+  if (status != STATUS_NS(SUCCESS))
+    return status;
+  if (source->data != NULL)
+    memcpy(temporary.data, source->data,
+           TEXT_GRID_ATTRIBUTE_FUNC(_Count)(source->size) *
+               sizeof(*source->data));
+  TEXT_GRID_ATTRIBUTE_FUNC(Destroy)(destination);
+  *destination = temporary;
+  return STATUS_NS(SUCCESS);
+}

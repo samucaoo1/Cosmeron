@@ -1,0 +1,32 @@
+#pragma once
+
+inline static bool TEXT_CODEPOINT_NS(IsValid)(TText_Char32 codepoint) {
+  return (uint_least32_t)codepoint <= UINT32_C(0x10FFFF);
+}
+
+inline static bool TEXT_CODEPOINT_NS(IsScalar)(TText_Char32 codepoint) {
+  uint_least32_t value = (uint_least32_t)codepoint;
+  return value <= UINT32_C(0x10FFFF) &&
+         !(value >= UINT32_C(0xD800) && value <= UINT32_C(0xDFFF));
+}
+
+inline static bool TEXT_CODEPOINT_NS(IsASCII)(TText_Char32 codepoint) {
+  return (uint_least32_t)codepoint <= UINT32_C(0x7F);
+}
+
+inline static bool TEXT_CODEPOINT_NS(IsControl)(TText_Char32 codepoint) {
+  uint_least32_t value = (uint_least32_t)codepoint;
+  return value <= UINT32_C(0x1F) ||
+         (value >= UINT32_C(0x7F) && value <= UINT32_C(0x9F));
+}
+
+inline static bool TEXT_CODEPOINT_NS(IsWhitespace)(TText_Char32 codepoint) {
+  uint_least32_t value = (uint_least32_t)codepoint;
+  return (value >= UINT32_C(0x0009) && value <= UINT32_C(0x000D)) ||
+         value == UINT32_C(0x0020) || value == UINT32_C(0x0085) ||
+         value == UINT32_C(0x00A0) || value == UINT32_C(0x1680) ||
+         (value >= UINT32_C(0x2000) && value <= UINT32_C(0x200A)) ||
+         value == UINT32_C(0x2028) || value == UINT32_C(0x2029) ||
+         value == UINT32_C(0x202F) || value == UINT32_C(0x205F) ||
+         value == UINT32_C(0x3000);
+}

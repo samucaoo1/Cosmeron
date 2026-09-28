@@ -1,0 +1,44 @@
+#pragma once
+
+#include "../../Core/Namespace.h"
+#include "../../Core/Preprocessor/Compiling.inc"
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+typedef uint16_t TText_Char16;
+typedef uint32_t TText_Char32;
+
+#define TEXT_MOD(NAME) GNS2(LIB_PREFIX(Text), NAME)
+#define TEXT_NS(MODULE, NAME) GNS2(TEXT_MOD(MODULE), NAME)
+#define TEXT_TYPE(NAME) TEXT_MOD(NAME)
+
+#define TEXT_CODEPOINT_NS(NAME) TEXT_NS(Codepoint, NAME)
+#define TEXT_UTF8_NS(NAME) TEXT_NS(UTF8, NAME)
+#define TEXT_UTF16_NS(NAME) TEXT_NS(UTF16, NAME)
+#define TEXT_WIDTH_NS(NAME) TEXT_NS(Width, NAME)
+#define TEXT_GRID_NS(NAME) TEXT_NS(Grid, NAME)
+
+#define TEXT_GRID_TYPE(SUFFIX) GNS2(LIB_PREFIX(TText_Grid), SUFFIX)
+#define TEXT_GRID_FUNC(SUFFIX, FUNCTION)                                      \
+  GNS2(GNS2(TEXT_MOD(Grid), SUFFIX), FUNCTION)
+#define TEXT_GRID_CHAR_TYPE(SUFFIX)                                           \
+  GNS3(LIB_PREFIX(TText_Grid), Char, SUFFIX)
+#define TEXT_GRID_CHAR_FUNC(SUFFIX, FUNCTION)                                 \
+  GNS2(GNS3(TEXT_MOD(Grid), Char, SUFFIX), FUNCTION)
+#define TEXT_GRID_ATTRIBUTE_TYPE(NAME)                                        \
+  GNS3(LIB_PREFIX(TText_Grid), Attribute, NAME)
+#define TEXT_GRID_ATTRIBUTE_NS(NAME) GNS3(TEXT_MOD(Grid), Attribute, NAME)
+#define TEXT_GRID_ATTRIBUTE_FUNC(FUNCTION) TEXT_GRID_ATTRIBUTE_NS(FUNCTION)
+#define TEXT_GRID_UNDERLINE_TYPE(NAME)                                        \
+  GNS3(LIB_PREFIX(TText_Grid), Underline, NAME)
+#define TEXT_GRID_UNDERLINE_NS(NAME) GNS3(TEXT_MOD(Grid), Underline, NAME)
+#define TEXT_GRID_COLOR_TYPE(NAME) GNS3(LIB_PREFIX(TText_Grid), Color, NAME)
+#define TEXT_GRID_COLOR_NS(NAME) GNS3(TEXT_MOD(Grid), Color, NAME)
+#define TEXT_GRID_COLOR_FUNC(FUNCTION) TEXT_GRID_COLOR_NS(FUNCTION)
+
+#define TEXT_GRID_CHARACTER_TABLE                                             \
+  X(char, char)                                                               \
+  X(TText_Char16, char16)                                                         \
+  X(TText_Char32, char32)

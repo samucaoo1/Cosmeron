@@ -1,0 +1,99 @@
+#pragma once
+
+inline static size_t TEXT_UTF8_NS(EncodedLength)(TText_Char32 codepoint) {
+  uint_least32_t value = (uint_least32_t)codepoint;
+  if (!TEXT_CODEPOINT_NS(IsScalar)(codepoint))
+    return 0U;
+  if (value <= UINT32_C(0x7F))
+    return 1U;
+  if (value <= UINT32_C(0x7FF))
+    return 2U;
+  if (value <= UINT32_C(0xFFFF))
+    return 3U;
+  return 4U;
+}
+
+inline static TText_Encode_Result TEXT_UTF8_NS(Encode)(TText_Char32 codepoint,
+                                                       unsigned char *output,
+                                                       size_t capacity) {
+  uint_least32_t value = (uint_least32_t)codepoint;
+  size_t length = TEXT_UTF8_NS(EncodedLength)(codepoint);
+  if (length == 0U)
+    return (TText_Encode_Result){0U, TEXT_ERROR_INVALID_SEQUENCE};
+  if (output == NULL)
+    return (TText_Encode_Result){0U, TEXT_ERROR_INVALID_ARGUMENT};
+  if (capacity < length)
+    return (TText_Encode_Result){0U, TEXT_ERROR_INSUFFICIENT_SPACE};
+
+  if (length == 1U) {
+    output[0] = (unsigned char)value;
+  } else if (length == 2U) {
+    output[0] = (unsigned char)(UINT32_C(0xC0) | (value >> 6U));
+    output[1] = (unsigned char)(UINT32_C(0x80) | (value & UINT32_C(0x3F)));
+  } else if (length == 3U) {
+    output[0] = (unsigned char)(UINT32_C(0xE0) | (value >> 12U));
+    output[1] = (unsigned char)(UINT32_C(0x80) | ((value >> 6U) & UINT32_C(0x3F)));
+    output[2] = (unsigned char)(UINT32_C(0x80) | (value & UINT32_C(0x3F)));
+  } else {
+    output[0] = (unsigned char)(UINT32_C(0xF0) | (value >> 18U));
+    output[1] = (unsigned char)(UINT32_C(0x80) | ((value >> 12U) & UINT32_C(0x3F)));
+    output[2] = (unsigned char)(UINT32_C(0x80) | ((value >> 6U) & UINT32_C(0x3F)));
+    output[3] = (unsigned char)(UINT32_C(0x80) | (value & UINT32_C(0x3F)));
+  }
+  return (TText_Encode_Result){length, TEXT_ERROR_NONE};
+}
+
+inline static TText_Decode_Result TEXT_UTF8_NS(Decode)(const unsigned char *input,
+                                                       size_t size) {
+  uint_least32_t value;
+  size_t length;
+  uint_least32_t minimum;
+  size_t index;
+
+  if (input == NULL)
+    return (TText_Decode_Result){0, 0U, TEXT_ERROR_INVALID_ARGUMENT};
+  if (size == 0U)
+    return (TText_Decode_Result){0, 0U, TEXT_ERROR_INCOMPLETE_SEQUENCE};
+  if (input[0] <= 0x7FU)
+    return (TText_Decode_Result){(TText_Char32)input[0], 1U, TEXT_ERROR_NONE};
+  if (input[0] >= 0xC2U && input[0] <= 0xDFU) {
+    value = input[0] & 0x1FU; length = 2U; minimum = UINT32_C(0x80);
+  } else if (input[0] >= 0xE0U && input[0] <= 0xEFU) {
+    value = input[0] & 0x0FU; length = 3U; minimum = UINT32_C(0x800);
+  } else if (input[0] >= 0xF0U && input[0] <= 0xF4U) {
+    value = input[0] & 0x07U; length = 4U; minimum = UINT32_C(0x10000);
+  } else {
+    return (TText_Decode_Result){0, 1U, TEXT_ERROR_INVALID_SEQUENCE};
+  }
+  if (size < length)
+    return (TText_Decode_Result){0, 0U, TEXT_ERROR_INCOMPLETE_SEQUENCE};
+  for (index = 1U; index < length; ++index) {
+    if ((input[index] & 0xC0U) != 0x80U)
+      return (TText_Decode_Result){0, index, TEXT_ERROR_INVALID_SEQUENCE};
+    value = (value << 6U) | (input[index] & 0x3FU);
+  }
+  if (value < minimum || !TEXT_CODEPOINT_NS(IsScalar)((TText_Char32)value))
+    return (TText_Decode_Result){0, length, TEXT_ERROR_INVALID_SEQUENCE};
+  return (TText_Decode_Result){(TText_Char32)value, length, TEXT_ERROR_NONE};
+}
+
+inline static TText_Measure_Result TEXT_UTF8_NS(Count)(
+    const unsigned char *input, size_t size) {
+  size_t offset = 0U;
+  size_t count = 0U;
+  if (input == NULL && size != 0U)
+    return (TText_Measure_Result){0U, 0U, TEXT_ERROR_INVALID_ARGUMENT};
+  while (offset < size) {
+    TText_Decode_Result decoded = TEXT_UTF8_NS(Decode)(input + offset, size - offset);
+    if (decoded.error != TEXT_ERROR_NONE)
+      return (TText_Measure_Result){count, offset, decoded.error};
+    offset += decoded.units;
+    ++count;
+  }
+  return (TText_Measure_Result){count, offset, TEXT_ERROR_NONE};
+}
+
+inline static bool TEXT_UTF8_NS(Validate)(const unsigned char *input,
+                                         size_t size) {
+  return TEXT_UTF8_NS(Count)(input, size).error == TEXT_ERROR_NONE;
+}
