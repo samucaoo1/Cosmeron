@@ -10,6 +10,7 @@ int main(void) {
   NETWORK_ADDRESS_TYPE(TEndpoint) endpoint;
   uint16_t closed_port;
   NETWORK_TYPE(TError) error = NETWORK_ERROR_CONST(NONE);
+  NETWORK_CONNECTION_TYPE(TState) state;
 
   NETWORK_LISTENER_FUNC(Init)(&listener);
   NETWORK_CONNECTION_FUNC(Init)(&connection);
@@ -18,18 +19,22 @@ int main(void) {
 
   assert(NETWORK_LISTENER_FUNC(ListenAt)(&listener, &endpoint, NULL) ==
          STATUS_CONST(SUCCESS));
-  closed_port = NETWORK_LISTENER_FUNC(LocalEndpoint)(&listener)->port;
+  assert(NETWORK_LISTENER_FUNC(LocalEndpoint)(&listener, &endpoint) ==
+         STATUS_CONST(SUCCESS));
+  closed_port = endpoint.port;
   NETWORK_LISTENER_FUNC(Close)(&listener);
 
   assert(NETWORK_CONNECTION_FUNC(Connect)(
              &connection, "127.0.0.1", closed_port, &error) != STATUS_CONST(SUCCESS));
-  assert(NETWORK_CONNECTION_FUNC(State)(&connection) ==
-         NETWORK_CONNECTION_CONST(FAILED));
+  assert(NETWORK_CONNECTION_FUNC(State)(&connection, &state) ==
+         STATUS_CONST(SUCCESS));
+  assert(state == NETWORK_CONNECTION_CONST(FAILED));
   assert(error != NETWORK_ERROR_CONST(NONE));
 
   NETWORK_CONNECTION_FUNC(Close)(&connection);
-  assert(NETWORK_CONNECTION_FUNC(State)(&connection) ==
-         NETWORK_CONNECTION_CONST(CLOSED));
+  assert(NETWORK_CONNECTION_FUNC(State)(&connection, &state) ==
+         STATUS_CONST(SUCCESS));
+  assert(state == NETWORK_CONNECTION_CONST(CLOSED));
   NETWORK_CONNECTION_FUNC(Close)(&connection);
 
   NETWORK_CONNECTION_FUNC(Destroy)(&connection);
