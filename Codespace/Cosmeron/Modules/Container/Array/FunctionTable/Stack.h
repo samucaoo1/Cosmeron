@@ -3,7 +3,7 @@
 #if CONTAINER_FUNCTION_TABLE_ENABLED
 
 #define FLAT_STACK_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                              \
-  typedef struct FLAT_STACK_FUNC(SUFFIX, FunctionTable) {                   \
+  typedef struct FLAT_STACK_FUNCTION_TABLE_TYPE(SUFFIX) {                   \
     /* Lifecycle */                                                            \
     OPSTATUS (*init)(FLAT_STACK_TYPE(SUFFIX) *);                               \
     void (*destroy)(FLAT_STACK_TYPE(SUFFIX) *);                                \
@@ -19,10 +19,10 @@
     bool (*empty)(const FLAT_STACK_TYPE(SUFFIX) *);                                  \
     size_t (*size)(const FLAT_STACK_TYPE(SUFFIX) *);                                 \
     size_t (*capacity)(const FLAT_STACK_TYPE(SUFFIX) *);                             \
-  } FLAT_STACK_FUNC(SUFFIX, FunctionTable);
+  } FLAT_STACK_FUNCTION_TABLE_TYPE(SUFFIX);
 
 #define FLAT_STACK_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)                     \
-  static const FLAT_STACK_FUNC(SUFFIX, FunctionTable)                              \
+  static const FLAT_STACK_FUNCTION_TABLE_TYPE(SUFFIX)                              \
       FLAT_STACK_FUNC(SUFFIX, functions) = {                                   \
           .init = FLAT_STACK_FUNC(SUFFIX, Init),                       \
           .destroy = FLAT_STACK_FUNC(SUFFIX, Destroy),                 \
