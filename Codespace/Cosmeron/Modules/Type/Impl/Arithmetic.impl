@@ -153,13 +153,13 @@
       const size_t limbIndex = bit / bitsPerLimb;                              \
       const size_t bitIndex = bit % bitsPerLimb;                               \
       r.limb[0] |= (TYPE)((dividend->limb[limbIndex] >> bitIndex) & (TYPE)1U); \
-      CMPOUT comparison = COMPARISON_CONST(LOWER);                  \
+      CMPOUT comparison = COMPARISON_CONST(RESULT_LOWER);                  \
       if (!carriedHighBit) {                                                   \
         status = COMPARE_FUNC(&r, divisor, &comparison);                       \
         if (status != STATUS_CONST(SUCCESS))                                   \
           return status;                                                       \
       }                                                                        \
-      if (carriedHighBit || comparison != COMPARISON_CONST(LOWER)) {           \
+      if (carriedHighBit || comparison != COMPARISON_CONST(RESULT_LOWER)) {           \
         if (carriedHighBit) {                                                  \
           unsigned char borrow = 0U;                                           \
           for (size_t i = 0; i < limbCount; ++i) {                            \

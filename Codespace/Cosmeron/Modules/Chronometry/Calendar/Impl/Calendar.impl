@@ -48,18 +48,18 @@ CHRONOMETRY_CALENDAR_REFORM_POLICY_PROTOTYPE {
 
 CHRONOMETRY_CALENDAR_DATE_COMPARE_PROTOTYPE {
   if (left.year < right.year)
-    return COMPARISON_CONST(LOWER);
+    return COMPARISON_CONST(RESULT_LOWER);
   if (left.year > right.year)
-    return COMPARISON_CONST(HIGHER);
+    return COMPARISON_CONST(RESULT_HIGHER);
   if (left.month < right.month)
-    return COMPARISON_CONST(LOWER);
+    return COMPARISON_CONST(RESULT_LOWER);
   if (left.month > right.month)
-    return COMPARISON_CONST(HIGHER);
+    return COMPARISON_CONST(RESULT_HIGHER);
   if (left.day < right.day)
-    return COMPARISON_CONST(LOWER);
+    return COMPARISON_CONST(RESULT_LOWER);
   if (left.day > right.day)
-    return COMPARISON_CONST(HIGHER);
-  return COMPARISON_CONST(EQUAL);
+    return COMPARISON_CONST(RESULT_HIGHER);
+  return COMPARISON_CONST(RESULT_EQUAL);
 }
 
 CHRONOMETRY_CALENDAR_IS_LEAP_YEAR_PROTOTYPE {
@@ -85,7 +85,7 @@ inline static CALENDAR_FUNC(System) CALENDAR_FUNC(_SystemFor)(
     const CALENDAR_FUNC(Policy) *policy, CHRONOMETRY_TYPE(Date) date) {
   if (policy->kind == CALENDAR_CONST(PURE_SYSTEM))
     return policy->system;
-  return CALENDAR_FUNC(DateCompare)(date, policy->reform.firstAfter) != COMPARISON_CONST(LOWER)
+  return CALENDAR_FUNC(DateCompare)(date, policy->reform.firstAfter) != COMPARISON_CONST(RESULT_LOWER)
              ? policy->reform.after
              : policy->reform.before;
 }
@@ -96,8 +96,8 @@ CHRONOMETRY_CALENDAR_DATE_IS_VALID_PROTOTYPE {
   if (policy == NULL || date.year <= -4800)
     return false;
   if (policy->kind == CALENDAR_CONST(HISTORICAL_REFORM) &&
-      CALENDAR_FUNC(DateCompare)(date, policy->reform.lastBefore) == COMPARISON_CONST(HIGHER) &&
-      CALENDAR_FUNC(DateCompare)(date, policy->reform.firstAfter) == COMPARISON_CONST(LOWER))
+      CALENDAR_FUNC(DateCompare)(date, policy->reform.lastBefore) == COMPARISON_CONST(RESULT_HIGHER) &&
+      CALENDAR_FUNC(DateCompare)(date, policy->reform.firstAfter) == COMPARISON_CONST(RESULT_LOWER))
     return false;
   system = CALENDAR_FUNC(_SystemFor)(policy, date);
   maximum = CALENDAR_FUNC(DaysInMonth)(system, date.year, date.month);
@@ -131,7 +131,7 @@ CHRONOMETRY_CALENDAR_DATE_TO_DAY_OF_YEAR_PROTOTYPE {
   }
   if (policy->kind == CALENDAR_CONST(HISTORICAL_REFORM) &&
       date.year == policy->reform.firstAfter.year &&
-      CALENDAR_FUNC(DateCompare)(date, policy->reform.firstAfter) != COMPARISON_CONST(LOWER))
+      CALENDAR_FUNC(DateCompare)(date, policy->reform.firstAfter) != COMPARISON_CONST(RESULT_LOWER))
     value -= policy->reform.suppressedDays;
   *outDayOfYear = value;
   return STATUS_CONST(SUCCESS);
