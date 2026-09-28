@@ -2,9 +2,9 @@
 
 #include "Distribution.space"
 
-#define RANDOM_DISTRIBUTION_F64_PROTOTYPE \
-  static inline double RANDOM_DISTRIBUTION_FUNC(F64)(                       \
-      RANDOM_SOURCE_TYPE(Value) *source)
+#define RANDOM_DISTRIBUTION_F64_PROTOTYPE                                    \
+  static inline OPSTATUS RANDOM_DISTRIBUTION_FUNC(F64)(                       \
+      RANDOM_SOURCE_TYPE(Value) *source, double *out)
 
 RANDOM_DISTRIBUTION_F64_PROTOTYPE;
 
