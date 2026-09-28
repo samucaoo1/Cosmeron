@@ -29,16 +29,16 @@
     hash->size = 0;                                                            \
     hash->deleted = 0;                                                         \
     for (i = 0; i < oldCapacity; ++i) {                                        \
-      if (oldBuckets[i].state == HASH_BUCKET_OCCUPIED) {                       \
+      if (oldBuckets[i].state == HASH_CONST(BUCKET_OCCUPIED)) {                       \
         size_t start = (size_t)(HASH_FUNCTION(oldBuckets[i].key)) %            \
                        hash->capacity;                                         \
         size_t probe;                                                          \
         for (probe = 0; probe < hash->capacity; ++probe) {                     \
           THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *bucket =                \
               &hash->buckets[(start + probe) % hash->capacity];                \
-          if (bucket->state != HASH_BUCKET_OCCUPIED) {                         \
+          if (bucket->state != HASH_CONST(BUCKET_OCCUPIED)) {                         \
             *bucket = oldBuckets[i];                                           \
-            bucket->state = HASH_BUCKET_OCCUPIED;                              \
+            bucket->state = HASH_CONST(BUCKET_OCCUPIED);                              \
             ++hash->size;                                                      \
             break;                                                             \
           }                                                                    \
