@@ -25,7 +25,7 @@ static inline NETWORK_TYPE(TError) NETWORK_INS(ResolveMapError)(int error) {
   (void)error;
 #ifdef EAI_NONAME
   if (error == EAI_NONAME)
-    return NETWORK_ERROR_CONST(HOST_NOT_FOUND);
+    return NETWORK_ERROR_CONST(RESOLVE_HOST_NOT_FOUND);
 #endif
 #ifdef EAI_AGAIN
   if (error == EAI_AGAIN)
@@ -129,7 +129,7 @@ static inline OPSTATUS NETWORK_RESOLVE_FUNC(Address)(
   NETWORK_INS(ResolveFreeAddrInfo)(result);
   if (addresses->size == 0) {
     if (error != NULL)
-      *error = NETWORK_ERROR_CONST(HOST_NOT_FOUND);
+      *error = NETWORK_ERROR_CONST(RESOLVE_HOST_NOT_FOUND);
     return STATUS_CONST(GENERIC_ERROR);
   }
 
