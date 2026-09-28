@@ -1,3 +1,12 @@
 RANDOM_DISTRIBUTION_F64_PROTOTYPE {
-  return (double)(RANDOM_SOURCE_FUNC(NextU64)(source) >> 11U) * 0x1.0p-53;
+  uint64_t value;
+  OPSTATUS status = RANDOM_SOURCE_FUNC(NextU64)(source, &value);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  if (out == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  *out = (double)(value >> 11U) * 0x1.0p-53;
+  return STATUS_CONST(SUCCESS);
 }
