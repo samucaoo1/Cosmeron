@@ -1,9 +1,19 @@
 #pragma once
 
+#include "../../../Core/Error/Status.h"
 #include "../Encoding/UTF8.h"
 
-inline static int TEXT_WIDTH_NS(Codepoint)(TText_Char32 codepoint);
-inline static TText_Measure_Result TEXT_WIDTH_NS(UTF8)(
-    const unsigned char *input, size_t size);
+#define TEXT_WIDTH_CODEPOINT_PROTOTYPE                                        \
+  static inline OPSTATUS TEXT_WIDTH_FUNC(Codepoint)(                          \
+      TEXT_TYPE(TChar32) codepoint, int *outWidth)
+
+#define TEXT_WIDTH_UTF8_PROTOTYPE                                             \
+  static inline OPSTATUS TEXT_WIDTH_FUNC(UTF8)(                               \
+      const unsigned char *input, size_t size,                                \
+      size_t *outColumns, size_t *outUnits)
+
+TEXT_WIDTH_CODEPOINT_PROTOTYPE;
+TEXT_WIDTH_UTF8_PROTOTYPE;
 
 #include "Impl/Width.impl"
+/* EOF */

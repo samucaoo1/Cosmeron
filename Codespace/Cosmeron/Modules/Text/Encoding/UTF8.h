@@ -1,18 +1,37 @@
 #pragma once
 
+#include "../../../Core/Error/Status.h"
 #include "../Text.space"
-#include "../Types.h"
 #include "../Unicode/Codepoint.h"
 
-inline static size_t TEXT_UTF8_NS(EncodedLength)(TText_Char32 codepoint);
-inline static TText_Encode_Result TEXT_UTF8_NS(Encode)(TText_Char32 codepoint,
-                                                       unsigned char *output,
-                                                       size_t capacity);
-inline static TText_Decode_Result TEXT_UTF8_NS(Decode)(const unsigned char *input,
-                                                       size_t size);
-inline static bool TEXT_UTF8_NS(Validate)(const unsigned char *input,
-                                         size_t size);
-inline static TText_Measure_Result TEXT_UTF8_NS(Count)(
-    const unsigned char *input, size_t size);
+#define TEXT_UTF8_ENCODED_LENGTH_PROTOTYPE                                    \
+  static inline OPSTATUS TEXT_UTF8_FUNC(EncodedLength)(                       \
+      TEXT_TYPE(TChar32) codepoint, size_t *outUnits)
+
+#define TEXT_UTF8_ENCODE_PROTOTYPE                                            \
+  static inline OPSTATUS TEXT_UTF8_FUNC(Encode)(                              \
+      TEXT_TYPE(TChar32) codepoint, unsigned char *output,                    \
+      size_t capacity, size_t *outUnits)
+
+#define TEXT_UTF8_DECODE_PROTOTYPE                                            \
+  static inline OPSTATUS TEXT_UTF8_FUNC(Decode)(                              \
+      const unsigned char *input, size_t size,                                \
+      TEXT_TYPE(TChar32) *outCodepoint, size_t *outUnits)
+
+#define TEXT_UTF8_VALIDATE_PROTOTYPE                                          \
+  static inline bool TEXT_UTF8_FUNC(Validate)(                                \
+      const unsigned char *input, size_t size)
+
+#define TEXT_UTF8_COUNT_PROTOTYPE                                             \
+  static inline OPSTATUS TEXT_UTF8_FUNC(Count)(                               \
+      const unsigned char *input, size_t size,                                \
+      size_t *outCodepoints, size_t *outUnits)
+
+TEXT_UTF8_ENCODED_LENGTH_PROTOTYPE;
+TEXT_UTF8_ENCODE_PROTOTYPE;
+TEXT_UTF8_DECODE_PROTOTYPE;
+TEXT_UTF8_VALIDATE_PROTOTYPE;
+TEXT_UTF8_COUNT_PROTOTYPE;
 
 #include "Impl/UTF8.impl"
+/* EOF */

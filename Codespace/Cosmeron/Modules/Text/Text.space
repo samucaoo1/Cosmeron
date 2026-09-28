@@ -7,38 +7,42 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef uint16_t TText_Char16;
-typedef uint32_t TText_Char32;
+#define TEXT_MOD Text
+#define TEXT_CMOD TEXT
 
-#define TEXT_MOD(NAME) GNS2(LIB_PREFIX(Text), NAME)
-#define TEXT_NS(MODULE, NAME) GNS2(TEXT_MOD(MODULE), NAME)
-#define TEXT_TYPE(NAME) TEXT_MOD(NAME)
+#define TEXT_NS(NAME) GNS2(LIB_PREFIX(TEXT_MOD), NAME)
+#define TEXT_CNS(NAME) CNS2(LIB_PREFIX_CONST(TEXT_CMOD), NAME)
+#define TEXT_INS(NAME) GNS3(LIB_PREFIX(TEXT_MOD), Internal, NAME)
+#define TEXT_CINS(NAME) CNS3(LIB_PREFIX_CONST(TEXT_CMOD), INTERNAL, NAME)
 
-#define TEXT_CODEPOINT_NS(NAME) TEXT_NS(Codepoint, NAME)
-#define TEXT_UTF8_NS(NAME) TEXT_NS(UTF8, NAME)
-#define TEXT_UTF16_NS(NAME) TEXT_NS(UTF16, NAME)
-#define TEXT_WIDTH_NS(NAME) TEXT_NS(Width, NAME)
-#define TEXT_GRID_NS(NAME) TEXT_NS(Grid, NAME)
+#define TEXT_TYPE(NAME) TEXT_NS(NAME)
+#define TEXT_FUNC(NAME) TEXT_NS(NAME)
+#define TEXT_CONST(NAME) TEXT_CNS(NAME)
 
-#define TEXT_GRID_TYPE(SUFFIX) GNS2(LIB_PREFIX(TText_Grid), SUFFIX)
-#define TEXT_GRID_FUNC(SUFFIX, FUNCTION)                                      \
-  GNS2(GNS2(TEXT_MOD(Grid), SUFFIX), FUNCTION)
-#define TEXT_GRID_CHAR_TYPE(SUFFIX)                                           \
-  GNS3(LIB_PREFIX(TText_Grid), Char, SUFFIX)
-#define TEXT_GRID_CHAR_FUNC(SUFFIX, FUNCTION)                                 \
-  GNS2(GNS3(TEXT_MOD(Grid), Char, SUFFIX), FUNCTION)
-#define TEXT_GRID_ATTRIBUTE_TYPE(NAME)                                        \
-  GNS3(LIB_PREFIX(TText_Grid), Attribute, NAME)
-#define TEXT_GRID_ATTRIBUTE_NS(NAME) GNS3(TEXT_MOD(Grid), Attribute, NAME)
-#define TEXT_GRID_ATTRIBUTE_FUNC(FUNCTION) TEXT_GRID_ATTRIBUTE_NS(FUNCTION)
-#define TEXT_GRID_UNDERLINE_TYPE(NAME)                                        \
-  GNS3(LIB_PREFIX(TText_Grid), Underline, NAME)
-#define TEXT_GRID_UNDERLINE_NS(NAME) GNS3(TEXT_MOD(Grid), Underline, NAME)
-#define TEXT_GRID_COLOR_TYPE(NAME) GNS3(LIB_PREFIX(TText_Grid), Color, NAME)
-#define TEXT_GRID_COLOR_NS(NAME) GNS3(TEXT_MOD(Grid), Color, NAME)
-#define TEXT_GRID_COLOR_FUNC(FUNCTION) TEXT_GRID_COLOR_NS(FUNCTION)
+#define TEXT_CODEPOINT_FUNC(NAME) GNS3(LIB_PREFIX(TEXT_MOD), Codepoint, NAME)
+#define TEXT_UTF8_FUNC(NAME) GNS3(LIB_PREFIX(TEXT_MOD), UTF8, NAME)
+#define TEXT_UTF16_FUNC(NAME) GNS3(LIB_PREFIX(TEXT_MOD), UTF16, NAME)
+#define TEXT_WIDTH_FUNC(NAME) GNS3(LIB_PREFIX(TEXT_MOD), Width, NAME)
+#define TEXT_GRID_NS(NAME) GNS3(LIB_PREFIX(TEXT_MOD), Grid, NAME)
 
-#define TEXT_GRID_CHARACTER_TABLE                                             \
+#define TEXT_GRID_TYPE(SUFFIX) GNS2(TEXT_GRID_NS(TGrid), SUFFIX)
+#define TEXT_GRID_FUNC(SUFFIX, FUNCTION) GNS2(GNS3(LIB_PREFIX(TEXT_MOD), Grid, SUFFIX), FUNCTION)
+#define TEXT_GRID_CHAR_TYPE(SUFFIX) GNS2(TEXT_GRID_NS(TCharGrid), SUFFIX)
+#define TEXT_GRID_CHAR_FUNC(SUFFIX, FUNCTION) GNS2(GNS4(LIB_PREFIX(TEXT_MOD), Grid, Char, SUFFIX), FUNCTION)
+#define TEXT_GRID_ATTRIBUTE_TYPE(NAME) GNS4(LIB_PREFIX(TEXT_MOD), Grid, Attribute, NAME)
+#define TEXT_GRID_ATTRIBUTE_FUNC(NAME) GNS4(LIB_PREFIX(TEXT_MOD), Grid, Attribute, NAME)
+#define TEXT_GRID_ATTRIBUTE_CONST(NAME) CNS4(LIB_PREFIX_CONST(TEXT_CMOD), GRID, ATTRIBUTE, NAME)
+#define TEXT_GRID_UNDERLINE_TYPE(NAME) GNS4(LIB_PREFIX(TEXT_MOD), Grid, Underline, NAME)
+#define TEXT_GRID_UNDERLINE_CONST(NAME) CNS4(LIB_PREFIX_CONST(TEXT_CMOD), GRID, UNDERLINE, NAME)
+#define TEXT_GRID_COLOR_TYPE(NAME) GNS4(LIB_PREFIX(TEXT_MOD), Grid, Color, NAME)
+#define TEXT_GRID_COLOR_FUNC(NAME) GNS4(LIB_PREFIX(TEXT_MOD), Grid, Color, NAME)
+#define TEXT_GRID_COLOR_CONST(NAME) CNS4(LIB_PREFIX_CONST(TEXT_CMOD), GRID, COLOR, NAME)
+
+typedef uint16_t TEXT_TYPE(TChar16);
+typedef uint32_t TEXT_TYPE(TChar32);
+
+#define TEXT_GRID_CHARACTER_TABLE(X)                                          \
   X(char, char)                                                               \
-  X(TText_Char16, char16)                                                         \
-  X(TText_Char32, char32)
+  X(TEXT_TYPE(TChar16), char16)                                               \
+  X(TEXT_TYPE(TChar32), char32)
+/* EOF */
