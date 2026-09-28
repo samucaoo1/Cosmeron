@@ -99,7 +99,7 @@ static inline OPSTATUS TEXT_INS(GridCharReadRegion)(
   TEXT_GRID_CHAR_DESTROY_PROTOTYPE(TYPE, SUFFIX) {                                    \
     if (grid == NULL)                                                         \
       return STATUS_CONST(INVALID_ARGUMENT);                                     \
-    free(grid->data);                                                         \
+    Memory_Free(grid->data);                                                  \
     *grid = (TEXT_GRID_CHAR_TYPE(SUFFIX)){0};                                 \
     return STATUS_CONST(SUCCESS);                                                \
   }                                                                           \
