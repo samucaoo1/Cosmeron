@@ -3,7 +3,7 @@
 #if CONTAINER_FUNCTION_TABLE_ENABLED
 
 #define FLAT_QUEUE_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                              \
-  typedef struct FLAT_QUEUE_FUNC(SUFFIX, FunctionTable) {                   \
+  typedef struct FLAT_QUEUE_FUNCTION_TABLE_TYPE(SUFFIX) {                   \
     /* Lifecycle */                                                            \
     OPSTATUS (*init)(FLAT_QUEUE_TYPE(SUFFIX) *);                               \
     void (*destroy)(FLAT_QUEUE_TYPE(SUFFIX) *);                                \
@@ -23,10 +23,10 @@
     bool (*empty)(const FLAT_QUEUE_TYPE(SUFFIX) *);                                  \
     size_t (*size)(const FLAT_QUEUE_TYPE(SUFFIX) *);                                 \
     size_t (*capacity)(const FLAT_QUEUE_TYPE(SUFFIX) *);                             \
-  } FLAT_QUEUE_FUNC(SUFFIX, FunctionTable);
+  } FLAT_QUEUE_FUNCTION_TABLE_TYPE(SUFFIX);
 
 #define FLAT_QUEUE_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)                     \
-  static const FLAT_QUEUE_FUNC(SUFFIX, FunctionTable)                              \
+  static const FLAT_QUEUE_FUNCTION_TABLE_TYPE(SUFFIX)                              \
       FLAT_QUEUE_FUNC(SUFFIX, functions) = {                                   \
           .init = FLAT_QUEUE_FUNC(SUFFIX, Init),                       \
           .destroy = FLAT_QUEUE_FUNC(SUFFIX, Destroy),                 \
