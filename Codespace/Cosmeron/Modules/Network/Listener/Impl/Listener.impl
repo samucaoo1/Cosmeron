@@ -212,5 +212,4 @@ NETWORK_LISTENER_CLOSE_PROTOTYPE {
   SOCKET_FUNC(Close)(&listener->primary);
   SOCKET_FUNC(Close)(&listener->secondary);
   listener->dualStack = false;
-  listener->lastError = NETWORK_ERROR_CONST(NONE);
 }
