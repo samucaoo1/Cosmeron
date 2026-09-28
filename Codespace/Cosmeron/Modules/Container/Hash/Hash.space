@@ -15,8 +15,8 @@
 #define HASH_NS(NAME) GNS2(CONTAINER_NS(Hash), NAME)
 #define HASH_CONST(NAME) CNS3(LIB_PREFIX_CONST(CONTAINER_CMOD), HASH, NAME)
 
-#define HASH_INITIAL_CAPACITY 16u
-#define HASH_LOAD_PERCENT 75u
+#define COSMERON_MACRO_INTERNAL_HASH_INITIAL_CAPACITY 16u
+#define COSMERON_MACRO_INTERNAL_HASH_LOAD_PERCENT 75u
 
 typedef enum HASH_NS(BucketState) {
   HASH_CONST(BUCKET_EMPTY),
@@ -44,26 +44,53 @@ typedef enum HASH_NS(BucketState) {
 #define HASH_FUNCTION_TABLE_TYPE(KEY_SUFFIX, VALUE_SUFFIX)                    \
   GNS2(HASH_OPERATION_NS(KEY_SUFFIX, VALUE_SUFFIX), FunctionTable)
 
-#define HASH_INT(VALUE)                                                       \
-  ((size_t)((uint32_t)(VALUE) * UINT32_C(2654435761)))
+#define COSMERON_MACRO_INTERNAL_HASH_INT_FACTOR UINT32_C(2654435761)
+#define COSMERON_MACRO_INTERNAL_HASH_FNV_OFFSET                               \
+  UINT64_C(14695981039346656037)
+#define COSMERON_MACRO_INTERNAL_HASH_FNV_PRIME UINT64_C(1099511628211)
+
+#define HASH_INT_PROTOTYPE                                                    \
+  static inline size_t HASH_NS(Int)(uint32_t value)
 
 #define HASH_CSTRING_PROTOTYPE                                                \
   static inline size_t HASH_NS(CString)(const char *value)
 
+#define HASH_EQUAL_INT_PROTOTYPE                                              \
+  static inline bool HASH_NS(EqualInt)(int left, int right)
+
+#define HASH_EQUAL_CSTRING_PROTOTYPE                                          \
+  static inline bool HASH_NS(EqualCString)(const char *left, const char *right)
+
+HASH_INT_PROTOTYPE;
 HASH_CSTRING_PROTOTYPE;
+HASH_EQUAL_INT_PROTOTYPE;
+HASH_EQUAL_CSTRING_PROTOTYPE;
+
+HASH_INT_PROTOTYPE {
+  return (size_t)(value * COSMERON_MACRO_INTERNAL_HASH_INT_FACTOR);
+}
 
 HASH_CSTRING_PROTOTYPE {
-  size_t hash = (size_t)UINT64_C(14695981039346656037);
+  size_t hash = (size_t)COSMERON_MACRO_INTERNAL_HASH_FNV_OFFSET;
   if (!value)
     return 0;
   while (*value) {
     hash ^= (uint8_t)*value++;
-    hash *= (size_t)UINT64_C(1099511628211);
+    hash *= (size_t)COSMERON_MACRO_INTERNAL_HASH_FNV_PRIME;
   }
   return hash;
 }
 
+HASH_EQUAL_INT_PROTOTYPE {
+  return left == right;
+}
+
+HASH_EQUAL_CSTRING_PROTOTYPE {
+  return (left == NULL || right == NULL) ? left == right
+                                         : strcmp(left, right) == 0;
+}
+
+#define HASH_INT(VALUE) HASH_NS(Int)((uint32_t)(VALUE))
 #define HASH_CSTRING(VALUE) HASH_NS(CString)((VALUE))
-#define HASH_EQUAL_INT(A, B) ((A) == (B))
-#define HASH_EQUAL_CSTRING(A, B)                                              \
-  (((A) == NULL || (B) == NULL) ? ((A) == (B)) : (strcmp((A), (B)) == 0))
+#define HASH_EQUAL_INT(A, B) HASH_NS(EqualInt)((A), (B))
+#define HASH_EQUAL_CSTRING(A, B) HASH_NS(EqualCString)((A), (B))
