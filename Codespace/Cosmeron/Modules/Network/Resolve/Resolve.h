@@ -60,8 +60,8 @@ static inline void NETWORK_INS(ResolveFreeAddrInfo)(struct addrinfo *result) {
       NETWORK_RESOLVE_TYPE(TAddressVector) *addresses, const char *host,      \
       NETWORK_TYPE(TError) *error)
 
-NETWORK_RESOLVE_ADDRESS_PROTOTYPE;                                           \
-                                                                            \
+NETWORK_RESOLVE_ADDRESS_PROTOTYPE;
+
 NETWORK_RESOLVE_ADDRESS_PROTOTYPE {
   struct addrinfo hints;
   struct addrinfo *result = NULL;
