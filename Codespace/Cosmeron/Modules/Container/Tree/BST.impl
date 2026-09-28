@@ -10,7 +10,7 @@
  * BST core — Remove (no rebalance)
  * ============================================================= */
 
-#define TBST_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                 \
+#define COSMERON_MACRO_INTERNAL_TBST_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                 \
   TTREE_REMOVE_PROTOTYPE(T, KEY_TYPE) {         \
     if (!tree)                                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
@@ -41,7 +41,7 @@
  * CreateNode + Insert — SET
  * ============================================================= */
 
-#define TBST_IMPLEMENT_SET(T, KEY_TYPE, CMP)                                  \
+#define COSMERON_MACRO_INTERNAL_TBST_IMPLEMENT_SET(T, KEY_TYPE, CMP)                                  \
   static inline TTREE_NODE(T) *                                                \
       TTREE_FN(T, CreateNode)(KEY_TYPE key) {                                  \
     TTREE_NODE(T) *_n;                                                        \
@@ -95,7 +95,7 @@
  * CreateNode + Insert — MAP
  * ============================================================= */
 
-#define TBST_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                      \
+#define COSMERON_MACRO_INTERNAL_TBST_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                      \
   static inline TTREE_NODE(T) *                                                \
       TTREE_FN(T, CreateNode)(KEY_TYPE key, VALUE_TYPE value) {                \
     TTREE_NODE(T) *_n;                                                        \
@@ -151,18 +151,18 @@
  * Full BST SET / MAP expansion
  * ============================================================= */
 
-#define TBST_SET_IMPLEMENT_ALL(T, KEY_TYPE, CMP)                                     \
-  TTREE_NODE_SET(T, KEY_TYPE, )                                                \
-  TTREE_STRUCT(T)                                                              \
+#define COSMERON_MACRO_INTERNAL_TBST_SET_IMPLEMENT_ALL(T, KEY_TYPE, CMP)                                     \
+  COSMERON_MACRO_INTERNAL_TTREE_NODE_SET(T, KEY_TYPE, )                                                \
+  COSMERON_MACRO_INTERNAL_TTREE_STRUCT(T)                                                              \
   TTREE_SET_PROTOTYPES(T, KEY_TYPE)                                            \
-  TTREE_COMMON_SET(T, KEY_TYPE, CMP)                                           \
-  TBST_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                       \
-  TBST_IMPLEMENT_SET(T, KEY_TYPE, CMP)
+  COSMERON_MACRO_INTERNAL_TTREE_COMMON_SET(T, KEY_TYPE, CMP)                                           \
+  COSMERON_MACRO_INTERNAL_TBST_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                       \
+  COSMERON_MACRO_INTERNAL_TBST_IMPLEMENT_SET(T, KEY_TYPE, CMP)
 
-#define TBST_MAP_IMPLEMENT_ALL(T, KEY_TYPE, VALUE_TYPE, CMP)                         \
-  TTREE_NODE_MAP(T, KEY_TYPE, VALUE_TYPE, )                                    \
-  TTREE_STRUCT(T)                                                              \
+#define COSMERON_MACRO_INTERNAL_TBST_MAP_IMPLEMENT_ALL(T, KEY_TYPE, VALUE_TYPE, CMP)                         \
+  COSMERON_MACRO_INTERNAL_TTREE_NODE_MAP(T, KEY_TYPE, VALUE_TYPE, )                                    \
+  COSMERON_MACRO_INTERNAL_TTREE_STRUCT(T)                                                              \
   TTREE_MAP_PROTOTYPES(T, KEY_TYPE, VALUE_TYPE)                                \
-  TTREE_COMMON_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                               \
-  TBST_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                       \
-  TBST_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)
+  COSMERON_MACRO_INTERNAL_TTREE_COMMON_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                               \
+  COSMERON_MACRO_INTERNAL_TBST_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                       \
+  COSMERON_MACRO_INTERNAL_TBST_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)
