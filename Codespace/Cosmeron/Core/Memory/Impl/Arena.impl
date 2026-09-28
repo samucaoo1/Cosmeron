@@ -23,7 +23,7 @@ ARENA_ALLOC_ALIGNED_PROTOTYPE {
   size_t padding;
   size_t alignedOffset;
 
-  if (!arena || !out || alignment == 0 || alignment > ARENA_ALIGNMENT)
+  if (!arena || !out || alignment == 0 || alignment > COSMERON_MACRO_INTERNAL_ARENA_ALIGNMENT)
     return STATUS_CONST(INVALID_ARGUMENT);
 
   if (size == 0) {
@@ -48,7 +48,7 @@ ARENA_ALLOC_ALIGNED_PROTOTYPE {
 }
 
 ARENA_ALLOC_PROTOTYPE {
-  return ARENA_FUNC(AllocAligned)(arena, out, size, ARENA_ALIGNMENT);
+  return ARENA_FUNC(AllocAligned)(arena, out, size, COSMERON_MACRO_INTERNAL_ARENA_ALIGNMENT);
 }
 
 ARENA_ALLOC_ARRAY_ALIGNED_PROTOTYPE {
@@ -58,7 +58,7 @@ ARENA_ALLOC_ARRAY_ALIGNED_PROTOTYPE {
   if (!out)
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  status = Memory_Internal_ArraySize(count, elementSize, &size);
+  status = MEMORY_INS(AllocArraySize)(count, elementSize, &size);
   if (status != STATUS_CONST(SUCCESS))
     return status;
 
@@ -67,7 +67,7 @@ ARENA_ALLOC_ARRAY_ALIGNED_PROTOTYPE {
 
 ARENA_ALLOC_ARRAY_PROTOTYPE {
   return ARENA_FUNC(AllocArrayAligned)(arena, out, count, elementSize,
-                                        ARENA_ALIGNMENT);
+                                        COSMERON_MACRO_INTERNAL_ARENA_ALIGNMENT);
 }
 
 ARENA_ALLOC_TYPED_PROTOTYPE {
