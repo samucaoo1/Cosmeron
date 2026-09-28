@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../Core/Namespace.h"
+#include "../../Core/Error/Status.h"
 #include "../../Core/Preprocessor/Compiling.inc"
 #include "../../Core/Preprocessor/Operations.h"
 #include "../../Core/Preprocessor/Detect/OperationSystem.h"
@@ -21,7 +22,12 @@
 #define NETWORK_FUNC(NAME) NETWORK_NS(NAME)
 #define NETWORK_CONST(NAME) NETWORK_CNS(NAME)
 
-#define NETWORK_ERROR_CONST(NAME) CNS3(LIB_PREFIX_CONST(NETWORK_CMOD), ERROR, NAME)
+#ifdef COSMERON_NAMESPACE_CONST
+#define NETWORK_ERROR_SCOPE CNS2(COSMERON_NAMESPACE_CONST, PP_OP_CAT(NETWORK_, ERROR))
+#else
+#define NETWORK_ERROR_SCOPE PP_OP_CAT(NETWORK_, ERROR)
+#endif
+#define NETWORK_ERROR_CONST(NAME) CNS2(NETWORK_ERROR_SCOPE, NAME)
 #define NETWORK_EVENT_CONST(NAME) CNS3(LIB_PREFIX_CONST(NETWORK_CMOD), EVENT, NAME)
 #define NETWORK_POLLER_SOURCE_CONST(NAME) CNS4(LIB_PREFIX_CONST(NETWORK_CMOD), POLLER, SOURCE, NAME)
 
