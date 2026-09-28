@@ -49,10 +49,15 @@
   HASH_INTERNAL_FIND_BUCKET(KEY_TYPE, KEY_SUFFIX, VALUE_SUFFIX, HASH_FUNCTION, \
                             EQUAL_FUNCTION)                                    \
   HASH_FIND_PROTOTYPE(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX) {        \
-    THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *bucket =                      \
-        HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, InternalFindBucket)(hash,     \
-                                                                     key);     \
-    return bucket ? &bucket->value : NULL;                                     \
+    THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *bucket;                       \
+    if (!hash || !out)                                                        \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    bucket = HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, InternalFindBucket)(     \
+        hash, key);                                                           \
+    if (!bucket)                                                              \
+      return STATUS_CONST(NOT_FOUND);                                          \
+    *out = &bucket->value;                                                     \
+    return STATUS_CONST(SUCCESS);                                              \
   }
 
 #define HASH_IMPLEMENT_CONST_FIND(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE,            \
@@ -60,10 +65,15 @@
   HASH_INTERNAL_CONST_FIND_BUCKET(KEY_TYPE, KEY_SUFFIX, VALUE_SUFFIX,          \
                                   HASH_FUNCTION, EQUAL_FUNCTION)               \
   HASH_CONST_FIND_PROTOTYPE(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX) {  \
-    const THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *bucket =                \
-        HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, InternalConstFindBucket)(     \
-            hash, key);                                                        \
-    return bucket ? &bucket->value : NULL;                                     \
+    const THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *bucket;                 \
+    if (!hash || !out)                                                        \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    bucket = HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, InternalConstFindBucket)(\
+        hash, key);                                                           \
+    if (!bucket)                                                              \
+      return STATUS_CONST(NOT_FOUND);                                          \
+    *out = &bucket->value;                                                     \
+    return STATUS_CONST(SUCCESS);                                              \
   }
 
 #define HASH_IMPLEMENT_CONTAINS(KEY_TYPE, KEY_SUFFIX, VALUE_SUFFIX,            \

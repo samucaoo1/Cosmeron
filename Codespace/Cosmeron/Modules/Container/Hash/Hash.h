@@ -53,15 +53,17 @@
  * ============================================================ */
 
 #define HASH_FIND_PROTOTYPE(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX)   \
-  static inline VALUE_TYPE *                                                  \
+  static inline OPSTATUS                                                      \
   HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, Find)(                             \
-      THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) * hash, KEY_TYPE key)
+      THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) * hash, KEY_TYPE key,              \
+      VALUE_TYPE **out)
 
 #define HASH_CONST_FIND_PROTOTYPE(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE,           \
                                   VALUE_SUFFIX)                               \
-  static inline VALUE_TYPE const *                                            \
+  static inline OPSTATUS                                                      \
   HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, ConstFind)(                        \
-      const THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) * hash, KEY_TYPE key)
+      const THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) * hash, KEY_TYPE key,        \
+      VALUE_TYPE const **out)
 
 #define HASH_CONTAINS_PROTOTYPE(KEY_TYPE, KEY_SUFFIX, VALUE_SUFFIX)           \
   static inline bool HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, Contains)(      \

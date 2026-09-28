@@ -7,9 +7,10 @@
     OPSTATUS (*init)(THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *);                 \
     void (*destroy)(THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *);                  \
     OPSTATUS (*rehash)(THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *, size_t);       \
-    VALUE_TYPE *(*find)(THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *, KEY_TYPE);    \
-    VALUE_TYPE const *(*constFind)(                                           \
-        const THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *, KEY_TYPE);              \
+    OPSTATUS (*find)(THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *, KEY_TYPE, VALUE_TYPE **);    \
+    OPSTATUS (*constFind)(                                                    \
+        const THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *, KEY_TYPE,               \
+        VALUE_TYPE const **);              \
     bool (*contains)(const THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *, KEY_TYPE); \
     OPSTATUS (*insert)(THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *, KEY_TYPE,      \
                        VALUE_TYPE);                                           \
