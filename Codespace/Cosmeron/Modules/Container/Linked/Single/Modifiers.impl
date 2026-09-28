@@ -6,7 +6,7 @@
  * ============================================================ */
 
 /* PushFront — Cria nó e liga no head */
-#define SINGLE_LINKED_IMPLEMENT_PUSH_FRONT(TYPE, FUNCTION_NAME,                \
+#define COSMERON_MACRO_INTERNAL_SINGLE_LINKED_IMPLEMENT_PUSH_FRONT(TYPE, FUNCTION_NAME,                \
                                            FUNCTION_CREATE_NODE,               \
                                            FUNCTION_LINK_FRONT,                \
                                            CONTAINER_STRUCT, NODE_STRUCT)       \
@@ -23,7 +23,7 @@
   }
 
 /* PopFront — Remove do head e libera */
-#define SINGLE_LINKED_IMPLEMENT_POP_FRONT(TYPE, FUNCTION_NAME,                 \
+#define COSMERON_MACRO_INTERNAL_SINGLE_LINKED_IMPLEMENT_POP_FRONT(TYPE, FUNCTION_NAME,                 \
                                           FUNCTION_UNLINK_FRONT,               \
                                           CONTAINER_STRUCT)                     \
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
@@ -38,7 +38,7 @@
   }
 
 /* PushBack — Cria nó e liga no tail */
-#define SINGLE_LINKED_IMPLEMENT_PUSH_BACK(TYPE, FUNCTION_NAME,                 \
+#define COSMERON_MACRO_INTERNAL_SINGLE_LINKED_IMPLEMENT_PUSH_BACK(TYPE, FUNCTION_NAME,                 \
                                           FUNCTION_CREATE_NODE,                \
                                           FUNCTION_LINK_BACK,                  \
                                           CONTAINER_STRUCT, NODE_STRUCT)        \
@@ -55,14 +55,14 @@
   }
 
 /* Clear — Destroi tudo e reinicializa */
-#define SINGLE_LINKED_IMPLEMENT_CLEAR(TYPE, FUNCTION_NAME,                     \
+#define COSMERON_MACRO_INTERNAL_SINGLE_LINKED_IMPLEMENT_CLEAR(TYPE, FUNCTION_NAME,                     \
                                       FUNCTION_DESTROY, CONTAINER_STRUCT)      \
   static inline void FUNCTION_NAME(CONTAINER_STRUCT *container) {              \
     FUNCTION_DESTROY(container);                                               \
   }
 
 /* InsertAfter — Insere após um nó existente */
-#define SINGLE_LINKED_IMPLEMENT_INSERT_AFTER(TYPE, FUNCTION_NAME,              \
+#define COSMERON_MACRO_INTERNAL_SINGLE_LINKED_IMPLEMENT_INSERT_AFTER(TYPE, FUNCTION_NAME,              \
                                              FUNCTION_CREATE_NODE,             \
                                              CONTAINER_STRUCT, NODE_STRUCT)     \
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
@@ -90,7 +90,7 @@
   }
 
 /* EraseAfter — Remove o nó após pos */
-#define SINGLE_LINKED_IMPLEMENT_ERASE_AFTER(TYPE, FUNCTION_NAME,               \
+#define COSMERON_MACRO_INTERNAL_SINGLE_LINKED_IMPLEMENT_ERASE_AFTER(TYPE, FUNCTION_NAME,               \
                                             CONTAINER_STRUCT, NODE_STRUCT)      \
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        NODE_STRUCT *pos) {                     \
