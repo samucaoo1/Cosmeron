@@ -114,7 +114,7 @@ static inline bool NETWORK_POLLER_FUNC(_StreamClosed)(
 }
 
 static inline OPSTATUS NETWORK_POLLER_FUNC(_PushEvent)(
-    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TEventVector) *events,
+    NETWORK_POLLER_TYPE(TEventVector) *events,
     NETWORK_POLLER_TYPE(TRegistration) *registration, NETWORK_POLLER_TYPE(EventFlags) flags,
     NETWORK_TYPE(TError) *error) {
   NETWORK_POLLER_TYPE(TEvent) event;
