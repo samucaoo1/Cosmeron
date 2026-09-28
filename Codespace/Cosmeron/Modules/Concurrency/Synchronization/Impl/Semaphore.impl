@@ -36,7 +36,7 @@ static inline OPSTATUS SEMAPHORE_FUNC(Wait)(CONCURRENCY_TYPE(TSemaphore) *semaph
 
 static inline OPSTATUS SEMAPHORE_FUNC(TryWait)(CONCURRENCY_TYPE(TSemaphore) *semaphore, bool *outAcquired) {
   OPSTATUS status;
-  if (semaphore == NULL || acquired == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  if (semaphore == NULL || outAcquired == NULL) return STATUS_CONST(INVALID_ARGUMENT);
   *outAcquired = false;
   status = MUTEX_FUNC(Lock)(&semaphore->mutex);
   if (status != STATUS_CONST(SUCCESS)) return status;

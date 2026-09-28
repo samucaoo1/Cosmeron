@@ -81,19 +81,19 @@ static inline OPSTATUS FUTURE_FUNC(Get)(CONCURRENCY_TYPE(TFuture) *future, void 
       return status;
     } }
   }
-  if (result != NULL) *result = future->result;
-  if (resultStatus != NULL) *resultStatus = future->status;
+  if (outResult != NULL) *outResult = future->result;
+  if (outStatus != NULL) *outStatus = future->status;
   return MUTEX_FUNC(Unlock)(&future->mutex);
 }
 
-static inline void ConcurrencyInternal_Future_Task_Run(void *argument) {
-  CONCURRENCY_TYPE(CONCURRENCY_TYPE(TFuture)Task) *futureTask = (CONCURRENCY_TYPE(CONCURRENCY_TYPE(TFuture)Task) *)argument;
+static inline void CONCURRENCY_INS(FutureTaskRun)(void *argument) {
+  CONCURRENCY_TYPE(TFutureTask) *futureTask = (CONCURRENCY_TYPE(TFutureTask) *)argument;
   void *result = NULL;
   OPSTATUS status = futureTask->function(futureTask->argument, &result);
   (void)FUTURE_FUNC(Complete)(futureTask->future, result, status);
 }
 
-static inline CONCURRENCY_TYPE(TTask) FUTURE_FUNC(Task)(CONCURRENCY_TYPE(CONCURRENCY_TYPE(TFuture)Task) *futureTask, CONCURRENCY_TYPE(TFuture) *future,
+static inline CONCURRENCY_TYPE(TTask) FUTURE_FUNC(Task)(CONCURRENCY_TYPE(TFutureTask) *futureTask, CONCURRENCY_TYPE(TFuture) *future,
                                     CONCURRENCY_TYPE(FutureFunction) function, void *argument) {
   if (futureTask == NULL || future == NULL || !future->initialized ||
       function == NULL)
@@ -101,5 +101,5 @@ static inline CONCURRENCY_TYPE(TTask) FUTURE_FUNC(Task)(CONCURRENCY_TYPE(CONCURR
   futureTask->future = future;
   futureTask->function = function;
   futureTask->argument = argument;
-  return TASK_FUNC(Create)(ConcurrencyInternal_Future_Task_Run, futureTask);
+  return TASK_FUNC(Create)(CONCURRENCY_INS(FutureTaskRun), futureTask);
 }

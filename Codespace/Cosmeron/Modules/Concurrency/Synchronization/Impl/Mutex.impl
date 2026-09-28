@@ -18,7 +18,7 @@ static inline OPSTATUS MUTEX_FUNC(Lock)(CONCURRENCY_TYPE(TMutex) *mutex) {
 }
 static inline OPSTATUS MUTEX_FUNC(TryLock)(CONCURRENCY_TYPE(TMutex) *mutex, bool *outAcquired) {
   int result;
-  if (mutex == NULL || acquired == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  if (mutex == NULL || outAcquired == NULL) return STATUS_CONST(INVALID_ARGUMENT);
   result = pthread_mutex_trylock(&mutex->native);
   if (result == 0) {
     *outAcquired = true;
@@ -47,7 +47,7 @@ static inline OPSTATUS MUTEX_FUNC(Lock)(CONCURRENCY_TYPE(TMutex) *mutex) {
   return STATUS_CONST(SUCCESS);
 }
 static inline OPSTATUS MUTEX_FUNC(TryLock)(CONCURRENCY_TYPE(TMutex) *mutex, bool *outAcquired) {
-  if (mutex == NULL || acquired == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  if (mutex == NULL || outAcquired == NULL) return STATUS_CONST(INVALID_ARGUMENT);
   *outAcquired = TryAcquireSRWLockExclusive(&mutex->native) != 0;
   return STATUS_CONST(SUCCESS);
 }
