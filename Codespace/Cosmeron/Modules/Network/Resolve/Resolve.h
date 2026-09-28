@@ -21,7 +21,7 @@ FLAT_VECTOR_IMPLEMENT_ALL(NETWORK_ADDRESS_TYPE(TAddress), Network_Address)
 
 typedef FLAT_VECTOR_TYPE(Network_Address) NETWORK_RESOLVE_TYPE(TAddressVector);
 
-static inline NETWORK_TYPE(Error) NETWORK_INS(ResolveMapError)(int error) {
+static inline NETWORK_TYPE(TError) NETWORK_INS(ResolveMapError)(int error) {
   (void)error;
 #ifdef EAI_NONAME
   if (error == EAI_NONAME)
@@ -57,7 +57,7 @@ static inline void NETWORK_INS(ResolveFreeAddrInfo)(struct addrinfo *result) {
 
 static inline OPSTATUS NETWORK_RESOLVE_FUNC(Address)(
     NETWORK_RESOLVE_TYPE(TAddressVector) *addresses, const char *host,
-    NETWORK_TYPE(Error) *error) {
+    NETWORK_TYPE(TError) *error) {
   struct addrinfo hints;
   struct addrinfo *result = NULL;
   struct addrinfo *current = NULL;

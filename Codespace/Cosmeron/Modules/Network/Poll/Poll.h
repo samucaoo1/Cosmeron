@@ -16,17 +16,17 @@ enum {
   NETWORK_EVENT_CONST(ERROR) = 1u << 4
 };
 
-typedef enum NETWORK_POLLER_TYPE(SourceType) {
+typedef enum NETWORK_POLLER_TYPE(TSourceType) {
   NETWORK_POLLER_SOURCE_CONST(CONNECTION),
   NETWORK_POLLER_SOURCE_CONST(LISTENER),
   NETWORK_POLLER_SOURCE_CONST(DATAGRAM)
-} NETWORK_POLLER_TYPE(SourceType);
+} NETWORK_POLLER_TYPE(TSourceType);
 
 typedef uint64_t NETWORK_POLLER_TYPE(Handle);
 
 typedef struct NETWORK_POLLER_TYPE(TRegistration) {
   NETWORK_POLLER_TYPE(Handle) handle;
-  NETWORK_POLLER_TYPE(SourceType) sourceType;
+  NETWORK_POLLER_TYPE(TSourceType) sourceType;
   NETWORK_POLLER_TYPE(EventFlags) interests;
   void *object;
   void *userdata;
@@ -34,7 +34,7 @@ typedef struct NETWORK_POLLER_TYPE(TRegistration) {
 
 typedef struct NETWORK_POLLER_TYPE(TEvent) {
   NETWORK_POLLER_TYPE(Handle) handle;
-  NETWORK_POLLER_TYPE(SourceType) sourceType;
+  NETWORK_POLLER_TYPE(TSourceType) sourceType;
   NETWORK_POLLER_TYPE(EventFlags) flags;
   void *object;
   void *userdata;
@@ -49,32 +49,32 @@ typedef FLAT_VECTOR_TYPE(Network_Event) NETWORK_POLLER_TYPE(TEventVector);
 typedef struct NETWORK_POLLER_TYPE(TPoller) {
   NETWORK_POLLER_TYPE(TRegistrationVector) registrations;
   NETWORK_POLLER_TYPE(Handle) nextHandle;
-  NETWORK_TYPE(Error) lastError;
+  NETWORK_TYPE(TError) lastError;
 } NETWORK_POLLER_TYPE(TPoller);
 
 static inline void NETWORK_POLLER_FUNC(Init)(NETWORK_POLLER_TYPE(TPoller) *poller);
 static inline void NETWORK_POLLER_FUNC(Destroy)(NETWORK_POLLER_TYPE(TPoller) *poller);
 static inline OPSTATUS NETWORK_POLLER_FUNC(AddConnection)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_CONNECTION_TYPE(TConnection) *connection,
-    NETWORK_POLLER_TYPE(EventFlags) interests, void *userdata, NETWORK_POLLER_TYPE(Handle) *handle, NETWORK_TYPE(Error) *error);
+    NETWORK_POLLER_TYPE(EventFlags) interests, void *userdata, NETWORK_POLLER_TYPE(Handle) *handle, NETWORK_TYPE(TError) *error);
 static inline OPSTATUS NETWORK_POLLER_FUNC(AddListener)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_LISTENER_TYPE(TListener) *listener,
-    NETWORK_POLLER_TYPE(EventFlags) interests, void *userdata, NETWORK_POLLER_TYPE(Handle) *handle, NETWORK_TYPE(Error) *error);
+    NETWORK_POLLER_TYPE(EventFlags) interests, void *userdata, NETWORK_POLLER_TYPE(Handle) *handle, NETWORK_TYPE(TError) *error);
 static inline OPSTATUS NETWORK_POLLER_FUNC(AddDatagram)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_DATAGRAM_TYPE(TDatagram) *datagram,
-    NETWORK_POLLER_TYPE(EventFlags) interests, void *userdata, NETWORK_POLLER_TYPE(Handle) *handle, NETWORK_TYPE(Error) *error);
+    NETWORK_POLLER_TYPE(EventFlags) interests, void *userdata, NETWORK_POLLER_TYPE(Handle) *handle, NETWORK_TYPE(TError) *error);
 static inline OPSTATUS NETWORK_POLLER_FUNC(Remove)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(Handle) handle,
-    NETWORK_TYPE(Error) *error);
+    NETWORK_TYPE(TError) *error);
 static inline OPSTATUS NETWORK_POLLER_FUNC(Watch)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(Handle) handle,
-    NETWORK_POLLER_TYPE(EventFlags) interests, NETWORK_TYPE(Error) *error);
+    NETWORK_POLLER_TYPE(EventFlags) interests, NETWORK_TYPE(TError) *error);
 static inline OPSTATUS NETWORK_POLLER_FUNC(Wait)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TEventVector) *events,
-    NETWORK_TYPE(Error) *error);
+    NETWORK_TYPE(TError) *error);
 static inline OPSTATUS NETWORK_POLLER_FUNC(WaitFor)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TEventVector) *events,
-    CHRONOMETRY_TYPE(Duration) timeout, NETWORK_TYPE(Error) *error);
+    CHRONOMETRY_TYPE(Duration) timeout, NETWORK_TYPE(TError) *error);
 
 static inline bool NETWORK_POLLER_FUNC(Event_Has)(
     const NETWORK_POLLER_TYPE(TEvent) *event, NETWORK_POLLER_TYPE(EventFlags) flags) {

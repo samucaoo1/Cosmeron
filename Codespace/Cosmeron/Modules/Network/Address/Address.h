@@ -3,13 +3,13 @@
 #include "../Network.space"
 #include <string.h>
 
-typedef enum NETWORK_ADDRESS_TYPE(AddressType) {
+typedef enum NETWORK_ADDRESS_TYPE(TType) {
   NETWORK_ADDRESS_CONST(IPV4),
   NETWORK_ADDRESS_CONST(IPV6)
-} NETWORK_ADDRESS_TYPE(Type);
+} NETWORK_ADDRESS_TYPE(TType);
 
 typedef struct NETWORK_ADDRESS_TYPE(TAddress) {
-  NETWORK_ADDRESS_TYPE(Type) type;
+  NETWORK_ADDRESS_TYPE(TType) type;
   union {
     uint8_t ipv4[4];
     uint8_t ipv6[16];
