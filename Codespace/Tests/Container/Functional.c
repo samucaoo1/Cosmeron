@@ -76,7 +76,7 @@ static int test_capacity_overflow(void) {
 }
 
 static int test_queue(void) {
-  TContainer_Flat_Queue(int, queue)
+  TFlat_Queue(int, queue)
   for (int value = 0; value < 64; ++value)
     TEST_ASSERT(Push(queue, value) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(Size(queue) == 64);
@@ -93,7 +93,7 @@ static int test_queue(void) {
 }
 
 static int test_stack(void) {
-  TContainer_Flat_Stack(int, stack)
+  TFlat_Stack(int, stack)
   for (int value = 0; value < 64; ++value)
     TEST_ASSERT(Push(stack, value) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(Size(stack) == 64);
@@ -126,7 +126,7 @@ static int test_string(void) {
 }
 
 static int test_deque(void) {
-  TContainer_Linked_Deque(int, deque)
+  TLinked_Deque(int, deque)
   TEST_ASSERT(PushFront(deque, 2) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(PushFront(deque, 1) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(PushBack(deque, 3) == STATUS_CONST(SUCCESS));
@@ -162,8 +162,8 @@ static int test_vector(void) {
 
 
 static int test_linked_node_ownership(void) {
-  TContainer_Linked_List(int, first)
-  TContainer_Linked_List(int, second)
+  TLinked_List(int, first)
+  TLinked_List(int, second)
   TEST_ASSERT(PushBack(first, 1) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(PushBack(second, 2) == STATUS_CONST(SUCCESS));
   Container_Linked_List_TNode_int *foreign = second.head;
@@ -176,8 +176,8 @@ static int test_linked_node_ownership(void) {
   Destroy(first);
   Destroy(second);
 
-  TContainer_Linked_ForwardList(int, forwardA)
-  TContainer_Linked_ForwardList(int, forwardB)
+  TLinked_ForwardList(int, forwardA)
+  TLinked_ForwardList(int, forwardB)
   TEST_ASSERT(Container_Linked_ForwardList_int_PushFront(&forwardA, 1) ==
               STATUS_CONST(SUCCESS));
   TEST_ASSERT(Container_Linked_ForwardList_int_PushFront(&forwardB, 2) ==
@@ -196,7 +196,7 @@ static int test_linked_node_ownership(void) {
 }
 
 static int test_list(void) {
-  TContainer_Linked_List(int, list)
+  TLinked_List(int, list)
   for (int value = 0; value < 256; ++value)
     TEST_ASSERT(PushBack(list, value) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(Size(list) == 256);
