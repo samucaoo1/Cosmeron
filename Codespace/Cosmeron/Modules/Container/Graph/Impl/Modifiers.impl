@@ -1,6 +1,6 @@
 #pragma once
 
-#define GRAPH_IMPLEMENT_ADD_VERTEX(VERTEX_TYPE, VERTEX_SUFFIX, WEIGHT_SUFFIX) \
+#define COSMERON_MACRO_INTERNAL_GRAPH_IMPLEMENT_ADD_VERTEX(VERTEX_TYPE, VERTEX_SUFFIX, WEIGHT_SUFFIX) \
   GRAPH_ADD_VERTEX_PROTOTYPE(VERTEX_TYPE, VERTEX_SUFFIX, WEIGHT_SUFFIX) {     \
     size_t index;                                                              \
     if (!graph || !outIndex)                                                   \
@@ -34,7 +34,7 @@
     return STATUS_CONST(SUCCESS);                                              \
   }
 
-#define GRAPH_IMPLEMENT_ADD_EDGE(WEIGHT_TYPE, VERTEX_SUFFIX, WEIGHT_SUFFIX)   \
+#define COSMERON_MACRO_INTERNAL_GRAPH_IMPLEMENT_ADD_EDGE(WEIGHT_TYPE, VERTEX_SUFFIX, WEIGHT_SUFFIX)   \
   GRAPH_ADD_EDGE_PROTOTYPE(WEIGHT_TYPE, VERTEX_SUFFIX, WEIGHT_SUFFIX) {       \
     TGRAPH_VERTEX_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) *vertex;                 \
     if (!graph)                                                                \
@@ -68,7 +68,7 @@
     return STATUS_CONST(SUCCESS);                                              \
   }
 
-#define GRAPH_IMPLEMENT_REMOVE_EDGE(VERTEX_SUFFIX, WEIGHT_SUFFIX)             \
+#define COSMERON_MACRO_INTERNAL_GRAPH_IMPLEMENT_REMOVE_EDGE(VERTEX_SUFFIX, WEIGHT_SUFFIX)             \
   GRAPH_REMOVE_EDGE_PROTOTYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) {                 \
     TGRAPH_VERTEX_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) *vertex;                 \
     size_t i;                                                                  \
@@ -88,7 +88,7 @@
     return STATUS_CONST(NOT_FOUND);                                            \
   }
 
-#define GRAPH_IMPLEMENT_REMOVE_VERTEX(VERTEX_SUFFIX, WEIGHT_SUFFIX)           \
+#define COSMERON_MACRO_INTERNAL_GRAPH_IMPLEMENT_REMOVE_VERTEX(VERTEX_SUFFIX, WEIGHT_SUFFIX)           \
   GRAPH_REMOVE_VERTEX_PROTOTYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) {               \
     size_t i;                                                                  \
     if (!graph)                                                                \
