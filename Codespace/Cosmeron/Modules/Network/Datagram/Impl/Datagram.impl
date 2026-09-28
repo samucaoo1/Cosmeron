@@ -26,7 +26,7 @@ static inline void NETWORK_DATAGRAM_FUNC(_RefreshLocalEndpoint)(
                                      &datagram->localEndpoint);
 }
 
-static inline void NETWORK_DATAGRAM_FUNC(Init)(NETWORK_DATAGRAM_TYPE(TDatagram) *datagram) {
+NETWORK_DATAGRAM_INIT_PROTOTYPE {
   if (datagram == NULL)
     return;
   memset(datagram, 0, sizeof(*datagram));
@@ -35,9 +35,7 @@ static inline void NETWORK_DATAGRAM_FUNC(Init)(NETWORK_DATAGRAM_TYPE(TDatagram) 
   SOCKET_FUNC(Init)(&datagram->socket);
 }
 
-static inline OPSTATUS NETWORK_DATAGRAM_FUNC(Open)(
-    NETWORK_DATAGRAM_TYPE(TDatagram) *datagram, SOCKET_TYPE(TFamily) family,
-    NETWORK_TYPE(TError) *error) {
+NETWORK_DATAGRAM_OPEN_PROTOTYPE {
   if (datagram == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -55,9 +53,7 @@ static inline OPSTATUS NETWORK_DATAGRAM_FUNC(Open)(
       datagram, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-static inline OPSTATUS NETWORK_DATAGRAM_FUNC(Bind)(
-    NETWORK_DATAGRAM_TYPE(TDatagram) *datagram, const NETWORK_ADDRESS_TYPE(TEndpoint) *endpoint,
-    NETWORK_TYPE(TError) *error) {
+NETWORK_DATAGRAM_BIND_PROTOTYPE {
   SOCKET_TYPE(TFamily) family;
   if (datagram == NULL || endpoint == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
@@ -83,9 +79,7 @@ static inline OPSTATUS NETWORK_DATAGRAM_FUNC(Bind)(
       datagram, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-static inline OPSTATUS NETWORK_DATAGRAM_FUNC(SetPeer)(
-    NETWORK_DATAGRAM_TYPE(TDatagram) *datagram, const NETWORK_ADDRESS_TYPE(TEndpoint) *endpoint,
-    NETWORK_TYPE(TError) *error) {
+NETWORK_DATAGRAM_SET_PEER_PROTOTYPE {
   SOCKET_TYPE(TFamily) family;
   if (datagram == NULL || endpoint == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
@@ -113,9 +107,7 @@ static inline OPSTATUS NETWORK_DATAGRAM_FUNC(SetPeer)(
       datagram, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-static inline OPSTATUS NETWORK_DATAGRAM_FUNC(SendTo)(
-    NETWORK_DATAGRAM_TYPE(TDatagram) *datagram, const NETWORK_ADDRESS_TYPE(TEndpoint) *endpoint,
-    const void *data, size_t size, size_t *sent, NETWORK_TYPE(TError) *error) {
+NETWORK_DATAGRAM_SEND_TO_PROTOTYPE {
   SOCKET_TYPE(TFamily) family;
   if (datagram == NULL || endpoint == NULL || (size != 0 && data == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
@@ -142,9 +134,7 @@ static inline OPSTATUS NETWORK_DATAGRAM_FUNC(SendTo)(
       datagram, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-static inline OPSTATUS NETWORK_DATAGRAM_FUNC(ReceiveFrom)(
-    NETWORK_DATAGRAM_TYPE(TDatagram) *datagram, void *buffer, size_t capacity,
-    NETWORK_ADDRESS_TYPE(TEndpoint) *sender, size_t *received, NETWORK_TYPE(TError) *error) {
+NETWORK_DATAGRAM_RECEIVE_FROM_PROTOTYPE {
   if (datagram == NULL || (capacity != 0 && buffer == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -163,9 +153,7 @@ static inline OPSTATUS NETWORK_DATAGRAM_FUNC(ReceiveFrom)(
       datagram, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-static inline OPSTATUS NETWORK_DATAGRAM_FUNC(Send)(
-    NETWORK_DATAGRAM_TYPE(TDatagram) *datagram, const void *data, size_t size, size_t *sent,
-    NETWORK_TYPE(TError) *error) {
+NETWORK_DATAGRAM_SEND_PROTOTYPE {
   if (datagram == NULL || (size != 0 && data == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -184,9 +172,7 @@ static inline OPSTATUS NETWORK_DATAGRAM_FUNC(Send)(
       datagram, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-static inline OPSTATUS NETWORK_DATAGRAM_FUNC(Receive)(
-    NETWORK_DATAGRAM_TYPE(TDatagram) *datagram, void *buffer, size_t capacity,
-    size_t *received, NETWORK_TYPE(TError) *error) {
+NETWORK_DATAGRAM_RECEIVE_PROTOTYPE {
   if (datagram == NULL || (capacity != 0 && buffer == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -205,8 +191,7 @@ static inline OPSTATUS NETWORK_DATAGRAM_FUNC(Receive)(
       datagram, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-static inline OPSTATUS NETWORK_DATAGRAM_FUNC(SetBlocking)(
-    NETWORK_DATAGRAM_TYPE(TDatagram) *datagram, bool blocking, NETWORK_TYPE(TError) *error) {
+NETWORK_DATAGRAM_SET_BLOCKING_PROTOTYPE {
   if (datagram == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -222,8 +207,7 @@ static inline OPSTATUS NETWORK_DATAGRAM_FUNC(SetBlocking)(
       datagram, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-static inline OPSTATUS NETWORK_DATAGRAM_FUNC(ClearPeer)(
-    NETWORK_DATAGRAM_TYPE(TDatagram) *datagram, NETWORK_TYPE(TError) *error) {
+NETWORK_DATAGRAM_CLEAR_PEER_PROTOTYPE {
   struct sockaddr_storage native;
   if (datagram == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
@@ -266,7 +250,7 @@ static inline OPSTATUS NETWORK_DATAGRAM_FUNC(ClearPeer)(
       datagram, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-static inline void NETWORK_DATAGRAM_FUNC(Close)(NETWORK_DATAGRAM_TYPE(TDatagram) *datagram) {
+NETWORK_DATAGRAM_CLOSE_PROTOTYPE {
   if (datagram == NULL)
     return;
   SOCKET_FUNC(Close)(&datagram->socket);

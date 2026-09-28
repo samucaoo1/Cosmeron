@@ -58,7 +58,7 @@ static inline void NETWORK_LISTENER_FUNC(_RefreshLocalEndpoint)(
                                      &listener->localEndpoint);
 }
 
-static inline void NETWORK_LISTENER_FUNC(Init)(NETWORK_LISTENER_TYPE(TListener) *listener) {
+NETWORK_LISTENER_INIT_PROTOTYPE {
   if (listener == NULL)
     return;
   memset(listener, 0, sizeof(*listener));
@@ -68,9 +68,7 @@ static inline void NETWORK_LISTENER_FUNC(Init)(NETWORK_LISTENER_TYPE(TListener) 
   SOCKET_FUNC(Init)(&listener->secondary);
 }
 
-static inline OPSTATUS NETWORK_LISTENER_FUNC(ListenAt)(
-    NETWORK_LISTENER_TYPE(TListener) *listener, const NETWORK_ADDRESS_TYPE(TEndpoint) *endpoint,
-    NETWORK_TYPE(TError) *error) {
+NETWORK_LISTENER_LISTEN_AT_PROTOTYPE {
   if (listener == NULL || endpoint == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -85,8 +83,7 @@ static inline OPSTATUS NETWORK_LISTENER_FUNC(ListenAt)(
       listener, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-static inline OPSTATUS NETWORK_LISTENER_FUNC(Listen)(
-    NETWORK_LISTENER_TYPE(TListener) *listener, uint16_t port, NETWORK_TYPE(TError) *error) {
+NETWORK_LISTENER_LISTEN_PROTOTYPE {
   NETWORK_ADDRESS_TYPE(TAddress) address;
   NETWORK_ADDRESS_TYPE(TEndpoint) endpoint;
   uint16_t boundPort = port;
@@ -170,9 +167,7 @@ static inline SOCKET_TYPE(TSocket) *NETWORK_LISTENER_FUNC(_AcceptSocket)(
 #endif
 }
 
-static inline OPSTATUS NETWORK_LISTENER_FUNC(Accept)(
-    NETWORK_LISTENER_TYPE(TListener) *listener, NETWORK_CONNECTION_TYPE(TConnection) *connection,
-    NETWORK_TYPE(TError) *error) {
+NETWORK_LISTENER_ACCEPT_PROTOTYPE {
   SOCKET_TYPE(TSocket) *source;
   NETWORK_ADDRESS_TYPE(TEndpoint) peer;
   NETWORK_CONNECTION_TYPE(TConnection) accepted;
@@ -205,7 +200,7 @@ static inline OPSTATUS NETWORK_LISTENER_FUNC(Accept)(
       listener, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-static inline void NETWORK_LISTENER_FUNC(Close)(NETWORK_LISTENER_TYPE(TListener) *listener) {
+NETWORK_LISTENER_CLOSE_PROTOTYPE {
   if (listener == NULL)
     return;
   SOCKET_FUNC(Close)(&listener->primary);
