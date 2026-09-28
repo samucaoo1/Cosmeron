@@ -1,7 +1,7 @@
 #pragma once
 
-#define TDECIMAL_FUNCTION_TABLE(SUFFIX)                                       \
-  typedef struct TDECIMAL_FUNC(SUFFIX, FunctionTable) {                     \
+#define TDECIMAL_FUNCTION_TABLE_STRUCT(SUFFIX)                                       \
+  typedef struct TDECIMAL_FUNCTION_TABLE_TYPE(SUFFIX) {                     \
     OPSTATUS (*clear)(TDECIMAL_TYPE(SUFFIX) *);                                    \
     OPSTATUS (*init)(TDECIMAL_TYPE(SUFFIX) *);                                     \
     /* Arithmetic */                                                           \
@@ -46,10 +46,10 @@
     OPSTATUS (*toCString)(const TDECIMAL_TYPE(SUFFIX) *, char *, size_t);          \
     OPSTATUS (*toCStringBase)(const TDECIMAL_TYPE(SUFFIX) *, char *, size_t,       \
                               unsigned);                             \
-  } TDECIMAL_FUNC(SUFFIX, FunctionTable);
+  } TDECIMAL_FUNCTION_TABLE_TYPE(SUFFIX);
 
 #define TDECIMAL_FUNCTION_TABLE_INSTANCE(SUFFIX)                             \
-  static const TDECIMAL_FUNC(SUFFIX, FunctionTable) TDECIMAL_FUNC(                 \
+  static const TDECIMAL_FUNCTION_TABLE_TYPE(SUFFIX) TDECIMAL_FUNC(                 \
       SUFFIX, functions) = {                                                   \
       .clear = &TDECIMAL_FUNC(SUFFIX, Clear),                                  \
       .init = &TDECIMAL_FUNC(SUFFIX, Init),                                    \
