@@ -34,10 +34,10 @@ int main(void) {
   CONCURRENCY_TYPE(TSemaphore) semaphore;
   CONCURRENCY_TYPE(TBarrier) barrier;
   CONCURRENCY_TYPE(TFuture) future;
-  CONCURRENCY_TYPE(CONCURRENCY_TYPE(TFuture)Task) futureTask;
+  CONCURRENCY_TYPE(TFutureTask) futureTask;
   CONCURRENCY_TYPE(TTask) queue[2];
   CONCURRENCY_TYPE(TThread) workers[1];
-  CONCURRENCY_TYPE(TThread)Pool pool;
+  CONCURRENCY_TYPE(TThreadPool) pool;
   void *futureResult = NULL;
   OPSTATUS futureStatus = STATUS_CONST(GENERIC_ERROR);
   bool acquired = false;
