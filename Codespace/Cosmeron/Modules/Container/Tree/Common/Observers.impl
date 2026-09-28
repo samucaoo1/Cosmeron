@@ -5,11 +5,11 @@
  * Shared by all algorithms.  CMP is baked at compile time.
  *
  * Find is split:
- *   TTREE_IMPLEMENT_FIND_SET  → OPSTATUS + KEY_TYPE **out
- *   TTREE_IMPLEMENT_FIND_MAP  → OPSTATUS + VALUE_TYPE **out
+ *   COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_FIND_SET  → OPSTATUS + KEY_TYPE **out
+ *   COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_FIND_MAP  → OPSTATUS + VALUE_TYPE **out
  * ============================================================= */
 
-#define TTREE_IMPLEMENT_OBSERVERS(T, KEY_TYPE, CMP)                            \
+#define COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_OBSERVERS(T, KEY_TYPE, CMP)                            \
   TTREE_FIND_NODE_PROTOTYPE(T, KEY_TYPE) {                          \
     if (!tree)                                                                 \
       return NULL;                                                             \
@@ -87,7 +87,7 @@
 
 /* ------ Find: SET variant (returns KEY_TYPE*) ------ */
 
-#define TTREE_IMPLEMENT_FIND_SET(T, KEY_TYPE)                                  \
+#define COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_FIND_SET(T, KEY_TYPE)                                  \
   TTREE_FIND_SET_PROTOTYPE(T, KEY_TYPE) {                   \
     TTREE_NODE(T) *node;                                                       \
     if (!tree || !out)                                                        \
@@ -101,7 +101,7 @@
 
 /* ------ Find: MAP variant (returns VALUE_TYPE*) ------ */
 
-#define TTREE_IMPLEMENT_FIND_MAP(T, KEY_TYPE, VALUE_TYPE)                      \
+#define COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_FIND_MAP(T, KEY_TYPE, VALUE_TYPE)                      \
   TTREE_FIND_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE) {                 \
     TTREE_NODE(T) *node;                                                       \
     if (!tree || !out)                                                        \
