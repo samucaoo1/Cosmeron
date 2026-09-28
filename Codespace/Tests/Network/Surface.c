@@ -142,7 +142,7 @@ static void test_connection(void) {
   NETWORK_CONNECTION_FUNC(Init)(&server);
   {
     NETWORK_CONNECTION_TYPE(TState) state = NETWORK_CONNECTION_CONST(FAILED);
-    NETWORK_ADDRESS_TYPE(TEndpoint) unchanged = {{0}};
+    NETWORK_ADDRESS_TYPE(TEndpoint) unchanged = {0};
     unchanged.port = UINT16_C(1234);
 
     assert(NETWORK_CONNECTION_FUNC(State)(NULL, &state) ==
@@ -218,7 +218,7 @@ static void test_datagram(void) {
   NETWORK_DATAGRAM_FUNC(Init)(&peer);
   assert(!NETWORK_DATAGRAM_FUNC(HasPeer)(NULL));
   {
-    NETWORK_ADDRESS_TYPE(TEndpoint) unchanged = {{0}};
+    NETWORK_ADDRESS_TYPE(TEndpoint) unchanged = {0};
     unchanged.port = UINT16_C(4321);
     assert(NETWORK_DATAGRAM_FUNC(LocalEndpoint)(
                &peer, &unchanged) == STATUS_CONST(NOT_AVAILABLE));
@@ -365,7 +365,7 @@ static void test_poller_accessors(void) {
 
 static void test_listener_listen(void) {
   NETWORK_LISTENER_TYPE(TListener) listener;
-  NETWORK_ADDRESS_TYPE(TEndpoint) localEndpoint = {{0}};
+  NETWORK_ADDRESS_TYPE(TEndpoint) localEndpoint = {0};
   localEndpoint.port = UINT16_C(999);
   NETWORK_LISTENER_FUNC(Init)(&listener);
   assert(NETWORK_LISTENER_FUNC(LocalEndpoint)(
@@ -374,10 +374,10 @@ static void test_listener_listen(void) {
   assert(NETWORK_LISTENER_FUNC(Listen)(&listener, 0, NULL) ==
          STATUS_CONST(SUCCESS));
   {
-    NETWORK_ADDRESS_TYPE(TEndpoint) localEndpoint;
+    NETWORK_ADDRESS_TYPE(TEndpoint) boundEndpoint;
     assert(NETWORK_LISTENER_FUNC(LocalEndpoint)(
-               &listener, &localEndpoint) == STATUS_CONST(SUCCESS));
-    assert(localEndpoint.port != 0);
+               &listener, &boundEndpoint) == STATUS_CONST(SUCCESS));
+    assert(boundEndpoint.port != 0);
   }
   NETWORK_LISTENER_FUNC(Close)(&listener);
 }
