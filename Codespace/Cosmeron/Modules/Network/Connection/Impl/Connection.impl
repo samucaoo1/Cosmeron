@@ -178,6 +178,8 @@ static inline void NETWORK_CONNECTION_FUNC(_RefreshEndpoints)(
 }
 
 static inline void NETWORK_CONNECTION_FUNC(Init)(NETWORK_CONNECTION_TYPE(TConnection) *connection) {
+  if (connection == NULL)
+    return;
   memset(connection, 0, sizeof(*connection));
   connection->state = NETWORK_CONNECTION_CONST(IDLE);
   connection->lastError = NETWORK_ERROR_CONST(NONE);

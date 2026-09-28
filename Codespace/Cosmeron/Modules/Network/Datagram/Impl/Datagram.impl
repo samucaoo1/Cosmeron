@@ -27,6 +27,8 @@ static inline void NETWORK_DATAGRAM_FUNC(_RefreshLocalEndpoint)(
 }
 
 static inline void NETWORK_DATAGRAM_FUNC(Init)(NETWORK_DATAGRAM_TYPE(TDatagram) *datagram) {
+  if (datagram == NULL)
+    return;
   memset(datagram, 0, sizeof(*datagram));
   datagram->lastError = NETWORK_ERROR_CONST(NONE);
   datagram->blocking = true;

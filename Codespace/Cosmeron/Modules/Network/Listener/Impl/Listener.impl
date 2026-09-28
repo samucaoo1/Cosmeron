@@ -59,6 +59,8 @@ static inline void NETWORK_LISTENER_FUNC(_RefreshLocalEndpoint)(
 }
 
 static inline void NETWORK_LISTENER_FUNC(Init)(NETWORK_LISTENER_TYPE(TListener) *listener) {
+  if (listener == NULL)
+    return;
   memset(listener, 0, sizeof(*listener));
   listener->lastError = NETWORK_ERROR_CONST(NONE);
   listener->blocking = true;
@@ -173,9 +175,11 @@ static inline OPSTATUS NETWORK_LISTENER_FUNC(Accept)(
     NETWORK_TYPE(TError) *error) {
   SOCKET_TYPE(TSocket) *source;
   NETWORK_ADDRESS_TYPE(TEndpoint) peer;
+  NETWORK_CONNECTION_TYPE(TConnection) accepted;
 
   if (listener == NULL || connection == NULL) {
-    if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
+    if (error != NULL)
+      *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
   }
   source = NETWORK_LISTENER_FUNC(_AcceptSocket)(listener);
@@ -183,20 +187,20 @@ static inline OPSTATUS NETWORK_LISTENER_FUNC(Accept)(
     return NETWORK_LISTENER_FUNC(_Fail)(
         listener, error, NETWORK_ERROR_CONST(UNKNOWN));
 
-  NETWORK_CONNECTION_FUNC(Destroy)(connection);
-  NETWORK_CONNECTION_FUNC(Init)(connection);
+  NETWORK_CONNECTION_FUNC(Init)(&accepted);
   {
     NETWORK_TYPE(TError) socketError;
     if (SOCKET_FUNC(Accept)(
-            source, &connection->socket, &peer, &socketError) !=
+            source, &accepted.socket, &peer, &socketError) !=
         STATUS_CONST(SUCCESS))
       return NETWORK_LISTENER_FUNC(_Fail)(listener, error, socketError);
   }
 
-  connection->remoteEndpoint = peer;
-  connection->state = NETWORK_CONNECTION_CONST(CONNECTED);
-  connection->lastError = NETWORK_ERROR_CONST(NONE);
-  NETWORK_CONNECTION_FUNC(_RefreshEndpoints)(connection);
+  accepted.remoteEndpoint = peer;
+  accepted.state = NETWORK_CONNECTION_CONST(CONNECTED);
+  accepted.lastError = NETWORK_ERROR_CONST(NONE);
+  NETWORK_CONNECTION_FUNC(_RefreshEndpoints)(&accepted);
+  *connection = accepted;
   return NETWORK_LISTENER_FUNC(_Publish)(
       listener, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }

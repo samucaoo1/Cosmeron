@@ -9,8 +9,10 @@
 #define SEQUENTIAL_ACCESS_GET(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)           \
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        size_t index, TYPE *out) {              \
+    if (!container || !out)                                                    \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (index >= container->size)                                              \
-      return STATUS_CONST(OUT_OF_RANGE);                                    \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
     *out = container->data[index];                                             \
     return STATUS_CONST(SUCCESS);                                                 \
   }
@@ -24,7 +26,7 @@
 
 #define SEQUENTIAL_ACCESS_BACK(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)          \
   static inline TYPE *FUNCTION_NAME(CONTAINER_STRUCT *container) {             \
-    if (container->size == 0)                                                  \
+    if (!container || container->size == 0)                                    \
       return NULL;                                                             \
     return &container->data[container->size - 1];                              \
   }

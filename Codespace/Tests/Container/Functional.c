@@ -315,6 +315,7 @@ static int test_null_contracts(void) {
   TEST_ASSERT(Container_Flat_Vector_int_Erase(NULL, 0U, 0U) == STATUS_CONST(INVALID_ARGUMENT));
   Container_Flat_Vector_int_Clear(NULL);
   TEST_ASSERT(Container_Flat_Vector_int_At(NULL, 0U) == NULL);
+  TEST_ASSERT(Container_Flat_Vector_int_Back(NULL) == NULL);
   TEST_ASSERT(!Container_Flat_Vector_int_Empty(NULL));
   TEST_ASSERT(Container_Flat_Vector_int_Size(NULL) == 0U);
   Container_Flat_Vector_int_Destroy(NULL);
@@ -326,6 +327,11 @@ static int test_null_contracts(void) {
   TEST_ASSERT(!Container_Flat_Queue_int_Empty(NULL));
   TEST_ASSERT(Container_Flat_Queue_int_Size(NULL) == 0U);
   Container_Flat_Queue_int_Destroy(NULL);
+
+  TEST_ASSERT(Container_Flat_Stack_int_Init(NULL) == STATUS_CONST(INVALID_ARGUMENT));
+  TEST_ASSERT(Container_Flat_Stack_int_Top(NULL) == NULL);
+  TEST_ASSERT(Container_Flat_Stack_int_Pop(NULL, NULL) == STATUS_CONST(INVALID_ARGUMENT));
+  Container_Flat_Stack_int_Destroy(NULL);
 
   TEST_ASSERT(Container_Linked_List_int_Init(NULL) == STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Container_Linked_List_int_PushBack(NULL, 1) == STATUS_CONST(INVALID_ARGUMENT));

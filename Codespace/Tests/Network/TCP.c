@@ -13,7 +13,7 @@ int main(void) {
 
   NETWORK_LISTENER_FUNC(Init)(&listener);
   NETWORK_CONNECTION_FUNC(Init)(&client);
-  NETWORK_CONNECTION_FUNC(Init)(&server);
+  /* Accept treats server as an output and must not inspect prior storage. */
   NETWORK_ADDRESS_FUNC(IPv4_Loopback)(&loopback);
   NETWORK_ADDRESS_FUNC(Endpoint_Create)(&endpoint, &loopback, 0);
 
