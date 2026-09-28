@@ -47,7 +47,12 @@ typedef enum HASH_NS(BucketState) {
 #define HASH_INT(VALUE)                                                       \
   ((size_t)((uint32_t)(VALUE) * UINT32_C(2654435761)))
 
-static inline size_t HASH_NS(CString)(const char *value) {
+#define HASH_CSTRING_PROTOTYPE                                                \
+  static inline size_t HASH_NS(CString)(const char *value)
+
+HASH_CSTRING_PROTOTYPE;
+
+HASH_CSTRING_PROTOTYPE {
   size_t hash = (size_t)UINT64_C(14695981039346656037);
   if (!value)
     return 0;
