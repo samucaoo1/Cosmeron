@@ -1,6 +1,6 @@
 static inline RANDOM_SOURCE_TYPE(Value) RANDOM_FUNC(SourceFromSeed)(uint64_t seed) {
   RANDOM_SOURCE_TYPE(Value) source = {0};
-  RANDOM_SOURCE_FUNC(Init)(&source, &RANDOM_ENGINE_FUNC(Xoshiro, FunctionTable), seed,
+  RANDOM_SOURCE_FUNC(Init)(&source, &RANDOM_ENGINE_FUNC(Xoshiro, Descriptor), seed,
                          NULL);
   return source;
 }
@@ -18,7 +18,7 @@ RANDOM_U64_FROM_SEED_PROTOTYPE {
 static inline RANDOM_SOURCE_TYPE(Value) RANDOM_FUNC(_StackSource)(
     RANDOM_ENGINE_TYPE(Xoshiro) *state, uint64_t seed) {
   RANDOM_SOURCE_TYPE(Value) source = {
-      &RANDOM_ENGINE_FUNC(Xoshiro, FunctionTable), NULL, state, sizeof(*state), false};
+      &RANDOM_ENGINE_FUNC(Xoshiro, Descriptor), NULL, state, sizeof(*state), false};
   source.engine->seed(source.state, seed);
   return source;
 }
