@@ -70,8 +70,7 @@
     if (str->size == 0)                                                       \
       return STATUS_CONST(OUT_OF_RANGE);                                         \
     str->size--;                                                              \
-    if (outValue)                                                            \
-      *outValue = str->data[str->size];                                      \
+    *outValue = str->data[str->size];                                      \
     str->data[str->size] = (CHAR_TYPE)0;                                      \
     return STATUS_CONST(SUCCESS);                                                \
   }
