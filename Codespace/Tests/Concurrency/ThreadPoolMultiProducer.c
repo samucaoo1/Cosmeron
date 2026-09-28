@@ -7,7 +7,7 @@
 #define TASKS_PER_PRODUCER 5000
 
 typedef struct TProducer_Context {
-  CONCURRENCY_TYPE(TThread)Pool *pool;
+  CONCURRENCY_TYPE(TThreadPool) *pool;
   CONCURRENCY_TYPE(TAtomicU32) *counter;
 } TProducer_Context;
 
@@ -25,7 +25,7 @@ static void producer(void *argument) {
 }
 
 int main(void) {
-  CONCURRENCY_TYPE(TThread)Pool pool;
+  CONCURRENCY_TYPE(TThreadPool) pool;
   CONCURRENCY_TYPE(TThread) workers[WORKER_COUNT];
   CONCURRENCY_TYPE(TThread) producers[PRODUCER_COUNT];
   CONCURRENCY_TYPE(TTask) queue[QUEUE_CAPACITY];

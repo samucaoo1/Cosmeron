@@ -6,7 +6,7 @@ typedef struct TRecord {
   int value;
 } TRecord;
 
-HASH_MAP_DEFINE(int, recordKey, TRecord, record, HASH_INT, HASH_EQUAL_INT)
+HASH_MAP_IMPLEMENT_ALL(int, recordKey, TRecord, record, HASH_INT, HASH_EQUAL_INT)
 
 int main(void) {
   THASH_TYPE(int, int) hash = {0};
@@ -61,7 +61,7 @@ int main(void) {
   TEST_ASSERT(HASH_OPERATION(int, int, IsEmpty)(&hash));
   TEST_ASSERT(HASH_OPERATION(int, int, Capacity)(&hash) > 0u);
 
-#if CONTAINER_ENABLE_PSEUDO_METHODS
+#if CONTAINER_FUNCTION_TABLE_ENABLED
   TEST_ASSERT(hash.api != NULL);
   TEST_ASSERT(hash.api->insert(&hash, 1, 2) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(hash.api->contains(&hash, 1));
