@@ -18,10 +18,10 @@
 
 #define HASH_STRUCT(KEY_SUFFIX, VALUE_SUFFIX)                                 \
   CONTAINER_API_FORWARD(                                                       \
-      HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, FunctionTable))                \
+      HASH_FUNCTION_TABLE_TYPE(KEY_SUFFIX, VALUE_SUFFIX))                \
   typedef struct THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) {                       \
     CONTAINER_API_FIELD(                                                       \
-        HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, FunctionTable))              \
+        HASH_FUNCTION_TABLE_TYPE(KEY_SUFFIX, VALUE_SUFFIX))              \
     THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) * buckets;                    \
     size_t capacity;                                                           \
     size_t size;                                                               \
