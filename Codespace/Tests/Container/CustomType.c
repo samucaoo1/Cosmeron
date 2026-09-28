@@ -6,13 +6,17 @@ typedef struct TContainerTestRecord {
   int payload;
 } TContainerTestRecord;
 
-static int ContainerTest_Record_Compare(TContainerTestRecord left,
-                                        TContainerTestRecord right) {
-  return (left.key > right.key) - (left.key < right.key);
+static CMPOUT ContainerTest_Record_Compare(TContainerTestRecord left,
+                                           TContainerTestRecord right) {
+  if (left.key < right.key)
+    return COMPARISON_CONST(LESS);
+  if (left.key > right.key)
+    return COMPARISON_CONST(GREATER);
+  return COMPARISON_CONST(SAME);
 }
 
-TREE_AVL_SET_DEFINE_CMP(record, TContainerTestRecord,
-                        ContainerTest_Record_Compare)
+TREE_AVL_SET_IMPLEMENT_ALL_CMP(record, TContainerTestRecord,
+                                  ContainerTest_Record_Compare)
 
 int main(void) {
   TTree_AVL_Set(record, records);
