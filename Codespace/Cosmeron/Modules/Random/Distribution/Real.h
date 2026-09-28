@@ -4,7 +4,7 @@
 
 #define RANDOM_DISTRIBUTION_F64_PROTOTYPE                                    \
   static inline OPSTATUS RANDOM_DISTRIBUTION_FUNC(F64)(                       \
-      RANDOM_SOURCE_TYPE(Value) *source, double *out)
+      RANDOM_SOURCE_TYPE(Value) *source, double *outValue)
 
 RANDOM_DISTRIBUTION_F64_PROTOTYPE;
 
