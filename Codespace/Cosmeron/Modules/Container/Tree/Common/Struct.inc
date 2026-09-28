@@ -5,7 +5,7 @@
  * No cmp pointer; comparison is baked in at compile time.
  * ============================================================= */
 
-#define TTREE_STRUCT(T)                                                        \
+#define COSMERON_MACRO_INTERNAL_TTREE_STRUCT(T)                                                        \
   CONTAINER_API_FORWARD(TTREE_FUNCTION_TABLE_TYPE(T))                                        \
   typedef struct T {                                                           \
     CONTAINER_API_FIELD(TTREE_FUNCTION_TABLE_TYPE(T))                          \
