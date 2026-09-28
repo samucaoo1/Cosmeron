@@ -138,7 +138,7 @@
   FLAT_VECTOR_EMPTY_PROTOTYPE(SUFFIX);                                \
   FLAT_VECTOR_SIZE_PROTOTYPE(SUFFIX);                                 \
   FLAT_VECTOR_CAPACITY_PROTOTYPE(SUFFIX);                             \
-  FLAT_VECTOR_IMPLEMENT(TYPE, SUFFIX)                                          \
+  COSMERON_MACRO_INTERNAL_FLAT_VECTOR_IMPLEMENT(TYPE, SUFFIX)                                          \
   FLAT_VECTOR_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                                   \
   FLAT_VECTOR_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)
 
