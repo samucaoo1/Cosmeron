@@ -10,15 +10,19 @@
  * ============================================================ */
 
 #define LINKED_STACK_TYPE(SUFFIX) GNS2(LINKED_NS(TStack), SUFFIX)
-#define LINKED_STACK_FUNC(SUFFIX, FUNC) GNS2(GNS2(LINKED_NS(Stack), SUFFIX), FUNC)
+#define LINKED_STACK_NS(SUFFIX) GNS2(LINKED_NS(Stack), SUFFIX)
+#define LINKED_STACK_FUNC(SUFFIX, FUNC) GNS2(LINKED_STACK_NS(SUFFIX), FUNC)
+#define LINKED_STACK_STRUCT_TAG(SUFFIX) GNS2(LINKED_STACK_NS(SUFFIX), str)
+#define LINKED_STACK_FUNCTION_TABLE_TYPE(SUFFIX) \
+  GNS2(LINKED_STACK_NS(SUFFIX), FunctionTable)
 
 #define LINKED_STACK_NODE_TYPE(SUFFIX)                                         \
   SINGLE_LINKED_NODE_TYPE(SUFFIX, LINKED_NS(Stack))
 
 #define LINKED_STACK_STRUCT(TYPE, SUFFIX)                                      \
-  CONTAINER_API_FORWARD(LINKED_STACK_FUNC(SUFFIX, FunctionTable))                          \
-  typedef struct LINKED_STACK_FUNC(SUFFIX, str) {                              \
-    CONTAINER_API_FIELD(LINKED_STACK_FUNC(SUFFIX, FunctionTable))            \
+  CONTAINER_API_FORWARD(LINKED_STACK_FUNCTION_TABLE_TYPE(SUFFIX))                          \
+  typedef struct LINKED_STACK_STRUCT_TAG(SUFFIX) {                              \
+    CONTAINER_API_FIELD(LINKED_STACK_FUNCTION_TABLE_TYPE(SUFFIX))            \
     LINKED_STACK_NODE_TYPE(SUFFIX) * head;                                     \
     LINKED_STACK_NODE_TYPE(SUFFIX) * tail;                                     \
     size_t size;                                                               \
