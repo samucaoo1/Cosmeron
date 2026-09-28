@@ -11,7 +11,6 @@
 #include "../Linked/Stack.h"
 
 
-#define CONTAINER_ALIAS_SELECT_2(_1, _2, NAME, ...) NAME
 #define CONTAINER_ALIAS_SELECT_4(_1, _2, _3, _4, NAME, ...) NAME
 
 #define CONTAINER_VECTOR_ASSOC(OP)                                             \
@@ -81,37 +80,23 @@
                     CONTAINER_FORWARD_ASSOC(PushFront),                       \
                     CONTAINER_DEQUE_ASSOC(PushFront))(&(self), (value))
 
-#define CONTAINER_POP_1(self) CONTAINER_POP_2(self, NULL)
-#define CONTAINER_POP_2(self, out)                                             \
+#define Pop(self, out)                                                        \
   _Generic(&(self), CONTAINER_FLAT_QUEUE_ASSOC(Pop),                          \
                     CONTAINER_FLAT_STACK_ASSOC(Pop),                          \
                     CONTAINER_LINKED_QUEUE_ASSOC(Pop),                        \
                     CONTAINER_LINKED_STACK_ASSOC(Pop))(&(self), (out))
-#define Pop(...)                                                               \
-  CONTAINER_ALIAS_SELECT_2(__VA_ARGS__, CONTAINER_POP_2, CONTAINER_POP_1,     \
-                           CONTAINER_ALIAS_UNUSED)(__VA_ARGS__)
 
-#define CONTAINER_POP_BACK_1(self) CONTAINER_POP_BACK_2(self, NULL)
-#define CONTAINER_POP_BACK_2(self, out)                                        \
+#define PopBack(self, out)                                                    \
   _Generic(&(self), CONTAINER_VECTOR_ASSOC(PopBack),                          \
                     CONTAINER_STRING_ASSOC(PopBack),                          \
                     CONTAINER_LIST_ASSOC(PopBack),                            \
                     CONTAINER_DEQUE_ASSOC(PopBack))(&(self), (out))
-#define PopBack(...)                                                           \
-  CONTAINER_ALIAS_SELECT_2(__VA_ARGS__, CONTAINER_POP_BACK_2,                 \
-                           CONTAINER_POP_BACK_1,                               \
-                           CONTAINER_ALIAS_UNUSED)(__VA_ARGS__)
 
-#define CONTAINER_POP_FRONT_1(self) CONTAINER_POP_FRONT_2(self, NULL)
-#define CONTAINER_POP_FRONT_2(self, out)                                       \
+#define PopFront(self, out)                                                   \
   _Generic(&(self), CONTAINER_VECTOR_ASSOC(PopFront),                         \
                     CONTAINER_LIST_ASSOC(PopFront),                           \
                     CONTAINER_FORWARD_ASSOC(PopFront),                        \
                     CONTAINER_DEQUE_ASSOC(PopFront))(&(self), (out))
-#define PopFront(...)                                                          \
-  CONTAINER_ALIAS_SELECT_2(__VA_ARGS__, CONTAINER_POP_FRONT_2,                \
-                           CONTAINER_POP_FRONT_1,                              \
-                           CONTAINER_ALIAS_UNUSED)(__VA_ARGS__)
 
 #define At(self, index, out)                                                   \
   _Generic(&(self), CONTAINER_VECTOR_ASSOC(At), CONTAINER_STRING_ASSOC(At))   \
