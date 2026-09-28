@@ -8,6 +8,9 @@
     TTREE_PUBLIC_SET_TYPE(ALGO, KEY) tree;                                     \
     TTREE_NODE(TTREE_SET_TYPE(ALGO, KEY)) *node;                               \
     const TTREE_NODE(TTREE_SET_TYPE(ALGO, KEY)) *cnode;                        \
+    KEY *found = NULL;                                                         \
+    KEY *minimum = NULL;                                                       \
+    KEY *maximum = NULL;                        \
     TEST_ASSERT(TTREE_FN(TTREE_SET_TYPE(ALGO, KEY), Init)(&tree) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(TTREE_FN(TTREE_SET_TYPE(ALGO, KEY), Empty)(&tree));            \
     TEST_ASSERT(TTREE_FN(TTREE_SET_TYPE(ALGO, KEY), Insert)(&tree, (KEY)(B)) == STATUS_CONST(SUCCESS)); \
@@ -16,12 +19,18 @@
     TEST_ASSERT(TTREE_FN(TTREE_SET_TYPE(ALGO, KEY), Size)(&tree) == 3U);       \
     node = TTREE_FN(TTREE_SET_TYPE(ALGO, KEY), FindNode)(&tree, (KEY)(B));     \
     TEST_ASSERT(node != NULL);                                                 \
-    TEST_ASSERT(TTREE_FN(TTREE_SET_TYPE(ALGO, KEY), Find)(&tree, (KEY)(B)) != NULL); \
+    TEST_ASSERT(TTREE_FN(TTREE_SET_TYPE(ALGO, KEY), Find)(                     \
+                    &tree, (KEY)(B), &found) == STATUS_CONST(SUCCESS));        \
+    TEST_ASSERT(found != NULL && *found == (KEY)(B));                          \
     TEST_ASSERT(TTREE_FN(TTREE_SET_TYPE(ALGO, KEY), Contains)(&tree, (KEY)(B))); \
     TEST_ASSERT(TTREE_FN(TTREE_SET_TYPE(ALGO, KEY), MinNode)(tree.root) != NULL); \
     TEST_ASSERT(TTREE_FN(TTREE_SET_TYPE(ALGO, KEY), MaxNode)(tree.root) != NULL); \
-    TEST_ASSERT(*TTREE_FN(TTREE_SET_TYPE(ALGO, KEY), Min)(&tree) == (KEY)(A)); \
-    TEST_ASSERT(*TTREE_FN(TTREE_SET_TYPE(ALGO, KEY), Max)(&tree) == (KEY)(C)); \
+    TEST_ASSERT(TTREE_FN(TTREE_SET_TYPE(ALGO, KEY), Min)(                      \
+                    &tree, &minimum) == STATUS_CONST(SUCCESS));                \
+    TEST_ASSERT(TTREE_FN(TTREE_SET_TYPE(ALGO, KEY), Max)(                      \
+                    &tree, &maximum) == STATUS_CONST(SUCCESS));                \
+    TEST_ASSERT(*minimum == (KEY)(A));                                         \
+    TEST_ASSERT(*maximum == (KEY)(C)); \
     node = TTREE_FN(TTREE_SET_TYPE(ALGO, KEY), Begin)(&tree);                  \
     TEST_ASSERT(node != NULL);                                                 \
     TEST_ASSERT(TTREE_FN(TTREE_SET_TYPE(ALGO, KEY), End)(&tree) == NULL);      \
@@ -46,6 +55,9 @@
     TTREE_PUBLIC_MAP_TYPE(ALGO, KEY, VALUE) tree;                              \
     TTREE_NODE(TTREE_MAP_TYPE(ALGO, KEY, VALUE)) *node;                        \
     const TTREE_NODE(TTREE_MAP_TYPE(ALGO, KEY, VALUE)) *cnode;                 \
+    VALUE *found = NULL;                                                       \
+    KEY *minimum = NULL;                                                       \
+    KEY *maximum = NULL;                 \
     TEST_ASSERT(TTREE_FN(TTREE_MAP_TYPE(ALGO, KEY, VALUE), Init)(&tree) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(TTREE_FN(TTREE_MAP_TYPE(ALGO, KEY, VALUE), Empty)(&tree));     \
     TEST_ASSERT(TTREE_FN(TTREE_MAP_TYPE(ALGO, KEY, VALUE), Insert)(&tree, (KEY)2, (VALUE)(B)) == STATUS_CONST(SUCCESS)); \
@@ -54,12 +66,18 @@
     TEST_ASSERT(TTREE_FN(TTREE_MAP_TYPE(ALGO, KEY, VALUE), Size)(&tree) == 3U); \
     node = TTREE_FN(TTREE_MAP_TYPE(ALGO, KEY, VALUE), FindNode)(&tree, (KEY)2); \
     TEST_ASSERT(node != NULL);                                                 \
-    TEST_ASSERT(TTREE_FN(TTREE_MAP_TYPE(ALGO, KEY, VALUE), Find)(&tree, (KEY)2) != NULL); \
+    TEST_ASSERT(TTREE_FN(TTREE_MAP_TYPE(ALGO, KEY, VALUE), Find)(              \
+                    &tree, (KEY)2, &found) == STATUS_CONST(SUCCESS));          \
+    TEST_ASSERT(found != NULL && *found == (VALUE)(B));                        \
     TEST_ASSERT(TTREE_FN(TTREE_MAP_TYPE(ALGO, KEY, VALUE), Contains)(&tree, (KEY)2)); \
     TEST_ASSERT(TTREE_FN(TTREE_MAP_TYPE(ALGO, KEY, VALUE), MinNode)(tree.root) != NULL); \
     TEST_ASSERT(TTREE_FN(TTREE_MAP_TYPE(ALGO, KEY, VALUE), MaxNode)(tree.root) != NULL); \
-    TEST_ASSERT(*TTREE_FN(TTREE_MAP_TYPE(ALGO, KEY, VALUE), Min)(&tree) == (KEY)1); \
-    TEST_ASSERT(*TTREE_FN(TTREE_MAP_TYPE(ALGO, KEY, VALUE), Max)(&tree) == (KEY)3); \
+    TEST_ASSERT(TTREE_FN(TTREE_MAP_TYPE(ALGO, KEY, VALUE), Min)(               \
+                    &tree, &minimum) == STATUS_CONST(SUCCESS));                \
+    TEST_ASSERT(TTREE_FN(TTREE_MAP_TYPE(ALGO, KEY, VALUE), Max)(               \
+                    &tree, &maximum) == STATUS_CONST(SUCCESS));                \
+    TEST_ASSERT(*minimum == (KEY)1);                                           \
+    TEST_ASSERT(*maximum == (KEY)3); \
     node = TTREE_FN(TTREE_MAP_TYPE(ALGO, KEY, VALUE), Begin)(&tree);           \
     TEST_ASSERT(node != NULL);                                                 \
     TEST_ASSERT(TTREE_FN(TTREE_MAP_TYPE(ALGO, KEY, VALUE), End)(&tree) == NULL); \
