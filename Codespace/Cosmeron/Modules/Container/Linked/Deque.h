@@ -11,7 +11,11 @@
 
 #define LINKED_DEQUE_TYPE(SUFFIX) GNS2(LINKED_NS(TDeque), SUFFIX)
 
-#define LINKED_DEQUE_FUNC(SUFFIX, FUNC) GNS2(GNS2(LINKED_NS(Deque), SUFFIX), FUNC)
+#define LINKED_DEQUE_NS(SUFFIX) GNS2(LINKED_NS(Deque), SUFFIX)
+#define LINKED_DEQUE_FUNC(SUFFIX, FUNC) GNS2(LINKED_DEQUE_NS(SUFFIX), FUNC)
+#define LINKED_DEQUE_STRUCT_TAG(SUFFIX) LINKED_DEQUE_TYPE(SUFFIX)
+#define LINKED_DEQUE_FUNCTION_TABLE_TYPE(SUFFIX) \
+  GNS2(LINKED_DEQUE_NS(SUFFIX), FunctionTable)
 
 #define LINKED_DEQUE_NODE_TYPE(SUFFIX)                                         \
   DOUBLE_LINKED_NODE_TYPE(SUFFIX, LINKED_NS(Deque))
@@ -21,9 +25,9 @@
  * ============================================================ */
 
 #define LINKED_DEQUE_STRUCT(TYPE, SUFFIX)                                      \
-  CONTAINER_API_FORWARD(LINKED_DEQUE_FUNC(SUFFIX, FunctionTable))                          \
-  typedef struct LINKED_DEQUE_TYPE(SUFFIX) {                                   \
-    CONTAINER_API_FIELD(LINKED_DEQUE_FUNC(SUFFIX, FunctionTable))            \
+  CONTAINER_API_FORWARD(LINKED_DEQUE_FUNCTION_TABLE_TYPE(SUFFIX))                          \
+  typedef struct LINKED_DEQUE_STRUCT_TAG(SUFFIX) {                                   \
+    CONTAINER_API_FIELD(LINKED_DEQUE_FUNCTION_TABLE_TYPE(SUFFIX))            \
     LINKED_DEQUE_NODE_TYPE(SUFFIX) * head;                                     \
     LINKED_DEQUE_NODE_TYPE(SUFFIX) * tail;                                     \
     size_t size;                                                               \
