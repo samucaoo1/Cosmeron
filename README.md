@@ -2,8 +2,6 @@
   <img src="Docs/Assets/Brand/Cosmeron-Horizontal.png" alt="Cosmeron — modular C11 systems programming library" width="900">
 </p>
 
-# Cosmeron
-
 **Cosmeron is a modular, header-oriented C11 library for portable systems programming, experimentation, education, and reusable low-level components.** It favors readable APIs, explicit ownership, consistent naming, composable modules, and portability without hiding how the machine works.
 
 Cosmeron continues the project previously developed as **Congro;Library**, carrying its architecture and design principles into a cleaner repository and a new public identity.
@@ -66,7 +64,7 @@ Cosmeron uses namespaced generated APIs while keeping direct C symbols available
 
 ```c
 BIT_FUNC(32, Popcount)(flags);
-Bit_32_Popcount(flags);
+Bit32_Popcount(flags);
 ```
 
 Fallible operations return `OPSTATUS`; primary results are written through explicit output parameters. Predicates return `bool`. Ownership and native-platform boundaries are intended to remain visible rather than implicit.
