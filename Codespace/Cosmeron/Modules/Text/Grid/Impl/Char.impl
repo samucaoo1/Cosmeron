@@ -76,18 +76,15 @@ static inline OPSTATUS TEXT_INS(GridCharReadRegion)(
 }
 
 #define TEXT_GRID_CHAR_IMPLEMENT_ALL(TYPE, SUFFIX)                                \
-  static inline bool TEXT_GRID_CHAR_FUNC(SUFFIX, IsEmpty)(                    \
-      const TEXT_GRID_CHAR_TYPE(SUFFIX) *grid) {                              \
+  TEXT_GRID_CHAR_IS_EMPTY_PROTOTYPE(TYPE, SUFFIX) {                              \
     return grid != NULL && grid->data == NULL && grid->size.col == 0U &&      \
            grid->size.row == 0U;                                              \
   }                                                                           \
-  static inline bool TEXT_GRID_CHAR_FUNC(SUFFIX, IsValid)(                    \
-      const TEXT_GRID_CHAR_TYPE(SUFFIX) *grid) {                              \
+  TEXT_GRID_CHAR_IS_VALID_PROTOTYPE(TYPE, SUFFIX) {                              \
     return grid != NULL &&                                                     \
            TEXT_INS(GridCharValid)(grid->data, grid->size);         \
   }                                                                           \
-  static inline OPSTATUS TEXT_GRID_CHAR_FUNC(SUFFIX, Create)(                 \
-      TEXT_GRID_CHAR_TYPE(SUFFIX) *grid, TDUAL_TYPE(uint16) size) {           \
+  TEXT_GRID_CHAR_CREATE_PROTOTYPE(TYPE, SUFFIX) {           \
     if (grid == NULL)                                                         \
       return STATUS_CONST(INVALID_ARGUMENT);                                     \
     {                                                                          \
@@ -99,16 +96,14 @@ static inline OPSTATUS TEXT_INS(GridCharReadRegion)(
       return status;                                                           \
     }               \
   }                                                                           \
-  static inline OPSTATUS TEXT_GRID_CHAR_FUNC(SUFFIX, Destroy)(                \
-      TEXT_GRID_CHAR_TYPE(SUFFIX) *grid) {                                    \
+  TEXT_GRID_CHAR_DESTROY_PROTOTYPE(TYPE, SUFFIX) {                                    \
     if (grid == NULL)                                                         \
       return STATUS_CONST(INVALID_ARGUMENT);                                     \
     free(grid->data);                                                         \
     *grid = (TEXT_GRID_CHAR_TYPE(SUFFIX)){0};                                 \
     return STATUS_CONST(SUCCESS);                                                \
   }                                                                           \
-  static inline OPSTATUS TEXT_GRID_CHAR_FUNC(SUFFIX, Clear)(                  \
-      TEXT_GRID_CHAR_TYPE(SUFFIX) *grid) {                                    \
+  TEXT_GRID_CHAR_CLEAR_PROTOTYPE(TYPE, SUFFIX) {                                    \
     if (!TEXT_GRID_CHAR_FUNC(SUFFIX, IsValid)(grid))                          \
       return STATUS_CONST(INVALID_ARGUMENT);                                     \
     if (grid->data != NULL)                                                   \
@@ -116,9 +111,7 @@ static inline OPSTATUS TEXT_INS(GridCharReadRegion)(
                                 sizeof(TYPE));                                \
     return STATUS_CONST(SUCCESS);                                                \
   }                                                                           \
-  static inline OPSTATUS TEXT_GRID_CHAR_FUNC(SUFFIX, ReadCell)(               \
-      const TEXT_GRID_CHAR_TYPE(SUFFIX) *grid, TDUAL_TYPE(uint16) position,   \
-      TYPE *character) {                                                      \
+  TEXT_GRID_CHAR_READ_CELL_PROTOTYPE(TYPE, SUFFIX) {                                                      \
     if (!TEXT_GRID_CHAR_FUNC(SUFFIX, IsValid)(grid) || character == NULL)     \
       return STATUS_CONST(INVALID_ARGUMENT);                                     \
     if (position.x >= grid->size.col || position.y >= grid->size.row)         \
@@ -126,9 +119,7 @@ static inline OPSTATUS TEXT_INS(GridCharReadRegion)(
     *character = grid->data[(size_t)position.y * grid->size.col + position.x];\
     return STATUS_CONST(SUCCESS);                                                \
   }                                                                           \
-  static inline OPSTATUS TEXT_GRID_CHAR_FUNC(SUFFIX, WriteCell)(              \
-      TEXT_GRID_CHAR_TYPE(SUFFIX) *grid, TDUAL_TYPE(uint16) position,         \
-      TYPE character) {                                                       \
+  TEXT_GRID_CHAR_WRITE_CELL_PROTOTYPE(TYPE, SUFFIX) {                                                       \
     if (!TEXT_GRID_CHAR_FUNC(SUFFIX, IsValid)(grid))                          \
       return STATUS_CONST(INVALID_ARGUMENT);                                     \
     if (position.x >= grid->size.col || position.y >= grid->size.row)         \
@@ -136,8 +127,7 @@ static inline OPSTATUS TEXT_INS(GridCharReadRegion)(
     grid->data[(size_t)position.y * grid->size.col + position.x] = character; \
     return STATUS_CONST(SUCCESS);                                                \
   }                                                                           \
-  static inline OPSTATUS TEXT_GRID_CHAR_FUNC(SUFFIX, Fill)(                   \
-      TEXT_GRID_CHAR_TYPE(SUFFIX) *grid, TYPE character) {                    \
+  TEXT_GRID_CHAR_FILL_PROTOTYPE(TYPE, SUFFIX) {                    \
     size_t i, count;                                                          \
     if (!TEXT_GRID_CHAR_FUNC(SUFFIX, IsValid)(grid))                          \
       return STATUS_CONST(INVALID_ARGUMENT);                                     \
@@ -146,9 +136,7 @@ static inline OPSTATUS TEXT_INS(GridCharReadRegion)(
       grid->data[i] = character;                                              \
     return STATUS_CONST(SUCCESS);                                                \
   }                                                                           \
-  static inline OPSTATUS TEXT_GRID_CHAR_FUNC(SUFFIX, FillRegion)(             \
-      TEXT_GRID_CHAR_TYPE(SUFFIX) *grid, TQUAD_TYPE(uint16) region,           \
-      TYPE character) {                                                       \
+  TEXT_GRID_CHAR_FILL_REGION_PROTOTYPE(TYPE, SUFFIX) {                                                       \
     uint32_t x, y;                                                            \
     if (!TEXT_GRID_CHAR_FUNC(SUFFIX, IsValid)(grid))                          \
       return STATUS_CONST(INVALID_ARGUMENT);                                     \
@@ -161,9 +149,7 @@ static inline OPSTATUS TEXT_INS(GridCharReadRegion)(
         grid->data[(size_t)y * grid->size.col + x] = character;               \
     return STATUS_CONST(SUCCESS);                                                \
   }                                                                           \
-  static inline OPSTATUS TEXT_GRID_CHAR_FUNC(SUFFIX, Read)(                   \
-      const TEXT_GRID_CHAR_TYPE(SUFFIX) *source, TQUAD_TYPE(uint16) region,   \
-      TEXT_GRID_CHAR_TYPE(SUFFIX) *destination) {                             \
+  TEXT_GRID_CHAR_READ_PROTOTYPE(TYPE, SUFFIX) {                             \
     TEXT_GRID_CHAR_TYPE(SUFFIX) temporary = {0};                              \
     OPSTATUS status;                                                          \
     if (!TEXT_GRID_CHAR_FUNC(SUFFIX, IsValid)(source) ||                      \
@@ -182,11 +168,7 @@ static inline OPSTATUS TEXT_INS(GridCharReadRegion)(
     *destination = temporary;                                                 \
     return STATUS_CONST(SUCCESS);                                                \
   }                                                                           \
-  static inline OPSTATUS TEXT_GRID_CHAR_FUNC(SUFFIX, WriteRegion)(            \
-      TEXT_GRID_CHAR_TYPE(SUFFIX) *destination,                               \
-      TDUAL_TYPE(uint16) destinationPosition,                                \
-      const TEXT_GRID_CHAR_TYPE(SUFFIX) *source,                              \
-      TQUAD_TYPE(uint16) sourceRegion) {                                     \
+  TEXT_GRID_CHAR_WRITE_REGION_PROTOTYPE(TYPE, SUFFIX) {                                     \
     TEXT_GRID_CHAR_TYPE(SUFFIX) temporary = {0};                              \
     uint32_t width, height, y;                                                \
     OPSTATUS status;                                                          \
@@ -216,10 +198,7 @@ static inline OPSTATUS TEXT_INS(GridCharReadRegion)(
     TEXT_GRID_CHAR_FUNC(SUFFIX, Destroy)(&temporary);                         \
     return STATUS_CONST(SUCCESS);                                                \
   }                                                                           \
-  static inline OPSTATUS TEXT_GRID_CHAR_FUNC(SUFFIX, Write)(                  \
-      TEXT_GRID_CHAR_TYPE(SUFFIX) *destination,                               \
-      TDUAL_TYPE(uint16) destinationPosition,                                \
-      const TEXT_GRID_CHAR_TYPE(SUFFIX) *source) {                            \
+  TEXT_GRID_CHAR_WRITE_PROTOTYPE(TYPE, SUFFIX) {                            \
     TQUAD_TYPE(uint16) region = {0};                                          \
     if (!TEXT_GRID_CHAR_FUNC(SUFFIX, IsValid)(source))                        \
       return STATUS_CONST(INVALID_ARGUMENT);                                     \
@@ -230,8 +209,7 @@ static inline OPSTATUS TEXT_INS(GridCharReadRegion)(
     return TEXT_GRID_CHAR_FUNC(SUFFIX, WriteRegion)(                          \
         destination, destinationPosition, source, region);                   \
   }                                                                           \
-  static inline OPSTATUS TEXT_GRID_CHAR_FUNC(SUFFIX, Resize)(                 \
-      TEXT_GRID_CHAR_TYPE(SUFFIX) *grid, TDUAL_TYPE(uint16) size) {           \
+  TEXT_GRID_CHAR_RESIZE_PROTOTYPE(TYPE, SUFFIX) {           \
     TEXT_GRID_CHAR_TYPE(SUFFIX) temporary = {0};                              \
     uint32_t width, height, y;                                                \
     OPSTATUS status;                                                          \
@@ -252,8 +230,7 @@ static inline OPSTATUS TEXT_INS(GridCharReadRegion)(
     *grid = temporary;                                                        \
     return STATUS_CONST(SUCCESS);                                                \
   }                                                                           \
-  static inline OPSTATUS TEXT_GRID_CHAR_FUNC(SUFFIX, Recreate)(               \
-      TEXT_GRID_CHAR_TYPE(SUFFIX) *grid, TDUAL_TYPE(uint16) size) {           \
+  TEXT_GRID_CHAR_RECREATE_PROTOTYPE(TYPE, SUFFIX) {           \
     TEXT_GRID_CHAR_TYPE(SUFFIX) temporary = {0};                              \
     OPSTATUS status;                                                          \
     if (!TEXT_GRID_CHAR_FUNC(SUFFIX, IsValid)(grid))                          \
@@ -267,9 +244,7 @@ static inline OPSTATUS TEXT_INS(GridCharReadRegion)(
     *grid = temporary;                                                        \
     return STATUS_CONST(SUCCESS);                                                \
   }                                                                           \
-  static inline OPSTATUS TEXT_GRID_CHAR_FUNC(SUFFIX, Clone)(                  \
-      TEXT_GRID_CHAR_TYPE(SUFFIX) *destination,                               \
-      const TEXT_GRID_CHAR_TYPE(SUFFIX) *source) {                            \
+  TEXT_GRID_CHAR_CLONE_PROTOTYPE(TYPE, SUFFIX) {                            \
     TEXT_GRID_CHAR_TYPE(SUFFIX) temporary = {0};                              \
     OPSTATUS status;                                                          \
     if (!TEXT_GRID_CHAR_FUNC(SUFFIX, IsValid)(source) ||                      \
