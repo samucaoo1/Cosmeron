@@ -1,7 +1,7 @@
 #pragma once
 
-#define TBIGINT_FUNCTION_TABLE(SUFFIX)                                        \
-  typedef struct TBIGINT_FUNC(SUFFIX, FunctionTable) {                      \
+#define TBIGINT_FUNCTION_TABLE_STRUCT(SUFFIX)                                        \
+  typedef struct TBIGINT_FUNCTION_TABLE_TYPE(SUFFIX) {                      \
     OPSTATUS (*clear)(TBIGINT_TYPE(SUFFIX) *);                                     \
     OPSTATUS (*init)(TBIGINT_TYPE(SUFFIX) *);                                      \
     /* Arithmetic */                                                           \
@@ -46,10 +46,10 @@
     OPSTATUS (*toCString)(const TBIGINT_TYPE(SUFFIX) *, char *, size_t);          \
     OPSTATUS (*toCStringBase)(const TBIGINT_TYPE(SUFFIX) *, char *, size_t,       \
                               unsigned);                              \
-  } TBIGINT_FUNC(SUFFIX, FunctionTable);
+  } TBIGINT_FUNCTION_TABLE_TYPE(SUFFIX);
 
 #define TBIGINT_FUNCTION_TABLE_INSTANCE(SUFFIX)                              \
-  static const TBIGINT_FUNC(SUFFIX, FunctionTable) TBIGINT_FUNC(                   \
+  static const TBIGINT_FUNCTION_TABLE_TYPE(SUFFIX) TBIGINT_FUNC(                   \
       SUFFIX, functions) = {                                                   \
       .clear = &TBIGINT_FUNC(SUFFIX, Clear),                                   \
       .init = &TBIGINT_FUNC(SUFFIX, Init),                                     \
