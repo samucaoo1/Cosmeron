@@ -146,7 +146,7 @@
   CONTAINER_API_BIND(NAME, LINKED_LIST_FUNC(TYPE, functions));                               \
   LINKED_LIST_FUNC(TYPE, Init)(&NAME);
 /* Compatibility alias: prefer LINKED_LIST_INSTANCE_DECLARE. */
-#define TLINKED_NS(List)(TYPE, NAME) LINKED_LIST_INSTANCE_DECLARE(TYPE, NAME)
+#define TLinked_List(TYPE, NAME) LINKED_LIST_INSTANCE_DECLARE(TYPE, NAME)
 
 /* ============================================================
  * Implementation
