@@ -13,152 +13,152 @@
 
 /* --- Internals --- */
 
-#define LINKED_LIST_CREATE_NODE(TYPE, SUFFIX)                                        \
-  DOUBLE_LINKED_CREATE_NODE(TYPE, LINKED_LIST_FUNC(SUFFIX, _CreateNode),             \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_CREATE_NODE(TYPE, SUFFIX)                                        \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_CREATE_NODE(TYPE, LINKED_LIST_FUNC(SUFFIX, _CreateNode),             \
                             LINKED_LIST_NODE_TYPE(SUFFIX))
 
-#define LINKED_LIST_LINK_FRONT(TYPE, SUFFIX)                                         \
-  DOUBLE_LINKED_LINK_FRONT(LINKED_LIST_FUNC(SUFFIX, _LinkFront),                     \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_LINK_FRONT(TYPE, SUFFIX)                                         \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_LINK_FRONT(LINKED_LIST_FUNC(SUFFIX, _LinkFront),                     \
                            LINKED_LIST_TYPE(SUFFIX),                                 \
                            LINKED_LIST_NODE_TYPE(SUFFIX))
 
-#define LINKED_LIST_LINK_BACK(TYPE, SUFFIX)                                          \
-  DOUBLE_LINKED_LINK_BACK(LINKED_LIST_FUNC(SUFFIX, _LinkBack),                       \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_LINK_BACK(TYPE, SUFFIX)                                          \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_LINK_BACK(LINKED_LIST_FUNC(SUFFIX, _LinkBack),                       \
                           LINKED_LIST_TYPE(SUFFIX),                                  \
                           LINKED_LIST_NODE_TYPE(SUFFIX))
 
-#define LINKED_LIST_UNLINK_FRONT(TYPE, SUFFIX)                                       \
-  DOUBLE_LINKED_UNLINK_FRONT(LINKED_LIST_FUNC(SUFFIX, _UnlinkFront),                \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_UNLINK_FRONT(TYPE, SUFFIX)                                       \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_UNLINK_FRONT(LINKED_LIST_FUNC(SUFFIX, _UnlinkFront),                \
                              LINKED_LIST_TYPE(SUFFIX),                               \
                              LINKED_LIST_NODE_TYPE(SUFFIX))
 
-#define LINKED_LIST_UNLINK_BACK(TYPE, SUFFIX)                                        \
-  DOUBLE_LINKED_UNLINK_BACK(LINKED_LIST_FUNC(SUFFIX, _UnlinkBack),                  \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_UNLINK_BACK(TYPE, SUFFIX)                                        \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_UNLINK_BACK(LINKED_LIST_FUNC(SUFFIX, _UnlinkBack),                  \
                             LINKED_LIST_TYPE(SUFFIX),                                \
                             LINKED_LIST_NODE_TYPE(SUFFIX))
 
-#define LINKED_LIST_LINK_BEFORE(TYPE, SUFFIX)                                        \
-  DOUBLE_LINKED_LINK_BEFORE(LINKED_LIST_FUNC(SUFFIX, _LinkBefore),                   \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_LINK_BEFORE(TYPE, SUFFIX)                                        \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_LINK_BEFORE(LINKED_LIST_FUNC(SUFFIX, _LinkBefore),                   \
                             LINKED_LIST_TYPE(SUFFIX),                                \
                             LINKED_LIST_NODE_TYPE(SUFFIX))
 
-#define LINKED_LIST_UNLINK(TYPE, SUFFIX)                                             \
-  DOUBLE_LINKED_UNLINK(LINKED_LIST_FUNC(SUFFIX, _Unlink), LINKED_LIST_TYPE(SUFFIX),        \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_UNLINK(TYPE, SUFFIX)                                             \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_UNLINK(LINKED_LIST_FUNC(SUFFIX, _Unlink), LINKED_LIST_TYPE(SUFFIX),        \
                        LINKED_LIST_NODE_TYPE(SUFFIX))
 
 /* --- Lifecycle --- */
 
-#define LINKED_LIST_IMPLEMENT_INIT(TYPE, SUFFIX)                                     \
-  DOUBLE_LINKED_IMPLEMENT_INIT(TYPE, LINKED_LIST_FUNC(SUFFIX, Init),         \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_INIT(TYPE, SUFFIX)                                     \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_IMPLEMENT_INIT(TYPE, LINKED_LIST_FUNC(SUFFIX, Init),         \
                                LINKED_LIST_TYPE(SUFFIX))
 
-#define LINKED_LIST_IMPLEMENT_DESTROY(TYPE, SUFFIX)                                  \
-  DOUBLE_LINKED_IMPLEMENT_DESTROY(TYPE, LINKED_LIST_FUNC(SUFFIX, Destroy),   \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_DESTROY(TYPE, SUFFIX)                                  \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_IMPLEMENT_DESTROY(TYPE, LINKED_LIST_FUNC(SUFFIX, Destroy),   \
                                   LINKED_LIST_TYPE(SUFFIX),                          \
                                   LINKED_LIST_NODE_TYPE(SUFFIX))
 
 /* --- Access --- */
 
-#define LINKED_LIST_IMPLEMENT_FRONT(TYPE, SUFFIX)                                    \
-  DOUBLE_LINKED_ACCESS_FRONT(TYPE, LINKED_LIST_FUNC(SUFFIX, Front),          \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_FRONT(TYPE, SUFFIX)                                    \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_ACCESS_FRONT(TYPE, LINKED_LIST_FUNC(SUFFIX, Front),          \
                              LINKED_LIST_TYPE(SUFFIX))
 
-#define LINKED_LIST_IMPLEMENT_BACK(TYPE, SUFFIX)                                     \
-  DOUBLE_LINKED_ACCESS_BACK(TYPE, LINKED_LIST_FUNC(SUFFIX, Back),            \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_BACK(TYPE, SUFFIX)                                     \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_ACCESS_BACK(TYPE, LINKED_LIST_FUNC(SUFFIX, Back),            \
                             LINKED_LIST_TYPE(SUFFIX))
 
-#define LINKED_LIST_IMPLEMENT_BEGIN(TYPE, SUFFIX)                                    \
-  DOUBLE_LINKED_ACCESS_BEGIN(LINKED_LIST_FUNC(SUFFIX, Begin),                 \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_BEGIN(TYPE, SUFFIX)                                    \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_ACCESS_BEGIN(LINKED_LIST_FUNC(SUFFIX, Begin),                 \
                              LINKED_LIST_TYPE(SUFFIX),                               \
                              LINKED_LIST_NODE_TYPE(SUFFIX))
 
-#define LINKED_LIST_IMPLEMENT_END(TYPE, SUFFIX)                                      \
-  DOUBLE_LINKED_ACCESS_END(LINKED_LIST_FUNC(SUFFIX, End),                    \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_END(TYPE, SUFFIX)                                      \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_ACCESS_END(LINKED_LIST_FUNC(SUFFIX, End),                    \
                            LINKED_LIST_TYPE(SUFFIX),                                 \
                            LINKED_LIST_NODE_TYPE(SUFFIX))
 
-#define LINKED_LIST_IMPLEMENT_RBEGIN(TYPE, SUFFIX)                                   \
-  DOUBLE_LINKED_ACCESS_RBEGIN(LINKED_LIST_FUNC(SUFFIX, RBegin),              \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_RBEGIN(TYPE, SUFFIX)                                   \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_ACCESS_RBEGIN(LINKED_LIST_FUNC(SUFFIX, RBegin),              \
                               LINKED_LIST_TYPE(SUFFIX),                              \
                               LINKED_LIST_NODE_TYPE(SUFFIX))
 
 /* --- Modifiers --- */
 
-#define LINKED_LIST_IMPLEMENT_PUSH_FRONT(TYPE, SUFFIX)                               \
-  DOUBLE_LINKED_IMPLEMENT_PUSH_FRONT(                                          \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_PUSH_FRONT(TYPE, SUFFIX)                               \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_IMPLEMENT_PUSH_FRONT(                                          \
       TYPE, LINKED_LIST_FUNC(SUFFIX, PushFront),                            \
       LINKED_LIST_FUNC(SUFFIX, _CreateNode), LINKED_LIST_FUNC(SUFFIX, _LinkFront),         \
       LINKED_LIST_TYPE(SUFFIX), LINKED_LIST_NODE_TYPE(SUFFIX))
 
-#define LINKED_LIST_IMPLEMENT_PUSH_BACK(TYPE, SUFFIX)                                \
-  DOUBLE_LINKED_IMPLEMENT_PUSH_BACK(                                           \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_PUSH_BACK(TYPE, SUFFIX)                                \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_IMPLEMENT_PUSH_BACK(                                           \
       TYPE, LINKED_LIST_FUNC(SUFFIX, PushBack),                             \
       LINKED_LIST_FUNC(SUFFIX, _CreateNode), LINKED_LIST_FUNC(SUFFIX, _LinkBack),          \
       LINKED_LIST_TYPE(SUFFIX), LINKED_LIST_NODE_TYPE(SUFFIX))
 
-#define LINKED_LIST_IMPLEMENT_POP_FRONT(TYPE, SUFFIX)                                \
-  DOUBLE_LINKED_IMPLEMENT_POP_FRONT(TYPE,                                      \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_POP_FRONT(TYPE, SUFFIX)                                \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_IMPLEMENT_POP_FRONT(TYPE,                                      \
                                     LINKED_LIST_FUNC(SUFFIX, PopFront),      \
                                     LINKED_LIST_FUNC(SUFFIX, _UnlinkFront),          \
                                     LINKED_LIST_TYPE(SUFFIX))
 
-#define LINKED_LIST_IMPLEMENT_POP_BACK(TYPE, SUFFIX)                                 \
-  DOUBLE_LINKED_IMPLEMENT_POP_BACK(TYPE,                                       \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_POP_BACK(TYPE, SUFFIX)                                 \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_IMPLEMENT_POP_BACK(TYPE,                                       \
                                    LINKED_LIST_FUNC(SUFFIX, PopBack),       \
                                    LINKED_LIST_FUNC(SUFFIX, _UnlinkBack),            \
                                    LINKED_LIST_TYPE(SUFFIX))
 
-#define LINKED_LIST_IMPLEMENT_INSERT(TYPE, SUFFIX)                                   \
-  DOUBLE_LINKED_IMPLEMENT_INSERT(                                              \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_INSERT(TYPE, SUFFIX)                                   \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_IMPLEMENT_INSERT(                                              \
       TYPE, LINKED_LIST_FUNC(SUFFIX, Insert),                                \
       LINKED_LIST_FUNC(SUFFIX, _CreateNode), LINKED_LIST_FUNC(SUFFIX, _LinkBack),          \
       LINKED_LIST_FUNC(SUFFIX, _LinkBefore), LINKED_LIST_TYPE(SUFFIX),                     \
       LINKED_LIST_NODE_TYPE(SUFFIX))
 
-#define LINKED_LIST_IMPLEMENT_ERASE(TYPE, SUFFIX)                                    \
-  DOUBLE_LINKED_IMPLEMENT_ERASE(TYPE, LINKED_LIST_FUNC(SUFFIX, Erase),       \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_ERASE(TYPE, SUFFIX)                                    \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_IMPLEMENT_ERASE(TYPE, LINKED_LIST_FUNC(SUFFIX, Erase),       \
                                 LINKED_LIST_FUNC(SUFFIX, _Unlink),                   \
                                 LINKED_LIST_TYPE(SUFFIX),                            \
                                 LINKED_LIST_NODE_TYPE(SUFFIX))
 
-#define LINKED_LIST_IMPLEMENT_CLEAR(TYPE, SUFFIX)                                    \
-  DOUBLE_LINKED_IMPLEMENT_CLEAR(TYPE, LINKED_LIST_FUNC(SUFFIX, Clear),       \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_CLEAR(TYPE, SUFFIX)                                    \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_IMPLEMENT_CLEAR(TYPE, LINKED_LIST_FUNC(SUFFIX, Clear),       \
                                 LINKED_LIST_FUNC(SUFFIX, Destroy),           \
                                 LINKED_LIST_TYPE(SUFFIX))
 
 /* --- Observers --- */
 
-#define LINKED_LIST_IMPLEMENT_EMPTY(TYPE, SUFFIX)                                    \
-  DOUBLE_LINKED_IMPLEMENT_EMPTY(TYPE, LINKED_LIST_FUNC(SUFFIX, Empty),       \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_EMPTY(TYPE, SUFFIX)                                    \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_IMPLEMENT_EMPTY(TYPE, LINKED_LIST_FUNC(SUFFIX, Empty),       \
                                 LINKED_LIST_TYPE(SUFFIX))
 
-#define LINKED_LIST_IMPLEMENT_SIZE(TYPE, SUFFIX)                                     \
-  DOUBLE_LINKED_IMPLEMENT_SIZE(TYPE, LINKED_LIST_FUNC(SUFFIX, Size),         \
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_SIZE(TYPE, SUFFIX)                                     \
+  COSMERON_MACRO_INTERNAL_DOUBLE_LINKED_IMPLEMENT_SIZE(TYPE, LINKED_LIST_FUNC(SUFFIX, Size),         \
                                LINKED_LIST_TYPE(SUFFIX))
 
 /* --- Aggregator --- */
 
-#define LINKED_LIST_IMPLEMENT(TYPE, SUFFIX)                                          \
-  LINKED_LIST_CREATE_NODE(TYPE, SUFFIX)                                              \
-  LINKED_LIST_LINK_FRONT(TYPE, SUFFIX)                                               \
-  LINKED_LIST_LINK_BACK(TYPE, SUFFIX)                                                \
-  LINKED_LIST_UNLINK_FRONT(TYPE, SUFFIX)                                             \
-  LINKED_LIST_UNLINK_BACK(TYPE, SUFFIX)                                              \
-  LINKED_LIST_LINK_BEFORE(TYPE, SUFFIX)                                              \
-  LINKED_LIST_UNLINK(TYPE, SUFFIX)                                                   \
-  LINKED_LIST_IMPLEMENT_INIT(TYPE, SUFFIX)                                           \
-  LINKED_LIST_IMPLEMENT_DESTROY(TYPE, SUFFIX)                                        \
-  LINKED_LIST_IMPLEMENT_FRONT(TYPE, SUFFIX)                                          \
-  LINKED_LIST_IMPLEMENT_BACK(TYPE, SUFFIX)                                           \
-  LINKED_LIST_IMPLEMENT_BEGIN(TYPE, SUFFIX)                                           \
-  LINKED_LIST_IMPLEMENT_END(TYPE, SUFFIX)                                            \
-  LINKED_LIST_IMPLEMENT_RBEGIN(TYPE, SUFFIX)                                         \
-  LINKED_LIST_IMPLEMENT_PUSH_FRONT(TYPE, SUFFIX)                                     \
-  LINKED_LIST_IMPLEMENT_PUSH_BACK(TYPE, SUFFIX)                                      \
-  LINKED_LIST_IMPLEMENT_POP_FRONT(TYPE, SUFFIX)                                      \
-  LINKED_LIST_IMPLEMENT_POP_BACK(TYPE, SUFFIX)                                       \
-  LINKED_LIST_IMPLEMENT_INSERT(TYPE, SUFFIX)                                         \
-  LINKED_LIST_IMPLEMENT_ERASE(TYPE, SUFFIX)                                          \
-  LINKED_LIST_IMPLEMENT_CLEAR(TYPE, SUFFIX)                                          \
-  LINKED_LIST_IMPLEMENT_EMPTY(TYPE, SUFFIX)                                          \
-  LINKED_LIST_IMPLEMENT_SIZE(TYPE, SUFFIX)
+#define COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT(TYPE, SUFFIX)                                          \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_CREATE_NODE(TYPE, SUFFIX)                                              \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_LINK_FRONT(TYPE, SUFFIX)                                               \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_LINK_BACK(TYPE, SUFFIX)                                                \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_UNLINK_FRONT(TYPE, SUFFIX)                                             \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_UNLINK_BACK(TYPE, SUFFIX)                                              \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_LINK_BEFORE(TYPE, SUFFIX)                                              \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_UNLINK(TYPE, SUFFIX)                                                   \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_INIT(TYPE, SUFFIX)                                           \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_DESTROY(TYPE, SUFFIX)                                        \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_FRONT(TYPE, SUFFIX)                                          \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_BACK(TYPE, SUFFIX)                                           \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_BEGIN(TYPE, SUFFIX)                                           \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_END(TYPE, SUFFIX)                                            \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_RBEGIN(TYPE, SUFFIX)                                         \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_PUSH_FRONT(TYPE, SUFFIX)                                     \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_PUSH_BACK(TYPE, SUFFIX)                                      \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_POP_FRONT(TYPE, SUFFIX)                                      \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_POP_BACK(TYPE, SUFFIX)                                       \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_INSERT(TYPE, SUFFIX)                                         \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_ERASE(TYPE, SUFFIX)                                          \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_CLEAR(TYPE, SUFFIX)                                          \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_EMPTY(TYPE, SUFFIX)                                          \
+  COSMERON_MACRO_INTERNAL_LINKED_LIST_IMPLEMENT_SIZE(TYPE, SUFFIX)
