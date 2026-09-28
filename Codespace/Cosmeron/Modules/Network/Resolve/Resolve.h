@@ -17,14 +17,11 @@
 #include <sys/socket.h>
 #endif
 
-#define NETWORK_RESOLVE_TYPE(NAME) GNS2(NETWORK_MOD(Resolve), NAME)
-#define NETWORK_RESOLVE_FUNC(NAME) GNS2(NETWORK_MOD(Resolve), NAME)
-
 FLAT_VECTOR_IMPLEMENT_ALL(NETWORK_ADDRESS_TYPE(TAddress), Network_Address)
 
-typedef FLAT_VECTOR_TYPE(Network_Address) NETWORK_ADDRESS_TYPE(TAddress)_Vector;
+typedef FLAT_VECTOR_TYPE(Network_Address) NETWORK_RESOLVE_TYPE(TAddressVector);
 
-static inline NETWORK_TYPE(Error) NETWORK_RESOLVE_FUNC(_MapError)(int error) {
+static inline NETWORK_TYPE(Error) NETWORK_INS(ResolveMapError)(int error) {
   (void)error;
 #ifdef EAI_NONAME
   if (error == EAI_NONAME)
@@ -41,7 +38,7 @@ static inline NETWORK_TYPE(Error) NETWORK_RESOLVE_FUNC(_MapError)(int error) {
   return NETWORK_ERROR_CONST(UNKNOWN);
 }
 
-static inline int NETWORK_RESOLVE_FUNC(_GetAddrInfo)(
+static inline int NETWORK_INS(ResolveGetAddrInfo)(
     const char *host, const struct addrinfo *hints, struct addrinfo **result) {
 #if OS_WINDOWS
   return NETWORK_FUNC(_WinGetAddrInfo)(host, NULL, hints, result);
@@ -50,7 +47,7 @@ static inline int NETWORK_RESOLVE_FUNC(_GetAddrInfo)(
 #endif
 }
 
-static inline void NETWORK_RESOLVE_FUNC(_FreeAddrInfo)(struct addrinfo *result) {
+static inline void NETWORK_INS(ResolveFreeAddrInfo)(struct addrinfo *result) {
 #if OS_WINDOWS
   NETWORK_FUNC(_WinFreeAddrInfo)(result);
 #else
@@ -59,7 +56,7 @@ static inline void NETWORK_RESOLVE_FUNC(_FreeAddrInfo)(struct addrinfo *result) 
 }
 
 static inline OPSTATUS NETWORK_RESOLVE_FUNC(Address)(
-    NETWORK_ADDRESS_TYPE(TAddress)_Vector *addresses, const char *host,
+    NETWORK_RESOLVE_TYPE(TAddressVector) *addresses, const char *host,
     NETWORK_TYPE(Error) *error) {
   struct addrinfo hints;
   struct addrinfo *result = NULL;
@@ -84,10 +81,10 @@ static inline OPSTATUS NETWORK_RESOLVE_FUNC(Address)(
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = 0;
 
-  status = NETWORK_RESOLVE_FUNC(_GetAddrInfo)(host, &hints, &result);
+  status = NETWORK_INS(ResolveGetAddrInfo)(host, &hints, &result);
   if (status != 0) {
     if (error != NULL)
-      *error = NETWORK_RESOLVE_FUNC(_MapError)(status);
+      *error = NETWORK_INS(ResolveMapError)(status);
     return STATUS_CONST(GENERIC_ERROR);
   }
 
@@ -98,13 +95,13 @@ static inline OPSTATUS NETWORK_RESOLVE_FUNC(Address)(
     if (current->ai_family == AF_INET) {
       const struct sockaddr_in *native =
           (const struct sockaddr_in *)current->ai_addr;
-      address.type = NETWORK_ADDRESS_TYPE(IPV4);
+      address.type = NETWORK_ADDRESS_CONST(IPV4);
       memcpy(address.bytes.ipv4, &native->sin_addr, 4);
       supported = true;
     } else if (current->ai_family == AF_INET6) {
       const struct sockaddr_in6 *native =
           (const struct sockaddr_in6 *)current->ai_addr;
-      address.type = NETWORK_ADDRESS_TYPE(IPV6);
+      address.type = NETWORK_ADDRESS_CONST(IPV6);
       memcpy(address.bytes.ipv6, &native->sin6_addr, 16);
       supported = true;
     }
@@ -121,7 +118,7 @@ static inline OPSTATUS NETWORK_RESOLVE_FUNC(Address)(
       if (!duplicate &&
           FLAT_VECTOR_FUNC(Network_Address, PushBack)(addresses, address) !=
               STATUS_CONST(SUCCESS)) {
-        NETWORK_RESOLVE_FUNC(_FreeAddrInfo)(result);
+        NETWORK_INS(ResolveFreeAddrInfo)(result);
         if (error != NULL)
           *error = NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED);
         return STATUS_CONST(GENERIC_ERROR);
@@ -129,7 +126,7 @@ static inline OPSTATUS NETWORK_RESOLVE_FUNC(Address)(
     }
   }
 
-  NETWORK_RESOLVE_FUNC(_FreeAddrInfo)(result);
+  NETWORK_INS(ResolveFreeAddrInfo)(result);
   if (addresses->size == 0) {
     if (error != NULL)
       *error = NETWORK_ERROR_CONST(HOST_NOT_FOUND);
