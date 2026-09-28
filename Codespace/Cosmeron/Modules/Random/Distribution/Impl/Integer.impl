@@ -47,17 +47,17 @@ static inline int64_t RANDOM_DISTRIBUTION_FUNC(_I64Unchecked)(
 }
 
 RANDOM_DISTRIBUTION_U64_PROTOTYPE {
-  if (!RANDOM_SOURCE_FUNC(_Valid)(source) || out == NULL)
+  if (!RANDOM_SOURCE_FUNC(_Valid)(source) || outValue == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  *out = RANDOM_DISTRIBUTION_FUNC(_U64Unchecked)(source, minimum, maximum);
+  *outValue = RANDOM_DISTRIBUTION_FUNC(_U64Unchecked)(source, minimum, maximum);
   return STATUS_CONST(SUCCESS);
 }
 
 RANDOM_DISTRIBUTION_I64_PROTOTYPE {
-  if (!RANDOM_SOURCE_FUNC(_Valid)(source) || out == NULL)
+  if (!RANDOM_SOURCE_FUNC(_Valid)(source) || outValue == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  *out = RANDOM_DISTRIBUTION_FUNC(_I64Unchecked)(source, minimum, maximum);
+  *outValue = RANDOM_DISTRIBUTION_FUNC(_I64Unchecked)(source, minimum, maximum);
   return STATUS_CONST(SUCCESS);
 }
