@@ -304,7 +304,8 @@ NETWORK_CONNECTION_RECONNECT_PROTOTYPE {
 }
 
 NETWORK_CONNECTION_READ_PROTOTYPE {
-  if (connection == NULL || (capacity != 0 && buffer == NULL)) {
+  if (connection == NULL || bytesRead == NULL ||
+      (capacity != 0 && buffer == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
   }
@@ -341,7 +342,8 @@ NETWORK_CONNECTION_READ_EXACT_PROTOTYPE {
 }
 
 NETWORK_CONNECTION_WRITE_PROTOTYPE {
-  if (connection == NULL || (size != 0 && data == NULL)) {
+  if (connection == NULL || bytesWritten == NULL ||
+      (size != 0 && data == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
   }
