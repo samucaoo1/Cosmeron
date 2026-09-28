@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-static inline OPSTATUS Memory_Internal_ArraySize(size_t count,
+static inline OPSTATUS MEMORY_INS(AllocArraySize)(size_t count,
                                                  size_t elementSize,
                                                  size_t *outSize) {
   if (!outSize)
@@ -41,7 +41,7 @@ ALLOC_ARRAY_PROTOTYPE {
   if (!out)
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  status = Memory_Internal_ArraySize(count, elementSize, &size);
+  status = MEMORY_INS(AllocArraySize)(count, elementSize, &size);
   if (status != STATUS_CONST(SUCCESS))
     return status;
 
@@ -75,7 +75,7 @@ REALLOC_ARRAY_PROTOTYPE {
   if (!ptr)
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  status = Memory_Internal_ArraySize(count, elementSize, &size);
+  status = MEMORY_INS(AllocArraySize)(count, elementSize, &size);
   if (status != STATUS_CONST(SUCCESS))
     return status;
 
