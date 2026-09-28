@@ -10,7 +10,7 @@ typedef struct MemoryUtilities_Aligned {
 } MemoryUtilities_Aligned;
 
 int main(void) {
-  TArena arena = {0};
+  ARENA_TYPE(TArena) arena = {0};
   int *values = NULL;
   int left = 1;
   int right = 2;
