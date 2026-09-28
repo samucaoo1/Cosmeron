@@ -1,6 +1,6 @@
 #pragma once
 
-#define GRAPH_IMPLEMENT_INIT(VERTEX_SUFFIX, WEIGHT_SUFFIX)                    \
+#define COSMERON_MACRO_INTERNAL_GRAPH_IMPLEMENT_INIT(VERTEX_SUFFIX, WEIGHT_SUFFIX)                    \
   GRAPH_INIT_PROTOTYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) {                        \
     void *storage = NULL;                                                       \
     OPSTATUS status;                                                            \
@@ -24,7 +24,7 @@
     return STATUS_CONST(SUCCESS);                                               \
   }
 
-#define GRAPH_IMPLEMENT_DESTROY(VERTEX_SUFFIX, WEIGHT_SUFFIX)                 \
+#define COSMERON_MACRO_INTERNAL_GRAPH_IMPLEMENT_DESTROY(VERTEX_SUFFIX, WEIGHT_SUFFIX)                 \
   GRAPH_DESTROY_PROTOTYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) {                     \
     size_t i;                                                                   \
     if (!graph)                                                                 \
@@ -37,7 +37,7 @@
     graph->edgeCount = 0;                                                       \
   }
 
-#define GRAPH_IMPLEMENT_CLEAR(VERTEX_SUFFIX, WEIGHT_SUFFIX)                   \
+#define COSMERON_MACRO_INTERNAL_GRAPH_IMPLEMENT_CLEAR(VERTEX_SUFFIX, WEIGHT_SUFFIX)                   \
   GRAPH_CLEAR_PROTOTYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) {                       \
     size_t i;                                                                   \
     if (!graph)                                                                 \
