@@ -272,7 +272,7 @@ int main(void) {
   {
     TBIGINT_TYPE(128) left = {0};
     TBIGINT_TYPE(128) right = {0};
-    TComparisonResult comparison;
+    CMPOUT comparison;
     left.limb[0] = 1U;
     right.limb[0] = 2U;
     if (TBIGINT_FUNC(128, Compare)(&left, &right, &comparison) != STATUS_CONST(SUCCESS) ||

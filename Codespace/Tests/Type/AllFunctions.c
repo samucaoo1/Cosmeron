@@ -49,7 +49,7 @@
     DECLMACRO(SUFFIX, b)                                                       \
     DECLMACRO(SUFFIX, q)                                                       \
     DECLMACRO(SUFFIX, r)                                                       \
-    TComparisonResult cmp = COMPARISON_CONST(EQUAL);                           \
+    CMPOUT cmp = COMPARISON_CONST(EQUAL);                           \
     bool bit = false;                                                          \
     char buffer[400];                                                          \
     CHECK_STATUS(PREFIX##_FUNC(SUFFIX, Init)(&a));                             \
