@@ -1,8 +1,8 @@
 #pragma once
 
 static inline OPSTATUS NETWORK_POLLER_FUNC(_Publish)(
-    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_TYPE(Error) *error,
-    NETWORK_TYPE(Error) domainError, OPSTATUS status) {
+    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_TYPE(TError) *error,
+    NETWORK_TYPE(TError) domainError, OPSTATUS status) {
   if (poller != NULL)
     poller->lastError = domainError;
   if (error != NULL)
@@ -11,9 +11,9 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_Publish)(
 }
 
 static inline OPSTATUS NETWORK_POLLER_FUNC(_Add)(
-    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(SourceType) sourceType, void *object,
+    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TSourceType) sourceType, void *object,
     NETWORK_POLLER_TYPE(EventFlags) interests, void *userdata, NETWORK_POLLER_TYPE(Handle) *handle,
-    NETWORK_TYPE(Error) *error) {
+    NETWORK_TYPE(TError) *error) {
   NETWORK_POLLER_TYPE(TRegistration) registration;
   if (poller == NULL || object == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
@@ -53,7 +53,7 @@ static inline void NETWORK_POLLER_FUNC(Destroy)(NETWORK_POLLER_TYPE(TPoller) *po
 static inline OPSTATUS NETWORK_POLLER_FUNC(AddConnection)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_CONNECTION_TYPE(TConnection) *connection,
     NETWORK_POLLER_TYPE(EventFlags) interests, void *userdata, NETWORK_POLLER_TYPE(Handle) *handle,
-    NETWORK_TYPE(Error) *error) {
+    NETWORK_TYPE(TError) *error) {
   return NETWORK_POLLER_FUNC(_Add)(
       poller, NETWORK_POLLER_SOURCE_CONST(CONNECTION), connection, interests,
       userdata, handle, error);
@@ -62,7 +62,7 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(AddConnection)(
 static inline OPSTATUS NETWORK_POLLER_FUNC(AddListener)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_LISTENER_TYPE(TListener) *listener,
     NETWORK_POLLER_TYPE(EventFlags) interests, void *userdata, NETWORK_POLLER_TYPE(Handle) *handle,
-    NETWORK_TYPE(Error) *error) {
+    NETWORK_TYPE(TError) *error) {
   return NETWORK_POLLER_FUNC(_Add)(
       poller, NETWORK_POLLER_SOURCE_CONST(LISTENER), listener, interests,
       userdata, handle, error);
@@ -71,7 +71,7 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(AddListener)(
 static inline OPSTATUS NETWORK_POLLER_FUNC(AddDatagram)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_DATAGRAM_TYPE(TDatagram) *datagram,
     NETWORK_POLLER_TYPE(EventFlags) interests, void *userdata, NETWORK_POLLER_TYPE(Handle) *handle,
-    NETWORK_TYPE(Error) *error) {
+    NETWORK_TYPE(TError) *error) {
   return NETWORK_POLLER_FUNC(_Add)(
       poller, NETWORK_POLLER_SOURCE_CONST(DATAGRAM), datagram, interests,
       userdata, handle, error);
@@ -79,7 +79,7 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(AddDatagram)(
 
 static inline OPSTATUS NETWORK_POLLER_FUNC(Remove)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(Handle) handle,
-    NETWORK_TYPE(Error) *error) {
+    NETWORK_TYPE(TError) *error) {
   size_t i;
   if (poller == NULL || handle == 0) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
@@ -98,7 +98,7 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(Remove)(
 
 static inline OPSTATUS NETWORK_POLLER_FUNC(Watch)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(Handle) handle,
-    NETWORK_POLLER_TYPE(EventFlags) interests, NETWORK_TYPE(Error) *error) {
+    NETWORK_POLLER_TYPE(EventFlags) interests, NETWORK_TYPE(TError) *error) {
   size_t i;
   if (poller == NULL || handle == 0) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
@@ -126,7 +126,7 @@ static inline bool NETWORK_POLLER_FUNC(_StreamClosed)(
 #endif
   if (result == 0) return true;
   if (result == TSOCKET_NATIVE_ERROR) {
-    NETWORK_TYPE(Error) error =
+    NETWORK_TYPE(TError) error =
         SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
     return error != NETWORK_ERROR_CONST(WOULD_BLOCK);
   }
@@ -136,7 +136,7 @@ static inline bool NETWORK_POLLER_FUNC(_StreamClosed)(
 static inline OPSTATUS NETWORK_POLLER_FUNC(_PushEvent)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TEventVector) *events,
     NETWORK_POLLER_TYPE(TRegistration) *registration, NETWORK_POLLER_TYPE(EventFlags) flags,
-    NETWORK_TYPE(Error) *error) {
+    NETWORK_TYPE(TError) *error) {
   NETWORK_POLLER_TYPE(TEvent) event;
   if (flags == NETWORK_EVENT_CONST(NONE))
     return NETWORK_POLLER_FUNC(_Publish)(

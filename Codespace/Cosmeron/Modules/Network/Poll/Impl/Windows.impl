@@ -55,7 +55,7 @@ static inline NETWORK_POLLER_TYPE(EventFlags) NETWORK_POLLER_FUNC(_NativeReady)(
 
 static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TEventVector) *events, int timeoutMs,
-    NETWORK_TYPE(Error) *error) {
+    NETWORK_TYPE(TError) *error) {
   WSAPOLLFD *descriptors;
   size_t *registrationIndices;
   bool *detectClose;
@@ -206,13 +206,13 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
 
 static inline OPSTATUS NETWORK_POLLER_FUNC(Wait)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TEventVector) *events,
-    NETWORK_TYPE(Error) *error) {
+    NETWORK_TYPE(TError) *error) {
   return NETWORK_POLLER_FUNC(_WaitNative)(poller, events, -1, error);
 }
 
 static inline OPSTATUS NETWORK_POLLER_FUNC(WaitFor)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TEventVector) *events,
-    CHRONOMETRY_TYPE(Duration) timeout, NETWORK_TYPE(Error) *error) {
+    CHRONOMETRY_TYPE(Duration) timeout, NETWORK_TYPE(TError) *error) {
   int64_t milliseconds;
   if (timeout.nanoseconds < 0) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);

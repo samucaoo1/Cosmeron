@@ -39,7 +39,7 @@ static inline NETWORK_POLLER_TYPE(EventFlags) NETWORK_POLLER_FUNC(_Ready)(
 
 static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TEventVector) *events,
-    struct timeval *timeout, NETWORK_TYPE(Error) *error) {
+    struct timeval *timeout, NETWORK_TYPE(TError) *error) {
   fd_set read_set, writeSet, errorSet;
   SOCKET_TYPE(Handle) maximum = 0;
   size_t i;
@@ -120,13 +120,13 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
 
 static inline OPSTATUS NETWORK_POLLER_FUNC(Wait)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TEventVector) *events,
-    NETWORK_TYPE(Error) *error) {
+    NETWORK_TYPE(TError) *error) {
   return NETWORK_POLLER_FUNC(_WaitNative)(poller, events, NULL, error);
 }
 
 static inline OPSTATUS NETWORK_POLLER_FUNC(WaitFor)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TEventVector) *events,
-    CHRONOMETRY_TYPE(Duration) timeout, NETWORK_TYPE(Error) *error) {
+    CHRONOMETRY_TYPE(Duration) timeout, NETWORK_TYPE(TError) *error) {
   struct timeval native_timeout;
   if (timeout.nanoseconds < 0) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);

@@ -5,8 +5,8 @@
 #endif
 
 static inline OPSTATUS NETWORK_LISTENER_FUNC(_Publish)(
-    NETWORK_LISTENER_TYPE(TListener) *listener, NETWORK_TYPE(Error) *error,
-    NETWORK_TYPE(Error) domainError, OPSTATUS status) {
+    NETWORK_LISTENER_TYPE(TListener) *listener, NETWORK_TYPE(TError) *error,
+    NETWORK_TYPE(TError) domainError, OPSTATUS status) {
   if (listener != NULL)
     listener->lastError = domainError;
   if (error != NULL)
@@ -15,8 +15,8 @@ static inline OPSTATUS NETWORK_LISTENER_FUNC(_Publish)(
 }
 
 static inline OPSTATUS NETWORK_LISTENER_FUNC(_Fail)(
-    NETWORK_LISTENER_TYPE(TListener) *listener, NETWORK_TYPE(Error) *error,
-    NETWORK_TYPE(Error) domainError) {
+    NETWORK_LISTENER_TYPE(TListener) *listener, NETWORK_TYPE(TError) *error,
+    NETWORK_TYPE(TError) domainError) {
   return NETWORK_LISTENER_FUNC(_Publish)(
       listener, error, domainError, STATUS_CONST(GENERIC_ERROR));
 }
@@ -24,11 +24,11 @@ static inline OPSTATUS NETWORK_LISTENER_FUNC(_Fail)(
 static inline bool NETWORK_LISTENER_FUNC(_Open)(
     NETWORK_LISTENER_TYPE(TListener) *listener, SOCKET_TYPE(TSocket) *socket,
     const NETWORK_ADDRESS_TYPE(TEndpoint) *endpoint) {
-  SOCKET_TYPE(Family) family =
+  SOCKET_TYPE(TFamily) family =
       endpoint->address.type == NETWORK_ADDRESS_CONST(IPV6)
           ? SOCKET_CONST(FAMILY_IPV6)
           : SOCKET_CONST(FAMILY_IPV4);
-  NETWORK_TYPE(Error) socketError;
+  NETWORK_TYPE(TError) socketError;
   if (SOCKET_FUNC(Create)(
           socket, family, SOCKET_CONST(KIND_STREAM), SOCKET_CONST(PROTOCOL_TCP),
           &socketError) != STATUS_CONST(SUCCESS)) {
@@ -68,7 +68,7 @@ static inline void NETWORK_LISTENER_FUNC(Init)(NETWORK_LISTENER_TYPE(TListener) 
 
 static inline OPSTATUS NETWORK_LISTENER_FUNC(ListenAt)(
     NETWORK_LISTENER_TYPE(TListener) *listener, const NETWORK_ADDRESS_TYPE(TEndpoint) *endpoint,
-    NETWORK_TYPE(Error) *error) {
+    NETWORK_TYPE(TError) *error) {
   if (listener == NULL || endpoint == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -84,7 +84,7 @@ static inline OPSTATUS NETWORK_LISTENER_FUNC(ListenAt)(
 }
 
 static inline OPSTATUS NETWORK_LISTENER_FUNC(Listen)(
-    NETWORK_LISTENER_TYPE(TListener) *listener, uint16_t port, NETWORK_TYPE(Error) *error) {
+    NETWORK_LISTENER_TYPE(TListener) *listener, uint16_t port, NETWORK_TYPE(TError) *error) {
   NETWORK_ADDRESS_TYPE(TAddress) address;
   NETWORK_ADDRESS_TYPE(TEndpoint) endpoint;
   uint16_t boundPort = port;
@@ -170,7 +170,7 @@ static inline SOCKET_TYPE(TSocket) *NETWORK_LISTENER_FUNC(_AcceptSocket)(
 
 static inline OPSTATUS NETWORK_LISTENER_FUNC(Accept)(
     NETWORK_LISTENER_TYPE(TListener) *listener, NETWORK_CONNECTION_TYPE(TConnection) *connection,
-    NETWORK_TYPE(Error) *error) {
+    NETWORK_TYPE(TError) *error) {
   SOCKET_TYPE(TSocket) *source;
   NETWORK_ADDRESS_TYPE(TEndpoint) peer;
 
@@ -186,7 +186,7 @@ static inline OPSTATUS NETWORK_LISTENER_FUNC(Accept)(
   NETWORK_CONNECTION_FUNC(Destroy)(connection);
   NETWORK_CONNECTION_FUNC(Init)(connection);
   {
-    NETWORK_TYPE(Error) socketError;
+    NETWORK_TYPE(TError) socketError;
     if (SOCKET_FUNC(Accept)(
             source, &connection->socket, &peer, &socketError) !=
         STATUS_CONST(SUCCESS))
