@@ -14,8 +14,8 @@
     OPSTATUS (*popBack)(LINKED_DEQUE_TYPE(SUFFIX) *, TYPE *);                       \
     void (*clear)(LINKED_DEQUE_TYPE(SUFFIX) *);                                      \
     /* Element access */                                                       \
-    TYPE *(*front)(LINKED_DEQUE_TYPE(SUFFIX) *);                                     \
-    TYPE *(*back)(LINKED_DEQUE_TYPE(SUFFIX) *);                                      \
+    OPSTATUS (*front)(LINKED_DEQUE_TYPE(SUFFIX) *, TYPE **);                                     \
+    OPSTATUS (*back)(LINKED_DEQUE_TYPE(SUFFIX) *, TYPE **);                                      \
     /* Observers */                                                            \
     bool (*empty)(const LINKED_DEQUE_TYPE(SUFFIX) *);                                      \
     size_t (*size)(const LINKED_DEQUE_TYPE(SUFFIX) *);                                     \

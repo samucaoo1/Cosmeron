@@ -12,7 +12,7 @@
     OPSTATUS (*pop)(LINKED_STACK_TYPE(SUFFIX) *, TYPE *);                     \
     void (*clear)(LINKED_STACK_TYPE(SUFFIX) *);                               \
     /* Element access */                                                       \
-    TYPE *(*top)(LINKED_STACK_TYPE(SUFFIX) *);                                \
+    OPSTATUS (*top)(LINKED_STACK_TYPE(SUFFIX) *, TYPE **);                                \
     /* Observers */                                                            \
     bool (*empty)(const LINKED_STACK_TYPE(SUFFIX) *);                               \
     size_t (*size)(const LINKED_STACK_TYPE(SUFFIX) *);                              \

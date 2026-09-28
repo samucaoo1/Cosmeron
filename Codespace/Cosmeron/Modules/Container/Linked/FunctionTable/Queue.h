@@ -12,8 +12,8 @@
     OPSTATUS (*pop)(LINKED_QUEUE_TYPE(SUFFIX) *, TYPE *);                     \
     void (*clear)(LINKED_QUEUE_TYPE(SUFFIX) *);                               \
     /* Element access */                                                       \
-    TYPE *(*front)(LINKED_QUEUE_TYPE(SUFFIX) *);                              \
-    TYPE *(*back)(LINKED_QUEUE_TYPE(SUFFIX) *);                               \
+    OPSTATUS (*front)(LINKED_QUEUE_TYPE(SUFFIX) *, TYPE **);                              \
+    OPSTATUS (*back)(LINKED_QUEUE_TYPE(SUFFIX) *, TYPE **);                               \
     /* Observers */                                                            \
     bool (*empty)(const LINKED_QUEUE_TYPE(SUFFIX) *);                               \
     size_t (*size)(const LINKED_QUEUE_TYPE(SUFFIX) *);                              \

@@ -57,12 +57,8 @@
  * ============================================================ */
 
 #define LINKED_STACK_TOP_PROTOTYPE(TYPE, SUFFIX)                      \
-  static inline TYPE *LINKED_STACK_FUNC(SUFFIX, Top)(                          \
-      LINKED_STACK_TYPE(SUFFIX) * stack)
-
-/* ============================================================
- * Names and Prototypes — Observers
- * ============================================================ */
+  static inline OPSTATUS LINKED_STACK_FUNC(SUFFIX, Top)(                       \
+      LINKED_STACK_TYPE(SUFFIX) * stack, TYPE **out)
 
 #define LINKED_STACK_EMPTY_PROTOTYPE(SUFFIX)                          \
   static inline bool LINKED_STACK_FUNC(SUFFIX, Empty)(                         \

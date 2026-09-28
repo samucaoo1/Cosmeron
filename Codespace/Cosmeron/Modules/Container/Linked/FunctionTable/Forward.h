@@ -17,7 +17,7 @@
                             LINKED_FORWARD_LIST_NODE_TYPE(SUFFIX) *);                \
     void (*clear)(LINKED_FORWARD_LIST_TYPE(SUFFIX) *);                               \
     /* Element access */                                                       \
-    TYPE *(*front)(LINKED_FORWARD_LIST_TYPE(SUFFIX) *);                              \
+    OPSTATUS (*front)(LINKED_FORWARD_LIST_TYPE(SUFFIX) *, TYPE **);                              \
     LINKED_FORWARD_LIST_NODE_TYPE(SUFFIX) *(*begin)(LINKED_FORWARD_LIST_TYPE(SUFFIX) *);   \
     /* Observers */                                                            \
     bool (*empty)(const LINKED_FORWARD_LIST_TYPE(SUFFIX) *);                               \

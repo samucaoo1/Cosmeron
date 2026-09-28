@@ -20,8 +20,8 @@
                       LINKED_LIST_NODE_TYPE(SUFFIX) **);                     \
     void (*clear)(LINKED_LIST_TYPE(SUFFIX) *);                                       \
     /* Element access */                                                       \
-    TYPE *(*front)(LINKED_LIST_TYPE(SUFFIX) *);                                      \
-    TYPE *(*back)(LINKED_LIST_TYPE(SUFFIX) *);                                       \
+    OPSTATUS (*front)(LINKED_LIST_TYPE(SUFFIX) *, TYPE **);                                      \
+    OPSTATUS (*back)(LINKED_LIST_TYPE(SUFFIX) *, TYPE **);                                       \
     LINKED_LIST_NODE_TYPE(SUFFIX) *(*begin)(LINKED_LIST_TYPE(SUFFIX) *);           \
     LINKED_LIST_NODE_TYPE(SUFFIX) *(*end)(LINKED_LIST_TYPE(SUFFIX) *);             \
     LINKED_LIST_NODE_TYPE(SUFFIX) *(*rBegin)(LINKED_LIST_TYPE(SUFFIX) *);          \
