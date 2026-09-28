@@ -16,7 +16,7 @@
  * Namespace base
  * ============================================================= */
 
-#define TREE_NS CONTAINER_NS(Tree)
+#define TREE_NS(NAME) GNS2(CONTAINER_NS(Tree), NAME)
 
 /* =============================================================
  * Name generators
@@ -27,16 +27,16 @@
  * ============================================================= */
 
 #define TTREE_SET_TYPE(ALG, KEY) \
-  GNS2(GNS2(GNS2(TREE_NS, ALG), Set), KEY)
+  GNS2(GNS2(TREE_NS(ALG), Set), KEY)
 
 #define TTREE_MAP_TYPE(ALG, KEY, VAL) \
-  GNS2(GNS2(GNS2(GNS2(TREE_NS, ALG), Map), KEY), VAL)
+  GNS2(GNS2(GNS2(TREE_NS(ALG), Map), KEY), VAL)
 
 #define TTREE_PUBLIC_SET_TYPE(ALG, KEY) \
-  GNS2(GNS2(GNS2(TREE_NS, ALG), TSet), KEY)
+  GNS2(GNS2(TREE_NS(ALG), TSet), KEY)
 
 #define TTREE_PUBLIC_MAP_TYPE(ALG, KEY, VAL) \
-  GNS2(GNS2(GNS2(GNS2(TREE_NS, ALG), TMap), KEY), VAL)
+  GNS2(GNS2(GNS2(TREE_NS(ALG), TMap), KEY), VAL)
 
 #define TTREE_NODE(T) GNS2(T, Node)
 
