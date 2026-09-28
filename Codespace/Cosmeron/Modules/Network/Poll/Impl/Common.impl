@@ -37,49 +37,40 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_Add)(
       poller, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-static inline void NETWORK_POLLER_FUNC(Init)(NETWORK_POLLER_TYPE(TPoller) *poller) {
+NETWORK_POLLER_INIT_PROTOTYPE {
+  if (poller == NULL)
+    return;
   memset(poller, 0, sizeof(*poller));
   FLAT_VECTOR_FUNC(Network_Poll_Registration, Init)(&poller->registrations);
   poller->nextHandle = 1;
   poller->lastError = NETWORK_ERROR_CONST(NONE);
 }
 
-static inline void NETWORK_POLLER_FUNC(Destroy)(NETWORK_POLLER_TYPE(TPoller) *poller) {
+NETWORK_POLLER_DESTROY_PROTOTYPE {
   if (poller == NULL) return;
   FLAT_VECTOR_FUNC(Network_Poll_Registration, Destroy)(&poller->registrations);
   poller->nextHandle = 1;
 }
 
-static inline OPSTATUS NETWORK_POLLER_FUNC(AddConnection)(
-    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_CONNECTION_TYPE(TConnection) *connection,
-    NETWORK_POLLER_TYPE(EventFlags) interests, void *userdata, NETWORK_POLLER_TYPE(Handle) *handle,
-    NETWORK_TYPE(TError) *error) {
+NETWORK_POLLER_ADD_CONNECTION_PROTOTYPE {
   return NETWORK_POLLER_FUNC(_Add)(
       poller, NETWORK_POLLER_SOURCE_CONST(CONNECTION), connection, interests,
       userdata, handle, error);
 }
 
-static inline OPSTATUS NETWORK_POLLER_FUNC(AddListener)(
-    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_LISTENER_TYPE(TListener) *listener,
-    NETWORK_POLLER_TYPE(EventFlags) interests, void *userdata, NETWORK_POLLER_TYPE(Handle) *handle,
-    NETWORK_TYPE(TError) *error) {
+NETWORK_POLLER_ADD_LISTENER_PROTOTYPE {
   return NETWORK_POLLER_FUNC(_Add)(
       poller, NETWORK_POLLER_SOURCE_CONST(LISTENER), listener, interests,
       userdata, handle, error);
 }
 
-static inline OPSTATUS NETWORK_POLLER_FUNC(AddDatagram)(
-    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_DATAGRAM_TYPE(TDatagram) *datagram,
-    NETWORK_POLLER_TYPE(EventFlags) interests, void *userdata, NETWORK_POLLER_TYPE(Handle) *handle,
-    NETWORK_TYPE(TError) *error) {
+NETWORK_POLLER_ADD_DATAGRAM_PROTOTYPE {
   return NETWORK_POLLER_FUNC(_Add)(
       poller, NETWORK_POLLER_SOURCE_CONST(DATAGRAM), datagram, interests,
       userdata, handle, error);
 }
 
-static inline OPSTATUS NETWORK_POLLER_FUNC(Remove)(
-    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(Handle) handle,
-    NETWORK_TYPE(TError) *error) {
+NETWORK_POLLER_REMOVE_PROTOTYPE {
   size_t i;
   if (poller == NULL || handle == 0) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
@@ -96,9 +87,7 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(Remove)(
       poller, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(NOT_FOUND));
 }
 
-static inline OPSTATUS NETWORK_POLLER_FUNC(Watch)(
-    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(Handle) handle,
-    NETWORK_POLLER_TYPE(EventFlags) interests, NETWORK_TYPE(TError) *error) {
+NETWORK_POLLER_WATCH_PROTOTYPE {
   size_t i;
   if (poller == NULL || handle == 0) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);

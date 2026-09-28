@@ -118,15 +118,11 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
       poller, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-static inline OPSTATUS NETWORK_POLLER_FUNC(Wait)(
-    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TEventVector) *events,
-    NETWORK_TYPE(TError) *error) {
+NETWORK_POLLER_WAIT_PROTOTYPE {
   return NETWORK_POLLER_FUNC(_WaitNative)(poller, events, NULL, error);
 }
 
-static inline OPSTATUS NETWORK_POLLER_FUNC(WaitFor)(
-    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TEventVector) *events,
-    CHRONOMETRY_TYPE(Duration) timeout, NETWORK_TYPE(TError) *error) {
+NETWORK_POLLER_WAIT_FOR_PROTOTYPE {
   struct timeval native_timeout;
   if (timeout.nanoseconds < 0) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);

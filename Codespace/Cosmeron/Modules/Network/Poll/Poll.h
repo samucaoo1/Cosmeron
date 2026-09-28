@@ -52,50 +52,112 @@ typedef struct NETWORK_POLLER_TYPE(TPoller) {
   NETWORK_TYPE(TError) lastError;
 } NETWORK_POLLER_TYPE(TPoller);
 
-static inline void NETWORK_POLLER_FUNC(Init)(NETWORK_POLLER_TYPE(TPoller) *poller);
-static inline void NETWORK_POLLER_FUNC(Destroy)(NETWORK_POLLER_TYPE(TPoller) *poller);
-static inline OPSTATUS NETWORK_POLLER_FUNC(AddConnection)(
-    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_CONNECTION_TYPE(TConnection) *connection,
-    NETWORK_POLLER_TYPE(EventFlags) interests, void *userdata, NETWORK_POLLER_TYPE(Handle) *handle, NETWORK_TYPE(TError) *error);
-static inline OPSTATUS NETWORK_POLLER_FUNC(AddListener)(
-    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_LISTENER_TYPE(TListener) *listener,
-    NETWORK_POLLER_TYPE(EventFlags) interests, void *userdata, NETWORK_POLLER_TYPE(Handle) *handle, NETWORK_TYPE(TError) *error);
-static inline OPSTATUS NETWORK_POLLER_FUNC(AddDatagram)(
-    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_DATAGRAM_TYPE(TDatagram) *datagram,
-    NETWORK_POLLER_TYPE(EventFlags) interests, void *userdata, NETWORK_POLLER_TYPE(Handle) *handle, NETWORK_TYPE(TError) *error);
-static inline OPSTATUS NETWORK_POLLER_FUNC(Remove)(
-    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(Handle) handle,
-    NETWORK_TYPE(TError) *error);
-static inline OPSTATUS NETWORK_POLLER_FUNC(Watch)(
-    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(Handle) handle,
-    NETWORK_POLLER_TYPE(EventFlags) interests, NETWORK_TYPE(TError) *error);
-static inline OPSTATUS NETWORK_POLLER_FUNC(Wait)(
-    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TEventVector) *events,
-    NETWORK_TYPE(TError) *error);
-static inline OPSTATUS NETWORK_POLLER_FUNC(WaitFor)(
-    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TEventVector) *events,
-    CHRONOMETRY_TYPE(Duration) timeout, NETWORK_TYPE(TError) *error);
+#define NETWORK_POLLER_INIT_PROTOTYPE                                      \
+  static inline void NETWORK_POLLER_FUNC(Init)(NETWORK_POLLER_TYPE(TPoller) *poller)
 
-static inline bool NETWORK_POLLER_FUNC(Event_Has)(
-    const NETWORK_POLLER_TYPE(TEvent) *event, NETWORK_POLLER_TYPE(EventFlags) flags) {
-  return (event->flags & flags) == flags;
+#define NETWORK_POLLER_DESTROY_PROTOTYPE                                   \
+  static inline void NETWORK_POLLER_FUNC(Destroy)(NETWORK_POLLER_TYPE(TPoller) *poller)
+
+#define NETWORK_POLLER_ADD_CONNECTION_PROTOTYPE                             \
+  static inline OPSTATUS NETWORK_POLLER_FUNC(AddConnection)(                 \
+      NETWORK_POLLER_TYPE(TPoller) *poller,                                  \
+      NETWORK_CONNECTION_TYPE(TConnection) *connection,                     \
+      NETWORK_POLLER_TYPE(EventFlags) interests, void *userdata,            \
+      NETWORK_POLLER_TYPE(Handle) *handle, NETWORK_TYPE(TError) *error)
+
+#define NETWORK_POLLER_ADD_LISTENER_PROTOTYPE                               \
+  static inline OPSTATUS NETWORK_POLLER_FUNC(AddListener)(                   \
+      NETWORK_POLLER_TYPE(TPoller) *poller,                                  \
+      NETWORK_LISTENER_TYPE(TListener) *listener,                           \
+      NETWORK_POLLER_TYPE(EventFlags) interests, void *userdata,            \
+      NETWORK_POLLER_TYPE(Handle) *handle, NETWORK_TYPE(TError) *error)
+
+#define NETWORK_POLLER_ADD_DATAGRAM_PROTOTYPE                               \
+  static inline OPSTATUS NETWORK_POLLER_FUNC(AddDatagram)(                   \
+      NETWORK_POLLER_TYPE(TPoller) *poller,                                  \
+      NETWORK_DATAGRAM_TYPE(TDatagram) *datagram,                           \
+      NETWORK_POLLER_TYPE(EventFlags) interests, void *userdata,            \
+      NETWORK_POLLER_TYPE(Handle) *handle, NETWORK_TYPE(TError) *error)
+
+#define NETWORK_POLLER_REMOVE_PROTOTYPE                                     \
+  static inline OPSTATUS NETWORK_POLLER_FUNC(Remove)(                        \
+      NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(Handle) handle,\
+      NETWORK_TYPE(TError) *error)
+
+#define NETWORK_POLLER_WATCH_PROTOTYPE                                      \
+  static inline OPSTATUS NETWORK_POLLER_FUNC(Watch)(                         \
+      NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(Handle) handle,\
+      NETWORK_POLLER_TYPE(EventFlags) interests, NETWORK_TYPE(TError) *error)
+
+#define NETWORK_POLLER_WAIT_PROTOTYPE                                       \
+  static inline OPSTATUS NETWORK_POLLER_FUNC(Wait)(                          \
+      NETWORK_POLLER_TYPE(TPoller) *poller,                                 \
+      NETWORK_POLLER_TYPE(TEventVector) *events, NETWORK_TYPE(TError) *error)
+
+#define NETWORK_POLLER_WAIT_FOR_PROTOTYPE                                   \
+  static inline OPSTATUS NETWORK_POLLER_FUNC(WaitFor)(                       \
+      NETWORK_POLLER_TYPE(TPoller) *poller,                                 \
+      NETWORK_POLLER_TYPE(TEventVector) *events,                            \
+      CHRONOMETRY_TYPE(Duration) timeout, NETWORK_TYPE(TError) *error)
+
+#define NETWORK_POLLER_EVENT_HAS_PROTOTYPE                                  \
+  static inline bool NETWORK_POLLER_FUNC(Event_Has)(                         \
+      const NETWORK_POLLER_TYPE(TEvent) *event,                              \
+      NETWORK_POLLER_TYPE(EventFlags) flags)
+
+#define NETWORK_POLLER_EVENT_USER_DATA_PROTOTYPE                            \
+  static inline void *NETWORK_POLLER_FUNC(Event_UserData)(                   \
+      const NETWORK_POLLER_TYPE(TEvent) *event)
+
+#define NETWORK_POLLER_EVENT_CONNECTION_PROTOTYPE                           \
+  static inline NETWORK_CONNECTION_TYPE(TConnection) *                      \
+  NETWORK_POLLER_FUNC(Event_Connection)(const NETWORK_POLLER_TYPE(TEvent) *event)
+
+#define NETWORK_POLLER_EVENT_LISTENER_PROTOTYPE                             \
+  static inline NETWORK_LISTENER_TYPE(TListener) *                          \
+  NETWORK_POLLER_FUNC(Event_Listener)(const NETWORK_POLLER_TYPE(TEvent) *event)
+
+#define NETWORK_POLLER_EVENT_DATAGRAM_PROTOTYPE                             \
+  static inline NETWORK_DATAGRAM_TYPE(TDatagram) *                          \
+  NETWORK_POLLER_FUNC(Event_Datagram)(const NETWORK_POLLER_TYPE(TEvent) *event)
+
+NETWORK_POLLER_INIT_PROTOTYPE;
+NETWORK_POLLER_DESTROY_PROTOTYPE;
+NETWORK_POLLER_ADD_CONNECTION_PROTOTYPE;
+NETWORK_POLLER_ADD_LISTENER_PROTOTYPE;
+NETWORK_POLLER_ADD_DATAGRAM_PROTOTYPE;
+NETWORK_POLLER_REMOVE_PROTOTYPE;
+NETWORK_POLLER_WATCH_PROTOTYPE;
+NETWORK_POLLER_WAIT_PROTOTYPE;
+NETWORK_POLLER_WAIT_FOR_PROTOTYPE;
+
+NETWORK_POLLER_EVENT_HAS_PROTOTYPE {
+  return event != NULL && (event->flags & flags) == flags;
 }
-static inline void *NETWORK_POLLER_FUNC(Event_UserData)(
-    const NETWORK_POLLER_TYPE(TEvent) *event) { return event->userdata; }
-static inline NETWORK_CONNECTION_TYPE(TConnection) *NETWORK_POLLER_FUNC(Event_Connection)(
-    const NETWORK_POLLER_TYPE(TEvent) *event) {
-  return event->sourceType == NETWORK_POLLER_SOURCE_CONST(CONNECTION)
-             ? (NETWORK_CONNECTION_TYPE(TConnection) *)event->object : NULL;
+
+NETWORK_POLLER_EVENT_USER_DATA_PROTOTYPE {
+  return event != NULL ? event->userdata : NULL;
 }
-static inline NETWORK_LISTENER_TYPE(TListener) *NETWORK_POLLER_FUNC(Event_Listener)(
-    const NETWORK_POLLER_TYPE(TEvent) *event) {
-  return event->sourceType == NETWORK_POLLER_SOURCE_CONST(LISTENER)
-             ? (NETWORK_LISTENER_TYPE(TListener) *)event->object : NULL;
+
+NETWORK_POLLER_EVENT_CONNECTION_PROTOTYPE {
+  return event != NULL &&
+                 event->sourceType == NETWORK_POLLER_SOURCE_CONST(CONNECTION)
+             ? (NETWORK_CONNECTION_TYPE(TConnection) *)event->object
+             : NULL;
 }
-static inline NETWORK_DATAGRAM_TYPE(TDatagram) *NETWORK_POLLER_FUNC(Event_Datagram)(
-    const NETWORK_POLLER_TYPE(TEvent) *event) {
-  return event->sourceType == NETWORK_POLLER_SOURCE_CONST(DATAGRAM)
-             ? (NETWORK_DATAGRAM_TYPE(TDatagram) *)event->object : NULL;
+
+NETWORK_POLLER_EVENT_LISTENER_PROTOTYPE {
+  return event != NULL &&
+                 event->sourceType == NETWORK_POLLER_SOURCE_CONST(LISTENER)
+             ? (NETWORK_LISTENER_TYPE(TListener) *)event->object
+             : NULL;
+}
+
+NETWORK_POLLER_EVENT_DATAGRAM_PROTOTYPE {
+  return event != NULL &&
+                 event->sourceType == NETWORK_POLLER_SOURCE_CONST(DATAGRAM)
+             ? (NETWORK_DATAGRAM_TYPE(TDatagram) *)event->object
+             : NULL;
 }
 
 #include "Impl/Common.impl"

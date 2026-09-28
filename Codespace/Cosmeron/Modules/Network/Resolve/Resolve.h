@@ -55,9 +55,14 @@ static inline void NETWORK_INS(ResolveFreeAddrInfo)(struct addrinfo *result) {
 #endif
 }
 
-static inline OPSTATUS NETWORK_RESOLVE_FUNC(Address)(
-    NETWORK_RESOLVE_TYPE(TAddressVector) *addresses, const char *host,
-    NETWORK_TYPE(TError) *error) {
+#define NETWORK_RESOLVE_ADDRESS_PROTOTYPE                                    \
+  static inline OPSTATUS NETWORK_RESOLVE_FUNC(Address)(                       \
+      NETWORK_RESOLVE_TYPE(TAddressVector) *addresses, const char *host,      \
+      NETWORK_TYPE(TError) *error)
+
+NETWORK_RESOLVE_ADDRESS_PROTOTYPE;                                           \
+                                                                            \
+NETWORK_RESOLVE_ADDRESS_PROTOTYPE {
   struct addrinfo hints;
   struct addrinfo *result = NULL;
   struct addrinfo *current = NULL;

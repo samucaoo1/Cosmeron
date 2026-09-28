@@ -21,8 +21,38 @@ typedef struct NETWORK_ADDRESS_TYPE(TEndpoint) {
   uint16_t port;
 } NETWORK_ADDRESS_TYPE(TEndpoint);
 
-static inline void NETWORK_ADDRESS_FUNC(IPv4_Create)(
-    NETWORK_ADDRESS_TYPE(TAddress) *address, uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
+#define NETWORK_ADDRESS_IPV4_CREATE_PROTOTYPE                               \
+  static inline void NETWORK_ADDRESS_FUNC(IPv4_Create)(                       \
+      NETWORK_ADDRESS_TYPE(TAddress) *address, uint8_t a, uint8_t b,          \
+      uint8_t c, uint8_t d)
+
+#define NETWORK_ADDRESS_IPV4_ANY_PROTOTYPE                                  \
+  static inline void NETWORK_ADDRESS_FUNC(IPv4_Any)(                          \
+      NETWORK_ADDRESS_TYPE(TAddress) *address)
+
+#define NETWORK_ADDRESS_IPV4_LOOPBACK_PROTOTYPE                             \
+  static inline void NETWORK_ADDRESS_FUNC(IPv4_Loopback)(                     \
+      NETWORK_ADDRESS_TYPE(TAddress) *address)
+
+#define NETWORK_ADDRESS_IPV6_ANY_PROTOTYPE                                  \
+  static inline void NETWORK_ADDRESS_FUNC(IPv6_Any)(                          \
+      NETWORK_ADDRESS_TYPE(TAddress) *address)
+
+#define NETWORK_ADDRESS_IPV6_LOOPBACK_PROTOTYPE                             \
+  static inline void NETWORK_ADDRESS_FUNC(IPv6_Loopback)(                     \
+      NETWORK_ADDRESS_TYPE(TAddress) *address)
+
+#define NETWORK_ADDRESS_ENDPOINT_CREATE_PROTOTYPE                           \
+  static inline void NETWORK_ADDRESS_FUNC(Endpoint_Create)(                   \
+      NETWORK_ADDRESS_TYPE(TEndpoint) *endpoint,                              \
+      const NETWORK_ADDRESS_TYPE(TAddress) *address, uint16_t port)
+
+#define NETWORK_ADDRESS_EQUAL_PROTOTYPE                                     \
+  static inline bool NETWORK_ADDRESS_FUNC(Equal)(                             \
+      const NETWORK_ADDRESS_TYPE(TAddress) *left,                             \
+      const NETWORK_ADDRESS_TYPE(TAddress) *right)
+
+NETWORK_ADDRESS_IPV4_CREATE_PROTOTYPE {
   if (address == NULL)
     return;
   address->type = NETWORK_ADDRESS_CONST(IPV4);
@@ -32,38 +62,36 @@ static inline void NETWORK_ADDRESS_FUNC(IPv4_Create)(
   address->bytes.ipv4[3] = d;
 }
 
-static inline void NETWORK_ADDRESS_FUNC(IPv4_Any)(NETWORK_ADDRESS_TYPE(TAddress) *address) {
+NETWORK_ADDRESS_IPV4_ANY_PROTOTYPE {
   NETWORK_ADDRESS_FUNC(IPv4_Create)(address, 0, 0, 0, 0);
 }
 
-static inline void NETWORK_ADDRESS_FUNC(IPv4_Loopback)(NETWORK_ADDRESS_TYPE(TAddress) *address) {
+NETWORK_ADDRESS_IPV4_LOOPBACK_PROTOTYPE {
   NETWORK_ADDRESS_FUNC(IPv4_Create)(address, 127, 0, 0, 1);
 }
 
-static inline void NETWORK_ADDRESS_FUNC(IPv6_Any)(NETWORK_ADDRESS_TYPE(TAddress) *address) {
+NETWORK_ADDRESS_IPV6_ANY_PROTOTYPE {
   if (address == NULL)
     return;
   address->type = NETWORK_ADDRESS_CONST(IPV6);
   memset(address->bytes.ipv6, 0, sizeof(address->bytes.ipv6));
 }
 
-static inline void NETWORK_ADDRESS_FUNC(IPv6_Loopback)(NETWORK_ADDRESS_TYPE(TAddress) *address) {
+NETWORK_ADDRESS_IPV6_LOOPBACK_PROTOTYPE {
   if (address == NULL)
     return;
   NETWORK_ADDRESS_FUNC(IPv6_Any)(address);
   address->bytes.ipv6[15] = 1;
 }
 
-static inline void NETWORK_ADDRESS_FUNC(Endpoint_Create)(
-    NETWORK_ADDRESS_TYPE(TEndpoint) *endpoint, const NETWORK_ADDRESS_TYPE(TAddress) *address, uint16_t port) {
+NETWORK_ADDRESS_ENDPOINT_CREATE_PROTOTYPE {
   if (endpoint == NULL || address == NULL)
     return;
   endpoint->address = *address;
   endpoint->port = port;
 }
 
-static inline bool NETWORK_ADDRESS_FUNC(Equal)(
-    const NETWORK_ADDRESS_TYPE(TAddress) *left, const NETWORK_ADDRESS_TYPE(TAddress) *right) {
+NETWORK_ADDRESS_EQUAL_PROTOTYPE {
   if (left == NULL || right == NULL)
     return false;
   if (left->type != right->type)
