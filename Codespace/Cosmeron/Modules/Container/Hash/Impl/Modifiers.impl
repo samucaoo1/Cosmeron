@@ -1,6 +1,6 @@
 #pragma once
 
-#define HASH_IMPLEMENT_INSERT(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX, \
+#define COSMERON_MACRO_INTERNAL_HASH_IMPLEMENT_INSERT(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX, \
                               HASH_FUNCTION, EQUAL_FUNCTION)                  \
   HASH_INSERT_PROTOTYPE(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX) {     \
     size_t start;                                                              \
@@ -63,7 +63,7 @@
     return STATUS_CONST(GENERIC_ERROR);                                        \
   }
 
-#define HASH_IMPLEMENT_REMOVE(KEY_TYPE, KEY_SUFFIX, VALUE_SUFFIX,             \
+#define COSMERON_MACRO_INTERNAL_HASH_IMPLEMENT_REMOVE(KEY_TYPE, KEY_SUFFIX, VALUE_SUFFIX,             \
                               HASH_FUNCTION, EQUAL_FUNCTION)                  \
   HASH_REMOVE_PROTOTYPE(KEY_TYPE, KEY_SUFFIX, VALUE_SUFFIX) {                 \
     THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *bucket;                      \
@@ -79,7 +79,7 @@
     return STATUS_CONST(SUCCESS);                                              \
   }
 
-#define HASH_IMPLEMENT_CLEAR(KEY_SUFFIX, VALUE_SUFFIX)                        \
+#define COSMERON_MACRO_INTERNAL_HASH_IMPLEMENT_CLEAR(KEY_SUFFIX, VALUE_SUFFIX)                        \
   HASH_CLEAR_PROTOTYPE(KEY_SUFFIX, VALUE_SUFFIX) {                            \
     if (!hash || !hash->buckets)                                               \
       return;                                                                  \
