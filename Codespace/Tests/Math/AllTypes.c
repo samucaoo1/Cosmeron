@@ -81,7 +81,7 @@
 #define TEST_EQUATION(TYPE, SUFFIX)                                            \
   do {                                                                         \
     TYPE first = (TYPE)0, second = (TYPE)0;                                    \
-    TMathSolution solution = MATH_CONST(SOLUTION_NONE);                        \
+    MATH_TYPE(Solution) solution = MATH_CONST(SOLUTION_NONE);                        \
     if (EQUATION_TYPED_FUNC(Linear, SUFFIX)(                                   \
             (TYPE)2, (TYPE)-8, &first, &solution) != STATUS_CONST(SUCCESS) ||  \
         solution != MATH_CONST(SOLUTION_ONE) || first != (TYPE)4)              \
@@ -134,21 +134,21 @@ int main(void) {
 #if !COMPILER_MSVC
   {
     float _Complex a, b;
-    TMathSolution solution;
+    MATH_TYPE(Solution) solution;
     if (Math_Equation_QuadraticComplex_F32(
             1.0f, 0.0f, 1.0f, &a, &b, &solution) != STATUS_CONST(SUCCESS))
       return __LINE__;
   }
   {
     double _Complex a, b;
-    TMathSolution solution;
+    MATH_TYPE(Solution) solution;
     if (Math_Equation_QuadraticComplex_F64(
             1.0, 0.0, 1.0, &a, &b, &solution) != STATUS_CONST(SUCCESS))
       return __LINE__;
   }
   {
     long double _Complex a, b;
-    TMathSolution solution;
+    MATH_TYPE(Solution) solution;
     if (Math_Equation_QuadraticComplex_F128(
             1.0L, 0.0L, 1.0L, &a, &b, &solution) != STATUS_CONST(SUCCESS))
       return __LINE__;

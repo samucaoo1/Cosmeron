@@ -6,7 +6,7 @@ static double MathTest_AbsoluteF64(double value) {
 
 int main(void) {
   double a=0,b=0;
-  TMathSolution sol=MATH_CONST(SOLUTION_NONE);
+  MATH_TYPE(Solution) sol=MATH_CONST(SOLUTION_NONE);
   if (Math_Equation_Linear_F64(2.0,-8.0,&a,&sol)!=STATUS_CONST(SUCCESS) || sol!=MATH_CONST(SOLUTION_ONE) || MathTest_AbsoluteF64(a-4.0)>1e-12) return 1;
   if (Math_Equation_Linear_F64(0.0,0.0,&a,&sol)!=STATUS_CONST(SUCCESS) || sol!=MATH_CONST(SOLUTION_INFINITE)) return 2;
   if (Math_Equation_QuadraticDiscriminant_F64(1.0,0.0,-4.0)!=16.0) return 3;
