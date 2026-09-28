@@ -17,7 +17,11 @@
 // #define LINKED_LIST_TYPE(SUFFIX) GNS2(LINKED_NS(TList), SUFFIX)
 #define LINKED_LIST_TYPE(SUFFIX) GNS2(LINKED_NS(TList), SUFFIX)
 
-#define LINKED_LIST_FUNC(SUFFIX, FUNC) GNS2(GNS2(LINKED_NS(List), SUFFIX), FUNC)
+#define LINKED_LIST_NS(SUFFIX) GNS2(LINKED_NS(List), SUFFIX)
+#define LINKED_LIST_FUNC(SUFFIX, FUNC) GNS2(LINKED_LIST_NS(SUFFIX), FUNC)
+#define LINKED_LIST_STRUCT_TAG(SUFFIX) GNS2(LINKED_LIST_NS(SUFFIX), str)
+#define LINKED_LIST_FUNCTION_TABLE_TYPE(SUFFIX) \
+  GNS2(LINKED_LIST_NS(SUFFIX), FunctionTable)
 
 #define LINKED_LIST_NODE_TYPE(SUFFIX)                                          \
   DOUBLE_LINKED_NODE_TYPE(SUFFIX, LINKED_NS(List))
@@ -27,9 +31,9 @@
  * ============================================================ */
 
 #define LINKED_LIST_STRUCT(TYPE, SUFFIX)                                       \
-  CONTAINER_API_FORWARD(LINKED_LIST_FUNC(SUFFIX, FunctionTable))                           \
-  typedef struct LINKED_LIST_FUNC(SUFFIX, str) {                               \
-    CONTAINER_API_FIELD(LINKED_LIST_FUNC(SUFFIX, FunctionTable))             \
+  CONTAINER_API_FORWARD(LINKED_LIST_FUNCTION_TABLE_TYPE(SUFFIX))                           \
+  typedef struct LINKED_LIST_STRUCT_TAG(SUFFIX) {                               \
+    CONTAINER_API_FIELD(LINKED_LIST_FUNCTION_TABLE_TYPE(SUFFIX))             \
     LINKED_LIST_NODE_TYPE(SUFFIX) * head;                                      \
     LINKED_LIST_NODE_TYPE(SUFFIX) * tail;                                      \
     size_t size;                                                               \
