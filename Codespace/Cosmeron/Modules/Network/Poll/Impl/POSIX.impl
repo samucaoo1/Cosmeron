@@ -107,7 +107,7 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
           l->secondary.handle, r->interests, false, &read_set, &writeSet, &errorSet);
     }
     if (NETWORK_POLLER_FUNC(_PushEvent)(
-            poller, events, r, flags, error) != STATUS_CONST(SUCCESS))
+            events, r, flags, error) != STATUS_CONST(SUCCESS))
       return STATUS_CONST(OUT_OF_MEMORY);
   }
 
