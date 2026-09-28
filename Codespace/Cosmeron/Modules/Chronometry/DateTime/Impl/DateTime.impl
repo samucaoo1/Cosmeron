@@ -50,7 +50,7 @@ inline static int64_t DATETIME_FUNC(_MillisecondsOfDay)(
 }
 
 CHRONOMETRY_DATETIME_ADD_DURATION_PROTOTYPE {
-  int64_t ordinal, milliseconds, day_delta, remainder;
+  int64_t ordinal, milliseconds, dayDelta, remainder;
   if (outResult == NULL || !DATETIME_FUNC(IsValid)(policy, value))
     return STATUS_CONST(INVALID_ARGUMENT);
   if (CALENDAR_FUNC(DateToOrdinal)(policy, value.date, &ordinal) !=
@@ -58,13 +58,13 @@ CHRONOMETRY_DATETIME_ADD_DURATION_PROTOTYPE {
     return STATUS_CONST(OUT_OF_RANGE);
   milliseconds = DATETIME_FUNC(_MillisecondsOfDay)(value.time) +
                  duration.nanoseconds / CHRONOMETRY_NANOSECONDS_PER_MILLISECOND;
-  day_delta = CALENDAR_FUNC(_FloorDiv)(milliseconds,
+  dayDelta = CALENDAR_FUNC(_FloorDiv)(milliseconds,
                                      COSMERON_MACRO_INTERNAL_CHRONOMETRY_SECONDS_PER_DAY * 1000);
-  remainder = milliseconds - day_delta * COSMERON_MACRO_INTERNAL_CHRONOMETRY_SECONDS_PER_DAY * 1000;
-  if ((day_delta > 0 && ordinal > INT64_MAX - day_delta) ||
-      (day_delta < 0 && ordinal < INT64_MIN - day_delta))
+  remainder = milliseconds - dayDelta * COSMERON_MACRO_INTERNAL_CHRONOMETRY_SECONDS_PER_DAY * 1000;
+  if ((dayDelta > 0 && ordinal > INT64_MAX - dayDelta) ||
+      (dayDelta < 0 && ordinal < INT64_MIN - dayDelta))
     return STATUS_CONST(ARITHMETIC_OVERFLOW);
-  if (CALENDAR_FUNC(DateFromOrdinal)(policy, ordinal + day_delta,
+  if (CALENDAR_FUNC(DateFromOrdinal)(policy, ordinal + dayDelta,
                                    &outResult->date) != STATUS_CONST(SUCCESS))
     return STATUS_CONST(OUT_OF_RANGE);
   outResult->time.hour = (uint8_t)(remainder / (COSMERON_MACRO_INTERNAL_CHRONOMETRY_SECONDS_PER_HOUR * 1000));
