@@ -24,7 +24,6 @@ SOCKET_INIT_PROTOTYPE {
   socket->family = SOCKET_CONST(FAMILY_IPV4);
   socket->kind = SOCKET_CONST(KIND_STREAM);
   socket->protocol = SOCKET_CONST(PROTOCOL_DEFAULT);
-  socket->lastError = NETWORK_ERROR_CONST(NONE);
   socket->blocking = true;
 }
 
@@ -47,13 +46,13 @@ SOCKET_CREATE_PROTOTYPE {
       (kind == SOCKET_CONST(KIND_DATAGRAM) &&
        protocol == SOCKET_CONST(PROTOCOL_TCP)))
     return SOCKET_FUNC(_Return)(
-        socket, error, NETWORK_ERROR_CONST(NONE),
+        error, NETWORK_ERROR_CONST(NONE),
         STATUS_CONST(INVALID_ARGUMENT));
   if (socket->handle != TSOCKET_NATIVE_INVALID)
     SOCKET_FUNC(Close)(socket);
   if (!NETWORK_FUNC(_EnsureRuntime)())
     return SOCKET_FUNC(_Return)(
-        socket, error, NETWORK_ERROR_CONST(UNKNOWN), STATUS_CONST(GENERIC_ERROR));
+        error, NETWORK_ERROR_CONST(UNKNOWN), STATUS_CONST(GENERIC_ERROR));
 
   nativeFamily = family == SOCKET_CONST(FAMILY_IPV6) ? AF_INET6 : AF_INET;
   socket->handle =
@@ -62,7 +61,7 @@ SOCKET_CREATE_PROTOTYPE {
   if (socket->handle == TSOCKET_NATIVE_INVALID) {
     domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
     return SOCKET_FUNC(_Return)(
-        socket, error, domainError, STATUS_CONST(GENERIC_ERROR));
+        error, domainError, STATUS_CONST(GENERIC_ERROR));
   }
 
   socket->family = family;
@@ -75,14 +74,14 @@ SOCKET_CREATE_PROTOTYPE {
       TSOCKET_OS_CLOSE(socket->handle);
       socket->handle = TSOCKET_NATIVE_INVALID;
       return SOCKET_FUNC(_Return)(
-          socket, error, domainError, STATUS_CONST(GENERIC_ERROR));
+        error, domainError, STATUS_CONST(GENERIC_ERROR));
     }
   }
 #endif
   socket->kind = kind;
   socket->protocol = protocol;
   return SOCKET_FUNC(_Return)(
-      socket, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+        error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 SOCKET_CLOSE_PROTOTYPE {
@@ -92,5 +91,4 @@ SOCKET_CLOSE_PROTOTYPE {
     TSOCKET_OS_CLOSE(socket->handle);
     socket->handle = TSOCKET_NATIVE_INVALID;
   }
-  socket->lastError = NETWORK_ERROR_CONST(NONE);
 }

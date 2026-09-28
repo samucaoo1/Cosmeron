@@ -10,17 +10,17 @@ SOCKET_BIND_PROTOTYPE {
   }
   if (!SOCKET_FUNC(_EndpointToNative)(endpoint, &native, &length))
     return SOCKET_FUNC(_Return)(
-        socket, error, NETWORK_ERROR_CONST(ADDRESS_INVALID),
+        error, NETWORK_ERROR_CONST(ADDRESS_INVALID),
         STATUS_CONST(GENERIC_ERROR));
 
   if (TSOCKET_NATIVE_BIND(socket->handle, (struct sockaddr *)&native, length) ==
       TSOCKET_NATIVE_ERROR) {
     domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
     return SOCKET_FUNC(_Return)(
-        socket, error, domainError, STATUS_CONST(GENERIC_ERROR));
+        error, domainError, STATUS_CONST(GENERIC_ERROR));
   }
   return SOCKET_FUNC(_Return)(
-      socket, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+        error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 SOCKET_LISTEN_PROTOTYPE {
@@ -32,10 +32,10 @@ SOCKET_LISTEN_PROTOTYPE {
   if (TSOCKET_NATIVE_LISTEN(socket->handle, backlog) == TSOCKET_NATIVE_ERROR) {
     domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
     return SOCKET_FUNC(_Return)(
-        socket, error, domainError, STATUS_CONST(GENERIC_ERROR));
+        error, domainError, STATUS_CONST(GENERIC_ERROR));
   }
   return SOCKET_FUNC(_Return)(
-      socket, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+        error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 SOCKET_ACCEPT_PROTOTYPE {
@@ -52,7 +52,7 @@ SOCKET_ACCEPT_PROTOTYPE {
   if (handle == TSOCKET_NATIVE_INVALID) {
     domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
     return SOCKET_FUNC(_Return)(
-        socket, error, domainError, STATUS_CONST(GENERIC_ERROR));
+        error, domainError, STATUS_CONST(GENERIC_ERROR));
   }
 
   if (client->handle != TSOCKET_NATIVE_INVALID)
@@ -67,13 +67,13 @@ SOCKET_ACCEPT_PROTOTYPE {
     client->handle = TSOCKET_NATIVE_INVALID;
     domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
     return SOCKET_FUNC(_Return)(
-        socket, error, domainError, STATUS_CONST(GENERIC_ERROR));
+        error, domainError, STATUS_CONST(GENERIC_ERROR));
   }
   client->blocking = socket->blocking;
   if (peer != NULL)
     SOCKET_FUNC(_EndpointFromNative)((struct sockaddr *)&native, peer);
   return SOCKET_FUNC(_Return)(
-      socket, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+        error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 SOCKET_CONNECT_PROTOTYPE {
@@ -86,15 +86,15 @@ SOCKET_CONNECT_PROTOTYPE {
   }
   if (!SOCKET_FUNC(_EndpointToNative)(endpoint, &native, &length))
     return SOCKET_FUNC(_Return)(
-        socket, error, NETWORK_ERROR_CONST(ADDRESS_INVALID),
+        error, NETWORK_ERROR_CONST(ADDRESS_INVALID),
         STATUS_CONST(GENERIC_ERROR));
 
   if (TSOCKET_NATIVE_CONNECT(socket->handle, (struct sockaddr *)&native, length) ==
       TSOCKET_NATIVE_ERROR) {
     domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
     return SOCKET_FUNC(_Return)(
-        socket, error, domainError, STATUS_CONST(GENERIC_ERROR));
+        error, domainError, STATUS_CONST(GENERIC_ERROR));
   }
   return SOCKET_FUNC(_Return)(
-      socket, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+        error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }

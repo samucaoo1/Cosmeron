@@ -28,11 +28,11 @@ SOCKET_SEND_PROTOTYPE {
   if (result == TSOCKET_NATIVE_ERROR) {
     domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
     return SOCKET_FUNC(_Return)(
-        socket, error, domainError, STATUS_CONST(GENERIC_ERROR));
+        error, domainError, STATUS_CONST(GENERIC_ERROR));
   }
   if (sent != NULL) *sent = (size_t)result;
   return SOCKET_FUNC(_Return)(
-      socket, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+        error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 SOCKET_RECEIVE_PROTOTYPE {
@@ -45,7 +45,7 @@ SOCKET_RECEIVE_PROTOTYPE {
   if (capacity == 0U) {
     if (received != NULL) *received = 0U;
     return SOCKET_FUNC(_Return)(
-        socket, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+        error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
   }
   amount = SOCKET_FUNC(_NativeIOSize)(capacity);
 #if OS_WINDOWS
@@ -56,16 +56,16 @@ SOCKET_RECEIVE_PROTOTYPE {
   if (result == TSOCKET_NATIVE_ERROR) {
     domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
     return SOCKET_FUNC(_Return)(
-        socket, error, domainError, STATUS_CONST(GENERIC_ERROR));
+        error, domainError, STATUS_CONST(GENERIC_ERROR));
   }
   if (result == 0)
     return SOCKET_FUNC(_Return)(
-        socket, error, NETWORK_ERROR_CONST(CONNECTION_CLOSED),
+        error, NETWORK_ERROR_CONST(CONNECTION_CLOSED),
         STATUS_CONST(GENERIC_ERROR));
 
   if (received != NULL) *received = (size_t)result;
   return SOCKET_FUNC(_Return)(
-      socket, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+        error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 SOCKET_SEND_TO_PROTOTYPE {
@@ -79,7 +79,7 @@ SOCKET_SEND_TO_PROTOTYPE {
   }
   if (!SOCKET_FUNC(_EndpointToNative)(endpoint, &native, &length))
     return SOCKET_FUNC(_Return)(
-        socket, error, NETWORK_ERROR_CONST(ADDRESS_INVALID),
+        error, NETWORK_ERROR_CONST(ADDRESS_INVALID),
         STATUS_CONST(GENERIC_ERROR));
 
   amount = SOCKET_FUNC(_NativeIOSize)(size);
@@ -93,11 +93,11 @@ SOCKET_SEND_TO_PROTOTYPE {
   if (result == TSOCKET_NATIVE_ERROR) {
     domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
     return SOCKET_FUNC(_Return)(
-        socket, error, domainError, STATUS_CONST(GENERIC_ERROR));
+        error, domainError, STATUS_CONST(GENERIC_ERROR));
   }
   if (sent != NULL) *sent = (size_t)result;
   return SOCKET_FUNC(_Return)(
-      socket, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+        error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 SOCKET_RECEIVE_FROM_PROTOTYPE {
@@ -120,11 +120,11 @@ SOCKET_RECEIVE_FROM_PROTOTYPE {
   if (result == TSOCKET_NATIVE_ERROR) {
     domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
     return SOCKET_FUNC(_Return)(
-        socket, error, domainError, STATUS_CONST(GENERIC_ERROR));
+        error, domainError, STATUS_CONST(GENERIC_ERROR));
   }
   if (sender != NULL)
     SOCKET_FUNC(_EndpointFromNative)((struct sockaddr *)&native, sender);
   if (received != NULL) *received = (size_t)result;
   return SOCKET_FUNC(_Return)(
-      socket, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+        error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }

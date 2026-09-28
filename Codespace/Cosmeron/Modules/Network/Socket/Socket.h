@@ -37,15 +37,12 @@ typedef struct SOCKET_TYPE(TSocket) {
   SOCKET_TYPE(TFamily) family;
   SOCKET_TYPE(TKind) kind;
   SOCKET_TYPE(TProtocol) protocol;
-  NETWORK_TYPE(TError) lastError;
   bool blocking;
 } SOCKET_TYPE(TSocket);
 
 static inline OPSTATUS SOCKET_FUNC(_Return)(
-    SOCKET_TYPE(TSocket) *socket, NETWORK_TYPE(TError) *error, NETWORK_TYPE(TError) domainError,
+    NETWORK_TYPE(TError) *error, NETWORK_TYPE(TError) domainError,
     OPSTATUS status) {
-  if (socket != NULL)
-    socket->lastError = domainError;
   if (error != NULL)
     *error = domainError;
   return status;
