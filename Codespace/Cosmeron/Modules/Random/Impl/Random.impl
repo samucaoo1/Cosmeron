@@ -5,11 +5,11 @@ static inline RANDOM_SOURCE_TYPE(Value) RANDOM_FUNC(SourceFromSeed)(uint64_t see
   return source;
 }
 
-static inline uint64_t RANDOM_FUNC(U64)(void) {
+RANDOM_U64_PROTOTYPE {
   return RANDOM_ENTROPY_FUNC(Collect)();
 }
 
-static inline uint64_t RANDOM_FUNC(U64_FromSeed)(uint64_t seed) {
+RANDOM_U64_FROM_SEED_PROTOTYPE {
   RANDOM_ENGINE_TYPE(Xoshiro) state;
   RANDOM_ENGINE_FUNC(Xoshiro, Seed)(&state, seed);
   return RANDOM_ENGINE_FUNC(Xoshiro, Next)(&state);
@@ -23,25 +23,24 @@ static inline RANDOM_SOURCE_TYPE(Value) RANDOM_FUNC(_StackSource)(
   return source;
 }
 
-static inline uint64_t RANDOM_FUNC(RangeU64)(uint64_t minimum,
-                                           uint64_t maximum) {
+RANDOM_RANGE_U64_PROTOTYPE {
   RANDOM_ENGINE_TYPE(Xoshiro) state;
   RANDOM_SOURCE_TYPE(Value) source =
       RANDOM_FUNC(_StackSource)(&state, RANDOM_FUNC(U64)());
   return RANDOM_DISTRIBUTION_FUNC(U64)(&source, minimum, maximum);
 }
 
-static inline int64_t RANDOM_FUNC(RangeI64)(int64_t minimum, int64_t maximum) {
+RANDOM_RANGE_I64_PROTOTYPE {
   RANDOM_ENGINE_TYPE(Xoshiro) state;
   RANDOM_SOURCE_TYPE(Value) source =
       RANDOM_FUNC(_StackSource)(&state, RANDOM_FUNC(U64)());
   return RANDOM_DISTRIBUTION_FUNC(I64)(&source, minimum, maximum);
 }
 
-static inline double RANDOM_FUNC(F64)(void) {
+RANDOM_F64_PROTOTYPE {
   return (double)(RANDOM_FUNC(U64)() >> 11U) * 0x1.0p-53;
 }
 
-static inline bool RANDOM_FUNC(Bool)(void) {
+RANDOM_BOOL_PROTOTYPE {
   return (RANDOM_FUNC(U64)() & UINT64_C(1)) != 0U;
 }
