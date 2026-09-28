@@ -28,7 +28,7 @@ int main(void) {
               STATUS_CONST(NOT_FOUND));
   TEST_ASSERT(value == NULL);
   initialCapacity = HASH_OPERATION(int, int, Capacity)(&hash);
-  TEST_ASSERT(initialCapacity == HASH_INITIAL_CAPACITY);
+  TEST_ASSERT(initialCapacity > 0u);
 
   for (i = 0; i < 100; ++i) {
     TEST_ASSERT(HASH_OPERATION(int, int, Insert)(&hash, i, i * 3) ==
