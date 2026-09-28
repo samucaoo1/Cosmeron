@@ -94,7 +94,7 @@ RANDOM_SHUFFLE_VECTOR_PROTOTYPE {
 
   {
     OPSTATUS status = RANDOM_SOURCE_FUNC(
-        Init)(&source, &RANDOM_ENGINE_FUNC(Xoshiro, FunctionTable),
+        Init)(&source, &RANDOM_ENGINE_FUNC(Xoshiro, Descriptor),
               RANDOM_ENTROPY_FUNC(Collect)(), NULL);
     if (status != STATUS_CONST(SUCCESS))
       return status;
