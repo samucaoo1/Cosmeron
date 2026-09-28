@@ -10,8 +10,8 @@
 
 #define MATH_VALUE_SMALLEST_IMPLEMENT(TYPE, SUFFIX, VA_ARG_TYPE)             \
   MATH_VALUE_SMALLEST_PROTOTYPE(TYPE, SUFFIX) {                    \
-    if (result == NULL || size == 0) {                                        \
-      return STATUS_NS(INVALID_ARGUMENT);                                     \
+    if (outResult == NULL || size == 0) {                                        \
+      return STATUS_CONST(INVALID_ARGUMENT);                                     \
     }                                                                         \
                                                                               \
     va_list arguments;                                                        \
@@ -29,14 +29,14 @@
                                                                               \
     va_end(arguments);                                                        \
                                                                               \
-    *result = smallest;                                                       \
-    return STATUS_NS(SUCCESS);                                                \
+    *outResult = smallest;                                                       \
+    return STATUS_CONST(SUCCESS);                                                \
   }
 
 #define MATH_VALUE_BIGGEST_IMPLEMENT(TYPE, SUFFIX, VA_ARG_TYPE)              \
   MATH_VALUE_BIGGEST_PROTOTYPE(TYPE, SUFFIX) {                     \
-    if (result == NULL || size == 0) {                                        \
-      return STATUS_NS(INVALID_ARGUMENT);                                     \
+    if (outResult == NULL || size == 0) {                                        \
+      return STATUS_CONST(INVALID_ARGUMENT);                                     \
     }                                                                         \
                                                                               \
     va_list arguments;                                                        \
@@ -54,8 +54,8 @@
                                                                               \
     va_end(arguments);                                                        \
                                                                               \
-    *result = biggest;                                                        \
-    return STATUS_NS(SUCCESS);                                                \
+    *outResult = biggest;                                                        \
+    return STATUS_CONST(SUCCESS);                                                \
   }
 
 /* EOF */
