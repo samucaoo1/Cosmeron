@@ -11,38 +11,38 @@
 #include "Impl/OS.inc"
 
 typedef enum SOCKET_TYPE(Family) {
-  SOCKET_TYPE(FAMILY_IPV4),
-  SOCKET_TYPE(FAMILY_IPV6)
-} TSocket_Family;
+  SOCKET_CONST(FAMILY_IPV4),
+  SOCKET_CONST(FAMILY_IPV6)
+} SOCKET_TYPE(Family);
 
 typedef enum SOCKET_TYPE(Kind) {
-  SOCKET_TYPE(KIND_STREAM),
-  SOCKET_TYPE(KIND_DATAGRAM)
-} TSocket_Kind;
+  SOCKET_CONST(KIND_STREAM),
+  SOCKET_CONST(KIND_DATAGRAM)
+} SOCKET_TYPE(Kind);
 
 typedef enum SOCKET_TYPE(Protocol) {
-  SOCKET_TYPE(PROTOCOL_DEFAULT),
-  SOCKET_TYPE(PROTOCOL_TCP),
-  SOCKET_TYPE(PROTOCOL_UDP)
-} TSocket_Protocol;
+  SOCKET_CONST(PROTOCOL_DEFAULT),
+  SOCKET_CONST(PROTOCOL_TCP),
+  SOCKET_CONST(PROTOCOL_UDP)
+} SOCKET_TYPE(Protocol);
 
 typedef enum SOCKET_TYPE(Shutdown) {
-  SOCKET_TYPE(SHUTDOWN_READ),
-  SOCKET_TYPE(SHUTDOWN_WRITE),
-  SOCKET_TYPE(SHUTDOWN_BOTH)
-} TSocket_Shutdown;
+  SOCKET_CONST(SHUTDOWN_READ),
+  SOCKET_CONST(SHUTDOWN_WRITE),
+  SOCKET_CONST(SHUTDOWN_BOTH)
+} SOCKET_TYPE(Shutdown);
 
-typedef struct SOCKET_TYPE(TSocket) {
+typedef struct SOCKET_TYPE(SOCKET_TYPE(TSocket)) {
   SOCKET_TYPE(Handle) handle;
-  TSocket_Family family;
-  TSocket_Kind kind;
-  TSocket_Protocol protocol;
-  TNetwork_Error lastError;
+  SOCKET_TYPE(Family) family;
+  SOCKET_TYPE(Kind) kind;
+  SOCKET_TYPE(Protocol) protocol;
+  NETWORK_TYPE(Error) lastError;
   bool blocking;
-} TSocket;
+} SOCKET_TYPE(TSocket);
 
 static inline OPSTATUS SOCKET_FUNC(_Return)(
-    TSocket *socket, TNetwork_Error *error, TNetwork_Error domainError,
+    SOCKET_TYPE(TSocket) *socket, NETWORK_TYPE(Error) *error, NETWORK_TYPE(Error) domainError,
     OPSTATUS status) {
   if (socket != NULL)
     socket->lastError = domainError;
@@ -52,57 +52,57 @@ static inline OPSTATUS SOCKET_FUNC(_Return)(
 }
 
 #define SOCKET_INIT_PROTOTYPE                                                  \
-  inline static void SOCKET_FUNC(Init)(TSocket *socket)
+  static inline void SOCKET_FUNC(Init)(SOCKET_TYPE(TSocket) *socket)
 #define SOCKET_CREATE_PROTOTYPE                                                \
-  inline static OPSTATUS SOCKET_FUNC(Create)(                                  \
-      TSocket *socket, TSocket_Family family, TSocket_Kind kind,                \
-      TSocket_Protocol protocol, TNetwork_Error *error)
+  static inline OPSTATUS SOCKET_FUNC(Create)(                                  \
+      SOCKET_TYPE(TSocket) *socket, SOCKET_TYPE(Family) family, SOCKET_TYPE(Kind) kind,                \
+      SOCKET_TYPE(Protocol) protocol, NETWORK_TYPE(Error) *error)
 #define SOCKET_CLOSE_PROTOTYPE                                                 \
-  inline static void SOCKET_FUNC(Close)(TSocket *socket)
+  static inline void SOCKET_FUNC(Close)(SOCKET_TYPE(TSocket) *socket)
 #define SOCKET_BIND_PROTOTYPE                                                  \
-  inline static OPSTATUS SOCKET_FUNC(Bind)(                                    \
-      TSocket *socket, const TNetwork_Endpoint *endpoint, TNetwork_Error *error)
+  static inline OPSTATUS SOCKET_FUNC(Bind)(                                    \
+      SOCKET_TYPE(TSocket) *socket, const NETWORK_ADDRESS_TYPE(TEndpoint) *endpoint, NETWORK_TYPE(Error) *error)
 #define SOCKET_LISTEN_PROTOTYPE                                                \
-  inline static OPSTATUS SOCKET_FUNC(Listen)(                                  \
-      TSocket *socket, int backlog, TNetwork_Error *error)
+  static inline OPSTATUS SOCKET_FUNC(Listen)(                                  \
+      SOCKET_TYPE(TSocket) *socket, int backlog, NETWORK_TYPE(Error) *error)
 #define SOCKET_ACCEPT_PROTOTYPE                                                \
-  inline static OPSTATUS SOCKET_FUNC(Accept)(                                  \
-      TSocket *socket, TSocket *client, TNetwork_Endpoint *peer,                \
-      TNetwork_Error *error)
+  static inline OPSTATUS SOCKET_FUNC(Accept)(                                  \
+      SOCKET_TYPE(TSocket) *socket, SOCKET_TYPE(TSocket) *client, NETWORK_ADDRESS_TYPE(TEndpoint) *peer,                \
+      NETWORK_TYPE(Error) *error)
 #define SOCKET_CONNECT_PROTOTYPE                                               \
-  inline static OPSTATUS SOCKET_FUNC(Connect)(                                 \
-      TSocket *socket, const TNetwork_Endpoint *endpoint, TNetwork_Error *error)
+  static inline OPSTATUS SOCKET_FUNC(Connect)(                                 \
+      SOCKET_TYPE(TSocket) *socket, const NETWORK_ADDRESS_TYPE(TEndpoint) *endpoint, NETWORK_TYPE(Error) *error)
 #define SOCKET_SEND_PROTOTYPE                                                  \
-  inline static OPSTATUS SOCKET_FUNC(Send)(                                    \
-      TSocket *socket, const void *data, size_t size, size_t *sent,             \
-      TNetwork_Error *error)
+  static inline OPSTATUS SOCKET_FUNC(Send)(                                    \
+      SOCKET_TYPE(TSocket) *socket, const void *data, size_t size, size_t *sent,             \
+      NETWORK_TYPE(Error) *error)
 #define SOCKET_RECEIVE_PROTOTYPE                                               \
-  inline static OPSTATUS SOCKET_FUNC(Receive)(                                 \
-      TSocket *socket, void *data, size_t capacity, size_t *received,           \
-      TNetwork_Error *error)
+  static inline OPSTATUS SOCKET_FUNC(Receive)(                                 \
+      SOCKET_TYPE(TSocket) *socket, void *data, size_t capacity, size_t *received,           \
+      NETWORK_TYPE(Error) *error)
 #define SOCKET_SEND_TO_PROTOTYPE                                               \
-  inline static OPSTATUS SOCKET_FUNC(SendTo)(                                  \
-      TSocket *socket, const void *data, size_t size,                           \
-      const TNetwork_Endpoint *endpoint, size_t *sent, TNetwork_Error *error)
+  static inline OPSTATUS SOCKET_FUNC(SendTo)(                                  \
+      SOCKET_TYPE(TSocket) *socket, const void *data, size_t size,                           \
+      const NETWORK_ADDRESS_TYPE(TEndpoint) *endpoint, size_t *sent, NETWORK_TYPE(Error) *error)
 #define SOCKET_RECEIVE_FROM_PROTOTYPE                                          \
-  inline static OPSTATUS SOCKET_FUNC(ReceiveFrom)(                             \
-      TSocket *socket, void *data, size_t capacity, TNetwork_Endpoint *sender,  \
-      size_t *received, TNetwork_Error *error)
+  static inline OPSTATUS SOCKET_FUNC(ReceiveFrom)(                             \
+      SOCKET_TYPE(TSocket) *socket, void *data, size_t capacity, NETWORK_ADDRESS_TYPE(TEndpoint) *sender,  \
+      size_t *received, NETWORK_TYPE(Error) *error)
 #define SOCKET_SHUTDOWN_PROTOTYPE                                              \
-  inline static OPSTATUS SOCKET_FUNC(Shutdown)(                                \
-      TSocket *socket, TSocket_Shutdown direction, TNetwork_Error *error)
+  static inline OPSTATUS SOCKET_FUNC(Shutdown)(                                \
+      SOCKET_TYPE(TSocket) *socket, SOCKET_TYPE(Shutdown) direction, NETWORK_TYPE(Error) *error)
 #define SOCKET_SET_BLOCKING_PROTOTYPE                                          \
-  inline static OPSTATUS SOCKET_FUNC(SetBlocking)(                             \
-      TSocket *socket, bool blocking, TNetwork_Error *error)
+  static inline OPSTATUS SOCKET_FUNC(SetBlocking)(                             \
+      SOCKET_TYPE(TSocket) *socket, bool blocking, NETWORK_TYPE(Error) *error)
 #define SOCKET_SET_REUSE_ADDRESS_PROTOTYPE                                     \
-  inline static OPSTATUS SOCKET_FUNC(SetReuseAddress)(                         \
-      TSocket *socket, bool enabled, TNetwork_Error *error)
+  static inline OPSTATUS SOCKET_FUNC(SetReuseAddress)(                         \
+      SOCKET_TYPE(TSocket) *socket, bool enabled, NETWORK_TYPE(Error) *error)
 #define SOCKET_SET_KEEP_ALIVE_PROTOTYPE                                        \
-  inline static OPSTATUS SOCKET_FUNC(SetKeepAlive)(                            \
-      TSocket *socket, bool enabled, TNetwork_Error *error)
+  static inline OPSTATUS SOCKET_FUNC(SetKeepAlive)(                            \
+      SOCKET_TYPE(TSocket) *socket, bool enabled, NETWORK_TYPE(Error) *error)
 #define SOCKET_SET_NO_DELAY_PROTOTYPE                                          \
-  inline static OPSTATUS SOCKET_FUNC(SetNoDelay)(                              \
-      TSocket *socket, bool enabled, TNetwork_Error *error)
+  static inline OPSTATUS SOCKET_FUNC(SetNoDelay)(                              \
+      SOCKET_TYPE(TSocket) *socket, bool enabled, NETWORK_TYPE(Error) *error)
 
 SOCKET_INIT_PROTOTYPE;
 SOCKET_CREATE_PROTOTYPE;

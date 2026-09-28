@@ -20,11 +20,11 @@
 #define NETWORK_RESOLVE_TYPE(NAME) GNS2(NETWORK_MOD(Resolve), NAME)
 #define NETWORK_RESOLVE_FUNC(NAME) GNS2(NETWORK_MOD(Resolve), NAME)
 
-FLAT_VECTOR_DECLARE(TNetwork_Address, Network_Address)
+FLAT_VECTOR_IMPLEMENT_ALL(NETWORK_ADDRESS_TYPE(TAddress), Network_Address)
 
-typedef FLAT_VECTOR_TYPE(Network_Address) TNetwork_Address_Vector;
+typedef FLAT_VECTOR_TYPE(Network_Address) NETWORK_ADDRESS_TYPE(TAddress)_Vector;
 
-static inline TNetwork_Error NETWORK_RESOLVE_FUNC(_MapError)(int error) {
+static inline NETWORK_TYPE(Error) NETWORK_RESOLVE_FUNC(_MapError)(int error) {
   (void)error;
 #ifdef EAI_NONAME
   if (error == EAI_NONAME)
@@ -59,8 +59,8 @@ static inline void NETWORK_RESOLVE_FUNC(_FreeAddrInfo)(struct addrinfo *result) 
 }
 
 static inline OPSTATUS NETWORK_RESOLVE_FUNC(Address)(
-    TNetwork_Address_Vector *addresses, const char *host,
-    TNetwork_Error *error) {
+    NETWORK_ADDRESS_TYPE(TAddress)_Vector *addresses, const char *host,
+    NETWORK_TYPE(Error) *error) {
   struct addrinfo hints;
   struct addrinfo *result = NULL;
   struct addrinfo *current = NULL;
@@ -92,7 +92,7 @@ static inline OPSTATUS NETWORK_RESOLVE_FUNC(Address)(
   }
 
   for (current = result; current != NULL; current = current->ai_next) {
-    TNetwork_Address address = {0};
+    NETWORK_ADDRESS_TYPE(TAddress) address = {0};
     bool supported = false;
 
     if (current->ai_family == AF_INET) {
@@ -120,7 +120,7 @@ static inline OPSTATUS NETWORK_RESOLVE_FUNC(Address)(
       }
       if (!duplicate &&
           FLAT_VECTOR_FUNC(Network_Address, PushBack)(addresses, address) !=
-              STATUS_NS(SUCCESS)) {
+              STATUS_CONST(SUCCESS)) {
         NETWORK_RESOLVE_FUNC(_FreeAddrInfo)(result);
         if (error != NULL)
           *error = NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED);
