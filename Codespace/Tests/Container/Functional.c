@@ -170,7 +170,12 @@ static int test_vector(void) {
   TEST_ASSERT(Erase(vector, Size(vector), 1) == STATUS_CONST(OUT_OF_RANGE));
   int removed = -1;
   TEST_ASSERT(PopBack(vector, &removed) == STATUS_CONST(SUCCESS));
-  TEST_ASSERT(PopBack(vector) == STATUS_CONST(SUCCESS));
+  {
+    size_t before = Size(vector);
+    TEST_ASSERT(PopBack(vector, NULL) == STATUS_CONST(INVALID_ARGUMENT));
+    TEST_ASSERT(Size(vector) == before);
+  }
+  TEST_ASSERT(PopBack(vector, &removed) == STATUS_CONST(SUCCESS));
   Destroy(vector);
   return 0;
 }
@@ -230,7 +235,12 @@ static int test_list(void) {
     TEST_ASSERT(PopFront(list, &value) == STATUS_CONST(SUCCESS));
     TEST_ASSERT(value == expected);
   }
-  TEST_ASSERT(PopFront(list) == STATUS_CONST(OUT_OF_RANGE));
+  {
+    int value = -1;
+    TEST_ASSERT(PopFront(list, NULL) == STATUS_CONST(INVALID_ARGUMENT));
+    TEST_ASSERT(PopFront(list, &value) == STATUS_CONST(OUT_OF_RANGE));
+    TEST_ASSERT(value == -1);
+  }
   Destroy(list);
   return 0;
 }
