@@ -4,7 +4,7 @@
 #include "Node.h"
 
 /* ============================================================
- * Linked_Stack — Pilha usando encadeamento simples
+ * LINKED_NS(Stack) — Pilha usando encadeamento simples
  *
  * LIFO: push/pop no head. O(1) em todas as operações.
  * ============================================================ */
@@ -79,7 +79,7 @@
  * ============================================================ */
 
 #define LINKED_STACK_IMPLEMENT_ALL(TYPE, SUFFIX)                                     \
-  SINGLE_LINKED_NODE_STRUCT(TYPE, SUFFIX, Linked_Stack)                        \
+  SINGLE_LINKED_NODE_STRUCT(TYPE, SUFFIX, LINKED_NS(Stack))                        \
   LINKED_STACK_STRUCT(TYPE, SUFFIX)                                            \
   LINKED_STACK_INIT_PROTOTYPE(SUFFIX);                                \
   LINKED_STACK_DESTROY_PROTOTYPE(SUFFIX);                             \
@@ -103,7 +103,7 @@
   CONTAINER_API_BIND(NAME, LINKED_STACK_FUNC(TYPE, functions));                              \
   LINKED_STACK_FUNC(TYPE, Init)(&NAME);
 /* Compatibility alias: prefer LINKED_STACK_INSTANCE_DECLARE. */
-#define TLinked_Stack(TYPE, NAME) LINKED_STACK_INSTANCE_DECLARE(TYPE, NAME)
+#define TLINKED_NS(Stack)(TYPE, NAME) LINKED_STACK_INSTANCE_DECLARE(TYPE, NAME)
 
 /* ============================================================
  * Instanciações
