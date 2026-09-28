@@ -19,18 +19,18 @@ typedef struct CHRONOMETRY_TYPE(DateTime) {
   static inline bool DATETIME_FUNC(TimeIsValid)(CHRONOMETRY_TYPE(TimeOfDay) time)
 #define CHRONOMETRY_DATETIME_IS_VALID_PROTOTYPE                      \
   static inline bool DATETIME_FUNC(IsValid)(                                    \
-      const CALENDAR_FUNC(Policy) *policy, CHRONOMETRY_TYPE(DateTime) value)
+      const CALENDAR_TYPE(Policy) *policy, CHRONOMETRY_TYPE(DateTime) value)
 #define CHRONOMETRY_DATETIME_COMPARE_PROTOTYPE                       \
   static inline CMPOUT DATETIME_FUNC(Compare)(CHRONOMETRY_TYPE(DateTime) left,     \
                                          CHRONOMETRY_TYPE(DateTime) right)
 #define CHRONOMETRY_DATETIME_ADD_DURATION_PROTOTYPE                  \
   static inline OPSTATUS DATETIME_FUNC(AddDuration)(                            \
-      const CALENDAR_FUNC(Policy) *policy, CHRONOMETRY_TYPE(DateTime) value,    \
+      const CALENDAR_TYPE(Policy) *policy, CHRONOMETRY_TYPE(DateTime) value,    \
       CHRONOMETRY_TYPE(Duration) duration,                                    \
       CHRONOMETRY_TYPE(DateTime) *outResult)
 #define CHRONOMETRY_DATETIME_DIFFERENCE_PROTOTYPE                    \
   static inline OPSTATUS DATETIME_FUNC(Difference)(                             \
-      const CALENDAR_FUNC(Policy) *policy, CHRONOMETRY_TYPE(DateTime) left,     \
+      const CALENDAR_TYPE(Policy) *policy, CHRONOMETRY_TYPE(DateTime) left,     \
       CHRONOMETRY_TYPE(DateTime) right, CHRONOMETRY_TYPE(Duration) *outResult)
 
 #include "Impl/DateTime.impl"
