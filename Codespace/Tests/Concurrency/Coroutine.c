@@ -2,13 +2,13 @@
 
 #include <assert.h>
 
-typedef struct CONCURRENCY_TYPE(TCoroutine)_Test_Context {
+typedef struct TCoroutineTestContext {
   unsigned step;
   unsigned value;
-} CONCURRENCY_TYPE(TCoroutine)_Test_Context;
+} TCoroutineTestContext;
 
 static void Test_Coroutine(CONCURRENCY_TYPE(TCoroutine) *coroutine, void *argument) {
-  CONCURRENCY_TYPE(TCoroutine)_Test_Context *context = argument;
+  TCoroutineTestContext *context = argument;
 
   COROUTINE_BEGIN(coroutine);
 
@@ -28,7 +28,7 @@ static void Test_Coroutine(CONCURRENCY_TYPE(TCoroutine) *coroutine, void *argume
 }
 
 int main(void) {
-  CONCURRENCY_TYPE(TCoroutine)_Test_Context context = {0u, 0u};
+  TCoroutineTestContext context = {0u, 0u};
   CONCURRENCY_TYPE(TCoroutine) coroutine = COROUTINE_INIT(Test_Coroutine, &context);
 
   assert(COROUTINE_FUNC(GetState)(&coroutine) == CONCURRENCY_CONST(COROUTINE, STATE_READY));
