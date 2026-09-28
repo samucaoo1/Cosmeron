@@ -2,15 +2,15 @@
 #include "../../../Core/Error/Status.h"
 #include "../Concurrency.space"
 
-typedef void (*TTaskFunction)(void *);
+typedef void (*CONCURRENCY_TYPE(TaskFunction))(void *);
 
-typedef struct TTask {
-  TTaskFunction function;
+typedef struct CONCURRENCY_TYPE(TTask) {
+  CONCURRENCY_TYPE(TaskFunction) function;
   void *argument;
-} TTask;
+} CONCURRENCY_TYPE(TTask);
 
-inline static TTask TASK_FUNC(Create)(TTaskFunction function, void *argument);
-inline static bool TASK_FUNC(IsValid)(const TTask *task);
-inline static OPSTATUS TASK_FUNC(Run)(const TTask *task);
+static inline CONCURRENCY_TYPE(TTask) TASK_FUNC(Create)(CONCURRENCY_TYPE(TaskFunction) function, void *argument);
+static inline bool TASK_FUNC(IsValid)(const CONCURRENCY_TYPE(TTask) *task);
+static inline OPSTATUS TASK_FUNC(Run)(const CONCURRENCY_TYPE(TTask) *task);
 
 #include "Impl/Task.impl"

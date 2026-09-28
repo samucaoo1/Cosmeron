@@ -4,33 +4,33 @@
 #include "Task.h"
 #include "../Synchronization/Condition.h"
 
-typedef OPSTATUS (*TFutureFunction)(void *argument, void **result);
+typedef OPSTATUS (*CONCURRENCY_TYPE(FutureFunction))(void *argument, void **outResult);
 
-typedef struct TFuture {
-  TMutex mutex;
-  TCondition condition;
+typedef struct CONCURRENCY_TYPE(TFuture) {
+  CONCURRENCY_TYPE(TMutex) mutex;
+  CONCURRENCY_TYPE(TCondition) condition;
   void *result;
   OPSTATUS status;
   bool ready;
   bool initialized;
-} TFuture;
+} CONCURRENCY_TYPE(TFuture);
 
-inline static OPSTATUS FUTURE_FUNC(Init)(TFuture *future);
-inline static OPSTATUS FUTURE_FUNC(Destroy)(TFuture *future);
-inline static bool FUTURE_FUNC(IsReady)(const TFuture *future);
-inline static OPSTATUS FUTURE_FUNC(Complete)(TFuture *future, void *result,
+static inline OPSTATUS FUTURE_FUNC(Init)(CONCURRENCY_TYPE(TFuture) *future);
+static inline OPSTATUS FUTURE_FUNC(Destroy)(CONCURRENCY_TYPE(TFuture) *future);
+static inline bool FUTURE_FUNC(IsReady)(const CONCURRENCY_TYPE(TFuture) *future);
+static inline OPSTATUS FUTURE_FUNC(Complete)(CONCURRENCY_TYPE(TFuture) *future, void *result,
                                        OPSTATUS status);
-inline static OPSTATUS FUTURE_FUNC(Wait)(TFuture *future);
-inline static OPSTATUS FUTURE_FUNC(Get)(TFuture *future, void **result,
-                                  OPSTATUS *resultStatus);
+static inline OPSTATUS FUTURE_FUNC(Wait)(CONCURRENCY_TYPE(TFuture) *future);
+static inline OPSTATUS FUTURE_FUNC(Get)(CONCURRENCY_TYPE(TFuture) *future, void **outResult,
+                                  OPSTATUS *outStatus);
 
-typedef struct TFutureTask {
-  TFuture *future;
-  TFutureFunction function;
+typedef struct CONCURRENCY_TYPE(CONCURRENCY_TYPE(TFuture)Task) {
+  CONCURRENCY_TYPE(TFuture) *future;
+  CONCURRENCY_TYPE(FutureFunction) function;
   void *argument;
-} TFutureTask;
+} CONCURRENCY_TYPE(CONCURRENCY_TYPE(TFuture)Task);
 
-inline static TTask FUTURE_FUNC(Task)(TFutureTask *futureTask, TFuture *future,
-                                    TFutureFunction function, void *argument);
+static inline CONCURRENCY_TYPE(TTask) FUTURE_FUNC(Task)(CONCURRENCY_TYPE(CONCURRENCY_TYPE(TFuture)Task) *futureTask, CONCURRENCY_TYPE(TFuture) *future,
+                                    CONCURRENCY_TYPE(FutureFunction) function, void *argument);
 
 #include "Impl/Future.impl"

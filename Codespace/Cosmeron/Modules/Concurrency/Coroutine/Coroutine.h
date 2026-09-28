@@ -3,21 +3,21 @@
 #include "../Concurrency.space"
 #include "../../../Core/Error/Status.h"
 
-typedef enum TCoroutineState {
+typedef enum CONCURRENCY_TYPE(CoroutineState) {
   CONCURRENCY_COROUTINE_STATE_READY = 0,
   CONCURRENCY_COROUTINE_STATE_RUNNING,
   CONCURRENCY_COROUTINE_STATE_SUSPENDED,
   CONCURRENCY_COROUTINE_STATE_FINISHED
-} TCoroutineState;
+} CONCURRENCY_TYPE(CoroutineState);
 
-typedef struct TCoroutine TCoroutine;
-typedef void (*TCoroutineFunction)(TCoroutine *coroutine, void *argument);
+typedef struct CONCURRENCY_TYPE(TCoroutine) CONCURRENCY_TYPE(TCoroutine);
+typedef void (*CONCURRENCY_TYPE(CoroutineFunction))(CONCURRENCY_TYPE(TCoroutine) *coroutine, void *argument);
 
-struct TCoroutine {
-  TCoroutineFunction function;
+struct CONCURRENCY_TYPE(TCoroutine) {
+  CONCURRENCY_TYPE(CoroutineFunction) function;
   void *argument;
   uint32_t continuation;
-  TCoroutineState state;
+  CONCURRENCY_TYPE(CoroutineState) state;
 };
 
 #define COROUTINE_INIT(FUNCTION, ARGUMENT)                                      \
@@ -25,7 +25,7 @@ struct TCoroutine {
 
 #define COROUTINE_BEGIN(COROUTINE)                                              \
   do {                                                                          \
-    TCoroutine *_coroutine = (COROUTINE);                                       \
+    CONCURRENCY_TYPE(TCoroutine) *_coroutine = (COROUTINE);                                       \
     if (_coroutine == NULL ||                                                   \
         _coroutine->state == CONCURRENCY_COROUTINE_STATE_FINISHED)                          \
       return;                                                                   \
@@ -50,17 +50,17 @@ struct TCoroutine {
     return;                                                                     \
   } while (0)
 
-inline static OPSTATUS COROUTINE_FUNC(Init)(TCoroutine *coroutine,
-                                      TCoroutineFunction function,
+static inline OPSTATUS COROUTINE_FUNC(Init)(CONCURRENCY_TYPE(TCoroutine) *coroutine,
+                                      CONCURRENCY_TYPE(CoroutineFunction) function,
                                       void *argument);
-inline static OPSTATUS COROUTINE_FUNC(Resume)(TCoroutine *coroutine);
-inline static OPSTATUS COROUTINE_FUNC(Reset)(TCoroutine *coroutine);
-inline static TCoroutineState
-COROUTINE_FUNC(GetState)(const TCoroutine *coroutine);
-inline static bool COROUTINE_FUNC(IsReady)(const TCoroutine *coroutine);
-inline static bool COROUTINE_FUNC(IsRunning)(const TCoroutine *coroutine);
-inline static bool COROUTINE_FUNC(IsSuspended)(const TCoroutine *coroutine);
-inline static bool COROUTINE_FUNC(IsFinished)(const TCoroutine *coroutine);
+static inline OPSTATUS COROUTINE_FUNC(Resume)(CONCURRENCY_TYPE(TCoroutine) *coroutine);
+static inline OPSTATUS COROUTINE_FUNC(Reset)(CONCURRENCY_TYPE(TCoroutine) *coroutine);
+static inline CONCURRENCY_TYPE(CoroutineState)
+COROUTINE_FUNC(GetState)(const CONCURRENCY_TYPE(TCoroutine) *coroutine);
+static inline bool COROUTINE_FUNC(IsReady)(const CONCURRENCY_TYPE(TCoroutine) *coroutine);
+static inline bool COROUTINE_FUNC(IsRunning)(const CONCURRENCY_TYPE(TCoroutine) *coroutine);
+static inline bool COROUTINE_FUNC(IsSuspended)(const CONCURRENCY_TYPE(TCoroutine) *coroutine);
+static inline bool COROUTINE_FUNC(IsFinished)(const CONCURRENCY_TYPE(TCoroutine) *coroutine);
 
 #include "Impl/Coroutine.impl"
 
