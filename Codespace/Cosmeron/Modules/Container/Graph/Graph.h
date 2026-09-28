@@ -18,10 +18,10 @@
 
 #define GRAPH_STRUCT(VERTEX_SUFFIX, WEIGHT_SUFFIX)                           \
   CONTAINER_API_FORWARD(                                                      \
-      GRAPH_OPERATION(VERTEX_SUFFIX, WEIGHT_SUFFIX, FunctionTable))          \
+      GRAPH_FUNCTION_TABLE_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX))          \
   typedef struct TGRAPH_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) {                 \
     CONTAINER_API_FIELD(                                                      \
-        GRAPH_OPERATION(VERTEX_SUFFIX, WEIGHT_SUFFIX, FunctionTable))        \
+        GRAPH_FUNCTION_TABLE_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX))        \
     TGRAPH_VERTEX_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) * vertices;             \
     size_t vertexCount;                                                       \
     size_t vertexCapacity;                                                    \
@@ -86,17 +86,17 @@
       size_t source, size_t destination)
 
 #define GRAPH_FIND_WEIGHT_PROTOTYPE(WEIGHT_TYPE, VERTEX_SUFFIX, WEIGHT_SUFFIX)\
-  static inline WEIGHT_TYPE *                                                 \
+  static inline OPSTATUS                                                      \
   GRAPH_OPERATION(VERTEX_SUFFIX, WEIGHT_SUFFIX, FindWeight)(                 \
       TGRAPH_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) * graph, size_t source,      \
-      size_t destination)
+      size_t destination, WEIGHT_TYPE **outWeight)
 
 #define GRAPH_CONST_FIND_WEIGHT_PROTOTYPE(WEIGHT_TYPE, VERTEX_SUFFIX,        \
                                           WEIGHT_SUFFIX)                     \
-  static inline WEIGHT_TYPE const *                                           \
+  static inline OPSTATUS                                                      \
   GRAPH_OPERATION(VERTEX_SUFFIX, WEIGHT_SUFFIX, ConstFindWeight)(            \
       const TGRAPH_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) * graph,               \
-      size_t source, size_t destination)
+      size_t source, size_t destination, WEIGHT_TYPE const **outWeight)
 
 #define GRAPH_VERTEX_COUNT_PROTOTYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX)           \
   static inline size_t                                                       \

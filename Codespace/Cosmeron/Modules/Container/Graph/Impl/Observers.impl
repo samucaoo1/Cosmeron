@@ -15,13 +15,17 @@
 #define GRAPH_IMPLEMENT_FIND_WEIGHT(WEIGHT_TYPE, VERTEX_SUFFIX, WEIGHT_SUFFIX)\
   GRAPH_FIND_WEIGHT_PROTOTYPE(WEIGHT_TYPE, VERTEX_SUFFIX, WEIGHT_SUFFIX) {     \
     size_t i;                                                                  \
-    if (!graph || source >= graph->vertexCount ||                             \
-        destination >= graph->vertexCount)                                     \
-      return NULL;                                                             \
-    for (i = 0; i < graph->vertices[source].edgeCount; ++i)                   \
-      if (graph->vertices[source].edges[i].destination == destination)         \
-        return &graph->vertices[source].edges[i].weight;                       \
-    return NULL;                                                               \
+    if (!graph || !outWeight)                                                  \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (source >= graph->vertexCount || destination >= graph->vertexCount)     \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    for (i = 0; i < graph->vertices[source].edgeCount; ++i) {                 \
+      if (graph->vertices[source].edges[i].destination == destination) {       \
+        *outWeight = &graph->vertices[source].edges[i].weight;                 \
+        return STATUS_CONST(SUCCESS);                                          \
+      }                                                                        \
+    }                                                                          \
+    return STATUS_CONST(NOT_FOUND);                                            \
   }
 
 #define GRAPH_IMPLEMENT_CONST_FIND_WEIGHT(WEIGHT_TYPE, VERTEX_SUFFIX,         \
@@ -29,13 +33,17 @@
   GRAPH_CONST_FIND_WEIGHT_PROTOTYPE(WEIGHT_TYPE, VERTEX_SUFFIX,              \
                                     WEIGHT_SUFFIX) {                           \
     size_t i;                                                                  \
-    if (!graph || source >= graph->vertexCount ||                             \
-        destination >= graph->vertexCount)                                     \
-      return NULL;                                                             \
-    for (i = 0; i < graph->vertices[source].edgeCount; ++i)                   \
-      if (graph->vertices[source].edges[i].destination == destination)         \
-        return &graph->vertices[source].edges[i].weight;                       \
-    return NULL;                                                               \
+    if (!graph || !outWeight)                                                  \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (source >= graph->vertexCount || destination >= graph->vertexCount)     \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    for (i = 0; i < graph->vertices[source].edgeCount; ++i) {                 \
+      if (graph->vertices[source].edges[i].destination == destination) {       \
+        *outWeight = &graph->vertices[source].edges[i].weight;                 \
+        return STATUS_CONST(SUCCESS);                                          \
+      }                                                                        \
+    }                                                                          \
+    return STATUS_CONST(NOT_FOUND);                                            \
   }
 
 #define GRAPH_IMPLEMENT_VERTEX_COUNT(VERTEX_SUFFIX, WEIGHT_SUFFIX)            \

@@ -4,7 +4,7 @@
 
 #define GRAPH_FUNCTION_TABLE_STRUCT(VERTEX_TYPE, VERTEX_SUFFIX, WEIGHT_TYPE,        \
                              WEIGHT_SUFFIX)                                  \
-  typedef struct GRAPH_OPERATION(VERTEX_SUFFIX, WEIGHT_SUFFIX, FunctionTable) {\
+  typedef struct GRAPH_FUNCTION_TABLE_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) {\
     OPSTATUS (*init)(TGRAPH_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) *);           \
     void (*destroy)(TGRAPH_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) *);            \
     void (*clear)(TGRAPH_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) *);              \
@@ -18,10 +18,12 @@
                              size_t);                                         \
     bool (*hasEdge)(const TGRAPH_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) *,       \
                     size_t, size_t);                                         \
-    WEIGHT_TYPE *(*findWeight)(                                              \
-        TGRAPH_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) *, size_t, size_t);        \
-    WEIGHT_TYPE const *(*constFindWeight)(                                   \
-        const TGRAPH_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) *, size_t, size_t);  \
+    OPSTATUS (*findWeight)(                                                  \
+        TGRAPH_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) *, size_t, size_t,         \
+        WEIGHT_TYPE **);                                                      \
+    OPSTATUS (*constFindWeight)(                                             \
+        const TGRAPH_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) *, size_t, size_t,   \
+        WEIGHT_TYPE const **);  \
     size_t (*vertexCount)(                                                    \
         const TGRAPH_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) *);                  \
     size_t (*edgeCount)(                                                      \
@@ -33,11 +35,11 @@
     OPSTATUS (*dfs)(TGRAPH_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) *, size_t,     \
                     TGRAPH_VISITOR_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX),       \
                     void *);                                                 \
-  } GRAPH_OPERATION(VERTEX_SUFFIX, WEIGHT_SUFFIX, FunctionTable);
+  } GRAPH_FUNCTION_TABLE_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX);
 
 #define GRAPH_FUNCTION_TABLE_INSTANCE(VERTEX_TYPE, VERTEX_SUFFIX,            \
                                       WEIGHT_TYPE, WEIGHT_SUFFIX)            \
-  static const GRAPH_OPERATION(VERTEX_SUFFIX, WEIGHT_SUFFIX, FunctionTable)  \
+  static const GRAPH_FUNCTION_TABLE_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX)  \
       GRAPH_OPERATION(VERTEX_SUFFIX, WEIGHT_SUFFIX, functions) = {           \
           .init = GRAPH_OPERATION(VERTEX_SUFFIX, WEIGHT_SUFFIX, Init),        \
           .destroy = GRAPH_OPERATION(VERTEX_SUFFIX, WEIGHT_SUFFIX, Destroy),  \

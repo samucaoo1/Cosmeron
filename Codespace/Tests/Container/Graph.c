@@ -53,10 +53,14 @@ int main(void) {
   TEST_ASSERT(GRAPH_OPERATION(int, int, EdgeCount)(&graph) == 4u);
   TEST_ASSERT(GRAPH_OPERATION(int, int, HasEdge)(&graph, a, c));
 
-  weight = GRAPH_OPERATION(int, int, FindWeight)(&graph, a, c);
+  weight = NULL;
+  TEST_ASSERT(GRAPH_OPERATION(int, int, FindWeight)(
+                  &graph, a, c, &weight) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(weight && *weight == 7);
   *weight = 8;
-  constWeight = GRAPH_OPERATION(int, int, ConstFindWeight)(&graph, a, c);
+  constWeight = NULL;
+  TEST_ASSERT(GRAPH_OPERATION(int, int, ConstFindWeight)(
+                  &graph, a, c, &constWeight) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(constWeight && *constWeight == 8);
 
   TEST_ASSERT(GRAPH_OPERATION(int, int, BFS)(&graph, a, VisitIntGraph, &bfs) ==
@@ -75,6 +79,12 @@ int main(void) {
   TEST_ASSERT(GRAPH_OPERATION(int, int, RemoveEdge)(&graph, a, c) ==
               STATUS_CONST(SUCCESS));
   TEST_ASSERT(!GRAPH_OPERATION(int, int, HasEdge)(&graph, a, c));
+  weight = NULL;
+  TEST_ASSERT(GRAPH_OPERATION(int, int, FindWeight)(
+                  &graph, a, c, &weight) == STATUS_CONST(NOT_FOUND));
+  TEST_ASSERT(weight == NULL);
+  TEST_ASSERT(GRAPH_OPERATION(int, int, FindWeight)(
+                  &graph, a, c, NULL) == STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(GRAPH_OPERATION(int, int, RemoveEdge)(&graph, a, c) ==
               STATUS_CONST(NOT_FOUND));
 
@@ -84,7 +94,7 @@ int main(void) {
   TEST_ASSERT(GRAPH_OPERATION(int, int, EdgeCount)(&graph) == 1u);
   TEST_ASSERT(GRAPH_OPERATION(int, int, HasEdge)(&graph, 1u, 2u));
 
-#if CONTAINER_ENABLE_PSEUDO_METHODS
+#if CONTAINER_FUNCTION_TABLE_ENABLED
   TEST_ASSERT(graph.api != NULL);
   TEST_ASSERT(graph.api->vertexCount(&graph) == 3u);
 #endif
