@@ -49,12 +49,12 @@ int main(void) {
     uint64_t first = 0;
     uint64_t second = 0;
     if (Random_Source_NextU64(&source, &first) != STATUS_CONST(SUCCESS))
-      return 6;
+      return 12;
     if (Random_Source_Reseed(&source, 42U) != STATUS_CONST(SUCCESS))
-      return 7;
+      return 13;
     if (Random_Source_NextU64(&source, &second) != STATUS_CONST(SUCCESS) ||
         first != second)
-      return 8;
+      return 14;
     if (Random_Source_NextU64(NULL, &second) !=
             STATUS_CONST(INVALID_ARGUMENT) ||
         Random_Source_NextU64(&source, NULL) !=
