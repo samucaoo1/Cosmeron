@@ -91,7 +91,7 @@
   FLAT_QUEUE_EMPTY_PROTOTYPE(SUFFIX);                                 \
   FLAT_QUEUE_SIZE_PROTOTYPE(SUFFIX);                                  \
   FLAT_QUEUE_CAPACITY_PROTOTYPE(SUFFIX);                              \
-  FLAT_QUEUE_IMPLEMENT(TYPE, SUFFIX)                                           \
+  COSMERON_MACRO_INTERNAL_FLAT_QUEUE_IMPLEMENT(TYPE, SUFFIX)                                           \
   FLAT_QUEUE_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                                    \
   FLAT_QUEUE_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)
 
