@@ -1,7 +1,7 @@
 #pragma once
 
-#define TBLOCK_FUNCTION_TABLE(SUFFIX)                                        \
-  typedef struct TBLOCK_FUNC(SUFFIX, FunctionTable) {                       \
+#define TBLOCK_FUNCTION_TABLE_STRUCT(SUFFIX)                                        \
+  typedef struct TBLOCK_FUNCTION_TABLE_TYPE(SUFFIX) {                       \
     OPSTATUS (*clear)(TBLOCK_TYPE(SUFFIX) *);                                      \
     OPSTATUS (*and)(TBLOCK_TYPE(SUFFIX) *, const TBLOCK_TYPE(SUFFIX) *);           \
     OPSTATUS (*or)(TBLOCK_TYPE(SUFFIX) *, const TBLOCK_TYPE(SUFFIX) *);            \
@@ -14,10 +14,10 @@
     OPSTATUS (*bitSet)(TBLOCK_TYPE(SUFFIX) *, uint32_t);                           \
     OPSTATUS (*bitClear)(TBLOCK_TYPE(SUFFIX) *, uint32_t);                         \
     OPSTATUS (*bitCheck)(const TBLOCK_TYPE(SUFFIX) *, uint32_t, bool *);                   \
-  } TBLOCK_FUNC(SUFFIX, FunctionTable);
+  } TBLOCK_FUNCTION_TABLE_TYPE(SUFFIX);
 
 #define TBLOCK_FUNCTION_TABLE_INSTANCE(SUFFIX)                               \
-  static const TBLOCK_FUNC(SUFFIX, FunctionTable) TBLOCK_FUNC(                     \
+  static const TBLOCK_FUNCTION_TABLE_TYPE(SUFFIX) TBLOCK_FUNC(                     \
       SUFFIX, functions) = {                                                   \
       .clear = &TBLOCK_FUNC(SUFFIX, Clear),                                    \
       .and = &TBLOCK_FUNC(SUFFIX, And),                                        \
