@@ -8,8 +8,8 @@
 int main(void) {
   TVector(int, vector)
   TContainer_Linked_List(int, list)
-  TContainer_Tree_AVL_Set(int, tree);
-  TContainer_Tree_BST_Set(int, bst);
+  TTree_AVL_Set(int, tree);
+  TTree_BST_Set(int, bst);
   int value = 0;
   TEST_ASSERT(Container_Flat_Vector_int_PushBack(&vector, 7) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(Container_Flat_Vector_int_PopBack(&vector, &value) == STATUS_CONST(SUCCESS));

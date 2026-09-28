@@ -15,7 +15,7 @@ TREE_AVL_SET_DEFINE_CMP(record, TContainerTestRecord,
                         ContainerTest_Record_Compare)
 
 int main(void) {
-  TContainer_Tree_AVL_Set(record, records);
+  TTree_AVL_Set(record, records);
   for (int key = 63; key >= 0; --key) {
     TContainerTestRecord record = {.key = key, .payload = key * 2};
     TEST_ASSERT(Container_Tree_AVL_Set_record_Insert(&records, record) ==

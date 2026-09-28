@@ -84,7 +84,7 @@
     TYPE needle[] = {(TYPE)'b', (TYPE)'c', 0};                                 \
     TYPE out = (TYPE)0;                                                        \
     size_t index = 0U;                                                         \
-    TComparisonResult cmp;                                                     \
+    CMPOUT cmp;                                                     \
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, Init)(&s) == STATUS_CONST(SUCCESS));     \
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, Init)(&other) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, Init)(&slice) == STATUS_CONST(SUCCESS)); \
@@ -226,9 +226,9 @@ int main(void) {
   TEST_STACK(float, float, 1, 2);
   TEST_STACK(double, double, 1, 2);
 
-  TEST_STRING(utf8, 8);
-  TEST_STRING(utf16, 16);
-  TEST_STRING(utf32, 32);
+  TEST_STRING(uint8_t, 8);
+  TEST_STRING(uint16_t, 16);
+  TEST_STRING(uint32_t, 32);
 
   TEST_FORWARD(int, int, 1, 2, 3);
   TEST_FORWARD(float, float, 1, 2, 3);
