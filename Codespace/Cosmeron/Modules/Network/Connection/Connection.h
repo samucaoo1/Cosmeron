@@ -91,19 +91,19 @@ typedef struct NETWORK_CONNECTION_TYPE(TConnection) {
       NETWORK_CONNECTION_TYPE(TConnection) *connection)
 
 #define NETWORK_CONNECTION_STATE_PROTOTYPE                                   \
-  static inline NETWORK_CONNECTION_TYPE(TState)                               \
-  NETWORK_CONNECTION_FUNC(State)(                                             \
-      const NETWORK_CONNECTION_TYPE(TConnection) *connection)
+  static inline OPSTATUS NETWORK_CONNECTION_FUNC(State)(                      \
+      const NETWORK_CONNECTION_TYPE(TConnection) *connection,                \
+      NETWORK_CONNECTION_TYPE(TState) *outState)
 
 #define NETWORK_CONNECTION_LOCAL_ENDPOINT_PROTOTYPE                          \
-  static inline const NETWORK_ADDRESS_TYPE(TEndpoint) *                       \
-  NETWORK_CONNECTION_FUNC(LocalEndpoint)(                                     \
-      const NETWORK_CONNECTION_TYPE(TConnection) *connection)
+  static inline OPSTATUS NETWORK_CONNECTION_FUNC(LocalEndpoint)(              \
+      const NETWORK_CONNECTION_TYPE(TConnection) *connection,                \
+      NETWORK_ADDRESS_TYPE(TEndpoint) *outEndpoint)
 
 #define NETWORK_CONNECTION_REMOTE_ENDPOINT_PROTOTYPE                         \
-  static inline const NETWORK_ADDRESS_TYPE(TEndpoint) *                       \
-  NETWORK_CONNECTION_FUNC(RemoteEndpoint)(                                    \
-      const NETWORK_CONNECTION_TYPE(TConnection) *connection)
+  static inline OPSTATUS NETWORK_CONNECTION_FUNC(RemoteEndpoint)(             \
+      const NETWORK_CONNECTION_TYPE(TConnection) *connection,                \
+      NETWORK_ADDRESS_TYPE(TEndpoint) *outEndpoint)
 
 NETWORK_CONNECTION_INIT_PROTOTYPE;
 NETWORK_CONNECTION_CONNECT_PROTOTYPE;
@@ -119,16 +119,31 @@ NETWORK_CONNECTION_CLOSE_PROTOTYPE;
 NETWORK_CONNECTION_DESTROY_PROTOTYPE;
 
 NETWORK_CONNECTION_STATE_PROTOTYPE {
-  return connection->state;
+  if (connection == NULL || outState == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  *outState = connection->state;
+  return STATUS_CONST(SUCCESS);
 }
 
-
 NETWORK_CONNECTION_LOCAL_ENDPOINT_PROTOTYPE {
-  return &connection->localEndpoint;
+  if (connection == NULL || outEndpoint == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (connection->state != NETWORK_CONNECTION_CONST(CONNECTED))
+    return STATUS_CONST(NOT_AVAILABLE);
+
+  *outEndpoint = connection->localEndpoint;
+  return STATUS_CONST(SUCCESS);
 }
 
 NETWORK_CONNECTION_REMOTE_ENDPOINT_PROTOTYPE {
-  return &connection->remoteEndpoint;
+  if (connection == NULL || outEndpoint == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (connection->state != NETWORK_CONNECTION_CONST(CONNECTED))
+    return STATUS_CONST(NOT_AVAILABLE);
+
+  *outEndpoint = connection->remoteEndpoint;
+  return STATUS_CONST(SUCCESS);
 }
 
 #include "Impl/Connection.impl"
