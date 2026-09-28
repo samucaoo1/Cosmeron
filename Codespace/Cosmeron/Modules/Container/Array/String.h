@@ -8,12 +8,16 @@
  * ============================================================ */
 
 #define TSTRING_TYPE(SUFFIX) GNS2(FLAT_NS(TString), SUFFIX)
-#define TSTRING_FUNC(SUFFIX, FUNC) GNS2(GNS2(FLAT_NS(String), SUFFIX), FUNC)
+#define TSTRING_NS(SUFFIX) GNS2(FLAT_NS(String), SUFFIX)
+#define TSTRING_FUNC(SUFFIX, FUNC) GNS2(TSTRING_NS(SUFFIX), FUNC)
+#define TSTRING_STRUCT_TAG(SUFFIX) GNS2(TSTRING_NS(SUFFIX), str)
+#define TSTRING_FUNCTION_TABLE_TYPE(SUFFIX) \
+  GNS2(TSTRING_NS(SUFFIX), FunctionTable)
 
 #define TSTRING_STRUCT(CHAR_TYPE, SUFFIX)                                      \
-  CONTAINER_API_FORWARD(TSTRING_FUNC(SUFFIX, FunctionTable))                                \
-  typedef struct TSTRING_FUNC(SUFFIX, str) {                                    \
-    CONTAINER_API_FIELD(TSTRING_FUNC(SUFFIX, FunctionTable))                  \
+  CONTAINER_API_FORWARD(TSTRING_FUNCTION_TABLE_TYPE(SUFFIX))                                \
+  typedef struct TSTRING_STRUCT_TAG(SUFFIX) {                                    \
+    CONTAINER_API_FIELD(TSTRING_FUNCTION_TABLE_TYPE(SUFFIX))                  \
     CHAR_TYPE *data;                                                           \
     size_t size;                                                               \
     size_t capacity;                                                           \
