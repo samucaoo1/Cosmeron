@@ -3,7 +3,7 @@
 #include "../Preprocessor/Compiling.inc"
 #include "Memory.space"
 
-#define ALLOC_FUNC(NAME) GNS2(LIB_PREFIX(Memory), NAME)
+#define ALLOC_FUNC(NAME) MEMORY_FUNC(NAME)
 
 typedef union MEMORY_INS(MaxAlignment_InternalType_) {
   long double longDoubleValue;
