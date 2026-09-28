@@ -13,7 +13,7 @@
   typedef struct THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) {                \
     KEY_TYPE key;                                                              \
     VALUE_TYPE value;                                                          \
-    uint8_t state;                                                             \
+    HASH_NS(BucketState) state;                                                             \
   } THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX);
 
 #define HASH_STRUCT(KEY_SUFFIX, VALUE_SUFFIX)                                 \

@@ -28,14 +28,14 @@
       size_t index = (start + i) % hash->capacity;                             \
       THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *bucket =                   \
           &hash->buckets[index];                                               \
-      if (bucket->state == HASH_BUCKET_OCCUPIED) {                             \
+      if (bucket->state == HASH_CONST(BUCKET_OCCUPIED)) {                             \
         if (EQUAL_FUNCTION(bucket->key, key)) {                               \
           bucket->value = value;                                               \
           return STATUS_CONST(SUCCESS);                                        \
         }                                                                      \
         continue;                                                              \
       }                                                                        \
-      if (bucket->state == HASH_BUCKET_DELETED) {                              \
+      if (bucket->state == HASH_CONST(BUCKET_DELETED)) {                              \
         if (firstDeleted == SIZE_MAX)                                          \
           firstDeleted = index;                                                \
         continue;                                                              \
@@ -44,9 +44,9 @@
         bucket = &hash->buckets[firstDeleted];                                \
       bucket->key = key;                                                       \
       bucket->value = value;                                                   \
-      if (bucket->state == HASH_BUCKET_DELETED)                               \
+      if (bucket->state == HASH_CONST(BUCKET_DELETED))                               \
         --hash->deleted;                                                       \
-      bucket->state = HASH_BUCKET_OCCUPIED;                                   \
+      bucket->state = HASH_CONST(BUCKET_OCCUPIED);                                   \
       ++hash->size;                                                            \
       return STATUS_CONST(SUCCESS);                                            \
     }                                                                          \
@@ -55,7 +55,7 @@
           &hash->buckets[firstDeleted];                                        \
       bucket->key = key;                                                       \
       bucket->value = value;                                                   \
-      bucket->state = HASH_BUCKET_OCCUPIED;                                   \
+      bucket->state = HASH_CONST(BUCKET_OCCUPIED);                                   \
       --hash->deleted;                                                         \
       ++hash->size;                                                            \
       return STATUS_CONST(SUCCESS);                                            \
@@ -73,7 +73,7 @@
         hash, key);                                                            \
     if (!bucket)                                                               \
       return STATUS_CONST(NOT_FOUND);                                          \
-    bucket->state = HASH_BUCKET_DELETED;                                      \
+    bucket->state = HASH_CONST(BUCKET_DELETED);                                      \
     --hash->size;                                                              \
     ++hash->deleted;                                                           \
     return STATUS_CONST(SUCCESS);                                              \

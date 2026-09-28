@@ -51,22 +51,22 @@ TEXT_GRID_CHARACTER_TABLE(X)
       TEXT_GRID_TYPE(SUFFIX) *destination);                                   \
   static inline OPSTATUS TEXT_GRID_FUNC(SUFFIX, Write)(                       \
       TEXT_GRID_TYPE(SUFFIX) *destination,                                    \
-      TDUAL_TYPE(uint16) destination_position,                                \
+      TDUAL_TYPE(uint16) destinationPosition,                                \
       const TEXT_GRID_TYPE(SUFFIX) *source);                                  \
   static inline OPSTATUS TEXT_GRID_FUNC(SUFFIX, WriteRegion)(                 \
       TEXT_GRID_TYPE(SUFFIX) *destination,                                    \
-      TDUAL_TYPE(uint16) destination_position,                                \
+      TDUAL_TYPE(uint16) destinationPosition,                                \
       const TEXT_GRID_TYPE(SUFFIX) *source,                                   \
-      TQUAD_TYPE(uint16) source_region);                                      \
+      TQUAD_TYPE(uint16) sourceRegion);                                      \
   static inline OPSTATUS TEXT_GRID_FUNC(SUFFIX, Blit)(                        \
       TEXT_GRID_TYPE(SUFFIX) *destination,                                    \
-      TDUAL_TYPE(uint16) destination_position,                                \
+      TDUAL_TYPE(uint16) destinationPosition,                                \
       const TEXT_GRID_TYPE(SUFFIX) *source);                                  \
   static inline OPSTATUS TEXT_GRID_FUNC(SUFFIX, BlitRegion)(                  \
       TEXT_GRID_TYPE(SUFFIX) *destination,                                    \
-      TDUAL_TYPE(uint16) destination_position,                                \
+      TDUAL_TYPE(uint16) destinationPosition,                                \
       const TEXT_GRID_TYPE(SUFFIX) *source,                                   \
-      TQUAD_TYPE(uint16) source_region)
+      TQUAD_TYPE(uint16) sourceRegion)
 
 #define X(TYPE, SUFFIX) TEXT_GRID_PROTOTYPES(TYPE, SUFFIX);
 TEXT_GRID_CHARACTER_TABLE(X)

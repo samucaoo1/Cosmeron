@@ -193,35 +193,35 @@ TEXT_INS(GridAttributeCompose)(
   }                                                                           \
   static inline OPSTATUS TEXT_GRID_FUNC(SUFFIX, WriteRegion)(                 \
       TEXT_GRID_TYPE(SUFFIX) *destination,                                    \
-      TDUAL_TYPE(uint16) destination_position,                                \
+      TDUAL_TYPE(uint16) destinationPosition,                                \
       const TEXT_GRID_TYPE(SUFFIX) *source,                                   \
-      TQUAD_TYPE(uint16) source_region) {                                     \
+      TQUAD_TYPE(uint16) sourceRegion) {                                     \
     TEXT_GRID_TYPE(SUFFIX) temporary = {0};                                   \
     uint32_t width, height, x, y;                                             \
     OPSTATUS status;                                                          \
     if (!TEXT_GRID_FUNC(SUFFIX, IsValid)(destination) ||                      \
         !TEXT_GRID_FUNC(SUFFIX, IsValid)(source))                             \
       return STATUS_CONST(INVALID_ARGUMENT);                                     \
-    if (source_region.left > source_region.right ||                           \
-        source_region.top > source_region.bottom)                             \
+    if (sourceRegion.left > sourceRegion.right ||                           \
+        sourceRegion.top > sourceRegion.bottom)                             \
       return STATUS_CONST(INVALID_ARGUMENT);                                     \
-    if (source_region.right >= source->chars.size.col ||                      \
-        source_region.bottom >= source->chars.size.row)                       \
+    if (sourceRegion.right >= source->chars.size.col ||                      \
+        sourceRegion.bottom >= source->chars.size.row)                       \
       return STATUS_CONST(OUT_OF_RANGE);                                         \
-    width = (uint32_t)source_region.right - source_region.left + 1U;          \
-    height = (uint32_t)source_region.bottom - source_region.top + 1U;         \
-    if ((uint32_t)destination_position.x + width > destination->chars.size.col ||\
-        (uint32_t)destination_position.y + height > destination->chars.size.row)\
+    width = (uint32_t)sourceRegion.right - sourceRegion.left + 1U;          \
+    height = (uint32_t)sourceRegion.bottom - sourceRegion.top + 1U;         \
+    if ((uint32_t)destinationPosition.x + width > destination->chars.size.col ||\
+        (uint32_t)destinationPosition.y + height > destination->chars.size.row)\
       return STATUS_CONST(OUT_OF_RANGE);                                         \
-    status = TEXT_GRID_FUNC(SUFFIX, Read)(source, source_region, &temporary); \
+    status = TEXT_GRID_FUNC(SUFFIX, Read)(source, sourceRegion, &temporary); \
     if (status != STATUS_CONST(SUCCESS))                                         \
       return status;                                                          \
     for (y = 0U; y < height; ++y)                                             \
       for (x = 0U; x < width; ++x) {                                          \
         size_t from = (size_t)y * width + x;                                  \
-        size_t to = (size_t)(destination_position.y + y) *                    \
+        size_t to = (size_t)(destinationPosition.y + y) *                    \
                         destination->chars.size.col +                         \
-                    destination_position.x + x;                               \
+                    destinationPosition.x + x;                               \
         destination->chars.data[to] = temporary.chars.data[from];            \
         destination->attributes.data[to] = temporary.attributes.data[from];  \
       }                                                                       \
@@ -230,7 +230,7 @@ TEXT_INS(GridAttributeCompose)(
   }                                                                           \
   static inline OPSTATUS TEXT_GRID_FUNC(SUFFIX, Write)(                       \
       TEXT_GRID_TYPE(SUFFIX) *destination,                                    \
-      TDUAL_TYPE(uint16) destination_position,                                \
+      TDUAL_TYPE(uint16) destinationPosition,                                \
       const TEXT_GRID_TYPE(SUFFIX) *source) {                                 \
     TQUAD_TYPE(uint16) region = {0};                                          \
     if (!TEXT_GRID_FUNC(SUFFIX, IsValid)(source))                             \
@@ -240,7 +240,7 @@ TEXT_INS(GridAttributeCompose)(
     region.right = (uint16_t)(source->chars.size.col - 1U);                   \
     region.bottom = (uint16_t)(source->chars.size.row - 1U);                  \
     return TEXT_GRID_FUNC(SUFFIX, WriteRegion)(destination,                   \
-                                                destination_position, source, \
+                                                destinationPosition, source, \
                                                 region);                      \
   }                                                                           \
   static inline OPSTATUS TEXT_GRID_FUNC(SUFFIX, Resize)(                      \
@@ -302,35 +302,35 @@ TEXT_INS(GridAttributeCompose)(
   }                                                                           \
   static inline OPSTATUS TEXT_GRID_FUNC(SUFFIX, BlitRegion)(                  \
       TEXT_GRID_TYPE(SUFFIX) *destination,                                    \
-      TDUAL_TYPE(uint16) destination_position,                                \
+      TDUAL_TYPE(uint16) destinationPosition,                                \
       const TEXT_GRID_TYPE(SUFFIX) *source,                                   \
-      TQUAD_TYPE(uint16) source_region) {                                     \
+      TQUAD_TYPE(uint16) sourceRegion) {                                     \
     TEXT_GRID_TYPE(SUFFIX) temporary = {0};                                   \
     uint32_t width, height, x, y;                                             \
     OPSTATUS status;                                                          \
     if (!TEXT_GRID_FUNC(SUFFIX, IsValid)(destination) ||                      \
         !TEXT_GRID_FUNC(SUFFIX, IsValid)(source))                             \
       return STATUS_CONST(INVALID_ARGUMENT);                                     \
-    if (source_region.left > source_region.right ||                           \
-        source_region.top > source_region.bottom)                             \
+    if (sourceRegion.left > sourceRegion.right ||                           \
+        sourceRegion.top > sourceRegion.bottom)                             \
       return STATUS_CONST(INVALID_ARGUMENT);                                     \
-    if (source_region.right >= source->chars.size.col ||                      \
-        source_region.bottom >= source->chars.size.row)                       \
+    if (sourceRegion.right >= source->chars.size.col ||                      \
+        sourceRegion.bottom >= source->chars.size.row)                       \
       return STATUS_CONST(OUT_OF_RANGE);                                         \
-    width = (uint32_t)source_region.right - source_region.left + 1U;          \
-    height = (uint32_t)source_region.bottom - source_region.top + 1U;         \
-    if ((uint32_t)destination_position.x + width > destination->chars.size.col ||\
-        (uint32_t)destination_position.y + height > destination->chars.size.row)\
+    width = (uint32_t)sourceRegion.right - sourceRegion.left + 1U;          \
+    height = (uint32_t)sourceRegion.bottom - sourceRegion.top + 1U;         \
+    if ((uint32_t)destinationPosition.x + width > destination->chars.size.col ||\
+        (uint32_t)destinationPosition.y + height > destination->chars.size.row)\
       return STATUS_CONST(OUT_OF_RANGE);                                         \
-    status = TEXT_GRID_FUNC(SUFFIX, Read)(source, source_region, &temporary); \
+    status = TEXT_GRID_FUNC(SUFFIX, Read)(source, sourceRegion, &temporary); \
     if (status != STATUS_CONST(SUCCESS))                                         \
       return status;                                                          \
     for (y = 0U; y < height; ++y)                                             \
       for (x = 0U; x < width; ++x) {                                          \
         size_t from = (size_t)y * width + x;                                  \
-        size_t to = (size_t)(destination_position.y + y) *                    \
+        size_t to = (size_t)(destinationPosition.y + y) *                    \
                         destination->chars.size.col +                         \
-                    destination_position.x + x;                               \
+                    destinationPosition.x + x;                               \
         destination->chars.data[to] = temporary.chars.data[from];            \
         destination->attributes.data[to] = TEXT_INS(GridAttributeCompose)(\
             destination->attributes.data[to],                                \
@@ -341,7 +341,7 @@ TEXT_INS(GridAttributeCompose)(
   }                                                                           \
   static inline OPSTATUS TEXT_GRID_FUNC(SUFFIX, Blit)(                        \
       TEXT_GRID_TYPE(SUFFIX) *destination,                                    \
-      TDUAL_TYPE(uint16) destination_position,                                \
+      TDUAL_TYPE(uint16) destinationPosition,                                \
       const TEXT_GRID_TYPE(SUFFIX) *source) {                                 \
     TQUAD_TYPE(uint16) region = {0};                                          \
     if (!TEXT_GRID_FUNC(SUFFIX, IsValid)(source))                             \
@@ -351,7 +351,7 @@ TEXT_INS(GridAttributeCompose)(
     region.right = (uint16_t)(source->chars.size.col - 1U);                   \
     region.bottom = (uint16_t)(source->chars.size.row - 1U);                  \
     return TEXT_GRID_FUNC(SUFFIX, BlitRegion)(destination,                    \
-                                               destination_position, source,  \
+                                               destinationPosition, source,  \
                                                region);                       \
   }
 
