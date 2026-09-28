@@ -10,7 +10,7 @@ typedef struct MemoryUtilities_Aligned {
 } MemoryUtilities_Aligned;
 
 int main(void) {
-  TArena arena = {0};
+  ARENA_TYPE(TArena) arena = {0};
   int *values = NULL;
   int left = 1;
   int right = 2;
@@ -26,7 +26,7 @@ int main(void) {
 
   if (ARENA_FUNC(Create)(&arena, 256) != STATUS_CONST(SUCCESS))
     return 1;
-  if (ARENA_FUNC(Alloc)(&arena, &raw, sizeof(int)) != STATUS_CONST(SUCCESS) ||
+  if (ARENA_FUNC(AllocBytes)(&arena, &raw, sizeof(int)) != STATUS_CONST(SUCCESS) ||
       raw == NULL)
     return 19;
   if (ARENA_FUNC(AllocArray)(&arena, &rawArray, 2U, sizeof(int)) !=

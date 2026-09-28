@@ -26,12 +26,20 @@ int main(void) {
          STATUS_CONST(INVALID_ARGUMENT));
   assert(NETWORK_CONNECTION_FUNC(Read)(&connection, NULL, 1, &count, NULL) ==
          STATUS_CONST(INVALID_ARGUMENT));
+  assert(count == 123);
+  assert(NETWORK_CONNECTION_FUNC(Read)(&connection, NULL, 0, NULL, NULL) ==
+         STATUS_CONST(INVALID_ARGUMENT));
+  assert(count == 123);
   assert(NETWORK_CONNECTION_FUNC(ReadExact)(NULL, NULL, 0, NULL) ==
          STATUS_CONST(INVALID_ARGUMENT));
   assert(NETWORK_CONNECTION_FUNC(Write)(NULL, NULL, 0, &count, NULL) ==
          STATUS_CONST(INVALID_ARGUMENT));
   assert(NETWORK_CONNECTION_FUNC(Write)(&connection, NULL, 1, &count, NULL) ==
          STATUS_CONST(INVALID_ARGUMENT));
+  assert(count == 123);
+  assert(NETWORK_CONNECTION_FUNC(Write)(&connection, NULL, 0, NULL, NULL) ==
+         STATUS_CONST(INVALID_ARGUMENT));
+  assert(count == 123);
   assert(NETWORK_CONNECTION_FUNC(WriteAll)(NULL, NULL, 0, NULL) ==
          STATUS_CONST(INVALID_ARGUMENT));
   assert(NETWORK_CONNECTION_FUNC(Shutdown)(

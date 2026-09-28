@@ -252,18 +252,48 @@ static void test_poller_accessors(void) {
   event.flags = NETWORK_EVENT_CONST(WRITE);
   event.object = &connection;
   event.userdata = &marker;
-  assert(NETWORK_POLLER_FUNC(Event_UserData)(&event) == &marker);
-  assert(NETWORK_POLLER_FUNC(Event_Connection)(&event) == &connection);
-  assert(NETWORK_POLLER_FUNC(Event_Listener)(&event) == NULL);
-  assert(NETWORK_POLLER_FUNC(Event_Datagram)(&event) == NULL);
+  {
+    void *userdata = NULL;
+    NETWORK_CONNECTION_TYPE(TConnection) *eventConnection = NULL;
+    NETWORK_LISTENER_TYPE(TListener) *eventListener = &listener;
+    NETWORK_DATAGRAM_TYPE(TDatagram) *eventDatagram = &datagram;
+
+    assert(NETWORK_POLLER_FUNC(Event_UserData)(&event, &userdata) ==
+           STATUS_CONST(SUCCESS));
+    assert(userdata == &marker);
+    assert(NETWORK_POLLER_FUNC(Event_Connection)(
+               &event, &eventConnection) == STATUS_CONST(SUCCESS));
+    assert(eventConnection == &connection);
+    assert(NETWORK_POLLER_FUNC(Event_Listener)(
+               &event, &eventListener) == STATUS_CONST(NOT_FOUND));
+    assert(eventListener == &listener);
+    assert(NETWORK_POLLER_FUNC(Event_Datagram)(
+               &event, &eventDatagram) == STATUS_CONST(NOT_FOUND));
+    assert(eventDatagram == &datagram);
+
+    assert(NETWORK_POLLER_FUNC(Event_UserData)(NULL, &userdata) ==
+           STATUS_CONST(INVALID_ARGUMENT));
+    assert(NETWORK_POLLER_FUNC(Event_UserData)(&event, NULL) ==
+           STATUS_CONST(INVALID_ARGUMENT));
+  }
 
   event.sourceType = NETWORK_POLLER_SOURCE_CONST(LISTENER);
   event.object = &listener;
-  assert(NETWORK_POLLER_FUNC(Event_Listener)(&event) == &listener);
+  {
+    NETWORK_LISTENER_TYPE(TListener) *eventListener = NULL;
+    assert(NETWORK_POLLER_FUNC(Event_Listener)(
+               &event, &eventListener) == STATUS_CONST(SUCCESS));
+    assert(eventListener == &listener);
+  }
 
   event.sourceType = NETWORK_POLLER_SOURCE_CONST(DATAGRAM);
   event.object = &datagram;
-  assert(NETWORK_POLLER_FUNC(Event_Datagram)(&event) == &datagram);
+  {
+    NETWORK_DATAGRAM_TYPE(TDatagram) *eventDatagram = NULL;
+    assert(NETWORK_POLLER_FUNC(Event_Datagram)(
+               &event, &eventDatagram) == STATUS_CONST(SUCCESS));
+    assert(eventDatagram == &datagram);
+  }
 
   assert(NETWORK_POLLER_FUNC(Remove)(&poller, connection_handle, NULL) ==
          STATUS_CONST(SUCCESS));

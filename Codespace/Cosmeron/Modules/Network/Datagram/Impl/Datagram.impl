@@ -100,7 +100,8 @@ NETWORK_DATAGRAM_SET_PEER_PROTOTYPE {
 
 NETWORK_DATAGRAM_SEND_TO_PROTOTYPE {
   SOCKET_TYPE(TFamily) family;
-  if (datagram == NULL || endpoint == NULL || (size != 0 && data == NULL)) {
+  if (datagram == NULL || endpoint == NULL || sent == NULL ||
+      (size != 0 && data == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
   }
@@ -124,7 +125,8 @@ NETWORK_DATAGRAM_SEND_TO_PROTOTYPE {
 }
 
 NETWORK_DATAGRAM_RECEIVE_FROM_PROTOTYPE {
-  if (datagram == NULL || (capacity != 0 && buffer == NULL)) {
+  if (datagram == NULL || received == NULL ||
+      (capacity != 0 && buffer == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
   }
@@ -141,7 +143,7 @@ NETWORK_DATAGRAM_RECEIVE_FROM_PROTOTYPE {
 }
 
 NETWORK_DATAGRAM_SEND_PROTOTYPE {
-  if (datagram == NULL || (size != 0 && data == NULL)) {
+  if (datagram == NULL || sent == NULL || (size != 0 && data == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
   }
@@ -158,7 +160,8 @@ NETWORK_DATAGRAM_SEND_PROTOTYPE {
 }
 
 NETWORK_DATAGRAM_RECEIVE_PROTOTYPE {
-  if (datagram == NULL || (capacity != 0 && buffer == NULL)) {
+  if (datagram == NULL || received == NULL ||
+      (capacity != 0 && buffer == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
   }

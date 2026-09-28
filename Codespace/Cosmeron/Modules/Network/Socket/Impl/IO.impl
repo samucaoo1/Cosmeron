@@ -11,7 +11,7 @@ static inline size_t SOCKET_FUNC(_NativeIOSize)(size_t size) {
 SOCKET_SEND_PROTOTYPE {
   size_t amount;
   NETWORK_TYPE(TError) domainError;
-  if (socket == NULL || (size != 0U && data == NULL)) {
+  if (socket == NULL || sent == NULL || (size != 0U && data == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
   }
@@ -30,7 +30,7 @@ SOCKET_SEND_PROTOTYPE {
     return SOCKET_FUNC(_Return)(
         error, domainError, STATUS_CONST(GENERIC_ERROR));
   }
-  if (sent != NULL) *sent = (size_t)result;
+  *sent = (size_t)result;
   return SOCKET_FUNC(_Return)(
         error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
@@ -38,12 +38,12 @@ SOCKET_SEND_PROTOTYPE {
 SOCKET_RECEIVE_PROTOTYPE {
   size_t amount;
   NETWORK_TYPE(TError) domainError;
-  if (socket == NULL || (capacity != 0U && data == NULL)) {
+  if (socket == NULL || received == NULL || (capacity != 0U && data == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
   }
   if (capacity == 0U) {
-    if (received != NULL) *received = 0U;
+    *received = 0U;
     return SOCKET_FUNC(_Return)(
         error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
   }
@@ -63,7 +63,7 @@ SOCKET_RECEIVE_PROTOTYPE {
         error, NETWORK_ERROR_CONST(CONNECTION_CLOSED),
         STATUS_CONST(GENERIC_ERROR));
 
-  if (received != NULL) *received = (size_t)result;
+  *received = (size_t)result;
   return SOCKET_FUNC(_Return)(
         error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
@@ -73,7 +73,8 @@ SOCKET_SEND_TO_PROTOTYPE {
   SOCKET_TYPE(Len) length;
   size_t amount;
   NETWORK_TYPE(TError) domainError;
-  if (socket == NULL || endpoint == NULL || (size != 0U && data == NULL)) {
+  if (socket == NULL || endpoint == NULL || sent == NULL ||
+      (size != 0U && data == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
   }
@@ -105,7 +106,7 @@ SOCKET_RECEIVE_FROM_PROTOTYPE {
   SOCKET_TYPE(Len) length = (SOCKET_TYPE(Len))sizeof(native);
   size_t amount;
   NETWORK_TYPE(TError) domainError;
-  if (socket == NULL || (capacity != 0U && data == NULL)) {
+  if (socket == NULL || received == NULL || (capacity != 0U && data == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
   }

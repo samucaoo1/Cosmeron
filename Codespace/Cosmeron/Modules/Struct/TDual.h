@@ -16,7 +16,6 @@
         TYPE a;                                                               \
         TYPE x1;                                                              \
         TYPE x;                                                               \
-        TYPE X;                                                               \
         TYPE col;                                                             \
         TYPE length;                                                          \
         TYPE real;                                                            \
@@ -30,7 +29,6 @@
         TYPE b;                                                               \
         TYPE x2;                                                              \
         TYPE y;                                                               \
-        TYPE Y;                                                               \
         TYPE row;                                                             \
         TYPE width;                                                           \
         TYPE imaginary;                                                       \

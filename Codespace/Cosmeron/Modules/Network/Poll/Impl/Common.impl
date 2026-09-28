@@ -13,7 +13,7 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_Add)(
     NETWORK_POLLER_TYPE(EventFlags) interests, void *userdata, NETWORK_POLLER_TYPE(Handle) *handle,
     NETWORK_TYPE(TError) *error) {
   NETWORK_POLLER_TYPE(TRegistration) registration;
-  if (poller == NULL || object == NULL) {
+  if (poller == NULL || object == NULL || handle == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
   }
@@ -29,7 +29,7 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_Add)(
     return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
         STATUS_CONST(OUT_OF_MEMORY));
   }
-  if (handle != NULL) *handle = registration.handle;
+  *handle = registration.handle;
   return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 

@@ -111,9 +111,9 @@
   } while (0)
 
 int main(void) {
-  Char8 c8 = 0;
-  Char16 c16 = 0;
-  Char32 c32 = 0;
+  TYPE_ALIAS(TCh8, TChar8) c8 = 0;
+  TYPE_ALIAS(TCh16, TChar16) c16 = 0;
+  TYPE_ALIAS(TCh32, TChar32) c32 = 0;
   TBigint(128, bigint);
   TBlock(128, block);
   TDecimal(128, decimal);

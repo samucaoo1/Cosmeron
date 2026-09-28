@@ -42,7 +42,7 @@ RANDOM_SOURCE_INIT_PROTOTYPE {
   OPSTATUS status;
 
   if (source == NULL || !RANDOM_SOURCE_FUNC(_EngineValid)(engine) ||
-      engine->stateAlignment > MEMORY_MAX_ALIGNMENT)
+      engine->stateAlignment > COSMERON_MACRO_INTERNAL_MEMORY_MAX_ALIGNMENT)
     return STATUS_CONST(INVALID_ARGUMENT);
 
   status = ALLOC_FUNC(AllocBytes)(&state, engine->stateSize);

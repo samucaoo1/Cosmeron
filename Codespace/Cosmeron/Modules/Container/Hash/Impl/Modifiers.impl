@@ -15,7 +15,7 @@
         return status;                                                         \
     }                                                                          \
     if ((hash->size + hash->deleted + 1u) * 100u >                             \
-        hash->capacity * HASH_LOAD_PERCENT) {                                  \
+        hash->capacity * COSMERON_MACRO_INTERNAL_HASH_LOAD_PERCENT) {                                  \
       if (hash->capacity > SIZE_MAX / 2u)                                     \
         return STATUS_CONST(ARITHMETIC_OVERFLOW);                             \
       status = HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, Rehash)(              \
