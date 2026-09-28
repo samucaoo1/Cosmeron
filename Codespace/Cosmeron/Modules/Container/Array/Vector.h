@@ -3,16 +3,20 @@
 #include "Flat.space"
 
 #define FLAT_VECTOR_TYPE(SUFFIX) GNS2(FLAT_NS(TVector), SUFFIX)
-#define FLAT_VECTOR_FUNC(SUFFIX, FUNC) GNS2(GNS2(FLAT_NS(Vector), SUFFIX), FUNC)
+#define FLAT_VECTOR_NS(SUFFIX) GNS2(FLAT_NS(Vector), SUFFIX)
+#define FLAT_VECTOR_FUNC(SUFFIX, FUNC) GNS2(FLAT_VECTOR_NS(SUFFIX), FUNC)
+#define FLAT_VECTOR_STRUCT_TAG(SUFFIX) GNS2(FLAT_VECTOR_NS(SUFFIX), str)
+#define FLAT_VECTOR_FUNCTION_TABLE_TYPE(SUFFIX) \
+  GNS2(FLAT_VECTOR_NS(SUFFIX), FunctionTable)
 
 /* ============================================================
  * Struct
  * ============================================================ */
 
 #define FLAT_VECTOR_STRUCT(TYPE, SUFFIX)                                       \
-  CONTAINER_API_FORWARD(FLAT_VECTOR_FUNC(SUFFIX, FunctionTable))                           \
-  typedef struct FLAT_VECTOR_FUNC(SUFFIX, str) {                               \
-    CONTAINER_API_FIELD(FLAT_VECTOR_FUNC(SUFFIX, FunctionTable))             \
+  CONTAINER_API_FORWARD(FLAT_VECTOR_FUNCTION_TABLE_TYPE(SUFFIX))                           \
+  typedef struct FLAT_VECTOR_STRUCT_TAG(SUFFIX) {                               \
+    CONTAINER_API_FIELD(FLAT_VECTOR_FUNCTION_TABLE_TYPE(SUFFIX))             \
     TYPE *data;                                                                \
     size_t size;                                                               \
     size_t capacity;                                                           \
