@@ -5,14 +5,15 @@
 
 #define ALLOC_FUNC(NAME) GNS2(LIB_PREFIX(Memory), NAME)
 
-typedef union ALLOC_FUNC(MaxAlignment) {
+typedef union MEMORY_INS(MaxAlignment_InternalType_) {
   long double longDoubleValue;
   double doubleValue;
   long long integerValue;
   void *pointerValue;
-} ALLOC_FUNC(MaxAlignment);
+} MEMORY_INS(MaxAlignment_InternalType_);
 
-#define MEMORY_MAX_ALIGNMENT _Alignof(ALLOC_FUNC(MaxAlignment))
+#define COSMERON_MACRO_INTERNAL_MEMORY_MAX_ALIGNMENT                          \
+  _Alignof(MEMORY_INS(MaxAlignment_InternalType_))
 
 #define ALLOC_BYTES_PROTOTYPE                                                  \
   static inline OPSTATUS ALLOC_FUNC(AllocBytes)(void **out, size_t size)
