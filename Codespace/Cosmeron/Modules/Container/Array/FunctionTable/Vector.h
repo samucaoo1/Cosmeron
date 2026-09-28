@@ -3,7 +3,7 @@
 #if CONTAINER_FUNCTION_TABLE_ENABLED
 
 #define FLAT_VECTOR_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                             \
-  typedef struct FLAT_VECTOR_FUNC(SUFFIX, FunctionTable) {                  \
+  typedef struct FLAT_VECTOR_FUNCTION_TABLE_TYPE(SUFFIX) {                  \
     /* Lifecycle */                                                            \
     OPSTATUS (*init)(FLAT_VECTOR_TYPE(SUFFIX) *);                              \
     void (*destroy)(FLAT_VECTOR_TYPE(SUFFIX) *);                               \
@@ -30,10 +30,10 @@
     bool (*empty)(const FLAT_VECTOR_TYPE(SUFFIX) *);                                 \
     size_t (*size)(const FLAT_VECTOR_TYPE(SUFFIX) *);                                \
     size_t (*capacity)(const FLAT_VECTOR_TYPE(SUFFIX) *);                            \
-  } FLAT_VECTOR_FUNC(SUFFIX, FunctionTable);
+  } FLAT_VECTOR_FUNCTION_TABLE_TYPE(SUFFIX);
 
 #define FLAT_VECTOR_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)                    \
-  static const FLAT_VECTOR_FUNC(SUFFIX, FunctionTable)                             \
+  static const FLAT_VECTOR_FUNCTION_TABLE_TYPE(SUFFIX)                             \
       FLAT_VECTOR_FUNC(SUFFIX, functions) = {                                  \
           .init = FLAT_VECTOR_FUNC(SUFFIX, Init),                      \
           .destroy = FLAT_VECTOR_FUNC(SUFFIX, Destroy),                \
