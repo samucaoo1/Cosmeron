@@ -8,6 +8,20 @@ static inline bool RANDOM_SOURCE_FUNC(_EngineValid)(
          engine->stateSize != 0U && engine->stateAlignment != 0U;
 }
 
+static inline bool RANDOM_SOURCE_FUNC(_Valid)(
+    const RANDOM_SOURCE_TYPE(Value) *source) {
+  return source != NULL &&
+         RANDOM_SOURCE_FUNC(_EngineValid)(source->engine) &&
+         source->state != NULL &&
+         source->stateSize >= source->engine->stateSize;
+}
+
+static inline uint64_t RANDOM_SOURCE_FUNC(_NextU64Unchecked)(
+    RANDOM_SOURCE_TYPE(Value) *source) {
+  uint64_t value = source->engine->nextU64(source->state);
+  return source->mixer == NULL ? value : source->mixer(value);
+}
+
 RANDOM_SOURCE_INIT_WITH_STATE_PROTOTYPE {
   if (source == NULL || !RANDOM_SOURCE_FUNC(_EngineValid)(engine) ||
       state == NULL || stateSize < engine->stateSize ||
@@ -61,13 +75,11 @@ RANDOM_SOURCE_RESEED_PROTOTYPE {
 }
 
 RANDOM_SOURCE_NEXT_U64_PROTOTYPE {
-  uint64_t value;
-  if (source == NULL || !RANDOM_SOURCE_FUNC(_EngineValid)(source->engine) ||
-      source->state == NULL || source->stateSize < source->engine->stateSize)
-    return 0U;
+  if (!RANDOM_SOURCE_FUNC(_Valid)(source) || out == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
 
-  value = source->engine->nextU64(source->state);
-  return source->mixer == NULL ? value : source->mixer(value);
+  *out = RANDOM_SOURCE_FUNC(_NextU64Unchecked)(source);
+  return STATUS_CONST(SUCCESS);
 }
 
 RANDOM_SOURCE_DESTROY_PROTOTYPE {
