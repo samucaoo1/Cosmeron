@@ -83,7 +83,7 @@ static inline bool NETWORK_INS(WinSockAPILoad)(NETWORK_INS(WinSockAPI) *api) {
   if (api->module == NULL)
     return false;
 
-#define NETWORK_LOAD_WINSOCK_SYMBOL(MEMBER, SYMBOL)                            \
+#define COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(MEMBER, SYMBOL)                            \
   do {                                                                          \
     FARPROC symbolAddress = GetProcAddress(api->module, (SYMBOL));              \
     if (symbolAddress == NULL || sizeof(api->MEMBER) != sizeof(symbolAddress))  \
@@ -91,36 +91,36 @@ static inline bool NETWORK_INS(WinSockAPILoad)(NETWORK_INS(WinSockAPI) *api) {
     memcpy(&api->MEMBER, &symbolAddress, sizeof(api->MEMBER));                  \
   } while (0)
 
-  NETWORK_LOAD_WINSOCK_SYMBOL(startup, "WSAStartup");
-  NETWORK_LOAD_WINSOCK_SYMBOL(getLastError, "WSAGetLastError");
-  NETWORK_LOAD_WINSOCK_SYMBOL(socket, "socket");
-  NETWORK_LOAD_WINSOCK_SYMBOL(closeSocket, "closesocket");
-  NETWORK_LOAD_WINSOCK_SYMBOL(ioctlSocket, "ioctlsocket");
-  NETWORK_LOAD_WINSOCK_SYMBOL(bind, "bind");
-  NETWORK_LOAD_WINSOCK_SYMBOL(listen, "listen");
-  NETWORK_LOAD_WINSOCK_SYMBOL(accept, "accept");
-  NETWORK_LOAD_WINSOCK_SYMBOL(connect, "connect");
-  NETWORK_LOAD_WINSOCK_SYMBOL(send, "send");
-  NETWORK_LOAD_WINSOCK_SYMBOL(receive, "recv");
-  NETWORK_LOAD_WINSOCK_SYMBOL(sendTo, "sendto");
-  NETWORK_LOAD_WINSOCK_SYMBOL(receiveFrom, "recvfrom");
-  NETWORK_LOAD_WINSOCK_SYMBOL(shutdown, "shutdown");
-  NETWORK_LOAD_WINSOCK_SYMBOL(setSockOpt, "setsockopt");
-  NETWORK_LOAD_WINSOCK_SYMBOL(getSockOpt, "getsockopt");
-  NETWORK_LOAD_WINSOCK_SYMBOL(getSockName, "getsockname");
-  NETWORK_LOAD_WINSOCK_SYMBOL(getPeerName, "getpeername");
-  NETWORK_LOAD_WINSOCK_SYMBOL(select, "select");
-  NETWORK_LOAD_WINSOCK_SYMBOL(getAddrInfo, "getaddrinfo");
-  NETWORK_LOAD_WINSOCK_SYMBOL(freeAddrInfo, "freeaddrinfo");
-  NETWORK_LOAD_WINSOCK_SYMBOL(poll, "WSAPoll");
-  NETWORK_LOAD_WINSOCK_SYMBOL(hostToNetworkShort, "htons");
-  NETWORK_LOAD_WINSOCK_SYMBOL(networkToHostShort, "ntohs");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(startup, "WSAStartup");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(getLastError, "WSAGetLastError");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(socket, "socket");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(closeSocket, "closesocket");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(ioctlSocket, "ioctlsocket");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(bind, "bind");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(listen, "listen");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(accept, "accept");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(connect, "connect");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(send, "send");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(receive, "recv");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(sendTo, "sendto");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(receiveFrom, "recvfrom");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(shutdown, "shutdown");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(setSockOpt, "setsockopt");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(getSockOpt, "getsockopt");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(getSockName, "getsockname");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(getPeerName, "getpeername");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(select, "select");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(getAddrInfo, "getaddrinfo");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(freeAddrInfo, "freeaddrinfo");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(poll, "WSAPoll");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(hostToNetworkShort, "htons");
+  COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL(networkToHostShort, "ntohs");
 
-#undef NETWORK_LOAD_WINSOCK_SYMBOL
+#undef COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL
   return true;
 
 load_failed:
-#undef NETWORK_LOAD_WINSOCK_SYMBOL
+#undef COSMERON_MACRO_INTERNAL_NETWORK_LOAD_WINSOCK_SYMBOL
   FreeLibrary(api->module);
   memset(api, 0, sizeof(*api));
   return false;
