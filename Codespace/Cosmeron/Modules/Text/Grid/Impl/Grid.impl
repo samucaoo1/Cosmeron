@@ -5,18 +5,18 @@ TEXT_INS(GridAttributeResolveInverse)(
     TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute) {
   if ((attribute.flags & TEXT_GRID_ATTRIBUTE_CONST(INVERSE)) != 0U) {
     uint32_t color = attribute.foreground;
-    uint16_t foreground_default =
+    uint16_t foregroundDefault =
         attribute.flags & TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_FOREGROUND);
-    uint16_t background_default =
+    uint16_t backgroundDefault =
         attribute.flags & TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_BACKGROUND);
     attribute.foreground = attribute.background;
     attribute.background = color;
     attribute.flags &= (uint16_t)~(TEXT_GRID_ATTRIBUTE_CONST(INVERSE) |
                                    TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_FOREGROUND) |
                                    TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_BACKGROUND));
-    if (background_default != 0U)
+    if (backgroundDefault != 0U)
       attribute.flags |= TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_FOREGROUND);
-    if (foreground_default != 0U)
+    if (foregroundDefault != 0U)
       attribute.flags |= TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_BACKGROUND);
   }
   return attribute;
@@ -26,16 +26,16 @@ static inline TEXT_GRID_ATTRIBUTE_TYPE(Cell)
 TEXT_INS(GridAttributeCompose)(
     TEXT_GRID_ATTRIBUTE_TYPE(Cell) destination,
     TEXT_GRID_ATTRIBUTE_TYPE(Cell) source) {
-  bool source_transparent;
-  bool destination_transparent;
+  bool sourceTransparent;
+  bool destinationTransparent;
   source = TEXT_INS(GridAttributeResolveInverse)(source);
   destination = TEXT_INS(GridAttributeResolveInverse)(destination);
-  source_transparent =
+  sourceTransparent =
       (source.flags & TEXT_GRID_ATTRIBUTE_CONST(TRANSPARENT_BACKGROUND)) != 0U;
-  destination_transparent =
+  destinationTransparent =
       (destination.flags & TEXT_GRID_ATTRIBUTE_CONST(TRANSPARENT_BACKGROUND)) !=
       0U;
-  if (!source_transparent)
+  if (!sourceTransparent)
     return source;
   source.background = destination.background;
   source.flags &=
@@ -43,7 +43,7 @@ TEXT_INS(GridAttributeCompose)(
                   TEXT_GRID_ATTRIBUTE_CONST(TRANSPARENT_BACKGROUND));
   source.flags |=
       destination.flags & TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_BACKGROUND);
-  if (destination_transparent)
+  if (destinationTransparent)
     source.flags |= TEXT_GRID_ATTRIBUTE_CONST(TRANSPARENT_BACKGROUND);
   return source;
 }
@@ -98,17 +98,24 @@ TEXT_INS(GridAttributeCompose)(
     return TEXT_GRID_FUNC(SUFFIX, ClearWith)(                                 \
         grid, TEXT_GRID_ATTRIBUTE_FUNC(Default)());                           \
   }                                                                           \
-  TEXT_GRID_READ_CELL_PROTOTYPE(TYPE, SUFFIX) {           \
+  TEXT_GRID_READ_CELL_PROTOTYPE(TYPE, SUFFIX) {                              \
+    TYPE temporaryCharacter;                                                  \
+    TEXT_GRID_ATTRIBUTE_TYPE(Cell) temporaryAttribute;                        \
     OPSTATUS status;                                                          \
     if (!TEXT_GRID_FUNC(SUFFIX, IsValid)(grid) || character == NULL ||        \
         attribute == NULL)                                                    \
-      return STATUS_CONST(INVALID_ARGUMENT);                                     \
-    status = TEXT_GRID_CHAR_FUNC(SUFFIX, ReadCell)(&grid->chars, position,    \
-                                                    character);               \
-    return status == STATUS_CONST(SUCCESS)                                       \
-               ? TEXT_GRID_ATTRIBUTE_FUNC(ReadCell)(&grid->attributes,        \
-                                                      position, attribute)    \
-               : status;                                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                  \
+    status = TEXT_GRID_CHAR_FUNC(SUFFIX, ReadCell)(                           \
+        &grid->chars, position, &temporaryCharacter);                         \
+    if (status != STATUS_CONST(SUCCESS))                                      \
+      return status;                                                          \
+    status = TEXT_GRID_ATTRIBUTE_FUNC(ReadCell)(                              \
+        &grid->attributes, position, &temporaryAttribute);                    \
+    if (status != STATUS_CONST(SUCCESS))                                      \
+      return status;                                                          \
+    *character = temporaryCharacter;                                          \
+    *attribute = temporaryAttribute;                                          \
+    return STATUS_CONST(SUCCESS);                                             \
   }                                                                           \
   TEXT_GRID_WRITE_CELL_PROTOTYPE(TYPE, SUFFIX) {             \
     OPSTATUS status;                                                          \
