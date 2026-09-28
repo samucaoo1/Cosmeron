@@ -2,6 +2,7 @@
 
 #include "../Concurrency.space"
 
+#define ATOMIC_TYPE(SUFFIX) CONCURRENCY_TYPE(PP_OP_CAT2(TAtomic, SUFFIX))
 
 #define ATOMIC_LOAD_PROTOTYPE(TYPE, SUFFIX)                                   \
   static inline TYPE ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, Load))(               \
@@ -99,7 +100,6 @@ typedef enum CONCURRENCY_TYPE(MemoryOrder) {
   CONCURRENCY_CONST(ATOMIC, MEMORY_ORDER_SEQ_CST) = __ATOMIC_SEQ_CST
 } CONCURRENCY_TYPE(MemoryOrder);
 
-#define ATOMIC_TYPE(SUFFIX) CONCURRENCY_TYPE(PP_OP_CAT2(TAtomic, SUFFIX))
 
 #define ATOMIC_U32_INIT(VALUE) { (uint32_t)(VALUE) }
 #if CONCURRENCY_HAS_ATOMIC_U64
