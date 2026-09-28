@@ -6,7 +6,6 @@
 #include "../../../Core/Error/Status.h"
 
 typedef struct NETWORK_DATAGRAM_TYPE(TDatagram) {
-  NETWORK_TYPE(TError) lastError;
   NETWORK_ADDRESS_TYPE(TEndpoint) localEndpoint;
   NETWORK_ADDRESS_TYPE(TEndpoint) peerEndpoint;
   bool blocking;
@@ -74,10 +73,6 @@ typedef struct NETWORK_DATAGRAM_TYPE(TDatagram) {
   static inline bool NETWORK_DATAGRAM_FUNC(HasPeer)(                          \
       const NETWORK_DATAGRAM_TYPE(TDatagram) *datagram)
 
-#define NETWORK_DATAGRAM_LAST_ERROR_PROTOTYPE                               \
-  static inline NETWORK_TYPE(TError) NETWORK_DATAGRAM_FUNC(LastError)(       \
-      const NETWORK_DATAGRAM_TYPE(TDatagram) *datagram)
-
 #define NETWORK_DATAGRAM_LOCAL_ENDPOINT_PROTOTYPE                           \
   static inline const NETWORK_ADDRESS_TYPE(TEndpoint) *                      \
   NETWORK_DATAGRAM_FUNC(LocalEndpoint)(                                       \
@@ -104,9 +99,6 @@ NETWORK_DATAGRAM_HAS_PEER_PROTOTYPE {
   return datagram->hasPeer;
 }
 
-NETWORK_DATAGRAM_LAST_ERROR_PROTOTYPE {
-  return datagram->lastError;
-}
 
 NETWORK_DATAGRAM_LOCAL_ENDPOINT_PROTOTYPE {
   return &datagram->localEndpoint;

@@ -192,7 +192,6 @@ static void test_datagram(void) {
 
   assert(NETWORK_DATAGRAM_FUNC(Open)(&peer, SOCKET_CONST(FAMILY_IPV4), NULL) ==
          STATUS_CONST(SUCCESS));
-  assert(NETWORK_DATAGRAM_FUNC(LastError)(&peer) == NETWORK_ERROR_CONST(NONE));
   assert(NETWORK_DATAGRAM_FUNC(PeerEndpoint)(&peer) == NULL);
   assert(NETWORK_DATAGRAM_FUNC(SetBlocking)(&peer, false, NULL) ==
          STATUS_CONST(SUCCESS));

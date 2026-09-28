@@ -1,20 +1,17 @@
 #pragma once
 
 static inline OPSTATUS NETWORK_DATAGRAM_FUNC(_Publish)(
-    NETWORK_DATAGRAM_TYPE(TDatagram) *datagram, NETWORK_TYPE(TError) *error,
-    NETWORK_TYPE(TError) domainError, OPSTATUS status) {
-  if (datagram != NULL)
-    datagram->lastError = domainError;
+    NETWORK_TYPE(TError) *error, NETWORK_TYPE(TError) domainError,
+    OPSTATUS status) {
   if (error != NULL)
     *error = domainError;
   return status;
 }
 
 static inline OPSTATUS NETWORK_DATAGRAM_FUNC(_Fail)(
-    NETWORK_DATAGRAM_TYPE(TDatagram) *datagram, NETWORK_TYPE(TError) *error,
-    NETWORK_TYPE(TError) domainError) {
+    NETWORK_TYPE(TError) *error, NETWORK_TYPE(TError) domainError) {
   return NETWORK_DATAGRAM_FUNC(_Publish)(
-      datagram, error, domainError, STATUS_CONST(GENERIC_ERROR));
+      error, domainError, STATUS_CONST(GENERIC_ERROR));
 }
 
 static inline void NETWORK_DATAGRAM_FUNC(_RefreshLocalEndpoint)(
@@ -30,7 +27,6 @@ NETWORK_DATAGRAM_INIT_PROTOTYPE {
   if (datagram == NULL)
     return;
   memset(datagram, 0, sizeof(*datagram));
-  datagram->lastError = NETWORK_ERROR_CONST(NONE);
   datagram->blocking = true;
   SOCKET_FUNC(Init)(&datagram->socket);
 }
@@ -46,11 +42,10 @@ NETWORK_DATAGRAM_OPEN_PROTOTYPE {
     if (SOCKET_FUNC(Create)(
             &datagram->socket, family, SOCKET_CONST(KIND_DATAGRAM),
             SOCKET_CONST(PROTOCOL_UDP), &socketError) != STATUS_CONST(SUCCESS))
-      return NETWORK_DATAGRAM_FUNC(_Fail)(datagram, error, socketError);
+      return NETWORK_DATAGRAM_FUNC(_Fail)(error, socketError);
   }
   datagram->blocking = true;
-  return NETWORK_DATAGRAM_FUNC(_Publish)(
-      datagram, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+  return NETWORK_DATAGRAM_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 NETWORK_DATAGRAM_BIND_PROTOTYPE {
@@ -66,17 +61,15 @@ NETWORK_DATAGRAM_BIND_PROTOTYPE {
       NETWORK_DATAGRAM_FUNC(Open)(datagram, family, error) != STATUS_CONST(SUCCESS))
     return STATUS_CONST(GENERIC_ERROR);
   if (datagram->socket.family != family)
-    return NETWORK_DATAGRAM_FUNC(_Fail)(
-        datagram, error, NETWORK_ERROR_CONST(ADDRESS_FAMILY_UNSUPPORTED));
+    return NETWORK_DATAGRAM_FUNC(_Fail)(error, NETWORK_ERROR_CONST(ADDRESS_FAMILY_UNSUPPORTED));
   {
     NETWORK_TYPE(TError) socketError;
     if (SOCKET_FUNC(Bind)(
             &datagram->socket, endpoint, &socketError) != STATUS_CONST(SUCCESS))
-      return NETWORK_DATAGRAM_FUNC(_Fail)(datagram, error, socketError);
+      return NETWORK_DATAGRAM_FUNC(_Fail)(error, socketError);
   }
   NETWORK_DATAGRAM_FUNC(_RefreshLocalEndpoint)(datagram);
-  return NETWORK_DATAGRAM_FUNC(_Publish)(
-      datagram, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+  return NETWORK_DATAGRAM_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 NETWORK_DATAGRAM_SET_PEER_PROTOTYPE {
@@ -92,19 +85,17 @@ NETWORK_DATAGRAM_SET_PEER_PROTOTYPE {
       NETWORK_DATAGRAM_FUNC(Open)(datagram, family, error) != STATUS_CONST(SUCCESS))
     return STATUS_CONST(GENERIC_ERROR);
   if (datagram->socket.family != family)
-    return NETWORK_DATAGRAM_FUNC(_Fail)(
-        datagram, error, NETWORK_ERROR_CONST(ADDRESS_FAMILY_UNSUPPORTED));
+    return NETWORK_DATAGRAM_FUNC(_Fail)(error, NETWORK_ERROR_CONST(ADDRESS_FAMILY_UNSUPPORTED));
   {
     NETWORK_TYPE(TError) socketError;
     if (SOCKET_FUNC(Connect)(
             &datagram->socket, endpoint, &socketError) != STATUS_CONST(SUCCESS))
-      return NETWORK_DATAGRAM_FUNC(_Fail)(datagram, error, socketError);
+      return NETWORK_DATAGRAM_FUNC(_Fail)(error, socketError);
   }
   datagram->peerEndpoint = *endpoint;
   datagram->hasPeer = true;
   NETWORK_DATAGRAM_FUNC(_RefreshLocalEndpoint)(datagram);
-  return NETWORK_DATAGRAM_FUNC(_Publish)(
-      datagram, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+  return NETWORK_DATAGRAM_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 NETWORK_DATAGRAM_SEND_TO_PROTOTYPE {
@@ -120,18 +111,16 @@ NETWORK_DATAGRAM_SEND_TO_PROTOTYPE {
       NETWORK_DATAGRAM_FUNC(Open)(datagram, family, error) != STATUS_CONST(SUCCESS))
     return STATUS_CONST(GENERIC_ERROR);
   if (datagram->socket.family != family)
-    return NETWORK_DATAGRAM_FUNC(_Fail)(
-        datagram, error, NETWORK_ERROR_CONST(ADDRESS_FAMILY_UNSUPPORTED));
+    return NETWORK_DATAGRAM_FUNC(_Fail)(error, NETWORK_ERROR_CONST(ADDRESS_FAMILY_UNSUPPORTED));
   {
     NETWORK_TYPE(TError) socketError;
     if (SOCKET_FUNC(SendTo)(
             &datagram->socket, data, size, endpoint, sent, &socketError) !=
         STATUS_CONST(SUCCESS))
-      return NETWORK_DATAGRAM_FUNC(_Fail)(datagram, error, socketError);
+      return NETWORK_DATAGRAM_FUNC(_Fail)(error, socketError);
   }
   NETWORK_DATAGRAM_FUNC(_RefreshLocalEndpoint)(datagram);
-  return NETWORK_DATAGRAM_FUNC(_Publish)(
-      datagram, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+  return NETWORK_DATAGRAM_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 NETWORK_DATAGRAM_RECEIVE_FROM_PROTOTYPE {
@@ -140,17 +129,15 @@ NETWORK_DATAGRAM_RECEIVE_FROM_PROTOTYPE {
     return STATUS_CONST(INVALID_ARGUMENT);
   }
   if (datagram->socket.handle == TSOCKET_NATIVE_INVALID)
-    return NETWORK_DATAGRAM_FUNC(_Fail)(
-        datagram, error, NETWORK_ERROR_CONST(NOT_CONNECTED));
+    return NETWORK_DATAGRAM_FUNC(_Fail)(error, NETWORK_ERROR_CONST(NOT_CONNECTED));
   {
     NETWORK_TYPE(TError) socketError;
     if (SOCKET_FUNC(ReceiveFrom)(
             &datagram->socket, buffer, capacity, sender, received,
             &socketError) != STATUS_CONST(SUCCESS))
-      return NETWORK_DATAGRAM_FUNC(_Fail)(datagram, error, socketError);
+      return NETWORK_DATAGRAM_FUNC(_Fail)(error, socketError);
   }
-  return NETWORK_DATAGRAM_FUNC(_Publish)(
-      datagram, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+  return NETWORK_DATAGRAM_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 NETWORK_DATAGRAM_SEND_PROTOTYPE {
@@ -159,17 +146,15 @@ NETWORK_DATAGRAM_SEND_PROTOTYPE {
     return STATUS_CONST(INVALID_ARGUMENT);
   }
   if (!datagram->hasPeer)
-    return NETWORK_DATAGRAM_FUNC(_Fail)(
-        datagram, error, NETWORK_ERROR_CONST(NOT_CONNECTED));
+    return NETWORK_DATAGRAM_FUNC(_Fail)(error, NETWORK_ERROR_CONST(NOT_CONNECTED));
   {
     NETWORK_TYPE(TError) socketError;
     if (SOCKET_FUNC(Send)(
             &datagram->socket, data, size, sent, &socketError) !=
         STATUS_CONST(SUCCESS))
-      return NETWORK_DATAGRAM_FUNC(_Fail)(datagram, error, socketError);
+      return NETWORK_DATAGRAM_FUNC(_Fail)(error, socketError);
   }
-  return NETWORK_DATAGRAM_FUNC(_Publish)(
-      datagram, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+  return NETWORK_DATAGRAM_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 NETWORK_DATAGRAM_RECEIVE_PROTOTYPE {
@@ -178,17 +163,15 @@ NETWORK_DATAGRAM_RECEIVE_PROTOTYPE {
     return STATUS_CONST(INVALID_ARGUMENT);
   }
   if (!datagram->hasPeer)
-    return NETWORK_DATAGRAM_FUNC(_Fail)(
-        datagram, error, NETWORK_ERROR_CONST(NOT_CONNECTED));
+    return NETWORK_DATAGRAM_FUNC(_Fail)(error, NETWORK_ERROR_CONST(NOT_CONNECTED));
   {
     NETWORK_TYPE(TError) socketError;
     if (SOCKET_FUNC(Receive)(
             &datagram->socket, buffer, capacity, received, &socketError) !=
         STATUS_CONST(SUCCESS))
-      return NETWORK_DATAGRAM_FUNC(_Fail)(datagram, error, socketError);
+      return NETWORK_DATAGRAM_FUNC(_Fail)(error, socketError);
   }
-  return NETWORK_DATAGRAM_FUNC(_Publish)(
-      datagram, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+  return NETWORK_DATAGRAM_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 NETWORK_DATAGRAM_SET_BLOCKING_PROTOTYPE {
@@ -200,54 +183,49 @@ NETWORK_DATAGRAM_SET_BLOCKING_PROTOTYPE {
     NETWORK_TYPE(TError) socketError;
     if (SOCKET_FUNC(SetBlocking)(
             &datagram->socket, blocking, &socketError) != STATUS_CONST(SUCCESS))
-      return NETWORK_DATAGRAM_FUNC(_Fail)(datagram, error, socketError);
+      return NETWORK_DATAGRAM_FUNC(_Fail)(error, socketError);
   }
   datagram->blocking = blocking;
-  return NETWORK_DATAGRAM_FUNC(_Publish)(
-      datagram, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+  return NETWORK_DATAGRAM_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 NETWORK_DATAGRAM_CLEAR_PEER_PROTOTYPE {
   struct sockaddr_storage native;
+  NETWORK_TYPE(TError) domainError = NETWORK_ERROR_CONST(NONE);
+
   if (datagram == NULL) {
-    if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
+    if (error != NULL)
+      *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
   }
+
   if (datagram->socket.handle != TSOCKET_NATIVE_INVALID && datagram->hasPeer) {
     memset(&native, 0, sizeof(native));
     ((struct sockaddr *)&native)->sa_family = AF_UNSPEC;
-    if (TSOCKET_NATIVE_CONNECT(datagram->socket.handle, (struct sockaddr *)&native,
-                (SOCKET_TYPE(Len))sizeof(struct sockaddr)) ==
-        TSOCKET_NATIVE_ERROR) {
+    if (TSOCKET_NATIVE_CONNECT(
+            datagram->socket.handle, (struct sockaddr *)&native,
+            (SOCKET_TYPE(Len))sizeof(struct sockaddr)) == TSOCKET_NATIVE_ERROR) {
 #if OS_WINDOWS
       int nativeError = TSOCKET_NATIVE_ERROR_CODE();
       if (nativeError != WSAEAFNOSUPPORT && nativeError != WSAEINVAL)
-        datagram->lastError = SOCKET_FUNC(_MapNativeError)(nativeError);
+        domainError = SOCKET_FUNC(_MapNativeError)(nativeError);
 #elif OS_MAC
-      {
-        int nativeError = TSOCKET_NATIVE_ERROR_CODE();
-        if (nativeError == EAFNOSUPPORT || nativeError == EINVAL)
-          datagram->lastError = NETWORK_ERROR_CONST(NONE);
-        else
-          datagram->lastError = SOCKET_FUNC(_MapNativeError)(nativeError);
-      }
+      int nativeError = TSOCKET_NATIVE_ERROR_CODE();
+      if (nativeError != EAFNOSUPPORT && nativeError != EINVAL)
+        domainError = SOCKET_FUNC(_MapNativeError)(nativeError);
 #else
-      datagram->lastError =
-          SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
+      domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
 #endif
-    } else {
-      datagram->lastError = NETWORK_ERROR_CONST(NONE);
     }
-  } else {
-    datagram->lastError = NETWORK_ERROR_CONST(NONE);
   }
+
   datagram->hasPeer = false;
   memset(&datagram->peerEndpoint, 0, sizeof(datagram->peerEndpoint));
-  if (datagram->lastError != NETWORK_ERROR_CONST(NONE))
-    return NETWORK_DATAGRAM_FUNC(_Publish)(
-        datagram, error, datagram->lastError, STATUS_CONST(GENERIC_ERROR));
   return NETWORK_DATAGRAM_FUNC(_Publish)(
-      datagram, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+      error, domainError,
+      domainError == NETWORK_ERROR_CONST(NONE)
+          ? STATUS_CONST(SUCCESS)
+          : STATUS_CONST(GENERIC_ERROR));
 }
 
 NETWORK_DATAGRAM_CLOSE_PROTOTYPE {
@@ -255,5 +233,4 @@ NETWORK_DATAGRAM_CLOSE_PROTOTYPE {
     return;
   SOCKET_FUNC(Close)(&datagram->socket);
   datagram->hasPeer = false;
-  datagram->lastError = NETWORK_ERROR_CONST(NONE);
 }
