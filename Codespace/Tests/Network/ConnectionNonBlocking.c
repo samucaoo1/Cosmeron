@@ -10,6 +10,7 @@ int main(void) {
   char byte;
   size_t received = 123;
   NETWORK_TYPE(TError) error = NETWORK_ERROR_CONST(NONE);
+  NETWORK_CONNECTION_TYPE(TState) state;
 
   NETWORK_LISTENER_FUNC(Init)(&listener);
   NETWORK_CONNECTION_FUNC(Init)(&client);
@@ -19,7 +20,8 @@ int main(void) {
 
   assert(NETWORK_LISTENER_FUNC(ListenAt)(&listener, &endpoint, NULL) ==
          STATUS_CONST(SUCCESS));
-  endpoint = *NETWORK_LISTENER_FUNC(LocalEndpoint)(&listener);
+  assert(NETWORK_LISTENER_FUNC(LocalEndpoint)(&listener, &endpoint) ==
+         STATUS_CONST(SUCCESS));
 
   assert(NETWORK_CONNECTION_FUNC(SetBlocking)(&client, false, NULL) ==
          STATUS_CONST(SUCCESS));
@@ -35,8 +37,9 @@ int main(void) {
          STATUS_CONST(SUCCESS));
   assert(received == 123);
   assert(error == NETWORK_ERROR_CONST(WOULD_BLOCK));
-  assert(NETWORK_CONNECTION_FUNC(State)(&client) ==
-         NETWORK_CONNECTION_CONST(CONNECTED));
+  assert(NETWORK_CONNECTION_FUNC(State)(&client, &state) ==
+         STATUS_CONST(SUCCESS));
+  assert(state == NETWORK_CONNECTION_CONST(CONNECTED));
 
   NETWORK_CONNECTION_FUNC(Destroy)(&server);
   NETWORK_CONNECTION_FUNC(Destroy)(&client);
