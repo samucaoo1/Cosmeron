@@ -38,9 +38,9 @@ typedef struct NETWORK_LISTENER_TYPE(TListener) {
       NETWORK_LISTENER_TYPE(TListener) *listener)
 
 #define NETWORK_LISTENER_LOCAL_ENDPOINT_PROTOTYPE                           \
-  static inline const NETWORK_ADDRESS_TYPE(TEndpoint) *                      \
-  NETWORK_LISTENER_FUNC(LocalEndpoint)(                                       \
-      const NETWORK_LISTENER_TYPE(TListener) *listener)
+  static inline OPSTATUS NETWORK_LISTENER_FUNC(LocalEndpoint)(                \
+      const NETWORK_LISTENER_TYPE(TListener) *listener,                      \
+      NETWORK_ADDRESS_TYPE(TEndpoint) *outEndpoint)
 
 NETWORK_LISTENER_INIT_PROTOTYPE;
 NETWORK_LISTENER_LISTEN_PROTOTYPE;
@@ -50,7 +50,13 @@ NETWORK_LISTENER_CLOSE_PROTOTYPE;
 
 
 NETWORK_LISTENER_LOCAL_ENDPOINT_PROTOTYPE {
-  return &listener->localEndpoint;
+  if (listener == NULL || outEndpoint == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (listener->primary.handle == TSOCKET_NATIVE_INVALID)
+    return STATUS_CONST(NOT_AVAILABLE);
+
+  *outEndpoint = listener->localEndpoint;
+  return STATUS_CONST(SUCCESS);
 }
 
 #include "Impl/Listener.impl"
