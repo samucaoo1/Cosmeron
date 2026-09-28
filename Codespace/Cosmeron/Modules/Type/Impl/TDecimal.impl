@@ -58,23 +58,23 @@
                               TDECIMAL_FUNC(SUFFIX, Compare), TDECIMAL_FUNC(SUFFIX, Sub), \
                               TDECIMAL_FUNC(SUFFIX, ShiftLeft))                    \
   TDECIMAL_DIV_PROTOTYPE(SUFFIX) {         \
-    if (!dividend || !divisor)                                                 \
+    if (!dividendDecimal || !divisorDecimal)                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     TDECIMAL_TYPE(SUFFIX) quotient;                                                \
-    OPSTATUS status = TDECIMAL_FUNC(SUFFIX, DivMod)(dividend, divisor, &quotient, NULL); \
+    OPSTATUS status = TDECIMAL_FUNC(SUFFIX, DivMod)(dividendDecimal, divisorDecimal, &quotient, NULL); \
     if (status == STATUS_CONST(SUCCESS))                                       \
-      for (size_t i = 0; i < sizeof(dividend->limb) / sizeof(dividend->limb[0]); ++i) \
-      dividend->limb[i] = quotient.limb[i];                                                    \
+      for (size_t i = 0; i < sizeof(dividendDecimal->limb) / sizeof(dividendDecimal->limb[0]); ++i) \
+      dividendDecimal->limb[i] = quotient.limb[i];                                                    \
     return status;                                                             \
   }                                                                            \
   TDECIMAL_MOD_PROTOTYPE(SUFFIX) {         \
-    if (!dividend || !divisor)                                                 \
+    if (!dividendDecimal || !divisorDecimal)                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     TDECIMAL_TYPE(SUFFIX) remainder;                                               \
-    OPSTATUS status = TDECIMAL_FUNC(SUFFIX, DivMod)(dividend, divisor, NULL, &remainder); \
+    OPSTATUS status = TDECIMAL_FUNC(SUFFIX, DivMod)(dividendDecimal, divisorDecimal, NULL, &remainder); \
     if (status == STATUS_CONST(SUCCESS))                                       \
-      for (size_t i = 0; i < sizeof(dividend->limb) / sizeof(dividend->limb[0]); ++i) \
-      dividend->limb[i] = remainder.limb[i];                                                   \
+      for (size_t i = 0; i < sizeof(dividendDecimal->limb) / sizeof(dividendDecimal->limb[0]); ++i) \
+      dividendDecimal->limb[i] = remainder.limb[i];                                                   \
     return status;                                                             \
   }                                                                            \
   DATA_TYPE_IMPLEMENT_INCREMENT(TYPE, TDECIMAL_FUNC(SUFFIX, Increment),        \
