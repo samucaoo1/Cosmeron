@@ -1,6 +1,6 @@
 #pragma once
 
-#define GRAPH_IMPLEMENT_BFS(VERTEX_SUFFIX, WEIGHT_SUFFIX)                     \
+#define COSMERON_MACRO_INTERNAL_GRAPH_IMPLEMENT_BFS(VERTEX_SUFFIX, WEIGHT_SUFFIX)                     \
   GRAPH_BFS_PROTOTYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) {                         \
     uint8_t *visited = NULL;                                                   \
     size_t *queue = NULL;                                                      \
@@ -45,7 +45,7 @@
     return STATUS_CONST(SUCCESS);                                              \
   }
 
-#define GRAPH_IMPLEMENT_DFS(VERTEX_SUFFIX, WEIGHT_SUFFIX)                     \
+#define COSMERON_MACRO_INTERNAL_GRAPH_IMPLEMENT_DFS(VERTEX_SUFFIX, WEIGHT_SUFFIX)                     \
   GRAPH_DFS_PROTOTYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) {                         \
     uint8_t *visited = NULL;                                                   \
     size_t *stack = NULL;                                                      \
