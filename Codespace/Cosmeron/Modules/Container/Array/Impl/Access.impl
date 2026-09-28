@@ -1,4 +1,4 @@
-#define SEQUENTIAL_ACCESS_AT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)            \
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_ACCESS_AT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)            \
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        size_t index, TYPE **out) {             \
     if (!container || !out)                                                    \
@@ -9,7 +9,7 @@
     return STATUS_CONST(SUCCESS);                                              \
   }
 
-#define SEQUENTIAL_ACCESS_GET(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)           \
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_ACCESS_GET(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)           \
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        size_t index, TYPE *out) {              \
     if (!container || !out)                                                    \
@@ -20,7 +20,7 @@
     return STATUS_CONST(SUCCESS);                                                 \
   }
 
-#define SEQUENTIAL_ACCESS_FRONT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)         \
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_ACCESS_FRONT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)         \
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        TYPE **out) {                           \
     if (!container || !out)                                                    \
@@ -31,7 +31,7 @@
     return STATUS_CONST(SUCCESS);                                              \
   }
 
-#define SEQUENTIAL_ACCESS_BACK(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)          \
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_ACCESS_BACK(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)          \
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        TYPE **out) {                           \
     if (!container || !out)                                                    \
@@ -42,7 +42,7 @@
     return STATUS_CONST(SUCCESS);                                              \
   }
 
-#define SEQUENTIAL_ACCESS_DATA(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)          \
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_ACCESS_DATA(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)          \
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        TYPE **outData) {                       \
     if (!container || !outData)                                                \
