@@ -132,9 +132,9 @@
                     CONTAINER_FLAT_STACK_ASSOC(Capacity),                     \
                     CONTAINER_STRING_ASSOC(Capacity))(&(self))
 
-#define Data(self)                                                             \
+#define Data(self, out)                                                        \
   _Generic(&(self), CONTAINER_VECTOR_ASSOC(Data), CONTAINER_STRING_ASSOC(Data))\
-      (&(self))
+      (&(self), (out))
 
 #define CONTAINER_INSERT_3(self, position, value)                              \
   _Generic(&(self), CONTAINER_VECTOR_ASSOC(Insert))(&(self), (position),      \

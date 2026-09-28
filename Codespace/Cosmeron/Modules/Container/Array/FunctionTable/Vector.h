@@ -14,7 +14,7 @@
     OPSTATUS (*at)(FLAT_VECTOR_TYPE(SUFFIX) *, size_t, TYPE **);                           \
     OPSTATUS (*front)(FLAT_VECTOR_TYPE(SUFFIX) *, TYPE **);                                \
     OPSTATUS (*back)(FLAT_VECTOR_TYPE(SUFFIX) *, TYPE **);                                 \
-    TYPE *(*data)(FLAT_VECTOR_TYPE(SUFFIX) *);                                 \
+    OPSTATUS (*data)(FLAT_VECTOR_TYPE(SUFFIX) *, TYPE **);                                 \
     /* Modifiers */                                                            \
     OPSTATUS (*pushBack)(FLAT_VECTOR_TYPE(SUFFIX) *, TYPE);                   \
     OPSTATUS (*popBack)(FLAT_VECTOR_TYPE(SUFFIX) *, TYPE *);                  \

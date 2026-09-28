@@ -12,8 +12,7 @@
       FLAT_QUEUE_INITIAL_CAPACITY, FLAT_QUEUE_GROWTH_FACTOR)
 
 #define SEQUENTIAL_QUEUE_IMPLEMENT_COMPACT(TYPE, SUFFIX)                       \
-  static inline OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, Compact)(             \
-      FLAT_QUEUE_TYPE(SUFFIX) * queue) {                                       \
+  FLAT_QUEUE_COMPACT_PROTOTYPE(SUFFIX) {                                       \
     if (!queue)                                                                \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
     if (queue->head == 0)                                                      \
@@ -29,8 +28,7 @@
   }
 
 #define SEQUENTIAL_QUEUE_IMPLEMENT_INIT(TYPE, SUFFIX)                          \
-  static inline OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, Init)(                \
-      FLAT_QUEUE_TYPE(SUFFIX) * queue) {                                       \
+  FLAT_QUEUE_INIT_PROTOTYPE(SUFFIX) {                                       \
     if (!queue)                                                                \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
     queue->data = NULL;                                                        \
@@ -41,8 +39,7 @@
   }
 
 #define SEQUENTIAL_QUEUE_IMPLEMENT_DESTROY(TYPE, SUFFIX)                       \
-  static inline void FLAT_QUEUE_FUNC(SUFFIX, Destroy)(                 \
-      FLAT_QUEUE_TYPE(SUFFIX) * queue) {                                       \
+  FLAT_QUEUE_DESTROY_PROTOTYPE(SUFFIX) {                                       \
     if (!queue)                                                                \
       return;                                                                  \
     Memory_Free(queue->data);                                                 \
@@ -57,8 +54,7 @@
                               FLAT_QUEUE_TYPE(SUFFIX))
 
 #define SEQUENTIAL_QUEUE_IMPLEMENT_SHRINK_TO_FIT(TYPE, SUFFIX)                 \
-  static inline OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, ShrinkToFit)(       \
-      FLAT_QUEUE_TYPE(SUFFIX) * queue) {                                       \
+  FLAT_QUEUE_SHRINK_TO_FIT_PROTOTYPE(SUFFIX) {                                       \
     OPSTATUS status = FLAT_QUEUE_FUNC(SUFFIX, Compact)(queue);         \
     if (status != STATUS_CONST(SUCCESS))                                          \
       return status;                                                           \
@@ -81,8 +77,7 @@
   }
 
 #define SEQUENTIAL_QUEUE_IMPLEMENT_PUSH(TYPE, SUFFIX)                          \
-  static inline OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, Push)(                \
-      FLAT_QUEUE_TYPE(SUFFIX) * queue, TYPE value) {                           \
+  FLAT_QUEUE_PUSH_PROTOTYPE(TYPE, SUFFIX) {                           \
     if (!queue)                                                                \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
     if (queue->head > 0 && queue->size == queue->capacity) {                   \
@@ -98,8 +93,7 @@
   }
 
 #define SEQUENTIAL_QUEUE_IMPLEMENT_POP(TYPE, SUFFIX)                           \
-  static inline OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, Pop)(                 \
-      FLAT_QUEUE_TYPE(SUFFIX) * queue, TYPE * outValue) {                     \
+  FLAT_QUEUE_POP_PROTOTYPE(TYPE, SUFFIX) {                     \
     if (!queue || !outValue)                                                   \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue) == 0)                             \
@@ -137,20 +131,17 @@
   }
 
 #define SEQUENTIAL_QUEUE_IMPLEMENT_EMPTY(TYPE, SUFFIX)                         \
-  static inline bool FLAT_QUEUE_FUNC(SUFFIX, Empty)(                   \
-      const FLAT_QUEUE_TYPE(SUFFIX) * queue) {                              \
+  FLAT_QUEUE_EMPTY_PROTOTYPE(SUFFIX) {                              \
     return queue != NULL && SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue) == 0;                          \
   }
 
 #define SEQUENTIAL_QUEUE_IMPLEMENT_SIZE(TYPE, SUFFIX)                          \
-  static inline size_t FLAT_QUEUE_FUNC(SUFFIX, Size)(                  \
-      const FLAT_QUEUE_TYPE(SUFFIX) * queue) {                              \
+  FLAT_QUEUE_SIZE_PROTOTYPE(SUFFIX) {                              \
     return queue ? SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue) : 0U;                               \
   }
 
 #define SEQUENTIAL_QUEUE_IMPLEMENT_CAPACITY(TYPE, SUFFIX)                      \
-  static inline size_t FLAT_QUEUE_FUNC(SUFFIX, Capacity)(              \
-      const FLAT_QUEUE_TYPE(SUFFIX) * queue) {                              \
+  FLAT_QUEUE_CAPACITY_PROTOTYPE(SUFFIX) {                              \
     return queue ? queue->capacity : 0U;                                                    \
   }
 

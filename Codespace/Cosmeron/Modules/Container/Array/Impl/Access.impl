@@ -43,6 +43,10 @@
   }
 
 #define SEQUENTIAL_ACCESS_DATA(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)          \
-  static inline TYPE *FUNCTION_NAME(CONTAINER_STRUCT *container) {             \
-    return container ? container->data : NULL;                                                    \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       TYPE **outData) {                       \
+    if (!container || !outData)                                                \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    *outData = container->data;                                                \
+    return STATUS_CONST(SUCCESS);                                              \
   }

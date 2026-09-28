@@ -63,8 +63,7 @@
       TSTRING_FUNC(SUFFIX, EnsureCapacity), TSTRING_TYPE(SUFFIX))
 
 #define TSTRING_IMPLEMENT_POP_BACK(CHAR_TYPE, SUFFIX)                         \
-  static inline OPSTATUS TSTRING_FUNC(SUFFIX, PopBack)(                       \
-      TSTRING_TYPE(SUFFIX) * str, CHAR_TYPE *outValue) {                     \
+  TSTRING_POP_BACK_PROTOTYPE(CHAR_TYPE, SUFFIX) {                     \
     if (!str || !outValue)                                                     \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (str->size == 0)                                                       \
@@ -76,14 +75,12 @@
   }
 
 #define TSTRING_IMPLEMENT_CAPACITY(SUFFIX)                                    \
-  static inline size_t TSTRING_FUNC(SUFFIX, Capacity)(                        \
-      const TSTRING_TYPE(SUFFIX) *str) {                                           \
+  TSTRING_CAPACITY_PROTOTYPE(SUFFIX) {                                           \
     return str ? str->capacity : 0U;                                                     \
   }
 
 #define TSTRING_IMPLEMENT_INSERT_CHAR(CHAR_TYPE, SUFFIX)                      \
-  static inline OPSTATUS TSTRING_FUNC(SUFFIX, InsertChar)(                    \
-      TSTRING_TYPE(SUFFIX) * str, size_t pos, CHAR_TYPE ch) {                 \
+  TSTRING_INSERT_CHAR_PROTOTYPE(CHAR_TYPE, SUFFIX) {                 \
     if (!str)                                                                  \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
     if (pos > str->size)                                                      \
@@ -116,17 +113,18 @@
   }
 
 #define TSTRING_IMPLEMENT_CSTR(CHAR_TYPE, SUFFIX)                             \
-  TSTRING_CSTR_PROTOTYPE(CHAR_TYPE, SUFFIX) {                        \
-    if (!str)                                                                  \
-      return NULL;                                                             \
+  TSTRING_CSTR_PROTOTYPE(CHAR_TYPE, SUFFIX) {                                 \
     OPSTATUS status;                                                          \
+    if (!str || !outCStr)                                                     \
+      return STATUS_CONST(INVALID_ARGUMENT);                                  \
     if (str->size == 0 || str->data[str->size - 1] != 0) {                    \
       status = TSTRING_FUNC(SUFFIX, Reserve)(str, str->size + 1);             \
-      if (status != STATUS_CONST(SUCCESS))                                       \
-        return NULL;                                                          \
+      if (status != STATUS_CONST(SUCCESS))                                    \
+        return status;                                                        \
       str->data[str->size] = 0;                                               \
     }                                                                         \
-    return str->data;                                                         \
+    *outCStr = str->data;                                                     \
+    return STATUS_CONST(SUCCESS);                                             \
   }
 
 #define TSTRING_IMPLEMENT_APPEND(CHAR_TYPE, SUFFIX)                           \
@@ -271,8 +269,11 @@
   }
 
 #define TSTRING_IMPLEMENT_DATA(CHAR_TYPE, SUFFIX)                             \
-  TSTRING_DATA_PROTOTYPE(CHAR_TYPE, SUFFIX) {                        \
-    return str ? str->data : NULL;                                                          \
+  TSTRING_DATA_PROTOTYPE(CHAR_TYPE, SUFFIX) {                                 \
+    if (!str || !outData)                                                     \
+      return STATUS_CONST(INVALID_ARGUMENT);                                  \
+    *outData = str->data;                                                     \
+    return STATUS_CONST(SUCCESS);                                             \
   }
 
 #define TSTRING_IMPLEMENT(CHAR_TYPE, SUFFIX)                                  \

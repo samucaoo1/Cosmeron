@@ -30,9 +30,9 @@
 #define TSTRING_FROM_CSTR_PROTOTYPE(CHAR_TYPE, SUFFIX)                \
   static inline OPSTATUS TSTRING_FUNC(SUFFIX, FromCStr)(                       \
       TSTRING_TYPE(SUFFIX) * str, const CHAR_TYPE *cstr)
-#define TSTRING_CSTR_PROTOTYPE(CHAR_TYPE, SUFFIX)                     \
-  static inline const CHAR_TYPE *TSTRING_FUNC(SUFFIX, CStr)(                   \
-      TSTRING_TYPE(SUFFIX) * str)
+#define TSTRING_CSTR_PROTOTYPE(CHAR_TYPE, SUFFIX)                             \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, CStr)(                          \
+      TSTRING_TYPE(SUFFIX) *str, const CHAR_TYPE **outCStr)
 #define TSTRING_LENGTH_PROTOTYPE(SUFFIX)                              \
   static inline size_t TSTRING_FUNC(SUFFIX, Length)(const TSTRING_TYPE(SUFFIX) *str)
 #define TSTRING_EMPTY_PROTOTYPE(SUFFIX)                               \
@@ -92,9 +92,9 @@
   static inline OPSTATUS TSTRING_FUNC(SUFFIX, FindStr)(                       \
       const TSTRING_TYPE(SUFFIX) *str, const CHAR_TYPE *needle, size_t start, \
       size_t *index)
-#define TSTRING_DATA_PROTOTYPE(CHAR_TYPE, SUFFIX)                     \
-  static inline CHAR_TYPE *TSTRING_FUNC(SUFFIX,                                \
-                                        Data)(TSTRING_TYPE(SUFFIX) * str)
+#define TSTRING_DATA_PROTOTYPE(CHAR_TYPE, SUFFIX)                             \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, Data)(                          \
+      TSTRING_TYPE(SUFFIX) *str, CHAR_TYPE **outData)
 
 #include "Impl/String.impl"
 #include "FunctionTable/String.h"

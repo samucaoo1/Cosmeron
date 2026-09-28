@@ -62,9 +62,9 @@
   static inline OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, Back)(                       \
       FLAT_VECTOR_TYPE(SUFFIX) * vec, TYPE **out)
 
-#define FLAT_VECTOR_DATA_PROTOTYPE(TYPE, SUFFIX)                      \
-  static inline TYPE *FLAT_VECTOR_FUNC(SUFFIX,                                 \
-                                       Data)(FLAT_VECTOR_TYPE(SUFFIX) * vec)
+#define FLAT_VECTOR_DATA_PROTOTYPE(TYPE, SUFFIX)                              \
+  static inline OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, Data)(                      \
+      FLAT_VECTOR_TYPE(SUFFIX) *vec, TYPE **outData)
 
 /* ============================================================
  * Prototypes — Modifiers

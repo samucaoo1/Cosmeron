@@ -7,7 +7,7 @@
     OPSTATUS (*init)(TSTRING_TYPE(SUFFIX) * str);                              \
     void (*destroy)(TSTRING_TYPE(SUFFIX) * str);                               \
     OPSTATUS (*fromCStr)(TSTRING_TYPE(SUFFIX) * str, const CHAR_TYPE *cstr);  \
-    const CHAR_TYPE *(*cStr)(TSTRING_TYPE(SUFFIX) * str);                     \
+    OPSTATUS (*cStr)(TSTRING_TYPE(SUFFIX) *str, const CHAR_TYPE **outCStr);                     \
     size_t (*length)(const TSTRING_TYPE(SUFFIX) *str);                              \
     size_t (*size)(const TSTRING_TYPE(SUFFIX) *str);                                \
     bool (*empty)(const TSTRING_TYPE(SUFFIX) *str);                                 \
@@ -36,7 +36,7 @@
                      size_t start, size_t *index);                             \
     OPSTATUS (*findStr)(const TSTRING_TYPE(SUFFIX) *str,                       \
                         const CHAR_TYPE *needle, size_t start, size_t *index);                                          \
-    CHAR_TYPE *(*data)(TSTRING_TYPE(SUFFIX) * str);                            \
+    OPSTATUS (*data)(TSTRING_TYPE(SUFFIX) *str, CHAR_TYPE **outData);                            \
   } TSTRING_FUNCTION_TABLE_TYPE(SUFFIX);
 
 #define TSTRING_FUNCTION_TABLE_INSTANCE(CHAR_TYPE, SUFFIX)                   \
