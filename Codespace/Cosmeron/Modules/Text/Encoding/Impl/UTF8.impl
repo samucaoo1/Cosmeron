@@ -1,29 +1,44 @@
 #pragma once
 
-inline static size_t TEXT_UTF8_NS(EncodedLength)(TText_Char32 codepoint) {
+TEXT_UTF8_ENCODED_LENGTH_PROTOTYPE {
   uint_least32_t value = (uint_least32_t)codepoint;
-  if (!TEXT_CODEPOINT_NS(IsScalar)(codepoint))
-    return 0U;
+
+  if (outUnits == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (!TEXT_CODEPOINT_FUNC(IsScalar)(codepoint)) {
+    *outUnits = 0U;
+    return STATUS_CONST(INVALID_SEQUENCE);
+  }
+
   if (value <= UINT32_C(0x7F))
-    return 1U;
-  if (value <= UINT32_C(0x7FF))
-    return 2U;
-  if (value <= UINT32_C(0xFFFF))
-    return 3U;
-  return 4U;
+    *outUnits = 1U;
+  else if (value <= UINT32_C(0x7FF))
+    *outUnits = 2U;
+  else if (value <= UINT32_C(0xFFFF))
+    *outUnits = 3U;
+  else
+    *outUnits = 4U;
+
+  return STATUS_CONST(SUCCESS);
 }
 
-inline static TText_Encode_Result TEXT_UTF8_NS(Encode)(TText_Char32 codepoint,
-                                                       unsigned char *output,
-                                                       size_t capacity) {
+TEXT_UTF8_ENCODE_PROTOTYPE {
   uint_least32_t value = (uint_least32_t)codepoint;
-  size_t length = TEXT_UTF8_NS(EncodedLength)(codepoint);
-  if (length == 0U)
-    return (TText_Encode_Result){0U, TEXT_ERROR_INVALID_SEQUENCE};
-  if (output == NULL)
-    return (TText_Encode_Result){0U, TEXT_ERROR_INVALID_ARGUMENT};
-  if (capacity < length)
-    return (TText_Encode_Result){0U, TEXT_ERROR_INSUFFICIENT_SPACE};
+  size_t length = 0U;
+  OPSTATUS status;
+
+  if (output == NULL || outUnits == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  status = TEXT_UTF8_FUNC(EncodedLength)(codepoint, &length);
+  if (status != STATUS_CONST(SUCCESS)) {
+    *outUnits = 0U;
+    return status;
+  }
+  if (capacity < length) {
+    *outUnits = 0U;
+    return STATUS_CONST(INSUFFICIENT_SPACE);
+  }
 
   if (length == 1U) {
     output[0] = (unsigned char)value;
@@ -32,68 +47,116 @@ inline static TText_Encode_Result TEXT_UTF8_NS(Encode)(TText_Char32 codepoint,
     output[1] = (unsigned char)(UINT32_C(0x80) | (value & UINT32_C(0x3F)));
   } else if (length == 3U) {
     output[0] = (unsigned char)(UINT32_C(0xE0) | (value >> 12U));
-    output[1] = (unsigned char)(UINT32_C(0x80) | ((value >> 6U) & UINT32_C(0x3F)));
+    output[1] =
+        (unsigned char)(UINT32_C(0x80) | ((value >> 6U) & UINT32_C(0x3F)));
     output[2] = (unsigned char)(UINT32_C(0x80) | (value & UINT32_C(0x3F)));
   } else {
     output[0] = (unsigned char)(UINT32_C(0xF0) | (value >> 18U));
-    output[1] = (unsigned char)(UINT32_C(0x80) | ((value >> 12U) & UINT32_C(0x3F)));
-    output[2] = (unsigned char)(UINT32_C(0x80) | ((value >> 6U) & UINT32_C(0x3F)));
+    output[1] =
+        (unsigned char)(UINT32_C(0x80) | ((value >> 12U) & UINT32_C(0x3F)));
+    output[2] =
+        (unsigned char)(UINT32_C(0x80) | ((value >> 6U) & UINT32_C(0x3F)));
     output[3] = (unsigned char)(UINT32_C(0x80) | (value & UINT32_C(0x3F)));
   }
-  return (TText_Encode_Result){length, TEXT_ERROR_NONE};
+
+  *outUnits = length;
+  return STATUS_CONST(SUCCESS);
 }
 
-inline static TText_Decode_Result TEXT_UTF8_NS(Decode)(const unsigned char *input,
-                                                       size_t size) {
+TEXT_UTF8_DECODE_PROTOTYPE {
   uint_least32_t value;
-  size_t length;
   uint_least32_t minimum;
+  size_t length;
   size_t index;
 
-  if (input == NULL)
-    return (TText_Decode_Result){0, 0U, TEXT_ERROR_INVALID_ARGUMENT};
+  if (input == NULL || outCodepoint == NULL || outUnits == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  *outCodepoint = 0;
+  *outUnits = 0U;
+
   if (size == 0U)
-    return (TText_Decode_Result){0, 0U, TEXT_ERROR_INCOMPLETE_SEQUENCE};
-  if (input[0] <= 0x7FU)
-    return (TText_Decode_Result){(TText_Char32)input[0], 1U, TEXT_ERROR_NONE};
-  if (input[0] >= 0xC2U && input[0] <= 0xDFU) {
-    value = input[0] & 0x1FU; length = 2U; minimum = UINT32_C(0x80);
-  } else if (input[0] >= 0xE0U && input[0] <= 0xEFU) {
-    value = input[0] & 0x0FU; length = 3U; minimum = UINT32_C(0x800);
-  } else if (input[0] >= 0xF0U && input[0] <= 0xF4U) {
-    value = input[0] & 0x07U; length = 4U; minimum = UINT32_C(0x10000);
-  } else {
-    return (TText_Decode_Result){0, 1U, TEXT_ERROR_INVALID_SEQUENCE};
+    return STATUS_CONST(INCOMPLETE_SEQUENCE);
+
+  if (input[0] <= 0x7FU) {
+    *outCodepoint = (TEXT_TYPE(TChar32))input[0];
+    *outUnits = 1U;
+    return STATUS_CONST(SUCCESS);
   }
+
+  if (input[0] >= 0xC2U && input[0] <= 0xDFU) {
+    value = input[0] & 0x1FU;
+    length = 2U;
+    minimum = UINT32_C(0x80);
+  } else if (input[0] >= 0xE0U && input[0] <= 0xEFU) {
+    value = input[0] & 0x0FU;
+    length = 3U;
+    minimum = UINT32_C(0x800);
+  } else if (input[0] >= 0xF0U && input[0] <= 0xF4U) {
+    value = input[0] & 0x07U;
+    length = 4U;
+    minimum = UINT32_C(0x10000);
+  } else {
+    *outUnits = 1U;
+    return STATUS_CONST(INVALID_SEQUENCE);
+  }
+
   if (size < length)
-    return (TText_Decode_Result){0, 0U, TEXT_ERROR_INCOMPLETE_SEQUENCE};
+    return STATUS_CONST(INCOMPLETE_SEQUENCE);
+
   for (index = 1U; index < length; ++index) {
-    if ((input[index] & 0xC0U) != 0x80U)
-      return (TText_Decode_Result){0, index, TEXT_ERROR_INVALID_SEQUENCE};
+    if ((input[index] & 0xC0U) != 0x80U) {
+      *outUnits = index;
+      return STATUS_CONST(INVALID_SEQUENCE);
+    }
     value = (value << 6U) | (input[index] & 0x3FU);
   }
-  if (value < minimum || !TEXT_CODEPOINT_NS(IsScalar)((TText_Char32)value))
-    return (TText_Decode_Result){0, length, TEXT_ERROR_INVALID_SEQUENCE};
-  return (TText_Decode_Result){(TText_Char32)value, length, TEXT_ERROR_NONE};
+
+  *outUnits = length;
+  if (value < minimum ||
+      !TEXT_CODEPOINT_FUNC(IsScalar)((TEXT_TYPE(TChar32))value))
+    return STATUS_CONST(INVALID_SEQUENCE);
+
+  *outCodepoint = (TEXT_TYPE(TChar32))value;
+  return STATUS_CONST(SUCCESS);
 }
 
-inline static TText_Measure_Result TEXT_UTF8_NS(Count)(
-    const unsigned char *input, size_t size) {
+TEXT_UTF8_COUNT_PROTOTYPE {
   size_t offset = 0U;
   size_t count = 0U;
+
+  if (outCodepoints == NULL || outUnits == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  *outCodepoints = 0U;
+  *outUnits = 0U;
+
   if (input == NULL && size != 0U)
-    return (TText_Measure_Result){0U, 0U, TEXT_ERROR_INVALID_ARGUMENT};
+    return STATUS_CONST(INVALID_ARGUMENT);
+
   while (offset < size) {
-    TText_Decode_Result decoded = TEXT_UTF8_NS(Decode)(input + offset, size - offset);
-    if (decoded.error != TEXT_ERROR_NONE)
-      return (TText_Measure_Result){count, offset, decoded.error};
-    offset += decoded.units;
+    TEXT_TYPE(TChar32) codepoint;
+    size_t units;
+    OPSTATUS status =
+        TEXT_UTF8_FUNC(Decode)(input + offset, size - offset, &codepoint, &units);
+    (void)codepoint;
+    if (status != STATUS_CONST(SUCCESS)) {
+      *outCodepoints = count;
+      *outUnits = offset;
+      return status;
+    }
+    offset += units;
     ++count;
   }
-  return (TText_Measure_Result){count, offset, TEXT_ERROR_NONE};
+
+  *outCodepoints = count;
+  *outUnits = offset;
+  return STATUS_CONST(SUCCESS);
 }
 
-inline static bool TEXT_UTF8_NS(Validate)(const unsigned char *input,
-                                         size_t size) {
-  return TEXT_UTF8_NS(Count)(input, size).error == TEXT_ERROR_NONE;
+TEXT_UTF8_VALIDATE_PROTOTYPE {
+  size_t codepoints;
+  size_t units;
+  return TEXT_UTF8_FUNC(Count)(input, size, &codepoints, &units) ==
+         STATUS_CONST(SUCCESS);
 }
+/* EOF */
