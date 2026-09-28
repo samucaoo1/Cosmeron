@@ -107,7 +107,7 @@
                                       CONTAINER_STRUCT, NODE_STRUCT)            \
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        NODE_STRUCT *pos,                       \
-                                       NODE_STRUCT **out_next) {               \
+                                       NODE_STRUCT **outNext) {               \
     if (!container)                                                            \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
     if (!pos)                                                                  \
@@ -117,10 +117,10 @@
       current = current->next;                                                 \
     if (!current)                                                              \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
-    NODE_STRUCT *next_node = pos->next;                                        \
+    NODE_STRUCT *nextNode = pos->next;                                        \
     FUNCTION_UNLINK(container, pos);                                           \
-    if (out_next)                                                              \
-      *out_next = next_node;                                                   \
+    if (outNext)                                                              \
+      *outNext = nextNode;                                                   \
     return STATUS_CONST(SUCCESS);                                             \
   }
 
