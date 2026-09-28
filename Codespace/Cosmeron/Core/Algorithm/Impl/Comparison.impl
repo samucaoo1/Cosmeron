@@ -3,18 +3,18 @@
 #define COMPARISON_TYPED_IMPLEMENT(TYPE, SUFFIX)                               \
   COMPARISON_TYPED_PROTOTYPE(TYPE, SUFFIX) {                                   \
     return left < right                                                        \
-               ? COMPARISON_CONST(LOWER)                                       \
-               : (left > right ? COMPARISON_CONST(HIGHER)                      \
-                               : COMPARISON_CONST(EQUAL));                      \
+               ? COMPARISON_CONST(LESS)                                       \
+               : (left > right ? COMPARISON_CONST(GREATER)                      \
+                               : COMPARISON_CONST(SAME));                      \
   }
 
 #define COMPARISON_STRING_IMPLEMENT(TYPE, SUFFIX, FUNCTION)                    \
   COMPARISON_STRING_PROTOTYPE(TYPE, SUFFIX) {                                  \
     int result = FUNCTION(left, right);                                         \
     return result < 0                                                          \
-               ? COMPARISON_CONST(LOWER)                                       \
-               : (result > 0 ? COMPARISON_CONST(HIGHER)                        \
-                             : COMPARISON_CONST(EQUAL));                        \
+               ? COMPARISON_CONST(LESS)                                       \
+               : (result > 0 ? COMPARISON_CONST(GREATER)                        \
+                             : COMPARISON_CONST(SAME));                        \
   }
 
 COMPARISON_BYTES_PROTOTYPE {
@@ -22,15 +22,15 @@ COMPARISON_BYTES_PROTOTYPE {
   int result = memcmp(left, right, minimumSize);
 
   if (result < 0)
-    return COMPARISON_CONST(LOWER);
+    return COMPARISON_CONST(LESS);
   if (result > 0)
-    return COMPARISON_CONST(HIGHER);
+    return COMPARISON_CONST(GREATER);
   if (leftSize < rightSize)
-    return COMPARISON_CONST(LOWER);
+    return COMPARISON_CONST(LESS);
   if (leftSize > rightSize)
-    return COMPARISON_CONST(HIGHER);
+    return COMPARISON_CONST(GREATER);
 
-  return COMPARISON_CONST(EQUAL);
+  return COMPARISON_CONST(SAME);
 }
 
 COMPARISON_INVOKE_PROTOTYPE {

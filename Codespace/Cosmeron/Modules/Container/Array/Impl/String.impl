@@ -238,7 +238,7 @@
     for (size_t i = start; i < str->size; ++i) {                              \
       if (COMPARISON_FUNC(Bytes)(                                              \
               &str->data[i], sizeof(CHAR_TYPE), &ch, sizeof(CHAR_TYPE)) ==     \
-          COMPARISON_CONST(RESULT_EQUAL)) {                                           \
+          COMPARISON_CONST(SAME)) {                                           \
         *index = i;                                                            \
         return STATUS_CONST(SUCCESS);                                             \
       }                                                                        \
@@ -263,7 +263,7 @@
       if (COMPARISON_FUNC(Bytes)(&str->data[i],                                \
                                  needleLen * sizeof(CHAR_TYPE), needle,         \
                                  needleLen * sizeof(CHAR_TYPE)) ==              \
-          COMPARISON_CONST(RESULT_EQUAL)) {                                           \
+          COMPARISON_CONST(SAME)) {                                           \
         *index = i;                                                            \
         return STATUS_CONST(SUCCESS);                                             \
       }                                                                        \

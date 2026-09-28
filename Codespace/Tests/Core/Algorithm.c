@@ -13,24 +13,24 @@ int main(void) {
   int left = 4;
   int right = 9;
 
-  if (Comparison_Compare(int, 1, 2) != COMPARISON_CONST(LOWER))
+  if (Comparison_Compare(int, 1, 2) != COMPARISON_CONST(LESS))
     return 1;
-  if (Comparison_Compare(double, 3.0, 3.0) != COMPARISON_CONST(EQUAL))
+  if (Comparison_Compare(double, 3.0, 3.0) != COMPARISON_CONST(SAME))
     return 2;
-  if (COMPARISON_FUNC(CString)("b", "a") != COMPARISON_CONST(HIGHER))
+  if (COMPARISON_FUNC(CString)("b", "a") != COMPARISON_CONST(GREATER))
     return 3;
-  if (COMPARISON_FUNC(LongDouble)(1.0L, 2.0L) != COMPARISON_CONST(LOWER))
+  if (COMPARISON_FUNC(LongDouble)(1.0L, 2.0L) != COMPARISON_CONST(LESS))
     return 4;
 
   if (COMPARISON_FUNC(Bytes)(lowerBytes, sizeof(lowerBytes), higherBytes,
-                             sizeof(higherBytes)) != COMPARISON_CONST(LOWER))
+                             sizeof(higherBytes)) != COMPARISON_CONST(LESS))
     return 5;
   if (COMPARISON_FUNC(Bytes)(lowerBytes, 1, higherBytes, 2) !=
-      COMPARISON_CONST(LOWER))
+      COMPARISON_CONST(LESS))
     return 6;
 
   if (COMPARISON_FUNC(Invoke)(&left, &right, compare_int_pointer) !=
-      COMPARISON_CONST(LOWER))
+      COMPARISON_CONST(LESS))
     return 7;
 
   return 0;

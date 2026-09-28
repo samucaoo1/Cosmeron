@@ -276,14 +276,14 @@ int main(void) {
     left.limb[0] = 1U;
     right.limb[0] = 2U;
     if (TBIGINT_FUNC(128, Compare)(&left, &right, &comparison) != STATUS_CONST(SUCCESS) ||
-        comparison != COMPARISON_CONST(LOWER))
+        comparison != COMPARISON_CONST(LESS))
       return 43;
     if (TBIGINT_FUNC(128, Compare)(&right, &left, &comparison) != STATUS_CONST(SUCCESS) ||
-        comparison != COMPARISON_CONST(HIGHER))
+        comparison != COMPARISON_CONST(GREATER))
       return 44;
     right = left;
     if (TBIGINT_FUNC(128, Compare)(&left, &right, &comparison) != STATUS_CONST(SUCCESS) ||
-        comparison != COMPARISON_CONST(EQUAL))
+        comparison != COMPARISON_CONST(SAME))
       return 45;
     if (TBIGINT_FUNC(128, Compare)(NULL, &right, &comparison) != STATUS_CONST(INVALID_ARGUMENT))
       return 46;

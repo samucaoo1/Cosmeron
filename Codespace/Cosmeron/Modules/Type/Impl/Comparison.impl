@@ -13,15 +13,15 @@
     const size_t limbCount = sizeof(left->limb) / sizeof(left->limb[0]);      \
     for (size_t i = limbCount; i-- > 0;) {                                    \
       if (left->limb[i] < right->limb[i]) {                                    \
-        *result = COMPARISON_CONST(RESULT_LOWER);                                     \
+        *result = COMPARISON_CONST(LESS);                                     \
         return STATUS_CONST(SUCCESS);                                          \
       }                                                                        \
       if (left->limb[i] > right->limb[i]) {                                    \
-        *result = COMPARISON_CONST(RESULT_HIGHER);                                    \
+        *result = COMPARISON_CONST(GREATER);                                    \
         return STATUS_CONST(SUCCESS);                                          \
       }                                                              \
     }                                                                          \
-    *result = COMPARISON_CONST(RESULT_EQUAL);                                         \
+    *result = COMPARISON_CONST(SAME);                                         \
     return STATUS_CONST(SUCCESS);                                              \
   }
 
@@ -53,7 +53,7 @@
     CMPOUT result;                                                   \
     if (COMPARE_FUNC(left, right, &result) != STATUS_CONST(SUCCESS))            \
       return false;                                                            \
-    return result == COMPARISON_CONST(RESULT_LOWER);                                      \
+    return result == COMPARISON_CONST(LESS);                                      \
   }
 
 #define DATA_TYPE_IMPLEMENT_GREATERTHAN(TYPE, FUNCTION_NAME, COMPARE_FUNC,     \
@@ -63,7 +63,7 @@
     CMPOUT result;                                                   \
     if (COMPARE_FUNC(left, right, &result) != STATUS_CONST(SUCCESS))            \
       return false;                                                            \
-    return result == COMPARISON_CONST(RESULT_HIGHER);                                      \
+    return result == COMPARISON_CONST(GREATER);                                      \
   }
 
 #define DATA_TYPE_IMPLEMENT_LESSOREQUAL(TYPE, FUNCTION_NAME, COMPARE_FUNC,     \
@@ -73,7 +73,7 @@
     CMPOUT result;                                                   \
     if (COMPARE_FUNC(left, right, &result) != STATUS_CONST(SUCCESS))            \
       return false;                                                            \
-    return result != COMPARISON_CONST(RESULT_HIGHER);                                     \
+    return result != COMPARISON_CONST(GREATER);                                     \
   }
 
 #define DATA_TYPE_IMPLEMENT_GREATEROREQUAL(TYPE, FUNCTION_NAME, COMPARE_FUNC,  \
@@ -83,7 +83,7 @@
     CMPOUT result;                                                   \
     if (COMPARE_FUNC(left, right, &result) != STATUS_CONST(SUCCESS))            \
       return false;                                                            \
-    return result != COMPARISON_CONST(RESULT_LOWER);                                     \
+    return result != COMPARISON_CONST(LESS);                                     \
   }
 
 #define DATA_TYPE_IMPLEMENT_ISZERO(TYPE, FUNCTION_NAME, STRUCT_NAME)           \
