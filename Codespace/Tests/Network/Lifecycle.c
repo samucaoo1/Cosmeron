@@ -9,7 +9,7 @@ int main(void) {
   NETWORK_ADDRESS_TYPE(TAddress) loopback;
   NETWORK_ADDRESS_TYPE(TEndpoint) endpoint;
   uint16_t closed_port;
-  NETWORK_TYPE(Error) error = NETWORK_ERROR_CONST(NONE);
+  NETWORK_TYPE(TError) error = NETWORK_ERROR_CONST(NONE);
 
   NETWORK_LISTENER_FUNC(Init)(&listener);
   NETWORK_CONNECTION_FUNC(Init)(&connection);

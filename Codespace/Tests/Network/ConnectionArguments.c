@@ -12,14 +12,14 @@ int main(void) {
   SOCKET_FUNC(Init)(&socket);
 
   assert(SOCKET_FUNC(Create)(
-             &socket, (SOCKET_TYPE(Family))99, SOCKET_CONST(KIND_STREAM),
+             &socket, (SOCKET_TYPE(TFamily))99, SOCKET_CONST(KIND_STREAM),
              SOCKET_CONST(PROTOCOL_TCP), NULL) == STATUS_CONST(INVALID_ARGUMENT));
   assert(socket.handle == TSOCKET_NATIVE_INVALID);
   assert(SOCKET_FUNC(Create)(
              &socket, SOCKET_CONST(FAMILY_IPV4), SOCKET_CONST(KIND_STREAM),
              SOCKET_CONST(PROTOCOL_UDP), NULL) == STATUS_CONST(INVALID_ARGUMENT));
   assert(SOCKET_FUNC(Shutdown)(
-             &socket, (SOCKET_TYPE(Shutdown))99, NULL) ==
+             &socket, (SOCKET_TYPE(TShutdown))99, NULL) ==
          STATUS_CONST(INVALID_ARGUMENT));
 
   assert(NETWORK_CONNECTION_FUNC(Read)(NULL, NULL, 0, &count, NULL) ==
