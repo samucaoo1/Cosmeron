@@ -103,7 +103,7 @@
   CONTAINER_API_BIND(NAME, LINKED_STACK_FUNC(TYPE, functions));                              \
   LINKED_STACK_FUNC(TYPE, Init)(&NAME);
 /* Compatibility alias: prefer LINKED_STACK_INSTANCE_DECLARE. */
-#define TLINKED_NS(Stack)(TYPE, NAME) LINKED_STACK_INSTANCE_DECLARE(TYPE, NAME)
+#define TLinked_Stack(TYPE, NAME) LINKED_STACK_INSTANCE_DECLARE(TYPE, NAME)
 
 /* ============================================================
  * Instanciações
