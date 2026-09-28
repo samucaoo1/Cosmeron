@@ -13,69 +13,69 @@
 #define NETWORK_CONNECTION_DEFAULT_TIMEOUT_SECONDS INT64_C(30)
 
 typedef enum NETWORK_CONNECTION_TYPE(State) {
-  NETWORK_CONNECTION_TYPE(IDLE),
-  NETWORK_CONNECTION_TYPE(CONNECTING),
-  NETWORK_CONNECTION_TYPE(CONNECTED),
-  NETWORK_CONNECTION_TYPE(CLOSING),
-  NETWORK_CONNECTION_TYPE(CLOSED),
-  NETWORK_CONNECTION_TYPE(FAILED)
-} TNetwork_Connection_State;
+  NETWORK_CONNECTION_CONST(IDLE),
+  NETWORK_CONNECTION_CONST(CONNECTING),
+  NETWORK_CONNECTION_CONST(CONNECTED),
+  NETWORK_CONNECTION_CONST(CLOSING),
+  NETWORK_CONNECTION_CONST(CLOSED),
+  NETWORK_CONNECTION_CONST(FAILED)
+} NETWORK_CONNECTION_TYPE(State);
 
 typedef struct NETWORK_CONNECTION_TYPE(TConnection) {
-  TNetwork_Connection_State state;
-  TNetwork_Error lastError;
-  TNetwork_Endpoint localEndpoint;
-  TNetwork_Endpoint remoteEndpoint;
+  NETWORK_CONNECTION_TYPE(State) state;
+  NETWORK_TYPE(Error) lastError;
+  NETWORK_ADDRESS_TYPE(TEndpoint) localEndpoint;
+  NETWORK_ADDRESS_TYPE(TEndpoint) remoteEndpoint;
   char *host;
   uint16_t port;
   bool blocking;
   CHRONOMETRY_TYPE(Duration) connectTimeout;
-  TSocket socket;
-} TNetwork_Connection;
+  SOCKET_TYPE(TSocket) socket;
+} NETWORK_CONNECTION_TYPE(TConnection);
 
-inline static void NETWORK_CONNECTION_FUNC(Init)(TNetwork_Connection *connection);
-inline static OPSTATUS NETWORK_CONNECTION_FUNC(Connect)(
-    TNetwork_Connection *connection, const char *host, uint16_t port,
-    TNetwork_Error *error);
-inline static OPSTATUS NETWORK_CONNECTION_FUNC(ConnectFor)(
-    TNetwork_Connection *connection, const char *host, uint16_t port,
-    CHRONOMETRY_TYPE(Duration) timeout, TNetwork_Error *error);
-inline static OPSTATUS NETWORK_CONNECTION_FUNC(Reconnect)(
-    TNetwork_Connection *connection, TNetwork_Error *error);
-inline static OPSTATUS NETWORK_CONNECTION_FUNC(Read)(
-    TNetwork_Connection *connection, void *buffer, size_t capacity,
-    size_t *bytesRead, TNetwork_Error *error);
-inline static OPSTATUS NETWORK_CONNECTION_FUNC(ReadExact)(
-    TNetwork_Connection *connection, void *buffer, size_t size,
-    TNetwork_Error *error);
-inline static OPSTATUS NETWORK_CONNECTION_FUNC(Write)(
-    TNetwork_Connection *connection, const void *data, size_t size,
-    size_t *bytesWritten, TNetwork_Error *error);
-inline static OPSTATUS NETWORK_CONNECTION_FUNC(WriteAll)(
-    TNetwork_Connection *connection, const void *data, size_t size,
-    TNetwork_Error *error);
-inline static OPSTATUS NETWORK_CONNECTION_FUNC(Shutdown)(
-    TNetwork_Connection *connection, TSocket_Shutdown direction,
-    TNetwork_Error *error);
-inline static OPSTATUS NETWORK_CONNECTION_FUNC(SetBlocking)(
-    TNetwork_Connection *connection, bool blocking, TNetwork_Error *error);
-inline static void NETWORK_CONNECTION_FUNC(Close)(TNetwork_Connection *connection);
-inline static void NETWORK_CONNECTION_FUNC(Destroy)(TNetwork_Connection *connection);
+static inline void NETWORK_CONNECTION_FUNC(Init)(NETWORK_CONNECTION_TYPE(TConnection) *connection);
+static inline OPSTATUS NETWORK_CONNECTION_FUNC(Connect)(
+    NETWORK_CONNECTION_TYPE(TConnection) *connection, const char *host, uint16_t port,
+    NETWORK_TYPE(Error) *error);
+static inline OPSTATUS NETWORK_CONNECTION_FUNC(ConnectFor)(
+    NETWORK_CONNECTION_TYPE(TConnection) *connection, const char *host, uint16_t port,
+    CHRONOMETRY_TYPE(Duration) timeout, NETWORK_TYPE(Error) *error);
+static inline OPSTATUS NETWORK_CONNECTION_FUNC(Reconnect)(
+    NETWORK_CONNECTION_TYPE(TConnection) *connection, NETWORK_TYPE(Error) *error);
+static inline OPSTATUS NETWORK_CONNECTION_FUNC(Read)(
+    NETWORK_CONNECTION_TYPE(TConnection) *connection, void *buffer, size_t capacity,
+    size_t *bytesRead, NETWORK_TYPE(Error) *error);
+static inline OPSTATUS NETWORK_CONNECTION_FUNC(ReadExact)(
+    NETWORK_CONNECTION_TYPE(TConnection) *connection, void *buffer, size_t size,
+    NETWORK_TYPE(Error) *error);
+static inline OPSTATUS NETWORK_CONNECTION_FUNC(Write)(
+    NETWORK_CONNECTION_TYPE(TConnection) *connection, const void *data, size_t size,
+    size_t *bytesWritten, NETWORK_TYPE(Error) *error);
+static inline OPSTATUS NETWORK_CONNECTION_FUNC(WriteAll)(
+    NETWORK_CONNECTION_TYPE(TConnection) *connection, const void *data, size_t size,
+    NETWORK_TYPE(Error) *error);
+static inline OPSTATUS NETWORK_CONNECTION_FUNC(Shutdown)(
+    NETWORK_CONNECTION_TYPE(TConnection) *connection, SOCKET_TYPE(Shutdown) direction,
+    NETWORK_TYPE(Error) *error);
+static inline OPSTATUS NETWORK_CONNECTION_FUNC(SetBlocking)(
+    NETWORK_CONNECTION_TYPE(TConnection) *connection, bool blocking, NETWORK_TYPE(Error) *error);
+static inline void NETWORK_CONNECTION_FUNC(Close)(NETWORK_CONNECTION_TYPE(TConnection) *connection);
+static inline void NETWORK_CONNECTION_FUNC(Destroy)(NETWORK_CONNECTION_TYPE(TConnection) *connection);
 
-static inline TNetwork_Connection_State
-NETWORK_CONNECTION_FUNC(State)(const TNetwork_Connection *connection) {
+static inline NETWORK_CONNECTION_TYPE(State)
+NETWORK_CONNECTION_FUNC(State)(const NETWORK_CONNECTION_TYPE(TConnection) *connection) {
   return connection->state;
 }
-static inline TNetwork_Error
-NETWORK_CONNECTION_FUNC(LastError)(const TNetwork_Connection *connection) {
+static inline NETWORK_TYPE(Error)
+NETWORK_CONNECTION_FUNC(LastError)(const NETWORK_CONNECTION_TYPE(TConnection) *connection) {
   return connection->lastError;
 }
-static inline const TNetwork_Endpoint *
-NETWORK_CONNECTION_FUNC(LocalEndpoint)(const TNetwork_Connection *connection) {
+static inline const NETWORK_ADDRESS_TYPE(TEndpoint) *
+NETWORK_CONNECTION_FUNC(LocalEndpoint)(const NETWORK_CONNECTION_TYPE(TConnection) *connection) {
   return &connection->localEndpoint;
 }
-static inline const TNetwork_Endpoint *
-NETWORK_CONNECTION_FUNC(RemoteEndpoint)(const TNetwork_Connection *connection) {
+static inline const NETWORK_ADDRESS_TYPE(TEndpoint) *
+NETWORK_CONNECTION_FUNC(RemoteEndpoint)(const NETWORK_CONNECTION_TYPE(TConnection) *connection) {
   return &connection->remoteEndpoint;
 }
 

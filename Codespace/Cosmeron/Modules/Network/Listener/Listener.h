@@ -5,31 +5,31 @@
 #define NETWORK_LISTENER_DEFAULT_BACKLOG 128
 
 typedef struct NETWORK_LISTENER_TYPE(TListener) {
-  TNetwork_Error lastError;
-  TNetwork_Endpoint localEndpoint;
+  NETWORK_TYPE(Error) lastError;
+  NETWORK_ADDRESS_TYPE(TEndpoint) localEndpoint;
   bool blocking;
   bool dualStack;
-  TSocket primary;
-  TSocket secondary;
-} TNetwork_Listener;
+  SOCKET_TYPE(TSocket) primary;
+  SOCKET_TYPE(TSocket) secondary;
+} NETWORK_LISTENER_TYPE(TListener);
 
-inline static void NETWORK_LISTENER_FUNC(Init)(TNetwork_Listener *listener);
-inline static OPSTATUS NETWORK_LISTENER_FUNC(Listen)(
-    TNetwork_Listener *listener, uint16_t port, TNetwork_Error *error);
-inline static OPSTATUS NETWORK_LISTENER_FUNC(ListenAt)(
-    TNetwork_Listener *listener, const TNetwork_Endpoint *endpoint,
-    TNetwork_Error *error);
-inline static OPSTATUS NETWORK_LISTENER_FUNC(Accept)(
-    TNetwork_Listener *listener, TNetwork_Connection *connection,
-    TNetwork_Error *error);
-inline static void NETWORK_LISTENER_FUNC(Close)(TNetwork_Listener *listener);
+static inline void NETWORK_LISTENER_FUNC(Init)(NETWORK_LISTENER_TYPE(TListener) *listener);
+static inline OPSTATUS NETWORK_LISTENER_FUNC(Listen)(
+    NETWORK_LISTENER_TYPE(TListener) *listener, uint16_t port, NETWORK_TYPE(Error) *error);
+static inline OPSTATUS NETWORK_LISTENER_FUNC(ListenAt)(
+    NETWORK_LISTENER_TYPE(TListener) *listener, const NETWORK_ADDRESS_TYPE(TEndpoint) *endpoint,
+    NETWORK_TYPE(Error) *error);
+static inline OPSTATUS NETWORK_LISTENER_FUNC(Accept)(
+    NETWORK_LISTENER_TYPE(TListener) *listener, NETWORK_CONNECTION_TYPE(TConnection) *connection,
+    NETWORK_TYPE(Error) *error);
+static inline void NETWORK_LISTENER_FUNC(Close)(NETWORK_LISTENER_TYPE(TListener) *listener);
 
-static inline TNetwork_Error
-NETWORK_LISTENER_FUNC(LastError)(const TNetwork_Listener *listener) {
+static inline NETWORK_TYPE(Error)
+NETWORK_LISTENER_FUNC(LastError)(const NETWORK_LISTENER_TYPE(TListener) *listener) {
   return listener->lastError;
 }
-static inline const TNetwork_Endpoint *
-NETWORK_LISTENER_FUNC(LocalEndpoint)(const TNetwork_Listener *listener) {
+static inline const NETWORK_ADDRESS_TYPE(TEndpoint) *
+NETWORK_LISTENER_FUNC(LocalEndpoint)(const NETWORK_LISTENER_TYPE(TListener) *listener) {
   return &listener->localEndpoint;
 }
 
