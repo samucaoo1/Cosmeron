@@ -8,6 +8,7 @@ int main(void) {
   NETWORK_POLLER_TYPE(TEventVector) events;
   NETWORK_DATAGRAM_TYPE(TDatagram) datagram;
   NETWORK_TYPE(TError) error = NETWORK_ERROR_CONST(NONE);
+  NETWORK_POLLER_TYPE(Handle) handle = 0;
 
   NETWORK_POLLER_FUNC(Init)(&poller);
   assert(FLAT_VECTOR_FUNC(Network_Event, Init)(&events) == STATUS_CONST(SUCCESS));
@@ -16,8 +17,9 @@ int main(void) {
   datagram.socket.handle = (SOCKET_TYPE(Handle))FD_SETSIZE;
 
   assert(NETWORK_POLLER_FUNC(AddDatagram)(
-             &poller, &datagram, NETWORK_EVENT_CONST(READ), NULL, NULL, NULL) ==
+             &poller, &datagram, NETWORK_EVENT_CONST(READ), NULL, &handle, NULL) ==
          STATUS_CONST(SUCCESS));
+  assert(handle != 0);
   assert(NETWORK_POLLER_FUNC(Wait)(&poller, &events, &error) ==
          STATUS_CONST(OUT_OF_RANGE));
   assert(error == NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED));
