@@ -17,7 +17,7 @@ typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor;
  * RB core — shared by set and map
  * ============================================================= */
 
-#define TRB_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                  \
+#define COSMERON_MACRO_INTERNAL_TRB_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                  \
   static inline bool TTREE_FN(T, IsRed)(TTREE_NODE(T) * node) {               \
     return node != NULL && node->color == TREE_RB_RED;                             \
   }                                                                            \
@@ -220,7 +220,7 @@ typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor;
  * CreateNode + Insert — SET
  * ============================================================= */
 
-#define TRB_IMPLEMENT_SET(T, KEY_TYPE, CMP)                                   \
+#define COSMERON_MACRO_INTERNAL_TRB_IMPLEMENT_SET(T, KEY_TYPE, CMP)                                   \
   static inline TTREE_NODE(T) *                                                \
       TTREE_FN(T, CreateNode)(KEY_TYPE key) {                                  \
     TTREE_NODE(T) *_n;                                                        \
@@ -277,7 +277,7 @@ typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor;
  * CreateNode + Insert — MAP
  * ============================================================= */
 
-#define TRB_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                       \
+#define COSMERON_MACRO_INTERNAL_TRB_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                       \
   static inline TTREE_NODE(T) *                                                \
       TTREE_FN(T, CreateNode)(KEY_TYPE key, VALUE_TYPE value) {                \
     TTREE_NODE(T) *_n;                                                        \
@@ -336,18 +336,18 @@ typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor;
  * Full RB SET / MAP expansion
  * ============================================================= */
 
-#define TRB_SET_IMPLEMENT_ALL(T, KEY_TYPE, CMP)                                      \
-  TTREE_NODE_SET(T, KEY_TYPE, TREE_RBColor color;)                                 \
-  TTREE_STRUCT(T)                                                              \
+#define COSMERON_MACRO_INTERNAL_TRB_SET_IMPLEMENT_ALL(T, KEY_TYPE, CMP)                                      \
+  COSMERON_MACRO_INTERNAL_TTREE_NODE_SET(T, KEY_TYPE, TREE_RBColor color;)                                 \
+  COSMERON_MACRO_INTERNAL_TTREE_STRUCT(T)                                                              \
   TTREE_SET_PROTOTYPES(T, KEY_TYPE)                                            \
-  TTREE_COMMON_SET(T, KEY_TYPE, CMP)                                           \
-  TRB_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                        \
-  TRB_IMPLEMENT_SET(T, KEY_TYPE, CMP)
+  COSMERON_MACRO_INTERNAL_TTREE_COMMON_SET(T, KEY_TYPE, CMP)                                           \
+  COSMERON_MACRO_INTERNAL_TRB_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                        \
+  COSMERON_MACRO_INTERNAL_TRB_IMPLEMENT_SET(T, KEY_TYPE, CMP)
 
-#define TRB_MAP_IMPLEMENT_ALL(T, KEY_TYPE, VALUE_TYPE, CMP)                          \
-  TTREE_NODE_MAP(T, KEY_TYPE, VALUE_TYPE, TREE_RBColor color;)                     \
-  TTREE_STRUCT(T)                                                              \
+#define COSMERON_MACRO_INTERNAL_TRB_MAP_IMPLEMENT_ALL(T, KEY_TYPE, VALUE_TYPE, CMP)                          \
+  COSMERON_MACRO_INTERNAL_TTREE_NODE_MAP(T, KEY_TYPE, VALUE_TYPE, TREE_RBColor color;)                     \
+  COSMERON_MACRO_INTERNAL_TTREE_STRUCT(T)                                                              \
   TTREE_MAP_PROTOTYPES(T, KEY_TYPE, VALUE_TYPE)                                \
-  TTREE_COMMON_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                               \
-  TRB_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                        \
-  TRB_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)
+  COSMERON_MACRO_INTERNAL_TTREE_COMMON_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                               \
+  COSMERON_MACRO_INTERNAL_TRB_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                        \
+  COSMERON_MACRO_INTERNAL_TRB_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)
