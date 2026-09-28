@@ -34,7 +34,8 @@ static void test_socket_stream(void) {
 
   assert(NETWORK_LISTENER_FUNC(ListenAt)(&listener, &endpoint, NULL) ==
          STATUS_CONST(SUCCESS));
-  endpoint = *NETWORK_LISTENER_FUNC(LocalEndpoint)(&listener);
+  assert(NETWORK_LISTENER_FUNC(LocalEndpoint)(&listener, &endpoint) ==
+         STATUS_CONST(SUCCESS));
   assert(endpoint.port != 0);
 
   SOCKET_FUNC(Init)(&raw_listener);
@@ -106,7 +107,8 @@ static void test_socket_datagram(void) {
   NETWORK_ADDRESS_FUNC(Endpoint_Create)(&any, &loopback, 0);
   assert(NETWORK_DATAGRAM_FUNC(Bind)(&receiver, &any, NULL) ==
          STATUS_CONST(SUCCESS));
-  destination = *NETWORK_DATAGRAM_FUNC(LocalEndpoint)(&receiver);
+  assert(NETWORK_DATAGRAM_FUNC(LocalEndpoint)(&receiver, &destination) ==
+         STATUS_CONST(SUCCESS));
 
   SOCKET_FUNC(Init)(&sender);
   assert(SOCKET_FUNC(Create)(&sender, SOCKET_CONST(FAMILY_IPV4),
@@ -138,22 +140,51 @@ static void test_connection(void) {
   NETWORK_LISTENER_FUNC(Init)(&listener);
   NETWORK_CONNECTION_FUNC(Init)(&client);
   NETWORK_CONNECTION_FUNC(Init)(&server);
+  {
+    NETWORK_CONNECTION_TYPE(TState) state = NETWORK_CONNECTION_CONST(FAILED);
+    NETWORK_ADDRESS_TYPE(TEndpoint) unchanged = {{0}};
+    unchanged.port = UINT16_C(1234);
+
+    assert(NETWORK_CONNECTION_FUNC(State)(NULL, &state) ==
+           STATUS_CONST(INVALID_ARGUMENT));
+    assert(state == NETWORK_CONNECTION_CONST(FAILED));
+    assert(NETWORK_CONNECTION_FUNC(State)(&client, NULL) ==
+           STATUS_CONST(INVALID_ARGUMENT));
+    assert(NETWORK_CONNECTION_FUNC(LocalEndpoint)(
+               &client, &unchanged) == STATUS_CONST(NOT_AVAILABLE));
+    assert(unchanged.port == UINT16_C(1234));
+    assert(NETWORK_CONNECTION_FUNC(RemoteEndpoint)(
+               &client, &unchanged) == STATUS_CONST(NOT_AVAILABLE));
+    assert(unchanged.port == UINT16_C(1234));
+  }
   NETWORK_ADDRESS_FUNC(IPv4_Loopback)(&loopback);
   NETWORK_ADDRESS_FUNC(Endpoint_Create)(&endpoint, &loopback, 0);
 
   assert(NETWORK_LISTENER_FUNC(ListenAt)(&listener, &endpoint, NULL) ==
          STATUS_CONST(SUCCESS));
-  endpoint = *NETWORK_LISTENER_FUNC(LocalEndpoint)(&listener);
+  assert(NETWORK_LISTENER_FUNC(LocalEndpoint)(&listener, &endpoint) ==
+         STATUS_CONST(SUCCESS));
 
   assert(NETWORK_CONNECTION_FUNC(Connect)(&client, "127.0.0.1",
                                           endpoint.port, NULL) ==
          STATUS_CONST(SUCCESS));
   assert(NETWORK_LISTENER_FUNC(Accept)(&listener, &server, NULL) ==
          STATUS_CONST(SUCCESS));
-  assert(NETWORK_CONNECTION_FUNC(State)(&client) ==
-         NETWORK_CONNECTION_CONST(CONNECTED));
-  assert(NETWORK_CONNECTION_FUNC(LocalEndpoint)(&client)->port != 0);
-  assert(NETWORK_CONNECTION_FUNC(RemoteEndpoint)(&client)->port == endpoint.port);
+  {
+    NETWORK_CONNECTION_TYPE(TState) state;
+    NETWORK_ADDRESS_TYPE(TEndpoint) localEndpoint;
+    NETWORK_ADDRESS_TYPE(TEndpoint) remoteEndpoint;
+
+    assert(NETWORK_CONNECTION_FUNC(State)(&client, &state) ==
+           STATUS_CONST(SUCCESS));
+    assert(state == NETWORK_CONNECTION_CONST(CONNECTED));
+    assert(NETWORK_CONNECTION_FUNC(LocalEndpoint)(
+               &client, &localEndpoint) == STATUS_CONST(SUCCESS));
+    assert(localEndpoint.port != 0);
+    assert(NETWORK_CONNECTION_FUNC(RemoteEndpoint)(
+               &client, &remoteEndpoint) == STATUS_CONST(SUCCESS));
+    assert(remoteEndpoint.port == endpoint.port);
+  }
 
   assert(NETWORK_CONNECTION_FUNC(Write)(&client, &byte, 1U, &count, NULL) ==
          STATUS_CONST(SUCCESS));
@@ -185,12 +216,30 @@ static void test_datagram(void) {
 
   NETWORK_DATAGRAM_FUNC(Init)(&receiver);
   NETWORK_DATAGRAM_FUNC(Init)(&peer);
+  assert(!NETWORK_DATAGRAM_FUNC(HasPeer)(NULL));
+  {
+    NETWORK_ADDRESS_TYPE(TEndpoint) unchanged = {{0}};
+    unchanged.port = UINT16_C(4321);
+    assert(NETWORK_DATAGRAM_FUNC(LocalEndpoint)(
+               &peer, &unchanged) == STATUS_CONST(NOT_AVAILABLE));
+    assert(unchanged.port == UINT16_C(4321));
+    assert(NETWORK_DATAGRAM_FUNC(PeerEndpoint)(
+               NULL, &unchanged) == STATUS_CONST(INVALID_ARGUMENT));
+    assert(unchanged.port == UINT16_C(4321));
+  }
   NETWORK_ADDRESS_FUNC(IPv4_Loopback)(&loopback);
   NETWORK_ADDRESS_FUNC(Endpoint_Create)(&any, &loopback, 0);
 
   assert(NETWORK_DATAGRAM_FUNC(Open)(&peer, SOCKET_CONST(FAMILY_IPV4), NULL) ==
          STATUS_CONST(SUCCESS));
-  assert(NETWORK_DATAGRAM_FUNC(PeerEndpoint)(&peer) == NULL);
+  {
+    NETWORK_ADDRESS_TYPE(TEndpoint) peerEndpoint = destination;
+    assert(NETWORK_DATAGRAM_FUNC(PeerEndpoint)(
+               &peer, &peerEndpoint) == STATUS_CONST(NOT_FOUND));
+    assert(NETWORK_ADDRESS_FUNC(Equal)(
+        &peerEndpoint.address, &destination.address));
+    assert(peerEndpoint.port == destination.port);
+  }
   assert(NETWORK_DATAGRAM_FUNC(SetBlocking)(&peer, false, NULL) ==
          STATUS_CONST(SUCCESS));
   assert(NETWORK_DATAGRAM_FUNC(SetBlocking)(&peer, true, NULL) ==
@@ -198,10 +247,16 @@ static void test_datagram(void) {
 
   assert(NETWORK_DATAGRAM_FUNC(Bind)(&receiver, &any, NULL) ==
          STATUS_CONST(SUCCESS));
-  destination = *NETWORK_DATAGRAM_FUNC(LocalEndpoint)(&receiver);
+  assert(NETWORK_DATAGRAM_FUNC(LocalEndpoint)(&receiver, &destination) ==
+         STATUS_CONST(SUCCESS));
   assert(NETWORK_DATAGRAM_FUNC(SetPeer)(&peer, &destination, NULL) ==
          STATUS_CONST(SUCCESS));
-  assert(NETWORK_DATAGRAM_FUNC(PeerEndpoint)(&peer) != NULL);
+  {
+    NETWORK_ADDRESS_TYPE(TEndpoint) peerEndpoint;
+    assert(NETWORK_DATAGRAM_FUNC(PeerEndpoint)(
+               &peer, &peerEndpoint) == STATUS_CONST(SUCCESS));
+    assert(peerEndpoint.port == destination.port);
+  }
 
   assert(NETWORK_DATAGRAM_FUNC(Send)(&peer, message, sizeof(message), &sent,
                                      NULL) == STATUS_CONST(SUCCESS));
@@ -310,10 +365,20 @@ static void test_poller_accessors(void) {
 
 static void test_listener_listen(void) {
   NETWORK_LISTENER_TYPE(TListener) listener;
+  NETWORK_ADDRESS_TYPE(TEndpoint) localEndpoint = {{0}};
+  localEndpoint.port = UINT16_C(999);
   NETWORK_LISTENER_FUNC(Init)(&listener);
+  assert(NETWORK_LISTENER_FUNC(LocalEndpoint)(
+             &listener, &localEndpoint) == STATUS_CONST(NOT_AVAILABLE));
+  assert(localEndpoint.port == UINT16_C(999));
   assert(NETWORK_LISTENER_FUNC(Listen)(&listener, 0, NULL) ==
          STATUS_CONST(SUCCESS));
-  assert(NETWORK_LISTENER_FUNC(LocalEndpoint)(&listener)->port != 0);
+  {
+    NETWORK_ADDRESS_TYPE(TEndpoint) localEndpoint;
+    assert(NETWORK_LISTENER_FUNC(LocalEndpoint)(
+               &listener, &localEndpoint) == STATUS_CONST(SUCCESS));
+    assert(localEndpoint.port != 0);
+  }
   NETWORK_LISTENER_FUNC(Close)(&listener);
 }
 
