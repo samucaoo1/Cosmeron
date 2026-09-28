@@ -3,7 +3,7 @@
 #if CONTAINER_FUNCTION_TABLE_ENABLED
 
 #define LINKED_QUEUE_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                           \
-  typedef struct LINKED_QUEUE_FUNC(SUFFIX, FunctionTable) {               \
+  typedef struct LINKED_QUEUE_FUNCTION_TABLE_TYPE(SUFFIX) {               \
     /* Lifecycle */                                                            \
     OPSTATUS (*init)(LINKED_QUEUE_TYPE(SUFFIX) *);                            \
     void (*destroy)(LINKED_QUEUE_TYPE(SUFFIX) *);                             \
@@ -17,10 +17,10 @@
     /* Observers */                                                            \
     bool (*empty)(const LINKED_QUEUE_TYPE(SUFFIX) *);                               \
     size_t (*size)(const LINKED_QUEUE_TYPE(SUFFIX) *);                              \
-  } LINKED_QUEUE_FUNC(SUFFIX, FunctionTable);
+  } LINKED_QUEUE_FUNCTION_TABLE_TYPE(SUFFIX);
 
 #define LINKED_QUEUE_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)                  \
-  static const LINKED_QUEUE_FUNC(SUFFIX, FunctionTable)                           \
+  static const LINKED_QUEUE_FUNCTION_TABLE_TYPE(SUFFIX)                           \
       LINKED_QUEUE_FUNC(SUFFIX, functions) = {                                \
           /* Lifecycle */                                                       \
           .init = LINKED_QUEUE_FUNC(SUFFIX, Init),                    \
