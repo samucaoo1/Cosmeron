@@ -28,8 +28,8 @@
                                           CONTAINER_STRUCT)                     \
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        TYPE *outValue) {                      \
-    if (!container)                                                            \
-      return STATUS_CONST(INVALID_ARGUMENT);                                      \
+    if (!container || !outValue)                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (!container->head)                                                      \
       return STATUS_CONST(OUT_OF_RANGE);                                      \
     *outValue = container->head->value;                                    \
