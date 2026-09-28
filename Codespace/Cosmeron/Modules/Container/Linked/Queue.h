@@ -11,15 +11,19 @@
 
 #define LINKED_QUEUE_TYPE(SUFFIX) GNS2(LINKED_NS(TQueue), SUFFIX)
 
-#define LINKED_QUEUE_FUNC(SUFFIX, FUNC) GNS2(GNS2(LINKED_NS(Queue), SUFFIX), FUNC)
+#define LINKED_QUEUE_NS(SUFFIX) GNS2(LINKED_NS(Queue), SUFFIX)
+#define LINKED_QUEUE_FUNC(SUFFIX, FUNC) GNS2(LINKED_QUEUE_NS(SUFFIX), FUNC)
+#define LINKED_QUEUE_STRUCT_TAG(SUFFIX) GNS2(LINKED_QUEUE_NS(SUFFIX), str)
+#define LINKED_QUEUE_FUNCTION_TABLE_TYPE(SUFFIX) \
+  GNS2(LINKED_QUEUE_NS(SUFFIX), FunctionTable)
 
 #define LINKED_QUEUE_NODE_TYPE(SUFFIX)                                         \
   SINGLE_LINKED_NODE_TYPE(SUFFIX, LINKED_NS(Queue))
 
 #define LINKED_QUEUE_STRUCT(TYPE, SUFFIX)                                      \
-  CONTAINER_API_FORWARD(LINKED_QUEUE_FUNC(SUFFIX, FunctionTable))                          \
-  typedef struct LINKED_QUEUE_FUNC(SUFFIX, str) {                              \
-    CONTAINER_API_FIELD(LINKED_QUEUE_FUNC(SUFFIX, FunctionTable))            \
+  CONTAINER_API_FORWARD(LINKED_QUEUE_FUNCTION_TABLE_TYPE(SUFFIX))                          \
+  typedef struct LINKED_QUEUE_STRUCT_TAG(SUFFIX) {                              \
+    CONTAINER_API_FIELD(LINKED_QUEUE_FUNCTION_TABLE_TYPE(SUFFIX))            \
     LINKED_QUEUE_NODE_TYPE(SUFFIX) * head;                                     \
     LINKED_QUEUE_NODE_TYPE(SUFFIX) * tail;                                     \
     size_t size;                                                               \
