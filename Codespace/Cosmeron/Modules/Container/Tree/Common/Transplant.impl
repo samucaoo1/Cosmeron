@@ -4,7 +4,7 @@
  * Shared by all algorithms and both set/map semantics.
  * ============================================================= */
 
-#define TTREE_IMPLEMENT_TRANSPLANT(T)                                          \
+#define COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_TRANSPLANT(T)                                          \
   static inline void TTREE_FN(T, Transplant)(                                 \
       T * tree, TTREE_NODE(T) * u, TTREE_NODE(T) * v) {                       \
     if (!u->parent)                                                            \
