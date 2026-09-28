@@ -21,7 +21,8 @@ int main(void) {
   NETWORK_ADDRESS_FUNC(Endpoint_Create)(&endpoint, &loopback, 0);
   assert(NETWORK_LISTENER_FUNC(ListenAt)(&listener, &endpoint, NULL) ==
          STATUS_CONST(SUCCESS));
-  endpoint = *NETWORK_LISTENER_FUNC(LocalEndpoint)(&listener);
+  assert(NETWORK_LISTENER_FUNC(LocalEndpoint)(&listener, &endpoint) ==
+         STATUS_CONST(SUCCESS));
 
   assert(NETWORK_CONNECTION_FUNC(Connect)(&client, "127.0.0.1", endpoint.port, NULL) ==
          STATUS_CONST(SUCCESS));
