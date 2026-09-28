@@ -1,9 +1,9 @@
-#define RANDOM_SHUFFLE_SWAP_BUFFER_SIZE 64U
+#define COSMERON_MACRO_INTERNAL_RANDOM_SHUFFLE_SWAP_BUFFER_SIZE 64U
 
 static inline void RANDOM_SHUFFLE_FUNC(Swap)(unsigned char *first,
                                            unsigned char *second,
                                            size_t size) {
-  unsigned char temporary[RANDOM_SHUFFLE_SWAP_BUFFER_SIZE];
+  unsigned char temporary[COSMERON_MACRO_INTERNAL_RANDOM_SHUFFLE_SWAP_BUFFER_SIZE];
 
   while (size != 0U) {
     size_t chunk = size < sizeof(temporary) ? size : sizeof(temporary);
