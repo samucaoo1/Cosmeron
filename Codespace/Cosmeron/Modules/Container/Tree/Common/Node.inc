@@ -9,7 +9,7 @@
  *     BST  → (empty)
  * ============================================================= */
 
-#define TTREE_NODE_SET(T, KEY_TYPE, EXTRA_FIELDS)                              \
+#define COSMERON_MACRO_INTERNAL_TTREE_NODE_SET(T, KEY_TYPE, EXTRA_FIELDS)                              \
   typedef struct TTREE_NODE(T) {                                               \
     KEY_TYPE key;                                                              \
     struct TTREE_NODE(T) * left;                                               \
@@ -18,7 +18,7 @@
     EXTRA_FIELDS                                                               \
   } TTREE_NODE(T);
 
-#define TTREE_NODE_MAP(T, KEY_TYPE, VALUE_TYPE, EXTRA_FIELDS)                  \
+#define COSMERON_MACRO_INTERNAL_TTREE_NODE_MAP(T, KEY_TYPE, VALUE_TYPE, EXTRA_FIELDS)                  \
   typedef struct TTREE_NODE(T) {                                               \
     KEY_TYPE key;                                                              \
     VALUE_TYPE value;                                                          \
