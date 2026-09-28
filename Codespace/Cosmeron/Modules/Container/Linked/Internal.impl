@@ -13,7 +13,7 @@
 
 /* --- Generic lifecycle helpers --- */
 
-#define LINKED_INTERNAL_IMPLEMENT_INIT(FUNCTION_NAME, CONTAINER_STRUCT)        \
+#define COSMERON_MACRO_INTERNAL_LINKED_INTERNAL_IMPLEMENT_INIT(FUNCTION_NAME, CONTAINER_STRUCT)        \
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container) {          \
     if (!container)                                                            \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
@@ -23,7 +23,7 @@
     return STATUS_CONST(SUCCESS);                                                 \
   }
 
-#define LINKED_INTERNAL_IMPLEMENT_DESTROY(FUNCTION_NAME, CONTAINER_STRUCT,     \
+#define COSMERON_MACRO_INTERNAL_LINKED_INTERNAL_IMPLEMENT_DESTROY(FUNCTION_NAME, CONTAINER_STRUCT,     \
                                          NODE_STRUCT)                          \
   static inline void FUNCTION_NAME(CONTAINER_STRUCT *container) {              \
     if (!container)                                                            \
@@ -41,7 +41,7 @@
 
 /* --- Generic access helpers --- */
 
-#define LINKED_INTERNAL_ACCESS_FRONT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)    \
+#define COSMERON_MACRO_INTERNAL_LINKED_INTERNAL_ACCESS_FRONT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)    \
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        TYPE **out) {                           \
     if (!container || !out)                                                    \
@@ -52,7 +52,7 @@
     return STATUS_CONST(SUCCESS);                                              \
   }
 
-#define LINKED_INTERNAL_ACCESS_BACK(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)     \
+#define COSMERON_MACRO_INTERNAL_LINKED_INTERNAL_ACCESS_BACK(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)     \
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        TYPE **out) {                           \
     if (!container || !out)                                                    \
@@ -63,26 +63,26 @@
     return STATUS_CONST(SUCCESS);                                              \
   }
 
-#define LINKED_INTERNAL_ACCESS_BEGIN(FUNCTION_NAME, CONTAINER_STRUCT,          \
+#define COSMERON_MACRO_INTERNAL_LINKED_INTERNAL_ACCESS_BEGIN(FUNCTION_NAME, CONTAINER_STRUCT,          \
                                     NODE_STRUCT)                               \
   static inline NODE_STRUCT *FUNCTION_NAME(CONTAINER_STRUCT *container) {      \
     return container ? container->head : NULL;                                                    \
   }
 
-#define LINKED_INTERNAL_ACCESS_END(FUNCTION_NAME, CONTAINER_STRUCT,            \
+#define COSMERON_MACRO_INTERNAL_LINKED_INTERNAL_ACCESS_END(FUNCTION_NAME, CONTAINER_STRUCT,            \
                                   NODE_STRUCT)                                 \
   static inline NODE_STRUCT *FUNCTION_NAME(CONTAINER_STRUCT *container) {      \
     (void)container;                                                           \
     return NULL;                                                               \
   }
 
-#define LINKED_INTERNAL_ACCESS_RBEGIN(FUNCTION_NAME, CONTAINER_STRUCT,         \
+#define COSMERON_MACRO_INTERNAL_LINKED_INTERNAL_ACCESS_RBEGIN(FUNCTION_NAME, CONTAINER_STRUCT,         \
                                      NODE_STRUCT)                              \
   static inline NODE_STRUCT *FUNCTION_NAME(CONTAINER_STRUCT *container) {      \
     return container ? container->tail : NULL;                                                    \
   }
 
-#define LINKED_INTERNAL_DOUBLE_ACCESS_AT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT,\
+#define COSMERON_MACRO_INTERNAL_LINKED_INTERNAL_DOUBLE_ACCESS_AT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT,\
                                          NODE_STRUCT)                          \
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        size_t index, TYPE **out) {             \
@@ -109,19 +109,19 @@
 
 /* --- Generic observers helpers --- */
 
-#define LINKED_INTERNAL_IMPLEMENT_EMPTY(FUNCTION_NAME, CONTAINER_STRUCT)       \
+#define COSMERON_MACRO_INTERNAL_LINKED_INTERNAL_IMPLEMENT_EMPTY(FUNCTION_NAME, CONTAINER_STRUCT)       \
   static inline bool FUNCTION_NAME(const CONTAINER_STRUCT *container) {        \
     return container != NULL && container->size == 0;                                               \
   }
 
-#define LINKED_INTERNAL_IMPLEMENT_SIZE(FUNCTION_NAME, CONTAINER_STRUCT)        \
+#define COSMERON_MACRO_INTERNAL_LINKED_INTERNAL_IMPLEMENT_SIZE(FUNCTION_NAME, CONTAINER_STRUCT)        \
   static inline size_t FUNCTION_NAME(const CONTAINER_STRUCT *container) {      \
     return container ? container->size : 0U;                                                    \
   }
 
 /* --- Single linked family helpers --- */
 
-#define LINKED_INTERNAL_SINGLE_CREATE_NODE(TYPE, FUNCTION_NAME, NODE_STRUCT)   \
+#define COSMERON_MACRO_INTERNAL_LINKED_INTERNAL_SINGLE_CREATE_NODE(TYPE, FUNCTION_NAME, NODE_STRUCT)   \
   static inline OPSTATUS FUNCTION_NAME(NODE_STRUCT **out, TYPE value) {        \
     if (!out)                                                                  \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
@@ -136,7 +136,7 @@
     return STATUS_CONST(SUCCESS);                                                 \
   }
 
-#define LINKED_INTERNAL_SINGLE_LINK_FRONT(FUNCTION_NAME, CONTAINER_STRUCT,     \
+#define COSMERON_MACRO_INTERNAL_LINKED_INTERNAL_SINGLE_LINK_FRONT(FUNCTION_NAME, CONTAINER_STRUCT,     \
                                           NODE_STRUCT)                         \
   static inline void FUNCTION_NAME(CONTAINER_STRUCT *container,                \
                                    NODE_STRUCT *node) {                        \
@@ -147,7 +147,7 @@
     container->size++;                                                         \
   }
 
-#define LINKED_INTERNAL_SINGLE_LINK_BACK(FUNCTION_NAME, CONTAINER_STRUCT,      \
+#define COSMERON_MACRO_INTERNAL_LINKED_INTERNAL_SINGLE_LINK_BACK(FUNCTION_NAME, CONTAINER_STRUCT,      \
                                          NODE_STRUCT)                          \
   static inline void FUNCTION_NAME(CONTAINER_STRUCT *container,                \
                                    NODE_STRUCT *node) {                        \
@@ -160,7 +160,7 @@
     container->size++;                                                         \
   }
 
-#define LINKED_INTERNAL_SINGLE_UNLINK_FRONT(FUNCTION_NAME, CONTAINER_STRUCT,   \
+#define COSMERON_MACRO_INTERNAL_LINKED_INTERNAL_SINGLE_UNLINK_FRONT(FUNCTION_NAME, CONTAINER_STRUCT,   \
                                             NODE_STRUCT)                       \
   static inline void FUNCTION_NAME(CONTAINER_STRUCT *container) {              \
     NODE_STRUCT *old = container->head;                                        \
@@ -173,7 +173,7 @@
 
 /* --- Double linked family helpers --- */
 
-#define LINKED_INTERNAL_DOUBLE_CREATE_NODE(TYPE, FUNCTION_NAME, NODE_STRUCT)   \
+#define COSMERON_MACRO_INTERNAL_LINKED_INTERNAL_DOUBLE_CREATE_NODE(TYPE, FUNCTION_NAME, NODE_STRUCT)   \
   static inline OPSTATUS FUNCTION_NAME(NODE_STRUCT **out, TYPE value) {        \
     if (!out)                                                                  \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
@@ -189,7 +189,7 @@
     return STATUS_CONST(SUCCESS);                                                 \
   }
 
-#define LINKED_INTERNAL_DOUBLE_LINK_FRONT(FUNCTION_NAME, CONTAINER_STRUCT,     \
+#define COSMERON_MACRO_INTERNAL_LINKED_INTERNAL_DOUBLE_LINK_FRONT(FUNCTION_NAME, CONTAINER_STRUCT,     \
                                           NODE_STRUCT)                         \
   static inline void FUNCTION_NAME(CONTAINER_STRUCT *container,                \
                                    NODE_STRUCT *node) {                        \
@@ -203,7 +203,7 @@
     container->size++;                                                         \
   }
 
-#define LINKED_INTERNAL_DOUBLE_LINK_BACK(FUNCTION_NAME, CONTAINER_STRUCT,      \
+#define COSMERON_MACRO_INTERNAL_LINKED_INTERNAL_DOUBLE_LINK_BACK(FUNCTION_NAME, CONTAINER_STRUCT,      \
                                          NODE_STRUCT)                          \
   static inline void FUNCTION_NAME(CONTAINER_STRUCT *container,                \
                                    NODE_STRUCT *node) {                        \
@@ -217,7 +217,7 @@
     container->size++;                                                         \
   }
 
-#define LINKED_INTERNAL_DOUBLE_UNLINK_FRONT(FUNCTION_NAME, CONTAINER_STRUCT,   \
+#define COSMERON_MACRO_INTERNAL_LINKED_INTERNAL_DOUBLE_UNLINK_FRONT(FUNCTION_NAME, CONTAINER_STRUCT,   \
                                             NODE_STRUCT)                       \
   static inline void FUNCTION_NAME(CONTAINER_STRUCT *container) {              \
     NODE_STRUCT *old = container->head;                                        \
@@ -230,7 +230,7 @@
     container->size--;                                                         \
   }
 
-#define LINKED_INTERNAL_DOUBLE_UNLINK_BACK(FUNCTION_NAME, CONTAINER_STRUCT,    \
+#define COSMERON_MACRO_INTERNAL_LINKED_INTERNAL_DOUBLE_UNLINK_BACK(FUNCTION_NAME, CONTAINER_STRUCT,    \
                                            NODE_STRUCT)                        \
   static inline void FUNCTION_NAME(CONTAINER_STRUCT *container) {              \
     NODE_STRUCT *old = container->tail;                                        \
@@ -243,7 +243,7 @@
     container->size--;                                                         \
   }
 
-#define LINKED_INTERNAL_DOUBLE_LINK_BEFORE(FUNCTION_NAME, CONTAINER_STRUCT,    \
+#define COSMERON_MACRO_INTERNAL_LINKED_INTERNAL_DOUBLE_LINK_BEFORE(FUNCTION_NAME, CONTAINER_STRUCT,    \
                                            NODE_STRUCT)                        \
   static inline void FUNCTION_NAME(CONTAINER_STRUCT *container,                \
                                    NODE_STRUCT *pos, NODE_STRUCT *node) {      \
@@ -257,7 +257,7 @@
     container->size++;                                                         \
   }
 
-#define LINKED_INTERNAL_DOUBLE_UNLINK(FUNCTION_NAME, CONTAINER_STRUCT,         \
+#define COSMERON_MACRO_INTERNAL_LINKED_INTERNAL_DOUBLE_UNLINK(FUNCTION_NAME, CONTAINER_STRUCT,         \
                                       NODE_STRUCT)                             \
   static inline void FUNCTION_NAME(CONTAINER_STRUCT *container,                \
                                    NODE_STRUCT *node) {                        \
