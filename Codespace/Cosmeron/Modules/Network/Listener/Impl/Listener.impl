@@ -5,8 +5,8 @@
 #endif
 
 static inline OPSTATUS NETWORK_LISTENER_FUNC(_Publish)(
-    TNetwork_Listener *listener, TNetwork_Error *error,
-    TNetwork_Error domainError, OPSTATUS status) {
+    NETWORK_LISTENER_TYPE(TListener) *listener, NETWORK_TYPE(Error) *error,
+    NETWORK_TYPE(Error) domainError, OPSTATUS status) {
   if (listener != NULL)
     listener->lastError = domainError;
   if (error != NULL)
@@ -15,22 +15,22 @@ static inline OPSTATUS NETWORK_LISTENER_FUNC(_Publish)(
 }
 
 static inline OPSTATUS NETWORK_LISTENER_FUNC(_Fail)(
-    TNetwork_Listener *listener, TNetwork_Error *error,
-    TNetwork_Error domainError) {
+    NETWORK_LISTENER_TYPE(TListener) *listener, NETWORK_TYPE(Error) *error,
+    NETWORK_TYPE(Error) domainError) {
   return NETWORK_LISTENER_FUNC(_Publish)(
-      listener, error, domainError, STATUS_NS(GENERIC_ERROR));
+      listener, error, domainError, STATUS_CONST(GENERIC_ERROR));
 }
 
 static inline bool NETWORK_LISTENER_FUNC(_Open)(
-    TNetwork_Listener *listener, TSocket *socket,
-    const TNetwork_Endpoint *endpoint) {
-  TSocket_Family family =
-      endpoint->address.type == NETWORK_ADDRESS_TYPE(IPV6)
-          ? SOCKET_TYPE(FAMILY_IPV6)
-          : SOCKET_TYPE(FAMILY_IPV4);
-  TNetwork_Error socketError;
+    NETWORK_LISTENER_TYPE(TListener) *listener, SOCKET_TYPE(TSocket) *socket,
+    const NETWORK_ADDRESS_TYPE(TEndpoint) *endpoint) {
+  SOCKET_TYPE(Family) family =
+      endpoint->address.type == NETWORK_ADDRESS_CONST(IPV6)
+          ? SOCKET_CONST(FAMILY_IPV6)
+          : SOCKET_CONST(FAMILY_IPV4);
+  NETWORK_TYPE(Error) socketError;
   if (SOCKET_FUNC(Create)(
-          socket, family, SOCKET_TYPE(KIND_STREAM), SOCKET_TYPE(PROTOCOL_TCP),
+          socket, family, SOCKET_CONST(KIND_STREAM), SOCKET_CONST(PROTOCOL_TCP),
           &socketError) != STATUS_CONST(SUCCESS)) {
     listener->lastError = socketError;
     return false;
@@ -50,7 +50,7 @@ static inline bool NETWORK_LISTENER_FUNC(_Open)(
 }
 
 static inline void NETWORK_LISTENER_FUNC(_RefreshLocalEndpoint)(
-    TNetwork_Listener *listener, TSocket *socket) {
+    NETWORK_LISTENER_TYPE(TListener) *listener, SOCKET_TYPE(TSocket) *socket) {
   struct sockaddr_storage native;
   SOCKET_TYPE(Len) length = (SOCKET_TYPE(Len))sizeof(native);
   if (TSOCKET_NATIVE_GETSOCKNAME(socket->handle, (struct sockaddr *)&native, &length) == 0)
@@ -58,7 +58,7 @@ static inline void NETWORK_LISTENER_FUNC(_RefreshLocalEndpoint)(
                                      &listener->localEndpoint);
 }
 
-inline static void NETWORK_LISTENER_FUNC(Init)(TNetwork_Listener *listener) {
+static inline void NETWORK_LISTENER_FUNC(Init)(NETWORK_LISTENER_TYPE(TListener) *listener) {
   memset(listener, 0, sizeof(*listener));
   listener->lastError = NETWORK_ERROR_CONST(NONE);
   listener->blocking = true;
@@ -66,12 +66,12 @@ inline static void NETWORK_LISTENER_FUNC(Init)(TNetwork_Listener *listener) {
   SOCKET_FUNC(Init)(&listener->secondary);
 }
 
-inline static OPSTATUS NETWORK_LISTENER_FUNC(ListenAt)(
-    TNetwork_Listener *listener, const TNetwork_Endpoint *endpoint,
-    TNetwork_Error *error) {
+static inline OPSTATUS NETWORK_LISTENER_FUNC(ListenAt)(
+    NETWORK_LISTENER_TYPE(TListener) *listener, const NETWORK_ADDRESS_TYPE(TEndpoint) *endpoint,
+    NETWORK_TYPE(Error) *error) {
   if (listener == NULL || endpoint == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
-    return STATUS_NS(INVALID_ARGUMENT);
+    return STATUS_CONST(INVALID_ARGUMENT);
   }
   NETWORK_LISTENER_FUNC(Close)(listener);
   if (!NETWORK_LISTENER_FUNC(_Open)(listener, &listener->primary, endpoint))
@@ -80,18 +80,18 @@ inline static OPSTATUS NETWORK_LISTENER_FUNC(ListenAt)(
   listener->dualStack = false;
   NETWORK_LISTENER_FUNC(_RefreshLocalEndpoint)(listener, &listener->primary);
   return NETWORK_LISTENER_FUNC(_Publish)(
-      listener, error, NETWORK_ERROR_CONST(NONE), STATUS_NS(SUCCESS));
+      listener, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-inline static OPSTATUS NETWORK_LISTENER_FUNC(Listen)(
-    TNetwork_Listener *listener, uint16_t port, TNetwork_Error *error) {
-  TNetwork_Address address;
-  TNetwork_Endpoint endpoint;
+static inline OPSTATUS NETWORK_LISTENER_FUNC(Listen)(
+    NETWORK_LISTENER_TYPE(TListener) *listener, uint16_t port, NETWORK_TYPE(Error) *error) {
+  NETWORK_ADDRESS_TYPE(TAddress) address;
+  NETWORK_ADDRESS_TYPE(TEndpoint) endpoint;
   uint16_t boundPort = port;
 
   if (listener == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
-    return STATUS_NS(INVALID_ARGUMENT);
+    return STATUS_CONST(INVALID_ARGUMENT);
   }
   NETWORK_LISTENER_FUNC(Close)(listener);
 
@@ -108,7 +108,7 @@ inline static OPSTATUS NETWORK_LISTENER_FUNC(Listen)(
                    (char *)&ipv6Only, &length) == 0 && ipv6Only == 0) {
       listener->dualStack = true;
       return NETWORK_LISTENER_FUNC(_Publish)(
-          listener, error, NETWORK_ERROR_CONST(NONE), STATUS_NS(SUCCESS));
+          listener, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
     }
 
     NETWORK_ADDRESS_FUNC(IPv4_Any)(&address);
@@ -116,12 +116,12 @@ inline static OPSTATUS NETWORK_LISTENER_FUNC(Listen)(
     if (NETWORK_LISTENER_FUNC(_Open)(listener, &listener->secondary, &endpoint)) {
       listener->dualStack = true;
       return NETWORK_LISTENER_FUNC(_Publish)(
-          listener, error, NETWORK_ERROR_CONST(NONE), STATUS_NS(SUCCESS));
+          listener, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
     }
 
     /* IPv6 remains usable even when the IPv4 companion cannot be opened. */
     return NETWORK_LISTENER_FUNC(_Publish)(
-        listener, error, NETWORK_ERROR_CONST(NONE), STATUS_NS(SUCCESS));
+        listener, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
   }
 
   NETWORK_ADDRESS_FUNC(IPv4_Any)(&address);
@@ -133,11 +133,11 @@ inline static OPSTATUS NETWORK_LISTENER_FUNC(Listen)(
   NETWORK_LISTENER_FUNC(_RefreshLocalEndpoint)(listener, &listener->primary);
   listener->dualStack = false;
   return NETWORK_LISTENER_FUNC(_Publish)(
-      listener, error, NETWORK_ERROR_CONST(NONE), STATUS_NS(SUCCESS));
+      listener, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-static inline TSocket *NETWORK_LISTENER_FUNC(_AcceptSocket)(
-    TNetwork_Listener *listener) {
+static inline SOCKET_TYPE(TSocket) *NETWORK_LISTENER_FUNC(_AcceptSocket)(
+    NETWORK_LISTENER_TYPE(TListener) *listener) {
   if (listener->secondary.handle == TSOCKET_NATIVE_INVALID)
     return &listener->primary;
 
@@ -168,15 +168,15 @@ static inline TSocket *NETWORK_LISTENER_FUNC(_AcceptSocket)(
 #endif
 }
 
-inline static OPSTATUS NETWORK_LISTENER_FUNC(Accept)(
-    TNetwork_Listener *listener, TNetwork_Connection *connection,
-    TNetwork_Error *error) {
-  TSocket *source;
-  TNetwork_Endpoint peer;
+static inline OPSTATUS NETWORK_LISTENER_FUNC(Accept)(
+    NETWORK_LISTENER_TYPE(TListener) *listener, NETWORK_CONNECTION_TYPE(TConnection) *connection,
+    NETWORK_TYPE(Error) *error) {
+  SOCKET_TYPE(TSocket) *source;
+  NETWORK_ADDRESS_TYPE(TEndpoint) peer;
 
   if (listener == NULL || connection == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
-    return STATUS_NS(INVALID_ARGUMENT);
+    return STATUS_CONST(INVALID_ARGUMENT);
   }
   source = NETWORK_LISTENER_FUNC(_AcceptSocket)(listener);
   if (source == NULL)
@@ -186,7 +186,7 @@ inline static OPSTATUS NETWORK_LISTENER_FUNC(Accept)(
   NETWORK_CONNECTION_FUNC(Destroy)(connection);
   NETWORK_CONNECTION_FUNC(Init)(connection);
   {
-    TNetwork_Error socketError;
+    NETWORK_TYPE(Error) socketError;
     if (SOCKET_FUNC(Accept)(
             source, &connection->socket, &peer, &socketError) !=
         STATUS_CONST(SUCCESS))
@@ -194,14 +194,14 @@ inline static OPSTATUS NETWORK_LISTENER_FUNC(Accept)(
   }
 
   connection->remoteEndpoint = peer;
-  connection->state = NETWORK_CONNECTION_TYPE(CONNECTED);
+  connection->state = NETWORK_CONNECTION_CONST(CONNECTED);
   connection->lastError = NETWORK_ERROR_CONST(NONE);
   NETWORK_CONNECTION_FUNC(_RefreshEndpoints)(connection);
   return NETWORK_LISTENER_FUNC(_Publish)(
-      listener, error, NETWORK_ERROR_CONST(NONE), STATUS_NS(SUCCESS));
+      listener, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-inline static void NETWORK_LISTENER_FUNC(Close)(TNetwork_Listener *listener) {
+static inline void NETWORK_LISTENER_FUNC(Close)(NETWORK_LISTENER_TYPE(TListener) *listener) {
   if (listener == NULL)
     return;
   SOCKET_FUNC(Close)(&listener->primary);

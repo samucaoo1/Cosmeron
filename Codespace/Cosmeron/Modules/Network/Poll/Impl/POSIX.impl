@@ -3,7 +3,7 @@
 #include <limits.h>
 
 static inline bool NETWORK_POLLER_FUNC(_SetHandle)(
-    SOCKET_TYPE(Handle) handle, TNetwork_Event_Flags interests,
+    SOCKET_TYPE(Handle) handle, NETWORK_POLLER_TYPE(EventFlags) interests,
     fd_set *read_set, fd_set *writeSet, fd_set *errorSet,
     SOCKET_TYPE(Handle) *maximum) {
   if (handle == TSOCKET_NATIVE_INVALID) return true;
@@ -17,10 +17,10 @@ static inline bool NETWORK_POLLER_FUNC(_SetHandle)(
   return true;
 }
 
-static inline TNetwork_Event_Flags NETWORK_POLLER_FUNC(_Ready)(
-    SOCKET_TYPE(Handle) handle, TNetwork_Event_Flags interests,
+static inline NETWORK_POLLER_TYPE(EventFlags) NETWORK_POLLER_FUNC(_Ready)(
+    SOCKET_TYPE(Handle) handle, NETWORK_POLLER_TYPE(EventFlags) interests,
     bool detectClose, fd_set *read_set, fd_set *writeSet, fd_set *errorSet) {
-  TNetwork_Event_Flags flags = NETWORK_EVENT_CONST(NONE);
+  NETWORK_POLLER_TYPE(EventFlags) flags = NETWORK_EVENT_CONST(NONE);
   bool closed = false;
   if (handle == TSOCKET_NATIVE_INVALID) return flags;
   if (FD_ISSET(handle, errorSet)) flags |= NETWORK_EVENT_CONST(ERROR);
@@ -38,8 +38,8 @@ static inline TNetwork_Event_Flags NETWORK_POLLER_FUNC(_Ready)(
 }
 
 static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
-    TNetwork_Poller *poller, TNetwork_Event_Vector *events,
-    struct timeval *timeout, TNetwork_Error *error) {
+    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TEventVector) *events,
+    struct timeval *timeout, NETWORK_TYPE(Error) *error) {
   fd_set read_set, writeSet, errorSet;
   SOCKET_TYPE(Handle) maximum = 0;
   size_t i;
@@ -47,28 +47,28 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
 
   if (poller == NULL || events == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
-    return STATUS_NS(INVALID_ARGUMENT);
+    return STATUS_CONST(INVALID_ARGUMENT);
   }
   FLAT_VECTOR_FUNC(Network_Event, Clear)(events);
   if (poller->registrations.size == 0) {
     return NETWORK_POLLER_FUNC(_Publish)(
-        poller, error, NETWORK_ERROR_CONST(NONE), STATUS_NS(SUCCESS));
+        poller, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
   }
 
   FD_ZERO(&read_set); FD_ZERO(&writeSet); FD_ZERO(&errorSet);
   for (i = 0; i < poller->registrations.size; ++i) {
-    TNetwork_Poll_Registration *r = &poller->registrations.data[i];
+    NETWORK_POLLER_TYPE(TRegistration) *r = &poller->registrations.data[i];
     bool valid = true;
     if (r->sourceType == NETWORK_POLLER_SOURCE_CONST(CONNECTION)) {
-      TNetwork_Connection *c = (TNetwork_Connection *)r->object;
+      NETWORK_CONNECTION_TYPE(TConnection) *c = (NETWORK_CONNECTION_TYPE(TConnection) *)r->object;
       valid = NETWORK_POLLER_FUNC(_SetHandle)(
           c->socket.handle, r->interests, &read_set, &writeSet, &errorSet, &maximum);
     } else if (r->sourceType == NETWORK_POLLER_SOURCE_CONST(DATAGRAM)) {
-      TNetwork_Datagram *d = (TNetwork_Datagram *)r->object;
+      NETWORK_DATAGRAM_TYPE(TDatagram) *d = (NETWORK_DATAGRAM_TYPE(TDatagram) *)r->object;
       valid = NETWORK_POLLER_FUNC(_SetHandle)(
           d->socket.handle, r->interests, &read_set, &writeSet, &errorSet, &maximum);
     } else {
-      TNetwork_Listener *l = (TNetwork_Listener *)r->object;
+      NETWORK_LISTENER_TYPE(TListener) *l = (NETWORK_LISTENER_TYPE(TListener) *)r->object;
       valid = NETWORK_POLLER_FUNC(_SetHandle)(
                   l->primary.handle, r->interests, &read_set, &writeSet,
                   &errorSet, &maximum) &&
@@ -79,7 +79,7 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
     if (!valid) {
       return NETWORK_POLLER_FUNC(_Publish)(
           poller, error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
-          STATUS_NS(OUT_OF_RANGE));
+          STATUS_CONST(OUT_OF_RANGE));
     }
   }
 
@@ -88,49 +88,49 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
     return NETWORK_POLLER_FUNC(_Publish)(
         poller, error,
         SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE()),
-        STATUS_NS(GENERIC_ERROR));
+        STATUS_CONST(GENERIC_ERROR));
   }
 
   for (i = 0; i < poller->registrations.size; ++i) {
-    TNetwork_Poll_Registration *r = &poller->registrations.data[i];
-    TNetwork_Event_Flags flags = NETWORK_EVENT_CONST(NONE);
+    NETWORK_POLLER_TYPE(TRegistration) *r = &poller->registrations.data[i];
+    NETWORK_POLLER_TYPE(EventFlags) flags = NETWORK_EVENT_CONST(NONE);
     if (r->sourceType == NETWORK_POLLER_SOURCE_CONST(CONNECTION)) {
-      TNetwork_Connection *c = (TNetwork_Connection *)r->object;
+      NETWORK_CONNECTION_TYPE(TConnection) *c = (NETWORK_CONNECTION_TYPE(TConnection) *)r->object;
       flags = NETWORK_POLLER_FUNC(_Ready)(
           c->socket.handle, r->interests, true, &read_set, &writeSet, &errorSet);
     } else if (r->sourceType == NETWORK_POLLER_SOURCE_CONST(DATAGRAM)) {
-      TNetwork_Datagram *d = (TNetwork_Datagram *)r->object;
+      NETWORK_DATAGRAM_TYPE(TDatagram) *d = (NETWORK_DATAGRAM_TYPE(TDatagram) *)r->object;
       flags = NETWORK_POLLER_FUNC(_Ready)(
           d->socket.handle, r->interests, false, &read_set, &writeSet, &errorSet);
     } else {
-      TNetwork_Listener *l = (TNetwork_Listener *)r->object;
+      NETWORK_LISTENER_TYPE(TListener) *l = (NETWORK_LISTENER_TYPE(TListener) *)r->object;
       flags = NETWORK_POLLER_FUNC(_Ready)(
           l->primary.handle, r->interests, false, &read_set, &writeSet, &errorSet);
       flags |= NETWORK_POLLER_FUNC(_Ready)(
           l->secondary.handle, r->interests, false, &read_set, &writeSet, &errorSet);
     }
     if (NETWORK_POLLER_FUNC(_PushEvent)(
-            poller, events, r, flags, error) != STATUS_NS(SUCCESS))
+            poller, events, r, flags, error) != STATUS_CONST(SUCCESS))
       return STATUS_CONST(OUT_OF_MEMORY);
   }
 
   return NETWORK_POLLER_FUNC(_Publish)(
-      poller, error, NETWORK_ERROR_CONST(NONE), STATUS_NS(SUCCESS));
+      poller, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-inline static OPSTATUS NETWORK_POLLER_FUNC(Wait)(
-    TNetwork_Poller *poller, TNetwork_Event_Vector *events,
-    TNetwork_Error *error) {
+static inline OPSTATUS NETWORK_POLLER_FUNC(Wait)(
+    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TEventVector) *events,
+    NETWORK_TYPE(Error) *error) {
   return NETWORK_POLLER_FUNC(_WaitNative)(poller, events, NULL, error);
 }
 
-inline static OPSTATUS NETWORK_POLLER_FUNC(WaitFor)(
-    TNetwork_Poller *poller, TNetwork_Event_Vector *events,
-    CHRONOMETRY_TYPE(Duration) timeout, TNetwork_Error *error) {
+static inline OPSTATUS NETWORK_POLLER_FUNC(WaitFor)(
+    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TEventVector) *events,
+    CHRONOMETRY_TYPE(Duration) timeout, NETWORK_TYPE(Error) *error) {
   struct timeval native_timeout;
   if (timeout.nanoseconds < 0) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
-    return STATUS_NS(INVALID_ARGUMENT);
+    return STATUS_CONST(INVALID_ARGUMENT);
   }
   {
     int64_t seconds =

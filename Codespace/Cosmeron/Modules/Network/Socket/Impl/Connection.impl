@@ -3,7 +3,7 @@
 SOCKET_BIND_PROTOTYPE {
   struct sockaddr_storage native;
   SOCKET_TYPE(Len) length;
-  TNetwork_Error domainError;
+  NETWORK_TYPE(Error) domainError;
   if (socket == NULL || endpoint == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -24,7 +24,7 @@ SOCKET_BIND_PROTOTYPE {
 }
 
 SOCKET_LISTEN_PROTOTYPE {
-  TNetwork_Error domainError;
+  NETWORK_TYPE(Error) domainError;
   if (socket == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -42,7 +42,7 @@ SOCKET_ACCEPT_PROTOTYPE {
   struct sockaddr_storage native;
   SOCKET_TYPE(Len) length = (SOCKET_TYPE(Len))sizeof(native);
   SOCKET_TYPE(Handle) handle;
-  TNetwork_Error domainError;
+  NETWORK_TYPE(Error) domainError;
   if (socket == NULL || client == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -79,7 +79,7 @@ SOCKET_ACCEPT_PROTOTYPE {
 SOCKET_CONNECT_PROTOTYPE {
   struct sockaddr_storage native;
   SOCKET_TYPE(Len) length;
-  TNetwork_Error domainError;
+  NETWORK_TYPE(Error) domainError;
   if (socket == NULL || endpoint == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
