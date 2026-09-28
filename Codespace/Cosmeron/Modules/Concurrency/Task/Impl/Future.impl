@@ -1,7 +1,7 @@
 #pragma once
 #include "../Future.h"
 
-inline static OPSTATUS FUTURE_FUNC(Init)(TFuture *future) {
+static inline OPSTATUS FUTURE_FUNC(Init)(CONCURRENCY_TYPE(TFuture) *future) {
   if (future == NULL) return STATUS_CONST(INVALID_ARGUMENT);
   future->initialized = false;
   { OPSTATUS status = MUTEX_FUNC(Init)(&future->mutex); if (status != STATUS_CONST(SUCCESS)) return status; }
@@ -16,7 +16,7 @@ inline static OPSTATUS FUTURE_FUNC(Init)(TFuture *future) {
   return STATUS_CONST(SUCCESS);
 }
 
-inline static OPSTATUS FUTURE_FUNC(Destroy)(TFuture *future) {
+static inline OPSTATUS FUTURE_FUNC(Destroy)(CONCURRENCY_TYPE(TFuture) *future) {
   OPSTATUS status;
   if (future == NULL || !future->initialized) return STATUS_CONST(INVALID_ARGUMENT);
   status = CONDITION_FUNC(Destroy)(&future->condition);
@@ -27,17 +27,17 @@ inline static OPSTATUS FUTURE_FUNC(Destroy)(TFuture *future) {
   return STATUS_CONST(SUCCESS);
 }
 
-inline static bool FUTURE_FUNC(IsReady)(const TFuture *future) {
+static inline bool FUTURE_FUNC(IsReady)(const CONCURRENCY_TYPE(TFuture) *future) {
   bool ready;
   if (future == NULL || !future->initialized) return false;
-  TFuture *mutableFuture = (TFuture *)future;
+  CONCURRENCY_TYPE(TFuture) *mutableFuture = (CONCURRENCY_TYPE(TFuture) *)future;
   if (MUTEX_FUNC(Lock)(&mutableFuture->mutex) != STATUS_CONST(SUCCESS)) return false;
   ready = future->ready;
   (void)MUTEX_FUNC(Unlock)(&mutableFuture->mutex);
   return ready;
 }
 
-inline static OPSTATUS FUTURE_FUNC(Complete)(TFuture *future, void *result,
+static inline OPSTATUS FUTURE_FUNC(Complete)(CONCURRENCY_TYPE(TFuture) *future, void *result,
                                        OPSTATUS resultStatus) {
   OPSTATUS status;
   if (future == NULL || !future->initialized) return STATUS_CONST(INVALID_ARGUMENT);
@@ -55,7 +55,7 @@ inline static OPSTATUS FUTURE_FUNC(Complete)(TFuture *future, void *result,
   return MUTEX_FUNC(Unlock)(&future->mutex);
 }
 
-inline static OPSTATUS FUTURE_FUNC(Wait)(TFuture *future) {
+static inline OPSTATUS FUTURE_FUNC(Wait)(CONCURRENCY_TYPE(TFuture) *future) {
   OPSTATUS operationStatus;
   if (future == NULL || !future->initialized) return STATUS_CONST(INVALID_ARGUMENT);
   operationStatus = MUTEX_FUNC(Lock)(&future->mutex);
@@ -69,8 +69,8 @@ inline static OPSTATUS FUTURE_FUNC(Wait)(TFuture *future) {
   return MUTEX_FUNC(Unlock)(&future->mutex);
 }
 
-inline static OPSTATUS FUTURE_FUNC(Get)(TFuture *future, void **result,
-                                  OPSTATUS *resultStatus) {
+static inline OPSTATUS FUTURE_FUNC(Get)(CONCURRENCY_TYPE(TFuture) *future, void **outResult,
+                                  OPSTATUS *outStatus) {
   OPSTATUS operationStatus;
   if (future == NULL || !future->initialized) return STATUS_CONST(INVALID_ARGUMENT);
   operationStatus = MUTEX_FUNC(Lock)(&future->mutex);
@@ -86,15 +86,15 @@ inline static OPSTATUS FUTURE_FUNC(Get)(TFuture *future, void **result,
   return MUTEX_FUNC(Unlock)(&future->mutex);
 }
 
-inline static void ConcurrencyInternal_Future_Task_Run(void *argument) {
-  TFutureTask *futureTask = (TFutureTask *)argument;
+static inline void ConcurrencyInternal_Future_Task_Run(void *argument) {
+  CONCURRENCY_TYPE(CONCURRENCY_TYPE(TFuture)Task) *futureTask = (CONCURRENCY_TYPE(CONCURRENCY_TYPE(TFuture)Task) *)argument;
   void *result = NULL;
   OPSTATUS status = futureTask->function(futureTask->argument, &result);
   (void)FUTURE_FUNC(Complete)(futureTask->future, result, status);
 }
 
-inline static TTask FUTURE_FUNC(Task)(TFutureTask *futureTask, TFuture *future,
-                                    TFutureFunction function, void *argument) {
+static inline CONCURRENCY_TYPE(TTask) FUTURE_FUNC(Task)(CONCURRENCY_TYPE(CONCURRENCY_TYPE(TFuture)Task) *futureTask, CONCURRENCY_TYPE(TFuture) *future,
+                                    CONCURRENCY_TYPE(FutureFunction) function, void *argument) {
   if (futureTask == NULL || future == NULL || !future->initialized ||
       function == NULL)
     return TASK_FUNC(Create)(NULL, NULL);

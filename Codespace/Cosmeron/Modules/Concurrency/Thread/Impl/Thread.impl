@@ -8,20 +8,20 @@
 #include <sched.h>
 
 typedef struct InternalType_ThreadStart {
-  TThreadFunction function;
+  CONCURRENCY_TYPE(ThreadFunction) function;
   void *argument;
 } InternalType_ThreadStart;
 
-inline static void *ConcurrencyInternal_Thread_Start(void *opaque) {
+static inline void *ConcurrencyInternal_Thread_Start(void *opaque) {
   InternalType_ThreadStart *start = (InternalType_ThreadStart *)opaque;
-  TThreadFunction function = start->function;
+  CONCURRENCY_TYPE(ThreadFunction) function = start->function;
   void *argument = start->argument;
   Memory_Free(start);
   function(argument);
   return NULL;
 }
 
-inline static OPSTATUS THREAD_FUNC(Create)(TThread *thread, TThreadFunction function,
+static inline OPSTATUS THREAD_FUNC(Create)(CONCURRENCY_TYPE(TThread) *thread, CONCURRENCY_TYPE(ThreadFunction) function,
                                      void *argument) {
   if (thread == NULL || function == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -43,7 +43,7 @@ inline static OPSTATUS THREAD_FUNC(Create)(TThread *thread, TThreadFunction func
   return STATUS_CONST(SUCCESS);
 }
 
-inline static OPSTATUS THREAD_FUNC(Join)(TThread *thread) {
+static inline OPSTATUS THREAD_FUNC(Join)(CONCURRENCY_TYPE(TThread) *thread) {
   if (thread == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (!thread->joinable)
@@ -54,7 +54,7 @@ inline static OPSTATUS THREAD_FUNC(Join)(TThread *thread) {
   return STATUS_CONST(SUCCESS);
 }
 
-inline static OPSTATUS THREAD_FUNC(Detach)(TThread *thread) {
+static inline OPSTATUS THREAD_FUNC(Detach)(CONCURRENCY_TYPE(TThread) *thread) {
   if (thread == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (!thread->joinable)
@@ -65,32 +65,32 @@ inline static OPSTATUS THREAD_FUNC(Detach)(TThread *thread) {
   return STATUS_CONST(SUCCESS);
 }
 
-inline static void THREAD_FUNC(Yield)(void) { (void)sched_yield(); }
+static inline void THREAD_FUNC(Yield)(void) { (void)sched_yield(); }
 
-inline static TThreadNative THREAD_FUNC(Current)(void) { return pthread_self(); }
+static inline CONCURRENCY_TYPE(ThreadNative) THREAD_FUNC(Current)(void) { return pthread_self(); }
 
-inline static bool THREAD_FUNC(Equal)(TThreadNative first,
-                                    TThreadNative second) {
+static inline bool THREAD_FUNC(Equal)(CONCURRENCY_TYPE(ThreadNative) first,
+                                    CONCURRENCY_TYPE(ThreadNative) second) {
   return pthread_equal(first, second) != 0;
 }
 
 #elif OS_WINDOWS
 
 typedef struct InternalType_ThreadStart {
-  TThreadFunction function;
+  CONCURRENCY_TYPE(ThreadFunction) function;
   void *argument;
 } InternalType_ThreadStart;
 
-inline static DWORD WINAPI ConcurrencyInternal_Thread_Start(LPVOID opaque) {
+static inline DWORD WINAPI ConcurrencyInternal_Thread_Start(LPVOID opaque) {
   InternalType_ThreadStart *start = (InternalType_ThreadStart *)opaque;
-  TThreadFunction function = start->function;
+  CONCURRENCY_TYPE(ThreadFunction) function = start->function;
   void *argument = start->argument;
   Memory_Free(start);
   function(argument);
   return 0;
 }
 
-inline static OPSTATUS THREAD_FUNC(Create)(TThread *thread, TThreadFunction function,
+static inline OPSTATUS THREAD_FUNC(Create)(CONCURRENCY_TYPE(TThread) *thread, CONCURRENCY_TYPE(ThreadFunction) function,
                                      void *argument) {
   InternalType_ThreadStart *start;
   if (thread == NULL || function == NULL)
@@ -114,7 +114,7 @@ inline static OPSTATUS THREAD_FUNC(Create)(TThread *thread, TThreadFunction func
   return STATUS_CONST(SUCCESS);
 }
 
-inline static OPSTATUS THREAD_FUNC(Join)(TThread *thread) {
+static inline OPSTATUS THREAD_FUNC(Join)(CONCURRENCY_TYPE(TThread) *thread) {
   if (thread == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (!thread->joinable)
@@ -126,7 +126,7 @@ inline static OPSTATUS THREAD_FUNC(Join)(TThread *thread) {
   return STATUS_CONST(SUCCESS);
 }
 
-inline static OPSTATUS THREAD_FUNC(Detach)(TThread *thread) {
+static inline OPSTATUS THREAD_FUNC(Detach)(CONCURRENCY_TYPE(TThread) *thread) {
   if (thread == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (!thread->joinable)
@@ -137,14 +137,14 @@ inline static OPSTATUS THREAD_FUNC(Detach)(TThread *thread) {
   return STATUS_CONST(SUCCESS);
 }
 
-inline static void THREAD_FUNC(Yield)(void) { SwitchToThread(); }
+static inline void THREAD_FUNC(Yield)(void) { SwitchToThread(); }
 
-inline static TThreadNative THREAD_FUNC(Current)(void) {
+static inline CONCURRENCY_TYPE(ThreadNative) THREAD_FUNC(Current)(void) {
   return GetCurrentThread();
 }
 
-inline static bool THREAD_FUNC(Equal)(TThreadNative first,
-                                    TThreadNative second) {
+static inline bool THREAD_FUNC(Equal)(CONCURRENCY_TYPE(ThreadNative) first,
+                                    CONCURRENCY_TYPE(ThreadNative) second) {
   return GetThreadId(first) == GetThreadId(second);
 }
 

@@ -1,7 +1,7 @@
 #pragma once
 #include "../ThreadPool.h"
 
-inline static bool ConcurrencyInternal_ThreadPool_Pop(TThreadPool *pool, TTask *task) {
+static inline bool ConcurrencyInternal_ThreadPool_Pop(CONCURRENCY_TYPE(TThread)Pool *pool, CONCURRENCY_TYPE(TTask) *task) {
   if (pool->queueSize == 0) return false;
   *task = pool->queue[pool->queueHead];
   pool->queueHead = (pool->queueHead + 1) % pool->queueCapacity;
@@ -9,10 +9,10 @@ inline static bool ConcurrencyInternal_ThreadPool_Pop(TThreadPool *pool, TTask *
   return true;
 }
 
-inline static void ConcurrencyInternal_ThreadPool_Worker(void *argument) {
-  TThreadPool *pool = (TThreadPool *)argument;
+static inline void ConcurrencyInternal_ThreadPool_Worker(void *argument) {
+  CONCURRENCY_TYPE(TThread)Pool *pool = (CONCURRENCY_TYPE(TThread)Pool *)argument;
   for (;;) {
-    TTask task = {0};
+    CONCURRENCY_TYPE(TTask) task = {0};
     if (MUTEX_FUNC(Lock)(&pool->mutex) != STATUS_CONST(SUCCESS)) { pool->stopping = true; break; }
     while (pool->queueSize == 0 && !pool->stopping) {
       { OPSTATUS status = CONDITION_FUNC(Wait)(&pool->hasWork, &pool->mutex); if (status != STATUS_CONST(SUCCESS)) {
@@ -34,8 +34,8 @@ inline static void ConcurrencyInternal_ThreadPool_Worker(void *argument) {
   return;
 }
 
-inline static OPSTATUS THREAD_POOL_FUNC(Init)(TThreadPool *pool, TThread *threads,
-                                        size_t threadCount, TTask *queue,
+static inline OPSTATUS THREAD_POOL_FUNC(Init)(CONCURRENCY_TYPE(TThread)Pool *pool, CONCURRENCY_TYPE(TThread) *threads,
+                                        size_t threadCount, CONCURRENCY_TYPE(TTask) *queue,
                                         size_t queueCapacity) {
   size_t created = 0;
   if (pool == NULL || threads == NULL || queue == NULL ||
@@ -81,7 +81,7 @@ inline static OPSTATUS THREAD_POOL_FUNC(Init)(TThreadPool *pool, TThread *thread
   return createStatus;
 }
 
-inline static OPSTATUS THREAD_POOL_FUNC(Submit)(TThreadPool *pool, TTask task) {
+static inline OPSTATUS THREAD_POOL_FUNC(Submit)(CONCURRENCY_TYPE(TThread)Pool *pool, CONCURRENCY_TYPE(TTask) task) {
   size_t tail;
   if (pool == NULL || !pool->initialized || !TASK_FUNC(IsValid)(&task)) return STATUS_CONST(INVALID_ARGUMENT);
   { OPSTATUS status = MUTEX_FUNC(Lock)(&pool->mutex); if (status != STATUS_CONST(SUCCESS)) return status; }
@@ -105,14 +105,14 @@ inline static OPSTATUS THREAD_POOL_FUNC(Submit)(TThreadPool *pool, TTask task) {
   return MUTEX_FUNC(Unlock)(&pool->mutex);
 }
 
-inline static OPSTATUS THREAD_POOL_FUNC(TrySubmit)(TThreadPool *pool, TTask task,
-                                                   bool *submitted) {
+static inline OPSTATUS THREAD_POOL_FUNC(TrySubmit)(CONCURRENCY_TYPE(TThread)Pool *pool, CONCURRENCY_TYPE(TTask) task,
+                                                   bool *outSubmitted) {
   size_t tail;
   OPSTATUS status;
   if (pool == NULL || submitted == NULL || !pool->initialized ||
       !TASK_FUNC(IsValid)(&task))
     return STATUS_CONST(INVALID_ARGUMENT);
-  *submitted = false;
+  *outSubmitted = false;
   status = MUTEX_FUNC(Lock)(&pool->mutex);
   if (status != STATUS_CONST(SUCCESS)) return status;
   if (pool->stopping) {
@@ -126,7 +126,7 @@ inline static OPSTATUS THREAD_POOL_FUNC(TrySubmit)(TThreadPool *pool, TTask task
   tail = (pool->queueHead + pool->queueSize) % pool->queueCapacity;
   pool->queue[tail] = task;
   ++pool->queueSize;
-  *submitted = true;
+  *outSubmitted = true;
   status = CONDITION_FUNC(NotifyOne)(&pool->hasWork);
   {
     OPSTATUS unlockStatus = MUTEX_FUNC(Unlock)(&pool->mutex);
@@ -135,7 +135,7 @@ inline static OPSTATUS THREAD_POOL_FUNC(TrySubmit)(TThreadPool *pool, TTask task
   return status;
 }
 
-inline static OPSTATUS THREAD_POOL_FUNC(Shutdown)(TThreadPool *pool) {
+static inline OPSTATUS THREAD_POOL_FUNC(Shutdown)(CONCURRENCY_TYPE(TThread)Pool *pool) {
   OPSTATUS status;
   if (pool == NULL || !pool->initialized) return STATUS_CONST(INVALID_ARGUMENT);
   status = MUTEX_FUNC(Lock)(&pool->mutex);
@@ -147,7 +147,7 @@ inline static OPSTATUS THREAD_POOL_FUNC(Shutdown)(TThreadPool *pool) {
   return status;
 }
 
-inline static OPSTATUS THREAD_POOL_FUNC(Destroy)(TThreadPool *pool) {
+static inline OPSTATUS THREAD_POOL_FUNC(Destroy)(CONCURRENCY_TYPE(TThread)Pool *pool) {
   OPSTATUS status;
   if (pool == NULL || !pool->initialized) return STATUS_CONST(INVALID_ARGUMENT);
   for (size_t i = 0; i < pool->threadCount; ++i) {

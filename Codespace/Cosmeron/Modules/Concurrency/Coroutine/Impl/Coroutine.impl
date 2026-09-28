@@ -1,7 +1,7 @@
 #pragma once
 
-inline static OPSTATUS COROUTINE_FUNC(Init)(TCoroutine *coroutine,
-                                      TCoroutineFunction function,
+static inline OPSTATUS COROUTINE_FUNC(Init)(CONCURRENCY_TYPE(TCoroutine) *coroutine,
+                                      CONCURRENCY_TYPE(CoroutineFunction) function,
                                       void *argument) {
   if (coroutine == NULL || function == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -13,7 +13,7 @@ inline static OPSTATUS COROUTINE_FUNC(Init)(TCoroutine *coroutine,
   return STATUS_CONST(SUCCESS);
 }
 
-inline static OPSTATUS COROUTINE_FUNC(Resume)(TCoroutine *coroutine) {
+static inline OPSTATUS COROUTINE_FUNC(Resume)(CONCURRENCY_TYPE(TCoroutine) *coroutine) {
   if (coroutine == NULL || coroutine->function == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (coroutine->state == CONCURRENCY_COROUTINE_STATE_RUNNING)
@@ -25,7 +25,7 @@ inline static OPSTATUS COROUTINE_FUNC(Resume)(TCoroutine *coroutine) {
   return STATUS_CONST(SUCCESS);
 }
 
-inline static OPSTATUS COROUTINE_FUNC(Reset)(TCoroutine *coroutine) {
+static inline OPSTATUS COROUTINE_FUNC(Reset)(CONCURRENCY_TYPE(TCoroutine) *coroutine) {
   if (coroutine == NULL || coroutine->function == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (coroutine->state == CONCURRENCY_COROUTINE_STATE_RUNNING)
@@ -36,24 +36,24 @@ inline static OPSTATUS COROUTINE_FUNC(Reset)(TCoroutine *coroutine) {
   return STATUS_CONST(SUCCESS);
 }
 
-inline static TCoroutineState
-COROUTINE_FUNC(GetState)(const TCoroutine *coroutine) {
+static inline CONCURRENCY_TYPE(CoroutineState)
+COROUTINE_FUNC(GetState)(const CONCURRENCY_TYPE(TCoroutine) *coroutine) {
   return coroutine == NULL ? CONCURRENCY_COROUTINE_STATE_FINISHED : coroutine->state;
 }
 
-inline static bool COROUTINE_FUNC(IsReady)(const TCoroutine *coroutine) {
+static inline bool COROUTINE_FUNC(IsReady)(const CONCURRENCY_TYPE(TCoroutine) *coroutine) {
   return coroutine != NULL && coroutine->state == CONCURRENCY_COROUTINE_STATE_READY;
 }
 
-inline static bool COROUTINE_FUNC(IsRunning)(const TCoroutine *coroutine) {
+static inline bool COROUTINE_FUNC(IsRunning)(const CONCURRENCY_TYPE(TCoroutine) *coroutine) {
   return coroutine != NULL && coroutine->state == CONCURRENCY_COROUTINE_STATE_RUNNING;
 }
 
-inline static bool COROUTINE_FUNC(IsSuspended)(const TCoroutine *coroutine) {
+static inline bool COROUTINE_FUNC(IsSuspended)(const CONCURRENCY_TYPE(TCoroutine) *coroutine) {
   return coroutine != NULL && coroutine->state == CONCURRENCY_COROUTINE_STATE_SUSPENDED;
 }
 
-inline static bool COROUTINE_FUNC(IsFinished)(const TCoroutine *coroutine) {
+static inline bool COROUTINE_FUNC(IsFinished)(const CONCURRENCY_TYPE(TCoroutine) *coroutine) {
   return coroutine != NULL && coroutine->state == CONCURRENCY_COROUTINE_STATE_FINISHED;
 }
 
