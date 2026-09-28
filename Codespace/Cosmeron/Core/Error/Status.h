@@ -31,7 +31,10 @@
   X(TIMEOUT, "Timeout")                                                       \
   X(CANCELLED, "Cancelled")                                                   \
   X(ARITHMETIC_OVERFLOW, "Arithmetic overflow")                               \
-  X(DIVISION_BY_ZERO, "Division by zero")
+  X(DIVISION_BY_ZERO, "Division by zero")                                      \
+  X(INVALID_SEQUENCE, "Invalid sequence")                                      \
+  X(INCOMPLETE_SEQUENCE, "Incomplete sequence")                                \
+  X(INSUFFICIENT_SPACE, "Insufficient space")
 
 typedef enum STATUS_TYPE(Status) {
 #define STATUS_ENUM_ITEM(NAME, MESSAGE) STATUS_CONST(NAME),
