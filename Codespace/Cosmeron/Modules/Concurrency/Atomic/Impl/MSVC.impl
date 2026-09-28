@@ -29,6 +29,36 @@ typedef enum CONCURRENCY_TYPE(MemoryOrder) {
 #define ATOMIC_PTR_INIT(VALUE) { (void *)(VALUE) }
 #define ATOMIC_BOOL_INIT(VALUE) { (LONG)((VALUE) != false) }
 
+ATOMIC_LOAD_PROTOTYPE(uint32_t, U32);
+ATOMIC_STORE_PROTOTYPE(uint32_t, U32);
+ATOMIC_EXCHANGE_PROTOTYPE(uint32_t, U32);
+ATOMIC_COMPARE_EXCHANGE_PROTOTYPE(uint32_t, U32);
+ATOMIC_FETCH_ADD_PROTOTYPE(uint32_t, U32);
+ATOMIC_FETCH_SUB_PROTOTYPE(uint32_t, U32);
+ATOMIC_FETCH_AND_PROTOTYPE(uint32_t, U32);
+ATOMIC_FETCH_OR_PROTOTYPE(uint32_t, U32);
+ATOMIC_FETCH_XOR_PROTOTYPE(uint32_t, U32);
+
+#if CONCURRENCY_HAS_ATOMIC_U64
+ATOMIC_LOAD_PROTOTYPE(uint64_t, U64);
+ATOMIC_STORE_PROTOTYPE(uint64_t, U64);
+ATOMIC_EXCHANGE_PROTOTYPE(uint64_t, U64);
+ATOMIC_COMPARE_EXCHANGE_PROTOTYPE(uint64_t, U64);
+ATOMIC_FETCH_ADD_PROTOTYPE(uint64_t, U64);
+ATOMIC_FETCH_SUB_PROTOTYPE(uint64_t, U64);
+ATOMIC_FETCH_AND_PROTOTYPE(uint64_t, U64);
+ATOMIC_FETCH_OR_PROTOTYPE(uint64_t, U64);
+ATOMIC_FETCH_XOR_PROTOTYPE(uint64_t, U64);
+#endif
+
+ATOMIC_LOAD_PROTOTYPE(uintptr_t, Ptr);
+ATOMIC_STORE_PROTOTYPE(uintptr_t, Ptr);
+ATOMIC_EXCHANGE_PROTOTYPE(uintptr_t, Ptr);
+ATOMIC_COMPARE_EXCHANGE_PROTOTYPE(uintptr_t, Ptr);
+ATOMIC_BOOL_LOAD_PROTOTYPE;
+ATOMIC_BOOL_STORE_PROTOTYPE;
+ATOMIC_BOOL_EXCHANGE_PROTOTYPE;
+
 /*
  * MSVC's Interlocked family is intentionally used instead of C11 atomics.
  * This keeps the backend header-only and avoids an external atomic runtime.
@@ -36,28 +66,20 @@ typedef enum CONCURRENCY_TYPE(MemoryOrder) {
  * on this backend some weaker orders may therefore be implemented more strongly.
  */
 
-static inline uint32_t ATOMIC_FUNC(U32_Load)(const CONCURRENCY_TYPE(TAtomicU32) *atomic,
-                                           CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_LOAD_PROTOTYPE(uint32_t, U32) {
   (void)order;
   return (uint32_t)_InterlockedCompareExchange(
       (volatile LONG *)&atomic->value, 0, 0);
 }
-static inline void ATOMIC_FUNC(U32_Store)(CONCURRENCY_TYPE(TAtomicU32) *atomic, uint32_t value,
-                                        CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_STORE_PROTOTYPE(uint32_t, U32) {
   (void)order;
   (void)_InterlockedExchange(&atomic->value, (LONG)value);
 }
-static inline uint32_t ATOMIC_FUNC(U32_Exchange)(CONCURRENCY_TYPE(TAtomicU32) *atomic,
-                                               uint32_t value,
-                                               CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_EXCHANGE_PROTOTYPE(uint32_t, U32) {
   (void)order;
   return (uint32_t)_InterlockedExchange(&atomic->value, (LONG)value);
 }
-static inline bool ATOMIC_FUNC(U32_CompareExchange)(CONCURRENCY_TYPE(TAtomicU32) *atomic,
-                                                   uint32_t *expected,
-                                                   uint32_t desired,
-                                                   CONCURRENCY_TYPE(MemoryOrder) success,
-                                                   CONCURRENCY_TYPE(MemoryOrder) failure) {
+ATOMIC_COMPARE_EXCHANGE_PROTOTYPE(uint32_t, U32) {
   LONG old;
   (void)success;
   (void)failure;
@@ -68,59 +90,41 @@ static inline bool ATOMIC_FUNC(U32_CompareExchange)(CONCURRENCY_TYPE(TAtomicU32)
   *expected = (uint32_t)old;
   return false;
 }
-static inline uint32_t ATOMIC_FUNC(U32_FetchAdd)(CONCURRENCY_TYPE(TAtomicU32) *atomic,
-                                                uint32_t value,
-                                                CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_FETCH_ADD_PROTOTYPE(uint32_t, U32) {
   (void)order;
   return (uint32_t)_InterlockedExchangeAdd(&atomic->value, (LONG)value);
 }
-static inline uint32_t ATOMIC_FUNC(U32_FetchSub)(CONCURRENCY_TYPE(TAtomicU32) *atomic,
-                                                uint32_t value,
-                                                CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_FETCH_SUB_PROTOTYPE(uint32_t, U32) {
   return ATOMIC_FUNC(U32_FetchAdd)(atomic, (uint32_t)(0u - value), order);
 }
-static inline uint32_t ATOMIC_FUNC(U32_FetchAnd)(CONCURRENCY_TYPE(TAtomicU32) *atomic,
-                                                uint32_t value,
-                                                CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_FETCH_AND_PROTOTYPE(uint32_t, U32) {
   (void)order;
   return (uint32_t)_InterlockedAnd(&atomic->value, (LONG)value);
 }
-static inline uint32_t ATOMIC_FUNC(U32_FetchOr)(CONCURRENCY_TYPE(TAtomicU32) *atomic,
-                                               uint32_t value,
-                                               CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_FETCH_OR_PROTOTYPE(uint32_t, U32) {
   (void)order;
   return (uint32_t)_InterlockedOr(&atomic->value, (LONG)value);
 }
-static inline uint32_t ATOMIC_FUNC(U32_FetchXor)(CONCURRENCY_TYPE(TAtomicU32) *atomic,
-                                                uint32_t value,
-                                                CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_FETCH_XOR_PROTOTYPE(uint32_t, U32) {
   (void)order;
   return (uint32_t)_InterlockedXor(&atomic->value, (LONG)value);
 }
 
 #if CONCURRENCY_HAS_ATOMIC_U64
-static inline uint64_t ATOMIC_FUNC(U64_Load)(const CONCURRENCY_TYPE(TAtomicU64) *atomic,
-                                           CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_LOAD_PROTOTYPE(uint64_t, U64) {
   (void)order;
   return (uint64_t)_InterlockedCompareExchange64(
       (volatile LONG64 *)&atomic->value, 0, 0);
 }
-static inline void ATOMIC_FUNC(U64_Store)(CONCURRENCY_TYPE(TAtomicU64) *atomic, uint64_t value,
-                                        CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_STORE_PROTOTYPE(uint64_t, U64) {
   (void)order;
   (void)_InterlockedExchange64(&atomic->value, (LONG64)value);
 }
-static inline uint64_t ATOMIC_FUNC(U64_Exchange)(CONCURRENCY_TYPE(TAtomicU64) *atomic,
-                                               uint64_t value,
-                                               CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_EXCHANGE_PROTOTYPE(uint64_t, U64) {
   (void)order;
   return (uint64_t)_InterlockedExchange64(&atomic->value, (LONG64)value);
 }
-static inline bool ATOMIC_FUNC(U64_CompareExchange)(CONCURRENCY_TYPE(TAtomicU64) *atomic,
-                                                   uint64_t *expected,
-                                                   uint64_t desired,
-                                                   CONCURRENCY_TYPE(MemoryOrder) success,
-                                                   CONCURRENCY_TYPE(MemoryOrder) failure) {
+ATOMIC_COMPARE_EXCHANGE_PROTOTYPE(uint64_t, U64) {
   LONG64 old;
   (void)success;
   (void)failure;
@@ -131,59 +135,41 @@ static inline bool ATOMIC_FUNC(U64_CompareExchange)(CONCURRENCY_TYPE(TAtomicU64)
   *expected = (uint64_t)old;
   return false;
 }
-static inline uint64_t ATOMIC_FUNC(U64_FetchAdd)(CONCURRENCY_TYPE(TAtomicU64) *atomic,
-                                                uint64_t value,
-                                                CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_FETCH_ADD_PROTOTYPE(uint64_t, U64) {
   (void)order;
   return (uint64_t)_InterlockedExchangeAdd64(&atomic->value, (LONG64)value);
 }
-static inline uint64_t ATOMIC_FUNC(U64_FetchSub)(CONCURRENCY_TYPE(TAtomicU64) *atomic,
-                                                uint64_t value,
-                                                CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_FETCH_SUB_PROTOTYPE(uint64_t, U64) {
   return ATOMIC_FUNC(U64_FetchAdd)(atomic, (uint64_t)(0ull - value), order);
 }
-static inline uint64_t ATOMIC_FUNC(U64_FetchAnd)(CONCURRENCY_TYPE(TAtomicU64) *atomic,
-                                                uint64_t value,
-                                                CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_FETCH_AND_PROTOTYPE(uint64_t, U64) {
   (void)order;
   return (uint64_t)_InterlockedAnd64(&atomic->value, (LONG64)value);
 }
-static inline uint64_t ATOMIC_FUNC(U64_FetchOr)(CONCURRENCY_TYPE(TAtomicU64) *atomic,
-                                               uint64_t value,
-                                               CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_FETCH_OR_PROTOTYPE(uint64_t, U64) {
   (void)order;
   return (uint64_t)_InterlockedOr64(&atomic->value, (LONG64)value);
 }
-static inline uint64_t ATOMIC_FUNC(U64_FetchXor)(CONCURRENCY_TYPE(TAtomicU64) *atomic,
-                                                uint64_t value,
-                                                CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_FETCH_XOR_PROTOTYPE(uint64_t, U64) {
   (void)order;
   return (uint64_t)_InterlockedXor64(&atomic->value, (LONG64)value);
 }
 #endif
 
-static inline uintptr_t ATOMIC_FUNC(Ptr_Load)(const CONCURRENCY_TYPE(TAtomicPtr) *atomic,
-                                            CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_LOAD_PROTOTYPE(uintptr_t, Ptr) {
   (void)order;
   return (uintptr_t)_InterlockedCompareExchangePointer(
       (void *volatile *)&atomic->value, NULL, NULL);
 }
-static inline void ATOMIC_FUNC(Ptr_Store)(CONCURRENCY_TYPE(TAtomicPtr) *atomic, uintptr_t value,
-                                        CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_STORE_PROTOTYPE(uintptr_t, Ptr) {
   (void)order;
   (void)_InterlockedExchangePointer(&atomic->value, (void *)value);
 }
-static inline uintptr_t ATOMIC_FUNC(Ptr_Exchange)(CONCURRENCY_TYPE(TAtomicPtr) *atomic,
-                                                uintptr_t value,
-                                                CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_EXCHANGE_PROTOTYPE(uintptr_t, Ptr) {
   (void)order;
   return (uintptr_t)_InterlockedExchangePointer(&atomic->value, (void *)value);
 }
-static inline bool ATOMIC_FUNC(Ptr_CompareExchange)(CONCURRENCY_TYPE(TAtomicPtr) *atomic,
-                                                  uintptr_t *expected,
-                                                  uintptr_t desired,
-                                                  CONCURRENCY_TYPE(MemoryOrder) success,
-                                                  CONCURRENCY_TYPE(MemoryOrder) failure) {
+ATOMIC_COMPARE_EXCHANGE_PROTOTYPE(uintptr_t, Ptr) {
   void *old;
   (void)success;
   (void)failure;
@@ -195,18 +181,15 @@ static inline bool ATOMIC_FUNC(Ptr_CompareExchange)(CONCURRENCY_TYPE(TAtomicPtr)
   return false;
 }
 
-static inline bool ATOMIC_FUNC(Bool_Load)(const CONCURRENCY_TYPE(TAtomicBool) *atomic,
-                                        CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_BOOL_LOAD_PROTOTYPE {
   (void)order;
   return _InterlockedCompareExchange((volatile LONG *)&atomic->value, 0, 0) != 0;
 }
-static inline void ATOMIC_FUNC(Bool_Store)(CONCURRENCY_TYPE(TAtomicBool) *atomic, bool value,
-                                         CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_BOOL_STORE_PROTOTYPE {
   (void)order;
   (void)_InterlockedExchange(&atomic->value, (LONG)value);
 }
-static inline bool ATOMIC_FUNC(Bool_Exchange)(CONCURRENCY_TYPE(TAtomicBool) *atomic, bool value,
-                                             CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_BOOL_EXCHANGE_PROTOTYPE {
   (void)order;
   return _InterlockedExchange(&atomic->value, (LONG)value) != 0;
 }

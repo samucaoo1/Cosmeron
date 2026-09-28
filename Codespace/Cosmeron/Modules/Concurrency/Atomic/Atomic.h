@@ -2,6 +2,56 @@
 
 #include "../Concurrency.space"
 
+
+#define ATOMIC_LOAD_PROTOTYPE(TYPE, SUFFIX)                                   \
+  static inline TYPE ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, Load))(               \
+      const ATOMIC_TYPE(SUFFIX) *atomic, CONCURRENCY_TYPE(MemoryOrder) order)
+#define ATOMIC_STORE_PROTOTYPE(TYPE, SUFFIX)                                  \
+  static inline void ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, Store))(              \
+      ATOMIC_TYPE(SUFFIX) *atomic, TYPE value,                               \
+      CONCURRENCY_TYPE(MemoryOrder) order)
+#define ATOMIC_EXCHANGE_PROTOTYPE(TYPE, SUFFIX)                               \
+  static inline TYPE ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, Exchange))(           \
+      ATOMIC_TYPE(SUFFIX) *atomic, TYPE value,                               \
+      CONCURRENCY_TYPE(MemoryOrder) order)
+#define ATOMIC_COMPARE_EXCHANGE_PROTOTYPE(TYPE, SUFFIX)                       \
+  static inline bool ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, CompareExchange))(    \
+      ATOMIC_TYPE(SUFFIX) *atomic, TYPE *expected, TYPE desired,             \
+      CONCURRENCY_TYPE(MemoryOrder) success,                                  \
+      CONCURRENCY_TYPE(MemoryOrder) failure)
+#define ATOMIC_FETCH_ADD_PROTOTYPE(TYPE, SUFFIX)                              \
+  static inline TYPE ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, FetchAdd))(           \
+      ATOMIC_TYPE(SUFFIX) *atomic, TYPE value,                               \
+      CONCURRENCY_TYPE(MemoryOrder) order)
+#define ATOMIC_FETCH_SUB_PROTOTYPE(TYPE, SUFFIX)                              \
+  static inline TYPE ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, FetchSub))(           \
+      ATOMIC_TYPE(SUFFIX) *atomic, TYPE value,                               \
+      CONCURRENCY_TYPE(MemoryOrder) order)
+#define ATOMIC_FETCH_AND_PROTOTYPE(TYPE, SUFFIX)                              \
+  static inline TYPE ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, FetchAnd))(           \
+      ATOMIC_TYPE(SUFFIX) *atomic, TYPE value,                               \
+      CONCURRENCY_TYPE(MemoryOrder) order)
+#define ATOMIC_FETCH_OR_PROTOTYPE(TYPE, SUFFIX)                               \
+  static inline TYPE ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, FetchOr))(            \
+      ATOMIC_TYPE(SUFFIX) *atomic, TYPE value,                               \
+      CONCURRENCY_TYPE(MemoryOrder) order)
+#define ATOMIC_FETCH_XOR_PROTOTYPE(TYPE, SUFFIX)                              \
+  static inline TYPE ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, FetchXor))(           \
+      ATOMIC_TYPE(SUFFIX) *atomic, TYPE value,                               \
+      CONCURRENCY_TYPE(MemoryOrder) order)
+#define ATOMIC_BOOL_LOAD_PROTOTYPE                                            \
+  static inline bool ATOMIC_FUNC(Bool_Load)(                                 \
+      const CONCURRENCY_TYPE(TAtomicBool) *atomic,                            \
+      CONCURRENCY_TYPE(MemoryOrder) order)
+#define ATOMIC_BOOL_STORE_PROTOTYPE                                           \
+  static inline void ATOMIC_FUNC(Bool_Store)(                                \
+      CONCURRENCY_TYPE(TAtomicBool) *atomic, bool value,                      \
+      CONCURRENCY_TYPE(MemoryOrder) order)
+#define ATOMIC_BOOL_EXCHANGE_PROTOTYPE                                        \
+  static inline bool ATOMIC_FUNC(Bool_Exchange)(                             \
+      CONCURRENCY_TYPE(TAtomicBool) *atomic, bool value,                      \
+      CONCURRENCY_TYPE(MemoryOrder) order)
+
 #if COMPILER_GCC || COMPILER_CLANG
 
 /*
@@ -58,66 +108,36 @@ typedef enum CONCURRENCY_TYPE(MemoryOrder) {
 #define ATOMIC_PTR_INIT(VALUE) { (uintptr_t)(VALUE) }
 #define ATOMIC_BOOL_INIT(VALUE) { (uint32_t)((VALUE) != false) }
 
-#define ATOMIC_DECLARE(TYPE, SUFFIX)                                  \
-  static inline TYPE ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, Load))(const ATOMIC_TYPE(SUFFIX) *atomic,  \
-                                               CONCURRENCY_TYPE(MemoryOrder) order);            \
-  static inline void ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, Store))(ATOMIC_TYPE(SUFFIX) *atomic,       \
-                                                TYPE value,                     \
-                                                CONCURRENCY_TYPE(MemoryOrder) order);           \
-  static inline TYPE ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, Exchange))(ATOMIC_TYPE(SUFFIX) *atomic,    \
-                                                   TYPE value,                  \
-                                                   CONCURRENCY_TYPE(MemoryOrder) order);        \
-  static inline bool ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, CompareExchange))(                      \
-      ATOMIC_TYPE(SUFFIX) *atomic, TYPE *expected, TYPE desired,                  \
-      CONCURRENCY_TYPE(MemoryOrder) success, CONCURRENCY_TYPE(MemoryOrder) failure)
-
-ATOMIC_DECLARE(uint32_t, U32);
-#if CONCURRENCY_HAS_ATOMIC_U64
-ATOMIC_DECLARE(uint64_t, U64);
-#endif
-ATOMIC_DECLARE(uintptr_t, Ptr);
-
-static inline uint32_t ATOMIC_FUNC(U32_FetchAdd)(CONCURRENCY_TYPE(TAtomicU32) *atomic,
-                                                uint32_t value,
-                                                CONCURRENCY_TYPE(MemoryOrder) order);
-static inline uint32_t ATOMIC_FUNC(U32_FetchSub)(CONCURRENCY_TYPE(TAtomicU32) *atomic,
-                                                uint32_t value,
-                                                CONCURRENCY_TYPE(MemoryOrder) order);
-static inline uint32_t ATOMIC_FUNC(U32_FetchAnd)(CONCURRENCY_TYPE(TAtomicU32) *atomic,
-                                                uint32_t value,
-                                                CONCURRENCY_TYPE(MemoryOrder) order);
-static inline uint32_t ATOMIC_FUNC(U32_FetchOr)(CONCURRENCY_TYPE(TAtomicU32) *atomic,
-                                               uint32_t value,
-                                               CONCURRENCY_TYPE(MemoryOrder) order);
-static inline uint32_t ATOMIC_FUNC(U32_FetchXor)(CONCURRENCY_TYPE(TAtomicU32) *atomic,
-                                                uint32_t value,
-                                                CONCURRENCY_TYPE(MemoryOrder) order);
+ATOMIC_LOAD_PROTOTYPE(uint32_t, U32);
+ATOMIC_STORE_PROTOTYPE(uint32_t, U32);
+ATOMIC_EXCHANGE_PROTOTYPE(uint32_t, U32);
+ATOMIC_COMPARE_EXCHANGE_PROTOTYPE(uint32_t, U32);
+ATOMIC_FETCH_ADD_PROTOTYPE(uint32_t, U32);
+ATOMIC_FETCH_SUB_PROTOTYPE(uint32_t, U32);
+ATOMIC_FETCH_AND_PROTOTYPE(uint32_t, U32);
+ATOMIC_FETCH_OR_PROTOTYPE(uint32_t, U32);
+ATOMIC_FETCH_XOR_PROTOTYPE(uint32_t, U32);
 
 #if CONCURRENCY_HAS_ATOMIC_U64
-static inline uint64_t ATOMIC_FUNC(U64_FetchAdd)(CONCURRENCY_TYPE(TAtomicU64) *atomic,
-                                                uint64_t value,
-                                                CONCURRENCY_TYPE(MemoryOrder) order);
-static inline uint64_t ATOMIC_FUNC(U64_FetchSub)(CONCURRENCY_TYPE(TAtomicU64) *atomic,
-                                                uint64_t value,
-                                                CONCURRENCY_TYPE(MemoryOrder) order);
-static inline uint64_t ATOMIC_FUNC(U64_FetchAnd)(CONCURRENCY_TYPE(TAtomicU64) *atomic,
-                                                uint64_t value,
-                                                CONCURRENCY_TYPE(MemoryOrder) order);
-static inline uint64_t ATOMIC_FUNC(U64_FetchOr)(CONCURRENCY_TYPE(TAtomicU64) *atomic,
-                                               uint64_t value,
-                                               CONCURRENCY_TYPE(MemoryOrder) order);
-static inline uint64_t ATOMIC_FUNC(U64_FetchXor)(CONCURRENCY_TYPE(TAtomicU64) *atomic,
-                                                uint64_t value,
-                                                CONCURRENCY_TYPE(MemoryOrder) order);
-
+ATOMIC_LOAD_PROTOTYPE(uint64_t, U64);
+ATOMIC_STORE_PROTOTYPE(uint64_t, U64);
+ATOMIC_EXCHANGE_PROTOTYPE(uint64_t, U64);
+ATOMIC_COMPARE_EXCHANGE_PROTOTYPE(uint64_t, U64);
+ATOMIC_FETCH_ADD_PROTOTYPE(uint64_t, U64);
+ATOMIC_FETCH_SUB_PROTOTYPE(uint64_t, U64);
+ATOMIC_FETCH_AND_PROTOTYPE(uint64_t, U64);
+ATOMIC_FETCH_OR_PROTOTYPE(uint64_t, U64);
+ATOMIC_FETCH_XOR_PROTOTYPE(uint64_t, U64);
 #endif
 
-static inline bool ATOMIC_FUNC(Bool_Load)(const CONCURRENCY_TYPE(TAtomicBool) *atomic,
-                                        CONCURRENCY_TYPE(MemoryOrder) order);
-static inline void ATOMIC_FUNC(Bool_Store)(CONCURRENCY_TYPE(TAtomicBool) *atomic, bool value,
-                                         CONCURRENCY_TYPE(MemoryOrder) order);
-static inline bool ATOMIC_FUNC(Bool_Exchange)(CONCURRENCY_TYPE(TAtomicBool) *atomic, bool value,
-                                             CONCURRENCY_TYPE(MemoryOrder) order);
+ATOMIC_LOAD_PROTOTYPE(uintptr_t, Ptr);
+ATOMIC_STORE_PROTOTYPE(uintptr_t, Ptr);
+ATOMIC_EXCHANGE_PROTOTYPE(uintptr_t, Ptr);
+ATOMIC_COMPARE_EXCHANGE_PROTOTYPE(uintptr_t, Ptr);
+
+ATOMIC_BOOL_LOAD_PROTOTYPE;
+ATOMIC_BOOL_STORE_PROTOTYPE;
+ATOMIC_BOOL_EXCHANGE_PROTOTYPE;
 
 #include "Impl/Atomic.impl"
 

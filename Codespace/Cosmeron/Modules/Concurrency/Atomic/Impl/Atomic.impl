@@ -4,53 +4,36 @@
 
 #if COMPILER_GCC || COMPILER_CLANG
 
-#define ATOMIC_IMPLEMENT_SCALAR(TYPE, SUFFIX)                                  \
-  static inline TYPE ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, Load))(                                 \
-      const ATOMIC_TYPE(SUFFIX) *atomic, CONCURRENCY_TYPE(MemoryOrder) order) {                   \
-    return __atomic_load_n(&atomic->value, order);                             \
-  }                                                                            \
-  static inline void ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, Store))(ATOMIC_TYPE(SUFFIX) *atomic,       \
-                                                TYPE value,                     \
-                                                CONCURRENCY_TYPE(MemoryOrder) order) {          \
-    __atomic_store_n(&atomic->value, value, order);                            \
-  }                                                                            \
-  static inline TYPE ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, Exchange))(ATOMIC_TYPE(SUFFIX) *atomic,    \
-                                                   TYPE value,                  \
-                                                   CONCURRENCY_TYPE(MemoryOrder) order) {       \
-    return __atomic_exchange_n(&atomic->value, value, order);                  \
-  }                                                                            \
-  static inline bool ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, CompareExchange))(                      \
-      ATOMIC_TYPE(SUFFIX) *atomic, TYPE *expected, TYPE desired,                  \
-      CONCURRENCY_TYPE(MemoryOrder) success, CONCURRENCY_TYPE(MemoryOrder) failure) {                          \
-    return __atomic_compare_exchange_n(&atomic->value, expected, desired,      \
-                                       false, success, failure);                \
+#define ATOMIC_IMPLEMENT_SCALAR(TYPE, SUFFIX)                                \
+  ATOMIC_LOAD_PROTOTYPE(TYPE, SUFFIX) {                                      \
+    return __atomic_load_n(&atomic->value, order);                            \
+  }                                                                           \
+  ATOMIC_STORE_PROTOTYPE(TYPE, SUFFIX) {                                     \
+    __atomic_store_n(&atomic->value, value, order);                           \
+  }                                                                           \
+  ATOMIC_EXCHANGE_PROTOTYPE(TYPE, SUFFIX) {                                  \
+    return __atomic_exchange_n(&atomic->value, value, order);                 \
+  }                                                                           \
+  ATOMIC_COMPARE_EXCHANGE_PROTOTYPE(TYPE, SUFFIX) {                          \
+    return __atomic_compare_exchange_n(&atomic->value, expected, desired,     \
+                                       false, success, failure);               \
   }
 
-#define ATOMIC_IMPLEMENT_FETCH(TYPE, SUFFIX)                                   \
-  static inline TYPE ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, FetchAdd))(ATOMIC_TYPE(SUFFIX) *atomic,    \
-                                                   TYPE value,                  \
-                                                   CONCURRENCY_TYPE(MemoryOrder) order) {       \
-    return __atomic_fetch_add(&atomic->value, value, order);                   \
-  }                                                                            \
-  static inline TYPE ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, FetchSub))(ATOMIC_TYPE(SUFFIX) *atomic,    \
-                                                   TYPE value,                  \
-                                                   CONCURRENCY_TYPE(MemoryOrder) order) {       \
-    return __atomic_fetch_sub(&atomic->value, value, order);                   \
-  }                                                                            \
-  static inline TYPE ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, FetchAnd))(ATOMIC_TYPE(SUFFIX) *atomic,    \
-                                                   TYPE value,                  \
-                                                   CONCURRENCY_TYPE(MemoryOrder) order) {       \
-    return __atomic_fetch_and(&atomic->value, value, order);                   \
-  }                                                                            \
-  static inline TYPE ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, FetchOr))(ATOMIC_TYPE(SUFFIX) *atomic,     \
-                                                  TYPE value,                   \
-                                                  CONCURRENCY_TYPE(MemoryOrder) order) {        \
-    return __atomic_fetch_or(&atomic->value, value, order);                    \
-  }                                                                            \
-  static inline TYPE ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, FetchXor))(ATOMIC_TYPE(SUFFIX) *atomic,    \
-                                                   TYPE value,                  \
-                                                   CONCURRENCY_TYPE(MemoryOrder) order) {       \
-    return __atomic_fetch_xor(&atomic->value, value, order);                   \
+#define ATOMIC_IMPLEMENT_FETCH(TYPE, SUFFIX)                                 \
+  ATOMIC_FETCH_ADD_PROTOTYPE(TYPE, SUFFIX) {                                 \
+    return __atomic_fetch_add(&atomic->value, value, order);                  \
+  }                                                                           \
+  ATOMIC_FETCH_SUB_PROTOTYPE(TYPE, SUFFIX) {                                 \
+    return __atomic_fetch_sub(&atomic->value, value, order);                  \
+  }                                                                           \
+  ATOMIC_FETCH_AND_PROTOTYPE(TYPE, SUFFIX) {                                 \
+    return __atomic_fetch_and(&atomic->value, value, order);                  \
+  }                                                                           \
+  ATOMIC_FETCH_OR_PROTOTYPE(TYPE, SUFFIX) {                                  \
+    return __atomic_fetch_or(&atomic->value, value, order);                   \
+  }                                                                           \
+  ATOMIC_FETCH_XOR_PROTOTYPE(TYPE, SUFFIX) {                                 \
+    return __atomic_fetch_xor(&atomic->value, value, order);                  \
   }
 
 ATOMIC_IMPLEMENT_SCALAR(uint32_t, U32)
@@ -61,18 +44,15 @@ ATOMIC_IMPLEMENT_SCALAR(uint64_t, U64)
 ATOMIC_IMPLEMENT_FETCH(uint64_t, U64)
 #endif
 
-static inline bool ATOMIC_FUNC(Bool_Load)(const CONCURRENCY_TYPE(TAtomicBool) *atomic,
-                                        CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_BOOL_LOAD_PROTOTYPE {
   return __atomic_load_n(&atomic->value, order) != 0;
 }
 
-static inline void ATOMIC_FUNC(Bool_Store)(CONCURRENCY_TYPE(TAtomicBool) *atomic, bool value,
-                                         CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_BOOL_STORE_PROTOTYPE {
   __atomic_store_n(&atomic->value, (uint32_t)value, order);
 }
 
-static inline bool ATOMIC_FUNC(Bool_Exchange)(CONCURRENCY_TYPE(TAtomicBool) *atomic, bool value,
-                                             CONCURRENCY_TYPE(MemoryOrder) order) {
+ATOMIC_BOOL_EXCHANGE_PROTOTYPE {
   return __atomic_exchange_n(&atomic->value, (uint32_t)value, order) != 0;
 }
 
