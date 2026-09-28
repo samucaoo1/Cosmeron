@@ -16,9 +16,19 @@ int main(void) {
   TEST_ASSERT(value == 7);
   TEST_ASSERT(Container_Linked_List_int_PushBack(&list, 9) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(Container_Tree_AVL_Set_int_Insert(&tree, 11) == STATUS_CONST(SUCCESS));
-  TEST_ASSERT(Container_Tree_AVL_Set_int_Find(&tree, 11) != NULL);
+  {
+    int *found = NULL;
+    TEST_ASSERT(Container_Tree_AVL_Set_int_Find(&tree, 11, &found) ==
+                STATUS_CONST(SUCCESS));
+    TEST_ASSERT(found != NULL && *found == 11);
+  }
   TEST_ASSERT(Container_Tree_BST_Set_int_Insert(&bst, 12) == STATUS_CONST(SUCCESS));
-  TEST_ASSERT(Container_Tree_BST_Set_int_Find(&bst, 12) != NULL);
+  {
+    int *found = NULL;
+    TEST_ASSERT(Container_Tree_BST_Set_int_Find(&bst, 12, &found) ==
+                STATUS_CONST(SUCCESS));
+    TEST_ASSERT(found != NULL && *found == 12);
+  }
   TEST_ASSERT(Container_Tree_BST_Set_int_Begin(NULL) == NULL);
   Container_Flat_Vector_int_Destroy(&vector);
   Container_Linked_List_int_Destroy(&list);
