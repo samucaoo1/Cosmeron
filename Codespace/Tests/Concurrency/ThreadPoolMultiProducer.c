@@ -7,13 +7,13 @@
 #define TASKS_PER_PRODUCER 5000
 
 typedef struct TProducer_Context {
-  TThreadPool *pool;
-  TAtomicU32 *counter;
+  CONCURRENCY_TYPE(TThread)Pool *pool;
+  CONCURRENCY_TYPE(TAtomicU32) *counter;
 } TProducer_Context;
 
 static void increment(void *argument) {
-  TAtomicU32 *counter = (TAtomicU32 *)argument;
-  (void)ATOMIC_FUNC(U32_FetchAdd)(counter, 1, CONCURRENCY_ATOMIC_MEMORY_ORDER_RELAXED);
+  CONCURRENCY_TYPE(TAtomicU32) *counter = (CONCURRENCY_TYPE(TAtomicU32) *)argument;
+  (void)ATOMIC_FUNC(U32_FetchAdd)(counter, 1, CONCURRENCY_CONST(ATOMIC, MEMORY_ORDER_RELAXED));
 }
 
 static void producer(void *argument) {
@@ -25,11 +25,11 @@ static void producer(void *argument) {
 }
 
 int main(void) {
-  TThreadPool pool;
-  TThread workers[WORKER_COUNT];
-  TThread producers[PRODUCER_COUNT];
-  TTask queue[QUEUE_CAPACITY];
-  TAtomicU32 counter = ATOMIC_U32_INIT(0);
+  CONCURRENCY_TYPE(TThread)Pool pool;
+  CONCURRENCY_TYPE(TThread) workers[WORKER_COUNT];
+  CONCURRENCY_TYPE(TThread) producers[PRODUCER_COUNT];
+  CONCURRENCY_TYPE(TTask) queue[QUEUE_CAPACITY];
+  CONCURRENCY_TYPE(TAtomicU32) counter = ATOMIC_U32_INIT(0);
   TProducer_Context context = { &pool, &counter };
 
   assert(THREAD_POOL_FUNC(Init)(&pool, workers, WORKER_COUNT,
@@ -40,7 +40,7 @@ int main(void) {
     assert(THREAD_FUNC(Join)(&producers[i]) == STATUS_CONST(SUCCESS));
 
   assert(THREAD_POOL_FUNC(Destroy)(&pool) == STATUS_CONST(SUCCESS));
-  assert(ATOMIC_FUNC(U32_Load)(&counter, CONCURRENCY_ATOMIC_MEMORY_ORDER_SEQ_CST) ==
+  assert(ATOMIC_FUNC(U32_Load)(&counter, CONCURRENCY_CONST(ATOMIC, MEMORY_ORDER_SEQ_CST)) ==
          PRODUCER_COUNT * TASKS_PER_PRODUCER);
   return 0;
 }

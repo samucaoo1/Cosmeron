@@ -1,7 +1,7 @@
 #include <assert.h>
 #include "../../Cosmeron/Modules/Concurrency/Synchronization/Mutex.h"
 int main(void) {
-  TMutex mutex;
+  CONCURRENCY_TYPE(TMutex) mutex;
   bool acquired = false;
   assert(MUTEX_FUNC(Init)(&mutex) == STATUS_CONST(SUCCESS));
   assert(MUTEX_FUNC(Lock)(&mutex) == STATUS_CONST(SUCCESS));

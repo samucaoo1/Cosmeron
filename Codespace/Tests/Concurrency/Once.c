@@ -3,7 +3,7 @@
 static int calls = 0;
 static void initialize(void) { ++calls; }
 int main(void) {
-  TOnce once = ONCE_INIT;
+  CONCURRENCY_TYPE(TOnce) once = ONCE_INIT;
   assert(ONCE_FUNC(Call)(&once, initialize) == STATUS_CONST(SUCCESS));
   assert(ONCE_FUNC(Call)(&once, initialize) == STATUS_CONST(SUCCESS));
   assert(calls == 1);

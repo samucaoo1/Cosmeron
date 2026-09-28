@@ -4,8 +4,8 @@
 #define ITEM_COUNT 50000
 
 typedef struct TQueue_State {
-  TMutex mutex;
-  TCondition condition;
+  CONCURRENCY_TYPE(TMutex) mutex;
+  CONCURRENCY_TYPE(TCondition) condition;
   unsigned produced;
   unsigned consumed;
   bool done;
@@ -44,8 +44,8 @@ static void consumer(void *argument) {
 
 int main(void) {
   TQueue_State state = {0};
-  TThread producer_thread;
-  TThread consumer_thread;
+  CONCURRENCY_TYPE(TThread) producer_thread;
+  CONCURRENCY_TYPE(TThread) consumer_thread;
   assert(MUTEX_FUNC(Init)(&state.mutex) == STATUS_CONST(SUCCESS));
   assert(CONDITION_FUNC(Init)(&state.condition) == STATUS_CONST(SUCCESS));
   assert(THREAD_FUNC(Create)(&consumer_thread, consumer, &state) == STATUS_CONST(SUCCESS));

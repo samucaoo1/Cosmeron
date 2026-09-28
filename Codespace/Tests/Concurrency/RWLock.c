@@ -1,7 +1,7 @@
 #include "../../Cosmeron/Modules/Concurrency/Concurrency.h"
 #include <assert.h>
 int main(void) {
-  TRWLock lock;
+  CONCURRENCY_TYPE(TRWLock) lock;
   bool acquired = false;
   assert(RWLOCK_FUNC(Init)(&lock) == STATUS_CONST(SUCCESS));
   assert(RWLOCK_FUNC(ReadLock)(&lock) == STATUS_CONST(SUCCESS));
