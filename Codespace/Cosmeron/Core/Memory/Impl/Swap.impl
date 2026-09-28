@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 SWAP_BYTES_PROTOTYPE {
-  unsigned char temporary[SWAP_BLOCK_SIZE];
+  unsigned char temporary[COSMERON_MACRO_INTERNAL_SWAP_BLOCK_SIZE];
   unsigned char *leftBytes = left;
   unsigned char *rightBytes = right;
 
@@ -27,7 +27,7 @@ SWAP_BYTES_PROTOTYPE {
 
   while (size != 0) {
     size_t blockSize =
-        size > SWAP_BLOCK_SIZE ? SWAP_BLOCK_SIZE : size;
+        size > COSMERON_MACRO_INTERNAL_SWAP_BLOCK_SIZE ? COSMERON_MACRO_INTERNAL_SWAP_BLOCK_SIZE : size;
 
     memcpy(temporary, leftBytes, blockSize);
     memcpy(leftBytes, rightBytes, blockSize);
