@@ -291,11 +291,11 @@ int main(void) {
 
   {
     TBigint(128, viaApi);
-    if (!viaApi.api || viaApi.api->Clear(&viaApi) != STATUS_CONST(SUCCESS))
+    if (!viaApi.api || viaApi.api->clear(&viaApi) != STATUS_CONST(SUCCESS))
       return 47;
     viaApi.limb[0] = 255U;
     char buffer[8];
-    if (viaApi.api->ToCStringBase(&viaApi, buffer, sizeof(buffer), 16U) !=
+    if (viaApi.api->toCStringBase(&viaApi, buffer, sizeof(buffer), 16U) !=
             STATUS_CONST(SUCCESS) ||
         strcmp(buffer, "FF") != 0)
       return 48;
@@ -305,7 +305,7 @@ int main(void) {
     TBigint(128, remainder);
     viaApi.limb[0] = 100U;
     divisor.limb[0] = 9U;
-    if (viaApi.api->DivMod(&viaApi, &divisor, &quotient, &remainder) !=
+    if (viaApi.api->divMod(&viaApi, &divisor, &quotient, &remainder) !=
             STATUS_CONST(SUCCESS) ||
         quotient.limb[0] != 11U || remainder.limb[0] != 1U)
       return 49;
@@ -355,7 +355,7 @@ int main(void) {
     const void *remainderApi = (const void *)remainder.api;
     dividend.limb[0] = 100U;
     divisor.limb[0] = 9U;
-    if (dividend.api->DivMod(&dividend, &divisor, &quotient, &remainder) !=
+    if (dividend.api->divMod(&dividend, &divisor, &quotient, &remainder) !=
             STATUS_CONST(SUCCESS) ||
         quotient.limb[0] != 11U || remainder.limb[0] != 1U)
       return 51;
