@@ -4,7 +4,7 @@
 #include "Node.h"
 
 /* ============================================================
- * Linked_List - Lista duplamente encadeada
+ * LINKED_NS(List) - Lista duplamente encadeada
  * Baseado em std::list da STL C++
  *
  * Usa DOUBLE_LINKED_* como base genérica.
@@ -120,7 +120,7 @@
 #include "FunctionTable/List.h"
 
 #define LINKED_LIST_IMPLEMENT_ALL(TYPE, SUFFIX)                                      \
-  DOUBLE_LINKED_NODE_STRUCT(TYPE, SUFFIX, Linked_List)                         \
+  DOUBLE_LINKED_NODE_STRUCT(TYPE, SUFFIX, LINKED_NS(List))                         \
   LINKED_LIST_STRUCT(TYPE, SUFFIX)                                             \
   LINKED_LIST_INIT_PROTOTYPE(SUFFIX);                                 \
   LINKED_LIST_DESTROY_PROTOTYPE(SUFFIX);                              \
@@ -146,7 +146,7 @@
   CONTAINER_API_BIND(NAME, LINKED_LIST_FUNC(TYPE, functions));                               \
   LINKED_LIST_FUNC(TYPE, Init)(&NAME);
 /* Compatibility alias: prefer LINKED_LIST_INSTANCE_DECLARE. */
-#define TLinked_List(TYPE, NAME) LINKED_LIST_INSTANCE_DECLARE(TYPE, NAME)
+#define TLINKED_NS(List)(TYPE, NAME) LINKED_LIST_INSTANCE_DECLARE(TYPE, NAME)
 
 /* ============================================================
  * Implementation
