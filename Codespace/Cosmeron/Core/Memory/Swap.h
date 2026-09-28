@@ -3,10 +3,13 @@
 #include "../Preprocessor/Compiling.inc"
 #include "Memory.space"
 
-#define SWAP_FUNC(NAME) GNS2(LIB_PREFIX(Swap), NAME)
-#define SWAP_CONST(NAME) CNS2(LIB_PREFIX_CONST(SWAP), NAME)
+#define SWAP_NS(NAME) GNS2(MEMORY_NS(Swap), NAME)
+#define SWAP_CNS(NAME) CNS3(LIB_PREFIX_CONST(MEMORY_CMOD), SWAP, NAME)
 
-#define SWAP_BLOCK_SIZE 64u
+#define SWAP_FUNC(NAME) SWAP_NS(NAME)
+#define SWAP_CONST(NAME) SWAP_CNS(NAME)
+
+#define COSMERON_MACRO_INTERNAL_SWAP_BLOCK_SIZE 64u
 
 #define SWAP_BYTES_PROTOTYPE                                                   \
   static inline OPSTATUS SWAP_FUNC(Bytes)(void *left, void *right, size_t size)
