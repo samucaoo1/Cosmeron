@@ -5,8 +5,8 @@
  * Shared by all algorithms.  CMP is baked at compile time.
  *
  * Find is split:
- *   TTREE_IMPLEMENT_FIND_SET  → returns KEY_TYPE*
- *   TTREE_IMPLEMENT_FIND_MAP  → returns VALUE_TYPE*
+ *   TTREE_IMPLEMENT_FIND_SET  → OPSTATUS + KEY_TYPE **out
+ *   TTREE_IMPLEMENT_FIND_MAP  → OPSTATUS + VALUE_TYPE **out
  * ============================================================= */
 
 #define TTREE_IMPLEMENT_OBSERVERS(T, KEY_TYPE, CMP)                            \
