@@ -41,6 +41,7 @@
 #define TTREE_NODE(T) GNS2(T, Node)
 
 #define TTREE_FN(T, FUNC) PP_OP_CAT2(PP_OP_CAT2(T, _), FUNC)
+#define TTREE_FUNCTION_TABLE_TYPE(T) GNS2(T, FunctionTable)
 
 /* =============================================================
  * Comparator output type — default is int.
@@ -93,7 +94,7 @@
 #if CONTAINER_FUNCTION_TABLE_ENABLED
 
 #define TTREE_FUNCTION_TABLE_STRUCT_SET(T, KEY_TYPE)                                          \
-  typedef struct TTREE_FN(T, FunctionTable) {                               \
+  typedef struct TTREE_FUNCTION_TABLE_TYPE(T) {                               \
     OPSTATUS (*init)(T *);                                                     \
     void (*destroy)(T *);                                                      \
     void (*clear)(T *);                                                        \
@@ -116,10 +117,10 @@
     const TTREE_NODE(T) *(*constEnd)(const T *);                               \
     const TTREE_NODE(T) *(*constNext)(const TTREE_NODE(T) *);                  \
     const TTREE_NODE(T) *(*constPrev)(const TTREE_NODE(T) *);                  \
-  } TTREE_FN(T, FunctionTable);
+  } TTREE_FUNCTION_TABLE_TYPE(T);
 
 #define TTREE_FUNCTION_TABLE_STRUCT_MAP(T, KEY_TYPE, VALUE_TYPE)                              \
-  typedef struct TTREE_FN(T, FunctionTable) {                               \
+  typedef struct TTREE_FUNCTION_TABLE_TYPE(T) {                               \
     OPSTATUS (*init)(T *);                                                     \
     void (*destroy)(T *);                                                      \
     void (*clear)(T *);                                                        \
@@ -142,7 +143,7 @@
     const TTREE_NODE(T) *(*constEnd)(const T *);                               \
     const TTREE_NODE(T) *(*constNext)(const TTREE_NODE(T) *);                  \
     const TTREE_NODE(T) *(*constPrev)(const TTREE_NODE(T) *);                  \
-  } TTREE_FN(T, FunctionTable);
+  } TTREE_FUNCTION_TABLE_TYPE(T);
 
 #else
 #define TTREE_FUNCTION_TABLE_STRUCT_SET(...)
