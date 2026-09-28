@@ -9,11 +9,11 @@ static OPSTATUS compute(void *argument, void **result) {
 }
 
 int main(void) {
-  CONCURRENCY_TYPE(TThread)Pool pool;
+  CONCURRENCY_TYPE(TThreadPool) pool;
   CONCURRENCY_TYPE(TThread) threads[2];
   CONCURRENCY_TYPE(TTask) queue[4];
   CONCURRENCY_TYPE(TFuture) future;
-  CONCURRENCY_TYPE(CONCURRENCY_TYPE(TFuture)Task) futureTask;
+  CONCURRENCY_TYPE(TFutureTask) futureTask;
   uint32_t value = 41;
   void *result = NULL;
   OPSTATUS status = STATUS_CONST(GENERIC_ERROR);
