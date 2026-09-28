@@ -13,12 +13,11 @@
                                                 CONTAINER_STRUCT)              \
   static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
                                        TYPE *outValue) {                      \
-    if (!container)                                                            \
-      return STATUS_CONST(INVALID_ARGUMENT);                                      \
+    if (!container || !outValue)                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (container->size == 0)                                                  \
       return STATUS_CONST(OUT_OF_RANGE);                                          \
-    if (outValue)                                                             \
-      *outValue = container->data[container->size - 1];                       \
+    *outValue = container->data[container->size - 1];                       \
     container->size--;                                                         \
     return STATUS_CONST(SUCCESS);                                                 \
   }
@@ -38,8 +37,7 @@
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
     if (container->size == 0)                                                  \
       return STATUS_CONST(OUT_OF_RANGE);                                          \
-    if (outValue)                                                             \
-      *outValue = container->data[0];                                         \
+    *outValue = container->data[0];                                         \
     return FUNCTION_ERASE(container, 0, 1);                                       \
   }
 
