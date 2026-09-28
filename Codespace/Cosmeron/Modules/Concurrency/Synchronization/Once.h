@@ -17,6 +17,10 @@ typedef struct CONCURRENCY_TYPE(TOnce) {
 #define ONCE_INIT { INIT_ONCE_STATIC_INIT }
 #endif
 
-static inline OPSTATUS ONCE_FUNC(Call)(CONCURRENCY_TYPE(TOnce) *once, CONCURRENCY_TYPE(OnceFunction) function);
+#define ONCE_CALL_PROTOTYPE                                                   \
+  static inline OPSTATUS ONCE_FUNC(Call)(                                     \
+      CONCURRENCY_TYPE(TOnce) *once, CONCURRENCY_TYPE(OnceFunction) function)
+
+ONCE_CALL_PROTOTYPE;
 
 #include "Impl/Once.impl"

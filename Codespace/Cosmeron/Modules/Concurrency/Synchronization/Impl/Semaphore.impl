@@ -2,7 +2,7 @@
 
 #include "../Semaphore.h"
 
-static inline OPSTATUS SEMAPHORE_FUNC(Init)(CONCURRENCY_TYPE(TSemaphore) *semaphore, unsigned value) {
+SEMAPHORE_INIT_PROTOTYPE {
   if (semaphore == NULL) return STATUS_CONST(INVALID_ARGUMENT);
   { OPSTATUS status = MUTEX_FUNC(Init)(&semaphore->mutex); if (status != STATUS_CONST(SUCCESS)) return status; }
   { OPSTATUS status = CONDITION_FUNC(Init)(&semaphore->condition); if (status != STATUS_CONST(SUCCESS)) {
@@ -13,7 +13,7 @@ static inline OPSTATUS SEMAPHORE_FUNC(Init)(CONCURRENCY_TYPE(TSemaphore) *semaph
   return STATUS_CONST(SUCCESS);
 }
 
-static inline OPSTATUS SEMAPHORE_FUNC(Destroy)(CONCURRENCY_TYPE(TSemaphore) *semaphore) {
+SEMAPHORE_DESTROY_PROTOTYPE {
   OPSTATUS status;
   if (semaphore == NULL) return STATUS_CONST(INVALID_ARGUMENT);
   status = CONDITION_FUNC(Destroy)(&semaphore->condition);
@@ -21,7 +21,7 @@ static inline OPSTATUS SEMAPHORE_FUNC(Destroy)(CONCURRENCY_TYPE(TSemaphore) *sem
   return MUTEX_FUNC(Destroy)(&semaphore->mutex);
 }
 
-static inline OPSTATUS SEMAPHORE_FUNC(Wait)(CONCURRENCY_TYPE(TSemaphore) *semaphore) {
+SEMAPHORE_WAIT_PROTOTYPE {
   if (semaphore == NULL) return STATUS_CONST(INVALID_ARGUMENT);
   { OPSTATUS status = MUTEX_FUNC(Lock)(&semaphore->mutex); if (status != STATUS_CONST(SUCCESS)) return status; }
   while (semaphore->value == 0) {
@@ -34,7 +34,7 @@ static inline OPSTATUS SEMAPHORE_FUNC(Wait)(CONCURRENCY_TYPE(TSemaphore) *semaph
   return MUTEX_FUNC(Unlock)(&semaphore->mutex);
 }
 
-static inline OPSTATUS SEMAPHORE_FUNC(TryWait)(CONCURRENCY_TYPE(TSemaphore) *semaphore, bool *outAcquired) {
+SEMAPHORE_TRY_WAIT_PROTOTYPE {
   OPSTATUS status;
   if (semaphore == NULL || outAcquired == NULL) return STATUS_CONST(INVALID_ARGUMENT);
   *outAcquired = false;
@@ -48,7 +48,7 @@ static inline OPSTATUS SEMAPHORE_FUNC(TryWait)(CONCURRENCY_TYPE(TSemaphore) *sem
   return status;
 }
 
-static inline OPSTATUS SEMAPHORE_FUNC(Post)(CONCURRENCY_TYPE(TSemaphore) *semaphore) {
+SEMAPHORE_POST_PROTOTYPE {
   if (semaphore == NULL) return STATUS_CONST(INVALID_ARGUMENT);
   { OPSTATUS status = MUTEX_FUNC(Lock)(&semaphore->mutex); if (status != STATUS_CONST(SUCCESS)) return status; }
   if (semaphore->value == UINT_MAX) {
