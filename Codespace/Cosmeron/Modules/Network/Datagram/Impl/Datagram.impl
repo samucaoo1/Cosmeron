@@ -160,7 +160,8 @@ NETWORK_DATAGRAM_SEND_PROTOTYPE {
 }
 
 NETWORK_DATAGRAM_RECEIVE_PROTOTYPE {
-  if (datagram == NULL || (capacity != 0 && buffer == NULL)) {
+  if (datagram == NULL || received == NULL ||
+      (capacity != 0 && buffer == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
   }
