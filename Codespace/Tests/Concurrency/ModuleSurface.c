@@ -1,6 +1,6 @@
 #include "../../Cosmeron/Modules/Concurrency/Concurrency.h"
 
-static void CoroutineBody(TCoroutine *coroutine, void *argument) {
+static void CoroutineBody(CONCURRENCY_TYPE(TCoroutine) *coroutine, void *argument) {
   unsigned *steps = (unsigned *)argument;
   COROUTINE_BEGIN(coroutine);
   ++*steps;
@@ -15,29 +15,29 @@ static OPSTATUS FutureBody(void *argument, void **result) {
 }
 
 static void TaskBody(void *argument) {
-  TAtomicU32 *value = (TAtomicU32 *)argument;
+  CONCURRENCY_TYPE(TAtomicU32) *value = (CONCURRENCY_TYPE(TAtomicU32) *)argument;
   (void)ATOMIC_FUNC(U32_FetchAdd)(value, 1U,
-                                  CONCURRENCY_ATOMIC_MEMORY_ORDER_SEQ_CST);
+                                  CONCURRENCY_CONST(ATOMIC, MEMORY_ORDER_SEQ_CST));
 }
 
 static void ThreadBody(void *argument) {
-  TAtomicU32 *value = (TAtomicU32 *)argument;
+  CONCURRENCY_TYPE(TAtomicU32) *value = (CONCURRENCY_TYPE(TAtomicU32) *)argument;
   (void)ATOMIC_FUNC(U32_FetchAdd)(value, 1U,
-                                  CONCURRENCY_ATOMIC_MEMORY_ORDER_SEQ_CST);
+                                  CONCURRENCY_CONST(ATOMIC, MEMORY_ORDER_SEQ_CST));
 }
 
 int main(void) {
   unsigned steps = 0U;
-  TCoroutine coroutine;
-  TAtomicU32 value = ATOMIC_U32_INIT(0U);
-  TThread thread;
-  TSemaphore semaphore;
-  TBarrier barrier;
-  TFuture future;
-  TFutureTask futureTask;
-  TTask queue[2];
-  TThread workers[1];
-  TThreadPool pool;
+  CONCURRENCY_TYPE(TCoroutine) coroutine;
+  CONCURRENCY_TYPE(TAtomicU32) value = ATOMIC_U32_INIT(0U);
+  CONCURRENCY_TYPE(TThread) thread;
+  CONCURRENCY_TYPE(TSemaphore) semaphore;
+  CONCURRENCY_TYPE(TBarrier) barrier;
+  CONCURRENCY_TYPE(TFuture) future;
+  CONCURRENCY_TYPE(CONCURRENCY_TYPE(TFuture)Task) futureTask;
+  CONCURRENCY_TYPE(TTask) queue[2];
+  CONCURRENCY_TYPE(TThread) workers[1];
+  CONCURRENCY_TYPE(TThread)Pool pool;
   void *futureResult = NULL;
   OPSTATUS futureStatus = STATUS_CONST(GENERIC_ERROR);
   bool acquired = false;
@@ -54,7 +54,7 @@ int main(void) {
     return 4;
   if (THREAD_FUNC(Join)(&thread) != STATUS_CONST(SUCCESS))
     return 5;
-  if (ATOMIC_FUNC(U32_Load)(&value, CONCURRENCY_ATOMIC_MEMORY_ORDER_SEQ_CST) != 1U)
+  if (ATOMIC_FUNC(U32_Load)(&value, CONCURRENCY_CONST(ATOMIC, MEMORY_ORDER_SEQ_CST)) != 1U)
     return 6;
 
   if (SEMAPHORE_FUNC(Init)(&semaphore, 1U) != STATUS_CONST(SUCCESS))
@@ -76,7 +76,7 @@ int main(void) {
 
   if (FUTURE_FUNC(Init)(&future) != STATUS_CONST(SUCCESS))
     return 14;
-  TTask futureTaskValue =
+  CONCURRENCY_TYPE(TTask) futureTaskValue =
       FUTURE_FUNC(Task)(&futureTask, &future, FutureBody, &value);
   if (!TASK_FUNC(IsValid)(&futureTaskValue))
     return 15;
@@ -94,7 +94,7 @@ int main(void) {
       STATUS_CONST(SUCCESS))
     return 20;
   {
-    TTask task = TASK_FUNC(Create)(TaskBody, &value);
+    CONCURRENCY_TYPE(TTask) task = TASK_FUNC(Create)(TaskBody, &value);
     if (!TASK_FUNC(IsValid)(&task))
       return 21;
     if (THREAD_POOL_FUNC(TrySubmit)(&pool, task, &submitted) !=
@@ -108,7 +108,7 @@ int main(void) {
     return 24;
   if (THREAD_POOL_FUNC(Destroy)(&pool) != STATUS_CONST(SUCCESS))
     return 25;
-  if (ATOMIC_FUNC(U32_Load)(&value, CONCURRENCY_ATOMIC_MEMORY_ORDER_SEQ_CST) != 3U)
+  if (ATOMIC_FUNC(U32_Load)(&value, CONCURRENCY_CONST(ATOMIC, MEMORY_ORDER_SEQ_CST)) != 3U)
     return 26;
 
   return 0;

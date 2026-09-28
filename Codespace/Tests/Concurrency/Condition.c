@@ -2,8 +2,8 @@
 #include <assert.h>
 
 typedef struct {
-  TMutex mutex;
-  TCondition condition;
+  CONCURRENCY_TYPE(TMutex) mutex;
+  CONCURRENCY_TYPE(TCondition) condition;
   bool ready;
 } TState;
 
@@ -17,7 +17,7 @@ static void worker(void *argument) {
 
 int main(void) {
   TState state;
-  TThread thread;
+  CONCURRENCY_TYPE(TThread) thread;
   state.ready = false;
 
   assert(MUTEX_FUNC(Init)(&state.mutex) == STATUS_CONST(SUCCESS));

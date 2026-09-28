@@ -2,13 +2,13 @@
 
 #include <assert.h>
 
-typedef struct TCoroutine_Test_Context {
+typedef struct CONCURRENCY_TYPE(TCoroutine)_Test_Context {
   unsigned step;
   unsigned value;
-} TCoroutine_Test_Context;
+} CONCURRENCY_TYPE(TCoroutine)_Test_Context;
 
-static void Test_Coroutine(TCoroutine *coroutine, void *argument) {
-  TCoroutine_Test_Context *context = argument;
+static void Test_Coroutine(CONCURRENCY_TYPE(TCoroutine) *coroutine, void *argument) {
+  CONCURRENCY_TYPE(TCoroutine)_Test_Context *context = argument;
 
   COROUTINE_BEGIN(coroutine);
 
@@ -28,14 +28,14 @@ static void Test_Coroutine(TCoroutine *coroutine, void *argument) {
 }
 
 int main(void) {
-  TCoroutine_Test_Context context = {0u, 0u};
-  TCoroutine coroutine = COROUTINE_INIT(Test_Coroutine, &context);
+  CONCURRENCY_TYPE(TCoroutine)_Test_Context context = {0u, 0u};
+  CONCURRENCY_TYPE(TCoroutine) coroutine = COROUTINE_INIT(Test_Coroutine, &context);
 
-  assert(COROUTINE_FUNC(GetState)(&coroutine) == CONCURRENCY_COROUTINE_STATE_READY);
+  assert(COROUTINE_FUNC(GetState)(&coroutine) == CONCURRENCY_CONST(COROUTINE, STATE_READY));
   assert(COROUTINE_FUNC(IsReady)(&coroutine));
   assert(COROUTINE_FUNC(Resume)(&coroutine) == STATUS_CONST(SUCCESS));
   assert(context.step == 1u && context.value == 10u);
-  assert(COROUTINE_FUNC(GetState)(&coroutine) == CONCURRENCY_COROUTINE_STATE_SUSPENDED);
+  assert(COROUTINE_FUNC(GetState)(&coroutine) == CONCURRENCY_CONST(COROUTINE, STATE_SUSPENDED));
   assert(COROUTINE_FUNC(IsSuspended)(&coroutine));
 
   assert(COROUTINE_FUNC(Resume)(&coroutine) == STATUS_CONST(SUCCESS));
@@ -44,7 +44,7 @@ int main(void) {
 
   assert(COROUTINE_FUNC(Resume)(&coroutine) == STATUS_CONST(SUCCESS));
   assert(context.step == 3u && context.value == 60u);
-  assert(COROUTINE_FUNC(GetState)(&coroutine) == CONCURRENCY_COROUTINE_STATE_FINISHED);
+  assert(COROUTINE_FUNC(GetState)(&coroutine) == CONCURRENCY_CONST(COROUTINE, STATE_FINISHED));
   assert(COROUTINE_FUNC(IsFinished)(&coroutine));
   assert(COROUTINE_FUNC(Resume)(&coroutine) == STATUS_CONST(NOT_AVAILABLE));
 
