@@ -19,8 +19,7 @@ static inline bool TEXT_INS(GridAttributeRegionValid)(
          region.bottom < grid->size.row;
 }
 
-static inline TEXT_GRID_ATTRIBUTE_TYPE(Cell)
-TEXT_GRID_ATTRIBUTE_FUNC(Default)(void) {
+TEXT_GRID_ATTRIBUTE_DEFAULT_PROTOTYPE {
   TEXT_GRID_ATTRIBUTE_TYPE(Cell) cell = {0};
   cell.flags = TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_FOREGROUND) |
                TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_BACKGROUND);
@@ -28,8 +27,7 @@ TEXT_GRID_ATTRIBUTE_FUNC(Default)(void) {
   return cell;
 }
 
-static inline const TEXT_GRID_COLOR_TYPE(RGB) *
-TEXT_GRID_COLOR_FUNC(WindowsPalette)(void) {
+TEXT_GRID_COLOR_WINDOWS_PALETTE_PROTOTYPE {
   static const TEXT_GRID_COLOR_TYPE(RGB) palette[] = {
 #define X(NAME, RGB) UINT32_C(RGB),
       TEXT_GRID_WINDOWS_COLOR_TABLE
@@ -38,21 +36,18 @@ TEXT_GRID_COLOR_FUNC(WindowsPalette)(void) {
   return palette;
 }
 
-static inline bool TEXT_GRID_ATTRIBUTE_FUNC(IsEmpty)(
-    const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid) {
+TEXT_GRID_ATTRIBUTE_IS_EMPTY_PROTOTYPE {
   return grid != NULL && grid->data == NULL && grid->size.col == 0U &&
          grid->size.row == 0U;
 }
 
-static inline bool TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(
-    const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid) {
+TEXT_GRID_ATTRIBUTE_IS_VALID_PROTOTYPE {
   if (grid == NULL || !TEXT_INS(GridAttributeSizeValid)(grid->size))
     return false;
   return grid->size.col == 0U ? grid->data == NULL : grid->data != NULL;
 }
 
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Create)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) size) {
+TEXT_GRID_ATTRIBUTE_CREATE_PROTOTYPE {
   size_t count;
   OPSTATUS status;
   if (grid == NULL || !TEXT_GRID_ATTRIBUTE_FUNC(IsEmpty)(grid) ||
@@ -75,8 +70,7 @@ static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Create)(
   return TEXT_GRID_ATTRIBUTE_FUNC(Clear)(grid);
 }
 
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Destroy)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid) {
+TEXT_GRID_ATTRIBUTE_DESTROY_PROTOTYPE {
   if (grid == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
   Memory_Free(grid->data);
@@ -84,9 +78,7 @@ static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Destroy)(
   return STATUS_CONST(SUCCESS);
 }
 
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(ClearWith)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid,
-    TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute) {
+TEXT_GRID_ATTRIBUTE_CLEAR_WITH_PROTOTYPE {
   size_t index, count;
   if (!TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(grid))
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -96,21 +88,16 @@ static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(ClearWith)(
   return STATUS_CONST(SUCCESS);
 }
 
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Clear)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid) {
+TEXT_GRID_ATTRIBUTE_CLEAR_PROTOTYPE {
   return TEXT_GRID_ATTRIBUTE_FUNC(ClearWith)(
       grid, TEXT_GRID_ATTRIBUTE_FUNC(Default)());
 }
 
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Fill)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid,
-    TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute) {
+TEXT_GRID_ATTRIBUTE_FILL_PROTOTYPE {
   return TEXT_GRID_ATTRIBUTE_FUNC(ClearWith)(grid, attribute);
 }
 
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(ReadCell)(
-    const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) position,
-    TEXT_GRID_ATTRIBUTE_TYPE(Cell) *attribute) {
+TEXT_GRID_ATTRIBUTE_READ_CELL_PROTOTYPE {
   if (!TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(grid) || attribute == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (position.x >= grid->size.col || position.y >= grid->size.row)
@@ -119,9 +106,7 @@ static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(ReadCell)(
   return STATUS_CONST(SUCCESS);
 }
 
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(WriteCell)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) position,
-    TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute) {
+TEXT_GRID_ATTRIBUTE_WRITE_CELL_PROTOTYPE {
   if (!TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(grid))
     return STATUS_CONST(INVALID_ARGUMENT);
   if (position.x >= grid->size.col || position.y >= grid->size.row)
@@ -130,9 +115,7 @@ static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(WriteCell)(
   return STATUS_CONST(SUCCESS);
 }
 
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(FillRegion)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TQUAD_TYPE(uint16) region,
-    TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute) {
+TEXT_GRID_ATTRIBUTE_FILL_REGION_PROTOTYPE {
   uint32_t x, y;
   if (!TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(grid))
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -146,9 +129,7 @@ static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(FillRegion)(
   return STATUS_CONST(SUCCESS);
 }
 
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Read)(
-    const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source, TQUAD_TYPE(uint16) region,
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination) {
+TEXT_GRID_ATTRIBUTE_READ_PROTOTYPE {
   TEXT_GRID_ATTRIBUTE_TYPE(Grid) temporary = {0};
   TDUAL_TYPE(uint16) size;
   uint32_t x, y;
@@ -175,11 +156,7 @@ static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Read)(
   return STATUS_CONST(SUCCESS);
 }
 
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(WriteRegion)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination,
-    TDUAL_TYPE(uint16) destinationPosition,
-    const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source,
-    TQUAD_TYPE(uint16) sourceRegion) {
+TEXT_GRID_ATTRIBUTE_WRITE_REGION_PROTOTYPE {
   TEXT_GRID_ATTRIBUTE_TYPE(Grid) temporary = {0};
   uint32_t width, height, y;
   OPSTATUS status;
@@ -209,10 +186,7 @@ static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(WriteRegion)(
   return STATUS_CONST(SUCCESS);
 }
 
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Write)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination,
-    TDUAL_TYPE(uint16) destinationPosition,
-    const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source) {
+TEXT_GRID_ATTRIBUTE_WRITE_PROTOTYPE {
   TQUAD_TYPE(uint16) region = {0};
   if (!TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(source))
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -225,8 +199,7 @@ static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Write)(
                                                 region);
 }
 
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Resize)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) size) {
+TEXT_GRID_ATTRIBUTE_RESIZE_PROTOTYPE {
   TEXT_GRID_ATTRIBUTE_TYPE(Grid) temporary = {0};
   uint32_t width, height, y;
   OPSTATUS status;
@@ -249,8 +222,7 @@ static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Resize)(
   return STATUS_CONST(SUCCESS);
 }
 
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Recreate)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) size) {
+TEXT_GRID_ATTRIBUTE_RECREATE_PROTOTYPE {
   TEXT_GRID_ATTRIBUTE_TYPE(Grid) temporary = {0};
   OPSTATUS status;
   if (!TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(grid))
@@ -265,9 +237,7 @@ static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Recreate)(
   return STATUS_CONST(SUCCESS);
 }
 
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Clone)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination,
-    const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source) {
+TEXT_GRID_ATTRIBUTE_CLONE_PROTOTYPE {
   TEXT_GRID_ATTRIBUTE_TYPE(Grid) temporary = {0};
   OPSTATUS status;
   if (!TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(source) || destination == NULL ||
