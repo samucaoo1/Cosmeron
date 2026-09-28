@@ -26,7 +26,9 @@ int main(void) {
                 STATUS_CONST(SUCCESS));
   }
   TContainerTestRecord query = {.key = 17, .payload = 0};
-  TContainerTestRecord *found = Container_Tree_AVL_Set_record_Find(&records, query);
+  TContainerTestRecord *found = NULL;
+  TEST_ASSERT(Container_Tree_AVL_Set_record_Find(&records, query, &found) ==
+              STATUS_CONST(SUCCESS));
   TEST_ASSERT(found != NULL && found->payload == 34);
   Container_Tree_AVL_Set_record_Destroy(&records);
   return 0;
