@@ -49,6 +49,8 @@ typedef enum CONCURRENCY_TYPE(MemoryOrder) {
   CONCURRENCY_CONST(ATOMIC, MEMORY_ORDER_SEQ_CST) = __ATOMIC_SEQ_CST
 } CONCURRENCY_TYPE(MemoryOrder);
 
+#define ATOMIC_TYPE(SUFFIX) CONCURRENCY_TYPE(PP_OP_CAT2(TAtomic, SUFFIX))
+
 #define ATOMIC_U32_INIT(VALUE) { (uint32_t)(VALUE) }
 #if CONCURRENCY_HAS_ATOMIC_U64
 #define ATOMIC_U64_INIT(VALUE) { (uint64_t)(VALUE) }
@@ -57,16 +59,16 @@ typedef enum CONCURRENCY_TYPE(MemoryOrder) {
 #define ATOMIC_BOOL_INIT(VALUE) { (uint32_t)((VALUE) != false) }
 
 #define ATOMIC_DECLARE(TYPE, SUFFIX)                                  \
-  static inline TYPE ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, Load))(const PP_OP_CAT2(CONCURRENCY_TYPE(TAtomic), SUFFIX) *atomic,  \
+  static inline TYPE ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, Load))(const ATOMIC_TYPE(SUFFIX) *atomic,  \
                                                CONCURRENCY_TYPE(MemoryOrder) order);            \
-  static inline void ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, Store))(PP_OP_CAT2(CONCURRENCY_TYPE(TAtomic), SUFFIX) *atomic,       \
+  static inline void ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, Store))(ATOMIC_TYPE(SUFFIX) *atomic,       \
                                                 TYPE value,                     \
                                                 CONCURRENCY_TYPE(MemoryOrder) order);           \
-  static inline TYPE ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, Exchange))(PP_OP_CAT2(CONCURRENCY_TYPE(TAtomic), SUFFIX) *atomic,    \
+  static inline TYPE ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, Exchange))(ATOMIC_TYPE(SUFFIX) *atomic,    \
                                                    TYPE value,                  \
                                                    CONCURRENCY_TYPE(MemoryOrder) order);        \
   static inline bool ATOMIC_FUNC(PP_OP_CAT3(SUFFIX, _, CompareExchange))(                      \
-      PP_OP_CAT2(CONCURRENCY_TYPE(TAtomic), SUFFIX) *atomic, TYPE *expected, TYPE desired,                  \
+      ATOMIC_TYPE(SUFFIX) *atomic, TYPE *expected, TYPE desired,                  \
       CONCURRENCY_TYPE(MemoryOrder) success, CONCURRENCY_TYPE(MemoryOrder) failure)
 
 ATOMIC_DECLARE(uint32_t, U32);
