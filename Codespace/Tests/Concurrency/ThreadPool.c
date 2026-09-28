@@ -11,7 +11,7 @@ static void increment(void *argument) {
 }
 
 int main(void) {
-  CONCURRENCY_TYPE(TThread)Pool pool;
+  CONCURRENCY_TYPE(TThreadPool) pool;
   CONCURRENCY_TYPE(TThread) threads[THREAD_COUNT];
   CONCURRENCY_TYPE(TTask) queue[QUEUE_CAPACITY];
   CONCURRENCY_TYPE(TAtomicU32) counter = ATOMIC_U32_INIT(0);

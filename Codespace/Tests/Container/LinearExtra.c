@@ -16,7 +16,7 @@ int main(void){
   TEST_ASSERT(Container_Flat_Vector_int_ShrinkToFit(&v)==STATUS_CONST(SUCCESS));
   Container_Flat_Vector_int_Destroy(&v);
 
-  TContainer_Linked_Queue(int,q)
+  TLinked_Queue(int,q)
   TEST_ASSERT(Container_Linked_Queue_int_Push(&q,4)==STATUS_CONST(SUCCESS));
   TEST_ASSERT(Container_Linked_Queue_int_Push(&q,5)==STATUS_CONST(SUCCESS));
   TEST_ASSERT(*Container_Linked_Queue_int_Front(&q)==4 && *Container_Linked_Queue_int_Back(&q)==5);
@@ -25,7 +25,7 @@ int main(void){
   TEST_ASSERT(Container_Linked_Queue_int_Empty(&q));
   Container_Linked_Queue_int_Destroy(&q);
 
-  TContainer_Linked_Stack(int,s)
+  TLinked_Stack(int,s)
   TEST_ASSERT(Container_Linked_Stack_int_Push(&s,7)==STATUS_CONST(SUCCESS));
   TEST_ASSERT(Container_Linked_Stack_int_Push(&s,8)==STATUS_CONST(SUCCESS));
   TEST_ASSERT(*Container_Linked_Stack_int_Top(&s)==8);
