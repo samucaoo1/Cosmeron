@@ -1,0 +1,96 @@
+#pragma once
+
+static inline SOCKET_TYPE(Handle) SOCKET_FUNC(_NativeCreate)(int family, int kind,
+                                                              int protocol) {
+  return TSOCKET_NATIVE_SOCKET(family, kind, protocol);
+}
+
+static inline int SOCKET_FUNC(_NativeKind)(TSocket_Kind kind) {
+  return kind == SOCKET_TYPE(KIND_DATAGRAM) ? SOCK_DGRAM : SOCK_STREAM;
+}
+
+static inline int SOCKET_FUNC(_NativeProtocol)(TSocket_Protocol protocol) {
+  switch (protocol) {
+  case SOCKET_TYPE(PROTOCOL_TCP): return IPPROTO_TCP;
+  case SOCKET_TYPE(PROTOCOL_UDP): return IPPROTO_UDP;
+  default: return 0;
+  }
+}
+
+SOCKET_INIT_PROTOTYPE {
+  if (socket == NULL)
+    return;
+  socket->handle = TSOCKET_NATIVE_INVALID;
+  socket->family = SOCKET_TYPE(FAMILY_IPV4);
+  socket->kind = SOCKET_TYPE(KIND_STREAM);
+  socket->protocol = SOCKET_TYPE(PROTOCOL_DEFAULT);
+  socket->lastError = NETWORK_ERROR_CONST(NONE);
+  socket->blocking = true;
+}
+
+SOCKET_CREATE_PROTOTYPE {
+  int nativeFamily;
+  TNetwork_Error domainError;
+  if (socket == NULL) {
+    if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  if ((family != SOCKET_TYPE(FAMILY_IPV4) &&
+       family != SOCKET_TYPE(FAMILY_IPV6)) ||
+      (kind != SOCKET_TYPE(KIND_STREAM) &&
+       kind != SOCKET_TYPE(KIND_DATAGRAM)) ||
+      (protocol != SOCKET_TYPE(PROTOCOL_DEFAULT) &&
+       protocol != SOCKET_TYPE(PROTOCOL_TCP) &&
+       protocol != SOCKET_TYPE(PROTOCOL_UDP)) ||
+      (kind == SOCKET_TYPE(KIND_STREAM) &&
+       protocol == SOCKET_TYPE(PROTOCOL_UDP)) ||
+      (kind == SOCKET_TYPE(KIND_DATAGRAM) &&
+       protocol == SOCKET_TYPE(PROTOCOL_TCP)))
+    return SOCKET_FUNC(_Return)(
+        socket, error, NETWORK_ERROR_CONST(NONE),
+        STATUS_CONST(INVALID_ARGUMENT));
+  if (socket->handle != TSOCKET_NATIVE_INVALID)
+    SOCKET_FUNC(Close)(socket);
+  if (!NETWORK_FUNC(_EnsureRuntime)())
+    return SOCKET_FUNC(_Return)(
+        socket, error, NETWORK_ERROR_CONST(UNKNOWN), STATUS_CONST(GENERIC_ERROR));
+
+  nativeFamily = family == SOCKET_TYPE(FAMILY_IPV6) ? AF_INET6 : AF_INET;
+  socket->handle =
+      SOCKET_FUNC(_NativeCreate)(nativeFamily, SOCKET_FUNC(_NativeKind)(kind),
+                                 SOCKET_FUNC(_NativeProtocol)(protocol));
+  if (socket->handle == TSOCKET_NATIVE_INVALID) {
+    domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
+    return SOCKET_FUNC(_Return)(
+        socket, error, domainError, STATUS_CONST(GENERIC_ERROR));
+  }
+
+  socket->family = family;
+#if defined(SO_NOSIGPIPE)
+  if (kind == SOCKET_TYPE(KIND_STREAM)) {
+    int enabled = 1;
+    if (TSOCKET_NATIVE_SETSOCKOPT(socket->handle, SOL_SOCKET, SO_NOSIGPIPE, &enabled,
+                   (SOCKET_TYPE(Len))sizeof(enabled)) == TSOCKET_NATIVE_ERROR) {
+      domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
+      TSOCKET_OS_CLOSE(socket->handle);
+      socket->handle = TSOCKET_NATIVE_INVALID;
+      return SOCKET_FUNC(_Return)(
+          socket, error, domainError, STATUS_CONST(GENERIC_ERROR));
+    }
+  }
+#endif
+  socket->kind = kind;
+  socket->protocol = protocol;
+  return SOCKET_FUNC(_Return)(
+      socket, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+}
+
+SOCKET_CLOSE_PROTOTYPE {
+  if (socket == NULL)
+    return;
+  if (socket->handle != TSOCKET_NATIVE_INVALID) {
+    TSOCKET_OS_CLOSE(socket->handle);
+    socket->handle = TSOCKET_NATIVE_INVALID;
+  }
+  socket->lastError = NETWORK_ERROR_CONST(NONE);
+}

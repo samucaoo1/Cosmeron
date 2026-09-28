@@ -1,0 +1,157 @@
+#pragma once
+
+static inline OPSTATUS NETWORK_POLLER_FUNC(_Publish)(
+    TNetwork_Poller *poller, TNetwork_Error *error,
+    TNetwork_Error domainError, OPSTATUS status) {
+  if (poller != NULL)
+    poller->lastError = domainError;
+  if (error != NULL)
+    *error = domainError;
+  return status;
+}
+
+static inline OPSTATUS NETWORK_POLLER_FUNC(_Add)(
+    TNetwork_Poller *poller, TNetwork_Event_Source_Type sourceType, void *object,
+    TNetwork_Event_Flags interests, void *userdata, TNetwork_Poll_Handle *handle,
+    TNetwork_Error *error) {
+  TNetwork_Poll_Registration registration;
+  if (poller == NULL || object == NULL) {
+    if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
+    return STATUS_NS(INVALID_ARGUMENT);
+  }
+  registration.handle = poller->nextHandle++;
+  if (registration.handle == 0)
+    registration.handle = poller->nextHandle++;
+  registration.sourceType = sourceType;
+  registration.interests = interests;
+  registration.object = object;
+  registration.userdata = userdata;
+  if (FLAT_VECTOR_FUNC(Network_Poll_Registration, PushBack)(
+          &poller->registrations, registration) != STATUS_NS(SUCCESS)) {
+    return NETWORK_POLLER_FUNC(_Publish)(
+        poller, error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
+        STATUS_CONST(OUT_OF_MEMORY));
+  }
+  if (handle != NULL) *handle = registration.handle;
+  return NETWORK_POLLER_FUNC(_Publish)(
+      poller, error, NETWORK_ERROR_CONST(NONE), STATUS_NS(SUCCESS));
+}
+
+inline static void NETWORK_POLLER_FUNC(Init)(TNetwork_Poller *poller) {
+  memset(poller, 0, sizeof(*poller));
+  FLAT_VECTOR_FUNC(Network_Poll_Registration, Init)(&poller->registrations);
+  poller->nextHandle = 1;
+  poller->lastError = NETWORK_ERROR_CONST(NONE);
+}
+
+inline static void NETWORK_POLLER_FUNC(Destroy)(TNetwork_Poller *poller) {
+  if (poller == NULL) return;
+  FLAT_VECTOR_FUNC(Network_Poll_Registration, Destroy)(&poller->registrations);
+  poller->nextHandle = 1;
+}
+
+inline static OPSTATUS NETWORK_POLLER_FUNC(AddConnection)(
+    TNetwork_Poller *poller, TNetwork_Connection *connection,
+    TNetwork_Event_Flags interests, void *userdata, TNetwork_Poll_Handle *handle,
+    TNetwork_Error *error) {
+  return NETWORK_POLLER_FUNC(_Add)(
+      poller, NETWORK_POLLER_SOURCE_CONST(CONNECTION), connection, interests,
+      userdata, handle, error);
+}
+
+inline static OPSTATUS NETWORK_POLLER_FUNC(AddListener)(
+    TNetwork_Poller *poller, TNetwork_Listener *listener,
+    TNetwork_Event_Flags interests, void *userdata, TNetwork_Poll_Handle *handle,
+    TNetwork_Error *error) {
+  return NETWORK_POLLER_FUNC(_Add)(
+      poller, NETWORK_POLLER_SOURCE_CONST(LISTENER), listener, interests,
+      userdata, handle, error);
+}
+
+inline static OPSTATUS NETWORK_POLLER_FUNC(AddDatagram)(
+    TNetwork_Poller *poller, TNetwork_Datagram *datagram,
+    TNetwork_Event_Flags interests, void *userdata, TNetwork_Poll_Handle *handle,
+    TNetwork_Error *error) {
+  return NETWORK_POLLER_FUNC(_Add)(
+      poller, NETWORK_POLLER_SOURCE_CONST(DATAGRAM), datagram, interests,
+      userdata, handle, error);
+}
+
+inline static OPSTATUS NETWORK_POLLER_FUNC(Remove)(
+    TNetwork_Poller *poller, TNetwork_Poll_Handle handle,
+    TNetwork_Error *error) {
+  size_t i;
+  if (poller == NULL || handle == 0) {
+    if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
+    return STATUS_NS(INVALID_ARGUMENT);
+  }
+  for (i = 0; i < poller->registrations.size; ++i)
+    if (poller->registrations.data[i].handle == handle) {
+      OPSTATUS status = FLAT_VECTOR_FUNC(Network_Poll_Registration, Erase)(
+          &poller->registrations, i, 1);
+      return NETWORK_POLLER_FUNC(_Publish)(
+          poller, error, NETWORK_ERROR_CONST(NONE), status);
+    }
+  return NETWORK_POLLER_FUNC(_Publish)(
+      poller, error, NETWORK_ERROR_CONST(NONE), STATUS_NS(NOT_FOUND));
+}
+
+inline static OPSTATUS NETWORK_POLLER_FUNC(Watch)(
+    TNetwork_Poller *poller, TNetwork_Poll_Handle handle,
+    TNetwork_Event_Flags interests, TNetwork_Error *error) {
+  size_t i;
+  if (poller == NULL || handle == 0) {
+    if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
+    return STATUS_NS(INVALID_ARGUMENT);
+  }
+  for (i = 0; i < poller->registrations.size; ++i)
+    if (poller->registrations.data[i].handle == handle) {
+      poller->registrations.data[i].interests = interests;
+      return NETWORK_POLLER_FUNC(_Publish)(
+          poller, error, NETWORK_ERROR_CONST(NONE), STATUS_NS(SUCCESS));
+    }
+  return NETWORK_POLLER_FUNC(_Publish)(
+      poller, error, NETWORK_ERROR_CONST(NONE), STATUS_NS(NOT_FOUND));
+}
+
+static inline bool NETWORK_POLLER_FUNC(_StreamClosed)(
+    SOCKET_TYPE(Handle) handle) {
+  char byte;
+#if OS_WINDOWS
+  int result = TSOCKET_NATIVE_RECV(handle, &byte, 1, MSG_PEEK);
+#elif OS_MAC
+  ssize_t result = TSOCKET_NATIVE_RECV(handle, &byte, 1, MSG_PEEK);
+#else
+  ssize_t result = TSOCKET_NATIVE_RECV(handle, &byte, 1, MSG_PEEK | MSG_DONTWAIT);
+#endif
+  if (result == 0) return true;
+  if (result == TSOCKET_NATIVE_ERROR) {
+    TNetwork_Error error =
+        SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
+    return error != NETWORK_ERROR_CONST(WOULD_BLOCK);
+  }
+  return false;
+}
+
+static inline OPSTATUS NETWORK_POLLER_FUNC(_PushEvent)(
+    TNetwork_Poller *poller, TNetwork_Event_Vector *events,
+    TNetwork_Poll_Registration *registration, TNetwork_Event_Flags flags,
+    TNetwork_Error *error) {
+  TNetwork_Event event;
+  if (flags == NETWORK_EVENT_CONST(NONE))
+    return NETWORK_POLLER_FUNC(_Publish)(
+        poller, error, NETWORK_ERROR_CONST(NONE), STATUS_NS(SUCCESS));
+  event.handle = registration->handle;
+  event.sourceType = registration->sourceType;
+  event.flags = flags;
+  event.object = registration->object;
+  event.userdata = registration->userdata;
+  if (FLAT_VECTOR_FUNC(Network_Event, PushBack)(events, event) !=
+      STATUS_NS(SUCCESS)) {
+    return NETWORK_POLLER_FUNC(_Publish)(
+        poller, error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
+        STATUS_CONST(OUT_OF_MEMORY));
+  }
+  return NETWORK_POLLER_FUNC(_Publish)(
+      poller, error, NETWORK_ERROR_CONST(NONE), STATUS_NS(SUCCESS));
+}

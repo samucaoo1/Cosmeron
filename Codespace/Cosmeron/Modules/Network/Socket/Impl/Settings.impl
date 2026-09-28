@@ -1,0 +1,86 @@
+#pragma once
+
+SOCKET_SET_BLOCKING_PROTOTYPE {
+  TNetwork_Error domainError;
+  if (socket == NULL) {
+    if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  if (socket->handle == TSOCKET_NATIVE_INVALID)
+    return SOCKET_FUNC(_Return)(
+        socket, error, NETWORK_ERROR_CONST(NOT_CONNECTED),
+        STATUS_CONST(GENERIC_ERROR));
+  if (!SOCKET_FUNC(_SetBlockingNative)(socket->handle, blocking)) {
+    domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
+    return SOCKET_FUNC(_Return)(
+        socket, error, domainError, STATUS_CONST(GENERIC_ERROR));
+  }
+  socket->blocking = blocking;
+  return SOCKET_FUNC(_Return)(
+      socket, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+}
+
+static inline OPSTATUS SOCKET_FUNC(_SetBooleanOption)(
+    TSocket *socket, int level, int option, bool enabled, TNetwork_Error *error) {
+  int value = enabled ? 1 : 0;
+  TNetwork_Error domainError;
+  if (socket == NULL) {
+    if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  if (TSOCKET_NATIVE_SETSOCKOPT(socket->handle, level, option, (const char *)&value,
+                 (SOCKET_TYPE(Len))sizeof(value)) == TSOCKET_NATIVE_ERROR) {
+    domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
+    return SOCKET_FUNC(_Return)(
+        socket, error, domainError, STATUS_CONST(GENERIC_ERROR));
+  }
+  return SOCKET_FUNC(_Return)(
+      socket, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+}
+
+SOCKET_SET_REUSE_ADDRESS_PROTOTYPE {
+  return SOCKET_FUNC(_SetBooleanOption)(
+      socket, SOL_SOCKET, SO_REUSEADDR, enabled, error);
+}
+
+SOCKET_SET_KEEP_ALIVE_PROTOTYPE {
+  return SOCKET_FUNC(_SetBooleanOption)(
+      socket, SOL_SOCKET, SO_KEEPALIVE, enabled, error);
+}
+
+SOCKET_SET_NO_DELAY_PROTOTYPE {
+  return SOCKET_FUNC(_SetBooleanOption)(
+      socket, IPPROTO_TCP, TCP_NODELAY, enabled, error);
+}
+
+SOCKET_SHUTDOWN_PROTOTYPE {
+  TNetwork_Error domainError;
+  if (socket == NULL) {
+    if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  if (direction != SOCKET_TYPE(SHUTDOWN_READ) &&
+      direction != SOCKET_TYPE(SHUTDOWN_WRITE) &&
+      direction != SOCKET_TYPE(SHUTDOWN_BOTH))
+    return SOCKET_FUNC(_Return)(
+        socket, error, NETWORK_ERROR_CONST(NONE),
+        STATUS_CONST(INVALID_ARGUMENT));
+#if OS_WINDOWS
+  int native = direction == SOCKET_TYPE(SHUTDOWN_READ)
+                   ? SD_RECEIVE
+                   : direction == SOCKET_TYPE(SHUTDOWN_WRITE) ? SD_SEND
+                                                               : SD_BOTH;
+#else
+  int native = direction == SOCKET_TYPE(SHUTDOWN_READ)
+                   ? SHUT_RD
+                   : direction == SOCKET_TYPE(SHUTDOWN_WRITE) ? SHUT_WR
+                                                               : SHUT_RDWR;
+#endif
+  if (TSOCKET_NATIVE_SHUTDOWN(socket->handle, native) == TSOCKET_NATIVE_ERROR) {
+    domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
+    return SOCKET_FUNC(_Return)(
+        socket, error, domainError, STATUS_CONST(GENERIC_ERROR));
+  }
+  return SOCKET_FUNC(_Return)(
+      socket, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+}

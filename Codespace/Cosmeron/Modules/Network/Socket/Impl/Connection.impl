@@ -1,0 +1,100 @@
+#pragma once
+
+SOCKET_BIND_PROTOTYPE {
+  struct sockaddr_storage native;
+  SOCKET_TYPE(Len) length;
+  TNetwork_Error domainError;
+  if (socket == NULL || endpoint == NULL) {
+    if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  if (!SOCKET_FUNC(_EndpointToNative)(endpoint, &native, &length))
+    return SOCKET_FUNC(_Return)(
+        socket, error, NETWORK_ERROR_CONST(ADDRESS_INVALID),
+        STATUS_CONST(GENERIC_ERROR));
+
+  if (TSOCKET_NATIVE_BIND(socket->handle, (struct sockaddr *)&native, length) ==
+      TSOCKET_NATIVE_ERROR) {
+    domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
+    return SOCKET_FUNC(_Return)(
+        socket, error, domainError, STATUS_CONST(GENERIC_ERROR));
+  }
+  return SOCKET_FUNC(_Return)(
+      socket, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+}
+
+SOCKET_LISTEN_PROTOTYPE {
+  TNetwork_Error domainError;
+  if (socket == NULL) {
+    if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  if (TSOCKET_NATIVE_LISTEN(socket->handle, backlog) == TSOCKET_NATIVE_ERROR) {
+    domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
+    return SOCKET_FUNC(_Return)(
+        socket, error, domainError, STATUS_CONST(GENERIC_ERROR));
+  }
+  return SOCKET_FUNC(_Return)(
+      socket, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+}
+
+SOCKET_ACCEPT_PROTOTYPE {
+  struct sockaddr_storage native;
+  SOCKET_TYPE(Len) length = (SOCKET_TYPE(Len))sizeof(native);
+  SOCKET_TYPE(Handle) handle;
+  TNetwork_Error domainError;
+  if (socket == NULL || client == NULL) {
+    if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  handle = TSOCKET_NATIVE_ACCEPT(socket->handle, (struct sockaddr *)&native, &length);
+  if (handle == TSOCKET_NATIVE_INVALID) {
+    domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
+    return SOCKET_FUNC(_Return)(
+        socket, error, domainError, STATUS_CONST(GENERIC_ERROR));
+  }
+
+  if (client->handle != TSOCKET_NATIVE_INVALID)
+    SOCKET_FUNC(Close)(client);
+  SOCKET_FUNC(Init)(client);
+  client->handle = handle;
+  client->family = socket->family;
+  client->kind = socket->kind;
+  client->protocol = socket->protocol;
+  if (!SOCKET_FUNC(_SetBlockingNative)(handle, socket->blocking)) {
+    TSOCKET_OS_CLOSE(handle);
+    client->handle = TSOCKET_NATIVE_INVALID;
+    domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
+    return SOCKET_FUNC(_Return)(
+        socket, error, domainError, STATUS_CONST(GENERIC_ERROR));
+  }
+  client->blocking = socket->blocking;
+  if (peer != NULL)
+    SOCKET_FUNC(_EndpointFromNative)((struct sockaddr *)&native, peer);
+  return SOCKET_FUNC(_Return)(
+      socket, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+}
+
+SOCKET_CONNECT_PROTOTYPE {
+  struct sockaddr_storage native;
+  SOCKET_TYPE(Len) length;
+  TNetwork_Error domainError;
+  if (socket == NULL || endpoint == NULL) {
+    if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  if (!SOCKET_FUNC(_EndpointToNative)(endpoint, &native, &length))
+    return SOCKET_FUNC(_Return)(
+        socket, error, NETWORK_ERROR_CONST(ADDRESS_INVALID),
+        STATUS_CONST(GENERIC_ERROR));
+
+  if (TSOCKET_NATIVE_CONNECT(socket->handle, (struct sockaddr *)&native, length) ==
+      TSOCKET_NATIVE_ERROR) {
+    domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
+    return SOCKET_FUNC(_Return)(
+        socket, error, domainError, STATUS_CONST(GENERIC_ERROR));
+  }
+  return SOCKET_FUNC(_Return)(
+      socket, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+}

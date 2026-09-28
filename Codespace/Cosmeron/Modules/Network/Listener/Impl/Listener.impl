@@ -1,0 +1,211 @@
+#pragma once
+
+#if !OS_WINDOWS
+#include <poll.h>
+#endif
+
+static inline OPSTATUS NETWORK_LISTENER_FUNC(_Publish)(
+    TNetwork_Listener *listener, TNetwork_Error *error,
+    TNetwork_Error domainError, OPSTATUS status) {
+  if (listener != NULL)
+    listener->lastError = domainError;
+  if (error != NULL)
+    *error = domainError;
+  return status;
+}
+
+static inline OPSTATUS NETWORK_LISTENER_FUNC(_Fail)(
+    TNetwork_Listener *listener, TNetwork_Error *error,
+    TNetwork_Error domainError) {
+  return NETWORK_LISTENER_FUNC(_Publish)(
+      listener, error, domainError, STATUS_NS(GENERIC_ERROR));
+}
+
+static inline bool NETWORK_LISTENER_FUNC(_Open)(
+    TNetwork_Listener *listener, TSocket *socket,
+    const TNetwork_Endpoint *endpoint) {
+  TSocket_Family family =
+      endpoint->address.type == NETWORK_ADDRESS_TYPE(IPV6)
+          ? SOCKET_TYPE(FAMILY_IPV6)
+          : SOCKET_TYPE(FAMILY_IPV4);
+  TNetwork_Error socketError;
+  if (SOCKET_FUNC(Create)(
+          socket, family, SOCKET_TYPE(KIND_STREAM), SOCKET_TYPE(PROTOCOL_TCP),
+          &socketError) != STATUS_CONST(SUCCESS)) {
+    listener->lastError = socketError;
+    return false;
+  }
+  if (SOCKET_FUNC(SetReuseAddress)(socket, true, &socketError) !=
+          STATUS_CONST(SUCCESS) ||
+      SOCKET_FUNC(Bind)(socket, endpoint, &socketError) !=
+          STATUS_CONST(SUCCESS) ||
+      SOCKET_FUNC(Listen)(
+          socket, NETWORK_LISTENER_DEFAULT_BACKLOG, &socketError) !=
+          STATUS_CONST(SUCCESS)) {
+    listener->lastError = socketError;
+    SOCKET_FUNC(Close)(socket);
+    return false;
+  }
+  return true;
+}
+
+static inline void NETWORK_LISTENER_FUNC(_RefreshLocalEndpoint)(
+    TNetwork_Listener *listener, TSocket *socket) {
+  struct sockaddr_storage native;
+  SOCKET_TYPE(Len) length = (SOCKET_TYPE(Len))sizeof(native);
+  if (TSOCKET_NATIVE_GETSOCKNAME(socket->handle, (struct sockaddr *)&native, &length) == 0)
+    SOCKET_FUNC(_EndpointFromNative)((struct sockaddr *)&native,
+                                     &listener->localEndpoint);
+}
+
+inline static void NETWORK_LISTENER_FUNC(Init)(TNetwork_Listener *listener) {
+  memset(listener, 0, sizeof(*listener));
+  listener->lastError = NETWORK_ERROR_CONST(NONE);
+  listener->blocking = true;
+  SOCKET_FUNC(Init)(&listener->primary);
+  SOCKET_FUNC(Init)(&listener->secondary);
+}
+
+inline static OPSTATUS NETWORK_LISTENER_FUNC(ListenAt)(
+    TNetwork_Listener *listener, const TNetwork_Endpoint *endpoint,
+    TNetwork_Error *error) {
+  if (listener == NULL || endpoint == NULL) {
+    if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
+    return STATUS_NS(INVALID_ARGUMENT);
+  }
+  NETWORK_LISTENER_FUNC(Close)(listener);
+  if (!NETWORK_LISTENER_FUNC(_Open)(listener, &listener->primary, endpoint))
+    return NETWORK_LISTENER_FUNC(_Fail)(
+        listener, error, listener->lastError);
+  listener->dualStack = false;
+  NETWORK_LISTENER_FUNC(_RefreshLocalEndpoint)(listener, &listener->primary);
+  return NETWORK_LISTENER_FUNC(_Publish)(
+      listener, error, NETWORK_ERROR_CONST(NONE), STATUS_NS(SUCCESS));
+}
+
+inline static OPSTATUS NETWORK_LISTENER_FUNC(Listen)(
+    TNetwork_Listener *listener, uint16_t port, TNetwork_Error *error) {
+  TNetwork_Address address;
+  TNetwork_Endpoint endpoint;
+  uint16_t boundPort = port;
+
+  if (listener == NULL) {
+    if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
+    return STATUS_NS(INVALID_ARGUMENT);
+  }
+  NETWORK_LISTENER_FUNC(Close)(listener);
+
+  NETWORK_ADDRESS_FUNC(IPv6_Any)(&address);
+  NETWORK_ADDRESS_FUNC(Endpoint_Create)(&endpoint, &address, port);
+
+  if (NETWORK_LISTENER_FUNC(_Open)(listener, &listener->primary, &endpoint)) {
+    int ipv6Only = 1;
+    SOCKET_TYPE(Len) length = (SOCKET_TYPE(Len))sizeof(ipv6Only);
+    NETWORK_LISTENER_FUNC(_RefreshLocalEndpoint)(listener, &listener->primary);
+    boundPort = listener->localEndpoint.port;
+
+    if (TSOCKET_NATIVE_GETSOCKOPT(listener->primary.handle, IPPROTO_IPV6, IPV6_V6ONLY,
+                   (char *)&ipv6Only, &length) == 0 && ipv6Only == 0) {
+      listener->dualStack = true;
+      return NETWORK_LISTENER_FUNC(_Publish)(
+          listener, error, NETWORK_ERROR_CONST(NONE), STATUS_NS(SUCCESS));
+    }
+
+    NETWORK_ADDRESS_FUNC(IPv4_Any)(&address);
+    NETWORK_ADDRESS_FUNC(Endpoint_Create)(&endpoint, &address, boundPort);
+    if (NETWORK_LISTENER_FUNC(_Open)(listener, &listener->secondary, &endpoint)) {
+      listener->dualStack = true;
+      return NETWORK_LISTENER_FUNC(_Publish)(
+          listener, error, NETWORK_ERROR_CONST(NONE), STATUS_NS(SUCCESS));
+    }
+
+    /* IPv6 remains usable even when the IPv4 companion cannot be opened. */
+    return NETWORK_LISTENER_FUNC(_Publish)(
+        listener, error, NETWORK_ERROR_CONST(NONE), STATUS_NS(SUCCESS));
+  }
+
+  NETWORK_ADDRESS_FUNC(IPv4_Any)(&address);
+  NETWORK_ADDRESS_FUNC(Endpoint_Create)(&endpoint, &address, port);
+  if (!NETWORK_LISTENER_FUNC(_Open)(listener, &listener->primary, &endpoint))
+    return NETWORK_LISTENER_FUNC(_Fail)(
+        listener, error, listener->lastError);
+
+  NETWORK_LISTENER_FUNC(_RefreshLocalEndpoint)(listener, &listener->primary);
+  listener->dualStack = false;
+  return NETWORK_LISTENER_FUNC(_Publish)(
+      listener, error, NETWORK_ERROR_CONST(NONE), STATUS_NS(SUCCESS));
+}
+
+static inline TSocket *NETWORK_LISTENER_FUNC(_AcceptSocket)(
+    TNetwork_Listener *listener) {
+  if (listener->secondary.handle == TSOCKET_NATIVE_INVALID)
+    return &listener->primary;
+
+#if OS_WINDOWS
+  fd_set set;
+  FD_ZERO(&set);
+  FD_SET(listener->primary.handle, &set);
+  FD_SET(listener->secondary.handle, &set);
+  if (TSOCKET_NATIVE_SELECT(0, &set, NULL, NULL, NULL) <= 0)
+    return NULL;
+  return SOCKET_FUNC(_DescriptorSetContains)(listener->primary.handle, &set) ? &listener->primary
+                                                  : &listener->secondary;
+#else
+  struct pollfd descriptors[2];
+  descriptors[0].fd = listener->primary.handle;
+  descriptors[0].events = POLLIN;
+  descriptors[0].revents = 0;
+  descriptors[1].fd = listener->secondary.handle;
+  descriptors[1].events = POLLIN;
+  descriptors[1].revents = 0;
+  if (poll(descriptors, 2, -1) <= 0)
+    return NULL;
+  if (descriptors[0].revents & POLLIN)
+    return &listener->primary;
+  if (descriptors[1].revents & POLLIN)
+    return &listener->secondary;
+  return NULL;
+#endif
+}
+
+inline static OPSTATUS NETWORK_LISTENER_FUNC(Accept)(
+    TNetwork_Listener *listener, TNetwork_Connection *connection,
+    TNetwork_Error *error) {
+  TSocket *source;
+  TNetwork_Endpoint peer;
+
+  if (listener == NULL || connection == NULL) {
+    if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
+    return STATUS_NS(INVALID_ARGUMENT);
+  }
+  source = NETWORK_LISTENER_FUNC(_AcceptSocket)(listener);
+  if (source == NULL)
+    return NETWORK_LISTENER_FUNC(_Fail)(
+        listener, error, NETWORK_ERROR_CONST(UNKNOWN));
+
+  NETWORK_CONNECTION_FUNC(Destroy)(connection);
+  NETWORK_CONNECTION_FUNC(Init)(connection);
+  {
+    TNetwork_Error socketError;
+    if (SOCKET_FUNC(Accept)(
+            source, &connection->socket, &peer, &socketError) !=
+        STATUS_CONST(SUCCESS))
+      return NETWORK_LISTENER_FUNC(_Fail)(listener, error, socketError);
+  }
+
+  connection->remoteEndpoint = peer;
+  connection->state = NETWORK_CONNECTION_TYPE(CONNECTED);
+  connection->lastError = NETWORK_ERROR_CONST(NONE);
+  NETWORK_CONNECTION_FUNC(_RefreshEndpoints)(connection);
+  return NETWORK_LISTENER_FUNC(_Publish)(
+      listener, error, NETWORK_ERROR_CONST(NONE), STATUS_NS(SUCCESS));
+}
+
+inline static void NETWORK_LISTENER_FUNC(Close)(TNetwork_Listener *listener) {
+  if (listener == NULL)
+    return;
+  SOCKET_FUNC(Close)(&listener->primary);
+  SOCKET_FUNC(Close)(&listener->secondary);
+  listener->dualStack = false;
+  listener->lastError = NETWORK_ERROR_CONST(NONE);
+}
