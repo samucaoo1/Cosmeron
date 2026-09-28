@@ -4,7 +4,7 @@
 #include "Node.h"
 
 /* ============================================================
- * Linked_Queue — Fila usando encadeamento simples
+ * LINKED_NS(Queue) — Fila usando encadeamento simples
  *
  * FIFO: push no tail, pop no head. O(1) em todas as operações.
  * ============================================================ */
@@ -84,7 +84,7 @@
  * ============================================================ */
 
 #define LINKED_QUEUE_IMPLEMENT_ALL(TYPE, SUFFIX)                                     \
-  SINGLE_LINKED_NODE_STRUCT(TYPE, SUFFIX, Linked_Queue)                        \
+  SINGLE_LINKED_NODE_STRUCT(TYPE, SUFFIX, LINKED_NS(Queue))                        \
   LINKED_QUEUE_STRUCT(TYPE, SUFFIX)                                            \
   LINKED_QUEUE_INIT_PROTOTYPE(SUFFIX);                                \
   LINKED_QUEUE_DESTROY_PROTOTYPE(SUFFIX);                             \
@@ -109,7 +109,7 @@
   CONTAINER_API_BIND(NAME, LINKED_QUEUE_FUNC(TYPE, functions));                              \
   LINKED_QUEUE_FUNC(TYPE, Init)(&NAME);
 /* Compatibility alias: prefer LINKED_QUEUE_INSTANCE_DECLARE. */
-#define TLinked_Queue(TYPE, NAME) LINKED_QUEUE_INSTANCE_DECLARE(TYPE, NAME)
+#define TLINKED_NS(Queue)(TYPE, NAME) LINKED_QUEUE_INSTANCE_DECLARE(TYPE, NAME)
 
 /* ============================================================
  * Instanciações
