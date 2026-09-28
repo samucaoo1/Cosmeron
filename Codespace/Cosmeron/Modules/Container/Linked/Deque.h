@@ -4,7 +4,7 @@
 #include "Node.h"
 
 /* ============================================================
- * Linked_Deque — Double-ended queue usando encadeamento duplo
+ * LINKED_NS(Deque) — Double-ended queue usando encadeamento duplo
  *
  * O(1) em push/pop de ambas as extremidades.
  * ============================================================ */
@@ -96,7 +96,7 @@
  * ============================================================ */
 
 #define LINKED_DEQUE_IMPLEMENT_ALL(TYPE, SUFFIX)                                     \
-  DOUBLE_LINKED_NODE_STRUCT(TYPE, SUFFIX, Linked_Deque)                        \
+  DOUBLE_LINKED_NODE_STRUCT(TYPE, SUFFIX, LINKED_NS(Deque))                        \
   LINKED_DEQUE_STRUCT(TYPE, SUFFIX)                                            \
   LINKED_DEQUE_INIT_PROTOTYPE(SUFFIX);                                \
   LINKED_DEQUE_DESTROY_PROTOTYPE(SUFFIX);                             \
@@ -123,7 +123,7 @@
   CONTAINER_API_BIND(NAME, LINKED_DEQUE_FUNC(TYPE, functions));                              \
   LINKED_DEQUE_FUNC(TYPE, Init)(&NAME);
 /* Compatibility alias: prefer LINKED_DEQUE_INSTANCE_DECLARE. */
-#define TLinked_Deque(TYPE, NAME) LINKED_DEQUE_INSTANCE_DECLARE(TYPE, NAME)
+#define TLINKED_NS(Deque)(TYPE, NAME) LINKED_DEQUE_INSTANCE_DECLARE(TYPE, NAME)
 
 /* ============================================================
  * Instanciações
