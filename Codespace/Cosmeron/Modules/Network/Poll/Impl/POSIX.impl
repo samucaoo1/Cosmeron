@@ -51,8 +51,7 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
   }
   FLAT_VECTOR_FUNC(Network_Event, Clear)(events);
   if (poller->registrations.size == 0) {
-    return NETWORK_POLLER_FUNC(_Publish)(
-        poller, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+    return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
   }
 
   FD_ZERO(&read_set); FD_ZERO(&writeSet); FD_ZERO(&errorSet);
@@ -77,16 +76,14 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
                   &errorSet, &maximum);
     }
     if (!valid) {
-      return NETWORK_POLLER_FUNC(_Publish)(
-          poller, error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
+      return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
           STATUS_CONST(OUT_OF_RANGE));
     }
   }
 
   result = select(maximum + 1, &read_set, &writeSet, &errorSet, timeout);
   if (result == TSOCKET_NATIVE_ERROR) {
-    return NETWORK_POLLER_FUNC(_Publish)(
-        poller, error,
+    return NETWORK_POLLER_FUNC(_Publish)(error,
         SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE()),
         STATUS_CONST(GENERIC_ERROR));
   }
@@ -114,8 +111,7 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
       return STATUS_CONST(OUT_OF_MEMORY);
   }
 
-  return NETWORK_POLLER_FUNC(_Publish)(
-      poller, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+  return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 NETWORK_POLLER_WAIT_PROTOTYPE {

@@ -49,7 +49,6 @@ typedef FLAT_VECTOR_TYPE(Network_Event) NETWORK_POLLER_TYPE(TEventVector);
 typedef struct NETWORK_POLLER_TYPE(TPoller) {
   NETWORK_POLLER_TYPE(TRegistrationVector) registrations;
   NETWORK_POLLER_TYPE(Handle) nextHandle;
-  NETWORK_TYPE(TError) lastError;
 } NETWORK_POLLER_TYPE(TPoller);
 
 #define NETWORK_POLLER_INIT_PROTOTYPE                                      \
