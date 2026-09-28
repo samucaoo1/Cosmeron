@@ -4,7 +4,7 @@
 
 #if COMPILER_GCC || COMPILER_CLANG
 
-#define ATOMIC_IMPLEMENT_SCALAR(TYPE, SUFFIX)                                \
+#define COSMERON_MACRO_INTERNAL_ATOMIC_IMPLEMENT_SCALAR(TYPE, SUFFIX)                                \
   ATOMIC_LOAD_PROTOTYPE(TYPE, SUFFIX) {                                      \
     return __atomic_load_n(&atomic->value, order);                            \
   }                                                                           \
@@ -19,7 +19,7 @@
                                        false, success, failure);               \
   }
 
-#define ATOMIC_IMPLEMENT_FETCH(TYPE, SUFFIX)                                 \
+#define COSMERON_MACRO_INTERNAL_ATOMIC_IMPLEMENT_FETCH(TYPE, SUFFIX)                                 \
   ATOMIC_FETCH_ADD_PROTOTYPE(TYPE, SUFFIX) {                                 \
     return __atomic_fetch_add(&atomic->value, value, order);                  \
   }                                                                           \
@@ -36,12 +36,12 @@
     return __atomic_fetch_xor(&atomic->value, value, order);                  \
   }
 
-ATOMIC_IMPLEMENT_SCALAR(uint32_t, U32)
-ATOMIC_IMPLEMENT_SCALAR(uintptr_t, Ptr)
-ATOMIC_IMPLEMENT_FETCH(uint32_t, U32)
+COSMERON_MACRO_INTERNAL_ATOMIC_IMPLEMENT_SCALAR(uint32_t, U32)
+COSMERON_MACRO_INTERNAL_ATOMIC_IMPLEMENT_SCALAR(uintptr_t, Ptr)
+COSMERON_MACRO_INTERNAL_ATOMIC_IMPLEMENT_FETCH(uint32_t, U32)
 #if CONCURRENCY_HAS_ATOMIC_U64
-ATOMIC_IMPLEMENT_SCALAR(uint64_t, U64)
-ATOMIC_IMPLEMENT_FETCH(uint64_t, U64)
+COSMERON_MACRO_INTERNAL_ATOMIC_IMPLEMENT_SCALAR(uint64_t, U64)
+COSMERON_MACRO_INTERNAL_ATOMIC_IMPLEMENT_FETCH(uint64_t, U64)
 #endif
 
 ATOMIC_BOOL_LOAD_PROTOTYPE {
@@ -56,7 +56,7 @@ ATOMIC_BOOL_EXCHANGE_PROTOTYPE {
   return __atomic_exchange_n(&atomic->value, (uint32_t)value, order) != 0;
 }
 
-#undef ATOMIC_IMPLEMENT_FETCH
-#undef ATOMIC_IMPLEMENT_SCALAR
+#undef COSMERON_MACRO_INTERNAL_ATOMIC_IMPLEMENT_FETCH
+#undef COSMERON_MACRO_INTERNAL_ATOMIC_IMPLEMENT_SCALAR
 
 #endif
