@@ -13,9 +13,9 @@
     for (i = 0; i < hash->capacity; ++i) {                                     \
       THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *bucket =                    \
           &hash->buckets[(start + i) % hash->capacity];                        \
-      if (bucket->state == HASH_BUCKET_EMPTY)                                   \
+      if (bucket->state == HASH_CONST(BUCKET_EMPTY))                                   \
         return NULL;                                                            \
-      if (bucket->state == HASH_BUCKET_OCCUPIED &&                              \
+      if (bucket->state == HASH_CONST(BUCKET_OCCUPIED) &&                              \
           EQUAL_FUNCTION(bucket->key, key))                                    \
         return bucket;                                                          \
     }                                                                           \
@@ -35,9 +35,9 @@
     for (i = 0; i < hash->capacity; ++i) {                                     \
       const THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *bucket =              \
           &hash->buckets[(start + i) % hash->capacity];                        \
-      if (bucket->state == HASH_BUCKET_EMPTY)                                   \
+      if (bucket->state == HASH_CONST(BUCKET_EMPTY))                                   \
         return NULL;                                                            \
-      if (bucket->state == HASH_BUCKET_OCCUPIED &&                              \
+      if (bucket->state == HASH_CONST(BUCKET_OCCUPIED) &&                              \
           EQUAL_FUNCTION(bucket->key, key))                                    \
         return bucket;                                                          \
     }                                                                           \
