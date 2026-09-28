@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 static inline bool RANDOM_SOURCE_FUNC(_EngineValid)(
-    const RANDOM_ENGINE_TYPE(FunctionTable) *engine) {
+    const RANDOM_ENGINE_TYPE(Descriptor) *engine) {
   return engine != NULL && engine->nextU64 != NULL && engine->seed != NULL &&
          engine->stateSize != 0U && engine->stateAlignment != 0U;
 }
