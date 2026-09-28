@@ -65,8 +65,8 @@
 #define TSTRING_IMPLEMENT_POP_BACK(CHAR_TYPE, SUFFIX)                         \
   static inline OPSTATUS TSTRING_FUNC(SUFFIX, PopBack)(                       \
       TSTRING_TYPE(SUFFIX) * str, CHAR_TYPE *outValue) {                     \
-    if (!str)                                                                  \
-      return STATUS_CONST(INVALID_ARGUMENT);                                      \
+    if (!str || !outValue)                                                     \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (str->size == 0)                                                       \
       return STATUS_CONST(OUT_OF_RANGE);                                         \
     str->size--;                                                              \
