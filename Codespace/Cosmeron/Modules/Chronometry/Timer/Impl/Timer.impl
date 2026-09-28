@@ -14,7 +14,7 @@ CHRONOMETRY_TIMER_ELAPSED_PROTOTYPE {
   status = CLOCK_FUNC(Now)(&now);
   if (status != STATUS_CONST(SUCCESS))
     return status;
-  return CLOCK_FUNC(DurationBetween)(timer->start, now, elapsed);
+  return CLOCK_FUNC(DurationBetween)(timer->start, now, outElapsed);
 }
 
 CHRONOMETRY_TIMER_RESTART_PROTOTYPE {
@@ -25,7 +25,7 @@ CHRONOMETRY_TIMER_RESTART_PROTOTYPE {
   status = CLOCK_FUNC(Now)(&now);
   if (status != STATUS_CONST(SUCCESS))
     return status;
-  status = CLOCK_FUNC(DurationBetween)(timer->start, now, elapsed);
+  status = CLOCK_FUNC(DurationBetween)(timer->start, now, outElapsed);
   if (status == STATUS_CONST(SUCCESS))
     timer->start = now;
   return status;
@@ -45,7 +45,7 @@ CHRONOMETRY_DELTA_UPDATE_PROTOTYPE {
   status = CLOCK_FUNC(Now)(&now);
   if (status != STATUS_CONST(SUCCESS))
     return status;
-  status = CLOCK_FUNC(DurationBetween)(delta->previous, now, elapsed);
+  status = CLOCK_FUNC(DurationBetween)(delta->previous, now, outElapsed);
   if (status == STATUS_CONST(SUCCESS))
     delta->previous = now;
   return status;
@@ -64,30 +64,31 @@ CHRONOMETRY_FRAME_LIMITER_FROM_FPS_PROTOTYPE {
     return STATUS_CONST(INVALID_ARGUMENT);
   return TIMER_FUNC(FrameLimiterCreate)(
       DURATION_FUNC(FromNanoseconds)(CHRONOMETRY_NANOSECONDS_PER_SECOND / fps),
-      limiter);
+      outLimiter);
 }
 
 CHRONOMETRY_FRAME_LIMITER_BEGIN_PROTOTYPE {
-  if (outLimiter == NULL)
+  if (limiter == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
-  return CLOCK_FUNC(Now)(&outLimiter->frameStart);
+  return CLOCK_FUNC(Now)(&limiter->frameStart);
 }
 
 CHRONOMETRY_FRAME_LIMITER_REMAINING_PROTOTYPE {
   CHRONOMETRY_TYPE(ClockTimePoint) now;
   CHRONOMETRY_TYPE(Duration) elapsed;
   OPSTATUS status;
-  if (outLimiter == NULL || outRemaining == NULL ||
-      outLimiter->frameStart.nanoseconds == 0)
+  if (limiter == NULL || outRemaining == NULL ||
+      limiter->frameStart.nanoseconds == 0)
     return STATUS_CONST(INVALID_ARGUMENT);
   status = CLOCK_FUNC(Now)(&now);
   if (status != STATUS_CONST(SUCCESS))
     return status;
-  status = CLOCK_FUNC(DurationBetween)(outLimiter->frameStart, now, &outElapsed);
+  status = CLOCK_FUNC(DurationBetween)(limiter->frameStart, now, &elapsed);
   if (status != STATUS_CONST(SUCCESS))
     return status;
-  remaining->nanoseconds = outLimiter->target.nanoseconds - elapsed.nanoseconds;
-  if (remaining->nanoseconds < 0)
-    remaining->nanoseconds = 0;
+  outRemaining->nanoseconds =
+      limiter->target.nanoseconds - elapsed.nanoseconds;
+  if (outRemaining->nanoseconds < 0)
+    outRemaining->nanoseconds = 0;
   return STATUS_CONST(SUCCESS);
 }

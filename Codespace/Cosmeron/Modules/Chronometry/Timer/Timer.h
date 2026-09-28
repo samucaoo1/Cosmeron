@@ -38,10 +38,10 @@ typedef struct CHRONOMETRY_TYPE(FrameLimiter) {
       uint32_t fps, CHRONOMETRY_TYPE(FrameLimiter) *outLimiter)
 #define CHRONOMETRY_FRAME_LIMITER_BEGIN_PROTOTYPE                    \
   static inline OPSTATUS TIMER_FUNC(FrameLimiterBegin)(                         \
-      CHRONOMETRY_TYPE(FrameLimiter) *outLimiter)
+      CHRONOMETRY_TYPE(FrameLimiter) *limiter)
 #define CHRONOMETRY_FRAME_LIMITER_REMAINING_PROTOTYPE                \
   static inline OPSTATUS TIMER_FUNC(FrameLimiterRemaining)(                     \
-      const CHRONOMETRY_TYPE(FrameLimiter) *outLimiter,                          \
+      const CHRONOMETRY_TYPE(FrameLimiter) *limiter,                          \
       CHRONOMETRY_TYPE(Duration) *outRemaining)
 
 #include "Impl/Timer.impl"
