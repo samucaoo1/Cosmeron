@@ -3,7 +3,7 @@
 #if CONTAINER_FUNCTION_TABLE_ENABLED
 
 #define LINKED_LIST_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                                   \
-  typedef struct LINKED_LIST_FUNC(SUFFIX, FunctionTable) {                   \
+  typedef struct LINKED_LIST_FUNCTION_TABLE_TYPE(SUFFIX) {                   \
     /* Lifecycle */                                                            \
     OPSTATUS (*init)(LINKED_LIST_TYPE(SUFFIX) *);                                    \
     void (*destroy)(LINKED_LIST_TYPE(SUFFIX) *);                                     \
@@ -28,10 +28,10 @@
     /* Observers */                                                            \
     bool (*empty)(const LINKED_LIST_TYPE(SUFFIX) *);                                       \
     size_t (*size)(const LINKED_LIST_TYPE(SUFFIX) *);                                      \
-  } LINKED_LIST_FUNC(SUFFIX, FunctionTable);
+  } LINKED_LIST_FUNCTION_TABLE_TYPE(SUFFIX);
 
 #define LINKED_LIST_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)                          \
-  static const LINKED_LIST_FUNC(SUFFIX, FunctionTable)                                \
+  static const LINKED_LIST_FUNCTION_TABLE_TYPE(SUFFIX)                                \
       LINKED_LIST_FUNC(SUFFIX, functions) = {                                      \
           /* Lifecycle */                                                           \
           .init = LINKED_LIST_FUNC(SUFFIX, Init),                                  \
