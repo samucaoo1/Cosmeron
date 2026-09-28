@@ -109,7 +109,7 @@
   CONTAINER_API_BIND(NAME, LINKED_QUEUE_FUNC(TYPE, functions));                              \
   LINKED_QUEUE_FUNC(TYPE, Init)(&NAME);
 /* Compatibility alias: prefer LINKED_QUEUE_INSTANCE_DECLARE. */
-#define TLINKED_NS(Queue)(TYPE, NAME) LINKED_QUEUE_INSTANCE_DECLARE(TYPE, NAME)
+#define TLinked_Queue(TYPE, NAME) LINKED_QUEUE_INSTANCE_DECLARE(TYPE, NAME)
 
 /* ============================================================
  * Instanciações
