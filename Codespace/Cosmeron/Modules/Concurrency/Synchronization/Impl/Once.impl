@@ -3,31 +3,48 @@
 #include "../Once.h"
 
 #if OS_POSIX
-static inline OPSTATUS ONCE_FUNC(Call)(CONCURRENCY_TYPE(TOnce) *once, CONCURRENCY_TYPE(OnceFunction) function) {
-  if (once == NULL || function == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+static inline OPSTATUS ONCE_FUNC(Call)(
+    CONCURRENCY_TYPE(TOnce) *once,
+    CONCURRENCY_TYPE(OnceFunction) function) {
+  if (once == NULL || function == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
   return pthread_once(&once->native, function) == 0
              ? STATUS_CONST(SUCCESS)
              : STATUS_CONST(GENERIC_ERROR);
 }
-#elif OS_WINDOWS
-typedef struct CONCURRENCY_TYPE(TOnce)_Call {
-  CONCURRENCY_TYPE(OnceFunction) function;
-} CONCURRENCY_TYPE(TOnce)_Call;
 
-static inline BOOL CALLBACK ConcurrencyInternal_Once_Callback(
+#elif OS_WINDOWS
+typedef struct CONCURRENCY_INS(OnceCall_InternalType_) {
+  CONCURRENCY_TYPE(OnceFunction) function;
+} CONCURRENCY_INS(OnceCall_InternalType_);
+
+static inline BOOL CALLBACK CONCURRENCY_INS(OnceCallback)(
     PINIT_ONCE once, PVOID parameter, PVOID *context) {
-  CONCURRENCY_TYPE(TOnce)_Call *call = (CONCURRENCY_TYPE(TOnce)_Call *)parameter;
+  CONCURRENCY_INS(OnceCall_InternalType_) *call =
+      (CONCURRENCY_INS(OnceCall_InternalType_) *)parameter;
+
   (void)once;
   (void)context;
+
   call->function();
   return TRUE;
 }
-static inline OPSTATUS ONCE_FUNC(Call)(CONCURRENCY_TYPE(TOnce) *once, CONCURRENCY_TYPE(OnceFunction) function) {
-  CONCURRENCY_TYPE(TOnce)_Call call;
-  if (once == NULL || function == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+
+static inline OPSTATUS ONCE_FUNC(Call)(
+    CONCURRENCY_TYPE(TOnce) *once,
+    CONCURRENCY_TYPE(OnceFunction) function) {
+  CONCURRENCY_INS(OnceCall_InternalType_) call;
+
+  if (once == NULL || function == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
   call.function = function;
-  return InitOnceExecuteOnce(&once->native, ConcurrencyInternal_Once_Callback,
-                             &call, NULL) != 0
+  return InitOnceExecuteOnce(
+             &once->native,
+             CONCURRENCY_INS(OnceCallback),
+             &call,
+             NULL) != 0
              ? STATUS_CONST(SUCCESS)
              : STATUS_CONST(GENERIC_ERROR);
 }
