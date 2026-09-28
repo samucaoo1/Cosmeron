@@ -177,7 +177,7 @@ static inline void NETWORK_CONNECTION_FUNC(_RefreshEndpoints)(
                                      &connection->remoteEndpoint);
 }
 
-static inline void NETWORK_CONNECTION_FUNC(Init)(NETWORK_CONNECTION_TYPE(TConnection) *connection) {
+NETWORK_CONNECTION_INIT_PROTOTYPE {
   if (connection == NULL)
     return;
   memset(connection, 0, sizeof(*connection));
@@ -189,9 +189,7 @@ static inline void NETWORK_CONNECTION_FUNC(Init)(NETWORK_CONNECTION_TYPE(TConnec
   SOCKET_FUNC(Init)(&connection->socket);
 }
 
-static inline OPSTATUS NETWORK_CONNECTION_FUNC(ConnectFor)(
-    NETWORK_CONNECTION_TYPE(TConnection) *connection, const char *host, uint16_t port,
-    CHRONOMETRY_TYPE(Duration) timeout, NETWORK_TYPE(TError) *error) {
+NETWORK_CONNECTION_CONNECT_FOR_PROTOTYPE {
   NETWORK_RESOLVE_TYPE(TAddressVector) addresses;
   NETWORK_TYPE(TError) resolveError = NETWORK_ERROR_CONST(NONE);
   size_t index;
@@ -272,17 +270,14 @@ static inline OPSTATUS NETWORK_CONNECTION_FUNC(ConnectFor)(
       connection, error, connection->lastError);
 }
 
-static inline OPSTATUS NETWORK_CONNECTION_FUNC(Connect)(
-    NETWORK_CONNECTION_TYPE(TConnection) *connection, const char *host, uint16_t port,
-    NETWORK_TYPE(TError) *error) {
+NETWORK_CONNECTION_CONNECT_PROTOTYPE {
   CHRONOMETRY_TYPE(Duration) timeout;
   DURATION_FUNC(FromSeconds)(NETWORK_CONNECTION_DEFAULT_TIMEOUT_SECONDS, &timeout);
   return NETWORK_CONNECTION_FUNC(ConnectFor)(
       connection, host, port, timeout, error);
 }
 
-static inline OPSTATUS NETWORK_CONNECTION_FUNC(Reconnect)(
-    NETWORK_CONNECTION_TYPE(TConnection) *connection, NETWORK_TYPE(TError) *error) {
+NETWORK_CONNECTION_RECONNECT_PROTOTYPE {
   if (connection == NULL || connection->host == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -304,9 +299,7 @@ static inline OPSTATUS NETWORK_CONNECTION_FUNC(Reconnect)(
   return status;
 }
 
-static inline OPSTATUS NETWORK_CONNECTION_FUNC(Read)(
-    NETWORK_CONNECTION_TYPE(TConnection) *connection, void *buffer, size_t capacity,
-    size_t *bytesRead, NETWORK_TYPE(TError) *error) {
+NETWORK_CONNECTION_READ_PROTOTYPE {
   if (connection == NULL || (capacity != 0 && buffer == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -326,9 +319,7 @@ static inline OPSTATUS NETWORK_CONNECTION_FUNC(Read)(
       connection, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-static inline OPSTATUS NETWORK_CONNECTION_FUNC(ReadExact)(
-    NETWORK_CONNECTION_TYPE(TConnection) *connection, void *buffer, size_t size,
-    NETWORK_TYPE(TError) *error) {
+NETWORK_CONNECTION_READ_EXACT_PROTOTYPE {
   size_t total = 0;
   if (connection == NULL || (size != 0 && buffer == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
@@ -347,9 +338,7 @@ static inline OPSTATUS NETWORK_CONNECTION_FUNC(ReadExact)(
       connection, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-static inline OPSTATUS NETWORK_CONNECTION_FUNC(Write)(
-    NETWORK_CONNECTION_TYPE(TConnection) *connection, const void *data, size_t size,
-    size_t *bytesWritten, NETWORK_TYPE(TError) *error) {
+NETWORK_CONNECTION_WRITE_PROTOTYPE {
   if (connection == NULL || (size != 0 && data == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -369,9 +358,7 @@ static inline OPSTATUS NETWORK_CONNECTION_FUNC(Write)(
       connection, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-static inline OPSTATUS NETWORK_CONNECTION_FUNC(WriteAll)(
-    NETWORK_CONNECTION_TYPE(TConnection) *connection, const void *data, size_t size,
-    NETWORK_TYPE(TError) *error) {
+NETWORK_CONNECTION_WRITE_ALL_PROTOTYPE {
   size_t total = 0;
   if (connection == NULL || (size != 0 && data == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
@@ -393,8 +380,7 @@ static inline OPSTATUS NETWORK_CONNECTION_FUNC(WriteAll)(
       connection, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-static inline OPSTATUS NETWORK_CONNECTION_FUNC(SetBlocking)(
-    NETWORK_CONNECTION_TYPE(TConnection) *connection, bool blocking, NETWORK_TYPE(TError) *error) {
+NETWORK_CONNECTION_SET_BLOCKING_PROTOTYPE {
   NETWORK_TYPE(TError) socketError = NETWORK_ERROR_CONST(NONE);
   if (connection == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
@@ -410,9 +396,7 @@ static inline OPSTATUS NETWORK_CONNECTION_FUNC(SetBlocking)(
       connection, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-static inline OPSTATUS NETWORK_CONNECTION_FUNC(Shutdown)(
-    NETWORK_CONNECTION_TYPE(TConnection) *connection, SOCKET_TYPE(TShutdown) direction,
-    NETWORK_TYPE(TError) *error) {
+NETWORK_CONNECTION_SHUTDOWN_PROTOTYPE {
   NETWORK_TYPE(TError) socketError;
   if (connection == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
@@ -426,7 +410,7 @@ static inline OPSTATUS NETWORK_CONNECTION_FUNC(Shutdown)(
       connection, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-static inline void NETWORK_CONNECTION_FUNC(Close)(NETWORK_CONNECTION_TYPE(TConnection) *connection) {
+NETWORK_CONNECTION_CLOSE_PROTOTYPE {
   if (connection == NULL)
     return;
   if (connection->state == NETWORK_CONNECTION_CONST(CONNECTED))
@@ -436,7 +420,7 @@ static inline void NETWORK_CONNECTION_FUNC(Close)(NETWORK_CONNECTION_TYPE(TConne
   connection->lastError = NETWORK_ERROR_CONST(NONE);
 }
 
-static inline void NETWORK_CONNECTION_FUNC(Destroy)(NETWORK_CONNECTION_TYPE(TConnection) *connection) {
+NETWORK_CONNECTION_DESTROY_PROTOTYPE {
   if (connection == NULL)
     return;
   NETWORK_CONNECTION_FUNC(Close)(connection);
