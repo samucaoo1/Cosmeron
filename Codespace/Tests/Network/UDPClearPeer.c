@@ -19,8 +19,10 @@ int main(void) {
 
   assert(NETWORK_DATAGRAM_FUNC(Bind)(&first, &any, NULL) == STATUS_CONST(SUCCESS));
   assert(NETWORK_DATAGRAM_FUNC(Bind)(&second, &any, NULL) == STATUS_CONST(SUCCESS));
-  first_endpoint = *NETWORK_DATAGRAM_FUNC(LocalEndpoint)(&first);
-  second_endpoint = *NETWORK_DATAGRAM_FUNC(LocalEndpoint)(&second);
+  assert(NETWORK_DATAGRAM_FUNC(LocalEndpoint)(&first, &first_endpoint) ==
+         STATUS_CONST(SUCCESS));
+  assert(NETWORK_DATAGRAM_FUNC(LocalEndpoint)(&second, &second_endpoint) ==
+         STATUS_CONST(SUCCESS));
 
   assert(NETWORK_DATAGRAM_FUNC(SetPeer)(&sender, &first_endpoint, NULL) ==
          STATUS_CONST(SUCCESS));
