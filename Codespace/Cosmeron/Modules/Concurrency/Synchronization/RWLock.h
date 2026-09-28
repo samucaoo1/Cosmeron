@@ -3,17 +3,17 @@
 #include "../../../Core/Error/Status.h"
 #if OS_POSIX
 #include <pthread.h>
-typedef struct TRWLock { pthread_rwlock_t native; } TRWLock;
+typedef struct CONCURRENCY_TYPE(TRWLock) { pthread_rwlock_t native; } CONCURRENCY_TYPE(TRWLock);
 #elif OS_WINDOWS
 #include <windows.h>
-typedef struct TRWLock { SRWLOCK native; } TRWLock;
+typedef struct CONCURRENCY_TYPE(TRWLock) { SRWLOCK native; } CONCURRENCY_TYPE(TRWLock);
 #endif
-inline static OPSTATUS RWLOCK_FUNC(Init)(TRWLock *lock);
-inline static OPSTATUS RWLOCK_FUNC(Destroy)(TRWLock *lock);
-inline static OPSTATUS RWLOCK_FUNC(ReadLock)(TRWLock *lock);
-inline static OPSTATUS RWLOCK_FUNC(TryReadLock)(TRWLock *lock, bool *acquired);
-inline static OPSTATUS RWLOCK_FUNC(ReadUnlock)(TRWLock *lock);
-inline static OPSTATUS RWLOCK_FUNC(WriteLock)(TRWLock *lock);
-inline static OPSTATUS RWLOCK_FUNC(TryWriteLock)(TRWLock *lock, bool *acquired);
-inline static OPSTATUS RWLOCK_FUNC(WriteUnlock)(TRWLock *lock);
+static inline OPSTATUS RWLOCK_FUNC(Init)(CONCURRENCY_TYPE(TRWLock) *lock);
+static inline OPSTATUS RWLOCK_FUNC(Destroy)(CONCURRENCY_TYPE(TRWLock) *lock);
+static inline OPSTATUS RWLOCK_FUNC(ReadLock)(CONCURRENCY_TYPE(TRWLock) *lock);
+static inline OPSTATUS RWLOCK_FUNC(TryReadLock)(CONCURRENCY_TYPE(TRWLock) *lock, bool *outAcquired);
+static inline OPSTATUS RWLOCK_FUNC(ReadUnlock)(CONCURRENCY_TYPE(TRWLock) *lock);
+static inline OPSTATUS RWLOCK_FUNC(WriteLock)(CONCURRENCY_TYPE(TRWLock) *lock);
+static inline OPSTATUS RWLOCK_FUNC(TryWriteLock)(CONCURRENCY_TYPE(TRWLock) *lock, bool *outAcquired);
+static inline OPSTATUS RWLOCK_FUNC(WriteUnlock)(CONCURRENCY_TYPE(TRWLock) *lock);
 #include "Impl/RWLock.impl"
