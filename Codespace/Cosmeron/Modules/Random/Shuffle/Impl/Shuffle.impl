@@ -16,11 +16,7 @@ static inline void RANDOM_SHUFFLE_FUNC(Swap)(unsigned char *first,
   }
 }
 
-static inline OPSTATUS RANDOM_SHUFFLE_FUNC(VectorFromSource)(
-    void *vector,
-    size_t count,
-    size_t elementSize,
-    RANDOM_SOURCE_TYPE(Value) *source) {
+RANDOM_SHUFFLE_VECTOR_FROM_SOURCE_PROTOTYPE {
   unsigned char *bytes;
   size_t index;
   size_t totalSize;
@@ -77,9 +73,7 @@ static inline OPSTATUS RANDOM_SHUFFLE_FUNC(VectorFromSource)(
   return STATUS_CONST(SUCCESS);
 }
 
-static inline OPSTATUS RANDOM_SHUFFLE_FUNC(Vector)(void *vector,
-                                                 size_t count,
-                                                 size_t elementSize) {
+RANDOM_SHUFFLE_VECTOR_PROTOTYPE {
   RANDOM_SOURCE_TYPE(Value) source;
 
   if (elementSize == 0U) {

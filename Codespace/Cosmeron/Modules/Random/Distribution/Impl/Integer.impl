@@ -1,6 +1,4 @@
-static inline uint64_t RANDOM_DISTRIBUTION_FUNC(U64)(RANDOM_SOURCE_TYPE(Value) *source,
-                                     uint64_t minimum,
-                                     uint64_t maximum) {
+RANDOM_DISTRIBUTION_U64_PROTOTYPE {
   uint64_t span;
   uint64_t threshold;
   uint64_t value;
@@ -13,9 +11,7 @@ static inline uint64_t RANDOM_DISTRIBUTION_FUNC(U64)(RANDOM_SOURCE_TYPE(Value) *
   do { value = RANDOM_SOURCE_FUNC(NextU64)(source); } while (value < threshold);
   return minimum + (value % span);
 }
-static inline int64_t RANDOM_DISTRIBUTION_FUNC(I64)(RANDOM_SOURCE_TYPE(Value) *source,
-                                    int64_t minimum,
-                                    int64_t maximum) {
+RANDOM_DISTRIBUTION_I64_PROTOTYPE {
   const uint64_t sign = UINT64_C(1) << 63U;
   uint64_t biased_minimum;
   uint64_t biased_maximum;
