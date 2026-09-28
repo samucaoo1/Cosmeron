@@ -42,17 +42,25 @@
 /* --- Generic access helpers --- */
 
 #define LINKED_INTERNAL_ACCESS_FRONT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)    \
-  static inline TYPE *FUNCTION_NAME(CONTAINER_STRUCT *container) {             \
-    if (!container || container->size == 0)                                                  \
-      return NULL;                                                             \
-    return &container->head->value;                                            \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       TYPE **out) {                           \
+    if (!container || !out)                                                    \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (container->size == 0)                                                  \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *out = &container->head->value;                                            \
+    return STATUS_CONST(SUCCESS);                                              \
   }
 
 #define LINKED_INTERNAL_ACCESS_BACK(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)     \
-  static inline TYPE *FUNCTION_NAME(CONTAINER_STRUCT *container) {             \
-    if (!container || container->size == 0)                                                  \
-      return NULL;                                                             \
-    return &container->tail->value;                                            \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       TYPE **out) {                           \
+    if (!container || !out)                                                    \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (container->size == 0)                                                  \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *out = &container->tail->value;                                            \
+    return STATUS_CONST(SUCCESS);                                              \
   }
 
 #define LINKED_INTERNAL_ACCESS_BEGIN(FUNCTION_NAME, CONTAINER_STRUCT,          \
@@ -76,10 +84,12 @@
 
 #define LINKED_INTERNAL_DOUBLE_ACCESS_AT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT,\
                                          NODE_STRUCT)                          \
-  static inline TYPE *FUNCTION_NAME(CONTAINER_STRUCT *container,               \
-                                    size_t index) {                            \
-    if (!container || index >= container->size)                                              \
-      return NULL;                                                             \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       size_t index, TYPE **out) {             \
+    if (!container || !out)                                                    \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (index >= container->size)                                              \
+      return STATUS_CONST(OUT_OF_RANGE);                                                             \
     NODE_STRUCT *temp;                                                         \
     size_t i;                                                                  \
     if (index < container->size / 2) {                                         \
@@ -93,7 +103,8 @@
       while (i-- > index)                                                      \
         temp = temp->prev;                                                     \
     }                                                                          \
-    return &temp->value;                                                       \
+    *out = &temp->value;                                                       \
+    return STATUS_CONST(SUCCESS);                                              \
   }
 
 /* --- Generic observers helpers --- */

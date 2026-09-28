@@ -52,12 +52,12 @@
  * ============================================================ */
 
 #define LINKED_LIST_FRONT_PROTOTYPE(TYPE, SUFFIX)                     \
-  static inline TYPE *LINKED_LIST_FUNC(SUFFIX,                                 \
-                                       Front)(LINKED_LIST_TYPE(SUFFIX) * list)
+  static inline OPSTATUS LINKED_LIST_FUNC(SUFFIX, Front)(                      \
+      LINKED_LIST_TYPE(SUFFIX) * list, TYPE **out)
 
 #define LINKED_LIST_BACK_PROTOTYPE(TYPE, SUFFIX)                      \
-  static inline TYPE *LINKED_LIST_FUNC(SUFFIX,                                 \
-                                       Back)(LINKED_LIST_TYPE(SUFFIX) * list)
+  static inline OPSTATUS LINKED_LIST_FUNC(SUFFIX, Back)(                       \
+      LINKED_LIST_TYPE(SUFFIX) * list, TYPE **out)
 
 #define LINKED_LIST_BEGIN_PROTOTYPE(SUFFIX)                           \
   static inline LINKED_LIST_NODE_TYPE(SUFFIX) *                                \

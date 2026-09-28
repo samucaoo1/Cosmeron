@@ -70,16 +70,12 @@
  * ============================================================ */
 
 #define LINKED_DEQUE_FRONT_PROTOTYPE(TYPE, SUFFIX)                    \
-  static inline TYPE *LINKED_DEQUE_FUNC(SUFFIX, Front)(                        \
-      LINKED_DEQUE_TYPE(SUFFIX) * deque)
+  static inline OPSTATUS LINKED_DEQUE_FUNC(SUFFIX, Front)(                     \
+      LINKED_DEQUE_TYPE(SUFFIX) * deque, TYPE **out)
 
 #define LINKED_DEQUE_BACK_PROTOTYPE(TYPE, SUFFIX)                     \
-  static inline TYPE *LINKED_DEQUE_FUNC(SUFFIX, Back)(                         \
-      LINKED_DEQUE_TYPE(SUFFIX) * deque)
-
-/* ============================================================
- * Names and Prototypes — Observers
- * ============================================================ */
+  static inline OPSTATUS LINKED_DEQUE_FUNC(SUFFIX, Back)(                      \
+      LINKED_DEQUE_TYPE(SUFFIX) * deque, TYPE **out)
 
 #define LINKED_DEQUE_EMPTY_PROTOTYPE(SUFFIX)                          \
   static inline bool LINKED_DEQUE_FUNC(SUFFIX, Empty)(                         \

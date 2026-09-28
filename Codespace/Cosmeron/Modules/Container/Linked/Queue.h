@@ -58,16 +58,12 @@
  * ============================================================ */
 
 #define LINKED_QUEUE_FRONT_PROTOTYPE(TYPE, SUFFIX)                    \
-  static inline TYPE *LINKED_QUEUE_FUNC(SUFFIX, Front)(                        \
-      LINKED_QUEUE_TYPE(SUFFIX) * queue)
+  static inline OPSTATUS LINKED_QUEUE_FUNC(SUFFIX, Front)(                     \
+      LINKED_QUEUE_TYPE(SUFFIX) * queue, TYPE **out)
 
 #define LINKED_QUEUE_BACK_PROTOTYPE(TYPE, SUFFIX)                     \
-  static inline TYPE *LINKED_QUEUE_FUNC(SUFFIX, Back)(                         \
-      LINKED_QUEUE_TYPE(SUFFIX) * queue)
-
-/* ============================================================
- * Names and Prototypes — Observers
- * ============================================================ */
+  static inline OPSTATUS LINKED_QUEUE_FUNC(SUFFIX, Back)(                      \
+      LINKED_QUEUE_TYPE(SUFFIX) * queue, TYPE **out)
 
 #define LINKED_QUEUE_EMPTY_PROTOTYPE(SUFFIX)                          \
   static inline bool LINKED_QUEUE_FUNC(SUFFIX, Empty)(                         \
