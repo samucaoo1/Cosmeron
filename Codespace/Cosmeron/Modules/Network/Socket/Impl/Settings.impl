@@ -1,7 +1,7 @@
 #pragma once
 
 SOCKET_SET_BLOCKING_PROTOTYPE {
-  TNetwork_Error domainError;
+  NETWORK_TYPE(Error) domainError;
   if (socket == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -21,9 +21,9 @@ SOCKET_SET_BLOCKING_PROTOTYPE {
 }
 
 static inline OPSTATUS SOCKET_FUNC(_SetBooleanOption)(
-    TSocket *socket, int level, int option, bool enabled, TNetwork_Error *error) {
+    SOCKET_TYPE(TSocket) *socket, int level, int option, bool enabled, NETWORK_TYPE(Error) *error) {
   int value = enabled ? 1 : 0;
-  TNetwork_Error domainError;
+  NETWORK_TYPE(Error) domainError;
   if (socket == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -54,26 +54,26 @@ SOCKET_SET_NO_DELAY_PROTOTYPE {
 }
 
 SOCKET_SHUTDOWN_PROTOTYPE {
-  TNetwork_Error domainError;
+  NETWORK_TYPE(Error) domainError;
   if (socket == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
   }
-  if (direction != SOCKET_TYPE(SHUTDOWN_READ) &&
-      direction != SOCKET_TYPE(SHUTDOWN_WRITE) &&
-      direction != SOCKET_TYPE(SHUTDOWN_BOTH))
+  if (direction != SOCKET_CONST(SHUTDOWN_READ) &&
+      direction != SOCKET_CONST(SHUTDOWN_WRITE) &&
+      direction != SOCKET_CONST(SHUTDOWN_BOTH))
     return SOCKET_FUNC(_Return)(
         socket, error, NETWORK_ERROR_CONST(NONE),
         STATUS_CONST(INVALID_ARGUMENT));
 #if OS_WINDOWS
-  int native = direction == SOCKET_TYPE(SHUTDOWN_READ)
+  int native = direction == SOCKET_CONST(SHUTDOWN_READ)
                    ? SD_RECEIVE
-                   : direction == SOCKET_TYPE(SHUTDOWN_WRITE) ? SD_SEND
+                   : direction == SOCKET_CONST(SHUTDOWN_WRITE) ? SD_SEND
                                                                : SD_BOTH;
 #else
-  int native = direction == SOCKET_TYPE(SHUTDOWN_READ)
+  int native = direction == SOCKET_CONST(SHUTDOWN_READ)
                    ? SHUT_RD
-                   : direction == SOCKET_TYPE(SHUTDOWN_WRITE) ? SHUT_WR
+                   : direction == SOCKET_CONST(SHUTDOWN_WRITE) ? SHUT_WR
                                                                : SHUT_RDWR;
 #endif
   if (TSOCKET_NATIVE_SHUTDOWN(socket->handle, native) == TSOCKET_NATIVE_ERROR) {

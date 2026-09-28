@@ -84,15 +84,15 @@ static inline bool SOCKET_FUNC(_DescriptorSetContains)(
 #endif
 }
 
-static inline int SOCKET_FUNC(_NativeFamily)(TNetwork_Address_Type type) {
-  return type == NETWORK_ADDRESS_TYPE(IPV6) ? AF_INET6 : AF_INET;
+static inline int SOCKET_FUNC(_NativeFamily)(NETWORK_ADDRESS_TYPE(Type) type) {
+  return type == NETWORK_ADDRESS_CONST(IPV6) ? AF_INET6 : AF_INET;
 }
 
 static inline bool SOCKET_FUNC(_EndpointToNative)(
-    const TNetwork_Endpoint *endpoint, struct sockaddr_storage *storage,
+    const NETWORK_ADDRESS_TYPE(TEndpoint) *endpoint, struct sockaddr_storage *storage,
     SOCKET_TYPE(Len) *length) {
   memset(storage, 0, sizeof(*storage));
-  if (endpoint->address.type == NETWORK_ADDRESS_TYPE(IPV4)) {
+  if (endpoint->address.type == NETWORK_ADDRESS_CONST(IPV4)) {
     struct sockaddr_in *address = (struct sockaddr_in *)storage;
     address->sin_family = AF_INET;
     address->sin_port = TSOCKET_NATIVE_HTONS(endpoint->port);
@@ -100,7 +100,7 @@ static inline bool SOCKET_FUNC(_EndpointToNative)(
     *length = (SOCKET_TYPE(Len))sizeof(*address);
     return true;
   }
-  if (endpoint->address.type == NETWORK_ADDRESS_TYPE(IPV6)) {
+  if (endpoint->address.type == NETWORK_ADDRESS_CONST(IPV6)) {
     struct sockaddr_in6 *address = (struct sockaddr_in6 *)storage;
     address->sin6_family = AF_INET6;
     address->sin6_port = TSOCKET_NATIVE_HTONS(endpoint->port);
@@ -112,17 +112,17 @@ static inline bool SOCKET_FUNC(_EndpointToNative)(
 }
 
 static inline bool SOCKET_FUNC(_EndpointFromNative)(
-    const struct sockaddr *native, TNetwork_Endpoint *endpoint) {
+    const struct sockaddr *native, NETWORK_ADDRESS_TYPE(TEndpoint) *endpoint) {
   if (native->sa_family == AF_INET) {
     const struct sockaddr_in *address = (const struct sockaddr_in *)native;
-    endpoint->address.type = NETWORK_ADDRESS_TYPE(IPV4);
+    endpoint->address.type = NETWORK_ADDRESS_CONST(IPV4);
     memcpy(endpoint->address.bytes.ipv4, &address->sin_addr, 4);
     endpoint->port = TSOCKET_NATIVE_NTOHS(address->sin_port);
     return true;
   }
   if (native->sa_family == AF_INET6) {
     const struct sockaddr_in6 *address = (const struct sockaddr_in6 *)native;
-    endpoint->address.type = NETWORK_ADDRESS_TYPE(IPV6);
+    endpoint->address.type = NETWORK_ADDRESS_CONST(IPV6);
     memcpy(endpoint->address.bytes.ipv6, &address->sin6_addr, 16);
     endpoint->port = TSOCKET_NATIVE_NTOHS(address->sin6_port);
     return true;
@@ -130,7 +130,7 @@ static inline bool SOCKET_FUNC(_EndpointFromNative)(
   return false;
 }
 
-static inline TNetwork_Error SOCKET_FUNC(_MapNativeError)(int error) {
+static inline NETWORK_TYPE(Error) SOCKET_FUNC(_MapNativeError)(int error) {
 #if OS_WINDOWS
   switch (error) {
   case WSAEWOULDBLOCK:
