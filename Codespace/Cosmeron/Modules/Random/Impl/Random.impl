@@ -1,10 +1,3 @@
-static inline RANDOM_SOURCE_TYPE(Value) RANDOM_FUNC(SourceFromSeed)(uint64_t seed) {
-  RANDOM_SOURCE_TYPE(Value) source = {0};
-  RANDOM_SOURCE_FUNC(Init)(&source, &RANDOM_ENGINE_FUNC(Xoshiro, Descriptor), seed,
-                         NULL);
-  return source;
-}
-
 RANDOM_U64_PROTOTYPE {
   return RANDOM_ENTROPY_FUNC(Collect)();
 }
@@ -27,14 +20,16 @@ RANDOM_RANGE_U64_PROTOTYPE {
   RANDOM_ENGINE_TYPE(Xoshiro) state;
   RANDOM_SOURCE_TYPE(Value) source =
       RANDOM_FUNC(_StackSource)(&state, RANDOM_FUNC(U64)());
-  return RANDOM_DISTRIBUTION_FUNC(U64)(&source, minimum, maximum);
+  return RANDOM_DISTRIBUTION_FUNC(_U64Unchecked)(
+      &source, minimum, maximum);
 }
 
 RANDOM_RANGE_I64_PROTOTYPE {
   RANDOM_ENGINE_TYPE(Xoshiro) state;
   RANDOM_SOURCE_TYPE(Value) source =
       RANDOM_FUNC(_StackSource)(&state, RANDOM_FUNC(U64)());
-  return RANDOM_DISTRIBUTION_FUNC(I64)(&source, minimum, maximum);
+  return RANDOM_DISTRIBUTION_FUNC(_I64Unchecked)(
+      &source, minimum, maximum);
 }
 
 RANDOM_F64_PROTOTYPE {
