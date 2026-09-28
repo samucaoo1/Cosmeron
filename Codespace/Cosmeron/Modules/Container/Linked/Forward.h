@@ -132,7 +132,7 @@
   CONTAINER_API_BIND(NAME, LINKED_FORWARD_LIST_FUNC(TYPE, functions));                       \
   LINKED_FORWARD_LIST_FUNC(TYPE, Init)(&NAME);
 /* Compatibility alias: prefer LINKED_FORWARD_LIST_INSTANCE_DECLARE. */
-#define TLINKED_NS(ForwardList)(TYPE, NAME) LINKED_FORWARD_LIST_INSTANCE_DECLARE(TYPE, NAME)
+#define TLinked_ForwardList(TYPE, NAME) LINKED_FORWARD_LIST_INSTANCE_DECLARE(TYPE, NAME)
 
 /* ============================================================
  * Instanciações
