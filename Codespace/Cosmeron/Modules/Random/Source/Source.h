@@ -41,8 +41,8 @@ typedef struct RANDOM_SOURCE_TYPE(Value) {
       RANDOM_SOURCE_TYPE(Value) *source, uint64_t seed)
 
 #define RANDOM_SOURCE_NEXT_U64_PROTOTYPE                                    \
-  static inline uint64_t RANDOM_SOURCE_FUNC(NextU64)(                        \
-      RANDOM_SOURCE_TYPE(Value) *source)
+  static inline OPSTATUS RANDOM_SOURCE_FUNC(NextU64)(                         \
+      RANDOM_SOURCE_TYPE(Value) *source, uint64_t *out)
 
 #define RANDOM_SOURCE_DESTROY_PROTOTYPE                                     \
   static inline void RANDOM_SOURCE_FUNC(Destroy)(                            \
