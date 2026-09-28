@@ -152,8 +152,6 @@ static void test_connection(void) {
          STATUS_CONST(SUCCESS));
   assert(NETWORK_CONNECTION_FUNC(State)(&client) ==
          NETWORK_CONNECTION_CONST(CONNECTED));
-  assert(NETWORK_CONNECTION_FUNC(LastError)(&client) ==
-         NETWORK_ERROR_CONST(NONE));
   assert(NETWORK_CONNECTION_FUNC(LocalEndpoint)(&client)->port != 0);
   assert(NETWORK_CONNECTION_FUNC(RemoteEndpoint)(&client)->port == endpoint.port);
 

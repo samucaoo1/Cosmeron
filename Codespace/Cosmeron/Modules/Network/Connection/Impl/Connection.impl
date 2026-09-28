@@ -5,10 +5,8 @@
 #endif
 
 static inline OPSTATUS NETWORK_CONNECTION_FUNC(_Publish)(
-    NETWORK_CONNECTION_TYPE(TConnection) *connection, NETWORK_TYPE(TError) *error,
-    NETWORK_TYPE(TError) domainError, OPSTATUS status) {
-  if (connection != NULL)
-    connection->lastError = domainError;
+    NETWORK_TYPE(TError) *error, NETWORK_TYPE(TError) domainError,
+    OPSTATUS status) {
   if (error != NULL)
     *error = domainError;
   return status;
@@ -20,7 +18,7 @@ static inline OPSTATUS NETWORK_CONNECTION_FUNC(_Fail)(
   if (connection != NULL)
     connection->state = NETWORK_CONNECTION_CONST(FAILED);
   return NETWORK_CONNECTION_FUNC(_Publish)(
-      connection, error, domainError, STATUS_CONST(GENERIC_ERROR));
+      error, domainError, STATUS_CONST(GENERIC_ERROR));
 }
 
 static inline OPSTATUS NETWORK_CONNECTION_FUNC(_IOFail)(
@@ -33,8 +31,7 @@ static inline OPSTATUS NETWORK_CONNECTION_FUNC(_IOFail)(
       connection->state = NETWORK_CONNECTION_CONST(FAILED);
     }
   }
-  return NETWORK_CONNECTION_FUNC(_Publish)(
-      connection, error, domainError, STATUS_CONST(GENERIC_ERROR));
+  return NETWORK_CONNECTION_FUNC(_Publish)(error, domainError, STATUS_CONST(GENERIC_ERROR));
 }
 
 static inline bool NETWORK_CONNECTION_FUNC(_StoreHost)(
@@ -52,16 +49,18 @@ static inline bool NETWORK_CONNECTION_FUNC(_StoreHost)(
   return true;
 }
 
-static inline bool NETWORK_CONNECTION_FUNC(_WaitConnect)(
-    NETWORK_CONNECTION_TYPE(TConnection) *connection, CHRONOMETRY_TYPE(Duration) timeout) {
+static inline OPSTATUS NETWORK_CONNECTION_FUNC(_WaitConnect)(
+    NETWORK_CONNECTION_TYPE(TConnection) *connection,
+    CHRONOMETRY_TYPE(Duration) timeout,
+    NETWORK_TYPE(TError) *error) {
   int result;
   int socketError = 0;
   SOCKET_TYPE(Len) errorLength = (SOCKET_TYPE(Len))sizeof(socketError);
 
-  if (timeout.nanoseconds < 0) {
-    connection->lastError = NETWORK_ERROR_CONST(ADDRESS_INVALID);
-    return false;
-  }
+  if (timeout.nanoseconds < 0)
+    return NETWORK_CONNECTION_FUNC(_Publish)(
+        error, NETWORK_ERROR_CONST(ADDRESS_INVALID),
+        STATUS_CONST(INVALID_ARGUMENT));
 
 #if OS_WINDOWS
   fd_set writeSet;
@@ -88,80 +87,85 @@ static inline bool NETWORK_CONNECTION_FUNC(_WaitConnect)(
   descriptor.revents = 0;
   result = poll(&descriptor, 1, (int)milliseconds);
 #endif
-  if (result == 0) {
-    connection->lastError = NETWORK_ERROR_CONST(TIMEOUT);
-    return false;
-  }
-  if (result == TSOCKET_NATIVE_ERROR) {
-    connection->lastError =
-        SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
-    return false;
-  }
-  if (TSOCKET_NATIVE_GETSOCKOPT(connection->socket.handle, SOL_SOCKET, SO_ERROR,
-                 (char *)&socketError, &errorLength) == TSOCKET_NATIVE_ERROR) {
-    connection->lastError =
-        SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
-    return false;
-  }
-  if (socketError != 0) {
-    connection->lastError = SOCKET_FUNC(_MapNativeError)(socketError);
-    return false;
-  }
-  return true;
+  if (result == 0)
+    return NETWORK_CONNECTION_FUNC(_Publish)(
+        error, NETWORK_ERROR_CONST(TIMEOUT), STATUS_CONST(GENERIC_ERROR));
+  if (result == TSOCKET_NATIVE_ERROR)
+    return NETWORK_CONNECTION_FUNC(_Publish)(
+        error, SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE()),
+        STATUS_CONST(GENERIC_ERROR));
+  if (TSOCKET_NATIVE_GETSOCKOPT(
+          connection->socket.handle, SOL_SOCKET, SO_ERROR,
+          (char *)&socketError, &errorLength) == TSOCKET_NATIVE_ERROR)
+    return NETWORK_CONNECTION_FUNC(_Publish)(
+        error, SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE()),
+        STATUS_CONST(GENERIC_ERROR));
+  if (socketError != 0)
+    return NETWORK_CONNECTION_FUNC(_Publish)(
+        error, SOCKET_FUNC(_MapNativeError)(socketError),
+        STATUS_CONST(GENERIC_ERROR));
+  return NETWORK_CONNECTION_FUNC(_Publish)(
+      error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-static inline bool NETWORK_CONNECTION_FUNC(_ConnectEndpoint)(
-    NETWORK_CONNECTION_TYPE(TConnection) *connection, const NETWORK_ADDRESS_TYPE(TEndpoint) *endpoint,
-    CHRONOMETRY_TYPE(Duration) timeout) {
+static inline OPSTATUS NETWORK_CONNECTION_FUNC(_ConnectEndpoint)(
+    NETWORK_CONNECTION_TYPE(TConnection) *connection,
+    const NETWORK_ADDRESS_TYPE(TEndpoint) *endpoint,
+    CHRONOMETRY_TYPE(Duration) timeout,
+    NETWORK_TYPE(TError) *error) {
   int result;
+  NETWORK_TYPE(TError) socketError = NETWORK_ERROR_CONST(NONE);
+
+  if (SOCKET_FUNC(SetBlocking)(
+          &connection->socket, false, &socketError) != STATUS_CONST(SUCCESS))
+    return NETWORK_CONNECTION_FUNC(_Publish)(
+        error, socketError, STATUS_CONST(GENERIC_ERROR));
 
   {
-    NETWORK_TYPE(TError) socketError;
-    if (SOCKET_FUNC(SetBlocking)(
-            &connection->socket, false, &socketError) != STATUS_CONST(SUCCESS)) {
-      connection->lastError = socketError;
-      return false;
+    struct sockaddr_storage native;
+    SOCKET_TYPE(Len) length;
+    if (!SOCKET_FUNC(_EndpointToNative)(endpoint, &native, &length)) {
+      (void)SOCKET_FUNC(SetBlocking)(
+          &connection->socket, connection->blocking, NULL);
+      return NETWORK_CONNECTION_FUNC(_Publish)(
+          error, NETWORK_ERROR_CONST(ADDRESS_INVALID),
+          STATUS_CONST(GENERIC_ERROR));
     }
+
+    result = TSOCKET_NATIVE_CONNECT(
+        connection->socket.handle, (struct sockaddr *)&native, length);
   }
 
-  struct sockaddr_storage native;
-  SOCKET_TYPE(Len) length;
-  if (!SOCKET_FUNC(_EndpointToNative)(endpoint, &native, &length)) {
-    connection->lastError = NETWORK_ERROR_CONST(ADDRESS_INVALID);
-    return false;
-  }
-
-  result = TSOCKET_NATIVE_CONNECT(connection->socket.handle, (struct sockaddr *)&native, length);
   if (result == TSOCKET_NATIVE_ERROR) {
-    int error = TSOCKET_NATIVE_ERROR_CODE();
+    int nativeError = TSOCKET_NATIVE_ERROR_CODE();
 #if OS_WINDOWS
-    if (error != WSAEWOULDBLOCK && error != WSAEINPROGRESS) {
+    if (nativeError != WSAEWOULDBLOCK && nativeError != WSAEINPROGRESS) {
 #else
-    if (error != EINPROGRESS && error != EWOULDBLOCK) {
+    if (nativeError != EINPROGRESS && nativeError != EWOULDBLOCK) {
 #endif
-      connection->lastError = SOCKET_FUNC(_MapNativeError)(error);
       (void)SOCKET_FUNC(SetBlocking)(
           &connection->socket, connection->blocking, NULL);
-      return false;
+      return NETWORK_CONNECTION_FUNC(_Publish)(
+          error, SOCKET_FUNC(_MapNativeError)(nativeError),
+          STATUS_CONST(GENERIC_ERROR));
     }
-    if (!NETWORK_CONNECTION_FUNC(_WaitConnect)(connection, timeout)) {
+
+    if (NETWORK_CONNECTION_FUNC(_WaitConnect)(
+            connection, timeout, error) != STATUS_CONST(SUCCESS)) {
       (void)SOCKET_FUNC(SetBlocking)(
           &connection->socket, connection->blocking, NULL);
-      return false;
+      return STATUS_CONST(GENERIC_ERROR);
     }
   }
 
-  {
-    NETWORK_TYPE(TError) socketError;
-    if (SOCKET_FUNC(SetBlocking)(
-            &connection->socket, connection->blocking, &socketError) !=
-        STATUS_CONST(SUCCESS)) {
-      connection->lastError = socketError;
-      return false;
-    }
-  }
-  connection->lastError = NETWORK_ERROR_CONST(NONE);
-  return true;
+  if (SOCKET_FUNC(SetBlocking)(
+          &connection->socket, connection->blocking, &socketError) !=
+      STATUS_CONST(SUCCESS))
+    return NETWORK_CONNECTION_FUNC(_Publish)(
+        error, socketError, STATUS_CONST(GENERIC_ERROR));
+
+  return NETWORK_CONNECTION_FUNC(_Publish)(
+      error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 static inline void NETWORK_CONNECTION_FUNC(_RefreshEndpoints)(
@@ -182,7 +186,6 @@ NETWORK_CONNECTION_INIT_PROTOTYPE {
     return;
   memset(connection, 0, sizeof(*connection));
   connection->state = NETWORK_CONNECTION_CONST(IDLE);
-  connection->lastError = NETWORK_ERROR_CONST(NONE);
   connection->blocking = true;
   DURATION_FUNC(FromSeconds)(NETWORK_CONNECTION_DEFAULT_TIMEOUT_SECONDS,
                            &connection->connectTimeout);
@@ -192,6 +195,7 @@ NETWORK_CONNECTION_INIT_PROTOTYPE {
 NETWORK_CONNECTION_CONNECT_FOR_PROTOTYPE {
   NETWORK_RESOLVE_TYPE(TAddressVector) addresses;
   NETWORK_TYPE(TError) resolveError = NETWORK_ERROR_CONST(NONE);
+  NETWORK_TYPE(TError) connectError = NETWORK_ERROR_CONST(UNKNOWN);
   size_t index;
   CHRONOMETRY_TYPE(ClockTimePoint) started;
 
@@ -236,7 +240,7 @@ NETWORK_CONNECTION_CONNECT_FOR_PROTOTYPE {
             connection, error, NETWORK_ERROR_CONST(UNKNOWN));
       }
       if (elapsed.nanoseconds >= timeout.nanoseconds) {
-        connection->lastError = NETWORK_ERROR_CONST(TIMEOUT);
+        connectError = NETWORK_ERROR_CONST(TIMEOUT);
         break;
       }
       remaining.nanoseconds = timeout.nanoseconds - elapsed.nanoseconds;
@@ -251,23 +255,23 @@ NETWORK_CONNECTION_CONNECT_FOR_PROTOTYPE {
       if (SOCKET_FUNC(Create)(
               &connection->socket, family, SOCKET_CONST(KIND_STREAM),
               SOCKET_CONST(PROTOCOL_TCP), &socketError) != STATUS_CONST(SUCCESS)) {
-        connection->lastError = socketError;
+        connectError = socketError;
         continue;
       }
     }
-    if (!NETWORK_CONNECTION_FUNC(_ConnectEndpoint)(connection, &endpoint,
-                                                       remaining))
+    if (NETWORK_CONNECTION_FUNC(_ConnectEndpoint)(
+            connection, &endpoint, remaining, &connectError) !=
+        STATUS_CONST(SUCCESS))
       continue;
     connection->state = NETWORK_CONNECTION_CONST(CONNECTED);
     NETWORK_CONNECTION_FUNC(_RefreshEndpoints)(connection);
     FLAT_VECTOR_FUNC(Network_Address, Destroy)(&addresses);
-    return NETWORK_CONNECTION_FUNC(_Publish)(
-        connection, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+    return NETWORK_CONNECTION_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
   }
 
   FLAT_VECTOR_FUNC(Network_Address, Destroy)(&addresses);
   return NETWORK_CONNECTION_FUNC(_Fail)(
-      connection, error, connection->lastError);
+      connection, error, connectError);
 }
 
 NETWORK_CONNECTION_CONNECT_PROTOTYPE {
@@ -315,8 +319,7 @@ NETWORK_CONNECTION_READ_PROTOTYPE {
       return NETWORK_CONNECTION_FUNC(_IOFail)(
           connection, error, socketError);
   }
-  return NETWORK_CONNECTION_FUNC(_Publish)(
-      connection, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+  return NETWORK_CONNECTION_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 NETWORK_CONNECTION_READ_EXACT_PROTOTYPE {
@@ -334,8 +337,7 @@ NETWORK_CONNECTION_READ_EXACT_PROTOTYPE {
       return status;
     total += received;
   }
-  return NETWORK_CONNECTION_FUNC(_Publish)(
-      connection, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+  return NETWORK_CONNECTION_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 NETWORK_CONNECTION_WRITE_PROTOTYPE {
@@ -354,8 +356,7 @@ NETWORK_CONNECTION_WRITE_PROTOTYPE {
       return NETWORK_CONNECTION_FUNC(_IOFail)(
           connection, error, socketError);
   }
-  return NETWORK_CONNECTION_FUNC(_Publish)(
-      connection, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+  return NETWORK_CONNECTION_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 NETWORK_CONNECTION_WRITE_ALL_PROTOTYPE {
@@ -376,8 +377,7 @@ NETWORK_CONNECTION_WRITE_ALL_PROTOTYPE {
           connection, error, NETWORK_ERROR_CONST(CONNECTION_CLOSED));
     total += sent;
   }
-  return NETWORK_CONNECTION_FUNC(_Publish)(
-      connection, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+  return NETWORK_CONNECTION_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 NETWORK_CONNECTION_SET_BLOCKING_PROTOTYPE {
@@ -392,8 +392,7 @@ NETWORK_CONNECTION_SET_BLOCKING_PROTOTYPE {
     return NETWORK_CONNECTION_FUNC(_IOFail)(
         connection, error, socketError);
   connection->blocking = blocking;
-  return NETWORK_CONNECTION_FUNC(_Publish)(
-      connection, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+  return NETWORK_CONNECTION_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 NETWORK_CONNECTION_SHUTDOWN_PROTOTYPE {
@@ -406,8 +405,7 @@ NETWORK_CONNECTION_SHUTDOWN_PROTOTYPE {
           &connection->socket, direction, &socketError) != STATUS_CONST(SUCCESS))
     return NETWORK_CONNECTION_FUNC(_Fail)(
         connection, error, socketError);
-  return NETWORK_CONNECTION_FUNC(_Publish)(
-      connection, error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+  return NETWORK_CONNECTION_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 NETWORK_CONNECTION_CLOSE_PROTOTYPE {

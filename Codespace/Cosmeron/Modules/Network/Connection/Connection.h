@@ -23,7 +23,6 @@ typedef enum NETWORK_CONNECTION_TYPE(TState) {
 
 typedef struct NETWORK_CONNECTION_TYPE(TConnection) {
   NETWORK_CONNECTION_TYPE(TState) state;
-  NETWORK_TYPE(TError) lastError;
   NETWORK_ADDRESS_TYPE(TEndpoint) localEndpoint;
   NETWORK_ADDRESS_TYPE(TEndpoint) remoteEndpoint;
   char *host;
@@ -96,10 +95,6 @@ typedef struct NETWORK_CONNECTION_TYPE(TConnection) {
   NETWORK_CONNECTION_FUNC(State)(                                             \
       const NETWORK_CONNECTION_TYPE(TConnection) *connection)
 
-#define NETWORK_CONNECTION_LAST_ERROR_PROTOTYPE                              \
-  static inline NETWORK_TYPE(TError) NETWORK_CONNECTION_FUNC(LastError)(      \
-      const NETWORK_CONNECTION_TYPE(TConnection) *connection)
-
 #define NETWORK_CONNECTION_LOCAL_ENDPOINT_PROTOTYPE                          \
   static inline const NETWORK_ADDRESS_TYPE(TEndpoint) *                       \
   NETWORK_CONNECTION_FUNC(LocalEndpoint)(                                     \
@@ -127,9 +122,6 @@ NETWORK_CONNECTION_STATE_PROTOTYPE {
   return connection->state;
 }
 
-NETWORK_CONNECTION_LAST_ERROR_PROTOTYPE {
-  return connection->lastError;
-}
 
 NETWORK_CONNECTION_LOCAL_ENDPOINT_PROTOTYPE {
   return &connection->localEndpoint;
