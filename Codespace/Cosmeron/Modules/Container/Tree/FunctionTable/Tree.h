@@ -13,7 +13,7 @@
  * ============================================================= */
 
 #define TTREE_FUNCTION_TABLE_INSTANCE_SET(T)                                           \
-  static const TTREE_FN(T, FunctionTable) TTREE_FN(T, functions) = {         \
+  static const TTREE_FUNCTION_TABLE_TYPE(T) TTREE_FN(T, functions) = {         \
       .init = TTREE_FN(T, Init),                                               \
       .destroy = TTREE_FN(T, Destroy),                                         \
       .clear = TTREE_FN(T, Clear),                                             \
@@ -39,7 +39,7 @@
   };
 
 #define TTREE_FUNCTION_TABLE_INSTANCE_MAP(T)                                           \
-  static const TTREE_FN(T, FunctionTable) TTREE_FN(T, functions) = {         \
+  static const TTREE_FUNCTION_TABLE_TYPE(T) TTREE_FN(T, functions) = {         \
       .init = TTREE_FN(T, Init),                                               \
       .destroy = TTREE_FN(T, Destroy),                                         \
       .clear = TTREE_FN(T, Clear),                                             \
