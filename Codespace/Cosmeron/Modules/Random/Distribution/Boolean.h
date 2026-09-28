@@ -4,7 +4,7 @@
 
 #define RANDOM_DISTRIBUTION_BOOL_PROTOTYPE                                   \
   static inline OPSTATUS RANDOM_DISTRIBUTION_FUNC(Bool)(                      \
-      RANDOM_SOURCE_TYPE(Value) *source, bool *out)
+      RANDOM_SOURCE_TYPE(Value) *source, bool *outValue)
 
 RANDOM_DISTRIBUTION_BOOL_PROTOTYPE;
 
