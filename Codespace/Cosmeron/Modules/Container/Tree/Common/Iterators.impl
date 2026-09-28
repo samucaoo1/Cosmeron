@@ -4,7 +4,7 @@
  * Shared by all algorithms and both set/map semantics.
  * ============================================================= */
 
-#define TTREE_IMPLEMENT_ITERATORS(T)                                           \
+#define COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_ITERATORS(T)                                           \
   TTREE_BEGIN_PROTOTYPE(T) {                \
     if (!tree)                                                                 \
       return NULL;                                                             \
@@ -43,7 +43,7 @@
   }
 
 
-#define TTREE_IMPLEMENT_CONST_ITERATORS(T)                                     \
+#define COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_CONST_ITERATORS(T)                                     \
   TTREE_CONST_BEGIN_PROTOTYPE(T) { \
     const TTREE_NODE(T) *node;                                                 \
     if (!tree) return NULL;                                                    \
