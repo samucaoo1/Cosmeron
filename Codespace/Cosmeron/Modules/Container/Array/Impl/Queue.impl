@@ -100,12 +100,11 @@
 #define SEQUENTIAL_QUEUE_IMPLEMENT_POP(TYPE, SUFFIX)                           \
   static inline OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, Pop)(                 \
       FLAT_QUEUE_TYPE(SUFFIX) * queue, TYPE * outValue) {                     \
-    if (!queue)                                                                \
-      return STATUS_CONST(INVALID_ARGUMENT);                                      \
+    if (!queue || !outValue)                                                   \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue) == 0)                             \
       return STATUS_CONST(OUT_OF_RANGE);                                          \
-    if (outValue)                                                             \
-      *outValue = queue->data[queue->head];                                   \
+    *outValue = queue->data[queue->head];                                   \
     queue->head++;                                                             \
     if (SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue) == 0) {                           \
       queue->size = 0;                                                         \
