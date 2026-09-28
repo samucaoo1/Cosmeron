@@ -18,12 +18,28 @@ typedef struct CONCURRENCY_TYPE(TThreadPool) {
   CONCURRENCY_TYPE(TCondition) hasSpace;
 } CONCURRENCY_TYPE(TThreadPool);
 
-static inline OPSTATUS THREAD_POOL_FUNC(Init)(CONCURRENCY_TYPE(TThreadPool) *pool, CONCURRENCY_TYPE(TThread) *threads,
-                                        size_t threadCount, CONCURRENCY_TYPE(TTask) *queue,
-                                        size_t queueCapacity);
-static inline OPSTATUS THREAD_POOL_FUNC(Submit)(CONCURRENCY_TYPE(TThreadPool) *pool, CONCURRENCY_TYPE(TTask) task);
-static inline OPSTATUS THREAD_POOL_FUNC(TrySubmit)(CONCURRENCY_TYPE(TThreadPool) *pool, CONCURRENCY_TYPE(TTask) task, bool *outSubmitted);
-static inline OPSTATUS THREAD_POOL_FUNC(Shutdown)(CONCURRENCY_TYPE(TThreadPool) *pool);
-static inline OPSTATUS THREAD_POOL_FUNC(Destroy)(CONCURRENCY_TYPE(TThreadPool) *pool);
+#define THREAD_POOL_INIT_PROTOTYPE                                            \
+  static inline OPSTATUS THREAD_POOL_FUNC(Init)(                              \
+      CONCURRENCY_TYPE(TThreadPool) *pool, CONCURRENCY_TYPE(TThread) *threads,\
+      size_t threadCount, CONCURRENCY_TYPE(TTask) *queue, size_t queueCapacity)
+#define THREAD_POOL_SUBMIT_PROTOTYPE                                          \
+  static inline OPSTATUS THREAD_POOL_FUNC(Submit)(                            \
+      CONCURRENCY_TYPE(TThreadPool) *pool, CONCURRENCY_TYPE(TTask) task)
+#define THREAD_POOL_TRY_SUBMIT_PROTOTYPE                                      \
+  static inline OPSTATUS THREAD_POOL_FUNC(TrySubmit)(                         \
+      CONCURRENCY_TYPE(TThreadPool) *pool, CONCURRENCY_TYPE(TTask) task,      \
+      bool *outSubmitted)
+#define THREAD_POOL_SHUTDOWN_PROTOTYPE                                        \
+  static inline OPSTATUS THREAD_POOL_FUNC(Shutdown)(                          \
+      CONCURRENCY_TYPE(TThreadPool) *pool)
+#define THREAD_POOL_DESTROY_PROTOTYPE                                         \
+  static inline OPSTATUS THREAD_POOL_FUNC(Destroy)(                           \
+      CONCURRENCY_TYPE(TThreadPool) *pool)
+
+THREAD_POOL_INIT_PROTOTYPE;
+THREAD_POOL_SUBMIT_PROTOTYPE;
+THREAD_POOL_TRY_SUBMIT_PROTOTYPE;
+THREAD_POOL_SHUTDOWN_PROTOTYPE;
+THREAD_POOL_DESTROY_PROTOTYPE;
 
 #include "Impl/ThreadPool.impl"

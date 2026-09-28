@@ -1,18 +1,18 @@
 #pragma once
 #include "../Task.h"
 
-static inline CONCURRENCY_TYPE(TTask) TASK_FUNC(Create)(CONCURRENCY_TYPE(TaskFunction) function, void *argument) {
+TASK_CREATE_PROTOTYPE {
   CONCURRENCY_TYPE(TTask) task;
   task.function = function;
   task.argument = argument;
   return task;
 }
 
-static inline bool TASK_FUNC(IsValid)(const CONCURRENCY_TYPE(TTask) *task) {
+TASK_IS_VALID_PROTOTYPE {
   return task != NULL && task->function != NULL;
 }
 
-static inline OPSTATUS TASK_FUNC(Run)(const CONCURRENCY_TYPE(TTask) *task) {
+TASK_RUN_PROTOTYPE {
   if (!TASK_FUNC(IsValid)(task)) return STATUS_CONST(INVALID_ARGUMENT);
   task->function(task->argument);
   return STATUS_CONST(SUCCESS);

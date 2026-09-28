@@ -76,10 +76,12 @@ int main(void) {
 
   if (FUTURE_FUNC(Init)(&future) != STATUS_CONST(SUCCESS))
     return 14;
-  CONCURRENCY_TYPE(TTask) futureTaskValue =
-      FUTURE_FUNC(Task)(&futureTask, &future, FutureBody, &value);
-  if (!TASK_FUNC(IsValid)(&futureTaskValue))
+  CONCURRENCY_TYPE(TTask) futureTaskValue;
+  if (FUTURE_FUNC(Task)(&futureTask, &future, FutureBody, &value,
+                        &futureTaskValue) != STATUS_CONST(SUCCESS))
     return 15;
+  if (!TASK_FUNC(IsValid)(&futureTaskValue))
+    return 27;
   if (TASK_FUNC(Run)(&futureTaskValue) != STATUS_CONST(SUCCESS))
     return 16;
   if (FUTURE_FUNC(Get)(&future, &futureResult, &futureStatus) !=

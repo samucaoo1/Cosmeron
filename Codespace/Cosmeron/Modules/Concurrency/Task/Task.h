@@ -9,8 +9,16 @@ typedef struct CONCURRENCY_TYPE(TTask) {
   void *argument;
 } CONCURRENCY_TYPE(TTask);
 
-static inline CONCURRENCY_TYPE(TTask) TASK_FUNC(Create)(CONCURRENCY_TYPE(TaskFunction) function, void *argument);
-static inline bool TASK_FUNC(IsValid)(const CONCURRENCY_TYPE(TTask) *task);
-static inline OPSTATUS TASK_FUNC(Run)(const CONCURRENCY_TYPE(TTask) *task);
+#define TASK_CREATE_PROTOTYPE                                                 \
+  static inline CONCURRENCY_TYPE(TTask) TASK_FUNC(Create)(                    \
+      CONCURRENCY_TYPE(TaskFunction) function, void *argument)
+#define TASK_IS_VALID_PROTOTYPE                                               \
+  static inline bool TASK_FUNC(IsValid)(const CONCURRENCY_TYPE(TTask) *task)
+#define TASK_RUN_PROTOTYPE                                                    \
+  static inline OPSTATUS TASK_FUNC(Run)(const CONCURRENCY_TYPE(TTask) *task)
+
+TASK_CREATE_PROTOTYPE;
+TASK_IS_VALID_PROTOTYPE;
+TASK_RUN_PROTOTYPE;
 
 #include "Impl/Task.impl"

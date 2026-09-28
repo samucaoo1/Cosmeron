@@ -17,13 +17,18 @@ int main(void) {
   uint32_t value = 41;
   void *result = NULL;
   OPSTATUS status = STATUS_CONST(GENERIC_ERROR);
+  CONCURRENCY_TYPE(TTask) task;
 
   assert(FUTURE_FUNC(Init)(&future) == STATUS_CONST(SUCCESS));
   assert(THREAD_POOL_FUNC(Init)(&pool, threads, 2, queue, 4) == STATUS_CONST(SUCCESS));
-  assert(THREAD_POOL_FUNC(Submit)(
-      &pool, FUTURE_FUNC(Task)(&futureTask, &future, compute, &value)) ==
-      STATUS_CONST(SUCCESS));
+  assert(FUTURE_FUNC(Task)(&futureTask, &future, compute, &value, &task) ==
+         STATUS_CONST(SUCCESS));
+  assert(THREAD_POOL_FUNC(Submit)(&pool, task) == STATUS_CONST(SUCCESS));
   assert(FUTURE_FUNC(Wait)(&future) == STATUS_CONST(SUCCESS));
+  assert(FUTURE_FUNC(Get)(&future, NULL, &status) ==
+         STATUS_CONST(INVALID_ARGUMENT));
+  assert(FUTURE_FUNC(Get)(&future, &result, NULL) ==
+         STATUS_CONST(INVALID_ARGUMENT));
   assert(FUTURE_FUNC(Get)(&future, &result, &status) == STATUS_CONST(SUCCESS));
   assert(result == &value);
   assert(value == 42);
@@ -33,6 +38,10 @@ int main(void) {
          STATUS_CONST(ALREADY_EXISTS));
 
   assert(THREAD_POOL_FUNC(Destroy)(&pool) == STATUS_CONST(SUCCESS));
+  assert(FUTURE_FUNC(Task)(NULL, &future, compute, &value, &task) ==
+         STATUS_CONST(INVALID_ARGUMENT));
+  assert(FUTURE_FUNC(Task)(&futureTask, &future, compute, &value, NULL) ==
+         STATUS_CONST(INVALID_ARGUMENT));
   assert(FUTURE_FUNC(Destroy)(&future) == STATUS_CONST(SUCCESS));
   assert(FUTURE_FUNC(Destroy)(&future) == STATUS_CONST(INVALID_ARGUMENT));
   assert(!FUTURE_FUNC(IsReady)(&future));
