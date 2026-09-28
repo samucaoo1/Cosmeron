@@ -11,16 +11,16 @@
     graph->vertexCapacity = 0;                                                  \
     graph->edgeCount = 0;                                                       \
     status = ALLOC_FUNC(AllocArray)(                                            \
-        &storage, GRAPH_INITIAL_VERTEX_CAPACITY,                                \
+        &storage, COSMERON_MACRO_INTERNAL_GRAPH_INITIAL_VERTEX_CAPACITY,                                \
         sizeof(TGRAPH_VERTEX_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX)));             \
     if (status != STATUS_CONST(SUCCESS))                                        \
       return status;                                                            \
     graph->vertices =                                                           \
         (TGRAPH_VERTEX_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX) *)storage;            \
     memset(graph->vertices, 0,                                                  \
-           GRAPH_INITIAL_VERTEX_CAPACITY *                                      \
+           COSMERON_MACRO_INTERNAL_GRAPH_INITIAL_VERTEX_CAPACITY *                                      \
                sizeof(TGRAPH_VERTEX_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX)));      \
-    graph->vertexCapacity = GRAPH_INITIAL_VERTEX_CAPACITY;                      \
+    graph->vertexCapacity = COSMERON_MACRO_INTERNAL_GRAPH_INITIAL_VERTEX_CAPACITY;                      \
     return STATUS_CONST(SUCCESS);                                               \
   }
 
