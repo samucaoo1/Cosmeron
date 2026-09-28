@@ -13,8 +13,11 @@
 
 SWAP_BYTES_PROTOTYPE;
 
-#define SWAP_DECLARE(TYPE, SUFFIX)                                             \
-  static inline void SWAP_FUNC(SUFFIX)(TYPE *left, TYPE *right) {              \
+#define SWAP_PROTOTYPE(TYPE, SUFFIX)                                           \
+  static inline void SWAP_FUNC(SUFFIX)(TYPE *left, TYPE *right)
+
+#define SWAP_IMPLEMENT(TYPE, SUFFIX)                                           \
+  SWAP_PROTOTYPE(TYPE, SUFFIX) {                                               \
     TYPE temporary = *left;                                                    \
     *left = *right;                                                            \
     *right = temporary;                                                        \
