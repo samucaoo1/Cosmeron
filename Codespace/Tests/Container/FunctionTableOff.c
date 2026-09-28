@@ -7,7 +7,7 @@
 
 int main(void) {
   TVector(int, vector)
-  TContainer_Linked_List(int, list)
+  TLinked_List(int, list)
   TTree_AVL_Set(int, tree);
   TTree_BST_Set(int, bst);
   int value = 0;
