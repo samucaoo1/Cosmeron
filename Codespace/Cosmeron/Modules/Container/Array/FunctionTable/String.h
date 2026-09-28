@@ -3,7 +3,7 @@
 #if CONTAINER_FUNCTION_TABLE_ENABLED
 
 #define TSTRING_FUNCTION_TABLE_STRUCT(CHAR_TYPE, SUFFIX)                            \
-  struct TSTRING_FUNC(SUFFIX, FunctionTable) {                              \
+  struct TSTRING_FUNCTION_TABLE_TYPE(SUFFIX) {                              \
     OPSTATUS (*init)(TSTRING_TYPE(SUFFIX) * str);                              \
     void (*destroy)(TSTRING_TYPE(SUFFIX) * str);                               \
     OPSTATUS (*fromCStr)(TSTRING_TYPE(SUFFIX) * str, const CHAR_TYPE *cstr);  \
@@ -37,10 +37,10 @@
     OPSTATUS (*findStr)(const TSTRING_TYPE(SUFFIX) *str,                       \
                         const CHAR_TYPE *needle, size_t start, size_t *index);                                          \
     CHAR_TYPE *(*data)(TSTRING_TYPE(SUFFIX) * str);                            \
-  } TSTRING_FUNC(SUFFIX, FunctionTable);
+  } TSTRING_FUNCTION_TABLE_TYPE(SUFFIX);
 
 #define TSTRING_FUNCTION_TABLE_INSTANCE(CHAR_TYPE, SUFFIX)                   \
-  static const struct TSTRING_FUNC(SUFFIX, FunctionTable)                   \
+  static const struct TSTRING_FUNCTION_TABLE_TYPE(SUFFIX)                   \
       TSTRING_FUNC(SUFFIX, functions) = {                                      \
           .init = TSTRING_FUNC(SUFFIX, Init),                                  \
           .destroy = TSTRING_FUNC(SUFFIX, Destroy),                            \
