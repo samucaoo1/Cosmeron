@@ -8,7 +8,7 @@ int main(void) {
   NETWORK_ADDRESS_TYPE(TEndpoint) endpoint;
   char byte;
   size_t received = 123;
-  NETWORK_TYPE(Error) error = NETWORK_ERROR_CONST(NONE);
+  NETWORK_TYPE(TError) error = NETWORK_ERROR_CONST(NONE);
 
   NETWORK_DATAGRAM_FUNC(Init)(&datagram);
   NETWORK_ADDRESS_FUNC(IPv4_Loopback)(&loopback);

@@ -7,7 +7,7 @@ int main(void) {
   NETWORK_POLLER_TYPE(TPoller) poller;
   NETWORK_POLLER_TYPE(TEventVector) events;
   NETWORK_DATAGRAM_TYPE(TDatagram) datagram;
-  NETWORK_TYPE(Error) error = NETWORK_ERROR_CONST(NONE);
+  NETWORK_TYPE(TError) error = NETWORK_ERROR_CONST(NONE);
 
   NETWORK_POLLER_FUNC(Init)(&poller);
   assert(FLAT_VECTOR_FUNC(Network_Event, Init)(&events) == STATUS_CONST(SUCCESS));
