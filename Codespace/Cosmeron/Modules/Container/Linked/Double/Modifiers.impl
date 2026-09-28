@@ -49,8 +49,7 @@
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
     if (!container->head)                                                      \
       return STATUS_CONST(OUT_OF_RANGE);                                      \
-    if (outValue)                                                             \
-      *outValue = container->head->value;                                    \
+    *outValue = container->head->value;                                    \
     FUNCTION_UNLINK_FRONT(container);                                          \
     return STATUS_CONST(SUCCESS);                                             \
   }
@@ -65,8 +64,7 @@
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
     if (!container->tail)                                                      \
       return STATUS_CONST(OUT_OF_RANGE);                                      \
-    if (outValue)                                                             \
-      *outValue = container->tail->value;                                    \
+    *outValue = container->tail->value;                                    \
     FUNCTION_UNLINK_BACK(container);                                           \
     return STATUS_CONST(SUCCESS);                                             \
   }
