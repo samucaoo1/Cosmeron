@@ -113,27 +113,27 @@
                            CONTAINER_POP_FRONT_1,                              \
                            CONTAINER_ALIAS_UNUSED)(__VA_ARGS__)
 
-#define At(self, index)                                                        \
+#define At(self, index, out)                                                   \
   _Generic(&(self), CONTAINER_VECTOR_ASSOC(At), CONTAINER_STRING_ASSOC(At))   \
-      (&(self), (index))
+      (&(self), (index), (out))
 
-#define Front(self)                                                            \
+#define Front(self, out)                                                       \
   _Generic(&(self), CONTAINER_VECTOR_ASSOC(Front),                            \
                     CONTAINER_FLAT_QUEUE_ASSOC(Front),                        \
                     CONTAINER_LIST_ASSOC(Front),                              \
                     CONTAINER_FORWARD_ASSOC(Front),                           \
-                    CONTAINER_DEQUE_ASSOC(Front))(&(self))
+                    CONTAINER_DEQUE_ASSOC(Front))(&(self), (out))
 
-#define Back(self)                                                             \
+#define Back(self, out)                                                        \
   _Generic(&(self), CONTAINER_VECTOR_ASSOC(Back),                             \
                     CONTAINER_FLAT_QUEUE_ASSOC(Back),                         \
                     CONTAINER_LIST_ASSOC(Back),                               \
                     CONTAINER_FORWARD_ASSOC(Back),                            \
-                    CONTAINER_DEQUE_ASSOC(Back))(&(self))
+                    CONTAINER_DEQUE_ASSOC(Back))(&(self), (out))
 
-#define Top(self)                                                              \
+#define Top(self, out)                                                         \
   _Generic(&(self), CONTAINER_FLAT_STACK_ASSOC(Top),                          \
-                    CONTAINER_LINKED_STACK_ASSOC(Top))(&(self))
+                    CONTAINER_LINKED_STACK_ASSOC(Top))(&(self), (out))
 
 #define Reserve(self, count)                                                   \
   _Generic(&(self), CONTAINER_VECTOR_ASSOC(Reserve),                          \

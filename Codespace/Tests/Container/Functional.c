@@ -77,11 +77,16 @@ static int test_capacity_overflow(void) {
 
 static int test_queue(void) {
   TFlat_Queue(int, queue)
+  int *emptyAccess = NULL;
+  TEST_ASSERT(Front(queue, &emptyAccess) == STATUS_CONST(OUT_OF_RANGE));
+  TEST_ASSERT(Back(queue, &emptyAccess) == STATUS_CONST(OUT_OF_RANGE));
   for (int value = 0; value < 64; ++value)
     TEST_ASSERT(Push(queue, value) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(Size(queue) == 64);
-  TEST_ASSERT(*Front(queue) == 0);
-  TEST_ASSERT(*Back(queue) == 63);
+  int *front = NULL;
+  int *back = NULL;
+  TEST_ASSERT(Front(queue, &front) == STATUS_CONST(SUCCESS) && *front == 0);
+  TEST_ASSERT(Back(queue, &back) == STATUS_CONST(SUCCESS) && *back == 63);
   for (int expected = 0; expected < 64; ++expected) {
     int value = -1;
     TEST_ASSERT(Pop(queue, &value) == STATUS_CONST(SUCCESS));
@@ -94,10 +99,13 @@ static int test_queue(void) {
 
 static int test_stack(void) {
   TFlat_Stack(int, stack)
+  int *emptyAccess = NULL;
+  TEST_ASSERT(Top(stack, &emptyAccess) == STATUS_CONST(OUT_OF_RANGE));
   for (int value = 0; value < 64; ++value)
     TEST_ASSERT(Push(stack, value) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(Size(stack) == 64);
-  TEST_ASSERT(*Top(stack) == 63);
+  int *top = NULL;
+  TEST_ASSERT(Top(stack, &top) == STATUS_CONST(SUCCESS) && *top == 63);
   for (int expected = 63; expected >= 0; --expected) {
     int value = -1;
     TEST_ASSERT(Pop(stack, &value) == STATUS_CONST(SUCCESS));
@@ -130,8 +138,10 @@ static int test_deque(void) {
   TEST_ASSERT(PushFront(deque, 2) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(PushFront(deque, 1) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(PushBack(deque, 3) == STATUS_CONST(SUCCESS));
-  TEST_ASSERT(*Front(deque) == 1);
-  TEST_ASSERT(*Back(deque) == 3);
+  int *front = NULL;
+  int *back = NULL;
+  TEST_ASSERT(Front(deque, &front) == STATUS_CONST(SUCCESS) && *front == 1);
+  TEST_ASSERT(Back(deque, &back) == STATUS_CONST(SUCCESS) && *back == 3);
   int value = 0;
   TEST_ASSERT(PopFront(deque, &value) == STATUS_CONST(SUCCESS) && value == 1);
   TEST_ASSERT(PopBack(deque, &value) == STATUS_CONST(SUCCESS) && value == 3);
@@ -143,12 +153,17 @@ static int test_deque(void) {
 
 static int test_vector(void) {
   TVector(int, vector)
+  int *emptyAccess = NULL;
   TEST_ASSERT(Empty(vector));
+  TEST_ASSERT(At(vector, 0U, &emptyAccess) == STATUS_CONST(OUT_OF_RANGE));
+  TEST_ASSERT(Front(vector, &emptyAccess) == STATUS_CONST(OUT_OF_RANGE));
+  TEST_ASSERT(Back(vector, &emptyAccess) == STATUS_CONST(OUT_OF_RANGE));
   for (int value = 0; value < 1024; ++value)
     TEST_ASSERT(PushBack(vector, value) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(Size(vector) == 1024);
   TEST_ASSERT(Insert(vector, 512, -1) == STATUS_CONST(SUCCESS));
-  TEST_ASSERT(*At(vector, 512) == -1);
+  int *at = NULL;
+  TEST_ASSERT(At(vector, 512, &at) == STATUS_CONST(SUCCESS) && *at == -1);
   TEST_ASSERT(Erase(vector, 500, 25) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(Size(vector) == 1000);
   TEST_ASSERT(Erase(vector, Size(vector), 0) == STATUS_CONST(SUCCESS));
@@ -308,14 +323,23 @@ static int test_map(void) {
 
 
 static int test_null_contracts(void) {
+  int sentinel = 123;
+  int *out = &sentinel;
+
   TEST_ASSERT(Container_Flat_Vector_int_Init(NULL) == STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Container_Flat_Vector_int_Reserve(NULL, 16U) == STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Container_Flat_Vector_int_PopBack(NULL, NULL) == STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Container_Flat_Vector_int_Insert(NULL, 0U, 1) == STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Container_Flat_Vector_int_Erase(NULL, 0U, 0U) == STATUS_CONST(INVALID_ARGUMENT));
   Container_Flat_Vector_int_Clear(NULL);
-  TEST_ASSERT(Container_Flat_Vector_int_At(NULL, 0U) == NULL);
-  TEST_ASSERT(Container_Flat_Vector_int_Back(NULL) == NULL);
+  TEST_ASSERT(Container_Flat_Vector_int_At(NULL, 0U, &out) ==
+              STATUS_CONST(INVALID_ARGUMENT));
+  TEST_ASSERT(out == &sentinel);
+  TEST_ASSERT(Container_Flat_Vector_int_At(NULL, 0U, NULL) ==
+              STATUS_CONST(INVALID_ARGUMENT));
+  TEST_ASSERT(Container_Flat_Vector_int_Back(NULL, &out) ==
+              STATUS_CONST(INVALID_ARGUMENT));
+  TEST_ASSERT(out == &sentinel);
   TEST_ASSERT(!Container_Flat_Vector_int_Empty(NULL));
   TEST_ASSERT(Container_Flat_Vector_int_Size(NULL) == 0U);
   Container_Flat_Vector_int_Destroy(NULL);
@@ -323,20 +347,26 @@ static int test_null_contracts(void) {
   TEST_ASSERT(Container_Flat_Queue_int_Init(NULL) == STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Container_Flat_Queue_int_Push(NULL, 1) == STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Container_Flat_Queue_int_Pop(NULL, NULL) == STATUS_CONST(INVALID_ARGUMENT));
-  TEST_ASSERT(Container_Flat_Queue_int_Front(NULL) == NULL);
+  TEST_ASSERT(Container_Flat_Queue_int_Front(NULL, &out) ==
+              STATUS_CONST(INVALID_ARGUMENT));
+  TEST_ASSERT(out == &sentinel);
   TEST_ASSERT(!Container_Flat_Queue_int_Empty(NULL));
   TEST_ASSERT(Container_Flat_Queue_int_Size(NULL) == 0U);
   Container_Flat_Queue_int_Destroy(NULL);
 
   TEST_ASSERT(Container_Flat_Stack_int_Init(NULL) == STATUS_CONST(INVALID_ARGUMENT));
-  TEST_ASSERT(Container_Flat_Stack_int_Top(NULL) == NULL);
+  TEST_ASSERT(Container_Flat_Stack_int_Top(NULL, &out) ==
+              STATUS_CONST(INVALID_ARGUMENT));
+  TEST_ASSERT(out == &sentinel);
   TEST_ASSERT(Container_Flat_Stack_int_Pop(NULL, NULL) == STATUS_CONST(INVALID_ARGUMENT));
   Container_Flat_Stack_int_Destroy(NULL);
 
   TEST_ASSERT(Container_Linked_List_int_Init(NULL) == STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Container_Linked_List_int_PushBack(NULL, 1) == STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Container_Linked_List_int_PopFront(NULL, NULL) == STATUS_CONST(INVALID_ARGUMENT));
-  TEST_ASSERT(Container_Linked_List_int_Front(NULL) == NULL);
+  TEST_ASSERT(Container_Linked_List_int_Front(NULL, &out) ==
+              STATUS_CONST(INVALID_ARGUMENT));
+  TEST_ASSERT(out == &sentinel);
   TEST_ASSERT(!Container_Linked_List_int_Empty(NULL));
   TEST_ASSERT(Container_Linked_List_int_Size(NULL) == 0U);
   Container_Linked_List_int_Destroy(NULL);
