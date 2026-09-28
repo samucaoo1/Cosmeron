@@ -17,13 +17,13 @@ static inline short NETWORK_POLLER_FUNC(_NativeInterests)(
 static inline size_t NETWORK_POLLER_FUNC(_AppendNative)(
     WSAPOLLFD *descriptors, size_t *registrationIndices, bool *detectClose,
     size_t count, SOCKET_TYPE(Handle) handle, size_t registrationIndex,
-    NETWORK_POLLER_TYPE(EventFlags) interests, bool close_detection) {
+    NETWORK_POLLER_TYPE(EventFlags) interests, bool closeDetection) {
   if (handle == TSOCKET_NATIVE_INVALID) return count;
   descriptors[count].fd = handle;
   descriptors[count].events = NETWORK_POLLER_FUNC(_NativeInterests)(interests);
   descriptors[count].revents = 0;
   registrationIndices[count] = registrationIndex;
-  detectClose[count] = close_detection;
+  detectClose[count] = closeDetection;
   return count + 1;
 }
 
