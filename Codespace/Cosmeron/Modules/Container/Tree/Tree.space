@@ -124,7 +124,7 @@
   TTREE_CONST_BEGIN_PROTOTYPE(T);                                             \
   TTREE_CONST_END_PROTOTYPE(T);                                               \
   TTREE_CONST_NEXT_PROTOTYPE(T);                                              \
-  TTREE_CONST_PREV_PROTOTYPE(T)
+  TTREE_CONST_PREV_PROTOTYPE(T);
 
 #define TTREE_MAP_PROTOTYPES(T, KEY_TYPE, VALUE_TYPE)                         \
   TTREE_INIT_PROTOTYPE(T);                                                    \
@@ -148,7 +148,7 @@
   TTREE_CONST_BEGIN_PROTOTYPE(T);                                             \
   TTREE_CONST_END_PROTOTYPE(T);                                               \
   TTREE_CONST_NEXT_PROTOTYPE(T);                                              \
-  TTREE_CONST_PREV_PROTOTYPE(T)
+  TTREE_CONST_PREV_PROTOTYPE(T);
 
 /* =============================================================
  * Comparator output type — default is int.
