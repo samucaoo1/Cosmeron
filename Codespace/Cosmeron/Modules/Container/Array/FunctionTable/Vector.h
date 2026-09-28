@@ -11,9 +11,9 @@
     OPSTATUS (*reserve)(FLAT_VECTOR_TYPE(SUFFIX) *, size_t);                   \
     OPSTATUS (*shrinkToFit)(FLAT_VECTOR_TYPE(SUFFIX) *);                     \
     /* Element access */                                                       \
-    TYPE *(*at)(FLAT_VECTOR_TYPE(SUFFIX) *, size_t);                           \
-    TYPE *(*front)(FLAT_VECTOR_TYPE(SUFFIX) *);                                \
-    TYPE *(*back)(FLAT_VECTOR_TYPE(SUFFIX) *);                                 \
+    OPSTATUS (*at)(FLAT_VECTOR_TYPE(SUFFIX) *, size_t, TYPE **);                           \
+    OPSTATUS (*front)(FLAT_VECTOR_TYPE(SUFFIX) *, TYPE **);                                \
+    OPSTATUS (*back)(FLAT_VECTOR_TYPE(SUFFIX) *, TYPE **);                                 \
     TYPE *(*data)(FLAT_VECTOR_TYPE(SUFFIX) *);                                 \
     /* Modifiers */                                                            \
     OPSTATUS (*pushBack)(FLAT_VECTOR_TYPE(SUFFIX) *, TYPE);                   \

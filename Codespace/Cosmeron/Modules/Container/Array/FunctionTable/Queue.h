@@ -17,8 +17,8 @@
     OPSTATUS (*pushBack)(FLAT_QUEUE_TYPE(SUFFIX) *, TYPE);                    \
     OPSTATUS (*popFront)(FLAT_QUEUE_TYPE(SUFFIX) *, TYPE *);                  \
     /* Element access */                                                       \
-    TYPE *(*front)(FLAT_QUEUE_TYPE(SUFFIX) *);                                 \
-    TYPE *(*back)(FLAT_QUEUE_TYPE(SUFFIX) *);                                  \
+    OPSTATUS (*front)(FLAT_QUEUE_TYPE(SUFFIX) *, TYPE **);                                 \
+    OPSTATUS (*back)(FLAT_QUEUE_TYPE(SUFFIX) *, TYPE **);                                  \
     /* Observers */                                                            \
     bool (*empty)(const FLAT_QUEUE_TYPE(SUFFIX) *);                                  \
     size_t (*size)(const FLAT_QUEUE_TYPE(SUFFIX) *);                                 \

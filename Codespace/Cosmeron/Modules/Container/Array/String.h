@@ -52,14 +52,14 @@
   static inline OPSTATUS TSTRING_FUNC(SUFFIX, InsertChar)(                    \
       TSTRING_TYPE(SUFFIX) * str, size_t pos, CHAR_TYPE ch)
 #define TSTRING_AT_PROTOTYPE(CHAR_TYPE, SUFFIX)                       \
-  static inline CHAR_TYPE *TSTRING_FUNC(SUFFIX, At)(                           \
-      TSTRING_TYPE(SUFFIX) * str, size_t index)
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, At)(                             \
+      TSTRING_TYPE(SUFFIX) * str, size_t index, CHAR_TYPE **out)
 #define TSTRING_FRONT_PROTOTYPE(CHAR_TYPE, SUFFIX)                    \
-  static inline CHAR_TYPE *TSTRING_FUNC(SUFFIX,                                \
-                                        Front)(TSTRING_TYPE(SUFFIX) * str)
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, Front)(                          \
+      TSTRING_TYPE(SUFFIX) * str, CHAR_TYPE **out)
 #define TSTRING_BACK_PROTOTYPE(CHAR_TYPE, SUFFIX)                     \
-  static inline CHAR_TYPE *TSTRING_FUNC(SUFFIX,                                \
-                                        Back)(TSTRING_TYPE(SUFFIX) * str)
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, Back)(                           \
+      TSTRING_TYPE(SUFFIX) * str, CHAR_TYPE **out)
 #define TSTRING_APPEND_PROTOTYPE(CHAR_TYPE, SUFFIX)                   \
   static inline OPSTATUS TSTRING_FUNC(SUFFIX, Append)(                         \
       TSTRING_TYPE(SUFFIX) * str, const CHAR_TYPE *cstr)

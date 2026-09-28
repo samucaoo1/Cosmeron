@@ -16,9 +16,9 @@
     size_t (*capacity)(const TSTRING_TYPE(SUFFIX) *str);                             \
     OPSTATUS (*pushBack)(TSTRING_TYPE(SUFFIX) * str, CHAR_TYPE ch);           \
     OPSTATUS (*popBack)(TSTRING_TYPE(SUFFIX) * str, CHAR_TYPE *outValue);                          \
-    CHAR_TYPE *(*at)(TSTRING_TYPE(SUFFIX) * str, size_t index);                \
-    CHAR_TYPE *(*front)(TSTRING_TYPE(SUFFIX) * str);                           \
-    CHAR_TYPE *(*back)(TSTRING_TYPE(SUFFIX) * str);                            \
+    OPSTATUS (*at)(TSTRING_TYPE(SUFFIX) * str, size_t index, CHAR_TYPE **out);                \
+    OPSTATUS (*front)(TSTRING_TYPE(SUFFIX) * str, CHAR_TYPE **out);                           \
+    OPSTATUS (*back)(TSTRING_TYPE(SUFFIX) * str, CHAR_TYPE **out);                            \
     OPSTATUS (*append)(TSTRING_TYPE(SUFFIX) * str, const CHAR_TYPE *cstr);     \
     OPSTATUS (*appendStr)(TSTRING_TYPE(SUFFIX) * str,                         \
                            TSTRING_TYPE(SUFFIX) * other);                      \

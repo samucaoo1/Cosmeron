@@ -14,7 +14,7 @@
     OPSTATUS (*push)(FLAT_STACK_TYPE(SUFFIX) *, TYPE);                         \
     OPSTATUS (*pop)(FLAT_STACK_TYPE(SUFFIX) *, TYPE *);                        \
     /* Element access */                                                       \
-    TYPE *(*top)(FLAT_STACK_TYPE(SUFFIX) *);                                   \
+    OPSTATUS (*top)(FLAT_STACK_TYPE(SUFFIX) *, TYPE **);                                   \
     /* Observers */                                                            \
     bool (*empty)(const FLAT_STACK_TYPE(SUFFIX) *);                                  \
     size_t (*size)(const FLAT_STACK_TYPE(SUFFIX) *);                                 \
