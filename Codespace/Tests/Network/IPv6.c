@@ -21,7 +21,8 @@ int main(void) {
       STATUS_CONST(SUCCESS))
     return 0; /* IPv6 is optional on the host running the test. */
 
-  endpoint = *NETWORK_LISTENER_FUNC(LocalEndpoint)(&listener);
+  assert(NETWORK_LISTENER_FUNC(LocalEndpoint)(&listener, &endpoint) ==
+         STATUS_CONST(SUCCESS));
   assert(endpoint.address.type == NETWORK_ADDRESS_CONST(IPV6));
   assert(endpoint.port != 0);
 
