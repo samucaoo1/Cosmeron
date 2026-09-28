@@ -4,10 +4,10 @@
 #include "../../../Core/Error/Status.h"
 
 typedef enum CONCURRENCY_TYPE(CoroutineState) {
-  CONCURRENCY_COROUTINE_STATE_READY = 0,
-  CONCURRENCY_COROUTINE_STATE_RUNNING,
-  CONCURRENCY_COROUTINE_STATE_SUSPENDED,
-  CONCURRENCY_COROUTINE_STATE_FINISHED
+  CONCURRENCY_CONST(COROUTINE, STATE_READY) = 0,
+  CONCURRENCY_CONST(COROUTINE, STATE_RUNNING),
+  CONCURRENCY_CONST(COROUTINE, STATE_SUSPENDED),
+  CONCURRENCY_CONST(COROUTINE, STATE_FINISHED)
 } CONCURRENCY_TYPE(CoroutineState);
 
 typedef struct CONCURRENCY_TYPE(TCoroutine) CONCURRENCY_TYPE(TCoroutine);
@@ -21,22 +21,22 @@ struct CONCURRENCY_TYPE(TCoroutine) {
 };
 
 #define COROUTINE_INIT(FUNCTION, ARGUMENT)                                      \
-  { (FUNCTION), (ARGUMENT), 0u, CONCURRENCY_COROUTINE_STATE_READY }
+  { (FUNCTION), (ARGUMENT), 0u, CONCURRENCY_CONST(COROUTINE, STATE_READY) }
 
 #define COROUTINE_BEGIN(COROUTINE)                                              \
   do {                                                                          \
     CONCURRENCY_TYPE(TCoroutine) *_coroutine = (COROUTINE);                                       \
     if (_coroutine == NULL ||                                                   \
-        _coroutine->state == CONCURRENCY_COROUTINE_STATE_FINISHED)                          \
+        _coroutine->state == CONCURRENCY_CONST(COROUTINE, STATE_FINISHED))                          \
       return;                                                                   \
-    _coroutine->state = CONCURRENCY_COROUTINE_STATE_RUNNING;                                \
+    _coroutine->state = CONCURRENCY_CONST(COROUTINE, STATE_RUNNING);                                \
     switch (_coroutine->continuation) {                                         \
     case 0u:
 
 #define COROUTINE_YIELD(COROUTINE)                                              \
   do {                                                                          \
     (COROUTINE)->continuation = (uint32_t)__LINE__;                             \
-    (COROUTINE)->state = CONCURRENCY_COROUTINE_STATE_SUSPENDED;                             \
+    (COROUTINE)->state = CONCURRENCY_CONST(COROUTINE, STATE_SUSPENDED);                             \
     return;                                                                     \
   case __LINE__:;                                                               \
   } while (0)
@@ -46,7 +46,7 @@ struct CONCURRENCY_TYPE(TCoroutine) {
       break;                                                                    \
     }                                                                           \
     (COROUTINE)->continuation = 0u;                                             \
-    (COROUTINE)->state = CONCURRENCY_COROUTINE_STATE_FINISHED;                              \
+    (COROUTINE)->state = CONCURRENCY_CONST(COROUTINE, STATE_FINISHED);                              \
     return;                                                                     \
   } while (0)
 
