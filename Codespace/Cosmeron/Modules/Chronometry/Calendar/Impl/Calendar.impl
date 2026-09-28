@@ -37,27 +37,35 @@ CHRONOMETRY_CALENDAR_SYSTEM_POLICY_PROTOTYPE {
 }
 
 CHRONOMETRY_CALENDAR_REFORM_POLICY_PROTOTYPE {
+  CALENDAR_TYPE(Policy) policy = {
+      CALENDAR_CONST(HISTORICAL_REFORM),
+      CALENDAR_CONST(GREGORIAN),
+      {
+          .before = CALENDAR_CONST(JULIAN),
+          .after = CALENDAR_CONST(GREGORIAN),
+      },
+  };
+
   if (outPolicy == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
-  outPolicy->kind = CALENDAR_CONST(HISTORICAL_REFORM);
-  outPolicy->system = CALENDAR_CONST(GREGORIAN);
-  outPolicy->reform.before = CALENDAR_CONST(JULIAN);
-  outPolicy->reform.after = CALENDAR_CONST(GREGORIAN);
+
   switch (id) {
 #define X(NAME, BEFORE_YEAR, BEFORE_MONTH, BEFORE_DAY, AFTER_YEAR,             \
           AFTER_MONTH, AFTER_DAY, SUPPRESSED)                                 \
-  case CALENDAR_CONST(NAME):                                                      \
-    outPolicy->reform.lastBefore = (CHRONOMETRY_TYPE(Date)){                    \
-        BEFORE_YEAR, CALENDAR_CONST(BEFORE_MONTH), BEFORE_DAY};                   \
-    outPolicy->reform.firstAfter = (CHRONOMETRY_TYPE(Date)){                    \
-        AFTER_YEAR, CALENDAR_CONST(AFTER_MONTH), AFTER_DAY};                      \
-    outPolicy->reform.suppressedDays = SUPPRESSED;                              \
+  case CALENDAR_CONST(NAME):                                                  \
+    policy.reform.lastBefore = (CHRONOMETRY_TYPE(Date)){                      \
+        BEFORE_YEAR, CALENDAR_CONST(BEFORE_MONTH), BEFORE_DAY};               \
+    policy.reform.firstAfter = (CHRONOMETRY_TYPE(Date)){                      \
+        AFTER_YEAR, CALENDAR_CONST(AFTER_MONTH), AFTER_DAY};                   \
+    policy.reform.suppressedDays = SUPPRESSED;                                \
     break;
     CHRONOMETRY_CALENDAR_REFORM_TABLE(X)
 #undef X
   default:
     return STATUS_CONST(OUT_OF_RANGE);
   }
+
+  *outPolicy = policy;
   return STATUS_CONST(SUCCESS);
 }
 
