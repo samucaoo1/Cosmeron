@@ -82,53 +82,107 @@ enum {
   TEXT_GRID_COLOR_CONST(WINDOWS_COUNT)
 };
 
-static inline TEXT_GRID_ATTRIBUTE_TYPE(Cell)
-TEXT_GRID_ATTRIBUTE_FUNC(Default)(void);
-static inline const TEXT_GRID_COLOR_TYPE(RGB) *
-TEXT_GRID_COLOR_FUNC(WindowsPalette)(void);
-static inline bool TEXT_GRID_ATTRIBUTE_FUNC(IsEmpty)(
-    const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid);
-static inline bool TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(
-    const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid);
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Create)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) size);
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Destroy)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid);
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Resize)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) size);
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Recreate)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) size);
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Clone)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination,
-    const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source);
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Clear)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid);
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(ClearWith)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid,
-    TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute);
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Fill)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid,
-    TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute);
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(ReadCell)(
-    const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) position,
-    TEXT_GRID_ATTRIBUTE_TYPE(Cell) *attribute);
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(WriteCell)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) position,
-    TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute);
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(FillRegion)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TQUAD_TYPE(uint16) region,
-    TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute);
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Read)(
-    const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source, TQUAD_TYPE(uint16) region,
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination);
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Write)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination,
-    TDUAL_TYPE(uint16) destinationPosition,
-    const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source);
-static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(WriteRegion)(
-    TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination,
-    TDUAL_TYPE(uint16) destinationPosition,
-    const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source,
-    TQUAD_TYPE(uint16) sourceRegion);
+#define TEXT_GRID_ATTRIBUTE_DEFAULT_PROTOTYPE                               \
+  static inline TEXT_GRID_ATTRIBUTE_TYPE(Cell)                                \
+  TEXT_GRID_ATTRIBUTE_FUNC(Default)(void)
+
+#define TEXT_GRID_COLOR_WINDOWS_PALETTE_PROTOTYPE                           \
+  static inline const TEXT_GRID_COLOR_TYPE(RGB) *                            \
+  TEXT_GRID_COLOR_FUNC(WindowsPalette)(void)
+
+#define TEXT_GRID_ATTRIBUTE_IS_EMPTY_PROTOTYPE                              \
+  static inline bool TEXT_GRID_ATTRIBUTE_FUNC(IsEmpty)(                      \
+      const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid)
+
+#define TEXT_GRID_ATTRIBUTE_IS_VALID_PROTOTYPE                              \
+  static inline bool TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(                      \
+      const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid)
+
+#define TEXT_GRID_ATTRIBUTE_CREATE_PROTOTYPE                                \
+  static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Create)(                   \
+      TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) size)
+
+#define TEXT_GRID_ATTRIBUTE_DESTROY_PROTOTYPE                               \
+  static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Destroy)(                  \
+      TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid)
+
+#define TEXT_GRID_ATTRIBUTE_RESIZE_PROTOTYPE                                \
+  static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Resize)(                   \
+      TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) size)
+
+#define TEXT_GRID_ATTRIBUTE_RECREATE_PROTOTYPE                              \
+  static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Recreate)(                 \
+      TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) size)
+
+#define TEXT_GRID_ATTRIBUTE_CLONE_PROTOTYPE                                 \
+  static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Clone)(                    \
+      TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination,                           \
+      const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source)
+
+#define TEXT_GRID_ATTRIBUTE_CLEAR_PROTOTYPE                                 \
+  static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Clear)(                    \
+      TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid)
+
+#define TEXT_GRID_ATTRIBUTE_CLEAR_WITH_PROTOTYPE                            \
+  static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(ClearWith)(                \
+      TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid,                                  \
+      TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute)
+
+#define TEXT_GRID_ATTRIBUTE_FILL_PROTOTYPE                                  \
+  static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Fill)(                     \
+      TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid,                                  \
+      TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute)
+
+#define TEXT_GRID_ATTRIBUTE_READ_CELL_PROTOTYPE                             \
+  static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(ReadCell)(                 \
+      const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) position,\
+      TEXT_GRID_ATTRIBUTE_TYPE(Cell) *attribute)
+
+#define TEXT_GRID_ATTRIBUTE_WRITE_CELL_PROTOTYPE                            \
+  static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(WriteCell)(                \
+      TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) position,     \
+      TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute)
+
+#define TEXT_GRID_ATTRIBUTE_FILL_REGION_PROTOTYPE                           \
+  static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(FillRegion)(               \
+      TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TQUAD_TYPE(uint16) region,       \
+      TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute)
+
+#define TEXT_GRID_ATTRIBUTE_READ_PROTOTYPE                                  \
+  static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Read)(                     \
+      const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source, TQUAD_TYPE(uint16) region,\
+      TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination)
+
+#define TEXT_GRID_ATTRIBUTE_WRITE_PROTOTYPE                                 \
+  static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Write)(                    \
+      TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination,                           \
+      TDUAL_TYPE(uint16) destinationPosition,                                \
+      const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source)
+
+#define TEXT_GRID_ATTRIBUTE_WRITE_REGION_PROTOTYPE                          \
+  static inline OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(WriteRegion)(              \
+      TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination,                           \
+      TDUAL_TYPE(uint16) destinationPosition,                                \
+      const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source,                          \
+      TQUAD_TYPE(uint16) sourceRegion)
+
+TEXT_GRID_ATTRIBUTE_DEFAULT_PROTOTYPE;
+TEXT_GRID_COLOR_WINDOWS_PALETTE_PROTOTYPE;
+TEXT_GRID_ATTRIBUTE_IS_EMPTY_PROTOTYPE;
+TEXT_GRID_ATTRIBUTE_IS_VALID_PROTOTYPE;
+TEXT_GRID_ATTRIBUTE_CREATE_PROTOTYPE;
+TEXT_GRID_ATTRIBUTE_DESTROY_PROTOTYPE;
+TEXT_GRID_ATTRIBUTE_RESIZE_PROTOTYPE;
+TEXT_GRID_ATTRIBUTE_RECREATE_PROTOTYPE;
+TEXT_GRID_ATTRIBUTE_CLONE_PROTOTYPE;
+TEXT_GRID_ATTRIBUTE_CLEAR_PROTOTYPE;
+TEXT_GRID_ATTRIBUTE_CLEAR_WITH_PROTOTYPE;
+TEXT_GRID_ATTRIBUTE_FILL_PROTOTYPE;
+TEXT_GRID_ATTRIBUTE_READ_CELL_PROTOTYPE;
+TEXT_GRID_ATTRIBUTE_WRITE_CELL_PROTOTYPE;
+TEXT_GRID_ATTRIBUTE_FILL_REGION_PROTOTYPE;
+TEXT_GRID_ATTRIBUTE_READ_PROTOTYPE;
+TEXT_GRID_ATTRIBUTE_WRITE_PROTOTYPE;
+TEXT_GRID_ATTRIBUTE_WRITE_REGION_PROTOTYPE;
 
 #include "Impl/Attribute.impl"
