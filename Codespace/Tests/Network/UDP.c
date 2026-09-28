@@ -17,7 +17,8 @@ int main(void) {
   NETWORK_ADDRESS_FUNC(Endpoint_Create)(&bind_endpoint, &loopback, 0);
 
   assert(NETWORK_DATAGRAM_FUNC(Bind)(&receiver, &bind_endpoint, NULL) == STATUS_CONST(SUCCESS));
-  destination = *NETWORK_DATAGRAM_FUNC(LocalEndpoint)(&receiver);
+  assert(NETWORK_DATAGRAM_FUNC(LocalEndpoint)(&receiver, &destination) ==
+         STATUS_CONST(SUCCESS));
   assert(destination.port != 0);
 
   assert(NETWORK_DATAGRAM_FUNC(SendTo)(&sender, &destination, message,
