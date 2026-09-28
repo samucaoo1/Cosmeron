@@ -13,6 +13,7 @@
   do {                                                                         \
     FLAT_VECTOR_TYPE(SUFFIX) v;                                                \
     TYPE out = (TYPE)0;                                                        \
+    TYPE *access = NULL;                                                       \
     TEST_ASSERT(FLAT_VECTOR_FUNC(SUFFIX, Init)(&v) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(FLAT_VECTOR_FUNC(SUFFIX, Empty)(&v));                          \
     TEST_ASSERT(FLAT_VECTOR_FUNC(SUFFIX, Reserve)(&v, 8U) == STATUS_CONST(SUCCESS)); \
@@ -21,9 +22,12 @@
     TEST_ASSERT(FLAT_VECTOR_FUNC(SUFFIX, PushFront)(&v, (TYPE)(A)) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(FLAT_VECTOR_FUNC(SUFFIX, Insert)(&v, 2U, (TYPE)(C)) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(FLAT_VECTOR_FUNC(SUFFIX, Size)(&v) == 3U);                     \
-    TEST_ASSERT(*FLAT_VECTOR_FUNC(SUFFIX, Front)(&v) == (TYPE)(A));            \
-    TEST_ASSERT(*FLAT_VECTOR_FUNC(SUFFIX, Back)(&v) == (TYPE)(C));             \
-    TEST_ASSERT(*FLAT_VECTOR_FUNC(SUFFIX, At)(&v, 1U) == (TYPE)(B));           \
+    TEST_ASSERT(FLAT_VECTOR_FUNC(SUFFIX, Front)(&v, &access) == STATUS_CONST(SUCCESS)); \
+    TEST_ASSERT(*access == (TYPE)(A));                                         \
+    TEST_ASSERT(FLAT_VECTOR_FUNC(SUFFIX, Back)(&v, &access) == STATUS_CONST(SUCCESS)); \
+    TEST_ASSERT(*access == (TYPE)(C));                                         \
+    TEST_ASSERT(FLAT_VECTOR_FUNC(SUFFIX, At)(&v, 1U, &access) == STATUS_CONST(SUCCESS)); \
+    TEST_ASSERT(*access == (TYPE)(B));           \
     TEST_ASSERT(FLAT_VECTOR_FUNC(SUFFIX, Data)(&v) != NULL);                   \
     TEST_ASSERT(FLAT_VECTOR_FUNC(SUFFIX, Erase)(&v, 1U, 1U) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(FLAT_VECTOR_FUNC(SUFFIX, PopFront)(&v, &out) == STATUS_CONST(SUCCESS)); \
@@ -40,14 +44,17 @@
   do {                                                                         \
     FLAT_QUEUE_TYPE(SUFFIX) q;                                                 \
     TYPE out = (TYPE)0;                                                        \
+    TYPE *access = NULL;                                                       \
     TEST_ASSERT(FLAT_QUEUE_FUNC(SUFFIX, Init)(&q) == STATUS_CONST(SUCCESS));  \
     TEST_ASSERT(FLAT_QUEUE_FUNC(SUFFIX, Empty)(&q));                           \
     TEST_ASSERT(FLAT_QUEUE_FUNC(SUFFIX, Reserve)(&q, 8U) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(FLAT_QUEUE_FUNC(SUFFIX, Push)(&q, (TYPE)(A)) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(FLAT_QUEUE_FUNC(SUFFIX, Push)(&q, (TYPE)(B)) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(FLAT_QUEUE_FUNC(SUFFIX, Push)(&q, (TYPE)(C)) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(*FLAT_QUEUE_FUNC(SUFFIX, Front)(&q) == (TYPE)(A));             \
-    TEST_ASSERT(*FLAT_QUEUE_FUNC(SUFFIX, Back)(&q) == (TYPE)(C));              \
+    TEST_ASSERT(FLAT_QUEUE_FUNC(SUFFIX, Front)(&q, &access) == STATUS_CONST(SUCCESS)); \
+    TEST_ASSERT(*access == (TYPE)(A));                                         \
+    TEST_ASSERT(FLAT_QUEUE_FUNC(SUFFIX, Back)(&q, &access) == STATUS_CONST(SUCCESS)); \
+    TEST_ASSERT(*access == (TYPE)(C));              \
     TEST_ASSERT(FLAT_QUEUE_FUNC(SUFFIX, Pop)(&q, &out) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(out == (TYPE)(A));                                             \
     TEST_ASSERT(FLAT_QUEUE_FUNC(SUFFIX, Compact)(&q) == STATUS_CONST(SUCCESS)); \
@@ -61,12 +68,14 @@
   do {                                                                         \
     FLAT_STACK_TYPE(SUFFIX) s;                                                 \
     TYPE out = (TYPE)0;                                                        \
+    TYPE *access = NULL;                                                       \
     TEST_ASSERT(FLAT_STACK_FUNC(SUFFIX, Init)(&s) == STATUS_CONST(SUCCESS));  \
     TEST_ASSERT(FLAT_STACK_FUNC(SUFFIX, Empty)(&s));                           \
     TEST_ASSERT(FLAT_STACK_FUNC(SUFFIX, Reserve)(&s, 8U) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(FLAT_STACK_FUNC(SUFFIX, Push)(&s, (TYPE)(A)) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(FLAT_STACK_FUNC(SUFFIX, Push)(&s, (TYPE)(B)) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(*FLAT_STACK_FUNC(SUFFIX, Top)(&s) == (TYPE)(B));               \
+    TEST_ASSERT(FLAT_STACK_FUNC(SUFFIX, Top)(&s, &access) == STATUS_CONST(SUCCESS)); \
+    TEST_ASSERT(*access == (TYPE)(B));               \
     TEST_ASSERT(FLAT_STACK_FUNC(SUFFIX, Size)(&s) == 2U);                      \
     TEST_ASSERT(FLAT_STACK_FUNC(SUFFIX, Pop)(&s, &out) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(out == (TYPE)(B));                                             \
@@ -83,6 +92,7 @@
     TYPE otherText[] = {(TYPE)'d', (TYPE)'e', 0};                              \
     TYPE needle[] = {(TYPE)'b', (TYPE)'c', 0};                                 \
     TYPE out = (TYPE)0;                                                        \
+    TYPE *access = NULL;                                                       \
     size_t index = 0U;                                                         \
     CMPOUT cmp;                                                     \
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, Init)(&s) == STATUS_CONST(SUCCESS));     \
@@ -95,12 +105,15 @@
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, Reserve)(&s, 16U) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, Capacity)(&s) >= 16U);                    \
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, PushBack)(&s, (TYPE)'c') == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(*TSTRING_FUNC(SUFFIX, Back)(&s) == (TYPE)'c');                 \
+    TEST_ASSERT(TSTRING_FUNC(SUFFIX, Back)(&s, &access) == STATUS_CONST(SUCCESS)); \
+    TEST_ASSERT(*access == (TYPE)'c');                 \
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, PopBack)(&s, &out) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(out == (TYPE)'c');                                             \
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, InsertChar)(&s, 1U, (TYPE)'x') == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(*TSTRING_FUNC(SUFFIX, At)(&s, 1U) == (TYPE)'x');               \
-    TEST_ASSERT(*TSTRING_FUNC(SUFFIX, Front)(&s) == (TYPE)'a');                \
+    TEST_ASSERT(TSTRING_FUNC(SUFFIX, At)(&s, 1U, &access) == STATUS_CONST(SUCCESS)); \
+    TEST_ASSERT(*access == (TYPE)'x');                                         \
+    TEST_ASSERT(TSTRING_FUNC(SUFFIX, Front)(&s, &access) == STATUS_CONST(SUCCESS)); \
+    TEST_ASSERT(*access == (TYPE)'a');                \
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, Append)(&s, tail) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, FromCStr)(&other, otherText) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, AppendStr)(&s, &other) == STATUS_CONST(SUCCESS)); \
@@ -123,12 +136,15 @@
     LINKED_FORWARD_LIST_TYPE(SUFFIX) list;                                     \
     LINKED_FORWARD_LIST_NODE_TYPE(SUFFIX) *node = NULL;                        \
     TYPE out = (TYPE)0;                                                        \
+    TYPE *access = NULL;                                                       \
     TEST_ASSERT(LINKED_FORWARD_LIST_FUNC(SUFFIX, Init)(&list) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(LINKED_FORWARD_LIST_FUNC(SUFFIX, Empty)(&list));               \
     TEST_ASSERT(LINKED_FORWARD_LIST_FUNC(SUFFIX, PushFront)(&list, (TYPE)(B)) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(LINKED_FORWARD_LIST_FUNC(SUFFIX, PushFront)(&list, (TYPE)(A)) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(*LINKED_FORWARD_LIST_FUNC(SUFFIX, Front)(&list) == (TYPE)(A)); \
-    TEST_ASSERT(*LINKED_FORWARD_LIST_FUNC(SUFFIX, Back)(&list) == (TYPE)(B));  \
+    TEST_ASSERT(LINKED_FORWARD_LIST_FUNC(SUFFIX, Front)(&list, &access) == STATUS_CONST(SUCCESS)); \
+    TEST_ASSERT(*access == (TYPE)(A));                                         \
+    TEST_ASSERT(LINKED_FORWARD_LIST_FUNC(SUFFIX, Back)(&list, &access) == STATUS_CONST(SUCCESS)); \
+    TEST_ASSERT(*access == (TYPE)(B));  \
     node = LINKED_FORWARD_LIST_FUNC(SUFFIX, Begin)(&list);                     \
     TEST_ASSERT(node != NULL);                                                 \
     TEST_ASSERT(LINKED_FORWARD_LIST_FUNC(SUFFIX, InsertAfter)(&list, node, (TYPE)(C), NULL) == STATUS_CONST(SUCCESS)); \
@@ -146,12 +162,15 @@
     LINKED_LIST_TYPE(SUFFIX) list;                                             \
     LINKED_LIST_NODE_TYPE(SUFFIX) *node = NULL;                                \
     TYPE out = (TYPE)0;                                                        \
+    TYPE *access = NULL;                                                       \
     TEST_ASSERT(LINKED_LIST_FUNC(SUFFIX, Init)(&list) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(LINKED_LIST_FUNC(SUFFIX, Empty)(&list));                       \
     TEST_ASSERT(LINKED_LIST_FUNC(SUFFIX, PushFront)(&list, (TYPE)(A)) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(LINKED_LIST_FUNC(SUFFIX, PushBack)(&list, (TYPE)(B)) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(*LINKED_LIST_FUNC(SUFFIX, Front)(&list) == (TYPE)(A));         \
-    TEST_ASSERT(*LINKED_LIST_FUNC(SUFFIX, Back)(&list) == (TYPE)(B));          \
+    TEST_ASSERT(LINKED_LIST_FUNC(SUFFIX, Front)(&list, &access) == STATUS_CONST(SUCCESS)); \
+    TEST_ASSERT(*access == (TYPE)(A));                                         \
+    TEST_ASSERT(LINKED_LIST_FUNC(SUFFIX, Back)(&list, &access) == STATUS_CONST(SUCCESS)); \
+    TEST_ASSERT(*access == (TYPE)(B));          \
     TEST_ASSERT(LINKED_LIST_FUNC(SUFFIX, Begin)(&list) == list.head);          \
     TEST_ASSERT(LINKED_LIST_FUNC(SUFFIX, End)(&list) == NULL);                 \
     TEST_ASSERT(LINKED_LIST_FUNC(SUFFIX, RBegin)(&list) == list.tail);         \
@@ -171,12 +190,15 @@
   do {                                                                         \
     LINKED_QUEUE_TYPE(SUFFIX) q;                                               \
     TYPE out = (TYPE)0;                                                        \
+    TYPE *access = NULL;                                                       \
     TEST_ASSERT(LINKED_QUEUE_FUNC(SUFFIX, Init)(&q) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(LINKED_QUEUE_FUNC(SUFFIX, Empty)(&q));                         \
     TEST_ASSERT(LINKED_QUEUE_FUNC(SUFFIX, Push)(&q, (TYPE)(A)) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(LINKED_QUEUE_FUNC(SUFFIX, Push)(&q, (TYPE)(B)) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(*LINKED_QUEUE_FUNC(SUFFIX, Front)(&q) == (TYPE)(A));           \
-    TEST_ASSERT(*LINKED_QUEUE_FUNC(SUFFIX, Back)(&q) == (TYPE)(B));            \
+    TEST_ASSERT(LINKED_QUEUE_FUNC(SUFFIX, Front)(&q, &access) == STATUS_CONST(SUCCESS)); \
+    TEST_ASSERT(*access == (TYPE)(A));                                         \
+    TEST_ASSERT(LINKED_QUEUE_FUNC(SUFFIX, Back)(&q, &access) == STATUS_CONST(SUCCESS)); \
+    TEST_ASSERT(*access == (TYPE)(B));            \
     TEST_ASSERT(LINKED_QUEUE_FUNC(SUFFIX, Size)(&q) == 2U);                    \
     TEST_ASSERT(LINKED_QUEUE_FUNC(SUFFIX, Pop)(&q, &out) == STATUS_CONST(SUCCESS)); \
     LINKED_QUEUE_FUNC(SUFFIX, Clear)(&q);                                      \
@@ -187,11 +209,13 @@
   do {                                                                         \
     LINKED_STACK_TYPE(SUFFIX) s;                                               \
     TYPE out = (TYPE)0;                                                        \
+    TYPE *access = NULL;                                                       \
     TEST_ASSERT(LINKED_STACK_FUNC(SUFFIX, Init)(&s) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(LINKED_STACK_FUNC(SUFFIX, Empty)(&s));                         \
     TEST_ASSERT(LINKED_STACK_FUNC(SUFFIX, Push)(&s, (TYPE)(A)) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(LINKED_STACK_FUNC(SUFFIX, Push)(&s, (TYPE)(B)) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(*LINKED_STACK_FUNC(SUFFIX, Top)(&s) == (TYPE)(B));             \
+    TEST_ASSERT(LINKED_STACK_FUNC(SUFFIX, Top)(&s, &access) == STATUS_CONST(SUCCESS)); \
+    TEST_ASSERT(*access == (TYPE)(B));             \
     TEST_ASSERT(LINKED_STACK_FUNC(SUFFIX, Size)(&s) == 2U);                    \
     TEST_ASSERT(LINKED_STACK_FUNC(SUFFIX, Pop)(&s, &out) == STATUS_CONST(SUCCESS)); \
     LINKED_STACK_FUNC(SUFFIX, Clear)(&s);                                      \
@@ -202,12 +226,15 @@
   do {                                                                         \
     LINKED_DEQUE_TYPE(SUFFIX) d;                                               \
     TYPE out = (TYPE)0;                                                        \
+    TYPE *access = NULL;                                                       \
     TEST_ASSERT(LINKED_DEQUE_FUNC(SUFFIX, Init)(&d) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(LINKED_DEQUE_FUNC(SUFFIX, Empty)(&d));                         \
     TEST_ASSERT(LINKED_DEQUE_FUNC(SUFFIX, PushFront)(&d, (TYPE)(A)) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(LINKED_DEQUE_FUNC(SUFFIX, PushBack)(&d, (TYPE)(B)) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(*LINKED_DEQUE_FUNC(SUFFIX, Front)(&d) == (TYPE)(A));           \
-    TEST_ASSERT(*LINKED_DEQUE_FUNC(SUFFIX, Back)(&d) == (TYPE)(B));            \
+    TEST_ASSERT(LINKED_DEQUE_FUNC(SUFFIX, Front)(&d, &access) == STATUS_CONST(SUCCESS)); \
+    TEST_ASSERT(*access == (TYPE)(A));                                         \
+    TEST_ASSERT(LINKED_DEQUE_FUNC(SUFFIX, Back)(&d, &access) == STATUS_CONST(SUCCESS)); \
+    TEST_ASSERT(*access == (TYPE)(B));            \
     TEST_ASSERT(LINKED_DEQUE_FUNC(SUFFIX, Size)(&d) == 2U);                    \
     TEST_ASSERT(LINKED_DEQUE_FUNC(SUFFIX, PopFront)(&d, &out) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(LINKED_DEQUE_FUNC(SUFFIX, PopBack)(&d, &out) == STATUS_CONST(SUCCESS)); \
