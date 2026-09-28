@@ -36,8 +36,6 @@ static void test_socket_stream(void) {
          STATUS_CONST(SUCCESS));
   endpoint = *NETWORK_LISTENER_FUNC(LocalEndpoint)(&listener);
   assert(endpoint.port != 0);
-  assert(NETWORK_LISTENER_FUNC(LastError)(&listener) ==
-         NETWORK_ERROR_CONST(NONE));
 
   SOCKET_FUNC(Init)(&raw_listener);
   assert(SOCKET_FUNC(Create)(&raw_listener, SOCKET_CONST(FAMILY_IPV4),

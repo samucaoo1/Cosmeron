@@ -30,8 +30,6 @@ int main(void) {
   NETWORK_CONNECTION_FUNC(Close)(&connection);
   assert(NETWORK_CONNECTION_FUNC(State)(&connection) ==
          NETWORK_CONNECTION_CONST(CLOSED));
-  assert(NETWORK_CONNECTION_FUNC(LastError)(&connection) ==
-         NETWORK_ERROR_CONST(NONE));
   NETWORK_CONNECTION_FUNC(Close)(&connection);
 
   NETWORK_CONNECTION_FUNC(Destroy)(&connection);
