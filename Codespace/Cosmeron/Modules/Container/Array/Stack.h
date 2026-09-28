@@ -47,8 +47,8 @@
       FLAT_STACK_TYPE(SUFFIX) * stack, TYPE * outValue)
 
 #define FLAT_STACK_TOP_PROTOTYPE(TYPE, SUFFIX)                        \
-  static inline TYPE *FLAT_STACK_FUNC(SUFFIX,                                  \
-                                      Top)(FLAT_STACK_TYPE(SUFFIX) * stack)
+  static inline OPSTATUS FLAT_STACK_FUNC(SUFFIX, Top)(                         \
+      FLAT_STACK_TYPE(SUFFIX) * stack, TYPE **out)
 
 #define FLAT_STACK_EMPTY_PROTOTYPE(SUFFIX)                            \
   static inline bool FLAT_STACK_FUNC(SUFFIX,                                   \

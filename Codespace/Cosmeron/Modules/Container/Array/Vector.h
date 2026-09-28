@@ -47,16 +47,16 @@
  * ============================================================ */
 
 #define FLAT_VECTOR_AT_PROTOTYPE(TYPE, SUFFIX)                        \
-  static inline TYPE *FLAT_VECTOR_FUNC(SUFFIX, At)(                            \
-      FLAT_VECTOR_TYPE(SUFFIX) * vec, size_t index)
+  static inline OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, At)(                         \
+      FLAT_VECTOR_TYPE(SUFFIX) * vec, size_t index, TYPE **out)
 
 #define FLAT_VECTOR_FRONT_PROTOTYPE(TYPE, SUFFIX)                     \
-  static inline TYPE *FLAT_VECTOR_FUNC(SUFFIX,                                 \
-                                       Front)(FLAT_VECTOR_TYPE(SUFFIX) * vec)
+  static inline OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, Front)(                      \
+      FLAT_VECTOR_TYPE(SUFFIX) * vec, TYPE **out)
 
 #define FLAT_VECTOR_BACK_PROTOTYPE(TYPE, SUFFIX)                      \
-  static inline TYPE *FLAT_VECTOR_FUNC(SUFFIX,                                 \
-                                       Back)(FLAT_VECTOR_TYPE(SUFFIX) * vec)
+  static inline OPSTATUS FLAT_VECTOR_FUNC(SUFFIX, Back)(                       \
+      FLAT_VECTOR_TYPE(SUFFIX) * vec, TYPE **out)
 
 #define FLAT_VECTOR_DATA_PROTOTYPE(TYPE, SUFFIX)                      \
   static inline TYPE *FLAT_VECTOR_FUNC(SUFFIX,                                 \

@@ -118,23 +118,23 @@
   }
 
 #define SEQUENTIAL_QUEUE_IMPLEMENT_FRONT(TYPE, SUFFIX)                         \
-  static inline TYPE *FLAT_QUEUE_FUNC(SUFFIX, Front)(                  \
-      FLAT_QUEUE_TYPE(SUFFIX) * queue) {                                       \
-    if (!queue)                                                                \
-      return NULL;                                                             \
+  FLAT_QUEUE_FRONT_PROTOTYPE(TYPE, SUFFIX) {                                   \
+    if (!queue || !out)                                                        \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue) == 0)                             \
-      return NULL;                                                             \
-    return &queue->data[queue->head];                                          \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *out = &queue->data[queue->head];                                          \
+    return STATUS_CONST(SUCCESS);                                              \
   }
 
 #define SEQUENTIAL_QUEUE_IMPLEMENT_BACK(TYPE, SUFFIX)                          \
-  static inline TYPE *FLAT_QUEUE_FUNC(SUFFIX, Back)(                   \
-      FLAT_QUEUE_TYPE(SUFFIX) * queue) {                                       \
-    if (!queue)                                                                \
-      return NULL;                                                             \
+  FLAT_QUEUE_BACK_PROTOTYPE(TYPE, SUFFIX) {                                    \
+    if (!queue || !out)                                                        \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue) == 0)                             \
-      return NULL;                                                             \
-    return &queue->data[queue->size - 1];                                      \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *out = &queue->data[queue->size - 1];                                      \
+    return STATUS_CONST(SUCCESS);                                              \
   }
 
 #define SEQUENTIAL_QUEUE_IMPLEMENT_EMPTY(TYPE, SUFFIX)                         \

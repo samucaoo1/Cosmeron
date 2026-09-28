@@ -53,12 +53,12 @@
       FLAT_QUEUE_TYPE(SUFFIX) * queue, TYPE * outValue)
 
 #define FLAT_QUEUE_FRONT_PROTOTYPE(TYPE, SUFFIX)                      \
-  static inline TYPE *FLAT_QUEUE_FUNC(SUFFIX,                                  \
-                                      Front)(FLAT_QUEUE_TYPE(SUFFIX) * queue)
+  static inline OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, Front)(                       \
+      FLAT_QUEUE_TYPE(SUFFIX) * queue, TYPE **out)
 
 #define FLAT_QUEUE_BACK_PROTOTYPE(TYPE, SUFFIX)                       \
-  static inline TYPE *FLAT_QUEUE_FUNC(SUFFIX,                                  \
-                                      Back)(FLAT_QUEUE_TYPE(SUFFIX) * queue)
+  static inline OPSTATUS FLAT_QUEUE_FUNC(SUFFIX, Back)(                        \
+      FLAT_QUEUE_TYPE(SUFFIX) * queue, TYPE **out)
 
 #define FLAT_QUEUE_EMPTY_PROTOTYPE(SUFFIX)                            \
   static inline bool FLAT_QUEUE_FUNC(SUFFIX,                                   \

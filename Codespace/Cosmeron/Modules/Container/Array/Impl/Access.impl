@@ -1,9 +1,12 @@
 #define SEQUENTIAL_ACCESS_AT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)            \
-  static inline TYPE *FUNCTION_NAME(CONTAINER_STRUCT *container,               \
-                                    size_t index) {                            \
-    if (!container || index >= container->size)                                              \
-      return NULL;                                                             \
-    return &container->data[index];                                            \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       size_t index, TYPE **out) {             \
+    if (!container || !out)                                                    \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (index >= container->size)                                              \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *out = &container->data[index];                                            \
+    return STATUS_CONST(SUCCESS);                                              \
   }
 
 #define SEQUENTIAL_ACCESS_GET(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)           \
@@ -18,17 +21,25 @@
   }
 
 #define SEQUENTIAL_ACCESS_FRONT(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)         \
-  static inline TYPE *FUNCTION_NAME(CONTAINER_STRUCT *container) {             \
-    if (!container || container->size == 0)                                                  \
-      return NULL;                                                             \
-    return &container->data[0];                                                \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       TYPE **out) {                           \
+    if (!container || !out)                                                    \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (container->size == 0)                                                  \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *out = &container->data[0];                                                \
+    return STATUS_CONST(SUCCESS);                                              \
   }
 
 #define SEQUENTIAL_ACCESS_BACK(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)          \
-  static inline TYPE *FUNCTION_NAME(CONTAINER_STRUCT *container) {             \
-    if (!container || container->size == 0)                                    \
-      return NULL;                                                             \
-    return &container->data[container->size - 1];                              \
+  static inline OPSTATUS FUNCTION_NAME(CONTAINER_STRUCT *container,            \
+                                       TYPE **out) {                           \
+    if (!container || !out)                                                    \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (container->size == 0)                                                  \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *out = &container->data[container->size - 1];                              \
+    return STATUS_CONST(SUCCESS);                                              \
   }
 
 #define SEQUENTIAL_ACCESS_DATA(TYPE, FUNCTION_NAME, CONTAINER_STRUCT)          \
