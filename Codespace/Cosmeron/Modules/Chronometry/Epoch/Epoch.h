@@ -5,11 +5,11 @@
 
 #define CHRONOMETRY_EPOCH_DATE_TO_JDN_PROTOTYPE                      \
   inline static OPSTATUS EPOCH_FUNC(DateToJulianDayNumber)(                     \
-      const CALENDAR_FUNC(Policy) *policy, CHRONOMETRY_TYPE(Date) date,         \
+      const CALENDAR_TYPE(Policy) *policy, CHRONOMETRY_TYPE(Date) date,         \
       int64_t *julianDayNumber)
 #define CHRONOMETRY_EPOCH_DATE_FROM_JDN_PROTOTYPE                    \
   inline static OPSTATUS EPOCH_FUNC(DateFromJulianDayNumber)(                   \
-      const CALENDAR_FUNC(Policy) *policy, int64_t julianDayNumber,           \
+      const CALENDAR_TYPE(Policy) *policy, int64_t julianDayNumber,           \
       CHRONOMETRY_TYPE(Date) *date)
 #define CHRONOMETRY_EPOCH_DATE_TO_RATA_DIE_PROTOTYPE                 \
   inline static OPSTATUS EPOCH_FUNC(DateToRataDie)(                             \
