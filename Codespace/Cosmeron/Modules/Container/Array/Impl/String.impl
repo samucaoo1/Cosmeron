@@ -5,7 +5,7 @@
 #include "Modifiers.impl"
 #include "Observers.impl"
 
-#define TSTRING_IMPLEMENT_STRLEN(CHAR_TYPE, SUFFIX)                           \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_STRLEN(CHAR_TYPE, SUFFIX)                           \
   static inline size_t TSTRING_FUNC(SUFFIX, StrLen)(const CHAR_TYPE *cstr) {  \
     if (!cstr)                                                                 \
       return 0;                                                                \
@@ -15,54 +15,54 @@
     return len;                                                                \
   }
 
-#define TSTRING_IMPLEMENT_ENSURE_CAPACITY(CHAR_TYPE, SUFFIX)                  \
-  SEQUENTIAL_CONTAINER_ENSURE_CAPACITY(                                       \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_ENSURE_CAPACITY(CHAR_TYPE, SUFFIX)                  \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_CONTAINER_ENSURE_CAPACITY(                                       \
       CHAR_TYPE, TSTRING_FUNC(SUFFIX, EnsureCapacity),                        \
       TSTRING_FUNC(SUFFIX, Reserve), TSTRING_TYPE(SUFFIX),                    \
       COSMERON_MACRO_INTERNAL_FLAT_INITIAL_CAPACITY, COSMERON_MACRO_INTERNAL_FLAT_GROWTH_FACTOR)
 
-#define TSTRING_IMPLEMENT_INIT(CHAR_TYPE, SUFFIX)                             \
-  SEQUENTIAL_CONTAINER_IMPLEMENT_INIT(                                        \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_INIT(CHAR_TYPE, SUFFIX)                             \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_CONTAINER_IMPLEMENT_INIT(                                        \
       CHAR_TYPE, TSTRING_FUNC(SUFFIX, Init), TSTRING_TYPE(SUFFIX))
 
-#define TSTRING_IMPLEMENT_DESTROY(CHAR_TYPE, SUFFIX)                          \
-  SEQUENTIAL_CONTAINER_IMPLEMENT_DESTROY(                                     \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_DESTROY(CHAR_TYPE, SUFFIX)                          \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_CONTAINER_IMPLEMENT_DESTROY(                                     \
       CHAR_TYPE, TSTRING_FUNC(SUFFIX, Destroy), TSTRING_TYPE(SUFFIX))
 
-#define TSTRING_IMPLEMENT_RESERVE(CHAR_TYPE, SUFFIX)                          \
-  SEQUENTIAL_CAPACITY_RESERVE(                                                \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_RESERVE(CHAR_TYPE, SUFFIX)                          \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_CAPACITY_RESERVE(                                                \
       CHAR_TYPE, TSTRING_FUNC(SUFFIX, Reserve), TSTRING_TYPE(SUFFIX))
 
-#define TSTRING_IMPLEMENT_AT(CHAR_TYPE, SUFFIX)                               \
-  SEQUENTIAL_ACCESS_AT(CHAR_TYPE, TSTRING_FUNC(SUFFIX, At),                   \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_AT(CHAR_TYPE, SUFFIX)                               \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_ACCESS_AT(CHAR_TYPE, TSTRING_FUNC(SUFFIX, At),                   \
                        TSTRING_TYPE(SUFFIX))
 
-#define TSTRING_IMPLEMENT_FRONT(CHAR_TYPE, SUFFIX)                            \
-  SEQUENTIAL_ACCESS_FRONT(CHAR_TYPE, TSTRING_FUNC(SUFFIX, Front),             \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_FRONT(CHAR_TYPE, SUFFIX)                            \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_ACCESS_FRONT(CHAR_TYPE, TSTRING_FUNC(SUFFIX, Front),             \
                           TSTRING_TYPE(SUFFIX))
 
-#define TSTRING_IMPLEMENT_BACK(CHAR_TYPE, SUFFIX)                             \
-  SEQUENTIAL_ACCESS_BACK(CHAR_TYPE, TSTRING_FUNC(SUFFIX, Back),               \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_BACK(CHAR_TYPE, SUFFIX)                             \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_ACCESS_BACK(CHAR_TYPE, TSTRING_FUNC(SUFFIX, Back),               \
                          TSTRING_TYPE(SUFFIX))
 
-#define TSTRING_IMPLEMENT_LENGTH(CHAR_TYPE, SUFFIX)                           \
-  SEQUENTIAL_CONTAINER_IMPLEMENT_SIZE(                                        \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_LENGTH(CHAR_TYPE, SUFFIX)                           \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_CONTAINER_IMPLEMENT_SIZE(                                        \
       CHAR_TYPE, TSTRING_FUNC(SUFFIX, Length), TSTRING_TYPE(SUFFIX))
 
-#define TSTRING_IMPLEMENT_EMPTY(CHAR_TYPE, SUFFIX)                            \
-  SEQUENTIAL_CONTAINER_IMPLEMENT_EMPTY(                                       \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_EMPTY(CHAR_TYPE, SUFFIX)                            \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_CONTAINER_IMPLEMENT_EMPTY(                                       \
       CHAR_TYPE, TSTRING_FUNC(SUFFIX, Empty), TSTRING_TYPE(SUFFIX))
 
-#define TSTRING_IMPLEMENT_CLEAR(CHAR_TYPE, SUFFIX)                            \
-  SEQUENTIAL_CONTAINER_IMPLEMENT_CLEAR(                                       \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_CLEAR(CHAR_TYPE, SUFFIX)                            \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_CONTAINER_IMPLEMENT_CLEAR(                                       \
       CHAR_TYPE, TSTRING_FUNC(SUFFIX, Clear), TSTRING_TYPE(SUFFIX))
 
-#define TSTRING_IMPLEMENT_PUSH_BACK(CHAR_TYPE, SUFFIX)                        \
-  SEQUENTIAL_CONTAINER_IMPLEMENT_PUSH_BACK(                                   \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_PUSH_BACK(CHAR_TYPE, SUFFIX)                        \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_CONTAINER_IMPLEMENT_PUSH_BACK(                                   \
       CHAR_TYPE, TSTRING_FUNC(SUFFIX, PushBack),                              \
       TSTRING_FUNC(SUFFIX, EnsureCapacity), TSTRING_TYPE(SUFFIX))
 
-#define TSTRING_IMPLEMENT_POP_BACK(CHAR_TYPE, SUFFIX)                         \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_POP_BACK(CHAR_TYPE, SUFFIX)                         \
   TSTRING_POP_BACK_PROTOTYPE(CHAR_TYPE, SUFFIX) {                     \
     if (!str || !outValue)                                                     \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
@@ -74,12 +74,12 @@
     return STATUS_CONST(SUCCESS);                                                \
   }
 
-#define TSTRING_IMPLEMENT_CAPACITY(SUFFIX)                                    \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_CAPACITY(SUFFIX)                                    \
   TSTRING_CAPACITY_PROTOTYPE(SUFFIX) {                                           \
     return str ? str->capacity : 0U;                                                     \
   }
 
-#define TSTRING_IMPLEMENT_INSERT_CHAR(CHAR_TYPE, SUFFIX)                      \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_INSERT_CHAR(CHAR_TYPE, SUFFIX)                      \
   TSTRING_INSERT_CHAR_PROTOTYPE(CHAR_TYPE, SUFFIX) {                 \
     if (!str)                                                                  \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
@@ -96,7 +96,7 @@
     return STATUS_CONST(SUCCESS);                                                \
   }
 
-#define TSTRING_IMPLEMENT_FROM_CSTR(CHAR_TYPE, SUFFIX)                        \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_FROM_CSTR(CHAR_TYPE, SUFFIX)                        \
   TSTRING_FROM_CSTR_PROTOTYPE(CHAR_TYPE, SUFFIX) {                   \
     if (!str)                                                                  \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
@@ -112,7 +112,7 @@
     return STATUS_CONST(SUCCESS);                                                \
   }
 
-#define TSTRING_IMPLEMENT_CSTR(CHAR_TYPE, SUFFIX)                             \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_CSTR(CHAR_TYPE, SUFFIX)                             \
   TSTRING_CSTR_PROTOTYPE(CHAR_TYPE, SUFFIX) {                                 \
     OPSTATUS status;                                                          \
     if (!str || !outCStr)                                                     \
@@ -127,7 +127,7 @@
     return STATUS_CONST(SUCCESS);                                             \
   }
 
-#define TSTRING_IMPLEMENT_APPEND(CHAR_TYPE, SUFFIX)                           \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_APPEND(CHAR_TYPE, SUFFIX)                           \
   TSTRING_APPEND_PROTOTYPE(CHAR_TYPE, SUFFIX) {                      \
     if (!str)                                                                  \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
@@ -143,7 +143,7 @@
     return STATUS_CONST(SUCCESS);                                                \
   }
 
-#define TSTRING_IMPLEMENT_APPEND_STR(CHAR_TYPE, SUFFIX)                       \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_APPEND_STR(CHAR_TYPE, SUFFIX)                       \
   TSTRING_APPEND_STR_PROTOTYPE(SUFFIX) {                             \
     if (!str)                                                                  \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
@@ -159,7 +159,7 @@
     return STATUS_CONST(SUCCESS);                                                \
   }
 
-#define TSTRING_IMPLEMENT_INSERT(CHAR_TYPE, SUFFIX)                           \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_INSERT(CHAR_TYPE, SUFFIX)                           \
   TSTRING_INSERT_PROTOTYPE(CHAR_TYPE, SUFFIX) {                      \
     if (!str)                                                                  \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
@@ -179,7 +179,7 @@
     return STATUS_CONST(SUCCESS);                                                \
   }
 
-#define TSTRING_IMPLEMENT_ERASE(CHAR_TYPE, SUFFIX)                            \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_ERASE(CHAR_TYPE, SUFFIX)                            \
   TSTRING_ERASE_PROTOTYPE(SUFFIX) {                                  \
     if (!str)                                                                  \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
@@ -194,7 +194,7 @@
     return STATUS_CONST(SUCCESS);                                                \
   }
 
-#define TSTRING_IMPLEMENT_SUBSTR(CHAR_TYPE, SUFFIX)                           \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_SUBSTR(CHAR_TYPE, SUFFIX)                           \
   TSTRING_SUBSTR_PROTOTYPE(SUFFIX) {                                           \
     if (!str || !out || str == out)                                            \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
@@ -218,7 +218,7 @@
     return STATUS_CONST(SUCCESS);                                                 \
   }
 
-#define TSTRING_IMPLEMENT_COMPARE(CHAR_TYPE, SUFFIX)                          \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_COMPARE(CHAR_TYPE, SUFFIX)                          \
   TSTRING_COMPARE_PROTOTYPE(SUFFIX) {                                          \
     if (!str || !other || !outResult)                                             \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
@@ -228,7 +228,7 @@
     return STATUS_CONST(SUCCESS);                                                 \
   }
 
-#define TSTRING_IMPLEMENT_FIND(CHAR_TYPE, SUFFIX)                             \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_FIND(CHAR_TYPE, SUFFIX)                             \
   TSTRING_FIND_PROTOTYPE(CHAR_TYPE, SUFFIX) {                                  \
     if (!str || !index)                                                        \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
@@ -243,7 +243,7 @@
     return STATUS_CONST(NOT_FOUND);                                               \
   }
 
-#define TSTRING_IMPLEMENT_FIND_STR(CHAR_TYPE, SUFFIX)                         \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_FIND_STR(CHAR_TYPE, SUFFIX)                         \
   TSTRING_FIND_STR_PROTOTYPE(CHAR_TYPE, SUFFIX) {                              \
     if (!str || !needle || !index)                                             \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
@@ -268,7 +268,7 @@
     return STATUS_CONST(NOT_FOUND);                                               \
   }
 
-#define TSTRING_IMPLEMENT_DATA(CHAR_TYPE, SUFFIX)                             \
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_DATA(CHAR_TYPE, SUFFIX)                             \
   TSTRING_DATA_PROTOTYPE(CHAR_TYPE, SUFFIX) {                                 \
     if (!str || !outData)                                                     \
       return STATUS_CONST(INVALID_ARGUMENT);                                  \
@@ -276,30 +276,30 @@
     return STATUS_CONST(SUCCESS);                                             \
   }
 
-#define TSTRING_IMPLEMENT(CHAR_TYPE, SUFFIX)                                  \
-  TSTRING_IMPLEMENT_STRLEN(CHAR_TYPE, SUFFIX)                                 \
-  TSTRING_IMPLEMENT_ENSURE_CAPACITY(CHAR_TYPE, SUFFIX)                        \
-  TSTRING_IMPLEMENT_INIT(CHAR_TYPE, SUFFIX)                                   \
-  TSTRING_IMPLEMENT_DESTROY(CHAR_TYPE, SUFFIX)                                \
-  TSTRING_IMPLEMENT_FROM_CSTR(CHAR_TYPE, SUFFIX)                              \
-  TSTRING_IMPLEMENT_CSTR(CHAR_TYPE, SUFFIX)                                   \
-  TSTRING_IMPLEMENT_LENGTH(CHAR_TYPE, SUFFIX)                                 \
-  TSTRING_IMPLEMENT_EMPTY(CHAR_TYPE, SUFFIX)                                  \
-  TSTRING_IMPLEMENT_CLEAR(CHAR_TYPE, SUFFIX)                                  \
-  TSTRING_IMPLEMENT_RESERVE(CHAR_TYPE, SUFFIX)                                \
-  TSTRING_IMPLEMENT_PUSH_BACK(CHAR_TYPE, SUFFIX)                              \
-  TSTRING_IMPLEMENT_POP_BACK(CHAR_TYPE, SUFFIX)                               \
-  TSTRING_IMPLEMENT_CAPACITY(SUFFIX)                                          \
-  TSTRING_IMPLEMENT_INSERT_CHAR(CHAR_TYPE, SUFFIX)                            \
-  TSTRING_IMPLEMENT_AT(CHAR_TYPE, SUFFIX)                                     \
-  TSTRING_IMPLEMENT_FRONT(CHAR_TYPE, SUFFIX)                                  \
-  TSTRING_IMPLEMENT_BACK(CHAR_TYPE, SUFFIX)                                   \
-  TSTRING_IMPLEMENT_APPEND(CHAR_TYPE, SUFFIX)                                 \
-  TSTRING_IMPLEMENT_APPEND_STR(CHAR_TYPE, SUFFIX)                             \
-  TSTRING_IMPLEMENT_INSERT(CHAR_TYPE, SUFFIX)                                 \
-  TSTRING_IMPLEMENT_ERASE(CHAR_TYPE, SUFFIX)                                  \
-  TSTRING_IMPLEMENT_SUBSTR(CHAR_TYPE, SUFFIX)                                 \
-  TSTRING_IMPLEMENT_COMPARE(CHAR_TYPE, SUFFIX)                                \
-  TSTRING_IMPLEMENT_FIND(CHAR_TYPE, SUFFIX)                                   \
-  TSTRING_IMPLEMENT_FIND_STR(CHAR_TYPE, SUFFIX)                               \
-  TSTRING_IMPLEMENT_DATA(CHAR_TYPE, SUFFIX)
+#define COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT(CHAR_TYPE, SUFFIX)                                  \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_STRLEN(CHAR_TYPE, SUFFIX)                                 \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_ENSURE_CAPACITY(CHAR_TYPE, SUFFIX)                        \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_INIT(CHAR_TYPE, SUFFIX)                                   \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_DESTROY(CHAR_TYPE, SUFFIX)                                \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_FROM_CSTR(CHAR_TYPE, SUFFIX)                              \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_CSTR(CHAR_TYPE, SUFFIX)                                   \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_LENGTH(CHAR_TYPE, SUFFIX)                                 \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_EMPTY(CHAR_TYPE, SUFFIX)                                  \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_CLEAR(CHAR_TYPE, SUFFIX)                                  \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_RESERVE(CHAR_TYPE, SUFFIX)                                \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_PUSH_BACK(CHAR_TYPE, SUFFIX)                              \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_POP_BACK(CHAR_TYPE, SUFFIX)                               \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_CAPACITY(SUFFIX)                                          \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_INSERT_CHAR(CHAR_TYPE, SUFFIX)                            \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_AT(CHAR_TYPE, SUFFIX)                                     \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_FRONT(CHAR_TYPE, SUFFIX)                                  \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_BACK(CHAR_TYPE, SUFFIX)                                   \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_APPEND(CHAR_TYPE, SUFFIX)                                 \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_APPEND_STR(CHAR_TYPE, SUFFIX)                             \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_INSERT(CHAR_TYPE, SUFFIX)                                 \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_ERASE(CHAR_TYPE, SUFFIX)                                  \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_SUBSTR(CHAR_TYPE, SUFFIX)                                 \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_COMPARE(CHAR_TYPE, SUFFIX)                                \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_FIND(CHAR_TYPE, SUFFIX)                                   \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_FIND_STR(CHAR_TYPE, SUFFIX)                               \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT_DATA(CHAR_TYPE, SUFFIX)
