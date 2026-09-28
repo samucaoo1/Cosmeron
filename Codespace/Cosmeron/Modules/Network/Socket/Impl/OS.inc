@@ -84,7 +84,7 @@ static inline bool SOCKET_FUNC(_DescriptorSetContains)(
 #endif
 }
 
-static inline int SOCKET_FUNC(_NativeFamily)(NETWORK_ADDRESS_TYPE(Type) type) {
+static inline int SOCKET_FUNC(_NativeFamily)(NETWORK_ADDRESS_TYPE(TType) type) {
   return type == NETWORK_ADDRESS_CONST(IPV6) ? AF_INET6 : AF_INET;
 }
 
@@ -130,7 +130,7 @@ static inline bool SOCKET_FUNC(_EndpointFromNative)(
   return false;
 }
 
-static inline NETWORK_TYPE(Error) SOCKET_FUNC(_MapNativeError)(int error) {
+static inline NETWORK_TYPE(TError) SOCKET_FUNC(_MapNativeError)(int error) {
 #if OS_WINDOWS
   switch (error) {
   case WSAEWOULDBLOCK:

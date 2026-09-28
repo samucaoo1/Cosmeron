@@ -1,7 +1,7 @@
 #pragma once
 
 SOCKET_SET_BLOCKING_PROTOTYPE {
-  NETWORK_TYPE(Error) domainError;
+  NETWORK_TYPE(TError) domainError;
   if (socket == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -21,9 +21,9 @@ SOCKET_SET_BLOCKING_PROTOTYPE {
 }
 
 static inline OPSTATUS SOCKET_FUNC(_SetBooleanOption)(
-    SOCKET_TYPE(TSocket) *socket, int level, int option, bool enabled, NETWORK_TYPE(Error) *error) {
+    SOCKET_TYPE(TSocket) *socket, int level, int option, bool enabled, NETWORK_TYPE(TError) *error) {
   int value = enabled ? 1 : 0;
-  NETWORK_TYPE(Error) domainError;
+  NETWORK_TYPE(TError) domainError;
   if (socket == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -54,7 +54,7 @@ SOCKET_SET_NO_DELAY_PROTOTYPE {
 }
 
 SOCKET_SHUTDOWN_PROTOTYPE {
-  NETWORK_TYPE(Error) domainError;
+  NETWORK_TYPE(TError) domainError;
   if (socket == NULL) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);

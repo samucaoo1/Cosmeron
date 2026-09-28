@@ -10,7 +10,7 @@ static inline size_t SOCKET_FUNC(_NativeIOSize)(size_t size) {
 
 SOCKET_SEND_PROTOTYPE {
   size_t amount;
-  NETWORK_TYPE(Error) domainError;
+  NETWORK_TYPE(TError) domainError;
   if (socket == NULL || (size != 0U && data == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -37,7 +37,7 @@ SOCKET_SEND_PROTOTYPE {
 
 SOCKET_RECEIVE_PROTOTYPE {
   size_t amount;
-  NETWORK_TYPE(Error) domainError;
+  NETWORK_TYPE(TError) domainError;
   if (socket == NULL || (capacity != 0U && data == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -72,7 +72,7 @@ SOCKET_SEND_TO_PROTOTYPE {
   struct sockaddr_storage native;
   SOCKET_TYPE(Len) length;
   size_t amount;
-  NETWORK_TYPE(Error) domainError;
+  NETWORK_TYPE(TError) domainError;
   if (socket == NULL || endpoint == NULL || (size != 0U && data == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -104,7 +104,7 @@ SOCKET_RECEIVE_FROM_PROTOTYPE {
   struct sockaddr_storage native;
   SOCKET_TYPE(Len) length = (SOCKET_TYPE(Len))sizeof(native);
   size_t amount;
-  NETWORK_TYPE(Error) domainError;
+  NETWORK_TYPE(TError) domainError;
   if (socket == NULL || (capacity != 0U && data == NULL)) {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
