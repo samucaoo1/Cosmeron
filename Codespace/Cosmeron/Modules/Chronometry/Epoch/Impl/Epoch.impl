@@ -29,7 +29,9 @@ CHRONOMETRY_EPOCH_DATETIME_TO_UNIX_PROTOTYPE {
   int64_t jdn, days, seconds;
   if (instant == NULL || !DATETIME_FUNC(IsValid)(&gregorian, value))
     return STATUS_CONST(INVALID_ARGUMENT);
-  CALENDAR_FUNC(DateToOrdinal)(&gregorian, value.date, &jdn);
+  if (CALENDAR_FUNC(DateToOrdinal)(&gregorian, value.date, &jdn) !=
+      STATUS_CONST(SUCCESS))
+    return STATUS_CONST(OUT_OF_RANGE);
   days = jdn - COSMERON_MACRO_INTERNAL_CHRONOMETRY_UNIX_EPOCH_JDN;
   seconds = days * CHRONOMETRY_SECONDS_PER_DAY + value.time.hour * CHRONOMETRY_SECONDS_PER_HOUR +
             value.time.minute * CHRONOMETRY_SECONDS_PER_MINUTE + value.time.second;
