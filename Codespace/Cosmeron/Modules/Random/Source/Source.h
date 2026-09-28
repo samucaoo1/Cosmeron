@@ -17,21 +17,43 @@ typedef struct RANDOM_SOURCE_TYPE(Value) {
   bool ownsState;
 } RANDOM_SOURCE_TYPE(Value);
 
-typedef RANDOM_SOURCE_TYPE(Value) RANDOM_SOURCE_TYPE(Value);
 
-static inline OPSTATUS RANDOM_SOURCE_FUNC(Init)(
-    RANDOM_SOURCE_TYPE(Value) *source, const RANDOM_ENGINE_TYPE(FunctionTable) *engine,
-    uint64_t seed, RANDOM_MIXER_TYPE(Function) mixer);
-static inline OPSTATUS RANDOM_SOURCE_FUNC(InitWithState)(
-    RANDOM_SOURCE_TYPE(Value) *source, const RANDOM_ENGINE_TYPE(FunctionTable) *engine,
-    void *state, size_t stateSize, uint64_t seed, RANDOM_MIXER_TYPE(Function) mixer);
-static inline OPSTATUS RANDOM_SOURCE_FUNC(InitSystem)(
-    RANDOM_SOURCE_TYPE(Value) *source, const RANDOM_ENGINE_TYPE(FunctionTable) *engine,
-    RANDOM_MIXER_TYPE(Function) mixer);
-static inline OPSTATUS RANDOM_SOURCE_FUNC(Reseed)(RANDOM_SOURCE_TYPE(Value) *source,
-                                                  uint64_t seed);
-static inline uint64_t RANDOM_SOURCE_FUNC(NextU64)(RANDOM_SOURCE_TYPE(Value) *source);
-static inline void RANDOM_SOURCE_FUNC(Destroy)(RANDOM_SOURCE_TYPE(Value) *source);
+#define RANDOM_SOURCE_INIT_PROTOTYPE                                        \
+  static inline OPSTATUS RANDOM_SOURCE_FUNC(Init)(                            \
+      RANDOM_SOURCE_TYPE(Value) *source,                                      \
+      const RANDOM_ENGINE_TYPE(FunctionTable) *engine, uint64_t seed,         \
+      RANDOM_MIXER_TYPE(Function) mixer)
+
+#define RANDOM_SOURCE_INIT_WITH_STATE_PROTOTYPE                             \
+  static inline OPSTATUS RANDOM_SOURCE_FUNC(InitWithState)(                  \
+      RANDOM_SOURCE_TYPE(Value) *source,                                      \
+      const RANDOM_ENGINE_TYPE(FunctionTable) *engine, void *state,          \
+      size_t stateSize, uint64_t seed, RANDOM_MIXER_TYPE(Function) mixer)
+
+#define RANDOM_SOURCE_INIT_SYSTEM_PROTOTYPE                                 \
+  static inline OPSTATUS RANDOM_SOURCE_FUNC(InitSystem)(                     \
+      RANDOM_SOURCE_TYPE(Value) *source,                                      \
+      const RANDOM_ENGINE_TYPE(FunctionTable) *engine,                       \
+      RANDOM_MIXER_TYPE(Function) mixer)
+
+#define RANDOM_SOURCE_RESEED_PROTOTYPE                                      \
+  static inline OPSTATUS RANDOM_SOURCE_FUNC(Reseed)(                         \
+      RANDOM_SOURCE_TYPE(Value) *source, uint64_t seed)
+
+#define RANDOM_SOURCE_NEXT_U64_PROTOTYPE                                    \
+  static inline uint64_t RANDOM_SOURCE_FUNC(NextU64)(                        \
+      RANDOM_SOURCE_TYPE(Value) *source)
+
+#define RANDOM_SOURCE_DESTROY_PROTOTYPE                                     \
+  static inline void RANDOM_SOURCE_FUNC(Destroy)(                            \
+      RANDOM_SOURCE_TYPE(Value) *source)
+
+RANDOM_SOURCE_INIT_PROTOTYPE;
+RANDOM_SOURCE_INIT_WITH_STATE_PROTOTYPE;
+RANDOM_SOURCE_INIT_SYSTEM_PROTOTYPE;
+RANDOM_SOURCE_RESEED_PROTOTYPE;
+RANDOM_SOURCE_NEXT_U64_PROTOTYPE;
+RANDOM_SOURCE_DESTROY_PROTOTYPE;
 
 #include "Impl/Source.impl"
 /* EOF */

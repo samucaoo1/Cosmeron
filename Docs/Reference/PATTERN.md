@@ -54,7 +54,7 @@ OPSTATUS
 Internal preprocessor macros do not use namespace guards:
 
 ```c
-CONGRO_MACRO_INTERNAL_*
+COSMERON_MACRO_INTERNAL_*
 ```
 
 ## 2. Types
