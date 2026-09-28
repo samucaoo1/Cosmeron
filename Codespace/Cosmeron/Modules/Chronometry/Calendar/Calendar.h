@@ -26,22 +26,22 @@
 #define CALENDAR_MONTH_LENGTH_CONST(NAME)                                      \
   CALENDAR_CONST(PP_OP_CAT2(DAYS_IN_, NAME))
 
-typedef enum CALENDAR_FUNC(Month) {
+typedef enum CALENDAR_TYPE(Month) {
 #define X(NAME, NUMBER, DAYS) CALENDAR_CONST(NAME) = NUMBER,
   CHRONOMETRY_CALENDAR_MONTH_TABLE(X)
 #undef X
-} CALENDAR_FUNC(Month);
+} CALENDAR_TYPE(Month);
 
-typedef enum CALENDAR_FUNC(MonthLength) {
+typedef enum CALENDAR_TYPE(MonthLength) {
 #define X(NAME, NUMBER, DAYS) CALENDAR_MONTH_LENGTH_CONST(NAME) = DAYS,
   CHRONOMETRY_CALENDAR_MONTH_TABLE(X)
 #undef X
-} CALENDAR_FUNC(MonthLength);
+} CALENDAR_TYPE(MonthLength);
 
-typedef enum CALENDAR_FUNC(System) {
+typedef enum CALENDAR_TYPE(System) {
   CALENDAR_CONST(GREGORIAN),
   CALENDAR_CONST(JULIAN)
-} CALENDAR_FUNC(System);
+} CALENDAR_TYPE(System);
 
 typedef struct CHRONOMETRY_TYPE(Date) {
   int32_t year : 23;
@@ -49,38 +49,38 @@ typedef struct CHRONOMETRY_TYPE(Date) {
   uint8_t day : 5;
 } CHRONOMETRY_TYPE(Date);
 
-typedef struct CALENDAR_FUNC(Reform) {
-  CALENDAR_FUNC(System) before;
-  CALENDAR_FUNC(System) after;
+typedef struct CALENDAR_TYPE(Reform) {
+  CALENDAR_TYPE(System) before;
+  CALENDAR_TYPE(System) after;
   CHRONOMETRY_TYPE(Date) lastBefore;
   CHRONOMETRY_TYPE(Date) firstAfter;
   uint8_t suppressedDays;
-} CALENDAR_FUNC(Reform);
+} CALENDAR_TYPE(Reform);
 
-typedef enum CALENDAR_FUNC(ReformId) {
+typedef enum CALENDAR_TYPE(ReformId) {
 #define X(NAME, ...) CALENDAR_CONST(NAME),
   CHRONOMETRY_CALENDAR_REFORM_TABLE(X)
 #undef X
-} CALENDAR_FUNC(ReformId);
+} CALENDAR_TYPE(ReformId);
 
-typedef enum CALENDAR_FUNC(PolicyKind) {
+typedef enum CALENDAR_TYPE(PolicyKind) {
   CALENDAR_CONST(PURE_SYSTEM),
   CALENDAR_CONST(HISTORICAL_REFORM)
-} CALENDAR_FUNC(PolicyKind);
+} CALENDAR_TYPE(PolicyKind);
 
-typedef struct CALENDAR_FUNC(Policy) {
-  CALENDAR_FUNC(PolicyKind) kind;
-  CALENDAR_FUNC(System) system;
-  CALENDAR_FUNC(Reform) reform;
-} CALENDAR_FUNC(Policy);
+typedef struct CALENDAR_TYPE(Policy) {
+  CALENDAR_TYPE(PolicyKind) kind;
+  CALENDAR_TYPE(System) system;
+  CALENDAR_TYPE(Reform) reform;
+} CALENDAR_TYPE(Policy);
 
 #define CHRONOMETRY_CALENDAR_SYSTEM_POLICY_PROTOTYPE                           \
-  static inline CALENDAR_FUNC(Policy) CALENDAR_FUNC(SystemPolicy)(             \
-      CALENDAR_FUNC(System) system)
+  static inline CALENDAR_TYPE(Policy) CALENDAR_FUNC(SystemPolicy)(             \
+      CALENDAR_TYPE(System) system)
 
 #define CHRONOMETRY_CALENDAR_REFORM_POLICY_PROTOTYPE                           \
   static inline OPSTATUS CALENDAR_FUNC(ReformPolicy)(                          \
-      CALENDAR_FUNC(ReformId) id, CALENDAR_FUNC(Policy) *outPolicy)
+      CALENDAR_TYPE(ReformId) id, CALENDAR_TYPE(Policy) *outPolicy)
 
 #define CHRONOMETRY_CALENDAR_DATE_COMPARE_PROTOTYPE                            \
   static inline CMPOUT CALENDAR_FUNC(DateCompare)(                             \
@@ -88,34 +88,34 @@ typedef struct CALENDAR_FUNC(Policy) {
 
 #define CHRONOMETRY_CALENDAR_IS_LEAP_YEAR_PROTOTYPE                            \
   static inline bool CALENDAR_FUNC(IsLeapYear)(                                \
-      CALENDAR_FUNC(System) system, int32_t year)
+      CALENDAR_TYPE(System) system, int32_t year)
 
 #define CHRONOMETRY_CALENDAR_DAYS_IN_MONTH_PROTOTYPE                           \
   static inline uint8_t CALENDAR_FUNC(DaysInMonth)(                            \
-      CALENDAR_FUNC(System) system, int32_t year, uint8_t month)
+      CALENDAR_TYPE(System) system, int32_t year, uint8_t month)
 
 #define CHRONOMETRY_CALENDAR_DATE_IS_VALID_PROTOTYPE                           \
   static inline bool CALENDAR_FUNC(DateIsValid)(                               \
-      const CALENDAR_FUNC(Policy) *policy, CHRONOMETRY_TYPE(Date) date)
+      const CALENDAR_TYPE(Policy) *policy, CHRONOMETRY_TYPE(Date) date)
 
 #define CHRONOMETRY_CALENDAR_DATE_TO_DAY_OF_YEAR_PROTOTYPE                     \
   static inline OPSTATUS CALENDAR_FUNC(DateToDayOfYear)(                       \
-      const CALENDAR_FUNC(Policy) *policy, CHRONOMETRY_TYPE(Date) date,        \
+      const CALENDAR_TYPE(Policy) *policy, CHRONOMETRY_TYPE(Date) date,        \
       uint16_t *outDayOfYear)
 
 #define CHRONOMETRY_CALENDAR_DATE_TO_ORDINAL_PROTOTYPE                         \
   static inline OPSTATUS CALENDAR_FUNC(DateToOrdinal)(                         \
-      const CALENDAR_FUNC(Policy) *policy, CHRONOMETRY_TYPE(Date) date,        \
+      const CALENDAR_TYPE(Policy) *policy, CHRONOMETRY_TYPE(Date) date,        \
       int64_t *outOrdinal)
 
 #define CHRONOMETRY_CALENDAR_DATE_FROM_ORDINAL_PROTOTYPE                       \
   static inline OPSTATUS CALENDAR_FUNC(DateFromOrdinal)(                       \
-      const CALENDAR_FUNC(Policy) *policy, int64_t ordinal,                    \
+      const CALENDAR_TYPE(Policy) *policy, int64_t ordinal,                    \
       CHRONOMETRY_TYPE(Date) *outDate)
 
 #define CHRONOMETRY_CALENDAR_DATE_DIFFERENCE_PROTOTYPE                         \
   static inline OPSTATUS CALENDAR_FUNC(DateDifference)(                        \
-      const CALENDAR_FUNC(Policy) *policy, CHRONOMETRY_TYPE(Date) left,        \
+      const CALENDAR_TYPE(Policy) *policy, CHRONOMETRY_TYPE(Date) left,        \
       CHRONOMETRY_TYPE(Date) right, int64_t *outDays)
 
 #include "Impl/Calendar.impl"
