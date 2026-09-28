@@ -27,8 +27,10 @@
     TEST_ASSERT(FLAT_VECTOR_FUNC(SUFFIX, Back)(&v, &access) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(*access == (TYPE)(C));                                         \
     TEST_ASSERT(FLAT_VECTOR_FUNC(SUFFIX, At)(&v, 1U, &access) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(*access == (TYPE)(B));           \
-    TEST_ASSERT(FLAT_VECTOR_FUNC(SUFFIX, Data)(&v) != NULL);                   \
+    TEST_ASSERT(*access == (TYPE)(B));                                         \
+    access = NULL;                                                            \
+    TEST_ASSERT(FLAT_VECTOR_FUNC(SUFFIX, Data)(&v, &access) == STATUS_CONST(SUCCESS)); \
+    TEST_ASSERT(access != NULL);                   \
     TEST_ASSERT(FLAT_VECTOR_FUNC(SUFFIX, Erase)(&v, 1U, 1U) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(FLAT_VECTOR_FUNC(SUFFIX, PopFront)(&v, &out) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(out == (TYPE)(A));                                             \
@@ -93,6 +95,7 @@
     TYPE needle[] = {(TYPE)'b', (TYPE)'c', 0};                                 \
     TYPE out = (TYPE)0;                                                        \
     TYPE *access = NULL;                                                       \
+    const TYPE *cstr = NULL;                                                   \
     size_t index = 0U;                                                         \
     CMPOUT cmp;                                                     \
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, Init)(&s) == STATUS_CONST(SUCCESS));     \
@@ -100,7 +103,8 @@
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, Init)(&slice) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, Empty)(&s));                              \
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, FromCStr)(&s, base) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, CStr)(&s) != NULL);                       \
+    TEST_ASSERT(TSTRING_FUNC(SUFFIX, CStr)(&s, &cstr) == STATUS_CONST(SUCCESS)); \
+    TEST_ASSERT(cstr != NULL);                       \
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, Length)(&s) == 2U);                       \
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, Reserve)(&s, 16U) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, Capacity)(&s) >= 16U);                    \
@@ -123,7 +127,9 @@
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, Compare)(&s, &other, &cmp) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, Find)(&s, (TYPE)'b', 0U, &index) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, FindStr)(&s, needle, 0U, &index) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, Data)(&s) != NULL);                       \
+    access = NULL;                                                            \
+    TEST_ASSERT(TSTRING_FUNC(SUFFIX, Data)(&s, &access) == STATUS_CONST(SUCCESS)); \
+    TEST_ASSERT(access != NULL);                       \
     TSTRING_FUNC(SUFFIX, Clear)(&s);                                           \
     TEST_ASSERT(TSTRING_FUNC(SUFFIX, Empty)(&s));                              \
     TSTRING_FUNC(SUFFIX, Destroy)(&slice);                                     \
