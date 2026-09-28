@@ -327,15 +327,24 @@ If a new macro does not clearly belong to this grammar, reconsider whether it sh
 Use X-macros when one semantic table must generate multiple representations.
 
 ```c
-#define STATUS_TABLE(X) \
-    X(SUCCESS, "Success") \
-    X(INVALID_ARGUMENT, "Invalid argument")
+#define COMPARISON_TABLE(X)\
+  X(COMPARISON_CONST(LESS),-1, "Less than")\
+  X(COMPARISON_CONST(SAME), 0, "Same")\
+  X(COMPARISON_CONST(GREATER), 1, "Greater than")
 ```
+and
 
+```c
+typedef enum COMPARISON_TYPE(Result) {
+"#define X(NAME, VALUE, DESC) NAME = VALUE,
+COMPARISON_TABLE(X)
+#undef X"
+} COMPARISON_TYPE(Result);
+```
 Rules:
 
 - one table is the source of truth;
-- do not duplicate the same list in enums, strings, mappings, or switches;
+- do not "duplicate" the same list in enums, strings, mappings, or switches. If the table exist, use. 
 - table names and helper macros use `SNAKE_CASE`;
 - generated public constants still pass through the constant namespace;
 - X-macros are generation tools, not public runtime API.

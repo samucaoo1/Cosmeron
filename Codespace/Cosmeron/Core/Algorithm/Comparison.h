@@ -18,20 +18,20 @@
 #define COMPARISON_FUNC(NAME) COMPARISON_NS(NAME)
 #define COMPARISON_CONST(NAME) COMPARISON_CNS(NAME)
 
+#define COMPARISON_TABLE(X)                                                   \
+  X(COMPARISON_CONST(LESS),-1, "Less than")                                                   \
+  X(COMPARISON_CONST(SAME), 0, "Same")                                                   \
+  X(COMPARISON_CONST(GREATER), 1, "Greater than")
+
 typedef enum COMPARISON_TYPE(Result) {
-  COMPARISON_CONST(LESS) = -1,
-  COMPARISON_CONST(SAME) = 0,
-  COMPARISON_CONST(GREATER) = 1
+  #define x(NAME, VALUE, DESC) NAME = VALUE,
+  COMPARISON_TABLE(x)
+  #undef x
 } COMPARISON_TYPE(Result);
 
 typedef COMPARISON_TYPE(Result) CMPOUT;
 
 typedef CMPOUT (*COMPARISON_TYPE(Comparator))(const void *left, const void *right);
-
-#define COMPARISON_TABLE(X)                                                    \
-  X(COMPARISON_CONST(LESS))                                                   \
-  X(COMPARISON_CONST(SAME))                                                   \
-  X(COMPARISON_CONST(GREATER))
 
 #define COMPARISON_TYPED_PROTOTYPE(TYPE, SUFFIX)                               \
   static inline CMPOUT COMPARISON_FUNC(SUFFIX)(TYPE left, TYPE right)
