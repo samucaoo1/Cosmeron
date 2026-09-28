@@ -37,23 +37,23 @@
                               TBIGINT_FUNC(SUFFIX, Compare), TBIGINT_FUNC(SUFFIX, Sub), \
                               TBIGINT_FUNC(SUFFIX, ShiftLeft))                    \
   TBIGINT_DIV_PROTOTYPE(SUFFIX) {         \
-    if (!dividend || !divisor)                                                 \
+    if (!dividendBigint || !divisorBigint)                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     TBIGINT_TYPE(SUFFIX) quotient;                                                \
-    OPSTATUS status = TBIGINT_FUNC(SUFFIX, DivMod)(dividend, divisor, &quotient, NULL); \
+    OPSTATUS status = TBIGINT_FUNC(SUFFIX, DivMod)(dividendBigint, divisorBigint, &quotient, NULL); \
     if (status == STATUS_CONST(SUCCESS))                                       \
-      for (size_t i = 0; i < sizeof(dividend->limb) / sizeof(dividend->limb[0]); ++i) \
-      dividend->limb[i] = quotient.limb[i];                                                    \
+      for (size_t i = 0; i < sizeof(dividendBigint->limb) / sizeof(dividendBigint->limb[0]); ++i) \
+      dividendBigint->limb[i] = quotient.limb[i];                                                    \
     return status;                                                             \
   }                                                                            \
   TBIGINT_MOD_PROTOTYPE(SUFFIX) {         \
-    if (!dividend || !divisor)                                                 \
+    if (!dividendBigint || !divisorBigint)                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     TBIGINT_TYPE(SUFFIX) remainder;                                               \
-    OPSTATUS status = TBIGINT_FUNC(SUFFIX, DivMod)(dividend, divisor, NULL, &remainder); \
+    OPSTATUS status = TBIGINT_FUNC(SUFFIX, DivMod)(dividendBigint, divisorBigint, NULL, &remainder); \
     if (status == STATUS_CONST(SUCCESS))                                       \
-      for (size_t i = 0; i < sizeof(dividend->limb) / sizeof(dividend->limb[0]); ++i) \
-      dividend->limb[i] = remainder.limb[i];                                                   \
+      for (size_t i = 0; i < sizeof(dividendBigint->limb) / sizeof(dividendBigint->limb[0]); ++i) \
+      dividendBigint->limb[i] = remainder.limb[i];                                                   \
     return status;                                                             \
   }                                                                            \
   DATA_TYPE_IMPLEMENT_INCREMENT(TYPE, TBIGINT_FUNC(SUFFIX, Increment),         \
