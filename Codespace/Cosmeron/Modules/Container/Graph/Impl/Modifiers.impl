@@ -13,7 +13,7 @@
         return STATUS_CONST(ARITHMETIC_OVERFLOW);                             \
       newCapacity = graph->vertexCapacity                                     \
                         ? graph->vertexCapacity * 2u                           \
-                        : GRAPH_INITIAL_VERTEX_CAPACITY;                       \
+                        : COSMERON_MACRO_INTERNAL_GRAPH_INITIAL_VERTEX_CAPACITY;                       \
       storage = graph->vertices;                                               \
       status = ALLOC_FUNC(ReallocArray)(                                      \
           &storage, newCapacity,                                               \
@@ -50,7 +50,7 @@
         return STATUS_CONST(ARITHMETIC_OVERFLOW);                             \
       newCapacity = vertex->edgeCapacity                                      \
                         ? vertex->edgeCapacity * 2u                            \
-                        : GRAPH_INITIAL_EDGE_CAPACITY;                         \
+                        : COSMERON_MACRO_INTERNAL_GRAPH_INITIAL_EDGE_CAPACITY;                         \
       storage = vertex->edges;                                                 \
       status = ALLOC_FUNC(ReallocArray)(                                      \
           &storage, newCapacity,                                               \
