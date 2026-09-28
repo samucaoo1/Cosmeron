@@ -11,16 +11,16 @@
     hash->size = 0;                                                             \
     hash->deleted = 0;                                                          \
     status = ALLOC_FUNC(AllocArray)(                                            \
-        &storage, HASH_INITIAL_CAPACITY,                                        \
+        &storage, COSMERON_MACRO_INTERNAL_HASH_INITIAL_CAPACITY,                                        \
         sizeof(THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX)));                  \
     if (status != STATUS_CONST(SUCCESS))                                        \
       return status;                                                            \
     hash->buckets =                                                             \
         (THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *)storage;                 \
     memset(hash->buckets, 0,                                                    \
-           HASH_INITIAL_CAPACITY *                                              \
+           COSMERON_MACRO_INTERNAL_HASH_INITIAL_CAPACITY *                                              \
                sizeof(THASH_BUCKET_TYPE(KEY_SUFFIX, VALUE_SUFFIX)));           \
-    hash->capacity = HASH_INITIAL_CAPACITY;                                     \
+    hash->capacity = COSMERON_MACRO_INTERNAL_HASH_INITIAL_CAPACITY;                                     \
     return STATUS_CONST(SUCCESS);                                               \
   }
 
