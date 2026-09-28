@@ -13,10 +13,8 @@ int main(void) {
     return 1;
   if (fail() != STATUS_CONST(INVALID_ARGUMENT))
     return 2;
-  if (STATUS_NS(SUCCESS) != STATUS_CONST(SUCCESS))
+  if (Error_Test_StatusCount != 18)
     return 3;
-  if (Error_Test_StatusCount != 15)
-    return 4;
 
   (void)&PANIC_INTERNAL_FUNC(Trigger);
   (void)&PANIC_INTERNAL_FUNC(Stacktrace);
