@@ -3,7 +3,7 @@
 #if CONTAINER_FUNCTION_TABLE_ENABLED
 
 #define LINKED_DEQUE_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                                  \
-  typedef struct LINKED_DEQUE_FUNC(SUFFIX, FunctionTable) {                       \
+  typedef struct LINKED_DEQUE_FUNCTION_TABLE_TYPE(SUFFIX) {                       \
     /* Lifecycle */                                                            \
     OPSTATUS (*init)(LINKED_DEQUE_TYPE(SUFFIX) *);                                   \
     void (*destroy)(LINKED_DEQUE_TYPE(SUFFIX) *);                                    \
@@ -19,10 +19,10 @@
     /* Observers */                                                            \
     bool (*empty)(const LINKED_DEQUE_TYPE(SUFFIX) *);                                      \
     size_t (*size)(const LINKED_DEQUE_TYPE(SUFFIX) *);                                     \
-  } LINKED_DEQUE_FUNC(SUFFIX, FunctionTable);
+  } LINKED_DEQUE_FUNCTION_TABLE_TYPE(SUFFIX);
 
 #define LINKED_DEQUE_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)                         \
-  static const LINKED_DEQUE_FUNC(SUFFIX, FunctionTable)                                  \
+  static const LINKED_DEQUE_FUNCTION_TABLE_TYPE(SUFFIX)                                  \
       LINKED_DEQUE_FUNC(SUFFIX, functions) = {                                       \
           /* Lifecycle */                                                       \
           .init = LINKED_DEQUE_FUNC(SUFFIX, Init),                           \
