@@ -123,7 +123,7 @@
   CONTAINER_API_BIND(NAME, LINKED_DEQUE_FUNC(TYPE, functions));                              \
   LINKED_DEQUE_FUNC(TYPE, Init)(&NAME);
 /* Compatibility alias: prefer LINKED_DEQUE_INSTANCE_DECLARE. */
-#define TLINKED_NS(Deque)(TYPE, NAME) LINKED_DEQUE_INSTANCE_DECLARE(TYPE, NAME)
+#define TLinked_Deque(TYPE, NAME) LINKED_DEQUE_INSTANCE_DECLARE(TYPE, NAME)
 
 /* ============================================================
  * Instanciações
