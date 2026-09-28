@@ -74,14 +74,14 @@ typedef struct NETWORK_DATAGRAM_TYPE(TDatagram) {
       const NETWORK_DATAGRAM_TYPE(TDatagram) *datagram)
 
 #define NETWORK_DATAGRAM_LOCAL_ENDPOINT_PROTOTYPE                           \
-  static inline const NETWORK_ADDRESS_TYPE(TEndpoint) *                      \
-  NETWORK_DATAGRAM_FUNC(LocalEndpoint)(                                       \
-      const NETWORK_DATAGRAM_TYPE(TDatagram) *datagram)
+  static inline OPSTATUS NETWORK_DATAGRAM_FUNC(LocalEndpoint)(                \
+      const NETWORK_DATAGRAM_TYPE(TDatagram) *datagram,                      \
+      NETWORK_ADDRESS_TYPE(TEndpoint) *outEndpoint)
 
 #define NETWORK_DATAGRAM_PEER_ENDPOINT_PROTOTYPE                            \
-  static inline const NETWORK_ADDRESS_TYPE(TEndpoint) *                      \
-  NETWORK_DATAGRAM_FUNC(PeerEndpoint)(                                        \
-      const NETWORK_DATAGRAM_TYPE(TDatagram) *datagram)
+  static inline OPSTATUS NETWORK_DATAGRAM_FUNC(PeerEndpoint)(                 \
+      const NETWORK_DATAGRAM_TYPE(TDatagram) *datagram,                      \
+      NETWORK_ADDRESS_TYPE(TEndpoint) *outEndpoint)
 
 NETWORK_DATAGRAM_INIT_PROTOTYPE;
 NETWORK_DATAGRAM_OPEN_PROTOTYPE;
@@ -96,16 +96,27 @@ NETWORK_DATAGRAM_CLEAR_PEER_PROTOTYPE;
 NETWORK_DATAGRAM_CLOSE_PROTOTYPE;
 
 NETWORK_DATAGRAM_HAS_PEER_PROTOTYPE {
-  return datagram->hasPeer;
+  return datagram != NULL && datagram->hasPeer;
 }
 
-
 NETWORK_DATAGRAM_LOCAL_ENDPOINT_PROTOTYPE {
-  return &datagram->localEndpoint;
+  if (datagram == NULL || outEndpoint == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (datagram->socket.handle == TSOCKET_NATIVE_INVALID)
+    return STATUS_CONST(NOT_AVAILABLE);
+
+  *outEndpoint = datagram->localEndpoint;
+  return STATUS_CONST(SUCCESS);
 }
 
 NETWORK_DATAGRAM_PEER_ENDPOINT_PROTOTYPE {
-  return datagram->hasPeer ? &datagram->peerEndpoint : NULL;
+  if (datagram == NULL || outEndpoint == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (!datagram->hasPeer)
+    return STATUS_CONST(NOT_FOUND);
+
+  *outEndpoint = datagram->peerEndpoint;
+  return STATUS_CONST(SUCCESS);
 }
 
 #include "Impl/Datagram.impl"
