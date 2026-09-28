@@ -24,8 +24,8 @@ typedef struct ARENA_TYPE(TArena) {
 #define ARENA_CREATE_PROTOTYPE                                                 \
   static inline OPSTATUS ARENA_FUNC(Create)(ARENA_TYPE(TArena) *arena, size_t capacity)
 
-#define ARENA_ALLOC_PROTOTYPE                                                  \
-  static inline OPSTATUS ARENA_FUNC(Alloc)(ARENA_TYPE(TArena) *arena, void **out,           \
+#define ARENA_ALLOC_BYTES_PROTOTYPE                                                  \
+  static inline OPSTATUS ARENA_FUNC(AllocBytes)(ARENA_TYPE(TArena) *arena, void **out,           \
                                             size_t size)
 
 #define ARENA_ALLOC_ALIGNED_PROTOTYPE                                          \
@@ -53,7 +53,7 @@ typedef struct ARENA_TYPE(TArena) {
   static inline OPSTATUS ARENA_FUNC(Destroy)(ARENA_TYPE(TArena) *arena)
 
 ARENA_CREATE_PROTOTYPE;
-ARENA_ALLOC_PROTOTYPE;
+ARENA_ALLOC_BYTES_PROTOTYPE;
 ARENA_ALLOC_ALIGNED_PROTOTYPE;
 ARENA_ALLOC_ARRAY_PROTOTYPE;
 ARENA_ALLOC_ARRAY_ALIGNED_PROTOTYPE;
