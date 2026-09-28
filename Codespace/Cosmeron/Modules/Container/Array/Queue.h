@@ -8,12 +8,16 @@
 
 #define FLAT_QUEUE_TYPE(SUFFIX) GNS2(FLAT_NS(TQueue), SUFFIX)
 
-#define FLAT_QUEUE_FUNC(SUFFIX, FUNC) GNS2(GNS2(FLAT_NS(Queue), SUFFIX), FUNC)
+#define FLAT_QUEUE_NS(SUFFIX) GNS2(FLAT_NS(Queue), SUFFIX)
+#define FLAT_QUEUE_FUNC(SUFFIX, FUNC) GNS2(FLAT_QUEUE_NS(SUFFIX), FUNC)
+#define FLAT_QUEUE_STRUCT_TAG(SUFFIX) GNS2(FLAT_QUEUE_NS(SUFFIX), str)
+#define FLAT_QUEUE_FUNCTION_TABLE_TYPE(SUFFIX) \
+  GNS2(FLAT_QUEUE_NS(SUFFIX), FunctionTable)
 
 #define FLAT_QUEUE_STRUCT(TYPE, SUFFIX)                                        \
-  CONTAINER_API_FORWARD(FLAT_QUEUE_FUNC(SUFFIX, FunctionTable))                            \
-  typedef struct FLAT_QUEUE_FUNC(SUFFIX, str) {                                \
-    CONTAINER_API_FIELD(FLAT_QUEUE_FUNC(SUFFIX, FunctionTable))              \
+  CONTAINER_API_FORWARD(FLAT_QUEUE_FUNCTION_TABLE_TYPE(SUFFIX))                            \
+  typedef struct FLAT_QUEUE_STRUCT_TAG(SUFFIX) {                                \
+    CONTAINER_API_FIELD(FLAT_QUEUE_FUNCTION_TABLE_TYPE(SUFFIX))              \
     TYPE *data;                                                                \
     size_t size;                                                               \
     size_t capacity;                                                           \
