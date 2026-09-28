@@ -109,14 +109,14 @@ static int test_stack(void) {
 }
 
 static int test_string(void) {
-  static const utf8 cosmeron[] = {'C', 'o', 'n', 'g', 'r', 'o', 0};
-  static const utf8 library[] = {' ', 'L', 'i', 'b', 'r', 'a', 'r', 'y', 0};
-  static const utf8 expected[] = {
+  static const uint8_t cosmeron[] = {'C', 'o', 'n', 'g', 'r', 'o', 0};
+  static const uint8_t library[] = {' ', 'L', 'i', 'b', 'r', 'a', 'r', 'y', 0};
+  static const uint8_t expected[] = {
       'C', 'o', 'n', 'g', 'r', 'o', ' ', 'L',
       'i', 'b', 'r', 'a', 'r', 'y', '!', 0};
   TString(8, string)
   TEST_ASSERT(string.api->fromCStr(&string, cosmeron) == STATUS_CONST(SUCCESS));
-  TEST_ASSERT(string.api->pushBack(&string, (utf8)'!') == STATUS_CONST(SUCCESS));
+  TEST_ASSERT(string.api->pushBack(&string, (uint8_t)'!') == STATUS_CONST(SUCCESS));
   TEST_ASSERT(string.api->length(&string) == 7);
   TEST_ASSERT(string.api->insertStr(&string, 6, library) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(string.api->length(&string) == 15);
@@ -222,7 +222,7 @@ static int test_list(void) {
 
 
 static int test_bst_and_iterators(void) {
-  TContainer_Tree_BST_Set(int, tree)
+  TTree_BST_Set(int, tree)
   TEST_ASSERT(TreeBegin(tree) == NULL);
   TEST_ASSERT(Container_Tree_BST_Set_int_Begin(NULL) == NULL);
 
@@ -256,7 +256,7 @@ static int test_bst_and_iterators(void) {
 }
 
 static int test_avl(void) {
-  TContainer_Tree_AVL_Set(int, tree);
+  TTree_AVL_Set(int, tree);
   for (int index = 0; index < 257; ++index) {
     int value = (index * 73) % 257;
     TEST_ASSERT(TreeInsert(tree, value) == STATUS_CONST(SUCCESS));
@@ -275,7 +275,7 @@ static int test_avl(void) {
 }
 
 static int test_red_black(void) {
-  TContainer_Tree_RB_Set(int, tree);
+  TTree_RB_Set(int, tree);
   for (int index = 0; index < 257; ++index) {
     int value = (index * 73) % 257;
     TEST_ASSERT(TreeInsert(tree, value) == STATUS_CONST(SUCCESS));
@@ -295,7 +295,7 @@ static int test_red_black(void) {
 }
 
 static int test_map(void) {
-  TContainer_Tree_AVL_Map(int, int, map);
+  TTree_AVL_Map(int, int, map);
   for (int key = 0; key < 100; ++key)
     TEST_ASSERT(TreeInsert(map, key, key * 10) == STATUS_CONST(SUCCESS));
   for (int key = 0; key < 100; ++key) {
@@ -353,16 +353,16 @@ static int test_string_contracts(void) {
   TString(8, text)
   TString(8, other)
   TString(8, slice)
-  const utf8 hello[] = {'h', 'e', 'l', 'l', 'o', 0};
-  const utf8 ell[] = {'e', 'l', 'l', 0};
+  const uint8_t hello[] = {'h', 'e', 'l', 'l', 'o', 0};
+  const uint8_t ell[] = {'e', 'l', 'l', 0};
   size_t index = 99U;
-  TComparisonResult comparison;
+  CMPOUT comparison;
 
   TEST_ASSERT(Container_Flat_String_8_FromCStr(&text, hello) == STATUS_CONST(SUCCESS));
-  TEST_ASSERT(Container_Flat_String_8_Find(&text, (utf8)'l', 0U, &index) ==
+  TEST_ASSERT(Container_Flat_String_8_Find(&text, (uint8_t)'l', 0U, &index) ==
               STATUS_CONST(SUCCESS));
   TEST_ASSERT(index == 2U);
-  TEST_ASSERT(Container_Flat_String_8_Find(&text, (utf8)'x', 0U, &index) ==
+  TEST_ASSERT(Container_Flat_String_8_Find(&text, (uint8_t)'x', 0U, &index) ==
               STATUS_CONST(NOT_FOUND));
   TEST_ASSERT(Container_Flat_String_8_FindStr(&text, ell, 0U, &index) ==
               STATUS_CONST(SUCCESS));
@@ -378,19 +378,19 @@ static int test_string_contracts(void) {
   TEST_ASSERT(Container_Flat_String_8_Substr(&text, 1U, 3U, &slice) ==
               STATUS_CONST(SUCCESS));
   TEST_ASSERT(slice.size == 3U);
-  TEST_ASSERT(slice.data[0] == (utf8)'e' && slice.data[2] == (utf8)'l');
+  TEST_ASSERT(slice.data[0] == (uint8_t)'e' && slice.data[2] == (uint8_t)'l');
   TEST_ASSERT(Container_Flat_String_8_Substr(&text, 0U, 1U, &text) ==
               STATUS_CONST(INVALID_ARGUMENT));
 
   TEST_ASSERT(Container_Flat_String_8_PopBack(NULL, NULL) == STATUS_CONST(INVALID_ARGUMENT));
-  TEST_ASSERT(Container_Flat_String_8_InsertChar(NULL, 0U, (utf8)'x') ==
+  TEST_ASSERT(Container_Flat_String_8_InsertChar(NULL, 0U, (uint8_t)'x') ==
               STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Container_Flat_String_8_Append(NULL, hello) == STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Container_Flat_String_8_Erase(NULL, 0U, 1U) ==
               STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Container_Flat_String_8_Compare(NULL, &other, &comparison) ==
               STATUS_CONST(INVALID_ARGUMENT));
-  TEST_ASSERT(Container_Flat_String_8_Find(NULL, (utf8)'x', 0U, &index) ==
+  TEST_ASSERT(Container_Flat_String_8_Find(NULL, (uint8_t)'x', 0U, &index) ==
               STATUS_CONST(INVALID_ARGUMENT));
   TEST_ASSERT(Container_Flat_String_8_Data(NULL) == NULL);
 
