@@ -46,8 +46,13 @@ int main(void) {
                          UINT64_C(1234), NULL) != STATUS_CONST(SUCCESS))
     return 5;
 
-  if (Random_Distribution_U64(&source, 10U, 20U) < 10U)
-    return 6;
+  {
+    uint64_t value = 0;
+    if (Random_Distribution_U64(&source, 10U, 20U, &value) !=
+            STATUS_CONST(SUCCESS) ||
+        value < 10U || value > 20U)
+      return 6;
+  }
 
   if (Random_Shuffle_VectorFromSource(values, 5U, sizeof(values[0]), &source) !=
       STATUS_CONST(SUCCESS))
@@ -70,7 +75,10 @@ int main(void) {
     OPSTATUS status = Random_Source_InitSystem(
         &systemSource, &Random_Engine_Xoshiro_Descriptor, Random_Mixer_WyHash);
     if (status == STATUS_CONST(SUCCESS)) {
-      (void)Random_Source_NextU64(&systemSource);
+      uint64_t value = 0;
+      if (Random_Source_NextU64(&systemSource, &value) !=
+          STATUS_CONST(SUCCESS))
+        return 17;
       Random_Source_Destroy(&systemSource);
     } else if (status != STATUS_CONST(NOT_AVAILABLE)) {
       return 12;
