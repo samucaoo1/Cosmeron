@@ -46,7 +46,7 @@ foreach ($pair in @(
   @("tree-all-functions","TreeAllFunctions.c"),
   @("hash","Hash.c"),
   @("graph","Graph.c"),
-  @("off","PseudoMethodsOff.c"),
+  @("off","FunctionTableOff.c"),
   @("custom-type","CustomType.c"),
   @("include-all","IncludeAll.c"),
   @("include-all-off","IncludeAllOff.c")
@@ -74,7 +74,7 @@ foreach ($pair in @(
 }
 
 foreach ($pair in @(
-  @("type","Type.c"), @("type-no-vtable","TypeNoVTable.c"), @("all-functions","AllFunctions.c"), @("include-all","IncludeAll.c")
+  @("type","Type.c"), @("type-no-function-table","TypeNoFunctionTable.c"), @("all-functions","AllFunctions.c"), @("include-all","IncludeAll.c")
 )) { Invoke-CosmeronTest "Codespace/Tests/Type" $pair[0] @($pair[1]) }
 
 $concurrency = @{
