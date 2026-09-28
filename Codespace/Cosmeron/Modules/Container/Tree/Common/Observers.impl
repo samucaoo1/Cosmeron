@@ -10,8 +10,7 @@
  * ============================================================= */
 
 #define TTREE_IMPLEMENT_OBSERVERS(T, KEY_TYPE, CMP)                            \
-  static inline TTREE_NODE(T) *                                                \
-      TTREE_FN(T, FindNode)(T * tree, KEY_TYPE key) {                          \
+  TTREE_FIND_NODE_PROTOTYPE(T, KEY_TYPE) {                          \
     if (!tree)                                                                 \
       return NULL;                                                             \
     TTREE_NODE(T) *current = tree->root;                                       \
@@ -27,7 +26,7 @@
     return NULL;                                                               \
   }                                                                            \
                                                                                \
-  static inline bool TTREE_FN(T, Contains)(const T *tree, KEY_TYPE key) {       \
+  TTREE_CONTAINS_PROTOTYPE(T, KEY_TYPE) {       \
     if (!tree)                                                                 \
       return false;                                                            \
     const TTREE_NODE(T) *current = tree->root;                                 \
@@ -40,8 +39,7 @@
     return false;                                                              \
   }                                                                            \
                                                                                \
-  static inline TTREE_NODE(T) *                                                \
-      TTREE_FN(T, MinNode)(TTREE_NODE(T) * node) {                            \
+  TTREE_MIN_NODE_PROTOTYPE(T) {                            \
     if (!node)                                                                 \
       return NULL;                                                             \
     while (node->left)                                                         \
@@ -49,8 +47,7 @@
     return node;                                                               \
   }                                                                            \
                                                                                \
-  static inline TTREE_NODE(T) *                                                \
-      TTREE_FN(T, MaxNode)(TTREE_NODE(T) * node) {                            \
+  TTREE_MAX_NODE_PROTOTYPE(T) {                            \
     if (!node)                                                                 \
       return NULL;                                                             \
     while (node->right)                                                        \
@@ -58,7 +55,7 @@
     return node;                                                               \
   }                                                                            \
                                                                                \
-  static inline OPSTATUS TTREE_FN(T, Min)(T *tree, KEY_TYPE **out) {           \
+  TTREE_MIN_PROTOTYPE(T, KEY_TYPE) {           \
     TTREE_NODE(T) *node;                                                       \
     if (!tree || !out)                                                        \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
@@ -69,7 +66,7 @@
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
                                                                                \
-  static inline OPSTATUS TTREE_FN(T, Max)(T *tree, KEY_TYPE **out) {           \
+  TTREE_MAX_PROTOTYPE(T, KEY_TYPE) {           \
     TTREE_NODE(T) *node;                                                       \
     if (!tree || !out)                                                        \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
@@ -80,19 +77,18 @@
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
                                                                                \
-  static inline bool TTREE_FN(T, Empty)(const T *tree) {                       \
+  TTREE_EMPTY_PROTOTYPE(T) {                       \
     return tree != NULL && tree->size == 0;                                    \
   }                                                                            \
                                                                                \
-  static inline size_t TTREE_FN(T, Size)(const T *tree) {                      \
+  TTREE_SIZE_PROTOTYPE(T) {                      \
     return tree ? tree->size : 0U;                                             \
   }
 
 /* ------ Find: SET variant (returns KEY_TYPE*) ------ */
 
 #define TTREE_IMPLEMENT_FIND_SET(T, KEY_TYPE)                                  \
-  static inline OPSTATUS TTREE_FN(T, Find)(T *tree, KEY_TYPE key,              \
-                                           KEY_TYPE **out) {                   \
+  TTREE_FIND_SET_PROTOTYPE(T, KEY_TYPE) {                   \
     TTREE_NODE(T) *node;                                                       \
     if (!tree || !out)                                                        \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
@@ -106,8 +102,7 @@
 /* ------ Find: MAP variant (returns VALUE_TYPE*) ------ */
 
 #define TTREE_IMPLEMENT_FIND_MAP(T, KEY_TYPE, VALUE_TYPE)                      \
-  static inline OPSTATUS TTREE_FN(T, Find)(T *tree, KEY_TYPE key,              \
-                                           VALUE_TYPE **out) {                 \
+  TTREE_FIND_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE) {                 \
     TTREE_NODE(T) *node;                                                       \
     if (!tree || !out)                                                        \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \

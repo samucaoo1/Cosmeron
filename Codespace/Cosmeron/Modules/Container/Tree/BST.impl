@@ -11,7 +11,7 @@
  * ============================================================= */
 
 #define TBST_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                 \
-  static inline OPSTATUS TTREE_FN(T, Remove)(T * tree, KEY_TYPE key) {         \
+  TTREE_REMOVE_PROTOTYPE(T, KEY_TYPE) {         \
     if (!tree)                                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
     TTREE_NODE(T) *_z = TTREE_FN(T, FindNode)(tree, key);                      \
@@ -57,7 +57,7 @@
     return _n;                                                                 \
   }                                                                            \
                                                                                \
-  static inline OPSTATUS TTREE_FN(T, Insert)(T * tree, KEY_TYPE key) {         \
+  TTREE_INSERT_SET_PROTOTYPE(T, KEY_TYPE) {         \
     if (!tree)                                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
     TTREE_NODE(T) *_n = TTREE_FN(T, CreateNode)(key);                          \
@@ -112,8 +112,7 @@
     return _n;                                                                 \
   }                                                                            \
                                                                                \
-  static inline OPSTATUS TTREE_FN(T, Insert)(                                 \
-      T * tree, KEY_TYPE key, VALUE_TYPE value) {                              \
+  TTREE_INSERT_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE) {                              \
     if (!tree)                                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                      \
     TTREE_NODE(T) *_n = TTREE_FN(T, CreateNode)(key, value);                   \
@@ -155,6 +154,7 @@
 #define TBST_SET_IMPLEMENT_ALL(T, KEY_TYPE, CMP)                                     \
   TTREE_NODE_SET(T, KEY_TYPE, )                                                \
   TTREE_STRUCT(T)                                                              \
+  TTREE_SET_PROTOTYPES(T, KEY_TYPE)                                            \
   TTREE_COMMON_SET(T, KEY_TYPE, CMP)                                           \
   TBST_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                       \
   TBST_IMPLEMENT_SET(T, KEY_TYPE, CMP)
@@ -162,6 +162,7 @@
 #define TBST_MAP_IMPLEMENT_ALL(T, KEY_TYPE, VALUE_TYPE, CMP)                         \
   TTREE_NODE_MAP(T, KEY_TYPE, VALUE_TYPE, )                                    \
   TTREE_STRUCT(T)                                                              \
+  TTREE_MAP_PROTOTYPES(T, KEY_TYPE, VALUE_TYPE)                                \
   TTREE_COMMON_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                               \
   TBST_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                       \
   TBST_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)

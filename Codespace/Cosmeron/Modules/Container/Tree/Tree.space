@@ -43,6 +43,113 @@
 #define TTREE_FN(T, FUNC) PP_OP_CAT2(PP_OP_CAT2(T, _), FUNC)
 #define TTREE_FUNCTION_TABLE_TYPE(T) GNS2(T, FunctionTable)
 
+
+/* =============================================================
+ * Operation prototypes
+ * ============================================================= */
+
+#define TTREE_INIT_PROTOTYPE(T)                                               \
+  static inline OPSTATUS TTREE_FN(T, Init)(T *tree)
+#define TTREE_DESTROY_PROTOTYPE(T)                                            \
+  static inline void TTREE_FN(T, Destroy)(T *tree)
+#define TTREE_CLEAR_PROTOTYPE(T)                                              \
+  static inline void TTREE_FN(T, Clear)(T *tree)
+#define TTREE_INSERT_SET_PROTOTYPE(T, KEY_TYPE)                               \
+  static inline OPSTATUS TTREE_FN(T, Insert)(T *tree, KEY_TYPE key)
+#define TTREE_INSERT_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE)                   \
+  static inline OPSTATUS TTREE_FN(T, Insert)(                                 \
+      T *tree, KEY_TYPE key, VALUE_TYPE value)
+#define TTREE_REMOVE_PROTOTYPE(T, KEY_TYPE)                                   \
+  static inline OPSTATUS TTREE_FN(T, Remove)(T *tree, KEY_TYPE key)
+#define TTREE_FIND_NODE_PROTOTYPE(T, KEY_TYPE)                                \
+  static inline TTREE_NODE(T) *TTREE_FN(T, FindNode)(T *tree, KEY_TYPE key)
+#define TTREE_FIND_SET_PROTOTYPE(T, KEY_TYPE)                                 \
+  static inline OPSTATUS TTREE_FN(T, Find)(                                   \
+      T *tree, KEY_TYPE key, KEY_TYPE **out)
+#define TTREE_FIND_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE)                     \
+  static inline OPSTATUS TTREE_FN(T, Find)(                                   \
+      T *tree, KEY_TYPE key, VALUE_TYPE **out)
+#define TTREE_CONTAINS_PROTOTYPE(T, KEY_TYPE)                                 \
+  static inline bool TTREE_FN(T, Contains)(const T *tree, KEY_TYPE key)
+#define TTREE_MIN_NODE_PROTOTYPE(T)                                           \
+  static inline TTREE_NODE(T) *TTREE_FN(T, MinNode)(TTREE_NODE(T) *node)
+#define TTREE_MAX_NODE_PROTOTYPE(T)                                           \
+  static inline TTREE_NODE(T) *TTREE_FN(T, MaxNode)(TTREE_NODE(T) *node)
+#define TTREE_MIN_PROTOTYPE(T, KEY_TYPE)                                      \
+  static inline OPSTATUS TTREE_FN(T, Min)(T *tree, KEY_TYPE **out)
+#define TTREE_MAX_PROTOTYPE(T, KEY_TYPE)                                      \
+  static inline OPSTATUS TTREE_FN(T, Max)(T *tree, KEY_TYPE **out)
+#define TTREE_EMPTY_PROTOTYPE(T)                                              \
+  static inline bool TTREE_FN(T, Empty)(const T *tree)
+#define TTREE_SIZE_PROTOTYPE(T)                                               \
+  static inline size_t TTREE_FN(T, Size)(const T *tree)
+#define TTREE_BEGIN_PROTOTYPE(T)                                              \
+  static inline TTREE_NODE(T) *TTREE_FN(T, Begin)(T *tree)
+#define TTREE_END_PROTOTYPE(T)                                                \
+  static inline TTREE_NODE(T) *TTREE_FN(T, End)(T *tree)
+#define TTREE_NEXT_PROTOTYPE(T)                                               \
+  static inline TTREE_NODE(T) *TTREE_FN(T, Next)(TTREE_NODE(T) *node)
+#define TTREE_PREV_PROTOTYPE(T)                                               \
+  static inline TTREE_NODE(T) *TTREE_FN(T, Prev)(TTREE_NODE(T) *node)
+#define TTREE_CONST_BEGIN_PROTOTYPE(T)                                        \
+  static inline const TTREE_NODE(T) *TTREE_FN(T, ConstBegin)(const T *tree)
+#define TTREE_CONST_END_PROTOTYPE(T)                                          \
+  static inline const TTREE_NODE(T) *TTREE_FN(T, ConstEnd)(const T *tree)
+#define TTREE_CONST_NEXT_PROTOTYPE(T)                                         \
+  static inline const TTREE_NODE(T) *TTREE_FN(T, ConstNext)(                  \
+      const TTREE_NODE(T) *node)
+#define TTREE_CONST_PREV_PROTOTYPE(T)                                         \
+  static inline const TTREE_NODE(T) *TTREE_FN(T, ConstPrev)(                  \
+      const TTREE_NODE(T) *node)
+
+#define TTREE_SET_PROTOTYPES(T, KEY_TYPE)                                     \
+  TTREE_INIT_PROTOTYPE(T);                                                    \
+  TTREE_DESTROY_PROTOTYPE(T);                                                 \
+  TTREE_CLEAR_PROTOTYPE(T);                                                   \
+  TTREE_INSERT_SET_PROTOTYPE(T, KEY_TYPE);                                    \
+  TTREE_REMOVE_PROTOTYPE(T, KEY_TYPE);                                        \
+  TTREE_FIND_NODE_PROTOTYPE(T, KEY_TYPE);                                     \
+  TTREE_FIND_SET_PROTOTYPE(T, KEY_TYPE);                                      \
+  TTREE_CONTAINS_PROTOTYPE(T, KEY_TYPE);                                      \
+  TTREE_MIN_NODE_PROTOTYPE(T);                                                \
+  TTREE_MAX_NODE_PROTOTYPE(T);                                                \
+  TTREE_MIN_PROTOTYPE(T, KEY_TYPE);                                           \
+  TTREE_MAX_PROTOTYPE(T, KEY_TYPE);                                           \
+  TTREE_EMPTY_PROTOTYPE(T);                                                   \
+  TTREE_SIZE_PROTOTYPE(T);                                                    \
+  TTREE_BEGIN_PROTOTYPE(T);                                                   \
+  TTREE_END_PROTOTYPE(T);                                                     \
+  TTREE_NEXT_PROTOTYPE(T);                                                    \
+  TTREE_PREV_PROTOTYPE(T);                                                    \
+  TTREE_CONST_BEGIN_PROTOTYPE(T);                                             \
+  TTREE_CONST_END_PROTOTYPE(T);                                               \
+  TTREE_CONST_NEXT_PROTOTYPE(T);                                              \
+  TTREE_CONST_PREV_PROTOTYPE(T)
+
+#define TTREE_MAP_PROTOTYPES(T, KEY_TYPE, VALUE_TYPE)                         \
+  TTREE_INIT_PROTOTYPE(T);                                                    \
+  TTREE_DESTROY_PROTOTYPE(T);                                                 \
+  TTREE_CLEAR_PROTOTYPE(T);                                                   \
+  TTREE_INSERT_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE);                        \
+  TTREE_REMOVE_PROTOTYPE(T, KEY_TYPE);                                        \
+  TTREE_FIND_NODE_PROTOTYPE(T, KEY_TYPE);                                     \
+  TTREE_FIND_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE);                          \
+  TTREE_CONTAINS_PROTOTYPE(T, KEY_TYPE);                                      \
+  TTREE_MIN_NODE_PROTOTYPE(T);                                                \
+  TTREE_MAX_NODE_PROTOTYPE(T);                                                \
+  TTREE_MIN_PROTOTYPE(T, KEY_TYPE);                                           \
+  TTREE_MAX_PROTOTYPE(T, KEY_TYPE);                                           \
+  TTREE_EMPTY_PROTOTYPE(T);                                                   \
+  TTREE_SIZE_PROTOTYPE(T);                                                    \
+  TTREE_BEGIN_PROTOTYPE(T);                                                   \
+  TTREE_END_PROTOTYPE(T);                                                     \
+  TTREE_NEXT_PROTOTYPE(T);                                                    \
+  TTREE_PREV_PROTOTYPE(T);                                                    \
+  TTREE_CONST_BEGIN_PROTOTYPE(T);                                             \
+  TTREE_CONST_END_PROTOTYPE(T);                                               \
+  TTREE_CONST_NEXT_PROTOTYPE(T);                                              \
+  TTREE_CONST_PREV_PROTOTYPE(T)
+
 /* =============================================================
  * Comparator output type — default is int.
  * Override by defining TTREE_CMPOUT before including the algorithm.

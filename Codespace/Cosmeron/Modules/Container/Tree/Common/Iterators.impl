@@ -5,18 +5,18 @@
  * ============================================================= */
 
 #define TTREE_IMPLEMENT_ITERATORS(T)                                           \
-  static inline TTREE_NODE(T) * TTREE_FN(T, Begin)(T * tree) {                \
+  TTREE_BEGIN_PROTOTYPE(T) {                \
     if (!tree)                                                                 \
       return NULL;                                                             \
     return TTREE_FN(T, MinNode)(tree->root);                                   \
   }                                                                            \
                                                                                \
-  static inline TTREE_NODE(T) * TTREE_FN(T, End)(T * tree) {                  \
+  TTREE_END_PROTOTYPE(T) {                  \
     (void)tree;                                                                \
     return NULL;                                                               \
   }                                                                            \
                                                                                \
-  static inline TTREE_NODE(T) * TTREE_FN(T, Next)(TTREE_NODE(T) * node) {     \
+  TTREE_NEXT_PROTOTYPE(T) {     \
     if (!node)                                                                 \
       return NULL;                                                             \
     if (node->right)                                                           \
@@ -29,7 +29,7 @@
     return _p;                                                                 \
   }                                                                            \
                                                                                \
-  static inline TTREE_NODE(T) * TTREE_FN(T, Prev)(TTREE_NODE(T) * node) {     \
+  TTREE_PREV_PROTOTYPE(T) {     \
     if (!node)                                                                 \
       return NULL;                                                             \
     if (node->left)                                                            \
@@ -44,7 +44,7 @@
 
 
 #define TTREE_IMPLEMENT_CONST_ITERATORS(T)                                     \
-  static inline const TTREE_NODE(T) *TTREE_FN(T, ConstBegin)(const T *tree) { \
+  TTREE_CONST_BEGIN_PROTOTYPE(T) { \
     const TTREE_NODE(T) *node;                                                 \
     if (!tree) return NULL;                                                    \
     node = tree->root;                                                         \
@@ -52,11 +52,10 @@
     while (node->left) node = node->left;                                      \
     return node;                                                               \
   }                                                                            \
-  static inline const TTREE_NODE(T) *TTREE_FN(T, ConstEnd)(const T *tree) {   \
+  TTREE_CONST_END_PROTOTYPE(T) {   \
     (void)tree; return NULL;                                                   \
   }                                                                            \
-  static inline const TTREE_NODE(T) *TTREE_FN(T, ConstNext)(                  \
-      const TTREE_NODE(T) *node) {                                             \
+  TTREE_CONST_NEXT_PROTOTYPE(T) {                                             \
     const TTREE_NODE(T) *parent;                                               \
     if (!node) return NULL;                                                    \
     if (node->right) {                                                         \
@@ -68,8 +67,7 @@
     while (parent && node == parent->right) { node = parent; parent = parent->parent; } \
     return parent;                                                             \
   }                                                                            \
-  static inline const TTREE_NODE(T) *TTREE_FN(T, ConstPrev)(                  \
-      const TTREE_NODE(T) *node) {                                             \
+  TTREE_CONST_PREV_PROTOTYPE(T) {                                             \
     const TTREE_NODE(T) *parent;                                               \
     if (!node) return NULL;                                                    \
     if (node->left) {                                                          \
