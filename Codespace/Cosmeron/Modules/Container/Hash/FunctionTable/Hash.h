@@ -3,7 +3,7 @@
 #if CONTAINER_FUNCTION_TABLE_ENABLED
 
 #define HASH_FUNCTION_TABLE_STRUCT(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX)   \
-  typedef struct HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, FunctionTable) {    \
+  typedef struct HASH_FUNCTION_TABLE_TYPE(KEY_SUFFIX, VALUE_SUFFIX) {    \
     OPSTATUS (*init)(THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *);                 \
     void (*destroy)(THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *);                  \
     OPSTATUS (*rehash)(THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *, size_t);       \
@@ -19,11 +19,11 @@
     bool (*isEmpty)(const THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *);            \
     size_t (*size)(const THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *);             \
     size_t (*capacity)(const THASH_TYPE(KEY_SUFFIX, VALUE_SUFFIX) *);         \
-  } HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, FunctionTable);
+  } HASH_FUNCTION_TABLE_TYPE(KEY_SUFFIX, VALUE_SUFFIX);
 
 #define HASH_FUNCTION_TABLE_INSTANCE(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE,        \
                                      VALUE_SUFFIX)                            \
-  static const HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, FunctionTable)        \
+  static const HASH_FUNCTION_TABLE_TYPE(KEY_SUFFIX, VALUE_SUFFIX)        \
       HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, functions) = {                 \
           .init = HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, Init),             \
           .destroy = HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, Destroy),       \
