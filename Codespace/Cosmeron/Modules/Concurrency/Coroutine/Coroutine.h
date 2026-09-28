@@ -50,17 +50,41 @@ struct CONCURRENCY_TYPE(TCoroutine) {
     return;                                                                     \
   } while (0)
 
-static inline OPSTATUS COROUTINE_FUNC(Init)(CONCURRENCY_TYPE(TCoroutine) *coroutine,
-                                      CONCURRENCY_TYPE(CoroutineFunction) function,
-                                      void *argument);
-static inline OPSTATUS COROUTINE_FUNC(Resume)(CONCURRENCY_TYPE(TCoroutine) *coroutine);
-static inline OPSTATUS COROUTINE_FUNC(Reset)(CONCURRENCY_TYPE(TCoroutine) *coroutine);
-static inline CONCURRENCY_TYPE(CoroutineState)
-COROUTINE_FUNC(GetState)(const CONCURRENCY_TYPE(TCoroutine) *coroutine);
-static inline bool COROUTINE_FUNC(IsReady)(const CONCURRENCY_TYPE(TCoroutine) *coroutine);
-static inline bool COROUTINE_FUNC(IsRunning)(const CONCURRENCY_TYPE(TCoroutine) *coroutine);
-static inline bool COROUTINE_FUNC(IsSuspended)(const CONCURRENCY_TYPE(TCoroutine) *coroutine);
-static inline bool COROUTINE_FUNC(IsFinished)(const CONCURRENCY_TYPE(TCoroutine) *coroutine);
+#define COROUTINE_INIT_PROTOTYPE                                              \
+  static inline OPSTATUS COROUTINE_FUNC(Init)(                                \
+      CONCURRENCY_TYPE(TCoroutine) *coroutine,                                \
+      CONCURRENCY_TYPE(CoroutineFunction) function, void *argument)
+#define COROUTINE_RESUME_PROTOTYPE                                            \
+  static inline OPSTATUS COROUTINE_FUNC(Resume)(                              \
+      CONCURRENCY_TYPE(TCoroutine) *coroutine)
+#define COROUTINE_RESET_PROTOTYPE                                             \
+  static inline OPSTATUS COROUTINE_FUNC(Reset)(                               \
+      CONCURRENCY_TYPE(TCoroutine) *coroutine)
+#define COROUTINE_GET_STATE_PROTOTYPE                                         \
+  static inline OPSTATUS COROUTINE_FUNC(GetState)(                            \
+      const CONCURRENCY_TYPE(TCoroutine) *coroutine,                          \
+      CONCURRENCY_TYPE(CoroutineState) *outState)
+#define COROUTINE_IS_READY_PROTOTYPE                                          \
+  static inline bool COROUTINE_FUNC(IsReady)(                                 \
+      const CONCURRENCY_TYPE(TCoroutine) *coroutine)
+#define COROUTINE_IS_RUNNING_PROTOTYPE                                        \
+  static inline bool COROUTINE_FUNC(IsRunning)(                               \
+      const CONCURRENCY_TYPE(TCoroutine) *coroutine)
+#define COROUTINE_IS_SUSPENDED_PROTOTYPE                                      \
+  static inline bool COROUTINE_FUNC(IsSuspended)(                             \
+      const CONCURRENCY_TYPE(TCoroutine) *coroutine)
+#define COROUTINE_IS_FINISHED_PROTOTYPE                                       \
+  static inline bool COROUTINE_FUNC(IsFinished)(                              \
+      const CONCURRENCY_TYPE(TCoroutine) *coroutine)
+
+COROUTINE_INIT_PROTOTYPE;
+COROUTINE_RESUME_PROTOTYPE;
+COROUTINE_RESET_PROTOTYPE;
+COROUTINE_GET_STATE_PROTOTYPE;
+COROUTINE_IS_READY_PROTOTYPE;
+COROUTINE_IS_RUNNING_PROTOTYPE;
+COROUTINE_IS_SUSPENDED_PROTOTYPE;
+COROUTINE_IS_FINISHED_PROTOTYPE;
 
 #include "Impl/Coroutine.impl"
 

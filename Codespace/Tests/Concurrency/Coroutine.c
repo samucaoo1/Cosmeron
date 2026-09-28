@@ -30,12 +30,15 @@ static void Test_Coroutine(CONCURRENCY_TYPE(TCoroutine) *coroutine, void *argume
 int main(void) {
   TCoroutineTestContext context = {0u, 0u};
   CONCURRENCY_TYPE(TCoroutine) coroutine = COROUTINE_INIT(Test_Coroutine, &context);
+  CONCURRENCY_TYPE(CoroutineState) state = CONCURRENCY_CONST(COROUTINE, STATE_FINISHED);
 
-  assert(COROUTINE_FUNC(GetState)(&coroutine) == CONCURRENCY_CONST(COROUTINE, STATE_READY));
+  assert(COROUTINE_FUNC(GetState)(&coroutine, &state) == STATUS_CONST(SUCCESS));
+  assert(state == CONCURRENCY_CONST(COROUTINE, STATE_READY));
   assert(COROUTINE_FUNC(IsReady)(&coroutine));
   assert(COROUTINE_FUNC(Resume)(&coroutine) == STATUS_CONST(SUCCESS));
   assert(context.step == 1u && context.value == 10u);
-  assert(COROUTINE_FUNC(GetState)(&coroutine) == CONCURRENCY_CONST(COROUTINE, STATE_SUSPENDED));
+  assert(COROUTINE_FUNC(GetState)(&coroutine, &state) == STATUS_CONST(SUCCESS));
+  assert(state == CONCURRENCY_CONST(COROUTINE, STATE_SUSPENDED));
   assert(COROUTINE_FUNC(IsSuspended)(&coroutine));
 
   assert(COROUTINE_FUNC(Resume)(&coroutine) == STATUS_CONST(SUCCESS));
@@ -44,10 +47,13 @@ int main(void) {
 
   assert(COROUTINE_FUNC(Resume)(&coroutine) == STATUS_CONST(SUCCESS));
   assert(context.step == 3u && context.value == 60u);
-  assert(COROUTINE_FUNC(GetState)(&coroutine) == CONCURRENCY_CONST(COROUTINE, STATE_FINISHED));
+  assert(COROUTINE_FUNC(GetState)(&coroutine, &state) == STATUS_CONST(SUCCESS));
+  assert(state == CONCURRENCY_CONST(COROUTINE, STATE_FINISHED));
   assert(COROUTINE_FUNC(IsFinished)(&coroutine));
   assert(COROUTINE_FUNC(Resume)(&coroutine) == STATUS_CONST(NOT_AVAILABLE));
 
+  assert(COROUTINE_FUNC(GetState)(NULL, &state) == STATUS_CONST(INVALID_ARGUMENT));
+  assert(COROUTINE_FUNC(GetState)(&coroutine, NULL) == STATUS_CONST(INVALID_ARGUMENT));
   assert(COROUTINE_FUNC(Reset)(&coroutine) == STATUS_CONST(SUCCESS));
   assert(COROUTINE_FUNC(IsReady)(&coroutine));
   assert(COROUTINE_FUNC(Resume)(&coroutine) == STATUS_CONST(SUCCESS));

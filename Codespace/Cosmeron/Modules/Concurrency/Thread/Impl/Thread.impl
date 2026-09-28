@@ -7,13 +7,13 @@
 
 #include <sched.h>
 
-typedef struct InternalType_ThreadStart {
+typedef struct CONCURRENCY_INS(ThreadStart_InternalType_) {
   CONCURRENCY_TYPE(ThreadFunction) function;
   void *argument;
-} InternalType_ThreadStart;
+} CONCURRENCY_INS(ThreadStart_InternalType_);
 
-static inline void *ConcurrencyInternal_Thread_Start(void *opaque) {
-  InternalType_ThreadStart *start = (InternalType_ThreadStart *)opaque;
+static inline void *CONCURRENCY_INS(ThreadStart)(void *opaque) {
+  CONCURRENCY_INS(ThreadStart_InternalType_) *start = (CONCURRENCY_INS(ThreadStart_InternalType_) *)opaque;
   CONCURRENCY_TYPE(ThreadFunction) function = start->function;
   void *argument = start->argument;
   Memory_Free(start);
@@ -21,20 +21,19 @@ static inline void *ConcurrencyInternal_Thread_Start(void *opaque) {
   return NULL;
 }
 
-static inline OPSTATUS THREAD_FUNC(Create)(CONCURRENCY_TYPE(TThread) *thread, CONCURRENCY_TYPE(ThreadFunction) function,
-                                     void *argument) {
+THREAD_CREATE_PROTOTYPE {
   if (thread == NULL || function == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
-  InternalType_ThreadStart *start;
+  CONCURRENCY_INS(ThreadStart_InternalType_) *start;
   {
     void *allocated = NULL;
     if (ALLOC_FUNC(AllocBytes)(&allocated, sizeof(*start)) != STATUS_CONST(SUCCESS))
       return STATUS_CONST(OUT_OF_MEMORY);
-    start = (InternalType_ThreadStart *)allocated;
+    start = (CONCURRENCY_INS(ThreadStart_InternalType_) *)allocated;
   }
   start->function = function;
   start->argument = argument;
-  if (pthread_create(&thread->native, NULL, ConcurrencyInternal_Thread_Start, start) != 0) {
+  if (pthread_create(&thread->native, NULL, CONCURRENCY_INS(ThreadStart), start) != 0) {
     Memory_Free(start);
     thread->joinable = false;
     return STATUS_CONST(GENERIC_ERROR);
@@ -43,7 +42,7 @@ static inline OPSTATUS THREAD_FUNC(Create)(CONCURRENCY_TYPE(TThread) *thread, CO
   return STATUS_CONST(SUCCESS);
 }
 
-static inline OPSTATUS THREAD_FUNC(Join)(CONCURRENCY_TYPE(TThread) *thread) {
+THREAD_JOIN_PROTOTYPE {
   if (thread == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (!thread->joinable)
@@ -54,7 +53,7 @@ static inline OPSTATUS THREAD_FUNC(Join)(CONCURRENCY_TYPE(TThread) *thread) {
   return STATUS_CONST(SUCCESS);
 }
 
-static inline OPSTATUS THREAD_FUNC(Detach)(CONCURRENCY_TYPE(TThread) *thread) {
+THREAD_DETACH_PROTOTYPE {
   if (thread == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (!thread->joinable)
@@ -65,24 +64,23 @@ static inline OPSTATUS THREAD_FUNC(Detach)(CONCURRENCY_TYPE(TThread) *thread) {
   return STATUS_CONST(SUCCESS);
 }
 
-static inline void THREAD_FUNC(Yield)(void) { (void)sched_yield(); }
+THREAD_YIELD_PROTOTYPE { (void)sched_yield(); }
 
-static inline CONCURRENCY_TYPE(ThreadNative) THREAD_FUNC(Current)(void) { return pthread_self(); }
+THREAD_CURRENT_PROTOTYPE { return pthread_self(); }
 
-static inline bool THREAD_FUNC(Equal)(CONCURRENCY_TYPE(ThreadNative) first,
-                                    CONCURRENCY_TYPE(ThreadNative) second) {
+THREAD_EQUAL_PROTOTYPE {
   return pthread_equal(first, second) != 0;
 }
 
 #elif OS_WINDOWS
 
-typedef struct InternalType_ThreadStart {
+typedef struct CONCURRENCY_INS(ThreadStart_InternalType_) {
   CONCURRENCY_TYPE(ThreadFunction) function;
   void *argument;
-} InternalType_ThreadStart;
+} CONCURRENCY_INS(ThreadStart_InternalType_);
 
-static inline DWORD WINAPI ConcurrencyInternal_Thread_Start(LPVOID opaque) {
-  InternalType_ThreadStart *start = (InternalType_ThreadStart *)opaque;
+static inline DWORD WINAPI CONCURRENCY_INS(ThreadStart)(LPVOID opaque) {
+  CONCURRENCY_INS(ThreadStart_InternalType_) *start = (CONCURRENCY_INS(ThreadStart_InternalType_) *)opaque;
   CONCURRENCY_TYPE(ThreadFunction) function = start->function;
   void *argument = start->argument;
   Memory_Free(start);
@@ -90,20 +88,19 @@ static inline DWORD WINAPI ConcurrencyInternal_Thread_Start(LPVOID opaque) {
   return 0;
 }
 
-static inline OPSTATUS THREAD_FUNC(Create)(CONCURRENCY_TYPE(TThread) *thread, CONCURRENCY_TYPE(ThreadFunction) function,
-                                     void *argument) {
-  InternalType_ThreadStart *start;
+THREAD_CREATE_PROTOTYPE {
+  CONCURRENCY_INS(ThreadStart_InternalType_) *start;
   if (thread == NULL || function == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
   {
     void *allocated = NULL;
     if (ALLOC_FUNC(AllocBytes)(&allocated, sizeof(*start)) != STATUS_CONST(SUCCESS))
       return STATUS_CONST(OUT_OF_MEMORY);
-    start = (InternalType_ThreadStart *)allocated;
+    start = (CONCURRENCY_INS(ThreadStart_InternalType_) *)allocated;
   }
   start->function = function;
   start->argument = argument;
-  thread->native = CreateThread(NULL, 0, ConcurrencyInternal_Thread_Start, start, 0,
+  thread->native = CreateThread(NULL, 0, CONCURRENCY_INS(ThreadStart), start, 0,
                                 NULL);
   if (thread->native == NULL) {
     Memory_Free(start);
@@ -114,7 +111,7 @@ static inline OPSTATUS THREAD_FUNC(Create)(CONCURRENCY_TYPE(TThread) *thread, CO
   return STATUS_CONST(SUCCESS);
 }
 
-static inline OPSTATUS THREAD_FUNC(Join)(CONCURRENCY_TYPE(TThread) *thread) {
+THREAD_JOIN_PROTOTYPE {
   if (thread == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (!thread->joinable)
@@ -126,7 +123,7 @@ static inline OPSTATUS THREAD_FUNC(Join)(CONCURRENCY_TYPE(TThread) *thread) {
   return STATUS_CONST(SUCCESS);
 }
 
-static inline OPSTATUS THREAD_FUNC(Detach)(CONCURRENCY_TYPE(TThread) *thread) {
+THREAD_DETACH_PROTOTYPE {
   if (thread == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (!thread->joinable)
@@ -137,14 +134,13 @@ static inline OPSTATUS THREAD_FUNC(Detach)(CONCURRENCY_TYPE(TThread) *thread) {
   return STATUS_CONST(SUCCESS);
 }
 
-static inline void THREAD_FUNC(Yield)(void) { SwitchToThread(); }
+THREAD_YIELD_PROTOTYPE { SwitchToThread(); }
 
-static inline CONCURRENCY_TYPE(ThreadNative) THREAD_FUNC(Current)(void) {
+THREAD_CURRENT_PROTOTYPE {
   return GetCurrentThread();
 }
 
-static inline bool THREAD_FUNC(Equal)(CONCURRENCY_TYPE(ThreadNative) first,
-                                    CONCURRENCY_TYPE(ThreadNative) second) {
+THREAD_EQUAL_PROTOTYPE {
   return GetThreadId(first) == GetThreadId(second);
 }
 

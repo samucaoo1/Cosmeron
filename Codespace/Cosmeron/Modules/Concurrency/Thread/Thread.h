@@ -18,13 +18,27 @@ typedef struct CONCURRENCY_TYPE(TThread) {
   bool joinable;
 } CONCURRENCY_TYPE(TThread);
 
-static inline OPSTATUS THREAD_FUNC(Create)(CONCURRENCY_TYPE(TThread) *thread, CONCURRENCY_TYPE(ThreadFunction) function,
-                                     void *argument);
-static inline OPSTATUS THREAD_FUNC(Join)(CONCURRENCY_TYPE(TThread) *thread);
-static inline OPSTATUS THREAD_FUNC(Detach)(CONCURRENCY_TYPE(TThread) *thread);
-static inline void THREAD_FUNC(Yield)(void);
-static inline CONCURRENCY_TYPE(ThreadNative) THREAD_FUNC(Current)(void);
-static inline bool THREAD_FUNC(Equal)(CONCURRENCY_TYPE(ThreadNative) first,
-                                    CONCURRENCY_TYPE(ThreadNative) second);
+#define THREAD_CREATE_PROTOTYPE                                               \
+  static inline OPSTATUS THREAD_FUNC(Create)(                                 \
+      CONCURRENCY_TYPE(TThread) *thread,                                      \
+      CONCURRENCY_TYPE(ThreadFunction) function, void *argument)
+#define THREAD_JOIN_PROTOTYPE                                                 \
+  static inline OPSTATUS THREAD_FUNC(Join)(CONCURRENCY_TYPE(TThread) *thread)
+#define THREAD_DETACH_PROTOTYPE                                               \
+  static inline OPSTATUS THREAD_FUNC(Detach)(CONCURRENCY_TYPE(TThread) *thread)
+#define THREAD_YIELD_PROTOTYPE                                                \
+  static inline void THREAD_FUNC(Yield)(void)
+#define THREAD_CURRENT_PROTOTYPE                                              \
+  static inline CONCURRENCY_TYPE(ThreadNative) THREAD_FUNC(Current)(void)
+#define THREAD_EQUAL_PROTOTYPE                                                \
+  static inline bool THREAD_FUNC(Equal)(CONCURRENCY_TYPE(ThreadNative) first, \
+                                        CONCURRENCY_TYPE(ThreadNative) second)
+
+THREAD_CREATE_PROTOTYPE;
+THREAD_JOIN_PROTOTYPE;
+THREAD_DETACH_PROTOTYPE;
+THREAD_YIELD_PROTOTYPE;
+THREAD_CURRENT_PROTOTYPE;
+THREAD_EQUAL_PROTOTYPE;
 
 #include "Impl/Thread.impl"
