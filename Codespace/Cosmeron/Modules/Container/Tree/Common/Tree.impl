@@ -11,17 +11,17 @@
  * ============================================================= */
 
 #define COSMERON_MACRO_INTERNAL_TTREE_COMMON_SET(T, KEY_TYPE, CMP)                                     \
-  TTREE_IMPLEMENT_LIFECYCLE(T)                                                 \
-  TTREE_IMPLEMENT_OBSERVERS(T, KEY_TYPE, CMP)                                  \
-  TTREE_IMPLEMENT_FIND_SET(T, KEY_TYPE)                                        \
-  TTREE_IMPLEMENT_ITERATORS(T)                                                 \
-  TTREE_IMPLEMENT_CONST_ITERATORS(T)                                           \
-  TTREE_IMPLEMENT_TRANSPLANT(T)
+  COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_LIFECYCLE(T)                                                 \
+  COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_OBSERVERS(T, KEY_TYPE, CMP)                                  \
+  COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_FIND_SET(T, KEY_TYPE)                                        \
+  COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_ITERATORS(T)                                                 \
+  COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_CONST_ITERATORS(T)                                           \
+  COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_TRANSPLANT(T)
 
 #define COSMERON_MACRO_INTERNAL_TTREE_COMMON_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                         \
-  TTREE_IMPLEMENT_LIFECYCLE(T)                                                 \
-  TTREE_IMPLEMENT_OBSERVERS(T, KEY_TYPE, CMP)                                  \
-  TTREE_IMPLEMENT_FIND_MAP(T, KEY_TYPE, VALUE_TYPE)                            \
-  TTREE_IMPLEMENT_ITERATORS(T)                                                 \
-  TTREE_IMPLEMENT_CONST_ITERATORS(T)                                           \
-  TTREE_IMPLEMENT_TRANSPLANT(T)
+  COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_LIFECYCLE(T)                                                 \
+  COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_OBSERVERS(T, KEY_TYPE, CMP)                                  \
+  COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_FIND_MAP(T, KEY_TYPE, VALUE_TYPE)                            \
+  COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_ITERATORS(T)                                                 \
+  COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_CONST_ITERATORS(T)                                           \
+  COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_TRANSPLANT(T)
