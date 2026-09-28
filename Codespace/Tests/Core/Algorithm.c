@@ -1,6 +1,6 @@
 #include "../../Cosmeron/Core/Algorithm/Comparison.h"
 
-static TComparisonResult compare_int_pointer(const void *left,
+static CMPOUT compare_int_pointer(const void *left,
                                              const void *right) {
   const int leftValue = *(const int *)left;
   const int rightValue = *(const int *)right;
