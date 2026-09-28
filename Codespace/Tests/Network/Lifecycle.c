@@ -4,12 +4,12 @@
 #include "../../Cosmeron/Modules/Network/Listener/Listener.h"
 
 int main(void) {
-  TNetwork_Listener listener;
-  TNetwork_Connection connection;
-  TNetwork_Address loopback;
-  TNetwork_Endpoint endpoint;
+  NETWORK_LISTENER_TYPE(TListener) listener;
+  NETWORK_CONNECTION_TYPE(TConnection) connection;
+  NETWORK_ADDRESS_TYPE(TAddress) loopback;
+  NETWORK_ADDRESS_TYPE(TEndpoint) endpoint;
   uint16_t closed_port;
-  TNetwork_Error error = NETWORK_ERROR_CONST(NONE);
+  NETWORK_TYPE(Error) error = NETWORK_ERROR_CONST(NONE);
 
   NETWORK_LISTENER_FUNC(Init)(&listener);
   NETWORK_CONNECTION_FUNC(Init)(&connection);
@@ -17,19 +17,19 @@ int main(void) {
   NETWORK_ADDRESS_FUNC(Endpoint_Create)(&endpoint, &loopback, 0);
 
   assert(NETWORK_LISTENER_FUNC(ListenAt)(&listener, &endpoint, NULL) ==
-         STATUS_NS(SUCCESS));
+         STATUS_CONST(SUCCESS));
   closed_port = NETWORK_LISTENER_FUNC(LocalEndpoint)(&listener)->port;
   NETWORK_LISTENER_FUNC(Close)(&listener);
 
   assert(NETWORK_CONNECTION_FUNC(Connect)(
-             &connection, "127.0.0.1", closed_port, &error) != STATUS_NS(SUCCESS));
+             &connection, "127.0.0.1", closed_port, &error) != STATUS_CONST(SUCCESS));
   assert(NETWORK_CONNECTION_FUNC(State)(&connection) ==
-         NETWORK_CONNECTION_TYPE(FAILED));
+         NETWORK_CONNECTION_CONST(FAILED));
   assert(error != NETWORK_ERROR_CONST(NONE));
 
   NETWORK_CONNECTION_FUNC(Close)(&connection);
   assert(NETWORK_CONNECTION_FUNC(State)(&connection) ==
-         NETWORK_CONNECTION_TYPE(CLOSED));
+         NETWORK_CONNECTION_CONST(CLOSED));
   assert(NETWORK_CONNECTION_FUNC(LastError)(&connection) ==
          NETWORK_ERROR_CONST(NONE));
   NETWORK_CONNECTION_FUNC(Close)(&connection);

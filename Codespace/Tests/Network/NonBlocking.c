@@ -3,24 +3,24 @@
 #include "../../Cosmeron/Modules/Network/Datagram/Datagram.h"
 
 int main(void) {
-  TNetwork_Datagram datagram;
-  TNetwork_Address loopback;
-  TNetwork_Endpoint endpoint;
+  NETWORK_DATAGRAM_TYPE(TDatagram) datagram;
+  NETWORK_ADDRESS_TYPE(TAddress) loopback;
+  NETWORK_ADDRESS_TYPE(TEndpoint) endpoint;
   char byte;
   size_t received = 123;
-  TNetwork_Error error = NETWORK_ERROR_CONST(NONE);
+  NETWORK_TYPE(Error) error = NETWORK_ERROR_CONST(NONE);
 
   NETWORK_DATAGRAM_FUNC(Init)(&datagram);
   NETWORK_ADDRESS_FUNC(IPv4_Loopback)(&loopback);
   NETWORK_ADDRESS_FUNC(Endpoint_Create)(&endpoint, &loopback, 0);
 
   assert(NETWORK_DATAGRAM_FUNC(Bind)(&datagram, &endpoint, NULL) ==
-         STATUS_NS(SUCCESS));
+         STATUS_CONST(SUCCESS));
   assert(NETWORK_DATAGRAM_FUNC(SetBlocking)(&datagram, false, NULL) ==
-         STATUS_NS(SUCCESS));
+         STATUS_CONST(SUCCESS));
   assert(NETWORK_DATAGRAM_FUNC(ReceiveFrom)(
              &datagram, &byte, sizeof(byte), NULL, &received, &error) !=
-         STATUS_NS(SUCCESS));
+         STATUS_CONST(SUCCESS));
   assert(received == 123);
   assert(error == NETWORK_ERROR_CONST(WOULD_BLOCK));
 
