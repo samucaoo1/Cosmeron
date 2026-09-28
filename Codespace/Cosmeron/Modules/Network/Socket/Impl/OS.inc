@@ -10,7 +10,7 @@ typedef SOCKET SOCKET_TYPE(Handle);
 typedef int SOCKET_TYPE(Len);
 #define TSOCKET_NATIVE_INVALID INVALID_SOCKET
 #define TSOCKET_NATIVE_ERROR SOCKET_ERROR
-#define TSOCKET_OS_CLOSE(h) NETWORK_FUNC(_WinCloseSocket)(h)
+#define COSMERON_MACRO_INTERNAL_TSOCKET_OS_CLOSE(h) NETWORK_FUNC(_WinCloseSocket)(h)
 #define TSOCKET_NATIVE_ERROR_CODE() NETWORK_FUNC(_WinGetLastError)()
 #define TSOCKET_NATIVE_HTONS(value) NETWORK_FUNC(_WinHostToNetworkShort)(value)
 #define TSOCKET_NATIVE_NTOHS(value) NETWORK_FUNC(_WinNetworkToHostShort)(value)
@@ -46,7 +46,7 @@ typedef int SOCKET_TYPE(Handle);
 typedef socklen_t SOCKET_TYPE(Len);
 #define TSOCKET_NATIVE_INVALID (-1)
 #define TSOCKET_NATIVE_ERROR (-1)
-#define TSOCKET_OS_CLOSE(h) close(h)
+#define COSMERON_MACRO_INTERNAL_TSOCKET_OS_CLOSE(h) close(h)
 #define TSOCKET_NATIVE_ERROR_CODE() errno
 #define TSOCKET_NATIVE_HTONS(value) htons(value)
 #define TSOCKET_NATIVE_NTOHS(value) ntohs(value)
