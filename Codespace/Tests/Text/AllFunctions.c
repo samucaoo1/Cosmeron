@@ -136,11 +136,24 @@ static int test_attributes(void) {
 }
 
 int main(void) {
-  if (Text_UTF8_EncodedLength((TEXT_TYPE(TChar32))'A') != 1U ||
-      Text_UTF8_EncodedLength((TEXT_TYPE(TChar32))UINT32_C(0x1F600)) != 4U)
+  size_t units = 0U;
+
+  if (TEXT_UTF8_FUNC(EncodedLength)((TEXT_TYPE(TChar32))'A', &units) !=
+          STATUS_CONST(SUCCESS) ||
+      units != 1U ||
+      TEXT_UTF8_FUNC(EncodedLength)(
+          (TEXT_TYPE(TChar32))UINT32_C(0x1F600), &units) !=
+          STATUS_CONST(SUCCESS) ||
+      units != 4U)
     return 1;
-  if (Text_UTF16_EncodedLength((TEXT_TYPE(TChar32))'A') != 1U ||
-      Text_UTF16_EncodedLength((TEXT_TYPE(TChar32))UINT32_C(0x1F600)) != 2U)
+
+  if (TEXT_UTF16_FUNC(EncodedLength)((TEXT_TYPE(TChar32))'A', &units) !=
+          STATUS_CONST(SUCCESS) ||
+      units != 1U ||
+      TEXT_UTF16_FUNC(EncodedLength)(
+          (TEXT_TYPE(TChar32))UINT32_C(0x1F600), &units) !=
+          STATUS_CONST(SUCCESS) ||
+      units != 2U)
     return 2;
   if (!Text_Codepoint_IsControl((TEXT_TYPE(TChar32))'\n'))
     return 3;
