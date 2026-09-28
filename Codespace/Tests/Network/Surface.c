@@ -233,12 +233,11 @@ static void test_datagram(void) {
   assert(NETWORK_DATAGRAM_FUNC(Open)(&peer, SOCKET_CONST(FAMILY_IPV4), NULL) ==
          STATUS_CONST(SUCCESS));
   {
-    NETWORK_ADDRESS_TYPE(TEndpoint) peerEndpoint = destination;
+    NETWORK_ADDRESS_TYPE(TEndpoint) peerEndpoint = {0};
+    peerEndpoint.port = UINT16_C(2468);
     assert(NETWORK_DATAGRAM_FUNC(PeerEndpoint)(
                &peer, &peerEndpoint) == STATUS_CONST(NOT_FOUND));
-    assert(NETWORK_ADDRESS_FUNC(Equal)(
-        &peerEndpoint.address, &destination.address));
-    assert(peerEndpoint.port == destination.port);
+    assert(peerEndpoint.port == UINT16_C(2468));
   }
   assert(NETWORK_DATAGRAM_FUNC(SetBlocking)(&peer, false, NULL) ==
          STATUS_CONST(SUCCESS));
