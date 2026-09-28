@@ -80,7 +80,7 @@
   FLAT_STACK_EMPTY_PROTOTYPE(SUFFIX);                                 \
   FLAT_STACK_SIZE_PROTOTYPE(SUFFIX);                                  \
   FLAT_STACK_CAPACITY_PROTOTYPE(SUFFIX);                              \
-  FLAT_STACK_IMPLEMENT(TYPE, SUFFIX)                                           \
+  COSMERON_MACRO_INTERNAL_FLAT_STACK_IMPLEMENT(TYPE, SUFFIX)                                           \
   FLAT_STACK_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                                    \
   FLAT_STACK_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)
 
