@@ -95,7 +95,7 @@
 #include "FunctionTable/Forward.h"
 
 /* ============================================================
- * Linked_ForwardList — Lista simplesmente encadeada
+ * LINKED_NS(ForwardList) — Lista simplesmente encadeada
  *
  * Inserção O(1) no head. O(n) no tail.
  * ============================================================ */
@@ -105,7 +105,7 @@
  * ============================================================ */
 
 #define LINKED_FORWARD_LIST_IMPLEMENT_ALL(TYPE, SUFFIX)                              \
-  SINGLE_LINKED_NODE_STRUCT(TYPE, SUFFIX, Linked_ForwardList)                  \
+  SINGLE_LINKED_NODE_STRUCT(TYPE, SUFFIX, LINKED_NS(ForwardList))                  \
   LINKED_FORWARD_LIST_STRUCT(TYPE, SUFFIX)                                     \
   LINKED_FORWARD_LIST_INIT_PROTOTYPE(SUFFIX);                         \
   LINKED_FORWARD_LIST_DESTROY_PROTOTYPE(SUFFIX);                      \
@@ -132,7 +132,7 @@
   CONTAINER_API_BIND(NAME, LINKED_FORWARD_LIST_FUNC(TYPE, functions));                       \
   LINKED_FORWARD_LIST_FUNC(TYPE, Init)(&NAME);
 /* Compatibility alias: prefer LINKED_FORWARD_LIST_INSTANCE_DECLARE. */
-#define TLinked_ForwardList(TYPE, NAME) LINKED_FORWARD_LIST_INSTANCE_DECLARE(TYPE, NAME)
+#define TLINKED_NS(ForwardList)(TYPE, NAME) LINKED_FORWARD_LIST_INSTANCE_DECLARE(TYPE, NAME)
 
 /* ============================================================
  * Instanciações
