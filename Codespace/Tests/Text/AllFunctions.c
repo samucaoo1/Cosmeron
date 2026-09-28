@@ -49,7 +49,7 @@
     TDUAL_TYPE(uint16) size = {.col = 2U, .row = 2U};                          \
     TDUAL_TYPE(uint16) pos = {.x = 1U, .y = 1U};                               \
     TQUAD_TYPE(uint16) rect = {.left = 0U, .right = 1U, .top = 0U, .bottom = 0U}; \
-    cell.foreground = TEXT_GRID_COLOR_NS(WINDOWS_BRIGHT_GREEN);                \
+    cell.foreground = TEXT_GRID_COLOR_CONST(WINDOWS_BRIGHT_GREEN);                \
     CHECK_TRUE(TEXT_GRID_FUNC(SUFFIX, IsEmpty)(&grid));                        \
     CHECK_TRUE(TEXT_GRID_FUNC(SUFFIX, IsValid)(&grid));                        \
     CHECK_STATUS(TEXT_GRID_FUNC(SUFFIX, Create)(&grid, size));                 \
@@ -98,11 +98,11 @@ static int test_attributes(void) {
     return __LINE__;
   if (TEXT_GRID_ATTRIBUTE_FUNC(Create)(&grid, size) != STATUS_CONST(SUCCESS))
     return __LINE__;
-  cell.flags |= TEXT_GRID_ATTRIBUTE_NS(BOLD);
+  cell.flags |= TEXT_GRID_ATTRIBUTE_CONST(BOLD);
   if (TEXT_GRID_ATTRIBUTE_FUNC(WriteCell)(&grid, pos, cell) != STATUS_CONST(SUCCESS))
     return __LINE__;
   if (TEXT_GRID_ATTRIBUTE_FUNC(ReadCell)(&grid, pos, &out) != STATUS_CONST(SUCCESS) ||
-      (out.flags & TEXT_GRID_ATTRIBUTE_NS(BOLD)) == 0U)
+      (out.flags & TEXT_GRID_ATTRIBUTE_CONST(BOLD)) == 0U)
     return __LINE__;
   if (TEXT_GRID_ATTRIBUTE_FUNC(Fill)(&grid, cell) != STATUS_CONST(SUCCESS))
     return __LINE__;
@@ -136,24 +136,24 @@ static int test_attributes(void) {
 }
 
 int main(void) {
-  if (Text_UTF8_EncodedLength((TText_Char32)'A') != 1U ||
-      Text_UTF8_EncodedLength((TText_Char32)UINT32_C(0x1F600)) != 4U)
+  if (Text_UTF8_EncodedLength((TEXT_TYPE(TChar32))'A') != 1U ||
+      Text_UTF8_EncodedLength((TEXT_TYPE(TChar32))UINT32_C(0x1F600)) != 4U)
     return 1;
-  if (Text_UTF16_EncodedLength((TText_Char32)'A') != 1U ||
-      Text_UTF16_EncodedLength((TText_Char32)UINT32_C(0x1F600)) != 2U)
+  if (Text_UTF16_EncodedLength((TEXT_TYPE(TChar32))'A') != 1U ||
+      Text_UTF16_EncodedLength((TEXT_TYPE(TChar32))UINT32_C(0x1F600)) != 2U)
     return 2;
-  if (!Text_Codepoint_IsControl((TText_Char32)'\n'))
+  if (!Text_Codepoint_IsControl((TEXT_TYPE(TChar32))'\n'))
     return 3;
   if (test_attributes() != 0)
     return 4;
 
   TEST_CHAR_GRID(char, char, 'A', 'B');
-  TEST_CHAR_GRID(TText_Char16, char16, 65U, 66U);
-  TEST_CHAR_GRID(TText_Char32, char32, 65U, 66U);
+  TEST_CHAR_GRID(TEXT_TYPE(TChar16), char16, 65U, 66U);
+  TEST_CHAR_GRID(TEXT_TYPE(TChar32), char32, 65U, 66U);
 
   TEST_COMPOSITE_GRID(char, char, 'A', 'B');
-  TEST_COMPOSITE_GRID(TText_Char16, char16, 65U, 66U);
-  TEST_COMPOSITE_GRID(TText_Char32, char32, 65U, 66U);
+  TEST_COMPOSITE_GRID(TEXT_TYPE(TChar16), char16, 65U, 66U);
+  TEST_COMPOSITE_GRID(TEXT_TYPE(TChar32), char32, 65U, 66U);
 
   return 0;
 }

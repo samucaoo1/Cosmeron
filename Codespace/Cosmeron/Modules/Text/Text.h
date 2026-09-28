@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Text.space"
-#include "Types.h"
 #include "Unicode/Codepoint.h"
 #include "Encoding/UTF8.h"
 #include "Encoding/UTF16.h"

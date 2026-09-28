@@ -5,7 +5,7 @@
 #include <assert.h>
 
 int main(void) {
-  Cosmeron_TText_Grid_char32 grid = {0};
+  Cosmeron_Text_TGrid_char32 grid = {0};
   Cosmeron_Struct_TDual_uint16 size = {.col = 2U, .row = 1U};
   assert(Cosmeron_Text_Grid_char32_Create(&grid, size) ==
          COSMERON_STATUS_SUCCESS);
