@@ -14,22 +14,24 @@
 #include <limits.h>
 #include <string.h>
 
-typedef NTSTATUS (WINAPI *TRandom_BCryptGenRandom)(
+typedef NTSTATUS (WINAPI *RANDOM_ENTROPY_INS(BCryptGenRandom_InternalType_))(
     BCRYPT_ALG_HANDLE, PUCHAR, ULONG, ULONG);
 
-typedef struct TRandom_BCrypt_API {
+typedef struct RANDOM_ENTROPY_INS(BCryptAPI_InternalType_) {
   HMODULE module;
-  TRandom_BCryptGenRandom genRandom;
-} TRandom_BCrypt_API;
+  RANDOM_ENTROPY_INS(BCryptGenRandom_InternalType_) genRandom;
+} RANDOM_ENTROPY_INS(BCryptAPI_InternalType_);
 
-static inline TRandom_BCrypt_API *RANDOM_ENTROPY_FUNC(_BCryptAPI)(void) {
-  static TRandom_BCrypt_API api = {0};
+static inline RANDOM_ENTROPY_INS(BCryptAPI_InternalType_) *
+RANDOM_ENTROPY_INS(BCryptAPI)(void) {
+  static RANDOM_ENTROPY_INS(BCryptAPI_InternalType_) api = {0};
   return &api;
 }
 
-static inline BOOL CALLBACK RANDOM_ENTROPY_FUNC(_InitializeBCrypt)(
+static inline BOOL CALLBACK RANDOM_ENTROPY_INS(InitializeBCrypt)(
     PINIT_ONCE initOnce, PVOID parameter, PVOID *context) {
-  TRandom_BCrypt_API *api = RANDOM_ENTROPY_FUNC(_BCryptAPI)();
+  RANDOM_ENTROPY_INS(BCryptAPI_InternalType_) *api =
+      RANDOM_ENTROPY_INS(BCryptAPI)();
   FARPROC symbolAddress;
   (void)initOnce;
   (void)parameter;
@@ -51,11 +53,12 @@ static inline BOOL CALLBACK RANDOM_ENTROPY_FUNC(_InitializeBCrypt)(
   return TRUE;
 }
 
-static inline TRandom_BCryptGenRandom
-RANDOM_ENTROPY_FUNC(_BCryptGenRandom)(void) {
+static inline RANDOM_ENTROPY_INS(BCryptGenRandom_InternalType_)
+RANDOM_ENTROPY_INS(BCryptGenRandom)(void) {
   static INIT_ONCE once = INIT_ONCE_STATIC_INIT;
-  TRandom_BCrypt_API *api = RANDOM_ENTROPY_FUNC(_BCryptAPI)();
-  if (!InitOnceExecuteOnce(&once, RANDOM_ENTROPY_FUNC(_InitializeBCrypt),
+  RANDOM_ENTROPY_INS(BCryptAPI_InternalType_) *api =
+      RANDOM_ENTROPY_INS(BCryptAPI)();
+  if (!InitOnceExecuteOnce(&once, RANDOM_ENTROPY_INS(InitializeBCrypt),
                            NULL, NULL))
     return NULL;
   return api->genRandom;
@@ -68,12 +71,28 @@ RANDOM_ENTROPY_FUNC(_BCryptGenRandom)(void) {
 #include <unistd.h>
 #endif
 
-inline static bool RANDOM_ENTROPY_FUNC(System)(void *destination, size_t size);
-inline static uint64_t RANDOM_ENTROPY_FUNC(Address)(void);
-inline static uint64_t RANDOM_ENTROPY_FUNC(Clock)(void);
-inline static uint64_t RANDOM_ENTROPY_FUNC(Jitter)(void);
-inline static uint64_t RANDOM_ENTROPY_FUNC(Thread)(void);
-inline static uint64_t RANDOM_ENTROPY_FUNC(Time)(void);
-inline static uint64_t RANDOM_ENTROPY_FUNC(Collect)(void);
+#define RANDOM_ENTROPY_SYSTEM_PROTOTYPE                                      \
+  static inline OPSTATUS RANDOM_ENTROPY_FUNC(System)(                         \
+      void *destination, size_t size)
+#define RANDOM_ENTROPY_ADDRESS_PROTOTYPE                                     \
+  static inline uint64_t RANDOM_ENTROPY_FUNC(Address)(void)
+#define RANDOM_ENTROPY_CLOCK_PROTOTYPE                                       \
+  static inline uint64_t RANDOM_ENTROPY_FUNC(Clock)(void)
+#define RANDOM_ENTROPY_JITTER_PROTOTYPE                                      \
+  static inline uint64_t RANDOM_ENTROPY_FUNC(Jitter)(void)
+#define RANDOM_ENTROPY_THREAD_PROTOTYPE                                      \
+  static inline uint64_t RANDOM_ENTROPY_FUNC(Thread)(void)
+#define RANDOM_ENTROPY_TIME_PROTOTYPE                                        \
+  static inline uint64_t RANDOM_ENTROPY_FUNC(Time)(void)
+#define RANDOM_ENTROPY_COLLECT_PROTOTYPE                                     \
+  static inline uint64_t RANDOM_ENTROPY_FUNC(Collect)(void)
+
+RANDOM_ENTROPY_SYSTEM_PROTOTYPE;
+RANDOM_ENTROPY_ADDRESS_PROTOTYPE;
+RANDOM_ENTROPY_CLOCK_PROTOTYPE;
+RANDOM_ENTROPY_JITTER_PROTOTYPE;
+RANDOM_ENTROPY_THREAD_PROTOTYPE;
+RANDOM_ENTROPY_TIME_PROTOTYPE;
+RANDOM_ENTROPY_COLLECT_PROTOTYPE;
 
 #include "Impl/Entropy.impl"
