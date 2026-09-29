@@ -33,11 +33,11 @@ CHRONOMETRY_EPOCH_DATETIME_TO_UNIX_PROTOTYPE {
       STATUS_CONST(SUCCESS))
     return STATUS_CONST(OUT_OF_RANGE);
   days = jdn - COSMERON_MACRO_INTERNAL_CHRONOMETRY_UNIX_EPOCH_JDN;
-  seconds = days * CHRONOMETRY_SECONDS_PER_DAY + value.time.hour * CHRONOMETRY_SECONDS_PER_HOUR +
-            value.time.minute * CHRONOMETRY_SECONDS_PER_MINUTE + value.time.second;
+  seconds = days * DURATION_CONST(SECONDS_PER_DAY) + value.time.hour * DURATION_CONST(SECONDS_PER_HOUR) +
+            value.time.minute * DURATION_CONST(SECONDS_PER_MINUTE) + value.time.second;
   instant->seconds = seconds;
   instant->nanoseconds =
-      (uint32_t)value.time.millisecond * ((uint32_t)CHRONOMETRY_NANOSECONDS_PER_MILLISECOND);
+      (uint32_t)value.time.millisecond * ((uint32_t)DURATION_CONST(NANOSECONDS_PER_MILLISECOND));
   return STATUS_CONST(SUCCESS);
 }
 
@@ -45,18 +45,18 @@ CHRONOMETRY_EPOCH_DATETIME_FROM_UNIX_PROTOTYPE {
   CALENDAR_TYPE(Policy) gregorian =
       CALENDAR_FUNC(SystemPolicy)(CALENDAR_CONST(GREGORIAN));
   int64_t days, seconds;
-  if (value == NULL || instant.nanoseconds >= ((uint32_t)CHRONOMETRY_NANOSECONDS_PER_SECOND))
+  if (value == NULL || instant.nanoseconds >= ((uint32_t)DURATION_CONST(NANOSECONDS_PER_SECOND)))
     return STATUS_CONST(INVALID_ARGUMENT);
-  days = CALENDAR_FUNC(_FloorDiv)(instant.seconds, CHRONOMETRY_SECONDS_PER_DAY);
-  seconds = instant.seconds - days * CHRONOMETRY_SECONDS_PER_DAY;
+  days = CALENDAR_FUNC(_FloorDiv)(instant.seconds, DURATION_CONST(SECONDS_PER_DAY));
+  seconds = instant.seconds - days * DURATION_CONST(SECONDS_PER_DAY);
   if (CALENDAR_FUNC(DateFromOrdinal)(&gregorian,
           COSMERON_MACRO_INTERNAL_CHRONOMETRY_UNIX_EPOCH_JDN + days, &value->date) != STATUS_CONST(SUCCESS))
     return STATUS_CONST(OUT_OF_RANGE);
-  value->time.hour = (uint8_t)(seconds / CHRONOMETRY_SECONDS_PER_HOUR);
-  seconds %= CHRONOMETRY_SECONDS_PER_HOUR;
-  value->time.minute = (uint8_t)(seconds / CHRONOMETRY_SECONDS_PER_MINUTE);
-  value->time.second = (uint8_t)(seconds % CHRONOMETRY_SECONDS_PER_MINUTE);
-  value->time.millisecond = (uint16_t)(instant.nanoseconds / ((uint32_t)CHRONOMETRY_NANOSECONDS_PER_MILLISECOND));
+  value->time.hour = (uint8_t)(seconds / DURATION_CONST(SECONDS_PER_HOUR));
+  seconds %= DURATION_CONST(SECONDS_PER_HOUR);
+  value->time.minute = (uint8_t)(seconds / DURATION_CONST(SECONDS_PER_MINUTE));
+  value->time.second = (uint8_t)(seconds % DURATION_CONST(SECONDS_PER_MINUTE));
+  value->time.millisecond = (uint16_t)(instant.nanoseconds / ((uint32_t)DURATION_CONST(NANOSECONDS_PER_MILLISECOND)));
   return STATUS_CONST(SUCCESS);
 }
 
