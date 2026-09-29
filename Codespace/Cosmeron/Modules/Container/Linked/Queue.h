@@ -95,7 +95,7 @@
   LINKED_QUEUE_BACK_PROTOTYPE(TYPE, SUFFIX);                          \
   LINKED_QUEUE_EMPTY_PROTOTYPE(SUFFIX);                               \
   LINKED_QUEUE_SIZE_PROTOTYPE(SUFFIX);                                \
-  LINKED_QUEUE_IMPLEMENT(TYPE, SUFFIX)                                         \
+  COSMERON_MACRO_INTERNAL_LINKED_QUEUE_IMPLEMENT(TYPE, SUFFIX)                                         \
   LINKED_QUEUE_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                                  \
   LINKED_QUEUE_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)
 
