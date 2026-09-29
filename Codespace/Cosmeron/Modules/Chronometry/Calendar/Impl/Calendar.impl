@@ -112,11 +112,18 @@ CHRONOMETRY_CALENDAR_DAYS_IN_MONTH_PROTOTYPE {
     CHRONOMETRY_CALENDAR_MONTH_TABLE(X)
 #undef X
   };
+  uint8_t value;
+
+  if (outDays == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
   if (month < CALENDAR_CONST(JANUARY) || month > CALENDAR_CONST(DECEMBER))
-    return 0;
-  return (uint8_t)(days[month] +
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  value = (uint8_t)(days[month] +
       (month == CALENDAR_CONST(FEBRUARY) &&
        CALENDAR_FUNC(IsLeapYear)(system, year)));
+  *outDays = value;
+  return STATUS_CONST(SUCCESS);
 }
 
 inline static CALENDAR_TYPE(System) CALENDAR_INS(SystemFor)(
@@ -138,8 +145,10 @@ CHRONOMETRY_CALENDAR_DATE_IS_VALID_PROTOTYPE {
       CALENDAR_FUNC(DateCompare)(date, policy->reform.firstAfter) == COMPARISON_CONST(LESS))
     return false;
   system = CALENDAR_INS(SystemFor)(policy, date);
-  maximum = CALENDAR_FUNC(DaysInMonth)(system, date.year, date.month);
-  return maximum != 0 && date.day > 0 && date.day <= maximum;
+  if (CALENDAR_FUNC(DaysInMonth)(
+          system, date.year, date.month, &maximum) != STATUS_CONST(SUCCESS))
+    return false;
+  return date.day > 0 && date.day <= maximum;
 }
 
 CHRONOMETRY_CALENDAR_DATE_TO_DAY_OF_YEAR_PROTOTYPE {

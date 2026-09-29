@@ -91,8 +91,9 @@ typedef struct CALENDAR_TYPE(Policy) {
       CALENDAR_TYPE(System) system, int32_t year)
 
 #define CHRONOMETRY_CALENDAR_DAYS_IN_MONTH_PROTOTYPE                           \
-  static inline uint8_t CALENDAR_FUNC(DaysInMonth)(                            \
-      CALENDAR_TYPE(System) system, int32_t year, uint8_t month)
+  static inline OPSTATUS CALENDAR_FUNC(DaysInMonth)(                           \
+      CALENDAR_TYPE(System) system, int32_t year, uint8_t month,               \
+      uint8_t *outDays)
 
 #define CHRONOMETRY_CALENDAR_DATE_IS_VALID_PROTOTYPE                           \
   static inline bool CALENDAR_FUNC(DateIsValid)(                               \
