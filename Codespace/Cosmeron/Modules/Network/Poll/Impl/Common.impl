@@ -1,6 +1,6 @@
 #pragma once
 
-static inline OPSTATUS NETWORK_POLLER_FUNC(_Publish)(
+static inline OPSTATUS NETWORK_POLLER_INS(Publish)(
     NETWORK_TYPE(TError) *error, NETWORK_TYPE(TError) domainError,
     OPSTATUS status) {
   if (error != NULL)
@@ -8,7 +8,7 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_Publish)(
   return status;
 }
 
-static inline OPSTATUS NETWORK_POLLER_FUNC(_Add)(
+static inline OPSTATUS NETWORK_POLLER_INS(Add)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TSourceType) sourceType, void *object,
     NETWORK_POLLER_TYPE(EventFlags) interests, void *userdata, NETWORK_POLLER_TYPE(Handle) *handle,
     NETWORK_TYPE(TError) *error) {
@@ -26,11 +26,11 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_Add)(
   registration.userdata = userdata;
   if (FLAT_VECTOR_FUNC(Network_Poll_Registration, PushBack)(
           &poller->registrations, registration) != STATUS_CONST(SUCCESS)) {
-    return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
+    return NETWORK_POLLER_INS(Publish)(error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
         STATUS_CONST(OUT_OF_MEMORY));
   }
   *handle = registration.handle;
-  return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+  return NETWORK_POLLER_INS(Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 NETWORK_POLLER_INIT_PROTOTYPE {
@@ -48,19 +48,19 @@ NETWORK_POLLER_DESTROY_PROTOTYPE {
 }
 
 NETWORK_POLLER_ADD_CONNECTION_PROTOTYPE {
-  return NETWORK_POLLER_FUNC(_Add)(
+  return NETWORK_POLLER_INS(Add)(
       poller, NETWORK_POLLER_SOURCE_CONST(CONNECTION), connection, interests,
       userdata, handle, error);
 }
 
 NETWORK_POLLER_ADD_LISTENER_PROTOTYPE {
-  return NETWORK_POLLER_FUNC(_Add)(
+  return NETWORK_POLLER_INS(Add)(
       poller, NETWORK_POLLER_SOURCE_CONST(LISTENER), listener, interests,
       userdata, handle, error);
 }
 
 NETWORK_POLLER_ADD_DATAGRAM_PROTOTYPE {
-  return NETWORK_POLLER_FUNC(_Add)(
+  return NETWORK_POLLER_INS(Add)(
       poller, NETWORK_POLLER_SOURCE_CONST(DATAGRAM), datagram, interests,
       userdata, handle, error);
 }
@@ -75,9 +75,9 @@ NETWORK_POLLER_REMOVE_PROTOTYPE {
     if (poller->registrations.data[i].handle == handle) {
       OPSTATUS status = FLAT_VECTOR_FUNC(Network_Poll_Registration, Erase)(
           &poller->registrations, i, 1);
-      return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), status);
+      return NETWORK_POLLER_INS(Publish)(error, NETWORK_ERROR_CONST(NONE), status);
     }
-  return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(NOT_FOUND));
+  return NETWORK_POLLER_INS(Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(NOT_FOUND));
 }
 
 NETWORK_POLLER_WATCH_PROTOTYPE {
@@ -89,12 +89,12 @@ NETWORK_POLLER_WATCH_PROTOTYPE {
   for (i = 0; i < poller->registrations.size; ++i)
     if (poller->registrations.data[i].handle == handle) {
       poller->registrations.data[i].interests = interests;
-      return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+      return NETWORK_POLLER_INS(Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
     }
-  return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(NOT_FOUND));
+  return NETWORK_POLLER_INS(Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(NOT_FOUND));
 }
 
-static inline bool NETWORK_POLLER_FUNC(_StreamClosed)(
+static inline bool NETWORK_POLLER_INS(StreamClosed)(
     SOCKET_TYPE(Handle) handle) {
   char byte;
 #if OS_WINDOWS
@@ -107,19 +107,19 @@ static inline bool NETWORK_POLLER_FUNC(_StreamClosed)(
   if (result == 0) return true;
   if (result == TSOCKET_NATIVE_ERROR) {
     NETWORK_TYPE(TError) error =
-        SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
+        SOCKET_INS(MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
     return error != NETWORK_ERROR_CONST(WOULD_BLOCK);
   }
   return false;
 }
 
-static inline OPSTATUS NETWORK_POLLER_FUNC(_PushEvent)(
+static inline OPSTATUS NETWORK_POLLER_INS(PushEvent)(
     NETWORK_POLLER_TYPE(TEventVector) *events,
     NETWORK_POLLER_TYPE(TRegistration) *registration, NETWORK_POLLER_TYPE(EventFlags) flags,
     NETWORK_TYPE(TError) *error) {
   NETWORK_POLLER_TYPE(TEvent) event;
   if (flags == NETWORK_EVENT_CONST(NONE))
-    return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+    return NETWORK_POLLER_INS(Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
   event.handle = registration->handle;
   event.sourceType = registration->sourceType;
   event.flags = flags;
@@ -127,8 +127,8 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_PushEvent)(
   event.userdata = registration->userdata;
   if (FLAT_VECTOR_FUNC(Network_Event, PushBack)(events, event) !=
       STATUS_CONST(SUCCESS)) {
-    return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
+    return NETWORK_POLLER_INS(Publish)(error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
         STATUS_CONST(OUT_OF_MEMORY));
   }
-  return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+  return NETWORK_POLLER_INS(Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
