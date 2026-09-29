@@ -24,7 +24,7 @@ int main(void) {
 
   {
     CHRONOMETRY_TYPE(Duration) timeout =
-        DURATION_FUNC(FromNanoseconds)(2 * CHRONOMETRY_NANOSECONDS_PER_SECOND);
+        DURATION_FUNC(FromNanoseconds)(2 * CHRONOMETRY_DURATION_NANOSECONDS_PER_SECOND);
     assert(NETWORK_CONNECTION_FUNC(ConnectFor)(
                &client, "127.0.0.1", endpoint.port, timeout, NULL) ==
            STATUS_CONST(SUCCESS));
