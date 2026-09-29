@@ -274,7 +274,7 @@ int main(void) {
   TEST_LIST(char, char, 'a', 'b', 'c');
   {
     int a = 1, b = 2, c = 3;
-    TEST_LIST(void_ptr, void_ptr, &a, &b, &c);
+    TEST_LIST(TTestVoidPointer, void_ptr, &a, &b, &c);
   }
 
   TEST_LINKED_QUEUE(int, int, 1, 2);
