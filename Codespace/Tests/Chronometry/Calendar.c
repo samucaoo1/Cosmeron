@@ -17,16 +17,16 @@ int main(void) {
   if (Chronometry_Calendar_SystemPolicy(
           CHRONOMETRY_CALENDAR_GREGORIAN, NULL) !=
       STATUS_CONST(INVALID_ARGUMENT))
-    return 5;
+    return 2;
   reform = sentinel;
   if (Chronometry_Calendar_SystemPolicy(
           (Chronometry_Calendar_System)99, &reform) !=
           STATUS_CONST(OUT_OF_RANGE) ||
       reform.kind != sentinel.kind || reform.system != sentinel.system)
-    return 6;
+    return 3;
 
   if (!Chronometry_Calendar_IsLeapYear(CHRONOMETRY_CALENDAR_GREGORIAN, 2024))
-    return 7;
+    return 4;
   if (Chronometry_Calendar_IsLeapYear(CHRONOMETRY_CALENDAR_GREGORIAN, 2100))
     return 5;
   {
@@ -48,7 +48,7 @@ int main(void) {
       return 8;
   }
   if (!Chronometry_Calendar_DateIsValid(&g, d))
-    return 7;
+    return 9;
   if (Chronometry_Calendar_DateToDayOfYear(&g, d, &doy) != STATUS_CONST(SUCCESS) ||
       doy != 60U)
     return 10;
