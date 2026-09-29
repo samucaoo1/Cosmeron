@@ -42,7 +42,7 @@ The macro form follows the configured Cosmeron namespace automatically and is th
 If a custom namespace is configured:
 
 ```c
-#define CONGRO_NAMESPACE MyProject
+#define COSMERON_NAMESPACE MyProject
 
 #include "Cosmeron/Modules/Bit/Bit.h"
 ```
@@ -1520,7 +1520,7 @@ Bit_32_Popcount
 If a namespace is configured:
 
 ```c
-#define CONGRO_NAMESPACE MyProject
+#define COSMERON_NAMESPACE MyProject
 ```
 
 the direct symbol becomes:
