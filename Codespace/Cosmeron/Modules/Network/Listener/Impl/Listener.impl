@@ -4,7 +4,7 @@
 #include <poll.h>
 #endif
 
-static inline OPSTATUS NETWORK_LISTENER_FUNC(_Publish)(
+static inline OPSTATUS NETWORK_LISTENER_INS(Publish)(
     NETWORK_TYPE(TError) *error, NETWORK_TYPE(TError) domainError,
     OPSTATUS status) {
   if (error != NULL)
@@ -12,13 +12,13 @@ static inline OPSTATUS NETWORK_LISTENER_FUNC(_Publish)(
   return status;
 }
 
-static inline OPSTATUS NETWORK_LISTENER_FUNC(_Fail)(
+static inline OPSTATUS NETWORK_LISTENER_INS(Fail)(
     NETWORK_TYPE(TError) *error, NETWORK_TYPE(TError) domainError) {
-  return NETWORK_LISTENER_FUNC(_Publish)(
+  return NETWORK_LISTENER_INS(Publish)(
       error, domainError, STATUS_CONST(GENERIC_ERROR));
 }
 
-static inline OPSTATUS NETWORK_LISTENER_FUNC(_Open)(
+static inline OPSTATUS NETWORK_LISTENER_INS(Open)(
     SOCKET_TYPE(TSocket) *socket,
     const NETWORK_ADDRESS_TYPE(TEndpoint) *endpoint,
     NETWORK_TYPE(TError) *error) {
@@ -45,12 +45,12 @@ static inline OPSTATUS NETWORK_LISTENER_FUNC(_Open)(
   return status;
 }
 
-static inline void NETWORK_LISTENER_FUNC(_RefreshLocalEndpoint)(
+static inline void NETWORK_LISTENER_INS(RefreshLocalEndpoint)(
     NETWORK_LISTENER_TYPE(TListener) *listener, SOCKET_TYPE(TSocket) *socket) {
   struct sockaddr_storage native;
   SOCKET_TYPE(Len) length = (SOCKET_TYPE(Len))sizeof(native);
   if (TSOCKET_NATIVE_GETSOCKNAME(socket->handle, (struct sockaddr *)&native, &length) == 0)
-    SOCKET_FUNC(_EndpointFromNative)((struct sockaddr *)&native,
+    SOCKET_INS(EndpointFromNative)((struct sockaddr *)&native,
                                      &listener->localEndpoint);
 }
 
@@ -71,13 +71,13 @@ NETWORK_LISTENER_LISTEN_AT_PROTOTYPE {
   NETWORK_LISTENER_FUNC(Close)(listener);
   {
     NETWORK_TYPE(TError) openError = NETWORK_ERROR_CONST(NONE);
-    if (NETWORK_LISTENER_FUNC(_Open)(
+    if (NETWORK_LISTENER_INS(Open)(
             &listener->primary, endpoint, &openError) != STATUS_CONST(SUCCESS))
-      return NETWORK_LISTENER_FUNC(_Fail)(error, openError);
+      return NETWORK_LISTENER_INS(Fail)(error, openError);
   }
   listener->dualStack = false;
-  NETWORK_LISTENER_FUNC(_RefreshLocalEndpoint)(listener, &listener->primary);
-  return NETWORK_LISTENER_FUNC(_Publish)(
+  NETWORK_LISTENER_INS(RefreshLocalEndpoint)(listener, &listener->primary);
+  return NETWORK_LISTENER_INS(Publish)(
       error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
@@ -97,31 +97,31 @@ NETWORK_LISTENER_LISTEN_PROTOTYPE {
 
   {
     NETWORK_TYPE(TError) openError = NETWORK_ERROR_CONST(NONE);
-    if (NETWORK_LISTENER_FUNC(_Open)(
+    if (NETWORK_LISTENER_INS(Open)(
             &listener->primary, &endpoint, &openError) == STATUS_CONST(SUCCESS)) {
     int ipv6Only = 1;
     SOCKET_TYPE(Len) length = (SOCKET_TYPE(Len))sizeof(ipv6Only);
-    NETWORK_LISTENER_FUNC(_RefreshLocalEndpoint)(listener, &listener->primary);
+    NETWORK_LISTENER_INS(RefreshLocalEndpoint)(listener, &listener->primary);
     boundPort = listener->localEndpoint.port;
 
     if (TSOCKET_NATIVE_GETSOCKOPT(listener->primary.handle, IPPROTO_IPV6, IPV6_V6ONLY,
                    (char *)&ipv6Only, &length) == 0 && ipv6Only == 0) {
       listener->dualStack = true;
-      return NETWORK_LISTENER_FUNC(_Publish)(
+      return NETWORK_LISTENER_INS(Publish)(
           error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
     }
 
     NETWORK_ADDRESS_FUNC(IPv4_Any)(&address);
     NETWORK_ADDRESS_FUNC(Endpoint_Create)(&endpoint, &address, boundPort);
-    if (NETWORK_LISTENER_FUNC(_Open)(
+    if (NETWORK_LISTENER_INS(Open)(
             &listener->secondary, &endpoint, &openError) == STATUS_CONST(SUCCESS)) {
       listener->dualStack = true;
-      return NETWORK_LISTENER_FUNC(_Publish)(
+      return NETWORK_LISTENER_INS(Publish)(
       error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
     }
 
     /* IPv6 remains usable even when the IPv4 companion cannot be opened. */
-    return NETWORK_LISTENER_FUNC(_Publish)(
+    return NETWORK_LISTENER_INS(Publish)(
         error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
     }
   }
@@ -130,18 +130,18 @@ NETWORK_LISTENER_LISTEN_PROTOTYPE {
   NETWORK_ADDRESS_FUNC(Endpoint_Create)(&endpoint, &address, port);
   {
     NETWORK_TYPE(TError) openError = NETWORK_ERROR_CONST(NONE);
-    if (NETWORK_LISTENER_FUNC(_Open)(
+    if (NETWORK_LISTENER_INS(Open)(
             &listener->primary, &endpoint, &openError) != STATUS_CONST(SUCCESS))
-      return NETWORK_LISTENER_FUNC(_Fail)(error, openError);
+      return NETWORK_LISTENER_INS(Fail)(error, openError);
   }
 
-  NETWORK_LISTENER_FUNC(_RefreshLocalEndpoint)(listener, &listener->primary);
+  NETWORK_LISTENER_INS(RefreshLocalEndpoint)(listener, &listener->primary);
   listener->dualStack = false;
-  return NETWORK_LISTENER_FUNC(_Publish)(
+  return NETWORK_LISTENER_INS(Publish)(
       error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
-static inline SOCKET_TYPE(TSocket) *NETWORK_LISTENER_FUNC(_AcceptSocket)(
+static inline SOCKET_TYPE(TSocket) *NETWORK_LISTENER_INS(AcceptSocket)(
     NETWORK_LISTENER_TYPE(TListener) *listener) {
   if (listener->secondary.handle == TSOCKET_NATIVE_INVALID)
     return &listener->primary;
@@ -153,7 +153,7 @@ static inline SOCKET_TYPE(TSocket) *NETWORK_LISTENER_FUNC(_AcceptSocket)(
   FD_SET(listener->secondary.handle, &set);
   if (TSOCKET_NATIVE_SELECT(0, &set, NULL, NULL, NULL) <= 0)
     return NULL;
-  return SOCKET_FUNC(_DescriptorSetContains)(listener->primary.handle, &set) ? &listener->primary
+  return SOCKET_INS(DescriptorSetContains)(listener->primary.handle, &set) ? &listener->primary
                                                   : &listener->secondary;
 #else
   struct pollfd descriptors[2];
@@ -183,9 +183,9 @@ NETWORK_LISTENER_ACCEPT_PROTOTYPE {
       *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
   }
-  source = NETWORK_LISTENER_FUNC(_AcceptSocket)(listener);
+  source = NETWORK_LISTENER_INS(AcceptSocket)(listener);
   if (source == NULL)
-    return NETWORK_LISTENER_FUNC(_Fail)(
+    return NETWORK_LISTENER_INS(Fail)(
         error, NETWORK_ERROR_CONST(UNKNOWN));
 
   NETWORK_CONNECTION_FUNC(Init)(&accepted);
@@ -194,7 +194,7 @@ NETWORK_LISTENER_ACCEPT_PROTOTYPE {
     if (SOCKET_FUNC(Accept)(
             source, &accepted.socket, &peer, &socketError) !=
         STATUS_CONST(SUCCESS))
-      return NETWORK_LISTENER_FUNC(_Fail)(
+      return NETWORK_LISTENER_INS(Fail)(
         error, socketError);
   }
 
@@ -202,7 +202,7 @@ NETWORK_LISTENER_ACCEPT_PROTOTYPE {
   accepted.state = NETWORK_CONNECTION_CONST(CONNECTED);
   NETWORK_CONNECTION_FUNC(_RefreshEndpoints)(&accepted);
   *connection = accepted;
-  return NETWORK_LISTENER_FUNC(_Publish)(
+  return NETWORK_LISTENER_INS(Publish)(
       error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
