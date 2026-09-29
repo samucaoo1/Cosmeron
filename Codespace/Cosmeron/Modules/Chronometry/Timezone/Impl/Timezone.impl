@@ -20,7 +20,7 @@ CHRONOMETRY_TIMEZONE_TO_UTC_PROTOTYPE {
     return status;
   status = DURATION_FUNC(FromSeconds)(
       -(int64_t)value.offset.minutesEastOfUtc *
-          CHRONOMETRY_SECONDS_PER_MINUTE,
+          DURATION_CONST(SECONDS_PER_MINUTE),
       &offset);
   return status == STATUS_CONST(SUCCESS)
              ? INSTANT_FUNC(AddDuration)(local, offset, instant)
@@ -34,7 +34,7 @@ CHRONOMETRY_TIMEZONE_FROM_UTC_PROTOTYPE {
   if (value == NULL || !TIMEZONE_FUNC(OffsetIsValid)(offset))
     return STATUS_CONST(INVALID_ARGUMENT);
   status = DURATION_FUNC(FromSeconds)(
-      (int64_t)offset.minutesEastOfUtc * CHRONOMETRY_SECONDS_PER_MINUTE,
+      (int64_t)offset.minutesEastOfUtc * DURATION_CONST(SECONDS_PER_MINUTE),
       &duration);
   if (status != STATUS_CONST(SUCCESS))
     return status;
