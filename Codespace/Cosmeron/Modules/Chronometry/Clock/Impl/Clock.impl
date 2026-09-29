@@ -21,8 +21,8 @@ CHRONOMETRY_CLOCK_NOW_PROTOTYPE {
   uint64_t ticks = (uint64_t)counter.QuadPart;
   uint64_t hz = (uint64_t)frequency.QuadPart;
   outResult->nanoseconds =
-      (ticks / hz) * (uint64_t)CHRONOMETRY_NANOSECONDS_PER_SECOND +
-      ((ticks % hz) * (uint64_t)CHRONOMETRY_NANOSECONDS_PER_SECOND) / hz;
+      (ticks / hz) * (uint64_t)DURATION_CONST(NANOSECONDS_PER_SECOND) +
+      ((ticks % hz) * (uint64_t)DURATION_CONST(NANOSECONDS_PER_SECOND)) / hz;
 #elif OS_MAC
   mach_timebase_info_data_t timebase;
   uint64_t ticks = mach_absolute_time();
@@ -36,7 +36,7 @@ CHRONOMETRY_CLOCK_NOW_PROTOTYPE {
     return STATUS_CONST(GENERIC_ERROR);
   outResult->nanoseconds =
       (uint64_t)value.tv_sec *
-          (uint64_t)CHRONOMETRY_NANOSECONDS_PER_SECOND +
+          (uint64_t)DURATION_CONST(NANOSECONDS_PER_SECOND) +
       (uint64_t)value.tv_nsec;
 #endif
   return STATUS_CONST(SUCCESS);
