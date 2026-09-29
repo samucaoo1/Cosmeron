@@ -4,7 +4,7 @@
 #include <string.h>
 #include "../../../../Core/Memory/Alloc.h"
 
-static inline short NETWORK_POLLER_FUNC(_NativeInterests)(
+static inline short NETWORK_POLLER_INS(NativeInterests)(
     NETWORK_POLLER_TYPE(EventFlags) interests) {
   short events = 0;
   if (interests & (NETWORK_EVENT_CONST(READ) | NETWORK_EVENT_CONST(ACCEPT) |
@@ -14,20 +14,20 @@ static inline short NETWORK_POLLER_FUNC(_NativeInterests)(
   return events;
 }
 
-static inline size_t NETWORK_POLLER_FUNC(_AppendNative)(
+static inline size_t NETWORK_POLLER_INS(AppendNative)(
     WSAPOLLFD *descriptors, size_t *registrationIndices, bool *detectClose,
     size_t count, SOCKET_TYPE(Handle) handle, size_t registrationIndex,
     NETWORK_POLLER_TYPE(EventFlags) interests, bool closeDetection) {
   if (handle == TSOCKET_NATIVE_INVALID) return count;
   descriptors[count].fd = handle;
-  descriptors[count].events = NETWORK_POLLER_FUNC(_NativeInterests)(interests);
+  descriptors[count].events = NETWORK_POLLER_INS(NativeInterests)(interests);
   descriptors[count].revents = 0;
   registrationIndices[count] = registrationIndex;
   detectClose[count] = closeDetection;
   return count + 1;
 }
 
-static inline NETWORK_POLLER_TYPE(EventFlags) NETWORK_POLLER_FUNC(_NativeReady)(
+static inline NETWORK_POLLER_TYPE(EventFlags) NETWORK_POLLER_INS(NativeReady)(
     const WSAPOLLFD *descriptor, bool detectClose,
     NETWORK_POLLER_TYPE(EventFlags) interests) {
   short ready = descriptor->revents;
@@ -41,7 +41,7 @@ static inline NETWORK_POLLER_TYPE(EventFlags) NETWORK_POLLER_FUNC(_NativeReady)(
     flags |= NETWORK_EVENT_CONST(WRITE);
   if (ready & (POLLRDNORM | POLLHUP)) {
     if (detectClose && (interests & NETWORK_EVENT_CONST(CLOSE)))
-      closed = NETWORK_POLLER_FUNC(_StreamClosed)(descriptor->fd);
+      closed = NETWORK_POLLER_INS(StreamClosed)(descriptor->fd);
     if (interests & NETWORK_EVENT_CONST(ACCEPT)) flags |= NETWORK_EVENT_CONST(ACCEPT);
     if ((interests & NETWORK_EVENT_CONST(READ)) && !closed &&
         (ready & POLLRDNORM))
@@ -53,7 +53,7 @@ static inline NETWORK_POLLER_TYPE(EventFlags) NETWORK_POLLER_FUNC(_NativeReady)(
   return flags;
 }
 
-static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
+static inline OPSTATUS NETWORK_POLLER_INS(WaitNative)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TEventVector) *events, int timeoutMs,
     NETWORK_TYPE(TError) *error) {
   WSAPOLLFD *descriptors;
@@ -71,11 +71,11 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
   }
   FLAT_VECTOR_FUNC(Network_Event, Clear)(events);
   if (poller->registrations.size == 0) {
-    return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+    return NETWORK_POLLER_INS(Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
   }
 
   if (poller->registrations.size > SIZE_MAX / 2) {
-    return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
+    return NETWORK_POLLER_INS(Publish)(error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
         STATUS_CONST(OUT_OF_RANGE));
   }
   capacity = poller->registrations.size * 2;
@@ -118,7 +118,7 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
     Memory_Free(registrationIndices);
     Memory_Free(detectClose);
     Memory_Free(flags);
-    return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
+    return NETWORK_POLLER_INS(Publish)(error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
         STATUS_CONST(OUT_OF_MEMORY));
   }
 
@@ -129,17 +129,17 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
     NETWORK_POLLER_TYPE(TRegistration) *r = &poller->registrations.data[i];
     if (r->sourceType == NETWORK_POLLER_SOURCE_CONST(CONNECTION)) {
       NETWORK_CONNECTION_TYPE(TConnection) *c = (NETWORK_CONNECTION_TYPE(TConnection) *)r->object;
-      count = NETWORK_POLLER_FUNC(_AppendNative)(
+      count = NETWORK_POLLER_INS(AppendNative)(
           descriptors, registrationIndices, detectClose, count, c->socket.handle, i, r->interests, true);
     } else if (r->sourceType == NETWORK_POLLER_SOURCE_CONST(DATAGRAM)) {
       NETWORK_DATAGRAM_TYPE(TDatagram) *d = (NETWORK_DATAGRAM_TYPE(TDatagram) *)r->object;
-      count = NETWORK_POLLER_FUNC(_AppendNative)(
+      count = NETWORK_POLLER_INS(AppendNative)(
           descriptors, registrationIndices, detectClose, count, d->socket.handle, i, r->interests, false);
     } else {
       NETWORK_LISTENER_TYPE(TListener) *l = (NETWORK_LISTENER_TYPE(TListener) *)r->object;
-      count = NETWORK_POLLER_FUNC(_AppendNative)(
+      count = NETWORK_POLLER_INS(AppendNative)(
           descriptors, registrationIndices, detectClose, count, l->primary.handle, i, r->interests, false);
-      count = NETWORK_POLLER_FUNC(_AppendNative)(
+      count = NETWORK_POLLER_INS(AppendNative)(
           descriptors, registrationIndices, detectClose, count, l->secondary.handle, i, r->interests, false);
     }
   }
@@ -149,7 +149,7 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
     Memory_Free(registrationIndices);
     Memory_Free(detectClose);
     Memory_Free(flags);
-    return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+    return NETWORK_POLLER_INS(Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
   }
 
   if (count > ULONG_MAX) {
@@ -157,7 +157,7 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
     Memory_Free(registrationIndices);
     Memory_Free(detectClose);
     Memory_Free(flags);
-    return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
+    return NETWORK_POLLER_INS(Publish)(error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
         STATUS_CONST(OUT_OF_RANGE));
   }
 
@@ -167,19 +167,19 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
     Memory_Free(registrationIndices);
     Memory_Free(detectClose);
     Memory_Free(flags);
-    return NETWORK_POLLER_FUNC(_Publish)(error, SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE()),
+    return NETWORK_POLLER_INS(Publish)(error, SOCKET_INS(MapNativeError)(TSOCKET_NATIVE_ERROR_CODE()),
         STATUS_CONST(GENERIC_ERROR));
   }
 
   for (i = 0; i < count; ++i) {
     size_t index = registrationIndices[i];
-    flags[index] |= NETWORK_POLLER_FUNC(_NativeReady)(
+    flags[index] |= NETWORK_POLLER_INS(NativeReady)(
         &descriptors[i], detectClose[i],
         poller->registrations.data[index].interests);
   }
   for (i = 0; i < poller->registrations.size; ++i) {
     flags[i] &= poller->registrations.data[i].interests;
-    if (NETWORK_POLLER_FUNC(_PushEvent)(
+    if (NETWORK_POLLER_INS(PushEvent)(
             events, &poller->registrations.data[i], flags[i], error) !=
         STATUS_CONST(SUCCESS)) {
       Memory_Free(descriptors);
@@ -194,11 +194,11 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
   Memory_Free(registrationIndices);
   Memory_Free(detectClose);
   Memory_Free(flags);
-  return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+  return NETWORK_POLLER_INS(Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 NETWORK_POLLER_WAIT_PROTOTYPE {
-  return NETWORK_POLLER_FUNC(_WaitNative)(poller, events, -1, error);
+  return NETWORK_POLLER_INS(WaitNative)(poller, events, -1, error);
 }
 
 NETWORK_POLLER_WAIT_FOR_PROTOTYPE {
@@ -211,6 +211,6 @@ NETWORK_POLLER_WAIT_FOR_PROTOTYPE {
   if (timeout.nanoseconds % CHRONOMETRY_DURATION_NANOSECONDS_PER_MILLISECOND != 0)
     ++milliseconds;
   if (milliseconds > INT_MAX) milliseconds = INT_MAX;
-  return NETWORK_POLLER_FUNC(_WaitNative)(
+  return NETWORK_POLLER_INS(WaitNative)(
       poller, events, (int)milliseconds, error);
 }
