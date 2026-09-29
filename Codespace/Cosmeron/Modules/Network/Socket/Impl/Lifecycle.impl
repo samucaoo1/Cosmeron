@@ -50,7 +50,7 @@ SOCKET_CREATE_PROTOTYPE {
         STATUS_CONST(INVALID_ARGUMENT));
   if (socket->handle != TSOCKET_NATIVE_INVALID)
     SOCKET_FUNC(Close)(socket);
-  if (!NETWORK_FUNC(_EnsureRuntime)())
+  if (!NETWORK_INS(EnsureRuntime)())
     return SOCKET_INS(Return)(
         error, NETWORK_ERROR_CONST(UNKNOWN), STATUS_CONST(GENERIC_ERROR));
 
