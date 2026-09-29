@@ -12,11 +12,15 @@ CHRONOMETRY_EPOCH_DATE_FROM_JDN_PROTOTYPE {
 }
 
 CHRONOMETRY_EPOCH_DATE_TO_RATA_DIE_PROTOTYPE {
-  CALENDAR_TYPE(Policy) gregorian =
-      CALENDAR_FUNC(SystemPolicy)(CALENDAR_CONST(GREGORIAN));
+  CALENDAR_TYPE(Policy) gregorian;
   int64_t jdn;
+  OPSTATUS status;
+
   if (rataDie == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
+  status = CALENDAR_FUNC(SystemPolicy)(CALENDAR_CONST(GREGORIAN), &gregorian);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
   if (CALENDAR_FUNC(DateToOrdinal)(&gregorian, date, &jdn) != STATUS_CONST(SUCCESS))
     return STATUS_CONST(OUT_OF_RANGE);
   *rataDie = jdn - COSMERON_MACRO_INTERNAL_CHRONOMETRY_RATA_DIE_JDN + 1;
@@ -24,10 +28,16 @@ CHRONOMETRY_EPOCH_DATE_TO_RATA_DIE_PROTOTYPE {
 }
 
 CHRONOMETRY_EPOCH_DATETIME_TO_UNIX_PROTOTYPE {
-  CALENDAR_TYPE(Policy) gregorian =
-      CALENDAR_FUNC(SystemPolicy)(CALENDAR_CONST(GREGORIAN));
+  CALENDAR_TYPE(Policy) gregorian;
   int64_t jdn, days, seconds;
-  if (instant == NULL || !DATETIME_FUNC(IsValid)(&gregorian, value))
+  OPSTATUS status;
+
+  if (instant == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  status = CALENDAR_FUNC(SystemPolicy)(CALENDAR_CONST(GREGORIAN), &gregorian);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+  if (!DATETIME_FUNC(IsValid)(&gregorian, value))
     return STATUS_CONST(INVALID_ARGUMENT);
   if (CALENDAR_FUNC(DateToOrdinal)(&gregorian, value.date, &jdn) !=
       STATUS_CONST(SUCCESS))
@@ -42,11 +52,16 @@ CHRONOMETRY_EPOCH_DATETIME_TO_UNIX_PROTOTYPE {
 }
 
 CHRONOMETRY_EPOCH_DATETIME_FROM_UNIX_PROTOTYPE {
-  CALENDAR_TYPE(Policy) gregorian =
-      CALENDAR_FUNC(SystemPolicy)(CALENDAR_CONST(GREGORIAN));
+  CALENDAR_TYPE(Policy) gregorian;
   int64_t days, seconds;
-  if (value == NULL || instant.nanoseconds >= ((uint32_t)DURATION_CONST(NANOSECONDS_PER_SECOND)))
+  OPSTATUS status;
+
+  if (value == NULL ||
+      instant.nanoseconds >= ((uint32_t)DURATION_CONST(NANOSECONDS_PER_SECOND)))
     return STATUS_CONST(INVALID_ARGUMENT);
+  status = CALENDAR_FUNC(SystemPolicy)(CALENDAR_CONST(GREGORIAN), &gregorian);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
   days = CALENDAR_INS(FloorDiv)(instant.seconds, DURATION_CONST(SECONDS_PER_DAY));
   seconds = instant.seconds - days * DURATION_CONST(SECONDS_PER_DAY);
   if (CALENDAR_FUNC(DateFromOrdinal)(&gregorian,
