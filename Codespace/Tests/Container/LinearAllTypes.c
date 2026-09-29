@@ -9,6 +9,8 @@
 #include "../../Cosmeron/Modules/Container/Linked/Stack.h"
 #include "../../Cosmeron/Modules/Container/Linked/Deque.h"
 
+typedef void *TTestVoidPointer;
+
 #define TEST_VECTOR(TYPE, SUFFIX, A, B, C)                                    \
   do {                                                                         \
     FLAT_VECTOR_TYPE(SUFFIX) v;                                                \
