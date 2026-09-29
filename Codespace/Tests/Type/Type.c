@@ -344,6 +344,20 @@ int main(void) {
     if (TBIGINT_FUNC(128, DivMod)(&dividend, &divisor, &sameOutput, &sameOutput) !=
         STATUS_CONST(INVALID_ARGUMENT))
       return 50;
+    if (TBIGINT_FUNC(128, DivMod)(&dividend, &divisor, NULL, &sameOutput) !=
+            STATUS_CONST(INVALID_ARGUMENT) ||
+        TBIGINT_FUNC(128, DivMod)(&dividend, &divisor, &sameOutput, NULL) !=
+            STATUS_CONST(INVALID_ARGUMENT))
+      return 51;
+
+    quotient.limb[0] = 123U;
+    remainder.limb[0] = 456U;
+    divisor.limb[0] = 0U;
+    if (TBIGINT_FUNC(128, DivMod)(
+            &dividend, &divisor, &quotient, &remainder) !=
+            STATUS_CONST(DIVISION_BY_ZERO) ||
+        quotient.limb[0] != 123U || remainder.limb[0] != 456U)
+      return 52;
   }
 
   {

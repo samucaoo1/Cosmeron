@@ -8,6 +8,8 @@
 
 #define TDECIMAL_TYPE(SUFFIX) TYPE_TYPE(TDecimal, SUFFIX)
 #define TDECIMAL_FUNC(SUFFIX, FUNCTION) TYPE_FUNC(TDecimal, SUFFIX, FUNCTION)
+#define TDECIMAL_INS(SUFFIX, NAME)                                            \
+  GNS2(TYPE_INS(PP_OP_CAT2(TDecimal, SUFFIX)), NAME)
 #define TDECIMAL_FUNCTION_TABLE_TYPE(SUFFIX) \
   GNS2(TDECIMAL_TYPE(SUFFIX), FunctionTable)
 
@@ -54,10 +56,12 @@
       TDECIMAL_TYPE(SUFFIX) * destinationDecimal,                             \
       const TDECIMAL_TYPE(SUFFIX) * sourceDecimal)
 
-#define TDECIMAL_DIVMOD_PROTOTYPE(SUFFIX)                                \
-  static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, DivMod)(                            \
-      const TDECIMAL_TYPE(SUFFIX) *dividend, const TDECIMAL_TYPE(SUFFIX) *divisor,     \
-      TDECIMAL_TYPE(SUFFIX) *quotient, TDECIMAL_TYPE(SUFFIX) *remainder)
+#define TDECIMAL_DIVMOD_PROTOTYPE(SUFFIX)                                    \
+  static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, DivMod)(                       \
+      const TDECIMAL_TYPE(SUFFIX) *dividend,                                  \
+      const TDECIMAL_TYPE(SUFFIX) *divisor,                                   \
+      TDECIMAL_TYPE(SUFFIX) *outQuotient,                                     \
+      TDECIMAL_TYPE(SUFFIX) *outRemainder)
 
 #define TDECIMAL_DIV_PROTOTYPE(SUFFIX)                                \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, Div)(                               \

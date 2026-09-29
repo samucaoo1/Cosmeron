@@ -32,15 +32,21 @@
   DATA_TYPE_IMPLEMENT_MUL(TYPE, TBIGINT_FUNC(SUFFIX, Mul),                       \
                            TBIGINT_TYPE(SUFFIX), TBIGINT_FUNC(SUFFIX, Add),          \
                            TBIGINT_FUNC(SUFFIX, ShiftLeft))                       \
-  DATA_TYPE_IMPLEMENT_DIVMOD(TYPE, TBIGINT_FUNC(SUFFIX, DivMod),                 \
+  DATA_TYPE_IMPLEMENT_DIVMOD(TYPE, TBIGINT_INS(SUFFIX, DivMod),                \
                               TBIGINT_TYPE(SUFFIX), TBIGINT_FUNC(SUFFIX, IsZero),     \
                               TBIGINT_FUNC(SUFFIX, Compare), TBIGINT_FUNC(SUFFIX, Sub), \
                               TBIGINT_FUNC(SUFFIX, ShiftLeft))                    \
+  TBIGINT_DIVMOD_PROTOTYPE(SUFFIX) {                                           \
+    if (!outQuotient || !outRemainder)                                         \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    return TBIGINT_INS(SUFFIX, DivMod)(                                        \
+        dividend, divisor, outQuotient, outRemainder);                         \
+  }                                                                            \
   TBIGINT_DIV_PROTOTYPE(SUFFIX) {         \
     if (!dividendBigint || !divisorBigint)                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     TBIGINT_TYPE(SUFFIX) quotient;                                                \
-    OPSTATUS status = TBIGINT_FUNC(SUFFIX, DivMod)(dividendBigint, divisorBigint, &quotient, NULL); \
+    OPSTATUS status = TBIGINT_INS(SUFFIX, DivMod)(dividendBigint, divisorBigint, &quotient, NULL); \
     if (status == STATUS_CONST(SUCCESS))                                       \
       for (size_t i = 0; i < sizeof(dividendBigint->limb) / sizeof(dividendBigint->limb[0]); ++i) \
       dividendBigint->limb[i] = quotient.limb[i];                                                    \
@@ -50,7 +56,7 @@
     if (!dividendBigint || !divisorBigint)                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     TBIGINT_TYPE(SUFFIX) remainder;                                               \
-    OPSTATUS status = TBIGINT_FUNC(SUFFIX, DivMod)(dividendBigint, divisorBigint, NULL, &remainder); \
+    OPSTATUS status = TBIGINT_INS(SUFFIX, DivMod)(dividendBigint, divisorBigint, NULL, &remainder); \
     if (status == STATUS_CONST(SUCCESS))                                       \
       for (size_t i = 0; i < sizeof(dividendBigint->limb) / sizeof(dividendBigint->limb[0]); ++i) \
       dividendBigint->limb[i] = remainder.limb[i];                                                   \

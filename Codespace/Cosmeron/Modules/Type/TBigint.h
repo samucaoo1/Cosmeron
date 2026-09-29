@@ -8,6 +8,8 @@
 
 #define TBIGINT_TYPE(SUFFIX) TYPE_TYPE(TBigint, SUFFIX)
 #define TBIGINT_FUNC(SUFFIX, FUNCTION) TYPE_FUNC(TBigint, SUFFIX, FUNCTION)
+#define TBIGINT_INS(SUFFIX, NAME)                                             \
+  GNS2(TYPE_INS(PP_OP_CAT2(TBigint, SUFFIX)), NAME)
 #define TBIGINT_FUNCTION_TABLE_TYPE(SUFFIX) \
   GNS2(TBIGINT_TYPE(SUFFIX), FunctionTable)
 
@@ -52,10 +54,12 @@
       TBIGINT_TYPE(SUFFIX) * destinationBigint,                               \
       const TBIGINT_TYPE(SUFFIX) * sourceBigint)
 
-#define TBIGINT_DIVMOD_PROTOTYPE(SUFFIX)                                \
-  static inline OPSTATUS TBIGINT_FUNC(SUFFIX, DivMod)(                            \
-      const TBIGINT_TYPE(SUFFIX) *dividend, const TBIGINT_TYPE(SUFFIX) *divisor,     \
-      TBIGINT_TYPE(SUFFIX) *quotient, TBIGINT_TYPE(SUFFIX) *remainder)
+#define TBIGINT_DIVMOD_PROTOTYPE(SUFFIX)                                     \
+  static inline OPSTATUS TBIGINT_FUNC(SUFFIX, DivMod)(                        \
+      const TBIGINT_TYPE(SUFFIX) *dividend,                                   \
+      const TBIGINT_TYPE(SUFFIX) *divisor,                                    \
+      TBIGINT_TYPE(SUFFIX) *outQuotient,                                      \
+      TBIGINT_TYPE(SUFFIX) *outRemainder)
 
 #define TBIGINT_DIV_PROTOTYPE(SUFFIX)                                 \
   static inline OPSTATUS TBIGINT_FUNC(SUFFIX, Div)(                                \
