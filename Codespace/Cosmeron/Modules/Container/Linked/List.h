@@ -164,5 +164,5 @@ LINKED_LIST_IMPLEMENT_ALL(int, int)
 LINKED_LIST_IMPLEMENT_ALL(float, float)
 LINKED_LIST_IMPLEMENT_ALL(double, double)
 LINKED_LIST_IMPLEMENT_ALL(char, char)
-typedef void *void_ptr;
-LINKED_LIST_IMPLEMENT_ALL(void_ptr, void_ptr)
+typedef void *CONTAINER_INS(VoidPointer_InternalType_);
+LINKED_LIST_IMPLEMENT_ALL(CONTAINER_INS(VoidPointer_InternalType_), void_ptr)
