@@ -23,7 +23,7 @@ OPSTATUS
 | Element | Case | Example |
 |---|---|---|
 | Module / namespace token | `PascalCase` | `Memory`, `Comparison` |
-| Type | `PascalCase` | `TVector`, `Comparison_Result` |
+| Type | `PascalCase` | `TVector`, `ComparisonResult` |
 | Function | `PascalCase` | `Memory_Copy`, `Vector_Push` |
 | Constant / enum value | `SNAKE_CASE` | `SUCCESS`, `OUT_OF_RANGE` |
 | Preprocessor macro | `SNAKE_CASE` | `VECTOR_IMPLEMENT_ALL` |
