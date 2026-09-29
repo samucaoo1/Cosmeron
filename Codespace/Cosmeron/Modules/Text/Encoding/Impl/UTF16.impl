@@ -5,10 +5,8 @@ TEXT_UTF16_ENCODED_LENGTH_PROTOTYPE {
 
   if (outUnits == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
-  if (!TEXT_CODEPOINT_FUNC(IsScalar)(codepoint)) {
-    *outUnits = 0U;
+  if (!TEXT_CODEPOINT_FUNC(IsScalar)(codepoint))
     return STATUS_CONST(INVALID_SEQUENCE);
-  }
 
   *outUnits = value <= UINT32_C(0xFFFF) ? 1U : 2U;
   return STATUS_CONST(SUCCESS);
@@ -23,14 +21,10 @@ TEXT_UTF16_ENCODE_PROTOTYPE {
     return STATUS_CONST(INVALID_ARGUMENT);
 
   status = TEXT_UTF16_FUNC(EncodedLength)(codepoint, &length);
-  if (status != STATUS_CONST(SUCCESS)) {
-    *outUnits = 0U;
+  if (status != STATUS_CONST(SUCCESS))
     return status;
-  }
-  if (capacity < length) {
-    *outUnits = 0U;
+  if (capacity < length)
     return STATUS_CONST(INSUFFICIENT_SPACE);
-  }
 
   if (length == 1U) {
     output[0] = (TEXT_TYPE(TChar16))value;
@@ -48,38 +42,35 @@ TEXT_UTF16_ENCODE_PROTOTYPE {
 
 TEXT_UTF16_DECODE_PROTOTYPE {
   uint_least32_t first;
+  TEXT_TYPE(TChar32) codepoint;
+  size_t units;
 
   if (input == NULL || outCodepoint == NULL || outUnits == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
-
-  *outCodepoint = 0;
-  *outUnits = 0U;
-
   if (size == 0U)
     return STATUS_CONST(INCOMPLETE_SEQUENCE);
 
   first = (uint_least32_t)input[0];
   if (first < UINT32_C(0xD800) || first > UINT32_C(0xDFFF)) {
-    *outCodepoint = (TEXT_TYPE(TChar32))first;
-    *outUnits = 1U;
-    return STATUS_CONST(SUCCESS);
-  }
-  if (first > UINT32_C(0xDBFF)) {
-    *outUnits = 1U;
-    return STATUS_CONST(INVALID_SEQUENCE);
-  }
-  if (size < 2U)
-    return STATUS_CONST(INCOMPLETE_SEQUENCE);
-  if ((uint_least32_t)input[1] < UINT32_C(0xDC00) ||
-      (uint_least32_t)input[1] > UINT32_C(0xDFFF)) {
-    *outUnits = 1U;
-    return STATUS_CONST(INVALID_SEQUENCE);
+    codepoint = (TEXT_TYPE(TChar32))first;
+    units = 1U;
+  } else {
+    if (first > UINT32_C(0xDBFF))
+      return STATUS_CONST(INVALID_SEQUENCE);
+    if (size < 2U)
+      return STATUS_CONST(INCOMPLETE_SEQUENCE);
+    if ((uint_least32_t)input[1] < UINT32_C(0xDC00) ||
+        (uint_least32_t)input[1] > UINT32_C(0xDFFF))
+      return STATUS_CONST(INVALID_SEQUENCE);
+
+    codepoint = (TEXT_TYPE(TChar32))(
+        UINT32_C(0x10000) + ((first - UINT32_C(0xD800)) << 10U) +
+        ((uint_least32_t)input[1] - UINT32_C(0xDC00)));
+    units = 2U;
   }
 
-  *outCodepoint = (TEXT_TYPE(TChar32))(
-      UINT32_C(0x10000) + ((first - UINT32_C(0xD800)) << 10U) +
-      ((uint_least32_t)input[1] - UINT32_C(0xDC00)));
-  *outUnits = 2U;
+  *outCodepoint = codepoint;
+  *outUnits = units;
   return STATUS_CONST(SUCCESS);
 }
 

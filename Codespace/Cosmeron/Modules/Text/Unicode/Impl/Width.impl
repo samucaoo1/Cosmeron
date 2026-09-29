@@ -83,10 +83,6 @@ TEXT_WIDTH_UTF8_PROTOTYPE {
 
   if (outColumns == NULL || outUnits == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
-
-  *outColumns = 0U;
-  *outUnits = 0U;
-
   if (input == NULL && size != 0U)
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -97,18 +93,12 @@ TEXT_WIDTH_UTF8_PROTOTYPE {
     OPSTATUS status =
         TEXT_UTF8_FUNC(Decode)(input + offset, size - offset, &codepoint, &units);
 
-    if (status != STATUS_CONST(SUCCESS)) {
-      *outColumns = columns;
-      *outUnits = offset;
+    if (status != STATUS_CONST(SUCCESS))
       return status;
-    }
 
     status = TEXT_WIDTH_FUNC(Codepoint)(codepoint, &width);
-    if (status != STATUS_CONST(SUCCESS)) {
-      *outColumns = columns;
-      *outUnits = offset;
+    if (status != STATUS_CONST(SUCCESS))
       return status;
-    }
 
     columns += (size_t)width;
     offset += units;

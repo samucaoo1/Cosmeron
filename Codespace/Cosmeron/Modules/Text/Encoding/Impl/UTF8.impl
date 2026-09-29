@@ -5,10 +5,8 @@ TEXT_UTF8_ENCODED_LENGTH_PROTOTYPE {
 
   if (outUnits == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
-  if (!TEXT_CODEPOINT_FUNC(IsScalar)(codepoint)) {
-    *outUnits = 0U;
+  if (!TEXT_CODEPOINT_FUNC(IsScalar)(codepoint))
     return STATUS_CONST(INVALID_SEQUENCE);
-  }
 
   if (value <= UINT32_C(0x7F))
     *outUnits = 1U;
@@ -31,14 +29,10 @@ TEXT_UTF8_ENCODE_PROTOTYPE {
     return STATUS_CONST(INVALID_ARGUMENT);
 
   status = TEXT_UTF8_FUNC(EncodedLength)(codepoint, &length);
-  if (status != STATUS_CONST(SUCCESS)) {
-    *outUnits = 0U;
+  if (status != STATUS_CONST(SUCCESS))
     return status;
-  }
-  if (capacity < length) {
-    *outUnits = 0U;
+  if (capacity < length)
     return STATUS_CONST(INSUFFICIENT_SPACE);
-  }
 
   if (length == 1U) {
     output[0] = (unsigned char)value;
@@ -71,10 +65,6 @@ TEXT_UTF8_DECODE_PROTOTYPE {
 
   if (input == NULL || outCodepoint == NULL || outUnits == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
-
-  *outCodepoint = 0;
-  *outUnits = 0U;
-
   if (size == 0U)
     return STATUS_CONST(INCOMPLETE_SEQUENCE);
 
@@ -97,7 +87,6 @@ TEXT_UTF8_DECODE_PROTOTYPE {
     length = 4U;
     minimum = UINT32_C(0x10000);
   } else {
-    *outUnits = 1U;
     return STATUS_CONST(INVALID_SEQUENCE);
   }
 
@@ -105,19 +94,17 @@ TEXT_UTF8_DECODE_PROTOTYPE {
     return STATUS_CONST(INCOMPLETE_SEQUENCE);
 
   for (index = 1U; index < length; ++index) {
-    if ((input[index] & 0xC0U) != 0x80U) {
-      *outUnits = index;
+    if ((input[index] & 0xC0U) != 0x80U)
       return STATUS_CONST(INVALID_SEQUENCE);
-    }
     value = (value << 6U) | (input[index] & 0x3FU);
   }
 
-  *outUnits = length;
   if (value < minimum ||
       !TEXT_CODEPOINT_FUNC(IsScalar)((TEXT_TYPE(TChar32))value))
     return STATUS_CONST(INVALID_SEQUENCE);
 
   *outCodepoint = (TEXT_TYPE(TChar32))value;
+  *outUnits = length;
   return STATUS_CONST(SUCCESS);
 }
 
@@ -127,9 +114,6 @@ TEXT_UTF8_COUNT_PROTOTYPE {
 
   if (outCodepoints == NULL || outUnits == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
-  *outCodepoints = 0U;
-  *outUnits = 0U;
-
   if (input == NULL && size != 0U)
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -139,11 +123,8 @@ TEXT_UTF8_COUNT_PROTOTYPE {
     OPSTATUS status =
         TEXT_UTF8_FUNC(Decode)(input + offset, size - offset, &codepoint, &units);
     (void)codepoint;
-    if (status != STATUS_CONST(SUCCESS)) {
-      *outCodepoints = count;
-      *outUnits = offset;
+    if (status != STATUS_CONST(SUCCESS))
       return status;
-    }
     offset += units;
     ++count;
   }

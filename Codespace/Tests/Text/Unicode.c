@@ -84,11 +84,45 @@ int main(void) {
 
   {
     static const unsigned char invalidUtf8[] = {0xC0U, 0x80U};
-    TEXT_TYPE(TChar32) decoded = 0;
-    size_t units = 0U;
+    static const unsigned char incompleteUtf8[] = {0xF0U, 0x9FU};
+    TEXT_TYPE(TChar32) decoded = (TEXT_TYPE(TChar32))UINT32_C(0x55AA);
+    size_t units = 77U;
+    size_t count = 88U;
+    size_t columns = 99U;
+
     if (TEXT_UTF8_FUNC(Decode)(invalidUtf8, 2U, &decoded, &units) !=
-        STATUS_CONST(INVALID_SEQUENCE))
+            STATUS_CONST(INVALID_SEQUENCE) ||
+        decoded != (TEXT_TYPE(TChar32))UINT32_C(0x55AA) || units != 77U)
       return 16;
+    if (TEXT_UTF8_FUNC(Decode)(incompleteUtf8, 2U, &decoded, &units) !=
+            STATUS_CONST(INCOMPLETE_SEQUENCE) ||
+        decoded != (TEXT_TYPE(TChar32))UINT32_C(0x55AA) || units != 77U)
+      return 17;
+    if (TEXT_UTF8_FUNC(Count)(invalidUtf8, 2U, &count, &units) !=
+            STATUS_CONST(INVALID_SEQUENCE) ||
+        count != 88U || units != 77U)
+      return 18;
+    if (TEXT_WIDTH_FUNC(UTF8)(invalidUtf8, 2U, &columns, &units) !=
+            STATUS_CONST(INVALID_SEQUENCE) ||
+        columns != 99U || units != 77U)
+      return 19;
+
+    units = 77U;
+    if (TEXT_UTF8_FUNC(Encode)(
+            (TEXT_TYPE(TChar32))UINT32_C(0x1F600), invalidUtf8 == NULL ? NULL : (unsigned char *)invalidUtf8,
+            1U, &units) != STATUS_CONST(INSUFFICIENT_SPACE) ||
+        units != 77U)
+      return 20;
+  }
+
+  {
+    TEXT_TYPE(TChar16) invalidUtf16[] = {(TEXT_TYPE(TChar16))UINT16_C(0xDC00)};
+    TEXT_TYPE(TChar32) decoded = (TEXT_TYPE(TChar32))UINT32_C(0xAA55);
+    size_t units = 66U;
+    if (TEXT_UTF16_FUNC(Decode)(invalidUtf16, 1U, &decoded, &units) !=
+            STATUS_CONST(INVALID_SEQUENCE) ||
+        decoded != (TEXT_TYPE(TChar32))UINT32_C(0xAA55) || units != 66U)
+      return 21;
   }
 
   return 0;
