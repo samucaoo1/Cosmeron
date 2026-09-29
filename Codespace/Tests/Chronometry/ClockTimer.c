@@ -32,7 +32,7 @@ int main(void) {
 
   Chronometry_FrameLimiter limiter;
   Chronometry_Duration target = Chronometry_Duration_FromNanoseconds(
-      16 * CHRONOMETRY_NANOSECONDS_PER_MILLISECOND);
+      16 * CHRONOMETRY_DURATION_NANOSECONDS_PER_MILLISECOND);
   if (Chronometry_Timer_FrameLimiterCreate(target, &limiter) !=
           STATUS_CONST(SUCCESS) ||
       limiter.target.nanoseconds != target.nanoseconds)
