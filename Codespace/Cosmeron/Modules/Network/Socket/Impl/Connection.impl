@@ -63,7 +63,7 @@ SOCKET_ACCEPT_PROTOTYPE {
   client->kind = socket->kind;
   client->protocol = socket->protocol;
   if (!SOCKET_FUNC(_SetBlockingNative)(handle, socket->blocking)) {
-    TSOCKET_OS_CLOSE(handle);
+    COSMERON_MACRO_INTERNAL_TSOCKET_OS_CLOSE(handle);
     client->handle = TSOCKET_NATIVE_INVALID;
     domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
     return SOCKET_FUNC(_Return)(
