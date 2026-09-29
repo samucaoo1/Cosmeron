@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../DateTime/DateTime.h"
+#include "../Duration/Duration.h"
 #include "../Instant/Instant.h"
 
 #define CHRONOMETRY_EPOCH_DATE_TO_JDN_PROTOTYPE                      \
