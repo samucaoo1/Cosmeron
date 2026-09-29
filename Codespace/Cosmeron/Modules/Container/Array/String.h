@@ -125,7 +125,7 @@
   TSTRING_FIND_PROTOTYPE(CHAR_TYPE, SUFFIX);                          \
   TSTRING_FIND_STR_PROTOTYPE(CHAR_TYPE, SUFFIX);                      \
   TSTRING_DATA_PROTOTYPE(CHAR_TYPE, SUFFIX);                          \
-  TSTRING_IMPLEMENT(CHAR_TYPE, SUFFIX)                                         \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT(CHAR_TYPE, SUFFIX)                                         \
   TSTRING_FUNCTION_TABLE_STRUCT(CHAR_TYPE, SUFFIX)                                  \
   TSTRING_FUNCTION_TABLE_INSTANCE(CHAR_TYPE, SUFFIX)
 
