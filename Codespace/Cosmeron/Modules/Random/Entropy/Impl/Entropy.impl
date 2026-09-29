@@ -1,64 +1,67 @@
-inline static bool RANDOM_ENTROPY_FUNC(System)(void *destination, size_t size) {
-  if (destination == NULL && size != 0U) return false;
+RANDOM_ENTROPY_SYSTEM_PROTOTYPE {
+  if (destination == NULL && size != 0U)
+    return STATUS_CONST(INVALID_ARGUMENT);
 #if OS_WINDOWS
-  TRandom_BCryptGenRandom generator = RANDOM_ENTROPY_FUNC(_BCryptGenRandom)();
+  RANDOM_ENTROPY_INS(BCryptGenRandom_InternalType_) generator =
+      RANDOM_ENTROPY_INS(BCryptGenRandom)();
   unsigned char *output = (unsigned char *)destination;
   if (generator == NULL)
-    return false;
+    return STATUS_CONST(NOT_AVAILABLE);
   while (size != 0U) {
     ULONG amount = size > (size_t)ULONG_MAX ? ULONG_MAX : (ULONG)size;
     if (generator(NULL, (PUCHAR)output, amount,
                   BCRYPT_USE_SYSTEM_PREFERRED_RNG) != 0)
-      return false;
+      return STATUS_CONST(NOT_AVAILABLE);
     output += (size_t)amount;
     size -= (size_t)amount;
   }
-  return true;
+  return STATUS_CONST(SUCCESS);
 #elif OS_LINUX
   unsigned char *output = destination;
   while (size != 0U) {
     ssize_t read_size = getrandom(output, size, 0);
     if (read_size < 0) {
       if (errno == EINTR) continue;
-      return false;
+      return STATUS_CONST(NOT_AVAILABLE);
     }
     output += (size_t)read_size;
     size -= (size_t)read_size;
   }
-  return true;
+  return STATUS_CONST(SUCCESS);
 #elif OS_MAC || OS_FREEBSD
   unsigned char *output = destination;
   int descriptor = open("/dev/urandom", O_RDONLY);
   if (descriptor < 0)
-    return false;
+    return STATUS_CONST(NOT_AVAILABLE);
   while (size != 0U) {
     ssize_t read_size = read(descriptor, output, size);
     if (read_size < 0) {
       if (errno == EINTR)
         continue;
       (void)close(descriptor);
-      return false;
+      return STATUS_CONST(NOT_AVAILABLE);
     }
     if (read_size == 0) {
       (void)close(descriptor);
-      return false;
+      return STATUS_CONST(NOT_AVAILABLE);
     }
     output += (size_t)read_size;
     size -= (size_t)read_size;
   }
   (void)close(descriptor);
-  return true;
+  return STATUS_CONST(SUCCESS);
 #else
-  (void)destination; (void)size;
-  return false;
+  (void)destination;
+  (void)size;
+  return STATUS_CONST(NOT_AVAILABLE);
 #endif
 }
 
-inline static uint64_t RANDOM_ENTROPY_FUNC(Address)(void) {
+RANDOM_ENTROPY_ADDRESS_PROTOTYPE {
   uintptr_t address = (uintptr_t)&address;
   return (uint64_t)address;
 }
-inline static uint64_t RANDOM_ENTROPY_FUNC(Clock)(void) {
+RANDOM_ENTROPY_CLOCK_PROTOTYPE {
   struct timespec time_point;
   uint64_t value = (uint64_t)clock();
   if (timespec_get(&time_point, TIME_UTC) == TIME_UTC) {
@@ -67,7 +70,7 @@ inline static uint64_t RANDOM_ENTROPY_FUNC(Clock)(void) {
   }
   return value;
 }
-inline static uint64_t RANDOM_ENTROPY_FUNC(Jitter)(void) {
+RANDOM_ENTROPY_JITTER_PROTOTYPE {
   volatile uint64_t work = (uint64_t)(uintptr_t)&work;
   uint64_t result = RANDOM_ENTROPY_FUNC(Clock)();
   unsigned sample;
@@ -84,10 +87,10 @@ inline static uint64_t RANDOM_ENTROPY_FUNC(Jitter)(void) {
   }
   return result ^ work;
 }
-inline static uint64_t RANDOM_ENTROPY_FUNC(Time)(void) {
+RANDOM_ENTROPY_TIME_PROTOTYPE {
   return (uint64_t)time(NULL);
 }
-inline static uint64_t RANDOM_ENTROPY_FUNC(Thread)(void) {
+RANDOM_ENTROPY_THREAD_PROTOTYPE {
 #if OS_WINDOWS
   return (uint64_t)GetCurrentThreadId();
 #elif OS_MAC || OS_FREEBSD
@@ -97,7 +100,7 @@ inline static uint64_t RANDOM_ENTROPY_FUNC(Thread)(void) {
 #endif
 }
 
-inline static uint64_t RANDOM_ENTROPY_FUNC(Collect)(void) {
+RANDOM_ENTROPY_COLLECT_PROTOTYPE {
   RANDOM_ENTROPY_TYPE(Pool) pool;
   uint64_t stack_sample;
 
