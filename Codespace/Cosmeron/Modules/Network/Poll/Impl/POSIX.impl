@@ -2,7 +2,7 @@
 
 #include <limits.h>
 
-static inline bool NETWORK_POLLER_FUNC(_SetHandle)(
+static inline bool NETWORK_POLLER_INS(SetHandle)(
     SOCKET_TYPE(Handle) handle, NETWORK_POLLER_TYPE(EventFlags) interests,
     fd_set *readSet, fd_set *writeSet, fd_set *errorSet,
     SOCKET_TYPE(Handle) *maximum) {
@@ -17,7 +17,7 @@ static inline bool NETWORK_POLLER_FUNC(_SetHandle)(
   return true;
 }
 
-static inline NETWORK_POLLER_TYPE(EventFlags) NETWORK_POLLER_FUNC(_Ready)(
+static inline NETWORK_POLLER_TYPE(EventFlags) NETWORK_POLLER_INS(Ready)(
     SOCKET_TYPE(Handle) handle, NETWORK_POLLER_TYPE(EventFlags) interests,
     bool detectClose, fd_set *readSet, fd_set *writeSet, fd_set *errorSet) {
   NETWORK_POLLER_TYPE(EventFlags) flags = NETWORK_EVENT_CONST(NONE);
@@ -28,7 +28,7 @@ static inline NETWORK_POLLER_TYPE(EventFlags) NETWORK_POLLER_FUNC(_Ready)(
     flags |= NETWORK_EVENT_CONST(WRITE);
   if (FD_ISSET(handle, readSet)) {
     if (detectClose && (interests & NETWORK_EVENT_CONST(CLOSE)))
-      closed = NETWORK_POLLER_FUNC(_StreamClosed)(handle);
+      closed = NETWORK_POLLER_INS(StreamClosed)(handle);
     if (interests & NETWORK_EVENT_CONST(ACCEPT)) flags |= NETWORK_EVENT_CONST(ACCEPT);
     if ((interests & NETWORK_EVENT_CONST(READ)) && !closed)
       flags |= NETWORK_EVENT_CONST(READ);
@@ -37,7 +37,7 @@ static inline NETWORK_POLLER_TYPE(EventFlags) NETWORK_POLLER_FUNC(_Ready)(
   return flags;
 }
 
-static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
+static inline OPSTATUS NETWORK_POLLER_INS(WaitNative)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TEventVector) *events,
     struct timeval *timeout, NETWORK_TYPE(TError) *error) {
   fd_set readSet, writeSet, errorSet;
@@ -51,7 +51,7 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
   }
   FLAT_VECTOR_FUNC(Network_Event, Clear)(events);
   if (poller->registrations.size == 0) {
-    return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+    return NETWORK_POLLER_INS(Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
   }
 
   FD_ZERO(&readSet); FD_ZERO(&writeSet); FD_ZERO(&errorSet);
@@ -60,31 +60,31 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
     bool valid = true;
     if (r->sourceType == NETWORK_POLLER_SOURCE_CONST(CONNECTION)) {
       NETWORK_CONNECTION_TYPE(TConnection) *c = (NETWORK_CONNECTION_TYPE(TConnection) *)r->object;
-      valid = NETWORK_POLLER_FUNC(_SetHandle)(
+      valid = NETWORK_POLLER_INS(SetHandle)(
           c->socket.handle, r->interests, &readSet, &writeSet, &errorSet, &maximum);
     } else if (r->sourceType == NETWORK_POLLER_SOURCE_CONST(DATAGRAM)) {
       NETWORK_DATAGRAM_TYPE(TDatagram) *d = (NETWORK_DATAGRAM_TYPE(TDatagram) *)r->object;
-      valid = NETWORK_POLLER_FUNC(_SetHandle)(
+      valid = NETWORK_POLLER_INS(SetHandle)(
           d->socket.handle, r->interests, &readSet, &writeSet, &errorSet, &maximum);
     } else {
       NETWORK_LISTENER_TYPE(TListener) *l = (NETWORK_LISTENER_TYPE(TListener) *)r->object;
-      valid = NETWORK_POLLER_FUNC(_SetHandle)(
+      valid = NETWORK_POLLER_INS(SetHandle)(
                   l->primary.handle, r->interests, &readSet, &writeSet,
                   &errorSet, &maximum) &&
-              NETWORK_POLLER_FUNC(_SetHandle)(
+              NETWORK_POLLER_INS(SetHandle)(
                   l->secondary.handle, r->interests, &readSet, &writeSet,
                   &errorSet, &maximum);
     }
     if (!valid) {
-      return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
+      return NETWORK_POLLER_INS(Publish)(error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
           STATUS_CONST(OUT_OF_RANGE));
     }
   }
 
   result = select(maximum + 1, &readSet, &writeSet, &errorSet, timeout);
   if (result == TSOCKET_NATIVE_ERROR) {
-    return NETWORK_POLLER_FUNC(_Publish)(error,
-        SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE()),
+    return NETWORK_POLLER_INS(Publish)(error,
+        SOCKET_INS(MapNativeError)(TSOCKET_NATIVE_ERROR_CODE()),
         STATUS_CONST(GENERIC_ERROR));
   }
 
@@ -93,29 +93,29 @@ static inline OPSTATUS NETWORK_POLLER_FUNC(_WaitNative)(
     NETWORK_POLLER_TYPE(EventFlags) flags = NETWORK_EVENT_CONST(NONE);
     if (r->sourceType == NETWORK_POLLER_SOURCE_CONST(CONNECTION)) {
       NETWORK_CONNECTION_TYPE(TConnection) *c = (NETWORK_CONNECTION_TYPE(TConnection) *)r->object;
-      flags = NETWORK_POLLER_FUNC(_Ready)(
+      flags = NETWORK_POLLER_INS(Ready)(
           c->socket.handle, r->interests, true, &readSet, &writeSet, &errorSet);
     } else if (r->sourceType == NETWORK_POLLER_SOURCE_CONST(DATAGRAM)) {
       NETWORK_DATAGRAM_TYPE(TDatagram) *d = (NETWORK_DATAGRAM_TYPE(TDatagram) *)r->object;
-      flags = NETWORK_POLLER_FUNC(_Ready)(
+      flags = NETWORK_POLLER_INS(Ready)(
           d->socket.handle, r->interests, false, &readSet, &writeSet, &errorSet);
     } else {
       NETWORK_LISTENER_TYPE(TListener) *l = (NETWORK_LISTENER_TYPE(TListener) *)r->object;
-      flags = NETWORK_POLLER_FUNC(_Ready)(
+      flags = NETWORK_POLLER_INS(Ready)(
           l->primary.handle, r->interests, false, &readSet, &writeSet, &errorSet);
-      flags |= NETWORK_POLLER_FUNC(_Ready)(
+      flags |= NETWORK_POLLER_INS(Ready)(
           l->secondary.handle, r->interests, false, &readSet, &writeSet, &errorSet);
     }
-    if (NETWORK_POLLER_FUNC(_PushEvent)(
+    if (NETWORK_POLLER_INS(PushEvent)(
             events, r, flags, error) != STATUS_CONST(SUCCESS))
       return STATUS_CONST(OUT_OF_MEMORY);
   }
 
-  return NETWORK_POLLER_FUNC(_Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+  return NETWORK_POLLER_INS(Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 NETWORK_POLLER_WAIT_PROTOTYPE {
-  return NETWORK_POLLER_FUNC(_WaitNative)(poller, events, NULL, error);
+  return NETWORK_POLLER_INS(WaitNative)(poller, events, NULL, error);
 }
 
 NETWORK_POLLER_WAIT_FOR_PROTOTYPE {
@@ -135,6 +135,6 @@ NETWORK_POLLER_WAIT_FOR_PROTOTYPE {
   nativeTimeout.tv_usec = (long)(
       (timeout.nanoseconds % CHRONOMETRY_DURATION_NANOSECONDS_PER_SECOND) /
       CHRONOMETRY_DURATION_NANOSECONDS_PER_MICROSECOND);
-  return NETWORK_POLLER_FUNC(_WaitNative)(
+  return NETWORK_POLLER_INS(WaitNative)(
       poller, events, &nativeTimeout, error);
 }
