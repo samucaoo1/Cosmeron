@@ -94,8 +94,12 @@ int main(void) {
   CHECK_MIXER(WyHash);
   CHECK_MIXER(Xorshift);
 
-  if (!Random_Entropy_System(&entropyBuffer, sizeof(entropyBuffer)))
+  if (Random_Entropy_System(&entropyBuffer, sizeof(entropyBuffer)) !=
+      STATUS_CONST(SUCCESS))
     return 13;
+  if (Random_Entropy_System(NULL, sizeof(entropyBuffer)) !=
+      STATUS_CONST(INVALID_ARGUMENT))
+    return 18;
   (void)Random_Entropy_Address();
   (void)Random_Entropy_Clock();
   (void)Random_Entropy_Jitter();
@@ -103,13 +107,27 @@ int main(void) {
   (void)Random_Entropy_Time();
   (void)Random_Entropy_Collect();
 
-  Random_Entropy_Pool_Init(&pool);
-  if (pool.count != 0U)
+  if (Random_Entropy_Pool_Init(&pool) != STATUS_CONST(SUCCESS))
     return 14;
-  Random_Entropy_Pool_Add(&pool, UINT64_C(123));
-  if (pool.count != 1U)
+  if (pool.count != 0U)
     return 15;
-  (void)Random_Entropy_Pool_Finalize(&pool);
+  if (Random_Entropy_Pool_Add(&pool, UINT64_C(123)) !=
+      STATUS_CONST(SUCCESS))
+    return 19;
+  if (pool.count != 1U)
+    return 20;
+  {
+    uint64_t poolValue = 0U;
+    if (Random_Entropy_Pool_Finalize(&pool, &poolValue) !=
+        STATUS_CONST(SUCCESS))
+      return 21;
+    if (Random_Entropy_Pool_Finalize(NULL, &poolValue) !=
+            STATUS_CONST(INVALID_ARGUMENT) ||
+        Random_Entropy_Pool_Finalize(&pool, NULL) !=
+            STATUS_CONST(INVALID_ARGUMENT))
+      return 22;
+    (void)poolValue;
+  }
 
   return 0;
 }
