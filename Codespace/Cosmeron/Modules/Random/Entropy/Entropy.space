@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Random.space"
+#include "../../../Core/Error/Status.h"
 
-typedef bool (*RANDOM_ENTROPY_TYPE(Function))(void *destination, size_t size);
+typedef OPSTATUS (*RANDOM_ENTROPY_TYPE(Function))(void *destination, size_t size);
 /* EOF */
