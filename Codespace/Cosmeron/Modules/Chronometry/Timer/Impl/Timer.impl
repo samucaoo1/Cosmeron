@@ -63,7 +63,7 @@ CHRONOMETRY_FRAME_LIMITER_FROM_FPS_PROTOTYPE {
   if (outLimiter == NULL || fps == 0)
     return STATUS_CONST(INVALID_ARGUMENT);
   return TIMER_FUNC(FrameLimiterCreate)(
-      DURATION_FUNC(FromNanoseconds)(CHRONOMETRY_NANOSECONDS_PER_SECOND / fps),
+      DURATION_FUNC(FromNanoseconds)(DURATION_CONST(NANOSECONDS_PER_SECOND) / fps),
       outLimiter);
 }
 
