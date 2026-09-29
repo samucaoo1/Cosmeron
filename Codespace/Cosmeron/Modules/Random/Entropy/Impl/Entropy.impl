@@ -102,17 +102,33 @@ RANDOM_ENTROPY_THREAD_PROTOTYPE {
 
 RANDOM_ENTROPY_COLLECT_PROTOTYPE {
   RANDOM_ENTROPY_TYPE(Pool) pool;
-  uint64_t stack_sample;
+  uint64_t stackSample;
+  uint64_t result = 0U;
 
-  RANDOM_ENTROPY_FUNC(Pool_Init)(&pool);
-  stack_sample = (uint64_t)(uintptr_t)&pool ^
-                 (uint64_t)(uintptr_t)&stack_sample;
-  RANDOM_ENTROPY_FUNC(Pool_Add)(&pool, stack_sample);
-  RANDOM_ENTROPY_FUNC(Pool_Add)(&pool, RANDOM_ENTROPY_FUNC(Address)());
-  RANDOM_ENTROPY_FUNC(Pool_Add)(&pool, RANDOM_ENTROPY_FUNC(Clock)());
-  RANDOM_ENTROPY_FUNC(Pool_Add)(&pool, RANDOM_ENTROPY_FUNC(Jitter)());
-  RANDOM_ENTROPY_FUNC(Pool_Add)(&pool, RANDOM_ENTROPY_FUNC(Thread)());
-  RANDOM_ENTROPY_FUNC(Pool_Add)(&pool, RANDOM_ENTROPY_FUNC(Time)());
-  RANDOM_ENTROPY_FUNC(Pool_Add)(&pool, RANDOM_ENTROPY_FUNC(Clock)());
-  return RANDOM_ENTROPY_FUNC(Pool_Finalize)(&pool);
+  PANIC_ASSERT(RANDOM_ENTROPY_FUNC(Pool_Init)(&pool) == STATUS_CONST(SUCCESS));
+  stackSample = (uint64_t)(uintptr_t)&pool ^
+                (uint64_t)(uintptr_t)&stackSample;
+  PANIC_ASSERT(RANDOM_ENTROPY_FUNC(Pool_Add)(&pool, stackSample) ==
+               STATUS_CONST(SUCCESS));
+  PANIC_ASSERT(RANDOM_ENTROPY_FUNC(Pool_Add)(
+                   &pool, RANDOM_ENTROPY_FUNC(Address)()) ==
+               STATUS_CONST(SUCCESS));
+  PANIC_ASSERT(RANDOM_ENTROPY_FUNC(Pool_Add)(
+                   &pool, RANDOM_ENTROPY_FUNC(Clock)()) ==
+               STATUS_CONST(SUCCESS));
+  PANIC_ASSERT(RANDOM_ENTROPY_FUNC(Pool_Add)(
+                   &pool, RANDOM_ENTROPY_FUNC(Jitter)()) ==
+               STATUS_CONST(SUCCESS));
+  PANIC_ASSERT(RANDOM_ENTROPY_FUNC(Pool_Add)(
+                   &pool, RANDOM_ENTROPY_FUNC(Thread)()) ==
+               STATUS_CONST(SUCCESS));
+  PANIC_ASSERT(RANDOM_ENTROPY_FUNC(Pool_Add)(
+                   &pool, RANDOM_ENTROPY_FUNC(Time)()) ==
+               STATUS_CONST(SUCCESS));
+  PANIC_ASSERT(RANDOM_ENTROPY_FUNC(Pool_Add)(
+                   &pool, RANDOM_ENTROPY_FUNC(Clock)()) ==
+               STATUS_CONST(SUCCESS));
+  PANIC_ASSERT(RANDOM_ENTROPY_FUNC(Pool_Finalize)(&pool, &result) ==
+               STATUS_CONST(SUCCESS));
+  return result;
 }
