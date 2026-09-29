@@ -8,7 +8,7 @@ RANDOM_U64_FROM_SEED_PROTOTYPE {
   return RANDOM_ENGINE_FUNC(Xoshiro, Next)(&state);
 }
 
-static inline RANDOM_SOURCE_TYPE(Value) RANDOM_FUNC(_StackSource)(
+static inline RANDOM_SOURCE_TYPE(Value) RANDOM_INS(StackSource)(
     RANDOM_ENGINE_TYPE(Xoshiro) *state, uint64_t seed) {
   RANDOM_SOURCE_TYPE(Value) source = {
       &RANDOM_ENGINE_FUNC(Xoshiro, Descriptor), NULL, state, sizeof(*state), false};
@@ -19,16 +19,16 @@ static inline RANDOM_SOURCE_TYPE(Value) RANDOM_FUNC(_StackSource)(
 RANDOM_RANGE_U64_PROTOTYPE {
   RANDOM_ENGINE_TYPE(Xoshiro) state;
   RANDOM_SOURCE_TYPE(Value) source =
-      RANDOM_FUNC(_StackSource)(&state, RANDOM_FUNC(U64)());
-  return RANDOM_DISTRIBUTION_FUNC(_U64Unchecked)(
+      RANDOM_INS(StackSource)(&state, RANDOM_FUNC(U64)());
+  return RANDOM_DISTRIBUTION_INS(U64Unchecked)(
       &source, minimum, maximum);
 }
 
 RANDOM_RANGE_I64_PROTOTYPE {
   RANDOM_ENGINE_TYPE(Xoshiro) state;
   RANDOM_SOURCE_TYPE(Value) source =
-      RANDOM_FUNC(_StackSource)(&state, RANDOM_FUNC(U64)());
-  return RANDOM_DISTRIBUTION_FUNC(_I64Unchecked)(
+      RANDOM_INS(StackSource)(&state, RANDOM_FUNC(U64)());
+  return RANDOM_DISTRIBUTION_INS(I64Unchecked)(
       &source, minimum, maximum);
 }
 
