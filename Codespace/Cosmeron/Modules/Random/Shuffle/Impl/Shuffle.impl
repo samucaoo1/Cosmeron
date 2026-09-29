@@ -1,6 +1,6 @@
 #define COSMERON_MACRO_INTERNAL_RANDOM_SHUFFLE_SWAP_BUFFER_SIZE 64U
 
-static inline void RANDOM_SHUFFLE_FUNC(Swap)(unsigned char *first,
+static inline void RANDOM_SHUFFLE_INS(Swap)(unsigned char *first,
                                            unsigned char *second,
                                            size_t size) {
   unsigned char temporary[COSMERON_MACRO_INTERNAL_RANDOM_SHUFFLE_SWAP_BUFFER_SIZE];
@@ -21,7 +21,7 @@ RANDOM_SHUFFLE_VECTOR_FROM_SOURCE_PROTOTYPE {
   size_t index;
   size_t totalSize;
 
-  if (!RANDOM_SOURCE_FUNC(_Valid)(source) || elementSize == 0U) {
+  if (!RANDOM_SOURCE_INS(Valid)(source) || elementSize == 0U) {
     return STATUS_CONST(INVALID_ARGUMENT);
   }
 
@@ -65,7 +65,7 @@ RANDOM_SHUFFLE_VECTOR_FROM_SOURCE_PROTOTYPE {
     selected = (size_t)selectedU64;
 
     if (selected != index) {
-      RANDOM_SHUFFLE_FUNC(Swap)(bytes + index * elementSize,
+      RANDOM_SHUFFLE_INS(Swap)(bytes + index * elementSize,
                               bytes + selected * elementSize,
                               elementSize);
     }
