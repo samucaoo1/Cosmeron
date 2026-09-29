@@ -200,7 +200,7 @@ NETWORK_LISTENER_ACCEPT_PROTOTYPE {
 
   accepted.remoteEndpoint = peer;
   accepted.state = NETWORK_CONNECTION_CONST(CONNECTED);
-  NETWORK_CONNECTION_FUNC(_RefreshEndpoints)(&accepted);
+  NETWORK_CONNECTION_INS(RefreshEndpoints)(&accepted);
   *connection = accepted;
   return NETWORK_LISTENER_INS(Publish)(
       error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
