@@ -109,7 +109,7 @@
   LINKED_DEQUE_BACK_PROTOTYPE(TYPE, SUFFIX);                          \
   LINKED_DEQUE_EMPTY_PROTOTYPE(SUFFIX);                               \
   LINKED_DEQUE_SIZE_PROTOTYPE(SUFFIX);                                \
-  LINKED_DEQUE_IMPLEMENT(TYPE, SUFFIX)                                         \
+  COSMERON_MACRO_INTERNAL_LINKED_DEQUE_IMPLEMENT(TYPE, SUFFIX)                                         \
   LINKED_DEQUE_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                                  \
   LINKED_DEQUE_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)
 
