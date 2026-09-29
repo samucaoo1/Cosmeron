@@ -89,7 +89,7 @@
   LINKED_STACK_TOP_PROTOTYPE(TYPE, SUFFIX);                           \
   LINKED_STACK_EMPTY_PROTOTYPE(SUFFIX);                               \
   LINKED_STACK_SIZE_PROTOTYPE(SUFFIX);                                \
-  LINKED_STACK_IMPLEMENT(TYPE, SUFFIX)                                         \
+  COSMERON_MACRO_INTERNAL_LINKED_STACK_IMPLEMENT(TYPE, SUFFIX)                                         \
   LINKED_STACK_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                                  \
   LINKED_STACK_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)
 
