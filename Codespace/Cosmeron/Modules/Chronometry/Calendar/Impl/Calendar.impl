@@ -25,7 +25,7 @@ enum {
   CALENDAR_CONST(MAX_SUPPORTED_YEAR) = 4194303
 };
 
-inline static int64_t CALENDAR_FUNC(_FloorDiv)(int64_t value, int64_t divisor) {
+inline static int64_t CALENDAR_INS(FloorDiv)(int64_t value, int64_t divisor) {
   int64_t quotient = value / divisor;
   int64_t remainder = value % divisor;
   return quotient - (remainder < 0);
@@ -106,7 +106,7 @@ CHRONOMETRY_CALENDAR_DAYS_IN_MONTH_PROTOTYPE {
        CALENDAR_FUNC(IsLeapYear)(system, year)));
 }
 
-inline static CALENDAR_TYPE(System) CALENDAR_FUNC(_SystemFor)(
+inline static CALENDAR_TYPE(System) CALENDAR_INS(SystemFor)(
     const CALENDAR_TYPE(Policy) *policy, CHRONOMETRY_TYPE(Date) date) {
   if (policy->kind == CALENDAR_CONST(PURE_SYSTEM))
     return policy->system;
@@ -124,7 +124,7 @@ CHRONOMETRY_CALENDAR_DATE_IS_VALID_PROTOTYPE {
       CALENDAR_FUNC(DateCompare)(date, policy->reform.lastBefore) == COMPARISON_CONST(GREATER) &&
       CALENDAR_FUNC(DateCompare)(date, policy->reform.firstAfter) == COMPARISON_CONST(LESS))
     return false;
-  system = CALENDAR_FUNC(_SystemFor)(policy, date);
+  system = CALENDAR_INS(SystemFor)(policy, date);
   maximum = CALENDAR_FUNC(DaysInMonth)(system, date.year, date.month);
   return maximum != 0 && date.day > 0 && date.day <= maximum;
 }
@@ -134,7 +134,7 @@ CHRONOMETRY_CALENDAR_DATE_TO_DAY_OF_YEAR_PROTOTYPE {
   uint16_t value;
   if (outDayOfYear == NULL || !CALENDAR_FUNC(DateIsValid)(policy, date))
     return STATUS_CONST(INVALID_ARGUMENT);
-  system = CALENDAR_FUNC(_SystemFor)(policy, date);
+  system = CALENDAR_INS(SystemFor)(policy, date);
   value = date.day;
   /* Intentional fallthrough: the original cumulative month algorithm. */
   switch (date.month) {
@@ -162,9 +162,9 @@ CHRONOMETRY_CALENDAR_DATE_TO_DAY_OF_YEAR_PROTOTYPE {
   return STATUS_CONST(SUCCESS);
 }
 
-inline static int64_t CALENDAR_FUNC(_ToJdn)(CALENDAR_TYPE(System) system,
+inline static int64_t CALENDAR_INS(ToJdn)(CALENDAR_TYPE(System) system,
                                           CHRONOMETRY_TYPE(Date) date) {
-  int64_t a = CALENDAR_FUNC(_FloorDiv)(CALENDAR_CONST(JDN_MONTH_PIVOT) - date.month,
+  int64_t a = CALENDAR_INS(FloorDiv)(CALENDAR_CONST(JDN_MONTH_PIVOT) - date.month,
                                       CALENDAR_CONST(MONTHS_PER_YEAR));
   int64_t y = (int64_t)date.year + CALENDAR_CONST(JDN_YEAR_OFFSET) - a;
   int64_t m = (int64_t)date.month + CALENDAR_CONST(MONTHS_PER_YEAR) * a - CALENDAR_CONST(JDN_MONTH_SHIFT);
@@ -176,7 +176,7 @@ inline static int64_t CALENDAR_FUNC(_ToJdn)(CALENDAR_TYPE(System) system,
              : value - CALENDAR_CONST(JDN_JULIAN_OFFSET);
 }
 
-inline static CHRONOMETRY_TYPE(Date) CALENDAR_FUNC(_FromJdn)(
+inline static CHRONOMETRY_TYPE(Date) CALENDAR_INS(FromJdn)(
     CALENDAR_TYPE(System) system, int64_t jdn) {
   int64_t b, c, d, e, m;
   if (system == CALENDAR_CONST(GREGORIAN)) {
@@ -199,7 +199,7 @@ inline static CHRONOMETRY_TYPE(Date) CALENDAR_FUNC(_FromJdn)(
 CHRONOMETRY_CALENDAR_DATE_TO_ORDINAL_PROTOTYPE {
   if (outOrdinal == NULL || !CALENDAR_FUNC(DateIsValid)(policy, date))
     return STATUS_CONST(INVALID_ARGUMENT);
-  *outOrdinal = CALENDAR_FUNC(_ToJdn)(CALENDAR_FUNC(_SystemFor)(policy, date), date);
+  *outOrdinal = CALENDAR_INS(ToJdn)(CALENDAR_INS(SystemFor)(policy, date), date);
   return STATUS_CONST(SUCCESS);
 }
 
@@ -215,14 +215,14 @@ CHRONOMETRY_CALENDAR_DATE_FROM_ORDINAL_PROTOTYPE {
   if (policy == NULL || outDate == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
   system = policy->kind == CALENDAR_CONST(PURE_SYSTEM) ? policy->system
-      : (ordinal >= CALENDAR_FUNC(_ToJdn)(policy->reform.after,
+      : (ordinal >= CALENDAR_INS(ToJdn)(policy->reform.after,
                                         policy->reform.firstAfter)
              ? policy->reform.after : policy->reform.before);
-  minimumOrdinal = CALENDAR_FUNC(_ToJdn)(system, minimumDate);
-  maximumOrdinal = CALENDAR_FUNC(_ToJdn)(system, maximumDate);
+  minimumOrdinal = CALENDAR_INS(ToJdn)(system, minimumDate);
+  maximumOrdinal = CALENDAR_INS(ToJdn)(system, maximumDate);
   if (ordinal < minimumOrdinal || ordinal > maximumOrdinal)
     return STATUS_CONST(OUT_OF_RANGE);
-  candidate = CALENDAR_FUNC(_FromJdn)(system, ordinal);
+  candidate = CALENDAR_INS(FromJdn)(system, ordinal);
   if (!CALENDAR_FUNC(DateIsValid)(policy, candidate))
     return STATUS_CONST(OUT_OF_RANGE);
   *outDate = candidate;
