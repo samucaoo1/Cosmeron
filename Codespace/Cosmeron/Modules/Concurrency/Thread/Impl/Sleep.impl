@@ -13,13 +13,13 @@ THREAD_SLEEP_FOR_PROTOTYPE {
 #if OS_WINDOWS
   DWORD milliseconds =
       (DWORD)((duration.nanoseconds +
-               CHRONOMETRY_NANOSECONDS_PER_MILLISECOND - 1) /
-              CHRONOMETRY_NANOSECONDS_PER_MILLISECOND);
+               CHRONOMETRY_DURATION_NANOSECONDS_PER_MILLISECOND - 1) /
+              CHRONOMETRY_DURATION_NANOSECONDS_PER_MILLISECOND);
   Sleep(milliseconds);
 #else
   struct timespec request = {
-      (time_t)(duration.nanoseconds / CHRONOMETRY_NANOSECONDS_PER_SECOND),
-      (long)(duration.nanoseconds % CHRONOMETRY_NANOSECONDS_PER_SECOND)};
+      (time_t)(duration.nanoseconds / CHRONOMETRY_DURATION_NANOSECONDS_PER_SECOND),
+      (long)(duration.nanoseconds % CHRONOMETRY_DURATION_NANOSECONDS_PER_SECOND)};
   while (nanosleep(&request, &request) != 0) {
     if (errno != EINTR)
       return STATUS_CONST(GENERIC_ERROR);
