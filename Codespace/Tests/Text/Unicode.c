@@ -107,12 +107,15 @@ int main(void) {
         columns != 99U || units != 77U)
       return 19;
 
-    units = 77U;
-    if (TEXT_UTF8_FUNC(Encode)(
-            (TEXT_TYPE(TChar32))UINT32_C(0x1F600), invalidUtf8 == NULL ? NULL : (unsigned char *)invalidUtf8,
-            1U, &units) != STATUS_CONST(INSUFFICIENT_SPACE) ||
-        units != 77U)
-      return 20;
+    {
+      unsigned char small[1] = {0xEEU};
+      units = 77U;
+      if (TEXT_UTF8_FUNC(Encode)(
+              (TEXT_TYPE(TChar32))UINT32_C(0x1F600), small, 1U, &units) !=
+              STATUS_CONST(INSUFFICIENT_SPACE) ||
+          units != 77U || small[0] != 0xEEU)
+        return 20;
+    }
   }
 
   {
