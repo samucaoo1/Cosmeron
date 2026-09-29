@@ -68,7 +68,7 @@ typedef socklen_t SOCKET_TYPE(Len);
 
 #endif
 
-static inline bool SOCKET_FUNC(_DescriptorSetContains)(
+static inline bool SOCKET_INS(DescriptorSetContains)(
     SOCKET_TYPE(Handle) handle, const fd_set *set) {
 #if OS_WINDOWS
   u_int index;
@@ -84,11 +84,11 @@ static inline bool SOCKET_FUNC(_DescriptorSetContains)(
 #endif
 }
 
-static inline int SOCKET_FUNC(_NativeFamily)(NETWORK_ADDRESS_TYPE(TType) type) {
+static inline int SOCKET_INS(NativeFamily)(NETWORK_ADDRESS_TYPE(TType) type) {
   return type == NETWORK_ADDRESS_CONST(IPV6) ? AF_INET6 : AF_INET;
 }
 
-static inline bool SOCKET_FUNC(_EndpointToNative)(
+static inline bool SOCKET_INS(EndpointToNative)(
     const NETWORK_ADDRESS_TYPE(TEndpoint) *endpoint, struct sockaddr_storage *storage,
     SOCKET_TYPE(Len) *length) {
   memset(storage, 0, sizeof(*storage));
@@ -111,7 +111,7 @@ static inline bool SOCKET_FUNC(_EndpointToNative)(
   return false;
 }
 
-static inline bool SOCKET_FUNC(_EndpointFromNative)(
+static inline bool SOCKET_INS(EndpointFromNative)(
     const struct sockaddr *native, NETWORK_ADDRESS_TYPE(TEndpoint) *endpoint) {
   if (native->sa_family == AF_INET) {
     const struct sockaddr_in *address = (const struct sockaddr_in *)native;
@@ -130,7 +130,7 @@ static inline bool SOCKET_FUNC(_EndpointFromNative)(
   return false;
 }
 
-static inline NETWORK_TYPE(TError) SOCKET_FUNC(_MapNativeError)(int error) {
+static inline NETWORK_TYPE(TError) SOCKET_INS(MapNativeError)(int error) {
 #if OS_WINDOWS
   switch (error) {
   case WSAEWOULDBLOCK:
@@ -187,7 +187,7 @@ static inline NETWORK_TYPE(TError) SOCKET_FUNC(_MapNativeError)(int error) {
 #endif
 }
 
-static inline bool SOCKET_FUNC(_SetBlockingNative)(SOCKET_TYPE(Handle) handle,
+static inline bool SOCKET_INS(SetBlockingNative)(SOCKET_TYPE(Handle) handle,
                                                     bool blocking) {
 #if OS_WINDOWS
   u_long mode = blocking ? 0UL : 1UL;

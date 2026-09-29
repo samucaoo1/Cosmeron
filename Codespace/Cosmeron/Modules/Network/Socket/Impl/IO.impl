@@ -1,6 +1,6 @@
 #pragma once
 
-static inline size_t SOCKET_FUNC(_NativeIOSize)(size_t size) {
+static inline size_t SOCKET_INS(NativeIOSize)(size_t size) {
 #if OS_WINDOWS
   return size > (size_t)INT_MAX ? (size_t)INT_MAX : size;
 #else
@@ -15,7 +15,7 @@ SOCKET_SEND_PROTOTYPE {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
   }
-  amount = SOCKET_FUNC(_NativeIOSize)(size);
+  amount = SOCKET_INS(NativeIOSize)(size);
 #if OS_WINDOWS
   int result = TSOCKET_NATIVE_SEND(socket->handle, (const char *)data, (int)amount, 0);
 #else
@@ -26,12 +26,12 @@ SOCKET_SEND_PROTOTYPE {
 #endif
 #endif
   if (result == TSOCKET_NATIVE_ERROR) {
-    domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
-    return SOCKET_FUNC(_Return)(
+    domainError = SOCKET_INS(MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
+    return SOCKET_INS(Return)(
         error, domainError, STATUS_CONST(GENERIC_ERROR));
   }
   *sent = (size_t)result;
-  return SOCKET_FUNC(_Return)(
+  return SOCKET_INS(Return)(
         error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
@@ -44,27 +44,27 @@ SOCKET_RECEIVE_PROTOTYPE {
   }
   if (capacity == 0U) {
     *received = 0U;
-    return SOCKET_FUNC(_Return)(
+    return SOCKET_INS(Return)(
         error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
   }
-  amount = SOCKET_FUNC(_NativeIOSize)(capacity);
+  amount = SOCKET_INS(NativeIOSize)(capacity);
 #if OS_WINDOWS
   int result = TSOCKET_NATIVE_RECV(socket->handle, (char *)data, (int)amount, 0);
 #else
   ssize_t result = TSOCKET_NATIVE_RECV(socket->handle, data, amount, 0);
 #endif
   if (result == TSOCKET_NATIVE_ERROR) {
-    domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
-    return SOCKET_FUNC(_Return)(
+    domainError = SOCKET_INS(MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
+    return SOCKET_INS(Return)(
         error, domainError, STATUS_CONST(GENERIC_ERROR));
   }
   if (result == 0)
-    return SOCKET_FUNC(_Return)(
+    return SOCKET_INS(Return)(
         error, NETWORK_ERROR_CONST(CONNECTION_CLOSED),
         STATUS_CONST(GENERIC_ERROR));
 
   *received = (size_t)result;
-  return SOCKET_FUNC(_Return)(
+  return SOCKET_INS(Return)(
         error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
@@ -78,12 +78,12 @@ SOCKET_SEND_TO_PROTOTYPE {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
   }
-  if (!SOCKET_FUNC(_EndpointToNative)(endpoint, &native, &length))
-    return SOCKET_FUNC(_Return)(
+  if (!SOCKET_INS(EndpointToNative)(endpoint, &native, &length))
+    return SOCKET_INS(Return)(
         error, NETWORK_ERROR_CONST(ADDRESS_INVALID),
         STATUS_CONST(GENERIC_ERROR));
 
-  amount = SOCKET_FUNC(_NativeIOSize)(size);
+  amount = SOCKET_INS(NativeIOSize)(size);
 #if OS_WINDOWS
   int result = TSOCKET_NATIVE_SENDTO(socket->handle, (const char *)data, (int)amount, 0,
                       (struct sockaddr *)&native, length);
@@ -92,12 +92,12 @@ SOCKET_SEND_TO_PROTOTYPE {
                           (struct sockaddr *)&native, length);
 #endif
   if (result == TSOCKET_NATIVE_ERROR) {
-    domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
-    return SOCKET_FUNC(_Return)(
+    domainError = SOCKET_INS(MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
+    return SOCKET_INS(Return)(
         error, domainError, STATUS_CONST(GENERIC_ERROR));
   }
   if (sent != NULL) *sent = (size_t)result;
-  return SOCKET_FUNC(_Return)(
+  return SOCKET_INS(Return)(
         error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
@@ -110,7 +110,7 @@ SOCKET_RECEIVE_FROM_PROTOTYPE {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
   }
-  amount = SOCKET_FUNC(_NativeIOSize)(capacity);
+  amount = SOCKET_INS(NativeIOSize)(capacity);
 #if OS_WINDOWS
   int result = TSOCKET_NATIVE_RECVFROM(socket->handle, (char *)data, (int)amount, 0,
                         (struct sockaddr *)&native, &length);
@@ -119,13 +119,13 @@ SOCKET_RECEIVE_FROM_PROTOTYPE {
                             (struct sockaddr *)&native, &length);
 #endif
   if (result == TSOCKET_NATIVE_ERROR) {
-    domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
-    return SOCKET_FUNC(_Return)(
+    domainError = SOCKET_INS(MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
+    return SOCKET_INS(Return)(
         error, domainError, STATUS_CONST(GENERIC_ERROR));
   }
   if (sender != NULL)
-    SOCKET_FUNC(_EndpointFromNative)((struct sockaddr *)&native, sender);
+    SOCKET_INS(EndpointFromNative)((struct sockaddr *)&native, sender);
   if (received != NULL) *received = (size_t)result;
-  return SOCKET_FUNC(_Return)(
+  return SOCKET_INS(Return)(
         error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }

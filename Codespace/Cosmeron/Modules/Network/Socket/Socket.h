@@ -40,7 +40,7 @@ typedef struct SOCKET_TYPE(TSocket) {
   bool blocking;
 } SOCKET_TYPE(TSocket);
 
-static inline OPSTATUS SOCKET_FUNC(_Return)(
+static inline OPSTATUS SOCKET_INS(Return)(
     NETWORK_TYPE(TError) *error, NETWORK_TYPE(TError) domainError,
     OPSTATUS status) {
   if (error != NULL)

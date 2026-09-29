@@ -1,15 +1,15 @@
 #pragma once
 
-static inline SOCKET_TYPE(Handle) SOCKET_FUNC(_NativeCreate)(int family, int kind,
+static inline SOCKET_TYPE(Handle) SOCKET_INS(NativeCreate)(int family, int kind,
                                                               int protocol) {
   return TSOCKET_NATIVE_SOCKET(family, kind, protocol);
 }
 
-static inline int SOCKET_FUNC(_NativeKind)(SOCKET_TYPE(TKind) kind) {
+static inline int SOCKET_INS(NativeKind)(SOCKET_TYPE(TKind) kind) {
   return kind == SOCKET_CONST(KIND_DATAGRAM) ? SOCK_DGRAM : SOCK_STREAM;
 }
 
-static inline int SOCKET_FUNC(_NativeProtocol)(SOCKET_TYPE(TProtocol) protocol) {
+static inline int SOCKET_INS(NativeProtocol)(SOCKET_TYPE(TProtocol) protocol) {
   switch (protocol) {
   case SOCKET_CONST(PROTOCOL_TCP): return IPPROTO_TCP;
   case SOCKET_CONST(PROTOCOL_UDP): return IPPROTO_UDP;
@@ -45,22 +45,22 @@ SOCKET_CREATE_PROTOTYPE {
        protocol == SOCKET_CONST(PROTOCOL_UDP)) ||
       (kind == SOCKET_CONST(KIND_DATAGRAM) &&
        protocol == SOCKET_CONST(PROTOCOL_TCP)))
-    return SOCKET_FUNC(_Return)(
+    return SOCKET_INS(Return)(
         error, NETWORK_ERROR_CONST(NONE),
         STATUS_CONST(INVALID_ARGUMENT));
   if (socket->handle != TSOCKET_NATIVE_INVALID)
     SOCKET_FUNC(Close)(socket);
   if (!NETWORK_FUNC(_EnsureRuntime)())
-    return SOCKET_FUNC(_Return)(
+    return SOCKET_INS(Return)(
         error, NETWORK_ERROR_CONST(UNKNOWN), STATUS_CONST(GENERIC_ERROR));
 
   nativeFamily = family == SOCKET_CONST(FAMILY_IPV6) ? AF_INET6 : AF_INET;
   socket->handle =
-      SOCKET_FUNC(_NativeCreate)(nativeFamily, SOCKET_FUNC(_NativeKind)(kind),
-                                 SOCKET_FUNC(_NativeProtocol)(protocol));
+      SOCKET_INS(NativeCreate)(nativeFamily, SOCKET_INS(NativeKind)(kind),
+                                 SOCKET_INS(NativeProtocol)(protocol));
   if (socket->handle == TSOCKET_NATIVE_INVALID) {
-    domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
-    return SOCKET_FUNC(_Return)(
+    domainError = SOCKET_INS(MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
+    return SOCKET_INS(Return)(
         error, domainError, STATUS_CONST(GENERIC_ERROR));
   }
 
@@ -70,17 +70,17 @@ SOCKET_CREATE_PROTOTYPE {
     int enabled = 1;
     if (TSOCKET_NATIVE_SETSOCKOPT(socket->handle, SOL_SOCKET, SO_NOSIGPIPE, &enabled,
                    (SOCKET_TYPE(Len))sizeof(enabled)) == TSOCKET_NATIVE_ERROR) {
-      domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
+      domainError = SOCKET_INS(MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
       COSMERON_MACRO_INTERNAL_TSOCKET_OS_CLOSE(socket->handle);
       socket->handle = TSOCKET_NATIVE_INVALID;
-      return SOCKET_FUNC(_Return)(
+      return SOCKET_INS(Return)(
         error, domainError, STATUS_CONST(GENERIC_ERROR));
     }
   }
 #endif
   socket->kind = kind;
   socket->protocol = protocol;
-  return SOCKET_FUNC(_Return)(
+  return SOCKET_INS(Return)(
         error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
