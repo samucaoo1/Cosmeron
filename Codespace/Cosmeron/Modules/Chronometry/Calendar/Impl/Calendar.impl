@@ -32,8 +32,21 @@ inline static int64_t CALENDAR_INS(FloorDiv)(int64_t value, int64_t divisor) {
 }
 
 CHRONOMETRY_CALENDAR_SYSTEM_POLICY_PROTOTYPE {
-  CALENDAR_TYPE(Policy) policy = {CALENDAR_CONST(PURE_SYSTEM), system, {0}};
-  return policy;
+  CALENDAR_TYPE(Policy) policy;
+
+  if (outPolicy == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (system != CALENDAR_CONST(GREGORIAN) &&
+      system != CALENDAR_CONST(JULIAN))
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  policy = (CALENDAR_TYPE(Policy)){
+      CALENDAR_CONST(PURE_SYSTEM),
+      system,
+      {0},
+  };
+  *outPolicy = policy;
+  return STATUS_CONST(SUCCESS);
 }
 
 CHRONOMETRY_CALENDAR_REFORM_POLICY_PROTOTYPE {

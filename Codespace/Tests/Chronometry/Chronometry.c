@@ -1,8 +1,10 @@
 #include "../../Cosmeron/Modules/Chronometry/Chronometry.h"
 
 int main(void) {
-  Chronometry_Calendar_Policy policy =
-      Chronometry_Calendar_SystemPolicy(CHRONOMETRY_CALENDAR_GREGORIAN);
+  Chronometry_Calendar_Policy policy;
+  if (Chronometry_Calendar_SystemPolicy(
+          CHRONOMETRY_CALENDAR_GREGORIAN, &policy) != STATUS_CONST(SUCCESS))
+    return 6;
   Chronometry_Date date = {2024, CHRONOMETRY_CALENDAR_FEBRUARY, 29};
   uint16_t dayOfYear = 0U;
   Chronometry_Duration second;

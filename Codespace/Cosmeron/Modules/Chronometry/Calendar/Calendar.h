@@ -75,8 +75,8 @@ typedef struct CALENDAR_TYPE(Policy) {
 } CALENDAR_TYPE(Policy);
 
 #define CHRONOMETRY_CALENDAR_SYSTEM_POLICY_PROTOTYPE                           \
-  static inline CALENDAR_TYPE(Policy) CALENDAR_FUNC(SystemPolicy)(             \
-      CALENDAR_TYPE(System) system)
+  static inline OPSTATUS CALENDAR_FUNC(SystemPolicy)(                          \
+      CALENDAR_TYPE(System) system, CALENDAR_TYPE(Policy) *outPolicy)
 
 #define CHRONOMETRY_CALENDAR_REFORM_POLICY_PROTOTYPE                           \
   static inline OPSTATUS CALENDAR_FUNC(ReformPolicy)(                          \
