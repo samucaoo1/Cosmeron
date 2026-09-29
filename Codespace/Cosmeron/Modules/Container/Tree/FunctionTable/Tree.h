@@ -1,6 +1,6 @@
 #pragma once
 
-#if CONTAINER_FUNCTION_TABLE_ENABLED
+#if COSMERON_MACRO_INTERNAL_CONTAINER_FUNCTION_TABLE_ENABLED
 
 /* =============================================================
  * FunctionTable instances — static const binding of functions to slots.
