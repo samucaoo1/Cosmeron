@@ -44,10 +44,10 @@ CHRONOMETRY_PARSE_DATETIME_ISO_PROTOTYPE {
   if (sscanf(text, "%d-%d-%dT%d:%d:%d.%d%n", &year, &month, &day, &hour,
              &minute, &second, &millisecond, &consumed) != 7 ||
       text[consumed] != '\0' || month < CALENDAR_CONST(JANUARY) || month > CALENDAR_CONST(DECEMBER) || day <= 0 || day > CALENDAR_MONTH_LENGTH_CONST(JANUARY) ||
-      hour < 0 || hour >= CHRONOMETRY_HOURS_PER_DAY || minute < 0 ||
-      minute >= CHRONOMETRY_MINUTES_PER_HOUR || second < 0 ||
-      second >= CHRONOMETRY_SECONDS_PER_MINUTE || millisecond < 0 ||
-      millisecond >= CHRONOMETRY_MILLISECONDS_PER_SECOND)
+      hour < 0 || hour >= DURATION_CONST(HOURS_PER_DAY) || minute < 0 ||
+      minute >= DURATION_CONST(MINUTES_PER_HOUR) || second < 0 ||
+      second >= DURATION_CONST(SECONDS_PER_MINUTE) || millisecond < 0 ||
+      millisecond >= DURATION_CONST(MILLISECONDS_PER_SECOND))
     return STATUS_CONST(OUT_OF_RANGE);
   value->date = (CHRONOMETRY_TYPE(Date)){year, (uint8_t)month, (uint8_t)day};
   value->time = (CHRONOMETRY_TYPE(TimeOfDay)){(uint16_t)millisecond,
