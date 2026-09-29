@@ -3,6 +3,7 @@
 #include "Entropy.space"
 #include "Pool/Pool.h"
 #include "../../../Core/Preprocessor/Detect/OperationSystem.h"
+#include "../../../Core/Error/Panic.h"
 
 #include <errno.h>
 #include <stdint.h>
