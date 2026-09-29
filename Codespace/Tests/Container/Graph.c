@@ -94,7 +94,7 @@ int main(void) {
   TEST_ASSERT(GRAPH_OPERATION(int, int, EdgeCount)(&graph) == 1u);
   TEST_ASSERT(GRAPH_OPERATION(int, int, HasEdge)(&graph, 1u, 2u));
 
-#if CONTAINER_FUNCTION_TABLE_ENABLED
+#if COSMERON_MACRO_INTERNAL_CONTAINER_FUNCTION_TABLE_ENABLED
   TEST_ASSERT(graph.api != NULL);
   TEST_ASSERT(graph.api->vertexCount(&graph) == 3u);
 #endif
