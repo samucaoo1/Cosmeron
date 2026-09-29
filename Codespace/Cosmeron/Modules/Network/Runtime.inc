@@ -143,7 +143,7 @@ static inline BOOL CALLBACK NETWORK_INS(WinSockInitialize)(
   return TRUE;
 }
 
-static inline bool NETWORK_FUNC(_EnsureRuntime)(void) {
+static inline bool NETWORK_INS(EnsureRuntime)(void) {
   static INIT_ONCE once = INIT_ONCE_STATIC_INIT;
   static bool initialized = false;
   if (!InitOnceExecuteOnce(&once, NETWORK_INS(WinSockInitialize),
@@ -152,98 +152,98 @@ static inline bool NETWORK_FUNC(_EnsureRuntime)(void) {
   return initialized;
 }
 
-static inline SOCKET NETWORK_FUNC(_WinSocket)(int family, int kind, int protocol) {
+static inline SOCKET NETWORK_INS(WinSocket)(int family, int kind, int protocol) {
   return NETWORK_INS(WinSockAPIGet)()->socket(family, kind, protocol);
 }
-static inline int NETWORK_FUNC(_WinCloseSocket)(SOCKET socket) {
+static inline int NETWORK_INS(WinCloseSocket)(SOCKET socket) {
   return NETWORK_INS(WinSockAPIGet)()->closeSocket(socket);
 }
-static inline int NETWORK_FUNC(_WinIoctlSocket)(SOCKET socket, long command,
+static inline int NETWORK_INS(WinIoctlSocket)(SOCKET socket, long command,
                                                 u_long *argument) {
   return NETWORK_INS(WinSockAPIGet)()->ioctlSocket(socket, command, argument);
 }
-static inline int NETWORK_FUNC(_WinGetLastError)(void) {
+static inline int NETWORK_INS(WinGetLastError)(void) {
   return NETWORK_INS(WinSockAPIGet)()->getLastError();
 }
-static inline int NETWORK_FUNC(_WinBind)(
+static inline int NETWORK_INS(WinBind)(
     SOCKET socket, const struct sockaddr *address, int length) {
   return NETWORK_INS(WinSockAPIGet)()->bind(socket, address, length);
 }
-static inline int NETWORK_FUNC(_WinListen)(SOCKET socket, int backlog) {
+static inline int NETWORK_INS(WinListen)(SOCKET socket, int backlog) {
   return NETWORK_INS(WinSockAPIGet)()->listen(socket, backlog);
 }
-static inline SOCKET NETWORK_FUNC(_WinAccept)(
+static inline SOCKET NETWORK_INS(WinAccept)(
     SOCKET socket, struct sockaddr *address, int *length) {
   return NETWORK_INS(WinSockAPIGet)()->accept(socket, address, length);
 }
-static inline int NETWORK_FUNC(_WinConnect)(
+static inline int NETWORK_INS(WinConnect)(
     SOCKET socket, const struct sockaddr *address, int length) {
   return NETWORK_INS(WinSockAPIGet)()->connect(socket, address, length);
 }
-static inline int NETWORK_FUNC(_WinSend)(
+static inline int NETWORK_INS(WinSend)(
     SOCKET socket, const char *buffer, int length, int flags) {
   return NETWORK_INS(WinSockAPIGet)()->send(socket, buffer, length, flags);
 }
-static inline int NETWORK_FUNC(_WinReceive)(
+static inline int NETWORK_INS(WinReceive)(
     SOCKET socket, char *buffer, int length, int flags) {
   return NETWORK_INS(WinSockAPIGet)()->receive(socket, buffer, length, flags);
 }
-static inline int NETWORK_FUNC(_WinSendTo)(
+static inline int NETWORK_INS(WinSendTo)(
     SOCKET socket, const char *buffer, int length, int flags,
     const struct sockaddr *address, int addressLength) {
   return NETWORK_INS(WinSockAPIGet)()->sendTo(
       socket, buffer, length, flags, address, addressLength);
 }
-static inline int NETWORK_FUNC(_WinReceiveFrom)(
+static inline int NETWORK_INS(WinReceiveFrom)(
     SOCKET socket, char *buffer, int length, int flags,
     struct sockaddr *address, int *addressLength) {
   return NETWORK_INS(WinSockAPIGet)()->receiveFrom(
       socket, buffer, length, flags, address, addressLength);
 }
-static inline int NETWORK_FUNC(_WinShutdown)(SOCKET socket, int direction) {
+static inline int NETWORK_INS(WinShutdown)(SOCKET socket, int direction) {
   return NETWORK_INS(WinSockAPIGet)()->shutdown(socket, direction);
 }
-static inline int NETWORK_FUNC(_WinSetSockOpt)(
+static inline int NETWORK_INS(WinSetSockOpt)(
     SOCKET socket, int level, int option, const char *value, int length) {
   return NETWORK_INS(WinSockAPIGet)()->setSockOpt(
       socket, level, option, value, length);
 }
-static inline int NETWORK_FUNC(_WinGetSockOpt)(
+static inline int NETWORK_INS(WinGetSockOpt)(
     SOCKET socket, int level, int option, char *value, int *length) {
   return NETWORK_INS(WinSockAPIGet)()->getSockOpt(
       socket, level, option, value, length);
 }
-static inline int NETWORK_FUNC(_WinGetSockName)(
+static inline int NETWORK_INS(WinGetSockName)(
     SOCKET socket, struct sockaddr *address, int *length) {
   return NETWORK_INS(WinSockAPIGet)()->getSockName(socket, address, length);
 }
-static inline int NETWORK_FUNC(_WinGetPeerName)(
+static inline int NETWORK_INS(WinGetPeerName)(
     SOCKET socket, struct sockaddr *address, int *length) {
   return NETWORK_INS(WinSockAPIGet)()->getPeerName(socket, address, length);
 }
-static inline int NETWORK_FUNC(_WinSelect)(
+static inline int NETWORK_INS(WinSelect)(
     int count, fd_set *readSet, fd_set *writeSet, fd_set *errorSet,
     const struct timeval *timeout) {
   return NETWORK_INS(WinSockAPIGet)()->select(
       count, readSet, writeSet, errorSet, timeout);
 }
-static inline int NETWORK_FUNC(_WinGetAddrInfo)(
+static inline int NETWORK_INS(WinGetAddrInfo)(
     PCSTR host, PCSTR service, const ADDRINFOA *hints, PADDRINFOA *result) {
   return NETWORK_INS(WinSockAPIGet)()->getAddrInfo(host, service, hints, result);
 }
-static inline void NETWORK_FUNC(_WinFreeAddrInfo)(PADDRINFOA result) {
+static inline void NETWORK_INS(WinFreeAddrInfo)(PADDRINFOA result) {
   NETWORK_INS(WinSockAPIGet)()->freeAddrInfo(result);
 }
-static inline int NETWORK_FUNC(_WinPoll)(
+static inline int NETWORK_INS(WinPoll)(
     LPWSAPOLLFD descriptors, ULONG count, INT timeout) {
   return NETWORK_INS(WinSockAPIGet)()->poll(descriptors, count, timeout);
 }
-static inline u_short NETWORK_FUNC(_WinHostToNetworkShort)(u_short value) {
+static inline u_short NETWORK_INS(WinHostToNetworkShort)(u_short value) {
   return NETWORK_INS(WinSockAPIGet)()->hostToNetworkShort(value);
 }
-static inline u_short NETWORK_FUNC(_WinNetworkToHostShort)(u_short value) {
+static inline u_short NETWORK_INS(WinNetworkToHostShort)(u_short value) {
   return NETWORK_INS(WinSockAPIGet)()->networkToHostShort(value);
 }
 #else
-static inline bool NETWORK_FUNC(_EnsureRuntime)(void) { return true; }
+static inline bool NETWORK_INS(EnsureRuntime)(void) { return true; }
 #endif
