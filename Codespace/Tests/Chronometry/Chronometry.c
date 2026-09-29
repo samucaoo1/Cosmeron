@@ -16,7 +16,7 @@ int main(void) {
     return 3;
   if (Chronometry_Duration_FromSeconds(1, &second) != STATUS_CONST(SUCCESS))
     return 4;
-  if (second.nanoseconds != CHRONOMETRY_NANOSECONDS_PER_SECOND)
+  if (second.nanoseconds != DURATION_CONST(NANOSECONDS_PER_SECOND))
     return 5;
   return 0;
 }
