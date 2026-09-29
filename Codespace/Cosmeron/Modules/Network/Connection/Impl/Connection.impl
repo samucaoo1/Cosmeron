@@ -70,15 +70,15 @@ static inline OPSTATUS NETWORK_CONNECTION_FUNC(_WaitConnect)(
   FD_ZERO(&errorSet);
   FD_SET(connection->socket.handle, &writeSet);
   FD_SET(connection->socket.handle, &errorSet);
-  tv.tv_sec = (long)(timeout.nanoseconds / CHRONOMETRY_NANOSECONDS_PER_SECOND);
-  tv.tv_usec = (long)((timeout.nanoseconds % CHRONOMETRY_NANOSECONDS_PER_SECOND) /
-                      CHRONOMETRY_NANOSECONDS_PER_MICROSECOND);
+  tv.tv_sec = (long)(timeout.nanoseconds / CHRONOMETRY_DURATION_NANOSECONDS_PER_SECOND);
+  tv.tv_usec = (long)((timeout.nanoseconds % CHRONOMETRY_DURATION_NANOSECONDS_PER_SECOND) /
+                      CHRONOMETRY_DURATION_NANOSECONDS_PER_MICROSECOND);
   result = TSOCKET_NATIVE_SELECT(0, NULL, &writeSet, &errorSet, &tv);
 #else
   struct pollfd descriptor;
   int64_t milliseconds =
-      timeout.nanoseconds / CHRONOMETRY_NANOSECONDS_PER_MILLISECOND;
-  if (timeout.nanoseconds % CHRONOMETRY_NANOSECONDS_PER_MILLISECOND != 0)
+      timeout.nanoseconds / CHRONOMETRY_DURATION_NANOSECONDS_PER_MILLISECOND;
+  if (timeout.nanoseconds % CHRONOMETRY_DURATION_NANOSECONDS_PER_MILLISECOND != 0)
     ++milliseconds;
   if (milliseconds > INT_MAX)
     milliseconds = INT_MAX;
