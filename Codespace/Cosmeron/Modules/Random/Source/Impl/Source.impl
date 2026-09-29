@@ -2,28 +2,28 @@
 
 #include <stdint.h>
 
-static inline bool RANDOM_SOURCE_FUNC(_EngineValid)(
+static inline bool RANDOM_SOURCE_INS(EngineValid)(
     const RANDOM_ENGINE_TYPE(Descriptor) *engine) {
   return engine != NULL && engine->nextU64 != NULL && engine->seed != NULL &&
          engine->stateSize != 0U && engine->stateAlignment != 0U;
 }
 
-static inline bool RANDOM_SOURCE_FUNC(_Valid)(
+static inline bool RANDOM_SOURCE_INS(Valid)(
     const RANDOM_SOURCE_TYPE(Value) *source) {
   return source != NULL &&
-         RANDOM_SOURCE_FUNC(_EngineValid)(source->engine) &&
+         RANDOM_SOURCE_INS(EngineValid)(source->engine) &&
          source->state != NULL &&
          source->stateSize >= source->engine->stateSize;
 }
 
-static inline uint64_t RANDOM_SOURCE_FUNC(_NextU64Unchecked)(
+static inline uint64_t RANDOM_SOURCE_INS(NextU64Unchecked)(
     RANDOM_SOURCE_TYPE(Value) *source) {
   uint64_t value = source->engine->nextU64(source->state);
   return source->mixer == NULL ? value : source->mixer(value);
 }
 
 RANDOM_SOURCE_INIT_WITH_STATE_PROTOTYPE {
-  if (source == NULL || !RANDOM_SOURCE_FUNC(_EngineValid)(engine) ||
+  if (source == NULL || !RANDOM_SOURCE_INS(EngineValid)(engine) ||
       state == NULL || stateSize < engine->stateSize ||
       ((uintptr_t)state % engine->stateAlignment) != 0U)
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -41,7 +41,7 @@ RANDOM_SOURCE_INIT_PROTOTYPE {
   void *state = NULL;
   OPSTATUS status;
 
-  if (source == NULL || !RANDOM_SOURCE_FUNC(_EngineValid)(engine) ||
+  if (source == NULL || !RANDOM_SOURCE_INS(EngineValid)(engine) ||
       engine->stateAlignment > COSMERON_MACRO_INTERNAL_MEMORY_MAX_ALIGNMENT)
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -60,13 +60,14 @@ RANDOM_SOURCE_INIT_PROTOTYPE {
 
 RANDOM_SOURCE_INIT_SYSTEM_PROTOTYPE {
   uint64_t seed;
-  if (!RANDOM_ENTROPY_FUNC(System)(&seed, sizeof(seed)))
-    return STATUS_CONST(NOT_AVAILABLE);
+  OPSTATUS status = RANDOM_ENTROPY_FUNC(System)(&seed, sizeof(seed));
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
   return RANDOM_SOURCE_FUNC(Init)(source, engine, seed, mixer);
 }
 
 RANDOM_SOURCE_RESEED_PROTOTYPE {
-  if (source == NULL || !RANDOM_SOURCE_FUNC(_EngineValid)(source->engine) ||
+  if (source == NULL || !RANDOM_SOURCE_INS(EngineValid)(source->engine) ||
       source->state == NULL || source->stateSize < source->engine->stateSize)
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -75,10 +76,10 @@ RANDOM_SOURCE_RESEED_PROTOTYPE {
 }
 
 RANDOM_SOURCE_NEXT_U64_PROTOTYPE {
-  if (!RANDOM_SOURCE_FUNC(_Valid)(source) || out == NULL)
+  if (!RANDOM_SOURCE_INS(Valid)(source) || out == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  *out = RANDOM_SOURCE_FUNC(_NextU64Unchecked)(source);
+  *out = RANDOM_SOURCE_INS(NextU64Unchecked)(source);
   return STATUS_CONST(SUCCESS);
 }
 
