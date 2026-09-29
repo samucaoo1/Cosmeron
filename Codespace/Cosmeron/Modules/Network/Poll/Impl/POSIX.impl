@@ -126,15 +126,15 @@ NETWORK_POLLER_WAIT_FOR_PROTOTYPE {
   }
   {
     int64_t seconds =
-        timeout.nanoseconds / CHRONOMETRY_NANOSECONDS_PER_SECOND;
+        timeout.nanoseconds / CHRONOMETRY_DURATION_NANOSECONDS_PER_SECOND;
     if ((uint64_t)seconds > (uint64_t)LONG_MAX)
       nativeTimeout.tv_sec = LONG_MAX;
     else
       nativeTimeout.tv_sec = (long)seconds;
   }
   nativeTimeout.tv_usec = (long)(
-      (timeout.nanoseconds % CHRONOMETRY_NANOSECONDS_PER_SECOND) /
-      CHRONOMETRY_NANOSECONDS_PER_MICROSECOND);
+      (timeout.nanoseconds % CHRONOMETRY_DURATION_NANOSECONDS_PER_SECOND) /
+      CHRONOMETRY_DURATION_NANOSECONDS_PER_MICROSECOND);
   return NETWORK_POLLER_FUNC(_WaitNative)(
       poller, events, &nativeTimeout, error);
 }
