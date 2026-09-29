@@ -207,8 +207,8 @@ NETWORK_POLLER_WAIT_FOR_PROTOTYPE {
     if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
   }
-  milliseconds = timeout.nanoseconds / CHRONOMETRY_NANOSECONDS_PER_MILLISECOND;
-  if (timeout.nanoseconds % CHRONOMETRY_NANOSECONDS_PER_MILLISECOND != 0)
+  milliseconds = timeout.nanoseconds / CHRONOMETRY_DURATION_NANOSECONDS_PER_MILLISECOND;
+  if (timeout.nanoseconds % CHRONOMETRY_DURATION_NANOSECONDS_PER_MILLISECOND != 0)
     ++milliseconds;
   if (milliseconds > INT_MAX) milliseconds = INT_MAX;
   return NETWORK_POLLER_FUNC(_WaitNative)(
