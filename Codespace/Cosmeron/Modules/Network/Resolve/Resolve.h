@@ -41,7 +41,7 @@ static inline NETWORK_TYPE(TError) NETWORK_INS(ResolveMapError)(int error) {
 static inline int NETWORK_INS(ResolveGetAddrInfo)(
     const char *host, const struct addrinfo *hints, struct addrinfo **result) {
 #if OS_WINDOWS
-  return NETWORK_FUNC(_WinGetAddrInfo)(host, NULL, hints, result);
+  return NETWORK_INS(WinGetAddrInfo)(host, NULL, hints, result);
 #else
   return getaddrinfo(host, NULL, hints, result);
 #endif
@@ -49,7 +49,7 @@ static inline int NETWORK_INS(ResolveGetAddrInfo)(
 
 static inline void NETWORK_INS(ResolveFreeAddrInfo)(struct addrinfo *result) {
 #if OS_WINDOWS
-  NETWORK_FUNC(_WinFreeAddrInfo)(result);
+  NETWORK_INS(WinFreeAddrInfo)(result);
 #else
   freeaddrinfo(result);
 #endif
@@ -76,7 +76,7 @@ NETWORK_RESOLVE_ADDRESS_PROTOTYPE {
 
   FLAT_VECTOR_FUNC(Network_Address, Clear)(addresses);
 #if OS_WINDOWS
-  if (!NETWORK_FUNC(_EnsureRuntime)()) {
+  if (!NETWORK_INS(EnsureRuntime)()) {
     if (error != NULL)
       *error = NETWORK_ERROR_CONST(UNKNOWN);
     return STATUS_CONST(GENERIC_ERROR);
