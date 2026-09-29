@@ -71,7 +71,7 @@ SOCKET_CREATE_PROTOTYPE {
     if (TSOCKET_NATIVE_SETSOCKOPT(socket->handle, SOL_SOCKET, SO_NOSIGPIPE, &enabled,
                    (SOCKET_TYPE(Len))sizeof(enabled)) == TSOCKET_NATIVE_ERROR) {
       domainError = SOCKET_FUNC(_MapNativeError)(TSOCKET_NATIVE_ERROR_CODE());
-      TSOCKET_OS_CLOSE(socket->handle);
+      COSMERON_MACRO_INTERNAL_TSOCKET_OS_CLOSE(socket->handle);
       socket->handle = TSOCKET_NATIVE_INVALID;
       return SOCKET_FUNC(_Return)(
         error, domainError, STATUS_CONST(GENERIC_ERROR));
@@ -88,7 +88,7 @@ SOCKET_CLOSE_PROTOTYPE {
   if (socket == NULL)
     return;
   if (socket->handle != TSOCKET_NATIVE_INVALID) {
-    TSOCKET_OS_CLOSE(socket->handle);
+    COSMERON_MACRO_INTERNAL_TSOCKET_OS_CLOSE(socket->handle);
     socket->handle = TSOCKET_NATIVE_INVALID;
   }
 }
