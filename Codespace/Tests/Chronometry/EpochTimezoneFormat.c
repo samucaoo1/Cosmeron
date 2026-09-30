@@ -59,25 +59,55 @@ int main(void) {
   if (memcmp(buf, unchanged, sizeof(buf)) != 0)
     return 13;
 
+  {
+    Chronometry_Date invalidDate = {2023, 2, 31};
+    memset(buf, 0x5A, sizeof(buf));
+    memcpy(unchanged, buf, sizeof(buf));
+    if (Chronometry_Format_DateISO(
+            invalidDate, buf, sizeof(buf)) != STATUS_CONST(OUT_OF_RANGE))
+      return 14;
+    if (memcmp(buf, unchanged, sizeof(buf)) != 0)
+      return 15;
+  }
+
   if (Chronometry_Format_DateISO(epoch, buf, sizeof(buf)) != STATUS_CONST(SUCCESS))
-    return 14;
+    return 16;
   if (strcmp(buf, "+1970-01-01") != 0)
-    return 15;
+    return 17;
+
+  back = (Chronometry_Date){2000, 1, 1};
+  if (Chronometry_Format_ParseDateISO("2023-02-31", &back) !=
+      STATUS_CONST(OUT_OF_RANGE))
+    return 18;
+  if (Chronometry_Calendar_DateCompare(
+          back, (Chronometry_Date){2000, 1, 1}) != 0)
+    return 19;
+
   if (Chronometry_Format_ParseDateISO(buf, &back) != STATUS_CONST(SUCCESS) ||
       Chronometry_Calendar_DateCompare(epoch, back) != 0)
-    return 16;
+    return 20;
 
   memset(buf, 0x5A, sizeof(buf));
   memcpy(unchanged, buf, sizeof(buf));
   if (Chronometry_Format_DateTimeISO(dt, buf, 8U) != STATUS_CONST(OUT_OF_RANGE))
-    return 17;
+    return 21;
   if (memcmp(buf, unchanged, sizeof(buf)) != 0)
-    return 18;
+    return 22;
 
   if (Chronometry_Format_DateTimeISO(dt, buf, sizeof(buf)) != STATUS_CONST(SUCCESS))
-    return 19;
+    return 23;
+
+  parsed = (Chronometry_DateTime){
+      {2000, 1, 1}, {0, 0, 0, 0}};
+  if (Chronometry_Format_ParseDateTimeISO(
+          "2023-02-31T12:00:00.000", &parsed) != STATUS_CONST(OUT_OF_RANGE))
+    return 24;
+  if (parsed.date.year != 2000 || parsed.date.month != 1 ||
+      parsed.date.day != 1)
+    return 25;
+
   if (Chronometry_Format_ParseDateTimeISO(buf, &parsed) != STATUS_CONST(SUCCESS) ||
       Chronometry_DateTime_Compare(dt, parsed) != 0)
-    return 20;
+    return 26;
   return 0;
 }
