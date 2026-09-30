@@ -127,7 +127,7 @@
 
 
 
-#define DATA_TYPE_IMPLEMENT_DIVMOD(TYPE, FUNCTION_NAME, STRUCT_NAME,           \
+#define DATA_TYPE_IMPLEMENT_DIV_MOD(TYPE, FUNCTION_NAME, STRUCT_NAME,           \
                                    IS_ZERO_FUNC, COMPARE_FUNC, SUB_FUNC,        \
                                    SHIFT_LEFT_FUNC)                            \
   static inline OPSTATUS FUNCTION_NAME(const STRUCT_NAME *dividend,            \

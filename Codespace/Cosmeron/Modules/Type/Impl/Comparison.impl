@@ -37,7 +37,7 @@
     return true;           \
   }
 
-#define DATA_TYPE_IMPLEMENT_NOTEQUAL(TYPE, FUNCTION_NAME, EQUAL_FUNC,          \
+#define DATA_TYPE_IMPLEMENT_NOT_EQUAL(TYPE, FUNCTION_NAME, EQUAL_FUNC,          \
                                      STRUCT_NAME)                              \
   static inline bool FUNCTION_NAME(const STRUCT_NAME *left,                    \
                                    const STRUCT_NAME *right) {                 \
@@ -46,7 +46,7 @@
     return !EQUAL_FUNC(left, right);                                           \
   }
 
-#define DATA_TYPE_IMPLEMENT_LESSTHAN(TYPE, FUNCTION_NAME, COMPARE_FUNC,        \
+#define DATA_TYPE_IMPLEMENT_LESS_THAN(TYPE, FUNCTION_NAME, COMPARE_FUNC,        \
                                      STRUCT_NAME)                              \
   static inline bool FUNCTION_NAME(const STRUCT_NAME *left,                    \
                                    const STRUCT_NAME *right) {                 \
@@ -56,7 +56,7 @@
     return result == COMPARISON_CONST(LESS);                                      \
   }
 
-#define DATA_TYPE_IMPLEMENT_GREATERTHAN(TYPE, FUNCTION_NAME, COMPARE_FUNC,     \
+#define DATA_TYPE_IMPLEMENT_GREATER_THAN(TYPE, FUNCTION_NAME, COMPARE_FUNC,     \
                                         STRUCT_NAME)                           \
   static inline bool FUNCTION_NAME(const STRUCT_NAME *left,                    \
                                    const STRUCT_NAME *right) {                 \
@@ -66,7 +66,7 @@
     return result == COMPARISON_CONST(GREATER);                                      \
   }
 
-#define DATA_TYPE_IMPLEMENT_LESSOREQUAL(TYPE, FUNCTION_NAME, COMPARE_FUNC,     \
+#define DATA_TYPE_IMPLEMENT_LESS_OR_EQUAL(TYPE, FUNCTION_NAME, COMPARE_FUNC,     \
                                         STRUCT_NAME)                           \
   static inline bool FUNCTION_NAME(const STRUCT_NAME *left,                    \
                                    const STRUCT_NAME *right) {                 \
@@ -76,7 +76,7 @@
     return result != COMPARISON_CONST(GREATER);                                     \
   }
 
-#define DATA_TYPE_IMPLEMENT_GREATEROREQUAL(TYPE, FUNCTION_NAME, COMPARE_FUNC,  \
+#define DATA_TYPE_IMPLEMENT_GREATER_OR_EQUAL(TYPE, FUNCTION_NAME, COMPARE_FUNC,  \
                                            STRUCT_NAME)                        \
   static inline bool FUNCTION_NAME(const STRUCT_NAME *left,                    \
                                    const STRUCT_NAME *right) {                 \
@@ -86,7 +86,7 @@
     return result != COMPARISON_CONST(LESS);                                     \
   }
 
-#define DATA_TYPE_IMPLEMENT_ISZERO(TYPE, FUNCTION_NAME, STRUCT_NAME)           \
+#define DATA_TYPE_IMPLEMENT_IS_ZERO(TYPE, FUNCTION_NAME, STRUCT_NAME)           \
   static inline bool FUNCTION_NAME(const STRUCT_NAME *target) {                \
     if (!target)                                                               \
       return false;                                                            \

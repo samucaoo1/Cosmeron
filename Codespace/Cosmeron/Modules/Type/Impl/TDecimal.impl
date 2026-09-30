@@ -53,7 +53,7 @@
   DATA_TYPE_IMPLEMENT_MUL(TYPE, TDECIMAL_FUNC(SUFFIX, Mul),                       \
                            TDECIMAL_TYPE(SUFFIX), TDECIMAL_FUNC(SUFFIX, Add),          \
                            TDECIMAL_FUNC(SUFFIX, ShiftLeft))                       \
-  DATA_TYPE_IMPLEMENT_DIVMOD(TYPE, TDECIMAL_INS(SUFFIX, DivMod),               \
+  DATA_TYPE_IMPLEMENT_DIV_MOD(TYPE, TDECIMAL_INS(SUFFIX, DivMod),               \
                               TDECIMAL_TYPE(SUFFIX), TDECIMAL_FUNC(SUFFIX, IsZero),     \
                               TDECIMAL_FUNC(SUFFIX, Compare), TDECIMAL_FUNC(SUFFIX, Sub), \
                               TDECIMAL_FUNC(SUFFIX, ShiftLeft))                    \
@@ -95,28 +95,28 @@
   DATA_TYPE_IMPLEMENT_EQUAL(TYPE, TDECIMAL_FUNC(SUFFIX, Equal),                \
                             TDECIMAL_TYPE(SUFFIX))                             \
                                                                                \
-  DATA_TYPE_IMPLEMENT_NOTEQUAL(TYPE, TDECIMAL_FUNC(SUFFIX, NotEqual),          \
+  DATA_TYPE_IMPLEMENT_NOT_EQUAL(TYPE, TDECIMAL_FUNC(SUFFIX, NotEqual),          \
                                TDECIMAL_FUNC(SUFFIX, Equal),                   \
                                TDECIMAL_TYPE(SUFFIX))                          \
                                                                                \
-  DATA_TYPE_IMPLEMENT_LESSTHAN(TYPE, TDECIMAL_FUNC(SUFFIX, LessThan),          \
+  DATA_TYPE_IMPLEMENT_LESS_THAN(TYPE, TDECIMAL_FUNC(SUFFIX, LessThan),          \
                                TDECIMAL_FUNC(SUFFIX, Compare),                 \
                                TDECIMAL_TYPE(SUFFIX))                          \
                                                                                \
-  DATA_TYPE_IMPLEMENT_GREATERTHAN(TYPE, TDECIMAL_FUNC(SUFFIX, GreaterThan),    \
+  DATA_TYPE_IMPLEMENT_GREATER_THAN(TYPE, TDECIMAL_FUNC(SUFFIX, GreaterThan),    \
                                   TDECIMAL_FUNC(SUFFIX, Compare),              \
                                   TDECIMAL_TYPE(SUFFIX))                       \
                                                                                \
-  DATA_TYPE_IMPLEMENT_LESSOREQUAL(TYPE, TDECIMAL_FUNC(SUFFIX, LessOrEqual),    \
+  DATA_TYPE_IMPLEMENT_LESS_OR_EQUAL(TYPE, TDECIMAL_FUNC(SUFFIX, LessOrEqual),    \
                                   TDECIMAL_FUNC(SUFFIX, Compare),              \
                                   TDECIMAL_TYPE(SUFFIX))                       \
                                                                                \
-  DATA_TYPE_IMPLEMENT_GREATEROREQUAL(TYPE,                                     \
+  DATA_TYPE_IMPLEMENT_GREATER_OR_EQUAL(TYPE,                                     \
                                      TDECIMAL_FUNC(SUFFIX, GreaterOrEqual),    \
                                      TDECIMAL_FUNC(SUFFIX, Compare),           \
                                      TDECIMAL_TYPE(SUFFIX))                    \
                                                                                \
-  DATA_TYPE_IMPLEMENT_ISZERO(TYPE, TDECIMAL_FUNC(SUFFIX, IsZero),              \
+  DATA_TYPE_IMPLEMENT_IS_ZERO(TYPE, TDECIMAL_FUNC(SUFFIX, IsZero),              \
                              TDECIMAL_TYPE(SUFFIX)) \
   DATA_TYPE_IMPLEMENT_TO_CSTRING_BASE(TYPE, TDECIMAL_FUNC(SUFFIX, ToCStringBase), \
                                        TDECIMAL_TYPE(SUFFIX),                      \

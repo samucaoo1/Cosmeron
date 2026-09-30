@@ -32,7 +32,7 @@
   DATA_TYPE_IMPLEMENT_MUL(TYPE, TBIGINT_FUNC(SUFFIX, Mul),                       \
                            TBIGINT_TYPE(SUFFIX), TBIGINT_FUNC(SUFFIX, Add),          \
                            TBIGINT_FUNC(SUFFIX, ShiftLeft))                       \
-  DATA_TYPE_IMPLEMENT_DIVMOD(TYPE, TBIGINT_INS(SUFFIX, DivMod),                \
+  DATA_TYPE_IMPLEMENT_DIV_MOD(TYPE, TBIGINT_INS(SUFFIX, DivMod),                \
                               TBIGINT_TYPE(SUFFIX), TBIGINT_FUNC(SUFFIX, IsZero),     \
                               TBIGINT_FUNC(SUFFIX, Compare), TBIGINT_FUNC(SUFFIX, Sub), \
                               TBIGINT_FUNC(SUFFIX, ShiftLeft))                    \
@@ -70,23 +70,23 @@
                               TBIGINT_TYPE(SUFFIX))                            \
   DATA_TYPE_IMPLEMENT_EQUAL(TYPE, TBIGINT_FUNC(SUFFIX, Equal),                 \
                             TBIGINT_TYPE(SUFFIX))                              \
-  DATA_TYPE_IMPLEMENT_NOTEQUAL(TYPE, TBIGINT_FUNC(SUFFIX, NotEqual),           \
+  DATA_TYPE_IMPLEMENT_NOT_EQUAL(TYPE, TBIGINT_FUNC(SUFFIX, NotEqual),           \
                                TBIGINT_FUNC(SUFFIX, Equal),                    \
                                TBIGINT_TYPE(SUFFIX))                           \
-  DATA_TYPE_IMPLEMENT_LESSTHAN(TYPE, TBIGINT_FUNC(SUFFIX, LessThan),           \
+  DATA_TYPE_IMPLEMENT_LESS_THAN(TYPE, TBIGINT_FUNC(SUFFIX, LessThan),           \
                                TBIGINT_FUNC(SUFFIX, Compare),                  \
                                TBIGINT_TYPE(SUFFIX))                           \
-  DATA_TYPE_IMPLEMENT_GREATERTHAN(TYPE, TBIGINT_FUNC(SUFFIX, GreaterThan),     \
+  DATA_TYPE_IMPLEMENT_GREATER_THAN(TYPE, TBIGINT_FUNC(SUFFIX, GreaterThan),     \
                                   TBIGINT_FUNC(SUFFIX, Compare),               \
                                   TBIGINT_TYPE(SUFFIX))                        \
-  DATA_TYPE_IMPLEMENT_LESSOREQUAL(TYPE, TBIGINT_FUNC(SUFFIX, LessOrEqual),     \
+  DATA_TYPE_IMPLEMENT_LESS_OR_EQUAL(TYPE, TBIGINT_FUNC(SUFFIX, LessOrEqual),     \
                                   TBIGINT_FUNC(SUFFIX, Compare),               \
                                   TBIGINT_TYPE(SUFFIX))                        \
-  DATA_TYPE_IMPLEMENT_GREATEROREQUAL(TYPE,                                     \
+  DATA_TYPE_IMPLEMENT_GREATER_OR_EQUAL(TYPE,                                     \
                                      TBIGINT_FUNC(SUFFIX, GreaterOrEqual),     \
                                      TBIGINT_FUNC(SUFFIX, Compare),            \
                                      TBIGINT_TYPE(SUFFIX))                     \
-  DATA_TYPE_IMPLEMENT_ISZERO(TYPE, TBIGINT_FUNC(SUFFIX, IsZero),               \
+  DATA_TYPE_IMPLEMENT_IS_ZERO(TYPE, TBIGINT_FUNC(SUFFIX, IsZero),               \
                              TBIGINT_TYPE(SUFFIX)) \
   DATA_TYPE_IMPLEMENT_TO_CSTRING_BASE(TYPE, TBIGINT_FUNC(SUFFIX, ToCStringBase), \
                                        TBIGINT_TYPE(SUFFIX),                      \
