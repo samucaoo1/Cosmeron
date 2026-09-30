@@ -4,14 +4,14 @@
 
 CHRONOMETRY_INSTANT_COMPARE_PROTOTYPE {
   if (left.seconds < right.seconds)
-    return COMPARISON_CONST(LOWER);
+    return COMPARISON_LOWER_CONST;
   if (left.seconds > right.seconds)
-    return COMPARISON_CONST(HIGHER);
+    return COMPARISON_HIGHER_CONST;
   if (left.nanoseconds < right.nanoseconds)
-    return COMPARISON_CONST(LOWER);
+    return COMPARISON_LOWER_CONST;
   if (left.nanoseconds > right.nanoseconds)
-    return COMPARISON_CONST(HIGHER);
-  return COMPARISON_CONST(EQUAL);
+    return COMPARISON_HIGHER_CONST;
+  return COMPARISON_EQUAL_CONST;
 }
 
 CHRONOMETRY_INSTANT_ADD_DURATION_PROTOTYPE {
