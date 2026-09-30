@@ -1,32 +1,32 @@
 #pragma once
 
 #define TBLOCK_IMPLEMENT(SUFFIX, TYPE, BIT_SUFFIX)                             \
-  DATA_TYPE_IMPLEMENT_CLEAR(TYPE, TBLOCK_FUNC(SUFFIX, Clear),                  \
+  DATA_TYPE_IMPLEMENT_CLEAR(TYPE, TBLOCK_CLEAR_PROTOTYPE(SUFFIX),                  \
                             TBLOCK_TYPE(SUFFIX))                               \
-  DATA_TYPE_IMPLEMENT_AND(TYPE, TBLOCK_FUNC(SUFFIX, And),                      \
+  DATA_TYPE_IMPLEMENT_AND(TYPE, TBLOCK_AND_PROTOTYPE(SUFFIX),                      \
                            TBLOCK_TYPE(SUFFIX))                                \
-  DATA_TYPE_IMPLEMENT_OR(TYPE, TBLOCK_FUNC(SUFFIX, Or),                        \
+  DATA_TYPE_IMPLEMENT_OR(TYPE, TBLOCK_OR_PROTOTYPE(SUFFIX),                        \
                           TBLOCK_TYPE(SUFFIX))                                 \
-  DATA_TYPE_IMPLEMENT_XOR(TYPE, TBLOCK_FUNC(SUFFIX, Xor),                      \
+  DATA_TYPE_IMPLEMENT_XOR(TYPE, TBLOCK_XOR_PROTOTYPE(SUFFIX),                      \
                            TBLOCK_TYPE(SUFFIX))                                \
-  DATA_TYPE_IMPLEMENT_NOT(TYPE, TBLOCK_FUNC(SUFFIX, Not),                      \
+  DATA_TYPE_IMPLEMENT_NOT(TYPE, TBLOCK_NOT_PROTOTYPE(SUFFIX),                      \
                            TBLOCK_TYPE(SUFFIX))                                \
-  DATA_TYPE_IMPLEMENT_SHIFT_LEFT(TYPE, TBLOCK_FUNC(SUFFIX, ShiftLeft),         \
+  DATA_TYPE_IMPLEMENT_SHIFT_LEFT(TYPE, TBLOCK_SHIFT_LEFT_PROTOTYPE(SUFFIX),         \
                                   TBLOCK_TYPE(SUFFIX))                         \
-  DATA_TYPE_IMPLEMENT_SHIFT_RIGHT(TYPE, TBLOCK_FUNC(SUFFIX, ShiftRight),        \
+  DATA_TYPE_IMPLEMENT_SHIFT_RIGHT(TYPE, TBLOCK_SHIFT_RIGHT_PROTOTYPE(SUFFIX),        \
                                    TBLOCK_TYPE(SUFFIX))                        \
-  DATA_TYPE_IMPLEMENT_ROTATE_LEFT(TYPE, TBLOCK_FUNC(SUFFIX, RotateLeft),       \
+  DATA_TYPE_IMPLEMENT_ROTATE_LEFT(TYPE, TBLOCK_ROTATE_LEFT_PROTOTYPE(SUFFIX),       \
                                   TBLOCK_TYPE(SUFFIX),                         \
                                   TBLOCK_FUNC(SUFFIX, ShiftLeft),              \
                                   TBLOCK_FUNC(SUFFIX, ShiftRight))             \
-  DATA_TYPE_IMPLEMENT_ROTATE_RIGHT(TYPE, TBLOCK_FUNC(SUFFIX, RotateRight),     \
+  DATA_TYPE_IMPLEMENT_ROTATE_RIGHT(TYPE, TBLOCK_ROTATE_RIGHT_PROTOTYPE(SUFFIX),     \
                                    TBLOCK_TYPE(SUFFIX),                        \
-                                   TBLOCK_FUNC(SUFFIX, ShiftLeft),             \
-                                   TBLOCK_FUNC(SUFFIX, ShiftRight))            \
-  DATA_TYPE_IMPLEMENT_BIT_SET(TYPE, TBLOCK_FUNC(SUFFIX, BitSet),               \
+                                   TBLOCK_SHIFT_LEFT_PROTOTYPE(SUFFIX),             \
+                                   TBLOCK_SHIFT_RIGHT_PROTOTYPE(SUFFIX))            \
+  DATA_TYPE_IMPLEMENT_BIT_SET(TYPE, TBLOCK_BIT_SET_PROTOTYPE(SUFFIX),               \
                               TBLOCK_TYPE(SUFFIX), BIT_SUFFIX)                 \
-  DATA_TYPE_IMPLEMENT_BIT_CLEAR(TYPE, TBLOCK_FUNC(SUFFIX, BitClear),           \
+  DATA_TYPE_IMPLEMENT_BIT_CLEAR(TYPE, TBLOCK_BIT_CLEAR_PROTOTYPE(SUFFIX),           \
                                 TBLOCK_TYPE(SUFFIX), BIT_SUFFIX)               \
-  DATA_TYPE_IMPLEMENT_BIT_CHECK(TYPE, TBLOCK_FUNC(SUFFIX, BitCheck),           \
+  DATA_TYPE_IMPLEMENT_BIT_CHECK(TYPE, TBLOCK_BIT_CHECK_PROTOTYPE(SUFFIX),           \
                                 TBLOCK_TYPE(SUFFIX), BIT_SUFFIX)
 /* EOF */
