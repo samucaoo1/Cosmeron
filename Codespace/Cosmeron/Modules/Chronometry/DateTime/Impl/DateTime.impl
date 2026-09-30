@@ -16,25 +16,25 @@ CHRONOMETRY_DATETIME_IS_VALID_PROTOTYPE {
 
 CHRONOMETRY_DATETIME_COMPARE_PROTOTYPE {
   CMPOUT date = CALENDAR_FUNC(DateCompare)(left.date, right.date);
-  if (date != COMPARISON_CONST(SAME))
+  if (date != COMPARISON_CONST(EQUAL))
     return date;
   if (left.time.hour < right.time.hour)
-    return COMPARISON_CONST(LESS);
+    return COMPARISON_CONST(LOWER);
   if (left.time.hour > right.time.hour)
-    return COMPARISON_CONST(GREATER);
+    return COMPARISON_CONST(HIGHER);
   if (left.time.minute < right.time.minute)
-    return COMPARISON_CONST(LESS);
+    return COMPARISON_CONST(LOWER);
   if (left.time.minute > right.time.minute)
-    return COMPARISON_CONST(GREATER);
+    return COMPARISON_CONST(HIGHER);
   if (left.time.second < right.time.second)
-    return COMPARISON_CONST(LESS);
+    return COMPARISON_CONST(LOWER);
   if (left.time.second > right.time.second)
-    return COMPARISON_CONST(GREATER);
+    return COMPARISON_CONST(HIGHER);
   if (left.time.millisecond < right.time.millisecond)
-    return COMPARISON_CONST(LESS);
+    return COMPARISON_CONST(LOWER);
   if (left.time.millisecond > right.time.millisecond)
-    return COMPARISON_CONST(GREATER);
-  return COMPARISON_CONST(SAME);
+    return COMPARISON_CONST(HIGHER);
+  return COMPARISON_CONST(EQUAL);
 }
 
 inline static int64_t DATETIME_INS(MillisecondsOfDay)(
