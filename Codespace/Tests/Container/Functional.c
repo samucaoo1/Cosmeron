@@ -435,7 +435,7 @@ static int test_string_contracts(void) {
   TEST_ASSERT(Container_Flat_String_8_FromCStr(&other, hello) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(Container_Flat_String_8_Compare(&text, &other, &comparison) ==
               STATUS_CONST(SUCCESS));
-  TEST_ASSERT(comparison == COMPARISON_CONST(SAME));
+  TEST_ASSERT(comparison == COMPARISON_EQUAL_CONST);
 
   TEST_ASSERT(Container_Flat_String_8_Substr(&text, 1U, 3U, &slice) ==
               STATUS_CONST(SUCCESS));

@@ -49,7 +49,7 @@
     DECLMACRO(SUFFIX, b)                                                       \
     DECLMACRO(SUFFIX, q)                                                       \
     DECLMACRO(SUFFIX, r)                                                       \
-    CMPOUT cmp = COMPARISON_CONST(EQUAL);                           \
+    CMPOUT cmp = COMPARISON_EQUAL_CONST;                           \
     bool bit = false;                                                          \
     char buffer[400];                                                          \
     CHECK_STATUS(PREFIX##_FUNC(SUFFIX, Init)(&a));                             \
@@ -102,7 +102,7 @@
     CHECK_TRUE(!bit);                                                          \
     a.limb[0] = 1U; b.limb[0] = 2U;                                           \
     CHECK_STATUS(PREFIX##_FUNC(SUFFIX, Compare)(&a, &b, &cmp));                \
-    CHECK_TRUE(cmp == COMPARISON_CONST(LOWER));                                \
+    CHECK_TRUE(cmp == COMPARISON_LOWER_CONST);                                \
     CHECK_TRUE(!PREFIX##_FUNC(SUFFIX, Equal)(&a, &b));                         \
     CHECK_TRUE(PREFIX##_FUNC(SUFFIX, NotEqual)(&a, &b));                       \
     CHECK_TRUE(PREFIX##_FUNC(SUFFIX, LessThan)(&a, &b));                       \

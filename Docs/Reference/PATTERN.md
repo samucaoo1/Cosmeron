@@ -212,9 +212,9 @@ Output enums do not use `T`. Their descriptive type remains namespaced; only the
 
 ```c
 typedef enum COMPARISON_TYPE(Result) {
-    COMPARISON_CONST(LOWER)  = -1,
-    COMPARISON_CONST(EQUAL)  = 0,
-    COMPARISON_CONST(HIGHER) = 1
+    COMPARISON_LOWER_CONST  = -1,
+    COMPARISON_EQUAL_CONST  = 0,
+    COMPARISON_HIGHER_CONST = 1
 } COMPARISON_TYPE(Result);
 
 typedef COMPARISON_TYPE(Result) CMPOUT;
@@ -239,7 +239,7 @@ Public constants use:
 Example:
 
 ```c
-COMPARISON_CONST(LOWER)
+COMPARISON_LOWER_CONST
 STATUS_CONST(SUCCESS)
 ```
 
@@ -247,7 +247,7 @@ Magic numbers are prohibited:
 
 ```c
 return -1;                       /* wrong */
-return COMPARISON_CONST(LOWER); /* correct */
+return COMPARISON_LOWER_CONST; /* correct */
 ```
 
 Explicit numeric values are allowed only when the representation itself matters, such as bit flags, protocols, file formats, ABI values, or externally defined mappings.
@@ -328,9 +328,9 @@ Use X-macros when one semantic table must generate multiple representations.
 
 ```c
 #define COMPARISON_TABLE(X)\
-  X(COMPARISON_CONST(LOWER),-1, "Lower")\
-  X(COMPARISON_CONST(EQUAL), 0, "Equal")\
-  X(COMPARISON_CONST(HIGHER), 1, "Higher")
+  X(COMPARISON_LOWER_CONST,-1, "Lower")\
+  X(COMPARISON_EQUAL_CONST, 0, "Equal")\
+  X(COMPARISON_HIGHER_CONST, 1, "Higher")
 ```
 and
 
