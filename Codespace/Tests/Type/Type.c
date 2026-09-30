@@ -338,6 +338,8 @@ int main(void) {
   {
     TBIGINT_TYPE(128) dividend = {0};
     TBIGINT_TYPE(128) divisor = {0};
+    TBIGINT_TYPE(128) quotient = {0};
+    TBIGINT_TYPE(128) remainder = {0};
     TBIGINT_TYPE(128) sameOutput = {0};
     dividend.limb[0] = 100U;
     divisor.limb[0] = 9U;
