@@ -19,9 +19,9 @@
 #define COMPARISON_CONST(NAME) COMPARISON_CNS(NAME)
 
 #define COMPARISON_TABLE(X)                                                   \
-  X(COMPARISON_CONST(LESS),-1, "Less than")                                                   \
-  X(COMPARISON_CONST(SAME), 0, "Same")                                                   \
-  X(COMPARISON_CONST(GREATER), 1, "Greater than")
+  X(COMPARISON_CONST(LOWER),-1, "Lower")                                                   \
+  X(COMPARISON_CONST(EQUAL), 0, "Equal")                                                   \
+  X(COMPARISON_CONST(HIGHER), 1, "Higher")
 
 typedef enum COMPARISON_TYPE(Result) {
 #define X(NAME, VALUE, DESC) NAME = VALUE,
