@@ -328,9 +328,9 @@ Use X-macros when one semantic table must generate multiple representations.
 
 ```c
 #define COMPARISON_TABLE(X)\
-  X(COMPARISON_CONST(LESS),-1, "Less than")\
-  X(COMPARISON_CONST(SAME), 0, "Same")\
-  X(COMPARISON_CONST(GREATER), 1, "Greater than")
+  X(COMPARISON_CONST(LOWER),-1, "Lower")\
+  X(COMPARISON_CONST(EQUAL), 0, "Equal")\
+  X(COMPARISON_CONST(HIGHER), 1, "Higher")
 ```
 and
 
