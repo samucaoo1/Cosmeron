@@ -33,8 +33,8 @@
                                                                                \
   DATA_TYPE_IMPLEMENT_ROTATE_LEFT(TYPE, TDECIMAL_ROTATE_LEFT_PROTOTYPE(SUFFIX),     \
                                   TDECIMAL_TYPE(SUFFIX),                       \
-                                  TDECIMAL_SHIFT_LEFT_PROTOTYPE(SUFFIX),            \
-                                  TDECIMAL_SHIFT_RIGHT_PROTOTYPE(SUFFIX))           \
+                                  TDECIMAL_FUNC(SUFFIX, ShiftLeft),            \
+                                  TDECIMAL_FUNC(SUFFIX, ShiftRight))           \
                                                                                \
   DATA_TYPE_IMPLEMENT_ROTATE_RIGHT(TYPE, TDECIMAL_ROTATE_RIGHT_PROTOTYPE(SUFFIX),   \
                                    TDECIMAL_TYPE(SUFFIX),                      \
