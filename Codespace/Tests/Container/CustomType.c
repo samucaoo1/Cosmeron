@@ -9,10 +9,10 @@ typedef struct TContainerTestRecord {
 static CMPOUT ContainerTest_Record_Compare(TContainerTestRecord left,
                                            TContainerTestRecord right) {
   if (left.key < right.key)
-    return COMPARISON_CONST(LESS);
+    return COMPARISON_LOWER_CONST;
   if (left.key > right.key)
-    return COMPARISON_CONST(GREATER);
-  return COMPARISON_CONST(SAME);
+    return COMPARISON_HIGHER_CONST;
+  return COMPARISON_EQUAL_CONST;
 }
 
 TREE_AVL_SET_IMPLEMENT_ALL_CMP(record, TContainerTestRecord,
