@@ -50,17 +50,34 @@ int main(void) {
     return 11;
 
   char buf[64];
-  if (Chronometry_Format_DateISO(epoch, buf, sizeof(buf)) != STATUS_CONST(SUCCESS))
+  char unchanged[64];
+
+  memset(buf, 0x5A, sizeof(buf));
+  memcpy(unchanged, buf, sizeof(buf));
+  if (Chronometry_Format_DateISO(epoch, buf, 4U) != STATUS_CONST(OUT_OF_RANGE))
     return 12;
-  if (strcmp(buf, "+1970-01-01") != 0)
+  if (memcmp(buf, unchanged, sizeof(buf)) != 0)
     return 13;
+
+  if (Chronometry_Format_DateISO(epoch, buf, sizeof(buf)) != STATUS_CONST(SUCCESS))
+    return 14;
+  if (strcmp(buf, "+1970-01-01") != 0)
+    return 15;
   if (Chronometry_Format_ParseDateISO(buf, &back) != STATUS_CONST(SUCCESS) ||
       Chronometry_Calendar_DateCompare(epoch, back) != 0)
-    return 14;
+    return 16;
+
+  memset(buf, 0x5A, sizeof(buf));
+  memcpy(unchanged, buf, sizeof(buf));
+  if (Chronometry_Format_DateTimeISO(dt, buf, 8U) != STATUS_CONST(OUT_OF_RANGE))
+    return 17;
+  if (memcmp(buf, unchanged, sizeof(buf)) != 0)
+    return 18;
+
   if (Chronometry_Format_DateTimeISO(dt, buf, sizeof(buf)) != STATUS_CONST(SUCCESS))
-    return 15;
+    return 19;
   if (Chronometry_Format_ParseDateTimeISO(buf, &parsed) != STATUS_CONST(SUCCESS) ||
       Chronometry_DateTime_Compare(dt, parsed) != 0)
-    return 16;
+    return 20;
   return 0;
 }
