@@ -16,12 +16,17 @@
 
 #define COMPARISON_TYPE(NAME) COMPARISON_NS(NAME)
 #define COMPARISON_FUNC(NAME) COMPARISON_NS(NAME)
-#define COMPARISON_CONST(NAME) COMPARISON_CNS(NAME)
+#define COMPARISON_LOWER_CONST                                                \
+  CNS2(LIB_PREFIX_CONST(ALGORITHM_CMOD), COMPARISON_LOWER)
+#define COMPARISON_EQUAL_CONST                                                \
+  CNS2(LIB_PREFIX_CONST(ALGORITHM_CMOD), COMPARISON_EQUAL)
+#define COMPARISON_HIGHER_CONST                                               \
+  CNS2(LIB_PREFIX_CONST(ALGORITHM_CMOD), COMPARISON_HIGHER)
 
 #define COMPARISON_TABLE(X)                                                   \
-  X(COMPARISON_CONST(LOWER),-1, "Lower")                                                   \
-  X(COMPARISON_CONST(EQUAL), 0, "Equal")                                                   \
-  X(COMPARISON_CONST(HIGHER), 1, "Higher")
+  X(COMPARISON_LOWER_CONST,-1, "Lower")                                                   \
+  X(COMPARISON_EQUAL_CONST, 0, "Equal")                                                   \
+  X(COMPARISON_HIGHER_CONST, 1, "Higher")
 
 typedef enum COMPARISON_TYPE(Result) {
 #define X(NAME, VALUE, DESC) NAME = VALUE,
