@@ -21,8 +21,8 @@
                                   TBLOCK_FUNC(SUFFIX, ShiftRight))             \
   DATA_TYPE_IMPLEMENT_ROTATE_RIGHT(TYPE, TBLOCK_ROTATE_RIGHT_PROTOTYPE(SUFFIX),     \
                                    TBLOCK_TYPE(SUFFIX),                        \
-                                   TBLOCK_SHIFT_LEFT_PROTOTYPE(SUFFIX),             \
-                                   TBLOCK_SHIFT_RIGHT_PROTOTYPE(SUFFIX))            \
+                                   TBLOCK_FUNC(SUFFIX, ShiftLeft),             \
+                                   TBLOCK_FUNC(SUFFIX, ShiftRight))            \
   DATA_TYPE_IMPLEMENT_BIT_SET(TYPE, TBLOCK_BIT_SET_PROTOTYPE(SUFFIX),               \
                               TBLOCK_TYPE(SUFFIX), BIT_SUFFIX)                 \
   DATA_TYPE_IMPLEMENT_BIT_CLEAR(TYPE, TBLOCK_BIT_CLEAR_PROTOTYPE(SUFFIX),           \
