@@ -198,7 +198,7 @@
  * themselves) live in FunctionTable/Tree.h.
  * ============================================================= */
 
-#if CONTAINER_FUNCTION_TABLE_ENABLED
+#if COSMERON_MACRO_INTERNAL_CONTAINER_FUNCTION_TABLE_ENABLED
 
 #define TTREE_FUNCTION_TABLE_STRUCT_SET(T, KEY_TYPE)                                          \
   typedef struct TTREE_FUNCTION_TABLE_TYPE(T) {                               \
