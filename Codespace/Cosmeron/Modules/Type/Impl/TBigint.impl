@@ -36,7 +36,7 @@
                               TBIGINT_TYPE(SUFFIX), TBIGINT_FUNC(SUFFIX, IsZero),     \
                               TBIGINT_FUNC(SUFFIX, Compare), TBIGINT_FUNC(SUFFIX, Sub), \
                               TBIGINT_FUNC(SUFFIX, ShiftLeft))                    \
-  TBIGINT_DIVMOD_PROTOTYPE(SUFFIX) {                                           \
+  TBIGINT_DIV_MOD_PROTOTYPE(SUFFIX) {                                           \
     if (!outQuotient || !outRemainder)                                         \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     return TBIGINT_INS(SUFFIX, DivMod)(                                        \

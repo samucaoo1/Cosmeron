@@ -54,7 +54,7 @@
       TBIGINT_TYPE(SUFFIX) * destinationBigint,                               \
       const TBIGINT_TYPE(SUFFIX) * sourceBigint)
 
-#define TBIGINT_DIVMOD_PROTOTYPE(SUFFIX)                                     \
+#define TBIGINT_DIV_MOD_PROTOTYPE(SUFFIX)                                     \
   static inline OPSTATUS TBIGINT_FUNC(SUFFIX, DivMod)(                        \
       const TBIGINT_TYPE(SUFFIX) *dividend,                                   \
       const TBIGINT_TYPE(SUFFIX) *divisor,                                    \
@@ -98,31 +98,31 @@
   static inline OPSTATUS TBIGINT_FUNC(SUFFIX,                                      \
                                   Not)(TBIGINT_TYPE(SUFFIX) * targetBigint)
 
-#define TBIGINT_SHIFTLEFT_PROTOTYPE(SUFFIX)                           \
+#define TBIGINT_SHIFT_LEFT_PROTOTYPE(SUFFIX)                           \
   static inline OPSTATUS TBIGINT_FUNC(SUFFIX, ShiftLeft)(                          \
       TBIGINT_TYPE(SUFFIX) * targetBigint, unsigned bitCount)
 
-#define TBIGINT_SHIFTRIGHT_PROTOTYPE(SUFFIX)                          \
+#define TBIGINT_SHIFT_RIGHT_PROTOTYPE(SUFFIX)                          \
   static inline OPSTATUS TBIGINT_FUNC(SUFFIX, ShiftRight)(                         \
       TBIGINT_TYPE(SUFFIX) * targetBigint, unsigned bitCount)
 
-#define TBIGINT_ROTATELEFT_PROTOTYPE(SUFFIX)                          \
+#define TBIGINT_ROTATE_LEFT_PROTOTYPE(SUFFIX)                          \
   static inline OPSTATUS TBIGINT_FUNC(SUFFIX, RotateLeft)(                         \
       TBIGINT_TYPE(SUFFIX) * targetBigint, unsigned bitCount)
 
-#define TBIGINT_ROTATERIGHT_PROTOTYPE(SUFFIX)                         \
+#define TBIGINT_ROTATE_RIGHT_PROTOTYPE(SUFFIX)                         \
   static inline OPSTATUS TBIGINT_FUNC(SUFFIX, RotateRight)(                        \
       TBIGINT_TYPE(SUFFIX) * targetBigint, unsigned bitCount)
 
-#define TBIGINT_BITSET_PROTOTYPE(SUFFIX)                              \
+#define TBIGINT_BIT_SET_PROTOTYPE(SUFFIX)                              \
   static inline OPSTATUS TBIGINT_FUNC(SUFFIX, BitSet)(                             \
       TBIGINT_TYPE(SUFFIX) * bigint, uint32_t bit)
 
-#define TBIGINT_BITCLEAR_PROTOTYPE(SUFFIX)                            \
+#define TBIGINT_BIT_CLEAR_PROTOTYPE(SUFFIX)                            \
   static inline OPSTATUS TBIGINT_FUNC(SUFFIX, BitClear)(                           \
       TBIGINT_TYPE(SUFFIX) * bigint, uint32_t bit)
 
-#define TBIGINT_BITCHECK_PROTOTYPE(SUFFIX)                            \
+#define TBIGINT_BIT_CHECK_PROTOTYPE(SUFFIX)                            \
   static inline OPSTATUS TBIGINT_FUNC(SUFFIX, BitCheck)(                           \
       const TBIGINT_TYPE(SUFFIX) *bigint, uint32_t bit, bool *outResult)
 
@@ -136,27 +136,27 @@
       const TBIGINT_TYPE(SUFFIX) * leftBigint,                                \
       const TBIGINT_TYPE(SUFFIX) * rightBigint)
 
-#define TBIGINT_NOTEQUAL_PROTOTYPE(SUFFIX)                            \
+#define TBIGINT_NOT_EQUAL_PROTOTYPE(SUFFIX)                            \
   static inline bool TBIGINT_FUNC(SUFFIX, NotEqual)(                           \
       const TBIGINT_TYPE(SUFFIX) * leftBigint,                                \
       const TBIGINT_TYPE(SUFFIX) * rightBigint)
 
-#define TBIGINT_LESSTHAN_PROTOTYPE(SUFFIX)                            \
+#define TBIGINT_LESS_THAN_PROTOTYPE(SUFFIX)                            \
   static inline bool TBIGINT_FUNC(SUFFIX, LessThan)(                           \
       const TBIGINT_TYPE(SUFFIX) * leftBigint,                                \
       const TBIGINT_TYPE(SUFFIX) * rightBigint)
 
-#define TBIGINT_GREATERTHAN_PROTOTYPE(SUFFIX)                         \
+#define TBIGINT_GREATER_THAN_PROTOTYPE(SUFFIX)                         \
   static inline bool TBIGINT_FUNC(SUFFIX, GreaterThan)(                        \
       const TBIGINT_TYPE(SUFFIX) * leftBigint,                                \
       const TBIGINT_TYPE(SUFFIX) * rightBigint)
 
-#define TBIGINT_LESSOREQUAL_PROTOTYPE(SUFFIX)                         \
+#define TBIGINT_LESS_OR_EQUAL_PROTOTYPE(SUFFIX)                         \
   static inline bool TBIGINT_FUNC(SUFFIX, LessOrEqual)(                        \
       const TBIGINT_TYPE(SUFFIX) * leftBigint,                                \
       const TBIGINT_TYPE(SUFFIX) * rightBigint)
 
-#define TBIGINT_GREATEROREQUAL_PROTOTYPE(SUFFIX)                      \
+#define TBIGINT_GREATER_OR_EQUAL_PROTOTYPE(SUFFIX)                      \
   static inline bool TBIGINT_FUNC(SUFFIX, GreaterOrEqual)(                     \
       const TBIGINT_TYPE(SUFFIX) * leftBigint,                                \
       const TBIGINT_TYPE(SUFFIX) * rightBigint)
@@ -170,7 +170,7 @@
   static inline OPSTATUS TBIGINT_FUNC(SUFFIX, ToCString)(                         \
       const TBIGINT_TYPE(SUFFIX) *value, char *buffer, size_t bufferSize)
 
-#define TBIGINT_ISZERO_PROTOTYPE(SUFFIX)                              \
+#define TBIGINT_IS_ZERO_PROTOTYPE(SUFFIX)                              \
   static inline bool TBIGINT_FUNC(SUFFIX, IsZero)(const TBIGINT_TYPE(SUFFIX) * \
                                                   targetBigint)
 
@@ -192,7 +192,7 @@
   TBIGINT_ADD_PROTOTYPE(SUFFIX);                                      \
   TBIGINT_SUB_PROTOTYPE(SUFFIX);                                      \
   TBIGINT_MUL_PROTOTYPE(SUFFIX);                                      \
-  TBIGINT_DIVMOD_PROTOTYPE(SUFFIX);                                     \
+  TBIGINT_DIV_MOD_PROTOTYPE(SUFFIX);                                     \
   TBIGINT_DIV_PROTOTYPE(SUFFIX);                                      \
   TBIGINT_MOD_PROTOTYPE(SUFFIX);                                      \
   TBIGINT_INCREMENT_PROTOTYPE(SUFFIX);                                \
@@ -201,21 +201,21 @@
   TBIGINT_OR_PROTOTYPE(SUFFIX);                                       \
   TBIGINT_XOR_PROTOTYPE(SUFFIX);                                      \
   TBIGINT_NOT_PROTOTYPE(SUFFIX);                                      \
-  TBIGINT_SHIFTLEFT_PROTOTYPE(SUFFIX);                                \
-  TBIGINT_SHIFTRIGHT_PROTOTYPE(SUFFIX);                               \
-  TBIGINT_ROTATELEFT_PROTOTYPE(SUFFIX);                               \
-  TBIGINT_ROTATERIGHT_PROTOTYPE(SUFFIX);                              \
-  TBIGINT_BITSET_PROTOTYPE(SUFFIX);                                   \
-  TBIGINT_BITCLEAR_PROTOTYPE(SUFFIX);                                 \
-  TBIGINT_BITCHECK_PROTOTYPE(SUFFIX);                                 \
+  TBIGINT_SHIFT_LEFT_PROTOTYPE(SUFFIX);                                \
+  TBIGINT_SHIFT_RIGHT_PROTOTYPE(SUFFIX);                               \
+  TBIGINT_ROTATE_LEFT_PROTOTYPE(SUFFIX);                               \
+  TBIGINT_ROTATE_RIGHT_PROTOTYPE(SUFFIX);                              \
+  TBIGINT_BIT_SET_PROTOTYPE(SUFFIX);                                   \
+  TBIGINT_BIT_CLEAR_PROTOTYPE(SUFFIX);                                 \
+  TBIGINT_BIT_CHECK_PROTOTYPE(SUFFIX);                                 \
   TBIGINT_COMPARE_PROTOTYPE(SUFFIX);                                  \
   TBIGINT_EQUAL_PROTOTYPE(SUFFIX);                                    \
-  TBIGINT_NOTEQUAL_PROTOTYPE(SUFFIX);                                 \
-  TBIGINT_LESSTHAN_PROTOTYPE(SUFFIX);                                 \
-  TBIGINT_GREATERTHAN_PROTOTYPE(SUFFIX);                              \
-  TBIGINT_LESSOREQUAL_PROTOTYPE(SUFFIX);                              \
-  TBIGINT_GREATEROREQUAL_PROTOTYPE(SUFFIX);                           \
-  TBIGINT_ISZERO_PROTOTYPE(SUFFIX);                                              \
+  TBIGINT_NOT_EQUAL_PROTOTYPE(SUFFIX);                                 \
+  TBIGINT_LESS_THAN_PROTOTYPE(SUFFIX);                                 \
+  TBIGINT_GREATER_THAN_PROTOTYPE(SUFFIX);                              \
+  TBIGINT_LESS_OR_EQUAL_PROTOTYPE(SUFFIX);                              \
+  TBIGINT_GREATER_OR_EQUAL_PROTOTYPE(SUFFIX);                           \
+  TBIGINT_IS_ZERO_PROTOTYPE(SUFFIX);                                              \
   TBIGINT_TO_CSTRING_BASE_PROTOTYPE(SUFFIX);                                   \
   TBIGINT_TO_CSTRING_PROTOTYPE(SUFFIX);
 

@@ -53,31 +53,31 @@
   static inline OPSTATUS TBLOCK_FUNC(SUFFIX,                                       \
                                  Not)(TBLOCK_TYPE(SUFFIX) * targetBlock)
 
-#define TBLOCK_SHIFTLEFT_PROTOTYPE(SUFFIX)                            \
+#define TBLOCK_SHIFT_LEFT_PROTOTYPE(SUFFIX)                            \
   static inline OPSTATUS TBLOCK_FUNC(SUFFIX, ShiftLeft)(                           \
       TBLOCK_TYPE(SUFFIX) * targetBlock, unsigned bitCount)
 
-#define TBLOCK_SHIFTRIGHT_PROTOTYPE(SUFFIX)                           \
+#define TBLOCK_SHIFT_RIGHT_PROTOTYPE(SUFFIX)                           \
   static inline OPSTATUS TBLOCK_FUNC(SUFFIX, ShiftRight)(                          \
       TBLOCK_TYPE(SUFFIX) * targetBlock, unsigned bitCount)
 
-#define TBLOCK_ROTATELEFT_PROTOTYPE(SUFFIX)                           \
+#define TBLOCK_ROTATE_LEFT_PROTOTYPE(SUFFIX)                           \
   static inline OPSTATUS TBLOCK_FUNC(SUFFIX, RotateLeft)(                          \
       TBLOCK_TYPE(SUFFIX) * targetBlock, unsigned bitCount)
 
-#define TBLOCK_ROTATERIGHT_PROTOTYPE(SUFFIX)                          \
+#define TBLOCK_ROTATE_RIGHT_PROTOTYPE(SUFFIX)                          \
   static inline OPSTATUS TBLOCK_FUNC(SUFFIX, RotateRight)(                         \
       TBLOCK_TYPE(SUFFIX) * targetBlock, unsigned bitCount)
 
-#define TBLOCK_BITSET_PROTOTYPE(SUFFIX)                               \
+#define TBLOCK_BIT_SET_PROTOTYPE(SUFFIX)                               \
   static inline OPSTATUS TBLOCK_FUNC(SUFFIX, BitSet)(TBLOCK_TYPE(SUFFIX) * block,  \
                                                  uint32_t bit)
 
-#define TBLOCK_BITCLEAR_PROTOTYPE(SUFFIX)                             \
+#define TBLOCK_BIT_CLEAR_PROTOTYPE(SUFFIX)                             \
   static inline OPSTATUS TBLOCK_FUNC(SUFFIX, BitClear)(                            \
       TBLOCK_TYPE(SUFFIX) * block, uint32_t bit)
 
-#define TBLOCK_BITCHECK_PROTOTYPE(SUFFIX)                             \
+#define TBLOCK_BIT_CHECK_PROTOTYPE(SUFFIX)                             \
   static inline OPSTATUS TBLOCK_FUNC(SUFFIX, BitCheck)(                            \
       const TBLOCK_TYPE(SUFFIX) *block, uint32_t bit, bool *outResult)
 
@@ -96,13 +96,13 @@
   TBLOCK_OR_PROTOTYPE(SUFFIX);                                        \
   TBLOCK_XOR_PROTOTYPE(SUFFIX);                                       \
   TBLOCK_NOT_PROTOTYPE(SUFFIX);                                       \
-  TBLOCK_SHIFTLEFT_PROTOTYPE(SUFFIX);                                 \
-  TBLOCK_SHIFTRIGHT_PROTOTYPE(SUFFIX);                                \
-  TBLOCK_ROTATELEFT_PROTOTYPE(SUFFIX);                                \
-  TBLOCK_ROTATERIGHT_PROTOTYPE(SUFFIX);                               \
-  TBLOCK_BITSET_PROTOTYPE(SUFFIX);                                    \
-  TBLOCK_BITCLEAR_PROTOTYPE(SUFFIX);                                  \
-  TBLOCK_BITCHECK_PROTOTYPE(SUFFIX);
+  TBLOCK_SHIFT_LEFT_PROTOTYPE(SUFFIX);                                 \
+  TBLOCK_SHIFT_RIGHT_PROTOTYPE(SUFFIX);                                \
+  TBLOCK_ROTATE_LEFT_PROTOTYPE(SUFFIX);                                \
+  TBLOCK_ROTATE_RIGHT_PROTOTYPE(SUFFIX);                               \
+  TBLOCK_BIT_SET_PROTOTYPE(SUFFIX);                                    \
+  TBLOCK_BIT_CLEAR_PROTOTYPE(SUFFIX);                                  \
+  TBLOCK_BIT_CHECK_PROTOTYPE(SUFFIX);
 
 #ifndef TYPE_DISABLE_FUNCTION_TABLE
 #define TYPE_FUNCTION_TABLE_DECLARE_TBLOCK(SUFFIX) \

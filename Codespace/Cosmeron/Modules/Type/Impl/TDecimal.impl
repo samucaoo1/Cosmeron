@@ -57,7 +57,7 @@
                               TDECIMAL_TYPE(SUFFIX), TDECIMAL_FUNC(SUFFIX, IsZero),     \
                               TDECIMAL_FUNC(SUFFIX, Compare), TDECIMAL_FUNC(SUFFIX, Sub), \
                               TDECIMAL_FUNC(SUFFIX, ShiftLeft))                    \
-  TDECIMAL_DIVMOD_PROTOTYPE(SUFFIX) {                                          \
+  TDECIMAL_DIV_MOD_PROTOTYPE(SUFFIX) {                                          \
     if (!outQuotient || !outRemainder)                                        \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     return TDECIMAL_INS(SUFFIX, DivMod)(                                       \

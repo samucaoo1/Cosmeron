@@ -56,7 +56,7 @@
       TDECIMAL_TYPE(SUFFIX) * destinationDecimal,                             \
       const TDECIMAL_TYPE(SUFFIX) * sourceDecimal)
 
-#define TDECIMAL_DIVMOD_PROTOTYPE(SUFFIX)                                    \
+#define TDECIMAL_DIV_MOD_PROTOTYPE(SUFFIX)                                    \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, DivMod)(                       \
       const TDECIMAL_TYPE(SUFFIX) *dividend,                                  \
       const TDECIMAL_TYPE(SUFFIX) *divisor,                                   \
@@ -100,31 +100,31 @@
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, Not)(TDECIMAL_TYPE(SUFFIX) *        \
                                                 targetDecimal)
 
-#define TDECIMAL_SHIFTLEFT_PROTOTYPE(SUFFIX)                          \
+#define TDECIMAL_SHIFT_LEFT_PROTOTYPE(SUFFIX)                          \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, ShiftLeft)(                         \
       TDECIMAL_TYPE(SUFFIX) * targetDecimal, unsigned bitCount)
 
-#define TDECIMAL_SHIFTRIGHT_PROTOTYPE(SUFFIX)                         \
+#define TDECIMAL_SHIFT_RIGHT_PROTOTYPE(SUFFIX)                         \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, ShiftRight)(                        \
       TDECIMAL_TYPE(SUFFIX) * targetDecimal, unsigned bitCount)
 
-#define TDECIMAL_ROTATELEFT_PROTOTYPE(SUFFIX)                         \
+#define TDECIMAL_ROTATE_LEFT_PROTOTYPE(SUFFIX)                         \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, RotateLeft)(                        \
       TDECIMAL_TYPE(SUFFIX) * targetDecimal, unsigned bitCount)
 
-#define TDECIMAL_ROTATERIGHT_PROTOTYPE(SUFFIX)                        \
+#define TDECIMAL_ROTATE_RIGHT_PROTOTYPE(SUFFIX)                        \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, RotateRight)(                       \
       TDECIMAL_TYPE(SUFFIX) * targetDecimal, unsigned bitCount)
 
-#define TDECIMAL_BITSET_PROTOTYPE(SUFFIX)                             \
+#define TDECIMAL_BIT_SET_PROTOTYPE(SUFFIX)                             \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, BitSet)(                            \
       TDECIMAL_TYPE(SUFFIX) * decimal, uint32_t bit)
 
-#define TDECIMAL_BITCLEAR_PROTOTYPE(SUFFIX)                           \
+#define TDECIMAL_BIT_CLEAR_PROTOTYPE(SUFFIX)                           \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, BitClear)(                          \
       TDECIMAL_TYPE(SUFFIX) * decimal, uint32_t bit)
 
-#define TDECIMAL_BITCHECK_PROTOTYPE(SUFFIX)                           \
+#define TDECIMAL_BIT_CHECK_PROTOTYPE(SUFFIX)                           \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, BitCheck)(                          \
       const TDECIMAL_TYPE(SUFFIX) *decimal, uint32_t bit, bool *outResult)
 
@@ -138,27 +138,27 @@
       const TDECIMAL_TYPE(SUFFIX) * leftDecimal,                              \
       const TDECIMAL_TYPE(SUFFIX) * rightDecimal)
 
-#define TDECIMAL_NOTEQUAL_PROTOTYPE(SUFFIX)                           \
+#define TDECIMAL_NOT_EQUAL_PROTOTYPE(SUFFIX)                           \
   static inline bool TDECIMAL_FUNC(SUFFIX, NotEqual)(                          \
       const TDECIMAL_TYPE(SUFFIX) * leftDecimal,                              \
       const TDECIMAL_TYPE(SUFFIX) * rightDecimal)
 
-#define TDECIMAL_LESSTHAN_PROTOTYPE(SUFFIX)                           \
+#define TDECIMAL_LESS_THAN_PROTOTYPE(SUFFIX)                           \
   static inline bool TDECIMAL_FUNC(SUFFIX, LessThan)(                          \
       const TDECIMAL_TYPE(SUFFIX) * leftDecimal,                              \
       const TDECIMAL_TYPE(SUFFIX) * rightDecimal)
 
-#define TDECIMAL_GREATERTHAN_PROTOTYPE(SUFFIX)                        \
+#define TDECIMAL_GREATER_THAN_PROTOTYPE(SUFFIX)                        \
   static inline bool TDECIMAL_FUNC(SUFFIX, GreaterThan)(                       \
       const TDECIMAL_TYPE(SUFFIX) * leftDecimal,                              \
       const TDECIMAL_TYPE(SUFFIX) * rightDecimal)
 
-#define TDECIMAL_LESSOREQUAL_PROTOTYPE(SUFFIX)                        \
+#define TDECIMAL_LESS_OR_EQUAL_PROTOTYPE(SUFFIX)                        \
   static inline bool TDECIMAL_FUNC(SUFFIX, LessOrEqual)(                       \
       const TDECIMAL_TYPE(SUFFIX) * leftDecimal,                              \
       const TDECIMAL_TYPE(SUFFIX) * rightDecimal)
 
-#define TDECIMAL_GREATEROREQUAL_PROTOTYPE(SUFFIX)                     \
+#define TDECIMAL_GREATER_OR_EQUAL_PROTOTYPE(SUFFIX)                     \
   static inline bool TDECIMAL_FUNC(SUFFIX, GreaterOrEqual)(                    \
       const TDECIMAL_TYPE(SUFFIX) * leftDecimal,                              \
       const TDECIMAL_TYPE(SUFFIX) * rightDecimal)
@@ -172,7 +172,7 @@
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, ToCString)(                         \
       const TDECIMAL_TYPE(SUFFIX) *value, char *buffer, size_t bufferSize)
 
-#define TDECIMAL_ISZERO_PROTOTYPE(SUFFIX)                             \
+#define TDECIMAL_IS_ZERO_PROTOTYPE(SUFFIX)                             \
   static inline bool TDECIMAL_FUNC(SUFFIX, IsZero)(                            \
       const TDECIMAL_TYPE(SUFFIX) * targetDecimal)
 
@@ -194,7 +194,7 @@
   TDECIMAL_ADD_PROTOTYPE(SUFFIX);                                     \
   TDECIMAL_SUB_PROTOTYPE(SUFFIX);                                     \
   TDECIMAL_MUL_PROTOTYPE(SUFFIX);                                     \
-  TDECIMAL_DIVMOD_PROTOTYPE(SUFFIX);                                     \
+  TDECIMAL_DIV_MOD_PROTOTYPE(SUFFIX);                                     \
   TDECIMAL_DIV_PROTOTYPE(SUFFIX);                                     \
   TDECIMAL_MOD_PROTOTYPE(SUFFIX);                                     \
   TDECIMAL_INCREMENT_PROTOTYPE(SUFFIX);                               \
@@ -203,21 +203,21 @@
   TDECIMAL_OR_PROTOTYPE(SUFFIX);                                      \
   TDECIMAL_XOR_PROTOTYPE(SUFFIX);                                     \
   TDECIMAL_NOT_PROTOTYPE(SUFFIX);                                     \
-  TDECIMAL_SHIFTLEFT_PROTOTYPE(SUFFIX);                               \
-  TDECIMAL_SHIFTRIGHT_PROTOTYPE(SUFFIX);                              \
-  TDECIMAL_ROTATELEFT_PROTOTYPE(SUFFIX);                              \
-  TDECIMAL_ROTATERIGHT_PROTOTYPE(SUFFIX);                             \
-  TDECIMAL_BITSET_PROTOTYPE(SUFFIX);                                  \
-  TDECIMAL_BITCLEAR_PROTOTYPE(SUFFIX);                                \
-  TDECIMAL_BITCHECK_PROTOTYPE(SUFFIX);                                \
+  TDECIMAL_SHIFT_LEFT_PROTOTYPE(SUFFIX);                               \
+  TDECIMAL_SHIFT_RIGHT_PROTOTYPE(SUFFIX);                              \
+  TDECIMAL_ROTATE_LEFT_PROTOTYPE(SUFFIX);                              \
+  TDECIMAL_ROTATE_RIGHT_PROTOTYPE(SUFFIX);                             \
+  TDECIMAL_BIT_SET_PROTOTYPE(SUFFIX);                                  \
+  TDECIMAL_BIT_CLEAR_PROTOTYPE(SUFFIX);                                \
+  TDECIMAL_BIT_CHECK_PROTOTYPE(SUFFIX);                                \
   TDECIMAL_COMPARE_PROTOTYPE(SUFFIX);                                 \
   TDECIMAL_EQUAL_PROTOTYPE(SUFFIX);                                   \
-  TDECIMAL_NOTEQUAL_PROTOTYPE(SUFFIX);                                \
-  TDECIMAL_LESSTHAN_PROTOTYPE(SUFFIX);                                \
-  TDECIMAL_GREATERTHAN_PROTOTYPE(SUFFIX);                             \
-  TDECIMAL_LESSOREQUAL_PROTOTYPE(SUFFIX);                             \
-  TDECIMAL_GREATEROREQUAL_PROTOTYPE(SUFFIX);                          \
-  TDECIMAL_ISZERO_PROTOTYPE(SUFFIX);                                              \
+  TDECIMAL_NOT_EQUAL_PROTOTYPE(SUFFIX);                                \
+  TDECIMAL_LESS_THAN_PROTOTYPE(SUFFIX);                                \
+  TDECIMAL_GREATER_THAN_PROTOTYPE(SUFFIX);                             \
+  TDECIMAL_LESS_OR_EQUAL_PROTOTYPE(SUFFIX);                             \
+  TDECIMAL_GREATER_OR_EQUAL_PROTOTYPE(SUFFIX);                          \
+  TDECIMAL_IS_ZERO_PROTOTYPE(SUFFIX);                                              \
   TDECIMAL_TO_CSTRING_BASE_PROTOTYPE(SUFFIX);                                   \
   TDECIMAL_TO_CSTRING_PROTOTYPE(SUFFIX);
 
