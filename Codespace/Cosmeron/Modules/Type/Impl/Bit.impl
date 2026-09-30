@@ -1,7 +1,7 @@
 #pragma once
 
-#define DATA_TYPE_IMPLEMENT_BIT_SET(TYPE, FUNCTION_NAME, STRUCT_NAME, SUFFIX)  \
-  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *target, uint32_t bit) {    \
+#define DATA_TYPE_IMPLEMENT_BIT_SET(TYPE, PROTOTYPE, STRUCT_NAME, SUFFIX)  \
+  PROTOTYPE {                                                               \
     if (!target)                                                               \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     const size_t bitsPerLimb = sizeof(target->limb[0]) * 8U;                   \
@@ -13,9 +13,9 @@
     return STATUS_CONST(SUCCESS);                                              \
   }
 
-#define DATA_TYPE_IMPLEMENT_BIT_CLEAR(TYPE, FUNCTION_NAME, STRUCT_NAME,        \
+#define DATA_TYPE_IMPLEMENT_BIT_CLEAR(TYPE, PROTOTYPE, STRUCT_NAME,        \
                                       SUFFIX)                                  \
-  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *target, uint32_t bit) {    \
+  PROTOTYPE {                                                               \
     if (!target)                                                               \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     const size_t bitsPerLimb = sizeof(target->limb[0]) * 8U;                   \
@@ -27,10 +27,9 @@
     return STATUS_CONST(SUCCESS);                                              \
   }
 
-#define DATA_TYPE_IMPLEMENT_BIT_CHECK(TYPE, FUNCTION_NAME, STRUCT_NAME,        \
+#define DATA_TYPE_IMPLEMENT_BIT_CHECK(TYPE, PROTOTYPE, STRUCT_NAME,        \
                                       SUFFIX)                                  \
-  static inline OPSTATUS FUNCTION_NAME(const STRUCT_NAME *target, uint32_t bit,\
-                                       bool *outResult) {                          \
+  PROTOTYPE {                                                               \
     if (!target || !outResult)                                                    \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     const size_t bitsPerLimb = sizeof(target->limb[0]) * 8U;                   \

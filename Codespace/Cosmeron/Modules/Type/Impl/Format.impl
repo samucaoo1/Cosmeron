@@ -2,10 +2,9 @@
 
 #include <stddef.h>
 
-#define DATA_TYPE_IMPLEMENT_TO_CSTRING_BASE(TYPE, FUNCTION_NAME, STRUCT_NAME, \
+#define DATA_TYPE_IMPLEMENT_TO_CSTRING_BASE(TYPE, PROTOTYPE, STRUCT_NAME, \
                                              IS_ZERO_FUNC)                     \
-  static inline OPSTATUS FUNCTION_NAME(const STRUCT_NAME *value, char *buffer, \
-                                       size_t bufferSize, unsigned base) {     \
+  PROTOTYPE {                                                               \
     if (!value || !buffer || bufferSize == 0U || base < 2U || base > 36U)      \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     STRUCT_NAME current = *value;                                              \
@@ -44,9 +43,8 @@
     return STATUS_CONST(SUCCESS);                                              \
   }
 
-#define DATA_TYPE_IMPLEMENT_TO_CSTRING(TYPE, FUNCTION_NAME, BASE_FUNCTION,    \
+#define DATA_TYPE_IMPLEMENT_TO_CSTRING(TYPE, PROTOTYPE, BASE_FUNCTION,    \
                                        STRUCT_NAME)                            \
-  static inline OPSTATUS FUNCTION_NAME(const STRUCT_NAME *value, char *buffer, \
-                                       size_t bufferSize) {                    \
+  PROTOTYPE {                                                               \
     return BASE_FUNCTION(value, buffer, bufferSize, 10U);                      \
   }

@@ -1,8 +1,7 @@
 #pragma once
 
-#define DATA_TYPE_IMPLEMENT_AND(TYPE, FUNCTION_NAME, STRUCT_NAME)              \
-  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *destination,                   \
-                                   const STRUCT_NAME *source) {                \
+#define DATA_TYPE_IMPLEMENT_AND(TYPE, PROTOTYPE, STRUCT_NAME)              \
+  PROTOTYPE {                                                               \
     if (!destination || !source)                                               \
       return STATUS_CONST(INVALID_ARGUMENT); \
     const size_t limbCount = \
@@ -12,9 +11,8 @@
     return STATUS_CONST(SUCCESS); \
   }
 
-#define DATA_TYPE_IMPLEMENT_OR(TYPE, FUNCTION_NAME, STRUCT_NAME)               \
-  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *destination,                   \
-                                   const STRUCT_NAME *source) {                \
+#define DATA_TYPE_IMPLEMENT_OR(TYPE, PROTOTYPE, STRUCT_NAME)               \
+  PROTOTYPE {                                                               \
     if (!destination || !source)                                               \
       return STATUS_CONST(INVALID_ARGUMENT); \
     const size_t limbCount = \
@@ -24,9 +22,8 @@
     return STATUS_CONST(SUCCESS); \
   }
 
-#define DATA_TYPE_IMPLEMENT_XOR(TYPE, FUNCTION_NAME, STRUCT_NAME)              \
-  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *destination,                   \
-                                   const STRUCT_NAME *source) {                \
+#define DATA_TYPE_IMPLEMENT_XOR(TYPE, PROTOTYPE, STRUCT_NAME)              \
+  PROTOTYPE {                                                               \
     if (!destination || !source)                                               \
       return STATUS_CONST(INVALID_ARGUMENT); \
     const size_t limbCount = \
@@ -36,8 +33,8 @@
     return STATUS_CONST(SUCCESS); \
   }
 
-#define DATA_TYPE_IMPLEMENT_NOT(TYPE, FUNCTION_NAME, STRUCT_NAME)              \
-  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *target) {                      \
+#define DATA_TYPE_IMPLEMENT_NOT(TYPE, PROTOTYPE, STRUCT_NAME)              \
+  PROTOTYPE {                                                               \
     if (!target) \
       return STATUS_CONST(INVALID_ARGUMENT); \
     const size_t limbCount = sizeof(target->limb) / sizeof(target->limb[0]);  \

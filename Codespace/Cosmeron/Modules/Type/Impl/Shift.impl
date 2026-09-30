@@ -3,8 +3,8 @@
 #include <limits.h>
 #include <string.h>
 
-#define DATA_TYPE_IMPLEMENT_SHIFT_LEFT(TYPE, FUNCTION_NAME, STRUCT_NAME)       \
-  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *target, unsigned bitCount) {  \
+#define DATA_TYPE_IMPLEMENT_SHIFT_LEFT(TYPE, PROTOTYPE, STRUCT_NAME)       \
+  PROTOTYPE {                                                               \
     if (!target) \
       return STATUS_CONST(INVALID_ARGUMENT); \
     const size_t limbCount = sizeof(target->limb) / sizeof(target->limb[0]);  \
@@ -31,8 +31,8 @@
     return STATUS_CONST(SUCCESS); \
   }
 
-#define DATA_TYPE_IMPLEMENT_SHIFT_RIGHT(TYPE, FUNCTION_NAME, STRUCT_NAME)      \
-  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *target, unsigned bitCount) {  \
+#define DATA_TYPE_IMPLEMENT_SHIFT_RIGHT(TYPE, PROTOTYPE, STRUCT_NAME)      \
+  PROTOTYPE {                                                               \
     if (!target) \
       return STATUS_CONST(INVALID_ARGUMENT); \
     const size_t limbCount = sizeof(target->limb) / sizeof(target->limb[0]);  \
@@ -59,9 +59,9 @@
     } \
     return STATUS_CONST(SUCCESS); \
   }
-#define DATA_TYPE_IMPLEMENT_ROTATE_LEFT(TYPE, FUNCTION_NAME, STRUCT_NAME,      \
+#define DATA_TYPE_IMPLEMENT_ROTATE_LEFT(TYPE, PROTOTYPE, STRUCT_NAME,      \
                                         SHIFT_LEFT_FUNC, SHIFT_RIGHT_FUNC)     \
-  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *target, unsigned shift) {      \
+  PROTOTYPE {                                                               \
     if (!target) \
       return STATUS_CONST(INVALID_ARGUMENT); \
     const size_t totalBits =                                                  \
@@ -83,9 +83,9 @@
     return STATUS_CONST(SUCCESS); \
   }
 
-#define DATA_TYPE_IMPLEMENT_ROTATE_RIGHT(TYPE, FUNCTION_NAME, STRUCT_NAME,      \
+#define DATA_TYPE_IMPLEMENT_ROTATE_RIGHT(TYPE, PROTOTYPE, STRUCT_NAME,      \
                                          SHIFT_LEFT_FUNC, SHIFT_RIGHT_FUNC)    \
-  static inline OPSTATUS FUNCTION_NAME(STRUCT_NAME *target, unsigned shift) {      \
+  PROTOTYPE {                                                               \
     if (!target) \
       return STATUS_CONST(INVALID_ARGUMENT); \
     const size_t totalBits =                                                  \
