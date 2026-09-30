@@ -40,18 +40,33 @@ static inline NETWORK_POLLER_TYPE(EventFlags) NETWORK_POLLER_INS(Ready)(
 static inline OPSTATUS NETWORK_POLLER_INS(WaitNative)(
     NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TEventVector) *events,
     struct timeval *timeout, NETWORK_TYPE(TError) *error) {
+  NETWORK_POLLER_TYPE(TEventVector) collected = {0};
   fd_set readSet, writeSet, errorSet;
   SOCKET_TYPE(Handle) maximum = 0;
   size_t i;
   int result;
 
   if (poller == NULL || events == NULL) {
-    if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
+    if (error != NULL)
+      *error = NETWORK_ERROR_CONST(NONE);
     return STATUS_CONST(INVALID_ARGUMENT);
   }
-  FLAT_VECTOR_FUNC(Network_Event, Clear)(events);
+
+  if (FLAT_VECTOR_FUNC(Network_Event, Init)(&collected) !=
+      STATUS_CONST(SUCCESS))
+    return NETWORK_POLLER_INS(Publish)(
+        error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
+        STATUS_CONST(OUT_OF_MEMORY));
+
+#if COSMERON_MACRO_INTERNAL_CONTAINER_FUNCTION_TABLE_ENABLED
+  collected.api = events->api;
+#endif
+
   if (poller->registrations.size == 0) {
-    return NETWORK_POLLER_INS(Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+    FLAT_VECTOR_FUNC(Network_Event, Destroy)(events);
+    *events = collected;
+    return NETWORK_POLLER_INS(Publish)(
+        error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
   }
 
   FD_ZERO(&readSet); FD_ZERO(&writeSet); FD_ZERO(&errorSet);
@@ -76,15 +91,18 @@ static inline OPSTATUS NETWORK_POLLER_INS(WaitNative)(
                   &errorSet, &maximum);
     }
     if (!valid) {
-      return NETWORK_POLLER_INS(Publish)(error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
+      FLAT_VECTOR_FUNC(Network_Event, Destroy)(&collected);
+      return NETWORK_POLLER_INS(Publish)(
+          error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
           STATUS_CONST(OUT_OF_RANGE));
     }
   }
 
   result = select(maximum + 1, &readSet, &writeSet, &errorSet, timeout);
   if (result == TSOCKET_NATIVE_ERROR) {
-    return NETWORK_POLLER_INS(Publish)(error,
-        SOCKET_INS(MapNativeError)(TSOCKET_NATIVE_ERROR_CODE()),
+    FLAT_VECTOR_FUNC(Network_Event, Destroy)(&collected);
+    return NETWORK_POLLER_INS(Publish)(
+        error, SOCKET_INS(MapNativeError)(TSOCKET_NATIVE_ERROR_CODE()),
         STATUS_CONST(GENERIC_ERROR));
   }
 
@@ -107,11 +125,16 @@ static inline OPSTATUS NETWORK_POLLER_INS(WaitNative)(
           l->secondary.handle, r->interests, false, &readSet, &writeSet, &errorSet);
     }
     if (NETWORK_POLLER_INS(PushEvent)(
-            events, r, flags, error) != STATUS_CONST(SUCCESS))
+            &collected, r, flags, error) != STATUS_CONST(SUCCESS)) {
+      FLAT_VECTOR_FUNC(Network_Event, Destroy)(&collected);
       return STATUS_CONST(OUT_OF_MEMORY);
+    }
   }
 
-  return NETWORK_POLLER_INS(Publish)(error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+  FLAT_VECTOR_FUNC(Network_Event, Destroy)(events);
+  *events = collected;
+  return NETWORK_POLLER_INS(Publish)(
+      error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
 }
 
 NETWORK_POLLER_WAIT_PROTOTYPE {
