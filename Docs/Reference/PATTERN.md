@@ -317,7 +317,7 @@ STRUCT(...)
 FUNCTION_TABLE_STRUCT(...)
 FUNCTION_TABLE_INSTANCE(...)
 
-LIBRARY_MACRO_INTERNAL_*
+COSMERON_MACRO_INTERNAL_*
 ```
 
 If a new macro does not clearly belong to this grammar, reconsider whether it should exist.
@@ -336,9 +336,9 @@ and
 
 ```c
 typedef enum COMPARISON_TYPE(Result) {
-"#define X(NAME, VALUE, DESC) NAME = VALUE,
+#define X(NAME, VALUE, DESC) NAME = VALUE,
 COMPARISON_TABLE(X)
-#undef X"
+#undef X
 } COMPARISON_TYPE(Result);
 ```
 Rules:
