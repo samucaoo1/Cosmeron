@@ -7,7 +7,7 @@
  *   TTREE_FUNCTION_TABLE_INSTANCE_SET(T)
  *   TTREE_FUNCTION_TABLE_INSTANCE_MAP(T)
  *
- * The struct typedefs (TTREE_VTABLE_SET / TTREE_VTABLE_MAP) live
+ * The struct typedefs (TTREE_FUNCTION_TABLE_STRUCT_SET / TTREE_FUNCTION_TABLE_STRUCT_MAP) live
  * in Tree.space, not here. This file only contains the `const`
  * instances that the user code binds to `t.api = &...`.
  * ============================================================= */
