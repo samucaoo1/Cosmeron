@@ -35,26 +35,26 @@
 
 #define TDECIMAL_CLEAR_PROTOTYPE(SUFFIX)                              \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX,                                     \
-                                   Clear)(TDECIMAL_TYPE(SUFFIX) * decimal)
+                                   Clear)(TDECIMAL_TYPE(SUFFIX) *target)
 
 #define TDECIMAL_INIT_PROTOTYPE(SUFFIX)                               \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX,                                     \
-                                   Init)(TDECIMAL_TYPE(SUFFIX) * decimal)
+                                   Init)(TDECIMAL_TYPE(SUFFIX) *target)
 
 #define TDECIMAL_ADD_PROTOTYPE(SUFFIX)                                \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, Add)(                               \
-      TDECIMAL_TYPE(SUFFIX) * destinationDecimal,                             \
-      const TDECIMAL_TYPE(SUFFIX) * sourceDecimal)
+      TDECIMAL_TYPE(SUFFIX) * destination,                             \
+      const TDECIMAL_TYPE(SUFFIX) * source)
 
 #define TDECIMAL_SUB_PROTOTYPE(SUFFIX)                                \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, Sub)(                               \
-      TDECIMAL_TYPE(SUFFIX) * destinationDecimal,                             \
-      const TDECIMAL_TYPE(SUFFIX) * sourceDecimal)
+      TDECIMAL_TYPE(SUFFIX) * destination,                             \
+      const TDECIMAL_TYPE(SUFFIX) * source)
 
 #define TDECIMAL_MUL_PROTOTYPE(SUFFIX)                                \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, Mul)(                               \
-      TDECIMAL_TYPE(SUFFIX) * destinationDecimal,                             \
-      const TDECIMAL_TYPE(SUFFIX) * sourceDecimal)
+      TDECIMAL_TYPE(SUFFIX) * destination,                             \
+      const TDECIMAL_TYPE(SUFFIX) * source)
 
 #define TDECIMAL_DIV_MOD_PROTOTYPE(SUFFIX)                                    \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, DivMod)(                       \
@@ -75,93 +75,93 @@
 
 #define TDECIMAL_INCREMENT_PROTOTYPE(SUFFIX)                          \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, Increment)(TDECIMAL_TYPE(SUFFIX) *  \
-                                                      targetDecimal)
+                                                      target)
 
 #define TDECIMAL_DECREMENT_PROTOTYPE(SUFFIX)                          \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, Decrement)(TDECIMAL_TYPE(SUFFIX) *  \
-                                                      targetDecimal)
+                                                      target)
 
 #define TDECIMAL_AND_PROTOTYPE(SUFFIX)                                \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, And)(                               \
-      TDECIMAL_TYPE(SUFFIX) * destinationDecimal,                             \
-      const TDECIMAL_TYPE(SUFFIX) * sourceDecimal)
+      TDECIMAL_TYPE(SUFFIX) * destination,                             \
+      const TDECIMAL_TYPE(SUFFIX) * source)
 
 #define TDECIMAL_OR_PROTOTYPE(SUFFIX)                                 \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, Or)(                                \
-      TDECIMAL_TYPE(SUFFIX) * destinationDecimal,                             \
-      const TDECIMAL_TYPE(SUFFIX) * sourceDecimal)
+      TDECIMAL_TYPE(SUFFIX) * destination,                             \
+      const TDECIMAL_TYPE(SUFFIX) * source)
 
 #define TDECIMAL_XOR_PROTOTYPE(SUFFIX)                                \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, Xor)(                               \
-      TDECIMAL_TYPE(SUFFIX) * destinationDecimal,                             \
-      const TDECIMAL_TYPE(SUFFIX) * sourceDecimal)
+      TDECIMAL_TYPE(SUFFIX) * destination,                             \
+      const TDECIMAL_TYPE(SUFFIX) * source)
 
 #define TDECIMAL_NOT_PROTOTYPE(SUFFIX)                                \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, Not)(TDECIMAL_TYPE(SUFFIX) *        \
-                                                targetDecimal)
+                                                target)
 
 #define TDECIMAL_SHIFT_LEFT_PROTOTYPE(SUFFIX)                          \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, ShiftLeft)(                         \
-      TDECIMAL_TYPE(SUFFIX) * targetDecimal, unsigned bitCount)
+      TDECIMAL_TYPE(SUFFIX) * target, unsigned bitCount)
 
 #define TDECIMAL_SHIFT_RIGHT_PROTOTYPE(SUFFIX)                         \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, ShiftRight)(                        \
-      TDECIMAL_TYPE(SUFFIX) * targetDecimal, unsigned bitCount)
+      TDECIMAL_TYPE(SUFFIX) * target, unsigned bitCount)
 
 #define TDECIMAL_ROTATE_LEFT_PROTOTYPE(SUFFIX)                         \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, RotateLeft)(                        \
-      TDECIMAL_TYPE(SUFFIX) * targetDecimal, unsigned bitCount)
+      TDECIMAL_TYPE(SUFFIX) *target, unsigned shift)
 
 #define TDECIMAL_ROTATE_RIGHT_PROTOTYPE(SUFFIX)                        \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, RotateRight)(                       \
-      TDECIMAL_TYPE(SUFFIX) * targetDecimal, unsigned bitCount)
+      TDECIMAL_TYPE(SUFFIX) *target, unsigned shift)
 
 #define TDECIMAL_BIT_SET_PROTOTYPE(SUFFIX)                             \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, BitSet)(                            \
-      TDECIMAL_TYPE(SUFFIX) * decimal, uint32_t bit)
+      TDECIMAL_TYPE(SUFFIX) *target, uint32_t bit)
 
 #define TDECIMAL_BIT_CLEAR_PROTOTYPE(SUFFIX)                           \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, BitClear)(                          \
-      TDECIMAL_TYPE(SUFFIX) * decimal, uint32_t bit)
+      TDECIMAL_TYPE(SUFFIX) *target, uint32_t bit)
 
 #define TDECIMAL_BIT_CHECK_PROTOTYPE(SUFFIX)                           \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, BitCheck)(                          \
-      const TDECIMAL_TYPE(SUFFIX) *decimal, uint32_t bit, bool *outResult)
+      const TDECIMAL_TYPE(SUFFIX) *target, uint32_t bit, bool *outResult)
 
 #define TDECIMAL_COMPARE_PROTOTYPE(SUFFIX)                            \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, Compare)(                              \
-      const TDECIMAL_TYPE(SUFFIX) * leftDecimal,                                            \
-      const TDECIMAL_TYPE(SUFFIX) * rightDecimal, CMPOUT *result)
+      const TDECIMAL_TYPE(SUFFIX) * left,                                            \
+      const TDECIMAL_TYPE(SUFFIX) * right, CMPOUT *result)
 
 #define TDECIMAL_EQUAL_PROTOTYPE(SUFFIX)                              \
   static inline bool TDECIMAL_FUNC(SUFFIX, Equal)(                             \
-      const TDECIMAL_TYPE(SUFFIX) * leftDecimal,                              \
-      const TDECIMAL_TYPE(SUFFIX) * rightDecimal)
+      const TDECIMAL_TYPE(SUFFIX) * left,                              \
+      const TDECIMAL_TYPE(SUFFIX) * right)
 
 #define TDECIMAL_NOT_EQUAL_PROTOTYPE(SUFFIX)                           \
   static inline bool TDECIMAL_FUNC(SUFFIX, NotEqual)(                          \
-      const TDECIMAL_TYPE(SUFFIX) * leftDecimal,                              \
-      const TDECIMAL_TYPE(SUFFIX) * rightDecimal)
+      const TDECIMAL_TYPE(SUFFIX) * left,                              \
+      const TDECIMAL_TYPE(SUFFIX) * right)
 
 #define TDECIMAL_LESS_THAN_PROTOTYPE(SUFFIX)                           \
   static inline bool TDECIMAL_FUNC(SUFFIX, LessThan)(                          \
-      const TDECIMAL_TYPE(SUFFIX) * leftDecimal,                              \
-      const TDECIMAL_TYPE(SUFFIX) * rightDecimal)
+      const TDECIMAL_TYPE(SUFFIX) * left,                              \
+      const TDECIMAL_TYPE(SUFFIX) * right)
 
 #define TDECIMAL_GREATER_THAN_PROTOTYPE(SUFFIX)                        \
   static inline bool TDECIMAL_FUNC(SUFFIX, GreaterThan)(                       \
-      const TDECIMAL_TYPE(SUFFIX) * leftDecimal,                              \
-      const TDECIMAL_TYPE(SUFFIX) * rightDecimal)
+      const TDECIMAL_TYPE(SUFFIX) * left,                              \
+      const TDECIMAL_TYPE(SUFFIX) * right)
 
 #define TDECIMAL_LESS_OR_EQUAL_PROTOTYPE(SUFFIX)                        \
   static inline bool TDECIMAL_FUNC(SUFFIX, LessOrEqual)(                       \
-      const TDECIMAL_TYPE(SUFFIX) * leftDecimal,                              \
-      const TDECIMAL_TYPE(SUFFIX) * rightDecimal)
+      const TDECIMAL_TYPE(SUFFIX) * left,                              \
+      const TDECIMAL_TYPE(SUFFIX) * right)
 
 #define TDECIMAL_GREATER_OR_EQUAL_PROTOTYPE(SUFFIX)                     \
   static inline bool TDECIMAL_FUNC(SUFFIX, GreaterOrEqual)(                    \
-      const TDECIMAL_TYPE(SUFFIX) * leftDecimal,                              \
-      const TDECIMAL_TYPE(SUFFIX) * rightDecimal)
+      const TDECIMAL_TYPE(SUFFIX) * left,                              \
+      const TDECIMAL_TYPE(SUFFIX) * right)
 
 #define TDECIMAL_TO_CSTRING_BASE_PROTOTYPE(SUFFIX)                                \
   static inline OPSTATUS TDECIMAL_FUNC(SUFFIX, ToCStringBase)(                     \
@@ -174,7 +174,7 @@
 
 #define TDECIMAL_IS_ZERO_PROTOTYPE(SUFFIX)                             \
   static inline bool TDECIMAL_FUNC(SUFFIX, IsZero)(                            \
-      const TDECIMAL_TYPE(SUFFIX) * targetDecimal)
+      const TDECIMAL_TYPE(SUFFIX) * target)
 
 #include "Impl/Arithmetic.impl"
 #include "Impl/Bit.impl"
