@@ -4,7 +4,7 @@
   DATA_TYPE_IMPLEMENT_CLEAR(TYPE, TBIGINT_CLEAR_PROTOTYPE(SUFFIX),                 \
                             TBIGINT_TYPE(SUFFIX))                              \
   DATA_TYPE_IMPLEMENT_INIT(TYPE, TBIGINT_INIT_PROTOTYPE(SUFFIX),                   \
-                           TBIGINT_CLEAR_PROTOTYPE(SUFFIX), TBIGINT_TYPE(SUFFIX))    \
+                           TBIGINT_FUNC(SUFFIX, Clear), TBIGINT_TYPE(SUFFIX))    \
   DATA_TYPE_IMPLEMENT_ADD(TYPE, TBIGINT_ADD_PROTOTYPE(SUFFIX), TBIGINT_TYPE(SUFFIX)) \
   DATA_TYPE_IMPLEMENT_SUB(TYPE, TBIGINT_SUB_PROTOTYPE(SUFFIX), TBIGINT_TYPE(SUFFIX)) \
   DATA_TYPE_IMPLEMENT_AND(TYPE, TBIGINT_AND_PROTOTYPE(SUFFIX), TBIGINT_TYPE(SUFFIX)) \
@@ -21,8 +21,8 @@
                                   TBIGINT_FUNC(SUFFIX, ShiftRight))            \
   DATA_TYPE_IMPLEMENT_ROTATE_RIGHT(TYPE, TBIGINT_ROTATE_RIGHT_PROTOTYPE(SUFFIX),    \
                                    TBIGINT_TYPE(SUFFIX),                       \
-                                   TBIGINT_SHIFT_LEFT_PROTOTYPE(SUFFIX),            \
-                                   TBIGINT_SHIFT_RIGHT_PROTOTYPE(SUFFIX))           \
+                                   TBIGINT_FUNC(SUFFIX, ShiftLeft),            \
+                                   TBIGINT_FUNC(SUFFIX, ShiftRight))           \
   DATA_TYPE_IMPLEMENT_BIT_SET(TYPE, TBIGINT_BIT_SET_PROTOTYPE(SUFFIX),              \
                               TBIGINT_TYPE(SUFFIX), 64)                        \
   DATA_TYPE_IMPLEMENT_BIT_CLEAR(TYPE, TBIGINT_BIT_CLEAR_PROTOTYPE(SUFFIX),          \
@@ -66,9 +66,9 @@
                                 TBIGINT_TYPE(SUFFIX))                          \
   DATA_TYPE_IMPLEMENT_DECREMENT(TYPE, TBIGINT_DECREMENT_PROTOTYPE(SUFFIX),         \
                                 TBIGINT_TYPE(SUFFIX))                          \
-  DATA_TYPE_IMPLEMENT_COMPARE(TYPE, TBIGINT_FUNC(SUFFIX, Compare),             \
+  DATA_TYPE_IMPLEMENT_COMPARE(TYPE, TBIGINT_COMPARE_PROTOTYPE(SUFFIX),             \
                               TBIGINT_TYPE(SUFFIX))                            \
-  DATA_TYPE_IMPLEMENT_EQUAL(TYPE, TBIGINT_FUNC(SUFFIX, Equal),                 \
+  DATA_TYPE_IMPLEMENT_EQUAL(TYPE, TBIGINT_EQUAL_PROTOTYPE(SUFFIX),                 \
                             TBIGINT_TYPE(SUFFIX))                              \
   DATA_TYPE_IMPLEMENT_NOT_EQUAL(TYPE, TBIGINT_NOT_EQUAL_PROTOTYPE(SUFFIX),           \
                                TBIGINT_FUNC(SUFFIX, Equal),                    \
@@ -88,7 +88,7 @@
                                      TBIGINT_TYPE(SUFFIX))                     \
   DATA_TYPE_IMPLEMENT_IS_ZERO(TYPE, TBIGINT_IS_ZERO_PROTOTYPE(SUFFIX),               \
                              TBIGINT_TYPE(SUFFIX)) \
-  DATA_TYPE_IMPLEMENT_TO_CSTRING_BASE(TYPE, TBIGINT_FUNC(SUFFIX, ToCStringBase), \
+  DATA_TYPE_IMPLEMENT_TO_CSTRING_BASE(TYPE, TBIGINT_TO_CSTRING_BASE_PROTOTYPE(SUFFIX), \
                                        TBIGINT_TYPE(SUFFIX),                      \
                                        TBIGINT_FUNC(SUFFIX, IsZero)) \
   DATA_TYPE_IMPLEMENT_TO_CSTRING(TYPE, TBIGINT_TO_CSTRING_PROTOTYPE(SUFFIX),          \
