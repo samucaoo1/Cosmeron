@@ -63,6 +63,7 @@ static inline void NETWORK_INS(ResolveFreeAddrInfo)(struct addrinfo *result) {
 NETWORK_RESOLVE_ADDRESS_PROTOTYPE;
 
 NETWORK_RESOLVE_ADDRESS_PROTOTYPE {
+  NETWORK_RESOLVE_TYPE(TAddressVector) resolved = {0};
   struct addrinfo hints;
   struct addrinfo *result = NULL;
   struct addrinfo *current = NULL;
@@ -74,20 +75,33 @@ NETWORK_RESOLVE_ADDRESS_PROTOTYPE {
     return STATUS_CONST(INVALID_ARGUMENT);
   }
 
-  FLAT_VECTOR_FUNC(Network_Address, Clear)(addresses);
+  status = FLAT_VECTOR_FUNC(Network_Address, Init)(&resolved);
+  if (status != STATUS_CONST(SUCCESS)) {
+    if (error != NULL)
+      *error = NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED);
+    return status;
+  }
+
+#if COSMERON_MACRO_INTERNAL_CONTAINER_FUNCTION_TABLE_ENABLED
+  resolved.api = addresses->api;
+#endif
+
 #if OS_WINDOWS
   if (!NETWORK_INS(EnsureRuntime)()) {
+    FLAT_VECTOR_FUNC(Network_Address, Destroy)(&resolved);
     if (error != NULL)
       *error = NETWORK_ERROR_CONST(UNKNOWN);
     return STATUS_CONST(GENERIC_ERROR);
   }
 #endif
+
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = 0;
 
   status = NETWORK_INS(ResolveGetAddrInfo)(host, &hints, &result);
   if (status != 0) {
+    FLAT_VECTOR_FUNC(Network_Address, Destroy)(&resolved);
     if (error != NULL)
       *error = NETWORK_INS(ResolveMapError)(status);
     return STATUS_CONST(GENERIC_ERROR);
@@ -114,16 +128,19 @@ NETWORK_RESOLVE_ADDRESS_PROTOTYPE {
     if (supported) {
       bool duplicate = false;
       size_t index;
-      for (index = 0; index < addresses->size; ++index) {
-        if (NETWORK_ADDRESS_FUNC(Equal)(&addresses->data[index], &address)) {
+
+      for (index = 0; index < resolved.size; ++index) {
+        if (NETWORK_ADDRESS_FUNC(Equal)(&resolved.data[index], &address)) {
           duplicate = true;
           break;
         }
       }
+
       if (!duplicate &&
-          FLAT_VECTOR_FUNC(Network_Address, PushBack)(addresses, address) !=
+          FLAT_VECTOR_FUNC(Network_Address, PushBack)(&resolved, address) !=
               STATUS_CONST(SUCCESS)) {
         NETWORK_INS(ResolveFreeAddrInfo)(result);
+        FLAT_VECTOR_FUNC(Network_Address, Destroy)(&resolved);
         if (error != NULL)
           *error = NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED);
         return STATUS_CONST(GENERIC_ERROR);
@@ -132,13 +149,18 @@ NETWORK_RESOLVE_ADDRESS_PROTOTYPE {
   }
 
   NETWORK_INS(ResolveFreeAddrInfo)(result);
-  if (addresses->size == 0) {
+  if (resolved.size == 0) {
+    FLAT_VECTOR_FUNC(Network_Address, Destroy)(&resolved);
     if (error != NULL)
       *error = NETWORK_ERROR_CONST(RESOLVE_HOST_NOT_FOUND);
     return STATUS_CONST(GENERIC_ERROR);
   }
 
+  FLAT_VECTOR_FUNC(Network_Address, Destroy)(addresses);
+  *addresses = resolved;
+
   if (error != NULL)
     *error = NETWORK_ERROR_CONST(NONE);
   return STATUS_CONST(SUCCESS);
 }
+
