@@ -18,31 +18,49 @@
 #define RANDOM_TYPE(NAME) RANDOM_NS(NAME)
 #define RANDOM_FUNC(NAME) RANDOM_NS(NAME)
 
-#define RANDOM_ENGINE_TYPE(NAME) GNS3(LIB_PREFIX(RANDOM_MOD), Engine, NAME)
-#define RANDOM_ENGINE_FUNC(ENGINE, NAME)                                       \
-  GNS4(LIB_PREFIX(RANDOM_MOD), Engine, ENGINE, NAME)
-#define RANDOM_ENGINE_INS(ENGINE, NAME)                                        \
+#define RANDOM_ENGINE_NS(NAME) GNS3(LIB_PREFIX(RANDOM_MOD), Engine, NAME)
+#define RANDOM_ENGINE_CNS(NAME)                                               \
+  CNS3(LIB_PREFIX_CONST(RANDOM_CMOD), ENGINE, NAME)
+#define RANDOM_ENGINE_TYPE(NAME) RANDOM_ENGINE_NS(NAME)
+#define RANDOM_ENGINE_FUNC(ENGINE, NAME)                                      \
+  GNS2(RANDOM_ENGINE_NS(ENGINE), NAME)
+#define RANDOM_ENGINE_INS(ENGINE, NAME)                                       \
   GNS4(LIB_PREFIX(RANDOM_MOD), Engine, Internal, PP_OP_CAT3(ENGINE, _, NAME))
 
-#define RANDOM_ENTROPY_TYPE(NAME) GNS3(LIB_PREFIX(RANDOM_MOD), Entropy, NAME)
-#define RANDOM_ENTROPY_FUNC(NAME) GNS3(LIB_PREFIX(RANDOM_MOD), Entropy, NAME)
-#define RANDOM_ENTROPY_INS(NAME) \
+#define RANDOM_ENTROPY_NS(NAME) GNS3(LIB_PREFIX(RANDOM_MOD), Entropy, NAME)
+#define RANDOM_ENTROPY_CNS(NAME)                                              \
+  CNS3(LIB_PREFIX_CONST(RANDOM_CMOD), ENTROPY, NAME)
+#define RANDOM_ENTROPY_TYPE(NAME) RANDOM_ENTROPY_NS(NAME)
+#define RANDOM_ENTROPY_FUNC(NAME) RANDOM_ENTROPY_NS(NAME)
+#define RANDOM_ENTROPY_INS(NAME)                                              \
   GNS4(LIB_PREFIX(RANDOM_MOD), Entropy, Internal, NAME)
 
-#define RANDOM_MIXER_TYPE(NAME) GNS3(LIB_PREFIX(RANDOM_MOD), Mixer, NAME)
-#define RANDOM_MIXER_FUNC(NAME) GNS3(LIB_PREFIX(RANDOM_MOD), Mixer, NAME)
+#define RANDOM_MIXER_NS(NAME) GNS3(LIB_PREFIX(RANDOM_MOD), Mixer, NAME)
+#define RANDOM_MIXER_CNS(NAME)                                                \
+  CNS3(LIB_PREFIX_CONST(RANDOM_CMOD), MIXER, NAME)
+#define RANDOM_MIXER_TYPE(NAME) RANDOM_MIXER_NS(NAME)
+#define RANDOM_MIXER_FUNC(NAME) RANDOM_MIXER_NS(NAME)
 
-#define RANDOM_SOURCE_TYPE(NAME) GNS3(LIB_PREFIX(RANDOM_MOD), Source, NAME)
-#define RANDOM_SOURCE_FUNC(NAME) GNS3(LIB_PREFIX(RANDOM_MOD), Source, NAME)
-#define RANDOM_SOURCE_INS(NAME) \
+#define RANDOM_SOURCE_NS(NAME) GNS3(LIB_PREFIX(RANDOM_MOD), Source, NAME)
+#define RANDOM_SOURCE_CNS(NAME)                                               \
+  CNS3(LIB_PREFIX_CONST(RANDOM_CMOD), SOURCE, NAME)
+#define RANDOM_SOURCE_TYPE(NAME) RANDOM_SOURCE_NS(NAME)
+#define RANDOM_SOURCE_FUNC(NAME) RANDOM_SOURCE_NS(NAME)
+#define RANDOM_SOURCE_INS(NAME)                                               \
   GNS4(LIB_PREFIX(RANDOM_MOD), Source, Internal, NAME)
 
-#define RANDOM_DISTRIBUTION_FUNC(NAME)                                        \
+#define RANDOM_DISTRIBUTION_NS(NAME)                                          \
   GNS3(LIB_PREFIX(RANDOM_MOD), Distribution, NAME)
+#define RANDOM_DISTRIBUTION_CNS(NAME)                                         \
+  CNS3(LIB_PREFIX_CONST(RANDOM_CMOD), DISTRIBUTION, NAME)
+#define RANDOM_DISTRIBUTION_FUNC(NAME) RANDOM_DISTRIBUTION_NS(NAME)
 #define RANDOM_DISTRIBUTION_INS(NAME)                                         \
   GNS4(LIB_PREFIX(RANDOM_MOD), Distribution, Internal, NAME)
 
-#define RANDOM_SHUFFLE_FUNC(NAME) GNS3(LIB_PREFIX(RANDOM_MOD), Shuffle, NAME)
-#define RANDOM_SHUFFLE_INS(NAME) \
+#define RANDOM_SHUFFLE_NS(NAME) GNS3(LIB_PREFIX(RANDOM_MOD), Shuffle, NAME)
+#define RANDOM_SHUFFLE_CNS(NAME)                                              \
+  CNS3(LIB_PREFIX_CONST(RANDOM_CMOD), SHUFFLE, NAME)
+#define RANDOM_SHUFFLE_FUNC(NAME) RANDOM_SHUFFLE_NS(NAME)
+#define RANDOM_SHUFFLE_INS(NAME)                                              \
   GNS4(LIB_PREFIX(RANDOM_MOD), Shuffle, Internal, NAME)
 /* EOF */
