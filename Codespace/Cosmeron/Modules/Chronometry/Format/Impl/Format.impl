@@ -1,29 +1,47 @@
 #pragma once
 
 #include <stdio.h>
+#include <string.h>
+
+#define COSMERON_MACRO_INTERNAL_CHRONOMETRY_FORMAT_DATE_CAPACITY 16u
+#define COSMERON_MACRO_INTERNAL_CHRONOMETRY_FORMAT_DATETIME_CAPACITY 32u
 
 CHRONOMETRY_FORMAT_DATE_ISO_PROTOTYPE {
+  char formatted[COSMERON_MACRO_INTERNAL_CHRONOMETRY_FORMAT_DATE_CAPACITY];
   int written;
+
   if (buffer == NULL || capacity == 0)
     return STATUS_CONST(INVALID_ARGUMENT);
-  written = snprintf(buffer, capacity, "%+05d-%02u-%02u", date.year,
-                     (unsigned)date.month, (unsigned)date.day);
-  return written < 0 || (size_t)written >= capacity ? STATUS_CONST(OUT_OF_RANGE)
-                                                     : STATUS_CONST(SUCCESS);
+
+  written = snprintf(formatted, sizeof(formatted), "%+05d-%02u-%02u",
+                     date.year, (unsigned)date.month, (unsigned)date.day);
+  if (written < 0 || (size_t)written >= sizeof(formatted) ||
+      (size_t)written >= capacity)
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  memcpy(buffer, formatted, (size_t)written + 1U);
+  return STATUS_CONST(SUCCESS);
 }
 
 CHRONOMETRY_FORMAT_DATETIME_ISO_PROTOTYPE {
+  char formatted[COSMERON_MACRO_INTERNAL_CHRONOMETRY_FORMAT_DATETIME_CAPACITY];
   int written;
+
   if (buffer == NULL || capacity == 0)
     return STATUS_CONST(INVALID_ARGUMENT);
-  written = snprintf(buffer, capacity,
+
+  written = snprintf(formatted, sizeof(formatted),
                      "%+05d-%02u-%02uT%02u:%02u:%02u.%03u", value.date.year,
                      (unsigned)value.date.month, (unsigned)value.date.day,
                      (unsigned)value.time.hour, (unsigned)value.time.minute,
                      (unsigned)value.time.second,
                      (unsigned)value.time.millisecond);
-  return written < 0 || (size_t)written >= capacity ? STATUS_CONST(OUT_OF_RANGE)
-                                                     : STATUS_CONST(SUCCESS);
+  if (written < 0 || (size_t)written >= sizeof(formatted) ||
+      (size_t)written >= capacity)
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  memcpy(buffer, formatted, (size_t)written + 1U);
+  return STATUS_CONST(SUCCESS);
 }
 
 CHRONOMETRY_PARSE_DATE_ISO_PROTOTYPE {
@@ -54,3 +72,6 @@ CHRONOMETRY_PARSE_DATETIME_ISO_PROTOTYPE {
       (uint8_t)second, (uint8_t)minute, (uint8_t)hour};
   return STATUS_CONST(SUCCESS);
 }
+
+#undef COSMERON_MACRO_INTERNAL_CHRONOMETRY_FORMAT_DATETIME_CAPACITY
+#undef COSMERON_MACRO_INTERNAL_CHRONOMETRY_FORMAT_DATE_CAPACITY
