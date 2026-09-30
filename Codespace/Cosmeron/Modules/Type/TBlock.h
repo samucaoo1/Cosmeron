@@ -32,54 +32,54 @@
   } TBLOCK_TYPE(SUFFIX);
 
 #define TBLOCK_CLEAR_PROTOTYPE(SUFFIX)                                \
-  static inline OPSTATUS TBLOCK_FUNC(SUFFIX, Clear)(TBLOCK_TYPE(SUFFIX) * block)
+  static inline OPSTATUS TBLOCK_FUNC(SUFFIX, Clear)(TBLOCK_TYPE(SUFFIX) *target)
 
 #define TBLOCK_AND_PROTOTYPE(SUFFIX)                                  \
   static inline OPSTATUS TBLOCK_FUNC(SUFFIX, And)(                                 \
-      TBLOCK_TYPE(SUFFIX) * destinationBlock,                                 \
-      const TBLOCK_TYPE(SUFFIX) * sourceBlock)
+      TBLOCK_TYPE(SUFFIX) * destination,                                 \
+      const TBLOCK_TYPE(SUFFIX) * source)
 
 #define TBLOCK_OR_PROTOTYPE(SUFFIX)                                   \
   static inline OPSTATUS TBLOCK_FUNC(SUFFIX,                                       \
-                                 Or)(TBLOCK_TYPE(SUFFIX) * destinationBlock,  \
-                                     const TBLOCK_TYPE(SUFFIX) * sourceBlock)
+                                 Or)(TBLOCK_TYPE(SUFFIX) * destination,  \
+                                     const TBLOCK_TYPE(SUFFIX) * source)
 
 #define TBLOCK_XOR_PROTOTYPE(SUFFIX)                                  \
   static inline OPSTATUS TBLOCK_FUNC(SUFFIX, Xor)(                                 \
-      TBLOCK_TYPE(SUFFIX) * destinationBlock,                                 \
-      const TBLOCK_TYPE(SUFFIX) * sourceBlock)
+      TBLOCK_TYPE(SUFFIX) * destination,                                 \
+      const TBLOCK_TYPE(SUFFIX) * source)
 
 #define TBLOCK_NOT_PROTOTYPE(SUFFIX)                                  \
   static inline OPSTATUS TBLOCK_FUNC(SUFFIX,                                       \
-                                 Not)(TBLOCK_TYPE(SUFFIX) * targetBlock)
+                                 Not)(TBLOCK_TYPE(SUFFIX) * target)
 
 #define TBLOCK_SHIFT_LEFT_PROTOTYPE(SUFFIX)                            \
   static inline OPSTATUS TBLOCK_FUNC(SUFFIX, ShiftLeft)(                           \
-      TBLOCK_TYPE(SUFFIX) * targetBlock, unsigned bitCount)
+      TBLOCK_TYPE(SUFFIX) * target, unsigned bitCount)
 
 #define TBLOCK_SHIFT_RIGHT_PROTOTYPE(SUFFIX)                           \
   static inline OPSTATUS TBLOCK_FUNC(SUFFIX, ShiftRight)(                          \
-      TBLOCK_TYPE(SUFFIX) * targetBlock, unsigned bitCount)
+      TBLOCK_TYPE(SUFFIX) * target, unsigned bitCount)
 
 #define TBLOCK_ROTATE_LEFT_PROTOTYPE(SUFFIX)                           \
   static inline OPSTATUS TBLOCK_FUNC(SUFFIX, RotateLeft)(                          \
-      TBLOCK_TYPE(SUFFIX) * targetBlock, unsigned bitCount)
+      TBLOCK_TYPE(SUFFIX) *target, unsigned shift)
 
 #define TBLOCK_ROTATE_RIGHT_PROTOTYPE(SUFFIX)                          \
   static inline OPSTATUS TBLOCK_FUNC(SUFFIX, RotateRight)(                         \
-      TBLOCK_TYPE(SUFFIX) * targetBlock, unsigned bitCount)
+      TBLOCK_TYPE(SUFFIX) *target, unsigned shift)
 
 #define TBLOCK_BIT_SET_PROTOTYPE(SUFFIX)                               \
-  static inline OPSTATUS TBLOCK_FUNC(SUFFIX, BitSet)(TBLOCK_TYPE(SUFFIX) * block,  \
+  static inline OPSTATUS TBLOCK_FUNC(SUFFIX, BitSet)(TBLOCK_TYPE(SUFFIX) *target,  \
                                                  uint32_t bit)
 
 #define TBLOCK_BIT_CLEAR_PROTOTYPE(SUFFIX)                             \
   static inline OPSTATUS TBLOCK_FUNC(SUFFIX, BitClear)(                            \
-      TBLOCK_TYPE(SUFFIX) * block, uint32_t bit)
+      TBLOCK_TYPE(SUFFIX) *target, uint32_t bit)
 
 #define TBLOCK_BIT_CHECK_PROTOTYPE(SUFFIX)                             \
   static inline OPSTATUS TBLOCK_FUNC(SUFFIX, BitCheck)(                            \
-      const TBLOCK_TYPE(SUFFIX) *block, uint32_t bit, bool *outResult)
+      const TBLOCK_TYPE(SUFFIX) *target, uint32_t bit, bool *outResult)
 
 #include "Impl/Bit.impl"
 #include "Impl/Bitwise.impl"
