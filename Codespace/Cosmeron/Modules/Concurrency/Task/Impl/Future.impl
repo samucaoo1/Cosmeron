@@ -1,5 +1,4 @@
 #pragma once
-#include "../Future.h"
 
 FUTURE_INIT_PROTOTYPE {
   if (future == NULL) return STATUS_CONST(INVALID_ARGUMENT);

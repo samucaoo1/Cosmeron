@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Tree.space"
-#include "RedBlack.impl"
+#include "Impl/RedBlack.impl"
 
 /* =============================================================
  * Public entry points — RB SET

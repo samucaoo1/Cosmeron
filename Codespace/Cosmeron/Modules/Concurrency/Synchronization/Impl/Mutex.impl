@@ -1,7 +1,5 @@
 #pragma once
 
-#include "../Mutex.h"
-
 #if OS_POSIX
 #include <errno.h>
 MUTEX_INIT_PROTOTYPE {

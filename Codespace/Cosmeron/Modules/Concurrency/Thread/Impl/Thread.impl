@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../Thread.h"
 #include "../../../../Core/Memory/Alloc.h"
 
 #if OS_POSIX

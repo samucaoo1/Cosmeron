@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Tree.space"
-#include "AVL.impl"
+#include "Impl/AVL.impl"
 
 /* =============================================================
  * Public entry points — AVL SET

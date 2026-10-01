@@ -11,7 +11,7 @@
  * because RB color values must be visible inside every
  * TRB_IMPLEMENT_* macro that follows. */
 
-typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor;
+typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor; transformar em xtable, colocar no ns
 
 /* =============================================================
  * RB core — shared by set and map

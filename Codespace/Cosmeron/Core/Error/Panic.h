@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define PANIC_FUNC(NAME) GNS2(LIB_PREFIX(Panic), NAME)
+
 #define PANIC_INTERNAL_FUNC(NAME) GNS3(LIB_PREFIX(Panic), Internal, NAME)
 
 #define PANIC_TRIGGER_PROTOTYPE                                                \
@@ -19,7 +21,9 @@
 
 PANIC_TRIGGER_PROTOTYPE;
 PANIC_STACKTRACE_PROTOTYPE;
-
+/*
+inline void 
+*/
 #define PANIC(message)                                                         \
   PANIC_INTERNAL_FUNC(Trigger)((message), __FILE__, __LINE__, __func__)
 

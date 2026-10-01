@@ -79,7 +79,7 @@ NETWORK_RESOLVE_ADDRESS_PROTOTYPE {
   if (status != STATUS_CONST(SUCCESS)) {
     if (error != NULL)
       *error = NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED);
-    return status;
+    return (OPSTATUS)status;
   }
 
 #if COSMERON_MACRO_INTERNAL_CONTAINER_FUNCTION_TABLE_ENABLED
@@ -108,7 +108,7 @@ NETWORK_RESOLVE_ADDRESS_PROTOTYPE {
   }
 
   for (current = result; current != NULL; current = current->ai_next) {
-    NETWORK_ADDRESS_TYPE(TAddress) address = {0};
+    NETWORK_ADDRESS_TYPE(TAddress) address = (NETWORK_ADDRESS_TYPE(TAddress)){0};
     bool supported = false;
 
     if (current->ai_family == AF_INET) {

@@ -15,7 +15,7 @@
  * ============================================================= */
 
 #include "Tree.space"
-#include "BST.impl"
+#include "Impl/BST.impl"
 
 /* =============================================================
  * Public entry points — BST SET

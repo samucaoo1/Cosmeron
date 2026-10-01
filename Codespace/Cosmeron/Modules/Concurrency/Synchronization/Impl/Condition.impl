@@ -1,5 +1,5 @@
 #pragma once
-#include "../Condition.h"
+
 #if OS_POSIX
 CONDITION_INIT_PROTOTYPE { if (condition == NULL) return STATUS_CONST(INVALID_ARGUMENT); return pthread_cond_init(&condition->native, NULL) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR); }
 CONDITION_DESTROY_PROTOTYPE { if (condition == NULL) return STATUS_CONST(INVALID_ARGUMENT); return pthread_cond_destroy(&condition->native) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(BUSY); }

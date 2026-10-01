@@ -1,5 +1,4 @@
 #pragma once
-#include "../ThreadPool.h"
 
 static inline bool CONCURRENCY_INS(ThreadPoolPop)(CONCURRENCY_TYPE(TThreadPool) *pool, CONCURRENCY_TYPE(TTask) *task) {
   if (pool->queueSize == 0) return false;

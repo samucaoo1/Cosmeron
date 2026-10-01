@@ -1,7 +1,5 @@
 #pragma once
 
-#include "../Once.h"
-
 #if OS_POSIX
 ONCE_CALL_PROTOTYPE {
   if (once == NULL || function == NULL)

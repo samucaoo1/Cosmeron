@@ -1,5 +1,4 @@
 #pragma once
-#include "../Task.h"
 
 TASK_CREATE_PROTOTYPE {
   CONCURRENCY_TYPE(TTask) task;
