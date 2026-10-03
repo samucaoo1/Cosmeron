@@ -1,36 +1,40 @@
+#pragma once
 
 /* =============================================================
  * Lifecycle — Init, DestroyNodes, Destroy, Clear
  * Shared by all algorithms and both set/map semantics.
  * ============================================================= */
 
-#define COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_LIFECYCLE(T)                                           \
-  TTREE_INIT_PROTOTYPE(T) {                        \
+#define COSMERON_MACRO_INTERNAL_TREE_IMPLEMENT_LIFECYCLE(T)                   \
+  TREE_INIT_PROTOTYPE(T) {                                                     \
     if (!tree)                                                                 \
-      return STATUS_CONST(INVALID_ARGUMENT);                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
     tree->root = NULL;                                                         \
     tree->size = 0;                                                            \
-    return STATUS_CONST(SUCCESS);                                                 \
+    return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
                                                                                \
-  static inline void TTREE_FN(T, DestroyNodes)(TTREE_NODE(T) * node) {        \
+  static inline void TREE_FUNC(T, DestroyNodes)(TREE_NODE(T) * node) {         \
     if (!node)                                                                 \
       return;                                                                  \
-    TTREE_FN(T, DestroyNodes)(node->left);                                     \
-    TTREE_FN(T, DestroyNodes)(node->right);                                    \
-    Memory_Free(node);                                                        \
+    TREE_FUNC(T, DestroyNodes)(node->left);                                    \
+    TREE_FUNC(T, DestroyNodes)(node->right);                                   \
+    Memory_Free(node);                                                         \
   }                                                                            \
                                                                                \
-  TTREE_DESTROY_PROTOTYPE(T) {                         \
+  TREE_DESTROY_PROTOTYPE(T) {                                                  \
     if (!tree)                                                                 \
       return;                                                                  \
-    TTREE_FN(T, DestroyNodes)(tree->root);                                     \
+    TREE_FUNC(T, DestroyNodes)(tree->root);                                    \
     tree->root = NULL;                                                         \
     tree->size = 0;                                                            \
   }                                                                            \
                                                                                \
-  TTREE_CLEAR_PROTOTYPE(T) {                           \
+  TREE_CLEAR_PROTOTYPE(T) {                                                    \
     if (!tree)                                                                 \
       return;                                                                  \
-    TTREE_FN(T, Destroy)(tree);                                                \
+    TREE_FUNC(T, Destroy)(tree);                                               \
   }
+
+#define COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_LIFECYCLE(T)                  \
+  COSMERON_MACRO_INTERNAL_TREE_IMPLEMENT_LIFECYCLE(T)

@@ -1,41 +1,43 @@
+#pragma once
+
 /* =============================================================
  * AVL — algorithm-specific implementation
  *   Height, UpdateHeight, BalanceFactor, Rotations, Rebalance,
  *   CreateNode (set/map), Insert (set/map), Remove
  * ============================================================= */
 
-#include "Common/Tree.impl"
+#include "Tree.impl"
 
 /* =============================================================
  * AVL core — shared by set and map
  * ============================================================= */
 
-#define COSMERON_MACRO_INTERNAL_TAVL_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                 \
-  static inline int TTREE_FN(T, Height)(TTREE_NODE(T) * node) {               \
+#define COSMERON_MACRO_INTERNAL_TREE_AVL_IMPLEMENT_CORE(T, KEY_TYPE, CMP)     \
+  static inline int TREE_FUNC(T, Height)(TREE_NODE(T) * node) {                \
     if (!node)                                                                 \
       return 0;                                                                \
     return node->height;                                                       \
   }                                                                            \
                                                                                \
-  static inline void TTREE_FN(T, UpdateHeight)(TTREE_NODE(T) * node) {        \
+  static inline void TREE_FUNC(T, UpdateHeight)(TREE_NODE(T) * node) {         \
     if (!node)                                                                 \
       return;                                                                  \
-    int _lh = TTREE_FN(T, Height)(node->left);                                \
-    int _rh = TTREE_FN(T, Height)(node->right);                               \
-    node->height = 1 + (_lh > _rh ? _lh : _rh);                               \
+    int _lh = TREE_FUNC(T, Height)(node->left);                                \
+    int _rh = TREE_FUNC(T, Height)(node->right);                               \
+    node->height = 1 + (_lh > _rh ? _lh : _rh);                                \
   }                                                                            \
                                                                                \
-  static inline int TTREE_FN(T, BalanceFactor)(TTREE_NODE(T) * node) {        \
+  static inline int TREE_FUNC(T, BalanceFactor)(TREE_NODE(T) * node) {         \
     if (!node)                                                                 \
       return 0;                                                                \
-    return TTREE_FN(T, Height)(node->left) -                                   \
-           TTREE_FN(T, Height)(node->right);                                   \
+    return TREE_FUNC(T, Height)(node->left) -                                  \
+           TREE_FUNC(T, Height)(node->right);                                  \
   }                                                                            \
                                                                                \
-  static inline TTREE_NODE(T) *                                                \
-      TTREE_FN(T, RotateRight)(T * tree, TTREE_NODE(T) * y) {                 \
-    TTREE_NODE(T) *x = y->left;                                                \
-    TTREE_NODE(T) *t2 = x->right;                                              \
+  static inline TREE_NODE(T) *                                                 \
+      TREE_FUNC(T, RotateRight)(T * tree, TREE_NODE(T) * y) {                  \
+    TREE_NODE(T) *x = y->left;                                                 \
+    TREE_NODE(T) *t2 = x->right;                                               \
     x->right = y;                                                              \
     y->left = t2;                                                              \
     x->parent = y->parent;                                                     \
@@ -48,15 +50,15 @@
       x->parent->left = x;                                                     \
     else                                                                       \
       x->parent->right = x;                                                    \
-    TTREE_FN(T, UpdateHeight)(y);                                              \
-    TTREE_FN(T, UpdateHeight)(x);                                              \
+    TREE_FUNC(T, UpdateHeight)(y);                                             \
+    TREE_FUNC(T, UpdateHeight)(x);                                             \
     return x;                                                                  \
   }                                                                            \
                                                                                \
-  static inline TTREE_NODE(T) *                                                \
-      TTREE_FN(T, RotateLeft)(T * tree, TTREE_NODE(T) * x) {                  \
-    TTREE_NODE(T) *y = x->right;                                               \
-    TTREE_NODE(T) *t2 = y->left;                                               \
+  static inline TREE_NODE(T) *                                                 \
+      TREE_FUNC(T, RotateLeft)(T * tree, TREE_NODE(T) * x) {                   \
+    TREE_NODE(T) *y = x->right;                                                \
+    TREE_NODE(T) *t2 = y->left;                                                \
     y->left = x;                                                               \
     x->right = t2;                                                             \
     y->parent = x->parent;                                                     \
@@ -69,73 +71,73 @@
       y->parent->left = y;                                                     \
     else                                                                       \
       y->parent->right = y;                                                    \
-    TTREE_FN(T, UpdateHeight)(x);                                              \
-    TTREE_FN(T, UpdateHeight)(y);                                              \
+    TREE_FUNC(T, UpdateHeight)(x);                                             \
+    TREE_FUNC(T, UpdateHeight)(y);                                             \
     return y;                                                                  \
   }                                                                            \
                                                                                \
-  static inline void TTREE_FN(T, Rebalance)(T * tree, TTREE_NODE(T) * node) { \
+  static inline void TREE_FUNC(T, Rebalance)(T * tree, TREE_NODE(T) * node) {  \
     while (node) {                                                             \
-      TTREE_FN(T, UpdateHeight)(node);                                         \
-      int _bf = TTREE_FN(T, BalanceFactor)(node);                              \
+      TREE_FUNC(T, UpdateHeight)(node);                                        \
+      int _bf = TREE_FUNC(T, BalanceFactor)(node);                             \
       if (_bf > 1) {                                                           \
-        if (TTREE_FN(T, BalanceFactor)(node->left) < 0)                        \
-          TTREE_FN(T, RotateLeft)(tree, node->left);                           \
-        node = TTREE_FN(T, RotateRight)(tree, node);                           \
+        if (TREE_FUNC(T, BalanceFactor)(node->left) < 0)                       \
+          TREE_FUNC(T, RotateLeft)(tree, node->left);                          \
+        node = TREE_FUNC(T, RotateRight)(tree, node);                          \
       } else if (_bf < -1) {                                                   \
-        if (TTREE_FN(T, BalanceFactor)(node->right) > 0)                       \
-          TTREE_FN(T, RotateRight)(tree, node->right);                         \
-        node = TTREE_FN(T, RotateLeft)(tree, node);                            \
+        if (TREE_FUNC(T, BalanceFactor)(node->right) > 0)                      \
+          TREE_FUNC(T, RotateRight)(tree, node->right);                        \
+        node = TREE_FUNC(T, RotateLeft)(tree, node);                           \
       }                                                                        \
       node = node->parent;                                                     \
     }                                                                          \
   }                                                                            \
                                                                                \
-  TTREE_REMOVE_PROTOTYPE(T, KEY_TYPE) {         \
+  TREE_REMOVE_PROTOTYPE(T, KEY_TYPE) {                                         \
     if (!tree)                                                                 \
-      return STATUS_CONST(INVALID_ARGUMENT);                                      \
-    TTREE_NODE(T) *_z = TTREE_FN(T, FindNode)(tree, key);                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    TREE_NODE(T) *_z = TREE_FUNC(T, FindNode)(tree, key);                      \
     if (!_z)                                                                   \
-      return STATUS_CONST(NOT_FOUND);                                             \
-    TTREE_NODE(T) *_rb_start = _z->parent;                                     \
+      return STATUS_CONST(NOT_FOUND);                                          \
+    TREE_NODE(T) *_rb_start = _z->parent;                                      \
     if (!_z->left) {                                                           \
-      TTREE_FN(T, Transplant)(tree, _z, _z->right);                           \
+      TREE_FUNC(T, Transplant)(tree, _z, _z->right);                           \
     } else if (!_z->right) {                                                   \
-      TTREE_FN(T, Transplant)(tree, _z, _z->left);                            \
+      TREE_FUNC(T, Transplant)(tree, _z, _z->left);                            \
     } else {                                                                   \
-      TTREE_NODE(T) *_s = TTREE_FN(T, MinNode)(_z->right);                    \
+      TREE_NODE(T) *_s = TREE_FUNC(T, MinNode)(_z->right);                     \
       _rb_start = _s->parent;                                                  \
       if (_s->parent != _z) {                                                  \
-        TTREE_FN(T, Transplant)(tree, _s, _s->right);                         \
+        TREE_FUNC(T, Transplant)(tree, _s, _s->right);                         \
         _s->right = _z->right;                                                 \
         _s->right->parent = _s;                                                \
       } else {                                                                 \
         _rb_start = _s;                                                        \
       }                                                                        \
-      TTREE_FN(T, Transplant)(tree, _z, _s);                                  \
+      TREE_FUNC(T, Transplant)(tree, _z, _s);                                  \
       _s->left = _z->left;                                                     \
       _s->left->parent = _s;                                                   \
     }                                                                          \
-    Memory_Free(_z);                                                          \
+    Memory_Free(_z);                                                           \
     tree->size--;                                                              \
     if (_rb_start)                                                             \
-      TTREE_FN(T, Rebalance)(tree, _rb_start);                                \
-    return STATUS_CONST(SUCCESS);                                                 \
+      TREE_FUNC(T, Rebalance)(tree, _rb_start);                                \
+    return STATUS_CONST(SUCCESS);                                              \
   }
 
 /* =============================================================
  * CreateNode + Insert — SET
  * ============================================================= */
 
-#define COSMERON_MACRO_INTERNAL_TAVL_IMPLEMENT_SET(T, KEY_TYPE, CMP)                                  \
-  static inline TTREE_NODE(T) *                                                \
-      TTREE_FN(T, CreateNode)(KEY_TYPE key) {                                  \
-    TTREE_NODE(T) *_n;                                                        \
-    void *allocated = NULL;                                                   \
-    if (ALLOC_FUNC(AllocArray)(&allocated, 1U, sizeof(TTREE_NODE(T))) !=       \
-        STATUS_CONST(SUCCESS))                                                   \
+#define COSMERON_MACRO_INTERNAL_TREE_AVL_IMPLEMENT_SET(T, KEY_TYPE, CMP)      \
+  static inline TREE_NODE(T) *                                                 \
+      TREE_FUNC(T, CreateNode)(KEY_TYPE key) {                                 \
+    TREE_NODE(T) *_n;                                                          \
+    void *allocated = NULL;                                                    \
+    if (ALLOC_FUNC(AllocArray)(&allocated, 1U, sizeof(TREE_NODE(T))) !=        \
+        STATUS_CONST(SUCCESS))                                                 \
       return NULL;                                                             \
-    _n = (TTREE_NODE(T) *)allocated;                                                             \
+    _n = (TREE_NODE(T) *)allocated;                                            \
     _n->key = key;                                                             \
     _n->left = NULL;                                                           \
     _n->right = NULL;                                                          \
@@ -144,54 +146,55 @@
     return _n;                                                                 \
   }                                                                            \
                                                                                \
-  TTREE_INSERT_SET_PROTOTYPE(T, KEY_TYPE) {         \
+  TREE_INSERT_SET_PROTOTYPE(T, KEY_TYPE) {                                     \
     if (!tree)                                                                 \
-      return STATUS_CONST(INVALID_ARGUMENT);                                      \
-    TTREE_NODE(T) *_n = TTREE_FN(T, CreateNode)(key);                          \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    TREE_NODE(T) *_n = TREE_FUNC(T, CreateNode)(key);                         \
     if (!_n)                                                                   \
-      return STATUS_CONST(OUT_OF_MEMORY);                                    \
+      return STATUS_CONST(OUT_OF_MEMORY);                                      \
     if (!tree->root) {                                                         \
       tree->root = _n;                                                         \
       tree->size++;                                                            \
-      return STATUS_CONST(SUCCESS);                                               \
+      return STATUS_CONST(SUCCESS);                                            \
     }                                                                          \
-    TTREE_NODE(T) *_cur = tree->root;                                           \
-    TTREE_NODE(T) *_par = NULL;                                                 \
+    TREE_NODE(T) *_cur = tree->root;                                           \
+    TREE_NODE(T) *_par = NULL;                                                 \
     while (_cur) {                                                             \
       _par = _cur;                                                             \
-      TTREE_CMPOUT _r = CMP(key, _cur->key);                                         \
-      if (_r < 0)                                                              \
+      TREE_CMPOUT _r = CMP(key, _cur->key);                                    \
+      if (_r < COMPARISON_EQUAL_CONST)                                         \
         _cur = _cur->left;                                                     \
-      else if (_r > 0)                                                         \
+      else if (_r > COMPARISON_EQUAL_CONST)                                    \
         _cur = _cur->right;                                                    \
       else {                                                                   \
-        Memory_Free(_n);                                                      \
-        return STATUS_CONST(ALREADY_EXISTS);                                               \
+        Memory_Free(_n);                                                       \
+        return STATUS_CONST(ALREADY_EXISTS);                                   \
       }                                                                        \
     }                                                                          \
     _n->parent = _par;                                                         \
-    if (CMP(key, _par->key) < 0)                                               \
+    if (CMP(key, _par->key) < COMPARISON_EQUAL_CONST)                          \
       _par->left = _n;                                                         \
     else                                                                       \
       _par->right = _n;                                                        \
     tree->size++;                                                              \
-    TTREE_FN(T, Rebalance)(tree, _par);                                        \
-    return STATUS_CONST(SUCCESS);                                                 \
+    TREE_FUNC(T, Rebalance)(tree, _par);                                       \
+    return STATUS_CONST(SUCCESS);                                              \
   }
 
 /* =============================================================
  * CreateNode + Insert — MAP
  * ============================================================= */
 
-#define COSMERON_MACRO_INTERNAL_TAVL_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                      \
-  static inline TTREE_NODE(T) *                                                \
-      TTREE_FN(T, CreateNode)(KEY_TYPE key, VALUE_TYPE value) {                \
-    TTREE_NODE(T) *_n;                                                        \
-    void *allocated = NULL;                                                   \
-    if (ALLOC_FUNC(AllocArray)(&allocated, 1U, sizeof(TTREE_NODE(T))) !=       \
-        STATUS_CONST(SUCCESS))                                                   \
+#define COSMERON_MACRO_INTERNAL_TREE_AVL_IMPLEMENT_MAP(T, KEY_TYPE,           \
+                                                        VALUE_TYPE, CMP)       \
+  static inline TREE_NODE(T) *                                                 \
+      TREE_FUNC(T, CreateNode)(KEY_TYPE key, VALUE_TYPE value) {               \
+    TREE_NODE(T) *_n;                                                          \
+    void *allocated = NULL;                                                    \
+    if (ALLOC_FUNC(AllocArray)(&allocated, 1U, sizeof(TREE_NODE(T))) !=        \
+        STATUS_CONST(SUCCESS))                                                 \
       return NULL;                                                             \
-    _n = (TTREE_NODE(T) *)allocated;                                                             \
+    _n = (TREE_NODE(T) *)allocated;                                            \
     _n->key = key;                                                             \
     _n->value = value;                                                         \
     _n->left = NULL;                                                           \
@@ -201,62 +204,70 @@
     return _n;                                                                 \
   }                                                                            \
                                                                                \
-  TTREE_INSERT_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE) {                              \
+  TREE_INSERT_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE) {                         \
     if (!tree)                                                                 \
-      return STATUS_CONST(INVALID_ARGUMENT);                                      \
-    TTREE_NODE(T) *_n = TTREE_FN(T, CreateNode)(key, value);                   \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    TREE_NODE(T) *_n = TREE_FUNC(T, CreateNode)(key, value);                  \
     if (!_n)                                                                   \
-      return STATUS_CONST(OUT_OF_MEMORY);                                    \
+      return STATUS_CONST(OUT_OF_MEMORY);                                      \
     if (!tree->root) {                                                         \
       tree->root = _n;                                                         \
       tree->size++;                                                            \
-      return STATUS_CONST(SUCCESS);                                               \
+      return STATUS_CONST(SUCCESS);                                            \
     }                                                                          \
-    TTREE_NODE(T) *_cur = tree->root;                                           \
-    TTREE_NODE(T) *_par = NULL;                                                 \
+    TREE_NODE(T) *_cur = tree->root;                                           \
+    TREE_NODE(T) *_par = NULL;                                                 \
     while (_cur) {                                                             \
       _par = _cur;                                                             \
-      TTREE_CMPOUT _r = CMP(key, _cur->key);                                         \
-      if (_r < 0)                                                              \
+      TREE_CMPOUT _r = CMP(key, _cur->key);                                    \
+      if (_r < COMPARISON_EQUAL_CONST)                                         \
         _cur = _cur->left;                                                     \
-      else if (_r > 0)                                                         \
+      else if (_r > COMPARISON_EQUAL_CONST)                                    \
         _cur = _cur->right;                                                    \
       else {                                                                   \
         _cur->value = value;                                                   \
-        Memory_Free(_n);                                                      \
-        return STATUS_CONST(ALREADY_EXISTS);                                               \
+        Memory_Free(_n);                                                       \
+        return STATUS_CONST(ALREADY_EXISTS);                                   \
       }                                                                        \
     }                                                                          \
     _n->parent = _par;                                                         \
-    if (CMP(key, _par->key) < 0)                                               \
+    if (CMP(key, _par->key) < COMPARISON_EQUAL_CONST)                          \
       _par->left = _n;                                                         \
     else                                                                       \
       _par->right = _n;                                                        \
     tree->size++;                                                              \
-    TTREE_FN(T, Rebalance)(tree, _par);                                        \
-    return STATUS_CONST(SUCCESS);                                                 \
+    TREE_FUNC(T, Rebalance)(tree, _par);                                       \
+    return STATUS_CONST(SUCCESS);                                              \
   }
 
 /* =============================================================
  * Full AVL SET expansion
  * ============================================================= */
 
-#define COSMERON_MACRO_INTERNAL_TAVL_SET_IMPLEMENT_ALL(T, KEY_TYPE, CMP)                                     \
-  COSMERON_MACRO_INTERNAL_TTREE_NODE_SET(T, KEY_TYPE, int height;)                                     \
-  COSMERON_MACRO_INTERNAL_TTREE_STRUCT(T)                                                              \
-  TTREE_SET_PROTOTYPES(T, KEY_TYPE)                                            \
-  COSMERON_MACRO_INTERNAL_TTREE_COMMON_SET(T, KEY_TYPE, CMP)                                           \
-  COSMERON_MACRO_INTERNAL_TAVL_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                       \
-  COSMERON_MACRO_INTERNAL_TAVL_IMPLEMENT_SET(T, KEY_TYPE, CMP)
+#define COSMERON_MACRO_INTERNAL_TREE_AVL_SET_IMPLEMENT_ALL(T, KEY_TYPE, CMP)  \
+  TREE_NODE_STRUCT_SET(T, KEY_TYPE, int height;)                               \
+  TREE_STRUCT(T)                                                               \
+  TREE_SET_PROTOTYPES(T, KEY_TYPE)                                             \
+  COSMERON_MACRO_INTERNAL_TREE_COMMON_SET(T, KEY_TYPE, CMP)                    \
+  COSMERON_MACRO_INTERNAL_TREE_AVL_IMPLEMENT_CORE(T, KEY_TYPE, CMP)            \
+  COSMERON_MACRO_INTERNAL_TREE_AVL_IMPLEMENT_SET(T, KEY_TYPE, CMP)
 
 /* =============================================================
  * Full AVL MAP expansion
  * ============================================================= */
 
-#define COSMERON_MACRO_INTERNAL_TAVL_MAP_IMPLEMENT_ALL(T, KEY_TYPE, VALUE_TYPE, CMP)                         \
-  COSMERON_MACRO_INTERNAL_TTREE_NODE_MAP(T, KEY_TYPE, VALUE_TYPE, int height;)                         \
-  COSMERON_MACRO_INTERNAL_TTREE_STRUCT(T)                                                              \
-  TTREE_MAP_PROTOTYPES(T, KEY_TYPE, VALUE_TYPE)                                \
-  COSMERON_MACRO_INTERNAL_TTREE_COMMON_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                               \
-  COSMERON_MACRO_INTERNAL_TAVL_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                       \
-  COSMERON_MACRO_INTERNAL_TAVL_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)
+#define COSMERON_MACRO_INTERNAL_TREE_AVL_MAP_IMPLEMENT_ALL(T, KEY_TYPE,       \
+                                                            VALUE_TYPE, CMP)   \
+  TREE_NODE_STRUCT_MAP(T, KEY_TYPE, VALUE_TYPE, int height;)                   \
+  TREE_STRUCT(T)                                                               \
+  TREE_MAP_PROTOTYPES(T, KEY_TYPE, VALUE_TYPE)                                 \
+  COSMERON_MACRO_INTERNAL_TREE_COMMON_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)        \
+  COSMERON_MACRO_INTERNAL_TREE_AVL_IMPLEMENT_CORE(T, KEY_TYPE, CMP)            \
+  COSMERON_MACRO_INTERNAL_TREE_AVL_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)
+
+/* Compatibility aliases */
+#define COSMERON_MACRO_INTERNAL_TAVL_IMPLEMENT_CORE COSMERON_MACRO_INTERNAL_TREE_AVL_IMPLEMENT_CORE
+#define COSMERON_MACRO_INTERNAL_TAVL_IMPLEMENT_SET COSMERON_MACRO_INTERNAL_TREE_AVL_IMPLEMENT_SET
+#define COSMERON_MACRO_INTERNAL_TAVL_IMPLEMENT_MAP COSMERON_MACRO_INTERNAL_TREE_AVL_IMPLEMENT_MAP
+#define COSMERON_MACRO_INTERNAL_TAVL_SET_IMPLEMENT_ALL COSMERON_MACRO_INTERNAL_TREE_AVL_SET_IMPLEMENT_ALL
+#define COSMERON_MACRO_INTERNAL_TAVL_MAP_IMPLEMENT_ALL COSMERON_MACRO_INTERNAL_TREE_AVL_MAP_IMPLEMENT_ALL

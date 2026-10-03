@@ -13,248 +13,319 @@
 #include <stdlib.h>
 
 /* =============================================================
- * Namespace base
+ * Module tokens and namespaces (Section 1, 8)
  * ============================================================= */
+
+#define TREE_MOD Tree
+#define TREE_CMOD TREE
 
 #define TREE_NS(NAME) GNS2(CONTAINER_NS(Tree), NAME)
+#define TREE_CNS(NAME) CNS3(LIB_PREFIX_CONST(CONTAINER_CMOD), TREE_CMOD, NAME)
+#define TREE_INS(NAME) GNS3(CONTAINER_NS(Tree), Internal, NAME)
+#define TREE_CINS(NAME) CNS3(LIB_PREFIX_CONST(CONTAINER_CMOD), TREE_CMOD, INTERNAL, NAME)
+#define TREE_CONST(NAME) TREE_CNS(NAME)
 
 /* =============================================================
- * Name generators
- *   TTREE_SET_TYPE(AVL, int)       → Tree_AVL_Set_int
- *   TTREE_MAP_TYPE(AVL, int, char) → Tree_AVL_Map_int_char
- *   TTREE_NODE(T)                  → T_Node
- *   TTREE_FN(T, Insert)            → T_Insert
+ * Compile-time FunctionTable switch (Section 4)
  * ============================================================= */
 
-#define TTREE_SET_TYPE(ALG, KEY) \
-  GNS2(GNS2(TREE_NS(ALG), Set), KEY)
-
-#define TTREE_MAP_TYPE(ALG, KEY, VAL) \
-  GNS2(GNS2(GNS2(TREE_NS(ALG), Map), KEY), VAL)
-
-#define TTREE_PUBLIC_SET_TYPE(ALG, KEY) \
-  GNS2(GNS2(TREE_NS(ALG), TSet), KEY)
-
-#define TTREE_PUBLIC_MAP_TYPE(ALG, KEY, VAL) \
-  GNS2(GNS2(GNS2(TREE_NS(ALG), TMap), KEY), VAL)
-
-#define TTREE_NODE(T) GNS2(T, Node)
-
-#define TTREE_FN(T, FUNC) PP_OP_CAT2(PP_OP_CAT2(T, _), FUNC)
-#define TTREE_FUNCTION_TABLE_TYPE(T) GNS2(T, FunctionTable)
-
-
-/* =============================================================
- * Operation prototypes
- * ============================================================= */
-
-#define TTREE_INIT_PROTOTYPE(T)                                               \
-  static inline OPSTATUS TTREE_FN(T, Init)(T *tree)
-#define TTREE_DESTROY_PROTOTYPE(T)                                            \
-  static inline void TTREE_FN(T, Destroy)(T *tree)
-#define TTREE_CLEAR_PROTOTYPE(T)                                              \
-  static inline void TTREE_FN(T, Clear)(T *tree)
-#define TTREE_INSERT_SET_PROTOTYPE(T, KEY_TYPE)                               \
-  static inline OPSTATUS TTREE_FN(T, Insert)(T *tree, KEY_TYPE key)
-#define TTREE_INSERT_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE)                   \
-  static inline OPSTATUS TTREE_FN(T, Insert)(                                 \
-      T *tree, KEY_TYPE key, VALUE_TYPE value)
-#define TTREE_REMOVE_PROTOTYPE(T, KEY_TYPE)                                   \
-  static inline OPSTATUS TTREE_FN(T, Remove)(T *tree, KEY_TYPE key)
-#define TTREE_FIND_NODE_PROTOTYPE(T, KEY_TYPE)                                \
-  static inline TTREE_NODE(T) *TTREE_FN(T, FindNode)(T *tree, KEY_TYPE key)
-#define TTREE_FIND_SET_PROTOTYPE(T, KEY_TYPE)                                 \
-  static inline OPSTATUS TTREE_FN(T, Find)(                                   \
-      T *tree, KEY_TYPE key, KEY_TYPE **out)
-#define TTREE_FIND_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE)                     \
-  static inline OPSTATUS TTREE_FN(T, Find)(                                   \
-      T *tree, KEY_TYPE key, VALUE_TYPE **out)
-#define TTREE_CONTAINS_PROTOTYPE(T, KEY_TYPE)                                 \
-  static inline bool TTREE_FN(T, Contains)(const T *tree, KEY_TYPE key)
-#define TTREE_MIN_NODE_PROTOTYPE(T)                                           \
-  static inline TTREE_NODE(T) *TTREE_FN(T, MinNode)(TTREE_NODE(T) *node)
-#define TTREE_MAX_NODE_PROTOTYPE(T)                                           \
-  static inline TTREE_NODE(T) *TTREE_FN(T, MaxNode)(TTREE_NODE(T) *node)
-#define TTREE_MIN_PROTOTYPE(T, KEY_TYPE)                                      \
-  static inline OPSTATUS TTREE_FN(T, Min)(T *tree, KEY_TYPE **out)
-#define TTREE_MAX_PROTOTYPE(T, KEY_TYPE)                                      \
-  static inline OPSTATUS TTREE_FN(T, Max)(T *tree, KEY_TYPE **out)
-#define TTREE_EMPTY_PROTOTYPE(T)                                              \
-  static inline bool TTREE_FN(T, Empty)(const T *tree)
-#define TTREE_SIZE_PROTOTYPE(T)                                               \
-  static inline size_t TTREE_FN(T, Size)(const T *tree)
-#define TTREE_BEGIN_PROTOTYPE(T)                                              \
-  static inline TTREE_NODE(T) *TTREE_FN(T, Begin)(T *tree)
-#define TTREE_END_PROTOTYPE(T)                                                \
-  static inline TTREE_NODE(T) *TTREE_FN(T, End)(T *tree)
-#define TTREE_NEXT_PROTOTYPE(T)                                               \
-  static inline TTREE_NODE(T) *TTREE_FN(T, Next)(TTREE_NODE(T) *node)
-#define TTREE_PREV_PROTOTYPE(T)                                               \
-  static inline TTREE_NODE(T) *TTREE_FN(T, Prev)(TTREE_NODE(T) *node)
-#define TTREE_CONST_BEGIN_PROTOTYPE(T)                                        \
-  static inline const TTREE_NODE(T) *TTREE_FN(T, ConstBegin)(const T *tree)
-#define TTREE_CONST_END_PROTOTYPE(T)                                          \
-  static inline const TTREE_NODE(T) *TTREE_FN(T, ConstEnd)(const T *tree)
-#define TTREE_CONST_NEXT_PROTOTYPE(T)                                         \
-  static inline const TTREE_NODE(T) *TTREE_FN(T, ConstNext)(                  \
-      const TTREE_NODE(T) *node)
-#define TTREE_CONST_PREV_PROTOTYPE(T)                                         \
-  static inline const TTREE_NODE(T) *TTREE_FN(T, ConstPrev)(                  \
-      const TTREE_NODE(T) *node)
-
-#define TTREE_SET_PROTOTYPES(T, KEY_TYPE)                                     \
-  TTREE_INIT_PROTOTYPE(T);                                                    \
-  TTREE_DESTROY_PROTOTYPE(T);                                                 \
-  TTREE_CLEAR_PROTOTYPE(T);                                                   \
-  TTREE_INSERT_SET_PROTOTYPE(T, KEY_TYPE);                                    \
-  TTREE_REMOVE_PROTOTYPE(T, KEY_TYPE);                                        \
-  TTREE_FIND_NODE_PROTOTYPE(T, KEY_TYPE);                                     \
-  TTREE_FIND_SET_PROTOTYPE(T, KEY_TYPE);                                      \
-  TTREE_CONTAINS_PROTOTYPE(T, KEY_TYPE);                                      \
-  TTREE_MIN_NODE_PROTOTYPE(T);                                                \
-  TTREE_MAX_NODE_PROTOTYPE(T);                                                \
-  TTREE_MIN_PROTOTYPE(T, KEY_TYPE);                                           \
-  TTREE_MAX_PROTOTYPE(T, KEY_TYPE);                                           \
-  TTREE_EMPTY_PROTOTYPE(T);                                                   \
-  TTREE_SIZE_PROTOTYPE(T);                                                    \
-  TTREE_BEGIN_PROTOTYPE(T);                                                   \
-  TTREE_END_PROTOTYPE(T);                                                     \
-  TTREE_NEXT_PROTOTYPE(T);                                                    \
-  TTREE_PREV_PROTOTYPE(T);                                                    \
-  TTREE_CONST_BEGIN_PROTOTYPE(T);                                             \
-  TTREE_CONST_END_PROTOTYPE(T);                                               \
-  TTREE_CONST_NEXT_PROTOTYPE(T);                                              \
-  TTREE_CONST_PREV_PROTOTYPE(T);
-
-#define TTREE_MAP_PROTOTYPES(T, KEY_TYPE, VALUE_TYPE)                         \
-  TTREE_INIT_PROTOTYPE(T);                                                    \
-  TTREE_DESTROY_PROTOTYPE(T);                                                 \
-  TTREE_CLEAR_PROTOTYPE(T);                                                   \
-  TTREE_INSERT_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE);                        \
-  TTREE_REMOVE_PROTOTYPE(T, KEY_TYPE);                                        \
-  TTREE_FIND_NODE_PROTOTYPE(T, KEY_TYPE);                                     \
-  TTREE_FIND_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE);                          \
-  TTREE_CONTAINS_PROTOTYPE(T, KEY_TYPE);                                      \
-  TTREE_MIN_NODE_PROTOTYPE(T);                                                \
-  TTREE_MAX_NODE_PROTOTYPE(T);                                                \
-  TTREE_MIN_PROTOTYPE(T, KEY_TYPE);                                           \
-  TTREE_MAX_PROTOTYPE(T, KEY_TYPE);                                           \
-  TTREE_EMPTY_PROTOTYPE(T);                                                   \
-  TTREE_SIZE_PROTOTYPE(T);                                                    \
-  TTREE_BEGIN_PROTOTYPE(T);                                                   \
-  TTREE_END_PROTOTYPE(T);                                                     \
-  TTREE_NEXT_PROTOTYPE(T);                                                    \
-  TTREE_PREV_PROTOTYPE(T);                                                    \
-  TTREE_CONST_BEGIN_PROTOTYPE(T);                                             \
-  TTREE_CONST_END_PROTOTYPE(T);                                               \
-  TTREE_CONST_NEXT_PROTOTYPE(T);                                              \
-  TTREE_CONST_PREV_PROTOTYPE(T);
-
-/* =============================================================
- * Comparator output type — default is int.
- * Override by defining TTREE_CMPOUT before including the algorithm.
- * ============================================================= */
-
-#ifndef TTREE_CMPOUT
-#define TTREE_CMPOUT CMPOUT
+#if !defined(TREE_DISABLE_FUNCTION_TABLE) && COSMERON_MACRO_INTERNAL_CONTAINER_FUNCTION_TABLE_ENABLED
+#define COSMERON_MACRO_INTERNAL_TREE_FUNCTION_TABLE_ENABLED 1
+#else
+#define COSMERON_MACRO_INTERNAL_TREE_FUNCTION_TABLE_ENABLED 0
 #endif
 
 /* =============================================================
- * One-liner: declare + bind FunctionTable + init.
- *
- *   TREE_SET_DECLARE(AVL, int, s)   ->   TTREE_SET_TYPE(AVL, int) s = {
- *                                .api = &TTREE_FN(..., functions),
- *                                .root = NULL, .size = 0
- *                              };
- *   TREE_MAP_DECLARE(AVL, int, int, m)
+ * Type and symbol name generators (Section 1, 2, 8)
+ *   TREE_SET_TYPE(AVL, int)       → Container_Tree_AVL_Set_int
+ *   TREE_MAP_TYPE(AVL, int, char) → Container_Tree_AVL_Map_int_char
+ *   TREE_NODE(T)                  → T_Node
+ *   TREE_FUNC(T, Insert)          → T_Insert
  * ============================================================= */
 
-#define TREE_SET_DECLARE(ALG, KEY, NAME)                                                  \
-  TTREE_SET_TYPE(ALG, KEY) NAME = {                                             \
-      CONTAINER_API_INITIALIZER(TTREE_FN(TTREE_SET_TYPE(ALG, KEY), functions))                    \
-      .root = NULL,                                                             \
-      .size = 0,                                                                \
-  }
+#define TREE_SET_TYPE(ALG, KEY) \
+  GNS2(GNS2(TREE_NS(ALG), Set), KEY)
 
-#define TREE_MAP_DECLARE(ALG, KEY, VAL, NAME)                                             \
-  TTREE_MAP_TYPE(ALG, KEY, VAL) NAME = {                                        \
-      CONTAINER_API_INITIALIZER(                                              \
-          TTREE_FN(TTREE_MAP_TYPE(ALG, KEY, VAL), functions))               \
-      .root = NULL,                                                             \
-      .size = 0,                                                                \
-  }
+#define TREE_MAP_TYPE(ALG, KEY, VAL) \
+  GNS2(GNS2(GNS2(TREE_NS(ALG), Map), KEY), VAL)
+
+#define TREE_PUBLIC_SET_TYPE(ALG, KEY) \
+  GNS2(GNS2(TREE_NS(ALG), TSet), KEY)
+
+#define TREE_PUBLIC_MAP_TYPE(ALG, KEY, VAL) \
+  GNS2(GNS2(GNS2(TREE_NS(ALG), TMap), KEY), VAL)
+
+#define TREE_NODE(T) GNS2(T, Node)
+#define TREE_FUNC(T, FUNC) GNS2(T, FUNC)
+#define TREE_FN(T, FUNC) TREE_FUNC(T, FUNC)
+#define TREE_FUNCTION_TABLE_TYPE(T) GNS2(T, FunctionTable)
+
+/* Compatibility aliases for older TTREE_* generator forms */
+#define TTREE_SET_TYPE(ALG, KEY) TREE_SET_TYPE(ALG, KEY)
+#define TTREE_MAP_TYPE(ALG, KEY, VAL) TREE_MAP_TYPE(ALG, KEY, VAL)
+#define TTREE_PUBLIC_SET_TYPE(ALG, KEY) TREE_PUBLIC_SET_TYPE(ALG, KEY)
+#define TTREE_PUBLIC_MAP_TYPE(ALG, KEY, VAL) TREE_PUBLIC_MAP_TYPE(ALG, KEY, VAL)
+#define TTREE_NODE(T) TREE_NODE(T)
+#define TTREE_FN(T, FUNC) TREE_FUNC(T, FUNC)
+#define TTREE_FUNCTION_TABLE_TYPE(T) TREE_FUNCTION_TABLE_TYPE(T)
 
 /* =============================================================
- * FunctionTable structs — declared here (in the public header) so
- * that code using the tree can take a pointer to the FunctionTable
- * typedef without including the FunctionTable header file.
- *
- *   TTREE_FUNCTION_TABLE_STRUCT_SET(T, KEY_TYPE)
- *     -> typedef struct T_FunctionTable { ... } T_FunctionTable;
- *   TTREE_FUNCTION_TABLE_STRUCT_MAP(T, KEY_TYPE, VALUE_TYPE)
- *     -> same, for MAP.
- *
- * The matching `*_INSTANCE` macros (the static const function tables
- * themselves) live in FunctionTable/Tree.h.
+ * Red-Black Color X-Macro and Enum (Section 5, 6, 9)
  * ============================================================= */
 
-#if COSMERON_MACRO_INTERNAL_CONTAINER_FUNCTION_TABLE_ENABLED
+#define TREE_RB_COLOR_TABLE(X) \
+  X(TREE_CONST(RB_RED), 0, "Red") \
+  X(TREE_CONST(RB_BLACK), 1, "Black")
 
-#define TTREE_FUNCTION_TABLE_STRUCT_SET(T, KEY_TYPE)                                          \
-  typedef struct TTREE_FUNCTION_TABLE_TYPE(T) {                               \
-    OPSTATUS (*init)(T *);                                                     \
-    void (*destroy)(T *);                                                      \
-    void (*clear)(T *);                                                        \
-    OPSTATUS (*insert)(T *, KEY_TYPE);                                         \
-    OPSTATUS (*remove)(T *, KEY_TYPE);                                         \
-    TTREE_NODE(T) * (*findNode)(T *, KEY_TYPE);                               \
-    OPSTATUS (*find)(T *, KEY_TYPE, KEY_TYPE **);                                      \
-    bool (*contains)(const T *, KEY_TYPE);                                           \
-    TTREE_NODE(T) * (*minNode)(TTREE_NODE(T) *);                              \
-    TTREE_NODE(T) * (*maxNode)(TTREE_NODE(T) *);                              \
-    OPSTATUS (*min)(T *, KEY_TYPE **);                                                     \
-    OPSTATUS (*max)(T *, KEY_TYPE **);                                                     \
-    bool (*empty)(const T *);                                                        \
-    size_t (*size)(const T *);                                                       \
-    TTREE_NODE(T) * (*begin)(T *);                                             \
-    TTREE_NODE(T) * (*end)(T *);                                               \
-    TTREE_NODE(T) * (*next)(TTREE_NODE(T) *);                                  \
-    TTREE_NODE(T) * (*prev)(TTREE_NODE(T) *);                                  \
-    const TTREE_NODE(T) *(*constBegin)(const T *);                             \
-    const TTREE_NODE(T) *(*constEnd)(const T *);                               \
-    const TTREE_NODE(T) *(*constNext)(const TTREE_NODE(T) *);                  \
-    const TTREE_NODE(T) *(*constPrev)(const TTREE_NODE(T) *);                  \
-  } TTREE_FUNCTION_TABLE_TYPE(T);
+typedef enum TREE_NS(RBColor) {
+#define COSMERON_MACRO_INTERNAL_TREE_COLOR_X(NAME, VALUE, DESC) NAME = (VALUE),
+  TREE_RB_COLOR_TABLE(COSMERON_MACRO_INTERNAL_TREE_COLOR_X)
+#undef COSMERON_MACRO_INTERNAL_TREE_COLOR_X
+} TREE_NS(RBColor);
 
-#define TTREE_FUNCTION_TABLE_STRUCT_MAP(T, KEY_TYPE, VALUE_TYPE)                              \
-  typedef struct TTREE_FUNCTION_TABLE_TYPE(T) {                               \
-    OPSTATUS (*init)(T *);                                                     \
-    void (*destroy)(T *);                                                      \
-    void (*clear)(T *);                                                        \
-    OPSTATUS (*insert)(T *, KEY_TYPE, VALUE_TYPE);                             \
-    OPSTATUS (*remove)(T *, KEY_TYPE);                                         \
-    TTREE_NODE(T) * (*findNode)(T *, KEY_TYPE);                               \
-    OPSTATUS (*find)(T *, KEY_TYPE, VALUE_TYPE **);                                  \
-    bool (*contains)(const T *, KEY_TYPE);                                           \
-    TTREE_NODE(T) * (*minNode)(TTREE_NODE(T) *);                              \
-    TTREE_NODE(T) * (*maxNode)(TTREE_NODE(T) *);                              \
-    OPSTATUS (*min)(T *, KEY_TYPE **);                                                     \
-    OPSTATUS (*max)(T *, KEY_TYPE **);                                                     \
-    bool (*empty)(const T *);                                                        \
-    size_t (*size)(const T *);                                                       \
-    TTREE_NODE(T) * (*begin)(T *);                                             \
-    TTREE_NODE(T) * (*end)(T *);                                               \
-    TTREE_NODE(T) * (*next)(TTREE_NODE(T) *);                                  \
-    TTREE_NODE(T) * (*prev)(TTREE_NODE(T) *);                                  \
-    const TTREE_NODE(T) *(*constBegin)(const T *);                             \
-    const TTREE_NODE(T) *(*constEnd)(const T *);                               \
-    const TTREE_NODE(T) *(*constNext)(const TTREE_NODE(T) *);                  \
-    const TTREE_NODE(T) *(*constPrev)(const TTREE_NODE(T) *);                  \
-  } TTREE_FUNCTION_TABLE_TYPE(T);
+typedef TREE_NS(RBColor) TREE_RBColor;
+#define TREE_RB_RED TREE_CONST(RB_RED)
+#define TREE_RB_BLACK TREE_CONST(RB_BLACK)
 
+/* =============================================================
+ * Struct generators (Section 4, 8)
+ * ============================================================= */
+
+#define TREE_NODE_STRUCT_SET(T, KEY_TYPE, EXTRA_FIELDS)                        \
+  typedef struct TREE_NODE(T) {                                                \
+    KEY_TYPE key;                                                              \
+    struct TREE_NODE(T) *left;                                                 \
+    struct TREE_NODE(T) *right;                                                \
+    struct TREE_NODE(T) *parent;                                               \
+    EXTRA_FIELDS                                                               \
+  } TREE_NODE(T);
+
+#define TREE_NODE_STRUCT_MAP(T, KEY_TYPE, VALUE_TYPE, EXTRA_FIELDS)           \
+  typedef struct TREE_NODE(T) {                                                \
+    KEY_TYPE key;                                                              \
+    VALUE_TYPE value;                                                          \
+    struct TREE_NODE(T) *left;                                                 \
+    struct TREE_NODE(T) *right;                                                \
+    struct TREE_NODE(T) *parent;                                               \
+    EXTRA_FIELDS                                                               \
+  } TREE_NODE(T);
+
+#define TREE_STRUCT(T)                                                         \
+  CONTAINER_API_FORWARD(TREE_FUNCTION_TABLE_TYPE(T))                           \
+  typedef struct T {                                                           \
+    CONTAINER_API_FIELD(TREE_FUNCTION_TABLE_TYPE(T))                           \
+    TREE_NODE(T) *root;                                                        \
+    size_t size;                                                               \
+  } T;
+
+#define COSMERON_MACRO_INTERNAL_TTREE_NODE_SET TREE_NODE_STRUCT_SET
+#define COSMERON_MACRO_INTERNAL_TTREE_NODE_MAP TREE_NODE_STRUCT_MAP
+#define COSMERON_MACRO_INTERNAL_TTREE_STRUCT TREE_STRUCT
+
+/* =============================================================
+ * Operation prototypes (Section 3, 10)
+ * ============================================================= */
+
+#define TREE_INIT_PROTOTYPE(T)                                                 \
+  static inline OPSTATUS TREE_FUNC(T, Init)(T *tree)
+
+#define TREE_DESTROY_PROTOTYPE(T)                                              \
+  static inline void TREE_FUNC(T, Destroy)(T *tree)
+
+#define TREE_CLEAR_PROTOTYPE(T)                                                \
+  static inline void TREE_FUNC(T, Clear)(T *tree)
+
+#define TREE_INSERT_SET_PROTOTYPE(T, KEY_TYPE)                                \
+  static inline OPSTATUS TREE_FUNC(T, Insert)(T *tree, KEY_TYPE key)
+
+#define TREE_INSERT_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE)                    \
+  static inline OPSTATUS TREE_FUNC(T, Insert)(                                 \
+      T *tree, KEY_TYPE key, VALUE_TYPE value)
+
+#define TREE_REMOVE_PROTOTYPE(T, KEY_TYPE)                                    \
+  static inline OPSTATUS TREE_FUNC(T, Remove)(T *tree, KEY_TYPE key)
+
+#define TREE_FIND_NODE_PROTOTYPE(T, KEY_TYPE)                                 \
+  static inline TREE_NODE(T) *TREE_FUNC(T, FindNode)(T *tree, KEY_TYPE key)
+
+#define TREE_FIND_SET_PROTOTYPE(T, KEY_TYPE)                                  \
+  static inline OPSTATUS TREE_FUNC(T, Find)(                                  \
+      T *tree, KEY_TYPE key, KEY_TYPE **out)
+
+#define TREE_FIND_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE)                      \
+  static inline OPSTATUS TREE_FUNC(T, Find)(                                  \
+      T *tree, KEY_TYPE key, VALUE_TYPE **out)
+
+#define TREE_CONTAINS_PROTOTYPE(T, KEY_TYPE)                                  \
+  static inline bool TREE_FUNC(T, Contains)(const T *tree, KEY_TYPE key)
+
+#define TREE_MIN_NODE_PROTOTYPE(T)                                            \
+  static inline TREE_NODE(T) *TREE_FUNC(T, MinNode)(TREE_NODE(T) *node)
+
+#define TREE_MAX_NODE_PROTOTYPE(T)                                            \
+  static inline TREE_NODE(T) *TREE_FUNC(T, MaxNode)(TREE_NODE(T) *node)
+
+#define TREE_MIN_PROTOTYPE(T, KEY_TYPE)                                       \
+  static inline OPSTATUS TREE_FUNC(T, Min)(T *tree, KEY_TYPE **out)
+
+#define TREE_MAX_PROTOTYPE(T, KEY_TYPE)                                       \
+  static inline OPSTATUS TREE_FUNC(T, Max)(T *tree, KEY_TYPE **out)
+
+#define TREE_EMPTY_PROTOTYPE(T)                                               \
+  static inline bool TREE_FUNC(T, Empty)(const T *tree)
+
+#define TREE_SIZE_PROTOTYPE(T)                                                \
+  static inline size_t TREE_FUNC(T, Size)(const T *tree)
+
+#define TREE_BEGIN_PROTOTYPE(T)                                               \
+  static inline TREE_NODE(T) *TREE_FUNC(T, Begin)(T *tree)
+
+#define TREE_END_PROTOTYPE(T)                                                 \
+  static inline TREE_NODE(T) *TREE_FUNC(T, End)(T *tree)
+
+#define TREE_NEXT_PROTOTYPE(T)                                                \
+  static inline TREE_NODE(T) *TREE_FUNC(T, Next)(TREE_NODE(T) *node)
+
+#define TREE_PREV_PROTOTYPE(T)                                                \
+  static inline TREE_NODE(T) *TREE_FUNC(T, Prev)(TREE_NODE(T) *node)
+
+#define TREE_CONST_BEGIN_PROTOTYPE(T)                                         \
+  static inline const TREE_NODE(T) *TREE_FUNC(T, ConstBegin)(const T *tree)
+
+#define TREE_CONST_END_PROTOTYPE(T)                                           \
+  static inline const TREE_NODE(T) *TREE_FUNC(T, ConstEnd)(const T *tree)
+
+#define TREE_CONST_NEXT_PROTOTYPE(T)                                          \
+  static inline const TREE_NODE(T) *TREE_FUNC(T, ConstNext)(                  \
+      const TREE_NODE(T) *node)
+
+#define TREE_CONST_PREV_PROTOTYPE(T)                                          \
+  static inline const TREE_NODE(T) *TREE_FUNC(T, ConstPrev)(                  \
+      const TREE_NODE(T) *node)
+
+/* Compatibility prototype aliases */
+#define TTREE_INIT_PROTOTYPE(T) TREE_INIT_PROTOTYPE(T)
+#define TTREE_DESTROY_PROTOTYPE(T) TREE_DESTROY_PROTOTYPE(T)
+#define TTREE_CLEAR_PROTOTYPE(T) TREE_CLEAR_PROTOTYPE(T)
+#define TTREE_INSERT_SET_PROTOTYPE(T, KEY_TYPE) TREE_INSERT_SET_PROTOTYPE(T, KEY_TYPE)
+#define TTREE_INSERT_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE) TREE_INSERT_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE)
+#define TTREE_REMOVE_PROTOTYPE(T, KEY_TYPE) TREE_REMOVE_PROTOTYPE(T, KEY_TYPE)
+#define TTREE_FIND_NODE_PROTOTYPE(T, KEY_TYPE) TREE_FIND_NODE_PROTOTYPE(T, KEY_TYPE)
+#define TTREE_FIND_SET_PROTOTYPE(T, KEY_TYPE) TREE_FIND_SET_PROTOTYPE(T, KEY_TYPE)
+#define TTREE_FIND_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE) TREE_FIND_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE)
+#define TTREE_CONTAINS_PROTOTYPE(T, KEY_TYPE) TREE_CONTAINS_PROTOTYPE(T, KEY_TYPE)
+#define TTREE_MIN_NODE_PROTOTYPE(T) TREE_MIN_NODE_PROTOTYPE(T)
+#define TTREE_MAX_NODE_PROTOTYPE(T) TREE_MAX_NODE_PROTOTYPE(T)
+#define TTREE_MIN_PROTOTYPE(T, KEY_TYPE) TREE_MIN_PROTOTYPE(T, KEY_TYPE)
+#define TTREE_MAX_PROTOTYPE(T, KEY_TYPE) TREE_MAX_PROTOTYPE(T, KEY_TYPE)
+#define TTREE_EMPTY_PROTOTYPE(T) TREE_EMPTY_PROTOTYPE(T)
+#define TTREE_SIZE_PROTOTYPE(T) TREE_SIZE_PROTOTYPE(T)
+#define TTREE_BEGIN_PROTOTYPE(T) TREE_BEGIN_PROTOTYPE(T)
+#define TTREE_END_PROTOTYPE(T) TREE_END_PROTOTYPE(T)
+#define TTREE_NEXT_PROTOTYPE(T) TREE_NEXT_PROTOTYPE(T)
+#define TTREE_PREV_PROTOTYPE(T) TREE_PREV_PROTOTYPE(T)
+#define TTREE_CONST_BEGIN_PROTOTYPE(T) TREE_CONST_BEGIN_PROTOTYPE(T)
+#define TTREE_CONST_END_PROTOTYPE(T) TREE_CONST_END_PROTOTYPE(T)
+#define TTREE_CONST_NEXT_PROTOTYPE(T) TREE_CONST_NEXT_PROTOTYPE(T)
+#define TTREE_CONST_PREV_PROTOTYPE(T) TREE_CONST_PREV_PROTOTYPE(T)
+
+#define TREE_SET_PROTOTYPES(T, KEY_TYPE)                                      \
+  TREE_INIT_PROTOTYPE(T);                                                     \
+  TREE_DESTROY_PROTOTYPE(T);                                                  \
+  TREE_CLEAR_PROTOTYPE(T);                                                    \
+  TREE_INSERT_SET_PROTOTYPE(T, KEY_TYPE);                                     \
+  TREE_REMOVE_PROTOTYPE(T, KEY_TYPE);                                         \
+  TREE_FIND_NODE_PROTOTYPE(T, KEY_TYPE);                                      \
+  TREE_FIND_SET_PROTOTYPE(T, KEY_TYPE);                                       \
+  TREE_CONTAINS_PROTOTYPE(T, KEY_TYPE);                                       \
+  TREE_MIN_NODE_PROTOTYPE(T);                                                 \
+  TREE_MAX_NODE_PROTOTYPE(T);                                                 \
+  TREE_MIN_PROTOTYPE(T, KEY_TYPE);                                            \
+  TREE_MAX_PROTOTYPE(T, KEY_TYPE);                                            \
+  TREE_EMPTY_PROTOTYPE(T);                                                    \
+  TREE_SIZE_PROTOTYPE(T);                                                     \
+  TREE_BEGIN_PROTOTYPE(T);                                                    \
+  TREE_END_PROTOTYPE(T);                                                      \
+  TREE_NEXT_PROTOTYPE(T);                                                     \
+  TREE_PREV_PROTOTYPE(T);                                                     \
+  TREE_CONST_BEGIN_PROTOTYPE(T);                                              \
+  TREE_CONST_END_PROTOTYPE(T);                                                \
+  TREE_CONST_NEXT_PROTOTYPE(T);                                               \
+  TREE_CONST_PREV_PROTOTYPE(T);
+
+#define TTREE_SET_PROTOTYPES(T, KEY_TYPE) TREE_SET_PROTOTYPES(T, KEY_TYPE)
+
+#define TREE_MAP_PROTOTYPES(T, KEY_TYPE, VALUE_TYPE)                          \
+  TREE_INIT_PROTOTYPE(T);                                                     \
+  TREE_DESTROY_PROTOTYPE(T);                                                  \
+  TREE_CLEAR_PROTOTYPE(T);                                                    \
+  TREE_INSERT_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE);                         \
+  TREE_REMOVE_PROTOTYPE(T, KEY_TYPE);                                         \
+  TREE_FIND_NODE_PROTOTYPE(T, KEY_TYPE);                                      \
+  TREE_FIND_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE);                           \
+  TREE_CONTAINS_PROTOTYPE(T, KEY_TYPE);                                       \
+  TREE_MIN_NODE_PROTOTYPE(T);                                                 \
+  TREE_MAX_NODE_PROTOTYPE(T);                                                 \
+  TREE_MIN_PROTOTYPE(T, KEY_TYPE);                                            \
+  TREE_MAX_PROTOTYPE(T, KEY_TYPE);                                            \
+  TREE_EMPTY_PROTOTYPE(T);                                                    \
+  TREE_SIZE_PROTOTYPE(T);                                                     \
+  TREE_BEGIN_PROTOTYPE(T);                                                    \
+  TREE_END_PROTOTYPE(T);                                                      \
+  TREE_NEXT_PROTOTYPE(T);                                                     \
+  TREE_PREV_PROTOTYPE(T);                                                     \
+  TREE_CONST_BEGIN_PROTOTYPE(T);                                              \
+  TREE_CONST_END_PROTOTYPE(T);                                                \
+  TREE_CONST_NEXT_PROTOTYPE(T);                                               \
+  TREE_CONST_PREV_PROTOTYPE(T);
+
+#define TTREE_MAP_PROTOTYPES(T, KEY_TYPE, VALUE_TYPE) \
+  TREE_MAP_PROTOTYPES(T, KEY_TYPE, VALUE_TYPE)
+
+/* =============================================================
+ * Comparator output type — default is CMPOUT (Section 5)
+ * ============================================================= */
+
+#ifndef TREE_CMPOUT
+#define TREE_CMPOUT CMPOUT
+#endif
+
+#ifndef TTREE_CMPOUT
+#define TTREE_CMPOUT TREE_CMPOUT
+#endif
+
+/* =============================================================
+ * One-liner: declare + bind FunctionTable + init
+ * ============================================================= */
+
+#if COSMERON_MACRO_INTERNAL_TREE_FUNCTION_TABLE_ENABLED
+#define TREE_SET_DECLARE(ALG, KEY, NAME)                                       \
+  TREE_SET_TYPE(ALG, KEY) NAME = {                                             \
+      CONTAINER_API_INITIALIZER(                                               \
+          TREE_FUNC(TREE_SET_TYPE(ALG, KEY), functions))                       \
+      .root = NULL,                                                            \
+      .size = 0,                                                               \
+  }
+
+#define TREE_MAP_DECLARE(ALG, KEY, VAL, NAME)                                  \
+  TREE_MAP_TYPE(ALG, KEY, VAL) NAME = {                                        \
+      CONTAINER_API_INITIALIZER(                                               \
+          TREE_FUNC(TREE_MAP_TYPE(ALG, KEY, VAL), functions))                  \
+      .root = NULL,                                                            \
+      .size = 0,                                                               \
+  }
 #else
-#define TTREE_FUNCTION_TABLE_STRUCT_SET(...)
-#define TTREE_FUNCTION_TABLE_STRUCT_MAP(...)
+#define TREE_SET_DECLARE(ALG, KEY, NAME)                                       \
+  TREE_SET_TYPE(ALG, KEY) NAME = {                                             \
+      .root = NULL,                                                            \
+      .size = 0,                                                               \
+  }
+
+#define TREE_MAP_DECLARE(ALG, KEY, VAL, NAME)                                  \
+  TREE_MAP_TYPE(ALG, KEY, VAL) NAME = {                                        \
+      .root = NULL,                                                            \
+      .size = 0,                                                               \
+  }
 #endif
 
 #include "FunctionTable/Tree.h"

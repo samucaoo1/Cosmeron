@@ -1,3 +1,4 @@
+#pragma once
 
 /* =============================================================
  * Observers — FindNode, Contains, MinNode, MaxNode, Min, Max,
@@ -5,20 +6,20 @@
  * Shared by all algorithms.  CMP is baked at compile time.
  *
  * Find is split:
- *   COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_FIND_SET  → OPSTATUS + KEY_TYPE **out
- *   COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_FIND_MAP  → OPSTATUS + VALUE_TYPE **out
+ *   COSMERON_MACRO_INTERNAL_TREE_IMPLEMENT_FIND_SET  → OPSTATUS + KEY_TYPE **out
+ *   COSMERON_MACRO_INTERNAL_TREE_IMPLEMENT_FIND_MAP  → OPSTATUS + VALUE_TYPE **out
  * ============================================================= */
 
-#define COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_OBSERVERS(T, KEY_TYPE, CMP)                            \
-  TTREE_FIND_NODE_PROTOTYPE(T, KEY_TYPE) {                          \
+#define COSMERON_MACRO_INTERNAL_TREE_IMPLEMENT_OBSERVERS(T, KEY_TYPE, CMP)     \
+  TREE_FIND_NODE_PROTOTYPE(T, KEY_TYPE) {                                      \
     if (!tree)                                                                 \
       return NULL;                                                             \
-    TTREE_NODE(T) *current = tree->root;                                       \
+    TREE_NODE(T) *current = tree->root;                                        \
     while (current) {                                                          \
-      TTREE_CMPOUT _r = CMP(key, current->key);                                      \
-      if (_r < 0)                                                              \
+      TREE_CMPOUT _comparison = CMP(key, current->key);                        \
+      if (_comparison < COMPARISON_EQUAL_CONST)                                \
         current = current->left;                                               \
-      else if (_r > 0)                                                         \
+      else if (_comparison > COMPARISON_EQUAL_CONST)                           \
         current = current->right;                                              \
       else                                                                     \
         return current;                                                        \
@@ -26,20 +27,23 @@
     return NULL;                                                               \
   }                                                                            \
                                                                                \
-  TTREE_CONTAINS_PROTOTYPE(T, KEY_TYPE) {       \
+  TREE_CONTAINS_PROTOTYPE(T, KEY_TYPE) {                                       \
     if (!tree)                                                                 \
       return false;                                                            \
-    const TTREE_NODE(T) *current = tree->root;                                 \
+    const TREE_NODE(T) *current = tree->root;                                  \
     while (current) {                                                          \
-      TTREE_CMPOUT result = CMP(key, current->key);                            \
-      if (result < 0) current = current->left;                                 \
-      else if (result > 0) current = current->right;                           \
-      else return true;                                                        \
+      TREE_CMPOUT _comparison = CMP(key, current->key);                        \
+      if (_comparison < COMPARISON_EQUAL_CONST)                                \
+        current = current->left;                                               \
+      else if (_comparison > COMPARISON_EQUAL_CONST)                           \
+        current = current->right;                                              \
+      else                                                                     \
+        return true;                                                           \
     }                                                                          \
     return false;                                                              \
   }                                                                            \
                                                                                \
-  TTREE_MIN_NODE_PROTOTYPE(T) {                            \
+  TREE_MIN_NODE_PROTOTYPE(T) {                                                 \
     if (!node)                                                                 \
       return NULL;                                                             \
     while (node->left)                                                         \
@@ -47,7 +51,7 @@
     return node;                                                               \
   }                                                                            \
                                                                                \
-  TTREE_MAX_NODE_PROTOTYPE(T) {                            \
+  TREE_MAX_NODE_PROTOTYPE(T) {                                                 \
     if (!node)                                                                 \
       return NULL;                                                             \
     while (node->right)                                                        \
@@ -55,45 +59,45 @@
     return node;                                                               \
   }                                                                            \
                                                                                \
-  TTREE_MIN_PROTOTYPE(T, KEY_TYPE) {           \
-    TTREE_NODE(T) *node;                                                       \
-    if (!tree || !out)                                                        \
+  TREE_MIN_PROTOTYPE(T, KEY_TYPE) {                                            \
+    TREE_NODE(T) *node;                                                        \
+    if (!tree || !out)                                                         \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    node = TTREE_FN(T, MinNode)(tree->root);                                   \
-    if (!node)                                                                \
+    node = TREE_FUNC(T, MinNode)(tree->root);                                  \
+    if (!node)                                                                 \
       return STATUS_CONST(NOT_FOUND);                                          \
     *out = &node->key;                                                         \
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
                                                                                \
-  TTREE_MAX_PROTOTYPE(T, KEY_TYPE) {           \
-    TTREE_NODE(T) *node;                                                       \
-    if (!tree || !out)                                                        \
+  TREE_MAX_PROTOTYPE(T, KEY_TYPE) {                                            \
+    TREE_NODE(T) *node;                                                        \
+    if (!tree || !out)                                                         \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    node = TTREE_FN(T, MaxNode)(tree->root);                                   \
-    if (!node)                                                                \
+    node = TREE_FUNC(T, MaxNode)(tree->root);                                  \
+    if (!node)                                                                 \
       return STATUS_CONST(NOT_FOUND);                                          \
     *out = &node->key;                                                         \
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
                                                                                \
-  TTREE_EMPTY_PROTOTYPE(T) {                       \
+  TREE_EMPTY_PROTOTYPE(T) {                                                    \
     return tree != NULL && tree->size == 0;                                    \
   }                                                                            \
                                                                                \
-  TTREE_SIZE_PROTOTYPE(T) {                      \
+  TREE_SIZE_PROTOTYPE(T) {                                                     \
     return tree ? tree->size : 0U;                                             \
   }
 
 /* ------ Find: SET variant (returns KEY_TYPE*) ------ */
 
-#define COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_FIND_SET(T, KEY_TYPE)                                  \
-  TTREE_FIND_SET_PROTOTYPE(T, KEY_TYPE) {                   \
-    TTREE_NODE(T) *node;                                                       \
-    if (!tree || !out)                                                        \
+#define COSMERON_MACRO_INTERNAL_TREE_IMPLEMENT_FIND_SET(T, KEY_TYPE)          \
+  TREE_FIND_SET_PROTOTYPE(T, KEY_TYPE) {                                       \
+    TREE_NODE(T) *node;                                                        \
+    if (!tree || !out)                                                         \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    node = TTREE_FN(T, FindNode)(tree, key);                                   \
-    if (!node)                                                                \
+    node = TREE_FUNC(T, FindNode)(tree, key);                                  \
+    if (!node)                                                                 \
       return STATUS_CONST(NOT_FOUND);                                          \
     *out = &node->key;                                                         \
     return STATUS_CONST(SUCCESS);                                              \
@@ -101,14 +105,19 @@
 
 /* ------ Find: MAP variant (returns VALUE_TYPE*) ------ */
 
-#define COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_FIND_MAP(T, KEY_TYPE, VALUE_TYPE)                      \
-  TTREE_FIND_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE) {                 \
-    TTREE_NODE(T) *node;                                                       \
-    if (!tree || !out)                                                        \
+#define COSMERON_MACRO_INTERNAL_TREE_IMPLEMENT_FIND_MAP(T, KEY_TYPE, VALUE_TYPE) \
+  TREE_FIND_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE) {                           \
+    TREE_NODE(T) *node;                                                        \
+    if (!tree || !out)                                                         \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    node = TTREE_FN(T, FindNode)(tree, key);                                   \
-    if (!node)                                                                \
+    node = TREE_FUNC(T, FindNode)(tree, key);                                  \
+    if (!node)                                                                 \
       return STATUS_CONST(NOT_FOUND);                                          \
     *out = &node->value;                                                       \
     return STATUS_CONST(SUCCESS);                                              \
   }
+
+/* Compatibility aliases */
+#define COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_OBSERVERS COSMERON_MACRO_INTERNAL_TREE_IMPLEMENT_OBSERVERS
+#define COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_FIND_SET COSMERON_MACRO_INTERNAL_TREE_IMPLEMENT_FIND_SET
+#define COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_FIND_MAP COSMERON_MACRO_INTERNAL_TREE_IMPLEMENT_FIND_MAP

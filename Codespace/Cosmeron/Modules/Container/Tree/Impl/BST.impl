@@ -1,55 +1,57 @@
+#pragma once
+
 /* =============================================================
  * BST — algorithm-specific implementation
  *   CreateNode (set/map), Insert (set/map), Remove
  *   No rotations or balancing.
  * ============================================================= */
 
-#include "Common/Tree.impl"
+#include "Tree.impl"
 
 /* =============================================================
  * BST core — Remove (no rebalance)
  * ============================================================= */
 
-#define COSMERON_MACRO_INTERNAL_TBST_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                 \
-  TTREE_REMOVE_PROTOTYPE(T, KEY_TYPE) {         \
+#define COSMERON_MACRO_INTERNAL_TREE_BST_IMPLEMENT_CORE(T, KEY_TYPE, CMP)     \
+  TREE_REMOVE_PROTOTYPE(T, KEY_TYPE) {                                         \
     if (!tree)                                                                 \
-      return STATUS_CONST(INVALID_ARGUMENT);                                      \
-    TTREE_NODE(T) *_z = TTREE_FN(T, FindNode)(tree, key);                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    TREE_NODE(T) *_z = TREE_FUNC(T, FindNode)(tree, key);                      \
     if (!_z)                                                                   \
-      return STATUS_CONST(NOT_FOUND);                                             \
+      return STATUS_CONST(NOT_FOUND);                                          \
     if (!_z->left) {                                                           \
-      TTREE_FN(T, Transplant)(tree, _z, _z->right);                           \
+      TREE_FUNC(T, Transplant)(tree, _z, _z->right);                           \
     } else if (!_z->right) {                                                   \
-      TTREE_FN(T, Transplant)(tree, _z, _z->left);                            \
+      TREE_FUNC(T, Transplant)(tree, _z, _z->left);                            \
     } else {                                                                   \
-      TTREE_NODE(T) *_s = TTREE_FN(T, MinNode)(_z->right);                    \
+      TREE_NODE(T) *_s = TREE_FUNC(T, MinNode)(_z->right);                     \
       if (_s->parent != _z) {                                                  \
-        TTREE_FN(T, Transplant)(tree, _s, _s->right);                         \
+        TREE_FUNC(T, Transplant)(tree, _s, _s->right);                         \
         _s->right = _z->right;                                                 \
         _s->right->parent = _s;                                                \
       }                                                                        \
-      TTREE_FN(T, Transplant)(tree, _z, _s);                                  \
+      TREE_FUNC(T, Transplant)(tree, _z, _s);                                  \
       _s->left = _z->left;                                                     \
       _s->left->parent = _s;                                                   \
     }                                                                          \
-    Memory_Free(_z);                                                          \
+    Memory_Free(_z);                                                           \
     tree->size--;                                                              \
-    return STATUS_CONST(SUCCESS);                                                 \
+    return STATUS_CONST(SUCCESS);                                              \
   }
 
 /* =============================================================
  * CreateNode + Insert — SET
  * ============================================================= */
 
-#define COSMERON_MACRO_INTERNAL_TBST_IMPLEMENT_SET(T, KEY_TYPE, CMP)                                  \
-  static inline TTREE_NODE(T) *                                                \
-      TTREE_FN(T, CreateNode)(KEY_TYPE key) {                                  \
-    TTREE_NODE(T) *_n;                                                        \
-    void *allocated = NULL;                                                   \
-    if (ALLOC_FUNC(AllocArray)(&allocated, 1U, sizeof(TTREE_NODE(T))) !=       \
-        STATUS_CONST(SUCCESS))                                                   \
+#define COSMERON_MACRO_INTERNAL_TREE_BST_IMPLEMENT_SET(T, KEY_TYPE, CMP)      \
+  static inline TREE_NODE(T) *                                                 \
+      TREE_FUNC(T, CreateNode)(KEY_TYPE key) {                                 \
+    TREE_NODE(T) *_n;                                                          \
+    void *allocated = NULL;                                                    \
+    if (ALLOC_FUNC(AllocArray)(&allocated, 1U, sizeof(TREE_NODE(T))) !=        \
+        STATUS_CONST(SUCCESS))                                                 \
       return NULL;                                                             \
-    _n = (TTREE_NODE(T) *)allocated;                                                             \
+    _n = (TREE_NODE(T) *)allocated;                                            \
     _n->key = key;                                                             \
     _n->left = NULL;                                                           \
     _n->right = NULL;                                                          \
@@ -57,53 +59,54 @@
     return _n;                                                                 \
   }                                                                            \
                                                                                \
-  TTREE_INSERT_SET_PROTOTYPE(T, KEY_TYPE) {         \
+  TREE_INSERT_SET_PROTOTYPE(T, KEY_TYPE) {                                     \
     if (!tree)                                                                 \
-      return STATUS_CONST(INVALID_ARGUMENT);                                      \
-    TTREE_NODE(T) *_n = TTREE_FN(T, CreateNode)(key);                          \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    TREE_NODE(T) *_n = TREE_FUNC(T, CreateNode)(key);                         \
     if (!_n)                                                                   \
-      return STATUS_CONST(OUT_OF_MEMORY);                                    \
+      return STATUS_CONST(OUT_OF_MEMORY);                                      \
     if (!tree->root) {                                                         \
       tree->root = _n;                                                         \
       tree->size++;                                                            \
-      return STATUS_CONST(SUCCESS);                                               \
+      return STATUS_CONST(SUCCESS);                                            \
     }                                                                          \
-    TTREE_NODE(T) *_cur = tree->root;                                           \
-    TTREE_NODE(T) *_par = NULL;                                                 \
+    TREE_NODE(T) *_cur = tree->root;                                           \
+    TREE_NODE(T) *_par = NULL;                                                 \
     while (_cur) {                                                             \
       _par = _cur;                                                             \
-      TTREE_CMPOUT _r = CMP(key, _cur->key);                                         \
-      if (_r < 0)                                                              \
+      TREE_CMPOUT _r = CMP(key, _cur->key);                                    \
+      if (_r < COMPARISON_EQUAL_CONST)                                         \
         _cur = _cur->left;                                                     \
-      else if (_r > 0)                                                         \
+      else if (_r > COMPARISON_EQUAL_CONST)                                    \
         _cur = _cur->right;                                                    \
       else {                                                                   \
-        Memory_Free(_n);                                                      \
-        return STATUS_CONST(ALREADY_EXISTS);                                               \
+        Memory_Free(_n);                                                       \
+        return STATUS_CONST(ALREADY_EXISTS);                                   \
       }                                                                        \
     }                                                                          \
     _n->parent = _par;                                                         \
-    if (CMP(key, _par->key) < 0)                                               \
+    if (CMP(key, _par->key) < COMPARISON_EQUAL_CONST)                          \
       _par->left = _n;                                                         \
     else                                                                       \
       _par->right = _n;                                                        \
     tree->size++;                                                              \
-    return STATUS_CONST(SUCCESS);                                                 \
+    return STATUS_CONST(SUCCESS);                                              \
   }
 
 /* =============================================================
  * CreateNode + Insert — MAP
  * ============================================================= */
 
-#define COSMERON_MACRO_INTERNAL_TBST_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                      \
-  static inline TTREE_NODE(T) *                                                \
-      TTREE_FN(T, CreateNode)(KEY_TYPE key, VALUE_TYPE value) {                \
-    TTREE_NODE(T) *_n;                                                        \
-    void *allocated = NULL;                                                   \
-    if (ALLOC_FUNC(AllocArray)(&allocated, 1U, sizeof(TTREE_NODE(T))) !=       \
-        STATUS_CONST(SUCCESS))                                                   \
+#define COSMERON_MACRO_INTERNAL_TREE_BST_IMPLEMENT_MAP(T, KEY_TYPE,           \
+                                                        VALUE_TYPE, CMP)       \
+  static inline TREE_NODE(T) *                                                 \
+      TREE_FUNC(T, CreateNode)(KEY_TYPE key, VALUE_TYPE value) {               \
+    TREE_NODE(T) *_n;                                                          \
+    void *allocated = NULL;                                                    \
+    if (ALLOC_FUNC(AllocArray)(&allocated, 1U, sizeof(TREE_NODE(T))) !=        \
+        STATUS_CONST(SUCCESS))                                                 \
       return NULL;                                                             \
-    _n = (TTREE_NODE(T) *)allocated;                                                             \
+    _n = (TREE_NODE(T) *)allocated;                                            \
     _n->key = key;                                                             \
     _n->value = value;                                                         \
     _n->left = NULL;                                                           \
@@ -112,57 +115,69 @@
     return _n;                                                                 \
   }                                                                            \
                                                                                \
-  TTREE_INSERT_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE) {                              \
+  TREE_INSERT_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE) {                         \
     if (!tree)                                                                 \
-      return STATUS_CONST(INVALID_ARGUMENT);                                      \
-    TTREE_NODE(T) *_n = TTREE_FN(T, CreateNode)(key, value);                   \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    TREE_NODE(T) *_n = TREE_FUNC(T, CreateNode)(key, value);                  \
     if (!_n)                                                                   \
-      return STATUS_CONST(OUT_OF_MEMORY);                                    \
+      return STATUS_CONST(OUT_OF_MEMORY);                                      \
     if (!tree->root) {                                                         \
       tree->root = _n;                                                         \
       tree->size++;                                                            \
-      return STATUS_CONST(SUCCESS);                                               \
+      return STATUS_CONST(SUCCESS);                                            \
     }                                                                          \
-    TTREE_NODE(T) *_cur = tree->root;                                           \
-    TTREE_NODE(T) *_par = NULL;                                                 \
+    TREE_NODE(T) *_cur = tree->root;                                           \
+    TREE_NODE(T) *_par = NULL;                                                 \
     while (_cur) {                                                             \
       _par = _cur;                                                             \
-      TTREE_CMPOUT _r = CMP(key, _cur->key);                                         \
-      if (_r < 0)                                                              \
+      TREE_CMPOUT _r = CMP(key, _cur->key);                                    \
+      if (_r < COMPARISON_EQUAL_CONST)                                         \
         _cur = _cur->left;                                                     \
-      else if (_r > 0)                                                         \
+      else if (_r > COMPARISON_EQUAL_CONST)                                    \
         _cur = _cur->right;                                                    \
       else {                                                                   \
         _cur->value = value;                                                   \
-        Memory_Free(_n);                                                      \
-        return STATUS_CONST(ALREADY_EXISTS);                                               \
+        Memory_Free(_n);                                                       \
+        return STATUS_CONST(ALREADY_EXISTS);                                   \
       }                                                                        \
     }                                                                          \
     _n->parent = _par;                                                         \
-    if (CMP(key, _par->key) < 0)                                               \
+    if (CMP(key, _par->key) < COMPARISON_EQUAL_CONST)                          \
       _par->left = _n;                                                         \
     else                                                                       \
       _par->right = _n;                                                        \
     tree->size++;                                                              \
-    return STATUS_CONST(SUCCESS);                                                 \
+    return STATUS_CONST(SUCCESS);                                              \
   }
 
 /* =============================================================
- * Full BST SET / MAP expansion
+ * Full BST SET expansion
  * ============================================================= */
 
-#define COSMERON_MACRO_INTERNAL_TBST_SET_IMPLEMENT_ALL(T, KEY_TYPE, CMP)                                     \
-  COSMERON_MACRO_INTERNAL_TTREE_NODE_SET(T, KEY_TYPE, )                                                \
-  COSMERON_MACRO_INTERNAL_TTREE_STRUCT(T)                                                              \
-  TTREE_SET_PROTOTYPES(T, KEY_TYPE)                                            \
-  COSMERON_MACRO_INTERNAL_TTREE_COMMON_SET(T, KEY_TYPE, CMP)                                           \
-  COSMERON_MACRO_INTERNAL_TBST_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                       \
-  COSMERON_MACRO_INTERNAL_TBST_IMPLEMENT_SET(T, KEY_TYPE, CMP)
+#define COSMERON_MACRO_INTERNAL_TREE_BST_SET_IMPLEMENT_ALL(T, KEY_TYPE, CMP)  \
+  TREE_NODE_STRUCT_SET(T, KEY_TYPE, )                                          \
+  TREE_STRUCT(T)                                                               \
+  TREE_SET_PROTOTYPES(T, KEY_TYPE)                                             \
+  COSMERON_MACRO_INTERNAL_TREE_COMMON_SET(T, KEY_TYPE, CMP)                    \
+  COSMERON_MACRO_INTERNAL_TREE_BST_IMPLEMENT_CORE(T, KEY_TYPE, CMP)            \
+  COSMERON_MACRO_INTERNAL_TREE_BST_IMPLEMENT_SET(T, KEY_TYPE, CMP)
 
-#define COSMERON_MACRO_INTERNAL_TBST_MAP_IMPLEMENT_ALL(T, KEY_TYPE, VALUE_TYPE, CMP)                         \
-  COSMERON_MACRO_INTERNAL_TTREE_NODE_MAP(T, KEY_TYPE, VALUE_TYPE, )                                    \
-  COSMERON_MACRO_INTERNAL_TTREE_STRUCT(T)                                                              \
-  TTREE_MAP_PROTOTYPES(T, KEY_TYPE, VALUE_TYPE)                                \
-  COSMERON_MACRO_INTERNAL_TTREE_COMMON_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                               \
-  COSMERON_MACRO_INTERNAL_TBST_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                       \
-  COSMERON_MACRO_INTERNAL_TBST_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)
+/* =============================================================
+ * Full BST MAP expansion
+ * ============================================================= */
+
+#define COSMERON_MACRO_INTERNAL_TREE_BST_MAP_IMPLEMENT_ALL(T, KEY_TYPE,       \
+                                                            VALUE_TYPE, CMP)   \
+  TREE_NODE_STRUCT_MAP(T, KEY_TYPE, VALUE_TYPE, )                              \
+  TREE_STRUCT(T)                                                               \
+  TREE_MAP_PROTOTYPES(T, KEY_TYPE, VALUE_TYPE)                                 \
+  COSMERON_MACRO_INTERNAL_TREE_COMMON_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)        \
+  COSMERON_MACRO_INTERNAL_TREE_BST_IMPLEMENT_CORE(T, KEY_TYPE, CMP)            \
+  COSMERON_MACRO_INTERNAL_TREE_BST_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)
+
+/* Compatibility aliases */
+#define COSMERON_MACRO_INTERNAL_TBST_IMPLEMENT_CORE COSMERON_MACRO_INTERNAL_TREE_BST_IMPLEMENT_CORE
+#define COSMERON_MACRO_INTERNAL_TBST_IMPLEMENT_SET COSMERON_MACRO_INTERNAL_TREE_BST_IMPLEMENT_SET
+#define COSMERON_MACRO_INTERNAL_TBST_IMPLEMENT_MAP COSMERON_MACRO_INTERNAL_TREE_BST_IMPLEMENT_MAP
+#define COSMERON_MACRO_INTERNAL_TBST_SET_IMPLEMENT_ALL COSMERON_MACRO_INTERNAL_TREE_BST_SET_IMPLEMENT_ALL
+#define COSMERON_MACRO_INTERNAL_TBST_MAP_IMPLEMENT_ALL COSMERON_MACRO_INTERNAL_TREE_BST_MAP_IMPLEMENT_ALL

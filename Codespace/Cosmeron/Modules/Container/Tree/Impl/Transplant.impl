@@ -1,12 +1,13 @@
+#pragma once
 
 /* =============================================================
  * Modifiers — Transplant
  * Shared by all algorithms and both set/map semantics.
  * ============================================================= */
 
-#define COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_TRANSPLANT(T)                                          \
-  static inline void TTREE_FN(T, Transplant)(                                 \
-      T * tree, TTREE_NODE(T) * u, TTREE_NODE(T) * v) {                       \
+#define COSMERON_MACRO_INTERNAL_TREE_IMPLEMENT_TRANSPLANT(T)                  \
+  static inline void TREE_FUNC(T, Transplant)(                                 \
+      T * tree, TREE_NODE(T) * u, TREE_NODE(T) * v) {                          \
     if (!u->parent)                                                            \
       tree->root = v;                                                          \
     else if (u == u->parent->left)                                             \
@@ -16,3 +17,6 @@
     if (v)                                                                     \
       v->parent = u->parent;                                                   \
   }
+
+#define COSMERON_MACRO_INTERNAL_TTREE_IMPLEMENT_TRANSPLANT(T)                 \
+  COSMERON_MACRO_INTERNAL_TREE_IMPLEMENT_TRANSPLANT(T)

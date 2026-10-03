@@ -113,5 +113,23 @@ int main(void) {
   TEST_MAP(AVL, int, float, 10, 20, 30);
   TEST_MAP(RB, int, int, 10, 20, 30);
   TEST_MAP(RB, int, float, 10, 20, 30);
+
+  /* Canonical TREE_* grammar checks */
+  {
+    TREE_PUBLIC_SET_TYPE(AVL, int) tree;
+    int *found = NULL;
+    TEST_ASSERT(TREE_FUNC(TREE_SET_TYPE(AVL, int), Init)(&tree) == STATUS_CONST(SUCCESS));
+    TEST_ASSERT(TREE_FUNC(TREE_SET_TYPE(AVL, int), Insert)(&tree, 42) == STATUS_CONST(SUCCESS));
+    TEST_ASSERT(TREE_FUNC(TREE_SET_TYPE(AVL, int), Find)(&tree, 42, &found) == STATUS_CONST(SUCCESS));
+    TEST_ASSERT(found != NULL && *found == 42);
+    TREE_FUNC(TREE_SET_TYPE(AVL, int), Destroy)(&tree);
+  }
+
+  /* RedBlack Color enum / X-Macro constants check */
+  TEST_ASSERT(TREE_CONST(RB_RED) == 0);
+  TEST_ASSERT(TREE_CONST(RB_BLACK) == 1);
+  TEST_ASSERT(TREE_RB_RED == TREE_CONST(RB_RED));
+  TEST_ASSERT(TREE_RB_BLACK == TREE_CONST(RB_BLACK));
+
   return 0;
 }

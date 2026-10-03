@@ -1,29 +1,24 @@
+#pragma once
+
 /* =============================================================
  * Red-Black — algorithm-specific implementation
  *   Rotations, InsertFixup, DeleteFixup,
  *   CreateNode (set/map), Insert (set/map), Remove
  * ============================================================= */
 
-#include "Common/Tree.impl"
-
-/* RedBlack color — namespaced to avoid collision with anything
- * that defines its own RED/BLACK or RBColor. Lives at file scope
- * because RB color values must be visible inside every
- * TRB_IMPLEMENT_* macro that follows. */
-
-typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor; transformar em xtable, colocar no ns
+#include "Tree.impl"
 
 /* =============================================================
  * RB core — shared by set and map
  * ============================================================= */
 
-#define COSMERON_MACRO_INTERNAL_TRB_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                  \
-  static inline bool TTREE_FN(T, IsRed)(TTREE_NODE(T) * node) {               \
-    return node != NULL && node->color == TREE_RB_RED;                             \
+#define COSMERON_MACRO_INTERNAL_TREE_RB_IMPLEMENT_CORE(T, KEY_TYPE, CMP)      \
+  static inline bool TREE_FUNC(T, IsRed)(TREE_NODE(T) * node) {                \
+    return node != NULL && node->color == TREE_RB_RED;                         \
   }                                                                            \
                                                                                \
-  static inline void TTREE_FN(T, RotateLeft)(T * tree, TTREE_NODE(T) * x) {   \
-    TTREE_NODE(T) *_y = x->right;                                              \
+  static inline void TREE_FUNC(T, RotateLeft)(T * tree, TREE_NODE(T) * x) {    \
+    TREE_NODE(T) *_y = x->right;                                               \
     x->right = _y->left;                                                       \
     if (_y->left)                                                              \
       _y->left->parent = x;                                                    \
@@ -38,8 +33,8 @@ typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor; transformar em
     x->parent = _y;                                                            \
   }                                                                            \
                                                                                \
-  static inline void TTREE_FN(T, RotateRight)(T * tree, TTREE_NODE(T) * y) {  \
-    TTREE_NODE(T) *_x = y->left;                                               \
+  static inline void TREE_FUNC(T, RotateRight)(T * tree, TREE_NODE(T) * y) {   \
+    TREE_NODE(T) *_x = y->left;                                                \
     y->left = _x->right;                                                       \
     if (_x->right)                                                             \
       _x->right->parent = y;                                                   \
@@ -54,81 +49,82 @@ typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor; transformar em
     y->parent = _x;                                                            \
   }                                                                            \
                                                                                \
-  static inline void TTREE_FN(T, InsertFixup)(T * tree,                       \
-                                              TTREE_NODE(T) * node) {          \
-    while (node->parent && node->parent->color == TREE_RB_RED) {                   \
+  static inline void TREE_FUNC(T, InsertFixup)(T * tree,                       \
+                                               TREE_NODE(T) * node) {          \
+    while (node->parent && node->parent->color == TREE_RB_RED) {               \
       if (node->parent->parent &&                                              \
           node->parent == node->parent->parent->left) {                        \
-        TTREE_NODE(T) *_u = node->parent->parent->right;                       \
-        if (TTREE_FN(T, IsRed)(_u)) {                                         \
-          node->parent->color = TREE_RB_BLACK;                                     \
-          _u->color = TREE_RB_BLACK;                                               \
-          node->parent->parent->color = TREE_RB_RED;                               \
+        TREE_NODE(T) *_u = node->parent->parent->right;                        \
+        if (TREE_FUNC(T, IsRed)(_u)) {                                         \
+          node->parent->color = TREE_RB_BLACK;                                 \
+          _u->color = TREE_RB_BLACK;                                           \
+          node->parent->parent->color = TREE_RB_RED;                           \
           node = node->parent->parent;                                         \
         } else {                                                               \
           if (node == node->parent->right) {                                   \
             node = node->parent;                                               \
-            TTREE_FN(T, RotateLeft)(tree, node);                               \
+            TREE_FUNC(T, RotateLeft)(tree, node);                              \
           }                                                                    \
-          node->parent->color = TREE_RB_BLACK;                                     \
-          node->parent->parent->color = TREE_RB_RED;                               \
-          TTREE_FN(T, RotateRight)(tree, node->parent->parent);                \
+          node->parent->color = TREE_RB_BLACK;                                 \
+          node->parent->parent->color = TREE_RB_RED;                           \
+          TREE_FUNC(T, RotateRight)(tree, node->parent->parent);               \
         }                                                                      \
       } else if (node->parent->parent) {                                       \
-        TTREE_NODE(T) *_u = node->parent->parent->left;                        \
-        if (TTREE_FN(T, IsRed)(_u)) {                                         \
-          node->parent->color = TREE_RB_BLACK;                                     \
-          _u->color = TREE_RB_BLACK;                                               \
-          node->parent->parent->color = TREE_RB_RED;                               \
+        TREE_NODE(T) *_u = node->parent->parent->left;                         \
+        if (TREE_FUNC(T, IsRed)(_u)) {                                         \
+          node->parent->color = TREE_RB_BLACK;                                 \
+          _u->color = TREE_RB_BLACK;                                           \
+          node->parent->parent->color = TREE_RB_RED;                           \
           node = node->parent->parent;                                         \
         } else {                                                               \
           if (node == node->parent->left) {                                    \
             node = node->parent;                                               \
-            TTREE_FN(T, RotateRight)(tree, node);                              \
+            TREE_FUNC(T, RotateRight)(tree, node);                             \
           }                                                                    \
-          node->parent->color = TREE_RB_BLACK;                                     \
-          node->parent->parent->color = TREE_RB_RED;                               \
-          TTREE_FN(T, RotateLeft)(tree, node->parent->parent);                 \
+          node->parent->color = TREE_RB_BLACK;                                 \
+          node->parent->parent->color = TREE_RB_RED;                           \
+          TREE_FUNC(T, RotateLeft)(tree, node->parent->parent);                \
         }                                                                      \
       } else {                                                                 \
         break;                                                                 \
       }                                                                        \
     }                                                                          \
-    tree->root->color = TREE_RB_BLACK;                                             \
+    tree->root->color = TREE_RB_BLACK;                                         \
   }                                                                            \
                                                                                \
-  static inline void TTREE_FN(T, DeleteFixup)(                                \
-      T * tree, TTREE_NODE(T) * node, TTREE_NODE(T) * par) {                  \
-    while (node != tree->root && (node == NULL || node->color == TREE_RB_BLACK)) { \
+  static inline void TREE_FUNC(T, DeleteFixup)(                                \
+      T * tree, TREE_NODE(T) * node, TREE_NODE(T) * par) {                    \
+    while (node != tree->root &&                                               \
+           (node == NULL || node->color == TREE_RB_BLACK)) {                   \
       if (par == NULL)                                                         \
         break;                                                                 \
       if (node == par->left) {                                                 \
-        TTREE_NODE(T) *_s = par->right;                                        \
-        if (_s && _s->color == TREE_RB_RED) {                                      \
-          _s->color = TREE_RB_BLACK;                                               \
-          par->color = TREE_RB_RED;                                                \
-          TTREE_FN(T, RotateLeft)(tree, par);                                  \
+        TREE_NODE(T) *_s = par->right;                                         \
+        if (_s && _s->color == TREE_RB_RED) {                                  \
+          _s->color = TREE_RB_BLACK;                                           \
+          par->color = TREE_RB_RED;                                            \
+          TREE_FUNC(T, RotateLeft)(tree, par);                                 \
           _s = par->right;                                                     \
         }                                                                      \
-        if (_s && (!_s->left || _s->left->color == TREE_RB_BLACK) &&               \
-            (!_s->right || _s->right->color == TREE_RB_BLACK)) {                   \
-          _s->color = TREE_RB_RED;                                                 \
+        if (_s && (!_s->left || _s->left->color == TREE_RB_BLACK) &&           \
+            (!_s->right || _s->right->color == TREE_RB_BLACK)) {               \
+          _s->color = TREE_RB_RED;                                             \
           node = par;                                                          \
           par = node->parent;                                                  \
         } else if (_s) {                                                       \
-          if (!_s->right || _s->right->color == TREE_RB_BLACK) {                   \
+          if (!_s->right || _s->right->color == TREE_RB_BLACK) {               \
             if (_s->left)                                                      \
-              _s->left->color = TREE_RB_BLACK;                                     \
-            _s->color = TREE_RB_RED;                                               \
-            TTREE_FN(T, RotateRight)(tree, _s);                                \
+              _s->left->color = TREE_RB_BLACK;                                 \
+            _s->color = TREE_RB_RED;                                           \
+            TREE_FUNC(T, RotateRight)(tree, _s);                               \
             _s = par->right;                                                   \
           }                                                                    \
           if (_s) {                                                            \
             _s->color = par->color;                                            \
-            par->color = TREE_RB_BLACK;                                            \
+            par->color = TREE_RB_BLACK;                                        \
             if (_s->right)                                                     \
-              _s->right->color = TREE_RB_BLACK;                                    \
-            TTREE_FN(T, RotateLeft)(tree, par);                                \
+              _s->right->color = TREE_RB_BLACK;                                \
+            TREE_FUNC(T, RotateLeft)(tree, par);                               \
           }                                                                    \
           node = tree->root;                                                   \
           break;                                                               \
@@ -136,32 +132,32 @@ typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor; transformar em
           break;                                                               \
         }                                                                      \
       } else {                                                                 \
-        TTREE_NODE(T) *_s = par->left;                                         \
-        if (_s && _s->color == TREE_RB_RED) {                                      \
-          _s->color = TREE_RB_BLACK;                                               \
-          par->color = TREE_RB_RED;                                                \
-          TTREE_FN(T, RotateRight)(tree, par);                                 \
+        TREE_NODE(T) *_s = par->left;                                         \
+        if (_s && _s->color == TREE_RB_RED) {                                  \
+          _s->color = TREE_RB_BLACK;                                           \
+          par->color = TREE_RB_RED;                                            \
+          TREE_FUNC(T, RotateRight)(tree, par);                                \
           _s = par->left;                                                      \
         }                                                                      \
-        if (_s && (!_s->right || _s->right->color == TREE_RB_BLACK) &&             \
-            (!_s->left || _s->left->color == TREE_RB_BLACK)) {                     \
-          _s->color = TREE_RB_RED;                                                 \
+        if (_s && (!_s->right || _s->right->color == TREE_RB_BLACK) &&         \
+            (!_s->left || _s->left->color == TREE_RB_BLACK)) {                 \
+          _s->color = TREE_RB_RED;                                             \
           node = par;                                                          \
           par = node->parent;                                                  \
         } else if (_s) {                                                       \
-          if (!_s->left || _s->left->color == TREE_RB_BLACK) {                     \
+          if (!_s->left || _s->left->color == TREE_RB_BLACK) {                 \
             if (_s->right)                                                     \
-              _s->right->color = TREE_RB_BLACK;                                    \
-            _s->color = TREE_RB_RED;                                               \
-            TTREE_FN(T, RotateLeft)(tree, _s);                                 \
+              _s->right->color = TREE_RB_BLACK;                                \
+            _s->color = TREE_RB_RED;                                           \
+            TREE_FUNC(T, RotateLeft)(tree, _s);                                \
             _s = par->left;                                                    \
           }                                                                    \
           if (_s) {                                                            \
             _s->color = par->color;                                            \
-            par->color = TREE_RB_BLACK;                                            \
+            par->color = TREE_RB_BLACK;                                        \
             if (_s->left)                                                      \
-              _s->left->color = TREE_RB_BLACK;                                     \
-            TTREE_FN(T, RotateRight)(tree, par);                               \
+              _s->left->color = TREE_RB_BLACK;                                 \
+            TREE_FUNC(T, RotateRight)(tree, par);                              \
           }                                                                    \
           node = tree->root;                                                   \
           break;                                                               \
@@ -171,183 +167,192 @@ typedef enum { TREE_RB_RED = 0, TREE_RB_BLACK = 1 } TREE_RBColor; transformar em
       }                                                                        \
     }                                                                          \
     if (node)                                                                  \
-      node->color = TREE_RB_BLACK;                                                 \
+      node->color = TREE_RB_BLACK;                                             \
   }                                                                            \
                                                                                \
-  TTREE_REMOVE_PROTOTYPE(T, KEY_TYPE) {         \
+  TREE_REMOVE_PROTOTYPE(T, KEY_TYPE) {                                         \
     if (!tree)                                                                 \
-      return STATUS_CONST(INVALID_ARGUMENT);                                      \
-    TTREE_NODE(T) *_z = TTREE_FN(T, FindNode)(tree, key);                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    TREE_NODE(T) *_z = TREE_FUNC(T, FindNode)(tree, key);                      \
     if (!_z)                                                                   \
-      return STATUS_CONST(NOT_FOUND);                                             \
-    TTREE_NODE(T) *_y = _z;                                                    \
-    TTREE_NODE(T) *_x;                                                         \
-    TTREE_NODE(T) *_xp;                                                        \
-    TREE_RBColor _yc = _y->color;                                                  \
+      return STATUS_CONST(NOT_FOUND);                                          \
+    TREE_NODE(T) *_y = _z;                                                     \
+    TREE_NODE(T) *_x;                                                          \
+    TREE_NODE(T) *_xp;                                                         \
+    TREE_NS(RBColor) _yc = _y->color;                                          \
     if (!_z->left) {                                                           \
       _x = _z->right;                                                          \
       _xp = _z->parent;                                                        \
-      TTREE_FN(T, Transplant)(tree, _z, _z->right);                           \
+      TREE_FUNC(T, Transplant)(tree, _z, _z->right);                           \
     } else if (!_z->right) {                                                   \
       _x = _z->left;                                                           \
       _xp = _z->parent;                                                        \
-      TTREE_FN(T, Transplant)(tree, _z, _z->left);                            \
+      TREE_FUNC(T, Transplant)(tree, _z, _z->left);                            \
     } else {                                                                   \
-      _y = TTREE_FN(T, MinNode)(_z->right);                                   \
+      _y = TREE_FUNC(T, MinNode)(_z->right);                                   \
       _yc = _y->color;                                                         \
       _x = _y->right;                                                          \
       if (_y->parent == _z) {                                                  \
         _xp = _y;                                                              \
       } else {                                                                 \
         _xp = _y->parent;                                                      \
-        TTREE_FN(T, Transplant)(tree, _y, _y->right);                         \
+        TREE_FUNC(T, Transplant)(tree, _y, _y->right);                         \
         _y->right = _z->right;                                                 \
         _y->right->parent = _y;                                                \
       }                                                                        \
-      TTREE_FN(T, Transplant)(tree, _z, _y);                                  \
+      TREE_FUNC(T, Transplant)(tree, _z, _y);                                  \
       _y->left = _z->left;                                                     \
       _y->left->parent = _y;                                                   \
       _y->color = _z->color;                                                   \
     }                                                                          \
-    Memory_Free(_z);                                                          \
+    Memory_Free(_z);                                                           \
     tree->size--;                                                              \
-    if (_yc == TREE_RB_BLACK)                                                       \
-      TTREE_FN(T, DeleteFixup)(tree, _x, _xp);                                \
-    return STATUS_CONST(SUCCESS);                                                 \
+    if (_yc == TREE_RB_BLACK)                                                  \
+      TREE_FUNC(T, DeleteFixup)(tree, _x, _xp);                                \
+    return STATUS_CONST(SUCCESS);                                              \
   }
 
 /* =============================================================
  * CreateNode + Insert — SET
  * ============================================================= */
 
-#define COSMERON_MACRO_INTERNAL_TRB_IMPLEMENT_SET(T, KEY_TYPE, CMP)                                   \
-  static inline TTREE_NODE(T) *                                                \
-      TTREE_FN(T, CreateNode)(KEY_TYPE key) {                                  \
-    TTREE_NODE(T) *_n;                                                        \
-    void *allocated = NULL;                                                   \
-    if (ALLOC_FUNC(AllocArray)(&allocated, 1U, sizeof(TTREE_NODE(T))) !=       \
-        STATUS_CONST(SUCCESS))                                                   \
+#define COSMERON_MACRO_INTERNAL_TREE_RB_IMPLEMENT_SET(T, KEY_TYPE, CMP)       \
+  static inline TREE_NODE(T) *                                                 \
+      TREE_FUNC(T, CreateNode)(KEY_TYPE key) {                                 \
+    TREE_NODE(T) *_n;                                                          \
+    void *allocated = NULL;                                                    \
+    if (ALLOC_FUNC(AllocArray)(&allocated, 1U, sizeof(TREE_NODE(T))) !=        \
+        STATUS_CONST(SUCCESS))                                                 \
       return NULL;                                                             \
-    _n = (TTREE_NODE(T) *)allocated;                                                             \
+    _n = (TREE_NODE(T) *)allocated;                                            \
     _n->key = key;                                                             \
     _n->left = NULL;                                                           \
     _n->right = NULL;                                                          \
     _n->parent = NULL;                                                         \
-    _n->color = TREE_RB_RED;                                                       \
+    _n->color = TREE_RB_RED;                                                   \
     return _n;                                                                 \
   }                                                                            \
                                                                                \
-  TTREE_INSERT_SET_PROTOTYPE(T, KEY_TYPE) {         \
+  TREE_INSERT_SET_PROTOTYPE(T, KEY_TYPE) {                                     \
     if (!tree)                                                                 \
-      return STATUS_CONST(INVALID_ARGUMENT);                                      \
-    TTREE_NODE(T) *_n = TTREE_FN(T, CreateNode)(key);                          \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    TREE_NODE(T) *_n = TREE_FUNC(T, CreateNode)(key);                         \
     if (!_n)                                                                   \
-      return STATUS_CONST(OUT_OF_MEMORY);                                    \
+      return STATUS_CONST(OUT_OF_MEMORY);                                      \
     if (!tree->root) {                                                         \
-      _n->color = TREE_RB_BLACK;                                                   \
+      _n->color = TREE_RB_BLACK;                                               \
       tree->root = _n;                                                         \
       tree->size++;                                                            \
-      return STATUS_CONST(SUCCESS);                                               \
+      return STATUS_CONST(SUCCESS);                                            \
     }                                                                          \
-    TTREE_NODE(T) *_cur = tree->root;                                           \
-    TTREE_NODE(T) *_par = NULL;                                                 \
+    TREE_NODE(T) *_cur = tree->root;                                           \
+    TREE_NODE(T) *_par = NULL;                                                 \
     while (_cur) {                                                             \
       _par = _cur;                                                             \
-      TTREE_CMPOUT _r = CMP(key, _cur->key);                                         \
-      if (_r < 0)                                                              \
+      TREE_CMPOUT _r = CMP(key, _cur->key);                                    \
+      if (_r < COMPARISON_EQUAL_CONST)                                         \
         _cur = _cur->left;                                                     \
-      else if (_r > 0)                                                         \
+      else if (_r > COMPARISON_EQUAL_CONST)                                    \
         _cur = _cur->right;                                                    \
       else {                                                                   \
-        Memory_Free(_n);                                                      \
-        return STATUS_CONST(ALREADY_EXISTS);                                               \
+        Memory_Free(_n);                                                       \
+        return STATUS_CONST(ALREADY_EXISTS);                                   \
       }                                                                        \
     }                                                                          \
     _n->parent = _par;                                                         \
-    if (CMP(key, _par->key) < 0)                                               \
+    if (CMP(key, _par->key) < COMPARISON_EQUAL_CONST)                          \
       _par->left = _n;                                                         \
     else                                                                       \
       _par->right = _n;                                                        \
     tree->size++;                                                              \
-    TTREE_FN(T, InsertFixup)(tree, _n);                                        \
-    return STATUS_CONST(SUCCESS);                                                 \
+    TREE_FUNC(T, InsertFixup)(tree, _n);                                       \
+    return STATUS_CONST(SUCCESS);                                              \
   }
 
 /* =============================================================
  * CreateNode + Insert — MAP
  * ============================================================= */
 
-#define COSMERON_MACRO_INTERNAL_TRB_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                       \
-  static inline TTREE_NODE(T) *                                                \
-      TTREE_FN(T, CreateNode)(KEY_TYPE key, VALUE_TYPE value) {                \
-    TTREE_NODE(T) *_n;                                                        \
-    void *allocated = NULL;                                                   \
-    if (ALLOC_FUNC(AllocArray)(&allocated, 1U, sizeof(TTREE_NODE(T))) !=       \
-        STATUS_CONST(SUCCESS))                                                   \
+#define COSMERON_MACRO_INTERNAL_TREE_RB_IMPLEMENT_MAP(T, KEY_TYPE,            \
+                                                       VALUE_TYPE, CMP)        \
+  static inline TREE_NODE(T) *                                                 \
+      TREE_FUNC(T, CreateNode)(KEY_TYPE key, VALUE_TYPE value) {               \
+    TREE_NODE(T) *_n;                                                          \
+    void *allocated = NULL;                                                    \
+    if (ALLOC_FUNC(AllocArray)(&allocated, 1U, sizeof(TREE_NODE(T))) !=        \
+        STATUS_CONST(SUCCESS))                                                 \
       return NULL;                                                             \
-    _n = (TTREE_NODE(T) *)allocated;                                                             \
+    _n = (TREE_NODE(T) *)allocated;                                            \
     _n->key = key;                                                             \
     _n->value = value;                                                         \
     _n->left = NULL;                                                           \
     _n->right = NULL;                                                          \
     _n->parent = NULL;                                                         \
-    _n->color = TREE_RB_RED;                                                       \
+    _n->color = TREE_RB_RED;                                                   \
     return _n;                                                                 \
   }                                                                            \
                                                                                \
-  TTREE_INSERT_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE) {                              \
+  TREE_INSERT_MAP_PROTOTYPE(T, KEY_TYPE, VALUE_TYPE) {                         \
     if (!tree)                                                                 \
-      return STATUS_CONST(INVALID_ARGUMENT);                                      \
-    TTREE_NODE(T) *_n = TTREE_FN(T, CreateNode)(key, value);                   \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    TREE_NODE(T) *_n = TREE_FUNC(T, CreateNode)(key, value);                  \
     if (!_n)                                                                   \
-      return STATUS_CONST(OUT_OF_MEMORY);                                    \
+      return STATUS_CONST(OUT_OF_MEMORY);                                      \
     if (!tree->root) {                                                         \
-      _n->color = TREE_RB_BLACK;                                                   \
+      _n->color = TREE_RB_BLACK;                                               \
       tree->root = _n;                                                         \
       tree->size++;                                                            \
-      return STATUS_CONST(SUCCESS);                                               \
+      return STATUS_CONST(SUCCESS);                                            \
     }                                                                          \
-    TTREE_NODE(T) *_cur = tree->root;                                           \
-    TTREE_NODE(T) *_par = NULL;                                                 \
+    TREE_NODE(T) *_cur = tree->root;                                           \
+    TREE_NODE(T) *_par = NULL;                                                 \
     while (_cur) {                                                             \
       _par = _cur;                                                             \
-      TTREE_CMPOUT _r = CMP(key, _cur->key);                                         \
-      if (_r < 0)                                                              \
+      TREE_CMPOUT _r = CMP(key, _cur->key);                                    \
+      if (_r < COMPARISON_EQUAL_CONST)                                         \
         _cur = _cur->left;                                                     \
-      else if (_r > 0)                                                         \
+      else if (_r > COMPARISON_EQUAL_CONST)                                    \
         _cur = _cur->right;                                                    \
       else {                                                                   \
         _cur->value = value;                                                   \
-        Memory_Free(_n);                                                      \
-        return STATUS_CONST(ALREADY_EXISTS);                                               \
+        Memory_Free(_n);                                                       \
+        return STATUS_CONST(ALREADY_EXISTS);                                   \
       }                                                                        \
     }                                                                          \
     _n->parent = _par;                                                         \
-    if (CMP(key, _par->key) < 0)                                               \
+    if (CMP(key, _par->key) < COMPARISON_EQUAL_CONST)                          \
       _par->left = _n;                                                         \
     else                                                                       \
       _par->right = _n;                                                        \
     tree->size++;                                                              \
-    TTREE_FN(T, InsertFixup)(tree, _n);                                        \
-    return STATUS_CONST(SUCCESS);                                                 \
+    TREE_FUNC(T, InsertFixup)(tree, _n);                                       \
+    return STATUS_CONST(SUCCESS);                                              \
   }
 
 /* =============================================================
  * Full RB SET / MAP expansion
  * ============================================================= */
 
-#define COSMERON_MACRO_INTERNAL_TRB_SET_IMPLEMENT_ALL(T, KEY_TYPE, CMP)                                      \
-  COSMERON_MACRO_INTERNAL_TTREE_NODE_SET(T, KEY_TYPE, TREE_RBColor color;)                                 \
-  COSMERON_MACRO_INTERNAL_TTREE_STRUCT(T)                                                              \
-  TTREE_SET_PROTOTYPES(T, KEY_TYPE)                                            \
-  COSMERON_MACRO_INTERNAL_TTREE_COMMON_SET(T, KEY_TYPE, CMP)                                           \
-  COSMERON_MACRO_INTERNAL_TRB_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                        \
-  COSMERON_MACRO_INTERNAL_TRB_IMPLEMENT_SET(T, KEY_TYPE, CMP)
+#define COSMERON_MACRO_INTERNAL_TREE_RB_SET_IMPLEMENT_ALL(T, KEY_TYPE, CMP)   \
+  TREE_NODE_STRUCT_SET(T, KEY_TYPE, TREE_NS(RBColor) color;)                  \
+  TREE_STRUCT(T)                                                               \
+  TREE_SET_PROTOTYPES(T, KEY_TYPE)                                             \
+  COSMERON_MACRO_INTERNAL_TREE_COMMON_SET(T, KEY_TYPE, CMP)                    \
+  COSMERON_MACRO_INTERNAL_TREE_RB_IMPLEMENT_CORE(T, KEY_TYPE, CMP)             \
+  COSMERON_MACRO_INTERNAL_TREE_RB_IMPLEMENT_SET(T, KEY_TYPE, CMP)
 
-#define COSMERON_MACRO_INTERNAL_TRB_MAP_IMPLEMENT_ALL(T, KEY_TYPE, VALUE_TYPE, CMP)                          \
-  COSMERON_MACRO_INTERNAL_TTREE_NODE_MAP(T, KEY_TYPE, VALUE_TYPE, TREE_RBColor color;)                     \
-  COSMERON_MACRO_INTERNAL_TTREE_STRUCT(T)                                                              \
-  TTREE_MAP_PROTOTYPES(T, KEY_TYPE, VALUE_TYPE)                                \
-  COSMERON_MACRO_INTERNAL_TTREE_COMMON_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)                               \
-  COSMERON_MACRO_INTERNAL_TRB_IMPLEMENT_CORE(T, KEY_TYPE, CMP)                                        \
-  COSMERON_MACRO_INTERNAL_TRB_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)
+#define COSMERON_MACRO_INTERNAL_TREE_RB_MAP_IMPLEMENT_ALL(T, KEY_TYPE,        \
+                                                           VALUE_TYPE, CMP)    \
+  TREE_NODE_STRUCT_MAP(T, KEY_TYPE, VALUE_TYPE, TREE_NS(RBColor) color;)      \
+  TREE_STRUCT(T)                                                               \
+  TREE_MAP_PROTOTYPES(T, KEY_TYPE, VALUE_TYPE)                                 \
+  COSMERON_MACRO_INTERNAL_TREE_COMMON_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)        \
+  COSMERON_MACRO_INTERNAL_TREE_RB_IMPLEMENT_CORE(T, KEY_TYPE, CMP)             \
+  COSMERON_MACRO_INTERNAL_TREE_RB_IMPLEMENT_MAP(T, KEY_TYPE, VALUE_TYPE, CMP)
+
+/* Compatibility aliases */
+#define COSMERON_MACRO_INTERNAL_TRB_IMPLEMENT_CORE COSMERON_MACRO_INTERNAL_TREE_RB_IMPLEMENT_CORE
+#define COSMERON_MACRO_INTERNAL_TRB_IMPLEMENT_SET COSMERON_MACRO_INTERNAL_TREE_RB_IMPLEMENT_SET
+#define COSMERON_MACRO_INTERNAL_TRB_IMPLEMENT_MAP COSMERON_MACRO_INTERNAL_TREE_RB_IMPLEMENT_MAP
+#define COSMERON_MACRO_INTERNAL_TRB_SET_IMPLEMENT_ALL COSMERON_MACRO_INTERNAL_TREE_RB_SET_IMPLEMENT_ALL
+#define COSMERON_MACRO_INTERNAL_TRB_MAP_IMPLEMENT_ALL COSMERON_MACRO_INTERNAL_TREE_RB_MAP_IMPLEMENT_ALL
