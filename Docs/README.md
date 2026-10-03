@@ -37,6 +37,7 @@ Cross-project technical conventions.
 
 Module-by-module API and usage documentation.
 
+- [Audio](Modules/Audio.md) — synthesis, beep music, codecs and playback
 - [Bit](Modules/Bit.md)
 
 ### [Translations](Translations/)

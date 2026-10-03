@@ -1,0 +1,178 @@
+/* Implementation included by Oscillator.h. */
+
+/* Odd Taylor polynomial on [-pi/2, pi/2], error below 6e-8.
+ * No libm, table storage, or runtime initialization needed. */
+static inline double AUDIO_INS(SineCycle)(double phase) {
+  const double tau = 6.283185307179586476925286766559;
+  double x, square;
+  if (phase > 0.75)
+    phase -= 1.0;
+  else if (phase > 0.25)
+    phase = 0.5 - phase;
+  x = phase * tau;
+  square = x * x;
+  return x *
+         (1.0 +
+          square *
+              (-1.0 / 6.0 +
+               square * (1.0 / 120.0 +
+                         square * (-1.0 / 5040.0 +
+                                   square * (1.0 / 362880.0 +
+                                             square * (-1.0 / 39916800.0))))));
+}
+static inline double AUDIO_INS(PolyBLEP)(double phase, double step) {
+  if (step == 0)
+    return 0;
+  if (phase < step) {
+    double t = phase / step;
+    return t + t - t * t - 1;
+  }
+  if (phase > 1 - step) {
+    double t = (phase - 1) / step;
+    return t * t + t + t + 1;
+  }
+  return 0;
+}
+AUDIO_OSCILLATOR_SET_QUALITY_PROTOTYPE {
+  if (oscillator == NULL || (quality != AUDIO_OSCILLATOR_CONST(BASIC) &&
+                             quality != AUDIO_OSCILLATOR_CONST(POLYBLEP)))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  oscillator->quality = quality;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_OSCILLATOR_INIT_PROTOTYPE {
+  AUDIO_OSCILLATOR_TYPE(TOscillator) value = {0};
+  if (oscillator == NULL ||
+      !AUDIO_INS(ValidFormat)(sampleRate, AUDIO_CONST(MONO)) ||
+      waveform < AUDIO_OSCILLATOR_CONST(SINE) ||
+      waveform >= AUDIO_OSCILLATOR_CONST(WAVETABLE) ||
+      !AUDIO_INS(Finite)(frequency) || frequency < 0.0 ||
+      frequency >= sampleRate * 0.5)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  value.frequency = frequency;
+  value.amplitude = 0.25f;
+  value.dutyCycle = 0.5f;
+  value.sampleRate = sampleRate;
+  value.noiseState = UINT32_C(0x6d2b79f5);
+  value.waveform = waveform;
+  *oscillator = value;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_OSCILLATOR_SET_FREQUENCY_PROTOTYPE {
+  if (oscillator == NULL || !AUDIO_INS(Finite)(frequency) || frequency < 0.0 ||
+      frequency >= oscillator->sampleRate * 0.5)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  oscillator->frequency = frequency;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_OSCILLATOR_SET_AMPLITUDE_PROTOTYPE {
+  if (oscillator == NULL || !(amplitude >= 0.0f && amplitude <= 1.0f))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  oscillator->amplitude = amplitude;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_OSCILLATOR_SET_DUTY_CYCLE_PROTOTYPE {
+  if (oscillator == NULL || !(dutyCycle > 0.0f && dutyCycle < 1.0f))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  oscillator->dutyCycle = dutyCycle;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_OSCILLATOR_SET_WAVEFORM_PROTOTYPE {
+  if (oscillator == NULL || waveform < AUDIO_OSCILLATOR_CONST(SINE) ||
+      waveform > AUDIO_OSCILLATOR_CONST(WAVETABLE) ||
+      (waveform == AUDIO_OSCILLATOR_CONST(WAVETABLE) &&
+       oscillator->tableSize < 2))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  oscillator->waveform = waveform;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_OSCILLATOR_SET_WAVETABLE_PROTOTYPE {
+  size_t i;
+  if (oscillator == NULL || table == NULL || tableSize < 2 ||
+      tableSize > UINT32_MAX)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  for (i = 0; i < tableSize; ++i)
+    if (!(table[i] >= -1.0f && table[i] <= 1.0f))
+      return STATUS_CONST(INVALID_ARGUMENT);
+  oscillator->table = table;
+  oscillator->tableSize = tableSize;
+  oscillator->waveform = AUDIO_OSCILLATOR_CONST(WAVETABLE);
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_OSCILLATOR_RESET_PHASE_PROTOTYPE {
+  if (oscillator == NULL || !(phase >= 0.0 && phase < 1.0))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  oscillator->phase = phase;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_OSCILLATOR_SEED_PROTOTYPE {
+  if (oscillator != NULL)
+    oscillator->noiseState = seed == 0 ? UINT32_C(0x6d2b79f5) : seed;
+}
+
+AUDIO_OSCILLATOR_RENDER_PROTOTYPE {
+  size_t i;
+  double step;
+  if (oscillator == NULL || outSamples == NULL || oscillator->sampleRate == 0)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  step = oscillator->frequency / oscillator->sampleRate;
+  for (i = 0; i < frameCount; ++i) {
+    double phase = oscillator->phase;
+    double sample;
+    switch (oscillator->waveform) {
+    case AUDIO_OSCILLATOR_CONST(SINE):
+      sample = AUDIO_INS(SineCycle)(phase);
+      break;
+    case AUDIO_OSCILLATOR_CONST(SQUARE):
+      sample = phase < oscillator->dutyCycle ? 1.0 : -1.0;
+      break;
+    case AUDIO_OSCILLATOR_CONST(TRIANGLE):
+      sample = phase < 0.5 ? 4.0 * phase - 1.0 : 3.0 - 4.0 * phase;
+      break;
+    case AUDIO_OSCILLATOR_CONST(SAW):
+      sample = 2.0 * phase - 1.0;
+      break;
+    case AUDIO_OSCILLATOR_CONST(NOISE):
+      oscillator->noiseState ^= oscillator->noiseState << 13;
+      oscillator->noiseState ^= oscillator->noiseState >> 17;
+      oscillator->noiseState ^= oscillator->noiseState << 5;
+      sample = (double)oscillator->noiseState / UINT32_MAX * 2.0 - 1.0;
+      break;
+    case AUDIO_OSCILLATOR_CONST(WAVETABLE): {
+      double position = phase * (double)oscillator->tableSize;
+      size_t index = (size_t)position;
+      size_t next = index + 1 == oscillator->tableSize ? 0 : index + 1;
+      sample = oscillator->table[index] +
+               (oscillator->table[next] - oscillator->table[index]) *
+                   (position - (double)index);
+      break;
+    }
+    default:
+      return STATUS_CONST(INVALID_ARGUMENT);
+    }
+    if (oscillator->quality == AUDIO_OSCILLATOR_CONST(POLYBLEP)) {
+      if (oscillator->waveform == AUDIO_OSCILLATOR_CONST(SAW))
+        sample -= AUDIO_INS(PolyBLEP)(phase, step);
+      if (oscillator->waveform == AUDIO_OSCILLATOR_CONST(SQUARE)) {
+        double falling = phase - oscillator->dutyCycle;
+        if (falling < 0)
+          falling += 1;
+        sample += AUDIO_INS(PolyBLEP)(phase, step) -
+                  AUDIO_INS(PolyBLEP)(falling, step);
+      }
+    }
+    outSamples[i] = (float)(sample * oscillator->amplitude);
+    oscillator->phase += step;
+    if (oscillator->phase >= 1.0)
+      oscillator->phase -= 1.0;
+  }
+  return STATUS_CONST(SUCCESS);
+}

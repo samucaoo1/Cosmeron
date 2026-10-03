@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - pattern-refactor
+      - audio-module
   pull_request:
     branches:
       - main
@@ -46,6 +47,10 @@ jobs:
       - name: Bootstrap repository
         if: ${{ hashFiles('Codespace/Tests/**') == '' }}
         run: echo "Codespace/Tests is not present yet; CI is installed and waiting for the source migration."
+
+      - name: Audio
+        if: ${{ hashFiles('Codespace/Tests/Audio/**') != '' }}
+        run: make -C Codespace/Tests/Audio clean run CC=${{ matrix.cc }}
 
       - name: Core
         if: ${{ hashFiles('Codespace/Tests/**') != '' }}
@@ -104,6 +109,11 @@ jobs:
         if: ${{ hashFiles('Codespace/Tests/**') == '' }}
         shell: bash
         run: echo "Codespace/Tests is not present yet; CI is installed and waiting for the source migration."
+
+      - name: Audio
+        if: ${{ hashFiles('Codespace/Tests/Audio/**') != '' }}
+        shell: bash
+        run: make -C Codespace/Tests/Audio clean run CC=gcc
 
       - name: Core
         if: ${{ hashFiles('Codespace/Tests/**') != '' }}
@@ -235,6 +245,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Audio
+        run: make -C Codespace/Tests/Audio clean run CC=clang CFLAGS="$SAN_FLAGS"
       - name: Core
         run: make -C Codespace/Tests/Core clean run CC=clang CFLAGS="$SAN_FLAGS"
       - name: Bit
@@ -272,6 +284,8 @@ jobs:
       - name: Install 32-bit libc
         run: sudo apt-get update && sudo apt-get install -y gcc-multilib libc6-dev-i386
 
+      - name: Audio
+        run: make -C Codespace/Tests/Audio clean run CC=gcc CFLAGS="$CFLAGS32"
       - name: Core
         run: make -C Codespace/Tests/Core clean run CC=gcc CFLAGS="$CFLAGS32"
       - name: Bit

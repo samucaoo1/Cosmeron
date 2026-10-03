@@ -1,0 +1,80 @@
+/* Implementation included by Device.h. */
+
+typedef struct AUDIO_INS(Device) {
+  cosmeron_audio_vendor_ma_device native;
+  AUDIO_DEVICE_TYPE(TConfig) config;
+} AUDIO_INS(Device);
+static void
+AUDIO_INS(DeviceRender)(cosmeron_audio_vendor_ma_device *native, void *output,
+                        const void *input,
+                        cosmeron_audio_vendor_ma_uint32 frameCount) {
+  AUDIO_INS(Device) *device = (AUDIO_INS(Device) *)native->pUserData;
+  size_t i, count = (size_t)frameCount * device->config.channels;
+  float *samples = (float *)output;
+  (void)input;
+  memset(samples, 0, count * sizeof(float));
+  device->config.render(device->config.userData, samples, frameCount,
+                        device->config.channels);
+  for (i = 0; i < count; ++i)
+    samples[i] =
+        AUDIO_INS(Finite)(samples[i]) ? AUDIO_INS(Clamp)(samples[i]) : 0.0f;
+}
+AUDIO_DEVICE_OPEN_PROTOTYPE {
+  AUDIO_INS(Device) * value;
+  cosmeron_audio_vendor_ma_device_config native;
+  cosmeron_audio_vendor_ma_result result;
+  if (device == NULL || config == NULL || config->render == NULL ||
+      !AUDIO_INS(ValidFormat)(config->sampleRate, config->channels))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (device->internal != NULL)
+    return STATUS_CONST(BUSY);
+  if (!AUDIO_INS(PrepareMath)())
+    return STATUS_CONST(NOT_AVAILABLE);
+  value = (AUDIO_INS(Device) *)calloc(1, sizeof(*value));
+  if (value == NULL)
+    return STATUS_CONST(OUT_OF_MEMORY);
+  value->config = *config;
+  native = cosmeron_audio_vendor_ma_device_config_init(
+      cosmeron_audio_vendor_ma_device_type_playback);
+  native.playback.format = cosmeron_audio_vendor_ma_format_f32;
+  native.playback.channels = config->channels;
+  native.sampleRate = config->sampleRate;
+  native.dataCallback = AUDIO_INS(DeviceRender);
+  native.pUserData = value;
+  result = cosmeron_audio_vendor_ma_device_init(NULL, &native, &value->native);
+  if (result != cosmeron_audio_vendor_MA_SUCCESS) {
+    free(value);
+    return AUDIO_INS(BackendStatus)(result);
+  }
+  device->internal = value;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_DEVICE_START_PROTOTYPE {
+  if (device == NULL || device->internal == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  return AUDIO_INS(BackendStatus)(cosmeron_audio_vendor_ma_device_start(
+      &((AUDIO_INS(Device) *)device->internal)->native));
+}
+
+AUDIO_DEVICE_STOP_PROTOTYPE {
+  if (device == NULL || device->internal == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  return AUDIO_INS(BackendStatus)(cosmeron_audio_vendor_ma_device_stop(
+      &((AUDIO_INS(Device) *)device->internal)->native));
+}
+
+AUDIO_DEVICE_IS_STARTED_PROTOTYPE {
+  return device != NULL && device->internal != NULL &&
+         cosmeron_audio_vendor_ma_device_is_started(
+             &((AUDIO_INS(Device) *)device->internal)->native) != 0;
+}
+
+AUDIO_DEVICE_CLOSE_PROTOTYPE {
+  if (device != NULL && device->internal != NULL) {
+    AUDIO_INS(Device) *value = (AUDIO_INS(Device) *)device->internal;
+    device->internal = NULL;
+    cosmeron_audio_vendor_ma_device_uninit(&value->native);
+    free(value);
+  }
+}

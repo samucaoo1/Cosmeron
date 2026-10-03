@@ -104,3 +104,8 @@ foreach ($name in $network.Keys) {
   Invoke-CosmeronTest "Codespace/Tests/Network" $name @($network[$name])
 }
 Invoke-CosmeronTest "Codespace/Tests/Network" "multi-tu" @("MultiTU_Main.c","MultiTU_A.c","MultiTU_B.c")
+
+foreach ($name in @("Synthesis", "Codec", "Player", "IncludeAll")) {
+  Invoke-CosmeronTest "Codespace/Tests/Audio" $name @("$name.c")
+}
+Invoke-CosmeronTest "Codespace/Tests/Audio" "multi-tu" @("MultiTU_A.c", "MultiTU_B.c", "MultiTU_Main.c")

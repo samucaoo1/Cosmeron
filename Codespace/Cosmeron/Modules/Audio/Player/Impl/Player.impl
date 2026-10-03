@@ -1,0 +1,276 @@
+/* Implementation included by Player.h. */
+
+typedef struct AUDIO_INS(Voice) {
+  cosmeron_audio_vendor_ma_sound native;
+  cosmeron_audio_vendor_ma_audio_buffer buffer;
+  bool hasBuffer;
+  uint64_t id;
+  struct AUDIO_INS(Voice) * next;
+} AUDIO_INS(Voice);
+typedef struct AUDIO_INS(Player) {
+  cosmeron_audio_vendor_ma_engine native;
+  AUDIO_PLAYER_TYPE(TConfig) config;
+  AUDIO_INS(Voice) * voices;
+  uint64_t nextId;
+} AUDIO_INS(Player);
+static inline void AUDIO_INS(DestroyVoice)(AUDIO_INS(Voice) * voice) {
+  cosmeron_audio_vendor_ma_sound_uninit(&voice->native);
+  if (voice->hasBuffer)
+    cosmeron_audio_vendor_ma_audio_buffer_uninit(&voice->buffer);
+  free(voice);
+}
+static inline AUDIO_INS(Voice) *
+    AUDIO_INS(FindVoice)(const AUDIO_PLAYER_TYPE(TPlayer) * player,
+                         AUDIO_PLAYER_TYPE(TVoice) token) {
+  AUDIO_INS(Voice) * voice;
+  if (player == NULL || player->internal == NULL || token.player != player ||
+      token.generation != player->generation)
+    return NULL;
+  voice = ((AUDIO_INS(Player) *)player->internal)->voices;
+  while (voice != NULL && voice->id != token.id)
+    voice = voice->next;
+  return voice;
+}
+static inline OPSTATUS
+AUDIO_INS(StartVoice)(AUDIO_PLAYER_TYPE(TPlayer) * player,
+                      AUDIO_INS(Voice) * voice, bool loop,
+                      AUDIO_PLAYER_TYPE(TVoice) * outVoice) {
+  AUDIO_INS(Player) *value = (AUDIO_INS(Player) *)player->internal;
+  AUDIO_PLAYER_TYPE(TVoice) token;
+  cosmeron_audio_vendor_ma_result result;
+  cosmeron_audio_vendor_ma_sound_set_looping(
+      &voice->native,
+      loop ? cosmeron_audio_vendor_MA_TRUE : cosmeron_audio_vendor_MA_FALSE);
+  result = cosmeron_audio_vendor_ma_sound_start(&voice->native);
+  if (result != cosmeron_audio_vendor_MA_SUCCESS) {
+    AUDIO_INS(DestroyVoice)(voice);
+    return AUDIO_INS(BackendStatus)(result);
+  }
+  voice->id = ++value->nextId;
+  voice->next = value->voices;
+  value->voices = voice;
+  token.player = player;
+  token.generation = player->generation;
+  token.id = voice->id;
+  *outVoice = token;
+  return STATUS_CONST(SUCCESS);
+}
+AUDIO_PLAYER_CONFIG_PROTOTYPE {
+  AUDIO_PLAYER_TYPE(TConfig) config;
+  config.sampleRate = AUDIO_CONST(DEFAULT_SAMPLE_RATE);
+  config.channels = AUDIO_CONST(STEREO);
+  config.offline = false;
+  return config;
+}
+
+AUDIO_PLAYER_OPEN_PROTOTYPE {
+  AUDIO_INS(Player) * value;
+  cosmeron_audio_vendor_ma_engine_config native;
+  cosmeron_audio_vendor_ma_result result;
+  if (player == NULL || config == NULL ||
+      !AUDIO_INS(ValidFormat)(config->sampleRate, config->channels))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (player->internal != NULL)
+    return STATUS_CONST(BUSY);
+  if (player->generation == UINT64_MAX)
+    return STATUS_CONST(OUT_OF_RANGE);
+  if (!AUDIO_INS(PrepareMath)())
+    return STATUS_CONST(NOT_AVAILABLE);
+  value = (AUDIO_INS(Player) *)calloc(1, sizeof(*value));
+  if (value == NULL)
+    return STATUS_CONST(OUT_OF_MEMORY);
+  value->config = *config;
+  native = cosmeron_audio_vendor_ma_engine_config_init();
+  native.sampleRate = config->sampleRate;
+  native.channels = config->channels;
+  native.noDevice = config->offline ? cosmeron_audio_vendor_MA_TRUE
+                                    : cosmeron_audio_vendor_MA_FALSE;
+  result = cosmeron_audio_vendor_ma_engine_init(&native, &value->native);
+  if (result != cosmeron_audio_vendor_MA_SUCCESS) {
+    free(value);
+    return AUDIO_INS(BackendStatus)(result);
+  }
+  player->internal = value;
+  ++player->generation;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_PLAYER_PLAY_FILE_PROTOTYPE {
+  AUDIO_INS(Player) * value;
+  AUDIO_INS(Voice) * voice;
+  cosmeron_audio_vendor_ma_result result;
+  if (player == NULL || player->internal == NULL || path == NULL ||
+      outVoice == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  value = (AUDIO_INS(Player) *)player->internal;
+  if (value->nextId == UINT64_MAX)
+    return STATUS_CONST(OUT_OF_RANGE);
+  voice = (AUDIO_INS(Voice) *)calloc(1, sizeof(*voice));
+  if (voice == NULL)
+    return STATUS_CONST(OUT_OF_MEMORY);
+  /* Stream on desktop, decode synchronously for deterministic offline
+   * rendering. */
+  result = cosmeron_audio_vendor_ma_sound_init_from_file(
+      &value->native, path,
+      cosmeron_audio_vendor_MA_SOUND_FLAG_NO_SPATIALIZATION |
+          (value->config.offline ? cosmeron_audio_vendor_MA_SOUND_FLAG_DECODE
+                                 : cosmeron_audio_vendor_MA_SOUND_FLAG_STREAM),
+      NULL, NULL, &voice->native);
+  if (result != cosmeron_audio_vendor_MA_SUCCESS) {
+    free(voice);
+    return AUDIO_INS(BackendStatus)(result);
+  }
+  return AUDIO_INS(StartVoice)(player, voice, loop, outVoice);
+}
+
+AUDIO_PLAYER_PLAY_BUFFER_PROTOTYPE {
+  AUDIO_INS(Player) * value;
+  AUDIO_INS(Voice) * voice;
+  cosmeron_audio_vendor_ma_audio_buffer_config config;
+  cosmeron_audio_vendor_ma_result result;
+  size_t count, i;
+  if (player == NULL || player->internal == NULL || buffer == NULL ||
+      buffer->samples == NULL || buffer->frameCount == 0 || outVoice == NULL ||
+      !AUDIO_INS(ValidFormat)(buffer->sampleRate, buffer->channels))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (buffer->frameCount > SIZE_MAX / buffer->channels / sizeof(float))
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  count = buffer->frameCount * buffer->channels;
+  for (i = 0; i < count; ++i)
+    if (!AUDIO_INS(Finite)(buffer->samples[i]))
+      return STATUS_CONST(INVALID_ARGUMENT);
+  value = (AUDIO_INS(Player) *)player->internal;
+  if (value->nextId == UINT64_MAX)
+    return STATUS_CONST(OUT_OF_RANGE);
+  voice = (AUDIO_INS(Voice) *)calloc(1, sizeof(*voice));
+  if (voice == NULL)
+    return STATUS_CONST(OUT_OF_MEMORY);
+  config = cosmeron_audio_vendor_ma_audio_buffer_config_init(
+      cosmeron_audio_vendor_ma_format_f32, buffer->channels, buffer->frameCount,
+      buffer->samples, NULL);
+  config.sampleRate = buffer->sampleRate;
+  result =
+      cosmeron_audio_vendor_ma_audio_buffer_init_copy(&config, &voice->buffer);
+  if (result != cosmeron_audio_vendor_MA_SUCCESS) {
+    free(voice);
+    return AUDIO_INS(BackendStatus)(result);
+  }
+  voice->hasBuffer = true;
+  result = cosmeron_audio_vendor_ma_sound_init_from_data_source(
+      &value->native, &voice->buffer,
+      cosmeron_audio_vendor_MA_SOUND_FLAG_NO_SPATIALIZATION, NULL,
+      &voice->native);
+  if (result != cosmeron_audio_vendor_MA_SUCCESS) {
+    cosmeron_audio_vendor_ma_audio_buffer_uninit(&voice->buffer);
+    free(voice);
+    return AUDIO_INS(BackendStatus)(result);
+  }
+  return AUDIO_INS(StartVoice)(player, voice, loop, outVoice);
+}
+
+AUDIO_PLAYER_PAUSE_PROTOTYPE {
+  AUDIO_INS(Voice) *value = AUDIO_INS(FindVoice)(player, voice);
+  if (value == NULL)
+    return STATUS_CONST(NOT_FOUND);
+  return AUDIO_INS(BackendStatus)(
+      cosmeron_audio_vendor_ma_sound_stop(&value->native));
+}
+
+AUDIO_PLAYER_RESUME_PROTOTYPE {
+  AUDIO_INS(Voice) *value = AUDIO_INS(FindVoice)(player, voice);
+  if (value == NULL)
+    return STATUS_CONST(NOT_FOUND);
+  return AUDIO_INS(BackendStatus)(
+      cosmeron_audio_vendor_ma_sound_start(&value->native));
+}
+
+AUDIO_PLAYER_SEEK_FRAME_PROTOTYPE {
+  AUDIO_INS(Voice) *value = AUDIO_INS(FindVoice)(player, voice);
+  if (value == NULL)
+    return STATUS_CONST(NOT_FOUND);
+  return AUDIO_INS(BackendStatus)(
+      cosmeron_audio_vendor_ma_sound_seek_to_pcm_frame(&value->native,
+                                                       frameIndex));
+}
+
+AUDIO_PLAYER_IS_PLAYING_PROTOTYPE {
+  AUDIO_INS(Voice) *value = AUDIO_INS(FindVoice)(player, voice);
+  return value != NULL &&
+         cosmeron_audio_vendor_ma_sound_is_playing(&value->native) != 0;
+}
+
+AUDIO_PLAYER_STOP_PROTOTYPE {
+  AUDIO_INS(Voice) *value = AUDIO_INS(FindVoice)(player, voice);
+  AUDIO_INS(Player) * state;
+  AUDIO_INS(Voice) * *link;
+  if (value == NULL)
+    return STATUS_CONST(NOT_FOUND);
+  state = (AUDIO_INS(Player) *)player->internal;
+  link = &state->voices;
+  while (*link != value)
+    link = &(*link)->next;
+  *link = value->next;
+  AUDIO_INS(DestroyVoice)(value);
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_PLAYER_COLLECT_PROTOTYPE {
+  size_t count = 0;
+  AUDIO_INS(Voice) * *link;
+  if (player == NULL || player->internal == NULL)
+    return 0;
+  link = &((AUDIO_INS(Player) *)player->internal)->voices;
+  while (*link != NULL) {
+    AUDIO_INS(Voice) *voice = *link;
+    if (cosmeron_audio_vendor_ma_sound_at_end(&voice->native)) {
+      *link = voice->next;
+      AUDIO_INS(DestroyVoice)(voice);
+      ++count;
+    } else
+      link = &voice->next;
+  }
+  return count;
+}
+
+AUDIO_PLAYER_RENDER_PROTOTYPE {
+  AUDIO_INS(Player) * value;
+  cosmeron_audio_vendor_ma_uint64 count = 0;
+  cosmeron_audio_vendor_ma_result result;
+  size_t i;
+  if (player == NULL || player->internal == NULL || outSamples == NULL ||
+      outFrames == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  value = (AUDIO_INS(Player) *)player->internal;
+  if (!value->config.offline)
+    return STATUS_CONST(NOT_SUPPORTED);
+  if (frameCount > SIZE_MAX / value->config.channels / sizeof(float))
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  if (frameCount == 0) {
+    *outFrames = 0;
+    return STATUS_CONST(SUCCESS);
+  }
+  result = cosmeron_audio_vendor_ma_engine_read_pcm_frames(
+      &value->native, outSamples, frameCount, &count);
+  /* Streaming exception: count and partial output are meaningful on failure. */
+  *outFrames = (size_t)count;
+  for (i = 0; i < (size_t)count * value->config.channels; ++i)
+    outSamples[i] = AUDIO_INS(Clamp)(outSamples[i]);
+  return AUDIO_INS(BackendStatus)(result);
+}
+
+AUDIO_PLAYER_CLOSE_PROTOTYPE {
+  if (player != NULL && player->internal != NULL) {
+    AUDIO_INS(Player) *value = (AUDIO_INS(Player) *)player->internal;
+    AUDIO_INS(Voice) *voice = value->voices;
+    player->internal = NULL;
+    if (!value->config.offline)
+      (void)cosmeron_audio_vendor_ma_engine_stop(&value->native);
+    while (voice != NULL) {
+      AUDIO_INS(Voice) *next = voice->next;
+      AUDIO_INS(DestroyVoice)(voice);
+      voice = next;
+    }
+    cosmeron_audio_vendor_ma_engine_uninit(&value->native);
+    free(value);
+  }
+}

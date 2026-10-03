@@ -1,0 +1,31 @@
+/* Implementation included by Mixer.h. */
+
+AUDIO_MIXER_SET_MASTER_VOLUME_PROTOTYPE {
+  if (player == NULL || player->internal == NULL ||
+      !(volume >= 0 && volume <= 1))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  return AUDIO_INS(BackendStatus)(cosmeron_audio_vendor_ma_engine_set_volume(
+      &((AUDIO_INS(Player) *)player->internal)->native, volume));
+}
+
+AUDIO_MIXER_SET_VOLUME_PROTOTYPE {
+  AUDIO_INS(Voice) * value;
+  if (!(volume >= 0 && volume <= 1))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  value = AUDIO_INS(FindVoice)(player, voice);
+  if (value == NULL)
+    return STATUS_CONST(NOT_FOUND);
+  cosmeron_audio_vendor_ma_sound_set_volume(&value->native, volume);
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_MIXER_SET_PAN_PROTOTYPE {
+  AUDIO_INS(Voice) * value;
+  if (!(pan >= -1 && pan <= 1))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  value = AUDIO_INS(FindVoice)(player, voice);
+  if (value == NULL)
+    return STATUS_CONST(NOT_FOUND);
+  cosmeron_audio_vendor_ma_sound_set_pan(&value->native, pan);
+  return STATUS_CONST(SUCCESS);
+}

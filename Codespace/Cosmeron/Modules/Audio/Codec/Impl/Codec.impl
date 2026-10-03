@@ -1,0 +1,239 @@
+/* Implementation included by Codec.h. */
+
+typedef struct AUDIO_INS(Decoder) {
+  cosmeron_audio_vendor_ma_decoder native;
+  AUDIO_CODEC_TYPE(TReader) reader;
+} AUDIO_INS(Decoder);
+static cosmeron_audio_vendor_ma_result
+AUDIO_INS(DecoderRead)(cosmeron_audio_vendor_ma_decoder *decoder, void *buffer,
+                       size_t capacity, size_t *outCount) {
+  AUDIO_INS(Decoder) *value = (AUDIO_INS(Decoder) *)decoder->pUserData;
+  size_t count = 0;
+  OPSTATUS result =
+      value->reader.read(value->reader.userData, buffer, capacity, &count);
+  if (count > capacity)
+    return cosmeron_audio_vendor_MA_INVALID_DATA;
+  *outCount = count;
+  if (result != STATUS_CONST(SUCCESS))
+    return cosmeron_audio_vendor_MA_IO_ERROR;
+  return count == 0 ? cosmeron_audio_vendor_MA_AT_END
+                    : cosmeron_audio_vendor_MA_SUCCESS;
+}
+static cosmeron_audio_vendor_ma_result
+AUDIO_INS(DecoderSeek)(cosmeron_audio_vendor_ma_decoder *decoder,
+                       cosmeron_audio_vendor_ma_int64 offset,
+                       cosmeron_audio_vendor_ma_seek_origin origin) {
+  AUDIO_INS(Decoder) *value = (AUDIO_INS(Decoder) *)decoder->pUserData;
+  AUDIO_CODEC_TYPE(TSeekOrigin) mapped;
+  switch (origin) {
+  case cosmeron_audio_vendor_ma_seek_origin_start:
+    mapped = AUDIO_CODEC_CONST(SEEK_START);
+    break;
+  case cosmeron_audio_vendor_ma_seek_origin_current:
+    mapped = AUDIO_CODEC_CONST(SEEK_CURRENT);
+    break;
+  case cosmeron_audio_vendor_ma_seek_origin_end:
+    mapped = AUDIO_CODEC_CONST(SEEK_END);
+    break;
+  default:
+    return cosmeron_audio_vendor_MA_INVALID_ARGS;
+  }
+  return value->reader.seek(value->reader.userData, offset, mapped) ==
+                 STATUS_CONST(SUCCESS)
+             ? cosmeron_audio_vendor_MA_SUCCESS
+             : cosmeron_audio_vendor_MA_BAD_SEEK;
+}
+static inline void AUDIO_INS(StoreLE16)(unsigned char *p, uint16_t value) {
+  p[0] = (unsigned char)value;
+  p[1] = (unsigned char)(value >> 8);
+}
+static inline void AUDIO_INS(StoreLE32)(unsigned char *p, uint32_t value) {
+  p[0] = (unsigned char)value;
+  p[1] = (unsigned char)(value >> 8);
+  p[2] = (unsigned char)(value >> 16);
+  p[3] = (unsigned char)(value >> 24);
+}
+AUDIO_CODEC_OPEN_FILE_PROTOTYPE {
+  AUDIO_INS(Decoder) * value;
+  cosmeron_audio_vendor_ma_result result;
+  cosmeron_audio_vendor_ma_decoder_config config;
+  if (decoder == NULL || path == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (decoder->internal != NULL)
+    return STATUS_CONST(BUSY);
+  if (!AUDIO_INS(PrepareMath)())
+    return STATUS_CONST(NOT_AVAILABLE);
+  value = (AUDIO_INS(Decoder) *)calloc(1, sizeof(*value));
+  if (value == NULL)
+    return STATUS_CONST(OUT_OF_MEMORY);
+  config = cosmeron_audio_vendor_ma_decoder_config_init(
+      cosmeron_audio_vendor_ma_format_f32, 0, 0);
+  result =
+      cosmeron_audio_vendor_ma_decoder_init_file(path, &config, &value->native);
+  if (result != cosmeron_audio_vendor_MA_SUCCESS) {
+    free(value);
+    return AUDIO_INS(BackendStatus)(result);
+  }
+  decoder->internal = value;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_CODEC_OPEN_MEMORY_PROTOTYPE {
+  AUDIO_INS(Decoder) * value;
+  cosmeron_audio_vendor_ma_result result;
+  cosmeron_audio_vendor_ma_decoder_config config;
+  if (decoder == NULL || data == NULL || size == 0)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (decoder->internal != NULL)
+    return STATUS_CONST(BUSY);
+  if (!AUDIO_INS(PrepareMath)())
+    return STATUS_CONST(NOT_AVAILABLE);
+  value = (AUDIO_INS(Decoder) *)calloc(1, sizeof(*value));
+  if (value == NULL)
+    return STATUS_CONST(OUT_OF_MEMORY);
+  config = cosmeron_audio_vendor_ma_decoder_config_init(
+      cosmeron_audio_vendor_ma_format_f32, 0, 0);
+  result = cosmeron_audio_vendor_ma_decoder_init_memory(data, size, &config,
+                                                        &value->native);
+  if (result != cosmeron_audio_vendor_MA_SUCCESS) {
+    free(value);
+    return AUDIO_INS(BackendStatus)(result);
+  }
+  decoder->internal = value;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_CODEC_OPEN_READER_PROTOTYPE {
+  AUDIO_INS(Decoder) * value;
+  cosmeron_audio_vendor_ma_result result;
+  cosmeron_audio_vendor_ma_decoder_config config;
+  if (decoder == NULL || reader == NULL || reader->read == NULL ||
+      reader->seek == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (decoder->internal != NULL)
+    return STATUS_CONST(BUSY);
+  if (!AUDIO_INS(PrepareMath)())
+    return STATUS_CONST(NOT_AVAILABLE);
+  value = (AUDIO_INS(Decoder) *)calloc(1, sizeof(*value));
+  if (value == NULL)
+    return STATUS_CONST(OUT_OF_MEMORY);
+  value->reader = *reader;
+  config = cosmeron_audio_vendor_ma_decoder_config_init(
+      cosmeron_audio_vendor_ma_format_f32, 0, 0);
+  result = cosmeron_audio_vendor_ma_decoder_init(AUDIO_INS(DecoderRead),
+                                                 AUDIO_INS(DecoderSeek), value,
+                                                 &config, &value->native);
+  if (result != cosmeron_audio_vendor_MA_SUCCESS) {
+    free(value);
+    return AUDIO_INS(BackendStatus)(result);
+  }
+  decoder->internal = value;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_CODEC_GET_INFO_PROTOTYPE {
+  AUDIO_INS(Decoder) * value;
+  AUDIO_CODEC_TYPE(TInfo) info = {0};
+  cosmeron_audio_vendor_ma_uint64 length = 0;
+  if (decoder == NULL || decoder->internal == NULL || outInfo == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  value = (AUDIO_INS(Decoder) *)decoder->internal;
+  info.channels = value->native.outputChannels;
+  info.sampleRate = value->native.outputSampleRate;
+  info.lengthKnown =
+      cosmeron_audio_vendor_ma_decoder_get_length_in_pcm_frames(
+          &value->native, &length) == cosmeron_audio_vendor_MA_SUCCESS;
+  info.frameCount = length;
+  *outInfo = info;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_CODEC_READ_FRAMES_PROTOTYPE {
+  AUDIO_INS(Decoder) * value;
+  cosmeron_audio_vendor_ma_uint64 count = 0;
+  cosmeron_audio_vendor_ma_result result;
+  if (decoder == NULL || decoder->internal == NULL || outSamples == NULL ||
+      outFrames == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  value = (AUDIO_INS(Decoder) *)decoder->internal;
+  if (value->native.outputChannels == 0 ||
+      frameCapacity > SIZE_MAX / value->native.outputChannels / sizeof(float))
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  if (frameCapacity == 0) {
+    *outFrames = 0;
+    return STATUS_CONST(SUCCESS);
+  }
+  result = cosmeron_audio_vendor_ma_decoder_read_pcm_frames(
+      &value->native, outSamples, frameCapacity, &count);
+  /* Streaming exception: partial PCM and its count are exposed even on error.
+   */
+  *outFrames = (size_t)count;
+  if (result == cosmeron_audio_vendor_MA_AT_END)
+    return STATUS_CONST(SUCCESS);
+  return AUDIO_INS(BackendStatus)(result);
+}
+
+AUDIO_CODEC_SEEK_FRAME_PROTOTYPE {
+  AUDIO_INS(Decoder) * value;
+  if (decoder == NULL || decoder->internal == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  value = (AUDIO_INS(Decoder) *)decoder->internal;
+  return AUDIO_INS(BackendStatus)(
+      cosmeron_audio_vendor_ma_decoder_seek_to_pcm_frame(&value->native,
+                                                         frameIndex));
+}
+
+AUDIO_CODEC_CLOSE_PROTOTYPE {
+  if (decoder != NULL && decoder->internal != NULL) {
+    AUDIO_INS(Decoder) *value = (AUDIO_INS(Decoder) *)decoder->internal;
+    decoder->internal = NULL;
+    cosmeron_audio_vendor_ma_decoder_uninit(&value->native);
+    free(value);
+  }
+}
+
+AUDIO_CODEC_WRITE_WAV_PROTOTYPE {
+  FILE *file;
+  size_t i, sampleCount;
+  uint32_t dataSize;
+  unsigned char header[44] = {0};
+  bool ok;
+  if (path == NULL || buffer == NULL ||
+      !AUDIO_INS(ValidFormat)(buffer->sampleRate, buffer->channels) ||
+      (buffer->samples == NULL && buffer->frameCount != 0))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (buffer->frameCount > (UINT32_MAX - 36u) / buffer->channels / 2u)
+    return STATUS_CONST(OUT_OF_RANGE);
+  sampleCount = buffer->frameCount * buffer->channels;
+  for (i = 0; i < sampleCount; ++i)
+    if (!AUDIO_INS(Finite)(buffer->samples[i]))
+      return STATUS_CONST(INVALID_ARGUMENT);
+  dataSize = (uint32_t)(sampleCount * 2);
+  memcpy(header, "RIFF", 4);
+  AUDIO_INS(StoreLE32)(header + 4, dataSize + 36);
+  memcpy(header + 8, "WAVEfmt ", 8);
+  AUDIO_INS(StoreLE32)(header + 16, 16);
+  AUDIO_INS(StoreLE16)(header + 20, 1);
+  AUDIO_INS(StoreLE16)(header + 22, (uint16_t)buffer->channels);
+  AUDIO_INS(StoreLE32)(header + 24, buffer->sampleRate);
+  AUDIO_INS(StoreLE32)(header + 28, buffer->sampleRate * buffer->channels * 2);
+  AUDIO_INS(StoreLE16)(header + 32, (uint16_t)(buffer->channels * 2));
+  AUDIO_INS(StoreLE16)(header + 34, 16);
+  memcpy(header + 36, "data", 4);
+  AUDIO_INS(StoreLE32)(header + 40, dataSize);
+  file = fopen(path, "wb");
+  if (file == NULL)
+    return STATUS_CONST(GENERIC_ERROR);
+  ok = fwrite(header, 1, sizeof(header), file) == sizeof(header);
+  for (i = 0; ok && i < sampleCount; ++i) {
+    unsigned char bytes[2];
+    float sample = AUDIO_INS(Clamp)(buffer->samples[i]);
+    int16_t converted =
+        sample <= -1.0f ? INT16_MIN : (int16_t)(sample * 32767.0f);
+    AUDIO_INS(StoreLE16)(bytes, (uint16_t)converted);
+    ok = fwrite(bytes, 1, sizeof(bytes), file) == sizeof(bytes);
+  }
+  if (fclose(file) != 0)
+    ok = false;
+  return ok ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR);
+}

@@ -1,0 +1,51 @@
+/* Implementation included by PCM.h. */
+
+AUDIO_PCM_INIT_PROTOTYPE {
+  float *samples = NULL;
+  if (buffer == NULL || !AUDIO_INS(ValidFormat)(sampleRate, channels))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (buffer->samples != NULL)
+    return STATUS_CONST(BUSY);
+  if (frameCount > SIZE_MAX / channels / sizeof(float))
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  if (frameCount != 0) {
+    samples = (float *)calloc(frameCount * channels, sizeof(float));
+    if (samples == NULL)
+      return STATUS_CONST(OUT_OF_MEMORY);
+  }
+  buffer->samples = samples;
+  buffer->frameCount = frameCount;
+  buffer->channels = channels;
+  buffer->sampleRate = sampleRate;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_PCM_DESTROY_PROTOTYPE {
+  if (buffer != NULL) {
+    free(buffer->samples);
+    memset(buffer, 0, sizeof(*buffer));
+  }
+}
+
+AUDIO_PCM_FROM_S16_PROTOTYPE {
+  size_t i;
+  if (samples == NULL || outSamples == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  for (i = 0; i < sampleCount; ++i)
+    outSamples[i] = samples[i] / 32768.0f;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_PCM_TO_S16_PROTOTYPE {
+  size_t i;
+  if (samples == NULL || outSamples == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  for (i = 0; i < sampleCount; ++i)
+    if (!AUDIO_INS(Finite)(samples[i]))
+      return STATUS_CONST(INVALID_ARGUMENT);
+  for (i = 0; i < sampleCount; ++i) {
+    float value = AUDIO_INS(Clamp)(samples[i]);
+    outSamples[i] = value <= -1.0f ? INT16_MIN : (int16_t)(value * 32767.0f);
+  }
+  return STATUS_CONST(SUCCESS);
+}

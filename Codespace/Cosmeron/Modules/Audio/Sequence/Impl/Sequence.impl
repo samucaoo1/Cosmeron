@@ -1,0 +1,332 @@
+/* Implementation included by Sequence.h. */
+
+static inline bool AUDIO_INS(MMLNumber)(const char **text, uint32_t *outValue) {
+  uint32_t value = 0;
+  const char *p = *text;
+  if (*p < '0' || *p > '9')
+    return false;
+  while (*p >= '0' && *p <= '9') {
+    uint32_t digit = (uint32_t)(*p - '0');
+    if (value > (UINT32_MAX - digit) / 10)
+      return false;
+    value = value * 10 + digit;
+    ++p;
+  }
+  *text = p;
+  *outValue = value;
+  return true;
+}
+static inline OPSTATUS
+AUDIO_INS(ParseMMLPass)(const char *text, AUDIO_SEQUENCE_TYPE(TEvent) * events,
+                        size_t *outCount, size_t *outError) {
+  const char *p = text;
+  size_t count = 0;
+  uint32_t bpm = AUDIO_CONST(DEFAULT_BPM), octave = AUDIO_CONST(DEFAULT_OCTAVE),
+           length = 4, volume = 32;
+  while (*p != '\0') {
+    const char *start = p;
+    char command;
+    uint32_t value, duration, ticks, dot;
+    int pitch;
+    if (isspace((unsigned char)*p)) {
+      ++p;
+      continue;
+    }
+    command = (char)toupper((unsigned char)*p++);
+    if (command == 'T' || command == 'O' || command == 'L' || command == 'V') {
+      if (!AUDIO_INS(MMLNumber)(&p, &value))
+        goto invalid;
+      if (command == 'T') {
+        if (value == 0 || value > 1000)
+          goto invalid;
+        bpm = value;
+      }
+      if (command == 'O') {
+        if (value > 9)
+          goto invalid;
+        octave = value;
+      }
+      if (command == 'V') {
+        if (value > 127)
+          goto invalid;
+        volume = value;
+      }
+      if (command == 'L') {
+        if (value == 0 || value > 128 || (value & (value - 1)) != 0)
+          goto invalid;
+        length = value;
+      }
+      continue;
+    }
+    if (command == '>') {
+      if (octave == 9)
+        goto invalid;
+      ++octave;
+      continue;
+    }
+    if (command == '<') {
+      if (octave == 0)
+        goto invalid;
+      --octave;
+      continue;
+    }
+    switch (command) {
+    case 'C':
+      pitch = 0;
+      break;
+    case 'D':
+      pitch = 2;
+      break;
+    case 'E':
+      pitch = 4;
+      break;
+    case 'F':
+      pitch = 5;
+      break;
+    case 'G':
+      pitch = 7;
+      break;
+    case 'A':
+      pitch = 9;
+      break;
+    case 'B':
+      pitch = 11;
+      break;
+    case 'P':
+    case 'R':
+      pitch = -100;
+      break;
+    default:
+      goto invalid;
+    }
+    if (*p == '#' || *p == '+' || *p == '-') {
+      if (pitch == -100)
+        goto invalid;
+      pitch += *p == '-' ? -1 : 1;
+      ++p;
+    }
+    duration = length;
+    if (*p >= '0' && *p <= '9') {
+      if (!AUDIO_INS(MMLNumber)(&p, &duration) || duration == 0 ||
+          duration > 128 || (duration & (duration - 1)) != 0)
+        goto invalid;
+    }
+    ticks = AUDIO_CONST(TICKS_PER_QUARTER) * 4 / duration;
+    value = ticks;
+    dot = 0;
+    while (*p == '.') {
+      if (++dot > 3)
+        goto invalid;
+      value /= 2;
+      ticks += value;
+      ++p;
+    }
+    if (pitch != -100) {
+      pitch += ((int)octave + 1) * 12;
+      if (pitch < 0 || pitch >= AUDIO_CONST(MIDI_NOTE_COUNT))
+        goto invalid;
+    }
+    if (count == SIZE_MAX)
+      return STATUS_CONST(ARITHMETIC_OVERFLOW);
+    if (events != NULL) {
+      events[count].frequency = 0;
+      if (pitch != -100)
+        (void)AUDIO_SEQUENCE_FUNC(NoteFrequency)((uint32_t)pitch,
+                                                 &events[count].frequency);
+      events[count].ticks = ticks;
+      events[count].bpm = bpm;
+      events[count].volume = (float)volume / 127.0f;
+    }
+    ++count;
+    continue;
+  invalid:
+    *outError = (size_t)(start - text);
+    return STATUS_CONST(INVALID_SEQUENCE);
+  }
+  *outCount = count;
+  return STATUS_CONST(SUCCESS);
+}
+static inline void AUDIO_INS(SequenceBeginEvent)(AUDIO_SEQUENCE_TYPE(TCursor) *
+                                                 cursor) {
+  cursor->frameInEvent = 0;
+  if (cursor->eventIndex < cursor->eventCount) {
+    const AUDIO_SEQUENCE_TYPE(TEvent) *event =
+        &cursor->events[cursor->eventIndex];
+    double exact = (double)event->ticks * cursor->oscillator.sampleRate * 60.0 /
+                       ((double)event->bpm * AUDIO_CONST(TICKS_PER_QUARTER)) +
+                   cursor->fractionalFrames;
+    cursor->eventFrames = (uint64_t)exact;
+    cursor->fractionalFrames = exact - (double)cursor->eventFrames;
+    cursor->oscillator.frequency = event->frequency;
+    cursor->oscillator.amplitude = event->volume;
+    cursor->oscillator.phase = 0;
+  }
+}
+AUDIO_SEQUENCE_NOTE_FREQUENCY_PROTOTYPE {
+  static const double semitones[12] = {1.0,
+                                       1.0594630943592953,
+                                       1.1224620483093730,
+                                       1.1892071150027211,
+                                       1.2599210498948732,
+                                       1.3348398541700344,
+                                       1.4142135623730951,
+                                       1.4983070768766815,
+                                       1.5874010519681995,
+                                       1.6817928305074290,
+                                       1.7817974362806785,
+                                       1.8877486253633868};
+  double value;
+  uint32_t octave, i;
+  if (outFrequency == NULL || midiNote >= AUDIO_CONST(MIDI_NOTE_COUNT))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  octave = midiNote / 12;
+  value = 8.175798915643707 * semitones[midiNote % 12];
+  for (i = 0; i < octave; ++i)
+    value *= 2.0;
+  *outFrequency = value;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_SEQUENCE_PARSE_MML_PROTOTYPE {
+  AUDIO_SEQUENCE_TYPE(TSequence) value = {0};
+  size_t count = 0, errorOffset = 0;
+  OPSTATUS status;
+  if (text == NULL || outSequence == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (outSequence->events != NULL)
+    return STATUS_CONST(BUSY);
+  status = AUDIO_INS(ParseMMLPass)(text, NULL, &count, &errorOffset);
+  if (status != STATUS_CONST(SUCCESS)) {
+    if (outErrorOffset != NULL)
+      *outErrorOffset = errorOffset;
+    return status;
+  }
+  if (count > SIZE_MAX / sizeof(*value.events))
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  if (count != 0) {
+    value.events =
+        (AUDIO_SEQUENCE_TYPE(TEvent) *)malloc(count * sizeof(*value.events));
+    if (value.events == NULL)
+      return STATUS_CONST(OUT_OF_MEMORY);
+    status = AUDIO_INS(ParseMMLPass)(text, value.events, &count, &errorOffset);
+    if (status != STATUS_CONST(SUCCESS)) {
+      free(value.events);
+      return status;
+    }
+  }
+  value.eventCount = count;
+  *outSequence = value;
+  if (outErrorOffset != NULL)
+    *outErrorOffset = 0;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_SEQUENCE_DESTROY_PROTOTYPE {
+  if (sequence != NULL) {
+    free(sequence->events);
+    memset(sequence, 0, sizeof(*sequence));
+  }
+}
+
+AUDIO_SEQUENCE_INIT_PROTOTYPE {
+  AUDIO_SEQUENCE_TYPE(TCursor) value = {0};
+  size_t i;
+  OPSTATUS status;
+  if (cursor == NULL || (events == NULL && eventCount != 0))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  status =
+      AUDIO_OSCILLATOR_FUNC(Init)(&value.oscillator, sampleRate, waveform, 0);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+  for (i = 0; i < eventCount; ++i)
+    if (!AUDIO_INS(Finite)(events[i].frequency) || events[i].frequency < 0 ||
+        events[i].frequency >= sampleRate * 0.5 || events[i].ticks == 0 ||
+        events[i].bpm == 0 || events[i].bpm > 1000 ||
+        !(events[i].volume >= 0 && events[i].volume <= 1))
+      return STATUS_CONST(INVALID_ARGUMENT);
+  value.events = events;
+  value.eventCount = eventCount;
+  AUDIO_INS(SequenceBeginEvent)(&value);
+  *cursor = value;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_SEQUENCE_FINISHED_PROTOTYPE {
+  return cursor == NULL || cursor->eventIndex >= cursor->eventCount;
+}
+
+AUDIO_SEQUENCE_RENDER_PROTOTYPE {
+  size_t written = 0;
+  if (cursor == NULL || outSamples == NULL || outFrames == NULL ||
+      cursor->oscillator.sampleRate == 0 ||
+      frameCount > SIZE_MAX / sizeof(float))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  while (written < frameCount && cursor->eventIndex < cursor->eventCount) {
+    uint64_t remaining = cursor->eventFrames - cursor->frameInEvent;
+    size_t count = remaining < frameCount - written ? (size_t)remaining
+                                                    : frameCount - written;
+    uint64_t ramp =
+        cursor->oscillator.sampleRate / 200; /* Five millisecond edge. */
+    size_t i;
+    if (ramp > cursor->eventFrames / 2)
+      ramp = cursor->eventFrames / 2;
+    if (cursor->events[cursor->eventIndex].frequency == 0)
+      memset(outSamples + written, 0, count * sizeof(float));
+    else {
+      (void)AUDIO_OSCILLATOR_FUNC(Render)(&cursor->oscillator,
+                                          outSamples + written, count);
+      for (i = 0; i < count; ++i) {
+        uint64_t position = cursor->frameInEvent + i;
+        uint64_t tail = cursor->eventFrames - position - 1;
+        float gain = 1;
+        if (ramp != 0 && position < ramp)
+          gain = (float)position / (float)ramp;
+        if (ramp != 0 && tail < ramp)
+          gain = (float)tail / (float)ramp;
+        outSamples[written + i] *= gain;
+      }
+    }
+    written += count;
+    cursor->frameInEvent += count;
+    if (cursor->frameInEvent == cursor->eventFrames) {
+      ++cursor->eventIndex;
+      AUDIO_INS(SequenceBeginEvent)(cursor);
+    }
+  }
+  memset(outSamples + written, 0, (frameCount - written) * sizeof(float));
+  *outFrames = written;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_SEQUENCE_RENDER_BUFFER_PROTOTYPE {
+  AUDIO_SEQUENCE_TYPE(TCursor) cursor;
+  AUDIO_PCM_TYPE(TBuffer) buffer = {0};
+  size_t total = 0, written;
+  double fraction = 0;
+  size_t i;
+  OPSTATUS status;
+  if (outBuffer == NULL || outBuffer->samples != NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  status = AUDIO_SEQUENCE_FUNC(Init)(&cursor, events, eventCount, sampleRate,
+                                     waveform);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+  for (i = 0; i < eventCount; ++i) {
+    double exact =
+        (double)events[i].ticks * sampleRate * 60.0 /
+            ((double)events[i].bpm * AUDIO_CONST(TICKS_PER_QUARTER)) +
+        fraction;
+    uint64_t frames = (uint64_t)exact;
+    fraction = exact - (double)frames;
+    if (frames > SIZE_MAX - total)
+      return STATUS_CONST(ARITHMETIC_OVERFLOW);
+    total += (size_t)frames;
+  }
+  status = AUDIO_PCM_FUNC(Init)(&buffer, total, AUDIO_CONST(MONO), sampleRate);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+  if (total != 0)
+    (void)AUDIO_SEQUENCE_FUNC(Render)(&cursor, buffer.samples, total, &written);
+  *outBuffer = buffer;
+  return STATUS_CONST(SUCCESS);
+}
