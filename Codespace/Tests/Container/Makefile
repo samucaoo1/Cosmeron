@@ -7,7 +7,7 @@ ASAN_OPTIONS ?= detect_leaks=1
 
 all: strict sanitize multi-tu
 
-strict: $(BUILD)/functional $(BUILD)/linear-extra $(BUILD)/linear-all-types $(BUILD)/tree-all-functions $(BUILD)/hash $(BUILD)/graph $(BUILD)/off $(BUILD)/custom-type $(BUILD)/include-all $(BUILD)/include-all-off
+strict: $(BUILD)/functional $(BUILD)/linear-extra $(BUILD)/linear-all-types $(BUILD)/tree-all-functions $(BUILD)/hash $(BUILD)/graph $(BUILD)/off $(BUILD)/tree-ft-off $(BUILD)/custom-type $(BUILD)/include-all $(BUILD)/include-all-off
 	$(BUILD)/functional
 	$(BUILD)/linear-extra
 	$(BUILD)/linear-all-types
@@ -15,6 +15,7 @@ strict: $(BUILD)/functional $(BUILD)/linear-extra $(BUILD)/linear-all-types $(BU
 	$(BUILD)/hash
 	$(BUILD)/graph
 	$(BUILD)/off
+	$(BUILD)/tree-ft-off
 	$(BUILD)/custom-type
 	$(BUILD)/include-all
 	$(BUILD)/include-all-off
@@ -51,6 +52,9 @@ $(BUILD)/graph: Graph.c Test.h | $(BUILD)
 
 $(BUILD)/off: FunctionTableOff.c Test.h | $(BUILD)
 	$(CC) $(CFLAGS) FunctionTableOff.c -o $@
+
+$(BUILD)/tree-ft-off: TreeFunctionTableOff.c Test.h | $(BUILD)
+	$(CC) $(CFLAGS) TreeFunctionTableOff.c -o $@
 
 $(BUILD)/custom-type: CustomType.c Test.h | $(BUILD)
 	$(CC) $(CFLAGS) CustomType.c -o $@

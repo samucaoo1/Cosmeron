@@ -3,6 +3,50 @@
 #include "../../Cosmeron/Modules/Container/Tree/AVL.h"
 #include "../../Cosmeron/Modules/Container/Tree/RedBlack.h"
 
+static inline CMPOUT Test_Compare_Long(long left, long right) {
+  if (left < right)
+    return COMPARISON_LOWER_CONST;
+  if (left > right)
+    return COMPARISON_HIGHER_CONST;
+  return COMPARISON_EQUAL_CONST;
+}
+
+TREE_BST_SET_IMPLEMENT_ALL_CMP(custom_long, long, Test_Compare_Long)
+TREE_AVL_SET_IMPLEMENT_ALL_CMP(custom_long, long, Test_Compare_Long)
+TREE_RB_SET_IMPLEMENT_ALL_CMP(custom_long, long, Test_Compare_Long)
+
+TREE_BST_MAP_IMPLEMENT_ALL_CMP(custom_long, long, int, Test_Compare_Long)
+TREE_AVL_MAP_IMPLEMENT_ALL_CMP(custom_long, long, int, Test_Compare_Long)
+TREE_RB_MAP_IMPLEMENT_ALL_CMP(custom_long, long, int, Test_Compare_Long)
+
+#define TEST_CUSTOM_SET(ALGO)                                                  \
+  do {                                                                         \
+    TREE_PUBLIC_SET_TYPE(ALGO, custom_long) tree;                              \
+    long *found = NULL;                                                        \
+    TEST_ASSERT(TREE_FUNC(TREE_SET_TYPE(ALGO, custom_long), Init)(&tree) ==    \
+                STATUS_CONST(SUCCESS));                                        \
+    TEST_ASSERT(TREE_FUNC(TREE_SET_TYPE(ALGO, custom_long), Insert)(           \
+                    &tree, 7L) == STATUS_CONST(SUCCESS));                      \
+    TEST_ASSERT(TREE_FUNC(TREE_SET_TYPE(ALGO, custom_long), Find)(             \
+                    &tree, 7L, &found) == STATUS_CONST(SUCCESS));              \
+    TEST_ASSERT(found != NULL && *found == 7L);                                \
+    TREE_FUNC(TREE_SET_TYPE(ALGO, custom_long), Destroy)(&tree);               \
+  } while (0)
+
+#define TEST_CUSTOM_MAP(ALGO)                                                  \
+  do {                                                                         \
+    TREE_PUBLIC_MAP_TYPE(ALGO, custom_long, int) tree;                         \
+    int *found = NULL;                                                         \
+    TEST_ASSERT(TREE_FUNC(TREE_MAP_TYPE(ALGO, custom_long, int), Init)(&tree) == \
+                STATUS_CONST(SUCCESS));                                        \
+    TEST_ASSERT(TREE_FUNC(TREE_MAP_TYPE(ALGO, custom_long, int), Insert)(      \
+                    &tree, 7L, 42) == STATUS_CONST(SUCCESS));                  \
+    TEST_ASSERT(TREE_FUNC(TREE_MAP_TYPE(ALGO, custom_long, int), Find)(        \
+                    &tree, 7L, &found) == STATUS_CONST(SUCCESS));              \
+    TEST_ASSERT(found != NULL && *found == 42);                                \
+    TREE_FUNC(TREE_MAP_TYPE(ALGO, custom_long, int), Destroy)(&tree);          \
+  } while (0)
+
 #define TEST_SET(ALGO, KEY, A, B, C)                                          \
   do {                                                                         \
     TTREE_PUBLIC_SET_TYPE(ALGO, KEY) tree;                                     \
@@ -113,6 +157,13 @@ int main(void) {
   TEST_MAP(AVL, int, float, 10, 20, 30);
   TEST_MAP(RB, int, int, 10, 20, 30);
   TEST_MAP(RB, int, float, 10, 20, 30);
+
+  TEST_CUSTOM_SET(BST);
+  TEST_CUSTOM_SET(AVL);
+  TEST_CUSTOM_SET(RB);
+  TEST_CUSTOM_MAP(BST);
+  TEST_CUSTOM_MAP(AVL);
+  TEST_CUSTOM_MAP(RB);
 
   /* Canonical TREE_* grammar checks */
   {

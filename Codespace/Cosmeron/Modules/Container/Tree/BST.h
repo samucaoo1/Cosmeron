@@ -54,16 +54,16 @@
 
 #define TREE_BST_SET_INSTANCE_DECLARE(KEY, NAME)                               \
   TREE_PUBLIC_SET_TYPE(BST, KEY) NAME;                                         \
-  CONTAINER_API_BIND(                                                          \
-      NAME, TREE_FUNC(TREE_SET_TYPE(BST, KEY), functions));                    \
+  COSMERON_MACRO_INTERNAL_TREE_API_BIND(                                       \
+      NAME, TREE_SET_TYPE(BST, KEY));                    \
   TREE_FUNC(TREE_SET_TYPE(BST, KEY), Init)(&NAME);
 
 #define TTree_BST_Set(KEY, NAME) TREE_BST_SET_INSTANCE_DECLARE(KEY, NAME)
 
 #define TREE_BST_MAP_INSTANCE_DECLARE(KEY, VAL, NAME)                          \
   TREE_PUBLIC_MAP_TYPE(BST, KEY, VAL) NAME;                                    \
-  CONTAINER_API_BIND(                                                          \
-      NAME, TREE_FUNC(TREE_MAP_TYPE(BST, KEY, VAL), functions));               \
+  COSMERON_MACRO_INTERNAL_TREE_API_BIND(                                       \
+      NAME, TREE_MAP_TYPE(BST, KEY, VAL));               \
   TREE_FUNC(TREE_MAP_TYPE(BST, KEY, VAL), Init)(&NAME);
 
 #define TTree_BST_Map(KEY, VAL, NAME) TREE_BST_MAP_INSTANCE_DECLARE(KEY, VAL, NAME)

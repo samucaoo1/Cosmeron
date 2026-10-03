@@ -31,8 +31,17 @@
 
 #if !defined(TREE_DISABLE_FUNCTION_TABLE) && COSMERON_MACRO_INTERNAL_CONTAINER_FUNCTION_TABLE_ENABLED
 #define COSMERON_MACRO_INTERNAL_TREE_FUNCTION_TABLE_ENABLED 1
+#define COSMERON_MACRO_INTERNAL_TREE_API_FORWARD(T) \
+  CONTAINER_API_FORWARD(TREE_FUNCTION_TABLE_TYPE(T))
+#define COSMERON_MACRO_INTERNAL_TREE_API_FIELD(T) \
+  CONTAINER_API_FIELD(TREE_FUNCTION_TABLE_TYPE(T))
+#define COSMERON_MACRO_INTERNAL_TREE_API_BIND(NAME, T) \
+  CONTAINER_API_BIND(NAME, TREE_FUNC(T, functions))
 #else
 #define COSMERON_MACRO_INTERNAL_TREE_FUNCTION_TABLE_ENABLED 0
+#define COSMERON_MACRO_INTERNAL_TREE_API_FORWARD(T)
+#define COSMERON_MACRO_INTERNAL_TREE_API_FIELD(T)
+#define COSMERON_MACRO_INTERNAL_TREE_API_BIND(NAME, T) ((void)0)
 #endif
 
 /* =============================================================
@@ -83,7 +92,6 @@ typedef enum TREE_NS(RBColor) {
 #undef COSMERON_MACRO_INTERNAL_TREE_COLOR_X
 } TREE_NS(RBColor);
 
-typedef TREE_NS(RBColor) TREE_RBColor;
 #define TREE_RB_RED TREE_CONST(RB_RED)
 #define TREE_RB_BLACK TREE_CONST(RB_BLACK)
 
@@ -111,9 +119,9 @@ typedef TREE_NS(RBColor) TREE_RBColor;
   } TREE_NODE(T);
 
 #define TREE_STRUCT(T)                                                         \
-  CONTAINER_API_FORWARD(TREE_FUNCTION_TABLE_TYPE(T))                           \
+  COSMERON_MACRO_INTERNAL_TREE_API_FORWARD(T)                                  \
   typedef struct T {                                                           \
-    CONTAINER_API_FIELD(TREE_FUNCTION_TABLE_TYPE(T))                           \
+    COSMERON_MACRO_INTERNAL_TREE_API_FIELD(T)                                  \
     TREE_NODE(T) *root;                                                        \
     size_t size;                                                               \
   } T;

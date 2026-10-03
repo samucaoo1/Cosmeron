@@ -33,7 +33,7 @@
       TREE_PUBLIC_MAP_TYPE(AVL, KEY_TYPE, VALUE_TYPE);                         \
   TREE_FUNCTION_TABLE_STRUCT_MAP(                                              \
       TREE_MAP_TYPE(AVL, KEY_TYPE, VALUE_TYPE), KEY_TYPE, VALUE_TYPE)          \
-  TREE_FUNCTION_TABLE_INSTANCE_MAP(TREE_MAP_TYPE(AVL, KEY_TYPE, VALUE_TYPE))
+  TREE_FUNCTION_TABLE_INSTANCE_MAP(TREE_MAP_TYPE(AVL, SUFFIX_K, VALUE_TYPE))
 
 #define TREE_AVL_MAP_IMPLEMENT_ALL_CMP(SUFFIX_K, KEY_TYPE, VALUE_TYPE, CMP)   \
   COSMERON_MACRO_INTERNAL_TREE_AVL_MAP_IMPLEMENT_ALL(                          \
@@ -50,16 +50,16 @@
 
 #define TREE_AVL_SET_INSTANCE_DECLARE(KEY, NAME)                               \
   TREE_PUBLIC_SET_TYPE(AVL, KEY) NAME;                                         \
-  CONTAINER_API_BIND(                                                          \
-      NAME, TREE_FUNC(TREE_SET_TYPE(AVL, KEY), functions));                    \
+  COSMERON_MACRO_INTERNAL_TREE_API_BIND(                                       \
+      NAME, TREE_SET_TYPE(AVL, KEY));                    \
   TREE_FUNC(TREE_SET_TYPE(AVL, KEY), Init)(&NAME);
 
 #define TTree_AVL_Set(KEY, NAME) TREE_AVL_SET_INSTANCE_DECLARE(KEY, NAME)
 
 #define TREE_AVL_MAP_INSTANCE_DECLARE(KEY, VAL, NAME)                          \
   TREE_PUBLIC_MAP_TYPE(AVL, KEY, VAL) NAME;                                    \
-  CONTAINER_API_BIND(                                                          \
-      NAME, TREE_FUNC(TREE_MAP_TYPE(AVL, KEY, VAL), functions));               \
+  COSMERON_MACRO_INTERNAL_TREE_API_BIND(                                       \
+      NAME, TREE_MAP_TYPE(AVL, KEY, VAL));               \
   TREE_FUNC(TREE_MAP_TYPE(AVL, KEY, VAL), Init)(&NAME);
 
 #define TTree_AVL_Map(KEY, VAL, NAME) TREE_AVL_MAP_INSTANCE_DECLARE(KEY, VAL, NAME)
