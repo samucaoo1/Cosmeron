@@ -23,6 +23,8 @@ TREE_RB_MAP_IMPLEMENT_ALL_CMP(custom_long, long, int, Test_Compare_Long)
   do {                                                                         \
     TREE_PUBLIC_SET_TYPE(ALGO, custom_long) tree;                              \
     long *found = NULL;                                                        \
+    CONTAINER_API_BIND(                                                        \
+        tree, TREE_FUNC(TREE_SET_TYPE(ALGO, custom_long), functions));         \
     TEST_ASSERT(TREE_FUNC(TREE_SET_TYPE(ALGO, custom_long), Init)(&tree) ==    \
                 STATUS_CONST(SUCCESS));                                        \
     TEST_ASSERT(TREE_FUNC(TREE_SET_TYPE(ALGO, custom_long), Insert)(           \
@@ -37,6 +39,8 @@ TREE_RB_MAP_IMPLEMENT_ALL_CMP(custom_long, long, int, Test_Compare_Long)
   do {                                                                         \
     TREE_PUBLIC_MAP_TYPE(ALGO, custom_long, int) tree;                         \
     int *found = NULL;                                                         \
+    CONTAINER_API_BIND(                                                        \
+        tree, TREE_FUNC(TREE_MAP_TYPE(ALGO, custom_long, int), functions));    \
     TEST_ASSERT(TREE_FUNC(TREE_MAP_TYPE(ALGO, custom_long, int), Init)(&tree) == \
                 STATUS_CONST(SUCCESS));                                        \
     TEST_ASSERT(TREE_FUNC(TREE_MAP_TYPE(ALGO, custom_long, int), Insert)(      \
