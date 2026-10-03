@@ -32,7 +32,7 @@
   typedef TREE_MAP_TYPE(RB, KEY_TYPE, VALUE_TYPE)                              \
       TREE_PUBLIC_MAP_TYPE(RB, KEY_TYPE, VALUE_TYPE);                          \
   TREE_FUNCTION_TABLE_STRUCT_MAP(                                               \
-      TREE_MAP_TYPE(RB, SUFFIX_K, VALUE_TYPE), KEY_TYPE, VALUE_TYPE)           \
+      TREE_MAP_TYPE(RB, KEY_TYPE, VALUE_TYPE), KEY_TYPE, VALUE_TYPE)           \
   TREE_FUNCTION_TABLE_INSTANCE_MAP(TREE_MAP_TYPE(RB, KEY_TYPE, VALUE_TYPE))
 
 #define TREE_RB_MAP_IMPLEMENT_ALL_CMP(SUFFIX_K, KEY_TYPE, VALUE_TYPE, CMP)    \
@@ -41,7 +41,7 @@
   typedef TREE_MAP_TYPE(RB, SUFFIX_K, VALUE_TYPE)                              \
       TREE_PUBLIC_MAP_TYPE(RB, SUFFIX_K, VALUE_TYPE);                          \
   TREE_FUNCTION_TABLE_STRUCT_MAP(                                               \
-      TREE_MAP_TYPE(RB, KEY_TYPE, VALUE_TYPE), KEY_TYPE, VALUE_TYPE)           \
+      TREE_MAP_TYPE(RB, SUFFIX_K, VALUE_TYPE), KEY_TYPE, VALUE_TYPE)           \
   TREE_FUNCTION_TABLE_INSTANCE_MAP(TREE_MAP_TYPE(RB, SUFFIX_K, VALUE_TYPE))
 
 /* =============================================================
