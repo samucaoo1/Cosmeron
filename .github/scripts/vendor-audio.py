@@ -30,7 +30,7 @@ text = tokens.sub(replace, text)
 # Coalesced definitions preserve that contract in a header-only integration.
 lock = 'cosmeron_audio_vendor_ma_atomic_spinlock cosmeron_audio_vendor_ma_atomic_global_lock;'
 assert text.count(lock) == 1
-text = text.replace(lock, """#if defined(_MSC_VER)
+text = text.replace(lock, """#if defined(_MSC_VER) || defined(__MINGW32__)
 __declspec(selectany) cosmeron_audio_vendor_ma_atomic_spinlock cosmeron_audio_vendor_ma_atomic_global_lock = 0;
 #elif defined(__GNUC__) || defined(__clang__)
 __attribute__((weak, visibility("hidden"))) cosmeron_audio_vendor_ma_atomic_spinlock cosmeron_audio_vendor_ma_atomic_global_lock = 0;

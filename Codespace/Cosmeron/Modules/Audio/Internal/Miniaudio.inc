@@ -14536,7 +14536,7 @@ static cosmeron_audio_vendor_MA_INLINE void cosmeron_audio_vendor_ma_atomic_spin
 {
     cosmeron_audio_vendor_ma_atomic_flag_clear_explicit(pSpinlock, cosmeron_audio_vendor_ma_atomic_memory_order_release);
 }
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) || defined(__MINGW32__)
 __declspec(selectany) cosmeron_audio_vendor_ma_atomic_spinlock cosmeron_audio_vendor_ma_atomic_global_lock = 0;
 #elif defined(__GNUC__) || defined(__clang__)
 __attribute__((weak, visibility("hidden"))) cosmeron_audio_vendor_ma_atomic_spinlock cosmeron_audio_vendor_ma_atomic_global_lock = 0;
