@@ -6251,3 +6251,1450 @@ Returns the stored node count.
 ```c
 size_t size = LINKED_STACK_FUNC(int, Size)(&stack);
 ```
+
+---
+
+# Hash Map package
+
+Header: `Cosmeron/Modules/Container/Hash/Hash.h`.
+
+Open-addressing hash map with linear probing and deleted-bucket tombstones. Built-ins include integer or C-string keys and int or void* values.
+
+### Instantiation
+
+```c
+THASH_TYPE(int, int) hash = {0};
+HASH_OPERATION(int, int, Init)(&hash);
+```
+
+### Function summary
+
+| Function | Description |
+| --- | --- |
+| [`Init`](#hash-map-init) | Initializes empty storage. |
+| [`Destroy`](#hash-map-destroy) | Releases all container-managed memory. |
+| [`Rehash`](#hash-map-rehash) | Rebuilds the hash bucket table at a requested capacity. |
+| [`Find`](#hash-map-find) | Returns a pointer to a mapped value. |
+| [`ConstFind`](#hash-map-constfind) | Returns a read-only pointer to a mapped value. |
+| [`Contains`](#hash-map-contains) | Reports whether the key is stored. |
+| [`Insert`](#hash-map-insert) | Adds a new key/value pair or overwrites the value for an existing key. |
+| [`Remove`](#hash-map-remove) | Removes the indicated key. |
+| [`Clear`](#hash-map-clear) | Removes all entries/edges while retaining a usable object. |
+| [`IsEmpty`](#hash-map-isempty) | Reports whether no entries or vertices exist. |
+| [`Size`](#hash-map-size) | Returns number of live hash entries. |
+| [`Capacity`](#hash-map-capacity) | Returns allocated hash bucket count. |
+
+### Hash contracts
+
+- Helpers: `HASH_INT(value)`, `HASH_CSTRING(value)`, `HASH_EQUAL_INT(left,right)` and `HASH_EQUAL_CSTRING(left,right)`.
+- Bucket states: `HASH_CONST(BUCKET_EMPTY)`, `HASH_CONST(BUCKET_OCCUPIED)`, `HASH_CONST(BUCKET_DELETED)`.
+- Initial capacity is 16 and growth target is 75% load, accounting for tombstones.
+- C-string keys are stored by pointer: keep pointed-to bytes alive and unchanged while inserted. Rehash/automatic growth invalidates previously borrowed value pointers.
+- `HASH_MAP_IMPLEMENT_ALL(KEY_TYPE, KEY_SUFFIX, VALUE_TYPE, VALUE_SUFFIX, HASH_FUNCTION, EQUAL_FUNCTION)` generates custom specializations; `HASH_MAP_DECLARE(KEY_SUFFIX, VALUE_SUFFIX, NAME)` declares a bound, initialized instance.
+
+---
+
+# Hash Map Init
+
+Initializes empty storage.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS HASH_OPERATION(int, int, Init)( THASH_TYPE(int, int) * hash);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Hash_int_int_Init( Container_Hash_THash_int_int * hash);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `THASH_TYPE(int` | Input scalar, key, index or value. |
+| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or a recoverable status such as `INVALID_ARGUMENT`, `OUT_OF_RANGE`, `NOT_FOUND`, or allocation failure.
+
+---
+
+### Remarks
+
+Initializes empty storage.
+
+---
+
+### Example
+
+```c
+THASH_TYPE(int, int) hash = {0};
+OPSTATUS status = HASH_OPERATION(int, int, Init)(&hash);
+```
+
+---
+
+# Hash Map Destroy
+
+Releases all container-managed memory.
+
+### Syntax
+
+#### Macro form
+
+```c
+void HASH_OPERATION(int, int, Destroy)( THASH_TYPE(int, int) * hash);
+```
+
+#### Direct form
+
+```c
+void Container_Hash_int_int_Destroy( Container_Hash_THash_int_int * hash);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `THASH_TYPE(int` | Input scalar, key, index or value. |
+| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
+
+---
+
+### Return value
+
+None.
+
+---
+
+### Remarks
+
+Releases all container-managed memory. Stored pointees are not automatically deep-freed.
+
+---
+
+### Example
+
+```c
+HASH_OPERATION(int, int, Destroy)(0, &hash);
+```
+
+---
+
+# Hash Map Rehash
+
+Rebuilds the hash bucket table at a requested capacity.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS HASH_OPERATION(int, int, Rehash)( THASH_TYPE(int, int) * hash, size_t newCapacity);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Hash_int_int_Rehash( Container_Hash_THash_int_int * hash, size_t newCapacity);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `THASH_TYPE(int` | Input scalar, key, index or value. |
+| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
+| `newCapacity` | `size_t newCapacity` | Input scalar, key, index or value. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or a recoverable status such as `INVALID_ARGUMENT`, `OUT_OF_RANGE`, `NOT_FOUND`, or allocation failure.
+
+---
+
+### Remarks
+
+Rebuilds the hash bucket table at a requested capacity. Bucket relocation can invalidate pointers returned by Find/ConstFind.
+
+---
+
+### Example
+
+```c
+OPSTATUS status = HASH_OPERATION(int, int, Rehash)(0, &hash, 32);
+```
+
+---
+
+# Hash Map Find
+
+Returns a pointer to a mapped value.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS HASH_OPERATION(int, int, Find)( THASH_TYPE(int, int) * hash, int key, int **out);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Hash_int_int_Find( Container_Hash_THash_int_int * hash, int key, int **out);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `THASH_TYPE(int` | Input scalar, key, index or value. |
+| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
+| `key` | `int key` | Input scalar, key, index or value. |
+| `out` | `int **out` | Typed out pointer to container-owned data. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or a recoverable status such as `INVALID_ARGUMENT`, `OUT_OF_RANGE`, `NOT_FOUND`, or allocation failure.
+
+---
+
+### Remarks
+
+Returns a pointer to a mapped value.
+
+---
+
+### Example
+
+```c
+int *found = NULL;
+OPSTATUS status = HASH_OPERATION(int, int, Find)(0, &hash, 7, &found);
+```
+
+---
+
+# Hash Map ConstFind
+
+Returns a read-only pointer to a mapped value.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS HASH_OPERATION(int, int, ConstFind)( const THASH_TYPE(int, int) * hash, int key, int const **out);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Hash_int_int_ConstFind( const Container_Hash_THash_int_int * hash, int key, int const **out);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `const THASH_TYPE(int` | Input scalar, key, index or value. |
+| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
+| `key` | `int key` | Input scalar, key, index or value. |
+| `out` | `int const **out` | Typed out pointer to container-owned data. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or a recoverable status such as `INVALID_ARGUMENT`, `OUT_OF_RANGE`, `NOT_FOUND`, or allocation failure.
+
+---
+
+### Remarks
+
+Returns a read-only pointer to a mapped value.
+
+---
+
+### Example
+
+```c
+const int *found = NULL;
+OPSTATUS status = HASH_OPERATION(int, int, ConstFind)(0, &hash, 7, &found);
+```
+
+---
+
+# Hash Map Contains
+
+Reports whether the key is stored.
+
+### Syntax
+
+#### Macro form
+
+```c
+bool HASH_OPERATION(int, int, Contains)( const THASH_TYPE(int, int) * hash, int key);
+```
+
+#### Direct form
+
+```c
+bool Container_Hash_int_int_Contains( const Container_Hash_THash_int_int * hash, int key);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `const THASH_TYPE(int` | Input scalar, key, index or value. |
+| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
+| `key` | `int key` | Input scalar, key, index or value. |
+
+---
+
+### Return value
+
+`bool`: true or false.
+
+---
+
+### Remarks
+
+Reports whether the key is stored.
+
+---
+
+### Example
+
+```c
+bool present = HASH_OPERATION(int, int, Contains)(0, &hash, 7);
+```
+
+---
+
+# Hash Map Insert
+
+Adds a new key/value pair or overwrites the value for an existing key.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS HASH_OPERATION(int, int, Insert)( THASH_TYPE(int, int) * hash, int key, int value);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Hash_int_int_Insert( Container_Hash_THash_int_int * hash, int key, int value);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `THASH_TYPE(int` | Input scalar, key, index or value. |
+| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
+| `key` | `int key` | Input scalar, key, index or value. |
+| `value` | `int value` | Input scalar, key, index or value. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or a recoverable status such as `INVALID_ARGUMENT`, `OUT_OF_RANGE`, `NOT_FOUND`, or allocation failure.
+
+---
+
+### Remarks
+
+Adds a new key/value pair or overwrites the value for an existing key. Bucket relocation can invalidate pointers returned by Find/ConstFind.
+
+---
+
+### Example
+
+```c
+OPSTATUS status = HASH_OPERATION(int, int, Insert)(0, &hash, 7, 70);
+```
+
+---
+
+# Hash Map Remove
+
+Removes the indicated key.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS HASH_OPERATION(int, int, Remove)( THASH_TYPE(int, int) * hash, int key);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Hash_int_int_Remove( Container_Hash_THash_int_int * hash, int key);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `THASH_TYPE(int` | Input scalar, key, index or value. |
+| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
+| `key` | `int key` | Input scalar, key, index or value. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or a recoverable status such as `INVALID_ARGUMENT`, `OUT_OF_RANGE`, `NOT_FOUND`, or allocation failure.
+
+---
+
+### Remarks
+
+Removes the indicated key.
+
+---
+
+### Example
+
+```c
+OPSTATUS status = HASH_OPERATION(int, int, Remove)(0, &hash, 7);
+```
+
+---
+
+# Hash Map Clear
+
+Removes all entries/edges while retaining a usable object.
+
+### Syntax
+
+#### Macro form
+
+```c
+void HASH_OPERATION(int, int, Clear)( THASH_TYPE(int, int) * hash);
+```
+
+#### Direct form
+
+```c
+void Container_Hash_int_int_Clear( Container_Hash_THash_int_int * hash);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `THASH_TYPE(int` | Input scalar, key, index or value. |
+| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
+
+---
+
+### Return value
+
+None.
+
+---
+
+### Remarks
+
+Removes all entries/edges while retaining a usable object. Stored pointees are not automatically deep-freed.
+
+---
+
+### Example
+
+```c
+HASH_OPERATION(int, int, Clear)(0, &hash);
+```
+
+---
+
+# Hash Map IsEmpty
+
+Reports whether no entries or vertices exist.
+
+### Syntax
+
+#### Macro form
+
+```c
+bool HASH_OPERATION(int, int, IsEmpty)( const THASH_TYPE(int, int) * hash);
+```
+
+#### Direct form
+
+```c
+bool Container_Hash_int_int_IsEmpty( const Container_Hash_THash_int_int * hash);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `const THASH_TYPE(int` | Input scalar, key, index or value. |
+| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
+
+---
+
+### Return value
+
+`bool`: true or false.
+
+---
+
+### Remarks
+
+Reports whether no entries or vertices exist.
+
+---
+
+### Example
+
+```c
+bool present = HASH_OPERATION(int, int, IsEmpty)(0, &hash);
+```
+
+---
+
+# Hash Map Size
+
+Returns number of live hash entries.
+
+### Syntax
+
+#### Macro form
+
+```c
+size_t HASH_OPERATION(int, int, Size)( const THASH_TYPE(int, int) * hash);
+```
+
+#### Direct form
+
+```c
+size_t Container_Hash_int_int_Size( const Container_Hash_THash_int_int * hash);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `const THASH_TYPE(int` | Input scalar, key, index or value. |
+| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
+
+---
+
+### Return value
+
+`size_t`: number of entries/vertices/edges or capacity.
+
+---
+
+### Remarks
+
+Returns number of live hash entries.
+
+---
+
+### Example
+
+```c
+size_t total = HASH_OPERATION(int, int, Size)(0, &hash);
+```
+
+---
+
+# Hash Map Capacity
+
+Returns allocated hash bucket count.
+
+### Syntax
+
+#### Macro form
+
+```c
+size_t HASH_OPERATION(int, int, Capacity)( const THASH_TYPE(int, int) * hash);
+```
+
+#### Direct form
+
+```c
+size_t Container_Hash_int_int_Capacity( const Container_Hash_THash_int_int * hash);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `const THASH_TYPE(int` | Input scalar, key, index or value. |
+| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
+
+---
+
+### Return value
+
+`size_t`: number of entries/vertices/edges or capacity.
+
+---
+
+### Remarks
+
+Returns allocated hash bucket count.
+
+---
+
+### Example
+
+```c
+size_t total = HASH_OPERATION(int, int, Capacity)(0, &hash);
+```
+
+---
+
+# Graph package
+
+Header: `Cosmeron/Modules/Container/Graph/Graph.h`.
+
+Directed graph with dynamically allocated adjacency lists; built-in vertex data is int, edge weights are int or float.
+
+### Instantiation
+
+```c
+TGRAPH_TYPE(int, int) graph = {0};
+GRAPH_OPERATION(int, int, Init)(&graph);
+```
+
+### Function summary
+
+| Function | Description |
+| --- | --- |
+| [`Init`](#graph-init) | Initializes empty storage. |
+| [`Destroy`](#graph-destroy) | Releases all container-managed memory. |
+| [`Clear`](#graph-clear) | Removes all entries/edges while retaining a usable object. |
+| [`AddVertex`](#graph-addvertex) | Adds a new vertex and returns its numeric index. |
+| [`AddEdge`](#graph-addedge) | Creates or replaces a weighted directed edge. |
+| [`RemoveEdge`](#graph-removeedge) | Removes a directed edge. |
+| [`RemoveVertex`](#graph-removevertex) | Deletes a vertex and reindexes later vertex numbers and edge destinations. |
+| [`HasEdge`](#graph-hasedge) | Checks whether an edge exists from source to destination. |
+| [`FindWeight`](#graph-findweight) | Returns a writable pointer to the weight of an edge. |
+| [`ConstFindWeight`](#graph-constfindweight) | Returns a read-only pointer to the weight of an edge. |
+| [`VertexCount`](#graph-vertexcount) | Returns current number of vertices. |
+| [`EdgeCount`](#graph-edgecount) | Returns current number of directed edges. |
+| [`IsEmpty`](#graph-isempty) | Reports whether no entries or vertices exist. |
+| [`BFS`](#graph-bfs) | Calls a visitor for each reachable vertex in breadth-first order. |
+| [`DFS`](#graph-dfs) | Calls a visitor for each reachable vertex in depth-first order. |
+
+### Graph contracts
+
+- Edges are **directed**: adding source→destination does not add destination→source.
+- `GRAPH_IMPLEMENT_ALL(VERTEX_TYPE, VERTEX_SUFFIX, WEIGHT_TYPE, WEIGHT_SUFFIX)` generates a custom type family; `GRAPH_DECLARE(VERTEX_SUFFIX, WEIGHT_SUFFIX, NAME)` creates a bound initialized instance.
+- Removing vertex index `i` compacts vertex storage; indexes greater than `i` decrement by one, and matching incoming edges are deleted.
+- BFS/DFS call a visitor with `(graph, vertexIndex, context)`; traversal can allocate temporary memory and fail if unavailable.
+
+---
+
+# Graph Init
+
+Initializes empty storage.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS GRAPH_OPERATION(int, int, Init)( TGRAPH_TYPE(int, int) * graph);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Graph_int_int_Init( Container_Graph_TGraph_int_int * graph);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `TGRAPH_TYPE(int` | Input scalar, key, index or value. |
+| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or a recoverable status such as `INVALID_ARGUMENT`, `OUT_OF_RANGE`, `NOT_FOUND`, or allocation failure.
+
+---
+
+### Remarks
+
+Initializes empty storage.
+
+---
+
+### Example
+
+```c
+TGRAPH_TYPE(int, int) graph = {0};
+OPSTATUS status = GRAPH_OPERATION(int, int, Init)(&graph);
+```
+
+---
+
+# Graph Destroy
+
+Releases all container-managed memory.
+
+### Syntax
+
+#### Macro form
+
+```c
+void GRAPH_OPERATION(int, int, Destroy)( TGRAPH_TYPE(int, int) * graph);
+```
+
+#### Direct form
+
+```c
+void Container_Graph_int_int_Destroy( Container_Graph_TGraph_int_int * graph);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `TGRAPH_TYPE(int` | Input scalar, key, index or value. |
+| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
+
+---
+
+### Return value
+
+None.
+
+---
+
+### Remarks
+
+Releases all container-managed memory. Stored pointees are not automatically deep-freed.
+
+---
+
+### Example
+
+```c
+GRAPH_OPERATION(int, int, Destroy)(0, &graph);
+```
+
+---
+
+# Graph Clear
+
+Removes all entries/edges while retaining a usable object.
+
+### Syntax
+
+#### Macro form
+
+```c
+void GRAPH_OPERATION(int, int, Clear)( TGRAPH_TYPE(int, int) * graph);
+```
+
+#### Direct form
+
+```c
+void Container_Graph_int_int_Clear( Container_Graph_TGraph_int_int * graph);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `TGRAPH_TYPE(int` | Input scalar, key, index or value. |
+| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
+
+---
+
+### Return value
+
+None.
+
+---
+
+### Remarks
+
+Removes all entries/edges while retaining a usable object. Stored pointees are not automatically deep-freed.
+
+---
+
+### Example
+
+```c
+GRAPH_OPERATION(int, int, Clear)(0, &graph);
+```
+
+---
+
+# Graph AddVertex
+
+Adds a new vertex and returns its numeric index.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS GRAPH_OPERATION(int, int, AddVertex)( TGRAPH_TYPE(int, int) * graph, int data, size_t *outIndex);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Graph_int_int_AddVertex( Container_Graph_TGraph_int_int * graph, int data, size_t *outIndex);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `TGRAPH_TYPE(int` | Input scalar, key, index or value. |
+| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
+| `data` | `int data` | Input scalar, key, index or value. |
+| `outIndex` | `size_t *outIndex` | Container pointer, callback, or output parameter. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or a recoverable status such as `INVALID_ARGUMENT`, `OUT_OF_RANGE`, `NOT_FOUND`, or allocation failure.
+
+---
+
+### Remarks
+
+Adds a new vertex and returns its numeric index.
+
+---
+
+### Example
+
+```c
+size_t indexOut = 0;
+OPSTATUS status = GRAPH_OPERATION(int, int, AddVertex)(0, &graph, 10, &indexOut);
+```
+
+---
+
+# Graph AddEdge
+
+Creates or replaces a weighted directed edge.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS GRAPH_OPERATION(int, int, AddEdge)( TGRAPH_TYPE(int, int) * graph, size_t source, size_t destination, int weight);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Graph_int_int_AddEdge( Container_Graph_TGraph_int_int * graph, size_t source, size_t destination, int weight);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `TGRAPH_TYPE(int` | Input scalar, key, index or value. |
+| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
+| `source` | `size_t source` | Input scalar, key, index or value. |
+| `destination` | `size_t destination` | Input scalar, key, index or value. |
+| `weight` | `int weight` | Input scalar, key, index or value. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or a recoverable status such as `INVALID_ARGUMENT`, `OUT_OF_RANGE`, `NOT_FOUND`, or allocation failure.
+
+---
+
+### Remarks
+
+Creates or replaces a weighted directed edge.
+
+---
+
+### Example
+
+```c
+OPSTATUS status = GRAPH_OPERATION(int, int, AddEdge)(0, &graph, 0, 1, 5);
+```
+
+---
+
+# Graph RemoveEdge
+
+Removes a directed edge.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS GRAPH_OPERATION(int, int, RemoveEdge)( TGRAPH_TYPE(int, int) * graph, size_t source, size_t destination);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Graph_int_int_RemoveEdge( Container_Graph_TGraph_int_int * graph, size_t source, size_t destination);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `TGRAPH_TYPE(int` | Input scalar, key, index or value. |
+| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
+| `source` | `size_t source` | Input scalar, key, index or value. |
+| `destination` | `size_t destination` | Input scalar, key, index or value. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or a recoverable status such as `INVALID_ARGUMENT`, `OUT_OF_RANGE`, `NOT_FOUND`, or allocation failure.
+
+---
+
+### Remarks
+
+Removes a directed edge.
+
+---
+
+### Example
+
+```c
+OPSTATUS status = GRAPH_OPERATION(int, int, RemoveEdge)(0, &graph, 0, 1);
+```
+
+---
+
+# Graph RemoveVertex
+
+Deletes a vertex and reindexes later vertex numbers and edge destinations.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS GRAPH_OPERATION(int, int, RemoveVertex)( TGRAPH_TYPE(int, int) * graph, size_t index);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Graph_int_int_RemoveVertex( Container_Graph_TGraph_int_int * graph, size_t index);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `TGRAPH_TYPE(int` | Input scalar, key, index or value. |
+| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
+| `index` | `size_t index` | Input scalar, key, index or value. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or a recoverable status such as `INVALID_ARGUMENT`, `OUT_OF_RANGE`, `NOT_FOUND`, or allocation failure.
+
+---
+
+### Remarks
+
+Deletes a vertex and reindexes later vertex numbers and edge destinations. Previously stored vertex IDs may no longer identify the same vertex.
+
+---
+
+### Example
+
+```c
+OPSTATUS status = GRAPH_OPERATION(int, int, RemoveVertex)(0, &graph, 0);
+```
+
+---
+
+# Graph HasEdge
+
+Checks whether an edge exists from source to destination.
+
+### Syntax
+
+#### Macro form
+
+```c
+bool GRAPH_OPERATION(int, int, HasEdge)( const TGRAPH_TYPE(int, int) * graph, size_t source, size_t destination);
+```
+
+#### Direct form
+
+```c
+bool Container_Graph_int_int_HasEdge( const Container_Graph_TGraph_int_int * graph, size_t source, size_t destination);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `const TGRAPH_TYPE(int` | Input scalar, key, index or value. |
+| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
+| `source` | `size_t source` | Input scalar, key, index or value. |
+| `destination` | `size_t destination` | Input scalar, key, index or value. |
+
+---
+
+### Return value
+
+`bool`: true or false.
+
+---
+
+### Remarks
+
+Checks whether an edge exists from source to destination.
+
+---
+
+### Example
+
+```c
+bool present = GRAPH_OPERATION(int, int, HasEdge)(0, &graph, 0, 1);
+```
+
+---
+
+# Graph FindWeight
+
+Returns a writable pointer to the weight of an edge.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS GRAPH_OPERATION(int, int, FindWeight)( TGRAPH_TYPE(int, int) * graph, size_t source, size_t destination, int **outWeight);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Graph_int_int_FindWeight( Container_Graph_TGraph_int_int * graph, size_t source, size_t destination, int **outWeight);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `TGRAPH_TYPE(int` | Input scalar, key, index or value. |
+| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
+| `source` | `size_t source` | Input scalar, key, index or value. |
+| `destination` | `size_t destination` | Input scalar, key, index or value. |
+| `outWeight` | `int **outWeight` | Typed out pointer to container-owned data. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or a recoverable status such as `INVALID_ARGUMENT`, `OUT_OF_RANGE`, `NOT_FOUND`, or allocation failure.
+
+---
+
+### Remarks
+
+Returns a writable pointer to the weight of an edge.
+
+---
+
+### Example
+
+```c
+int *weightOut = NULL;
+OPSTATUS status = GRAPH_OPERATION(int, int, FindWeight)(0, &graph, 0, 1, &weightOut);
+```
+
+---
+
+# Graph ConstFindWeight
+
+Returns a read-only pointer to the weight of an edge.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS GRAPH_OPERATION(int, int, ConstFindWeight)( const TGRAPH_TYPE(int, int) * graph, size_t source, size_t destination, int const **outWeight);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Graph_int_int_ConstFindWeight( const Container_Graph_TGraph_int_int * graph, size_t source, size_t destination, int const **outWeight);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `const TGRAPH_TYPE(int` | Input scalar, key, index or value. |
+| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
+| `source` | `size_t source` | Input scalar, key, index or value. |
+| `destination` | `size_t destination` | Input scalar, key, index or value. |
+| `outWeight` | `int const **outWeight` | Typed out pointer to container-owned data. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or a recoverable status such as `INVALID_ARGUMENT`, `OUT_OF_RANGE`, `NOT_FOUND`, or allocation failure.
+
+---
+
+### Remarks
+
+Returns a read-only pointer to the weight of an edge.
+
+---
+
+### Example
+
+```c
+const int *weightOut = NULL;
+OPSTATUS status = GRAPH_OPERATION(int, int, ConstFindWeight)(0, &graph, 0, 1, &weightOut);
+```
+
+---
+
+# Graph VertexCount
+
+Returns current number of vertices.
+
+### Syntax
+
+#### Macro form
+
+```c
+size_t GRAPH_OPERATION(int, int, VertexCount)( const TGRAPH_TYPE(int, int) * graph);
+```
+
+#### Direct form
+
+```c
+size_t Container_Graph_int_int_VertexCount( const Container_Graph_TGraph_int_int * graph);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `const TGRAPH_TYPE(int` | Input scalar, key, index or value. |
+| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
+
+---
+
+### Return value
+
+`size_t`: number of entries/vertices/edges or capacity.
+
+---
+
+### Remarks
+
+Returns current number of vertices.
+
+---
+
+### Example
+
+```c
+size_t total = GRAPH_OPERATION(int, int, VertexCount)(0, &graph);
+```
+
+---
+
+# Graph EdgeCount
+
+Returns current number of directed edges.
+
+### Syntax
+
+#### Macro form
+
+```c
+size_t GRAPH_OPERATION(int, int, EdgeCount)( const TGRAPH_TYPE(int, int) * graph);
+```
+
+#### Direct form
+
+```c
+size_t Container_Graph_int_int_EdgeCount( const Container_Graph_TGraph_int_int * graph);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `const TGRAPH_TYPE(int` | Input scalar, key, index or value. |
+| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
+
+---
+
+### Return value
+
+`size_t`: number of entries/vertices/edges or capacity.
+
+---
+
+### Remarks
+
+Returns current number of directed edges.
+
+---
+
+### Example
+
+```c
+size_t total = GRAPH_OPERATION(int, int, EdgeCount)(0, &graph);
+```
+
+---
+
+# Graph IsEmpty
+
+Reports whether no entries or vertices exist.
+
+### Syntax
+
+#### Macro form
+
+```c
+bool GRAPH_OPERATION(int, int, IsEmpty)( const TGRAPH_TYPE(int, int) * graph);
+```
+
+#### Direct form
+
+```c
+bool Container_Graph_int_int_IsEmpty( const Container_Graph_TGraph_int_int * graph);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `const TGRAPH_TYPE(int` | Input scalar, key, index or value. |
+| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
+
+---
+
+### Return value
+
+`bool`: true or false.
+
+---
+
+### Remarks
+
+Reports whether no entries or vertices exist.
+
+---
+
+### Example
+
+```c
+bool present = GRAPH_OPERATION(int, int, IsEmpty)(0, &graph);
+```
+
+---
+
+# Graph BFS
+
+Calls a visitor for each reachable vertex in breadth-first order.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS GRAPH_OPERATION(int, int, BFS)( TGRAPH_TYPE(int, int) * graph, size_t start, TGRAPH_VISITOR_TYPE(int, int) visitor, void *context);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Graph_int_int_BFS( Container_Graph_TGraph_int_int * graph, size_t start, Container_Graph_int_int_TVisitor visitor, void *context);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `TGRAPH_TYPE(int` | Input scalar, key, index or value. |
+| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
+| `start` | `size_t start` | Input scalar, key, index or value. |
+| `int` | `TGRAPH_VISITOR_TYPE(int` | Input scalar, key, index or value. |
+| `visitor` | `int) visitor` | Input scalar, key, index or value. |
+| `context` | `void *context` | Container pointer, callback, or output parameter. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or a recoverable status such as `INVALID_ARGUMENT`, `OUT_OF_RANGE`, `NOT_FOUND`, or allocation failure.
+
+---
+
+### Remarks
+
+Calls a visitor for each reachable vertex in breadth-first order. The visitor is invoked synchronously. Do not change the graph structure during traversal.
+
+---
+
+### Example
+
+```c
+/* VisitVertex: callback of TGRAPH_VISITOR_TYPE(int, int). */
+OPSTATUS status = GRAPH_OPERATION(int, int, BFS)(0, &graph, 0, 0, VisitVertex, NULL);
+```
+
+---
+
+# Graph DFS
+
+Calls a visitor for each reachable vertex in depth-first order.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS GRAPH_OPERATION(int, int, DFS)( TGRAPH_TYPE(int, int) * graph, size_t start, TGRAPH_VISITOR_TYPE(int, int) visitor, void *context);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Graph_int_int_DFS( Container_Graph_TGraph_int_int * graph, size_t start, Container_Graph_int_int_TVisitor visitor, void *context);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `int` | `TGRAPH_TYPE(int` | Input scalar, key, index or value. |
+| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
+| `start` | `size_t start` | Input scalar, key, index or value. |
+| `int` | `TGRAPH_VISITOR_TYPE(int` | Input scalar, key, index or value. |
+| `visitor` | `int) visitor` | Input scalar, key, index or value. |
+| `context` | `void *context` | Container pointer, callback, or output parameter. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or a recoverable status such as `INVALID_ARGUMENT`, `OUT_OF_RANGE`, `NOT_FOUND`, or allocation failure.
+
+---
+
+### Remarks
+
+Calls a visitor for each reachable vertex in depth-first order. The visitor is invoked synchronously. Do not change the graph structure during traversal.
+
+---
+
+### Example
+
+```c
+/* VisitVertex: callback of TGRAPH_VISITOR_TYPE(int, int). */
+OPSTATUS status = GRAPH_OPERATION(int, int, DFS)(0, &graph, 0, 0, VisitVertex, NULL);
+```
