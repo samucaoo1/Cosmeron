@@ -8943,3 +8943,253 @@ Returns a read-only predecessor node. The end sentinel is NULL. Iterator/node re
 TREE_NODE(TREE_SET_TYPE(AVL, int)) *node = TREE_FUNC(TREE_SET_TYPE(AVL, int), Begin)(&tree);
 const TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), ConstPrev)(node);
 ```
+
+---
+
+# Complete examples
+
+These examples are self-contained C11 programs; they use the macro form so namespaces can be configured without changing call sites.
+
+## Dynamic Vector
+
+```c
+#include "Cosmeron/Modules/Container/Array/Vector.h"
+
+int main(void) {
+    FLAT_VECTOR_TYPE(int) vector = {0};
+    if (FLAT_VECTOR_FUNC(int, Init)(&vector) != STATUS_CONST(SUCCESS))
+        return 1;
+    OPSTATUS status = FLAT_VECTOR_FUNC(int, PushBack)(&vector, 12);
+    int *element = NULL;
+    if (status == STATUS_CONST(SUCCESS))
+        status = FLAT_VECTOR_FUNC(int, At)(&vector, 0, &element);
+    int valid = status == STATUS_CONST(SUCCESS) && element && *element == 12;
+    FLAT_VECTOR_FUNC(int, Destroy)(&vector);
+    return valid ? 0 : 2;
+}
+```
+
+## TString and 8-bit code units
+
+```c
+#include "Cosmeron/Modules/Container/Array/String.h"
+
+int main(void) {
+    TSTRING_TYPE(8) str = {0};
+    const uint8_t hello[] = {'H', 'e', 'l', 'l', 'o', 0};
+    if (TSTRING_FUNC(8, Init)(&str) != STATUS_CONST(SUCCESS))
+        return 1;
+    OPSTATUS status = TSTRING_FUNC(8, FromCStr)(&str, hello);
+    size_t count = TSTRING_FUNC(8, Length)(&str);
+    TSTRING_FUNC(8, Destroy)(&str);
+    return status == STATUS_CONST(SUCCESS) && count == 5 ? 0 : 2;
+}
+```
+
+String lengths are measured in stored code units, not Unicode grapheme clusters. The implementation does not automatically validate UTF-8, UTF-16, or UTF-32.
+
+## Linked List traversal
+
+```c
+#include "Cosmeron/Modules/Container/Linked/List.h"
+
+int main(void) {
+    LINKED_LIST_TYPE(int) list = {0};
+    if (LINKED_LIST_FUNC(int, Init)(&list) != STATUS_CONST(SUCCESS))
+        return 1;
+    OPSTATUS status = LINKED_LIST_FUNC(int, PushBack)(&list, 5);
+    if (status == STATUS_CONST(SUCCESS))
+        status = LINKED_LIST_FUNC(int, PushBack)(&list, 10);
+    size_t count = 0;
+    if (status == STATUS_CONST(SUCCESS)) {
+        LINKED_LIST_NODE_TYPE(int) *node =
+            LINKED_LIST_FUNC(int, Begin)(&list);
+        while (node != LINKED_LIST_FUNC(int, End)(&list)) {
+            ++count;
+            node = node->next;
+        }
+    }
+    LINKED_LIST_FUNC(int, Destroy)(&list);
+    return status == STATUS_CONST(SUCCESS) && count == 2 ? 0 : 2;
+}
+```
+
+## Hash Map with integer keys
+
+```c
+#include "Cosmeron/Modules/Container/Hash/Hash.h"
+
+int main(void) {
+    HASH_MAP_DECLARE(int, int, prices);
+    OPSTATUS status = HASH_OPERATION(int, int, Insert)(&prices, 7, 99);
+    int *value = NULL;
+    if (status == STATUS_CONST(SUCCESS))
+        status = HASH_OPERATION(int, int, Find)(&prices, 7, &value);
+    int found = status == STATUS_CONST(SUCCESS) && value && *value == 99;
+    HASH_OPERATION(int, int, Destroy)(&prices);
+    return found ? 0 : 1;
+}
+```
+
+Values found in a hash map are borrowed pointers to bucket storage; a rehash or capacity expansion can invalidate them.
+
+## Graph with directed edge
+
+```c
+#include "Cosmeron/Modules/Container/Graph/Graph.h"
+
+static void Visit(TGRAPH_TYPE(int, int) *graph,
+                  size_t vertex, void *context) {
+    (void)graph;
+    (void)vertex;
+    ++*(size_t *)context;
+}
+
+int main(void) {
+    GRAPH_DECLARE(int, int, graph);
+    size_t a = 0, b = 0, visited = 0;
+    OPSTATUS status =
+        GRAPH_OPERATION(int, int, AddVertex)(&graph, 10, &a);
+    if (status == STATUS_CONST(SUCCESS))
+        status = GRAPH_OPERATION(int, int, AddVertex)(&graph, 20, &b);
+    if (status == STATUS_CONST(SUCCESS))
+        status = GRAPH_OPERATION(int, int, AddEdge)(&graph, a, b, 5);
+    if (status == STATUS_CONST(SUCCESS))
+        status = GRAPH_OPERATION(int, int, BFS)(&graph, a, Visit, &visited);
+    GRAPH_OPERATION(int, int, Destroy)(&graph);
+    return status == STATUS_CONST(SUCCESS) && visited == 2 ? 0 : 1;
+}
+```
+
+## AVL Set and Map
+
+```c
+#include "Cosmeron/Modules/Container/Tree/Tree.h"
+
+int main(void) {
+    TREE_SET_DECLARE(AVL, int, numbers);
+    OPSTATUS status = TREE_FUNC(TREE_SET_TYPE(AVL, int), Insert)(&numbers, 42);
+    int *key = NULL;
+    if (status == STATUS_CONST(SUCCESS))
+        status = TREE_FUNC(TREE_SET_TYPE(AVL, int), Find)(
+            &numbers, 42, &key);
+    int setOk = status == STATUS_CONST(SUCCESS) && key && *key == 42;
+
+    TREE_MAP_DECLARE(AVL, int, int, scores);
+    status = TREE_FUNC(TREE_MAP_TYPE(AVL, int, int), Insert)(&scores, 7, 98);
+    int *score = NULL;
+    if (status == STATUS_CONST(SUCCESS))
+        status = TREE_FUNC(TREE_MAP_TYPE(AVL, int, int), Find)(
+            &scores, 7, &score);
+    int mapOk = status == STATUS_CONST(SUCCESS) && score && *score == 98;
+
+    TREE_FUNC(TREE_SET_TYPE(AVL, int), Destroy)(&numbers);
+    TREE_FUNC(TREE_MAP_TYPE(AVL, int, int), Destroy)(&scores);
+    return setOk && mapOk ? 0 : 1;
+}
+```
+
+## Custom generated Vector
+
+```c
+#include "Cosmeron/Modules/Container/Array/Vector.h"
+
+typedef struct TPoint {
+    int x;
+    int y;
+} TPoint;
+
+FLAT_VECTOR_IMPLEMENT_ALL(TPoint, point)
+
+int main(void) {
+    FLAT_VECTOR_TYPE(point) points = {0};
+    if (FLAT_VECTOR_FUNC(point, Init)(&points) != STATUS_CONST(SUCCESS))
+        return 1;
+    TPoint value = {3, 4};
+    OPSTATUS status = FLAT_VECTOR_FUNC(point, PushBack)(&points, value);
+    FLAT_VECTOR_FUNC(point, Destroy)(&points);
+    return status == STATUS_CONST(SUCCESS) ? 0 : 2;
+}
+```
+
+---
+
+# Convenience APIs and function tables
+
+## Linear aliases
+
+The `Aliases/Linear.h` header offers typed C11 `_Generic` macros for a fixed set of built-in specializations, including `Push`, `PushBack`, `PushFront`, `Pop`, `PopBack`, `PopFront`, `At`, `Front`, `Back`, `Top`, `Reserve`, `Capacity`, `Data`, `Insert`, `Erase`, `Clear`, `Empty`, `Size` and `Destroy`. The operation receives a container **lvalue**; not every macro supports every family.
+
+```c
+#include "Cosmeron/Modules/Container/Aliases/Linear.h"
+
+int main(void) {
+    TVector(int, values)
+    PushBack(values, 10);
+    int *element = NULL;
+    OPSTATUS status = At(values, 0, &element);
+    Destroy(values);
+    return status == STATUS_CONST(SUCCESS) ? 0 : 1;
+}
+```
+
+The `Aliases/Tree.h` header offers `TreeInit`, `TreeDestroy`, `TreeClear`, `TreeInsert`, `TreeRemove`, `TreeFind`, `TreeFindNode`, `TreeContains`, `TreeMin`, `TreeMax`, `TreeEmpty`, `TreeSize`, `TreeBegin`, `TreeEnd`, `TreeNext`, `TreePrev` and const iterator variants. Its dispatch is limited to the built-in BST/AVL/RB Set/Map types. Custom-generated types should call their generated functions directly.
+
+## Optional function tables
+
+By default, a container's `api` pointer may provide methods with lowerCamelCase names (depending on its package). Function tables are optional and must not be used when disabled.
+
+```c
+#include "Cosmeron/Modules/Container/Array/Vector.h"
+
+int main(void) {
+    TVector(int, numbers)
+    OPSTATUS status = numbers.api->pushBack(&numbers, 42);
+    numbers.api->destroy(&numbers);
+    return status == STATUS_CONST(SUCCESS) ? 0 : 1;
+}
+```
+
+Define `CONTAINER_DISABLE_FUNCTION_TABLE` before all container headers to disable optional tables, or `TREE_DISABLE_FUNCTION_TABLE` to disable Tree-specific tables. Keep layout settings consistent across translation units.
+
+---
+
+# Ownership and invalidation
+
+| Family | Container-owned memory | Common invalidation |
+| --- | --- | --- |
+| Flat Vector/Queue/Stack | Resizable contiguous array | Growth, reserve, compact, shrink, destroy |
+| TString | Zero-terminated dynamic code-unit array | Mutation/reallocation, destroy |
+| Linked List/Queue/Stack/Deque | Allocated nodes | Removal of that node, clear, destroy |
+| Hash Map | Bucket array | Rehash, capacity growth, remove, destroy |
+| Graph | Vertices and adjacency arrays | Vertex reindexing, relocation, edge removal |
+| BST/AVL/RB | Tree nodes | Node removal, clear, destroy |
+
+The container copies C values. Destruction of a pointer-valued element does not by itself free an independently allocated pointee.
+
+---
+
+# Complexity overview
+
+| Structure | Common lookup | Modification |
+| --- | --- | --- |
+| Vector | O(1) indexing | Amortized O(1) append; O(n) insertion/erase |
+| Flat Queue | O(1) front/back | Amortized O(1) push/pop, with occasional compaction |
+| Flat Stack | O(1) top | Amortized O(1) push/pop |
+| Linked List/Deque | O(1) ends, O(n) search | O(1) at known valid node |
+| Hash Map | Average O(1), worst O(n) | Average O(1), worst O(n) |
+| Graph | Indexed vertices; adjacency scan for edges | Costs depend on vertex degree and reallocations |
+| BST | O(h), worst O(n) | O(h), worst O(n) |
+| AVL/RB | O(log n) | O(log n) |
+
+These are algorithmic characteristics, not guaranteed end-to-end timings.
+
+---
+
+# Notes
+
+- This reference is based on the **170 prototype templates** from the Container headers on the `audio-module` branch. Distinct Tree Set/Map signatures are covered separately.
+- Internal `COSMERON_MACRO_INTERNAL_*` implementation macros are not presented as standalone public APIs.
+- The library uses C11 and generated `static inline` functions, without a separately linked container implementation library.
+- Borrowed pointers and iterators must respect their container's invalidation rules.
+- Container specializations and comparator/hash implementations must be consistent with the stored types.
