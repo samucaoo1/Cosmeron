@@ -4394,3 +4394,168 @@ target.limb[0] = 17;
 bool answer = TDECIMAL_FUNC(128, IsZero)(&target);
 ```
 
+---
+
+# Complete examples
+
+## TBlock: 256-bit flags
+
+```c
+#include "Cosmeron/Modules/Type/TBlock.h"
+
+int main(void) {
+    TBlock(256, flags)
+    bool enabled = false;
+
+    OPSTATUS status = TBLOCK_FUNC(256, BitSet)(&flags, 200U);
+    if (status == STATUS_CONST(SUCCESS))
+        status = TBLOCK_FUNC(256, BitCheck)(&flags, 200U, &enabled);
+    if (status == STATUS_CONST(SUCCESS))
+        status = TBLOCK_FUNC(256, RotateLeft)(&flags, 1U);
+
+    return status == STATUS_CONST(SUCCESS) && enabled ? 0 : 1;
+}
+```
+
+The field `limb[0]` contains the low 64 bits. For example, bit 200 belongs to the fourth 64-bit limb (index 3), bit position 8 in that limb.
+
+## TBigint: checked addition and base-10 conversion
+
+```c
+#include <string.h>
+#include "Cosmeron/Modules/Type/TBigint.h"
+
+int main(void) {
+    TBigint(128, amount)
+    TBigint(128, increment)
+
+    amount.limb[0] = 123;
+    increment.limb[0] = 456;
+
+    OPSTATUS status = TBIGINT_FUNC(128, Add)(&amount, &increment);
+    if (status != STATUS_CONST(SUCCESS))
+        return 1;
+
+    char buffer[48];
+    status = TBIGINT_FUNC(128, ToCString)(
+        &amount, buffer, sizeof buffer);
+
+    return status == STATUS_CONST(SUCCESS) &&
+           strcmp(buffer, "579") == 0 ? 0 : 2;
+}
+```
+
+The destination's numeric storage is preserved when checked addition reports overflow, making explicit error handling possible without an extra copy.
+
+## TBigint: quotient and remainder
+
+```c
+#include "Cosmeron/Modules/Type/TBigint.h"
+
+int main(void) {
+    TBigint(128, dividend)
+    TBigint(128, divisor)
+    TBigint(128, quotient)
+    TBigint(128, remainder)
+    dividend.limb[0] = 17;
+    divisor.limb[0] = 3;
+
+    OPSTATUS status = TBIGINT_FUNC(128, DivMod)(
+        &dividend, &divisor, &quotient, &remainder);
+
+    return status == STATUS_CONST(SUCCESS) &&
+           quotient.limb[0] == 5 &&
+           remainder.limb[0] == 2 ? 0 : 1;
+}
+```
+
+The public `DivMod` operation requires **both** quotient and remainder outputs, even though the internal division algorithm also supports computing only one output. For single-result division, call the public `Div` or `Mod` operation instead.
+
+## TDecimal: current integer-only representation
+
+```c
+#include <string.h>
+#include "Cosmeron/Modules/Type/TDecimal.h"
+
+int main(void) {
+    TDecimal(128, value)
+    value.limb[0] = 1250; /* Integer 1250, NOT 12.50 */
+
+    char buffer[48];
+    OPSTATUS status = TDECIMAL_FUNC(128, ToCString)(
+        &value, buffer, sizeof buffer);
+
+    return status == STATUS_CONST(SUCCESS) &&
+           strcmp(buffer, "1250") == 0 ? 0 : 1;
+}
+```
+
+The current `TDecimal` code does not store currency-scale or decimal fractions. For example, if an application stores values in cents, the unit scale must be **handled by the application**.
+
+---
+
+# Function tables
+
+Each package can expose an optional `api` pointer to a static per-width function table:
+
+| Family | Macro type | Example member |
+| --- | --- | --- |
+| TBlock | `TBLOCK_FUNCTION_TABLE_TYPE(128)` | `bits.api->bitSet(&bits, 3U)` |
+| TBigint | `TBIGINT_FUNCTION_TABLE_TYPE(128)` | `bigint.api->add(&bigint, &other)` |
+| TDecimal | `TDECIMAL_FUNCTION_TABLE_TYPE(128)` | `decimal.api->toCString(&decimal, text, sizeof text)` |
+
+The members are lowerCamelCase forms of the operations. `TBlock` includes `clear`, logical/rotate methods and bit access. `TBigint` and `TDecimal` additionally include `init`, arithmetic, comparisons, `isZero`, `toCString` and `toCStringBase`.
+
+```c
+#include "Cosmeron/Modules/Type/TBigint.h"
+
+int main(void) {
+    TBigint(128, value)
+    TBigint(128, other)
+    value.limb[0] = 7;
+    other.limb[0] = 8;
+
+    OPSTATUS status = value.api->add(&value, &other);
+    return status == STATUS_CONST(SUCCESS) &&
+           value.limb[0] == 15 ? 0 : 1;
+}
+```
+
+The example above assumes function tables are enabled. With `TYPE_DISABLE_FUNCTION_TABLE` defined before inclusion, the `api` member is omitted, and `TBIGINT_FUNC`/direct calls must be used instead.
+
+An object declared as `TBIGINT_TYPE(128) value = {0};` does **not** automatically bind a function table even when the table type is enabled. Use the `TBigint(128, value)` declaration macro to bind it.
+
+---
+
+# Important limitations
+
+- **Unsigned semantics:** TBigint and TDecimal use unsigned limbs. Subtracting a larger number returns `ARITHMETIC_OVERFLOW`, rather than producing a signed negative value.
+- **Fixed precision:** arithmetic does not grow beyond its declared width. To store a larger number, choose a wider specialization in advance.
+- **Binary representation:** TDecimal has no base-10 limbs, implicit decimal scale, exponent or rounding. Its current implementation shares the binary algorithms of TBigint.
+- **Formatting only:** `ToCString` and `ToCStringBase` write integer strings; no corresponding string parser or decimal-fraction formatter is exposed.
+- **Logical shifts:** shifts do not report lost high bits; they discard them. Rotation wraps instead of discarding.
+- **Endian portability:** the numeric limb order is specified by the implementation, but raw bytes overlap native `uint64_t` storage and are not a portable serialization format.
+- **Structure layout:** function-table-enabled structures include an extra pointer, changing `sizeof` and ABI. Keep compile-time settings consistent across translation units.
+- **Performance:** the multi-limb algorithms are intentionally simple; no claim is made that their performance matches specialized optimized big-number libraries.
+- **No additional linker libraries:** the implementation is included by the headers and uses the other Cosmeron core/Bit facilities.
+
+---
+
+# Tests
+
+The existing test suite exercises all four widths, arithmetic and overflow boundaries, bit operations, quotient/remainder, comparisons, formatting, function tables, no-table layout, header aggregation, and fundamental aliases.
+
+```sh
+make -C Codespace/Tests/Type run
+```
+
+The Type test Makefile uses C11 with `-Wall -Wextra -Wpedantic -Werror`, and has no additional default link libraries. This is the available test command; a new compilation has **not** been performed during this documentation update.
+
+---
+
+# Notes
+
+- The public headers declare **74 operation templates**, yielding **296 concrete functions** across four widths.
+- `Fundamental.h` contains typedefs only; it does not add runtime functions.
+- `*_PROTOTYPE`, `*_IMPLEMENT`, `*_DECLARE` and `TYPE_FUNC` are code-generation or naming macros rather than separate independently callable API operations.
+- No source-code files were changed by this documentation.
