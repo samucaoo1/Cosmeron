@@ -147,7 +147,7 @@ OPSTATUS Container_Flat_Vector_int_Init(Container_Flat_TVector_int * vec);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Pointer argument; see the operation's contract. |
+| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -166,6 +166,7 @@ Initializes the container.
 ### Example
 
 ```c
+FLAT_VECTOR_TYPE(int) vec = {0};
 OPSTATUS status = FLAT_VECTOR_FUNC(int, Init)(&vec);
 ```
 
@@ -195,7 +196,7 @@ void Container_Flat_Vector_int_Destroy(Container_Flat_TVector_int * vec);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Pointer argument; see the operation's contract. |
+| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -243,8 +244,8 @@ OPSTATUS Container_Flat_Vector_int_Reserve(Container_Flat_TVector_int * vec, siz
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Pointer argument; see the operation's contract. |
-| `newCapacity` | `size_t newCapacity` | Scalar argument or value. |
+| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Container, node, callback, or output pointer. |
+| `newCapacity` | `size_t newCapacity` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -292,7 +293,7 @@ OPSTATUS Container_Flat_Vector_int_ShrinkToFit(Container_Flat_TVector_int * vec)
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Pointer argument; see the operation's contract. |
+| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -340,9 +341,9 @@ OPSTATUS Container_Flat_Vector_int_At(Container_Flat_TVector_int * vec, size_t i
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Pointer argument; see the operation's contract. |
-| `index` | `size_t index` | Scalar argument or value. |
-| `out` | `int **out` | Output pointer to an element inside the collection. |
+| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Container, node, callback, or output pointer. |
+| `index` | `size_t index` | Value, key, capacity, or index argument. |
+| `out` | `int **out` | Address of a typed pointer output. |
 
 ---
 
@@ -391,8 +392,8 @@ OPSTATUS Container_Flat_Vector_int_Front(Container_Flat_TVector_int * vec, int *
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Pointer argument; see the operation's contract. |
-| `out` | `int **out` | Output pointer to an element inside the collection. |
+| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Container, node, callback, or output pointer. |
+| `out` | `int **out` | Address of a typed pointer output. |
 
 ---
 
@@ -441,8 +442,8 @@ OPSTATUS Container_Flat_Vector_int_Back(Container_Flat_TVector_int * vec, int **
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Pointer argument; see the operation's contract. |
-| `out` | `int **out` | Output pointer to an element inside the collection. |
+| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Container, node, callback, or output pointer. |
+| `out` | `int **out` | Address of a typed pointer output. |
 
 ---
 
@@ -491,8 +492,8 @@ OPSTATUS Container_Flat_Vector_int_Data(Container_Flat_TVector_int *vec, int **o
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `vec` | `FLAT_VECTOR_TYPE(int) *vec` | Pointer argument; see the operation's contract. |
-| `outData` | `int **outData` | Output pointer to an element inside the collection. |
+| `vec` | `FLAT_VECTOR_TYPE(int) *vec` | Container, node, callback, or output pointer. |
+| `outData` | `int **outData` | Address of a typed pointer output. |
 
 ---
 
@@ -511,8 +512,8 @@ Returns a pointer to internal contiguous data. Returned pointers borrow containe
 ### Example
 
 ```c
-int *found = NULL;
-OPSTATUS status = FLAT_VECTOR_FUNC(int, Data)(&vec, &found);
+int *dataOut = NULL;
+OPSTATUS status = FLAT_VECTOR_FUNC(int, Data)(&vec, &dataOut);
 ```
 
 ---
@@ -541,8 +542,8 @@ OPSTATUS Container_Flat_Vector_int_PushBack(Container_Flat_TVector_int * vec, in
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Pointer argument; see the operation's contract. |
-| `value` | `int value` | Scalar argument or value. |
+| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Container, node, callback, or output pointer. |
+| `value` | `int value` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -590,8 +591,8 @@ OPSTATUS Container_Flat_Vector_int_PopBack(Container_Flat_TVector_int * vec, int
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Pointer argument; see the operation's contract. |
-| `outValue` | `int * outValue` | Pointer argument; see the operation's contract. |
+| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Container, node, callback, or output pointer. |
+| `outValue` | `int * outValue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -640,9 +641,9 @@ OPSTATUS Container_Flat_Vector_int_Insert(Container_Flat_TVector_int * vec, size
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Pointer argument; see the operation's contract. |
-| `position` | `size_t position` | Scalar argument or value. |
-| `value` | `int value` | Scalar argument or value. |
+| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Container, node, callback, or output pointer. |
+| `position` | `size_t position` | Value, key, capacity, or index argument. |
+| `value` | `int value` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -690,9 +691,9 @@ OPSTATUS Container_Flat_Vector_int_Erase(Container_Flat_TVector_int * vec, size_
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Pointer argument; see the operation's contract. |
-| `position` | `size_t position` | Scalar argument or value. |
-| `count` | `size_t count` | Scalar argument or value. |
+| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Container, node, callback, or output pointer. |
+| `position` | `size_t position` | Value, key, capacity, or index argument. |
+| `count` | `size_t count` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -740,7 +741,7 @@ void Container_Flat_Vector_int_Clear(Container_Flat_TVector_int * vec);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Pointer argument; see the operation's contract. |
+| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -788,8 +789,8 @@ OPSTATUS Container_Flat_Vector_int_PushFront(Container_Flat_TVector_int * vec, i
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Pointer argument; see the operation's contract. |
-| `value` | `int value` | Scalar argument or value. |
+| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Container, node, callback, or output pointer. |
+| `value` | `int value` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -837,8 +838,8 @@ OPSTATUS Container_Flat_Vector_int_PopFront(Container_Flat_TVector_int * vec, in
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Pointer argument; see the operation's contract. |
-| `outValue` | `int * outValue` | Pointer argument; see the operation's contract. |
+| `vec` | `FLAT_VECTOR_TYPE(int) * vec` | Container, node, callback, or output pointer. |
+| `outValue` | `int * outValue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -887,7 +888,7 @@ bool Container_Flat_Vector_int_Empty(const Container_Flat_TVector_int * vec);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `vec` | `const FLAT_VECTOR_TYPE(int) * vec` | Pointer argument; see the operation's contract. |
+| `vec` | `const FLAT_VECTOR_TYPE(int) * vec` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -906,7 +907,7 @@ Returns true when the collection is empty.
 ### Example
 
 ```c
-bool empty = FLAT_VECTOR_FUNC(int, Empty)(&vec);
+bool result = FLAT_VECTOR_FUNC(int, Empty)(&vec);
 ```
 
 ---
@@ -935,7 +936,7 @@ size_t Container_Flat_Vector_int_Size(const Container_Flat_TVector_int * vec);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `vec` | `const FLAT_VECTOR_TYPE(int) * vec` | Pointer argument; see the operation's contract. |
+| `vec` | `const FLAT_VECTOR_TYPE(int) * vec` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -983,7 +984,7 @@ size_t Container_Flat_Vector_int_Capacity(const Container_Flat_TVector_int * vec
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `vec` | `const FLAT_VECTOR_TYPE(int) * vec` | Pointer argument; see the operation's contract. |
+| `vec` | `const FLAT_VECTOR_TYPE(int) * vec` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -1065,7 +1066,7 @@ OPSTATUS Container_Flat_Queue_int_Init(Container_Flat_TQueue_int * queue);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `queue` | `FLAT_QUEUE_TYPE(int) * queue` | Pointer argument; see the operation's contract. |
+| `queue` | `FLAT_QUEUE_TYPE(int) * queue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -1084,6 +1085,7 @@ Initializes the container.
 ### Example
 
 ```c
+FLAT_QUEUE_TYPE(int) queue = {0};
 OPSTATUS status = FLAT_QUEUE_FUNC(int, Init)(&queue);
 ```
 
@@ -1113,7 +1115,7 @@ void Container_Flat_Queue_int_Destroy(Container_Flat_TQueue_int * queue);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `queue` | `FLAT_QUEUE_TYPE(int) * queue` | Pointer argument; see the operation's contract. |
+| `queue` | `FLAT_QUEUE_TYPE(int) * queue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -1161,8 +1163,8 @@ OPSTATUS Container_Flat_Queue_int_Reserve(Container_Flat_TQueue_int * queue, siz
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `queue` | `FLAT_QUEUE_TYPE(int) * queue` | Pointer argument; see the operation's contract. |
-| `newCapacity` | `size_t newCapacity` | Scalar argument or value. |
+| `queue` | `FLAT_QUEUE_TYPE(int) * queue` | Container, node, callback, or output pointer. |
+| `newCapacity` | `size_t newCapacity` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -1210,7 +1212,7 @@ OPSTATUS Container_Flat_Queue_int_ShrinkToFit(Container_Flat_TQueue_int * queue)
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `queue` | `FLAT_QUEUE_TYPE(int) * queue` | Pointer argument; see the operation's contract. |
+| `queue` | `FLAT_QUEUE_TYPE(int) * queue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -1258,7 +1260,7 @@ OPSTATUS Container_Flat_Queue_int_Compact(Container_Flat_TQueue_int * queue);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `queue` | `FLAT_QUEUE_TYPE(int) * queue` | Pointer argument; see the operation's contract. |
+| `queue` | `FLAT_QUEUE_TYPE(int) * queue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -1306,8 +1308,8 @@ OPSTATUS Container_Flat_Queue_int_Push(Container_Flat_TQueue_int * queue, int va
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `queue` | `FLAT_QUEUE_TYPE(int) * queue` | Pointer argument; see the operation's contract. |
-| `value` | `int value` | Scalar argument or value. |
+| `queue` | `FLAT_QUEUE_TYPE(int) * queue` | Container, node, callback, or output pointer. |
+| `value` | `int value` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -1355,8 +1357,8 @@ OPSTATUS Container_Flat_Queue_int_Pop(Container_Flat_TQueue_int * queue, int * o
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `queue` | `FLAT_QUEUE_TYPE(int) * queue` | Pointer argument; see the operation's contract. |
-| `outValue` | `int * outValue` | Pointer argument; see the operation's contract. |
+| `queue` | `FLAT_QUEUE_TYPE(int) * queue` | Container, node, callback, or output pointer. |
+| `outValue` | `int * outValue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -1405,8 +1407,8 @@ OPSTATUS Container_Flat_Queue_int_Front(Container_Flat_TQueue_int * queue, int *
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `queue` | `FLAT_QUEUE_TYPE(int) * queue` | Pointer argument; see the operation's contract. |
-| `out` | `int **out` | Output pointer to an element inside the collection. |
+| `queue` | `FLAT_QUEUE_TYPE(int) * queue` | Container, node, callback, or output pointer. |
+| `out` | `int **out` | Address of a typed pointer output. |
 
 ---
 
@@ -1455,8 +1457,8 @@ OPSTATUS Container_Flat_Queue_int_Back(Container_Flat_TQueue_int * queue, int **
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `queue` | `FLAT_QUEUE_TYPE(int) * queue` | Pointer argument; see the operation's contract. |
-| `out` | `int **out` | Output pointer to an element inside the collection. |
+| `queue` | `FLAT_QUEUE_TYPE(int) * queue` | Container, node, callback, or output pointer. |
+| `out` | `int **out` | Address of a typed pointer output. |
 
 ---
 
@@ -1505,7 +1507,7 @@ bool Container_Flat_Queue_int_Empty(const Container_Flat_TQueue_int * queue);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `queue` | `const FLAT_QUEUE_TYPE(int) * queue` | Pointer argument; see the operation's contract. |
+| `queue` | `const FLAT_QUEUE_TYPE(int) * queue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -1524,7 +1526,7 @@ Returns true when the collection is empty.
 ### Example
 
 ```c
-bool empty = FLAT_QUEUE_FUNC(int, Empty)(&queue);
+bool result = FLAT_QUEUE_FUNC(int, Empty)(&queue);
 ```
 
 ---
@@ -1553,7 +1555,7 @@ size_t Container_Flat_Queue_int_Size(const Container_Flat_TQueue_int * queue);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `queue` | `const FLAT_QUEUE_TYPE(int) * queue` | Pointer argument; see the operation's contract. |
+| `queue` | `const FLAT_QUEUE_TYPE(int) * queue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -1601,7 +1603,7 @@ size_t Container_Flat_Queue_int_Capacity(const Container_Flat_TQueue_int * queue
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `queue` | `const FLAT_QUEUE_TYPE(int) * queue` | Pointer argument; see the operation's contract. |
+| `queue` | `const FLAT_QUEUE_TYPE(int) * queue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -1681,7 +1683,7 @@ OPSTATUS Container_Flat_Stack_int_Init(Container_Flat_TStack_int * stack);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `stack` | `FLAT_STACK_TYPE(int) * stack` | Pointer argument; see the operation's contract. |
+| `stack` | `FLAT_STACK_TYPE(int) * stack` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -1700,6 +1702,7 @@ Initializes the container.
 ### Example
 
 ```c
+FLAT_STACK_TYPE(int) stack = {0};
 OPSTATUS status = FLAT_STACK_FUNC(int, Init)(&stack);
 ```
 
@@ -1729,7 +1732,7 @@ void Container_Flat_Stack_int_Destroy(Container_Flat_TStack_int * stack);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `stack` | `FLAT_STACK_TYPE(int) * stack` | Pointer argument; see the operation's contract. |
+| `stack` | `FLAT_STACK_TYPE(int) * stack` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -1777,8 +1780,8 @@ OPSTATUS Container_Flat_Stack_int_Reserve(Container_Flat_TStack_int * stack, siz
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `stack` | `FLAT_STACK_TYPE(int) * stack` | Pointer argument; see the operation's contract. |
-| `newCapacity` | `size_t newCapacity` | Scalar argument or value. |
+| `stack` | `FLAT_STACK_TYPE(int) * stack` | Container, node, callback, or output pointer. |
+| `newCapacity` | `size_t newCapacity` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -1826,7 +1829,7 @@ OPSTATUS Container_Flat_Stack_int_ShrinkToFit(Container_Flat_TStack_int * stack)
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `stack` | `FLAT_STACK_TYPE(int) * stack` | Pointer argument; see the operation's contract. |
+| `stack` | `FLAT_STACK_TYPE(int) * stack` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -1874,8 +1877,8 @@ OPSTATUS Container_Flat_Stack_int_Push(Container_Flat_TStack_int * stack, int va
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `stack` | `FLAT_STACK_TYPE(int) * stack` | Pointer argument; see the operation's contract. |
-| `value` | `int value` | Scalar argument or value. |
+| `stack` | `FLAT_STACK_TYPE(int) * stack` | Container, node, callback, or output pointer. |
+| `value` | `int value` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -1923,8 +1926,8 @@ OPSTATUS Container_Flat_Stack_int_Pop(Container_Flat_TStack_int * stack, int * o
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `stack` | `FLAT_STACK_TYPE(int) * stack` | Pointer argument; see the operation's contract. |
-| `outValue` | `int * outValue` | Pointer argument; see the operation's contract. |
+| `stack` | `FLAT_STACK_TYPE(int) * stack` | Container, node, callback, or output pointer. |
+| `outValue` | `int * outValue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -1973,8 +1976,8 @@ OPSTATUS Container_Flat_Stack_int_Top(Container_Flat_TStack_int * stack, int **o
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `stack` | `FLAT_STACK_TYPE(int) * stack` | Pointer argument; see the operation's contract. |
-| `out` | `int **out` | Output pointer to an element inside the collection. |
+| `stack` | `FLAT_STACK_TYPE(int) * stack` | Container, node, callback, or output pointer. |
+| `out` | `int **out` | Address of a typed pointer output. |
 
 ---
 
@@ -2023,7 +2026,7 @@ bool Container_Flat_Stack_int_Empty(const Container_Flat_TStack_int * stack);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `stack` | `const FLAT_STACK_TYPE(int) * stack` | Pointer argument; see the operation's contract. |
+| `stack` | `const FLAT_STACK_TYPE(int) * stack` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -2042,7 +2045,7 @@ Returns true when the collection is empty.
 ### Example
 
 ```c
-bool empty = FLAT_STACK_FUNC(int, Empty)(&stack);
+bool result = FLAT_STACK_FUNC(int, Empty)(&stack);
 ```
 
 ---
@@ -2071,7 +2074,7 @@ size_t Container_Flat_Stack_int_Size(const Container_Flat_TStack_int * stack);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `stack` | `const FLAT_STACK_TYPE(int) * stack` | Pointer argument; see the operation's contract. |
+| `stack` | `const FLAT_STACK_TYPE(int) * stack` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -2119,7 +2122,7 @@ size_t Container_Flat_Stack_int_Capacity(const Container_Flat_TStack_int * stack
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `stack` | `const FLAT_STACK_TYPE(int) * stack` | Pointer argument; see the operation's contract. |
+| `stack` | `const FLAT_STACK_TYPE(int) * stack` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -2213,7 +2216,7 @@ OPSTATUS Container_Flat_String_8_Init(Container_Flat_TString_8 * str);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `TSTRING_TYPE(8) * str` | Pointer argument; see the operation's contract. |
+| `str` | `TSTRING_TYPE(8) * str` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -2232,6 +2235,7 @@ Initializes the container.
 ### Example
 
 ```c
+TSTRING_TYPE(8) str = {0};
 OPSTATUS status = TSTRING_FUNC(8, Init)(&str);
 ```
 
@@ -2261,7 +2265,7 @@ void Container_Flat_String_8_Destroy(Container_Flat_TString_8 * str);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `TSTRING_TYPE(8) * str` | Pointer argument; see the operation's contract. |
+| `str` | `TSTRING_TYPE(8) * str` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -2309,8 +2313,8 @@ OPSTATUS Container_Flat_String_8_FromCStr(Container_Flat_TString_8 * str, const 
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `TSTRING_TYPE(8) * str` | Pointer argument; see the operation's contract. |
-| `cstr` | `const uint8_t *cstr` | Pointer argument; see the operation's contract. |
+| `str` | `TSTRING_TYPE(8) * str` | Container, node, callback, or output pointer. |
+| `cstr` | `const uint8_t *cstr` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -2359,8 +2363,8 @@ OPSTATUS Container_Flat_String_8_CStr(Container_Flat_TString_8 *str, const uint8
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `TSTRING_TYPE(8) *str` | Pointer argument; see the operation's contract. |
-| `outCStr` | `const uint8_t **outCStr` | Output pointer to an element inside the collection. |
+| `str` | `TSTRING_TYPE(8) *str` | Container, node, callback, or output pointer. |
+| `outCStr` | `const uint8_t **outCStr` | Address of a typed pointer output. |
 
 ---
 
@@ -2379,8 +2383,8 @@ Provides read-only access to a terminated code-unit array. Returned pointers bor
 ### Example
 
 ```c
-const uint8_t *found = NULL;
-OPSTATUS status = TSTRING_FUNC(8, CStr)(&str, &found);
+const uint8_t *textOut = NULL;
+OPSTATUS status = TSTRING_FUNC(8, CStr)(&str, &textOut);
 ```
 
 ---
@@ -2409,7 +2413,7 @@ size_t Container_Flat_String_8_Length(const Container_Flat_TString_8 *str);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `const TSTRING_TYPE(8) *str` | Pointer argument; see the operation's contract. |
+| `str` | `const TSTRING_TYPE(8) *str` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -2457,7 +2461,7 @@ bool Container_Flat_String_8_Empty(const Container_Flat_TString_8 *str);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `const TSTRING_TYPE(8) *str` | Pointer argument; see the operation's contract. |
+| `str` | `const TSTRING_TYPE(8) *str` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -2476,7 +2480,7 @@ Returns true when the collection is empty.
 ### Example
 
 ```c
-bool empty = TSTRING_FUNC(8, Empty)(&str);
+bool result = TSTRING_FUNC(8, Empty)(&str);
 ```
 
 ---
@@ -2505,7 +2509,7 @@ void Container_Flat_String_8_Clear(Container_Flat_TString_8 * str);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `TSTRING_TYPE(8) * str` | Pointer argument; see the operation's contract. |
+| `str` | `TSTRING_TYPE(8) * str` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -2553,8 +2557,8 @@ OPSTATUS Container_Flat_String_8_Reserve(Container_Flat_TString_8 * str, size_t 
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `TSTRING_TYPE(8) * str` | Pointer argument; see the operation's contract. |
-| `newCapacity` | `size_t newCapacity` | Scalar argument or value. |
+| `str` | `TSTRING_TYPE(8) * str` | Container, node, callback, or output pointer. |
+| `newCapacity` | `size_t newCapacity` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -2602,8 +2606,8 @@ OPSTATUS Container_Flat_String_8_PushBack(Container_Flat_TString_8 * str, uint8_
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `TSTRING_TYPE(8) * str` | Pointer argument; see the operation's contract. |
-| `ch` | `uint8_t ch` | Scalar argument or value. |
+| `str` | `TSTRING_TYPE(8) * str` | Container, node, callback, or output pointer. |
+| `ch` | `uint8_t ch` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -2651,8 +2655,8 @@ OPSTATUS Container_Flat_String_8_PopBack(Container_Flat_TString_8 * str, uint8_t
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `TSTRING_TYPE(8) * str` | Pointer argument; see the operation's contract. |
-| `outValue` | `uint8_t *outValue` | Pointer argument; see the operation's contract. |
+| `str` | `TSTRING_TYPE(8) * str` | Container, node, callback, or output pointer. |
+| `outValue` | `uint8_t *outValue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -2701,7 +2705,7 @@ size_t Container_Flat_String_8_Capacity(const Container_Flat_TString_8 *str);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `const TSTRING_TYPE(8) *str` | Pointer argument; see the operation's contract. |
+| `str` | `const TSTRING_TYPE(8) *str` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -2749,9 +2753,9 @@ OPSTATUS Container_Flat_String_8_InsertChar(Container_Flat_TString_8 * str, size
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `TSTRING_TYPE(8) * str` | Pointer argument; see the operation's contract. |
-| `pos` | `size_t pos` | Scalar argument or value. |
-| `ch` | `uint8_t ch` | Scalar argument or value. |
+| `str` | `TSTRING_TYPE(8) * str` | Container, node, callback, or output pointer. |
+| `pos` | `size_t pos` | Value, key, capacity, or index argument. |
+| `ch` | `uint8_t ch` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -2799,9 +2803,9 @@ OPSTATUS Container_Flat_String_8_At(Container_Flat_TString_8 * str, size_t index
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `TSTRING_TYPE(8) * str` | Pointer argument; see the operation's contract. |
-| `index` | `size_t index` | Scalar argument or value. |
-| `out` | `uint8_t **out` | Output pointer to an element inside the collection. |
+| `str` | `TSTRING_TYPE(8) * str` | Container, node, callback, or output pointer. |
+| `index` | `size_t index` | Value, key, capacity, or index argument. |
+| `out` | `uint8_t **out` | Address of a typed pointer output. |
 
 ---
 
@@ -2850,8 +2854,8 @@ OPSTATUS Container_Flat_String_8_Front(Container_Flat_TString_8 * str, uint8_t *
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `TSTRING_TYPE(8) * str` | Pointer argument; see the operation's contract. |
-| `out` | `uint8_t **out` | Output pointer to an element inside the collection. |
+| `str` | `TSTRING_TYPE(8) * str` | Container, node, callback, or output pointer. |
+| `out` | `uint8_t **out` | Address of a typed pointer output. |
 
 ---
 
@@ -2900,8 +2904,8 @@ OPSTATUS Container_Flat_String_8_Back(Container_Flat_TString_8 * str, uint8_t **
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `TSTRING_TYPE(8) * str` | Pointer argument; see the operation's contract. |
-| `out` | `uint8_t **out` | Output pointer to an element inside the collection. |
+| `str` | `TSTRING_TYPE(8) * str` | Container, node, callback, or output pointer. |
+| `out` | `uint8_t **out` | Address of a typed pointer output. |
 
 ---
 
@@ -2950,8 +2954,8 @@ OPSTATUS Container_Flat_String_8_Append(Container_Flat_TString_8 * str, const ui
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `TSTRING_TYPE(8) * str` | Pointer argument; see the operation's contract. |
-| `cstr` | `const uint8_t *cstr` | Pointer argument; see the operation's contract. |
+| `str` | `TSTRING_TYPE(8) * str` | Container, node, callback, or output pointer. |
+| `cstr` | `const uint8_t *cstr` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -3000,8 +3004,8 @@ OPSTATUS Container_Flat_String_8_AppendStr(Container_Flat_TString_8 * str, Conta
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `TSTRING_TYPE(8) * str` | Pointer argument; see the operation's contract. |
-| `other` | `TSTRING_TYPE(8) * other` | Pointer argument; see the operation's contract. |
+| `str` | `TSTRING_TYPE(8) * str` | Container, node, callback, or output pointer. |
+| `other` | `TSTRING_TYPE(8) * other` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -3020,8 +3024,10 @@ Appends another same-width TString.
 ### Example
 
 ```c
-/* other: separately initialized TString(8) */
+TSTRING_TYPE(8) other = {0};
+TSTRING_FUNC(8, Init)(&other);
 OPSTATUS status = TSTRING_FUNC(8, AppendStr)(&str, &other);
+TSTRING_FUNC(8, Destroy)(&other);
 ```
 
 ---
@@ -3050,9 +3056,9 @@ OPSTATUS Container_Flat_String_8_Insert(Container_Flat_TString_8 * str, size_t p
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `TSTRING_TYPE(8) * str` | Pointer argument; see the operation's contract. |
-| `pos` | `size_t pos` | Scalar argument or value. |
-| `cstr` | `const uint8_t *cstr` | Pointer argument; see the operation's contract. |
+| `str` | `TSTRING_TYPE(8) * str` | Container, node, callback, or output pointer. |
+| `pos` | `size_t pos` | Value, key, capacity, or index argument. |
+| `cstr` | `const uint8_t *cstr` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -3101,9 +3107,9 @@ OPSTATUS Container_Flat_String_8_Erase(Container_Flat_TString_8 * str, size_t po
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `TSTRING_TYPE(8) * str` | Pointer argument; see the operation's contract. |
-| `pos` | `size_t pos` | Scalar argument or value. |
-| `count` | `size_t count` | Scalar argument or value. |
+| `str` | `TSTRING_TYPE(8) * str` | Container, node, callback, or output pointer. |
+| `pos` | `size_t pos` | Value, key, capacity, or index argument. |
+| `count` | `size_t count` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -3151,10 +3157,10 @@ OPSTATUS Container_Flat_String_8_Substr(Container_Flat_TString_8 * str, size_t p
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `TSTRING_TYPE(8) * str` | Pointer argument; see the operation's contract. |
-| `pos` | `size_t pos` | Scalar argument or value. |
-| `count` | `size_t count` | Scalar argument or value. |
-| `out` | `TSTRING_TYPE(8) * out` | Pointer argument; see the operation's contract. |
+| `str` | `TSTRING_TYPE(8) * str` | Container, node, callback, or output pointer. |
+| `pos` | `size_t pos` | Value, key, capacity, or index argument. |
+| `count` | `size_t count` | Value, key, capacity, or index argument. |
+| `out` | `TSTRING_TYPE(8) * out` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -3174,7 +3180,10 @@ Copies a selected range into another TString.
 
 ```c
 uint8_t *found = NULL;
-OPSTATUS status = TSTRING_FUNC(8, Substr)(&str, 0, 1, &found);
+TSTRING_TYPE(8) slice = {0};
+TSTRING_FUNC(8, Init)(&slice);
+OPSTATUS status = TSTRING_FUNC(8, Substr)(&str, 0, 1, &slice);
+TSTRING_FUNC(8, Destroy)(&slice);
 ```
 
 ---
@@ -3203,9 +3212,9 @@ OPSTATUS Container_Flat_String_8_Compare(const Container_Flat_TString_8 *str, co
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `const TSTRING_TYPE(8) *str` | Pointer argument; see the operation's contract. |
-| `other` | `const TSTRING_TYPE(8) *other` | Pointer argument; see the operation's contract. |
-| `outResult` | `CMPOUT *outResult` | Pointer argument; see the operation's contract. |
+| `str` | `const TSTRING_TYPE(8) *str` | Container, node, callback, or output pointer. |
+| `other` | `const TSTRING_TYPE(8) *other` | Container, node, callback, or output pointer. |
+| `outResult` | `CMPOUT *outResult` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -3224,9 +3233,11 @@ Writes a CMPOUT lexical comparison via an output pointer. The function returns O
 ### Example
 
 ```c
-/* other: separately initialized TString(8) */
-CMPOUT comparison;
-OPSTATUS status = TSTRING_FUNC(8, Compare)(&str, &other, &comparison);
+TSTRING_TYPE(8) other = {0};
+TSTRING_FUNC(8, Init)(&other);
+CMPOUT result = COMPARISON_EQUAL_CONST;
+OPSTATUS status = TSTRING_FUNC(8, Compare)(&str, &other, &result);
+TSTRING_FUNC(8, Destroy)(&other);
 ```
 
 ---
@@ -3255,10 +3266,10 @@ OPSTATUS Container_Flat_String_8_Find(const Container_Flat_TString_8 *str, uint8
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `const TSTRING_TYPE(8) *str` | Pointer argument; see the operation's contract. |
-| `ch` | `uint8_t ch` | Scalar argument or value. |
-| `start` | `size_t start` | Scalar argument or value. |
-| `index` | `size_t *index` | Pointer argument; see the operation's contract. |
+| `str` | `const TSTRING_TYPE(8) *str` | Container, node, callback, or output pointer. |
+| `ch` | `uint8_t ch` | Value, key, capacity, or index argument. |
+| `start` | `size_t start` | Value, key, capacity, or index argument. |
+| `index` | `size_t *index` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -3277,7 +3288,8 @@ Searches for a code unit starting at a specified index.
 ### Example
 
 ```c
-OPSTATUS status = TSTRING_FUNC(8, Find)(&str, 'A', 0, 0);
+size_t foundIndex = 0;
+OPSTATUS status = TSTRING_FUNC(8, Find)(&str, 'A', 0, &foundIndex);
 ```
 
 ---
@@ -3306,10 +3318,10 @@ OPSTATUS Container_Flat_String_8_FindStr(const Container_Flat_TString_8 *str, co
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `const TSTRING_TYPE(8) *str` | Pointer argument; see the operation's contract. |
-| `needle` | `const uint8_t *needle` | Pointer argument; see the operation's contract. |
-| `start` | `size_t start` | Scalar argument or value. |
-| `index` | `size_t *index` | Pointer argument; see the operation's contract. |
+| `str` | `const TSTRING_TYPE(8) *str` | Container, node, callback, or output pointer. |
+| `needle` | `const uint8_t *needle` | Container, node, callback, or output pointer. |
+| `start` | `size_t start` | Value, key, capacity, or index argument. |
+| `index` | `size_t *index` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -3329,7 +3341,8 @@ Searches for a zero-terminated substring. Input must be terminated and have matc
 
 ```c
 const uint8_t letters[] = {'a', 'b', 0};
-OPSTATUS status = TSTRING_FUNC(8, FindStr)(&str, letters, 0, 0);
+size_t foundIndex = 0;
+OPSTATUS status = TSTRING_FUNC(8, FindStr)(&str, letters, 0, &foundIndex);
 ```
 
 ---
@@ -3358,8 +3371,8 @@ OPSTATUS Container_Flat_String_8_Data(Container_Flat_TString_8 *str, uint8_t **o
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `str` | `TSTRING_TYPE(8) *str` | Pointer argument; see the operation's contract. |
-| `outData` | `uint8_t **outData` | Output pointer to an element inside the collection. |
+| `str` | `TSTRING_TYPE(8) *str` | Container, node, callback, or output pointer. |
+| `outData` | `uint8_t **outData` | Address of a typed pointer output. |
 
 ---
 
@@ -3378,8 +3391,8 @@ Returns a pointer to internal contiguous data. Returned pointers borrow containe
 ### Example
 
 ```c
-uint8_t *found = NULL;
-OPSTATUS status = TSTRING_FUNC(8, Data)(&str, &found);
+uint8_t *dataOut = NULL;
+OPSTATUS status = TSTRING_FUNC(8, Data)(&str, &dataOut);
 ```
 
 ---
@@ -3444,7 +3457,7 @@ OPSTATUS Container_Linked_ForwardList_int_Init( Container_Linked_TForwardList_in
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container/node pointer. |
+| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -3463,6 +3476,7 @@ Initializes bookkeeping fields to an empty state. Calling Init on an already-own
 ### Example
 
 ```c
+LINKED_FORWARD_LIST_TYPE(int) container = {0};
 OPSTATUS status = LINKED_FORWARD_LIST_FUNC(int, Init)(&container);
 ```
 
@@ -3492,7 +3506,7 @@ void Container_Linked_ForwardList_int_Destroy( Container_Linked_TForwardList_int
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container/node pointer. |
+| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -3540,8 +3554,8 @@ OPSTATUS Container_Linked_ForwardList_int_PushFront( Container_Linked_TForwardLi
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container/node pointer. |
-| `value` | `int value` | Scalar value or index. |
+| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container, node, callback, or output pointer. |
+| `value` | `int value` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -3589,8 +3603,8 @@ OPSTATUS Container_Linked_ForwardList_int_PopFront( Container_Linked_TForwardLis
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container/node pointer. |
-| `outValue` | `int * outValue` | Container/node pointer. |
+| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container, node, callback, or output pointer. |
+| `outValue` | `int * outValue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -3609,8 +3623,8 @@ Removes the first value and reports it. The removed node ceases to exist and all
 ### Example
 
 ```c
-int value = 0;
-OPSTATUS status = LINKED_FORWARD_LIST_FUNC(int, PopFront)(&container, &value);
+int removed = 0;
+OPSTATUS status = LINKED_FORWARD_LIST_FUNC(int, PopFront)(&container, &removed);
 ```
 
 ---
@@ -3639,10 +3653,10 @@ OPSTATUS Container_Linked_ForwardList_int_InsertAfter( Container_Linked_TForward
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container/node pointer. |
-| `pos` | `LINKED_FORWARD_LIST_NODE_TYPE(int) * pos` | Container/node pointer. |
-| `value` | `int value` | Scalar value or index. |
-| `outNode` | `LINKED_FORWARD_LIST_NODE_TYPE(int) * *outNode` | Container/node pointer. |
+| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container, node, callback, or output pointer. |
+| `pos` | `LINKED_FORWARD_LIST_NODE_TYPE(int) * pos` | Container, node, callback, or output pointer. |
+| `value` | `int value` | Value, key, capacity, or index argument. |
+| `outNode` | `LINKED_FORWARD_LIST_NODE_TYPE(int) * *outNode` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -3662,8 +3676,8 @@ Inserts a new node after the given node. The newly allocated node belongs to the
 
 ```c
 LINKED_FORWARD_LIST_NODE_TYPE(int) *position = LINKED_FORWARD_LIST_FUNC(int, Begin)(&container);
-LINKED_FORWARD_LIST_NODE_TYPE(int) *inserted = NULL;
-OPSTATUS status = LINKED_FORWARD_LIST_FUNC(int, InsertAfter)(&container, position, 42, &inserted);
+LINKED_FORWARD_LIST_NODE_TYPE(int) *created = NULL;
+OPSTATUS status = LINKED_FORWARD_LIST_FUNC(int, InsertAfter)(&container, position, 42, &created);
 ```
 
 ---
@@ -3692,8 +3706,8 @@ OPSTATUS Container_Linked_ForwardList_int_EraseAfter( Container_Linked_TForwardL
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container/node pointer. |
-| `pos` | `LINKED_FORWARD_LIST_NODE_TYPE(int) * pos` | Container/node pointer. |
+| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container, node, callback, or output pointer. |
+| `pos` | `LINKED_FORWARD_LIST_NODE_TYPE(int) * pos` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -3742,7 +3756,7 @@ void Container_Linked_ForwardList_int_Clear( Container_Linked_TForwardList_int *
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container/node pointer. |
+| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -3790,8 +3804,8 @@ OPSTATUS Container_Linked_ForwardList_int_Front( Container_Linked_TForwardList_i
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `list` | `LINKED_FORWARD_LIST_TYPE(int) * list` | Container/node pointer. |
-| `out` | `int **out` | Typed pointer to an output. |
+| `list` | `LINKED_FORWARD_LIST_TYPE(int) * list` | Container, node, callback, or output pointer. |
+| `out` | `int **out` | Address of a typed pointer output. |
 
 ---
 
@@ -3810,8 +3824,8 @@ Obtains a pointer to the first node's value.
 ### Example
 
 ```c
-int *element = NULL;
-OPSTATUS status = LINKED_FORWARD_LIST_FUNC(int, Front)(&list, &element);
+int *found = NULL;
+OPSTATUS status = LINKED_FORWARD_LIST_FUNC(int, Front)(NULL, &found);
 ```
 
 ---
@@ -3840,8 +3854,8 @@ OPSTATUS Container_Linked_ForwardList_int_Back( Container_Linked_TForwardList_in
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `list` | `LINKED_FORWARD_LIST_TYPE(int) * list` | Container/node pointer. |
-| `out` | `int **out` | Typed pointer to an output. |
+| `list` | `LINKED_FORWARD_LIST_TYPE(int) * list` | Container, node, callback, or output pointer. |
+| `out` | `int **out` | Address of a typed pointer output. |
 
 ---
 
@@ -3860,8 +3874,8 @@ Obtains a pointer to the last node's value.
 ### Example
 
 ```c
-int *element = NULL;
-OPSTATUS status = LINKED_FORWARD_LIST_FUNC(int, Back)(&list, &element);
+int *found = NULL;
+OPSTATUS status = LINKED_FORWARD_LIST_FUNC(int, Back)(NULL, &found);
 ```
 
 ---
@@ -3890,7 +3904,7 @@ Container_Linked_ForwardList_TNode_int * Container_Linked_ForwardList_int_Begin(
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container/node pointer. |
+| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -3909,7 +3923,7 @@ Returns a pointer to the first node for iteration.
 ### Example
 
 ```c
-LINKED_FORWARD_LIST_NODE_TYPE(int) *node = LINKED_FORWARD_LIST_FUNC(int, Begin)(&container);
+LINKED_FORWARD_LIST_NODE_TYPE(int) * result = LINKED_FORWARD_LIST_FUNC(int, Begin)(&container);
 ```
 
 ---
@@ -3938,7 +3952,7 @@ bool Container_Linked_ForwardList_int_Empty( const Container_Linked_TForwardList
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `container` | `const LINKED_FORWARD_LIST_TYPE(int) * container` | Container/node pointer. |
+| `container` | `const LINKED_FORWARD_LIST_TYPE(int) * container` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -3957,7 +3971,7 @@ Reports whether the collection has no nodes.
 ### Example
 
 ```c
-bool empty = LINKED_FORWARD_LIST_FUNC(int, Empty)(&container);
+bool result = LINKED_FORWARD_LIST_FUNC(int, Empty)(&container);
 ```
 
 ---
@@ -3986,7 +4000,7 @@ size_t Container_Linked_ForwardList_int_Size( const Container_Linked_TForwardLis
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `container` | `const LINKED_FORWARD_LIST_TYPE(int) * container` | Container/node pointer. |
+| `container` | `const LINKED_FORWARD_LIST_TYPE(int) * container` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -4005,7 +4019,7 @@ Returns the stored node count.
 ### Example
 
 ```c
-size_t size = LINKED_FORWARD_LIST_FUNC(int, Size)(&container);
+size_t count = LINKED_FORWARD_LIST_FUNC(int, Size)(&container);
 ```
 
 ---
@@ -4073,7 +4087,7 @@ OPSTATUS Container_Linked_List_int_Init( Container_Linked_TList_int * list);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -4092,6 +4106,7 @@ Initializes bookkeeping fields to an empty state. Calling Init on an already-own
 ### Example
 
 ```c
+LINKED_LIST_TYPE(int) list = {0};
 OPSTATUS status = LINKED_LIST_FUNC(int, Init)(&list);
 ```
 
@@ -4121,7 +4136,7 @@ void Container_Linked_List_int_Destroy( Container_Linked_TList_int * list);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -4169,8 +4184,8 @@ OPSTATUS Container_Linked_List_int_Front( Container_Linked_TList_int * list, int
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
-| `out` | `int **out` | Typed pointer to an output. |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container, node, callback, or output pointer. |
+| `out` | `int **out` | Address of a typed pointer output. |
 
 ---
 
@@ -4189,8 +4204,8 @@ Obtains a pointer to the first node's value.
 ### Example
 
 ```c
-int *element = NULL;
-OPSTATUS status = LINKED_LIST_FUNC(int, Front)(&list, &element);
+int *found = NULL;
+OPSTATUS status = LINKED_LIST_FUNC(int, Front)(&list, &found);
 ```
 
 ---
@@ -4219,8 +4234,8 @@ OPSTATUS Container_Linked_List_int_Back( Container_Linked_TList_int * list, int 
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
-| `out` | `int **out` | Typed pointer to an output. |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container, node, callback, or output pointer. |
+| `out` | `int **out` | Address of a typed pointer output. |
 
 ---
 
@@ -4239,8 +4254,8 @@ Obtains a pointer to the last node's value.
 ### Example
 
 ```c
-int *element = NULL;
-OPSTATUS status = LINKED_LIST_FUNC(int, Back)(&list, &element);
+int *found = NULL;
+OPSTATUS status = LINKED_LIST_FUNC(int, Back)(&list, &found);
 ```
 
 ---
@@ -4269,7 +4284,7 @@ Container_Linked_List_TNode_int * Container_Linked_List_int_Begin(Container_Link
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -4288,7 +4303,7 @@ Returns a pointer to the first node for iteration.
 ### Example
 
 ```c
-LINKED_LIST_NODE_TYPE(int) *node = LINKED_LIST_FUNC(int, Begin)(&list);
+LINKED_LIST_NODE_TYPE(int) * result = LINKED_LIST_FUNC(int, Begin)(&list);
 ```
 
 ---
@@ -4317,7 +4332,7 @@ Container_Linked_List_TNode_int * Container_Linked_List_int_End(Container_Linked
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -4336,7 +4351,7 @@ Returns the past-end sentinel for iteration.
 ### Example
 
 ```c
-LINKED_LIST_NODE_TYPE(int) *end = LINKED_LIST_FUNC(int, End)(&list); /* End is the past-end position. */
+LINKED_LIST_NODE_TYPE(int) * result = LINKED_LIST_FUNC(int, End)(&list);
 ```
 
 ---
@@ -4365,8 +4380,8 @@ OPSTATUS Container_Linked_List_int_PushFront( Container_Linked_TList_int * list,
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
-| `value` | `int value` | Scalar value or index. |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container, node, callback, or output pointer. |
+| `value` | `int value` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -4414,8 +4429,8 @@ OPSTATUS Container_Linked_List_int_PushBack( Container_Linked_TList_int * list, 
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
-| `value` | `int value` | Scalar value or index. |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container, node, callback, or output pointer. |
+| `value` | `int value` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -4463,8 +4478,8 @@ OPSTATUS Container_Linked_List_int_PopFront( Container_Linked_TList_int * list, 
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
-| `outValue` | `int * outValue` | Container/node pointer. |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container, node, callback, or output pointer. |
+| `outValue` | `int * outValue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -4483,8 +4498,8 @@ Removes the first value and reports it. The removed node ceases to exist and all
 ### Example
 
 ```c
-int value = 0;
-OPSTATUS status = LINKED_LIST_FUNC(int, PopFront)(&list, &value);
+int removed = 0;
+OPSTATUS status = LINKED_LIST_FUNC(int, PopFront)(&list, &removed);
 ```
 
 ---
@@ -4513,8 +4528,8 @@ OPSTATUS Container_Linked_List_int_PopBack( Container_Linked_TList_int * list, i
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
-| `outValue` | `int * outValue` | Container/node pointer. |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container, node, callback, or output pointer. |
+| `outValue` | `int * outValue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -4533,8 +4548,8 @@ Removes the last value and reports it. The removed node ceases to exist and all 
 ### Example
 
 ```c
-int value = 0;
-OPSTATUS status = LINKED_LIST_FUNC(int, PopBack)(&list, &value);
+int removed = 0;
+OPSTATUS status = LINKED_LIST_FUNC(int, PopBack)(&list, &removed);
 ```
 
 ---
@@ -4563,10 +4578,10 @@ OPSTATUS Container_Linked_List_int_Insert( Container_Linked_TList_int * list, Co
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
-| `pos` | `LINKED_LIST_NODE_TYPE(int) * pos` | Container/node pointer. |
-| `value` | `int value` | Scalar value or index. |
-| `outNode` | `LINKED_LIST_NODE_TYPE(int) * *outNode` | Container/node pointer. |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container, node, callback, or output pointer. |
+| `pos` | `LINKED_LIST_NODE_TYPE(int) * pos` | Container, node, callback, or output pointer. |
+| `value` | `int value` | Value, key, capacity, or index argument. |
+| `outNode` | `LINKED_LIST_NODE_TYPE(int) * *outNode` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -4586,8 +4601,8 @@ Inserts a node before the specified list position. The newly allocated node belo
 
 ```c
 LINKED_LIST_NODE_TYPE(int) *position = LINKED_LIST_FUNC(int, Begin)(&list);
-LINKED_LIST_NODE_TYPE(int) *inserted = NULL;
-OPSTATUS status = LINKED_LIST_FUNC(int, Insert)(&list, position, 42, &inserted);
+LINKED_LIST_NODE_TYPE(int) *created = NULL;
+OPSTATUS status = LINKED_LIST_FUNC(int, Insert)(&list, position, 42, &created);
 ```
 
 ---
@@ -4616,9 +4631,9 @@ OPSTATUS Container_Linked_List_int_Erase( Container_Linked_TList_int * list, Con
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
-| `pos` | `LINKED_LIST_NODE_TYPE(int) * pos` | Container/node pointer. |
-| `outNode` | `LINKED_LIST_NODE_TYPE(int) * *outNode` | Container/node pointer. |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container, node, callback, or output pointer. |
+| `pos` | `LINKED_LIST_NODE_TYPE(int) * pos` | Container, node, callback, or output pointer. |
+| `outNode` | `LINKED_LIST_NODE_TYPE(int) * *outNode` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -4638,8 +4653,8 @@ Erases the given node and returns the following node through an out parameter. T
 
 ```c
 LINKED_LIST_NODE_TYPE(int) *position = LINKED_LIST_FUNC(int, Begin)(&list);
-LINKED_LIST_NODE_TYPE(int) *inserted = NULL;
-OPSTATUS status = LINKED_LIST_FUNC(int, Erase)(&list, position, &inserted);
+LINKED_LIST_NODE_TYPE(int) *created = NULL;
+OPSTATUS status = LINKED_LIST_FUNC(int, Erase)(&list, position, &created);
 ```
 
 ---
@@ -4668,7 +4683,7 @@ void Container_Linked_List_int_Clear(Container_Linked_TList_int * list);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -4716,7 +4731,7 @@ bool Container_Linked_List_int_Empty(const Container_Linked_TList_int * list);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `list` | `const LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
+| `list` | `const LINKED_LIST_TYPE(int) * list` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -4735,7 +4750,7 @@ Reports whether the collection has no nodes.
 ### Example
 
 ```c
-bool empty = LINKED_LIST_FUNC(int, Empty)(&list);
+bool result = LINKED_LIST_FUNC(int, Empty)(&list);
 ```
 
 ---
@@ -4764,7 +4779,7 @@ size_t Container_Linked_List_int_Size(const Container_Linked_TList_int * list);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `list` | `const LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
+| `list` | `const LINKED_LIST_TYPE(int) * list` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -4783,7 +4798,7 @@ Returns the stored node count.
 ### Example
 
 ```c
-size_t size = LINKED_LIST_FUNC(int, Size)(&list);
+size_t count = LINKED_LIST_FUNC(int, Size)(&list);
 ```
 
 ---
@@ -4847,7 +4862,7 @@ OPSTATUS Container_Linked_Deque_int_Init( Container_Linked_TDeque_int * deque);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container/node pointer. |
+| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -4866,6 +4881,7 @@ Initializes bookkeeping fields to an empty state. Calling Init on an already-own
 ### Example
 
 ```c
+LINKED_DEQUE_TYPE(int) deque = {0};
 OPSTATUS status = LINKED_DEQUE_FUNC(int, Init)(&deque);
 ```
 
@@ -4895,7 +4911,7 @@ void Container_Linked_Deque_int_Destroy( Container_Linked_TDeque_int * deque);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container/node pointer. |
+| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -4943,8 +4959,8 @@ OPSTATUS Container_Linked_Deque_int_PushFront( Container_Linked_TDeque_int * deq
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container/node pointer. |
-| `value` | `int value` | Scalar value or index. |
+| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container, node, callback, or output pointer. |
+| `value` | `int value` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -4992,8 +5008,8 @@ OPSTATUS Container_Linked_Deque_int_PushBack( Container_Linked_TDeque_int * dequ
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container/node pointer. |
-| `value` | `int value` | Scalar value or index. |
+| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container, node, callback, or output pointer. |
+| `value` | `int value` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -5041,8 +5057,8 @@ OPSTATUS Container_Linked_Deque_int_PopFront( Container_Linked_TDeque_int * dequ
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container/node pointer. |
-| `outValue` | `int * outValue` | Container/node pointer. |
+| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container, node, callback, or output pointer. |
+| `outValue` | `int * outValue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -5061,8 +5077,8 @@ Removes the first value and reports it. The removed node ceases to exist and all
 ### Example
 
 ```c
-int value = 0;
-OPSTATUS status = LINKED_DEQUE_FUNC(int, PopFront)(&deque, &value);
+int removed = 0;
+OPSTATUS status = LINKED_DEQUE_FUNC(int, PopFront)(&deque, &removed);
 ```
 
 ---
@@ -5091,8 +5107,8 @@ OPSTATUS Container_Linked_Deque_int_PopBack( Container_Linked_TDeque_int * deque
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container/node pointer. |
-| `outValue` | `int * outValue` | Container/node pointer. |
+| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container, node, callback, or output pointer. |
+| `outValue` | `int * outValue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -5111,8 +5127,8 @@ Removes the last value and reports it. The removed node ceases to exist and all 
 ### Example
 
 ```c
-int value = 0;
-OPSTATUS status = LINKED_DEQUE_FUNC(int, PopBack)(&deque, &value);
+int removed = 0;
+OPSTATUS status = LINKED_DEQUE_FUNC(int, PopBack)(&deque, &removed);
 ```
 
 ---
@@ -5141,7 +5157,7 @@ void Container_Linked_Deque_int_Clear( Container_Linked_TDeque_int * deque);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container/node pointer. |
+| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -5189,8 +5205,8 @@ OPSTATUS Container_Linked_Deque_int_Front( Container_Linked_TDeque_int * deque, 
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container/node pointer. |
-| `out` | `int **out` | Typed pointer to an output. |
+| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container, node, callback, or output pointer. |
+| `out` | `int **out` | Address of a typed pointer output. |
 
 ---
 
@@ -5209,8 +5225,8 @@ Obtains a pointer to the first node's value.
 ### Example
 
 ```c
-int *element = NULL;
-OPSTATUS status = LINKED_DEQUE_FUNC(int, Front)(&deque, &element);
+int *found = NULL;
+OPSTATUS status = LINKED_DEQUE_FUNC(int, Front)(&deque, &found);
 ```
 
 ---
@@ -5239,8 +5255,8 @@ OPSTATUS Container_Linked_Deque_int_Back( Container_Linked_TDeque_int * deque, i
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container/node pointer. |
-| `out` | `int **out` | Typed pointer to an output. |
+| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container, node, callback, or output pointer. |
+| `out` | `int **out` | Address of a typed pointer output. |
 
 ---
 
@@ -5259,8 +5275,8 @@ Obtains a pointer to the last node's value.
 ### Example
 
 ```c
-int *element = NULL;
-OPSTATUS status = LINKED_DEQUE_FUNC(int, Back)(&deque, &element);
+int *found = NULL;
+OPSTATUS status = LINKED_DEQUE_FUNC(int, Back)(&deque, &found);
 ```
 
 ---
@@ -5289,7 +5305,7 @@ bool Container_Linked_Deque_int_Empty( const Container_Linked_TDeque_int * deque
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `deque` | `const LINKED_DEQUE_TYPE(int) * deque` | Container/node pointer. |
+| `deque` | `const LINKED_DEQUE_TYPE(int) * deque` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -5308,7 +5324,7 @@ Reports whether the collection has no nodes.
 ### Example
 
 ```c
-bool empty = LINKED_DEQUE_FUNC(int, Empty)(&deque);
+bool result = LINKED_DEQUE_FUNC(int, Empty)(&deque);
 ```
 
 ---
@@ -5337,7 +5353,7 @@ size_t Container_Linked_Deque_int_Size( const Container_Linked_TDeque_int * dequ
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `deque` | `const LINKED_DEQUE_TYPE(int) * deque` | Container/node pointer. |
+| `deque` | `const LINKED_DEQUE_TYPE(int) * deque` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -5356,7 +5372,7 @@ Returns the stored node count.
 ### Example
 
 ```c
-size_t size = LINKED_DEQUE_FUNC(int, Size)(&deque);
+size_t count = LINKED_DEQUE_FUNC(int, Size)(&deque);
 ```
 
 ---
@@ -5418,7 +5434,7 @@ OPSTATUS Container_Linked_Queue_int_Init( Container_Linked_TQueue_int * queue);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `queue` | `LINKED_QUEUE_TYPE(int) * queue` | Container/node pointer. |
+| `queue` | `LINKED_QUEUE_TYPE(int) * queue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -5437,6 +5453,7 @@ Initializes bookkeeping fields to an empty state. Calling Init on an already-own
 ### Example
 
 ```c
+LINKED_QUEUE_TYPE(int) queue = {0};
 OPSTATUS status = LINKED_QUEUE_FUNC(int, Init)(&queue);
 ```
 
@@ -5466,7 +5483,7 @@ void Container_Linked_Queue_int_Destroy( Container_Linked_TQueue_int * queue);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `queue` | `LINKED_QUEUE_TYPE(int) * queue` | Container/node pointer. |
+| `queue` | `LINKED_QUEUE_TYPE(int) * queue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -5514,8 +5531,8 @@ OPSTATUS Container_Linked_Queue_int_Push( Container_Linked_TQueue_int * queue, i
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `queue` | `LINKED_QUEUE_TYPE(int) * queue` | Container/node pointer. |
-| `value` | `int value` | Scalar value or index. |
+| `queue` | `LINKED_QUEUE_TYPE(int) * queue` | Container, node, callback, or output pointer. |
+| `value` | `int value` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -5563,8 +5580,8 @@ OPSTATUS Container_Linked_Queue_int_Pop( Container_Linked_TQueue_int * queue, in
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `queue` | `LINKED_QUEUE_TYPE(int) * queue` | Container/node pointer. |
-| `outValue` | `int * outValue` | Container/node pointer. |
+| `queue` | `LINKED_QUEUE_TYPE(int) * queue` | Container, node, callback, or output pointer. |
+| `outValue` | `int * outValue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -5583,8 +5600,8 @@ Pops/dequeues a value. The removed node ceases to exist and all pointers to it b
 ### Example
 
 ```c
-int value = 0;
-OPSTATUS status = LINKED_QUEUE_FUNC(int, Pop)(&queue, &value);
+int removed = 0;
+OPSTATUS status = LINKED_QUEUE_FUNC(int, Pop)(&queue, &removed);
 ```
 
 ---
@@ -5613,7 +5630,7 @@ void Container_Linked_Queue_int_Clear( Container_Linked_TQueue_int * queue);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `queue` | `LINKED_QUEUE_TYPE(int) * queue` | Container/node pointer. |
+| `queue` | `LINKED_QUEUE_TYPE(int) * queue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -5661,8 +5678,8 @@ OPSTATUS Container_Linked_Queue_int_Front( Container_Linked_TQueue_int * queue, 
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `queue` | `LINKED_QUEUE_TYPE(int) * queue` | Container/node pointer. |
-| `out` | `int **out` | Typed pointer to an output. |
+| `queue` | `LINKED_QUEUE_TYPE(int) * queue` | Container, node, callback, or output pointer. |
+| `out` | `int **out` | Address of a typed pointer output. |
 
 ---
 
@@ -5681,8 +5698,8 @@ Obtains a pointer to the first node's value.
 ### Example
 
 ```c
-int *element = NULL;
-OPSTATUS status = LINKED_QUEUE_FUNC(int, Front)(&queue, &element);
+int *found = NULL;
+OPSTATUS status = LINKED_QUEUE_FUNC(int, Front)(&queue, &found);
 ```
 
 ---
@@ -5711,8 +5728,8 @@ OPSTATUS Container_Linked_Queue_int_Back( Container_Linked_TQueue_int * queue, i
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `queue` | `LINKED_QUEUE_TYPE(int) * queue` | Container/node pointer. |
-| `out` | `int **out` | Typed pointer to an output. |
+| `queue` | `LINKED_QUEUE_TYPE(int) * queue` | Container, node, callback, or output pointer. |
+| `out` | `int **out` | Address of a typed pointer output. |
 
 ---
 
@@ -5731,8 +5748,8 @@ Obtains a pointer to the last node's value.
 ### Example
 
 ```c
-int *element = NULL;
-OPSTATUS status = LINKED_QUEUE_FUNC(int, Back)(&queue, &element);
+int *found = NULL;
+OPSTATUS status = LINKED_QUEUE_FUNC(int, Back)(&queue, &found);
 ```
 
 ---
@@ -5761,7 +5778,7 @@ bool Container_Linked_Queue_int_Empty( const Container_Linked_TQueue_int * queue
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `queue` | `const LINKED_QUEUE_TYPE(int) * queue` | Container/node pointer. |
+| `queue` | `const LINKED_QUEUE_TYPE(int) * queue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -5780,7 +5797,7 @@ Reports whether the collection has no nodes.
 ### Example
 
 ```c
-bool empty = LINKED_QUEUE_FUNC(int, Empty)(&queue);
+bool result = LINKED_QUEUE_FUNC(int, Empty)(&queue);
 ```
 
 ---
@@ -5809,7 +5826,7 @@ size_t Container_Linked_Queue_int_Size( const Container_Linked_TQueue_int * queu
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `queue` | `const LINKED_QUEUE_TYPE(int) * queue` | Container/node pointer. |
+| `queue` | `const LINKED_QUEUE_TYPE(int) * queue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -5828,7 +5845,7 @@ Returns the stored node count.
 ### Example
 
 ```c
-size_t size = LINKED_QUEUE_FUNC(int, Size)(&queue);
+size_t count = LINKED_QUEUE_FUNC(int, Size)(&queue);
 ```
 
 ---
@@ -5889,7 +5906,7 @@ OPSTATUS Container_Linked_Stack_int_Init( Container_Linked_TStack_int * stack);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `stack` | `LINKED_STACK_TYPE(int) * stack` | Container/node pointer. |
+| `stack` | `LINKED_STACK_TYPE(int) * stack` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -5908,6 +5925,7 @@ Initializes bookkeeping fields to an empty state. Calling Init on an already-own
 ### Example
 
 ```c
+LINKED_STACK_TYPE(int) stack = {0};
 OPSTATUS status = LINKED_STACK_FUNC(int, Init)(&stack);
 ```
 
@@ -5937,7 +5955,7 @@ void Container_Linked_Stack_int_Destroy( Container_Linked_TStack_int * stack);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `stack` | `LINKED_STACK_TYPE(int) * stack` | Container/node pointer. |
+| `stack` | `LINKED_STACK_TYPE(int) * stack` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -5985,8 +6003,8 @@ OPSTATUS Container_Linked_Stack_int_Push( Container_Linked_TStack_int * stack, i
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `stack` | `LINKED_STACK_TYPE(int) * stack` | Container/node pointer. |
-| `value` | `int value` | Scalar value or index. |
+| `stack` | `LINKED_STACK_TYPE(int) * stack` | Container, node, callback, or output pointer. |
+| `value` | `int value` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -6034,8 +6052,8 @@ OPSTATUS Container_Linked_Stack_int_Pop( Container_Linked_TStack_int * stack, in
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `stack` | `LINKED_STACK_TYPE(int) * stack` | Container/node pointer. |
-| `outValue` | `int * outValue` | Container/node pointer. |
+| `stack` | `LINKED_STACK_TYPE(int) * stack` | Container, node, callback, or output pointer. |
+| `outValue` | `int * outValue` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -6054,8 +6072,8 @@ Pops/dequeues a value. The removed node ceases to exist and all pointers to it b
 ### Example
 
 ```c
-int value = 0;
-OPSTATUS status = LINKED_STACK_FUNC(int, Pop)(&stack, &value);
+int removed = 0;
+OPSTATUS status = LINKED_STACK_FUNC(int, Pop)(&stack, &removed);
 ```
 
 ---
@@ -6084,7 +6102,7 @@ void Container_Linked_Stack_int_Clear( Container_Linked_TStack_int * stack);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `stack` | `LINKED_STACK_TYPE(int) * stack` | Container/node pointer. |
+| `stack` | `LINKED_STACK_TYPE(int) * stack` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -6132,8 +6150,8 @@ OPSTATUS Container_Linked_Stack_int_Top( Container_Linked_TStack_int * stack, in
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `stack` | `LINKED_STACK_TYPE(int) * stack` | Container/node pointer. |
-| `out` | `int **out` | Typed pointer to an output. |
+| `stack` | `LINKED_STACK_TYPE(int) * stack` | Container, node, callback, or output pointer. |
+| `out` | `int **out` | Address of a typed pointer output. |
 
 ---
 
@@ -6152,8 +6170,8 @@ Obtains a pointer to the top node's value.
 ### Example
 
 ```c
-int *element = NULL;
-OPSTATUS status = LINKED_STACK_FUNC(int, Top)(&stack, &element);
+int *found = NULL;
+OPSTATUS status = LINKED_STACK_FUNC(int, Top)(&stack, &found);
 ```
 
 ---
@@ -6182,7 +6200,7 @@ bool Container_Linked_Stack_int_Empty( const Container_Linked_TStack_int * stack
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `stack` | `const LINKED_STACK_TYPE(int) * stack` | Container/node pointer. |
+| `stack` | `const LINKED_STACK_TYPE(int) * stack` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -6201,7 +6219,7 @@ Reports whether the collection has no nodes.
 ### Example
 
 ```c
-bool empty = LINKED_STACK_FUNC(int, Empty)(&stack);
+bool result = LINKED_STACK_FUNC(int, Empty)(&stack);
 ```
 
 ---
@@ -6230,7 +6248,7 @@ size_t Container_Linked_Stack_int_Size( const Container_Linked_TStack_int * stac
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `stack` | `const LINKED_STACK_TYPE(int) * stack` | Container/node pointer. |
+| `stack` | `const LINKED_STACK_TYPE(int) * stack` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -6249,7 +6267,7 @@ Returns the stored node count.
 ### Example
 
 ```c
-size_t size = LINKED_STACK_FUNC(int, Size)(&stack);
+size_t count = LINKED_STACK_FUNC(int, Size)(&stack);
 ```
 
 ---
@@ -6318,8 +6336,7 @@ OPSTATUS Container_Hash_int_int_Init( Container_Hash_THash_int_int * hash);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `THASH_TYPE(int` | Input scalar, key, index or value. |
-| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
+| `hash` | `THASH_TYPE(int, int) * hash` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -6368,8 +6385,7 @@ void Container_Hash_int_int_Destroy( Container_Hash_THash_int_int * hash);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `THASH_TYPE(int` | Input scalar, key, index or value. |
-| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
+| `hash` | `THASH_TYPE(int, int) * hash` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -6388,7 +6404,7 @@ Releases all container-managed memory. Stored pointees are not automatically dee
 ### Example
 
 ```c
-HASH_OPERATION(int, int, Destroy)(0, &hash);
+HASH_OPERATION(int, int, Destroy)(&hash);
 ```
 
 ---
@@ -6417,9 +6433,8 @@ OPSTATUS Container_Hash_int_int_Rehash( Container_Hash_THash_int_int * hash, siz
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `THASH_TYPE(int` | Input scalar, key, index or value. |
-| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
-| `newCapacity` | `size_t newCapacity` | Input scalar, key, index or value. |
+| `hash` | `THASH_TYPE(int, int) * hash` | Container, node, callback, or output pointer. |
+| `newCapacity` | `size_t newCapacity` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -6438,7 +6453,7 @@ Rebuilds the hash bucket table at a requested capacity. Bucket relocation can in
 ### Example
 
 ```c
-OPSTATUS status = HASH_OPERATION(int, int, Rehash)(0, &hash, 32);
+OPSTATUS status = HASH_OPERATION(int, int, Rehash)(&hash, 16);
 ```
 
 ---
@@ -6467,10 +6482,9 @@ OPSTATUS Container_Hash_int_int_Find( Container_Hash_THash_int_int * hash, int k
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `THASH_TYPE(int` | Input scalar, key, index or value. |
-| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
-| `key` | `int key` | Input scalar, key, index or value. |
-| `out` | `int **out` | Typed out pointer to container-owned data. |
+| `hash` | `THASH_TYPE(int, int) * hash` | Container, node, callback, or output pointer. |
+| `key` | `int key` | Value, key, capacity, or index argument. |
+| `out` | `int **out` | Address of a typed pointer output. |
 
 ---
 
@@ -6490,7 +6504,7 @@ Returns a pointer to a mapped value.
 
 ```c
 int *found = NULL;
-OPSTATUS status = HASH_OPERATION(int, int, Find)(0, &hash, 7, &found);
+OPSTATUS status = HASH_OPERATION(int, int, Find)(&hash, 7, &found);
 ```
 
 ---
@@ -6519,10 +6533,9 @@ OPSTATUS Container_Hash_int_int_ConstFind( const Container_Hash_THash_int_int * 
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `const THASH_TYPE(int` | Input scalar, key, index or value. |
-| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
-| `key` | `int key` | Input scalar, key, index or value. |
-| `out` | `int const **out` | Typed out pointer to container-owned data. |
+| `hash` | `const THASH_TYPE(int, int) * hash` | Container, node, callback, or output pointer. |
+| `key` | `int key` | Value, key, capacity, or index argument. |
+| `out` | `int const **out` | Address of a typed pointer output. |
 
 ---
 
@@ -6542,7 +6555,7 @@ Returns a read-only pointer to a mapped value.
 
 ```c
 const int *found = NULL;
-OPSTATUS status = HASH_OPERATION(int, int, ConstFind)(0, &hash, 7, &found);
+OPSTATUS status = HASH_OPERATION(int, int, ConstFind)(&hash, 7, &found);
 ```
 
 ---
@@ -6571,9 +6584,8 @@ bool Container_Hash_int_int_Contains( const Container_Hash_THash_int_int * hash,
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `const THASH_TYPE(int` | Input scalar, key, index or value. |
-| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
-| `key` | `int key` | Input scalar, key, index or value. |
+| `hash` | `const THASH_TYPE(int, int) * hash` | Container, node, callback, or output pointer. |
+| `key` | `int key` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -6592,7 +6604,7 @@ Reports whether the key is stored.
 ### Example
 
 ```c
-bool present = HASH_OPERATION(int, int, Contains)(0, &hash, 7);
+bool result = HASH_OPERATION(int, int, Contains)(&hash, 7);
 ```
 
 ---
@@ -6621,10 +6633,9 @@ OPSTATUS Container_Hash_int_int_Insert( Container_Hash_THash_int_int * hash, int
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `THASH_TYPE(int` | Input scalar, key, index or value. |
-| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
-| `key` | `int key` | Input scalar, key, index or value. |
-| `value` | `int value` | Input scalar, key, index or value. |
+| `hash` | `THASH_TYPE(int, int) * hash` | Container, node, callback, or output pointer. |
+| `key` | `int key` | Value, key, capacity, or index argument. |
+| `value` | `int value` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -6643,7 +6654,7 @@ Adds a new key/value pair or overwrites the value for an existing key. Bucket re
 ### Example
 
 ```c
-OPSTATUS status = HASH_OPERATION(int, int, Insert)(0, &hash, 7, 70);
+OPSTATUS status = HASH_OPERATION(int, int, Insert)(&hash, 7, 42);
 ```
 
 ---
@@ -6672,9 +6683,8 @@ OPSTATUS Container_Hash_int_int_Remove( Container_Hash_THash_int_int * hash, int
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `THASH_TYPE(int` | Input scalar, key, index or value. |
-| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
-| `key` | `int key` | Input scalar, key, index or value. |
+| `hash` | `THASH_TYPE(int, int) * hash` | Container, node, callback, or output pointer. |
+| `key` | `int key` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -6693,7 +6703,7 @@ Removes the indicated key.
 ### Example
 
 ```c
-OPSTATUS status = HASH_OPERATION(int, int, Remove)(0, &hash, 7);
+OPSTATUS status = HASH_OPERATION(int, int, Remove)(&hash, 7);
 ```
 
 ---
@@ -6722,8 +6732,7 @@ void Container_Hash_int_int_Clear( Container_Hash_THash_int_int * hash);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `THASH_TYPE(int` | Input scalar, key, index or value. |
-| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
+| `hash` | `THASH_TYPE(int, int) * hash` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -6742,7 +6751,7 @@ Removes all entries/edges while retaining a usable object. Stored pointees are n
 ### Example
 
 ```c
-HASH_OPERATION(int, int, Clear)(0, &hash);
+HASH_OPERATION(int, int, Clear)(&hash);
 ```
 
 ---
@@ -6771,8 +6780,7 @@ bool Container_Hash_int_int_IsEmpty( const Container_Hash_THash_int_int * hash);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `const THASH_TYPE(int` | Input scalar, key, index or value. |
-| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
+| `hash` | `const THASH_TYPE(int, int) * hash` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -6791,7 +6799,7 @@ Reports whether no entries or vertices exist.
 ### Example
 
 ```c
-bool present = HASH_OPERATION(int, int, IsEmpty)(0, &hash);
+bool result = HASH_OPERATION(int, int, IsEmpty)(&hash);
 ```
 
 ---
@@ -6820,8 +6828,7 @@ size_t Container_Hash_int_int_Size( const Container_Hash_THash_int_int * hash);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `const THASH_TYPE(int` | Input scalar, key, index or value. |
-| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
+| `hash` | `const THASH_TYPE(int, int) * hash` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -6840,7 +6847,7 @@ Returns number of live hash entries.
 ### Example
 
 ```c
-size_t total = HASH_OPERATION(int, int, Size)(0, &hash);
+size_t count = HASH_OPERATION(int, int, Size)(&hash);
 ```
 
 ---
@@ -6869,8 +6876,7 @@ size_t Container_Hash_int_int_Capacity( const Container_Hash_THash_int_int * has
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `const THASH_TYPE(int` | Input scalar, key, index or value. |
-| `hash` | `int) * hash` | Container pointer, callback, or output parameter. |
+| `hash` | `const THASH_TYPE(int, int) * hash` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -6889,7 +6895,7 @@ Returns allocated hash bucket count.
 ### Example
 
 ```c
-size_t total = HASH_OPERATION(int, int, Capacity)(0, &hash);
+size_t count = HASH_OPERATION(int, int, Capacity)(&hash);
 ```
 
 ---
@@ -6960,8 +6966,7 @@ OPSTATUS Container_Graph_int_int_Init( Container_Graph_TGraph_int_int * graph);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `TGRAPH_TYPE(int` | Input scalar, key, index or value. |
-| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
+| `graph` | `TGRAPH_TYPE(int, int) * graph` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -7010,8 +7015,7 @@ void Container_Graph_int_int_Destroy( Container_Graph_TGraph_int_int * graph);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `TGRAPH_TYPE(int` | Input scalar, key, index or value. |
-| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
+| `graph` | `TGRAPH_TYPE(int, int) * graph` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -7030,7 +7034,7 @@ Releases all container-managed memory. Stored pointees are not automatically dee
 ### Example
 
 ```c
-GRAPH_OPERATION(int, int, Destroy)(0, &graph);
+GRAPH_OPERATION(int, int, Destroy)(&graph);
 ```
 
 ---
@@ -7059,8 +7063,7 @@ void Container_Graph_int_int_Clear( Container_Graph_TGraph_int_int * graph);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `TGRAPH_TYPE(int` | Input scalar, key, index or value. |
-| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
+| `graph` | `TGRAPH_TYPE(int, int) * graph` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -7079,7 +7082,7 @@ Removes all entries/edges while retaining a usable object. Stored pointees are n
 ### Example
 
 ```c
-GRAPH_OPERATION(int, int, Clear)(0, &graph);
+GRAPH_OPERATION(int, int, Clear)(&graph);
 ```
 
 ---
@@ -7108,10 +7111,9 @@ OPSTATUS Container_Graph_int_int_AddVertex( Container_Graph_TGraph_int_int * gra
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `TGRAPH_TYPE(int` | Input scalar, key, index or value. |
-| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
-| `data` | `int data` | Input scalar, key, index or value. |
-| `outIndex` | `size_t *outIndex` | Container pointer, callback, or output parameter. |
+| `graph` | `TGRAPH_TYPE(int, int) * graph` | Container, node, callback, or output pointer. |
+| `data` | `int data` | Value, key, capacity, or index argument. |
+| `outIndex` | `size_t *outIndex` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -7131,7 +7133,7 @@ Adds a new vertex and returns its numeric index.
 
 ```c
 size_t indexOut = 0;
-OPSTATUS status = GRAPH_OPERATION(int, int, AddVertex)(0, &graph, 10, &indexOut);
+OPSTATUS status = GRAPH_OPERATION(int, int, AddVertex)(&graph, 10, &indexOut);
 ```
 
 ---
@@ -7160,11 +7162,10 @@ OPSTATUS Container_Graph_int_int_AddEdge( Container_Graph_TGraph_int_int * graph
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `TGRAPH_TYPE(int` | Input scalar, key, index or value. |
-| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
-| `source` | `size_t source` | Input scalar, key, index or value. |
-| `destination` | `size_t destination` | Input scalar, key, index or value. |
-| `weight` | `int weight` | Input scalar, key, index or value. |
+| `graph` | `TGRAPH_TYPE(int, int) * graph` | Container, node, callback, or output pointer. |
+| `source` | `size_t source` | Value, key, capacity, or index argument. |
+| `destination` | `size_t destination` | Value, key, capacity, or index argument. |
+| `weight` | `int weight` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -7183,7 +7184,7 @@ Creates or replaces a weighted directed edge.
 ### Example
 
 ```c
-OPSTATUS status = GRAPH_OPERATION(int, int, AddEdge)(0, &graph, 0, 1, 5);
+OPSTATUS status = GRAPH_OPERATION(int, int, AddEdge)(&graph, 0, 1, 5);
 ```
 
 ---
@@ -7212,10 +7213,9 @@ OPSTATUS Container_Graph_int_int_RemoveEdge( Container_Graph_TGraph_int_int * gr
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `TGRAPH_TYPE(int` | Input scalar, key, index or value. |
-| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
-| `source` | `size_t source` | Input scalar, key, index or value. |
-| `destination` | `size_t destination` | Input scalar, key, index or value. |
+| `graph` | `TGRAPH_TYPE(int, int) * graph` | Container, node, callback, or output pointer. |
+| `source` | `size_t source` | Value, key, capacity, or index argument. |
+| `destination` | `size_t destination` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -7234,7 +7234,7 @@ Removes a directed edge.
 ### Example
 
 ```c
-OPSTATUS status = GRAPH_OPERATION(int, int, RemoveEdge)(0, &graph, 0, 1);
+OPSTATUS status = GRAPH_OPERATION(int, int, RemoveEdge)(&graph, 0, 1);
 ```
 
 ---
@@ -7263,9 +7263,8 @@ OPSTATUS Container_Graph_int_int_RemoveVertex( Container_Graph_TGraph_int_int * 
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `TGRAPH_TYPE(int` | Input scalar, key, index or value. |
-| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
-| `index` | `size_t index` | Input scalar, key, index or value. |
+| `graph` | `TGRAPH_TYPE(int, int) * graph` | Container, node, callback, or output pointer. |
+| `index` | `size_t index` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -7284,7 +7283,7 @@ Deletes a vertex and reindexes later vertex numbers and edge destinations. Previ
 ### Example
 
 ```c
-OPSTATUS status = GRAPH_OPERATION(int, int, RemoveVertex)(0, &graph, 0);
+OPSTATUS status = GRAPH_OPERATION(int, int, RemoveVertex)(&graph, 0);
 ```
 
 ---
@@ -7313,10 +7312,9 @@ bool Container_Graph_int_int_HasEdge( const Container_Graph_TGraph_int_int * gra
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `const TGRAPH_TYPE(int` | Input scalar, key, index or value. |
-| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
-| `source` | `size_t source` | Input scalar, key, index or value. |
-| `destination` | `size_t destination` | Input scalar, key, index or value. |
+| `graph` | `const TGRAPH_TYPE(int, int) * graph` | Container, node, callback, or output pointer. |
+| `source` | `size_t source` | Value, key, capacity, or index argument. |
+| `destination` | `size_t destination` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -7335,7 +7333,7 @@ Checks whether an edge exists from source to destination.
 ### Example
 
 ```c
-bool present = GRAPH_OPERATION(int, int, HasEdge)(0, &graph, 0, 1);
+bool result = GRAPH_OPERATION(int, int, HasEdge)(&graph, 0, 1);
 ```
 
 ---
@@ -7364,11 +7362,10 @@ OPSTATUS Container_Graph_int_int_FindWeight( Container_Graph_TGraph_int_int * gr
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `TGRAPH_TYPE(int` | Input scalar, key, index or value. |
-| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
-| `source` | `size_t source` | Input scalar, key, index or value. |
-| `destination` | `size_t destination` | Input scalar, key, index or value. |
-| `outWeight` | `int **outWeight` | Typed out pointer to container-owned data. |
+| `graph` | `TGRAPH_TYPE(int, int) * graph` | Container, node, callback, or output pointer. |
+| `source` | `size_t source` | Value, key, capacity, or index argument. |
+| `destination` | `size_t destination` | Value, key, capacity, or index argument. |
+| `outWeight` | `int **outWeight` | Address of a typed pointer output. |
 
 ---
 
@@ -7388,7 +7385,7 @@ Returns a writable pointer to the weight of an edge.
 
 ```c
 int *weightOut = NULL;
-OPSTATUS status = GRAPH_OPERATION(int, int, FindWeight)(0, &graph, 0, 1, &weightOut);
+OPSTATUS status = GRAPH_OPERATION(int, int, FindWeight)(&graph, 0, 1, &weightOut);
 ```
 
 ---
@@ -7417,11 +7414,10 @@ OPSTATUS Container_Graph_int_int_ConstFindWeight( const Container_Graph_TGraph_i
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `const TGRAPH_TYPE(int` | Input scalar, key, index or value. |
-| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
-| `source` | `size_t source` | Input scalar, key, index or value. |
-| `destination` | `size_t destination` | Input scalar, key, index or value. |
-| `outWeight` | `int const **outWeight` | Typed out pointer to container-owned data. |
+| `graph` | `const TGRAPH_TYPE(int, int) * graph` | Container, node, callback, or output pointer. |
+| `source` | `size_t source` | Value, key, capacity, or index argument. |
+| `destination` | `size_t destination` | Value, key, capacity, or index argument. |
+| `outWeight` | `int const **outWeight` | Address of a typed pointer output. |
 
 ---
 
@@ -7441,7 +7437,7 @@ Returns a read-only pointer to the weight of an edge.
 
 ```c
 const int *weightOut = NULL;
-OPSTATUS status = GRAPH_OPERATION(int, int, ConstFindWeight)(0, &graph, 0, 1, &weightOut);
+OPSTATUS status = GRAPH_OPERATION(int, int, ConstFindWeight)(&graph, 0, 1, &weightOut);
 ```
 
 ---
@@ -7470,8 +7466,7 @@ size_t Container_Graph_int_int_VertexCount( const Container_Graph_TGraph_int_int
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `const TGRAPH_TYPE(int` | Input scalar, key, index or value. |
-| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
+| `graph` | `const TGRAPH_TYPE(int, int) * graph` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -7490,7 +7485,7 @@ Returns current number of vertices.
 ### Example
 
 ```c
-size_t total = GRAPH_OPERATION(int, int, VertexCount)(0, &graph);
+size_t count = GRAPH_OPERATION(int, int, VertexCount)(&graph);
 ```
 
 ---
@@ -7519,8 +7514,7 @@ size_t Container_Graph_int_int_EdgeCount( const Container_Graph_TGraph_int_int *
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `const TGRAPH_TYPE(int` | Input scalar, key, index or value. |
-| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
+| `graph` | `const TGRAPH_TYPE(int, int) * graph` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -7539,7 +7533,7 @@ Returns current number of directed edges.
 ### Example
 
 ```c
-size_t total = GRAPH_OPERATION(int, int, EdgeCount)(0, &graph);
+size_t count = GRAPH_OPERATION(int, int, EdgeCount)(&graph);
 ```
 
 ---
@@ -7568,8 +7562,7 @@ bool Container_Graph_int_int_IsEmpty( const Container_Graph_TGraph_int_int * gra
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `const TGRAPH_TYPE(int` | Input scalar, key, index or value. |
-| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
+| `graph` | `const TGRAPH_TYPE(int, int) * graph` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -7588,7 +7581,7 @@ Reports whether no entries or vertices exist.
 ### Example
 
 ```c
-bool present = GRAPH_OPERATION(int, int, IsEmpty)(0, &graph);
+bool result = GRAPH_OPERATION(int, int, IsEmpty)(&graph);
 ```
 
 ---
@@ -7617,12 +7610,10 @@ OPSTATUS Container_Graph_int_int_BFS( Container_Graph_TGraph_int_int * graph, si
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `TGRAPH_TYPE(int` | Input scalar, key, index or value. |
-| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
-| `start` | `size_t start` | Input scalar, key, index or value. |
-| `int` | `TGRAPH_VISITOR_TYPE(int` | Input scalar, key, index or value. |
-| `visitor` | `int) visitor` | Input scalar, key, index or value. |
-| `context` | `void *context` | Container pointer, callback, or output parameter. |
+| `graph` | `TGRAPH_TYPE(int, int) * graph` | Container, node, callback, or output pointer. |
+| `start` | `size_t start` | Value, key, capacity, or index argument. |
+| `visitor` | `TGRAPH_VISITOR_TYPE(int, int) visitor` | Value, key, capacity, or index argument. |
+| `context` | `void *context` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -7641,8 +7632,8 @@ Calls a visitor for each reachable vertex in breadth-first order. The visitor is
 ### Example
 
 ```c
-/* VisitVertex: callback of TGRAPH_VISITOR_TYPE(int, int). */
-OPSTATUS status = GRAPH_OPERATION(int, int, BFS)(0, &graph, 0, 0, VisitVertex, NULL);
+/* Define VisitVertex with TGRAPH_VISITOR_TYPE(int, int) signature. */
+OPSTATUS status = GRAPH_OPERATION(int, int, BFS)(&graph, 0, VisitVertex, NULL);
 ```
 
 ---
@@ -7671,12 +7662,10 @@ OPSTATUS Container_Graph_int_int_DFS( Container_Graph_TGraph_int_int * graph, si
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `int` | `TGRAPH_TYPE(int` | Input scalar, key, index or value. |
-| `graph` | `int) * graph` | Container pointer, callback, or output parameter. |
-| `start` | `size_t start` | Input scalar, key, index or value. |
-| `int` | `TGRAPH_VISITOR_TYPE(int` | Input scalar, key, index or value. |
-| `visitor` | `int) visitor` | Input scalar, key, index or value. |
-| `context` | `void *context` | Container pointer, callback, or output parameter. |
+| `graph` | `TGRAPH_TYPE(int, int) * graph` | Container, node, callback, or output pointer. |
+| `start` | `size_t start` | Value, key, capacity, or index argument. |
+| `visitor` | `TGRAPH_VISITOR_TYPE(int, int) visitor` | Value, key, capacity, or index argument. |
+| `context` | `void *context` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -7695,8 +7684,8 @@ Calls a visitor for each reachable vertex in depth-first order. The visitor is i
 ### Example
 
 ```c
-/* VisitVertex: callback of TGRAPH_VISITOR_TYPE(int, int). */
-OPSTATUS status = GRAPH_OPERATION(int, int, DFS)(0, &graph, 0, 0, VisitVertex, NULL);
+/* Define VisitVertex with TGRAPH_VISITOR_TYPE(int, int) signature. */
+OPSTATUS status = GRAPH_OPERATION(int, int, DFS)(&graph, 0, VisitVertex, NULL);
 ```
 
 ---
@@ -7806,8 +7795,7 @@ OPSTATUS Container_Tree_AVL_Set_int_Init(Container_Tree_AVL_Set_int *tree);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
-| `tree` | `int) *tree` | Tree or node pointer. |
+| `tree` | `TREE_SET_TYPE(AVL, int) *tree` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -7856,8 +7844,7 @@ void Container_Tree_AVL_Set_int_Destroy(Container_Tree_AVL_Set_int *tree);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
-| `tree` | `int) *tree` | Tree or node pointer. |
+| `tree` | `TREE_SET_TYPE(AVL, int) *tree` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -7876,7 +7863,7 @@ Releases every node owned by the tree. Node memory is released, but separately o
 ### Example
 
 ```c
-TREE_FUNC(TREE_SET_TYPE(AVL, int), Destroy)(NULL, &tree);
+TREE_FUNC(TREE_SET_TYPE(AVL, int), Destroy)(&tree);
 ```
 
 ---
@@ -7905,8 +7892,7 @@ void Container_Tree_AVL_Set_int_Clear(Container_Tree_AVL_Set_int *tree);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
-| `tree` | `int) *tree` | Tree or node pointer. |
+| `tree` | `TREE_SET_TYPE(AVL, int) *tree` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -7925,7 +7911,7 @@ Deletes all nodes and keeps the tree reusable. Node memory is released, but sepa
 ### Example
 
 ```c
-TREE_FUNC(TREE_SET_TYPE(AVL, int), Clear)(NULL, &tree);
+TREE_FUNC(TREE_SET_TYPE(AVL, int), Clear)(&tree);
 ```
 
 ---
@@ -7954,9 +7940,8 @@ OPSTATUS Container_Tree_AVL_Set_int_Insert(Container_Tree_AVL_Set_int *tree, int
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
-| `tree` | `int) *tree` | Tree or node pointer. |
-| `key` | `int key` | Key or value supplied by caller. |
+| `tree` | `TREE_SET_TYPE(AVL, int) *tree` | Container, node, callback, or output pointer. |
+| `key` | `int key` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -7975,7 +7960,7 @@ Inserts a Set key or Map key/value pair. The set stores each key according to th
 ### Example
 
 ```c
-OPSTATUS status = TREE_FUNC(TREE_SET_TYPE(AVL, int), Insert)(NULL, &tree, 42);
+OPSTATUS status = TREE_FUNC(TREE_SET_TYPE(AVL, int), Insert)(&tree, 7);
 ```
 
 ---
@@ -8004,11 +7989,9 @@ OPSTATUS Container_Tree_AVL_Map_int_int_Insert(Container_Tree_AVL_Map_int_int *t
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `TREE_MAP_TYPE(AVL` | Key or value supplied by caller. |
-| `int` | `int` | Key or value supplied by caller. |
-| `tree` | `int) *tree` | Tree or node pointer. |
-| `key` | `int key` | Key or value supplied by caller. |
-| `value` | `int value` | Key or value supplied by caller. |
+| `tree` | `TREE_MAP_TYPE(AVL, int, int) *tree` | Container, node, callback, or output pointer. |
+| `key` | `int key` | Value, key, capacity, or index argument. |
+| `value` | `int value` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -8027,7 +8010,7 @@ Inserts a Set key or Map key/value pair. The map stores a key/value pair; an exi
 ### Example
 
 ```c
-OPSTATUS status = TREE_FUNC(TREE_MAP_TYPE(AVL, int, int), Insert)(NULL, NULL, &tree, 42, 100);
+OPSTATUS status = TREE_FUNC(TREE_MAP_TYPE(AVL, int, int), Insert)(&tree, 7, 42);
 ```
 
 ---
@@ -8056,9 +8039,8 @@ OPSTATUS Container_Tree_AVL_Set_int_Remove(Container_Tree_AVL_Set_int *tree, int
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
-| `tree` | `int) *tree` | Tree or node pointer. |
-| `key` | `int key` | Key or value supplied by caller. |
+| `tree` | `TREE_SET_TYPE(AVL, int) *tree` | Container, node, callback, or output pointer. |
+| `key` | `int key` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -8077,7 +8059,7 @@ Removes a key and its corresponding node.
 ### Example
 
 ```c
-OPSTATUS status = TREE_FUNC(TREE_SET_TYPE(AVL, int), Remove)(NULL, &tree, 42);
+OPSTATUS status = TREE_FUNC(TREE_SET_TYPE(AVL, int), Remove)(&tree, 7);
 ```
 
 ---
@@ -8106,9 +8088,8 @@ Container_Tree_AVL_Set_int_Node * Container_Tree_AVL_Set_int_FindNode(Container_
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
-| `tree` | `int) *tree` | Tree or node pointer. |
-| `key` | `int key` | Key or value supplied by caller. |
+| `tree` | `TREE_SET_TYPE(AVL, int) *tree` | Container, node, callback, or output pointer. |
+| `key` | `int key` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -8127,7 +8108,7 @@ Returns a pointer to the node matching a key, or NULL.
 ### Example
 
 ```c
-TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), FindNode)(NULL, &tree, 42);
+TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), FindNode)(&tree, 7);
 ```
 
 ---
@@ -8156,10 +8137,9 @@ OPSTATUS Container_Tree_AVL_Set_int_Find(Container_Tree_AVL_Set_int *tree, int k
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
-| `tree` | `int) *tree` | Tree or node pointer. |
-| `key` | `int key` | Key or value supplied by caller. |
-| `out` | `int **out` | Output pointer to a tree-stored key/value. |
+| `tree` | `TREE_SET_TYPE(AVL, int) *tree` | Container, node, callback, or output pointer. |
+| `key` | `int key` | Value, key, capacity, or index argument. |
+| `out` | `int **out` | Address of a typed pointer output. |
 
 ---
 
@@ -8179,7 +8159,7 @@ Returns a typed pointer to an existing Set key or Map value. The pointer refers 
 
 ```c
 int *found = NULL;
-OPSTATUS status = TREE_FUNC(TREE_SET_TYPE(AVL, int), Find)(NULL, &tree, 42, &found);
+OPSTATUS status = TREE_FUNC(TREE_SET_TYPE(AVL, int), Find)(&tree, 7, &found);
 ```
 
 ---
@@ -8208,11 +8188,9 @@ OPSTATUS Container_Tree_AVL_Map_int_int_Find(Container_Tree_AVL_Map_int_int *tre
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `TREE_MAP_TYPE(AVL` | Key or value supplied by caller. |
-| `int` | `int` | Key or value supplied by caller. |
-| `tree` | `int) *tree` | Tree or node pointer. |
-| `key` | `int key` | Key or value supplied by caller. |
-| `out` | `int **out` | Output pointer to a tree-stored key/value. |
+| `tree` | `TREE_MAP_TYPE(AVL, int, int) *tree` | Container, node, callback, or output pointer. |
+| `key` | `int key` | Value, key, capacity, or index argument. |
+| `out` | `int **out` | Address of a typed pointer output. |
 
 ---
 
@@ -8232,7 +8210,7 @@ Returns a typed pointer to an existing Set key or Map value. The pointer refers 
 
 ```c
 int *found = NULL;
-OPSTATUS status = TREE_FUNC(TREE_MAP_TYPE(AVL, int, int), Find)(NULL, NULL, &tree, 42, &found);
+OPSTATUS status = TREE_FUNC(TREE_MAP_TYPE(AVL, int, int), Find)(&tree, 7, &found);
 ```
 
 ---
@@ -8261,9 +8239,8 @@ bool Container_Tree_AVL_Set_int_Contains(const Container_Tree_AVL_Set_int *tree,
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `const TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
-| `tree` | `int) *tree` | Tree or node pointer. |
-| `key` | `int key` | Key or value supplied by caller. |
+| `tree` | `const TREE_SET_TYPE(AVL, int) *tree` | Container, node, callback, or output pointer. |
+| `key` | `int key` | Value, key, capacity, or index argument. |
 
 ---
 
@@ -8282,7 +8259,7 @@ Checks whether the tree contains the given key.
 ### Example
 
 ```c
-bool present = TREE_FUNC(TREE_SET_TYPE(AVL, int), Contains)(NULL, &tree, 42);
+bool result = TREE_FUNC(TREE_SET_TYPE(AVL, int), Contains)(&tree, 7);
 ```
 
 ---
@@ -8311,8 +8288,7 @@ Container_Tree_AVL_Set_int_Node * Container_Tree_AVL_Set_int_MinNode(Container_T
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `TREE_NODE(TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
-| `node` | `int)) *node` | Tree or node pointer. |
+| `node` | `TREE_NODE(TREE_SET_TYPE(AVL, int)) *node` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -8332,7 +8308,7 @@ Finds the leftmost node of a given subtree.
 
 ```c
 TREE_NODE(TREE_SET_TYPE(AVL, int)) *node = TREE_FUNC(TREE_SET_TYPE(AVL, int), Begin)(&tree);
-TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), MinNode)(NULL, node);
+TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), MinNode)(node);
 ```
 
 ---
@@ -8361,8 +8337,7 @@ Container_Tree_AVL_Set_int_Node * Container_Tree_AVL_Set_int_MaxNode(Container_T
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `TREE_NODE(TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
-| `node` | `int)) *node` | Tree or node pointer. |
+| `node` | `TREE_NODE(TREE_SET_TYPE(AVL, int)) *node` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -8382,7 +8357,7 @@ Finds the rightmost node of a given subtree.
 
 ```c
 TREE_NODE(TREE_SET_TYPE(AVL, int)) *node = TREE_FUNC(TREE_SET_TYPE(AVL, int), Begin)(&tree);
-TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), MaxNode)(NULL, node);
+TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), MaxNode)(node);
 ```
 
 ---
@@ -8411,9 +8386,8 @@ OPSTATUS Container_Tree_AVL_Set_int_Min(Container_Tree_AVL_Set_int *tree, int **
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
-| `tree` | `int) *tree` | Tree or node pointer. |
-| `out` | `int **out` | Output pointer to a tree-stored key/value. |
+| `tree` | `TREE_SET_TYPE(AVL, int) *tree` | Container, node, callback, or output pointer. |
+| `out` | `int **out` | Address of a typed pointer output. |
 
 ---
 
@@ -8433,7 +8407,7 @@ Returns a pointer to the minimum key. The pointer refers to data inside the tree
 
 ```c
 int *found = NULL;
-OPSTATUS status = TREE_FUNC(TREE_SET_TYPE(AVL, int), Min)(NULL, &tree, &found);
+OPSTATUS status = TREE_FUNC(TREE_SET_TYPE(AVL, int), Min)(&tree, &found);
 ```
 
 ---
@@ -8462,9 +8436,8 @@ OPSTATUS Container_Tree_AVL_Set_int_Max(Container_Tree_AVL_Set_int *tree, int **
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
-| `tree` | `int) *tree` | Tree or node pointer. |
-| `out` | `int **out` | Output pointer to a tree-stored key/value. |
+| `tree` | `TREE_SET_TYPE(AVL, int) *tree` | Container, node, callback, or output pointer. |
+| `out` | `int **out` | Address of a typed pointer output. |
 
 ---
 
@@ -8484,7 +8457,7 @@ Returns a pointer to the maximum key. The pointer refers to data inside the tree
 
 ```c
 int *found = NULL;
-OPSTATUS status = TREE_FUNC(TREE_SET_TYPE(AVL, int), Max)(NULL, &tree, &found);
+OPSTATUS status = TREE_FUNC(TREE_SET_TYPE(AVL, int), Max)(&tree, &found);
 ```
 
 ---
@@ -8513,8 +8486,7 @@ bool Container_Tree_AVL_Set_int_Empty(const Container_Tree_AVL_Set_int *tree);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `const TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
-| `tree` | `int) *tree` | Tree or node pointer. |
+| `tree` | `const TREE_SET_TYPE(AVL, int) *tree` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -8533,7 +8505,7 @@ Returns true when tree size is zero.
 ### Example
 
 ```c
-bool present = TREE_FUNC(TREE_SET_TYPE(AVL, int), Empty)(NULL, &tree);
+bool result = TREE_FUNC(TREE_SET_TYPE(AVL, int), Empty)(&tree);
 ```
 
 ---
@@ -8562,8 +8534,7 @@ size_t Container_Tree_AVL_Set_int_Size(const Container_Tree_AVL_Set_int *tree);
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `const TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
-| `tree` | `int) *tree` | Tree or node pointer. |
+| `tree` | `const TREE_SET_TYPE(AVL, int) *tree` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -8582,7 +8553,7 @@ Returns the number of stored keys.
 ### Example
 
 ```c
-size_t count = TREE_FUNC(TREE_SET_TYPE(AVL, int), Size)(NULL, &tree);
+size_t count = TREE_FUNC(TREE_SET_TYPE(AVL, int), Size)(&tree);
 ```
 
 ---
@@ -8611,8 +8582,7 @@ Container_Tree_AVL_Set_int_Node * Container_Tree_AVL_Set_int_Begin(Container_Tre
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
-| `tree` | `int) *tree` | Tree or node pointer. |
+| `tree` | `TREE_SET_TYPE(AVL, int) *tree` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -8631,7 +8601,7 @@ Returns the smallest node for in-order traversal. The end sentinel is NULL. Iter
 ### Example
 
 ```c
-TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), Begin)(NULL, &tree);
+TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), Begin)(&tree);
 ```
 
 ---
@@ -8660,8 +8630,7 @@ Container_Tree_AVL_Set_int_Node * Container_Tree_AVL_Set_int_End(Container_Tree_
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
-| `tree` | `int) *tree` | Tree or node pointer. |
+| `tree` | `TREE_SET_TYPE(AVL, int) *tree` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -8680,7 +8649,7 @@ Returns NULL, the past-end iterator. The end sentinel is NULL. Iterator/node ref
 ### Example
 
 ```c
-TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), End)(NULL, &tree);
+TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), End)(&tree);
 ```
 
 ---
@@ -8709,8 +8678,7 @@ Container_Tree_AVL_Set_int_Node * Container_Tree_AVL_Set_int_Next(Container_Tree
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `TREE_NODE(TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
-| `node` | `int)) *node` | Tree or node pointer. |
+| `node` | `TREE_NODE(TREE_SET_TYPE(AVL, int)) *node` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -8730,7 +8698,7 @@ Returns the in-order successor of a node. The end sentinel is NULL. Iterator/nod
 
 ```c
 TREE_NODE(TREE_SET_TYPE(AVL, int)) *node = TREE_FUNC(TREE_SET_TYPE(AVL, int), Begin)(&tree);
-TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), Next)(NULL, node);
+TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), Next)(node);
 ```
 
 ---
@@ -8759,8 +8727,7 @@ Container_Tree_AVL_Set_int_Node * Container_Tree_AVL_Set_int_Prev(Container_Tree
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `TREE_NODE(TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
-| `node` | `int)) *node` | Tree or node pointer. |
+| `node` | `TREE_NODE(TREE_SET_TYPE(AVL, int)) *node` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -8780,7 +8747,7 @@ Returns the in-order predecessor of a node. The end sentinel is NULL. Iterator/n
 
 ```c
 TREE_NODE(TREE_SET_TYPE(AVL, int)) *node = TREE_FUNC(TREE_SET_TYPE(AVL, int), Begin)(&tree);
-TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), Prev)(NULL, node);
+TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), Prev)(node);
 ```
 
 ---
@@ -8809,8 +8776,7 @@ const Container_Tree_AVL_Set_int_Node * Container_Tree_AVL_Set_int_ConstBegin(co
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `const TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
-| `tree` | `int) *tree` | Tree or node pointer. |
+| `tree` | `const TREE_SET_TYPE(AVL, int) *tree` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -8829,7 +8795,7 @@ Returns the first node with read-only access. The end sentinel is NULL. Iterator
 ### Example
 
 ```c
-const TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), ConstBegin)(NULL, &tree);
+const TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), ConstBegin)(&tree);
 ```
 
 ---
@@ -8858,8 +8824,7 @@ const Container_Tree_AVL_Set_int_Node * Container_Tree_AVL_Set_int_ConstEnd(cons
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `const TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
-| `tree` | `int) *tree` | Tree or node pointer. |
+| `tree` | `const TREE_SET_TYPE(AVL, int) *tree` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -8878,7 +8843,7 @@ Returns the read-only NULL past-end sentinel. The end sentinel is NULL. Iterator
 ### Example
 
 ```c
-const TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), ConstEnd)(NULL, &tree);
+const TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), ConstEnd)(&tree);
 ```
 
 ---
@@ -8907,8 +8872,7 @@ const Container_Tree_AVL_Set_int_Node * Container_Tree_AVL_Set_int_ConstNext(con
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `const TREE_NODE(TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
-| `node` | `int)) *node` | Tree or node pointer. |
+| `node` | `const TREE_NODE(TREE_SET_TYPE(AVL, int)) *node` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -8928,7 +8892,7 @@ Returns a read-only successor node. The end sentinel is NULL. Iterator/node refe
 
 ```c
 TREE_NODE(TREE_SET_TYPE(AVL, int)) *node = TREE_FUNC(TREE_SET_TYPE(AVL, int), Begin)(&tree);
-const TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), ConstNext)(NULL, node);
+const TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), ConstNext)(node);
 ```
 
 ---
@@ -8957,8 +8921,7 @@ const Container_Tree_AVL_Set_int_Node * Container_Tree_AVL_Set_int_ConstPrev(con
 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
-| `AVL` | `const TREE_NODE(TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
-| `node` | `int)) *node` | Tree or node pointer. |
+| `node` | `const TREE_NODE(TREE_SET_TYPE(AVL, int)) *node` | Container, node, callback, or output pointer. |
 
 ---
 
@@ -8978,5 +8941,5 @@ Returns a read-only predecessor node. The end sentinel is NULL. Iterator/node re
 
 ```c
 TREE_NODE(TREE_SET_TYPE(AVL, int)) *node = TREE_FUNC(TREE_SET_TYPE(AVL, int), Begin)(&tree);
-const TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), ConstPrev)(NULL, node);
+const TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), ConstPrev)(node);
 ```
