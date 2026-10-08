@@ -3381,3 +3381,2873 @@ Returns a pointer to internal contiguous data. Returned pointers borrow containe
 uint8_t *found = NULL;
 OPSTATUS status = TSTRING_FUNC(8, Data)(&str, &found);
 ```
+
+---
+
+# Forward List package
+
+Header: `Cosmeron/Modules/Container/Linked/Forward.h`.
+
+Singly linked list with head/tail and node-oriented InsertAfter/EraseAfter.
+
+Built-in specializations: `int`, `float`, `double`, `char`. The examples below use `int`.
+
+### Instantiation
+
+```c
+LINKED_FORWARD_LIST_TYPE(int) container = {0};
+LINKED_FORWARD_LIST_FUNC(int, Init)(&container);
+```
+
+### Function summary
+
+| Function | Description |
+| --- | --- |
+| [`Init`](#forward-list-init) | Initializes bookkeeping fields to an empty state. |
+| [`Destroy`](#forward-list-destroy) | Releases the linked nodes and clears the container. |
+| [`PushFront`](#forward-list-pushfront) | Inserts a copied value at the front. |
+| [`PopFront`](#forward-list-popfront) | Removes the first value and reports it. |
+| [`InsertAfter`](#forward-list-insertafter) | Inserts a new node after the given node. |
+| [`EraseAfter`](#forward-list-eraseafter) | Removes the node immediately following the supplied node. |
+| [`Clear`](#forward-list-clear) | Removes all nodes without requiring a new instance. |
+| [`Front`](#forward-list-front) | Obtains a pointer to the first node's value. |
+| [`Back`](#forward-list-back) | Obtains a pointer to the last node's value. |
+| [`Begin`](#forward-list-begin) | Returns a pointer to the first node for iteration. |
+| [`Empty`](#forward-list-empty) | Reports whether the collection has no nodes. |
+| [`Size`](#forward-list-size) | Returns the stored node count. |
+
+Node pointers obtained from a list become invalid when their node is erased, or when the collection is cleared/destroyed. Never pass node positions taken from another container.
+
+---
+
+# Forward List Init
+
+Initializes bookkeeping fields to an empty state.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_FORWARD_LIST_FUNC(int, Init)( LINKED_FORWARD_LIST_TYPE(int) * container);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_ForwardList_int_Init( Container_Linked_TForwardList_int * container);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container/node pointer. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Initializes bookkeeping fields to an empty state. Calling Init on an already-owning live object would lose node references; destroy it first.
+
+---
+
+### Example
+
+```c
+OPSTATUS status = LINKED_FORWARD_LIST_FUNC(int, Init)(&container);
+```
+
+---
+
+# Forward List Destroy
+
+Releases the linked nodes and clears the container.
+
+### Syntax
+
+#### Macro form
+
+```c
+void LINKED_FORWARD_LIST_FUNC(int, Destroy)( LINKED_FORWARD_LIST_TYPE(int) * container);
+```
+
+#### Direct form
+
+```c
+void Container_Linked_ForwardList_int_Destroy( Container_Linked_TForwardList_int * container);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container/node pointer. |
+
+---
+
+### Return value
+
+None.
+
+---
+
+### Remarks
+
+Releases the linked nodes and clears the container. If values are pointers, independently owned pointees are not automatically destroyed.
+
+---
+
+### Example
+
+```c
+LINKED_FORWARD_LIST_FUNC(int, Destroy)(&container);
+```
+
+---
+
+# Forward List PushFront
+
+Inserts a copied value at the front.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_FORWARD_LIST_FUNC(int, PushFront)( LINKED_FORWARD_LIST_TYPE(int) * container, int value);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_ForwardList_int_PushFront( Container_Linked_TForwardList_int * container, int value);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container/node pointer. |
+| `value` | `int value` | Scalar value or index. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Inserts a copied value at the front.
+
+---
+
+### Example
+
+```c
+OPSTATUS status = LINKED_FORWARD_LIST_FUNC(int, PushFront)(&container, 42);
+```
+
+---
+
+# Forward List PopFront
+
+Removes the first value and reports it.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_FORWARD_LIST_FUNC(int, PopFront)( LINKED_FORWARD_LIST_TYPE(int) * container, int * outValue);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_ForwardList_int_PopFront( Container_Linked_TForwardList_int * container, int * outValue);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container/node pointer. |
+| `outValue` | `int * outValue` | Container/node pointer. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Removes the first value and reports it. The removed node ceases to exist and all pointers to it become invalid.
+
+---
+
+### Example
+
+```c
+int value = 0;
+OPSTATUS status = LINKED_FORWARD_LIST_FUNC(int, PopFront)(&container, &value);
+```
+
+---
+
+# Forward List InsertAfter
+
+Inserts a new node after the given node.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_FORWARD_LIST_FUNC(int, InsertAfter)( LINKED_FORWARD_LIST_TYPE(int) * container, LINKED_FORWARD_LIST_NODE_TYPE(int) * pos, int value, LINKED_FORWARD_LIST_NODE_TYPE(int) * *outNode);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_ForwardList_int_InsertAfter( Container_Linked_TForwardList_int * container, Container_Linked_ForwardList_TNode_int * pos, int value, Container_Linked_ForwardList_TNode_int * *outNode);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container/node pointer. |
+| `pos` | `LINKED_FORWARD_LIST_NODE_TYPE(int) * pos` | Container/node pointer. |
+| `value` | `int value` | Scalar value or index. |
+| `outNode` | `LINKED_FORWARD_LIST_NODE_TYPE(int) * *outNode` | Container/node pointer. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Inserts a new node after the given node. The newly allocated node belongs to the container.
+
+---
+
+### Example
+
+```c
+LINKED_FORWARD_LIST_NODE_TYPE(int) *position = LINKED_FORWARD_LIST_FUNC(int, Begin)(&container);
+LINKED_FORWARD_LIST_NODE_TYPE(int) *inserted = NULL;
+OPSTATUS status = LINKED_FORWARD_LIST_FUNC(int, InsertAfter)(&container, position, 42, &inserted);
+```
+
+---
+
+# Forward List EraseAfter
+
+Removes the node immediately following the supplied node.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_FORWARD_LIST_FUNC(int, EraseAfter)( LINKED_FORWARD_LIST_TYPE(int) * container, LINKED_FORWARD_LIST_NODE_TYPE(int) * pos);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_ForwardList_int_EraseAfter( Container_Linked_TForwardList_int * container, Container_Linked_ForwardList_TNode_int * pos);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container/node pointer. |
+| `pos` | `LINKED_FORWARD_LIST_NODE_TYPE(int) * pos` | Container/node pointer. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Removes the node immediately following the supplied node. The removed node ceases to exist and all pointers to it become invalid.
+
+---
+
+### Example
+
+```c
+LINKED_FORWARD_LIST_NODE_TYPE(int) *position = LINKED_FORWARD_LIST_FUNC(int, Begin)(&container);
+OPSTATUS status = LINKED_FORWARD_LIST_FUNC(int, EraseAfter)(&container, position);
+```
+
+---
+
+# Forward List Clear
+
+Removes all nodes without requiring a new instance.
+
+### Syntax
+
+#### Macro form
+
+```c
+void LINKED_FORWARD_LIST_FUNC(int, Clear)( LINKED_FORWARD_LIST_TYPE(int) * container);
+```
+
+#### Direct form
+
+```c
+void Container_Linked_ForwardList_int_Clear( Container_Linked_TForwardList_int * container);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container/node pointer. |
+
+---
+
+### Return value
+
+None.
+
+---
+
+### Remarks
+
+Removes all nodes without requiring a new instance. If values are pointers, independently owned pointees are not automatically destroyed.
+
+---
+
+### Example
+
+```c
+LINKED_FORWARD_LIST_FUNC(int, Clear)(&container);
+```
+
+---
+
+# Forward List Front
+
+Obtains a pointer to the first node's value.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_FORWARD_LIST_FUNC(int, Front)( LINKED_FORWARD_LIST_TYPE(int) * list, int **out);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_ForwardList_int_Front( Container_Linked_TForwardList_int * list, int **out);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `list` | `LINKED_FORWARD_LIST_TYPE(int) * list` | Container/node pointer. |
+| `out` | `int **out` | Typed pointer to an output. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Obtains a pointer to the first node's value.
+
+---
+
+### Example
+
+```c
+int *element = NULL;
+OPSTATUS status = LINKED_FORWARD_LIST_FUNC(int, Front)(&list, &element);
+```
+
+---
+
+# Forward List Back
+
+Obtains a pointer to the last node's value.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_FORWARD_LIST_FUNC(int, Back)( LINKED_FORWARD_LIST_TYPE(int) * list, int **out);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_ForwardList_int_Back( Container_Linked_TForwardList_int * list, int **out);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `list` | `LINKED_FORWARD_LIST_TYPE(int) * list` | Container/node pointer. |
+| `out` | `int **out` | Typed pointer to an output. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Obtains a pointer to the last node's value.
+
+---
+
+### Example
+
+```c
+int *element = NULL;
+OPSTATUS status = LINKED_FORWARD_LIST_FUNC(int, Back)(&list, &element);
+```
+
+---
+
+# Forward List Begin
+
+Returns a pointer to the first node for iteration.
+
+### Syntax
+
+#### Macro form
+
+```c
+LINKED_FORWARD_LIST_NODE_TYPE(int) * LINKED_FORWARD_LIST_FUNC(int, Begin)( LINKED_FORWARD_LIST_TYPE(int) * container);
+```
+
+#### Direct form
+
+```c
+Container_Linked_ForwardList_TNode_int * Container_Linked_ForwardList_int_Begin( Container_Linked_TForwardList_int * container);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `container` | `LINKED_FORWARD_LIST_TYPE(int) * container` | Container/node pointer. |
+
+---
+
+### Return value
+
+Pointer to node or NULL when appropriate.
+
+---
+
+### Remarks
+
+Returns a pointer to the first node for iteration.
+
+---
+
+### Example
+
+```c
+LINKED_FORWARD_LIST_NODE_TYPE(int) *node = LINKED_FORWARD_LIST_FUNC(int, Begin)(&container);
+```
+
+---
+
+# Forward List Empty
+
+Reports whether the collection has no nodes.
+
+### Syntax
+
+#### Macro form
+
+```c
+bool LINKED_FORWARD_LIST_FUNC(int, Empty)( const LINKED_FORWARD_LIST_TYPE(int) * container);
+```
+
+#### Direct form
+
+```c
+bool Container_Linked_ForwardList_int_Empty( const Container_Linked_TForwardList_int * container);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `container` | `const LINKED_FORWARD_LIST_TYPE(int) * container` | Container/node pointer. |
+
+---
+
+### Return value
+
+`bool` emptiness predicate.
+
+---
+
+### Remarks
+
+Reports whether the collection has no nodes.
+
+---
+
+### Example
+
+```c
+bool empty = LINKED_FORWARD_LIST_FUNC(int, Empty)(&container);
+```
+
+---
+
+# Forward List Size
+
+Returns the stored node count.
+
+### Syntax
+
+#### Macro form
+
+```c
+size_t LINKED_FORWARD_LIST_FUNC(int, Size)( const LINKED_FORWARD_LIST_TYPE(int) * container);
+```
+
+#### Direct form
+
+```c
+size_t Container_Linked_ForwardList_int_Size( const Container_Linked_TForwardList_int * container);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `container` | `const LINKED_FORWARD_LIST_TYPE(int) * container` | Container/node pointer. |
+
+---
+
+### Return value
+
+`size_t` live element count.
+
+---
+
+### Remarks
+
+Returns the stored node count.
+
+---
+
+### Example
+
+```c
+size_t size = LINKED_FORWARD_LIST_FUNC(int, Size)(&container);
+```
+
+---
+
+# Linked List package
+
+Header: `Cosmeron/Modules/Container/Linked/List.h`.
+
+Doubly linked list with stable node addresses until deletion, and node-oriented Insert/Erase.
+
+Built-in specializations: `int`, `float`, `double`, `char` and an internal `void_ptr`. The examples below use `int`.
+
+### Instantiation
+
+```c
+LINKED_LIST_TYPE(int) list = {0};
+LINKED_LIST_FUNC(int, Init)(&list);
+```
+
+### Function summary
+
+| Function | Description |
+| --- | --- |
+| [`Init`](#linked-list-init) | Initializes bookkeeping fields to an empty state. |
+| [`Destroy`](#linked-list-destroy) | Releases the linked nodes and clears the container. |
+| [`Front`](#linked-list-front) | Obtains a pointer to the first node's value. |
+| [`Back`](#linked-list-back) | Obtains a pointer to the last node's value. |
+| [`Begin`](#linked-list-begin) | Returns a pointer to the first node for iteration. |
+| [`End`](#linked-list-end) | Returns the past-end sentinel for iteration. |
+| [`PushFront`](#linked-list-pushfront) | Inserts a copied value at the front. |
+| [`PushBack`](#linked-list-pushback) | Inserts a copied value at the back. |
+| [`PopFront`](#linked-list-popfront) | Removes the first value and reports it. |
+| [`PopBack`](#linked-list-popback) | Removes the last value and reports it. |
+| [`Insert`](#linked-list-insert) | Inserts a node before the specified list position. |
+| [`Erase`](#linked-list-erase) | Erases the given node and returns the following node through an out parameter. |
+| [`Clear`](#linked-list-clear) | Removes all nodes without requiring a new instance. |
+| [`Empty`](#linked-list-empty) | Reports whether the collection has no nodes. |
+| [`Size`](#linked-list-size) | Returns the stored node count. |
+
+Node pointers obtained from a list become invalid when their node is erased, or when the collection is cleared/destroyed. Never pass node positions taken from another container.
+
+---
+
+# Linked List Init
+
+Initializes bookkeeping fields to an empty state.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_LIST_FUNC(int, Init)( LINKED_LIST_TYPE(int) * list);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_List_int_Init( Container_Linked_TList_int * list);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Initializes bookkeeping fields to an empty state. Calling Init on an already-owning live object would lose node references; destroy it first.
+
+---
+
+### Example
+
+```c
+OPSTATUS status = LINKED_LIST_FUNC(int, Init)(&list);
+```
+
+---
+
+# Linked List Destroy
+
+Releases the linked nodes and clears the container.
+
+### Syntax
+
+#### Macro form
+
+```c
+void LINKED_LIST_FUNC(int, Destroy)( LINKED_LIST_TYPE(int) * list);
+```
+
+#### Direct form
+
+```c
+void Container_Linked_List_int_Destroy( Container_Linked_TList_int * list);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
+
+---
+
+### Return value
+
+None.
+
+---
+
+### Remarks
+
+Releases the linked nodes and clears the container. If values are pointers, independently owned pointees are not automatically destroyed.
+
+---
+
+### Example
+
+```c
+LINKED_LIST_FUNC(int, Destroy)(&list);
+```
+
+---
+
+# Linked List Front
+
+Obtains a pointer to the first node's value.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_LIST_FUNC(int, Front)( LINKED_LIST_TYPE(int) * list, int **out);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_List_int_Front( Container_Linked_TList_int * list, int **out);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
+| `out` | `int **out` | Typed pointer to an output. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Obtains a pointer to the first node's value.
+
+---
+
+### Example
+
+```c
+int *element = NULL;
+OPSTATUS status = LINKED_LIST_FUNC(int, Front)(&list, &element);
+```
+
+---
+
+# Linked List Back
+
+Obtains a pointer to the last node's value.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_LIST_FUNC(int, Back)( LINKED_LIST_TYPE(int) * list, int **out);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_List_int_Back( Container_Linked_TList_int * list, int **out);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
+| `out` | `int **out` | Typed pointer to an output. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Obtains a pointer to the last node's value.
+
+---
+
+### Example
+
+```c
+int *element = NULL;
+OPSTATUS status = LINKED_LIST_FUNC(int, Back)(&list, &element);
+```
+
+---
+
+# Linked List Begin
+
+Returns a pointer to the first node for iteration.
+
+### Syntax
+
+#### Macro form
+
+```c
+LINKED_LIST_NODE_TYPE(int) * LINKED_LIST_FUNC(int, Begin)(LINKED_LIST_TYPE(int) * list);
+```
+
+#### Direct form
+
+```c
+Container_Linked_List_TNode_int * Container_Linked_List_int_Begin(Container_Linked_TList_int * list);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
+
+---
+
+### Return value
+
+Pointer to node or NULL when appropriate.
+
+---
+
+### Remarks
+
+Returns a pointer to the first node for iteration.
+
+---
+
+### Example
+
+```c
+LINKED_LIST_NODE_TYPE(int) *node = LINKED_LIST_FUNC(int, Begin)(&list);
+```
+
+---
+
+# Linked List End
+
+Returns the past-end sentinel for iteration.
+
+### Syntax
+
+#### Macro form
+
+```c
+LINKED_LIST_NODE_TYPE(int) * LINKED_LIST_FUNC(int, End)(LINKED_LIST_TYPE(int) * list);
+```
+
+#### Direct form
+
+```c
+Container_Linked_List_TNode_int * Container_Linked_List_int_End(Container_Linked_TList_int * list);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
+
+---
+
+### Return value
+
+Pointer to node or NULL when appropriate.
+
+---
+
+### Remarks
+
+Returns the past-end sentinel for iteration.
+
+---
+
+### Example
+
+```c
+LINKED_LIST_NODE_TYPE(int) *end = LINKED_LIST_FUNC(int, End)(&list); /* End is the past-end position. */
+```
+
+---
+
+# Linked List PushFront
+
+Inserts a copied value at the front.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_LIST_FUNC(int, PushFront)( LINKED_LIST_TYPE(int) * list, int value);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_List_int_PushFront( Container_Linked_TList_int * list, int value);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
+| `value` | `int value` | Scalar value or index. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Inserts a copied value at the front.
+
+---
+
+### Example
+
+```c
+OPSTATUS status = LINKED_LIST_FUNC(int, PushFront)(&list, 42);
+```
+
+---
+
+# Linked List PushBack
+
+Inserts a copied value at the back.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_LIST_FUNC(int, PushBack)( LINKED_LIST_TYPE(int) * list, int value);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_List_int_PushBack( Container_Linked_TList_int * list, int value);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
+| `value` | `int value` | Scalar value or index. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Inserts a copied value at the back.
+
+---
+
+### Example
+
+```c
+OPSTATUS status = LINKED_LIST_FUNC(int, PushBack)(&list, 42);
+```
+
+---
+
+# Linked List PopFront
+
+Removes the first value and reports it.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_LIST_FUNC(int, PopFront)( LINKED_LIST_TYPE(int) * list, int * outValue);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_List_int_PopFront( Container_Linked_TList_int * list, int * outValue);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
+| `outValue` | `int * outValue` | Container/node pointer. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Removes the first value and reports it. The removed node ceases to exist and all pointers to it become invalid.
+
+---
+
+### Example
+
+```c
+int value = 0;
+OPSTATUS status = LINKED_LIST_FUNC(int, PopFront)(&list, &value);
+```
+
+---
+
+# Linked List PopBack
+
+Removes the last value and reports it.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_LIST_FUNC(int, PopBack)( LINKED_LIST_TYPE(int) * list, int * outValue);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_List_int_PopBack( Container_Linked_TList_int * list, int * outValue);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
+| `outValue` | `int * outValue` | Container/node pointer. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Removes the last value and reports it. The removed node ceases to exist and all pointers to it become invalid.
+
+---
+
+### Example
+
+```c
+int value = 0;
+OPSTATUS status = LINKED_LIST_FUNC(int, PopBack)(&list, &value);
+```
+
+---
+
+# Linked List Insert
+
+Inserts a node before the specified list position.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_LIST_FUNC(int, Insert)( LINKED_LIST_TYPE(int) * list, LINKED_LIST_NODE_TYPE(int) * pos, int value, LINKED_LIST_NODE_TYPE(int) * *outNode);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_List_int_Insert( Container_Linked_TList_int * list, Container_Linked_List_TNode_int * pos, int value, Container_Linked_List_TNode_int * *outNode);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
+| `pos` | `LINKED_LIST_NODE_TYPE(int) * pos` | Container/node pointer. |
+| `value` | `int value` | Scalar value or index. |
+| `outNode` | `LINKED_LIST_NODE_TYPE(int) * *outNode` | Container/node pointer. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Inserts a node before the specified list position. The newly allocated node belongs to the container.
+
+---
+
+### Example
+
+```c
+LINKED_LIST_NODE_TYPE(int) *position = LINKED_LIST_FUNC(int, Begin)(&list);
+LINKED_LIST_NODE_TYPE(int) *inserted = NULL;
+OPSTATUS status = LINKED_LIST_FUNC(int, Insert)(&list, position, 42, &inserted);
+```
+
+---
+
+# Linked List Erase
+
+Erases the given node and returns the following node through an out parameter.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_LIST_FUNC(int, Erase)( LINKED_LIST_TYPE(int) * list, LINKED_LIST_NODE_TYPE(int) * pos, LINKED_LIST_NODE_TYPE(int) * *outNode);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_List_int_Erase( Container_Linked_TList_int * list, Container_Linked_List_TNode_int * pos, Container_Linked_List_TNode_int * *outNode);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
+| `pos` | `LINKED_LIST_NODE_TYPE(int) * pos` | Container/node pointer. |
+| `outNode` | `LINKED_LIST_NODE_TYPE(int) * *outNode` | Container/node pointer. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Erases the given node and returns the following node through an out parameter. The removed node ceases to exist and all pointers to it become invalid.
+
+---
+
+### Example
+
+```c
+LINKED_LIST_NODE_TYPE(int) *position = LINKED_LIST_FUNC(int, Begin)(&list);
+LINKED_LIST_NODE_TYPE(int) *inserted = NULL;
+OPSTATUS status = LINKED_LIST_FUNC(int, Erase)(&list, position, &inserted);
+```
+
+---
+
+# Linked List Clear
+
+Removes all nodes without requiring a new instance.
+
+### Syntax
+
+#### Macro form
+
+```c
+void LINKED_LIST_FUNC(int, Clear)(LINKED_LIST_TYPE(int) * list);
+```
+
+#### Direct form
+
+```c
+void Container_Linked_List_int_Clear(Container_Linked_TList_int * list);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `list` | `LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
+
+---
+
+### Return value
+
+None.
+
+---
+
+### Remarks
+
+Removes all nodes without requiring a new instance. If values are pointers, independently owned pointees are not automatically destroyed.
+
+---
+
+### Example
+
+```c
+LINKED_LIST_FUNC(int, Clear)(&list);
+```
+
+---
+
+# Linked List Empty
+
+Reports whether the collection has no nodes.
+
+### Syntax
+
+#### Macro form
+
+```c
+bool LINKED_LIST_FUNC(int, Empty)(const LINKED_LIST_TYPE(int) * list);
+```
+
+#### Direct form
+
+```c
+bool Container_Linked_List_int_Empty(const Container_Linked_TList_int * list);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `list` | `const LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
+
+---
+
+### Return value
+
+`bool` emptiness predicate.
+
+---
+
+### Remarks
+
+Reports whether the collection has no nodes.
+
+---
+
+### Example
+
+```c
+bool empty = LINKED_LIST_FUNC(int, Empty)(&list);
+```
+
+---
+
+# Linked List Size
+
+Returns the stored node count.
+
+### Syntax
+
+#### Macro form
+
+```c
+size_t LINKED_LIST_FUNC(int, Size)(const LINKED_LIST_TYPE(int) * list);
+```
+
+#### Direct form
+
+```c
+size_t Container_Linked_List_int_Size(const Container_Linked_TList_int * list);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `list` | `const LINKED_LIST_TYPE(int) * list` | Container/node pointer. |
+
+---
+
+### Return value
+
+`size_t` live element count.
+
+---
+
+### Remarks
+
+Returns the stored node count.
+
+---
+
+### Example
+
+```c
+size_t size = LINKED_LIST_FUNC(int, Size)(&list);
+```
+
+---
+
+# Linked Deque package
+
+Header: `Cosmeron/Modules/Container/Linked/Deque.h`.
+
+Doubly linked FIFO/LIFO operations from both ends.
+
+Built-in specializations: `int`, `float`, `double`, `char`. The examples below use `int`.
+
+### Instantiation
+
+```c
+LINKED_DEQUE_TYPE(int) deque = {0};
+LINKED_DEQUE_FUNC(int, Init)(&deque);
+```
+
+### Function summary
+
+| Function | Description |
+| --- | --- |
+| [`Init`](#linked-deque-init) | Initializes bookkeeping fields to an empty state. |
+| [`Destroy`](#linked-deque-destroy) | Releases the linked nodes and clears the container. |
+| [`PushFront`](#linked-deque-pushfront) | Inserts a copied value at the front. |
+| [`PushBack`](#linked-deque-pushback) | Inserts a copied value at the back. |
+| [`PopFront`](#linked-deque-popfront) | Removes the first value and reports it. |
+| [`PopBack`](#linked-deque-popback) | Removes the last value and reports it. |
+| [`Clear`](#linked-deque-clear) | Removes all nodes without requiring a new instance. |
+| [`Front`](#linked-deque-front) | Obtains a pointer to the first node's value. |
+| [`Back`](#linked-deque-back) | Obtains a pointer to the last node's value. |
+| [`Empty`](#linked-deque-empty) | Reports whether the collection has no nodes. |
+| [`Size`](#linked-deque-size) | Returns the stored node count. |
+
+Node pointers obtained from a list become invalid when their node is erased, or when the collection is cleared/destroyed. Never pass node positions taken from another container.
+
+---
+
+# Linked Deque Init
+
+Initializes bookkeeping fields to an empty state.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_DEQUE_FUNC(int, Init)( LINKED_DEQUE_TYPE(int) * deque);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_Deque_int_Init( Container_Linked_TDeque_int * deque);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container/node pointer. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Initializes bookkeeping fields to an empty state. Calling Init on an already-owning live object would lose node references; destroy it first.
+
+---
+
+### Example
+
+```c
+OPSTATUS status = LINKED_DEQUE_FUNC(int, Init)(&deque);
+```
+
+---
+
+# Linked Deque Destroy
+
+Releases the linked nodes and clears the container.
+
+### Syntax
+
+#### Macro form
+
+```c
+void LINKED_DEQUE_FUNC(int, Destroy)( LINKED_DEQUE_TYPE(int) * deque);
+```
+
+#### Direct form
+
+```c
+void Container_Linked_Deque_int_Destroy( Container_Linked_TDeque_int * deque);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container/node pointer. |
+
+---
+
+### Return value
+
+None.
+
+---
+
+### Remarks
+
+Releases the linked nodes and clears the container. If values are pointers, independently owned pointees are not automatically destroyed.
+
+---
+
+### Example
+
+```c
+LINKED_DEQUE_FUNC(int, Destroy)(&deque);
+```
+
+---
+
+# Linked Deque PushFront
+
+Inserts a copied value at the front.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_DEQUE_FUNC(int, PushFront)( LINKED_DEQUE_TYPE(int) * deque, int value);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_Deque_int_PushFront( Container_Linked_TDeque_int * deque, int value);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container/node pointer. |
+| `value` | `int value` | Scalar value or index. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Inserts a copied value at the front.
+
+---
+
+### Example
+
+```c
+OPSTATUS status = LINKED_DEQUE_FUNC(int, PushFront)(&deque, 42);
+```
+
+---
+
+# Linked Deque PushBack
+
+Inserts a copied value at the back.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_DEQUE_FUNC(int, PushBack)( LINKED_DEQUE_TYPE(int) * deque, int value);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_Deque_int_PushBack( Container_Linked_TDeque_int * deque, int value);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container/node pointer. |
+| `value` | `int value` | Scalar value or index. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Inserts a copied value at the back.
+
+---
+
+### Example
+
+```c
+OPSTATUS status = LINKED_DEQUE_FUNC(int, PushBack)(&deque, 42);
+```
+
+---
+
+# Linked Deque PopFront
+
+Removes the first value and reports it.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_DEQUE_FUNC(int, PopFront)( LINKED_DEQUE_TYPE(int) * deque, int * outValue);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_Deque_int_PopFront( Container_Linked_TDeque_int * deque, int * outValue);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container/node pointer. |
+| `outValue` | `int * outValue` | Container/node pointer. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Removes the first value and reports it. The removed node ceases to exist and all pointers to it become invalid.
+
+---
+
+### Example
+
+```c
+int value = 0;
+OPSTATUS status = LINKED_DEQUE_FUNC(int, PopFront)(&deque, &value);
+```
+
+---
+
+# Linked Deque PopBack
+
+Removes the last value and reports it.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_DEQUE_FUNC(int, PopBack)( LINKED_DEQUE_TYPE(int) * deque, int * outValue);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_Deque_int_PopBack( Container_Linked_TDeque_int * deque, int * outValue);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container/node pointer. |
+| `outValue` | `int * outValue` | Container/node pointer. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Removes the last value and reports it. The removed node ceases to exist and all pointers to it become invalid.
+
+---
+
+### Example
+
+```c
+int value = 0;
+OPSTATUS status = LINKED_DEQUE_FUNC(int, PopBack)(&deque, &value);
+```
+
+---
+
+# Linked Deque Clear
+
+Removes all nodes without requiring a new instance.
+
+### Syntax
+
+#### Macro form
+
+```c
+void LINKED_DEQUE_FUNC(int, Clear)( LINKED_DEQUE_TYPE(int) * deque);
+```
+
+#### Direct form
+
+```c
+void Container_Linked_Deque_int_Clear( Container_Linked_TDeque_int * deque);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container/node pointer. |
+
+---
+
+### Return value
+
+None.
+
+---
+
+### Remarks
+
+Removes all nodes without requiring a new instance. If values are pointers, independently owned pointees are not automatically destroyed.
+
+---
+
+### Example
+
+```c
+LINKED_DEQUE_FUNC(int, Clear)(&deque);
+```
+
+---
+
+# Linked Deque Front
+
+Obtains a pointer to the first node's value.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_DEQUE_FUNC(int, Front)( LINKED_DEQUE_TYPE(int) * deque, int **out);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_Deque_int_Front( Container_Linked_TDeque_int * deque, int **out);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container/node pointer. |
+| `out` | `int **out` | Typed pointer to an output. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Obtains a pointer to the first node's value.
+
+---
+
+### Example
+
+```c
+int *element = NULL;
+OPSTATUS status = LINKED_DEQUE_FUNC(int, Front)(&deque, &element);
+```
+
+---
+
+# Linked Deque Back
+
+Obtains a pointer to the last node's value.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_DEQUE_FUNC(int, Back)( LINKED_DEQUE_TYPE(int) * deque, int **out);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_Deque_int_Back( Container_Linked_TDeque_int * deque, int **out);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `deque` | `LINKED_DEQUE_TYPE(int) * deque` | Container/node pointer. |
+| `out` | `int **out` | Typed pointer to an output. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Obtains a pointer to the last node's value.
+
+---
+
+### Example
+
+```c
+int *element = NULL;
+OPSTATUS status = LINKED_DEQUE_FUNC(int, Back)(&deque, &element);
+```
+
+---
+
+# Linked Deque Empty
+
+Reports whether the collection has no nodes.
+
+### Syntax
+
+#### Macro form
+
+```c
+bool LINKED_DEQUE_FUNC(int, Empty)( const LINKED_DEQUE_TYPE(int) * deque);
+```
+
+#### Direct form
+
+```c
+bool Container_Linked_Deque_int_Empty( const Container_Linked_TDeque_int * deque);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `deque` | `const LINKED_DEQUE_TYPE(int) * deque` | Container/node pointer. |
+
+---
+
+### Return value
+
+`bool` emptiness predicate.
+
+---
+
+### Remarks
+
+Reports whether the collection has no nodes.
+
+---
+
+### Example
+
+```c
+bool empty = LINKED_DEQUE_FUNC(int, Empty)(&deque);
+```
+
+---
+
+# Linked Deque Size
+
+Returns the stored node count.
+
+### Syntax
+
+#### Macro form
+
+```c
+size_t LINKED_DEQUE_FUNC(int, Size)( const LINKED_DEQUE_TYPE(int) * deque);
+```
+
+#### Direct form
+
+```c
+size_t Container_Linked_Deque_int_Size( const Container_Linked_TDeque_int * deque);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `deque` | `const LINKED_DEQUE_TYPE(int) * deque` | Container/node pointer. |
+
+---
+
+### Return value
+
+`size_t` live element count.
+
+---
+
+### Remarks
+
+Returns the stored node count.
+
+---
+
+### Example
+
+```c
+size_t size = LINKED_DEQUE_FUNC(int, Size)(&deque);
+```
+
+---
+
+# Linked Queue package
+
+Header: `Cosmeron/Modules/Container/Linked/Queue.h`.
+
+Linked FIFO queue with node allocations on each push.
+
+Built-in specializations: `int`, `float`, `double`, `char`. The examples below use `int`.
+
+### Instantiation
+
+```c
+LINKED_QUEUE_TYPE(int) queue = {0};
+LINKED_QUEUE_FUNC(int, Init)(&queue);
+```
+
+### Function summary
+
+| Function | Description |
+| --- | --- |
+| [`Init`](#linked-queue-init) | Initializes bookkeeping fields to an empty state. |
+| [`Destroy`](#linked-queue-destroy) | Releases the linked nodes and clears the container. |
+| [`Push`](#linked-queue-push) | Pushes/enqueues a copied value. |
+| [`Pop`](#linked-queue-pop) | Pops/dequeues a value. |
+| [`Clear`](#linked-queue-clear) | Removes all nodes without requiring a new instance. |
+| [`Front`](#linked-queue-front) | Obtains a pointer to the first node's value. |
+| [`Back`](#linked-queue-back) | Obtains a pointer to the last node's value. |
+| [`Empty`](#linked-queue-empty) | Reports whether the collection has no nodes. |
+| [`Size`](#linked-queue-size) | Returns the stored node count. |
+
+Node pointers obtained from a list become invalid when their node is erased, or when the collection is cleared/destroyed. Never pass node positions taken from another container.
+
+---
+
+# Linked Queue Init
+
+Initializes bookkeeping fields to an empty state.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_QUEUE_FUNC(int, Init)( LINKED_QUEUE_TYPE(int) * queue);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_Queue_int_Init( Container_Linked_TQueue_int * queue);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `queue` | `LINKED_QUEUE_TYPE(int) * queue` | Container/node pointer. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Initializes bookkeeping fields to an empty state. Calling Init on an already-owning live object would lose node references; destroy it first.
+
+---
+
+### Example
+
+```c
+OPSTATUS status = LINKED_QUEUE_FUNC(int, Init)(&queue);
+```
+
+---
+
+# Linked Queue Destroy
+
+Releases the linked nodes and clears the container.
+
+### Syntax
+
+#### Macro form
+
+```c
+void LINKED_QUEUE_FUNC(int, Destroy)( LINKED_QUEUE_TYPE(int) * queue);
+```
+
+#### Direct form
+
+```c
+void Container_Linked_Queue_int_Destroy( Container_Linked_TQueue_int * queue);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `queue` | `LINKED_QUEUE_TYPE(int) * queue` | Container/node pointer. |
+
+---
+
+### Return value
+
+None.
+
+---
+
+### Remarks
+
+Releases the linked nodes and clears the container. If values are pointers, independently owned pointees are not automatically destroyed.
+
+---
+
+### Example
+
+```c
+LINKED_QUEUE_FUNC(int, Destroy)(&queue);
+```
+
+---
+
+# Linked Queue Push
+
+Pushes/enqueues a copied value.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_QUEUE_FUNC(int, Push)( LINKED_QUEUE_TYPE(int) * queue, int value);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_Queue_int_Push( Container_Linked_TQueue_int * queue, int value);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `queue` | `LINKED_QUEUE_TYPE(int) * queue` | Container/node pointer. |
+| `value` | `int value` | Scalar value or index. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Pushes/enqueues a copied value.
+
+---
+
+### Example
+
+```c
+OPSTATUS status = LINKED_QUEUE_FUNC(int, Push)(&queue, 42);
+```
+
+---
+
+# Linked Queue Pop
+
+Pops/dequeues a value.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_QUEUE_FUNC(int, Pop)( LINKED_QUEUE_TYPE(int) * queue, int * outValue);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_Queue_int_Pop( Container_Linked_TQueue_int * queue, int * outValue);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `queue` | `LINKED_QUEUE_TYPE(int) * queue` | Container/node pointer. |
+| `outValue` | `int * outValue` | Container/node pointer. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Pops/dequeues a value. The removed node ceases to exist and all pointers to it become invalid.
+
+---
+
+### Example
+
+```c
+int value = 0;
+OPSTATUS status = LINKED_QUEUE_FUNC(int, Pop)(&queue, &value);
+```
+
+---
+
+# Linked Queue Clear
+
+Removes all nodes without requiring a new instance.
+
+### Syntax
+
+#### Macro form
+
+```c
+void LINKED_QUEUE_FUNC(int, Clear)( LINKED_QUEUE_TYPE(int) * queue);
+```
+
+#### Direct form
+
+```c
+void Container_Linked_Queue_int_Clear( Container_Linked_TQueue_int * queue);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `queue` | `LINKED_QUEUE_TYPE(int) * queue` | Container/node pointer. |
+
+---
+
+### Return value
+
+None.
+
+---
+
+### Remarks
+
+Removes all nodes without requiring a new instance. If values are pointers, independently owned pointees are not automatically destroyed.
+
+---
+
+### Example
+
+```c
+LINKED_QUEUE_FUNC(int, Clear)(&queue);
+```
+
+---
+
+# Linked Queue Front
+
+Obtains a pointer to the first node's value.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_QUEUE_FUNC(int, Front)( LINKED_QUEUE_TYPE(int) * queue, int **out);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_Queue_int_Front( Container_Linked_TQueue_int * queue, int **out);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `queue` | `LINKED_QUEUE_TYPE(int) * queue` | Container/node pointer. |
+| `out` | `int **out` | Typed pointer to an output. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Obtains a pointer to the first node's value.
+
+---
+
+### Example
+
+```c
+int *element = NULL;
+OPSTATUS status = LINKED_QUEUE_FUNC(int, Front)(&queue, &element);
+```
+
+---
+
+# Linked Queue Back
+
+Obtains a pointer to the last node's value.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_QUEUE_FUNC(int, Back)( LINKED_QUEUE_TYPE(int) * queue, int **out);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_Queue_int_Back( Container_Linked_TQueue_int * queue, int **out);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `queue` | `LINKED_QUEUE_TYPE(int) * queue` | Container/node pointer. |
+| `out` | `int **out` | Typed pointer to an output. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Obtains a pointer to the last node's value.
+
+---
+
+### Example
+
+```c
+int *element = NULL;
+OPSTATUS status = LINKED_QUEUE_FUNC(int, Back)(&queue, &element);
+```
+
+---
+
+# Linked Queue Empty
+
+Reports whether the collection has no nodes.
+
+### Syntax
+
+#### Macro form
+
+```c
+bool LINKED_QUEUE_FUNC(int, Empty)( const LINKED_QUEUE_TYPE(int) * queue);
+```
+
+#### Direct form
+
+```c
+bool Container_Linked_Queue_int_Empty( const Container_Linked_TQueue_int * queue);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `queue` | `const LINKED_QUEUE_TYPE(int) * queue` | Container/node pointer. |
+
+---
+
+### Return value
+
+`bool` emptiness predicate.
+
+---
+
+### Remarks
+
+Reports whether the collection has no nodes.
+
+---
+
+### Example
+
+```c
+bool empty = LINKED_QUEUE_FUNC(int, Empty)(&queue);
+```
+
+---
+
+# Linked Queue Size
+
+Returns the stored node count.
+
+### Syntax
+
+#### Macro form
+
+```c
+size_t LINKED_QUEUE_FUNC(int, Size)( const LINKED_QUEUE_TYPE(int) * queue);
+```
+
+#### Direct form
+
+```c
+size_t Container_Linked_Queue_int_Size( const Container_Linked_TQueue_int * queue);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `queue` | `const LINKED_QUEUE_TYPE(int) * queue` | Container/node pointer. |
+
+---
+
+### Return value
+
+`size_t` live element count.
+
+---
+
+### Remarks
+
+Returns the stored node count.
+
+---
+
+### Example
+
+```c
+size_t size = LINKED_QUEUE_FUNC(int, Size)(&queue);
+```
+
+---
+
+# Linked Stack package
+
+Header: `Cosmeron/Modules/Container/Linked/Stack.h`.
+
+Linked LIFO stack with node allocations on each push.
+
+Built-in specializations: `int`, `float`, `double`, `char`. The examples below use `int`.
+
+### Instantiation
+
+```c
+LINKED_STACK_TYPE(int) stack = {0};
+LINKED_STACK_FUNC(int, Init)(&stack);
+```
+
+### Function summary
+
+| Function | Description |
+| --- | --- |
+| [`Init`](#linked-stack-init) | Initializes bookkeeping fields to an empty state. |
+| [`Destroy`](#linked-stack-destroy) | Releases the linked nodes and clears the container. |
+| [`Push`](#linked-stack-push) | Pushes/enqueues a copied value. |
+| [`Pop`](#linked-stack-pop) | Pops/dequeues a value. |
+| [`Clear`](#linked-stack-clear) | Removes all nodes without requiring a new instance. |
+| [`Top`](#linked-stack-top) | Obtains a pointer to the top node's value. |
+| [`Empty`](#linked-stack-empty) | Reports whether the collection has no nodes. |
+| [`Size`](#linked-stack-size) | Returns the stored node count. |
+
+Node pointers obtained from a list become invalid when their node is erased, or when the collection is cleared/destroyed. Never pass node positions taken from another container.
+
+---
+
+# Linked Stack Init
+
+Initializes bookkeeping fields to an empty state.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_STACK_FUNC(int, Init)( LINKED_STACK_TYPE(int) * stack);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_Stack_int_Init( Container_Linked_TStack_int * stack);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `stack` | `LINKED_STACK_TYPE(int) * stack` | Container/node pointer. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Initializes bookkeeping fields to an empty state. Calling Init on an already-owning live object would lose node references; destroy it first.
+
+---
+
+### Example
+
+```c
+OPSTATUS status = LINKED_STACK_FUNC(int, Init)(&stack);
+```
+
+---
+
+# Linked Stack Destroy
+
+Releases the linked nodes and clears the container.
+
+### Syntax
+
+#### Macro form
+
+```c
+void LINKED_STACK_FUNC(int, Destroy)( LINKED_STACK_TYPE(int) * stack);
+```
+
+#### Direct form
+
+```c
+void Container_Linked_Stack_int_Destroy( Container_Linked_TStack_int * stack);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `stack` | `LINKED_STACK_TYPE(int) * stack` | Container/node pointer. |
+
+---
+
+### Return value
+
+None.
+
+---
+
+### Remarks
+
+Releases the linked nodes and clears the container. If values are pointers, independently owned pointees are not automatically destroyed.
+
+---
+
+### Example
+
+```c
+LINKED_STACK_FUNC(int, Destroy)(&stack);
+```
+
+---
+
+# Linked Stack Push
+
+Pushes/enqueues a copied value.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_STACK_FUNC(int, Push)( LINKED_STACK_TYPE(int) * stack, int value);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_Stack_int_Push( Container_Linked_TStack_int * stack, int value);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `stack` | `LINKED_STACK_TYPE(int) * stack` | Container/node pointer. |
+| `value` | `int value` | Scalar value or index. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Pushes/enqueues a copied value.
+
+---
+
+### Example
+
+```c
+OPSTATUS status = LINKED_STACK_FUNC(int, Push)(&stack, 42);
+```
+
+---
+
+# Linked Stack Pop
+
+Pops/dequeues a value.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_STACK_FUNC(int, Pop)( LINKED_STACK_TYPE(int) * stack, int * outValue);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_Stack_int_Pop( Container_Linked_TStack_int * stack, int * outValue);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `stack` | `LINKED_STACK_TYPE(int) * stack` | Container/node pointer. |
+| `outValue` | `int * outValue` | Container/node pointer. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Pops/dequeues a value. The removed node ceases to exist and all pointers to it become invalid.
+
+---
+
+### Example
+
+```c
+int value = 0;
+OPSTATUS status = LINKED_STACK_FUNC(int, Pop)(&stack, &value);
+```
+
+---
+
+# Linked Stack Clear
+
+Removes all nodes without requiring a new instance.
+
+### Syntax
+
+#### Macro form
+
+```c
+void LINKED_STACK_FUNC(int, Clear)( LINKED_STACK_TYPE(int) * stack);
+```
+
+#### Direct form
+
+```c
+void Container_Linked_Stack_int_Clear( Container_Linked_TStack_int * stack);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `stack` | `LINKED_STACK_TYPE(int) * stack` | Container/node pointer. |
+
+---
+
+### Return value
+
+None.
+
+---
+
+### Remarks
+
+Removes all nodes without requiring a new instance. If values are pointers, independently owned pointees are not automatically destroyed.
+
+---
+
+### Example
+
+```c
+LINKED_STACK_FUNC(int, Clear)(&stack);
+```
+
+---
+
+# Linked Stack Top
+
+Obtains a pointer to the top node's value.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS LINKED_STACK_FUNC(int, Top)( LINKED_STACK_TYPE(int) * stack, int **out);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Linked_Stack_int_Top( Container_Linked_TStack_int * stack, int **out);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `stack` | `LINKED_STACK_TYPE(int) * stack` | Container/node pointer. |
+| `out` | `int **out` | Typed pointer to an output. |
+
+---
+
+### Return value
+
+`OPSTATUS`; check success before accessing outputs.
+
+---
+
+### Remarks
+
+Obtains a pointer to the top node's value.
+
+---
+
+### Example
+
+```c
+int *element = NULL;
+OPSTATUS status = LINKED_STACK_FUNC(int, Top)(&stack, &element);
+```
+
+---
+
+# Linked Stack Empty
+
+Reports whether the collection has no nodes.
+
+### Syntax
+
+#### Macro form
+
+```c
+bool LINKED_STACK_FUNC(int, Empty)( const LINKED_STACK_TYPE(int) * stack);
+```
+
+#### Direct form
+
+```c
+bool Container_Linked_Stack_int_Empty( const Container_Linked_TStack_int * stack);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `stack` | `const LINKED_STACK_TYPE(int) * stack` | Container/node pointer. |
+
+---
+
+### Return value
+
+`bool` emptiness predicate.
+
+---
+
+### Remarks
+
+Reports whether the collection has no nodes.
+
+---
+
+### Example
+
+```c
+bool empty = LINKED_STACK_FUNC(int, Empty)(&stack);
+```
+
+---
+
+# Linked Stack Size
+
+Returns the stored node count.
+
+### Syntax
+
+#### Macro form
+
+```c
+size_t LINKED_STACK_FUNC(int, Size)( const LINKED_STACK_TYPE(int) * stack);
+```
+
+#### Direct form
+
+```c
+size_t Container_Linked_Stack_int_Size( const Container_Linked_TStack_int * stack);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `stack` | `const LINKED_STACK_TYPE(int) * stack` | Container/node pointer. |
+
+---
+
+### Return value
+
+`size_t` live element count.
+
+---
+
+### Remarks
+
+Returns the stored node count.
+
+---
+
+### Example
+
+```c
+size_t size = LINKED_STACK_FUNC(int, Size)(&stack);
+```
