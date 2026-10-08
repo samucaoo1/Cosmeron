@@ -7698,3 +7698,1285 @@ Calls a visitor for each reachable vertex in depth-first order. The visitor is i
 /* VisitVertex: callback of TGRAPH_VISITOR_TYPE(int, int). */
 OPSTATUS status = GRAPH_OPERATION(int, int, DFS)(0, &graph, 0, 0, VisitVertex, NULL);
 ```
+
+---
+
+# Tree package
+
+Headers:
+
+```c
+#include "Cosmeron/Modules/Container/Tree/Tree.h"
+/* Or include BST.h, AVL.h, or RedBlack.h independently. */
+```
+
+The tree family generates **ordered Set and Map collections**. It provides three algorithms, each with the same operation names:
+
+| Algorithm | Behavior | Complexity |
+| --- | --- | --- |
+| BST | Plain binary search tree, no balancing | O(h), worst case O(n) |
+| AVL | Height-balanced binary search tree | O(log n) |
+| RB | Red-black balanced search tree | O(log n) |
+
+Here `h` means actual tree height. The default set specializations are `int`, `float`, and `double`; default maps use int keys with int or float values. The default floating-point comparator is **not a total ordering for NaNs**; use a suitable custom comparator if NaNs may appear.
+
+### Types, function names and generation
+
+```c
+TREE_SET_TYPE(AVL, int)              /* Container_Tree_AVL_Set_int */
+TREE_MAP_TYPE(AVL, int, int)         /* Container_Tree_AVL_Map_int_int */
+TREE_NODE(TREE_SET_TYPE(AVL, int))   /* Container_Tree_AVL_Set_int_Node */
+TREE_FUNC(TREE_SET_TYPE(AVL, int), Insert) /* Generated insert function */
+```
+
+`TREE_PUBLIC_SET_TYPE` and `TREE_PUBLIC_MAP_TYPE` provide public typed aliases. Compatibility macros `TTREE_SET_TYPE`, `TTREE_MAP_TYPE` and `TTREE_FN` are also available.
+
+### Function summary
+
+| Operation | Set / Map |
+| --- | --- |
+| [`Init`](#tree-init) | Initializes an empty tree object. |
+| [`Destroy`](#tree-destroy) | Releases every node owned by the tree. |
+| [`Clear`](#tree-clear) | Deletes all nodes and keeps the tree reusable. |
+| [`Insert (Set)`](#tree-insert-set) | Inserts a Set key or Map key/value pair. |
+| [`Insert (Map)`](#tree-insert-map) | Inserts a Set key or Map key/value pair. |
+| [`Remove`](#tree-remove) | Removes a key and its corresponding node. |
+| [`FindNode`](#tree-findnode) | Returns a pointer to the node matching a key, or NULL. |
+| [`Find (Set)`](#tree-find-set) | Returns a typed pointer to an existing Set key or Map value. |
+| [`Find (Map)`](#tree-find-map) | Returns a typed pointer to an existing Set key or Map value. |
+| [`Contains`](#tree-contains) | Checks whether the tree contains the given key. |
+| [`MinNode`](#tree-minnode) | Finds the leftmost node of a given subtree. |
+| [`MaxNode`](#tree-maxnode) | Finds the rightmost node of a given subtree. |
+| [`Min`](#tree-min) | Returns a pointer to the minimum key. |
+| [`Max`](#tree-max) | Returns a pointer to the maximum key. |
+| [`Empty`](#tree-empty) | Returns true when tree size is zero. |
+| [`Size`](#tree-size) | Returns the number of stored keys. |
+| [`Begin`](#tree-begin) | Returns the smallest node for in-order traversal. |
+| [`End`](#tree-end) | Returns NULL, the past-end iterator. |
+| [`Next`](#tree-next) | Returns the in-order successor of a node. |
+| [`Prev`](#tree-prev) | Returns the in-order predecessor of a node. |
+| [`ConstBegin`](#tree-constbegin) | Returns the first node with read-only access. |
+| [`ConstEnd`](#tree-constend) | Returns the read-only NULL past-end sentinel. |
+| [`ConstNext`](#tree-constnext) | Returns a read-only successor node. |
+| [`ConstPrev`](#tree-constprev) | Returns a read-only predecessor node. |
+
+### Initializing a tree
+
+`TREE_SET_DECLARE(ALG, KEY, NAME)` and `TREE_MAP_DECLARE(ALG, KEY, VAL, NAME)` declare an empty object and optionally bind its function table. They **do not call Init**. In comparison, `TREE_AVL_SET_INSTANCE_DECLARE` and its BST/RB/Map variants do call Init.
+
+```c
+TREE_SET_DECLARE(AVL, int, tree);
+TREE_FUNC(TREE_SET_TYPE(AVL, int), Insert)(&tree, 42);
+TREE_FUNC(TREE_SET_TYPE(AVL, int), Destroy)(&tree);
+```
+
+### Generator families
+
+| Algorithm | Set generator | Map generator |
+| --- | --- | --- |
+| BST | `TREE_BST_SET_IMPLEMENT_ALL(KEY_TYPE)` | `TREE_BST_MAP_IMPLEMENT_ALL(KEY_TYPE, VALUE_TYPE)` |
+| AVL | `TREE_AVL_SET_IMPLEMENT_ALL(KEY_TYPE)` | `TREE_AVL_MAP_IMPLEMENT_ALL(KEY_TYPE, VALUE_TYPE)` |
+| RB | `TREE_RB_SET_IMPLEMENT_ALL(KEY_TYPE)` | `TREE_RB_MAP_IMPLEMENT_ALL(KEY_TYPE, VALUE_TYPE)` |
+
+`*_IMPLEMENT_ALL_CMP(...)` variants accept custom comparison functions returning `CMPOUT`. Each algorithm also exposes `*_SET_INSTANCE_DECLARE` and `*_MAP_INSTANCE_DECLARE`. Avoid re-emitting built-in specializations already declared by a header in the same translation unit.
+
+---
+
+# Tree Init
+
+Initializes an empty tree object.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS TREE_FUNC(TREE_SET_TYPE(AVL, int), Init)(TREE_SET_TYPE(AVL, int) *tree);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Tree_AVL_Set_int_Init(Container_Tree_AVL_Set_int *tree);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
+| `tree` | `int) *tree` | Tree or node pointer. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or an operational error, including `NOT_FOUND` when a key is missing.
+
+---
+
+### Remarks
+
+Initializes an empty tree object. Calling Init on a live nonempty tree leaks existing nodes; destroy it before reinitializing.
+
+---
+
+### Example
+
+```c
+TREE_SET_TYPE(AVL, int) tree = {0};
+OPSTATUS status = TREE_FUNC(TREE_SET_TYPE(AVL, int), Init)(&tree);
+```
+
+---
+
+# Tree Destroy
+
+Releases every node owned by the tree.
+
+### Syntax
+
+#### Macro form
+
+```c
+void TREE_FUNC(TREE_SET_TYPE(AVL, int), Destroy)(TREE_SET_TYPE(AVL, int) *tree);
+```
+
+#### Direct form
+
+```c
+void Container_Tree_AVL_Set_int_Destroy(Container_Tree_AVL_Set_int *tree);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
+| `tree` | `int) *tree` | Tree or node pointer. |
+
+---
+
+### Return value
+
+None.
+
+---
+
+### Remarks
+
+Releases every node owned by the tree. Node memory is released, but separately owned pointees stored in keys/values are not automatically deep-freed.
+
+---
+
+### Example
+
+```c
+TREE_FUNC(TREE_SET_TYPE(AVL, int), Destroy)(NULL, &tree);
+```
+
+---
+
+# Tree Clear
+
+Deletes all nodes and keeps the tree reusable.
+
+### Syntax
+
+#### Macro form
+
+```c
+void TREE_FUNC(TREE_SET_TYPE(AVL, int), Clear)(TREE_SET_TYPE(AVL, int) *tree);
+```
+
+#### Direct form
+
+```c
+void Container_Tree_AVL_Set_int_Clear(Container_Tree_AVL_Set_int *tree);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
+| `tree` | `int) *tree` | Tree or node pointer. |
+
+---
+
+### Return value
+
+None.
+
+---
+
+### Remarks
+
+Deletes all nodes and keeps the tree reusable. Node memory is released, but separately owned pointees stored in keys/values are not automatically deep-freed.
+
+---
+
+### Example
+
+```c
+TREE_FUNC(TREE_SET_TYPE(AVL, int), Clear)(NULL, &tree);
+```
+
+---
+
+# Tree Insert Set
+
+Inserts a Set key or Map key/value pair.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS TREE_FUNC(TREE_SET_TYPE(AVL, int), Insert)(TREE_SET_TYPE(AVL, int) *tree, int key);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Tree_AVL_Set_int_Insert(Container_Tree_AVL_Set_int *tree, int key);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
+| `tree` | `int) *tree` | Tree or node pointer. |
+| `key` | `int key` | Key or value supplied by caller. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or an operational error, including `NOT_FOUND` when a key is missing.
+
+---
+
+### Remarks
+
+Inserts a Set key or Map key/value pair. The set stores each key according to the generated comparator.
+
+---
+
+### Example
+
+```c
+OPSTATUS status = TREE_FUNC(TREE_SET_TYPE(AVL, int), Insert)(NULL, &tree, 42);
+```
+
+---
+
+# Tree Insert Map
+
+Inserts a Set key or Map key/value pair.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS TREE_FUNC(TREE_MAP_TYPE(AVL, int, int), Insert)(TREE_MAP_TYPE(AVL, int, int) *tree, int key, int value);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Tree_AVL_Map_int_int_Insert(Container_Tree_AVL_Map_int_int *tree, int key, int value);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `TREE_MAP_TYPE(AVL` | Key or value supplied by caller. |
+| `int` | `int` | Key or value supplied by caller. |
+| `tree` | `int) *tree` | Tree or node pointer. |
+| `key` | `int key` | Key or value supplied by caller. |
+| `value` | `int value` | Key or value supplied by caller. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or an operational error, including `NOT_FOUND` when a key is missing.
+
+---
+
+### Remarks
+
+Inserts a Set key or Map key/value pair. The map stores a key/value pair; an existing key is handled according to the generated map implementation.
+
+---
+
+### Example
+
+```c
+OPSTATUS status = TREE_FUNC(TREE_MAP_TYPE(AVL, int, int), Insert)(NULL, NULL, &tree, 42, 100);
+```
+
+---
+
+# Tree Remove
+
+Removes a key and its corresponding node.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS TREE_FUNC(TREE_SET_TYPE(AVL, int), Remove)(TREE_SET_TYPE(AVL, int) *tree, int key);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Tree_AVL_Set_int_Remove(Container_Tree_AVL_Set_int *tree, int key);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
+| `tree` | `int) *tree` | Tree or node pointer. |
+| `key` | `int key` | Key or value supplied by caller. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or an operational error, including `NOT_FOUND` when a key is missing.
+
+---
+
+### Remarks
+
+Removes a key and its corresponding node.
+
+---
+
+### Example
+
+```c
+OPSTATUS status = TREE_FUNC(TREE_SET_TYPE(AVL, int), Remove)(NULL, &tree, 42);
+```
+
+---
+
+# Tree FindNode
+
+Returns a pointer to the node matching a key, or NULL.
+
+### Syntax
+
+#### Macro form
+
+```c
+TREE_NODE(TREE_SET_TYPE(AVL, int)) * TREE_FUNC(TREE_SET_TYPE(AVL, int), FindNode)(TREE_SET_TYPE(AVL, int) *tree, int key);
+```
+
+#### Direct form
+
+```c
+Container_Tree_AVL_Set_int_Node * Container_Tree_AVL_Set_int_FindNode(Container_Tree_AVL_Set_int *tree, int key);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
+| `tree` | `int) *tree` | Tree or node pointer. |
+| `key` | `int key` | Key or value supplied by caller. |
+
+---
+
+### Return value
+
+A typed node pointer, or NULL when there is no matching node.
+
+---
+
+### Remarks
+
+Returns a pointer to the node matching a key, or NULL.
+
+---
+
+### Example
+
+```c
+TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), FindNode)(NULL, &tree, 42);
+```
+
+---
+
+# Tree Find Set
+
+Returns a typed pointer to an existing Set key or Map value.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS TREE_FUNC(TREE_SET_TYPE(AVL, int), Find)(TREE_SET_TYPE(AVL, int) *tree, int key, int **out);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Tree_AVL_Set_int_Find(Container_Tree_AVL_Set_int *tree, int key, int **out);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
+| `tree` | `int) *tree` | Tree or node pointer. |
+| `key` | `int key` | Key or value supplied by caller. |
+| `out` | `int **out` | Output pointer to a tree-stored key/value. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or an operational error, including `NOT_FOUND` when a key is missing.
+
+---
+
+### Remarks
+
+Returns a typed pointer to an existing Set key or Map value. The pointer refers to data inside the tree, not a newly allocated result.
+
+---
+
+### Example
+
+```c
+int *found = NULL;
+OPSTATUS status = TREE_FUNC(TREE_SET_TYPE(AVL, int), Find)(NULL, &tree, 42, &found);
+```
+
+---
+
+# Tree Find Map
+
+Returns a typed pointer to an existing Set key or Map value.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS TREE_FUNC(TREE_MAP_TYPE(AVL, int, int), Find)(TREE_MAP_TYPE(AVL, int, int) *tree, int key, int **out);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Tree_AVL_Map_int_int_Find(Container_Tree_AVL_Map_int_int *tree, int key, int **out);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `TREE_MAP_TYPE(AVL` | Key or value supplied by caller. |
+| `int` | `int` | Key or value supplied by caller. |
+| `tree` | `int) *tree` | Tree or node pointer. |
+| `key` | `int key` | Key or value supplied by caller. |
+| `out` | `int **out` | Output pointer to a tree-stored key/value. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or an operational error, including `NOT_FOUND` when a key is missing.
+
+---
+
+### Remarks
+
+Returns a typed pointer to an existing Set key or Map value. The pointer refers to data inside the tree, not a newly allocated result.
+
+---
+
+### Example
+
+```c
+int *found = NULL;
+OPSTATUS status = TREE_FUNC(TREE_MAP_TYPE(AVL, int, int), Find)(NULL, NULL, &tree, 42, &found);
+```
+
+---
+
+# Tree Contains
+
+Checks whether the tree contains the given key.
+
+### Syntax
+
+#### Macro form
+
+```c
+bool TREE_FUNC(TREE_SET_TYPE(AVL, int), Contains)(const TREE_SET_TYPE(AVL, int) *tree, int key);
+```
+
+#### Direct form
+
+```c
+bool Container_Tree_AVL_Set_int_Contains(const Container_Tree_AVL_Set_int *tree, int key);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `const TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
+| `tree` | `int) *tree` | Tree or node pointer. |
+| `key` | `int key` | Key or value supplied by caller. |
+
+---
+
+### Return value
+
+`bool` predicate.
+
+---
+
+### Remarks
+
+Checks whether the tree contains the given key.
+
+---
+
+### Example
+
+```c
+bool present = TREE_FUNC(TREE_SET_TYPE(AVL, int), Contains)(NULL, &tree, 42);
+```
+
+---
+
+# Tree MinNode
+
+Finds the leftmost node of a given subtree.
+
+### Syntax
+
+#### Macro form
+
+```c
+TREE_NODE(TREE_SET_TYPE(AVL, int)) * TREE_FUNC(TREE_SET_TYPE(AVL, int), MinNode)(TREE_NODE(TREE_SET_TYPE(AVL, int)) *node);
+```
+
+#### Direct form
+
+```c
+Container_Tree_AVL_Set_int_Node * Container_Tree_AVL_Set_int_MinNode(Container_Tree_AVL_Set_int_Node *node);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `TREE_NODE(TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
+| `node` | `int)) *node` | Tree or node pointer. |
+
+---
+
+### Return value
+
+A typed node pointer, or NULL when there is no matching node.
+
+---
+
+### Remarks
+
+Finds the leftmost node of a given subtree.
+
+---
+
+### Example
+
+```c
+TREE_NODE(TREE_SET_TYPE(AVL, int)) *node = TREE_FUNC(TREE_SET_TYPE(AVL, int), Begin)(&tree);
+TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), MinNode)(NULL, node);
+```
+
+---
+
+# Tree MaxNode
+
+Finds the rightmost node of a given subtree.
+
+### Syntax
+
+#### Macro form
+
+```c
+TREE_NODE(TREE_SET_TYPE(AVL, int)) * TREE_FUNC(TREE_SET_TYPE(AVL, int), MaxNode)(TREE_NODE(TREE_SET_TYPE(AVL, int)) *node);
+```
+
+#### Direct form
+
+```c
+Container_Tree_AVL_Set_int_Node * Container_Tree_AVL_Set_int_MaxNode(Container_Tree_AVL_Set_int_Node *node);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `TREE_NODE(TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
+| `node` | `int)) *node` | Tree or node pointer. |
+
+---
+
+### Return value
+
+A typed node pointer, or NULL when there is no matching node.
+
+---
+
+### Remarks
+
+Finds the rightmost node of a given subtree.
+
+---
+
+### Example
+
+```c
+TREE_NODE(TREE_SET_TYPE(AVL, int)) *node = TREE_FUNC(TREE_SET_TYPE(AVL, int), Begin)(&tree);
+TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), MaxNode)(NULL, node);
+```
+
+---
+
+# Tree Min
+
+Returns a pointer to the minimum key.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS TREE_FUNC(TREE_SET_TYPE(AVL, int), Min)(TREE_SET_TYPE(AVL, int) *tree, int **out);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Tree_AVL_Set_int_Min(Container_Tree_AVL_Set_int *tree, int **out);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
+| `tree` | `int) *tree` | Tree or node pointer. |
+| `out` | `int **out` | Output pointer to a tree-stored key/value. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or an operational error, including `NOT_FOUND` when a key is missing.
+
+---
+
+### Remarks
+
+Returns a pointer to the minimum key. The pointer refers to data inside the tree, not a newly allocated result.
+
+---
+
+### Example
+
+```c
+int *found = NULL;
+OPSTATUS status = TREE_FUNC(TREE_SET_TYPE(AVL, int), Min)(NULL, &tree, &found);
+```
+
+---
+
+# Tree Max
+
+Returns a pointer to the maximum key.
+
+### Syntax
+
+#### Macro form
+
+```c
+OPSTATUS TREE_FUNC(TREE_SET_TYPE(AVL, int), Max)(TREE_SET_TYPE(AVL, int) *tree, int **out);
+```
+
+#### Direct form
+
+```c
+OPSTATUS Container_Tree_AVL_Set_int_Max(Container_Tree_AVL_Set_int *tree, int **out);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
+| `tree` | `int) *tree` | Tree or node pointer. |
+| `out` | `int **out` | Output pointer to a tree-stored key/value. |
+
+---
+
+### Return value
+
+`OPSTATUS`: success or an operational error, including `NOT_FOUND` when a key is missing.
+
+---
+
+### Remarks
+
+Returns a pointer to the maximum key. The pointer refers to data inside the tree, not a newly allocated result.
+
+---
+
+### Example
+
+```c
+int *found = NULL;
+OPSTATUS status = TREE_FUNC(TREE_SET_TYPE(AVL, int), Max)(NULL, &tree, &found);
+```
+
+---
+
+# Tree Empty
+
+Returns true when tree size is zero.
+
+### Syntax
+
+#### Macro form
+
+```c
+bool TREE_FUNC(TREE_SET_TYPE(AVL, int), Empty)(const TREE_SET_TYPE(AVL, int) *tree);
+```
+
+#### Direct form
+
+```c
+bool Container_Tree_AVL_Set_int_Empty(const Container_Tree_AVL_Set_int *tree);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `const TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
+| `tree` | `int) *tree` | Tree or node pointer. |
+
+---
+
+### Return value
+
+`bool` predicate.
+
+---
+
+### Remarks
+
+Returns true when tree size is zero.
+
+---
+
+### Example
+
+```c
+bool present = TREE_FUNC(TREE_SET_TYPE(AVL, int), Empty)(NULL, &tree);
+```
+
+---
+
+# Tree Size
+
+Returns the number of stored keys.
+
+### Syntax
+
+#### Macro form
+
+```c
+size_t TREE_FUNC(TREE_SET_TYPE(AVL, int), Size)(const TREE_SET_TYPE(AVL, int) *tree);
+```
+
+#### Direct form
+
+```c
+size_t Container_Tree_AVL_Set_int_Size(const Container_Tree_AVL_Set_int *tree);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `const TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
+| `tree` | `int) *tree` | Tree or node pointer. |
+
+---
+
+### Return value
+
+`size_t` key count.
+
+---
+
+### Remarks
+
+Returns the number of stored keys.
+
+---
+
+### Example
+
+```c
+size_t count = TREE_FUNC(TREE_SET_TYPE(AVL, int), Size)(NULL, &tree);
+```
+
+---
+
+# Tree Begin
+
+Returns the smallest node for in-order traversal.
+
+### Syntax
+
+#### Macro form
+
+```c
+TREE_NODE(TREE_SET_TYPE(AVL, int)) * TREE_FUNC(TREE_SET_TYPE(AVL, int), Begin)(TREE_SET_TYPE(AVL, int) *tree);
+```
+
+#### Direct form
+
+```c
+Container_Tree_AVL_Set_int_Node * Container_Tree_AVL_Set_int_Begin(Container_Tree_AVL_Set_int *tree);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
+| `tree` | `int) *tree` | Tree or node pointer. |
+
+---
+
+### Return value
+
+A typed node pointer, or NULL when there is no matching node.
+
+---
+
+### Remarks
+
+Returns the smallest node for in-order traversal. The end sentinel is NULL. Iterator/node references should not be used after removal or destruction.
+
+---
+
+### Example
+
+```c
+TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), Begin)(NULL, &tree);
+```
+
+---
+
+# Tree End
+
+Returns NULL, the past-end iterator.
+
+### Syntax
+
+#### Macro form
+
+```c
+TREE_NODE(TREE_SET_TYPE(AVL, int)) * TREE_FUNC(TREE_SET_TYPE(AVL, int), End)(TREE_SET_TYPE(AVL, int) *tree);
+```
+
+#### Direct form
+
+```c
+Container_Tree_AVL_Set_int_Node * Container_Tree_AVL_Set_int_End(Container_Tree_AVL_Set_int *tree);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
+| `tree` | `int) *tree` | Tree or node pointer. |
+
+---
+
+### Return value
+
+A typed node pointer, or NULL when there is no matching node.
+
+---
+
+### Remarks
+
+Returns NULL, the past-end iterator. The end sentinel is NULL. Iterator/node references should not be used after removal or destruction.
+
+---
+
+### Example
+
+```c
+TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), End)(NULL, &tree);
+```
+
+---
+
+# Tree Next
+
+Returns the in-order successor of a node.
+
+### Syntax
+
+#### Macro form
+
+```c
+TREE_NODE(TREE_SET_TYPE(AVL, int)) * TREE_FUNC(TREE_SET_TYPE(AVL, int), Next)(TREE_NODE(TREE_SET_TYPE(AVL, int)) *node);
+```
+
+#### Direct form
+
+```c
+Container_Tree_AVL_Set_int_Node * Container_Tree_AVL_Set_int_Next(Container_Tree_AVL_Set_int_Node *node);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `TREE_NODE(TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
+| `node` | `int)) *node` | Tree or node pointer. |
+
+---
+
+### Return value
+
+A typed node pointer, or NULL when there is no matching node.
+
+---
+
+### Remarks
+
+Returns the in-order successor of a node. The end sentinel is NULL. Iterator/node references should not be used after removal or destruction.
+
+---
+
+### Example
+
+```c
+TREE_NODE(TREE_SET_TYPE(AVL, int)) *node = TREE_FUNC(TREE_SET_TYPE(AVL, int), Begin)(&tree);
+TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), Next)(NULL, node);
+```
+
+---
+
+# Tree Prev
+
+Returns the in-order predecessor of a node.
+
+### Syntax
+
+#### Macro form
+
+```c
+TREE_NODE(TREE_SET_TYPE(AVL, int)) * TREE_FUNC(TREE_SET_TYPE(AVL, int), Prev)(TREE_NODE(TREE_SET_TYPE(AVL, int)) *node);
+```
+
+#### Direct form
+
+```c
+Container_Tree_AVL_Set_int_Node * Container_Tree_AVL_Set_int_Prev(Container_Tree_AVL_Set_int_Node *node);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `TREE_NODE(TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
+| `node` | `int)) *node` | Tree or node pointer. |
+
+---
+
+### Return value
+
+A typed node pointer, or NULL when there is no matching node.
+
+---
+
+### Remarks
+
+Returns the in-order predecessor of a node. The end sentinel is NULL. Iterator/node references should not be used after removal or destruction.
+
+---
+
+### Example
+
+```c
+TREE_NODE(TREE_SET_TYPE(AVL, int)) *node = TREE_FUNC(TREE_SET_TYPE(AVL, int), Begin)(&tree);
+TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), Prev)(NULL, node);
+```
+
+---
+
+# Tree ConstBegin
+
+Returns the first node with read-only access.
+
+### Syntax
+
+#### Macro form
+
+```c
+const TREE_NODE(TREE_SET_TYPE(AVL, int)) * TREE_FUNC(TREE_SET_TYPE(AVL, int), ConstBegin)(const TREE_SET_TYPE(AVL, int) *tree);
+```
+
+#### Direct form
+
+```c
+const Container_Tree_AVL_Set_int_Node * Container_Tree_AVL_Set_int_ConstBegin(const Container_Tree_AVL_Set_int *tree);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `const TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
+| `tree` | `int) *tree` | Tree or node pointer. |
+
+---
+
+### Return value
+
+A typed node pointer, or NULL when there is no matching node.
+
+---
+
+### Remarks
+
+Returns the first node with read-only access. The end sentinel is NULL. Iterator/node references should not be used after removal or destruction.
+
+---
+
+### Example
+
+```c
+const TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), ConstBegin)(NULL, &tree);
+```
+
+---
+
+# Tree ConstEnd
+
+Returns the read-only NULL past-end sentinel.
+
+### Syntax
+
+#### Macro form
+
+```c
+const TREE_NODE(TREE_SET_TYPE(AVL, int)) * TREE_FUNC(TREE_SET_TYPE(AVL, int), ConstEnd)(const TREE_SET_TYPE(AVL, int) *tree);
+```
+
+#### Direct form
+
+```c
+const Container_Tree_AVL_Set_int_Node * Container_Tree_AVL_Set_int_ConstEnd(const Container_Tree_AVL_Set_int *tree);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `const TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
+| `tree` | `int) *tree` | Tree or node pointer. |
+
+---
+
+### Return value
+
+A typed node pointer, or NULL when there is no matching node.
+
+---
+
+### Remarks
+
+Returns the read-only NULL past-end sentinel. The end sentinel is NULL. Iterator/node references should not be used after removal or destruction.
+
+---
+
+### Example
+
+```c
+const TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), ConstEnd)(NULL, &tree);
+```
+
+---
+
+# Tree ConstNext
+
+Returns a read-only successor node.
+
+### Syntax
+
+#### Macro form
+
+```c
+const TREE_NODE(TREE_SET_TYPE(AVL, int)) * TREE_FUNC(TREE_SET_TYPE(AVL, int), ConstNext)(const TREE_NODE(TREE_SET_TYPE(AVL, int)) *node);
+```
+
+#### Direct form
+
+```c
+const Container_Tree_AVL_Set_int_Node * Container_Tree_AVL_Set_int_ConstNext(const Container_Tree_AVL_Set_int_Node *node);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `const TREE_NODE(TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
+| `node` | `int)) *node` | Tree or node pointer. |
+
+---
+
+### Return value
+
+A typed node pointer, or NULL when there is no matching node.
+
+---
+
+### Remarks
+
+Returns a read-only successor node. The end sentinel is NULL. Iterator/node references should not be used after removal or destruction.
+
+---
+
+### Example
+
+```c
+TREE_NODE(TREE_SET_TYPE(AVL, int)) *node = TREE_FUNC(TREE_SET_TYPE(AVL, int), Begin)(&tree);
+const TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), ConstNext)(NULL, node);
+```
+
+---
+
+# Tree ConstPrev
+
+Returns a read-only predecessor node.
+
+### Syntax
+
+#### Macro form
+
+```c
+const TREE_NODE(TREE_SET_TYPE(AVL, int)) * TREE_FUNC(TREE_SET_TYPE(AVL, int), ConstPrev)(const TREE_NODE(TREE_SET_TYPE(AVL, int)) *node);
+```
+
+#### Direct form
+
+```c
+const Container_Tree_AVL_Set_int_Node * Container_Tree_AVL_Set_int_ConstPrev(const Container_Tree_AVL_Set_int_Node *node);
+```
+
+---
+
+### Parameters
+
+| Parameter | C type | Explanation |
+| --- | --- | --- |
+| `AVL` | `const TREE_NODE(TREE_SET_TYPE(AVL` | Key or value supplied by caller. |
+| `node` | `int)) *node` | Tree or node pointer. |
+
+---
+
+### Return value
+
+A typed node pointer, or NULL when there is no matching node.
+
+---
+
+### Remarks
+
+Returns a read-only predecessor node. The end sentinel is NULL. Iterator/node references should not be used after removal or destruction.
+
+---
+
+### Example
+
+```c
+TREE_NODE(TREE_SET_TYPE(AVL, int)) *node = TREE_FUNC(TREE_SET_TYPE(AVL, int), Begin)(&tree);
+const TREE_NODE(TREE_SET_TYPE(AVL, int)) * result = TREE_FUNC(TREE_SET_TYPE(AVL, int), ConstPrev)(NULL, node);
+```
