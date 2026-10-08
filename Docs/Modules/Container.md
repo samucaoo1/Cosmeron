@@ -3179,7 +3179,6 @@ Copies a selected range into another TString.
 ### Example
 
 ```c
-uint8_t *found = NULL;
 TSTRING_TYPE(8) slice = {0};
 TSTRING_FUNC(8, Init)(&slice);
 OPSTATUS status = TSTRING_FUNC(8, Substr)(&str, 0, 1, &slice);
@@ -3675,9 +3674,11 @@ Inserts a new node after the given node. The newly allocated node belongs to the
 ### Example
 
 ```c
+OPSTATUS status = LINKED_FORWARD_LIST_FUNC(int, PushFront)(&container, 7);
 LINKED_FORWARD_LIST_NODE_TYPE(int) *position = LINKED_FORWARD_LIST_FUNC(int, Begin)(&container);
 LINKED_FORWARD_LIST_NODE_TYPE(int) *created = NULL;
-OPSTATUS status = LINKED_FORWARD_LIST_FUNC(int, InsertAfter)(&container, position, 42, &created);
+if (status == STATUS_CONST(SUCCESS))
+    status = LINKED_FORWARD_LIST_FUNC(int, InsertAfter)(&container, position, 42, &created);
 ```
 
 ---
@@ -4600,9 +4601,11 @@ Inserts a node before the specified list position. The newly allocated node belo
 ### Example
 
 ```c
+OPSTATUS status = LINKED_LIST_FUNC(int, PushBack)(&list, 7);
 LINKED_LIST_NODE_TYPE(int) *position = LINKED_LIST_FUNC(int, Begin)(&list);
 LINKED_LIST_NODE_TYPE(int) *created = NULL;
-OPSTATUS status = LINKED_LIST_FUNC(int, Insert)(&list, position, 42, &created);
+if (status == STATUS_CONST(SUCCESS))
+    status = LINKED_LIST_FUNC(int, Insert)(&list, position, 42, &created);
 ```
 
 ---
@@ -4652,9 +4655,11 @@ Erases the given node and returns the following node through an out parameter. T
 ### Example
 
 ```c
+OPSTATUS status = LINKED_LIST_FUNC(int, PushBack)(&list, 7);
 LINKED_LIST_NODE_TYPE(int) *position = LINKED_LIST_FUNC(int, Begin)(&list);
-LINKED_LIST_NODE_TYPE(int) *created = NULL;
-OPSTATUS status = LINKED_LIST_FUNC(int, Erase)(&list, position, &created);
+LINKED_LIST_NODE_TYPE(int) *next = NULL;
+if (status == STATUS_CONST(SUCCESS))
+    status = LINKED_LIST_FUNC(int, Erase)(&list, position, &next);
 ```
 
 ---
