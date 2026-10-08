@@ -136,7 +136,7 @@ OPSTATUS status = ALLOC_FUNC(AllocBytes)(&out, size);
 
 #### Direct form
 
-``c
+```c
 OPSTATUS status = Memory_AllocBytes(&out, size);
 ```
 
@@ -194,7 +194,7 @@ OPSTATUS status = ALLOC_FUNC(AllocArray)(&out, count, elementSize);
 
 #### Direct form
 
-``c
+```c
 OPSTATUS status = Memory_AllocArray(&out, count, elementSize);
 ```
 
@@ -255,7 +255,7 @@ OPSTATUS status = ALLOC_FUNC(ReallocBytes)(&ptr, newSize);
 
 #### Direct form
 
-``c
+```c
 OPSTATUS status = Memory_ReallocBytes(&ptr, newSize);
 ```
 
@@ -314,7 +314,7 @@ OPSTATUS status = ALLOC_FUNC(ReallocArray)(&ptr, count, elementSize);
 
 #### Direct form
 
-``c
+```c
 OPSTATUS status = Memory_ReallocArray(&ptr, count, elementSize);
 ```
 
@@ -379,7 +379,7 @@ OPSTATUS status = ALLOC_FUNC(FreePointer)(&ptr);
 
 #### Direct form
 
-``c
+```c
 OPSTATUS status = Memory_FreePointer(&ptr);
 ```
 
@@ -502,7 +502,7 @@ OPSTATUS status = MEMORY_FUNC(Copy)(destination, source, size);
 
 #### Direct form
 
-``c
+```c
 OPSTATUS status = Memory_Copy(destination, source, size);
 ```
 
@@ -557,7 +557,7 @@ OPSTATUS status = MEMORY_FUNC(Move)(destination, source, size);
 
 #### Direct form
 
-``c
+```c
 OPSTATUS status = Memory_Move(destination, source, size);
 ```
 
@@ -612,7 +612,7 @@ OPSTATUS status = MEMORY_FUNC(Set)(destination, value, size);
 
 #### Direct form
 
-``c
+```c
 OPSTATUS status = Memory_Set(destination, value, size);
 ```
 
@@ -667,7 +667,7 @@ OPSTATUS status = MEMORY_FUNC(Zero)(destination, size);
 
 #### Direct form
 
-``c
+```c
 OPSTATUS status = Memory_Zero(destination, size);
 ```
 
@@ -720,7 +720,7 @@ OPSTATUS status = MEMORY_FUNC(CopyArray)(destination, source, count, elementSize
 
 #### Direct form
 
-``c
+```c
 OPSTATUS status = Memory_CopyArray(destination, source, count, elementSize);
 ```
 
@@ -776,7 +776,7 @@ OPSTATUS status = MEMORY_FUNC(MoveArray)(destination, source, count, elementSize
 
 #### Direct form
 
-``c
+```c
 OPSTATUS status = Memory_MoveArray(destination, source, count, elementSize);
 ```
 
@@ -831,7 +831,7 @@ OPSTATUS status = MEMORY_FUNC(ZeroArray)(destination, count, elementSize);
 
 #### Direct form
 
-``c
+```c
 OPSTATUS status = Memory_ZeroArray(destination, count, elementSize);
 ```
 
@@ -1055,7 +1055,7 @@ OPSTATUS status = SWAP_FUNC(Bytes)(left, right, size);
 
 #### Direct form
 
-``c
+```c
 OPSTATUS status = Memory_Swap_Bytes(left, right, size);
 ```
 
@@ -1205,7 +1205,7 @@ OPSTATUS status = ARENA_FUNC(Create)(&arena, capacity);
 
 #### Direct form
 
-``c
+```c
 OPSTATUS status = Memory_Arena_Create(&arena, capacity);
 ```
 
@@ -1261,7 +1261,7 @@ OPSTATUS status = ARENA_FUNC(AllocBytes)(&arena, &out, size);
 
 #### Direct form
 
-``c
+```c
 OPSTATUS status = Memory_Arena_AllocBytes(&arena, &out, size);
 ```
 
@@ -1321,7 +1321,7 @@ OPSTATUS status = ARENA_FUNC(AllocAligned)(&arena, &out, size, alignment);
 
 #### Direct form
 
-``c
+```c
 OPSTATUS status = Memory_Arena_AllocAligned(&arena, &out, size, alignment);
 ```
 
@@ -1382,7 +1382,7 @@ OPSTATUS status = ARENA_FUNC(AllocArray)(&arena, &out, count, elementSize);
 
 #### Direct form
 
-``c
+```c
 OPSTATUS status = Memory_Arena_AllocArray(&arena, &out, count, elementSize);
 ```
 
@@ -1446,7 +1446,7 @@ OPSTATUS status = ARENA_FUNC(AllocArrayAligned)(&arena, &out, count, elementSize
 
 #### Direct form
 
-``c
+```c
 OPSTATUS status = Memory_Arena_AllocArrayAligned(&arena, &out, count, elementSize, alignment);
 ```
 
@@ -1507,7 +1507,7 @@ OPSTATUS status = ARENA_FUNC(AllocTyped)(&arena, outPointerObject, count, elemen
 
 #### Direct form
 
-``c
+```c
 OPSTATUS status = Memory_Arena_AllocTyped(&arena, outPointerObject, count, elementSize, alignment);
 ```
 
@@ -1573,7 +1573,7 @@ OPSTATUS status = ARENA_FUNC(Reset)(&arena);
 
 #### Direct form
 
-``c
+```c
 OPSTATUS status = Memory_Arena_Reset(&arena);
 ```
 
@@ -1631,7 +1631,7 @@ OPSTATUS status = ARENA_FUNC(Destroy)(&arena);
 
 #### Direct form
 
-``c
+```c
 OPSTATUS status = Memory_Arena_Destroy(&arena);
 ```
 
