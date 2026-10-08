@@ -1021,7 +1021,7 @@ OPSTATUS Text_Width_Codepoint(Text_TChar32 codepoint, int *outWidth);
 
 ### Remarks
 
-Rejects non-scalars and control code points as INVALID_SEQUENCE. Returns 0 for NUL/combining ranges, 2 for hard-coded wide ranges (including many CJK/emoji), 1 otherwise. Ambiguous-width, grapheme clusters and terminal-specific rendering are not handled.
+Rejects non-scalars and control code points as INVALID_SEQUENCE. Returns 0 for selected combining and zero-width scalar ranges, 2 for hard-coded wide ranges (including many CJK/emoji), and 1 otherwise. **NUL (U+0000) is a control code and returns INVALID_SEQUENCE**, not width zero. Ambiguous-width, grapheme clusters and terminal-specific rendering are not handled.
 
 ---
 
@@ -3712,7 +3712,7 @@ OPSTATUS Text_Grid_char32_Blit(Text_Grid_TGrid_char32 *destination, Struct_TDual
 
 ### Remarks
 
-Unlike Write, this **always copies the source character** while compositing the attribute. INVERSE swaps source/destination foreground/background into resolved attributes. If source has TRANSPARENT_BACKGROUND, the destination's background/default-background state is preserved; this flag is not transparent-glyph alpha. No clipping.
+Unlike Write, this **always copies the source character** while compositing the attribute. INVERSE swaps foreground/background **within each affected attribute**, including its default-color flags, before composition. If source has TRANSPARENT_BACKGROUND, the destination's background/default-background state is preserved; this flag is not transparent-glyph alpha. No clipping.
 
 ---
 
