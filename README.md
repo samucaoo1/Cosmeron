@@ -42,7 +42,9 @@ The current architecture covers or is designed around:
 - **Text:** UTF-8/UTF-16, Unicode, text grids, and terminal-oriented text structures.
 - **Type:** fundamental typed operations and extended numeric/value types.
 
-Planned domains such as Filesystem, Input, Terminal, TUI, Graphics, Parsing, Serialization, Event Loop, Audio, and more are tracked in the [roadmap](Docs/Project/ROADMAP.md).
+The [Input module](Docs/Modules/Input.md) provides keyboard, mouse and controller state through native Windows/Linux backends.
+
+Planned domains such as Filesystem, Terminal, TUI, Graphics, Parsing, Serialization, Event Loop, Audio, and more are tracked in the [roadmap](Docs/Project/ROADMAP.md).
 
 ## Architecture
 

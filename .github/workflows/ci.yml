@@ -48,6 +48,9 @@ jobs:
         if: ${{ hashFiles('Codespace/Tests/**') == '' }}
         run: echo "Codespace/Tests is not present yet; CI is installed and waiting for the source migration."
 
+      - name: Input
+        run: make -C Codespace/Tests/Input clean run CC=${{ matrix.cc }}
+
       - name: Audio
         if: ${{ hashFiles('Codespace/Tests/Audio/**') != '' }}
         run: make -C Codespace/Tests/Audio clean run CC=${{ matrix.cc }}
@@ -109,6 +112,10 @@ jobs:
         if: ${{ hashFiles('Codespace/Tests/**') == '' }}
         shell: bash
         run: echo "Codespace/Tests is not present yet; CI is installed and waiting for the source migration."
+
+      - name: Input
+        shell: bash
+        run: make -C Codespace/Tests/Input clean run CC=gcc
 
       - name: Audio
         if: ${{ hashFiles('Codespace/Tests/Audio/**') != '' }}
@@ -245,6 +252,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Input
+        run: make -C Codespace/Tests/Input clean run CC=clang CFLAGS="$SAN_FLAGS"
       - name: Audio
         run: make -C Codespace/Tests/Audio clean run CC=clang CFLAGS="$SAN_FLAGS"
       - name: Core
@@ -284,6 +293,8 @@ jobs:
       - name: Install 32-bit libc
         run: sudo apt-get update && sudo apt-get install -y gcc-multilib libc6-dev-i386
 
+      - name: Input
+        run: make -C Codespace/Tests/Input clean run CC=gcc CFLAGS="$CFLAGS32"
       - name: Audio
         run: make -C Codespace/Tests/Audio clean run CC=gcc CFLAGS="$CFLAGS32"
       - name: Core

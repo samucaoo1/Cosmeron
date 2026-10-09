@@ -37,6 +37,7 @@ Cross-project technical conventions.
 
 Module-by-module API and usage documentation.
 
+- [Input](Modules/Input.md) — keyboard, mouse, controllers and gamepad state without public initialization
 - [Audio](Modules/Audio.md) — synthesis, beep music, codecs and playback
 - [Bit](Modules/Bit.md)
 
