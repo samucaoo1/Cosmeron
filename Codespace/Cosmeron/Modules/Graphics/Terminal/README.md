@@ -66,7 +66,7 @@ OPSTATUS TERMINAL_FUNC(ReadLine)(
     char *buffer, size_t capacity, size_t *outLength);
 OPSTATUS TERMINAL_FUNC(Scan)(const char *format, ...);
 OPSTATUS TERMINAL_FUNC(Input)(
-    const char *prompt, char *buffer, size_t capacity);
+    const char *prompt,...);
 OPSTATUS TERMINAL_FUNC(PutChar)(uint32_t codepoint);
 OPSTATUS TERMINAL_FUNC(GetChar)(uint32_t *outCodepoint);
 OPSTATUS TERMINAL_FUNC(Flush)(void);
@@ -152,7 +152,7 @@ TERMINAL_FUNC(PrintLn)("Ready");
 TERMINAL_FUNC(PrintAt)((TDUAL_TYPE(uint16)){.x = 10, .y = 4},
                        "HP: %u", hp);
 TERMINAL_FUNC(PrintStyled)(warningStyle, "Warning!");
-TERMINAL_FUNC(Input)("Name: ", name, sizeof(name));
+TERMINAL_FUNC(Input)("Name: %s", name);
 ~~~
 
 ## Tests
