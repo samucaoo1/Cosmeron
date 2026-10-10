@@ -119,6 +119,41 @@ typedef struct UI_TYPE(TProgressBar) {
   bool showPercent, vertical, indeterminate;
 } UI_TYPE(TProgressBar);
 
+/* Dialog is a lightweight overlay; caller draws other widgets beforehand.
+ * Outputs activated/dismissed are reset at each frame. */
+typedef struct UI_TYPE(TDialog) {
+  UI_TYPE(WidgetId) id;
+  TQUAD_TYPE(uint16) region;
+  const char *title, *message;
+  const char *const *actions;
+  size_t actionCount, selected;
+  const UI_TYPE(TVisual) *visual;
+  bool activated, dismissed;
+} UI_TYPE(TDialog);
+
+typedef struct UI_TYPE(TStatusBar) {
+  TQUAD_TYPE(uint16) region;
+  const char *left, *right;
+  const UI_TYPE(TVisual) *visual;
+} UI_TYPE(TStatusBar);
+
+typedef struct UI_TYPE(TToast) {
+  TQUAD_TYPE(uint16) region;
+  const char *title, *message;
+  const UI_TYPE(TVisual) *visual;
+  uint64_t nowTick, expiresAtTick;
+  bool visible;
+} UI_TYPE(TToast);
+
+typedef struct UI_TYPE(TSpinner) {
+  TQUAD_TYPE(uint16) region;
+  const UI_TYPE(TVisual) *visual;
+  const char *label;
+  const char *const *frames;
+  size_t frameCount;
+  uint64_t phase;
+} UI_TYPE(TSpinner);
+
 typedef struct UI_TYPE(TInputText) {
   UI_TYPE(WidgetId) id;
   TQUAD_TYPE(uint16) region;
