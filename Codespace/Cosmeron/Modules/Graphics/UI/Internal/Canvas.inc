@@ -297,3 +297,73 @@ UI_PANEL_END_PROTOTYPE {
   TERMINAL_FUNC(Canvas_Free)(&context->views[--context->panelDepth]);
   return STATUS_CONST(SUCCESS);
 }
+
+UI_POLL_EVENTS_PROTOTYPE {
+  size_t handled=0;
+  if(!context || !outCount || context->frame)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  while(handled<UI_MAX_KEYS) {
+    TERMINAL_TYPE(TEvent) event={0};
+    bool available=false;
+    OPSTATUS status=TERMINAL_FUNC(Event_Poll)(&event,&available);
+    if(status!=STATUS_CONST(SUCCESS))return status;
+    if(!available)break;
+    ++handled;
+    switch(event.kind){
+      case TERMINAL_CONST(EVENT_KEY):
+        status=UI_FUNC(Key)(context,event.key);break;
+      case TERMINAL_CONST(EVENT_POINTER_MOVE):
+        status=UI_FUNC(PointerMove)(context,event.position);break;
+      case TERMINAL_CONST(EVENT_POINTER_BUTTON):
+        status=UI_FUNC(PointerMove)(context,event.position);
+        if(status==STATUS_CONST(SUCCESS))
+          status=UI_FUNC(PointerButton)(context,event.pressed);
+        break;
+      case TERMINAL_CONST(EVENT_SCROLL):
+        status=UI_FUNC(PointerMove)(context,event.position);
+        if(status==STATUS_CONST(SUCCESS))
+          status=UI_FUNC(Scroll)(context,event.scroll);
+        break;
+      case TERMINAL_CONST(EVENT_RESIZE):
+        context->newSize=event.size;context->resized=true;
+        status=STATUS_CONST(SUCCESS);break;
+      default:status=STATUS_CONST(NOT_SUPPORTED);break;
+    }
+    if(status!=STATUS_CONST(SUCCESS))return status;
+  }
+  *outCount=handled;
+  return STATUS_CONST(SUCCESS);
+}
+UI_RESIZE_TAKE_PROTOTYPE {
+  if(!context || !outSize || !context->resized)return false;
+  *outSize=context->newSize;context->resized=false;return true;
+}
+UI_LAYOUT_SHARE_PROTOTYPE {
+  size_t index;
+  uint32_t remaining,maximum,share;
+  if(!UI_INS(Ready)(context)||!outRegion||!numerator||!denominator||
+     numerator>denominator||!context->layoutDepth)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  index=context->layoutDepth-1;
+  maximum=context->layouts[index].row?context->layouts[index].region.right:
+          context->layouts[index].region.bottom;
+  if(context->layouts[index].cursor>maximum)return STATUS_CONST(OUT_OF_RANGE);
+  remaining=maximum-context->layouts[index].cursor+1U;
+  share=(remaining*numerator)/denominator;
+  if(!share)share=1;
+  return UI_FUNC(Layout_Next)(context,(uint16_t)share,outRegion);
+}
+UI_LAYOUT_MEASURE_TEXT_PROTOTYPE {
+  size_t columns=0,codepoints=0;
+  OPSTATUS status;
+  if(!text||!outSize)return STATUS_CONST(INVALID_ARGUMENT);
+  status=TEXT_WIDTH_FUNC(UTF8)((const unsigned char *)text,
+         strlen(text),&columns,&codepoints);
+  if(status!=STATUS_CONST(SUCCESS))return status;
+  if(columns+2U*padding.x>UINT16_MAX||1U+2U*padding.y>UINT16_MAX)
+    return STATUS_CONST(OUT_OF_RANGE);
+  *outSize=(TDUAL_TYPE(uint16)){
+    .col=(uint16_t)(columns+2U*padding.x),
+    .row=(uint16_t)(1U+2U*padding.y)};
+  return STATUS_CONST(SUCCESS);
+}
