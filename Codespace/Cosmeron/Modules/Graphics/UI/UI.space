@@ -1,0 +1,149 @@
+#pragma once
+#include "../Canvas/Canvas.h"
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+
+#define UI_MOD UI
+#define UI_CMOD UI
+#define UI_NS(NAME) GNS2(LIB_PREFIX(UI_MOD), NAME)
+#define UI_CNS(NAME) CNS2(LIB_PREFIX_CONST(UI_CMOD), NAME)
+#define UI_INS(NAME) GNS3(LIB_PREFIX(UI_MOD), Internal, NAME)
+#define UI_TYPE(NAME) UI_NS(NAME)
+#define UI_FUNC(NAME) UI_NS(NAME)
+#define UI_CONST(NAME) UI_CNS(NAME)
+
+/* Bounded, allocation-free state. Applications can tune these limits. */
+#ifndef UI_MAX_WIDGETS
+#define UI_MAX_WIDGETS 128
+#endif
+#ifndef UI_MAX_SCOPES
+#define UI_MAX_SCOPES 16
+#endif
+#ifndef UI_MAX_KEYS
+#define UI_MAX_KEYS 32
+#endif
+_Static_assert(UI_MAX_WIDGETS > 0 && UI_MAX_SCOPES > 0 && UI_MAX_KEYS > 0,
+               "UI capacities must be positive");
+
+typedef uint64_t UI_TYPE(WidgetId);
+typedef enum UI_TYPE(Border) {
+  UI_CONST(BORDER_NONE), UI_CONST(BORDER_ASCII), UI_CONST(BORDER_SINGLE),
+  UI_CONST(BORDER_DOUBLE), UI_CONST(BORDER_ROUNDED), UI_CONST(BORDER_HEAVY)
+} UI_TYPE(Border);
+typedef enum UI_TYPE(Align) {
+  UI_CONST(ALIGN_LEFT), UI_CONST(ALIGN_CENTER), UI_CONST(ALIGN_RIGHT)
+} UI_TYPE(Align);
+
+typedef struct UI_TYPE(TVisual) {
+  TEXT_GRID_ATTRIBUTE_TYPE(Cell) normal, hovered, focused, active, disabled;
+  UI_TYPE(Border) border;
+  UI_TYPE(Align) align;
+  TDUAL_TYPE(uint16) padding;
+} UI_TYPE(TVisual);
+
+typedef struct UI_TYPE(TGlyphs) {
+  const char *checkboxOn, *checkboxOff;
+  const char *radioOn, *radioOff;
+  const char *sliderTrack, *sliderThumb;
+  const char *progressFull, *progressEmpty;
+  const char *selection;
+} UI_TYPE(TGlyphs);
+
+typedef struct UI_TYPE(TTheme) {
+  UI_TYPE(TVisual) text, button, checkbox, radio, slider, input;
+  UI_TYPE(TVisual) panel, progress, selection;
+  UI_TYPE(TGlyphs) glyphs;
+} UI_TYPE(TTheme);
+
+typedef struct UI_TYPE(TLabel) {
+  TQUAD_TYPE(uint16) region;
+  const char *text;
+  const UI_TYPE(TVisual) *visual;
+} UI_TYPE(TLabel);
+typedef struct UI_TYPE(TButton) {
+  UI_TYPE(WidgetId) id;
+  TQUAD_TYPE(uint16) region;
+  const char *label;
+  const UI_TYPE(TVisual) *visual;
+  bool disabled, pressed;
+} UI_TYPE(TButton);
+typedef struct UI_TYPE(TCheckbox) {
+  UI_TYPE(WidgetId) id;
+  TQUAD_TYPE(uint16) region;
+  const char *label;
+  const UI_TYPE(TVisual) *visual;
+  bool disabled, checked;
+} UI_TYPE(TCheckbox);
+typedef struct UI_TYPE(TRadio) {
+  UI_TYPE(WidgetId) id;
+  TQUAD_TYPE(uint16) region;
+  const char *label;
+  const UI_TYPE(TVisual) *visual;
+  uint32_t option, *selected;
+  bool disabled;
+} UI_TYPE(TRadio);
+typedef struct UI_TYPE(TSlider) {
+  UI_TYPE(WidgetId) id;
+  TQUAD_TYPE(uint16) region;
+  const UI_TYPE(TVisual) *visual;
+  int32_t minimum, maximum, value;
+  bool disabled;
+} UI_TYPE(TSlider);
+typedef struct UI_TYPE(TProgress) {
+  TQUAD_TYPE(uint16) region;
+  const UI_TYPE(TVisual) *visual;
+  float fraction;
+} UI_TYPE(TProgress);
+typedef struct UI_TYPE(TInputText) {
+  UI_TYPE(WidgetId) id;
+  TQUAD_TYPE(uint16) region;
+  const UI_TYPE(TVisual) *visual;
+  char *buffer;
+  size_t capacity, length;
+  bool disabled;
+} UI_TYPE(TInputText);
+typedef UI_TYPE(TInputText) UI_TYPE(TTextArea);
+typedef struct UI_TYPE(TList) {
+  UI_TYPE(WidgetId) id;
+  TQUAD_TYPE(uint16) region;
+  const UI_TYPE(TVisual) *visual;
+  const char *const *items;
+  size_t count, *selected;
+  bool disabled;
+} UI_TYPE(TList);
+typedef struct UI_TYPE(TSeparator) {
+  TQUAD_TYPE(uint16) region;
+  const UI_TYPE(TVisual) *visual;
+} UI_TYPE(TSeparator);
+typedef struct UI_TYPE(TPanel) {
+  TQUAD_TYPE(uint16) region;
+  const char *title;
+  const UI_TYPE(TVisual) *visual;
+} UI_TYPE(TPanel);
+
+typedef struct UI_TYPE(TContext) {
+  TERMINAL_TYPE(TCanvas) *canvas;
+  UI_TYPE(TTheme) theme;
+  bool themeSet, frame, pointerDown, pointerPressed, pointerReleased;
+  TDUAL_TYPE(uint16) pointer;
+  UI_TYPE(WidgetId) focus, held, idScope;
+  UI_TYPE(WidgetId) focusIds[UI_MAX_WIDGETS];
+  size_t focusCount;
+  TERMINAL_TYPE(TKey) keys[UI_MAX_KEYS];
+  size_t keyCount;
+  UI_TYPE(TVisual) visualStack[UI_MAX_SCOPES];
+  size_t visualDepth;
+  UI_TYPE(WidgetId) idStack[UI_MAX_SCOPES];
+  size_t idDepth;
+  struct {
+    TQUAD_TYPE(uint16) region;
+    uint32_t cursor;
+    uint16_t gap;
+    bool row;
+  } layouts[UI_MAX_SCOPES];
+  size_t layoutDepth;
+  TERMINAL_TYPE(TCanvas) views[UI_MAX_SCOPES];
+  size_t panelDepth;
+  int32_t scroll;
+} UI_TYPE(TContext);
