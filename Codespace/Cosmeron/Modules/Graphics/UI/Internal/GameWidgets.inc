@@ -48,6 +48,26 @@ static inline OPSTATUS UI_INS(MenuGeometry)(
   if(top>bottom && menu->count)return STATUS_CONST(OUT_OF_RANGE);
   return STATUS_CONST(SUCCESS);
 }
+static inline OPSTATUS UI_INS(MenuAlignedX)(
+    const UI_TYPE(TVisual) *visual,const char *label,
+    uint32_t left,uint32_t right,uint32_t *outX) {
+  size_t columns=0,units=0;
+  uint32_t width;
+  OPSTATUS status;
+  if(!visual || !label || !outX || right<left)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  status=TEXT_WIDTH_FUNC(UTF8)((const unsigned char *)label,
+      strlen(label),&columns,&units);
+  if(status!=STATUS_CONST(SUCCESS))return status;
+  width=right-left+1U;
+  *outX=left;
+  if(columns<width){
+    uint32_t available=(uint32_t)(width-columns);
+    if(visual->align==UI_CONST(ALIGN_CENTER))*outX+=available/2U;
+    else if(visual->align==UI_CONST(ALIGN_RIGHT))*outX+=available;
+  }
+  return STATUS_CONST(SUCCESS);
+}
 UI_MENU_EX_PROTOTYPE {
   UI_TYPE(WidgetId) id;
   const UI_TYPE(TVisual) *visual;
@@ -140,7 +160,10 @@ UI_MENU_EX_PROTOTYPE {
   status=UI_INS(Frame)(context,menu->region,visual->border,style);
   if(status!=STATUS_CONST(SUCCESS))return status;
   if(menu->title && *menu->title){
-    status=UI_INS(Text)(context,left,titleRow,right,menu->title,style,NULL);
+    uint32_t titleX=left;
+    status=UI_INS(MenuAlignedX)(visual,menu->title,left,right,&titleX);
+    if(status!=STATUS_CONST(SUCCESS))return status;
+    status=UI_INS(Text)(context,titleX,titleRow,right,menu->title,style,NULL);
     if(status!=STATUS_CONST(SUCCESS))return status;
   }
   for(y=top;y<=bottom && rows;y++){
@@ -167,7 +190,10 @@ UI_MENU_EX_PROTOTYPE {
     }
     if(x<right)x++;
     if(x<=right){
-      status=UI_INS(Text)(context,x,y,right,menu->items[item],style,NULL);
+      uint32_t aligned=x;
+      status=UI_INS(MenuAlignedX)(visual,menu->items[item],x,right,&aligned);
+      if(status!=STATUS_CONST(SUCCESS))return status;
+      status=UI_INS(Text)(context,aligned,y,right,menu->items[item],style,NULL);
       if(status!=STATUS_CONST(SUCCESS))return status;
     }
   }
