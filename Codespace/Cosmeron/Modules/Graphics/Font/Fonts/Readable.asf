@@ -6,6 +6,10 @@
 static const FONT_TYPE(TFont) Readable_Font = {
     .format = FONT_NS(FORMAT_STATIC),
     .height = 3,
+    .name = "Readable",
+    .author = "Cosmeron contributors",
+    .license = "EUPL-1.2-or-later",
+    /* Optional .letterSpacing and .lineSpacing default to 0. */
     .glyphs = {
         FONT_GLYPH(' ') = {
             .art = "   \n"

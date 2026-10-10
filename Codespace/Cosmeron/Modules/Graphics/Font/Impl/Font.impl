@@ -418,11 +418,16 @@ static inline OPSTATUS FONT_INS(GlyphColumns)(
     }
     if(pos!=n)return STATUS_CONST(INVALID_SEQUENCE);
   }
-  *outColumns=widest;
+  /* Explicit advance width is useful for bitmap fonts and the space glyph.
+   * If omitted, the widest source row defines the advance width. */
+  if(glyph->columns && glyph->columns<widest)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  *outColumns=glyph->columns?glyph->columns:widest;
   return STATUS_CONST(SUCCESS);
 }
 FONT_MEASURE_PROTOTYPE {
   uint32_t lineWidth=0,maxWidth=0,lines=1;
+  bool hasGlyph=false;
   const unsigned char *p=(const unsigned char *)asciiText;
   if(!font||!outSize||!p||!font->height ||
      (font->format!=FONT_NS(FORMAT_STATIC) && !font->data))
@@ -430,24 +435,33 @@ FONT_MEASURE_PROTOTYPE {
   while(*p){
     if(*p=='\n'){
       if(lineWidth>maxWidth)maxWidth=lineWidth;
-      lineWidth=0; ++lines;
+      lineWidth=0;
+      hasGlyph=false;
+      if(lines==UINT32_MAX)return STATUS_CONST(OUT_OF_RANGE);
+      ++lines;
     }else{
+      uint32_t increase;
+      uint16_t columns=0;
+      OPSTATUS status;
       if(*p<32U||*p>126U)return STATUS_CONST(NOT_SUPPORTED);
-      {
-        uint16_t columns=0;
-        OPSTATUS status=FONT_INS(GlyphColumns)(font,*p,&columns);
-        if(status!=STATUS_CONST(SUCCESS))return status;
-        lineWidth+=columns;
-        if(lineWidth>UINT16_MAX)return STATUS_CONST(OUT_OF_RANGE);
-      }
+      status=FONT_INS(GlyphColumns)(font,*p,&columns);
+      if(status!=STATUS_CONST(SUCCESS))return status;
+      increase=(uint32_t)columns+(hasGlyph?font->letterSpacing:0U);
+      if(increase>UINT16_MAX || lineWidth>UINT16_MAX-increase)
+        return STATUS_CONST(OUT_OF_RANGE);
+      lineWidth+=increase;
+      hasGlyph=true;
     }
     ++p;
   }
   if(lineWidth>maxWidth)maxWidth=lineWidth;
-  if((uint32_t)font->height*lines>UINT16_MAX)
-    return STATUS_CONST(OUT_OF_RANGE);
-  *outSize=(TDUAL_TYPE(uint16)){
-    .col=(uint16_t)maxWidth,.row=(uint16_t)(font->height*lines)};
+  {
+    uint64_t height=(uint64_t)font->height*lines +
+                    (uint64_t)font->lineSpacing*(lines-1U);
+    if(height>UINT16_MAX)return STATUS_CONST(OUT_OF_RANGE);
+    *outSize=(TDUAL_TYPE(uint16)){
+      .col=(uint16_t)maxWidth,.row=(uint16_t)height};
+  }
   return STATUS_CONST(SUCCESS);
 }
 static inline OPSTATUS FONT_INS(DrawRow)(
@@ -493,7 +507,12 @@ FONT_DRAW_PROTOTYPE {
     return STATUS_CONST(OUT_OF_RANGE);
   while(*p){
     uint16_t row;
-    if(*p=='\n'){x=position.col;y+=font->height;++p;continue;}
+    if(*p=='\n'){
+      x=position.col;
+      y+=(uint32_t)font->height+font->lineSpacing;
+      ++p;
+      continue;
+    }
     for(row=0;row<font->height;row++){
       const char *str;size_t len;
       status=FONT_INS(Row)(font,*p,row,&str,&len);
@@ -524,6 +543,7 @@ FONT_DRAW_PROTOTYPE {
       status=FONT_INS(GlyphColumns)(font,*p,&columns);
       if(status!=STATUS_CONST(SUCCESS))return status;
       x+=columns;
+      if(p[1] && p[1]!='\n')x+=font->letterSpacing;
     }
     ++p;
   }

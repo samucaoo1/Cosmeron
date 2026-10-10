@@ -35,5 +35,16 @@ typedef struct FONT_TYPE(TFont) {
   uint16_t height;
   char hardblank;
   FONT_TYPE(Format) format;
+
+  /* Optional descriptive fields. Parsed fonts may leave these NULL. */
+  const char *name;
+  const char *author;
+  const char *license;
+
+  /* Terminal cell spacing, shared by Measure and Draw. */
+  uint16_t letterSpacing;
+  uint16_t lineSpacing;
+
+  /* Always the final field: authoring static C11 fonts starts here. */
   FONT_TYPE(TGlyph) glyphs[95]; /* printable ASCII 32..126 */
 } FONT_TYPE(TFont);

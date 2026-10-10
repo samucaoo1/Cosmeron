@@ -35,6 +35,31 @@ Default symbol names are \`Font_ParseASF\`, \`Font_ParseFIGlet\`,
 the input bytes before your last Draw/Measure call**. A parsed font contains
 offsets into that source memory.
 
+## VGA 8×8 Basic — domínio público
+
+A fonte `Fonts/VGA8x8.asf` foi adaptada do conjunto de fontes bitmap
+[font8x8_basic.h](https://github.com/dhepper/font8x8/blob/8e279d2d864e79128e96188a6b9526cfa3fbfef9/font8x8_basic.h),
+criado por Daniel Hepper a partir dos desenhos de Marcel Sondaar. O arquivo
+original declara expressamente **Public Domain**. São 95 caracteres ASCII
+imprimíveis, 8 linhas por glifo, renderizados como `#` e espaços — úteis
+em menus de jogos clássicos e títulos retrô.
+
+```c
+#include "Cosmeron/Modules/Graphics/Font/Fonts/VGA8x8.asf"
+
+/* Fonte constante: sem parser e sem conversor. */
+FONT_FUNC(Draw)(&canvas, (TDUAL_TYPE(uint16)){.x=1,.y=1},
+    &VGA8x8_Font, "GAME OVER", TEXT_GRID_ATTRIBUTE_FUNC(Default)());
+```
+
+A estrutura também expõe metadados opcionais `.name`, `.author`,
+`.license`, `.letterSpacing` e `.lineSpacing`. Os espaçamentos são
+medidos em células e aplicados identicamente em `Font_Measure` e
+`Font_Draw`. Em cada definição C11, o último campo de `TFont` é sempre
+`.glyphs`. Para fontes bitmap, `.columns` em cada glifo pode fixar a
+largura de avanço, inclusive nas linhas vazias, desde que não seja menor
+que a maior linha de arte.
+
 ## ASF nativo — \`static const struct\` C11 (recomendado)
 
 O formato recomendado para fontes que serão **compiladas junto do programa**

@@ -5,6 +5,7 @@
 #include "../../Cosmeron/Modules/Graphics/Font/Font.h"
 #include "Fixtures/Retro.asf.h"
 #include "../../Cosmeron/Modules/Graphics/Font/Fonts/Readable.asf"
+#include "../../Cosmeron/Modules/Graphics/Font/Fonts/VGA8x8.asf"
 #define OK STATUS_CONST(SUCCESS)
 
 static uint32_t at(const TERMINAL_TYPE(TCanvas) *c,unsigned x,unsigned y,
@@ -147,4 +148,31 @@ static void test_static_const_asf(void) {
   (void)bad;
 }
 
-int main(void) { test_asf_embedded();test_figlet();test_asf2_readable();test_static_const_asf();return 0; }
+
+static void test_vga8x8_public_domain(void) {
+  TERMINAL_TYPE(TCanvas) cv={0};
+  TDUAL_TYPE(uint16) measured={0};
+  TEXT_GRID_ATTRIBUTE_TYPE(Cell) attr=TEXT_GRID_ATTRIBUTE_FUNC(Default)();
+  char printable[96];
+  unsigned i;
+  for(i=0;i<95;i++) printable[i]=(char)(32U+i);
+  printable[95]=0;
+  assert(strcmp(VGA8x8_Font.name,"VGA 8x8 Basic")==0);
+  assert(strcmp(VGA8x8_Font.license,"Public Domain")==0);
+  assert(FONT_FUNC(Measure)(&VGA8x8_Font,"AB",&measured)==OK);
+  assert(measured.col==17 && measured.row==8);
+  assert(FONT_FUNC(Measure)(&VGA8x8_Font,"A\\nB",&measured)==OK);
+  assert(measured.col==8 && measured.row==17);
+  assert(FONT_FUNC(Measure)(&VGA8x8_Font,printable,&measured)==OK);
+  assert(measured.col==854 && measured.row==8);
+  assert(TERMINAL_FUNC(Canvas_Create)(&cv,
+      (TDUAL_TYPE(uint16)){.col=40,.row=20})==OK);
+  assert(FONT_FUNC(Draw)(&cv,(TDUAL_TYPE(uint16)){.col=1,.row=1},
+      &VGA8x8_Font,"AB",attr)==OK);
+  assert(at(&cv,3,1,&attr)=='#'); /* A first row is 0x0C */
+  assert(at(&cv,10,1,&attr)=='#'); /* B starts after 8 columns + 1 gap */
+  assert(at(&cv,9,1,&attr)==' ');  /* inter-glyph gap */
+  TERMINAL_FUNC(Canvas_Free)(&cv);
+}
+
+int main(void) { test_asf_embedded();test_figlet();test_asf2_readable();test_static_const_asf();test_vga8x8_public_domain();return 0; }

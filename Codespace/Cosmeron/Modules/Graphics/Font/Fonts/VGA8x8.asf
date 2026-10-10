@@ -1,0 +1,1072 @@
+#pragma once
+/*
+ * VGA8x8.asf -- printable ASCII glyphs from font8x8_basic.h (U+0020..U+007E).
+ *
+ * Source: https://github.com/dhepper/font8x8/blob/8e279d2d864e79128e96188a6b9526cfa3fbfef9/font8x8_basic.h
+ * Source author: Daniel Hepper; original bitmap author: Marcel Sondaar.
+ * Source states explicitly: "License: Public Domain".
+ * Adaptation: each set bit becomes '#', unset bit becomes ' ' (8x8).
+ *
+ * This is a C11 includeable font definition, NOT a textual .flf/.asf parser
+ * input. It needs no script at build time and no runtime file access.
+ */
+#include "../Font.h"
+
+static const FONT_TYPE(TFont) VGA8x8_Font = {
+    .name = "VGA 8x8 Basic",
+    .author = "Daniel Hepper / Marcel Sondaar",
+    .license = "Public Domain",
+    .format = FONT_NS(FORMAT_STATIC),
+    .height = 8,
+    .letterSpacing = 1,
+    .lineSpacing = 1,
+
+    /* Put all artwork at the end for easy hand-editing. */
+    .glyphs = {
+        FONT_GLYPH(' ') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "        "
+        },
+        FONT_GLYPH('!') = {
+            .columns = 8,
+            .art = "   ##   \n"
+                   "  ####  \n"
+                   "  ####  \n"
+                   "   ##   \n"
+                   "   ##   \n"
+                   "        \n"
+                   "   ##   \n"
+                   "        "
+        },
+        FONT_GLYPH('"') = {
+            .columns = 8,
+            .art = " ## ##  \n"
+                   " ## ##  \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "        "
+        },
+        FONT_GLYPH('#') = {
+            .columns = 8,
+            .art = " ## ##  \n"
+                   " ## ##  \n"
+                   "####### \n"
+                   " ## ##  \n"
+                   "####### \n"
+                   " ## ##  \n"
+                   " ## ##  \n"
+                   "        "
+        },
+        FONT_GLYPH('$') = {
+            .columns = 8,
+            .art = "  ##    \n"
+                   " #####  \n"
+                   "##      \n"
+                   " ####   \n"
+                   "    ##  \n"
+                   "#####   \n"
+                   "  ##    \n"
+                   "        "
+        },
+        FONT_GLYPH('%') = {
+            .columns = 8,
+            .art = "        \n"
+                   "##   ## \n"
+                   "##  ##  \n"
+                   "   ##   \n"
+                   "  ##    \n"
+                   " ##  ## \n"
+                   "##   ## \n"
+                   "        "
+        },
+        FONT_GLYPH('&') = {
+            .columns = 8,
+            .art = "  ###   \n"
+                   " ## ##  \n"
+                   "  ###   \n"
+                   " ### ## \n"
+                   "## ###  \n"
+                   "##  ##  \n"
+                   " ### ## \n"
+                   "        "
+        },
+        FONT_GLYPH(39) = {
+            .columns = 8,
+            .art = " ##     \n"
+                   " ##     \n"
+                   "##      \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "        "
+        },
+        FONT_GLYPH('(') = {
+            .columns = 8,
+            .art = "   ##   \n"
+                   "  ##    \n"
+                   " ##     \n"
+                   " ##     \n"
+                   " ##     \n"
+                   "  ##    \n"
+                   "   ##   \n"
+                   "        "
+        },
+        FONT_GLYPH(')') = {
+            .columns = 8,
+            .art = " ##     \n"
+                   "  ##    \n"
+                   "   ##   \n"
+                   "   ##   \n"
+                   "   ##   \n"
+                   "  ##    \n"
+                   " ##     \n"
+                   "        "
+        },
+        FONT_GLYPH('*') = {
+            .columns = 8,
+            .art = "        \n"
+                   " ##  ## \n"
+                   "  ####  \n"
+                   "########\n"
+                   "  ####  \n"
+                   " ##  ## \n"
+                   "        \n"
+                   "        "
+        },
+        FONT_GLYPH('+') = {
+            .columns = 8,
+            .art = "        \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "######  \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "        \n"
+                   "        "
+        },
+        FONT_GLYPH(',') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   " ##     "
+        },
+        FONT_GLYPH('-') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   "        \n"
+                   "######  \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "        "
+        },
+        FONT_GLYPH('.') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "        "
+        },
+        FONT_GLYPH('/') = {
+            .columns = 8,
+            .art = "     ## \n"
+                   "    ##  \n"
+                   "   ##   \n"
+                   "  ##    \n"
+                   " ##     \n"
+                   "##      \n"
+                   "#       \n"
+                   "        "
+        },
+        FONT_GLYPH('0') = {
+            .columns = 8,
+            .art = " #####  \n"
+                   "##   ## \n"
+                   "##  ### \n"
+                   "## #### \n"
+                   "#### ## \n"
+                   "###  ## \n"
+                   " #####  \n"
+                   "        "
+        },
+        FONT_GLYPH('1') = {
+            .columns = 8,
+            .art = "  ##    \n"
+                   " ###    \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "######  \n"
+                   "        "
+        },
+        FONT_GLYPH('2') = {
+            .columns = 8,
+            .art = " ####   \n"
+                   "##  ##  \n"
+                   "    ##  \n"
+                   "  ###   \n"
+                   " ##     \n"
+                   "##  ##  \n"
+                   "######  \n"
+                   "        "
+        },
+        FONT_GLYPH('3') = {
+            .columns = 8,
+            .art = " ####   \n"
+                   "##  ##  \n"
+                   "    ##  \n"
+                   "  ###   \n"
+                   "    ##  \n"
+                   "##  ##  \n"
+                   " ####   \n"
+                   "        "
+        },
+        FONT_GLYPH('4') = {
+            .columns = 8,
+            .art = "   ###  \n"
+                   "  ####  \n"
+                   " ## ##  \n"
+                   "##  ##  \n"
+                   "####### \n"
+                   "    ##  \n"
+                   "   #### \n"
+                   "        "
+        },
+        FONT_GLYPH('5') = {
+            .columns = 8,
+            .art = "######  \n"
+                   "##      \n"
+                   "#####   \n"
+                   "    ##  \n"
+                   "    ##  \n"
+                   "##  ##  \n"
+                   " ####   \n"
+                   "        "
+        },
+        FONT_GLYPH('6') = {
+            .columns = 8,
+            .art = "  ###   \n"
+                   " ##     \n"
+                   "##      \n"
+                   "#####   \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   " ####   \n"
+                   "        "
+        },
+        FONT_GLYPH('7') = {
+            .columns = 8,
+            .art = "######  \n"
+                   "##  ##  \n"
+                   "    ##  \n"
+                   "   ##   \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "        "
+        },
+        FONT_GLYPH('8') = {
+            .columns = 8,
+            .art = " ####   \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   " ####   \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   " ####   \n"
+                   "        "
+        },
+        FONT_GLYPH('9') = {
+            .columns = 8,
+            .art = " ####   \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   " #####  \n"
+                   "    ##  \n"
+                   "   ##   \n"
+                   " ###    \n"
+                   "        "
+        },
+        FONT_GLYPH(':') = {
+            .columns = 8,
+            .art = "        \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "        \n"
+                   "        \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "        "
+        },
+        FONT_GLYPH(';') = {
+            .columns = 8,
+            .art = "        \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "        \n"
+                   "        \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   " ##     "
+        },
+        FONT_GLYPH('<') = {
+            .columns = 8,
+            .art = "   ##   \n"
+                   "  ##    \n"
+                   " ##     \n"
+                   "##      \n"
+                   " ##     \n"
+                   "  ##    \n"
+                   "   ##   \n"
+                   "        "
+        },
+        FONT_GLYPH('=') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   "######  \n"
+                   "        \n"
+                   "        \n"
+                   "######  \n"
+                   "        \n"
+                   "        "
+        },
+        FONT_GLYPH('>') = {
+            .columns = 8,
+            .art = " ##     \n"
+                   "  ##    \n"
+                   "   ##   \n"
+                   "    ##  \n"
+                   "   ##   \n"
+                   "  ##    \n"
+                   " ##     \n"
+                   "        "
+        },
+        FONT_GLYPH('?') = {
+            .columns = 8,
+            .art = " ####   \n"
+                   "##  ##  \n"
+                   "    ##  \n"
+                   "   ##   \n"
+                   "  ##    \n"
+                   "        \n"
+                   "  ##    \n"
+                   "        "
+        },
+        FONT_GLYPH('@') = {
+            .columns = 8,
+            .art = " #####  \n"
+                   "##   ## \n"
+                   "## #### \n"
+                   "## #### \n"
+                   "## #### \n"
+                   "##      \n"
+                   " ####   \n"
+                   "        "
+        },
+        FONT_GLYPH('A') = {
+            .columns = 8,
+            .art = "  ##    \n"
+                   " ####   \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   "######  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   "        "
+        },
+        FONT_GLYPH('B') = {
+            .columns = 8,
+            .art = "######  \n"
+                   " ##  ## \n"
+                   " ##  ## \n"
+                   " #####  \n"
+                   " ##  ## \n"
+                   " ##  ## \n"
+                   "######  \n"
+                   "        "
+        },
+        FONT_GLYPH('C') = {
+            .columns = 8,
+            .art = "  ####  \n"
+                   " ##  ## \n"
+                   "##      \n"
+                   "##      \n"
+                   "##      \n"
+                   " ##  ## \n"
+                   "  ####  \n"
+                   "        "
+        },
+        FONT_GLYPH('D') = {
+            .columns = 8,
+            .art = "#####   \n"
+                   " ## ##  \n"
+                   " ##  ## \n"
+                   " ##  ## \n"
+                   " ##  ## \n"
+                   " ## ##  \n"
+                   "#####   \n"
+                   "        "
+        },
+        FONT_GLYPH('E') = {
+            .columns = 8,
+            .art = "####### \n"
+                   " ##   # \n"
+                   " ## #   \n"
+                   " ####   \n"
+                   " ## #   \n"
+                   " ##   # \n"
+                   "####### \n"
+                   "        "
+        },
+        FONT_GLYPH('F') = {
+            .columns = 8,
+            .art = "####### \n"
+                   " ##   # \n"
+                   " ## #   \n"
+                   " ####   \n"
+                   " ## #   \n"
+                   " ##     \n"
+                   "####    \n"
+                   "        "
+        },
+        FONT_GLYPH('G') = {
+            .columns = 8,
+            .art = "  ####  \n"
+                   " ##  ## \n"
+                   "##      \n"
+                   "##      \n"
+                   "##  ### \n"
+                   " ##  ## \n"
+                   "  ##### \n"
+                   "        "
+        },
+        FONT_GLYPH('H') = {
+            .columns = 8,
+            .art = "##  ##  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   "######  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   "        "
+        },
+        FONT_GLYPH('I') = {
+            .columns = 8,
+            .art = " ####   \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   " ####   \n"
+                   "        "
+        },
+        FONT_GLYPH('J') = {
+            .columns = 8,
+            .art = "   #### \n"
+                   "    ##  \n"
+                   "    ##  \n"
+                   "    ##  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   " ####   \n"
+                   "        "
+        },
+        FONT_GLYPH('K') = {
+            .columns = 8,
+            .art = "###  ## \n"
+                   " ##  ## \n"
+                   " ## ##  \n"
+                   " ####   \n"
+                   " ## ##  \n"
+                   " ##  ## \n"
+                   "###  ## \n"
+                   "        "
+        },
+        FONT_GLYPH('L') = {
+            .columns = 8,
+            .art = "####    \n"
+                   " ##     \n"
+                   " ##     \n"
+                   " ##     \n"
+                   " ##   # \n"
+                   " ##  ## \n"
+                   "####### \n"
+                   "        "
+        },
+        FONT_GLYPH('M') = {
+            .columns = 8,
+            .art = "##   ## \n"
+                   "### ### \n"
+                   "####### \n"
+                   "####### \n"
+                   "## # ## \n"
+                   "##   ## \n"
+                   "##   ## \n"
+                   "        "
+        },
+        FONT_GLYPH('N') = {
+            .columns = 8,
+            .art = "##   ## \n"
+                   "###  ## \n"
+                   "#### ## \n"
+                   "## #### \n"
+                   "##  ### \n"
+                   "##   ## \n"
+                   "##   ## \n"
+                   "        "
+        },
+        FONT_GLYPH('O') = {
+            .columns = 8,
+            .art = "  ###   \n"
+                   " ## ##  \n"
+                   "##   ## \n"
+                   "##   ## \n"
+                   "##   ## \n"
+                   " ## ##  \n"
+                   "  ###   \n"
+                   "        "
+        },
+        FONT_GLYPH('P') = {
+            .columns = 8,
+            .art = "######  \n"
+                   " ##  ## \n"
+                   " ##  ## \n"
+                   " #####  \n"
+                   " ##     \n"
+                   " ##     \n"
+                   "####    \n"
+                   "        "
+        },
+        FONT_GLYPH('Q') = {
+            .columns = 8,
+            .art = " ####   \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   "## ###  \n"
+                   " ####   \n"
+                   "   ###  \n"
+                   "        "
+        },
+        FONT_GLYPH('R') = {
+            .columns = 8,
+            .art = "######  \n"
+                   " ##  ## \n"
+                   " ##  ## \n"
+                   " #####  \n"
+                   " ## ##  \n"
+                   " ##  ## \n"
+                   "###  ## \n"
+                   "        "
+        },
+        FONT_GLYPH('S') = {
+            .columns = 8,
+            .art = " ####   \n"
+                   "##  ##  \n"
+                   "###     \n"
+                   " ###    \n"
+                   "   ###  \n"
+                   "##  ##  \n"
+                   " ####   \n"
+                   "        "
+        },
+        FONT_GLYPH('T') = {
+            .columns = 8,
+            .art = "######  \n"
+                   "# ## #  \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   " ####   \n"
+                   "        "
+        },
+        FONT_GLYPH('U') = {
+            .columns = 8,
+            .art = "##  ##  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   "######  \n"
+                   "        "
+        },
+        FONT_GLYPH('V') = {
+            .columns = 8,
+            .art = "##  ##  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   " ####   \n"
+                   "  ##    \n"
+                   "        "
+        },
+        FONT_GLYPH('W') = {
+            .columns = 8,
+            .art = "##   ## \n"
+                   "##   ## \n"
+                   "##   ## \n"
+                   "## # ## \n"
+                   "####### \n"
+                   "### ### \n"
+                   "##   ## \n"
+                   "        "
+        },
+        FONT_GLYPH('X') = {
+            .columns = 8,
+            .art = "##   ## \n"
+                   "##   ## \n"
+                   " ## ##  \n"
+                   "  ###   \n"
+                   "  ###   \n"
+                   " ## ##  \n"
+                   "##   ## \n"
+                   "        "
+        },
+        FONT_GLYPH('Y') = {
+            .columns = 8,
+            .art = "##  ##  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   " ####   \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   " ####   \n"
+                   "        "
+        },
+        FONT_GLYPH('Z') = {
+            .columns = 8,
+            .art = "####### \n"
+                   "##   ## \n"
+                   "#   ##  \n"
+                   "   ##   \n"
+                   "  ##  # \n"
+                   " ##  ## \n"
+                   "####### \n"
+                   "        "
+        },
+        FONT_GLYPH('[') = {
+            .columns = 8,
+            .art = " ####   \n"
+                   " ##     \n"
+                   " ##     \n"
+                   " ##     \n"
+                   " ##     \n"
+                   " ##     \n"
+                   " ####   \n"
+                   "        "
+        },
+        FONT_GLYPH(92) = {
+            .columns = 8,
+            .art = "##      \n"
+                   " ##     \n"
+                   "  ##    \n"
+                   "   ##   \n"
+                   "    ##  \n"
+                   "     ## \n"
+                   "      # \n"
+                   "        "
+        },
+        FONT_GLYPH(']') = {
+            .columns = 8,
+            .art = " ####   \n"
+                   "   ##   \n"
+                   "   ##   \n"
+                   "   ##   \n"
+                   "   ##   \n"
+                   "   ##   \n"
+                   " ####   \n"
+                   "        "
+        },
+        FONT_GLYPH('^') = {
+            .columns = 8,
+            .art = "   #    \n"
+                   "  ###   \n"
+                   " ## ##  \n"
+                   "##   ## \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "        "
+        },
+        FONT_GLYPH('_') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "########"
+        },
+        FONT_GLYPH('`') = {
+            .columns = 8,
+            .art = "  ##    \n"
+                   "  ##    \n"
+                   "   ##   \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "        "
+        },
+        FONT_GLYPH('a') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   " ####   \n"
+                   "    ##  \n"
+                   " #####  \n"
+                   "##  ##  \n"
+                   " ### ## \n"
+                   "        "
+        },
+        FONT_GLYPH('b') = {
+            .columns = 8,
+            .art = "###     \n"
+                   " ##     \n"
+                   " ##     \n"
+                   " #####  \n"
+                   " ##  ## \n"
+                   " ##  ## \n"
+                   "## ###  \n"
+                   "        "
+        },
+        FONT_GLYPH('c') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   " ####   \n"
+                   "##  ##  \n"
+                   "##      \n"
+                   "##  ##  \n"
+                   " ####   \n"
+                   "        "
+        },
+        FONT_GLYPH('d') = {
+            .columns = 8,
+            .art = "   ###  \n"
+                   "    ##  \n"
+                   "    ##  \n"
+                   " #####  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   " ### ## \n"
+                   "        "
+        },
+        FONT_GLYPH('e') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   " ####   \n"
+                   "##  ##  \n"
+                   "######  \n"
+                   "##      \n"
+                   " ####   \n"
+                   "        "
+        },
+        FONT_GLYPH('f') = {
+            .columns = 8,
+            .art = "  ###   \n"
+                   " ## ##  \n"
+                   " ##     \n"
+                   "####    \n"
+                   " ##     \n"
+                   " ##     \n"
+                   "####    \n"
+                   "        "
+        },
+        FONT_GLYPH('g') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   " ### ## \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   " #####  \n"
+                   "    ##  \n"
+                   "#####   "
+        },
+        FONT_GLYPH('h') = {
+            .columns = 8,
+            .art = "###     \n"
+                   " ##     \n"
+                   " ## ##  \n"
+                   " ### ## \n"
+                   " ##  ## \n"
+                   " ##  ## \n"
+                   "###  ## \n"
+                   "        "
+        },
+        FONT_GLYPH('i') = {
+            .columns = 8,
+            .art = "  ##    \n"
+                   "        \n"
+                   " ###    \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   " ####   \n"
+                   "        "
+        },
+        FONT_GLYPH('j') = {
+            .columns = 8,
+            .art = "    ##  \n"
+                   "        \n"
+                   "    ##  \n"
+                   "    ##  \n"
+                   "    ##  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   " ####   "
+        },
+        FONT_GLYPH('k') = {
+            .columns = 8,
+            .art = "###     \n"
+                   " ##     \n"
+                   " ##  ## \n"
+                   " ## ##  \n"
+                   " ####   \n"
+                   " ## ##  \n"
+                   "###  ## \n"
+                   "        "
+        },
+        FONT_GLYPH('l') = {
+            .columns = 8,
+            .art = " ###    \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   " ####   \n"
+                   "        "
+        },
+        FONT_GLYPH('m') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   "##  ##  \n"
+                   "####### \n"
+                   "####### \n"
+                   "## # ## \n"
+                   "##   ## \n"
+                   "        "
+        },
+        FONT_GLYPH('n') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   "#####   \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   "        "
+        },
+        FONT_GLYPH('o') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   " ####   \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   " ####   \n"
+                   "        "
+        },
+        FONT_GLYPH('p') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   "## ###  \n"
+                   " ##  ## \n"
+                   " ##  ## \n"
+                   " #####  \n"
+                   " ##     \n"
+                   "####    "
+        },
+        FONT_GLYPH('q') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   " ### ## \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   " #####  \n"
+                   "    ##  \n"
+                   "   #### "
+        },
+        FONT_GLYPH('r') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   "## ###  \n"
+                   " ### ## \n"
+                   " ##  ## \n"
+                   " ##     \n"
+                   "####    \n"
+                   "        "
+        },
+        FONT_GLYPH('s') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   " #####  \n"
+                   "##      \n"
+                   " ####   \n"
+                   "    ##  \n"
+                   "#####   \n"
+                   "        "
+        },
+        FONT_GLYPH('t') = {
+            .columns = 8,
+            .art = "   #    \n"
+                   "  ##    \n"
+                   " #####  \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "  ## #  \n"
+                   "   ##   \n"
+                   "        "
+        },
+        FONT_GLYPH('u') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   " ### ## \n"
+                   "        "
+        },
+        FONT_GLYPH('v') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   " ####   \n"
+                   "  ##    \n"
+                   "        "
+        },
+        FONT_GLYPH('w') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   "##   ## \n"
+                   "## # ## \n"
+                   "####### \n"
+                   "####### \n"
+                   " ## ##  \n"
+                   "        "
+        },
+        FONT_GLYPH('x') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   "##   ## \n"
+                   " ## ##  \n"
+                   "  ###   \n"
+                   " ## ##  \n"
+                   "##   ## \n"
+                   "        "
+        },
+        FONT_GLYPH('y') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   "##  ##  \n"
+                   " #####  \n"
+                   "    ##  \n"
+                   "#####   "
+        },
+        FONT_GLYPH('z') = {
+            .columns = 8,
+            .art = "        \n"
+                   "        \n"
+                   "######  \n"
+                   "#  ##   \n"
+                   "  ##    \n"
+                   " ##  #  \n"
+                   "######  \n"
+                   "        "
+        },
+        FONT_GLYPH('{') = {
+            .columns = 8,
+            .art = "   ###  \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "###     \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "   ###  \n"
+                   "        "
+        },
+        FONT_GLYPH('|') = {
+            .columns = 8,
+            .art = "   ##   \n"
+                   "   ##   \n"
+                   "   ##   \n"
+                   "        \n"
+                   "   ##   \n"
+                   "   ##   \n"
+                   "   ##   \n"
+                   "        "
+        },
+        FONT_GLYPH('}') = {
+            .columns = 8,
+            .art = "###     \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "   ###  \n"
+                   "  ##    \n"
+                   "  ##    \n"
+                   "###     \n"
+                   "        "
+        },
+        FONT_GLYPH('~') = {
+            .columns = 8,
+            .art = " ### ## \n"
+                   "## ###  \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "        \n"
+                   "        "
+        }
+    }
+};
