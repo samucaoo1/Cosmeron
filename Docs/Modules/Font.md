@@ -35,6 +35,51 @@ Default symbol names are \`Font_ParseASF\`, \`Font_ParseFIGlet\`,
 the input bytes before your last Draw/Measure call**. A parsed font contains
 offsets into that source memory.
 
+## ASF2 — fonte legível, estilo FIGlet
+
+**Novo formato recomendado para criação manual.** Um arquivo ASF2 mostra as
+letras diretamente; nenhuma sequência ANSI é inserida no desenho. As cores
+opcionais são declaradas após as linhas de arte de cada glifo.
+
+```text
+ASF2 3
+# Glifos visíveis em um editor de texto comum
+@A
+  A
+ A A
+AAAAA
+
+@B
+BBBBB
+B   B
+BBBBB
+!fg 0 #FF281E
+```
+
+- `ASF2 3`: altura de três linhas; `@A` e `@B` são glifos por caractere;
+  `@space` representa o espaço (ASCII 32).
+- Linhas têm largura variável dentro de um glifo; o leitor mede a maior e
+  avança esse número de células, sem obrigar espaços à direita.
+- `!fg 0 #FF281E`: pinta **somente a linha zero** do glifo B com RGB.
+  Usar `!fg 1 #...` para a segunda, e assim por diante.
+- Linhas em branco e comentários são permitidos entre blocos.
+- Glifos de entrada ainda são limitados a ASCII 32–126. Os desenhos aceitam
+  Unicode UTF-8, sujeitos ao suporte de largura do Canvas.
+- O parser antigo `Font_ParseASF` continua lendo ASF1, sem alterações.
+  Use `Font_ParseASF2` para esta sintaxe.
+
+```c
+FONT_TYPE(TFont) font={0};
+FONT_FUNC(ParseASF2)((const char *)MyFont_Data,
+    sizeof(MyFont_Data),&font);
+FONT_FUNC(Draw)(&canvas,position,&font,"AB",
+    TEXT_GRID_ATTRIBUTE_FUNC(Default)());
+```
+
+A ferramenta `Tools/asf_compile.py` também embute arquivos ASF2 em
+headers C11 sem modificar os bytes. Exemplo:
+`Codespace/Cosmeron/Modules/Graphics/Font/Fonts/Readable.asf`.
+
 ## ASF1 specification (version 1)
 
 ASF means *ANSI/ASCII Font*. Version 1 is a **plain UTF-8 text** file with
