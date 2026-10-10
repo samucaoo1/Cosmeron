@@ -201,7 +201,7 @@ static inline OPSTATUS FONT_INS(Row)(
 }
 FONT_PARSE_ASF_PROTOTYPE {
   FONT_TYPE(TFont) f={0};
-  size_t cursor=0,start,len,at=4U;
+  size_t cursor=0,start=0,len=0,at=4U;
   uint32_t height=0;
   if(!data||!size||!outFont)return STATUS_CONST(INVALID_ARGUMENT);
   if(!FONT_INS(Line)(data,size,&cursor,&start,&len) || len<6 ||
@@ -243,7 +243,7 @@ FONT_PARSE_ASF_PROTOTYPE {
 }
 FONT_PARSE_FIGLET_PROTOTYPE {
   FONT_TYPE(TFont) f={0};
-  size_t cursor=0,start,len,at=6;
+  size_t cursor=0,start=0,len=0,at=6;
   uint32_t height=0,baseline=0,maxLen=0,comments=0;
   unsigned int letter, row;
   if(!data||!size||!outFont)return STATUS_CONST(INVALID_ARGUMENT);
