@@ -33,8 +33,8 @@ static void test_ui(void) {
   TQUAD_TYPE(uint16) piece;
   const char *items[]={"One","Two","Three"};
   char buffer[32]={0};
-  size_t selected=0, length=0;
-  bool pressed=false,checked=false;
+  size_t selected=0;
+  bool pressed=false;
   uint32_t chosen=1, point=0;
   TEXT_GRID_ATTRIBUTE_TYPE(Cell) attr;
   assert(TERMINAL_FUNC(Canvas_Create)(
