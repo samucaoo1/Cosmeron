@@ -1,0 +1,563 @@
+#pragma once
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#if OS_WINDOWS
+#include <windows.h>
+#include <conio.h>
+#else
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <termios.h>
+#include <sys/select.h>
+#include <errno.h>
+#endif
+
+static inline TERMINAL_TYPE(TTerminal) *TERMINAL_INS(State)(void) {
+  static TERMINAL_TYPE(TTerminal) state = {0};
+  state.input.stream = stdin; state.input.kind = TERMINAL_CONST(STDIN);
+  state.output.stream = stdout; state.output.kind = TERMINAL_CONST(STDOUT);
+  state.error.stream = stderr; state.error.kind = TERMINAL_CONST(STDERR);
+  return &state;
+}
+static inline bool TERMINAL_INS(IsTTY)(FILE *stream) {
+#if OS_WINDOWS
+  DWORD mode;
+  intptr_t fd = _get_osfhandle(_fileno(stream));
+  return fd != -1 && GetConsoleMode((HANDLE)fd, &mode) != 0;
+#else
+  return isatty(fileno(stream)) != 0;
+#endif
+}
+static inline bool TERMINAL_INS(Interactive)(void) {
+  return TERMINAL_INS(IsTTY)(stdout);
+}
+static inline OPSTATUS TERMINAL_INS(Emit)(const char *sequence) {
+  if (!TERMINAL_INS(Interactive)()) return STATUS_CONST(NOT_AVAILABLE);
+  if (fputs(sequence, stdout) == EOF) return STATUS_CONST(GENERIC_ERROR);
+  return STATUS_CONST(SUCCESS);
+}
+static inline OPSTATUS TERMINAL_INS(Format)(FILE *stream, const char *format, va_list args) {
+  if (!stream || !format) return STATUS_CONST(INVALID_ARGUMENT);
+  return vfprintf(stream, format, args) < 0 ? STATUS_CONST(GENERIC_ERROR) : STATUS_CONST(SUCCESS);
+}
+static inline OPSTATUS TERMINAL_INS(VPrintStyled)(
+    const TDUAL_TYPE(uint16) *position,
+    const TEXT_GRID_ATTRIBUTE_TYPE(Cell) *style,
+    const char *format, va_list args);
+static inline OPSTATUS TERMINAL_INS(ApplyStyle)(TEXT_GRID_ATTRIBUTE_TYPE(Cell) style);
+
+TERMINAL_STANDARD_PROTOTYPE { return TERMINAL_INS(State)(); }
+TERMINAL_STANDARD_HANDLE_PROTOTYPE {
+  TERMINAL_TYPE(TTerminal) *s = TERMINAL_INS(State)();
+  switch (stream) {
+  case TERMINAL_CONST(STDIN): return &s->input;
+  case TERMINAL_CONST(STDOUT): return &s->output;
+  case TERMINAL_CONST(STDERR): return &s->error;
+  default: return NULL;
+  }
+}
+TERMINAL_WRITE_TO_PROTOTYPE {
+  size_t count;
+  if (!handle || !handle->stream || !outWritten || (!data && size))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  count = fwrite(data, 1, size, handle->stream);
+  *outWritten = count;
+  return count == size ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR);
+}
+TERMINAL_READ_FROM_PROTOTYPE {
+  size_t count;
+  if (!handle || !handle->stream || !buffer || !outRead || !capacity)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  count = fread(buffer, 1, capacity, handle->stream);
+  *outRead = count;
+  return ferror(handle->stream) ? STATUS_CONST(GENERIC_ERROR) : STATUS_CONST(SUCCESS);
+}
+TERMINAL_FLUSH_HANDLE_PROTOTYPE {
+  if (!handle || !handle->stream) return STATUS_CONST(INVALID_ARGUMENT);
+  return fflush(handle->stream) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR);
+}
+TERMINAL_PRINT_TO_PROTOTYPE {
+  va_list args; OPSTATUS status;
+  if (!handle || !handle->stream || !format) return STATUS_CONST(INVALID_ARGUMENT);
+  va_start(args, format);
+  status = TERMINAL_INS(Format)(handle->stream, format, args);
+  va_end(args);
+  return status;
+}
+TERMINAL_WRITE_PROTOTYPE {
+  size_t written = 0;
+  return TERMINAL_FUNC(WriteTo)(TERMINAL_FUNC(StandardHandle)(TERMINAL_CONST(STDOUT)),data,size,&written);
+}
+TERMINAL_READ_PROTOTYPE {
+  return TERMINAL_FUNC(ReadFrom)(TERMINAL_FUNC(StandardHandle)(TERMINAL_CONST(STDIN)),buffer,capacity,outRead);
+}
+TERMINAL_PRINT_PROTOTYPE {
+  va_list args; OPSTATUS status;
+  if (!format) return STATUS_CONST(INVALID_ARGUMENT);
+  va_start(args, format); status = TERMINAL_INS(Format)(stdout,format,args); va_end(args);
+  return status;
+}
+TERMINAL_PRINT_LN_PROTOTYPE {
+  va_list args; OPSTATUS status;
+  if (!format) return STATUS_CONST(INVALID_ARGUMENT);
+  va_start(args, format); status = TERMINAL_INS(Format)(stdout,format,args); va_end(args);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  return fputc('\n',stdout)==EOF ? STATUS_CONST(GENERIC_ERROR) : STATUS_CONST(SUCCESS);
+}
+TERMINAL_WRITE_LINE_PROTOTYPE {
+  if (!text) return STATUS_CONST(INVALID_ARGUMENT);
+  if (fputs(text,stdout)==EOF || fputc('\n',stdout)==EOF) return STATUS_CONST(GENERIC_ERROR);
+  return STATUS_CONST(SUCCESS);
+}
+TERMINAL_READ_LINE_PROTOTYPE {
+  size_t size=0; int ch;
+  if (!buffer || !capacity || !outLength) return STATUS_CONST(INVALID_ARGUMENT);
+  while ((ch=fgetc(stdin)) != EOF && ch!='\n') {
+    if (size + 1 < capacity) buffer[size++] = (char)ch;
+    else {
+      while ((ch=fgetc(stdin))!=EOF && ch!='\n') {}
+      buffer[size]=0;
+      return STATUS_CONST(INSUFFICIENT_SPACE);
+    }
+  }
+  buffer[size]=0;
+  if (ch==EOF && ferror(stdin)) return STATUS_CONST(GENERIC_ERROR);
+  if (ch==EOF && size==0) return STATUS_CONST(NOT_FOUND);
+  if (size && buffer[size-1]=='\r') buffer[--size]=0;
+  *outLength=size;
+  return STATUS_CONST(SUCCESS);
+}
+TERMINAL_INPUT_PROTOTYPE {
+  OPSTATUS result;
+  if (!prompt) return STATUS_CONST(INVALID_ARGUMENT);
+  result=TERMINAL_FUNC(Print)("%s",prompt);
+  if (result!=STATUS_CONST(SUCCESS)) return result;
+  result=TERMINAL_FUNC(Flush)();
+  if (result!=STATUS_CONST(SUCCESS)) return result;
+  return TERMINAL_FUNC(ReadLine)(buffer,capacity,outLength);
+}
+TERMINAL_SCAN_PROTOTYPE {
+  va_list args; int result;
+  if (!format) return STATUS_CONST(INVALID_ARGUMENT);
+  /* Never silently allow scanf string/scanset conversions without a bound.
+   * The scanf API is intentionally restricted to formats with no conversions;
+   * callers should use ReadLine and explicit parsing for untrusted input. */
+  if (strchr(format,'%')) return STATUS_CONST(NOT_SUPPORTED);
+  va_start(args,format); result=vfscanf(stdin,format,args); va_end(args);
+  return result==EOF ? STATUS_CONST(NOT_FOUND) : STATUS_CONST(SUCCESS);
+}
+TERMINAL_PUT_CHAR_PROTOTYPE {
+  unsigned char bytes[4]; size_t size=0;
+  OPSTATUS status=TEXT_UTF8_FUNC(Encode)((TEXT_TYPE(TChar32))codepoint,bytes,sizeof(bytes),&size);
+  return status==STATUS_CONST(SUCCESS) ? TERMINAL_FUNC(Write)(bytes,size) : status;
+}
+TERMINAL_GET_CHAR_PROTOTYPE {
+  unsigned char bytes[4]; size_t n=0, consumed=0; int ch; OPSTATUS status;
+  TEXT_TYPE(TChar32) decoded;
+  if (!outCodepoint) return STATUS_CONST(INVALID_ARGUMENT);
+  ch=fgetc(stdin);
+  if (ch==EOF) return ferror(stdin)?STATUS_CONST(GENERIC_ERROR):STATUS_CONST(NOT_FOUND);
+  bytes[n++]=(unsigned char)ch;
+  for (;;) {
+    status=TEXT_UTF8_FUNC(Decode)(bytes,n,&decoded,&consumed);
+    if (status!=STATUS_CONST(INCOMPLETE_SEQUENCE)) break;
+    if (n==sizeof(bytes)) return STATUS_CONST(INVALID_SEQUENCE);
+    ch=fgetc(stdin);
+    if (ch==EOF) return STATUS_CONST(INCOMPLETE_SEQUENCE);
+    bytes[n++]=(unsigned char)ch;
+  }
+  if (status==STATUS_CONST(SUCCESS)) *outCodepoint=decoded;
+  return status;
+}
+TERMINAL_FLUSH_PROTOTYPE { return fflush(stdout)==0?STATUS_CONST(SUCCESS):STATUS_CONST(GENERIC_ERROR); }
+
+#if OS_WINDOWS
+static inline OPSTATUS TERMINAL_INS(ConsolePosition)(TDUAL_TYPE(uint16) *outPosition) {
+  CONSOLE_SCREEN_BUFFER_INFO info; HANDLE h=GetStdHandle(STD_OUTPUT_HANDLE);
+  if (!GetConsoleScreenBufferInfo(h,&info)) return STATUS_CONST(NOT_AVAILABLE);
+  outPosition->x=(uint16_t)info.dwCursorPosition.X;
+  outPosition->y=(uint16_t)info.dwCursorPosition.Y;
+  return STATUS_CONST(SUCCESS);
+}
+#endif
+TERMINAL_CURSOR_GET_POSITION_PROTOTYPE {
+  if (!outPosition) return STATUS_CONST(INVALID_ARGUMENT);
+#if OS_WINDOWS
+  return TERMINAL_INS(ConsolePosition)(outPosition);
+#else
+  return STATUS_CONST(NOT_SUPPORTED); /* No async cursor-reply parsing. */
+#endif
+}
+TERMINAL_CURSOR_SET_POSITION_PROTOTYPE {
+  if (!TERMINAL_INS(Interactive)()) return STATUS_CONST(NOT_AVAILABLE);
+#if OS_WINDOWS
+  COORD coord; coord.X=(SHORT)position.x; coord.Y=(SHORT)position.y;
+  return SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE),coord) ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR);
+#else
+  return fprintf(stdout,"\x1b[%u;%uH",(unsigned)position.y+1,(unsigned)position.x+1)<0 ? STATUS_CONST(GENERIC_ERROR):STATUS_CONST(SUCCESS);
+#endif
+}
+TERMINAL_CURSOR_MOVE_PROTOTYPE {
+  if (!TERMINAL_INS(Interactive)()) return STATUS_CONST(NOT_AVAILABLE);
+#if OS_WINDOWS
+  TDUAL_TYPE(uint16) p; int64_t x,y;
+  OPSTATUS st=TERMINAL_FUNC(Cursor_GetPosition)(&p);
+  if (st!=STATUS_CONST(SUCCESS)) return st;
+  x=(int64_t)p.x+deltaX; y=(int64_t)p.y+deltaY;
+  if (x<0 || y<0 || x>UINT16_MAX || y>UINT16_MAX) return STATUS_CONST(OUT_OF_RANGE);
+  p.x=(uint16_t)x;p.y=(uint16_t)y;
+  return TERMINAL_FUNC(Cursor_SetPosition)(p);
+#else
+  if (deltaY < 0 && fprintf(stdout,"\x1b[%lluA",(unsigned long long)(-(int64_t)deltaY)) < 0) return STATUS_CONST(GENERIC_ERROR);
+  if (deltaY > 0 && fprintf(stdout,"\x1b[%uB",(unsigned)deltaY)<0) return STATUS_CONST(GENERIC_ERROR);
+  if (deltaX > 0 && fprintf(stdout,"\x1b[%uC",(unsigned)deltaX)<0) return STATUS_CONST(GENERIC_ERROR);
+  if (deltaX < 0 && fprintf(stdout,"\x1b[%lluD",(unsigned long long)(-(int64_t)deltaX))<0) return STATUS_CONST(GENERIC_ERROR);
+  return STATUS_CONST(SUCCESS);
+#endif
+}
+TERMINAL_CURSOR_SHOW_PROTOTYPE {
+#if OS_WINDOWS
+  CONSOLE_CURSOR_INFO info; HANDLE h=GetStdHandle(STD_OUTPUT_HANDLE);
+  if (!TERMINAL_INS(Interactive)()) return STATUS_CONST(NOT_AVAILABLE);
+  if (!GetConsoleCursorInfo(h,&info)) return STATUS_CONST(GENERIC_ERROR);
+  info.bVisible=TRUE;
+  return SetConsoleCursorInfo(h,&info)?STATUS_CONST(SUCCESS):STATUS_CONST(GENERIC_ERROR);
+#else
+  return TERMINAL_INS(Emit)("\x1b[?25h");
+#endif
+}
+TERMINAL_CURSOR_HIDE_PROTOTYPE {
+#if OS_WINDOWS
+  CONSOLE_CURSOR_INFO info; HANDLE h=GetStdHandle(STD_OUTPUT_HANDLE);
+  if (!TERMINAL_INS(Interactive)()) return STATUS_CONST(NOT_AVAILABLE);
+  if (!GetConsoleCursorInfo(h,&info)) return STATUS_CONST(GENERIC_ERROR);
+  info.bVisible=FALSE;
+  return SetConsoleCursorInfo(h,&info)?STATUS_CONST(SUCCESS):STATUS_CONST(GENERIC_ERROR);
+#else
+  return TERMINAL_INS(Emit)("\x1b[?25l");
+#endif
+}
+TERMINAL_SIZE_GET_PROTOTYPE {
+  if (!outSize) return STATUS_CONST(INVALID_ARGUMENT);
+#if OS_WINDOWS
+  CONSOLE_SCREEN_BUFFER_INFO info;
+  if (!GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE),&info)) return STATUS_CONST(NOT_AVAILABLE);
+  outSize->col=(uint16_t)(info.srWindow.Right-info.srWindow.Left+1);
+  outSize->row=(uint16_t)(info.srWindow.Bottom-info.srWindow.Top+1);
+  return STATUS_CONST(SUCCESS);
+#else
+  struct winsize sz;
+  if (!TERMINAL_INS(Interactive)() || ioctl(fileno(stdout),TIOCGWINSZ,&sz)<0)
+    return STATUS_CONST(NOT_AVAILABLE);
+  outSize->col=sz.ws_col; outSize->row=sz.ws_row;
+  return STATUS_CONST(SUCCESS);
+#endif
+}
+TERMINAL_CLEAR_PROTOTYPE {
+#if OS_WINDOWS
+  CONSOLE_SCREEN_BUFFER_INFO info; HANDLE h=GetStdHandle(STD_OUTPUT_HANDLE);
+  DWORD written; COORD origin={0,0}; DWORD count;
+  if (!GetConsoleScreenBufferInfo(h,&info)) return STATUS_CONST(NOT_AVAILABLE);
+  count=(DWORD)info.dwSize.X*(DWORD)info.dwSize.Y;
+  if (!FillConsoleOutputCharacterA(h,' ',count,origin,&written) ||
+      !FillConsoleOutputAttribute(h,info.wAttributes,count,origin,&written) ||
+      !SetConsoleCursorPosition(h,origin)) return STATUS_CONST(GENERIC_ERROR);
+  return STATUS_CONST(SUCCESS);
+#else
+  return TERMINAL_INS(Emit)("\x1b[2J\x1b[H");
+#endif
+}
+TERMINAL_CLEAR_LINE_PROTOTYPE {
+#if OS_WINDOWS
+  CONSOLE_SCREEN_BUFFER_INFO info; HANDLE h=GetStdHandle(STD_OUTPUT_HANDLE); DWORD written;
+  if (!GetConsoleScreenBufferInfo(h,&info)) return STATUS_CONST(NOT_AVAILABLE);
+  return FillConsoleOutputCharacterA(h,' ',(DWORD)(info.dwSize.X-info.dwCursorPosition.X),info.dwCursorPosition,&written)?STATUS_CONST(SUCCESS):STATUS_CONST(GENERIC_ERROR);
+#else
+  return TERMINAL_INS(Emit)("\x1b[2K\r");
+#endif
+}
+TERMINAL_TITLE_SET_PROTOTYPE {
+  if (!title) return STATUS_CONST(INVALID_ARGUMENT);
+  if (!TERMINAL_INS(Interactive)()) return STATUS_CONST(NOT_AVAILABLE);
+#if OS_WINDOWS
+  return SetConsoleTitleA(title)?STATUS_CONST(SUCCESS):STATUS_CONST(GENERIC_ERROR);
+#else
+  if (strchr(title,'\x1b') || strchr(title,'\a') || strchr(title,'\r') || strchr(title,'\n')) return STATUS_CONST(INVALID_ARGUMENT);
+  return fprintf(stdout,"\x1b]0;%s\a",title)<0?STATUS_CONST(GENERIC_ERROR):STATUS_CONST(SUCCESS);
+#endif
+}
+TERMINAL_BELL_PROTOTYPE { return fputc('\a',stdout)==EOF?STATUS_CONST(GENERIC_ERROR):STATUS_CONST(SUCCESS); }
+
+static inline TEXT_GRID_ATTRIBUTE_TYPE(Cell) *TERMINAL_INS(StyleState)(void) {
+  static TEXT_GRID_ATTRIBUTE_TYPE(Cell) style={0};
+  return &style;
+}
+static inline bool *TERMINAL_INS(StyleSet)(void) {
+  static bool initialized=false; return &initialized;
+}
+static inline TEXT_GRID_ATTRIBUTE_TYPE(Cell) TERMINAL_INS(CurrentStyle)(void) {
+  return *TERMINAL_INS(StyleSet)()?*TERMINAL_INS(StyleState)():TEXT_GRID_ATTRIBUTE_FUNC(Default)();
+}
+static inline OPSTATUS TERMINAL_INS(ApplyStyle)(TEXT_GRID_ATTRIBUTE_TYPE(Cell) style) {
+  if (!TERMINAL_INS(Interactive)()) return STATUS_CONST(NOT_AVAILABLE);
+#if OS_WINDOWS
+  /* Windows VT rendering requires explicit console VT support. */
+  DWORD mode; HANDLE h=GetStdHandle(STD_OUTPUT_HANDLE);
+  if (!GetConsoleMode(h,&mode) || !(mode&ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+    return STATUS_CONST(NOT_SUPPORTED);
+#endif
+  if (fputs("\x1b[0",stdout)==EOF) return STATUS_CONST(GENERIC_ERROR);
+#define TERMINAL_FLAG_OUT(FLAG, CODE) if (style.flags & TEXT_GRID_ATTRIBUTE_CONST(FLAG)) { if (fputs(";" CODE,stdout)==EOF) return STATUS_CONST(GENERIC_ERROR); }
+  TERMINAL_FLAG_OUT(BOLD,"1")
+  TERMINAL_FLAG_OUT(FAINT,"2")
+  TERMINAL_FLAG_OUT(ITALIC,"3")
+  TERMINAL_FLAG_OUT(BLINK,"5")
+  TERMINAL_FLAG_OUT(INVERSE,"7")
+  TERMINAL_FLAG_OUT(HIDDEN,"8")
+  TERMINAL_FLAG_OUT(STRIKE,"9")
+  TERMINAL_FLAG_OUT(OVERLINE,"53")
+#undef TERMINAL_FLAG_OUT
+  if (style.underline != TEXT_GRID_UNDERLINE_CONST(NONE) && fputs(";4",stdout)==EOF) return STATUS_CONST(GENERIC_ERROR);
+  if (!(style.flags & TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_FOREGROUND)) &&
+      fprintf(stdout,";38;2;%u;%u;%u",
+       (unsigned)TEXT_GRID_COLOR_RED(style.foreground),
+       (unsigned)TEXT_GRID_COLOR_GREEN(style.foreground),
+       (unsigned)TEXT_GRID_COLOR_BLUE(style.foreground))<0) return STATUS_CONST(GENERIC_ERROR);
+  if (!(style.flags & TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_BACKGROUND)) &&
+      fprintf(stdout,";48;2;%u;%u;%u",
+       (unsigned)TEXT_GRID_COLOR_RED(style.background),
+       (unsigned)TEXT_GRID_COLOR_GREEN(style.background),
+       (unsigned)TEXT_GRID_COLOR_BLUE(style.background))<0) return STATUS_CONST(GENERIC_ERROR);
+  return fputc('m',stdout)==EOF?STATUS_CONST(GENERIC_ERROR):STATUS_CONST(SUCCESS);
+}
+TERMINAL_STYLE_GET_PROTOTYPE {
+  if (!outStyle) return STATUS_CONST(INVALID_ARGUMENT);
+  *outStyle=TERMINAL_INS(CurrentStyle)(); return STATUS_CONST(SUCCESS);
+}
+TERMINAL_STYLE_SET_PROTOTYPE {
+  OPSTATUS result=TERMINAL_INS(ApplyStyle)(style);
+  if (result==STATUS_CONST(SUCCESS)) {
+    *TERMINAL_INS(StyleState)()=style;*TERMINAL_INS(StyleSet)()=true;
+  }
+  return result;
+}
+TERMINAL_STYLE_RESET_PROTOTYPE { return TERMINAL_FUNC(Style_Set)(TEXT_GRID_ATTRIBUTE_FUNC(Default)()); }
+TERMINAL_COLOR_SET_PROTOTYPE {
+  TEXT_GRID_ATTRIBUTE_TYPE(Cell) style=TERMINAL_INS(CurrentStyle)();
+  style.foreground=foreground;style.background=background;
+  style.flags &= (uint16_t)~(TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_FOREGROUND)|TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_BACKGROUND));
+  return TERMINAL_FUNC(Style_Set)(style);
+}
+TERMINAL_COLOR_RESET_PROTOTYPE {
+  TEXT_GRID_ATTRIBUTE_TYPE(Cell) style=TERMINAL_INS(CurrentStyle)();
+  style.flags |= TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_FOREGROUND)|TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_BACKGROUND);
+  return TERMINAL_FUNC(Style_Set)(style);
+}
+TERMINAL_ATTRIBUTE_SET_PROTOTYPE {
+  TEXT_GRID_ATTRIBUTE_TYPE(Cell) style=TERMINAL_INS(CurrentStyle)();
+  const uint16_t mask=(uint16_t)(TEXT_GRID_ATTRIBUTE_CONST(BOLD)|TEXT_GRID_ATTRIBUTE_CONST(FAINT)|
+    TEXT_GRID_ATTRIBUTE_CONST(ITALIC)|TEXT_GRID_ATTRIBUTE_CONST(BLINK)|
+    TEXT_GRID_ATTRIBUTE_CONST(INVERSE)|TEXT_GRID_ATTRIBUTE_CONST(HIDDEN)|
+    TEXT_GRID_ATTRIBUTE_CONST(STRIKE)|TEXT_GRID_ATTRIBUTE_CONST(OVERLINE));
+  style.flags=(uint16_t)((style.flags&~mask)|(attributes&mask));
+  return TERMINAL_FUNC(Style_Set)(style);
+}
+TERMINAL_ATTRIBUTE_ADD_PROTOTYPE {
+  TEXT_GRID_ATTRIBUTE_TYPE(Cell) style=TERMINAL_INS(CurrentStyle)();
+  style.flags |= attributes;
+  return TERMINAL_FUNC(Style_Set)(style);
+}
+TERMINAL_ATTRIBUTE_REMOVE_PROTOTYPE {
+  TEXT_GRID_ATTRIBUTE_TYPE(Cell) style=TERMINAL_INS(CurrentStyle)();
+  style.flags &= (uint16_t)~attributes;
+  return TERMINAL_FUNC(Style_Set)(style);
+}
+TERMINAL_ATTRIBUTE_RESET_PROTOTYPE { return TERMINAL_FUNC(Attribute_Set)(0); }
+
+static inline OPSTATUS TERMINAL_INS(VPrintStyled)(
+    const TDUAL_TYPE(uint16) *position, const TEXT_GRID_ATTRIBUTE_TYPE(Cell) *style,
+    const char *format, va_list args) {
+  OPSTATUS result; TEXT_GRID_ATTRIBUTE_TYPE(Cell) previous; 
+  if (!format) return STATUS_CONST(INVALID_ARGUMENT);
+  if ((position || style) && !TERMINAL_INS(Interactive)()) return STATUS_CONST(NOT_AVAILABLE);
+  /* Save/restore terminal cursor with DEC sequences on POSIX; console position on Windows. */
+#if OS_WINDOWS
+  TDUAL_TYPE(uint16) oldPosition;
+  if (position) {
+    result=TERMINAL_FUNC(Cursor_GetPosition)(&oldPosition);
+    if(result!=STATUS_CONST(SUCCESS)) return result;
+    result=TERMINAL_FUNC(Cursor_SetPosition)(*position);
+    if(result!=STATUS_CONST(SUCCESS)) return result;
+  }
+#else
+  if (position && fputs("\x1b" "7",stdout)==EOF) return STATUS_CONST(GENERIC_ERROR);
+  if (position) {
+    result=TERMINAL_FUNC(Cursor_SetPosition)(*position);
+    if(result!=STATUS_CONST(SUCCESS)) { (void)fputs("\x1b" "8",stdout);return result; }
+  }
+#endif
+  previous=TERMINAL_INS(CurrentStyle)();
+  if (style) {
+    result=TERMINAL_INS(ApplyStyle)(*style);
+    if (result!=STATUS_CONST(SUCCESS)) goto restore;
+  }
+  result=TERMINAL_INS(Format)(stdout,format,args);
+restore:
+  if (style) {
+    OPSTATUS restore=TERMINAL_INS(ApplyStyle)(previous);
+    if (result==STATUS_CONST(SUCCESS)) result=restore;
+  }
+  if (position) {
+#if OS_WINDOWS
+    OPSTATUS restore=TERMINAL_FUNC(Cursor_SetPosition)(oldPosition);
+    if (result==STATUS_CONST(SUCCESS)) result=restore;
+#else
+    if (fputs("\x1b" "8",stdout)==EOF && result==STATUS_CONST(SUCCESS)) result=STATUS_CONST(GENERIC_ERROR);
+#endif
+  }
+  return result;
+}
+TERMINAL_PRINT_AT_PROTOTYPE {
+  OPSTATUS result; va_list args;
+  va_start(args,format);result=TERMINAL_INS(VPrintStyled)(&position,NULL,format,args);va_end(args);
+  return result;
+}
+TERMINAL_PRINT_STYLED_PROTOTYPE {
+  OPSTATUS result;va_list args;
+  va_start(args,format);result=TERMINAL_INS(VPrintStyled)(NULL,&style,format,args);va_end(args);
+  return result;
+}
+TERMINAL_PRINT_STYLED_LN_PROTOTYPE {
+  OPSTATUS result;va_list args;
+  va_start(args,format);result=TERMINAL_INS(VPrintStyled)(NULL,&style,format,args);va_end(args);
+  if (result!=STATUS_CONST(SUCCESS)) return result;
+  return fputc('\n',stdout)==EOF?STATUS_CONST(GENERIC_ERROR):STATUS_CONST(SUCCESS);
+}
+TERMINAL_PRINT_STYLED_AT_PROTOTYPE {
+  OPSTATUS result;va_list args;
+  va_start(args,format);result=TERMINAL_INS(VPrintStyled)(&position,&style,format,args);va_end(args);
+  return result;
+}
+
+/* Keyboard mode changes are explicit, and the original POSIX state is kept. */
+#if !OS_WINDOWS
+static inline struct termios *TERMINAL_INS(OriginalTermios)(void) {
+  static struct termios value;return &value;
+}
+static inline bool *TERMINAL_INS(OriginalSaved)(void) {
+  static bool value=false;return &value;
+}
+#endif
+static inline TERMINAL_TYPE(InputMode) *TERMINAL_INS(ModeState)(void) {
+  static TERMINAL_TYPE(InputMode) value=TERMINAL_CONST(INPUT_CANONICAL);return &value;
+}
+TERMINAL_INPUT_MODE_GET_PROTOTYPE {
+  if (!outMode) return STATUS_CONST(INVALID_ARGUMENT);
+  if (!TERMINAL_INS(IsTTY)(stdin)) return STATUS_CONST(NOT_AVAILABLE);
+  *outMode=*TERMINAL_INS(ModeState)();return STATUS_CONST(SUCCESS);
+}
+TERMINAL_INPUT_MODE_SET_PROTOTYPE {
+  if (mode!=TERMINAL_CONST(INPUT_CANONICAL) &&
+      mode!=TERMINAL_CONST(INPUT_CBREAK) && mode!=TERMINAL_CONST(INPUT_RAW))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (!TERMINAL_INS(IsTTY)(stdin)) return STATUS_CONST(NOT_AVAILABLE);
+#if OS_WINDOWS
+  HANDLE h=GetStdHandle(STD_INPUT_HANDLE); DWORD flags;
+  if (!GetConsoleMode(h,&flags)) return STATUS_CONST(GENERIC_ERROR);
+  if (mode==TERMINAL_CONST(INPUT_CANONICAL)) flags|=ENABLE_LINE_INPUT|ENABLE_ECHO_INPUT|ENABLE_PROCESSED_INPUT;
+  else {flags&=~(ENABLE_LINE_INPUT|ENABLE_ECHO_INPUT);if(mode==TERMINAL_CONST(INPUT_RAW))flags&=~ENABLE_PROCESSED_INPUT;}
+  if(!SetConsoleMode(h,flags)) return STATUS_CONST(GENERIC_ERROR);
+#else
+  struct termios original,updated;
+  if (!*TERMINAL_INS(OriginalSaved)()) {
+    if(tcgetattr(fileno(stdin),TERMINAL_INS(OriginalTermios)())<0) return STATUS_CONST(GENERIC_ERROR);
+    *TERMINAL_INS(OriginalSaved)()=true;
+  }
+  original=*TERMINAL_INS(OriginalTermios)();
+  updated=original;
+  if (mode!=TERMINAL_CONST(INPUT_CANONICAL)) {
+    updated.c_lflag &= (tcflag_t)~(ICANON|ECHO);
+    updated.c_cc[VMIN]=1;updated.c_cc[VTIME]=0;
+    if (mode==TERMINAL_CONST(INPUT_RAW)) {
+      updated.c_lflag &= (tcflag_t)~(ISIG|IEXTEN);
+      updated.c_iflag &= (tcflag_t)~(IXON|ICRNL|BRKINT|INPCK|ISTRIP);
+      updated.c_oflag &= (tcflag_t)~OPOST;
+      updated.c_cflag |= CS8;
+    }
+  }
+  if(tcsetattr(fileno(stdin),TCSANOW,&updated)<0) return STATUS_CONST(GENERIC_ERROR);
+#endif
+  *TERMINAL_INS(ModeState)()=mode;
+  return STATUS_CONST(SUCCESS);
+}
+TERMINAL_KEY_HIT_PROTOTYPE {
+  if (!outAvailable) return STATUS_CONST(INVALID_ARGUMENT);
+  if (!TERMINAL_INS(IsTTY)(stdin)) return STATUS_CONST(NOT_AVAILABLE);
+#if OS_WINDOWS
+  *outAvailable=_kbhit()!=0;
+#else
+  fd_set set;struct timeval timeout={0,0};
+  FD_ZERO(&set);FD_SET(fileno(stdin),&set);
+  {int n=select(fileno(stdin)+1,&set,NULL,NULL,&timeout);
+   if (n<0) return STATUS_CONST(GENERIC_ERROR);
+   *outAvailable=n>0;}
+#endif
+  return STATUS_CONST(SUCCESS);
+}
+static inline OPSTATUS TERMINAL_INS(ReadKey)(TERMINAL_TYPE(TKey) *outKey, bool echo) {
+  TERMINAL_TYPE(TKey) key;int ch;
+  if (!outKey) return STATUS_CONST(INVALID_ARGUMENT);
+  if (!TERMINAL_INS(IsTTY)(stdin)) return STATUS_CONST(NOT_AVAILABLE);
+#if OS_WINDOWS
+  ch=_getch();
+  if(ch==0 || ch==224) {
+    switch(_getch()) {
+    case 72:key=TERMINAL_CONST(KEY_UP);break;
+    case 80:key=TERMINAL_CONST(KEY_DOWN);break;
+    case 75:key=TERMINAL_CONST(KEY_LEFT);break;
+    case 77:key=TERMINAL_CONST(KEY_RIGHT);break;
+    case 71:key=TERMINAL_CONST(KEY_HOME);break;
+    case 79:key=TERMINAL_CONST(KEY_END);break;
+    case 83:key=TERMINAL_CONST(KEY_DELETE);break;
+    default:return STATUS_CONST(NOT_SUPPORTED);
+    }
+  } else key=(TERMINAL_TYPE(TKey))(unsigned char)ch;
+#else
+  TERMINAL_TYPE(InputMode) previous=*TERMINAL_INS(ModeState)();
+  bool changed=previous==TERMINAL_CONST(INPUT_CANONICAL);
+  if (changed) {OPSTATUS st=TERMINAL_FUNC(InputMode_Set)(TERMINAL_CONST(INPUT_CBREAK));if(st!=STATUS_CONST(SUCCESS))return st;}
+  ch=fgetc(stdin);
+  if (ch==EOF) {
+    if (changed)(void)TERMINAL_FUNC(InputMode_Set)(previous);
+    return STATUS_CONST(NOT_FOUND);
+  }
+  key=(TERMINAL_TYPE(TKey))(unsigned char)ch;
+  if (ch==27) {
+    bool available=false;
+    if (TERMINAL_FUNC(Key_Hit)(&available)==STATUS_CONST(SUCCESS) && available) {
+      int next=fgetc(stdin);
+      if (next=='[') {
+        int code=fgetc(stdin);
+        switch(code) {
+        case 'A':key=TERMINAL_CONST(KEY_UP);break;
+        case 'B':key=TERMINAL_CONST(KEY_DOWN);break;
+        case 'C':key=TERMINAL_CONST(KEY_RIGHT);break;
+        case 'D':key=TERMINAL_CONST(KEY_LEFT);break;
+        case 'H':key=TERMINAL_CONST(KEY_HOME);break;
+        case 'F':key=TERMINAL_CONST(KEY_END);break;
+        default:break;
+        }
+      } else if(next!=EOF) ungetc(next,stdin);
+    }
+  }
+  if (changed) (void)TERMINAL_FUNC(InputMode_Set)(previous);
+#endif
+  if (echo && key<=UINT32_C(0x7F)) {
+    if(fputc((int)key,stdout)==EOF) return STATUS_CONST(GENERIC_ERROR);
+  }
+  *outKey=key;return STATUS_CONST(SUCCESS);
+}
+TERMINAL_KEY_GET_PROTOTYPE {return TERMINAL_INS(ReadKey)(outKey,false);}
+TERMINAL_KEY_GET_ECHO_PROTOTYPE {return TERMINAL_INS(ReadKey)(outKey,true);}
