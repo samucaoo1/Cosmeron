@@ -14,7 +14,7 @@ $(BUILD)/ExternalStorage: MultiTU_A.c MultiTU_B.c MultiTU_Main.c $(HEADERS) | $(
 	$(CC) $(CFLAGS) -DINPUT_EXTERNAL_STORAGE MultiTU_A.c MultiTU_B.c MultiTU_Main.c -o $@
 build: $(TESTS:%=$(BUILD)/%) $(BUILD)/MultiTU $(BUILD)/ExternalStorage
 run: build
-	@set -e; for test in $(TESTS:%=$(BUILD)/%) $(BUILD)/MultiTU $(BUILD)/ExternalStorage; do "$$test"; done
+	@set -e; for test in $(TESTS:%=$(BUILD)/%) $(BUILD)/MultiTU $(BUILD)/ExternalStorage; do echo "Running $$test"; "$$test"; done
 clean:
 	rm -rf $(BUILD)
 .PHONY: all build run clean
