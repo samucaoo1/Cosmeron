@@ -164,6 +164,17 @@ typedef struct TERMINAL_TYPE(TCanvas) {
       const TERMINAL_TYPE(TCanvas) *canvas, TERMINAL_TYPE(TTerminal) *terminal, \
       TDUAL_TYPE(uint16) position)
 
+#define TERMINAL_CANVAS_UPDATE_DIFF_PROTOTYPE \
+  static inline OPSTATUS TERMINAL_FUNC(Canvas_UpdateDiff)( \
+      const TERMINAL_TYPE(TCanvas) *canvas, \
+      const TERMINAL_TYPE(TCanvas) *previous)
+#define TERMINAL_CANVAS_UPDATE_DIFF_AT_PROTOTYPE \
+  static inline OPSTATUS TERMINAL_FUNC(Canvas_UpdateDiffAt)( \
+      const TERMINAL_TYPE(TCanvas) *canvas, \
+      const TERMINAL_TYPE(TCanvas) *previous, TDUAL_TYPE(uint16) position)
+
+TERMINAL_CANVAS_UPDATE_DIFF_PROTOTYPE;
+TERMINAL_CANVAS_UPDATE_DIFF_AT_PROTOTYPE;
 TERMINAL_CANVAS_CREATE_PROTOTYPE;
 TERMINAL_CANVAS_FREE_PROTOTYPE;
 TERMINAL_CANVAS_RESIZE_PROTOTYPE;
