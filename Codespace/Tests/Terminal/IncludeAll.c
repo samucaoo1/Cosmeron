@@ -10,3 +10,5 @@ int main(void) {
   return 0;
 }
 #include "../../Cosmeron/Modules/Graphics/FIGlet/FIGlet.h"
+
+#include "../../Cosmeron/Modules/Graphics/Rasterization/Rasterization.h"

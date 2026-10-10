@@ -4,3 +4,5 @@
 #include "UI/UI.h"
 #include "Font/Font.h"
 #include "FIGlet/FIGlet.h"
+
+#include "Rasterization/Rasterization.h"

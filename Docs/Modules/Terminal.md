@@ -63,3 +63,14 @@ interactive output, ANSI, Unicode, truecolor and mouse support
 conservatively. The detection uses WinConsole APIs or environment-based
 POSIX heuristics: the reported capabilities are **not a formal terminal
 negotiation handshake**.
+
+## 2D rasterization
+
+`Graphics/Rasterization/Rasterization.h` provides `RASTER_FUNC(Point)`, `Line`,
+`Rectangle`, `Circle`, `Ellipse`, `Triangle`, `Polyline`, and `Polygon`, with
+`FillRectangle`, `FillCircle`, `FillEllipse`, `FillTriangle`, and `FillPolygon`.
+They draw into an existing `TERMINAL_TYPE(TCanvas)` using a one-cell character
+and a Text/Grid attribute cell. Call `Canvas_Update` explicitly to display it.
+Coordinates reuse Struct types; drawing is clipped to the canvas or view.
+See [Rasterization](../../Codespace/Cosmeron/Modules/Graphics/Rasterization/README.md)
+for signatures, examples, fill rules and Unicode handling.
