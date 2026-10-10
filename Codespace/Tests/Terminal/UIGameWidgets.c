@@ -48,7 +48,7 @@ static void test_classic_menu(void){
   assert(UI_FUNC(MenuEx)(&ui,&menu)==OK && menu.cancelled && !menu.activated);
   assert(UI_FUNC(End)(&ui)==OK);
   /* Mouse click on the second disabled option does nothing. */
-  assert(UI_FUNC(PointerMove)(&ui,(TDUAL_TYPE(uint16)){.x=5,.y=5})==OK);
+  assert(UI_FUNC(PointerMove)(&ui,(TDUAL_TYPE(uint16)){.x=5,.y=4})==OK);
   assert(UI_FUNC(PointerButton)(&ui,true)==OK);
   assert(UI_FUNC(Begin)(&ui,&canvas)==OK);
   assert(UI_FUNC(MenuEx)(&ui,&menu)==OK && selected==0);
@@ -58,7 +58,7 @@ static void test_classic_menu(void){
   assert(UI_FUNC(MenuEx)(&ui,&menu)==OK && !menu.activated);
   assert(UI_FUNC(End)(&ui)==OK);
   /* Third item is at interior y=5: border/title/two preceding rows. */
-  assert(UI_FUNC(PointerMove)(&ui,(TDUAL_TYPE(uint16)){.x=5,.y=6})==OK);
+  assert(UI_FUNC(PointerMove)(&ui,(TDUAL_TYPE(uint16)){.x=5,.y=5})==OK);
   assert(UI_FUNC(PointerButton)(&ui,true)==OK);
   assert(UI_FUNC(Begin)(&ui,&canvas)==OK);
   assert(UI_FUNC(MenuEx)(&ui,&menu)==OK && selected==2);
