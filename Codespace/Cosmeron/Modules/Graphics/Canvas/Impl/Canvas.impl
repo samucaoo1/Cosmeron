@@ -1,0 +1,478 @@
+#pragma once
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+static inline bool TERMINAL_INS(CanvasValid)(const TERMINAL_TYPE(TCanvas) *canvas) {
+  return canvas && canvas->backing &&
+    TEXT_GRID_FUNC(char32, IsValid)(canvas->backing) &&
+    ((uint32_t)canvas->origin.col+canvas->size.col <= canvas->backing->chars.size.col) &&
+    ((uint32_t)canvas->origin.row+canvas->size.row <= canvas->backing->chars.size.row);
+}
+static inline size_t TERMINAL_INS(CanvasIndex)(
+    const TERMINAL_TYPE(TCanvas) *canvas, uint32_t x, uint32_t y) {
+  return (size_t)(canvas->origin.row+y)*canvas->backing->chars.size.col+
+         (size_t)canvas->origin.col+x;
+}
+static inline OPSTATUS TERMINAL_INS(CanvasRegion)(
+    const TERMINAL_TYPE(TCanvas) *canvas, TQUAD_TYPE(uint16) rect) {
+  if (!TERMINAL_INS(CanvasValid)(canvas)) return STATUS_CONST(INVALID_ARGUMENT);
+  if (rect.left>rect.right || rect.top>rect.bottom) return STATUS_CONST(INVALID_ARGUMENT);
+  if (rect.right>=canvas->size.col || rect.bottom>=canvas->size.row)
+    return STATUS_CONST(OUT_OF_RANGE);
+  return STATUS_CONST(SUCCESS);
+}
+static inline bool TERMINAL_INS(CanvasStyleEqual)(
+    TEXT_GRID_ATTRIBUTE_TYPE(Cell) a, TEXT_GRID_ATTRIBUTE_TYPE(Cell) b) {
+  return a.foreground==b.foreground && a.background==b.background &&
+         a.flags==b.flags && a.underline==b.underline;
+}
+static inline void TERMINAL_INS(CanvasEraseWide)(
+    TERMINAL_TYPE(TCanvas) *canvas, uint32_t x, uint32_t y) {
+  size_t index=TERMINAL_INS(CanvasIndex)(canvas,x,y);
+  TEXT_GRID_ATTRIBUTE_TYPE(Cell) *attrs=canvas->backing->attributes.data;
+  TEXT_TYPE(TChar32) *chars=canvas->backing->chars.data;
+  if (attrs[index].flags & TEXT_GRID_ATTRIBUTE_CONST(CODE_UNIT_CONTINUATION)) {
+    if (x>0) {
+      size_t before=TERMINAL_INS(CanvasIndex)(canvas,x-1,y);
+      chars[before]=' ';
+    }
+    chars[index]=' ';
+    attrs[index].flags &= (uint16_t)~TEXT_GRID_ATTRIBUTE_CONST(CODE_UNIT_CONTINUATION);
+  } else if (x+1<canvas->size.col) {
+    size_t after=TERMINAL_INS(CanvasIndex)(canvas,x+1,y);
+    if (attrs[after].flags & TEXT_GRID_ATTRIBUTE_CONST(CODE_UNIT_CONTINUATION)) {
+      chars[after]=' ';
+      attrs[after].flags &= (uint16_t)~TEXT_GRID_ATTRIBUTE_CONST(CODE_UNIT_CONTINUATION);
+    }
+  }
+}
+TERMINAL_CANVAS_CREATE_PROTOTYPE {
+  OPSTATUS status;
+  if (!outCanvas || outCanvas->backing || outCanvas->owns)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  status=TEXT_GRID_FUNC(char32, Create)(&outCanvas->grid,size);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  outCanvas->backing=&outCanvas->grid;
+  outCanvas->origin=(TDUAL_TYPE(uint16)){0};
+  outCanvas->size=size;
+  outCanvas->cursor=(TDUAL_TYPE(uint16)){0};
+  outCanvas->style=TEXT_GRID_ATTRIBUTE_FUNC(Default)();
+  outCanvas->owns=true;
+  return TEXT_GRID_FUNC(char32, Fill)(&outCanvas->grid,
+      (TEXT_TYPE(TChar32))' ',outCanvas->style);
+}
+TERMINAL_CANVAS_FREE_PROTOTYPE {
+  if (!canvas) return;
+  if (canvas->owns && canvas->backing==&canvas->grid)
+    (void)TEXT_GRID_FUNC(char32, Destroy)(&canvas->grid);
+  *canvas=(TERMINAL_TYPE(TCanvas)){0};
+}
+TERMINAL_CANVAS_RESIZE_PROTOTYPE {
+  OPSTATUS status;
+  if (!TERMINAL_INS(CanvasValid)(canvas) || !canvas->owns ||
+      canvas->backing!=&canvas->grid) return STATUS_CONST(INVALID_ARGUMENT);
+  status=TEXT_GRID_FUNC(char32, Resize)(&canvas->grid,size);
+  if (status==STATUS_CONST(SUCCESS)) {
+    canvas->size=size;
+    if (canvas->cursor.col>size.col) canvas->cursor.col=size.col;
+    if (canvas->cursor.row>size.row) canvas->cursor.row=size.row;
+  }
+  return status;
+}
+TERMINAL_CANVAS_GET_SIZE_PROTOTYPE {
+  if (!outSize || !TERMINAL_INS(CanvasValid)(canvas))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  *outSize=canvas->size;return STATUS_CONST(SUCCESS);
+}
+TERMINAL_CANVAS_GET_PROTOTYPE {
+  size_t index;
+  if (!TERMINAL_INS(CanvasValid)(canvas) || !outCodepoint || !outAttribute)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (position.x>=canvas->size.col || position.y>=canvas->size.row)
+    return STATUS_CONST(OUT_OF_RANGE);
+  index=TERMINAL_INS(CanvasIndex)(canvas,position.x,position.y);
+  *outCodepoint=canvas->backing->chars.data[index];
+  *outAttribute=canvas->backing->attributes.data[index];
+  return STATUS_CONST(SUCCESS);
+}
+TERMINAL_CANVAS_SET_PROTOTYPE {
+  int width=0;
+  OPSTATUS status;
+  size_t index;
+  if (!TERMINAL_INS(CanvasValid)(canvas)) return STATUS_CONST(INVALID_ARGUMENT);
+  if (position.x>=canvas->size.col || position.y>=canvas->size.row)
+    return STATUS_CONST(OUT_OF_RANGE);
+  status=TEXT_WIDTH_FUNC(Codepoint)((TEXT_TYPE(TChar32))codepoint,&width);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  /* Combining marks need grapheme shaping; decline rather than corrupt the grid. */
+  if (width==0) return STATUS_CONST(NOT_SUPPORTED);
+  if (width<0 || width>2) return STATUS_CONST(INVALID_SEQUENCE);
+  if ((uint32_t)position.x+(uint32_t)width>canvas->size.col)
+    return STATUS_CONST(OUT_OF_RANGE);
+  TERMINAL_INS(CanvasEraseWide)(canvas,position.x,position.y);
+  if (width==2)
+    TERMINAL_INS(CanvasEraseWide)(canvas,(uint32_t)position.x+1U,position.y);
+  index=TERMINAL_INS(CanvasIndex)(canvas,position.x,position.y);
+  attribute.flags &= (uint16_t)~TEXT_GRID_ATTRIBUTE_CONST(CODE_UNIT_CONTINUATION);
+  canvas->backing->chars.data[index]=(TEXT_TYPE(TChar32))codepoint;
+  canvas->backing->attributes.data[index]=attribute;
+  if (width==2) {
+    index=TERMINAL_INS(CanvasIndex)(canvas,(uint32_t)position.x+1U,position.y);
+    canvas->backing->chars.data[index]=0;
+    attribute.flags |= TEXT_GRID_ATTRIBUTE_CONST(CODE_UNIT_CONTINUATION);
+    canvas->backing->attributes.data[index]=attribute;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+TERMINAL_CANVAS_CURSOR_GET_POSITION_PROTOTYPE {
+  if (!outPosition || !TERMINAL_INS(CanvasValid)(canvas))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  *outPosition=canvas->cursor;
+  return STATUS_CONST(SUCCESS);
+}
+TERMINAL_CANVAS_CURSOR_SET_POSITION_PROTOTYPE {
+  if (!TERMINAL_INS(CanvasValid)(canvas)) return STATUS_CONST(INVALID_ARGUMENT);
+  if (position.x>=canvas->size.col || position.y>=canvas->size.row)
+    return STATUS_CONST(OUT_OF_RANGE);
+  canvas->cursor=position;return STATUS_CONST(SUCCESS);
+}
+TERMINAL_CANVAS_CURSOR_MOVE_PROTOTYPE {
+  int64_t x,y;
+  if (!TERMINAL_INS(CanvasValid)(canvas)) return STATUS_CONST(INVALID_ARGUMENT);
+  x=(int64_t)canvas->cursor.x+deltaX;
+  y=(int64_t)canvas->cursor.y+deltaY;
+  if (x<0 || y<0 || x>=canvas->size.col || y>=canvas->size.row)
+    return STATUS_CONST(OUT_OF_RANGE);
+  canvas->cursor.x=(uint16_t)x;canvas->cursor.y=(uint16_t)y;
+  return STATUS_CONST(SUCCESS);
+}
+TERMINAL_CANVAS_STYLE_SET_PROTOTYPE {
+  if (canvas) canvas->style=style;
+}
+TERMINAL_CANVAS_STYLE_RESET_PROTOTYPE {
+  if (canvas) canvas->style=TEXT_GRID_ATTRIBUTE_FUNC(Default)();
+}
+TERMINAL_CANVAS_ATTRIBUTE_SET_PROTOTYPE {
+  if (canvas) {
+    const uint16_t internal=(uint16_t)(TEXT_GRID_ATTRIBUTE_CONST(CODE_UNIT_CONTINUATION));
+    canvas->style.flags=(uint16_t)((canvas->style.flags & internal) | (flags & ~internal));
+  }
+}
+TERMINAL_CANVAS_PUT_CHAR_PROTOTYPE {
+  OPSTATUS status;int width=0;TDUAL_TYPE(uint16) position;
+  if (!TERMINAL_INS(CanvasValid)(canvas)) return STATUS_CONST(INVALID_ARGUMENT);
+  if (codepoint=='\r') {canvas->cursor.col=0;return STATUS_CONST(SUCCESS);}
+  if (codepoint=='\n') {
+    canvas->cursor.col=0;
+    if (canvas->cursor.row<canvas->size.row) ++canvas->cursor.row;
+    return STATUS_CONST(SUCCESS);
+  }
+  if (codepoint=='\t') {
+    uint32_t end=((uint32_t)canvas->cursor.col/4U+1U)*4U;
+    while (canvas->cursor.col<end) {
+      status=TERMINAL_FUNC(Canvas_PutChar)(canvas,' ');
+      if (status!=STATUS_CONST(SUCCESS)) return status;
+    }
+    return STATUS_CONST(SUCCESS);
+  }
+  status=TEXT_WIDTH_FUNC(Codepoint)((TEXT_TYPE(TChar32))codepoint,&width);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  if (width<=0) return STATUS_CONST(NOT_SUPPORTED);
+  position=canvas->cursor;
+  if ((uint32_t)position.x+(uint32_t)width>canvas->size.col) {
+    position.x=0;
+    if ((uint32_t)position.y+1U>=canvas->size.row) return STATUS_CONST(OUT_OF_RANGE);
+    ++position.y;
+  }
+  status=TERMINAL_FUNC(Canvas_Set)(canvas,position,codepoint,canvas->style);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  canvas->cursor=position;
+  canvas->cursor.col=(uint16_t)(canvas->cursor.col+width);
+  return STATUS_CONST(SUCCESS);
+}
+TERMINAL_CANVAS_WRITE_PROTOTYPE {
+  size_t cursor=0;
+  if (!TERMINAL_INS(CanvasValid)(canvas) || (!utf8Text && byteLength))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (!TEXT_UTF8_FUNC(Validate)((const unsigned char *)utf8Text,byteLength))
+    return STATUS_CONST(INVALID_SEQUENCE);
+  while(cursor<byteLength) {
+    TEXT_TYPE(TChar32) point=0;size_t consumed=0;
+    OPSTATUS status=TEXT_UTF8_FUNC(Decode)(
+        (const unsigned char *)utf8Text+cursor,byteLength-cursor,&point,&consumed);
+    if (status!=STATUS_CONST(SUCCESS)) return status;
+    status=TERMINAL_FUNC(Canvas_PutChar)(canvas,(uint32_t)point);
+    if (status!=STATUS_CONST(SUCCESS)) return status;
+    cursor+=consumed;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+TERMINAL_CANVAS_WRITE_LINE_PROTOTYPE {
+  OPSTATUS status;
+  if (!text) return STATUS_CONST(INVALID_ARGUMENT);
+  status=TERMINAL_FUNC(Canvas_Write)(canvas,text,strlen(text));
+  return status==STATUS_CONST(SUCCESS)?
+      TERMINAL_FUNC(Canvas_PutChar)(canvas,'\n'):status;
+}
+static inline OPSTATUS TERMINAL_INS(CanvasFormat)(
+    TERMINAL_TYPE(TCanvas) *canvas,const char *format,va_list args) {
+  va_list copy;int len;char *buffer;OPSTATUS status;
+  if (!TERMINAL_INS(CanvasValid)(canvas) || !format)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  va_copy(copy,args);
+  len=vsnprintf(NULL,0,format,copy);
+  va_end(copy);
+  if (len<0) return STATUS_CONST(GENERIC_ERROR);
+  buffer=(char *)malloc((size_t)len+1U);
+  if (!buffer) return STATUS_CONST(OUT_OF_MEMORY);
+  va_copy(copy,args);
+  if (vsnprintf(buffer,(size_t)len+1U,format,copy)!=len) {
+    va_end(copy);free(buffer);return STATUS_CONST(GENERIC_ERROR);
+  }
+  va_end(copy);
+  status=TERMINAL_FUNC(Canvas_Write)(canvas,buffer,(size_t)len);
+  free(buffer);return status;
+}
+static inline OPSTATUS TERMINAL_INS(CanvasFormatScoped)(
+    TERMINAL_TYPE(TCanvas) *canvas, const TDUAL_TYPE(uint16) *position,
+    const TEXT_GRID_ATTRIBUTE_TYPE(Cell) *style, bool newline,
+    const char *format, va_list args) {
+  TDUAL_TYPE(uint16) previousPosition;TEXT_GRID_ATTRIBUTE_TYPE(Cell) previousStyle;
+  OPSTATUS status;
+  if (!TERMINAL_INS(CanvasValid)(canvas)) return STATUS_CONST(INVALID_ARGUMENT);
+  previousPosition=canvas->cursor;previousStyle=canvas->style;
+  if (position) {
+    status=TERMINAL_FUNC(Canvas_Cursor_SetPosition)(canvas,*position);
+    if(status!=STATUS_CONST(SUCCESS)) return status;
+  }
+  if (style) canvas->style=*style;
+  status=TERMINAL_INS(CanvasFormat)(canvas,format,args);
+  if (status==STATUS_CONST(SUCCESS) && newline)
+    status=TERMINAL_FUNC(Canvas_PutChar)(canvas,'\n');
+  if (style) canvas->style=previousStyle;
+  if (position) canvas->cursor=previousPosition;
+  return status;
+}
+TERMINAL_CANVAS_PRINT_PROTOTYPE {
+  va_list args;OPSTATUS status;
+  va_start(args,format);
+  status=TERMINAL_INS(CanvasFormatScoped)(canvas,NULL,NULL,false,format,args);
+  va_end(args);return status;
+}
+TERMINAL_CANVAS_PRINT_LN_PROTOTYPE {
+  va_list args;OPSTATUS status;
+  va_start(args,format);
+  status=TERMINAL_INS(CanvasFormatScoped)(canvas,NULL,NULL,true,format,args);
+  va_end(args);return status;
+}
+TERMINAL_CANVAS_PRINT_AT_PROTOTYPE {
+  va_list args;OPSTATUS status;
+  va_start(args,format);
+  status=TERMINAL_INS(CanvasFormatScoped)(canvas,&position,NULL,false,format,args);
+  va_end(args);return status;
+}
+TERMINAL_CANVAS_PRINT_STYLED_PROTOTYPE {
+  va_list args;OPSTATUS status;
+  va_start(args,format);
+  status=TERMINAL_INS(CanvasFormatScoped)(canvas,NULL,&style,false,format,args);
+  va_end(args);return status;
+}
+TERMINAL_CANVAS_PRINT_STYLED_LN_PROTOTYPE {
+  va_list args;OPSTATUS status;
+  va_start(args,format);
+  status=TERMINAL_INS(CanvasFormatScoped)(canvas,NULL,&style,true,format,args);
+  va_end(args);return status;
+}
+TERMINAL_CANVAS_PRINT_STYLED_AT_PROTOTYPE {
+  va_list args;OPSTATUS status;
+  va_start(args,format);
+  status=TERMINAL_INS(CanvasFormatScoped)(canvas,&position,&style,false,format,args);
+  va_end(args);return status;
+}
+TERMINAL_CANVAS_CLEAR_PROTOTYPE {
+  if (TERMINAL_INS(CanvasValid)(canvas)) {
+    (void)TERMINAL_FUNC(Canvas_Fill)(canvas,' ',TEXT_GRID_ATTRIBUTE_FUNC(Default)());
+    canvas->cursor=(TDUAL_TYPE(uint16)){0};
+  }
+}
+TERMINAL_CANVAS_FILL_PROTOTYPE {
+  OPSTATUS status;int width=0;
+  uint32_t x,y;
+  if (!TERMINAL_INS(CanvasValid)(canvas)) return STATUS_CONST(INVALID_ARGUMENT);
+  status=TEXT_WIDTH_FUNC(Codepoint)((TEXT_TYPE(TChar32))codepoint,&width);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  if (width!=1) return STATUS_CONST(NOT_SUPPORTED);
+  for(y=0;y<canvas->size.row;y++)
+    for(x=0;x<canvas->size.col;x++) {
+      size_t idx=TERMINAL_INS(CanvasIndex)(canvas,x,y);
+      canvas->backing->chars.data[idx]=(TEXT_TYPE(TChar32))codepoint;
+      attribute.flags &= (uint16_t)~TEXT_GRID_ATTRIBUTE_CONST(CODE_UNIT_CONTINUATION);
+      canvas->backing->attributes.data[idx]=attribute;
+    }
+  return STATUS_CONST(SUCCESS);
+}
+TERMINAL_CANVAS_FILL_REGION_PROTOTYPE {
+  OPSTATUS status=TERMINAL_INS(CanvasRegion)(canvas,region);
+  uint32_t x,y;int width=0;
+  if(status!=STATUS_CONST(SUCCESS)) return status;
+  status=TEXT_WIDTH_FUNC(Codepoint)((TEXT_TYPE(TChar32))codepoint,&width);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  if(width!=1) return STATUS_CONST(NOT_SUPPORTED);
+  for(y=region.top;y<=region.bottom;y++)
+    for(x=region.left;x<=region.right;x++) {
+      status=TERMINAL_FUNC(Canvas_Set)(canvas,
+          (TDUAL_TYPE(uint16)){.x=(uint16_t)x,.y=(uint16_t)y},codepoint,attribute);
+      if(status!=STATUS_CONST(SUCCESS)) return status;
+    }
+  return STATUS_CONST(SUCCESS);
+}
+TERMINAL_CANVAS_VIEW_PROTOTYPE {
+  OPSTATUS status=TERMINAL_INS(CanvasRegion)(source,region);
+  if(status!=STATUS_CONST(SUCCESS)) return status;
+  if(!outView || outView==source || outView->backing || outView->owns)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  outView->backing=source->backing;
+  outView->origin.x=(uint16_t)(source->origin.x+region.left);
+  outView->origin.y=(uint16_t)(source->origin.y+region.top);
+  outView->size.col=(uint16_t)(region.right-region.left+1U);
+  outView->size.row=(uint16_t)(region.bottom-region.top+1U);
+  outView->style=source->style;
+  outView->cursor=(TDUAL_TYPE(uint16)){0};
+  outView->owns=false;
+  return STATUS_CONST(SUCCESS);
+}
+TERMINAL_CANVAS_COPY_PROTOTYPE {
+  uint32_t x,y;OPSTATUS status;
+  if(!TERMINAL_INS(CanvasValid)(source) || !outCanvas || outCanvas==source ||
+      outCanvas->backing || outCanvas->owns) return STATUS_CONST(INVALID_ARGUMENT);
+  status=TERMINAL_FUNC(Canvas_Create)(outCanvas,source->size);
+  if(status!=STATUS_CONST(SUCCESS)) return status;
+  for(y=0;y<source->size.row;y++)
+    for(x=0;x<source->size.col;x++) {
+      size_t si=TERMINAL_INS(CanvasIndex)(source,x,y);
+      size_t di=TERMINAL_INS(CanvasIndex)(outCanvas,x,y);
+      outCanvas->backing->chars.data[di]=source->backing->chars.data[si];
+      outCanvas->backing->attributes.data[di]=source->backing->attributes.data[si];
+    }
+  outCanvas->style=source->style;
+  return STATUS_CONST(SUCCESS);
+}
+TERMINAL_CANVAS_CROP_PROTOTYPE {
+  TERMINAL_TYPE(TCanvas) view={0};
+  OPSTATUS status=TERMINAL_FUNC(Canvas_View)((TERMINAL_TYPE(TCanvas) *)source,
+      region,&view);
+  if(status!=STATUS_CONST(SUCCESS)) return status;
+  return TERMINAL_FUNC(Canvas_Copy)(&view,outCanvas);
+}
+TERMINAL_CANVAS_BLIT_REGION_PROTOTYPE {
+  TERMINAL_TYPE(TCanvas) snapshot={0};
+  OPSTATUS status=TERMINAL_INS(CanvasRegion)(source,region);
+  uint32_t x,y;
+  if(status!=STATUS_CONST(SUCCESS)) return status;
+  if(!TERMINAL_INS(CanvasValid)(destination)) return STATUS_CONST(INVALID_ARGUMENT);
+  if (position.x>=destination->size.col || position.y>=destination->size.row)
+    return STATUS_CONST(OUT_OF_RANGE);
+  /* Deep snapshot makes overlapping/self/view blits safe. */
+  status=TERMINAL_FUNC(Canvas_Crop)(source,region,&snapshot);
+  if(status!=STATUS_CONST(SUCCESS)) return status;
+  for(y=0;y<snapshot.size.row && y+position.y<destination->size.row;y++)
+    for(x=0;x<snapshot.size.col && x+position.x<destination->size.col;x++) {
+      size_t si=TERMINAL_INS(CanvasIndex)(&snapshot,x,y);
+      size_t di=TERMINAL_INS(CanvasIndex)(destination,x+position.x,y+position.y);
+      TEXT_GRID_ATTRIBUTE_TYPE(Cell) src=snapshot.backing->attributes.data[si];
+      TEXT_GRID_ATTRIBUTE_TYPE(Cell) dst=destination->backing->attributes.data[di];
+      destination->backing->chars.data[di]=snapshot.backing->chars.data[si];
+      destination->backing->attributes.data[di]=TEXT_INS(GridAttributeCompose)(dst,src);
+    }
+  TERMINAL_FUNC(Canvas_Free)(&snapshot);
+  return STATUS_CONST(SUCCESS);
+}
+TERMINAL_CANVAS_BLIT_PROTOTYPE {
+  if (!TERMINAL_INS(CanvasValid)(source)) return STATUS_CONST(INVALID_ARGUMENT);
+  if (!source->size.col || !source->size.row) return STATUS_CONST(SUCCESS);
+  return TERMINAL_FUNC(Canvas_BlitRegion)(destination,position,source,
+      (TQUAD_TYPE(uint16)){.left=0,.top=0,
+      .right=(uint16_t)(source->size.col-1U),
+      .bottom=(uint16_t)(source->size.row-1U)});
+}
+static inline OPSTATUS TERMINAL_INS(CanvasPresent)(
+    const TERMINAL_TYPE(TCanvas) *canvas, TERMINAL_TYPE(TTerminal) *terminal,
+    TDUAL_TYPE(uint16) position) {
+  OPSTATUS status=STATUS_CONST(SUCCESS);
+  TEXT_GRID_ATTRIBUTE_TYPE(Cell) original, applied;
+  TDUAL_TYPE(uint16) viewport;
+  uint32_t x,y;
+#if OS_WINDOWS
+  TDUAL_TYPE(uint16) savedPosition;
+#endif
+  if (!TERMINAL_INS(CanvasValid)(canvas) || !terminal)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (terminal->output.stream!=stdout)
+    return STATUS_CONST(NOT_SUPPORTED);
+  if (!TERMINAL_INS(Interactive)()) return STATUS_CONST(NOT_AVAILABLE);
+  status=TERMINAL_FUNC(Size_Get)(&viewport);
+  if(status!=STATUS_CONST(SUCCESS)) return status;
+  if((uint32_t)position.x+canvas->size.col>viewport.col ||
+     (uint32_t)position.y+canvas->size.row>viewport.row)
+    return STATUS_CONST(OUT_OF_RANGE);
+  original=TERMINAL_INS(CurrentStyle)();
+  applied=original;
+#if OS_WINDOWS
+  status=TERMINAL_FUNC(Cursor_GetPosition)(&savedPosition);
+  if(status!=STATUS_CONST(SUCCESS)) return status;
+#else
+  if(fputs("\x1b" "7",stdout)==EOF) return STATUS_CONST(GENERIC_ERROR);
+#endif
+  for(y=0;y<canvas->size.row;y++) {
+    status=TERMINAL_FUNC(Cursor_SetPosition)(
+        (TDUAL_TYPE(uint16)){.x=position.x,.y=(uint16_t)(position.y+y)});
+    if(status!=STATUS_CONST(SUCCESS)) break;
+    for(x=0;x<canvas->size.col;x++) {
+      size_t idx=TERMINAL_INS(CanvasIndex)(canvas,x,y);
+      TEXT_GRID_ATTRIBUTE_TYPE(Cell) cell=canvas->backing->attributes.data[idx];
+      TEXT_TYPE(TChar32) point=canvas->backing->chars.data[idx];
+      unsigned char encoded[4];size_t n=0;
+      if(cell.flags & TEXT_GRID_ATTRIBUTE_CONST(CODE_UNIT_CONTINUATION)) continue;
+      if(!TERMINAL_INS(CanvasStyleEqual)(applied,cell)) {
+        status=TERMINAL_INS(ApplyStyle)(cell);
+        if(status!=STATUS_CONST(SUCCESS)) break;
+        applied=cell;
+      }
+      if(!point) point=' ';
+      status=TEXT_UTF8_FUNC(Encode)(point,encoded,sizeof(encoded),&n);
+      if(status!=STATUS_CONST(SUCCESS)) break;
+      if(fwrite(encoded,1,n,stdout)!=n) {status=STATUS_CONST(GENERIC_ERROR);break;}
+    }
+    if(status!=STATUS_CONST(SUCCESS)) break;
+  }
+  if(!TERMINAL_INS(CanvasStyleEqual)(applied,original)) {
+    OPSTATUS reset=TERMINAL_INS(ApplyStyle)(original);
+    if(status==STATUS_CONST(SUCCESS))status=reset;
+  }
+#if OS_WINDOWS
+  {
+    OPSTATUS reset=TERMINAL_FUNC(Cursor_SetPosition)(savedPosition);
+    if(status==STATUS_CONST(SUCCESS))status=reset;
+  }
+#else
+  if(fputs("\x1b" "8",stdout)==EOF && status==STATUS_CONST(SUCCESS))
+    status=STATUS_CONST(GENERIC_ERROR);
+#endif
+  if(fflush(stdout)!=0 && status==STATUS_CONST(SUCCESS))
+    status=STATUS_CONST(GENERIC_ERROR);
+  return status;
+}
+TERMINAL_CANVAS_UPDATE_AT_TO_PROTOTYPE {
+  return TERMINAL_INS(CanvasPresent)(canvas,terminal,position);
+}
+TERMINAL_CANVAS_UPDATE_TO_PROTOTYPE {
+  return TERMINAL_FUNC(Canvas_UpdateAtTo)(canvas,terminal,(TDUAL_TYPE(uint16)){0});
+}
+TERMINAL_CANVAS_UPDATE_AT_PROTOTYPE {
+  return TERMINAL_FUNC(Canvas_UpdateAtTo)(canvas,TERMINAL_FUNC(Standard)(),position);
+}
+TERMINAL_CANVAS_UPDATE_PROTOTYPE {
+  return TERMINAL_FUNC(Canvas_UpdateAt)(canvas,(TDUAL_TYPE(uint16)){0});
+}
