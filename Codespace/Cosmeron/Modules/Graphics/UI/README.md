@@ -1,6 +1,6 @@
 # UI — terminal user interface package
 
-**Project specification only; no implementation yet.**
+**Implementation available in [UI.h](UI.h).** Initial immediate-mode widgets, layouts, themes and event handling have been implemented. Mouse capture from native terminal backends remains a separate integration task.
 
 ## Objective
 
@@ -25,7 +25,7 @@ Implement retained/immediate-friendly TUI widgets using **Canvas as the renderin
 | Theme | use Text/Grid cell attributes; no duplicate Style representation |
 | Render | render components to a Canvas, then explicitly update the target |
 
-## Illustrative signatures
+## Implemented public signatures (see UI.h)
 
 ```c
 OPSTATUS UI_FUNC(Layout)(

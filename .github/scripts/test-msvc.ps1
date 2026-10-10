@@ -115,6 +115,6 @@ foreach ($name in @("State", "Application", "HID", "ControllerTransport", "BSDHI
 }
 Invoke-CosmeronTest "Codespace/Tests/Input" "multi-tu" @("MultiTU_A.c", "MultiTU_B.c", "MultiTU_Main.c")
 
-foreach ($name in @("Terminal", "Canvas", "IncludeAll")) {
+foreach ($name in @("Terminal", "Canvas", "UI", "IncludeAll")) {
   Invoke-CosmeronTest "Codespace/Tests/Terminal" $name @("$name.c")
 }
