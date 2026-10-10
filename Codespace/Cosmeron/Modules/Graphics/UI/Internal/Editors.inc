@@ -196,8 +196,23 @@ static inline OPSTATUS UI_INS(DrawEdit)(
     return STATUS_CONST(SUCCESS);
   right-=visual->padding.x;bottom-=visual->padding.y;
   if(left>right || top>bottom)return STATUS_CONST(SUCCESS);
-  /* Horizontal scrolling for one-line edits. Vertical scrolling can be set
-   * with firstVisible to a line boundary for multi-line text areas. */
+  if(!UI_INS(Boundary)(input,input->firstVisible))
+    input->firstVisible=0;
+  if(multiline) {
+    uint32_t rows=bottom-top+1U,lines=0;
+    size_t j;
+    if(input->caret<input->firstVisible)
+      input->firstVisible=UI_INS(LineStart)(input,input->caret);
+    for(j=input->firstVisible;j<input->caret;j++)
+      if(input->buffer[j]=='\n')++lines;
+    while(lines>=rows && input->firstVisible<input->length) {
+      size_t end=UI_INS(LineEnd)(input,input->firstVisible);
+      if(end>=input->length)break;
+      input->firstVisible=end+1U;
+      --lines;
+    }
+  }
+  /* Horizontal scrolling for one-line edits. */
   if(!multiline && input->caret<input->firstVisible)
     input->firstVisible=input->caret;
   if(!multiline) {
@@ -278,11 +293,30 @@ static inline OPSTATUS UI_INS(InputCommon)(
     {
       TERMINAL_TYPE(TCanvas) *cv=UI_INS(Canvas)(context);
       uint32_t x=(uint32_t)context->pointer.x-cv->origin.x;
+      uint32_t y=(uint32_t)context->pointer.y-cv->origin.y;
       uint32_t start=input->region.left+1U;
-      size_t at=multiline?UI_INS(LineStart)(input,input->firstVisible):0;
+      uint32_t row=input->region.top+1U;
+      size_t at=multiline?input->firstVisible:0;
+      if(multiline && y>row) {
+        uint32_t n;
+        for(n=0;n<y-row && at<input->length;n++){
+          size_t end=UI_INS(LineEnd)(input,at);
+          at=end<input->length?end+1U:end;
+        }
+      }
       if(x>start)at=UI_INS(Advance)(input,at,(size_t)(x-start));
       input->caret=input->selectionAnchor=at;
     }
+  }
+  if(multiline && context->scroll &&
+     UI_INS(Hovered)(context,input->region)) {
+    if(context->scroll<0) {
+      size_t next=UI_INS(LineEnd)(input,input->firstVisible);
+      if(next<input->length)input->firstVisible=next+1U;
+    }else if(input->firstVisible>0) {
+      input->firstVisible=UI_INS(LineStart)(input,input->firstVisible-1U);
+    }
+    context->scroll=0;
   }
   status=UI_INS(TextEdit)(context,input,id,multiline);
   if(status!=STATUS_CONST(SUCCESS))return status;
