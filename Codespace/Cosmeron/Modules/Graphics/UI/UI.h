@@ -56,7 +56,39 @@
   static inline UI_TYPE(TGlyphs) UI_FUNC(Glyphs_Unicode)( \
       void)
 
-#define UI_BEGIN_PROTOTYPE \
+#define #define UI_POLL_EVENTS_PROTOTYPE \
+  static inline OPSTATUS UI_FUNC(PollEvents)( \
+      UI_TYPE(TContext) *context, size_t *outCount)
+
+#define UI_RESIZE_TAKE_PROTOTYPE \
+  static inline bool UI_FUNC(Resize_Take)( \
+      UI_TYPE(TContext) *context, TDUAL_TYPE(uint16) *outSize)
+
+#define UI_LAYOUT_SHARE_PROTOTYPE \
+  static inline OPSTATUS UI_FUNC(Layout_Share)( \
+      UI_TYPE(TContext) *context, uint16_t numerator, uint16_t denominator, TQUAD_TYPE(uint16) *outRegion)
+
+#define UI_LAYOUT_MEASURE_TEXT_PROTOTYPE \
+  static inline OPSTATUS UI_FUNC(Layout_MeasureText)( \
+      const char *text, TDUAL_TYPE(uint16) padding, TDUAL_TYPE(uint16) *outSize)
+
+#define UI_INPUT_TEXT_SELECT_PROTOTYPE \
+  static inline OPSTATUS UI_FUNC(InputText_Select)( \
+      UI_TYPE(TInputText) *input, size_t anchor, size_t caret)
+
+#define UI_INPUT_TEXT_COPY_PROTOTYPE \
+  static inline OPSTATUS UI_FUNC(InputText_Copy)( \
+      const UI_TYPE(TInputText) *input, char *buffer, size_t capacity, size_t *outLength)
+
+#define UI_INPUT_TEXT_CUT_PROTOTYPE \
+  static inline OPSTATUS UI_FUNC(InputText_Cut)( \
+      UI_TYPE(TInputText) *input, char *buffer, size_t capacity, size_t *outLength)
+
+#define UI_INPUT_TEXT_PASTE_PROTOTYPE \
+  static inline OPSTATUS UI_FUNC(InputText_Paste)( \
+      UI_TYPE(TInputText) *input, const char *utf8Text, size_t byteLength)
+
+UI_BEGIN_PROTOTYPE \
   static inline OPSTATUS UI_FUNC(Begin)( \
       UI_TYPE(TContext) *context, TERMINAL_TYPE(TCanvas) *canvas)
 
@@ -247,6 +279,14 @@ UI_THEME_SET_PROTOTYPE;
 UI_THEME_GET_PROTOTYPE;
 UI_GLYPHS_ASCII_PROTOTYPE;
 UI_GLYPHS_UNICODE_PROTOTYPE;
+UI_POLL_EVENTS_PROTOTYPE;
+UI_RESIZE_TAKE_PROTOTYPE;
+UI_LAYOUT_SHARE_PROTOTYPE;
+UI_LAYOUT_MEASURE_TEXT_PROTOTYPE;
+UI_INPUT_TEXT_SELECT_PROTOTYPE;
+UI_INPUT_TEXT_COPY_PROTOTYPE;
+UI_INPUT_TEXT_CUT_PROTOTYPE;
+UI_INPUT_TEXT_PASTE_PROTOTYPE;
 UI_BEGIN_PROTOTYPE;
 UI_END_PROTOTYPE;
 UI_GET_SIZE_PROTOTYPE;
