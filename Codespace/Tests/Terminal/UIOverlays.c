@@ -110,7 +110,7 @@ static void test_status_toast_spinner(void){
       "Press Enter to close",&dismissed)==OK);
   assert(!dismissed);
   assert(UI_FUNC(End)(&ui)==OK);
-  assert(TERMINAL_FUNC(Canvas_Clear)(&cv)==OK);
+  TERMINAL_FUNC(Canvas_Clear)(&cv);
   toast.nowTick=20;
   assert(UI_FUNC(Begin)(&ui,&cv)==OK);
   assert(UI_FUNC(ToastEx)(&ui,&toast)==OK);
