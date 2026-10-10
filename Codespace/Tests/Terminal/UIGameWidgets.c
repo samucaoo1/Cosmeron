@@ -26,7 +26,7 @@ static void test_classic_menu(void){
   assert(UI_FUNC(MenuEx)(&ui,&menu)==OK);
   assert(!menu.activated && !menu.cancelled);
   assert(TERMINAL_FUNC(Canvas_Get)(&canvas,
-    (TDUAL_TYPE(uint16)){.x=3,.y=2},&cell,&attr)==OK);
+    (TDUAL_TYPE(uint16)){.x=9,.y=2},&cell,&attr)==OK);
   assert(cell=='M');
   assert(UI_FUNC(End)(&ui)==OK);
   assert(UI_FUNC(Key)(&ui,TERMINAL_CONST(KEY_DOWN))==OK);
