@@ -111,3 +111,73 @@ requires all style, layout, panel and ID scopes to be balanced.
 - The current list shows from its first item; scrollbar, scroll viewport,
   select-on-double-click and virtualized lists are later work.
 - The UI is single-threaded and not a standalone GUI/windowing system.
+
+
+## Native mouse, keyboard and terminal resize (October 2026)
+
+`Terminal_Mouse_Enable(true)` enables SGR 1006 mouse reporting on
+POSIX/ANSI consoles (motion/click/drag/wheel); Windows uses
+`ReadConsoleInputW` and native console mouse events. Always disable it on
+shutdown with `Terminal_Mouse_Enable(false)`. Normal exit also restores the
+saved console mode. Mode setup requires interactive stdin AND stdout.
+
+`UI_PollEvents(&ui, &eventCount)` consumes currently available normalized
+`Terminal_TEvent` events; call **before** `UI_Begin`, not during a frame.
+It dispatches Unicode text, special keys, mouse, wheel, and resize.
+Use `UI_Resize_Take(&ui,&newSize)` to check pending size changes and decide
+when to resize the application-owned canvas. Never combine event polling with
+direct `Terminal_GetChar`/`Key_Get` on the same input stream.
+
+```c
+/* After the owning Canvas has been created: */
+(void)TERMINAL_FUNC(Mouse_Enable)(true);
+
+/* Each iteration: */
+size_t count=0;
+(void)UI_FUNC(PollEvents)(&ui,&count);
+TDUAL_TYPE(uint16) newSize;
+if(UI_FUNC(Resize_Take)(&ui,&newSize))
+    (void)TERMINAL_FUNC(Canvas_Resize)(&canvas,newSize);
+TERMINAL_FUNC(Canvas_Clear)(&canvas);
+(void)UI_FUNC(Begin)(&ui,&canvas);
+/* draw ButtonEx, InputTextEx, ... */
+(void)UI_FUNC(End)(&ui);
+(void)TERMINAL_FUNC(Canvas_Update)(&canvas);
+
+/* Shutdown: */
+(void)TERMINAL_FUNC(Mouse_Enable)(false);
+```
+
+There is deliberately **no mandatory UI Init or Free**. Use Chronometry or
+the host scheduler to avoid a busy-loop and handle any noninteractive
+`NOT_AVAILABLE` status; applications can still inject events manually.
+
+## Editing and advanced layout
+
+`TInputText` includes byte-indexed `caret`, `selectionAnchor` and
+`firstVisible`; UTF-8 codepoint boundaries are respected by
+`InputText_Select`, `InputText_Copy`, `InputText_Cut`,
+`InputText_Paste`. These functions operate on caller-owned UTF-8 memory
+rather than an OS-wide clipboard (external clipboard integration is not
+provided); paste source must not alias the input buffer.
+
+Arrow keys, Home, End, Delete, Backspace and Enter are handled by the editor;
+multiline supports up/down and line-by-line scrolling. The caret and selected
+range are visually distinguished by inverse attributes. This is a
+codepoint-based editor, **not** a full grapheme-cluster/shaping implementation;
+combining marks, multi-codepoint emoji and clipboard shortcuts need further work.
+
+`Layout_Share` consumes a fraction of remaining horizontal/vertical space;
+`Layout_MeasureText` returns terminal-cell text dimensions with padding.
+
+A `TList` now retains `firstVisible`: keyboard selection automatically
+scrolls the viewport, and mouse wheel scrolls when the pointer hovers over it.
+
+## Incremental presentation
+
+`Terminal_Canvas_UpdateDiff(&current,&previous)` writes changed cells;
+`Terminal_Canvas_UpdateDiffAt` draws the same diff at an explicit position.
+`previous` must be a valid snapshot of the last *successfully displayed*
+frame, updated by the application with `Canvas_Copy`. If sizes differ, the
+new implementation performs a full redraw. Use a full `Canvas_Update` after
+external writes, terminal clear/resize, or state uncertainty.

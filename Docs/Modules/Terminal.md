@@ -43,3 +43,23 @@ Functions use `TERMINAL_FUNC(...)` or their direct `Terminal_...` names when the
 - Keyboard escape-sequence parsing is basic; comprehensive modifier/function-key support is future work.
 
 See `Codespace/Cosmeron/Modules/Graphics/Terminal/README.md` for the design goals.
+
+
+## Native event API and terminal capabilities
+
+`TERMINAL_FUNC(Event_Poll)(TEvent *outEvent, bool *outAvailable)` polls
+non-blockingly. Event kinds are `EVENT_KEY`, `EVENT_POINTER_MOVE`,
+`EVENT_POINTER_BUTTON`, `EVENT_SCROLL`, and `EVENT_RESIZE`.
+Key events use Unicode codepoints or `KEY_*` tokens. Coordinate units are
+zero-based terminal cells.
+
+`TERMINAL_FUNC(Mouse_Enable)(bool enabled)` enables/disables optional native
+mouse reporting. It saves and restores original platform input settings.
+The capture path requires interactive stdin/stdout and must not be mixed with
+direct stdio/getch polling on the same descriptor.
+
+`TERMINAL_FUNC(Capabilities_Get)(TCapabilities *outCapabilities)` detects
+interactive output, ANSI, Unicode, truecolor and mouse support
+conservatively. The detection uses WinConsole APIs or environment-based
+POSIX heuristics: the reported capabilities are **not a formal terminal
+negotiation handshake**.

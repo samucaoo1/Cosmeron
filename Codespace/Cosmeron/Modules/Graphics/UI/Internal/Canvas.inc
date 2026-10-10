@@ -142,17 +142,32 @@ UI_BEGIN_PROTOTYPE {
   if(!context->themeSet) {
     TERMINAL_TYPE(TCapabilities) caps={0};
     context->theme=UI_FUNC(Theme_Default)();
-    if(TERMINAL_FUNC(Capabilities_Get)(&caps)==STATUS_CONST(SUCCESS) &&
-       !caps.unicode){
+    if(TERMINAL_FUNC(Capabilities_Get)(&caps)==STATUS_CONST(SUCCESS)){
       UI_TYPE(TVisual) *visuals[]={
-        &context->theme.button,&context->theme.checkbox,&context->theme.radio,
-        &context->theme.slider,&context->theme.input,&context->theme.panel,
-        &context->theme.progress,&context->theme.selection
+        &context->theme.text,&context->theme.button,
+        &context->theme.checkbox,&context->theme.radio,
+        &context->theme.slider,&context->theme.input,
+        &context->theme.panel,&context->theme.progress,
+        &context->theme.selection
       };
-      size_t i;
-      context->theme.glyphs=UI_FUNC(Glyphs_ASCII)();
-      for(i=0;i<sizeof(visuals)/sizeof(visuals[0]);i++)
-        visuals[i]->border=UI_CONST(BORDER_ASCII);
+      size_t visualIndex;
+      if(!caps.unicode){
+        context->theme.glyphs=UI_FUNC(Glyphs_ASCII)();
+        for(visualIndex=0;visualIndex<sizeof(visuals)/sizeof(visuals[0]);
+            ++visualIndex)
+          visuals[visualIndex]->border=UI_CONST(BORDER_ASCII);
+      }
+      if(!caps.ansi) {
+        TEXT_GRID_ATTRIBUTE_TYPE(Cell) fallback=TEXT_GRID_ATTRIBUTE_FUNC(Default)();
+        for(visualIndex=0;visualIndex<sizeof(visuals)/sizeof(visuals[0]);
+            ++visualIndex) {
+          visuals[visualIndex]->normal=fallback;
+          visuals[visualIndex]->hovered=fallback;
+          visuals[visualIndex]->focused=fallback;
+          visuals[visualIndex]->active=fallback;
+          visuals[visualIndex]->disabled=fallback;
+        }
+      }
     }
     context->themeSet=true;
   }

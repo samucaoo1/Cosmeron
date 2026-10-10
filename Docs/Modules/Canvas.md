@@ -73,3 +73,19 @@ arbitrary custom backend handles are not implemented.
 Cross-platform CI runs this header with GCC, Clang and MSVC, but terminal
 appearance and all platform-specific interactive key sequences still require
 manual terminal testing.
+
+
+## Differential presentation
+
+Use `TERMINAL_FUNC(Canvas_UpdateDiff)(current,previous)` or
+`TERMINAL_FUNC(Canvas_UpdateDiffAt)(current,previous,position)`
+to emit only changed cells. Both arguments must be valid canvases, and
+`previous` is a caller-owned snapshot of the previous successful frame.
+When sizes differ the implementation falls back to a full redraw.
+
+Unlike the normal full `Update`, diff drawing assumes nothing has
+modified the displayed surface outside this API. A direct
+`Terminal_Print`, a terminal resize or another application writing to the
+same terminal requires a full redraw and refreshing the snapshot.
+
+This design deliberately avoids an invisible persistent renderer cache.

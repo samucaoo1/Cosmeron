@@ -1,6 +1,6 @@
 # UI — terminal user interface package
 
-**Implementation available in [UI.h](UI.h).** Initial immediate-mode widgets, layouts, themes and event handling have been implemented. Mouse capture from native terminal backends remains a separate integration task.
+**Implementation available in [UI.h](UI.h).** Includes immediate-mode widgets, keyboard/mouse events, resizes, scrollable lists, themes, layouts and UTF-8 editing. See [Docs/Modules/UI.md](../../../../../Docs/Modules/UI.md) for configuration.
 
 ## Objective
 
@@ -9,7 +9,7 @@ Implement retained/immediate-friendly TUI widgets using **Canvas as the renderin
 ## Dependencies and reuse
 
 - `Graphics/Canvas`: drawing, clipping, cropped or borrowed nested views, explicit update.
-- `Graphics/Terminal`: keyboard events and console mode, capabilities.
+- `Graphics/Terminal`: native keyboard/mouse/resize events and console mode, capabilities.
 - `Struct/TDual.h`, `Struct/TQuad.h`: use `TDUAL_TYPE(uint16)` positions/dimensions and inclusive `TQUAD_TYPE(uint16)` rects; **do not invent `TPosition`, `TSize`, `TRect`**.
 - `Text/Grid` / `Text/Unicode`: glyphs, cell attributes, Unicode widths.
 - Optional `Container` for collections and `Chronometry` for animation/timers.

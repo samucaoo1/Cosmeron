@@ -55,7 +55,7 @@ static inline bool TERMINAL_INS(ParseMouseSGR)(
   if(button&64U){
     out->kind=TERMINAL_CONST(EVENT_SCROLL);
     out->scroll=(button&1U)?-1:1;
-  }else if(button&32U || (button&3U)==3U && *p=='M'){
+  }else if((button&32U)!=0U || (((button&3U)==3U) && *p=='M')){
     out->kind=TERMINAL_CONST(EVENT_POINTER_MOVE);
   }else{
     out->kind=TERMINAL_CONST(EVENT_POINTER_BUTTON);
