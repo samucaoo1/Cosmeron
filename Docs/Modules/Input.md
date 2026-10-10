@@ -74,9 +74,9 @@ Native capture is desktop/device scoped. For a host window (including Wayland), 
 | --- | --- | --- |
 | Linux | evdev physical keys, raw motion, absolute device coordinates and high-resolution wheels; optional X11 logical keys and desktop pointer | evdev, kernel-timed rumble |
 | Windows | Raw Input physical/logical keys and per-device aggregation; desktop pointer | XInput plus WinMM generic joysticks; XInput rumble uses an OS timer |
-| macOS | CoreGraphics event tap, layout translation through HIToolbox, desktop pointer | Optional dynamically loaded SDL 3 |
+| macOS | CoreGraphics event tap, layout translation through HIToolbox, desktop pointer | Native IOHIDManager; optional SDL 3 fallback |
 | FreeBSD | evdev and optional X11 | evdev |
-| OpenBSD / NetBSD / DragonFly | optional X11 polling | Optional dynamically loaded SDL 3 |
+| OpenBSD / NetBSD / DragonFly | optional X11 polling | Native ujoy/uhid through system libusbhid; optional SDL 3 fallback |
 | Other / INPUT_NO_NATIVE | application-submitted events | no native backend |
 
 Check `Input_GetCapabilities()` after Update. Capabilities describe currently available native sources; application capabilities accumulate as corresponding events are submitted. A successful application-mode update does not imply controller availability.
@@ -85,7 +85,7 @@ Linux/FreeBSD device access respects existing file permissions. X11 provides a k
 
 Windows checks existing Raw Input registrations and returns BUSY rather than replacing another target. Application mode avoids these registrations. Native key transitions begin when observed; keys held before capture starts are not guaranteed to be seeded. WinMM can expose duplicate XInput devices; generic bindings require explicit mapping and WinMM rumble is unsupported. WinMM manufacturer/product numbers are not presented as USB IDs.
 
-macOS event capture requires OS Input Monitoring permission; the module does not prompt or bypass it. Its event tap aggregates devices. Layout translation covers the key enum, not Unicode text. SDL 3 must be installed at runtime for macOS/non-evdev BSD controllers; define INPUT_NO_SDL_CONTROLLERS to disable this optional transport. SDL performs its own allocations and device management; applications already using SDL must continue their normal event pumping.
+macOS event capture requires OS Input Monitoring permission; the module does not prompt or bypass it. Its event tap aggregates devices. Layout translation covers the key enum, not Unicode text. Native HID is attempted first on macOS/non-evdev BSD. SDL 3 is optional and attempted only while no native controller has been acquired; define INPUT_NO_SDL_CONTROLLERS to disable this optional transport. SDL performs its own allocations and device management; applications already using SDL must continue their normal event pumping.
 
 No extra link flags are needed on Windows, macOS, BSD or modern Linux/glibc (2.34+). Older Linux libcs may require their usual dynamic-loader link library. Native libraries load at runtime. Module state uses bounded storage; native libraries may allocate internally. Resources close automatically at normal process exit and disconnect. Do not unload a shared object containing registered exit callbacks.
 
@@ -1746,7 +1746,7 @@ Vendor/Product return available USB identifiers or zero, including for stale IDs
 
 ## Expanded validation
 
-Application tests cover focus, multiple sources, physical/logical separation, pending overflow, invalid events and custom bindings. Native decoder tests cover evdev high-resolution wheels and recovery, Windows scan codes and system-timed rumble, macOS event translation, and SDL transport using a simulated driver. CI compiles platform branches on Linux, macOS and Windows. These automated checks do not replace physical-device, desktop-permission or BSD runtime validation.
+Application tests cover focus, multiple sources, physical/logical separation, pending overflow, invalid events and custom bindings. Native decoder tests cover evdev high-resolution wheels and recovery, Windows scan codes and system-timed rumble, macOS event translation, and SDL transport using a simulated driver. CI compiles platform branches on Linux, macOS and Windows. These automated checks do not replace physical-device, desktop-permission validation with physical devices. A separate Input BSD workflow builds and runs the suite in FreeBSD, OpenBSD, NetBSD and DragonFly virtual machines.
 
 
 The additional APIs also support the namespace macros:
@@ -1764,3 +1764,14 @@ INPUT_GAMEPAD_FUNC(ClearMapping)(controller);
 ```
 
 Use the same `*_FUNC` form for IsPhysicalPressed and IsPhysicalReleased. Both forms call the identical implementation; the macro form follows configured namespace prefixes.
+
+
+## Native controller priority on macOS and BSD
+
+macOS reads joystick/gamepad/multi-axis HID devices through IOHIDManager. It enumerates elements, normalizes absolute axes using descriptor limits, reads buttons and hats, reports vendor/product IDs and detects device removal. It uses its own run-loop mode and loads IOKit/CoreFoundation dynamically, with no framework link flags or SDL requirement.
+
+FreeBSD retains its native evdev backend. OpenBSD reads `/dev/ujoy/*`; NetBSD and DragonFly read `/dev/uhid*`. Those three systems use their base-system libusbhid to parse descriptors, then read bounded nonblocking input reports directly from the device. Discovery repeats approximately once per second. Device permissions must already allow reading; the code does not change them. Device paths serve as names on uhid/ujoy; USB IDs are currently unavailable there.
+
+On macOS and non-evdev BSD, native discovery runs before SDL. The first transport to acquire a controller owns controller enumeration for the process lifetime, including disconnect/reconnect. This avoids duplicate devices and changing connection identity behind the caller. If native discovery finds none, an installed SDL 3 may supply fallback devices. This is a whole-transport fallback, not per-device mixing. Define INPUT_NO_SDL_CONTROLLERS to require native-only operation.
+
+Generic HID button ordering is not a portable gamepad layout: these native devices expose raw controls and accept MapButton/MapAxis, but do not invent standard bindings. Native generic HID rumble returns NOT_SUPPORTED because motor output reports are device-specific. The SDL fallback retains its mappings and rumble support. FreeBSD evdev rumble is unchanged. Native-only does not mean universal vendor-protocol or wireless-driver coverage.

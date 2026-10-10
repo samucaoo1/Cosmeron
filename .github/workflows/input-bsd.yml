@@ -1,0 +1,50 @@
+name: Input BSD
+on:
+  push:
+    branches: [audio-module, main]
+    paths: ['Codespace/Cosmeron/Modules/Input/**', 'Codespace/Tests/Input/**', '.github/workflows/input-bsd.yml', '.github/scripts/test-input-posix.sh']
+  pull_request:
+    paths: ['Codespace/Cosmeron/Modules/Input/**', 'Codespace/Tests/Input/**', '.github/workflows/input-bsd.yml', '.github/scripts/test-input-posix.sh']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: input-bsd-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  freebsd:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: vmactions/freebsd-vm@c46abacb49f09938ca4e1702d15d836285d694cc
+        with:
+          usesh: true
+          run: sh .github/scripts/test-input-posix.sh
+  openbsd:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: vmactions/openbsd-vm@5f7b2c933b8846a138361d6843c52af4bef5d945
+        with:
+          usesh: true
+          run: sh .github/scripts/test-input-posix.sh
+  netbsd:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: vmactions/netbsd-vm@c8a0d7ddb84619a7a8cc4e652efa7950b3fd9f92
+        with:
+          usesh: true
+          run: sh .github/scripts/test-input-posix.sh
+  dragonflybsd:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: vmactions/dragonflybsd-vm@4ab776fa9f914fbea72f13715b451e77e7ef5c41
+        with:
+          usesh: true
+          run: sh .github/scripts/test-input-posix.sh

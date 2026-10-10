@@ -48,9 +48,11 @@ COSMERON_INPUT_STORAGE INPUT_INS(SDLState) INPUT_INS(sdlState) = {0};
 #endif
 static inline void INPUT_INS(SDLClose)(size_t slot) {
   INPUT_INS(SDLState) *s = &INPUT_INS(sdlState);
+  if (!s->ids[slot] && !s->joysticks[slot] && !s->gamepads[slot]) return;
   if (s->gamepads[slot]) s->closeGamepad(s->gamepads[slot]);
   if (s->joysticks[slot]) s->close(s->joysticks[slot]);
   s->gamepads[slot] = NULL; s->joysticks[slot] = NULL; s->ids[slot] = 0;
+  /* Empty SDL slots may belong to a native transport. */
   INPUT_INS(Disconnect)(slot);
 }
 static void INPUT_INS(SDLCleanup)(void) {
@@ -131,7 +133,7 @@ static inline bool INPUT_INS(SDLUpdate)(void) {
     bool found = false;
     for (i = 0; i < INPUT_DEVICE_CAPACITY; ++i) if (s->ids[i] == ids[k]) found = true;
     if (found) continue;
-    for (i = 0; i < INPUT_DEVICE_CAPACITY; ++i) if (!s->ids[i]) {
+    for (i = 0; i < INPUT_DEVICE_CAPACITY; ++i) if (!s->ids[i] && !INPUT_INS(state).devices[i].connected) {
       INPUT_INS(Device) *d;
       int n;
       s->joysticks[i] = s->open(ids[k]); if (!s->joysticks[i]) break;

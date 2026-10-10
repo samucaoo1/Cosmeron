@@ -3,9 +3,11 @@
 #include <Carbon/Carbon.h>
 #include "Dynamic.inc"
 #include "PhysicalKeys.inc"
+#include "MacHID.inc"
 #ifndef INPUT_NO_SDL_CONTROLLERS
 #include "SDLControllers.inc"
 #endif
+#include "ControllerTransport.inc"
 
 typedef struct INPUT_INS(MacState) {
   void *graphics, *foundation, *carbon;
@@ -166,10 +168,7 @@ unavailable:
 }
 static inline OPSTATUS INPUT_INS(BackendUpdate)(void) {
   INPUT_INS(MacState) *s = &INPUT_INS(macState);
-  bool available = false;
-#ifndef INPUT_NO_SDL_CONTROLLERS
-  available = INPUT_INS(SDLUpdate)();
-#endif
+  bool available = INPUT_INS(ControllersUpdate)();
   if (INPUT_INS(state).captureMode == INPUT_CONST(CAPTURE_APPLICATION)) return available ? STATUS_CONST(SUCCESS) : STATUS_CONST(NOT_AVAILABLE);
   if (!INPUT_INS(MacStart)()) return available ? STATUS_CONST(SUCCESS) : STATUS_CONST(NOT_AVAILABLE);
   /* Respect Input Monitoring permissions; never request them automatically. */
@@ -207,9 +206,5 @@ static inline OPSTATUS INPUT_INS(BackendUpdate)(void) {
   return available ? STATUS_CONST(SUCCESS) : STATUS_CONST(NOT_AVAILABLE);
 }
 static inline OPSTATUS INPUT_INS(BackendRumble)(INPUT_INS(Device) *d, float low, float high, uint32_t ms) {
-#ifndef INPUT_NO_SDL_CONTROLLERS
-  return INPUT_INS(SDLRumble)(d, low, high, ms);
-#else
-  (void)d; (void)low; (void)high; (void)ms; return STATUS_CONST(NOT_SUPPORTED);
-#endif
+  return INPUT_INS(ControllersRumble)(d, low, high, ms);
 }

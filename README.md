@@ -42,7 +42,7 @@ The current architecture covers or is designed around:
 - **Text:** UTF-8/UTF-16, Unicode, text grids, and terminal-oriented text structures.
 - **Type:** fundamental typed operations and extended numeric/value types.
 
-The [Input module](Docs/Modules/Input.md) provides keyboard, mouse and controller state through Windows/Linux backends, macOS capture, BSD paths and a host-event adapter. Optional SDL 3 supplies controllers on macOS and non-evdev BSD.
+The [Input module](Docs/Modules/Input.md) provides keyboard, mouse and controller state through Windows/Linux backends, macOS capture, BSD paths and a host-event adapter. Controllers use native IOHIDManager on macOS and evdev/uhid/ujoy on BSD; SDL 3 is an optional fallback on macOS and non-evdev BSD.
 
 Planned domains such as Filesystem, Terminal, TUI, Graphics, Parsing, Serialization, Event Loop, Audio, and more are tracked in the [roadmap](Docs/Project/ROADMAP.md).
 
