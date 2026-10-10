@@ -284,6 +284,100 @@ FONT_PARSE_FIGLET_PROTOTYPE {
   *outFont=f;
   return STATUS_CONST(SUCCESS);
 }
+
+/* ASF2: readable FIGlet-like glyph blocks; artwork is never interleaved
+ * with styling codes. Optional !fg ROW #RRGGBB follows the artwork. */
+static inline bool FONT_INS(ASF2Glyph)(const char *s,size_t n,unsigned *letter){
+  if(n==2 && s[0]=='@' && (unsigned char)s[1]>=33 && (unsigned char)s[1]<=126){
+    *letter=(unsigned char)s[1];return true;
+  }
+  if(n==6 && memcmp(s,"@space",6)==0){*letter=32;return true;}
+  return false;
+}
+static inline bool FONT_INS(HexColor)(const char *s,size_t n,uint32_t *color){
+  size_t i;uint32_t v=0;
+  if(n!=7||s[0]!='#')return false;
+  for(i=1;i<7;i++){
+    unsigned char c=(unsigned char)s[i];unsigned digit;
+    if(c>='0'&&c<='9')digit=c-'0';
+    else if(c>='A'&&c<='F')digit=c-'A'+10U;
+    else if(c>='a'&&c<='f')digit=c-'a'+10U;
+    else return false;
+    v=(v<<4)|digit;
+  }
+  *color=v;return true;
+}
+static inline bool FONT_INS(ASF2Color)(
+    const char *s,size_t n,uint32_t *row,uint32_t *color){
+  size_t cursor=4;uint32_t parsed;
+  if(n<13||memcmp(s,"!fg ",4)!=0||
+     !FONT_INS(Unsigned)(s,n,&cursor,&parsed))return false;
+  while(cursor<n && s[cursor]==' ')cursor++;
+  if(!FONT_INS(HexColor)(s+cursor,n-cursor,color))return false;
+  *row=parsed;return true;
+}
+FONT_PARSE_ASF2_PROTOTYPE {
+  FONT_TYPE(TFont) font={0};size_t cursor=0,start=0,len=0,at=4;
+  uint32_t height=0;
+  if(!data||!size||!outFont)return STATUS_CONST(INVALID_ARGUMENT);
+  if(!FONT_INS(Line)(data,size,&cursor,&start,&len)||len<6||
+     memcmp(data+start,"ASF2",4)!=0||
+     !FONT_INS(Unsigned)(data+start,len,&at,&height)||
+     height<1||height>FONT_MAX_HEIGHT)return STATUS_CONST(INVALID_SEQUENCE);
+  while(at<len && (data[start+at]==' '||data[start+at]=='\t'))at++;
+  if(at!=len)return STATUS_CONST(INVALID_SEQUENCE);
+  font.data=data;font.length=size;font.height=(uint16_t)height;
+  font.format=FONT_NS(FORMAT_ASF2);
+  while(FONT_INS(Line)(data,size,&cursor,&start,&len)){
+    unsigned letter;uint16_t row,maxWidth=0;
+    if(!len||data[start]=='#')continue;
+    if(!FONT_INS(ASF2Glyph)(data+start,len,&letter)||
+       font.glyphs[letter-32U].present)return STATUS_CONST(INVALID_SEQUENCE);
+    font.glyphs[letter-32U].present=true;
+    font.glyphs[letter-32U].offset=cursor;
+    for(row=0;row<font.height;row++){
+      uint16_t width=0;OPSTATUS st;
+      if(!FONT_INS(Line)(data,size,&cursor,&start,&len))
+        return STATUS_CONST(INVALID_SEQUENCE);
+      st=FONT_INS(RowSize)(data+start,len,false,&width);
+      if(st!=STATUS_CONST(SUCCESS))return st;
+      if(width>maxWidth)maxWidth=width;
+    }
+    font.glyphs[letter-32U].columns=maxWidth;
+    font.glyphs[letter-32U].paintOffset=cursor;
+    while(cursor<size){
+      size_t look=cursor,lnStart=0,lnLength=0;
+      uint32_t color,which;
+      if(!FONT_INS(Line)(data,size,&look,&lnStart,&lnLength))break;
+      if(lnLength<1||data[lnStart]=='#'||
+         FONT_INS(ASF2Glyph)(data+lnStart,lnLength,&letter))break;
+      if(!FONT_INS(ASF2Color)(data+lnStart,lnLength,&which,&color)||
+         which>=font.height)return STATUS_CONST(INVALID_SEQUENCE);
+      cursor=look;
+    }
+    font.glyphs[letter-32U].paintEnd=cursor;
+  }
+  *outFont=font;return STATUS_CONST(SUCCESS);
+}
+static inline OPSTATUS FONT_INS(ASF2RowStyle)(
+    const FONT_TYPE(TFont) *font,unsigned char code,uint16_t row,
+    TEXT_GRID_ATTRIBUTE_TYPE(Cell) *style){
+  size_t cursor=font->glyphs[code-32U].paintOffset;
+  size_t end=font->glyphs[code-32U].paintEnd;
+  while(cursor<end){
+    size_t start,len;uint32_t index,color;
+    if(!FONT_INS(Line)(font->data,end,&cursor,&start,&len))
+      return STATUS_CONST(INVALID_SEQUENCE);
+    if(!FONT_INS(ASF2Color)(font->data+start,len,&index,&color))
+      return STATUS_CONST(INVALID_SEQUENCE);
+    if(index==row){
+      style->foreground=color;
+      style->flags&=(uint16_t)~TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_FOREGROUND);
+    }
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
 FONT_MEASURE_PROTOTYPE {
   uint32_t lineWidth=0,maxWidth=0,lines=1;
   const unsigned char *p=(const unsigned char *)asciiText;
@@ -356,7 +450,14 @@ FONT_DRAW_PROTOTYPE {
       const char *str;size_t len;
       status=FONT_INS(Row)(font,*p,row,&str,&len);
       if(status!=STATUS_CONST(SUCCESS))return status;
-      status=FONT_INS(DrawRow)(canvas,x,y+row,font,str,len,defaultStyle);
+      {
+        TEXT_GRID_ATTRIBUTE_TYPE(Cell) paint=defaultStyle;
+        if(font->format==FONT_NS(FORMAT_ASF2)){
+          status=FONT_INS(ASF2RowStyle)(font,*p,row,&paint);
+          if(status!=STATUS_CONST(SUCCESS))return status;
+        }
+        status=FONT_INS(DrawRow)(canvas,x,y+row,font,str,len,paint);
+      }
       if(status!=STATUS_CONST(SUCCESS))return status;
     }
     x+=font->glyphs[*p-32U].columns;
