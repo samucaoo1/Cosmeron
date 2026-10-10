@@ -239,6 +239,27 @@
   static inline OPSTATUS UI_FUNC(ProgressEx)( \
       UI_TYPE(TContext) *context, const UI_TYPE(TProgress) *progress)
 
+#define UI_MENU_PROTOTYPE \
+  static inline OPSTATUS UI_FUNC(Menu)( \
+      UI_TYPE(TContext) *context, \
+      TQUAD_TYPE(uint16) region, \
+      const char *const *items, size_t count, \
+      size_t *selected, bool *outActivated)
+
+#define UI_MENU_EX_PROTOTYPE \
+  static inline OPSTATUS UI_FUNC(MenuEx)( \
+      UI_TYPE(TContext) *context, UI_TYPE(TMenu) *menu)
+
+#define UI_PROGRESS_BAR_PROTOTYPE \
+  static inline OPSTATUS UI_FUNC(ProgressBar)( \
+      UI_TYPE(TContext) *context, TQUAD_TYPE(uint16) region, \
+      uint64_t value, uint64_t maximum)
+
+#define UI_PROGRESS_BAR_EX_PROTOTYPE \
+  static inline OPSTATUS UI_FUNC(ProgressBarEx)( \
+      UI_TYPE(TContext) *context, \
+      const UI_TYPE(TProgressBar) *progress)
+
 #define UI_INPUT_TEXT_PROTOTYPE \
   static inline OPSTATUS UI_FUNC(InputText)( \
       UI_TYPE(TContext) *context, TQUAD_TYPE(uint16) region, char *buffer, \
@@ -323,6 +344,10 @@ UI_SLIDER_PROTOTYPE;
 UI_SLIDER_EX_PROTOTYPE;
 UI_PROGRESS_PROTOTYPE;
 UI_PROGRESS_EX_PROTOTYPE;
+UI_MENU_PROTOTYPE;
+UI_MENU_EX_PROTOTYPE;
+UI_PROGRESS_BAR_PROTOTYPE;
+UI_PROGRESS_BAR_EX_PROTOTYPE;
 UI_INPUT_TEXT_PROTOTYPE;
 UI_INPUT_TEXT_EX_PROTOTYPE;
 UI_TEXT_AREA_PROTOTYPE;
