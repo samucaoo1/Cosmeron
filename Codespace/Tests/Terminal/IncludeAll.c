@@ -1,6 +1,7 @@
 #include "../../Cosmeron/Modules/Graphics/Terminal/Terminal.h"
 #include "../../Cosmeron/Modules/Graphics/Canvas/Canvas.h"
 #include "../../Cosmeron/Modules/Graphics/UI/UI.h"
+#include "../../Cosmeron/Modules/Graphics/Font/Font.h"
 int main(void) {
   TERMINAL_TYPE(TCanvas) canvas={0};
   if (TERMINAL_FUNC(Canvas_Create)(&canvas,
