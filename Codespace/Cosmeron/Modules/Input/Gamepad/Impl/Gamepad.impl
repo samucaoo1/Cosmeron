@@ -42,7 +42,7 @@ INPUT_GAMEPAD_GET_AXIS_PROTOTYPE {
   if (index < 0 || (uint32_t)index >= d->axisCount) return 0;
   value = d->axes[index];
   if (d->customAxes[axis]) {
-    float minimum = axis >= INPUT_CONST(GAMEPAD_AXIS_LEFT_TRIGGER) ? 0 : -1;
+    float minimum = axis >= INPUT_CONST(GAMEPAD_AXIS_LEFT_TRIGGER) ? 0.0f : -1.0f;
     value = value * d->gamepadScale[axis] + d->gamepadOffset[axis];
     return value < minimum ? minimum : (value > 1 ? 1 : value);
   }

@@ -1,5 +1,6 @@
 #include "../../Cosmeron/Modules/Input/Input.h"
 #include <assert.h>
+#include <stdio.h>
 #if defined(_WIN32) && !defined(INPUT_NO_NATIVE)
 static volatile LONG inputStops;
 static DWORD WINAPI mockRumble(DWORD slot, XINPUT_VIBRATION *v) {
@@ -10,6 +11,7 @@ static DWORD WINAPI mockRumble(DWORD slot, XINPUT_VIBRATION *v) {
 #endif
 int main(void) {
 #if defined(_WIN32) && !defined(INPUT_NO_NATIVE)
+  puts("Windows: source aggregation"); fflush(stdout);
   Input_Internal_Device *d = Input_Internal_Connect(0, "Timer test");
   LONG i;
   uint32_t a = Input_Internal_WindowsSource((HANDLE)(uintptr_t)1);
@@ -23,11 +25,14 @@ int main(void) {
   Input_Internal_RemoveSource(a);
   assert(Input_Keyboard_IsDown(INPUT_KEY_A) && !Input_Keyboard_IsReleased(INPUT_KEY_A));
   Input_Internal_RemoveSource(b); assert(!Input_Keyboard_IsDown(INPUT_KEY_A));
+  puts("Windows: timer start"); fflush(stdout);
   d->rumble = true; Input_Internal_windowsState.set = mockRumble;
   assert(Input_Controller_Rumble(d->id, 1, 1, 10) == STATUS_SUCCESS);
+  puts("Windows: waiting for timer"); fflush(stdout);
   /* No Input_Update: the OS callback itself must stop the motors. */
   for (i = 0; i < 100 && !InterlockedCompareExchange(&inputStops, 0, 0); ++i) Sleep(10);
   assert(InterlockedCompareExchange(&inputStops, 0, 0) > 0);
+  puts("Windows: cancel timer"); fflush(stdout);
   Input_Internal_WindowsCancelTimer(0);
   assert(Input_Controller_Rumble(d->id, 1, 1, 10000) == STATUS_SUCCESS);
   assert(Input_Controller_StopRumble(d->id) == STATUS_SUCCESS);
