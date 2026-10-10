@@ -56,7 +56,7 @@
   static inline UI_TYPE(TGlyphs) UI_FUNC(Glyphs_Unicode)( \
       void)
 
-#define #define UI_POLL_EVENTS_PROTOTYPE \
+#define UI_POLL_EVENTS_PROTOTYPE \
   static inline OPSTATUS UI_FUNC(PollEvents)( \
       UI_TYPE(TContext) *context, size_t *outCount)
 
@@ -88,7 +88,7 @@
   static inline OPSTATUS UI_FUNC(InputText_Paste)( \
       UI_TYPE(TInputText) *input, const char *utf8Text, size_t byteLength)
 
-UI_BEGIN_PROTOTYPE \
+#define UI_BEGIN_PROTOTYPE \
   static inline OPSTATUS UI_FUNC(Begin)( \
       UI_TYPE(TContext) *context, TERMINAL_TYPE(TCanvas) *canvas)
 
