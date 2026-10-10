@@ -260,6 +260,51 @@
       UI_TYPE(TContext) *context, \
       const UI_TYPE(TProgressBar) *progress)
 
+#define UI_DIALOG_PROTOTYPE \
+  static inline OPSTATUS UI_FUNC(Dialog)( \
+      UI_TYPE(TContext) *context, TQUAD_TYPE(uint16) region, \
+      const char *title, const char *message, bool *outDismissed)
+
+#define UI_DIALOG_EX_PROTOTYPE \
+  static inline OPSTATUS UI_FUNC(DialogEx)( \
+      UI_TYPE(TContext) *context, UI_TYPE(TDialog) *dialog)
+
+#define UI_CONFIRM_PROTOTYPE \
+  static inline OPSTATUS UI_FUNC(Confirm)( \
+      UI_TYPE(TContext) *context, TQUAD_TYPE(uint16) region, \
+      const char *message, bool *outAccepted, bool *outRejected)
+
+#define UI_CONFIRM_EX_PROTOTYPE \
+  static inline OPSTATUS UI_FUNC(ConfirmEx)( \
+      UI_TYPE(TContext) *context, UI_TYPE(TDialog) *dialog)
+
+#define UI_STATUS_BAR_PROTOTYPE \
+  static inline OPSTATUS UI_FUNC(StatusBar)( \
+      UI_TYPE(TContext) *context, TQUAD_TYPE(uint16) region, \
+      const char *left, const char *right)
+
+#define UI_STATUS_BAR_EX_PROTOTYPE \
+  static inline OPSTATUS UI_FUNC(StatusBarEx)( \
+      UI_TYPE(TContext) *context, const UI_TYPE(TStatusBar) *bar)
+
+#define UI_TOAST_PROTOTYPE \
+  static inline OPSTATUS UI_FUNC(Toast)( \
+      UI_TYPE(TContext) *context, TQUAD_TYPE(uint16) region, \
+      const char *message, bool visible)
+
+#define UI_TOAST_EX_PROTOTYPE \
+  static inline OPSTATUS UI_FUNC(ToastEx)( \
+      UI_TYPE(TContext) *context, const UI_TYPE(TToast) *toast)
+
+#define UI_SPINNER_PROTOTYPE \
+  static inline OPSTATUS UI_FUNC(Spinner)( \
+      UI_TYPE(TContext) *context, TQUAD_TYPE(uint16) region, \
+      const char *label, uint64_t phase)
+
+#define UI_SPINNER_EX_PROTOTYPE \
+  static inline OPSTATUS UI_FUNC(SpinnerEx)( \
+      UI_TYPE(TContext) *context, const UI_TYPE(TSpinner) *spinner)
+
 #define UI_INPUT_TEXT_PROTOTYPE \
   static inline OPSTATUS UI_FUNC(InputText)( \
       UI_TYPE(TContext) *context, TQUAD_TYPE(uint16) region, char *buffer, \
@@ -348,6 +393,16 @@ UI_MENU_PROTOTYPE;
 UI_MENU_EX_PROTOTYPE;
 UI_PROGRESS_BAR_PROTOTYPE;
 UI_PROGRESS_BAR_EX_PROTOTYPE;
+UI_DIALOG_PROTOTYPE;
+UI_DIALOG_EX_PROTOTYPE;
+UI_CONFIRM_PROTOTYPE;
+UI_CONFIRM_EX_PROTOTYPE;
+UI_STATUS_BAR_PROTOTYPE;
+UI_STATUS_BAR_EX_PROTOTYPE;
+UI_TOAST_PROTOTYPE;
+UI_TOAST_EX_PROTOTYPE;
+UI_SPINNER_PROTOTYPE;
+UI_SPINNER_EX_PROTOTYPE;
 UI_INPUT_TEXT_PROTOTYPE;
 UI_INPUT_TEXT_EX_PROTOTYPE;
 UI_TEXT_AREA_PROTOTYPE;
