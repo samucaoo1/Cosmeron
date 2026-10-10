@@ -140,14 +140,30 @@ TERMINAL_INPUT_PROTOTYPE {
   return TERMINAL_FUNC(ReadLine)(buffer,capacity,outLength);
 }
 TERMINAL_SCAN_PROTOTYPE {
-  va_list args; int result;
+  va_list args; int result, expected=0;
+  const char *p;
   if (!format) return STATUS_CONST(INVALID_ARGUMENT);
-  /* Never silently allow scanf string/scanset conversions without a bound.
-   * The scanf API is intentionally restricted to formats with no conversions;
-   * callers should use ReadLine and explicit parsing for untrusted input. */
-  if (strchr(format,'%')) return STATUS_CONST(NOT_SUPPORTED);
-  va_start(args,format); result=vfscanf(stdin,format,args); va_end(args);
-  return result==EOF ? STATUS_CONST(NOT_FOUND) : STATUS_CONST(SUCCESS);
+  /* Numeric scanf subset. Unbounded strings, scansets, %n, pointers,
+   * character arrays, extensions and positional arguments are rejected. */
+  for (p=format; *p; ++p) {
+    bool suppressed=false;
+    if (*p!='%') continue;
+    ++p;
+    if (*p=='%') continue;
+    if (*p=='*') {suppressed=true;++p;}
+    while (*p>='0' && *p<='9') ++p;
+    if (*p=='h') {++p;if(*p=='h')++p;}
+    else if (*p=='l') {++p;if(*p=='l')++p;}
+    else if (*p=='j' || *p=='z' || *p=='t' || *p=='L') ++p;
+    if (!*p || strchr("diouxXfFeEgGaA",*p)==NULL)
+      return STATUS_CONST(NOT_SUPPORTED);
+    if(!suppressed) ++expected;
+  }
+  va_start(args,format);
+  result=vfscanf(stdin,format,args);
+  va_end(args);
+  if(result==EOF) return STATUS_CONST(NOT_FOUND);
+  return result==expected ? STATUS_CONST(SUCCESS) : STATUS_CONST(INVALID_SEQUENCE);
 }
 TERMINAL_PUT_CHAR_PROTOTYPE {
   unsigned char bytes[4]; size_t size=0;
