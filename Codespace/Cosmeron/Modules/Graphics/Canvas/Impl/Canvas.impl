@@ -539,3 +539,140 @@ TERMINAL_CANVAS_UPDATE_AT_PROTOTYPE {
 TERMINAL_CANVAS_UPDATE_PROTOTYPE {
   return TERMINAL_FUNC(Canvas_UpdateAt)(canvas,(TDUAL_TYPE(uint16)){0});
 }
+
+
+/* Explicit differential presentation. 'previous' is a caller-maintained
+ * snapshot of the LAST SUCCESSFULLY PRESENTED frame; no invisible cache. */
+static inline bool TERMINAL_INS(CanvasDirty)(
+    const TERMINAL_TYPE(TCanvas) *newFrame,
+    const TERMINAL_TYPE(TCanvas) *oldFrame,uint32_t x,uint32_t y) {
+  size_t current=TERMINAL_INS(CanvasIndex)(newFrame,x,y);
+  size_t old=TERMINAL_INS(CanvasIndex)(oldFrame,x,y);
+  TEXT_GRID_ATTRIBUTE_TYPE(Cell) a=newFrame->backing->attributes.data[current];
+  TEXT_GRID_ATTRIBUTE_TYPE(Cell) b=oldFrame->backing->attributes.data[old];
+  bool dirty=newFrame->backing->chars.data[current]!=
+             oldFrame->backing->chars.data[old] ||
+             !TERMINAL_INS(CanvasStyleEqual)(a,b);
+  if(!dirty && x+1U<newFrame->size.col) {
+    /* A wide glyph's trailing cell must be repainted if its lead changed. */
+    size_t next=TERMINAL_INS(CanvasIndex)(newFrame,x+1U,y);
+    size_t previous=TERMINAL_INS(CanvasIndex)(oldFrame,x+1U,y);
+    if((a.flags&TEXT_GRID_ATTRIBUTE_CONST(CODE_UNIT_CONTINUATION)) ||
+       (b.flags&TEXT_GRID_ATTRIBUTE_CONST(CODE_UNIT_CONTINUATION))) {
+      dirty=(newFrame->backing->chars.data[next]!=
+             oldFrame->backing->chars.data[previous]);
+    }
+  }
+  if(x && !dirty){
+    size_t left=TERMINAL_INS(CanvasIndex)(newFrame,x-1U,y);
+    size_t prior=TERMINAL_INS(CanvasIndex)(oldFrame,x-1U,y);
+    int newWidth=1,oldWidth=1;
+    (void)TEXT_WIDTH_FUNC(Codepoint)(newFrame->backing->chars.data[left],&newWidth);
+    (void)TEXT_WIDTH_FUNC(Codepoint)(oldFrame->backing->chars.data[prior],&oldWidth);
+    if(newWidth==2||oldWidth==2)
+      dirty=newFrame->backing->chars.data[left]!=
+            oldFrame->backing->chars.data[prior];
+  }
+  return dirty;
+}
+TERMINAL_CANVAS_UPDATE_DIFF_AT_PROTOTYPE {
+  OPSTATUS status=STATUS_CONST(SUCCESS);
+  TEXT_GRID_ATTRIBUTE_TYPE(Cell) original,applied;
+  TDUAL_TYPE(uint16) viewport;
+  uint32_t x,y;
+#if OS_WINDOWS
+  TDUAL_TYPE(uint16) savedPosition;
+#endif
+  if(!TERMINAL_INS(CanvasValid)(canvas) ||
+     !TERMINAL_INS(CanvasValid)(previous))return STATUS_CONST(INVALID_ARGUMENT);
+  if(canvas->size.col!=previous->size.col ||
+     canvas->size.row!=previous->size.row)
+    return TERMINAL_FUNC(Canvas_UpdateAt)(canvas,position);
+  if(!TERMINAL_INS(Interactive)())return STATUS_CONST(NOT_AVAILABLE);
+  status=TERMINAL_FUNC(Size_Get)(&viewport);
+  if(status!=STATUS_CONST(SUCCESS))return status;
+  if((uint32_t)position.x+canvas->size.col>viewport.col ||
+     (uint32_t)position.y+canvas->size.row>viewport.row)
+    return STATUS_CONST(OUT_OF_RANGE);
+  original=TERMINAL_INS(CurrentStyle)();
+  applied=original;
+#if OS_WINDOWS
+  status=TERMINAL_FUNC(Cursor_GetPosition)(&savedPosition);
+  if(status!=STATUS_CONST(SUCCESS))return status;
+#else
+  if(fputs("\x1b" "7",stdout)==EOF)return STATUS_CONST(GENERIC_ERROR);
+#endif
+  for(y=0;y<canvas->size.row;y++) {
+    bool cursorSet=false;
+    for(x=0;x<canvas->size.col;x++) {
+      size_t idx;
+      TEXT_GRID_ATTRIBUTE_TYPE(Cell) cell;
+      TEXT_TYPE(TChar32) glyph;
+      unsigned char utf8[4];
+      size_t amount=0;
+      if(!TERMINAL_INS(CanvasDirty)(canvas,previous,x,y)) {
+        cursorSet=false;continue;
+      }
+      idx=TERMINAL_INS(CanvasIndex)(canvas,x,y);
+      cell=canvas->backing->attributes.data[idx];
+      glyph=canvas->backing->chars.data[idx];
+      if(cell.flags&TEXT_GRID_ATTRIBUTE_CONST(CODE_UNIT_CONTINUATION)) {
+        if(x) {
+          size_t left=TERMINAL_INS(CanvasIndex)(canvas,x-1U,y);
+          int width=1;
+          if(TEXT_WIDTH_FUNC(Codepoint)(canvas->backing->chars.data[left],
+                                        &width)==STATUS_CONST(SUCCESS) &&
+             width==2) {
+            cursorSet=false;continue;
+          }
+        }
+        glyph=' ';
+        cell.flags&=(uint16_t)~TEXT_GRID_ATTRIBUTE_CONST(CODE_UNIT_CONTINUATION);
+      }
+      if(!cursorSet) {
+        status=TERMINAL_FUNC(Cursor_SetPosition)(
+          (TDUAL_TYPE(uint16)){.x=(uint16_t)(position.x+x),
+                               .y=(uint16_t)(position.y+y)});
+        if(status!=STATUS_CONST(SUCCESS))break;
+        cursorSet=true;
+      }
+      if(!TERMINAL_INS(CanvasStyleEqual)(applied,cell)) {
+        status=TERMINAL_INS(ApplyStyle)(cell);
+        if(status!=STATUS_CONST(SUCCESS))break;
+        applied=cell;
+      }
+      if(!glyph)glyph=' ';
+      status=TEXT_UTF8_FUNC(Encode)(glyph,utf8,sizeof(utf8),&amount);
+      if(status!=STATUS_CONST(SUCCESS))break;
+      if(fwrite(utf8,1,amount,stdout)!=amount){
+        status=STATUS_CONST(GENERIC_ERROR);break;
+      }
+      {
+        int width=1;
+        if(TEXT_WIDTH_FUNC(Codepoint)(glyph,&width)==STATUS_CONST(SUCCESS) &&
+           width==2)cursorSet=false;
+      }
+    }
+    if(status!=STATUS_CONST(SUCCESS))break;
+  }
+  if(!TERMINAL_INS(CanvasStyleEqual)(applied,original)){
+    OPSTATUS restored=TERMINAL_INS(ApplyStyle)(original);
+    if(status==STATUS_CONST(SUCCESS))status=restored;
+  }
+#if OS_WINDOWS
+  {
+    OPSTATUS restored=TERMINAL_FUNC(Cursor_SetPosition)(savedPosition);
+    if(status==STATUS_CONST(SUCCESS))status=restored;
+  }
+#else
+  if(fputs("\x1b" "8",stdout)==EOF && status==STATUS_CONST(SUCCESS))
+    status=STATUS_CONST(GENERIC_ERROR);
+#endif
+  if(fflush(stdout)!=0 && status==STATUS_CONST(SUCCESS))
+    status=STATUS_CONST(GENERIC_ERROR);
+  return status;
+}
+TERMINAL_CANVAS_UPDATE_DIFF_PROTOTYPE {
+  return TERMINAL_FUNC(Canvas_UpdateDiffAt)(
+      canvas,previous,(TDUAL_TYPE(uint16)){0});
+}
