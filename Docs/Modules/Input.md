@@ -68,27 +68,26 @@ These are identifiers and one event value, not separate owning objects. No publi
 
 ## Backend scope and limitations
 
-This first native implementation is **device/desktop scoped, not window-focus scoped**. It does not create a visible application window, capture exclusively, manage cursor appearance, or provide text/IME input. Do not assume input stops when your application loses focus.
+Native capture is desktop/device scoped. For a host window (including Wayland), select `INPUT_CAPTURE_APPLICATION` before the first Update and submit translated events from its event loop. Focus is then explicit. Neither mode provides text/IME input or cursor appearance management.
 
-| Feature | Linux | Windows |
+| Platform | Keyboard / mouse | Controllers |
 | --- | --- | --- |
-| Backend | evdev (`/dev/input/event*`) | Raw Input, async state reconciliation, XInput |
-| Access | Existing device-file permissions | Current interactive desktop access |
-| Keyboard | Linux key-code positions; no layout/text translation | Windows virtual-key semantics |
-| Mouse position | Raw relative displacement integrated from `(0,0)` | Desktop cursor coordinates from GetCursorPos |
-| Mouse delta | Raw device counts | Raw relative mouse counts |
-| Scroll | Legacy horizontal/vertical wheel steps | Wheel deltas divided by WHEEL_DELTA |
-| Controllers | Generic evdev buttons, absolute axes and hats | XInput-compatible controllers, up to four |
-| Hotplug | Rescan approximately once per wall-clock second | XInput polled on each update |
-| Rumble duration | Kernel-timed, maximum 65535 ms | Stopped by subsequent Update or normal process exit |
+| Linux | evdev physical keys, raw motion, absolute device coordinates and high-resolution wheels; optional X11 logical keys and desktop pointer | evdev, kernel-timed rumble |
+| Windows | Raw Input physical/logical keys and per-device aggregation; desktop pointer | XInput plus WinMM generic joysticks; XInput rumble uses an OS timer |
+| macOS | CoreGraphics event tap, layout translation through HIToolbox, desktop pointer | Optional dynamically loaded SDL 3 |
+| FreeBSD | evdev and optional X11 | evdev |
+| OpenBSD / NetBSD / DragonFly | optional X11 polling | Optional dynamically loaded SDL 3 |
+| Other / INPUT_NO_NATIVE | application-submitted events | no native backend |
 
-**Linux `GetPosition` is not the desktop cursor location.** The module has no X11/Wayland window integration. Absolute pointing devices/touchpads, high-resolution wheel events, relative controller axes, a physical-vs-logical keyboard API, keypad/international key completeness and custom gamepad mapping databases are not implemented. Letters on Linux follow the Linux key-code positions; do not use them for localized text or assume parity with Windows layout-sensitive virtual keys.
+Check `Input_GetCapabilities()` after Update. Capabilities describe currently available native sources; application capabilities accumulate as corresponding events are submitted. A successful application-mode update does not imply controller availability.
 
-On macOS/BSD and when `INPUT_NO_NATIVE` is defined, the module compiles but Update returns `NOT_SUPPORTED`. Native support is not claimed for those platforms. `INPUT_NO_NATIVE` is useful for build/test isolation, not a public event injection interface.
+Linux/FreeBSD device access respects existing file permissions. X11 provides a keyboard/pointer alternative without evdev access, but polling can miss short taps and does not supply raw motion or wheel events. X11 is deliberately disabled when WAYLAND_DISPLAY is present: Wayland applications must submit their own window events. Without a desktop position source, GetPosition is integrated raw displacement or absolute device units, not desktop pixels. Absolute tablet/touchpad coordinates are not calibrated to screens; multitouch gestures are outside this API.
 
-Windows uses a private message-only window for Raw Input. It checks for existing keyboard/mouse Raw Input registrations and returns `BUSY` instead of replacing them. This backend must own these registrations; do not register another Raw Input target later or run a separate message pump that consumes its messages. Integration with a host window's existing input loop requires a future adapter. Multiple physical keyboards/mice are aggregated; individual device identity is not exposed, and overlapping Windows raw transitions may be reconciled by the final aggregate snapshot.
+Windows checks existing Raw Input registrations and returns BUSY rather than replacing another target. Application mode avoids these registrations. Native key transitions begin when observed; keys held before capture starts are not guaranteed to be seeded. WinMM can expose duplicate XInput devices; generic bindings require explicit mapping and WinMM rumble is unsupported. WinMM manufacturer/product numbers are not presented as USB IDs.
 
-No extra link libraries are required. Windows loads User32/XInput dynamically. Linux uses libc/syscalls and Linux UAPI headers. Fixed storage avoids heap allocation; resources close automatically at normal process exit and on device disconnect. Do not unload a DLL/shared object containing this state while its exit callback is registered.
+macOS event capture requires OS Input Monitoring permission; the module does not prompt or bypass it. Its event tap aggregates devices. Layout translation covers the key enum, not Unicode text. SDL 3 must be installed at runtime for macOS/non-evdev BSD controllers; define INPUT_NO_SDL_CONTROLLERS to disable this optional transport. SDL performs its own allocations and device management; applications already using SDL must continue their normal event pumping.
+
+No extra link flags are needed on Windows, macOS, BSD or modern Linux/glibc (2.34+). Older Linux libcs may require their usual dynamic-loader link library. Native libraries load at runtime. Module state uses bounded storage; native libraries may allocate internally. Resources close automatically at normal process exit and disconnect. Do not unload a shared object containing registered exit callbacks.
 
 ## Update and state contracts
 
@@ -168,7 +167,7 @@ OPSTATUS Input_Controller_Rumble(Input_ControllerId controller,
 OPSTATUS Input_Controller_StopRumble(Input_ControllerId controller);
 ```
 
-Intensities are finite values in `[0,1]`; invalid values (including NaN) return `INVALID_ARGUMENT`. A zero duration or two zero intensities stops the effect. A new effect replaces the previous one. Unsupported hardware returns `NOT_SUPPORTED`; stale IDs return `NOT_FOUND`; Linux durations above 65535 ms return `OUT_OF_RANGE`. Keep updating on Windows to enforce the requested stop time.
+Intensities are finite values in `[0,1]`; invalid values (including NaN) return `INVALID_ARGUMENT`. A zero duration or two zero intensities stops the effect. A new effect replaces the previous one. Unsupported hardware returns `NOT_SUPPORTED`; stale IDs return `NOT_FOUND`; Linux durations above 65535 ms return `OUT_OF_RANGE`. Windows stops XInput vibration using a system timer, independently of Update. SDL-backed duration follows the SDL driver contract.
 
 ## Gamepad
 
@@ -182,7 +181,7 @@ float Input_Gamepad_GetAxis(Input_ControllerId controller, Input_GamepadAxis axi
 
 The same controller ID is used; no second handle or duplicated event stream is created. Buttons are named by position (`SOUTH`, `EAST`, `WEST`, `NORTH`), shoulders, stick clicks, Back/Start/Guide and d-pad directions. Axes: `LEFT_X/Y`, `RIGHT_X/Y`, `LEFT_TRIGGER`, `RIGHT_TRIGGER`.
 
-Stick components use `[-1,1]`, positive X right and Y up. Triggers use `[0,1]`. Missing elements and unmapped devices return neutral values. The Windows Guide button is not reported by standard XInput. Linux supports the kernel standard gamepad layout, not arbitrary vendor remappings; `IsMapped` indicates the recognized base layout, not availability of every optional control.
+Stick components use `[-1,1]`, positive X right and Y up. Triggers use `[0,1]`. Missing elements and unmapped devices return neutral values. The Windows Guide button is not reported by standard XInput. Linux recognizes the kernel standard layout; SDL supplies its standard mappings. MapButton and MapAxis override individual bindings; IsMapped does not guarantee every optional control exists.
 
 ## Events
 
@@ -665,7 +664,7 @@ None; each non-NULL output receives its component.
 
 ### Remarks
 
-Windows reports desktop coordinates. Linux reports integrated raw displacement from zero, not the desktop cursor. This function does not consume delta or update native input.
+Windows/macOS and an available X11 source report desktop coordinates. Check CAPABILITY_POINTER_POSITION; otherwise Linux reports integrated displacement or absolute device coordinates. This function does not consume delta or update native input.
 
 ### Example
 
@@ -749,7 +748,7 @@ None; each non-NULL output receives its component.
 
 ### Remarks
 
-Values use wheel-step units. Fractional Windows wheel steps are preserved. Linux high-resolution wheel events are not decoded. The next Update clears the accumulation.
+Values use wheel-step units. Fractional Windows wheel steps are preserved. Linux high-resolution wheel values are divided by 120; matching legacy values are ignored to prevent double counting. The next Update clears the accumulation.
 
 ### Example
 
@@ -1310,7 +1309,7 @@ OPSTATUS Input_Controller_Rumble(Input_ControllerId controller, float lowFrequen
 
 ### Remarks
 
-Zero duration or zero intensities stops the effect, but Linux validates the maximum duration first. Linux times effects in the kernel. Windows requires continued Update calls to stop on schedule. NaN and infinity are rejected.
+Zero duration or zero intensities stops the effect, but Linux validates the maximum duration first. Linux times effects in the kernel. Windows uses a system timer and does not require continued Update calls to stop on schedule. NaN and infinity are rejected.
 
 ### Example
 
@@ -1694,3 +1693,57 @@ A native-loss incident can represent an unknown number of events. The count is n
 uint64_t value = Input_Event_GetDroppedCount();
 (void)value;
 ```
+
+
+## Host events and capability queries
+
+```c
+OPSTATUS Input_SetCaptureMode(Input_CaptureMode mode);
+Input_Capabilities Input_GetCapabilities(void);
+OPSTATUS Input_Event_Submit(const Input_TEvent *event);
+```
+
+SetCaptureMode accepts NATIVE (default) or APPLICATION. Changing mode after the first Update returns BUSY; repeating the current mode succeeds. An invalid mode returns INVALID_ARGUMENT. There is no Init/Free lifecycle. Submit copies an event into a bounded pending queue; Update applies it to the same snapshot and output queue used by native capture. Submit does not inject events into the operating system.
+
+Submit requires application capture and accepts key press/release/repeat, mouse button press/release, movement, position, scroll, focus gained/lost and source removed. Unsupported types return NOT_SUPPORTED; invalid pointers, source slots or nonfinite motion return INVALID_ARGUMENT; invalid key/button codes return OUT_OF_RANGE; a full pending queue returns INSUFFICIENT_SPACE. Controller events remain native. Event_Clear clears output events, not pending submissions.
+
+`source` is a caller-assigned slot below INPUT_DEVICE_CAPACITY. Keep it stable while a device is connected. Releases only clear the aggregate key/button when no source holds it. SOURCE_REMOVED releases that source. FOCUS_LOST releases input and suppresses held state until FOCUS_GAINED. Submit these from the host's actual focus notifications. `physicalKey` identifies position while `data.key` identifies the logical key; UNKNOWN represents unavailable information. Sequence values are assigned by the module.
+
+```c
+Input_SetCaptureMode(INPUT_CAPTURE_APPLICATION); /* before first Update */
+Input_TEvent event = {0};
+event.type = INPUT_EVENT_KEY_PRESS;
+event.source = 0;
+event.data.key = INPUT_KEY_Z;
+event.physicalKey = INPUT_KEY_W; /* example: host's layout translation */
+Input_Event_Submit(&event);
+Input_Update();
+```
+
+Capability flags are KEYBOARD, PHYSICAL_KEYS, LOGICAL_KEYS, MOUSE_BUTTONS, POINTER_POSITION, RAW_MOTION, SCROLL, PRECISE_SCROLL, CONTROLLERS and APPLICATION_EVENTS, each prefixed INPUT_CAPABILITY_. Test them with a bitwise AND. Flags do not imply exclusive access, text input, or availability of every possible key/device.
+
+## Physical keyboard queries
+
+```c
+bool Input_Keyboard_IsPhysicalDown(Input_Key key);
+bool Input_Keyboard_IsPhysicalPressed(Input_Key key);
+bool Input_Keyboard_IsPhysicalReleased(Input_Key key);
+```
+
+These queries use physical positions and the same per-update transition semantics as logical queries. Invalid/UNKNOWN keys return false. Keypad, menu, non-US backslash and five international positions are now represented; actual support depends on the native source. X11-only polling has no physical-key capability. Use logical queries for shortcuts, physical queries for positional bindings, and a separate host text API for text entry.
+
+## Device identity and custom mappings
+
+```c
+uint16_t Input_Controller_GetVendor(Input_ControllerId controller);
+uint16_t Input_Controller_GetProduct(Input_ControllerId controller);
+OPSTATUS Input_Gamepad_MapButton(Input_ControllerId controller, Input_GamepadButton button, int32_t index);
+OPSTATUS Input_Gamepad_MapAxis(Input_ControllerId controller, Input_GamepadAxis axis, int32_t index, float scale, float offset);
+OPSTATUS Input_Gamepad_ClearMapping(Input_ControllerId controller);
+```
+
+Vendor/Product return available USB identifiers or zero, including for stale IDs. They are not stable unique device identities. Bindings last for the current connection only. MapButton maps a standard gamepad button to a raw button; MapAxis maps an axis using `raw * scale + offset`, clamped to the standard range (sticks -1..1, triggers 0..1). Index -1 disables that control. Scale/offset must be finite within -16..16. These functions return NOT_FOUND for stale IDs, OUT_OF_RANGE for invalid controls/indices and INVALID_ARGUMENT for invalid transforms. A successful binding marks the controller mapped and preserves other existing bindings. ClearMapping removes all standard bindings, including native defaults; it does not disconnect the controller. Raw controller queries remain available.
+
+## Expanded validation
+
+Application tests cover focus, multiple sources, physical/logical separation, pending overflow, invalid events and custom bindings. Native decoder tests cover evdev high-resolution wheels and recovery, Windows scan codes and system-timed rumble, macOS event translation, and SDL transport using a simulated driver. CI compiles platform branches on Linux, macOS and Windows. These automated checks do not replace physical-device, desktop-permission or BSD runtime validation.

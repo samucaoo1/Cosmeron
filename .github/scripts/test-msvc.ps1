@@ -110,7 +110,7 @@ foreach ($name in @("Synthesis", "Codec", "Player", "IncludeAll")) {
 }
 Invoke-CosmeronTest "Codespace/Tests/Audio" "multi-tu" @("MultiTU_A.c", "MultiTU_B.c", "MultiTU_Main.c")
 
-foreach ($name in @("State", "Namespace", "Linux", "IncludeAll")) {
+foreach ($name in @("State", "Application", "Namespace", "Linux", "Windows", "MacOS", "SDLControllers", "IncludeAll")) {
   Invoke-CosmeronTest "Codespace/Tests/Input" $name @("$name.c")
 }
 Invoke-CosmeronTest "Codespace/Tests/Input" "multi-tu" @("MultiTU_A.c", "MultiTU_B.c", "MultiTU_Main.c")

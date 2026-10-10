@@ -24,4 +24,10 @@ INPUT_EVENT_CLEAR_PROTOTYPE;
       void)
 INPUT_EVENT_GET_DROPPED_COUNT_PROTOTYPE;
 
+/* Queue a normalized host-window event for the next Update; never injects OS input. */
+#define INPUT_EVENT_SUBMIT_PROTOTYPE \
+  static inline OPSTATUS INPUT_EVENT_FUNC(Submit)( \
+      const INPUT_TYPE(TEvent) *event)
+INPUT_EVENT_SUBMIT_PROTOTYPE;
+
 #include "Impl/Event.impl"

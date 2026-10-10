@@ -4,9 +4,11 @@
 #endif
 #include <windows.h>
 #include <xinput.h>
+#include <mmsystem.h>
+#include "PhysicalKeys.inc"
 
 typedef struct INPUT_INS(WindowsState) {
-  HMODULE user, xinput;
+  HMODULE user, xinput, winmm;
   HWND window;
   bool started;
   SHORT (WINAPI *key)(int);
@@ -20,23 +22,43 @@ typedef struct INPUT_INS(WindowsState) {
   LRESULT (WINAPI *defproc)(HWND,UINT,WPARAM,LPARAM);
   DWORD (WINAPI *get)(DWORD,XINPUT_STATE *);
   DWORD (WINAPI *set)(DWORD,XINPUT_VIBRATION *);
-  ULONGLONG stopAt[XUSER_MAX_COUNT];
+  HANDLE timers[XUSER_MAX_COUNT];
+  HANDLE sources[INPUT_DEVICE_CAPACITY];
+  bool sourceUsed[INPUT_DEVICE_CAPACITY];
+  UINT (WINAPI *joyCount)(void);
+  MMRESULT (WINAPI *joyCaps)(UINT_PTR, LPJOYCAPSA, UINT);
+  MMRESULT (WINAPI *joyState)(UINT, LPJOYINFOEX);
+  JOYCAPSA joystickCaps[INPUT_DEVICE_CAPACITY];
 } INPUT_INS(WindowsState);
 #if defined(INPUT_EXTERNAL_STORAGE) && !defined(INPUT_DEFINE_STORAGE)
 COSMERON_INPUT_STORAGE INPUT_INS(WindowsState) INPUT_INS(windowsState);
 #else
 COSMERON_INPUT_STORAGE INPUT_INS(WindowsState) INPUT_INS(windowsState) = {0};
 #endif
+static inline void INPUT_INS(WindowsCancelTimer)(DWORD slot) {
+  HANDLE timer = INPUT_INS(windowsState).timers[slot];
+  if (timer) {
+    (void)DeleteTimerQueueTimer(NULL, timer, INVALID_HANDLE_VALUE);
+    INPUT_INS(windowsState).timers[slot] = NULL;
+  }
+}
+static VOID CALLBACK INPUT_INS(WindowsStopTimer)(PVOID context, BOOLEAN fired) {
+  DWORD slot = (DWORD)(uintptr_t)context;
+  XINPUT_VIBRATION vibration = {0};
+  (void)fired;
+  if (INPUT_INS(windowsState).set) (void)INPUT_INS(windowsState).set(slot, &vibration);
+}
 static void INPUT_INS(WindowsCleanup)(void) {
   INPUT_INS(WindowsState) *s = &INPUT_INS(windowsState);
   DWORD i;
   if (s->set) {
     XINPUT_VIBRATION v = {0};
-    for (i = 0; i < XUSER_MAX_COUNT; ++i) if (s->stopAt[i]) (void)s->set(i, &v);
+    for (i = 0; i < XUSER_MAX_COUNT; ++i) { INPUT_INS(WindowsCancelTimer)(i); (void)s->set(i, &v); }
   }
   if (s->window && s->destroy) s->destroy(s->window);
   if (s->xinput) FreeLibrary(s->xinput);
   if (s->user) FreeLibrary(s->user);
+  if (s->winmm) FreeLibrary(s->winmm);
 }
 #define COSMERON_INPUT_LOAD(MODULE, FIELD, NAME) do { \
   FARPROC address = GetProcAddress((MODULE), (NAME)); \
@@ -46,7 +68,7 @@ static void INPUT_INS(WindowsCleanup)(void) {
 static inline OPSTATUS INPUT_INS(WindowsStart)(void) {
   INPUT_INS(WindowsState) *s = &INPUT_INS(windowsState);
   RAWINPUTDEVICE devices[2];
-  if (s->started) return s->window ? STATUS_CONST(SUCCESS) : STATUS_CONST(NOT_AVAILABLE);
+  if (s->started) return STATUS_CONST(SUCCESS);
   s->user = LoadLibraryA("user32.dll");
   if (!s->user) return STATUS_CONST(NOT_AVAILABLE);
   COSMERON_INPUT_LOAD(s->user, key, "GetAsyncKeyState");
@@ -61,6 +83,7 @@ static inline OPSTATUS INPUT_INS(WindowsStart)(void) {
   if (!s->key || !s->cursor || !s->create || !s->destroy || !s->registerRaw || !s->registered || !s->peek || !s->raw || !s->defproc) {
     FreeLibrary(s->user); s->user = NULL; return STATUS_CONST(NOT_AVAILABLE);
   }
+  if (INPUT_INS(state).captureMode == INPUT_CONST(CAPTURE_NATIVE)) {
   {
     RAWINPUTDEVICE existing[INPUT_DEVICE_CAPACITY];
     UINT count = INPUT_DEVICE_CAPACITY, i;
@@ -80,10 +103,11 @@ static inline OPSTATUS INPUT_INS(WindowsStart)(void) {
   /* USB HID Generic Desktop usage page, mouse and keyboard usages. */
   devices[0].usUsagePage = 0x01; devices[0].usUsage = 0x02;
   devices[1].usUsagePage = 0x01; devices[1].usUsage = 0x06;
-  devices[0].dwFlags = devices[1].dwFlags = RIDEV_INPUTSINK;
+  devices[0].dwFlags = devices[1].dwFlags = RIDEV_INPUTSINK | RIDEV_DEVNOTIFY;
   devices[0].hwndTarget = devices[1].hwndTarget = s->window;
   if (!s->registerRaw(devices, 2, sizeof(devices[0]))) {
     s->destroy(s->window); s->window = NULL; FreeLibrary(s->user); s->user = NULL; return STATUS_CONST(NOT_AVAILABLE);
+  }
   }
   s->xinput = LoadLibraryA("xinput1_4.dll");
   if (!s->xinput) s->xinput = LoadLibraryA("xinput1_3.dll");
@@ -91,6 +115,12 @@ static inline OPSTATUS INPUT_INS(WindowsStart)(void) {
   if (s->xinput) {
     COSMERON_INPUT_LOAD(s->xinput, get, "XInputGetState");
     COSMERON_INPUT_LOAD(s->xinput, set, "XInputSetState");
+  }
+  s->winmm = LoadLibraryA("winmm.dll");
+  if (s->winmm) {
+    COSMERON_INPUT_LOAD(s->winmm, joyCount, "joyGetNumDevs");
+    COSMERON_INPUT_LOAD(s->winmm, joyCaps, "joyGetDevCapsA");
+    COSMERON_INPUT_LOAD(s->winmm, joyState, "joyGetPosEx");
   }
   if (atexit(INPUT_INS(WindowsCleanup)) != 0) {
     INPUT_INS(WindowsCleanup)(); memset(s, 0, sizeof(*s)); return STATUS_CONST(NOT_AVAILABLE);
@@ -100,11 +130,71 @@ static inline OPSTATUS INPUT_INS(WindowsStart)(void) {
 }
 #undef COSMERON_INPUT_LOAD
 static inline INPUT_TYPE(Key) INPUT_INS(WindowsKey)(unsigned code) {
-  switch (code) {
-#define COSMERON_INPUT_KEY_CASE(NAME, LINUX, WINDOWS) case WINDOWS: return LIB_PREFIX_CONST(NAME);
-    COSMERON_INPUT_KEY_TABLE(COSMERON_INPUT_KEY_CASE)
+#define COSMERON_INPUT_KEY_CASE(NAME, LINUX, WINDOWS) if ((WINDOWS) != 0 && code == (WINDOWS)) return LIB_PREFIX_CONST(NAME);
+  COSMERON_INPUT_KEY_TABLE(COSMERON_INPUT_KEY_CASE)
 #undef COSMERON_INPUT_KEY_CASE
-  default: return LIB_PREFIX_CONST(INPUT_KEY_UNKNOWN);
+  return LIB_PREFIX_CONST(INPUT_KEY_UNKNOWN);
+}
+static inline INPUT_TYPE(Key) INPUT_INS(WindowsPhysical)(unsigned scan) {
+#define COSMERON_INPUT_PHYSICAL_CASE(NAME, SCAN, MAC, XNAME) if ((SCAN) != 0 && scan == (SCAN)) return LIB_PREFIX_CONST(NAME);
+  COSMERON_INPUT_PHYSICAL_TABLE(COSMERON_INPUT_PHYSICAL_CASE)
+#undef COSMERON_INPUT_PHYSICAL_CASE
+  return LIB_PREFIX_CONST(INPUT_KEY_UNKNOWN);
+}
+static inline uint32_t INPUT_INS(WindowsSource)(HANDLE device) {
+  uint32_t i;
+  INPUT_INS(WindowsState) *s = &INPUT_INS(windowsState);
+  for (i = 0; i < INPUT_DEVICE_CAPACITY; ++i) if (s->sourceUsed[i] && s->sources[i] == device) return i;
+  for (i = 0; i < INPUT_DEVICE_CAPACITY; ++i) if (!s->sourceUsed[i]) {
+    s->sourceUsed[i] = true; s->sources[i] = device; return i;
+  }
+  ++INPUT_INS(state).dropped; return INPUT_DEVICE_CAPACITY;
+}
+static inline void INPUT_INS(WindowsGenericControllers)(void) {
+  INPUT_INS(WindowsState) *s = &INPUT_INS(windowsState);
+  UINT count, i;
+  if (!s->joyCount || !s->joyCaps || !s->joyState) return;
+  count = s->joyCount();
+  for (i = 0; i < count && i + XUSER_MAX_COUNT < INPUT_DEVICE_CAPACITY; ++i) {
+    size_t slot = i + XUSER_MAX_COUNT;
+    INPUT_INS(Device) *d = &INPUT_INS(state).devices[slot];
+    JOYCAPSA *c = &s->joystickCaps[slot];
+    JOYINFOEX j = {0};
+    unsigned b;
+    j.dwSize = sizeof(j); j.dwFlags = JOY_RETURNALL;
+    if (s->joyState(i, &j) != JOYERR_NOERROR) { INPUT_INS(Disconnect)(slot); continue; }
+    if (!d->connected) {
+      if (s->joyCaps(i, c, sizeof(*c)) != JOYERR_NOERROR) continue;
+      d = INPUT_INS(Connect)(slot, c->szPname); if (!d) continue;
+      /* WinMM manufacturer/product IDs are not USB VID/PID; leave them unknown. */
+      d->buttonCount = c->wNumButtons > 32 ? 32 : c->wNumButtons;
+      /* Preserve native X/Y/Z/R/U/V positions rather than compress optional axes. */
+      d->axisCount = 6; d->hatCount = (c->wCaps & JOYCAPS_HASPOV) ? 1 : 0;
+    }
+    for (b = 0; b < d->buttonCount; ++b) INPUT_INS(ControllerButton)(d, b, (j.dwButtons & ((DWORD)1 << b)) != 0);
+    {
+      DWORD values[] = { j.dwXpos, j.dwYpos, j.dwZpos, j.dwRpos, j.dwUpos, j.dwVpos };
+      UINT minima[] = { c->wXmin,c->wYmin,c->wZmin,c->wRmin,c->wUmin,c->wVmin };
+      UINT maxima[] = { c->wXmax,c->wYmax,c->wZmax,c->wRmax,c->wUmax,c->wVmax };
+      unsigned flags[] = { 0,0,JOYCAPS_HASZ,JOYCAPS_HASR,JOYCAPS_HASU,JOYCAPS_HASV };
+      for (b = 0; b < d->axisCount; ++b) {
+        double span = (double)maxima[b] - minima[b];
+        float v = span > 0 && (!flags[b] || (c->wCaps & flags[b])) ? (float)(2 * ((double)values[b] - minima[b]) / span - 1) : 0;
+        INPUT_INS(Axis)(d, b, v < -1 ? -1 : (v > 1 ? 1 : v));
+      }
+    }
+    if (d->hatCount) {
+      unsigned mask = 0;
+      if (j.dwPOV != JOY_POVCENTERED && j.dwPOV < 36000) {
+        unsigned sector = ((j.dwPOV + 2250) / 4500) % 8;
+        if (sector == 7 || sector <= 1) mask |= INPUT_CONST(HAT_UP);
+        if (sector >= 1 && sector <= 3) mask |= INPUT_CONST(HAT_RIGHT);
+        if (sector >= 3 && sector <= 5) mask |= INPUT_CONST(HAT_DOWN);
+        if (sector >= 5 && sector <= 7) mask |= INPUT_CONST(HAT_LEFT);
+      }
+      INPUT_INS(Hat)(d, 0, (INPUT_TYPE(Hat))mask);
+    }
+    INPUT_INS(state).capabilities |= INPUT_CONST(CAPABILITY_CONTROLLERS);
   }
 }
 static inline OPSTATUS INPUT_INS(BackendUpdate)(void) {
@@ -116,10 +206,19 @@ static inline OPSTATUS INPUT_INS(BackendUpdate)(void) {
   bool readFailed = false;
   OPSTATUS startStatus = INPUT_INS(WindowsStart)();
   if (startStatus != STATUS_CONST(SUCCESS)) return startStatus;
-  while (budget-- && s->peek(&msg, s->window, WM_INPUT, WM_INPUT, PM_REMOVE)) {
+  while (s->window && budget-- && s->peek(&msg, s->window, 0, 0, PM_REMOVE)) {
+    if (msg.message == WM_INPUT_DEVICE_CHANGE && msg.wParam == GIDC_REMOVAL) {
+      uint32_t source;
+      for (source = 0; source < INPUT_DEVICE_CAPACITY; ++source) if (s->sourceUsed[source] && s->sources[source] == (HANDLE)msg.lParam) {
+        INPUT_INS(RemoveSource)(source); s->sourceUsed[source] = false;
+      }
+    }
+    if (msg.message != WM_INPUT) { (void)s->defproc(msg.hwnd, msg.message, msg.wParam, msg.lParam); continue; }
     RAWINPUT r;
     UINT size = sizeof(r);
     if (s->raw((HRAWINPUT)msg.lParam, RID_INPUT, &r, &size, sizeof(RAWINPUTHEADER)) != (UINT)-1) {
+      uint32_t source = INPUT_INS(WindowsSource)(r.header.hDevice);
+      if (source >= INPUT_DEVICE_CAPACITY) { (void)s->defproc(msg.hwnd, msg.message, msg.wParam, msg.lParam); continue; }
       if (r.header.dwType == RIM_TYPEKEYBOARD) {
         unsigned vk = r.data.keyboard.VKey;
         bool down = !(r.data.keyboard.Flags & RI_KEY_BREAK);
@@ -127,16 +226,21 @@ static inline OPSTATUS INPUT_INS(BackendUpdate)(void) {
         if (vk == VK_SHIFT) vk = r.data.keyboard.MakeCode == 0x36 ? VK_RSHIFT : VK_LSHIFT;
         if (vk == VK_CONTROL) vk = (r.data.keyboard.Flags & RI_KEY_E0) ? VK_RCONTROL : VK_LCONTROL;
         if (vk == VK_MENU) vk = (r.data.keyboard.Flags & RI_KEY_E0) ? VK_RMENU : VK_LMENU;
+        if (vk == VK_RETURN && (r.data.keyboard.Flags & RI_KEY_E0)) vk |= 0x100;
         key = INPUT_INS(WindowsKey)(vk);
-        INPUT_INS(Key)(key, down, down && INPUT_INS(state).keys[key].down);
+        {
+          unsigned scan = r.data.keyboard.MakeCode | ((r.data.keyboard.Flags & RI_KEY_E0) ? 0x100u : 0) | ((r.data.keyboard.Flags & RI_KEY_E1) ? 0x200u : 0);
+          bool repeat = down && INPUT_INS(state).sourceKeys[source][key];
+          INPUT_INS(SourceKey)(source, key, INPUT_INS(WindowsPhysical)(scan), down, repeat);
+        }
       } else if (r.header.dwType == RIM_TYPEMOUSE) {
         USHORT f = r.data.mouse.usButtonFlags;
         const USHORT presses[] = { RI_MOUSE_LEFT_BUTTON_DOWN, RI_MOUSE_RIGHT_BUTTON_DOWN, RI_MOUSE_MIDDLE_BUTTON_DOWN, RI_MOUSE_BUTTON_4_DOWN, RI_MOUSE_BUTTON_5_DOWN };
         const USHORT releases[] = { RI_MOUSE_LEFT_BUTTON_UP, RI_MOUSE_RIGHT_BUTTON_UP, RI_MOUSE_MIDDLE_BUTTON_UP, RI_MOUSE_BUTTON_4_UP, RI_MOUSE_BUTTON_5_UP };
         unsigned b;
         for (b = 0; b < INPUT_CONST(MOUSE_BUTTON_COUNT); ++b) {
-          if (f & presses[b]) INPUT_INS(MouseButton)(b, true);
-          if (f & releases[b]) INPUT_INS(MouseButton)(b, false);
+          if (f & presses[b]) INPUT_INS(SourceMouse)(source, b, true);
+          if (f & releases[b]) INPUT_INS(SourceMouse)(source, b, false);
         }
         if (!(r.data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE)) INPUT_INS(Motion)((float)r.data.mouse.lLastX, (float)r.data.mouse.lLastY, false);
         if (f & RI_MOUSE_WHEEL) INPUT_INS(Motion)(0, (float)(SHORT)r.data.mouse.usButtonData / WHEEL_DELTA, true);
@@ -145,18 +249,13 @@ static inline OPSTATUS INPUT_INS(BackendUpdate)(void) {
     } else { readFailed = true; ++INPUT_INS(state).dropped; }
     (void)s->defproc(msg.hwnd, msg.message, msg.wParam, msg.lParam);
   }
-  /* Reconcile aggregate states, including devices held before the first call. */
-#define COSMERON_INPUT_KEY_SYNC(NAME, LINUX, WINDOWS) \
-  INPUT_INS(Key)(LIB_PREFIX_CONST(NAME), (s->key(WINDOWS) & 0x8000) != 0, false);
-  COSMERON_INPUT_KEY_TABLE(COSMERON_INPUT_KEY_SYNC)
-#undef COSMERON_INPUT_KEY_SYNC
-  {
-    const int buttons[] = { VK_LBUTTON, VK_RBUTTON, VK_MBUTTON, VK_XBUTTON1, VK_XBUTTON2 };
-    unsigned b;
-    for (b = 0; b < INPUT_CONST(MOUSE_BUTTON_COUNT); ++b) INPUT_INS(MouseButton)(b, (s->key(buttons[b]) & 0x8000) != 0);
+  if (s->window) {
+    INPUT_INS(state).capabilities |= INPUT_CONST(CAPABILITY_KEYBOARD) | INPUT_CONST(CAPABILITY_PHYSICAL_KEYS) | INPUT_CONST(CAPABILITY_LOGICAL_KEYS) | INPUT_CONST(CAPABILITY_MOUSE_BUTTONS) | INPUT_CONST(CAPABILITY_RAW_MOTION) | INPUT_CONST(CAPABILITY_SCROLL) | INPUT_CONST(CAPABILITY_PRECISE_SCROLL);
+    if (s->cursor(&point)) {
+      INPUT_INS(state).x = (float)point.x; INPUT_INS(state).y = (float)point.y;
+      INPUT_INS(state).capabilities |= INPUT_CONST(CAPABILITY_POINTER_POSITION);
+    } else readFailed = true;
   }
-  if (s->cursor(&point)) { INPUT_INS(state).x = (float)point.x; INPUT_INS(state).y = (float)point.y; }
-  else readFailed = true;
   for (i = 0; i < XUSER_MAX_COUNT && i < INPUT_DEVICE_CAPACITY; ++i) {
     XINPUT_STATE native;
     INPUT_INS(Device) *d = &INPUT_INS(state).devices[i];
@@ -165,7 +264,8 @@ static inline OPSTATUS INPUT_INS(BackendUpdate)(void) {
       XINPUT_GAMEPAD_RIGHT_THUMB, XINPUT_GAMEPAD_BACK, XINPUT_GAMEPAD_START, 0,
       XINPUT_GAMEPAD_DPAD_UP, XINPUT_GAMEPAD_DPAD_DOWN, XINPUT_GAMEPAD_DPAD_LEFT, XINPUT_GAMEPAD_DPAD_RIGHT };
     unsigned b;
-    if (!s->get || s->get(i, &native) != ERROR_SUCCESS) { INPUT_INS(Disconnect)(i); s->stopAt[i] = 0; continue; }
+    if (!s->get || s->get(i, &native) != ERROR_SUCCESS) { INPUT_INS(WindowsCancelTimer)(i); INPUT_INS(Disconnect)(i); continue; }
+    INPUT_INS(state).capabilities |= INPUT_CONST(CAPABILITY_CONTROLLERS);
     if (!d->connected) {
       d = INPUT_INS(Connect)(i, "XInput controller");
       if (!d) return STATUS_CONST(OUT_OF_RANGE);
@@ -189,21 +289,22 @@ static inline OPSTATUS INPUT_INS(BackendUpdate)(void) {
       if (native.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT) hat |= INPUT_CONST(HAT_RIGHT);
       INPUT_INS(Hat)(d, 0, (INPUT_TYPE(Hat))hat);
     }
-    if (s->set && s->stopAt[i] && GetTickCount64() >= s->stopAt[i]) {
-      XINPUT_VIBRATION v = {0};
-      (void)s->set(i, &v); s->stopAt[i] = 0;
-    }
   }
+  INPUT_INS(WindowsGenericControllers)();
   return readFailed ? STATUS_CONST(NOT_AVAILABLE) : STATUS_CONST(SUCCESS);
 }
 static inline OPSTATUS INPUT_INS(BackendRumble)(INPUT_INS(Device) *d, float low, float high, uint32_t ms) {
   INPUT_INS(WindowsState) *s = &INPUT_INS(windowsState);
   DWORD slot = (DWORD)(d - INPUT_INS(state).devices);
   XINPUT_VIBRATION v;
-  if (!s->set || !d->rumble) return STATUS_CONST(NOT_SUPPORTED);
+  if (slot >= XUSER_MAX_COUNT || !s->set || !d->rumble) return STATUS_CONST(NOT_SUPPORTED);
+  INPUT_INS(WindowsCancelTimer)(slot);
   v.wLeftMotorSpeed = ms ? (WORD)(low * UINT16_MAX) : 0;
   v.wRightMotorSpeed = ms ? (WORD)(high * UINT16_MAX) : 0;
   if (s->set(slot, &v) != ERROR_SUCCESS) return STATUS_CONST(NOT_AVAILABLE);
-  s->stopAt[slot] = ms && (low > 0 || high > 0) ? GetTickCount64() + ms : 0;
+  if (ms && (low > 0 || high > 0) && !CreateTimerQueueTimer(&s->timers[slot], NULL, INPUT_INS(WindowsStopTimer), (PVOID)(uintptr_t)slot, ms, 0, WT_EXECUTEONLYONCE)) {
+    v.wLeftMotorSpeed = v.wRightMotorSpeed = 0; (void)s->set(slot, &v);
+    return STATUS_CONST(GENERIC_ERROR);
+  }
   return STATUS_CONST(SUCCESS);
 }

@@ -7,8 +7,12 @@ static inline OPSTATUS INPUT_INS(BackendRumble)(INPUT_INS(Device) *device, float
 }
 #elif defined(_WIN32)
 #include "Windows.inc"
-#elif defined(__linux__)
+#elif defined(__APPLE__) && defined(__MACH__)
+#include "MacOS.inc"
+#elif defined(__linux__) || defined(__FreeBSD__)
 #include "Linux.inc"
+#elif defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+#include "BSD.inc"
 #else
 static inline OPSTATUS INPUT_INS(BackendUpdate)(void) { return STATUS_CONST(NOT_SUPPORTED); }
 static inline OPSTATUS INPUT_INS(BackendRumble)(INPUT_INS(Device) *device, float low, float high, uint32_t ms) {

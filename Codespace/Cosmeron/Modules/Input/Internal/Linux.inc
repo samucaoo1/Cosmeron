@@ -1,5 +1,10 @@
 #pragma once
+#if defined(__FreeBSD__)
+#include <dev/evdev/input.h>
+#else
 #include <linux/input.h>
+#endif
+#include "X11.inc"
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -14,7 +19,7 @@ enum { INPUT_INS(BitsPerByte) = CHAR_BIT, INPUT_INS(PathCapacity) = 256,
        INPUT_INS(EffectNone) = -1, INPUT_INS(ReadBudget) = 4096 };
 typedef struct INPUT_INS(LinuxDevice) {
   int fd, effect;
-  bool used, writable, controller, dropped;
+  bool used, writable, controller, dropped, keyboard, mouse, preciseX, preciseY;
   dev_t deviceNumber;
   ino_t inode;
   char path[INPUT_INS(PathCapacity)];
@@ -60,7 +65,11 @@ static inline void INPUT_INS(Aggregate)(unsigned code, bool repeat) {
   bool down = INPUT_INS(Held)(code);
   if (code >= BTN_LEFT && code <= BTN_EXTRA)
     INPUT_INS(MouseButton)(code - BTN_LEFT, down);
-  else INPUT_INS(Key)(INPUT_INS(LinuxKey)(code), down, repeat && down);
+  else {
+    INPUT_TYPE(Key) key = INPUT_INS(LinuxKey)(code);
+    INPUT_INS(Physical)(key, down, repeat && down);
+    if (!INPUT_INS(xState).display) INPUT_INS(Key)(key, down, repeat && down);
+  }
 }
 static inline void INPUT_INS(LinuxClose)(size_t slot) {
   INPUT_INS(LinuxDevice) *n = &INPUT_INS(linuxState).devices[slot];
@@ -145,7 +154,9 @@ static inline void INPUT_INS(LinuxOpen)(const char *path, size_t slot) {
   if (fcntl(fd, F_SETFD, FD_CLOEXEC) < 0 || fstat(fd, &st) < 0 ||
       ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(bits)), bits) < 0) { close(fd); return; }
   memset(n, 0, sizeof(*n));
+  n->keyboard = INPUT_INS(Bit)(bits, KEY_A); n->mouse = INPUT_INS(Bit)(bits, BTN_LEFT);
   n->controller = INPUT_INS(Bit)(bits, BTN_GAMEPAD) || INPUT_INS(Bit)(bits, BTN_JOYSTICK);
+  if (!n->controller && INPUT_INS(state).captureMode == INPUT_CONST(CAPTURE_APPLICATION)) { close(fd); return; }
   if (!n->controller && !INPUT_INS(Bit)(bits, KEY_A) && !INPUT_INS(Bit)(bits, BTN_LEFT)) { close(fd); return; }
   n->fd = fd; n->used = true; n->writable = writable; n->effect = INPUT_INS(EffectNone);
   n->deviceNumber = st.st_rdev; n->inode = st.st_ino;
@@ -156,6 +167,9 @@ static inline void INPUT_INS(LinuxOpen)(const char *path, size_t slot) {
     (void)ioctl(fd, EVIOCGNAME(sizeof(name)), name); name[sizeof(name)-1] = '\0';
     d = INPUT_INS(Connect)(slot, name);
     if (!d) { close(fd); n->used = false; return; }
+    { struct input_id identity;
+      if (ioctl(fd, EVIOCGID, &identity) == 0) { d->vendor = identity.vendor; d->product = identity.product; }
+    }
     for (code = BTN_MISC; code < KEY_CNT && d->buttonCount < INPUT_CONST(MAX_BUTTONS); ++code)
       if (INPUT_INS(Bit)(bits, code)) n->buttonMap[code] = (int)d->buttonCount++;
     (void)ioctl(fd, EVIOCGBIT(EV_ABS, sizeof(absBits)), absBits);
@@ -182,13 +196,21 @@ static inline void INPUT_INS(LinuxOpen)(const char *path, size_t slot) {
     (void)ioctl(fd, EVIOCGBIT(EV_FF, sizeof(ffBits)), ffBits);
     d->rumble = writable && INPUT_INS(Bit)(ffBits, FF_RUMBLE);
   }
+  { unsigned char relBits[(REL_CNT + CHAR_BIT - 1) / CHAR_BIT] = {0};
+    (void)ioctl(fd, EVIOCGBIT(EV_REL, sizeof(relBits)), relBits);
+#ifdef REL_WHEEL_HI_RES
+    n->preciseY = INPUT_INS(Bit)(relBits, REL_WHEEL_HI_RES);
+    n->preciseX = INPUT_INS(Bit)(relBits, REL_HWHEEL_HI_RES);
+#endif
+  }
   if (!INPUT_INS(LinuxSync)(slot)) INPUT_INS(LinuxClose)(slot);
 }
 static inline OPSTATUS INPUT_INS(BackendUpdate)(void) {
   INPUT_INS(LinuxState) *s = &INPUT_INS(linuxState);
   size_t i;
-  bool available = false;
+  bool available = false, keyboard = false, mouse = false;
   time_t now = time(NULL);
+  if (INPUT_INS(state).captureMode == INPUT_CONST(CAPTURE_NATIVE)) (void)INPUT_INS(XStart)();
   if (!s->started) {
     if (atexit(INPUT_INS(LinuxCleanup)) != 0) return STATUS_CONST(OUT_OF_MEMORY);
     s->started = true;
@@ -245,16 +267,32 @@ static inline OPSTATUS INPUT_INS(BackendUpdate)(void) {
           INPUT_INS(ControllerButton)(&INPUT_INS(state).devices[i], (unsigned)n->buttonMap[e.code], e.value != 0);
         else if (!n->controller) INPUT_INS(Aggregate)(e.code, e.value == 2);
       } else if (n->controller && e.type == EV_ABS) INPUT_INS(LinuxAbs)(i, e.code, e.value);
-      else if (!n->controller && e.type == EV_REL) {
+      else if (!n->controller && e.type == EV_ABS) {
+        if (e.code == ABS_X) INPUT_INS(state).x = (float)e.value;
+        if (e.code == ABS_Y) INPUT_INS(state).y = (float)e.value;
+      } else if (!n->controller && e.type == EV_REL) {
         if (e.code == REL_X) { INPUT_INS(state).x += (float)e.value; INPUT_INS(Motion)((float)e.value, 0, false); }
         if (e.code == REL_Y) { INPUT_INS(state).y += (float)e.value; INPUT_INS(Motion)(0, (float)e.value, false); }
-        if (e.code == REL_HWHEEL) INPUT_INS(Motion)((float)e.value, 0, true);
-        if (e.code == REL_WHEEL) INPUT_INS(Motion)(0, (float)e.value, true);
+        if (e.code == REL_HWHEEL && !n->preciseX) INPUT_INS(Motion)((float)e.value, 0, true);
+        if (e.code == REL_WHEEL && !n->preciseY) INPUT_INS(Motion)(0, (float)e.value, true);
+#ifdef REL_WHEEL_HI_RES
+        if (e.code == REL_HWHEEL_HI_RES) INPUT_INS(Motion)((float)e.value / 120.0f, 0, true);
+        if (e.code == REL_WHEEL_HI_RES) INPUT_INS(Motion)(0, (float)e.value / 120.0f, true);
+#endif
       }
     }
     if (n->used && (bytes == 0 || (bytes < 0 && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR))) INPUT_INS(LinuxClose)(i);
+    if (n->used) {
+      keyboard |= n->keyboard; mouse |= n->mouse;
+      if (n->controller) INPUT_INS(state).capabilities |= INPUT_CONST(CAPABILITY_CONTROLLERS);
+      if (n->keyboard) INPUT_INS(state).capabilities |= INPUT_CONST(CAPABILITY_KEYBOARD) | INPUT_CONST(CAPABILITY_PHYSICAL_KEYS);
+      if (n->mouse) INPUT_INS(state).capabilities |= INPUT_CONST(CAPABILITY_MOUSE_BUTTONS) | INPUT_CONST(CAPABILITY_RAW_MOTION) | INPUT_CONST(CAPABILITY_SCROLL);
+      if (n->preciseX || n->preciseY) INPUT_INS(state).capabilities |= INPUT_CONST(CAPABILITY_PRECISE_SCROLL);
+    }
     available |= n->used;
   }
+  (void)keyboard;
+  available |= INPUT_INS(XUpdate)(true, !mouse);
   return available ? STATUS_CONST(SUCCESS) : STATUS_CONST(NOT_AVAILABLE);
 }
 static inline OPSTATUS INPUT_INS(BackendRumble)(INPUT_INS(Device) *d, float low, float high, uint32_t ms) {

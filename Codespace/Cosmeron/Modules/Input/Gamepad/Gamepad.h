@@ -42,4 +42,22 @@ INPUT_GAMEPAD_IS_RELEASED_PROTOTYPE;
       INPUT_TYPE(GamepadAxis) axis)
 INPUT_GAMEPAD_GET_AXIS_PROTOTYPE;
 
+/* Bind a standard button to a raw button index; -1 removes the binding. */
+#define INPUT_GAMEPAD_MAP_BUTTON_PROTOTYPE \
+  static inline OPSTATUS INPUT_GAMEPAD_FUNC(MapButton)( \
+      INPUT_TYPE(ControllerId) controller, INPUT_TYPE(GamepadButton) button, int32_t index)
+INPUT_GAMEPAD_MAP_BUTTON_PROTOTYPE;
+
+/* Transform raw axis as value*scale+offset then clamp to the standard range. -1 unbinds. */
+#define INPUT_GAMEPAD_MAP_AXIS_PROTOTYPE \
+  static inline OPSTATUS INPUT_GAMEPAD_FUNC(MapAxis)( \
+      INPUT_TYPE(ControllerId) controller, INPUT_TYPE(GamepadAxis) axis, int32_t index, float scale, float offset)
+INPUT_GAMEPAD_MAP_AXIS_PROTOTYPE;
+
+/* Remove all bindings for this connection. Native mapping is restored on reconnection. */
+#define INPUT_GAMEPAD_CLEAR_MAPPING_PROTOTYPE \
+  static inline OPSTATUS INPUT_GAMEPAD_FUNC(ClearMapping)( \
+      INPUT_TYPE(ControllerId) controller)
+INPUT_GAMEPAD_CLEAR_MAPPING_PROTOTYPE;
+
 #include "Impl/Gamepad.impl"

@@ -95,7 +95,7 @@ INPUT_CONTROLLER_GET_HAT_PROTOTYPE;
 
 /* Replace the vibration effect. Intensities must be finite and in [0,1].
  * Zero duration or zero intensities stops it. Linux: maximum 65535 ms.
- * Windows requires continued Update calls to stop the effect on schedule. */
+ * Windows uses a system timer without Update calls to stop the effect on schedule. */
 #define INPUT_CONTROLLER_RUMBLE_PROTOTYPE \
   static inline OPSTATUS INPUT_CONTROLLER_FUNC(Rumble)( \
       INPUT_TYPE(ControllerId) controller, \
@@ -109,5 +109,17 @@ INPUT_CONTROLLER_RUMBLE_PROTOTYPE;
   static inline OPSTATUS INPUT_CONTROLLER_FUNC(StopRumble)( \
       INPUT_TYPE(ControllerId) controller)
 INPUT_CONTROLLER_STOP_RUMBLE_PROTOTYPE;
+
+/* USB vendor identifier when available; zero means unknown. */
+#define INPUT_CONTROLLER_GET_VENDOR_PROTOTYPE \
+  static inline uint16_t INPUT_CONTROLLER_FUNC(GetVendor)( \
+      INPUT_TYPE(ControllerId) controller)
+INPUT_CONTROLLER_GET_VENDOR_PROTOTYPE;
+
+/* USB product identifier when available; zero means unknown. */
+#define INPUT_CONTROLLER_GET_PRODUCT_PROTOTYPE \
+  static inline uint16_t INPUT_CONTROLLER_FUNC(GetProduct)( \
+      INPUT_TYPE(ControllerId) controller)
+INPUT_CONTROLLER_GET_PRODUCT_PROTOTYPE;
 
 #include "Impl/Controller.impl"

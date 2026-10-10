@@ -2,5 +2,27 @@
 
 INPUT_UPDATE_PROTOTYPE {
   INPUT_INS(Begin)();
-  return INPUT_INS(BackendUpdate)();
+  {
+    OPSTATUS result;
+    INPUT_INS(state).updated = true;
+    if (INPUT_INS(state).captureMode == INPUT_CONST(CAPTURE_NATIVE)) INPUT_INS(state).capabilities = 0;
+    if (INPUT_INS(state).captureMode == INPUT_CONST(CAPTURE_APPLICATION)) INPUT_INS(ApplyPending)();
+    result = INPUT_INS(BackendUpdate)();
+    if (INPUT_INS(state).captureMode == INPUT_CONST(CAPTURE_APPLICATION)) {
+      INPUT_INS(state).capabilities |= INPUT_CONST(CAPABILITY_APPLICATION_EVENTS);
+      if (result == STATUS_CONST(NOT_SUPPORTED) || result == STATUS_CONST(NOT_AVAILABLE)) result = STATUS_CONST(SUCCESS);
+    }
+    return result;
+  }
+}
+
+INPUT_SET_CAPTURE_MODE_PROTOTYPE {
+  if (mode != INPUT_CONST(CAPTURE_NATIVE) && mode != INPUT_CONST(CAPTURE_APPLICATION)) return STATUS_CONST(INVALID_ARGUMENT);
+  if (INPUT_INS(state).updated && mode != INPUT_INS(state).captureMode) return STATUS_CONST(BUSY);
+  INPUT_INS(state).captureMode = mode;
+  return STATUS_CONST(SUCCESS);
+}
+
+INPUT_GET_CAPABILITIES_PROTOTYPE {
+  return INPUT_INS(state).capabilities;
 }

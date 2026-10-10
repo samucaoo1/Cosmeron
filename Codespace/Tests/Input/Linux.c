@@ -33,9 +33,20 @@ int main(void) {
   assert(Input_Keyboard_IsReleased(INPUT_KEY_W));
   assert(Input_Keyboard_IsRepeated(INPUT_KEY_W));
   assert(Input_Mouse_IsDown(INPUT_MOUSE_BUTTON_LEFT));
+  assert(!Input_Keyboard_IsPhysicalDown(INPUT_KEY_W));
+  assert(Input_Keyboard_IsPhysicalPressed(INPUT_KEY_W));
+  assert(Input_Keyboard_IsPhysicalReleased(INPUT_KEY_W));
   Input_Mouse_GetDelta(&x, &y); assert(x == 3 && y == -2);
   Input_Mouse_GetPosition(&x, &y); assert(x == 3 && y == -2);
   Input_Mouse_GetScroll(&x, &y); assert(x == 0 && y == 1);
+#ifdef REL_WHEEL_HI_RES
+  n->preciseY = true; n->preciseX = true;
+  sendEvent(fds[1], EV_REL, REL_WHEEL, 1); /* coarse duplicate must be ignored */
+  sendEvent(fds[1], EV_REL, REL_WHEEL_HI_RES, 30);
+  sendEvent(fds[1], EV_REL, REL_HWHEEL_HI_RES, -60);
+  assert(Input_Update() == STATUS_SUCCESS);
+  Input_Mouse_GetScroll(&x, &y); assert(x == -0.5f && y == 0.25f);
+#endif
   /* A second keyboard keeps the aggregate held when the first releases. */
   Input_Internal_linuxState.devices[1].used = true;
   Input_Internal_SetBit(Input_Internal_linuxState.devices[1].keys, KEY_A, true);

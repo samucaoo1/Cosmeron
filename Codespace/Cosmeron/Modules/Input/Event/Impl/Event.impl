@@ -11,3 +11,25 @@ INPUT_EVENT_POLL_PROTOTYPE {
 INPUT_EVENT_CLEAR_PROTOTYPE { INPUT_INS(state).head = INPUT_INS(state).count = 0; }
 
 INPUT_EVENT_GET_DROPPED_COUNT_PROTOTYPE { return INPUT_INS(state).dropped; }
+
+INPUT_EVENT_SUBMIT_PROTOTYPE {
+  INPUT_INS(State) *s = &INPUT_INS(state);
+  if (!event || event->source >= INPUT_DEVICE_CAPACITY) return STATUS_CONST(INVALID_ARGUMENT);
+  if (s->captureMode != INPUT_CONST(CAPTURE_APPLICATION)) return STATUS_CONST(NOT_SUPPORTED);
+  switch (event->type) {
+  case INPUT_CONST(EVENT_KEY_PRESS): case INPUT_CONST(EVENT_KEY_RELEASE): case INPUT_CONST(EVENT_KEY_REPEAT):
+    if (event->data.key < 0 || event->data.key >= LIB_PREFIX_CONST(INPUT_KEY_COUNT) || event->physicalKey < 0 || event->physicalKey >= LIB_PREFIX_CONST(INPUT_KEY_COUNT)) return STATUS_CONST(OUT_OF_RANGE);
+    break;
+  case INPUT_CONST(EVENT_MOUSE_BUTTON_PRESS): case INPUT_CONST(EVENT_MOUSE_BUTTON_RELEASE):
+    if (event->data.mouseButton < 0 || event->data.mouseButton >= INPUT_CONST(MOUSE_BUTTON_COUNT)) return STATUS_CONST(OUT_OF_RANGE);
+    break;
+  case INPUT_CONST(EVENT_MOUSE_MOVE): case INPUT_CONST(EVENT_MOUSE_POSITION): case INPUT_CONST(EVENT_MOUSE_SCROLL):
+    if (!(event->data.motion.x >= -FLT_MAX && event->data.motion.x <= FLT_MAX) || !(event->data.motion.y >= -FLT_MAX && event->data.motion.y <= FLT_MAX)) return STATUS_CONST(INVALID_ARGUMENT);
+    break;
+  case INPUT_CONST(EVENT_FOCUS_GAINED): case INPUT_CONST(EVENT_FOCUS_LOST): case INPUT_CONST(EVENT_SOURCE_REMOVED): break;
+  default: return STATUS_CONST(NOT_SUPPORTED);
+  }
+  if (s->pendingCount == INPUT_EVENT_CAPACITY) return STATUS_CONST(INSUFFICIENT_SPACE);
+  s->pending[s->pendingCount++] = *event;
+  return STATUS_CONST(SUCCESS);
+}

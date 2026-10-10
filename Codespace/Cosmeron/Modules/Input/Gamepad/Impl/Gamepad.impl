@@ -8,7 +8,8 @@ INPUT_GAMEPAD_IS_MAPPED_PROTOTYPE {
 INPUT_GAMEPAD_IS_DOWN_PROTOTYPE {
   INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
   int index;
-  if (!d || !d->mapped || button < 0 || button >= INPUT_CONST(GAMEPAD_BUTTON_COUNT)) return false;
+  if (INPUT_INS(state).unfocused || !d || !d->mapped || button < 0 || button >= INPUT_CONST(GAMEPAD_BUTTON_COUNT)) return false;
+  if (d->standardProvided && !d->customButtons[button]) return d->standardButtons[button].down;
   index = d->gamepadButtons[button];
   return index >= 0 && (uint32_t)index < d->buttonCount && d->buttons[index].down;
 }
@@ -16,7 +17,8 @@ INPUT_GAMEPAD_IS_DOWN_PROTOTYPE {
 INPUT_GAMEPAD_IS_PRESSED_PROTOTYPE {
   INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
   int index;
-  if (!d || !d->mapped || button < 0 || button >= INPUT_CONST(GAMEPAD_BUTTON_COUNT)) return false;
+  if (INPUT_INS(state).unfocused || !d || !d->mapped || button < 0 || button >= INPUT_CONST(GAMEPAD_BUTTON_COUNT)) return false;
+  if (d->standardProvided && !d->customButtons[button]) return d->standardButtons[button].pressed;
   index = d->gamepadButtons[button];
   return index >= 0 && (uint32_t)index < d->buttonCount && d->buttons[index].pressed;
 }
@@ -24,7 +26,8 @@ INPUT_GAMEPAD_IS_PRESSED_PROTOTYPE {
 INPUT_GAMEPAD_IS_RELEASED_PROTOTYPE {
   INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
   int index;
-  if (!d || !d->mapped || button < 0 || button >= INPUT_CONST(GAMEPAD_BUTTON_COUNT)) return false;
+  if (INPUT_INS(state).unfocused || !d || !d->mapped || button < 0 || button >= INPUT_CONST(GAMEPAD_BUTTON_COUNT)) return false;
+  if (d->standardProvided && !d->customButtons[button]) return d->standardButtons[button].released;
   index = d->gamepadButtons[button];
   return index >= 0 && (uint32_t)index < d->buttonCount && d->buttons[index].released;
 }
@@ -33,13 +36,47 @@ INPUT_GAMEPAD_GET_AXIS_PROTOTYPE {
   INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
   int index;
   float value;
-  if (!d || !d->mapped || axis < 0 || axis >= INPUT_CONST(GAMEPAD_AXIS_COUNT)) return 0;
+  if (INPUT_INS(state).unfocused || !d || !d->mapped || axis < 0 || axis >= INPUT_CONST(GAMEPAD_AXIS_COUNT)) return 0;
+  if (d->standardProvided && !d->customAxes[axis]) return d->standardAxes[axis];
   index = d->gamepadAxes[axis];
   if (index < 0 || (uint32_t)index >= d->axisCount) return 0;
   value = d->axes[index];
+  if (d->customAxes[axis]) {
+    float minimum = axis >= INPUT_CONST(GAMEPAD_AXIS_LEFT_TRIGGER) ? 0 : -1;
+    value = value * d->gamepadScale[axis] + d->gamepadOffset[axis];
+    return value < minimum ? minimum : (value > 1 ? 1 : value);
+  }
   if (axis == INPUT_CONST(GAMEPAD_AXIS_LEFT_TRIGGER) || axis == INPUT_CONST(GAMEPAD_AXIS_RIGHT_TRIGGER)) return (value + 1) * 0.5f;
-#if defined(__linux__) && !defined(INPUT_NO_NATIVE)
+#if (defined(__linux__) || defined(__FreeBSD__)) && !defined(INPUT_NO_NATIVE)
   if (axis == INPUT_CONST(GAMEPAD_AXIS_LEFT_Y) || axis == INPUT_CONST(GAMEPAD_AXIS_RIGHT_Y)) return -value;
 #endif
   return value;
+}
+
+INPUT_GAMEPAD_MAP_BUTTON_PROTOTYPE {
+  INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
+  if (!d) return STATUS_CONST(NOT_FOUND);
+  if (button < 0 || button >= INPUT_CONST(GAMEPAD_BUTTON_COUNT) || index < -1 || (index >= 0 && (uint32_t)index >= d->buttonCount)) return STATUS_CONST(OUT_OF_RANGE);
+  d->gamepadButtons[button] = index; d->customButtons[button] = true; d->mapped = d->customMapping = true;
+  return STATUS_CONST(SUCCESS);
+}
+
+INPUT_GAMEPAD_MAP_AXIS_PROTOTYPE {
+  INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
+  if (!d) return STATUS_CONST(NOT_FOUND);
+  if (axis < 0 || axis >= INPUT_CONST(GAMEPAD_AXIS_COUNT) || index < -1 || (index >= 0 && (uint32_t)index >= d->axisCount)) return STATUS_CONST(OUT_OF_RANGE);
+  if (!(scale >= -16 && scale <= 16) || !(offset >= -16 && offset <= 16)) return STATUS_CONST(INVALID_ARGUMENT);
+  d->gamepadAxes[axis] = index; d->customAxes[axis] = true; d->gamepadScale[axis] = scale; d->gamepadOffset[axis] = offset;
+  d->mapped = d->customMapping = true;
+  return STATUS_CONST(SUCCESS);
+}
+
+INPUT_GAMEPAD_CLEAR_MAPPING_PROTOTYPE {
+  INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
+  unsigned i;
+  if (!d) return STATUS_CONST(NOT_FOUND);
+  for (i = 0; i < INPUT_CONST(GAMEPAD_BUTTON_COUNT); ++i) { d->gamepadButtons[i] = -1; d->customButtons[i] = true; }
+  for (i = 0; i < INPUT_CONST(GAMEPAD_AXIS_COUNT); ++i) { d->gamepadAxes[i] = -1; d->customAxes[i] = true; d->gamepadScale[i] = 1; d->gamepadOffset[i] = 0; }
+  d->mapped = false; d->customMapping = true;
+  return STATUS_CONST(SUCCESS);
 }

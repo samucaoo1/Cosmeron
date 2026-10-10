@@ -16,6 +16,18 @@
       void)
 INPUT_UPDATE_PROTOTYPE;
 
+/* Select once before the first Update. APPLICATION takes keyboard/mouse events from Submit. */
+#define INPUT_SET_CAPTURE_MODE_PROTOTYPE \
+  static inline OPSTATUS INPUT_FUNC(SetCaptureMode)( \
+      INPUT_TYPE(CaptureMode) mode)
+INPUT_SET_CAPTURE_MODE_PROTOTYPE;
+
+/* Available features observed at the last Update; a bitmask, not a promise about every device. */
+#define INPUT_GET_CAPABILITIES_PROTOTYPE \
+  static inline INPUT_TYPE(Capabilities) INPUT_FUNC(GetCapabilities)( \
+      void)
+INPUT_GET_CAPABILITIES_PROTOTYPE;
+
 #include "Impl/Input.impl"
 
 #include "Keyboard/Keyboard.h"

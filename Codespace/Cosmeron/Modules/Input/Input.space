@@ -3,6 +3,7 @@
 #include "../../Core/Error/Status.h"
 #include "../Struct/TPair.h"
 #include <stdbool.h>
+#include <float.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -50,6 +51,24 @@ typedef enum INPUT_TYPE(Key) {
 #undef COSMERON_INPUT_KEY_ENUM
   LIB_PREFIX_CONST(INPUT_KEY_COUNT)
 } INPUT_TYPE(Key);
+
+typedef uint32_t INPUT_TYPE(Capabilities);
+typedef enum INPUT_TYPE(CaptureMode) {
+  INPUT_CONST(CAPTURE_NATIVE), INPUT_CONST(CAPTURE_APPLICATION)
+} INPUT_TYPE(CaptureMode);
+enum {
+  INPUT_CONST(CAPABILITY_KEYBOARD) = 1u << 0,
+  INPUT_CONST(CAPABILITY_PHYSICAL_KEYS) = 1u << 1,
+  INPUT_CONST(CAPABILITY_LOGICAL_KEYS) = 1u << 2,
+  INPUT_CONST(CAPABILITY_MOUSE_BUTTONS) = 1u << 3,
+  INPUT_CONST(CAPABILITY_POINTER_POSITION) = 1u << 4,
+  INPUT_CONST(CAPABILITY_RAW_MOTION) = 1u << 5,
+  INPUT_CONST(CAPABILITY_SCROLL) = 1u << 6,
+  INPUT_CONST(CAPABILITY_PRECISE_SCROLL) = 1u << 7,
+  INPUT_CONST(CAPABILITY_CONTROLLERS) = 1u << 8,
+  INPUT_CONST(CAPABILITY_APPLICATION_EVENTS) = 1u << 9
+};
+
 typedef uint64_t INPUT_TYPE(ControllerId);
 typedef uint32_t INPUT_TYPE(Modifiers);
 enum {
@@ -110,11 +129,17 @@ typedef enum INPUT_TYPE(EventType) {
   INPUT_CONST(EVENT_DEVICE_CONNECTED),
   INPUT_CONST(EVENT_DEVICE_DISCONNECTED),
   INPUT_CONST(EVENT_DEVICE_RESET),
+  INPUT_CONST(EVENT_MOUSE_POSITION),
+  INPUT_CONST(EVENT_FOCUS_GAINED),
+  INPUT_CONST(EVENT_FOCUS_LOST),
+  INPUT_CONST(EVENT_SOURCE_REMOVED),
 } INPUT_TYPE(EventType);
 typedef struct INPUT_TYPE(TEvent) {
   INPUT_TYPE(EventType) type;
   INPUT_TYPE(ControllerId) controller; /* zero for keyboard/mouse */
   uint64_t sequence;
+  uint32_t source; /* application device slot, independent of controller ID */
+  INPUT_TYPE(Key) physicalKey; /* UNKNOWN if unavailable */
   union {
     INPUT_TYPE(Key) key;
     INPUT_TYPE(MouseButton) mouseButton;

@@ -1,7 +1,7 @@
 CC ?= cc
 CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -Werror
 BUILD ?= .build
-TESTS := State Namespace Linux IncludeAll
+TESTS := State Application Namespace Linux Windows MacOS SDLControllers IncludeAll
 HEADERS := $(shell find ../../Cosmeron/Modules/Input ../../Cosmeron/Core -type f)
 all: run
 $(BUILD):

@@ -51,27 +51,27 @@ INPUT_CONTROLLER_HAS_RUMBLE_PROTOTYPE {
 
 INPUT_CONTROLLER_IS_DOWN_PROTOTYPE {
   INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
-  return d && button < d->buttonCount && d->buttons[button].down;
+  return !INPUT_INS(state).unfocused && d && button < d->buttonCount && d->buttons[button].down;
 }
 
 INPUT_CONTROLLER_IS_PRESSED_PROTOTYPE {
   INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
-  return d && button < d->buttonCount && d->buttons[button].pressed;
+  return !INPUT_INS(state).unfocused && d && button < d->buttonCount && d->buttons[button].pressed;
 }
 
 INPUT_CONTROLLER_IS_RELEASED_PROTOTYPE {
   INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
-  return d && button < d->buttonCount && d->buttons[button].released;
+  return !INPUT_INS(state).unfocused && d && button < d->buttonCount && d->buttons[button].released;
 }
 
 INPUT_CONTROLLER_GET_AXIS_PROTOTYPE {
   INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
-  return d && axis < d->axisCount ? d->axes[axis] : 0;
+  return !INPUT_INS(state).unfocused && d && axis < d->axisCount ? d->axes[axis] : 0;
 }
 
 INPUT_CONTROLLER_GET_HAT_PROTOTYPE {
   INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
-  return d && hat < d->hatCount ? d->hats[hat] : INPUT_CONST(HAT_CENTERED);
+  return !INPUT_INS(state).unfocused && d && hat < d->hatCount ? d->hats[hat] : INPUT_CONST(HAT_CENTERED);
 }
 
 INPUT_CONTROLLER_RUMBLE_PROTOTYPE {
@@ -84,4 +84,14 @@ INPUT_CONTROLLER_RUMBLE_PROTOTYPE {
 
 INPUT_CONTROLLER_STOP_RUMBLE_PROTOTYPE {
   return INPUT_CONTROLLER_FUNC(Rumble)(controller, 0, 0, 0);
+}
+
+INPUT_CONTROLLER_GET_VENDOR_PROTOTYPE {
+  INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
+  return d ? d->vendor : 0;
+}
+
+INPUT_CONTROLLER_GET_PRODUCT_PROTOTYPE {
+  INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
+  return d ? d->product : 0;
 }

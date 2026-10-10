@@ -35,4 +35,22 @@ INPUT_KEYBOARD_IS_REPEATED_PROTOTYPE;
       void)
 INPUT_KEYBOARD_GET_MODIFIERS_PROTOTYPE;
 
+/* Query a physical key position using the same key identifiers. */
+#define INPUT_KEYBOARD_IS_PHYSICAL_DOWN_PROTOTYPE \
+  static inline bool INPUT_KEYBOARD_FUNC(IsPhysicalDown)( \
+      INPUT_TYPE(Key) key)
+INPUT_KEYBOARD_IS_PHYSICAL_DOWN_PROTOTYPE;
+
+/* Query a physical key position using the same key identifiers. */
+#define INPUT_KEYBOARD_IS_PHYSICAL_PRESSED_PROTOTYPE \
+  static inline bool INPUT_KEYBOARD_FUNC(IsPhysicalPressed)( \
+      INPUT_TYPE(Key) key)
+INPUT_KEYBOARD_IS_PHYSICAL_PRESSED_PROTOTYPE;
+
+/* Query a physical key position using the same key identifiers. */
+#define INPUT_KEYBOARD_IS_PHYSICAL_RELEASED_PROTOTYPE \
+  static inline bool INPUT_KEYBOARD_FUNC(IsPhysicalReleased)( \
+      INPUT_TYPE(Key) key)
+INPUT_KEYBOARD_IS_PHYSICAL_RELEASED_PROTOTYPE;
+
 #include "Impl/Keyboard.impl"
