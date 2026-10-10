@@ -140,7 +140,20 @@ UI_BEGIN_PROTOTYPE {
      !TEXT_GRID_FUNC(char32, IsValid)(canvas->backing))
     return STATUS_CONST(INVALID_ARGUMENT);
   if(!context->themeSet) {
+    TERMINAL_TYPE(TCapabilities) caps={0};
     context->theme=UI_FUNC(Theme_Default)();
+    if(TERMINAL_FUNC(Capabilities_Get)(&caps)==STATUS_CONST(SUCCESS) &&
+       !caps.unicode){
+      UI_TYPE(TVisual) *visuals[]={
+        &context->theme.button,&context->theme.checkbox,&context->theme.radio,
+        &context->theme.slider,&context->theme.input,&context->theme.panel,
+        &context->theme.progress,&context->theme.selection
+      };
+      size_t i;
+      context->theme.glyphs=UI_FUNC(Glyphs_ASCII)();
+      for(i=0;i<sizeof(visuals)/sizeof(visuals[0]);i++)
+        visuals[i]->border=UI_CONST(BORDER_ASCII);
+    }
     context->themeSet=true;
   }
   context->canvas=canvas;context->frame=true;
