@@ -4,3 +4,4 @@
 #include "../Internal/Canvas.inc"
 #include "../Internal/Widgets.inc"
 #include "../Internal/Editors.inc"
+#include "../Internal/GameWidgets.inc"
