@@ -95,6 +95,30 @@ typedef struct UI_TYPE(TProgress) {
   const UI_TYPE(TVisual) *visual;
   float fraction;
 } UI_TYPE(TProgress);
+/* Old-school game menu: text rows, selection marker, navigation and click. 
+ * Item text and disabled-mask arrays are borrowed; count may be zero. */
+typedef struct UI_TYPE(TMenu) {
+  UI_TYPE(WidgetId) id;
+  TQUAD_TYPE(uint16) region;
+  const char *title;
+  const char *const *items;
+  const bool *itemDisabled;
+  size_t count, *selected;
+  size_t firstVisible;
+  const UI_TYPE(TVisual) *visual;
+  bool wrap, disabled, activated, cancelled;
+} UI_TYPE(TMenu);
+
+/* ProgressBar complements the existing fraction-based Progress widget.
+ * phase is supplied by the caller for indeterminate animation. */
+typedef struct UI_TYPE(TProgressBar) {
+  TQUAD_TYPE(uint16) region;
+  const UI_TYPE(TVisual) *visual;
+  const char *label;
+  uint64_t value, maximum, phase;
+  bool showPercent, vertical, indeterminate;
+} UI_TYPE(TProgressBar);
+
 typedef struct UI_TYPE(TInputText) {
   UI_TYPE(WidgetId) id;
   TQUAD_TYPE(uint16) region;
