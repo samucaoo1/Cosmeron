@@ -182,7 +182,7 @@ static inline OPSTATUS FONT_INS(FLFStrip)(
 static inline OPSTATUS FONT_INS(Row)(
     const FONT_TYPE(TFont) *font,unsigned char letter,uint16_t row,
     const char **out,size_t *outLen) {
-  size_t cursor,start,len;
+  size_t cursor,start=0,len=0;
   uint16_t i;
   if(!font||!font->data||letter<32||letter>126||
      row>=font->height||!font->glyphs[letter-32U].present)
