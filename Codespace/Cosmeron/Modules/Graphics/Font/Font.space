@@ -10,19 +10,26 @@
 #define FONT_TYPE(NAME) FONT_NS(NAME)
 #define FONT_FUNC(NAME) FONT_NS(NAME)
 #define FONT_MAX_HEIGHT 32
+/* Compile-time C11 designated initializer: FONT_GLYPH('A') = {...}. */
+#define FONT_GLYPH(CHARACTER) [(CHARACTER) - 32]
 
 typedef enum FONT_TYPE(Format) {
   FONT_NS(FORMAT_ASF)=1, FONT_NS(FORMAT_FIGLET)=2,
-  FONT_NS(FORMAT_ASF2)=3
+  FONT_NS(FORMAT_ASF2)=3, FONT_NS(FORMAT_STATIC)=4
 } FONT_TYPE(Format);
 typedef struct FONT_TYPE(TGlyph) {
   size_t offset;
   size_t paintOffset, paintEnd; /* ASF2-only metadata after glyph art. */
   uint16_t columns;
   bool present;
+  /* Static C11 source: immutable rows separated by '\\n'.
+   * No runtime parsing, separate header generation, or allocation. */
+  const char *art;
+  uint32_t foreground, foregroundRows; /* Bit 0 = art row 0. */
+  uint32_t background, backgroundRows;
 } FONT_TYPE(TGlyph);
 typedef struct FONT_TYPE(TFont) {
-  /* Borrows data: source must outlive this font; no Init/Free. */
+  /* Borrowed data for parsed formats; FORMAT_STATIC uses embedded .art. */
   const char *data;
   size_t length;
   uint16_t height;
