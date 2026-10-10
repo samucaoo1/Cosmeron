@@ -13,9 +13,12 @@ int main(void) {
 #if defined(_WIN32) && !defined(INPUT_NO_NATIVE)
   puts("Windows: source aggregation"); fflush(stdout);
   Input_Internal_Device *d = Input_Internal_Connect(0, "Timer test");
+  puts("Windows: connected"); fflush(stdout);
   LONG i;
   uint32_t a = Input_Internal_WindowsSource((HANDLE)(uintptr_t)1);
+  puts("Windows: first source"); fflush(stdout);
   uint32_t b = Input_Internal_WindowsSource((HANDLE)(uintptr_t)2);
+  puts("Windows: second source"); fflush(stdout);
   assert(d && a != b);
   assert(Input_Internal_WindowsKey(VK_RETURN | 0x100) == INPUT_KEY_KEYPAD_ENTER);
   assert(Input_Internal_WindowsPhysical(0x11c) == INPUT_KEY_KEYPAD_ENTER);

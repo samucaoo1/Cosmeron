@@ -49,6 +49,9 @@ typedef struct INPUT_INS(State) {
 # endif
 #elif defined(_MSC_VER)
 # define COSMERON_INPUT_STORAGE __declspec(selectany)
+#elif defined(_WIN32) && (defined(__GNUC__) || defined(__clang__))
+/* PE/COFF uses COMDAT data, matching MSVC shared-storage semantics. */
+# define COSMERON_INPUT_STORAGE __attribute__((selectany))
 #elif defined(__GNUC__) || defined(__clang__)
 # define COSMERON_INPUT_STORAGE __attribute__((weak))
 #else
