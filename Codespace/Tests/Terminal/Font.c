@@ -77,4 +77,36 @@ static void test_figlet(void) {
       strlen("flf2a$ 2 2 2 0 0\nA@@\n"),&font)==STATUS_CONST(INVALID_SEQUENCE));
   TERMINAL_FUNC(Canvas_Free)(&c);
 }
-int main(void) { test_asf_embedded();test_figlet();return 0; }
+
+static void test_asf2_readable(void) {
+  const char source[] =
+    "ASF2 3\n"
+    "# readable glyphs, no escapes inside the artwork\n"
+    "@A\n"
+    "  A\n"
+    " A A\n"
+    "AAAAA\n"
+    "@B\n"
+    "BBBBB\n"
+    "B   B\n"
+    "BBBBB\n"
+    "!fg 0 #FF281E\n";
+  FONT_TYPE(TFont) font={0};
+  TERMINAL_TYPE(TCanvas) canvas={0};
+  TDUAL_TYPE(uint16) size={0};
+  TEXT_GRID_ATTRIBUTE_TYPE(Cell) style=TEXT_GRID_ATTRIBUTE_FUNC(Default)();
+  assert(FONT_FUNC(ParseASF2)(source,sizeof(source)-1U,&font)==OK);
+  assert(FONT_FUNC(Measure)(&font,"AB",&size)==OK);
+  assert(size.col==10 && size.row==3);
+  assert(TERMINAL_FUNC(Canvas_Create)(&canvas,
+      (TDUAL_TYPE(uint16)){.col=20,.row=5})==OK);
+  assert(FONT_FUNC(Draw)(&canvas,(TDUAL_TYPE(uint16)){.x=1,.y=1},
+      &font,"AB",style)==OK);
+  assert(at(&canvas,6,1,&style)=='B');
+  assert(style.foreground==TEXT_GRID_COLOR_RGB(255,40,30));
+  assert(at(&canvas,6,2,&style)=='B');
+  assert((style.flags&TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_FOREGROUND))!=0);
+  TERMINAL_FUNC(Canvas_Free)(&canvas);
+}
+
+int main(void) { test_asf_embedded();test_figlet();test_asf2_readable();return 0; }
