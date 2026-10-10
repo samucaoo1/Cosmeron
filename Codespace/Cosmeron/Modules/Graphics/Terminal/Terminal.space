@@ -57,6 +57,10 @@ typedef struct TERMINAL_TYPE(TEvent) {
   bool pressed;
 } TERMINAL_TYPE(TEvent);
 
+typedef struct TERMINAL_TYPE(TCapabilities) {
+  bool interactive, ansi, trueColor, unicode, mouse;
+} TERMINAL_TYPE(TCapabilities);
+
 typedef struct TERMINAL_TYPE(THandle) {
   FILE *stream;
   TERMINAL_TYPE(StandardStream) kind;
