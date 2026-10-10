@@ -113,6 +113,9 @@ static inline OPSTATUS UI_INS(Paint)(
   style=UI_INS(ResolveStyle)(context,visual,id,region,disabled);
   status=UI_INS(Frame)(context,region,visual->border,style);
   if(status!=STATUS_CONST(SUCCESS) || !label || !*label)return status;
+  if(visual->border!=UI_CONST(BORDER_NONE) &&
+     ((uint32_t)region.right-region.left<2U ||
+      (uint32_t)region.bottom-region.top<2U))return STATUS_CONST(SUCCESS);
   start=(uint32_t)region.left+(visual->border!=UI_CONST(BORDER_NONE))+
         visual->padding.x;
   end=(uint32_t)region.right-(visual->border!=UI_CONST(BORDER_NONE));
@@ -179,7 +182,8 @@ UI_KEY_PROTOTYPE {
 }
 UI_POINTER_MOVE_PROTOTYPE {
   if(!context)return STATUS_CONST(INVALID_ARGUMENT);
-  context->pointer=position;return STATUS_CONST(SUCCESS);
+  context->pointer=position;context->pointerKnown=true;
+  return STATUS_CONST(SUCCESS);
 }
 UI_POINTER_BUTTON_PROTOTYPE {
   if(!context)return STATUS_CONST(INVALID_ARGUMENT);

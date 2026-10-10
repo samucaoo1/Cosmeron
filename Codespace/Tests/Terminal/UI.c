@@ -115,6 +115,40 @@ static void test_ui(void) {
   assert(UI_FUNC(Theme_Set)(&ui,&ui.theme)==OK);
   TERMINAL_FUNC(Canvas_Free)(&canvas);
 }
+static void test_pointer_and_scopes(void) {
+  TERMINAL_TYPE(TCanvas) canvas={0};
+  UI_TYPE(TContext) ui={0};
+  UI_TYPE(TButton) action={0};
+  bool pressed=false;
+  assert(TERMINAL_FUNC(Canvas_Create)(
+      &canvas,(TDUAL_TYPE(uint16)){.col=30,.row=12})==OK);
+  action.label="Click";action.region=r(2,2,15,4);
+  assert(UI_FUNC(Begin)(&ui,&canvas)==OK);
+  assert(UI_FUNC(ButtonEx)(&ui,&action)==OK && !action.pressed);
+  assert(UI_FUNC(PushId)(&ui,"second")==OK);
+  assert(UI_FUNC(Button)(&ui,r(2,6,15,8),"Click",&pressed)==OK);
+  assert(UI_FUNC(PopId)(&ui)==OK);
+  assert(UI_FUNC(End)(&ui)==OK);
+
+  assert(UI_FUNC(PointerMove)(&ui,
+      (TDUAL_TYPE(uint16)){.x=4,.y=3})==OK);
+  assert(UI_FUNC(PointerButton)(&ui,true)==OK);
+  assert(UI_FUNC(Begin)(&ui,&canvas)==OK);
+  assert(UI_FUNC(ButtonEx)(&ui,&action)==OK && !action.pressed);
+  assert(UI_FUNC(End)(&ui)==OK);
+
+  assert(UI_FUNC(PointerButton)(&ui,false)==OK);
+  assert(UI_FUNC(Begin)(&ui,&canvas)==OK);
+  assert(UI_FUNC(ButtonEx)(&ui,&action)==OK && action.pressed);
+  assert(UI_FUNC(End)(&ui)==OK);
+
+  assert(UI_FUNC(Begin)(&ui,&canvas)==OK);
+  assert(UI_FUNC(Button)(&ui,r(2,2,15,4),"Click",&pressed)==OK);
+  assert(UI_FUNC(Button)(&ui,r(2,6,15,8),"Click",&pressed)==STATUS_CONST(ALREADY_EXISTS));
+  assert(UI_FUNC(End)(&ui)==OK);
+  TERMINAL_FUNC(Canvas_Free)(&canvas);
+}
+
 static void test_direct(void) {
   TERMINAL_TYPE(TCanvas) canvas={0};
   UI_TYPE(TContext) ctx={0};
@@ -137,4 +171,4 @@ static void test_direct(void) {
   assert(UI_FUNC(End)(&ctx)==OK);
   TERMINAL_FUNC(Canvas_Free)(&canvas);
 }
-int main(void) {test_theme();test_ui();test_direct();return 0;}
+int main(void) {test_theme();test_ui();test_pointer_and_scopes();test_direct();return 0;}

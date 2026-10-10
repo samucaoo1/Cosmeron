@@ -125,7 +125,7 @@ typedef struct UI_TYPE(TPanel) {
 typedef struct UI_TYPE(TContext) {
   TERMINAL_TYPE(TCanvas) *canvas;
   UI_TYPE(TTheme) theme;
-  bool themeSet, frame, pointerDown, pointerPressed, pointerReleased;
+  bool themeSet, frame, pointerKnown, pointerDown, pointerPressed, pointerReleased;
   TDUAL_TYPE(uint16) pointer;
   UI_TYPE(WidgetId) focus, held, idScope;
   UI_TYPE(WidgetId) focusIds[UI_MAX_WIDGETS];

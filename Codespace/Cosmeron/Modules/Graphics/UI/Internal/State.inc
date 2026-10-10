@@ -191,7 +191,7 @@ static inline bool UI_INS(Hovered)(
     UI_TYPE(TContext) *context,TQUAD_TYPE(uint16) region) {
   TERMINAL_TYPE(TCanvas) *canvas=UI_INS(Canvas)(context);
   uint32_t localX,localY;
-  if(!canvas) return false;
+  if(!canvas || !context->pointerKnown) return false;
   if(context->pointer.x<canvas->origin.x ||
      context->pointer.y<canvas->origin.y) return false;
   localX=(uint32_t)context->pointer.x-canvas->origin.x;

@@ -20,6 +20,8 @@ static inline OPSTATUS UI_INS(LabeledGlyph)(
   TEXT_GRID_ATTRIBUTE_TYPE(Cell) style=
       UI_INS(ResolveStyle)(context,visual,id,region,disabled);
   if(status!=STATUS_CONST(SUCCESS))return status;
+  if(visual->border!=UI_CONST(BORDER_NONE) &&
+     (uint32_t)region.right-region.left<2U)return STATUS_CONST(SUCCESS);
   start=(uint32_t)region.left+(visual->border!=UI_CONST(BORDER_NONE))+
         visual->padding.x;
   right=(uint32_t)region.right-(visual->border!=UI_CONST(BORDER_NONE));
@@ -162,6 +164,9 @@ UI_SLIDER_EX_PROTOTYPE {
   visual=UI_INS(ChooseVisual)(context,slider->visual,&context->theme.slider);
   left=(uint32_t)slider->region.left+(visual->border!=UI_CONST(BORDER_NONE));
   right=(uint32_t)slider->region.right-(visual->border!=UI_CONST(BORDER_NONE));
+  if(visual->border!=UI_CONST(BORDER_NONE) &&
+     (uint32_t)slider->region.right-slider->region.left<2U)
+    return STATUS_CONST(OUT_OF_RANGE);
   if(right<left)return STATUS_CONST(OUT_OF_RANGE);
   if(!slider->disabled) {
     if(context->pointerPressed && UI_INS(Hovered)(context,slider->region)) {
@@ -226,6 +231,9 @@ UI_PROGRESS_EX_PROTOTYPE {
   if(status!=STATUS_CONST(SUCCESS))return status;
   left=(uint32_t)progress->region.left+(visual->border!=UI_CONST(BORDER_NONE));
   right=(uint32_t)progress->region.right-(visual->border!=UI_CONST(BORDER_NONE));
+  if(visual->border!=UI_CONST(BORDER_NONE) &&
+     (uint32_t)progress->region.right-progress->region.left<2U)
+    return STATUS_CONST(OUT_OF_RANGE);
   if(right<left)return STATUS_CONST(OUT_OF_RANGE);
   filled=(uint32_t)((float)(right-left+1U)*progress->fraction);
   full=UI_INS(FirstGlyph)(context->theme.glyphs.progressFull,'#');

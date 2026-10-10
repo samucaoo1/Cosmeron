@@ -54,6 +54,9 @@ static inline OPSTATUS UI_INS(DrawEdit)(
   style=UI_INS(ResolveStyle)(context,visual,id,region,input->disabled);
   status=UI_INS(Frame)(context,region,visual->border,style);
   if(status!=STATUS_CONST(SUCCESS))return status;
+  if(visual->border!=UI_CONST(BORDER_NONE) &&
+     ((uint32_t)region.right-region.left<2U ||
+      (uint32_t)region.bottom-region.top<2U))return STATUS_CONST(SUCCESS);
   left=(uint32_t)region.left+(visual->border!=UI_CONST(BORDER_NONE))+
        visual->padding.x;
   right=(uint32_t)region.right-(visual->border!=UI_CONST(BORDER_NONE));
@@ -164,7 +167,9 @@ UI_LIST_EX_PROTOTYPE {
        UI_INS(Hovered)(context,list->region)) {
       TERMINAL_TYPE(TCanvas) *canvas=UI_INS(Canvas)(context);
       uint32_t localY=(uint32_t)context->pointer.y-canvas->origin.y;
-      size_t candidate=(size_t)(localY-list->region.top);
+      uint32_t top=(uint32_t)list->region.top+
+           (visual->border!=UI_CONST(BORDER_NONE));
+      size_t candidate=localY>=top?(size_t)(localY-top):list->count;
       if(candidate<list->count)*list->selected=candidate;
     }
     if(context->pointerPressed && UI_INS(Hovered)(context,list->region))
