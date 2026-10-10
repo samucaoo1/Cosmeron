@@ -24,8 +24,8 @@ def convert(source: Path, output: Path, symbol: str) -> None:
     data = source.read_bytes()
     if not data:
         raise ValueError("empty font source")
-    if source.suffix.lower() == ".asf" and not data.startswith(b"ASF1 "):
-        raise ValueError("invalid ASF1 signature")
+    if source.suffix.lower() == ".asf" and not (data.startswith(b"ASF1 ") or data.startswith(b"ASF2 ")):
+        raise ValueError("invalid ASF1/ASF2 signature")
     if source.suffix.lower() == ".flf" and not data.startswith(b"flf2a"):
         raise ValueError("invalid FIGlet flf2a signature")
     items = [f"0x{b:02X}" for b in data]
