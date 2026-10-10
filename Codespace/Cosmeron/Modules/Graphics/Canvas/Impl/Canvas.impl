@@ -71,13 +71,33 @@ TERMINAL_CANVAS_FREE_PROTOTYPE {
 }
 TERMINAL_CANVAS_RESIZE_PROTOTYPE {
   OPSTATUS status;
+  TDUAL_TYPE(uint16) oldSize;
+  uint32_t x,y;
   if (!TERMINAL_INS(CanvasValid)(canvas) || !canvas->owns ||
       canvas->backing!=&canvas->grid) return STATUS_CONST(INVALID_ARGUMENT);
+  oldSize=canvas->size;
   status=TEXT_GRID_FUNC(char32, Resize)(&canvas->grid,size);
   if (status==STATUS_CONST(SUCCESS)) {
     canvas->size=size;
     if (canvas->cursor.col>size.col) canvas->cursor.col=size.col;
     if (canvas->cursor.row>size.row) canvas->cursor.row=size.row;
+    for (y=0;y<size.row;y++) for (x=0;x<size.col;x++) {
+      if (x>=oldSize.col || y>=oldSize.row) {
+        size_t i=TERMINAL_INS(CanvasIndex)(canvas,x,y);
+        canvas->grid.chars.data[i]=' ';
+        canvas->grid.attributes.data[i]=TEXT_GRID_ATTRIBUTE_FUNC(Default)();
+      }
+    }
+    /* Shrinking can cut off the continuation half of a wide glyph. */
+    if (size.col>0) for (y=0;y<size.row;y++) {
+      size_t i=TERMINAL_INS(CanvasIndex)(canvas,(uint32_t)size.col-1U,y);
+      TEXT_TYPE(TChar32) cp=canvas->grid.chars.data[i];
+      int width=1;
+      if (TEXT_WIDTH_FUNC(Codepoint)(cp,&width)==STATUS_CONST(SUCCESS) && width==2) {
+        canvas->grid.chars.data[i]=' ';
+        canvas->grid.attributes.data[i]=TEXT_GRID_ATTRIBUTE_FUNC(Default)();
+      }
+    }
   }
   return status;
 }
@@ -170,8 +190,9 @@ TERMINAL_CANVAS_PUT_CHAR_PROTOTYPE {
     return STATUS_CONST(SUCCESS);
   }
   if (codepoint=='\t') {
-    uint32_t end=((uint32_t)canvas->cursor.col/4U+1U)*4U;
-    while (canvas->cursor.col<end) {
+    uint32_t count=4U-(canvas->cursor.col%4U);
+    uint32_t i;
+    for (i=0;i<count;i++) {
       status=TERMINAL_FUNC(Canvas_PutChar)(canvas,' ');
       if (status!=STATUS_CONST(SUCCESS)) return status;
     }
@@ -374,20 +395,46 @@ TERMINAL_CANVAS_BLIT_REGION_PROTOTYPE {
   if(!TERMINAL_INS(CanvasValid)(destination)) return STATUS_CONST(INVALID_ARGUMENT);
   if (position.x>=destination->size.col || position.y>=destination->size.row)
     return STATUS_CONST(OUT_OF_RANGE);
-  /* Deep snapshot makes overlapping/self/view blits safe. */
+  /* Snapshot the complete source region: handles self-blit and aliasing views. */
   status=TERMINAL_FUNC(Canvas_Crop)(source,region,&snapshot);
   if(status!=STATUS_CONST(SUCCESS)) return status;
-  for(y=0;y<snapshot.size.row && y+position.y<destination->size.row;y++)
+  for(y=0;y<snapshot.size.row && y+position.y<destination->size.row;y++) {
     for(x=0;x<snapshot.size.col && x+position.x<destination->size.col;x++) {
       size_t si=TERMINAL_INS(CanvasIndex)(&snapshot,x,y);
       size_t di=TERMINAL_INS(CanvasIndex)(destination,x+position.x,y+position.y);
       TEXT_GRID_ATTRIBUTE_TYPE(Cell) src=snapshot.backing->attributes.data[si];
       TEXT_GRID_ATTRIBUTE_TYPE(Cell) dst=destination->backing->attributes.data[di];
-      destination->backing->chars.data[di]=snapshot.backing->chars.data[si];
-      destination->backing->attributes.data[di]=TEXT_INS(GridAttributeCompose)(dst,src);
+      uint32_t codepoint=snapshot.backing->chars.data[si];
+      int width=1;
+      TDUAL_TYPE(uint16) target={
+        .x=(uint16_t)(x+position.x),.y=(uint16_t)(y+position.y)};
+      if(src.flags & TEXT_GRID_ATTRIBUTE_CONST(CODE_UNIT_CONTINUATION)) {
+        /* Continuations are consumed by their leading cell. Orphaned
+         * continuations at a region boundary become spaces. */
+        if(x>0) {
+          size_t prev=TERMINAL_INS(CanvasIndex)(&snapshot,x-1U,y);
+          int previousWidth=1;
+          if(TEXT_WIDTH_FUNC(Codepoint)(snapshot.backing->chars.data[prev],
+                                       &previousWidth)==STATUS_CONST(SUCCESS) &&
+             previousWidth==2) continue;
+        }
+        codepoint=' ';
+        src.flags &= (uint16_t)~TEXT_GRID_ATTRIBUTE_CONST(CODE_UNIT_CONTINUATION);
+      }
+      if (!codepoint) codepoint=' ';
+      if(TEXT_WIDTH_FUNC(Codepoint)((TEXT_TYPE(TChar32))codepoint,&width)!=
+          STATUS_CONST(SUCCESS)) {status=STATUS_CONST(INVALID_SEQUENCE);break;}
+      if(width==2 && (x+1U>=snapshot.size.col ||
+           x+position.x+1U>=destination->size.col))
+        codepoint=' ';
+      status=TERMINAL_FUNC(Canvas_Set)(destination,target,codepoint,
+          TEXT_INS(GridAttributeCompose)(dst,src));
+      if(status!=STATUS_CONST(SUCCESS)) break;
     }
+    if(status!=STATUS_CONST(SUCCESS))break;
+  }
   TERMINAL_FUNC(Canvas_Free)(&snapshot);
-  return STATUS_CONST(SUCCESS);
+  return status;
 }
 TERMINAL_CANVAS_BLIT_PROTOTYPE {
   if (!TERMINAL_INS(CanvasValid)(source)) return STATUS_CONST(INVALID_ARGUMENT);
@@ -434,7 +481,23 @@ static inline OPSTATUS TERMINAL_INS(CanvasPresent)(
       TEXT_GRID_ATTRIBUTE_TYPE(Cell) cell=canvas->backing->attributes.data[idx];
       TEXT_TYPE(TChar32) point=canvas->backing->chars.data[idx];
       unsigned char encoded[4];size_t n=0;
-      if(cell.flags & TEXT_GRID_ATTRIBUTE_CONST(CODE_UNIT_CONTINUATION)) continue;
+      if(cell.flags & TEXT_GRID_ATTRIBUTE_CONST(CODE_UNIT_CONTINUATION)) {
+        bool paired=false;
+        if(x>0) {
+          size_t prior=TERMINAL_INS(CanvasIndex)(canvas,x-1U,y);
+          int priorWidth=1;
+          paired=(TEXT_WIDTH_FUNC(Codepoint)(
+              canvas->backing->chars.data[prior],&priorWidth)==STATUS_CONST(SUCCESS) &&
+              priorWidth==2);
+        }
+        if(paired) continue;
+        point=' ';
+        cell.flags &= (uint16_t)~TEXT_GRID_ATTRIBUTE_CONST(CODE_UNIT_CONTINUATION);
+      } else if (x+1U==canvas->size.col) {
+        int width=1;
+        if(TEXT_WIDTH_FUNC(Codepoint)(point,&width)==STATUS_CONST(SUCCESS) && width==2)
+          point=' ';
+      }
       if(!TERMINAL_INS(CanvasStyleEqual)(applied,cell)) {
         status=TERMINAL_INS(ApplyStyle)(cell);
         if(status!=STATUS_CONST(SUCCESS)) break;
