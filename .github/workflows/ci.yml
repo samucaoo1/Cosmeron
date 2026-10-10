@@ -51,6 +51,9 @@ jobs:
       - name: Input
         run: make -C Codespace/Tests/Input clean run CC=${{ matrix.cc }}
 
+      - name: Terminal
+        run: make -C Codespace/Tests/Terminal clean run CC=${{ matrix.cc }}
+
       - name: Audio
         if: ${{ hashFiles('Codespace/Tests/Audio/**') != '' }}
         run: make -C Codespace/Tests/Audio clean run CC=${{ matrix.cc }}
