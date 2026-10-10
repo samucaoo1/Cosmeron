@@ -1,0 +1,51 @@
+#pragma once
+#include "../../../Core/Namespace.h"
+#include "../../../Core/Error/Status.h"
+#include "../../../Core/Preprocessor/Detect/OperationSystem.h"
+#include "../../Struct/TDual.h"
+#include "../../Text/Grid/Attribute.h"
+#include "../../Text/Encoding/UTF8.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+
+#define TERMINAL_MOD Terminal
+#define TERMINAL_CMOD TERMINAL
+#define TERMINAL_NS(NAME) GNS2(LIB_PREFIX(TERMINAL_MOD), NAME)
+#define TERMINAL_CNS(NAME) CNS2(LIB_PREFIX_CONST(TERMINAL_CMOD), NAME)
+#define TERMINAL_INS(NAME) GNS3(LIB_PREFIX(TERMINAL_MOD), Internal, NAME)
+#define TERMINAL_TYPE(NAME) TERMINAL_NS(NAME)
+#define TERMINAL_FUNC(NAME) TERMINAL_NS(NAME)
+#define TERMINAL_CONST(NAME) TERMINAL_CNS(NAME)
+
+/* The standard streams are borrowed. Never fclose a THandle. */
+typedef enum TERMINAL_TYPE(StandardStream) {
+  TERMINAL_CONST(STDIN), TERMINAL_CONST(STDOUT), TERMINAL_CONST(STDERR)
+} TERMINAL_TYPE(StandardStream);
+
+typedef enum TERMINAL_TYPE(InputMode) {
+  TERMINAL_CONST(INPUT_CANONICAL), TERMINAL_CONST(INPUT_CBREAK),
+  TERMINAL_CONST(INPUT_RAW)
+} TERMINAL_TYPE(InputMode);
+
+/* Special keys live beyond Unicode's scalar range. */
+typedef uint32_t TERMINAL_TYPE(TKey);
+enum {
+  TERMINAL_CONST(KEY_ESCAPE) = 27,
+  TERMINAL_CONST(KEY_ENTER) = 13,
+  TERMINAL_CONST(KEY_BACKSPACE) = 127,
+  TERMINAL_CONST(KEY_UP) = 0x110000,
+  TERMINAL_CONST(KEY_DOWN), TERMINAL_CONST(KEY_RIGHT),
+  TERMINAL_CONST(KEY_LEFT), TERMINAL_CONST(KEY_HOME),
+  TERMINAL_CONST(KEY_END), TERMINAL_CONST(KEY_DELETE)
+};
+
+typedef struct TERMINAL_TYPE(THandle) {
+  FILE *stream;
+  TERMINAL_TYPE(StandardStream) kind;
+} TERMINAL_TYPE(THandle);
+
+typedef struct TERMINAL_TYPE(TTerminal) {
+  TERMINAL_TYPE(THandle) input, output, error;
+} TERMINAL_TYPE(TTerminal);
