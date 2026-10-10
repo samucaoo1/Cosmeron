@@ -100,6 +100,14 @@
 #define TERMINAL_ATTRIBUTE_RESET_PROTOTYPE \
   static inline OPSTATUS TERMINAL_FUNC(Attribute_Reset)(void)
 
+/* Poll one event without blocking; all outputs are assigned on success.
+ * Mouse_Enable is optional and explicitly scoped to the process console. */
+#define TERMINAL_EVENT_POLL_PROTOTYPE \
+  static inline OPSTATUS TERMINAL_FUNC(Event_Poll)( \
+      TERMINAL_TYPE(TEvent) *outEvent, bool *outAvailable)
+#define TERMINAL_MOUSE_ENABLE_PROTOTYPE \
+  static inline OPSTATUS TERMINAL_FUNC(Mouse_Enable)(bool enabled)
+
 /* Terminal keyboard input is separate from general device Input. */
 #define TERMINAL_KEY_GET_PROTOTYPE \
   static inline OPSTATUS TERMINAL_FUNC(Key_Get)(TERMINAL_TYPE(TKey) *outKey)
@@ -152,6 +160,8 @@ TERMINAL_ATTRIBUTE_SET_PROTOTYPE;
 TERMINAL_ATTRIBUTE_ADD_PROTOTYPE;
 TERMINAL_ATTRIBUTE_REMOVE_PROTOTYPE;
 TERMINAL_ATTRIBUTE_RESET_PROTOTYPE;
+TERMINAL_EVENT_POLL_PROTOTYPE;
+TERMINAL_MOUSE_ENABLE_PROTOTYPE;
 TERMINAL_KEY_GET_PROTOTYPE;
 TERMINAL_KEY_GET_ECHO_PROTOTYPE;
 TERMINAL_KEY_HIT_PROTOTYPE;
