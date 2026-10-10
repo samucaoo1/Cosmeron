@@ -161,7 +161,7 @@ static void test_vga8x8_public_domain(void) {
   assert(strcmp(VGA8x8_Font.license,"Public Domain")==0);
   assert(FONT_FUNC(Measure)(&VGA8x8_Font,"AB",&measured)==OK);
   assert(measured.col==17 && measured.row==8);
-  assert(FONT_FUNC(Measure)(&VGA8x8_Font,"A\\nB",&measured)==OK);
+  assert(FONT_FUNC(Measure)(&VGA8x8_Font,"A\nB",&measured)==OK);
   assert(measured.col==8 && measured.row==17);
   assert(FONT_FUNC(Measure)(&VGA8x8_Font,printable,&measured)==OK);
   assert(measured.col==854 && measured.row==8);
