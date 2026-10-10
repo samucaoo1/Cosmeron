@@ -184,8 +184,19 @@ static inline OPSTATUS FONT_INS(Row)(
     const char **out,size_t *outLen) {
   size_t cursor,start=0,len=0;
   uint16_t i;
-  if(!font||!font->data||letter<32||letter>126||
-     row>=font->height||!font->glyphs[letter-32U].present)
+  if(!font || letter<32 || letter>126 || row>=font->height)
+    return STATUS_CONST(NOT_SUPPORTED);
+  if(font->format==FONT_NS(FORMAT_STATIC)){
+    const char *art=font->glyphs[letter-32U].art;
+    if(!art)return STATUS_CONST(NOT_FOUND);
+    cursor=0;
+    for(i=0;i<=row;i++)
+      if(!FONT_INS(Line)(art,strlen(art),&cursor,&start,&len))
+        return STATUS_CONST(INVALID_SEQUENCE);
+    *out=art+start;*outLen=len;
+    return STATUS_CONST(SUCCESS);
+  }
+  if(!font->data || !font->glyphs[letter-32U].present)
     return STATUS_CONST(NOT_SUPPORTED);
   cursor=font->glyphs[letter-32U].offset;
   for(i=0;i<=row;i++){
@@ -379,10 +390,42 @@ static inline OPSTATUS FONT_INS(ASF2RowStyle)(
   return STATUS_CONST(SUCCESS);
 }
 
+/* Calculate static glyph width from literal rows, preserving trailing spaces
+ * and rejecting mismatched height. Allows natural unpadded C string artwork. */
+static inline OPSTATUS FONT_INS(GlyphColumns)(
+    const FONT_TYPE(TFont) *font,unsigned char letter,uint16_t *outColumns){
+  uint16_t widest=0,row;
+  const FONT_TYPE(TGlyph) *glyph;
+  if(!font||!outColumns||letter<32||letter>126)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  glyph=&font->glyphs[letter-32U];
+  if(font->format!=FONT_NS(FORMAT_STATIC)){
+    if(!glyph->present)return STATUS_CONST(NOT_FOUND);
+    *outColumns=glyph->columns;
+    return STATUS_CONST(SUCCESS);
+  }
+  if(!glyph->art)return STATUS_CONST(NOT_FOUND);
+  {
+    size_t pos=0,start=0,length=0,n=strlen(glyph->art);
+    OPSTATUS status;
+    for(row=0;row<font->height;row++){
+      uint16_t w=0;
+      if(!FONT_INS(Line)(glyph->art,n,&pos,&start,&length))
+        return STATUS_CONST(INVALID_SEQUENCE);
+      status=FONT_INS(RowSize)(glyph->art+start,length,false,&w);
+      if(status!=STATUS_CONST(SUCCESS))return status;
+      if(w>widest)widest=w;
+    }
+    if(pos!=n)return STATUS_CONST(INVALID_SEQUENCE);
+  }
+  *outColumns=widest;
+  return STATUS_CONST(SUCCESS);
+}
 FONT_MEASURE_PROTOTYPE {
   uint32_t lineWidth=0,maxWidth=0,lines=1;
   const unsigned char *p=(const unsigned char *)asciiText;
-  if(!font||!font->data||!outSize||!p||!font->height)
+  if(!font||!outSize||!p||!font->height ||
+     (font->format!=FONT_NS(FORMAT_STATIC) && !font->data))
     return STATUS_CONST(INVALID_ARGUMENT);
   while(*p){
     if(*p=='\n'){
@@ -390,9 +433,13 @@ FONT_MEASURE_PROTOTYPE {
       lineWidth=0; ++lines;
     }else{
       if(*p<32U||*p>126U)return STATUS_CONST(NOT_SUPPORTED);
-      if(!font->glyphs[*p-32U].present)return STATUS_CONST(NOT_FOUND);
-      lineWidth+=font->glyphs[*p-32U].columns;
-      if(lineWidth>UINT16_MAX)return STATUS_CONST(OUT_OF_RANGE);
+      {
+        uint16_t columns=0;
+        OPSTATUS status=FONT_INS(GlyphColumns)(font,*p,&columns);
+        if(status!=STATUS_CONST(SUCCESS))return status;
+        lineWidth+=columns;
+        if(lineWidth>UINT16_MAX)return STATUS_CONST(OUT_OF_RANGE);
+      }
     }
     ++p;
   }
@@ -456,12 +503,28 @@ FONT_DRAW_PROTOTYPE {
         if(font->format==FONT_NS(FORMAT_ASF2)){
           status=FONT_INS(ASF2RowStyle)(font,*p,row,&paint);
           if(status!=STATUS_CONST(SUCCESS))return status;
+        }else if(font->format==FONT_NS(FORMAT_STATIC)){
+          const FONT_TYPE(TGlyph) *g=&font->glyphs[*p-32U];
+          uint32_t bit=UINT32_C(1)<<row;
+          if(g->foregroundRows&bit){
+            paint.foreground=g->foreground;
+            paint.flags&=(uint16_t)~TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_FOREGROUND);
+          }
+          if(g->backgroundRows&bit){
+            paint.background=g->background;
+            paint.flags&=(uint16_t)~TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_BACKGROUND);
+          }
         }
         status=FONT_INS(DrawRow)(canvas,x,y+row,font,str,len,paint);
       }
       if(status!=STATUS_CONST(SUCCESS))return status;
     }
-    x+=font->glyphs[*p-32U].columns;
+    {
+      uint16_t columns=0;
+      status=FONT_INS(GlyphColumns)(font,*p,&columns);
+      if(status!=STATUS_CONST(SUCCESS))return status;
+      x+=columns;
+    }
     ++p;
   }
   return STATUS_CONST(SUCCESS);
