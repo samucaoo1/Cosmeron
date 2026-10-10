@@ -12,10 +12,12 @@
 #define FONT_MAX_HEIGHT 32
 
 typedef enum FONT_TYPE(Format) {
-  FONT_NS(FORMAT_ASF)=1, FONT_NS(FORMAT_FIGLET)=2
+  FONT_NS(FORMAT_ASF)=1, FONT_NS(FORMAT_FIGLET)=2,
+  FONT_NS(FORMAT_ASF2)=3
 } FONT_TYPE(Format);
 typedef struct FONT_TYPE(TGlyph) {
   size_t offset;
+  size_t paintOffset, paintEnd; /* ASF2-only metadata after glyph art. */
   uint16_t columns;
   bool present;
 } FONT_TYPE(TGlyph);
