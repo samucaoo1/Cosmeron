@@ -134,3 +134,53 @@ not pixel-identical output with every option of the \`figlet\` executable.
   \`Font_Draw\` call before/after their layout. No independent TUI event loop.
 - Fonts from third parties may have separate licenses; the converter does
   **not** grant usage rights to those fonts.
+
+
+## Cosmeron Binary Orbit (bundled FIGlet font)
+
+The project ships a custom **Cosmeron.flf** under
+[\`Graphics/Font/Fonts/Cosmeron.flf\`](../../Codespace/Cosmeron/Modules/Graphics/Font/Fonts/Cosmeron.flf).
+
+This font uses sharply defined 7-row, fixed-width glyphs whose **only
+visible stroke characters are 0 and 1**, alternating like a stream of binary
+digits in the Cosmeron orbital branding. The background is ordinary spaces.
+There are 95 printable ASCII glyphs, plus the seven conventional FIGlet
+extended glyph slots (Ä Ö Ü ä ö ü ß). No ANSI color or \`.asf\` markup is
+embedded in this font — the appearance works on monochrome terminals.
+
+FIGlet header: \`flf2a$ 7 7 10 -1 6 0 0 0\` (7-row height, full-width layout,
+six comment lines). It deliberately uses **full-width/no smushing** so its
+0/1 geometry is preserved without FIGlet's character-merging rules.
+
+Usage in a standard FIGlet installation (load via explicit font file path):
+
+\`\`\`sh
+figlet -f Codespace/Cosmeron/Modules/Graphics/Font/Fonts/Cosmeron.flf COSMERON
+\`\`\`
+
+Usage in a C11 application built with Cosmeron:
+
+\`\`\`sh
+python3 Tools/asf_compile.py \
+  Codespace/Cosmeron/Modules/Graphics/Font/Fonts/Cosmeron.flf \
+  --symbol CosmeronBinary -o CosmeronBinary.flf.h
+\`\`\`
+
+\`\`\`c
+#include "Cosmeron/Modules/Graphics/Font/Font.h"
+#include "CosmeronBinary.flf.h"
+
+FONT_TYPE(TFont) binary={0};
+OPSTATUS status=FONT_FUNC(ParseFIGlet)(
+    (const char *)CosmeronBinary_Data,
+    sizeof(CosmeronBinary_Data), &binary);
+
+if(status==STATUS_CONST(SUCCESS))
+    status=FONT_FUNC(Draw)(&canvas,
+        (TDUAL_TYPE(uint16)){.x=0,.y=0},
+        &binary,"COSMERON",TEXT_GRID_ATTRIBUTE_FUNC(Default)());
+\`\`\`
+
+The \`.flf\` source is the editable asset; the compiled header is optional.
+Run \`Codespace/Tests/Terminal/FontCosmeron.c\` for validation of the
+7-row layout, all 95 ASCII glyphs and direct rendering through Canvas.
