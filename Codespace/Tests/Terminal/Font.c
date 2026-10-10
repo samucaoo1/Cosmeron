@@ -4,6 +4,7 @@
 #include <string.h>
 #include "../../Cosmeron/Modules/Graphics/Font/Font.h"
 #include "Fixtures/Retro.asf.h"
+#include "../../Cosmeron/Modules/Graphics/Font/Fonts/Readable.asf"
 #define OK STATUS_CONST(SUCCESS)
 
 static uint32_t at(const TERMINAL_TYPE(TCanvas) *c,unsigned x,unsigned y,
@@ -109,4 +110,41 @@ static void test_asf2_readable(void) {
   TERMINAL_FUNC(Canvas_Free)(&canvas);
 }
 
-int main(void) { test_asf_embedded();test_figlet();test_asf2_readable();return 0; }
+
+static void test_static_const_asf(void) {
+  TERMINAL_TYPE(TCanvas) canvas={0};
+  TDUAL_TYPE(uint16) measured={0};
+  TEXT_GRID_ATTRIBUTE_TYPE(Cell) style=TEXT_GRID_ATTRIBUTE_FUNC(Default)();
+  FONT_TYPE(TFont) bad={0};
+  static const FONT_TYPE(TFont) malformed={
+      .format=FONT_NS(FORMAT_STATIC),
+      .height=3,
+      .glyphs={FONT_GLYPH('A')={.art="A\nAA"}}
+  };
+  assert(FONT_FUNC(Measure)(&Readable_Font,"AB",&measured)==OK);
+  assert(measured.col==10 && measured.row==3);
+  assert(FONT_FUNC(Measure)(&Readable_Font,"A B",&measured)==OK);
+  assert(measured.col==13 && measured.row==3);
+  assert(FONT_FUNC(Measure)(&Readable_Font,"A\nB",&measured)==OK);
+  assert(measured.col==5 && measured.row==6);
+  assert(FONT_FUNC(Measure)(&malformed,"A",&measured)==STATUS_CONST(INVALID_SEQUENCE));
+  assert(FONT_FUNC(Measure)(&Readable_Font,"C",&measured)==STATUS_CONST(NOT_FOUND));
+  assert(TERMINAL_FUNC(Canvas_Create)(&canvas,
+      (TDUAL_TYPE(uint16)){.col=20,.row=8})==OK);
+  assert(FONT_FUNC(Draw)(&canvas,
+      (TDUAL_TYPE(uint16)){.col=1,.row=1},
+      &Readable_Font,"AB",style)==OK);
+  assert(at(&canvas,3,1,&style)=='A');
+  assert(at(&canvas,6,1,&style)=='B');
+  assert(style.foreground==TEXT_GRID_COLOR_RGB(255,40,30));
+  assert((style.flags&TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_FOREGROUND))==0);
+  assert(at(&canvas,6,2,&style)=='B');
+  assert((style.flags&TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_FOREGROUND))!=0);
+  assert(FONT_FUNC(Draw)(&canvas,
+      (TDUAL_TYPE(uint16)){.col=17,.row=1},
+      &Readable_Font,"AB",style)==STATUS_CONST(OUT_OF_RANGE));
+  TERMINAL_FUNC(Canvas_Free)(&canvas);
+  (void)bad;
+}
+
+int main(void) { test_asf_embedded();test_figlet();test_asf2_readable();test_static_const_asf();return 0; }
