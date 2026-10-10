@@ -7,6 +7,9 @@
 #define FONT_PARSE_ASF_PROTOTYPE \
   static inline OPSTATUS FONT_FUNC(ParseASF)( \
       const char *data, size_t size, FONT_TYPE(TFont) *outFont)
+#define FONT_PARSE_ASF2_PROTOTYPE \
+  static inline OPSTATUS FONT_FUNC(ParseASF2)( \
+      const char *data, size_t size, FONT_TYPE(TFont) *outFont)
 #define FONT_PARSE_FIGLET_PROTOTYPE \
   static inline OPSTATUS FONT_FUNC(ParseFIGlet)( \
       const char *data, size_t size, FONT_TYPE(TFont) *outFont)
@@ -21,6 +24,7 @@
       TEXT_GRID_ATTRIBUTE_TYPE(Cell) defaultStyle)
 
 FONT_PARSE_ASF_PROTOTYPE;
+FONT_PARSE_ASF2_PROTOTYPE;
 FONT_PARSE_FIGLET_PROTOTYPE;
 FONT_MEASURE_PROTOTYPE;
 FONT_DRAW_PROTOTYPE;
