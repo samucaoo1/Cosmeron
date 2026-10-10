@@ -82,3 +82,21 @@ int main(void) {
 line octants/reversal/endpoints, inclusive clipping, integer fill masks, concavity,
 degeneracy, extreme coordinates/radii, Unicode validation, styles and wide-glyph
 view boundaries.
+
+## Arcs and Bézier curves
+
+- `RASTER_FUNC(Arc)(canvas, center, radii, from, to, clockwise, codepoint, style)`
+  draws an ellipse boundary between two nonzero **direction vectors** measured
+  from the center. For example, from `{1,0}` to `{0,1}` clockwise draws the
+  bottom-right quarter (screen y points down). Both radii must be positive.
+  Equal directions mean a full ellipse. Angles use polar order without trig/libm.
+- `RASTER_FUNC(BezierQuadratic)(canvas, from, control, to, codepoint, style)`
+  draws a quadratic curve. All points reuse `TDUAL_TYPE(int32)`.
+- `RASTER_FUNC(BezierCubic)(canvas, from, control1, control2, to, codepoint, style)`
+  draws a cubic curve, including loops and coincident endpoints.
+
+Bézier drawing uses de Casteljau subdivision, convex-hull viewport culling and
+quarter-cell control deviation before line rasterization. Recursion is capped
+at 20 subdivisions: at extreme coordinates the cap takes precedence over the
+flatness target. No heap allocation. Rounding and clipping preserve the existing
+width-one character and Canvas-view contracts.

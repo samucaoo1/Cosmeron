@@ -1,0 +1,103 @@
+#pragma once
+/* Polar order starts at +X and follows screen-space clockwise (+Y down). */
+static inline int RASTER_INS(AngleCompare)(int64_t ax,int64_t ay,int64_t bx,int64_t by) {
+  bool aSecond=ay<0 || (ay==0 && ax<0),bSecond=by<0 || (by==0 && bx<0);
+  long double cross=(long double)ax*by-(long double)ay*bx;
+  if (aSecond!=bSecond) return aSecond ? 1 : -1;
+  return cross>0 ? -1 : cross<0 ? 1 : 0;
+}
+RASTER_ARC_PROTOTYPE {
+  int64_t x,y,first=(int64_t)center.y-radii.y,last=(int64_t)center.y+radii.y;
+  int order;
+  OPSTATUS status=RASTER_INS(Validate)(canvas,codepoint);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  if ((!from.x && !from.y) || (!to.x && !to.y) || !radii.x || !radii.y)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (!clockwise) {TDUAL_TYPE(int32) temp=from;from=to;to=temp;}
+  order=RASTER_INS(AngleCompare)(from.x,from.y,to.x,to.y);
+  if (first<0) first=0;
+  if (last>=canvas->size.y) last=(int64_t)canvas->size.y-1;
+  for (y=first;y<=last;y++) {
+    int64_t extent=RASTER_INS(Extent)(y-center.y,radii.x,radii.y);
+    int64_t above=RASTER_INS(Extent)(y-center.y-1,radii.x,radii.y);
+    int64_t below=RASTER_INS(Extent)(y-center.y+1,radii.x,radii.y);
+    int64_t inner=above<below ? above : below;
+    int64_t left=(int64_t)center.x-extent,right=(int64_t)center.x+extent;
+    if (inner>=extent) inner=extent-1;
+    if (left<0) left=0;
+    if (right>=canvas->size.x) right=(int64_t)canvas->size.x-1;
+    for (x=left;x<=right;x++) {
+      int64_t dx=x-center.x,dy=y-center.y;
+      bool after,before;
+      if (dx>=-inner && dx<=inner) continue;
+      after=RASTER_INS(AngleCompare)(from.x,from.y,dx,dy)<=0;
+      before=RASTER_INS(AngleCompare)(dx,dy,to.x,to.y)<=0;
+      if (order==0 || (order<0 ? after && before : after || before))
+        RASTER_INS(Plot)(canvas,x,y,codepoint,style);
+    }
+  }
+  return STATUS_CONST(SUCCESS);
+}
+static inline int32_t RASTER_INS(RoundCoordinate)(double value) {
+  if (value>=INT32_MAX) return INT32_MAX;
+  if (value<=INT32_MIN) return INT32_MIN;
+  return (int32_t)(value+(value<0 ? -0.5 : 0.5));
+}
+static inline void RASTER_INS(Bezier)(TERMINAL_TYPE(TCanvas) *canvas,
+    const TDUAL_TYPE(double) points[4],unsigned depth,
+    uint32_t codepoint,TEXT_GRID_ATTRIBUTE_TYPE(Cell) style) {
+  const unsigned maxDepth=20;
+  const double toleranceSquared=0.0625; /* Quarter-cell control deviation. */
+  double left=points[0].x,right=left,top=points[0].y,bottom=top,error=0;
+  TDUAL_TYPE(double) work[4],a[4],b[4];
+  unsigned i,level;
+  for (i=0;i<4;i++) {
+    if (points[i].x<left) left=points[i].x;
+    if (points[i].x>right) right=points[i].x;
+    if (points[i].y<top) top=points[i].y;
+    if (points[i].y>bottom) bottom=points[i].y;
+    work[i]=points[i];
+  }
+  if (right< -0.5 || bottom< -0.5 || left>canvas->size.x-0.5 || top>canvas->size.y-0.5) return;
+  for (i=1;i<3;i++) {
+    double x=points[i].x-(points[0].x+(points[3].x-points[0].x)*i/3);
+    double y=points[i].y-(points[0].y+(points[3].y-points[0].y)*i/3);
+    if (x*x+y*y>error) error=x*x+y*y;
+  }
+  if (error<=toleranceSquared || depth==maxDepth) {
+    RASTER_INS(Line)(canvas,
+        (TDUAL_TYPE(int32)){.x=RASTER_INS(RoundCoordinate)(points[0].x),.y=RASTER_INS(RoundCoordinate)(points[0].y)},
+        (TDUAL_TYPE(int32)){.x=RASTER_INS(RoundCoordinate)(points[3].x),.y=RASTER_INS(RoundCoordinate)(points[3].y)},
+        codepoint,style);
+    return;
+  }
+  a[0]=work[0];b[3]=work[3];
+  for (level=1;level<4;level++) {
+    for (i=0;i<4-level;i++) {
+      work[i].x=(work[i].x+work[i+1].x)/2;
+      work[i].y=(work[i].y+work[i+1].y)/2;
+    }
+    a[level]=work[0];b[3-level]=work[3-level];
+  }
+  RASTER_INS(Bezier)(canvas,a,depth+1,codepoint,style);
+  RASTER_INS(Bezier)(canvas,b,depth+1,codepoint,style);
+}
+RASTER_BEZIER_CUBIC_PROTOTYPE {
+  TDUAL_TYPE(double) points[4]={{.x=from.x,.y=from.y},{.x=control1.x,.y=control1.y},
+      {.x=control2.x,.y=control2.y},{.x=to.x,.y=to.y}};
+  OPSTATUS status=RASTER_INS(Validate)(canvas,codepoint);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  RASTER_INS(Bezier)(canvas,points,0,codepoint,style);
+  return STATUS_CONST(SUCCESS);
+}
+RASTER_BEZIER_QUADRATIC_PROTOTYPE {
+  TDUAL_TYPE(double) points[4]={{.x=from.x,.y=from.y},{.x=0,.y=0},{.x=0,.y=0},{.x=to.x,.y=to.y}};
+  OPSTATUS status=RASTER_INS(Validate)(canvas,codepoint);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  points[1].x=from.x+((double)control.x-from.x)*2/3;
+  points[1].y=from.y+((double)control.y-from.y)*2/3;
+  points[2].x=to.x+((double)control.x-to.x)*2/3;
+  points[2].y=to.y+((double)control.y-to.y)*2/3;
+  RASTER_INS(Bezier)(canvas,points,0,codepoint,style);
+  return STATUS_CONST(SUCCESS);
+}

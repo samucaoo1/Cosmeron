@@ -8,3 +8,4 @@
 #include "Rasterization/Rasterization.h"
 #include "Raycasting/Render.h"
 #include "Pseudo3DRoad/Render.h"
+#include "Sprite/Sprite.h"

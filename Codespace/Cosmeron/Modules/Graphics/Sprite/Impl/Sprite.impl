@@ -1,0 +1,135 @@
+#pragma once
+SPRITE_LAYER_PROTOTYPE {
+  SPRITE_TYPE(TLayer) layer={0};
+  layer.source=source;
+  if (TERMINAL_INS(CanvasValid)(source) && source->size.x && source->size.y) {
+    layer.region.right=(uint16_t)(source->size.x-1);
+    layer.region.bottom=(uint16_t)(source->size.y-1);
+    layer.size=source->size;
+  }
+  return layer;
+}
+static inline OPSTATUS SPRITE_INS(Validate)(const TERMINAL_TYPE(TCanvas) *canvas,
+    const SPRITE_TYPE(TLayer) *layer) {
+  uint32_t x,y;
+  OPSTATUS status;
+  if (!TERMINAL_INS(CanvasValid)(canvas) || !layer || !layer->size.x || !layer->size.y)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  status=TERMINAL_INS(CanvasRegion)(layer->source,layer->region);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  if (canvas->backing==layer->source->backing) return STATUS_CONST(INVALID_ARGUMENT);
+  for (y=layer->region.top;y<=layer->region.bottom;y++)
+    for (x=layer->region.left;x<=layer->region.right;x++) {
+      size_t index=TERMINAL_INS(CanvasIndex)(layer->source,x,y);
+      uint32_t cp=layer->source->backing->chars.data[index];
+      int width;
+      if (layer->useColorKey && cp==layer->colorKey) continue;
+      if (layer->source->backing->attributes.data[index].flags &
+          TEXT_GRID_ATTRIBUTE_CONST(CODE_UNIT_CONTINUATION)) return STATUS_CONST(NOT_SUPPORTED);
+      status=TEXT_WIDTH_FUNC(Codepoint)(cp,&width);
+      if (status!=STATUS_CONST(SUCCESS)) return status;
+      if (width!=1) return STATUS_CONST(NOT_SUPPORTED);
+    }
+  return STATUS_CONST(SUCCESS);
+}
+static inline bool SPRITE_INS(Sample)(const SPRITE_TYPE(TLayer) *layer,double u,double v,
+    uint32_t *outCodepoint,TEXT_GRID_ATTRIBUTE_TYPE(Cell) *outStyle) {
+  uint32_t width=(uint32_t)layer->region.right-layer->region.left+1;
+  uint32_t height=(uint32_t)layer->region.bottom-layer->region.top+1;
+  uint32_t x=(uint32_t)VALUE_TYPED_FUNC(Clamp,F64)(u*width,0,width-1);
+  uint32_t y=(uint32_t)VALUE_TYPED_FUNC(Clamp,F64)(v*height,0,height-1);
+  size_t index;
+  if (layer->flipX) x=width-1-x;
+  if (layer->flipY) y=height-1-y;
+  index=TERMINAL_INS(CanvasIndex)(layer->source,layer->region.left+x,layer->region.top+y);
+  *outCodepoint=layer->source->backing->chars.data[index];
+  *outStyle=layer->source->backing->attributes.data[index];
+  return !layer->useColorKey || *outCodepoint!=layer->colorKey;
+}
+static inline void SPRITE_INS(Plot)(TERMINAL_TYPE(TCanvas) *canvas,int32_t x,int32_t y,
+    uint32_t cp,TEXT_GRID_ATTRIBUTE_TYPE(Cell) style) {
+  if (style.flags & TEXT_GRID_ATTRIBUTE_CONST(TRANSPARENT_BACKGROUND)) {
+    TEXT_GRID_ATTRIBUTE_TYPE(Cell) previous=canvas->backing->attributes.data[
+        TERMINAL_INS(CanvasIndex)(canvas,(uint32_t)x,(uint32_t)y)];
+    style.background=previous.background;
+    style.flags &= (uint16_t)~(TEXT_GRID_ATTRIBUTE_CONST(TRANSPARENT_BACKGROUND)|
+        TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_BACKGROUND));
+    style.flags |= previous.flags & TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_BACKGROUND);
+  }
+  RASTER_INS(Plot)(canvas,x,y,cp,style);
+}
+/* Shared nearest-neighbor projection. Bounds are clipped before conversion.
+ * Optional depth arrays are read-only, one per column or row respectively. */
+static inline void SPRITE_INS(Projected)(TERMINAL_TYPE(TCanvas) *canvas,
+    const SPRITE_TYPE(TLayer) *layer,double left,double top,double width,double height,
+    double depth,const float *columnDepth,const float *rowDepth) {
+  int32_t x,y;
+  int32_t firstX=(int32_t)VALUE_TYPED_FUNC(Clamp,F64)(left,0,canvas->size.x);
+  int32_t firstY=(int32_t)VALUE_TYPED_FUNC(Clamp,F64)(top,0,canvas->size.y);
+  int32_t lastX=(int32_t)VALUE_TYPED_FUNC(Clamp,F64)(left+width+0.5,0,canvas->size.x);
+  int32_t lastY=(int32_t)VALUE_TYPED_FUNC(Clamp,F64)(top+height+0.5,0,canvas->size.y);
+  for (y=firstY;y<lastY;y++) {
+    double v=(y+0.5-top)/height;
+    if (v<0 || v>=1 || (rowDepth && depth>rowDepth[y])) continue;
+    for (x=firstX;x<lastX;x++) {
+      double u=(x+0.5-left)/width;
+      uint32_t cp;TEXT_GRID_ATTRIBUTE_TYPE(Cell) style;
+      if (u<0 || u>=1 || (columnDepth && depth>=columnDepth[x])) continue;
+      if (SPRITE_INS(Sample)(layer,u,v,&cp,&style)) SPRITE_INS(Plot)(canvas,x,y,cp,style);
+    }
+  }
+}
+SPRITE_DRAW_WITH_PROTOTYPE {
+  OPSTATUS status=SPRITE_INS(Validate)(canvas,layer);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  SPRITE_INS(Projected)(canvas,layer,layer->position.x,layer->position.y,
+      layer->size.x,layer->size.y,0,NULL,NULL);
+  return STATUS_CONST(SUCCESS);
+}
+SPRITE_DRAW_PROTOTYPE {
+  SPRITE_TYPE(TLayer) layer=SPRITE_FUNC(Layer)(source);
+  layer.position=position;
+  return SPRITE_FUNC(DrawWith)(canvas,&layer);
+}
+SPRITE_COMPOSE_PROTOTYPE {
+  size_t i;
+  if (!TERMINAL_INS(CanvasValid)(canvas) || (!layers && count)) return STATUS_CONST(INVALID_ARGUMENT);
+  for (i=0;i<count;i++) {
+    OPSTATUS status=SPRITE_INS(Validate)(canvas,&layers[i]);
+    if (status!=STATUS_CONST(SUCCESS)) return status;
+  }
+  for (i=0;i<count;i++) SPRITE_INS(Projected)(canvas,&layers[i],
+      (double)layers[i].position.x-camera.x,(double)layers[i].position.y-camera.y,
+      layers[i].size.x,layers[i].size.y,0,NULL,NULL);
+  return STATUS_CONST(SUCCESS);
+}
+SPRITE_FRAME_AT_PROTOTYPE {
+  uint64_t total=0;
+  size_t i;
+  if (!outIndex || !animation || !animation->frames || !animation->count)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  for (i=0;i<animation->count;i++) {
+    uint64_t duration=animation->frames[i].duration;
+    if (!duration) return STATUS_CONST(INVALID_ARGUMENT);
+    if (duration>UINT64_MAX-total) return STATUS_CONST(OUT_OF_RANGE);
+    total+=duration;
+  }
+  if (animation->loop) elapsed%=total;
+  else if (elapsed>=total) { *outIndex=animation->count-1;return STATUS_CONST(SUCCESS); }
+  for (i=0;i<animation->count;i++) {
+    if (elapsed<animation->frames[i].duration) { *outIndex=i;return STATUS_CONST(SUCCESS); }
+    elapsed-=animation->frames[i].duration;
+  }
+  return STATUS_CONST(OUT_OF_RANGE);
+}
+SPRITE_DRAW_FRAME_PROTOTYPE {
+  SPRITE_TYPE(TLayer) layer;
+  size_t index;
+  OPSTATUS status;
+  if (!placement) return STATUS_CONST(INVALID_ARGUMENT);
+  status=SPRITE_FUNC(FrameAt)(animation,elapsed,&index);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  layer=*placement;layer.source=animation->frames[index].source;
+  layer.region=animation->frames[index].region;
+  return SPRITE_FUNC(DrawWith)(canvas,&layer);
+}

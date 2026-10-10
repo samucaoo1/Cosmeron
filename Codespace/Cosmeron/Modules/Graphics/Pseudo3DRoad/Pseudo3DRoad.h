@@ -38,6 +38,10 @@ typedef struct ROAD_TYPE(TProjection) {
       const ROAD_TYPE(TNode) *node, ROAD_TYPE(TProjection) *outProjection)
 #define ROAD_TRACK_VALIDATE_PROTOTYPE \
   static inline OPSTATUS ROAD_FUNC(TrackValidate)(const ROAD_TYPE(TTrack) *track)
+#define ROAD_TRACK_SAMPLE_PROTOTYPE \
+  static inline OPSTATUS ROAD_FUNC(TrackSample)( \
+      const ROAD_TYPE(TTrack) *track, float z, ROAD_TYPE(TNode) *outNode)
+ROAD_TRACK_SAMPLE_PROTOTYPE;
 ROAD_PROJECT_PROTOTYPE;
 ROAD_TRACK_VALIDATE_PROTOTYPE;
 #include "Impl/Pseudo3DRoad.impl"

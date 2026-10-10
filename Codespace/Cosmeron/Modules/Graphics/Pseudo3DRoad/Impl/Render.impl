@@ -45,7 +45,9 @@ static inline void ROAD_INS(ProjectAt)(const ROAD_TYPE(TNode) *a,const ROAD_TYPE
   *y=(double)camera->horizon*size.y-(worldY-camera->position.y)*scale;
   *width=halfWidth*scale;
 }
-ROAD_RENDER_PROTOTYPE {
+static inline OPSTATUS ROAD_INS(Render)(TERMINAL_TYPE(TCanvas) *canvas,
+    const ROAD_TYPE(TTrack) *track,const ROAD_TYPE(TCamera) *camera,
+    const ROAD_TYPE(TStyle) *style,float *outRowDepth) {
   size_t i;
   int32_t y,clip;
   OPSTATUS status;
@@ -60,6 +62,7 @@ ROAD_RENDER_PROTOTYPE {
   for (y=0;y<canvas->size.y;y++)
     ROAD_INS(Span)(canvas,y,0,canvas->size.x,style->codepoint,
         y+0.5<(double)camera->horizon*canvas->size.y ? style->sky : style->grass[0]);
+  if (outRowDepth) for (y=0;y<canvas->size.y;y++) outRowDepth[y]=FLT_MAX;
   clip=canvas->size.y;
   for (i=0;i+1<track->count && clip>0;i++) {
     const ROAD_TYPE(TNode) *a=&track->nodes[i],*b=&track->nodes[i+1];
@@ -83,6 +86,7 @@ ROAD_RENDER_PROTOTYPE {
       uint32_t lane;
       if (sample<farY || sample>=nearY) continue;
       fraction=(sample-farY)/(nearY-farY);
+      if (outRowDepth) outRowDepth[y]=(float)(1/((1-fraction)/farDepth+fraction/nearDepth));
       center=farX+fraction*(nearX-farX);
       halfWidth=farWidth+fraction*(nearWidth-farWidth);
       edge=2*halfWidth*style->edgeFraction;
@@ -97,6 +101,54 @@ ROAD_RENDER_PROTOTYPE {
     }
     /* Next segment may own a row only if its center is above this far edge. */
     clip=(int32_t)VALUE_TYPED_FUNC(Clamp,F64)(farY+0.5,0,clip);
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+ROAD_RENDER_PROTOTYPE {
+  return ROAD_INS(Render)(canvas,track,camera,style,NULL);
+}
+ROAD_RENDER_DEPTH_PROTOTYPE {
+  if (!TERMINAL_INS(CanvasValid)(canvas) || !outRowDepth || depthCount<canvas->size.y)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  return ROAD_INS(Render)(canvas,track,camera,style,outRowDepth);
+}
+ROAD_RENDER_OBJECTS_PROTOTYPE {
+  size_t i,pass,previousIndex=0;
+  double previousDepth=DBL_MAX;
+  if (!TERMINAL_INS(CanvasValid)(canvas) || !ROAD_INS(CameraValid)(camera) ||
+      (!objects && count) || !rowDepth || depthCount<canvas->size.y)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  for (i=0;i<canvas->size.y;i++) if (!ROAD_INS(Finite)(rowDepth[i]) || rowDepth[i]<=0)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  for (i=0;i<count;i++) {
+    OPSTATUS status=SPRITE_INS(Validate)(canvas,&objects[i].image);
+    if (status!=STATUS_CONST(SUCCESS)) return status;
+    if (!ROAD_INS(Finite)(objects[i].position.x) || !ROAD_INS(Finite)(objects[i].position.y) ||
+        !ROAD_INS(Finite)(objects[i].position.z) || !ROAD_INS(Finite)(objects[i].size.x) ||
+        !ROAD_INS(Finite)(objects[i].size.y) || objects[i].size.x<=0 || objects[i].size.y<=0)
+      return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  for (pass=0;pass<count;pass++) {
+    size_t selected=count;
+    double best=-1;
+    for (i=0;i<count;i++) {
+      double depth=(double)objects[i].position.z-camera->position.z;
+      if (depth<camera->nearClip || depth>camera->drawDistance ||
+          !(depth<previousDepth || (depth==previousDepth && i>previousIndex))) continue;
+      if (depth>best) {best=depth;selected=i;}
+    }
+    if (selected==count) break;
+    {
+      const ROAD_TYPE(TObject) *object=&objects[selected];
+      double scale=(double)camera->focalLength*canvas->size.y/best;
+      double width=object->size.x*scale,height=object->size.y*scale;
+      double left=canvas->size.x/2.0+((double)object->position.x-camera->position.x)*scale-width/2;
+      double top=(double)camera->horizon*canvas->size.y-
+          ((double)object->position.y+object->size.y-camera->position.y)*scale;
+      SPRITE_INS(Projected)(canvas,&object->image,left,top,width,height,best,NULL,rowDepth);
+    }
+    previousDepth=best;previousIndex=selected;
   }
   return STATUS_CONST(SUCCESS);
 }

@@ -1,6 +1,9 @@
 #pragma once
-RAYCAST_RENDER_COLUMNS_PROTOTYPE {
+static inline OPSTATUS RAYCAST_INS(RenderColumns)(
+    TERMINAL_TYPE(TCanvas) *canvas,const RAYCAST_TYPE(TScene) *scene,
+    const RAYCAST_TYPE(TCamera) *camera,float *outDepth) {
   uint32_t x,y;
+  size_t i;
   OPSTATUS status;
   if (!scene || !RAYCAST_INS(MapValid)(&scene->map) ||
       !RAYCAST_INS(CameraValid)(camera)) return STATUS_CONST(INVALID_ARGUMENT);
@@ -10,6 +13,12 @@ RAYCAST_RENDER_COLUMNS_PROTOTYPE {
   if (status!=STATUS_CONST(SUCCESS)) return status;
   status=RASTER_INS(Validate)(canvas,scene->floorCodepoint);
   if (status!=STATUS_CONST(SUCCESS)) return status;
+  if (scene->textureCount && !scene->textures) return STATUS_CONST(INVALID_ARGUMENT);
+  for (i=0;i<scene->textureCount;i++) if (scene->textures[i]) {
+    SPRITE_TYPE(TLayer) texture=SPRITE_FUNC(Layer)(scene->textures[i]);
+    status=SPRITE_INS(Validate)(canvas,&texture);
+    if (status!=STATUS_CONST(SUCCESS)) return status;
+  }
   for (y=0;y<canvas->size.y;y++) {
     bool ceiling=(double)y+0.5<(double)camera->horizon*canvas->size.y;
     (void)RASTER_FUNC(Line)(canvas,(TDUAL_TYPE(int32)){.x=0,.y=(int32_t)y},
@@ -24,6 +33,7 @@ RAYCAST_RENDER_COLUMNS_PROTOTYPE {
     status=RAYCAST_FUNC(CameraRay)(camera,(uint16_t)x,canvas->size.x,&ray);
     if (status!=STATUS_CONST(SUCCESS)) return status;
     status=RAYCAST_FUNC(GridCast)(&scene->map,&ray,&hit);
+    if (outDepth) outDepth[x]=status==STATUS_CONST(SUCCESS) ? hit.distance : FLT_MAX;
     if (status==STATUS_CONST(NOT_FOUND)) continue;
     if (status!=STATUS_CONST(SUCCESS)) return status;
     /* Unnormalized camera rays make t perpendicular depth: no fisheye. */
@@ -33,9 +43,76 @@ RAYCAST_RENDER_COLUMNS_PROTOTYPE {
     bottom=VALUE_TYPED_FUNC(Clamp,F64)(center+height/2,0,canvas->size.y);
     /* Include precisely the cell centers in the projected vertical interval. */
     for (y=(uint32_t)top;y<canvas->size.y && (double)y+0.5<bottom;y++)
-      if ((double)y+0.5>=top)
-        (void)RASTER_FUNC(Point)(canvas,(TDUAL_TYPE(int32)){.x=(int32_t)x,.y=(int32_t)y},
-            scene->wallCodepoint,hit.side==RAYCAST_CONST(SIDE_Y) ? scene->sideStyle : scene->wallStyle);
+      if ((double)y+0.5>=top) {
+        uint32_t cp=scene->wallCodepoint;
+        TEXT_GRID_ATTRIBUTE_TYPE(Cell) style=hit.side==RAYCAST_CONST(SIDE_Y) ? scene->sideStyle : scene->wallStyle;
+        size_t material=(size_t)hit.material-1;
+        if (material<scene->textureCount && scene->textures[material]) {
+          SPRITE_TYPE(TLayer) texture=SPRITE_FUNC(Layer)(scene->textures[material]);
+          (void)SPRITE_INS(Sample)(&texture,hit.wallCoordinate,
+              ((double)y+0.5-(center-height/2))/height,&cp,&style);
+        }
+        SPRITE_INS(Plot)(canvas,(int32_t)x,(int32_t)y,cp,style);
+      }
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+RAYCAST_RENDER_COLUMNS_PROTOTYPE {
+  return RAYCAST_INS(RenderColumns)(canvas,scene,camera,NULL);
+}
+RAYCAST_RENDER_COLUMNS_DEPTH_PROTOTYPE {
+  if (!TERMINAL_INS(CanvasValid)(canvas) || !outDepth || depthCount<canvas->size.x)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  return RAYCAST_INS(RenderColumns)(canvas,scene,camera,outDepth);
+}
+static inline double RAYCAST_INS(SpriteDepth)(const RAYCAST_TYPE(TCamera) *camera,
+    const RAYCAST_TYPE(TSprite) *sprite) {
+  double determinant=(double)camera->plane.x*camera->direction.y-(double)camera->direction.x*camera->plane.y;
+  double x=(double)sprite->position.x-camera->position.x,y=(double)sprite->position.y-camera->position.y;
+  return (camera->plane.x*y-camera->plane.y*x)/determinant;
+}
+RAYCAST_RENDER_SPRITES_PROTOTYPE {
+  size_t i,pass,previousIndex=0;
+  double previousDepth=DBL_MAX;
+  if (!TERMINAL_INS(CanvasValid)(canvas) || !RAYCAST_INS(CameraValid)(camera) ||
+      (!sprites && count) || !columnDepth || depthCount<canvas->size.x)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  for (i=0;i<canvas->size.x;i++) if (!RAYCAST_INS(Finite)(columnDepth[i]) || columnDepth[i]<0)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  for (i=0;i<count;i++) {
+    OPSTATUS status=SPRITE_INS(Validate)(canvas,&sprites[i].image);
+    if (status!=STATUS_CONST(SUCCESS)) return status;
+    if (!RAYCAST_INS(Finite)(sprites[i].position.x) || !RAYCAST_INS(Finite)(sprites[i].position.y) ||
+        !RAYCAST_INS(Finite)(sprites[i].size.x) || !RAYCAST_INS(Finite)(sprites[i].size.y) ||
+        !RAYCAST_INS(Finite)(sprites[i].elevation) || sprites[i].size.x<=0 || sprites[i].size.y<=0)
+      return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  /* Stable far-to-near selection, no allocation and no mutation of caller data. */
+  for (pass=0;pass<count;pass++) {
+    size_t selected=count;
+    double best=-1;
+    for (i=0;i<count;i++) {
+      double depth=RAYCAST_INS(SpriteDepth)(camera,&sprites[i]);
+      if (depth<=0 || depth>camera->maxDistance ||
+          !(depth<previousDepth || (depth==previousDepth && i>previousIndex))) continue;
+      if (depth>best) {best=depth;selected=i;}
+    }
+    if (selected==count) break;
+    {
+      const RAYCAST_TYPE(TSprite) *sprite=&sprites[selected];
+      double determinant=(double)camera->plane.x*camera->direction.y-(double)camera->direction.x*camera->plane.y;
+      double x=(double)sprite->position.x-camera->position.x,y=(double)sprite->position.y-camera->position.y;
+      double lateral=(camera->direction.y*x-camera->direction.x*y)/determinant;
+      double planeSpan=determinant<0 ? -determinant : determinant;
+      double width=(double)sprite->size.x*canvas->size.x/(2*planeSpan*best);
+      double height=(double)sprite->size.y*canvas->size.y/best;
+      double left=(1+lateral/best)*canvas->size.x/2-width/2;
+      double top=(double)camera->horizon*canvas->size.y-
+          ((double)sprite->elevation+sprite->size.y)*canvas->size.y/best;
+      SPRITE_INS(Projected)(canvas,&sprite->image,left,top,width,height,best,columnDepth,NULL);
+    }
+    previousDepth=best;previousIndex=selected;
   }
   return STATUS_CONST(SUCCESS);
 }

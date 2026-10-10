@@ -10,7 +10,10 @@ int main(void) {
     1,0,0,0,0,0,0,1,
     1,0,0,0,0,0,0,1,
     1,1,1,1,1,1,1,1};
-  TERMINAL_TYPE(TCanvas) canvas={0};
+  TERMINAL_TYPE(TCanvas) canvas={0},texture={0},objectImage={0};
+  const TERMINAL_TYPE(TCanvas) *textures[1]={&texture};
+  RAYCAST_TYPE(TSprite) object={0};
+  float depth[80];
   TEXT_GRID_ATTRIBUTE_TYPE(Cell) base=TEXT_GRID_ATTRIBUTE_FUNC(Default)();
   RAYCAST_TYPE(TScene) scene={
     .map={.cells=cells,.size={.x=8,.y=8},.stride=8,.cellCount=64},
@@ -25,8 +28,30 @@ int main(void) {
   scene.wallStyle.foreground=0xD0AA70;scene.sideStyle.foreground=0x806040;
   status=TERMINAL_FUNC(Canvas_Create)(&canvas,(TDUAL_TYPE(uint16)){.x=80,.y=24});
   if (status!=STATUS_CONST(SUCCESS)) return 1;
-  status=RAYCAST_FUNC(RenderColumns)(&canvas,&scene,&camera);
+  status=TERMINAL_FUNC(Canvas_Create)(&texture,(TDUAL_TYPE(uint16)){.x=4,.y=4});
+  if (status!=STATUS_CONST(SUCCESS)) goto cleanup;
+  status=TERMINAL_FUNC(Canvas_Create)(&objectImage,(TDUAL_TYPE(uint16)){.x=3,.y=3});
+  if (status!=STATUS_CONST(SUCCESS)) goto cleanup;
+  status=TERMINAL_FUNC(Canvas_Fill)(&texture,'#',scene.wallStyle);
+  if (status!=STATUS_CONST(SUCCESS)) goto cleanup;
+  status=RASTER_FUNC(Line)(&texture,(TDUAL_TYPE(int32)){.x=0,.y=2},
+      (TDUAL_TYPE(int32)){.x=3,.y=2},'-',scene.sideStyle);
+  if (status!=STATUS_CONST(SUCCESS)) goto cleanup;
+  status=RASTER_FUNC(Line)(&objectImage,(TDUAL_TYPE(int32)){.x=1,.y=0},
+      (TDUAL_TYPE(int32)){.x=1,.y=2},'@',base);
+  if (status!=STATUS_CONST(SUCCESS)) goto cleanup;
+  scene.textures=textures;scene.textureCount=1;
+  object.image=SPRITE_FUNC(Layer)(&objectImage);
+  object.image.useColorKey=true;object.image.colorKey=' ';
+  object.position=(TDUAL_TYPE(float)){.x=4,.y=2.5f};
+  object.size=(TDUAL_TYPE(float)){.x=0.5f,.y=0.8f};object.elevation=-0.5f;
+  status=RAYCAST_FUNC(RenderColumnsDepth)(&canvas,&scene,&camera,depth,80);
+  if (status==STATUS_CONST(SUCCESS))
+    status=RAYCAST_FUNC(RenderSprites)(&canvas,&camera,&object,1,depth,80);
   if (status==STATUS_CONST(SUCCESS)) status=TERMINAL_FUNC(Canvas_Update)(&canvas);
+cleanup:
+  TERMINAL_FUNC(Canvas_Free)(&objectImage);
+  TERMINAL_FUNC(Canvas_Free)(&texture);
   TERMINAL_FUNC(Canvas_Free)(&canvas);
   return status==STATUS_CONST(SUCCESS) ? 0 : 1;
 }

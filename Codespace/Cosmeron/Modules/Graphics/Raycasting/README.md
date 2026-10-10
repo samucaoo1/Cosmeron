@@ -50,7 +50,7 @@ Default names: `Raycast_GridCast`, `Raycast_CameraRay`, `Raycast_RenderColumns`.
   no trigonometry dependency is imposed by the API.
 - The renderer paints ceiling/floor and projects solid, constant-height walls.
   `wallHeight * canvasHeight / depth` determines wall height in cells.
-  Y-side hits use `sideStyle`; all material IDs currently share these styles.
+  Y-side untextured hits use `sideStyle`; textured materials retain their source cell styles.
 - Rendering respects Canvas views, uses Rasterization's width-one brush policy,
   and changes neither canvas cursor nor its default style. Present with
   `TERMINAL_FUNC(Canvas_Update)` explicitly. No collision handling is implied.
@@ -74,5 +74,43 @@ boundaries, corner ties, limits, unchanged error outputs, invalid numbers,
 and Canvas view isolation. `ProjectionCore.c` enforces no Terminal dependency
 in the computational headers.
 
-Textures, sprites, arbitrary wall segments and collision/movement systems are
-not part of this renderer.
+Arbitrary wall segments and collision/movement systems are not part of this renderer.
+
+## Wall textures and billboard sprites
+
+`TScene.textures` borrows an array of Canvas pointers, with `textureCount` entries.
+Material ID N selects `textures[N-1]`; a missing/out-of-range/NULL entry uses the
+flat styles. Textures use nearest-neighbor sampling of `THit.wallCoordinate` and
+the **unclipped** vertical wall projection, so nearby walls crop instead of squash.
+Every supplied texture is validated before rendering, must contain width-one
+characters and must not share destination backing storage.
+
+```c
+OPSTATUS RAYCAST_FUNC(RenderColumnsDepth)(
+    TERMINAL_TYPE(TCanvas) *canvas, const RAYCAST_TYPE(TScene) *scene,
+    const RAYCAST_TYPE(TCamera) *camera, float *outDepth, size_t depthCount);
+OPSTATUS RAYCAST_FUNC(RenderSprites)(
+    TERMINAL_TYPE(TCanvas) *canvas, const RAYCAST_TYPE(TCamera) *camera,
+    const RAYCAST_TYPE(TSprite) *sprites, size_t count,
+    const float *columnDepth, size_t depthCount);
+```
+
+The caller supplies at least canvas width floats; depth is perpendicular wall
+distance, with `FLT_MAX` for no hit. Generate the buffer with the same camera,
+map and viewport immediately before drawing sprites. The original
+`RenderColumns` remains available without any depth-buffer requirement.
+
+A `TSprite` contains `SPRITE_TYPE(TLayer) image`, world `TDual_float position`,
+positive world `TDual_float size` and `float elevation` (bottom relative to the
+camera eye). For a unit wall centered at eye level, ground is elevation -0.5.
+The image crop, flips and transparency apply; its 2D position/size are superseded
+by perspective projection (keep its size initialized with `Sprite_Layer`).
+
+Sprites are billboarded, clipped by each wall column, and drawn far to near with
+stable input order for equal depths. Source data is never reordered. Sorting
+costs O(spriteCount²), intentionally avoiding hidden allocation. Transparent
+cells leave previously rendered content visible. Sprites on/behind the camera
+or beyond maxDistance are skipped. Equal wall/sprite depth favors the wall.
+The computational `Raycasting.h` still has no Terminal dependency.
+
+The Raycasting example now demonstrates a textured wall and transparent sprite.

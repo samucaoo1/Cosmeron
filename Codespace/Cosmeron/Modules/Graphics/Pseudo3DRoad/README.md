@@ -81,4 +81,42 @@ make -C Codespace/Tests/Terminal
 Run examples in an interactive terminal. Tests cover exact perspective values,
 near clipping, track validation, curves, hills/crest occlusion, movement,
 resizing to 1×1, nested views, invalid styles/numbers and unchanged error outputs.
-Track looping, traffic, roadside sprites and gameplay are left to the caller.
+Track looping, traffic simulation and gameplay are left to the caller.
+
+## Objects, terrain depth and track sampling
+
+```c
+OPSTATUS ROAD_FUNC(TrackSample)(
+    const ROAD_TYPE(TTrack) *track, float z, ROAD_TYPE(TNode) *outNode);
+OPSTATUS ROAD_FUNC(RenderDepth)(
+    TERMINAL_TYPE(TCanvas) *canvas, const ROAD_TYPE(TTrack) *track,
+    const ROAD_TYPE(TCamera) *camera, const ROAD_TYPE(TStyle) *style,
+    float *outRowDepth, size_t depthCount);
+OPSTATUS ROAD_FUNC(RenderObjects)(
+    TERMINAL_TYPE(TCanvas) *canvas, const ROAD_TYPE(TCamera) *camera,
+    const ROAD_TYPE(TObject) *objects, size_t count,
+    const float *rowDepth, size_t depthCount);
+```
+
+`TrackSample` interpolates center/elevation/halfWidth at world z. Place a sign or
+car using this position plus an x offset. It validates the track, returns
+`OUT_OF_RANGE` outside the track, and leaves the output untouched on failure.
+
+`RenderDepth` is the normal road render plus a caller-owned float buffer with
+at least canvas height elements. Each row stores visible terrain depth; untouched
+rows use `FLT_MAX`. Depth is interpolated reciprocally, not linearly in screen
+space. Recompute after any camera, track or viewport change. `Render` continues
+to work without a depth buffer.
+
+`TObject` contains `SPRITE_TYPE(TLayer) image`, `TTriple_float position` (world
+bottom center) and positive `TDual_float size` (world width/height). Image crop,
+flips and transparency apply. The image's 2D position/size are superseded by
+projection; initialize it with `Sprite_Layer` before changing crop/key fields.
+
+`RenderObjects` draws billboarded images far to near, rejecting fragments behind
+visible terrain per row. A tree can remain visible above a crest while its trunk
+is hidden. This shares the renderer's single-road/full-width terrain model; it
+is not general 3D geometry. Equal-depth objects follow input order; sorting is
+O(objectCount²) without allocation or caller-array mutation. Objects outside the
+near/far range are skipped. Arrays/images are borrowed and validated before draw.
+The road example now includes a transparent roadside tree.

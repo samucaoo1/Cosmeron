@@ -88,3 +88,17 @@ Both use existing Struct tuples and Rasterization. Computational headers can
 be included without Terminal; each package's `Render.h` enables the Canvas
 adapter. No initialization, implicit presentation, allocation or `-lm` required.
 Compilable examples are in `Codespace/Examples/Graphics`.
+
+
+## Sprites, composition and animation
+
+[Sprite](../../Codespace/Cosmeron/Modules/Graphics/Sprite/README.md) draws existing
+Canvas images with inclusive source crops, nearest-neighbor scaling, mirroring,
+character-key transparency and transparent backgrounds. `Sprite_Compose`
+provides ordered layers and a 2D camera over the destination Canvas/view.
+`Sprite_FrameAt`/`Sprite_DrawFrame` use caller-provided elapsed time.
+
+Raycast adds optional material textures, `RenderColumnsDepth` and `RenderSprites`.
+Road adds `TrackSample`, `RenderDepth` and `RenderObjects` with terrain occlusion.
+Buffers remain caller-owned; ordinary render calls need no buffers. Rasterization
+also includes `Arc`, `BezierQuadratic` and `BezierCubic`.

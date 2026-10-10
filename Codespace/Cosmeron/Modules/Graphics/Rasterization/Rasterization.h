@@ -88,4 +88,23 @@ RASTER_POLYLINE_PROTOTYPE;
 RASTER_POLYGON_PROTOTYPE;
 RASTER_FILL_POLYGON_PROTOTYPE;
 
+#define RASTER_ARC_PROTOTYPE \
+  static inline OPSTATUS RASTER_FUNC(Arc)( \
+      TERMINAL_TYPE(TCanvas) *canvas, TDUAL_TYPE(int32) center, \
+      TDUAL_TYPE(uint32) radii, TDUAL_TYPE(int32) from, TDUAL_TYPE(int32) to, \
+      bool clockwise, uint32_t codepoint, TEXT_GRID_ATTRIBUTE_TYPE(Cell) style)
+#define RASTER_BEZIER_QUADRATIC_PROTOTYPE \
+  static inline OPSTATUS RASTER_FUNC(BezierQuadratic)( \
+      TERMINAL_TYPE(TCanvas) *canvas, TDUAL_TYPE(int32) from, \
+      TDUAL_TYPE(int32) control, TDUAL_TYPE(int32) to, \
+      uint32_t codepoint, TEXT_GRID_ATTRIBUTE_TYPE(Cell) style)
+#define RASTER_BEZIER_CUBIC_PROTOTYPE \
+  static inline OPSTATUS RASTER_FUNC(BezierCubic)( \
+      TERMINAL_TYPE(TCanvas) *canvas, TDUAL_TYPE(int32) from, \
+      TDUAL_TYPE(int32) control1, TDUAL_TYPE(int32) control2, TDUAL_TYPE(int32) to, \
+      uint32_t codepoint, TEXT_GRID_ATTRIBUTE_TYPE(Cell) style)
+RASTER_ARC_PROTOTYPE;
+RASTER_BEZIER_QUADRATIC_PROTOTYPE;
+RASTER_BEZIER_CUBIC_PROTOTYPE;
 #include "Impl/Rasterization.impl"
+#include "Impl/Curves.impl"

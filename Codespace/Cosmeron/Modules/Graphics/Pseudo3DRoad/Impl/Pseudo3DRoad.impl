@@ -41,3 +41,30 @@ ROAD_PROJECT_PROTOTYPE {
   *outProjection=projection;
   return STATUS_CONST(SUCCESS);
 }
+
+ROAD_TRACK_SAMPLE_PROTOTYPE {
+  size_t low=0,high;
+  ROAD_TYPE(TNode) node;
+  double fraction;
+  OPSTATUS status;
+  if (!outNode || !ROAD_INS(Finite)(z)) return STATUS_CONST(INVALID_ARGUMENT);
+  status=ROAD_FUNC(TrackValidate)(track);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  high=track->count-1;
+  if (z<track->nodes[0].position.z || z>track->nodes[high].position.z)
+    return STATUS_CONST(OUT_OF_RANGE);
+  if (z==track->nodes[high].position.z) { *outNode=track->nodes[high];return STATUS_CONST(SUCCESS); }
+  while (high-low>1) {
+    size_t mid=low+(high-low)/2;
+    if (track->nodes[mid].position.z<=z) low=mid;
+    else high=mid;
+  }
+  fraction=((double)z-track->nodes[low].position.z)/
+      ((double)track->nodes[high].position.z-track->nodes[low].position.z);
+  node.position.x=(float)(track->nodes[low].position.x+fraction*((double)track->nodes[high].position.x-track->nodes[low].position.x));
+  node.position.y=(float)(track->nodes[low].position.y+fraction*((double)track->nodes[high].position.y-track->nodes[low].position.y));
+  node.position.z=z;
+  node.halfWidth=(float)(track->nodes[low].halfWidth+fraction*((double)track->nodes[high].halfWidth-track->nodes[low].halfWidth));
+  *outNode=node;
+  return STATUS_CONST(SUCCESS);
+}
