@@ -54,6 +54,11 @@ Without a custom library namespace, these expand to
 | Progress (fração 0..1) | Progress | ProgressEx / TProgress |
 | ProgressBar (valor/máximo) | ProgressBar | ProgressBarEx / TProgressBar |
 | Menu clássico de jogos | Menu | MenuEx / TMenu |
+| Dialog (OK) | Dialog | DialogEx / TDialog |
+| Confirm (Yes/No) | Confirm | ConfirmEx / TDialog |
+| StatusBar | StatusBar | StatusBarEx / TStatusBar |
+| Toast | Toast | ToastEx / TToast |
+| Spinner | Spinner | SpinnerEx / TSpinner |
 | InputText | InputText | InputTextEx / TInputText |
 | TextArea | TextArea | TextAreaEx / TTextArea |
 | List | List | ListEx / TList |
@@ -105,13 +110,12 @@ requires all style, layout, panel and ID scopes to be balanced.
 
 ## Current limitations
 
-- Native terminal mouse reporting/event polling must still be integrated.
+- Native mouse and keyboard event polling exist; terminal-specific behavior still needs interactive TTY regression tests.
 - No terminal output is automatic; call `Terminal_Canvas_Update` yourself.
 - Glyph width depends on terminal fonts; text shaping/combining marks are not
   implemented by the Canvas.
-- Editing is currently append/backspace rather than an advanced cursor editor.
-- The current list shows from its first item; scrollbar, scroll viewport,
-  select-on-double-click and virtualized lists are later work.
+- Editing supports Unicode codepoint cursor navigation, selection helpers and buffer paste, but not full grapheme/IME editing.
+- Lists have a scrolling viewport; scrollbar widgets, multi-select, double-click and virtualized lists are later work.
 - The UI is single-threaded and not a standalone GUI/windowing system.
 
 
@@ -275,3 +279,115 @@ the application supplies \`phase\`.
 The progress bar reuses \`theme.progress\`, existing Text/Grid attributes,
 \`glyphs.progressFull\` and \`glyphs.progressEmpty\`.
 A narrowly-sized region without enough interior cells returns an error.
+
+
+## Retro dialogs, confirmation, status bar, toast and spinner
+
+These are immediate-mode widgets over the **existing Canvas**. They require
+no widget allocation, no hidden windows and no Init/Free. Direct calls create
+temporary descriptors and delegate to \`*Ex\` functions.
+
+### Dialog and Confirm
+
+\`UI_Dialog\` is an informational OK/ESC dialog; its output becomes true
+when the user activates OK or dismisses via Escape. For multiple actions,
+\`UI_DialogEx\` accepts a \`TDialog\` with an array of borrowed action labels,
+\`actionCount\` and caller-persistent \`selected\` index. On each frame,
+\`activated\` and \`dismissed\` are reset. Arrow keys / Home / End navigate,
+Enter or Space activates, Escape dismisses, and mouse click/release chooses
+an action. Text can wrap within the rectangle. A zero action count displays
+the default OK action.
+
+\`\`\`c
+UI_TYPE(TDialog) dialog = {
+    .region = {.left=10,.top=4,.right=48,.bottom=13},
+    .title = "MISSION",
+    .message = "Continue this quest?"
+};
+UI_FUNC(ConfirmEx)(&ui,&dialog);  /* 0 = Yes; 1 = No */
+if(dialog.activated && dialog.selected==0) { /* accepted */ }
+if(dialog.dismissed) { /* Escape */ }
+\`\`\`
+
+\`UI_Confirm\` is the two-output convenience form:
+
+\`\`\`c
+bool accepted=false, rejected=false;
+UI_FUNC(Confirm)(&ui,dialog.region,
+                 "Delete save?",&accepted,&rejected);
+\`\`\`
+
+\`ConfirmEx\` allows exactly two custom action strings, or defaults to
+"Yes"/"No". Direct Confirm stores its two-choice cursor in \`TContext\`
+between frames; explicitly scoped IDs or \`TDialog\` are preferable if
+multiple confirmations are required.
+
+**Overlay ordering:** draw background first and the dialog last; while
+the dialog is open, the application should skip interactive background
+widgets. The dialog captures keyboard focus when drawn, but this version
+does not retroactively cancel events already consumed by widgets drawn
+earlier in the same frame. Rendering the background without interactive
+widgets is the supported modal pattern.
+
+### StatusBar
+
+\`\`\`c
+UI_FUNC(StatusBar)(&ui,
+    (TQUAD_TYPE(uint16)){.left=0,.top=23,.right=79,.bottom=23},
+    "HP 100  |  MP 50","F1 Help   ESC Menu");
+\`\`\`
+
+\`TStatusBar\` adds optional \`visual\` styling. Left text is clipped to
+leave room for right-aligned hints. Both positions are calculated in
+terminal-cell units. A one-line StatusBar uses \`theme.text\` by default,
+so it can be drawn without a border.
+
+### Toast
+
+\`\`\`c
+UI_TYPE(TToast) notice = {
+    .region = {.left=42,.top=1,.right=77,.bottom=5},
+    .title = "Saved",
+    .message = "Progress stored successfully.",
+    .visible = true,
+    .nowTick = ticks,
+    .expiresAtTick = 9000
+};
+UI_FUNC(ToastEx)(&ui,&notice);
+\`\`\`
+
+When not visible or expired, the toast returns success and renders nothing.
+The application supplies clock/tick values in any consistent units.
+\`expiresAtTick==0\` means **no automatic expiry**. \`UI_Toast\` is the
+direct form with a boolean \`visible\`. A toast does not receive focus or
+steal input. The caller clears/redraws its Canvas each frame to remove
+expired notifications.
+
+### Spinner
+
+\`\`\`c
+UI_FUNC(Spinner)(&ui,smallRegion,"Loading...",frameCounter);
+
+static const char *const customFrames[]={"|","/","-","\\\\"};
+UI_TYPE(TSpinner) spinner = {
+    .region = smallRegion,
+    .frames = customFrames, .frameCount = 4,
+    .phase = frameCounter
+};
+UI_FUNC(SpinnerEx)(&ui,&spinner);
+\`\`\`
+
+\`phase % frameCount\` chooses a UTF-8 frame. Without custom frames,
+the default animation is ASCII (\`| / - \\\\\`) in an ASCII-themed terminal,
+or a Unicode quarter-circle spinner otherwise. The application owns frame
+timing (Chronometry can provide scheduling): no blocking, threads or hidden
+timers are introduced.
+
+### Validation and boundaries
+
+Dialogs require space for body and actions. All widgets use the UI's
+inclusive \`TQuad_uint16\` regions, existing Text/Grid cells, UTF-8
+validation and \`OPSTATUS\`. These widgets are terminal-first; full dialog
+modal event trapping, IME, clipboard integration, text shaping and real-TTY
+visual QA remain tracked in
+[issue #119](https://github.com/samucaoo1/Cosmeron/issues/119).
