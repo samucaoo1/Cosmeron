@@ -1,0 +1,17 @@
+ASF2 3
+# Draw the characters exactly as they should appear.
+@space
+   
+   
+   
+
+@A
+  A
+ A A
+AAAAA
+
+@B
+BBBBB
+B   B
+BBBBB
+!fg 0 #FF281E
