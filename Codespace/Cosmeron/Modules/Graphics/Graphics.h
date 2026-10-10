@@ -2,3 +2,4 @@
 #include "Terminal/Terminal.h"
 #include "Canvas/Canvas.h"
 #include "UI/UI.h"
+#include "Font/Font.h"
