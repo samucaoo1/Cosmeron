@@ -1,0 +1,6 @@
+#pragma once
+/* Dependency order: theme/state -> canvas/frame/layout -> widgets -> editors. */
+#include "../Internal/State.inc"
+#include "../Internal/Canvas.inc"
+#include "../Internal/Widgets.inc"
+#include "../Internal/Editors.inc"
