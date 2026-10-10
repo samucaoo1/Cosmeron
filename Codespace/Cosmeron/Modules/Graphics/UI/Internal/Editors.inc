@@ -167,9 +167,9 @@ UI_LIST_EX_PROTOTYPE {
        UI_INS(Hovered)(context,list->region)) {
       TERMINAL_TYPE(TCanvas) *canvas=UI_INS(Canvas)(context);
       uint32_t localY=(uint32_t)context->pointer.y-canvas->origin.y;
-      uint32_t top=(uint32_t)list->region.top+
+      uint32_t firstRow=(uint32_t)list->region.top+
            (visual->border!=UI_CONST(BORDER_NONE));
-      size_t candidate=localY>=top?(size_t)(localY-top):list->count;
+      size_t candidate=localY>=firstRow?(size_t)(localY-firstRow):list->count;
       if(candidate<list->count)*list->selected=candidate;
     }
     if(context->pointerPressed && UI_INS(Hovered)(context,list->region))
