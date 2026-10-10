@@ -213,7 +213,7 @@ The queue retains older events and drops new ones when full. State updates still
 - `INPUT_DEVICE_CAPACITY`: native source slots, default 32; on Linux keyboards/mice also consume slots.
 - Fixed per-controller limits: 128 buttons, 64 absolute axes, 4 hats.
 - All translation units must use identical Input capacity, namespace and backend settings.
-- GCC/Clang weak storage and MSVC selectany storage make the default state shared across translation units rather than accidentally giving each `.c` file a separate input state.
+- GCC/Clang weak storage on POSIX and selectany/COMDAT storage on Windows make the default state shared across translation units rather than accidentally giving each `.c` file a separate input state.
 - For compilers without these extensions, define `INPUT_EXTERNAL_STORAGE` in all translation units and `INPUT_DEFINE_STORAGE` in exactly one. This defines storage, not a runtime lifecycle function.
 - State is scoped to one linked application image; sharing across independently loaded shared libraries is not promised.
 
@@ -1747,3 +1747,20 @@ Vendor/Product return available USB identifiers or zero, including for stale IDs
 ## Expanded validation
 
 Application tests cover focus, multiple sources, physical/logical separation, pending overflow, invalid events and custom bindings. Native decoder tests cover evdev high-resolution wheels and recovery, Windows scan codes and system-timed rumble, macOS event translation, and SDL transport using a simulated driver. CI compiles platform branches on Linux, macOS and Windows. These automated checks do not replace physical-device, desktop-permission or BSD runtime validation.
+
+
+The additional APIs also support the namespace macros:
+
+```c
+INPUT_FUNC(SetCaptureMode)(INPUT_CONST(CAPTURE_APPLICATION));
+INPUT_TYPE(Capabilities) caps = INPUT_FUNC(GetCapabilities)();
+bool held = INPUT_KEYBOARD_FUNC(IsPhysicalDown)(LIB_PREFIX_CONST(INPUT_KEY_W));
+OPSTATUS status = INPUT_EVENT_FUNC(Submit)(&event);
+uint16_t vendor = INPUT_CONTROLLER_FUNC(GetVendor)(controller);
+uint16_t product = INPUT_CONTROLLER_FUNC(GetProduct)(controller);
+INPUT_GAMEPAD_FUNC(MapButton)(controller, INPUT_CONST(GAMEPAD_BUTTON_SOUTH), 0);
+INPUT_GAMEPAD_FUNC(MapAxis)(controller, INPUT_CONST(GAMEPAD_AXIS_LEFT_Y), 1, -1.0f, 0.0f);
+INPUT_GAMEPAD_FUNC(ClearMapping)(controller);
+```
+
+Use the same `*_FUNC` form for IsPhysicalPressed and IsPhysicalReleased. Both forms call the identical implementation; the macro form follows configured namespace prefixes.
