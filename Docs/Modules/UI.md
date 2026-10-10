@@ -51,7 +51,9 @@ Without a custom library namespace, these expand to
 | Checkbox | Checkbox | CheckboxEx / TCheckbox |
 | Radio | Radio | RadioEx / TRadio |
 | Slider | Slider | SliderEx / TSlider |
-| Progress | Progress | ProgressEx / TProgress |
+| Progress (fração 0..1) | Progress | ProgressEx / TProgress |
+| ProgressBar (valor/máximo) | ProgressBar | ProgressBarEx / TProgressBar |
+| Menu clássico de jogos | Menu | MenuEx / TMenu |
 | InputText | InputText | InputTextEx / TInputText |
 | TextArea | TextArea | TextAreaEx / TTextArea |
 | List | List | ListEx / TList |
@@ -181,3 +183,95 @@ scrolls the viewport, and mouse wheel scrolls when the pointer hovers over it.
 frame, updated by the application with `Canvas_Copy`. If sizes differ, the
 new implementation performs a full redraw. Use a full `Canvas_Update` after
 external writes, terminal clear/resize, or state uncertainty.
+
+
+## Classic game menus
+
+The menu is **one immediate-mode focusable component** with a simple borrowed
+array of UTF-8 strings: no tree of Button objects or allocation per item.
+Navigation works with **Up/Down**, **Home/End**, **Enter/Space** to activate,
+**Escape** to cancel, and optionally mouse clicks and wheel navigation.
+A menu also has an \`itemDisabled\` mask, \`wrap\` and scrolling viewport.
+Selection persists in the caller-owned \`size_t selected\`.
+
+\`\`\`c
+const char *options[] = {"New game", "Continue", "Options", "Exit"};
+size_t selected = 0;
+bool activated = false;
+
+/* One-line direct API, called each frame between Begin/End: */
+UI_FUNC(Menu)(&ui,
+    (TQUAD_TYPE(uint16)){.left=3,.top=2,.right=26,.bottom=10},
+    options,4,&selected,&activated);
+if (activated) { /* dispatch based on selected */ }
+\`\`\`
+
+The configurable struct API allows a title, disabled entries, wrapping,
+different visual style and viewport state:
+
+\`\`\`c
+const bool disabled[] = {false, true, false, false};
+UI_TYPE(TMenu) menu = {
+    .region = {.left=3,.top=2,.right=26,.bottom=10},
+    .title = "MAIN MENU",
+    .items = options, .itemDisabled = disabled,
+    .count = 4, .selected = &selected, .wrap = true
+};
+
+/* Called each frame: */
+UI_FUNC(MenuEx)(&ui,&menu);
+if(menu.activated) { /* chosen menu.selected index */ }
+if(menu.cancelled) { /* Escape: return to previous screen */ }
+\`\`\`
+
+The current theme's \`selection\` visual, border and
+\`theme.glyphs.selection\` (Unicode \`▶\`, ASCII \`>\`) control the display.
+The selection marker and selected row are rendered in a Canvas view.
+No sound effects are implicit: the application can play them via Audio.
+
+Use \`PushId\` around multiple direct menus, or set \`menu.id\` explicitly,
+so there is no duplicate \`##menu\` widget ID in one frame.
+Empty lists render without activation; disabled options are skipped by
+arrow navigation and cannot be activated. The menu's own \`activated\` and
+\`cancelled\` flags reset every frame.
+
+## Advanced progress bars
+
+\`UI_Progress\`/\`UI_ProgressEx\` remain available for normalized fractions
+(\`0.0f\` through \`1.0f\`). For real task values, use
+\`UI_ProgressBar\` / \`UI_ProgressBarEx\`:
+
+\`\`\`c
+UI_FUNC(ProgressBar)(&ui,
+    (TQUAD_TYPE(uint16)){.left=2,.top=12,.right=30,.bottom=14},
+    completed,total);
+\`\`\`
+
+The direct form displays the percentage by default. The struct form
+supports a title, percentage toggle, vertical orientation, and an
+indeterminate pulse controlled by caller-supplied \`phase\`.
+
+\`\`\`c
+UI_TYPE(TProgressBar) loading = {
+    .region = {.left=2,.top=12,.right=30,.bottom=16},
+    .label = "Loading assets",
+    .value = completed, .maximum = total,
+    .showPercent = true
+};
+UI_FUNC(ProgressBarEx)(&ui,&loading);
+
+/* For a task with no measurable end: */
+loading.indeterminate = true;
+loading.phase = frameCounter++; /* schedule your frame rate externally */
+UI_FUNC(ProgressBarEx)(&ui,&loading);
+\`\`\`
+
+A determinate progress bar requires \`maximum > 0\` and
+\`value <= maximum\`. The code uses wide arithmetic for fraction/percentage
+calculation and requires no \`-lm\`. A zero maximum is allowed only in
+indeterminate mode. No animation timer runs implicitly inside the library;
+the application supplies \`phase\`.
+
+The progress bar reuses \`theme.progress\`, existing Text/Grid attributes,
+\`glyphs.progressFull\` and \`glyphs.progressEmpty\`.
+A narrowly-sized region without enough interior cells returns an error.
