@@ -154,9 +154,10 @@ static inline void INPUT_INS(BSDHIDReport)(size_t slot, const unsigned char *rep
   for (i = 0; i < n->count; ++i) {
     const hid_item_t *field = &n->fields[i];
     int64_t value;
+    double maximum = field->logical_minimum < 0 ? (double)field->logical_maximum : (double)(uint32_t)field->logical_maximum;
     if (!INPUT_INS(HIDBits)(report, length, field->pos, (unsigned)field->report_size, field->logical_minimum < 0, &value)) continue;
     if (n->kinds[i] == 0) INPUT_INS(ControllerButton)(d, n->indices[i], value != 0);
-    else if (n->kinds[i] == 1) INPUT_INS(Axis)(d, n->indices[i], INPUT_INS(HIDNormalize)((double)value, field->logical_minimum, field->logical_maximum));
+    else if (n->kinds[i] == 1) INPUT_INS(Axis)(d, n->indices[i], INPUT_INS(HIDNormalize)((double)value, field->logical_minimum, maximum));
     else INPUT_INS(Hat)(d, n->indices[i], INPUT_INS(HIDHat)(value, field->logical_minimum, field->logical_maximum));
   }
 }

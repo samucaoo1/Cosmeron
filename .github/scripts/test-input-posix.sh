@@ -2,7 +2,7 @@
 set -eu
 cd Codespace/Tests/Input
 mkdir -p .build-native
-for name in State Application HID ControllerTransport BSDHID NativeControllers Namespace Linux Windows MacOS SDLControllers IncludeAll; do
+for name in State Application HID ControllerTransport BSDHID MacHID NativeControllers Namespace Linux Windows MacOS SDLControllers IncludeAll; do
   echo "Compile and run $name"
   cc -std=c11 -Wall -Wextra -Wpedantic -Werror "$name.c" -o ".build-native/$name"
   ".build-native/$name"

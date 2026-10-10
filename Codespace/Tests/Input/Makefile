@@ -1,7 +1,7 @@
 CC ?= cc
 CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -Werror
 BUILD ?= .build
-TESTS := State Application HID ControllerTransport BSDHID NativeControllers Namespace Linux Windows MacOS SDLControllers IncludeAll
+TESTS := State Application HID ControllerTransport BSDHID MacHID NativeControllers Namespace Linux Windows MacOS SDLControllers IncludeAll
 HEADERS := $(shell find ../../Cosmeron/Modules/Input ../../Cosmeron/Core -type f)
 all: run
 $(BUILD):

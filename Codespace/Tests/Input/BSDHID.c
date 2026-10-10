@@ -20,6 +20,12 @@ int main(void) {
   Input_Internal_BSDHIDReport(0, report, sizeof(report));
   assert(Input_Controller_GetAxis(d->id, 0) == -1);
   assert(Input_Controller_GetHat(d->id, 0) == INPUT_HAT_CENTERED);
+  n->count = 1; n->kinds[0] = 1;
+  n->fields[0].pos = 0; n->fields[0].report_size = 32;
+  n->fields[0].logical_minimum = 0; n->fields[0].logical_maximum = -1; /* unsigned 32-bit maximum */
+  memset(report, 0xff, sizeof(report));
+  Input_Internal_BSDHIDReport(0, report, sizeof(report));
+  assert(Input_Controller_GetAxis(d->id, 0) == 1);
 #endif
   return 0;
 }
