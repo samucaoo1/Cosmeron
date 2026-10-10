@@ -458,73 +458,161 @@ TERMINAL_PRINT_STYLED_AT_PROTOTYPE {
   return result;
 }
 
-/* Keyboard mode changes are explicit, and the original POSIX state is kept. */
-#if !OS_WINDOWS
-static inline struct termios *TERMINAL_INS(OriginalTermios)(void) {
-  static struct termios value;return &value;
+/* Keyboard modes are process console state. Register restoration automatically
+ * on the first explicit/temporary mode change (no public Init/Free). */
+#if OS_WINDOWS
+static inline DWORD *TERMINAL_INS(OriginalConsoleMode)(void) {
+  static DWORD value=0; return &value;
 }
-static inline bool *TERMINAL_INS(OriginalSaved)(void) {
-  static bool value=false;return &value;
+#else
+static inline struct termios *TERMINAL_INS(OriginalTermios)(void) {
+  static struct termios value; return &value;
 }
 #endif
+static inline bool *TERMINAL_INS(OriginalSaved)(void) {
+  static bool saved=false; return &saved;
+}
+static inline bool *TERMINAL_INS(RestoreRegistered)(void) {
+  static bool registered=false; return &registered;
+}
+static void TERMINAL_INS(RestoreOriginalMode)(void) {
+  if (!*TERMINAL_INS(OriginalSaved)()) return;
+#if OS_WINDOWS
+  (void)SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE),*TERMINAL_INS(OriginalConsoleMode)());
+#else
+  (void)tcsetattr(fileno(stdin),TCSANOW,TERMINAL_INS(OriginalTermios)());
+#endif
+}
 static inline TERMINAL_TYPE(InputMode) *TERMINAL_INS(ModeState)(void) {
-  static TERMINAL_TYPE(InputMode) value=TERMINAL_CONST(INPUT_CANONICAL);return &value;
+  static TERMINAL_TYPE(InputMode) value=TERMINAL_CONST(INPUT_CANONICAL);
+  return &value;
 }
 TERMINAL_INPUT_MODE_GET_PROTOTYPE {
   if (!outMode) return STATUS_CONST(INVALID_ARGUMENT);
   if (!TERMINAL_INS(IsTTY)(stdin)) return STATUS_CONST(NOT_AVAILABLE);
-  *outMode=*TERMINAL_INS(ModeState)();return STATUS_CONST(SUCCESS);
+  *outMode=*TERMINAL_INS(ModeState)();
+  return STATUS_CONST(SUCCESS);
 }
 TERMINAL_INPUT_MODE_SET_PROTOTYPE {
   if (mode!=TERMINAL_CONST(INPUT_CANONICAL) &&
       mode!=TERMINAL_CONST(INPUT_CBREAK) && mode!=TERMINAL_CONST(INPUT_RAW))
     return STATUS_CONST(INVALID_ARGUMENT);
   if (!TERMINAL_INS(IsTTY)(stdin)) return STATUS_CONST(NOT_AVAILABLE);
-#if OS_WINDOWS
-  HANDLE h=GetStdHandle(STD_INPUT_HANDLE); DWORD flags;
-  if (!GetConsoleMode(h,&flags)) return STATUS_CONST(GENERIC_ERROR);
-  if (mode==TERMINAL_CONST(INPUT_CANONICAL)) flags|=ENABLE_LINE_INPUT|ENABLE_ECHO_INPUT|ENABLE_PROCESSED_INPUT;
-  else {flags&=~(ENABLE_LINE_INPUT|ENABLE_ECHO_INPUT);if(mode==TERMINAL_CONST(INPUT_RAW))flags&=~ENABLE_PROCESSED_INPUT;}
-  if(!SetConsoleMode(h,flags)) return STATUS_CONST(GENERIC_ERROR);
-#else
-  struct termios original,updated;
   if (!*TERMINAL_INS(OriginalSaved)()) {
-    if(tcgetattr(fileno(stdin),TERMINAL_INS(OriginalTermios)())<0) return STATUS_CONST(GENERIC_ERROR);
+#if OS_WINDOWS
+    if (!GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE),
+                        TERMINAL_INS(OriginalConsoleMode)()))
+      return STATUS_CONST(GENERIC_ERROR);
+#else
+    if(tcgetattr(fileno(stdin),TERMINAL_INS(OriginalTermios)())<0)
+      return STATUS_CONST(GENERIC_ERROR);
+#endif
     *TERMINAL_INS(OriginalSaved)()=true;
   }
-  original=*TERMINAL_INS(OriginalTermios)();
-  updated=original;
-  if (mode!=TERMINAL_CONST(INPUT_CANONICAL)) {
-    updated.c_lflag &= (tcflag_t)~(ICANON|ECHO);
-    updated.c_cc[VMIN]=1;updated.c_cc[VTIME]=0;
-    if (mode==TERMINAL_CONST(INPUT_RAW)) {
-      updated.c_lflag &= (tcflag_t)~(ISIG|IEXTEN);
-      updated.c_iflag &= (tcflag_t)~(IXON|ICRNL|BRKINT|INPCK|ISTRIP);
-      updated.c_oflag &= (tcflag_t)~OPOST;
-      updated.c_cflag |= CS8;
-    }
+  if (!*TERMINAL_INS(RestoreRegistered)()) {
+    if (atexit(TERMINAL_INS(RestoreOriginalMode))!=0)
+      return STATUS_CONST(GENERIC_ERROR);
+    *TERMINAL_INS(RestoreRegistered)()=true;
   }
-  if(tcsetattr(fileno(stdin),TCSANOW,&updated)<0) return STATUS_CONST(GENERIC_ERROR);
+#if OS_WINDOWS
+  {
+    HANDLE h=GetStdHandle(STD_INPUT_HANDLE);
+    DWORD flags=*TERMINAL_INS(OriginalConsoleMode)();
+    if (mode!=TERMINAL_CONST(INPUT_CANONICAL)) {
+      flags&=(DWORD)~(ENABLE_LINE_INPUT|ENABLE_ECHO_INPUT);
+      if (mode==TERMINAL_CONST(INPUT_RAW)) flags&=(DWORD)~ENABLE_PROCESSED_INPUT;
+    }
+    if (!SetConsoleMode(h,flags)) return STATUS_CONST(GENERIC_ERROR);
+  }
+#else
+  {
+    struct termios updated=*TERMINAL_INS(OriginalTermios)();
+    if (mode!=TERMINAL_CONST(INPUT_CANONICAL)) {
+      updated.c_lflag &= (tcflag_t)~(ICANON|ECHO);
+      updated.c_cc[VMIN]=1; updated.c_cc[VTIME]=0;
+      if (mode==TERMINAL_CONST(INPUT_RAW)) {
+        updated.c_lflag &= (tcflag_t)~(ISIG|IEXTEN);
+        updated.c_iflag &= (tcflag_t)~(IXON|ICRNL|BRKINT|INPCK|ISTRIP);
+        updated.c_oflag &= (tcflag_t)~OPOST;
+        updated.c_cflag |= CS8;
+      }
+    }
+    if (tcsetattr(fileno(stdin),TCSANOW,&updated)<0)
+      return STATUS_CONST(GENERIC_ERROR);
+  }
 #endif
   *TERMINAL_INS(ModeState)()=mode;
   return STATUS_CONST(SUCCESS);
 }
+#if !OS_WINDOWS
+typedef struct TERMINAL_INS(TKeyQueue) {
+  unsigned char bytes[8];
+  size_t count;
+} TERMINAL_INS(TKeyQueue);
+static inline TERMINAL_INS(TKeyQueue) *TERMINAL_INS(KeyQueue)(void) {
+  static TERMINAL_INS(TKeyQueue) queue={0}; return &queue;
+}
+static inline void TERMINAL_INS(KeyPush)(unsigned char b) {
+  TERMINAL_INS(TKeyQueue) *queue=TERMINAL_INS(KeyQueue)();
+  if(queue->count<sizeof(queue->bytes)) queue->bytes[queue->count++]=b;
+}
+static inline int TERMINAL_INS(KeyPop)(void) {
+  TERMINAL_INS(TKeyQueue) *queue=TERMINAL_INS(KeyQueue)();
+  unsigned char first;
+  if(!queue->count) return -1;
+  first=queue->bytes[0];
+  --queue->count;
+  if(queue->count) memmove(queue->bytes,queue->bytes+1,queue->count);
+  return (int)first;
+}
+/* Read an escape-sequence continuation without blocking indefinitely. */
+static inline int TERMINAL_INS(KeyTimedRead)(void) {
+  int fd=fileno(stdin);
+  fd_set set;
+  struct timeval timeout={0,30000};
+  unsigned char ch;
+  FD_ZERO(&set);
+  FD_SET(fd,&set);
+  if(select(fd+1,&set,NULL,NULL,&timeout)<=0) return -1;
+  return read(fd,&ch,1)==1?(int)ch:-1;
+}
+#endif
 TERMINAL_KEY_HIT_PROTOTYPE {
   if (!outAvailable) return STATUS_CONST(INVALID_ARGUMENT);
   if (!TERMINAL_INS(IsTTY)(stdin)) return STATUS_CONST(NOT_AVAILABLE);
 #if OS_WINDOWS
   *outAvailable=_kbhit()!=0;
 #else
-  fd_set set;struct timeval timeout={0,0};
-  FD_ZERO(&set);FD_SET(fileno(stdin),&set);
-  {int n=select(fileno(stdin)+1,&set,NULL,NULL,&timeout);
-   if (n<0) return STATUS_CONST(GENERIC_ERROR);
-   *outAvailable=n>0;}
+  {
+    TERMINAL_TYPE(InputMode) previous=*TERMINAL_INS(ModeState)();
+    bool changed=previous==TERMINAL_CONST(INPUT_CANONICAL);
+    fd_set set;
+    struct timeval timeout={0,0};
+    int n;
+    OPSTATUS restore=STATUS_CONST(SUCCESS);
+    if (TERMINAL_INS(KeyQueue)()->count) {
+      *outAvailable=true;
+      return STATUS_CONST(SUCCESS);
+    }
+    if (changed) {
+      OPSTATUS st=TERMINAL_FUNC(InputMode_Set)(TERMINAL_CONST(INPUT_CBREAK));
+      if(st!=STATUS_CONST(SUCCESS)) return st;
+    }
+    FD_ZERO(&set);
+    FD_SET(fileno(stdin),&set);
+    n=select(fileno(stdin)+1,&set,NULL,NULL,&timeout);
+    if (changed) restore=TERMINAL_FUNC(InputMode_Set)(previous);
+    if(n<0) return STATUS_CONST(GENERIC_ERROR);
+    if(restore!=STATUS_CONST(SUCCESS)) return restore;
+    *outAvailable=n>0;
+  }
 #endif
   return STATUS_CONST(SUCCESS);
 }
-static inline OPSTATUS TERMINAL_INS(ReadKey)(TERMINAL_TYPE(TKey) *outKey, bool echo) {
-  TERMINAL_TYPE(TKey) key;int ch;
+static inline OPSTATUS TERMINAL_INS(ReadKey)(
+    TERMINAL_TYPE(TKey) *outKey, bool echo) {
+  TERMINAL_TYPE(TKey) key;
+  int ch;
   if (!outKey) return STATUS_CONST(INVALID_ARGUMENT);
   if (!TERMINAL_INS(IsTTY)(stdin)) return STATUS_CONST(NOT_AVAILABLE);
 #if OS_WINDOWS
@@ -542,39 +630,74 @@ static inline OPSTATUS TERMINAL_INS(ReadKey)(TERMINAL_TYPE(TKey) *outKey, bool e
     }
   } else key=(TERMINAL_TYPE(TKey))(unsigned char)ch;
 #else
-  TERMINAL_TYPE(InputMode) previous=*TERMINAL_INS(ModeState)();
-  bool changed=previous==TERMINAL_CONST(INPUT_CANONICAL);
-  if (changed) {OPSTATUS st=TERMINAL_FUNC(InputMode_Set)(TERMINAL_CONST(INPUT_CBREAK));if(st!=STATUS_CONST(SUCCESS))return st;}
-  ch=fgetc(stdin);
-  if (ch==EOF) {
-    if (changed)(void)TERMINAL_FUNC(InputMode_Set)(previous);
-    return STATUS_CONST(NOT_FOUND);
-  }
-  key=(TERMINAL_TYPE(TKey))(unsigned char)ch;
-  if (ch==27) {
-    bool available=false;
-    if (TERMINAL_FUNC(Key_Hit)(&available)==STATUS_CONST(SUCCESS) && available) {
-      int next=fgetc(stdin);
-      if (next=='[') {
-        int code=fgetc(stdin);
-        switch(code) {
+  {
+    TERMINAL_TYPE(InputMode) previous=*TERMINAL_INS(ModeState)();
+    bool changed=previous==TERMINAL_CONST(INPUT_CANONICAL);
+    OPSTATUS restore=STATUS_CONST(SUCCESS);
+    unsigned char first;
+    if(changed) {
+      OPSTATUS st=TERMINAL_FUNC(InputMode_Set)(TERMINAL_CONST(INPUT_CBREAK));
+      if(st!=STATUS_CONST(SUCCESS)) return st;
+    }
+    ch=TERMINAL_INS(KeyPop)();
+    if(ch<0) {
+      int n=read(fileno(stdin),&first,1)==1?1:0;
+      if(!n) {
+        if(changed)(void)TERMINAL_FUNC(InputMode_Set)(previous);
+        return STATUS_CONST(NOT_FOUND);
+      }
+      ch=first;
+    }
+    key=(TERMINAL_TYPE(TKey))(unsigned char)ch;
+    if(ch==27) {
+      int second=TERMINAL_INS(KeyTimedRead)();
+      if(second=='[' || second=='O') {
+        int third=TERMINAL_INS(KeyTimedRead)();
+        switch(third) {
         case 'A':key=TERMINAL_CONST(KEY_UP);break;
         case 'B':key=TERMINAL_CONST(KEY_DOWN);break;
         case 'C':key=TERMINAL_CONST(KEY_RIGHT);break;
         case 'D':key=TERMINAL_CONST(KEY_LEFT);break;
         case 'H':key=TERMINAL_CONST(KEY_HOME);break;
         case 'F':key=TERMINAL_CONST(KEY_END);break;
-        default:break;
+        default:
+          if (second=='[' && (third=='1' || third=='3' ||
+              third=='4' || third=='7' || third=='8')) {
+            int fourth=TERMINAL_INS(KeyTimedRead)();
+            if (fourth=='~') {
+              if(third=='3') key=TERMINAL_CONST(KEY_DELETE);
+              if(third=='1' || third=='7') key=TERMINAL_CONST(KEY_HOME);
+              if(third=='4' || third=='8') key=TERMINAL_CONST(KEY_END);
+            } else if (fourth>=0) TERMINAL_INS(KeyPush)((unsigned char)fourth);
+          }
+          if(key==TERMINAL_CONST(KEY_ESCAPE)) {
+            TERMINAL_INS(KeyPush)((unsigned char)second);
+            if(third>=0) TERMINAL_INS(KeyPush)((unsigned char)third);
+          }
+          break;
         }
-      } else if(next!=EOF) ungetc(next,stdin);
+      } else if(second>=0) {
+        TERMINAL_INS(KeyPush)((unsigned char)second);
+      }
     }
+    if(changed) restore=TERMINAL_FUNC(InputMode_Set)(previous);
+    if(restore!=STATUS_CONST(SUCCESS)) return restore;
   }
-  if (changed) (void)TERMINAL_FUNC(InputMode_Set)(previous);
 #endif
-  if (echo && key<=UINT32_C(0x7F)) {
-    if(fputc((int)key,stdout)==EOF) return STATUS_CONST(GENERIC_ERROR);
+  if (key=='\n' || key=='\r') key=TERMINAL_CONST(KEY_ENTER);
+  if (key=='\b' || key==127U) key=TERMINAL_CONST(KEY_BACKSPACE);
+  if (echo && key<128U) {
+    int printable=0;
+    if (key==TERMINAL_CONST(KEY_ENTER)) printable='\n';
+    else if (key>=32U && key<=126U) printable=(int)key;
+    if(printable && fputc(printable,stdout)==EOF)
+      return STATUS_CONST(GENERIC_ERROR);
   }
   *outKey=key;return STATUS_CONST(SUCCESS);
 }
-TERMINAL_KEY_GET_PROTOTYPE {return TERMINAL_INS(ReadKey)(outKey,false);}
-TERMINAL_KEY_GET_ECHO_PROTOTYPE {return TERMINAL_INS(ReadKey)(outKey,true);}
+TERMINAL_KEY_GET_PROTOTYPE {
+  return TERMINAL_INS(ReadKey)(outKey,false);
+}
+TERMINAL_KEY_GET_ECHO_PROTOTYPE {
+  return TERMINAL_INS(ReadKey)(outKey,true);
+}
