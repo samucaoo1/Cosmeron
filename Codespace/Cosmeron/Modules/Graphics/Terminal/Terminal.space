@@ -41,6 +41,22 @@ enum {
   TERMINAL_CONST(KEY_END), TERMINAL_CONST(KEY_DELETE)
 };
 
+/* Normalized console input; Unicode scalars and special keys share TKey.
+ * Positions use absolute terminal cell coordinates (zero based). */
+typedef enum TERMINAL_TYPE(EventKind) {
+  TERMINAL_CONST(EVENT_KEY), TERMINAL_CONST(EVENT_POINTER_MOVE),
+  TERMINAL_CONST(EVENT_POINTER_BUTTON), TERMINAL_CONST(EVENT_SCROLL),
+  TERMINAL_CONST(EVENT_RESIZE)
+} TERMINAL_TYPE(EventKind);
+typedef struct TERMINAL_TYPE(TEvent) {
+  TERMINAL_TYPE(EventKind) kind;
+  TERMINAL_TYPE(TKey) key;
+  TDUAL_TYPE(uint16) position;
+  TDUAL_TYPE(uint16) size;
+  int32_t scroll;
+  bool pressed;
+} TERMINAL_TYPE(TEvent);
+
 typedef struct TERMINAL_TYPE(THandle) {
   FILE *stream;
   TERMINAL_TYPE(StandardStream) kind;
