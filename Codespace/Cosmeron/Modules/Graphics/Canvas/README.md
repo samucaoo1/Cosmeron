@@ -1,6 +1,6 @@
 # Canvas — retained textual surface
 
-**Design only.** A Canvas is a text-based 2D drawing surface independent from terminal state and not a native WinCon screen buffer. All drawing modifies its in-memory cells. Presentation is **explicit** via `Update`.
+**Implementation available in [Canvas.h](Canvas.h).** A Canvas is a text-based 2D drawing surface independent from terminal state and not a native WinCon screen buffer. All drawing modifies its in-memory cells. Presentation is **explicit** via `Update`.
 
 ## Existing implementations to reuse
 

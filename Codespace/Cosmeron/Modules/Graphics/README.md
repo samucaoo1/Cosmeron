@@ -1,6 +1,6 @@
 # Graphics — implementation project
 
-Status: **design specification only**. This folder contains package-level plans, not implemented headers.
+Status: **Terminal and Canvas foundations implemented**. UI, Rasterization, Raycasting and Pseudo3DRoad remain design specifications.
 
 ## Purpose
 

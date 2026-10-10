@@ -660,21 +660,25 @@ static inline OPSTATUS TERMINAL_INS(ReadKey)(
         case 'D':key=TERMINAL_CONST(KEY_LEFT);break;
         case 'H':key=TERMINAL_CONST(KEY_HOME);break;
         case 'F':key=TERMINAL_CONST(KEY_END);break;
-        default:
+        default: {
+          int fourth=-1;
           if (second=='[' && (third=='1' || third=='3' ||
               third=='4' || third=='7' || third=='8')) {
-            int fourth=TERMINAL_INS(KeyTimedRead)();
+            fourth=TERMINAL_INS(KeyTimedRead)();
             if (fourth=='~') {
               if(third=='3') key=TERMINAL_CONST(KEY_DELETE);
               if(third=='1' || third=='7') key=TERMINAL_CONST(KEY_HOME);
               if(third=='4' || third=='8') key=TERMINAL_CONST(KEY_END);
-            } else if (fourth>=0) TERMINAL_INS(KeyPush)((unsigned char)fourth);
+            }
           }
           if(key==TERMINAL_CONST(KEY_ESCAPE)) {
             TERMINAL_INS(KeyPush)((unsigned char)second);
             if(third>=0) TERMINAL_INS(KeyPush)((unsigned char)third);
+            if(fourth>=0 && fourth!='~')
+              TERMINAL_INS(KeyPush)((unsigned char)fourth);
           }
           break;
+        }
         }
       } else if(second>=0) {
         TERMINAL_INS(KeyPush)((unsigned char)second);

@@ -101,6 +101,20 @@ static void test_blit(void) {
   TERMINAL_FUNC(Canvas_Free)(&dst);
   TERMINAL_FUNC(Canvas_Free)(&source);
 }
+static void test_resize_wide(void) {
+  TERMINAL_TYPE(TCanvas) canvas={0};
+  TEXT_GRID_ATTRIBUTE_TYPE(Cell) attr=TEXT_GRID_ATTRIBUTE_FUNC(Default)();
+  uint32_t glyph=0;
+  assert(TERMINAL_FUNC(Canvas_Create)(&canvas,at(3,1))==OK);
+  assert(TERMINAL_FUNC(Canvas_Set)(&canvas,at(1,0),0x4E2D,attr)==OK);
+  assert(TERMINAL_FUNC(Canvas_Resize)(&canvas,at(2,1))==OK);
+  assert(character(&canvas,1,0)==' ');
+  assert(TERMINAL_FUNC(Canvas_Resize)(&canvas,at(4,2))==OK);
+  assert(TERMINAL_FUNC(Canvas_Get)(&canvas,at(3,1),&glyph,&attr)==OK);
+  assert(glyph==' ' && (attr.flags&TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_FOREGROUND)));
+  TERMINAL_FUNC(Canvas_Free)(&canvas);
+}
+
 static void test_update_capability(void) {
   TERMINAL_TYPE(TCanvas) canvas={0};
   assert(TERMINAL_FUNC(Canvas_Create)(&canvas,at(2,1))==OK);
@@ -108,4 +122,4 @@ static void test_update_capability(void) {
     assert(TERMINAL_FUNC(Canvas_Update)(&canvas)==STATUS_CONST(NOT_AVAILABLE));
   TERMINAL_FUNC(Canvas_Free)(&canvas);
 }
-int main(void) {test_views();test_text();test_blit();test_update_capability();return 0;}
+int main(void) {test_views();test_text();test_blit();test_resize_wide();test_update_capability();return 0;}
