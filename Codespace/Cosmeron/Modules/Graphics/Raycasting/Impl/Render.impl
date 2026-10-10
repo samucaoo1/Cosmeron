@@ -1,0 +1,41 @@
+#pragma once
+RAYCAST_RENDER_COLUMNS_PROTOTYPE {
+  uint32_t x,y;
+  OPSTATUS status;
+  if (!scene || !RAYCAST_INS(MapValid)(&scene->map) ||
+      !RAYCAST_INS(CameraValid)(camera)) return STATUS_CONST(INVALID_ARGUMENT);
+  status=RASTER_INS(Validate)(canvas,scene->wallCodepoint);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  status=RASTER_INS(Validate)(canvas,scene->ceilingCodepoint);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  status=RASTER_INS(Validate)(canvas,scene->floorCodepoint);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  for (y=0;y<canvas->size.y;y++) {
+    bool ceiling=(double)y+0.5<(double)camera->horizon*canvas->size.y;
+    (void)RASTER_FUNC(Line)(canvas,(TDUAL_TYPE(int32)){.x=0,.y=(int32_t)y},
+        (TDUAL_TYPE(int32)){.x=(int32_t)canvas->size.x-1,.y=(int32_t)y},
+        ceiling ? scene->ceilingCodepoint : scene->floorCodepoint,
+        ceiling ? scene->ceilingStyle : scene->floorStyle);
+  }
+  for (x=0;x<canvas->size.x;x++) {
+    RAYCAST_TYPE(TRay2D) ray;
+    RAYCAST_TYPE(THit) hit;
+    double height,center,top,bottom;
+    status=RAYCAST_FUNC(CameraRay)(camera,(uint16_t)x,canvas->size.x,&ray);
+    if (status!=STATUS_CONST(SUCCESS)) return status;
+    status=RAYCAST_FUNC(GridCast)(&scene->map,&ray,&hit);
+    if (status==STATUS_CONST(NOT_FOUND)) continue;
+    if (status!=STATUS_CONST(SUCCESS)) return status;
+    /* Unnormalized camera rays make t perpendicular depth: no fisheye. */
+    center=(double)camera->horizon*canvas->size.y;
+    height=hit.distance>0 ? (double)camera->wallHeight*canvas->size.y/hit.distance : DBL_MAX;
+    top=VALUE_TYPED_FUNC(Clamp,F64)(center-height/2,0,canvas->size.y);
+    bottom=VALUE_TYPED_FUNC(Clamp,F64)(center+height/2,0,canvas->size.y);
+    /* Include precisely the cell centers in the projected vertical interval. */
+    for (y=(uint32_t)top;y<canvas->size.y && (double)y+0.5<bottom;y++)
+      if ((double)y+0.5>=top)
+        (void)RASTER_FUNC(Point)(canvas,(TDUAL_TYPE(int32)){.x=(int32_t)x,.y=(int32_t)y},
+            scene->wallCodepoint,hit.side==RAYCAST_CONST(SIDE_Y) ? scene->sideStyle : scene->wallStyle);
+  }
+  return STATUS_CONST(SUCCESS);
+}

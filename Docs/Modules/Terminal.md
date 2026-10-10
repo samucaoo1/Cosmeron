@@ -74,3 +74,17 @@ and a Text/Grid attribute cell. Call `Canvas_Update` explicitly to display it.
 Coordinates reuse Struct types; drawing is clipped to the canvas or view.
 See [Rasterization](../../Codespace/Cosmeron/Modules/Graphics/Rasterization/README.md)
 for signatures, examples, fill rules and Unicode handling.
+
+## Raycasting and pseudo-3D road
+
+- [Raycasting](../../Codespace/Cosmeron/Modules/Graphics/Raycasting/README.md):
+  `Raycast_GridCast` traverses tile maps; `Raycast_CameraRay` creates column rays;
+  `Raycast_RenderColumns` projects walls, floor and ceiling into Canvas.
+- [Pseudo3DRoad](../../Codespace/Cosmeron/Modules/Graphics/Pseudo3DRoad/README.md):
+  `Road_TrackValidate`, `Road_Project`, `Road_StyleDefault`, and `Road_Render`
+  provide a road with perspective, bends, elevation, curbs and lane markings.
+
+Both use existing Struct tuples and Rasterization. Computational headers can
+be included without Terminal; each package's `Render.h` enables the Canvas
+adapter. No initialization, implicit presentation, allocation or `-lm` required.
+Compilable examples are in `Codespace/Examples/Graphics`.

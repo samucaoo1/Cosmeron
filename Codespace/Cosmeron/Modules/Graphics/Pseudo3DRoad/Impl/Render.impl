@@ -1,0 +1,102 @@
+#pragma once
+ROAD_STYLE_DEFAULT_PROTOTYPE {
+  ROAD_TYPE(TStyle) style={0};
+  TEXT_GRID_ATTRIBUTE_TYPE(Cell) base=TEXT_GRID_ATTRIBUTE_FUNC(Default)();
+  const uint32_t skyColor=0x76B8E8,grassLight=0x238C38,grassDark=0x1B702D;
+  const uint32_t roadLight=0x626262,roadDark=0x555555,edgeLight=0xEEEEEE,edgeDark=0xCC3333;
+  base.flags &= (uint16_t)~TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_BACKGROUND);
+  style.codepoint=' ';style.lanes=3;style.edgeFraction=0.08f;
+  style.laneFraction=0.015f;style.stripeSegments=2;
+  style.sky=base;style.sky.background=skyColor;
+  style.grass[0]=style.grass[1]=base;
+  style.grass[0].background=grassLight;style.grass[1].background=grassDark;
+  style.road[0]=style.road[1]=base;
+  style.road[0].background=roadLight;style.road[1].background=roadDark;
+  style.edge[0]=style.edge[1]=base;
+  style.edge[0].background=edgeLight;style.edge[1].background=edgeDark;
+  style.lane=base;style.lane.background=edgeLight;
+  return style;
+}
+static inline void ROAD_INS(Span)(TERMINAL_TYPE(TCanvas) *canvas,
+    int32_t y,double left,double right,uint32_t codepoint,TEXT_GRID_ATTRIBUTE_TYPE(Cell) style) {
+  int32_t first,last;
+  left=VALUE_TYPED_FUNC(Clamp,F64)(left,0,canvas->size.x);
+  right=VALUE_TYPED_FUNC(Clamp,F64)(right,0,canvas->size.x);
+  /* Draw cells whose centers lie in [left, right). */
+  first=(int32_t)left;
+  if (first+0.5<left) first++;
+  last=(int32_t)right;
+  if (last+0.5>=right) last--;
+  if (first<=last) (void)RASTER_FUNC(Line)(canvas,
+      (TDUAL_TYPE(int32)){.x=first,.y=y},(TDUAL_TYPE(int32)){.x=last,.y=y},codepoint,style);
+}
+/* Interpolate at the clipped depth in double precision; do not round a near
+ * plane back into float world coordinates (important far from world origin). */
+static inline void ROAD_INS(ProjectAt)(const ROAD_TYPE(TNode) *a,const ROAD_TYPE(TNode) *b,
+    const ROAD_TYPE(TCamera) *camera,TDUAL_TYPE(uint16) size,double depth,
+    double *x,double *y,double *width) {
+  double fraction=(depth-((double)a->position.z-camera->position.z))/
+      ((double)b->position.z-a->position.z);
+  double worldX=a->position.x+fraction*((double)b->position.x-a->position.x);
+  double worldY=a->position.y+fraction*((double)b->position.y-a->position.y);
+  double halfWidth=a->halfWidth+fraction*((double)b->halfWidth-a->halfWidth);
+  double scale=(double)camera->focalLength*size.y/depth;
+  *x=size.x/2.0+(worldX-camera->position.x)*scale;
+  *y=(double)camera->horizon*size.y-(worldY-camera->position.y)*scale;
+  *width=halfWidth*scale;
+}
+ROAD_RENDER_PROTOTYPE {
+  size_t i;
+  int32_t y,clip;
+  OPSTATUS status;
+  if (!ROAD_INS(CameraValid)(camera) || !style || !style->stripeSegments || !style->lanes ||
+      !ROAD_INS(Finite)(style->edgeFraction) || style->edgeFraction<0 || style->edgeFraction>1 ||
+      !ROAD_INS(Finite)(style->laneFraction) || style->laneFraction<0 ||
+      style->laneFraction>1.0/style->lanes) return STATUS_CONST(INVALID_ARGUMENT);
+  status=ROAD_FUNC(TrackValidate)(track);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  status=RASTER_INS(Validate)(canvas,style->codepoint);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  for (y=0;y<canvas->size.y;y++)
+    ROAD_INS(Span)(canvas,y,0,canvas->size.x,style->codepoint,
+        y+0.5<(double)camera->horizon*canvas->size.y ? style->sky : style->grass[0]);
+  clip=canvas->size.y;
+  for (i=0;i+1<track->count && clip>0;i++) {
+    const ROAD_TYPE(TNode) *a=&track->nodes[i],*b=&track->nodes[i+1];
+    double nearDepth=(double)a->position.z-camera->position.z;
+    double farDepth=(double)b->position.z-camera->position.z;
+    double nearX,nearY,nearWidth,farX,farY,farWidth;
+    int32_t first,last;
+    size_t stripe=(i/style->stripeSegments)%2;
+    if (nearDepth>camera->drawDistance) break;
+    if (farDepth<camera->nearClip) continue;
+    if (nearDepth<camera->nearClip) nearDepth=camera->nearClip;
+    if (farDepth>camera->drawDistance) farDepth=camera->drawDistance;
+    if (nearDepth>=farDepth) continue;
+    ROAD_INS(ProjectAt)(a,b,camera,canvas->size,nearDepth,&nearX,&nearY,&nearWidth);
+    ROAD_INS(ProjectAt)(a,b,camera,canvas->size,farDepth,&farX,&farY,&farWidth);
+    if (farY>=nearY || farY>=clip) continue; /* Back-facing or hidden behind a hill. */
+    first=(int32_t)VALUE_TYPED_FUNC(Clamp,F64)(farY,0,clip);
+    last=(int32_t)VALUE_TYPED_FUNC(Clamp,F64)(nearY+0.5,0,clip);
+    for (y=first;y<last;y++) {
+      double sample=y+0.5,fraction,center,halfWidth,edge;
+      uint32_t lane;
+      if (sample<farY || sample>=nearY) continue;
+      fraction=(sample-farY)/(nearY-farY);
+      center=farX+fraction*(nearX-farX);
+      halfWidth=farWidth+fraction*(nearWidth-farWidth);
+      edge=2*halfWidth*style->edgeFraction;
+      ROAD_INS(Span)(canvas,y,0,canvas->size.x,style->codepoint,style->grass[stripe]);
+      ROAD_INS(Span)(canvas,y,center-halfWidth-edge,center+halfWidth+edge,style->codepoint,style->edge[stripe]);
+      ROAD_INS(Span)(canvas,y,center-halfWidth,center+halfWidth,style->codepoint,style->road[stripe]);
+      if (stripe==0) for (lane=1;lane<style->lanes;lane++) {
+        double laneX=center-halfWidth+2*halfWidth*lane/style->lanes;
+        ROAD_INS(Span)(canvas,y,laneX-halfWidth*style->laneFraction,
+            laneX+halfWidth*style->laneFraction,style->codepoint,style->lane);
+      }
+    }
+    /* Next segment may own a row only if its center is above this far edge. */
+    clip=(int32_t)VALUE_TYPED_FUNC(Clamp,F64)(farY+0.5,0,clip);
+  }
+  return STATUS_CONST(SUCCESS);
+}

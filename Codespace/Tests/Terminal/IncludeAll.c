@@ -12,3 +12,5 @@ int main(void) {
 #include "../../Cosmeron/Modules/Graphics/FIGlet/FIGlet.h"
 
 #include "../../Cosmeron/Modules/Graphics/Rasterization/Rasterization.h"
+#include "../../Cosmeron/Modules/Graphics/Raycasting/Render.h"
+#include "../../Cosmeron/Modules/Graphics/Pseudo3DRoad/Render.h"

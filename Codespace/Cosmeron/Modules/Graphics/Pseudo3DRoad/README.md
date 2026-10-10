@@ -1,51 +1,84 @@
-# Pseudo3DRoad — perspective road algorithm
+# Pseudo3DRoad — perspective road with curves and hills
 
-**Project specification only.**
+Header-only C11, no heap allocation, initialization or mandatory `-lm`.
+`Pseudo3DRoad.h` contains the computational API without Terminal dependencies;
+`Render.h` adds the Canvas renderer. Both are available through `Graphics.h`.
 
-## Objective
+## Track, camera and projection
 
-Implement a pseudo-3D road/terrain algorithm inspired by traditional scanline road renderers. The render output is a supplied Canvas; `Terminal` is only the final presentation target, not a required calculation dependency.
+| Type | Fields and meaning |
+| --- | --- |
+| `ROAD_TYPE(TNode)` | `TTriple_float position`: x lateral center, y elevation (up), z forward distance; positive `halfWidth` in world units. |
+| `ROAD_TYPE(TTrack)` | Borrowed `const TNode *nodes`, `size_t count`. At least two nodes, finite values, strictly increasing z. Adjacent nodes define segments. |
+| `ROAD_TYPE(TCamera)` | `TTriple_float position`; positive `focalLength` in viewport heights, positive `nearClip`, `drawDistance > nearClip`, `horizon` in [0,1]. |
+| `ROAD_TYPE(TProjection)` | `TDual_float center` in screen cells, projected `halfWidth`, camera-relative `depth`, perspective `scale`. |
+| `ROAD_TYPE(TStyle)` | One width-one `codepoint`; Text/Grid `sky`, `grass[2]`, `road[2]`, `edge[2]`, `lane`; `lanes`, `edgeFraction`, `laneFraction`, `stripeSegments`. |
 
-## Reused foundations
+Use x changes for bends, y changes for hills, and halfWidth changes for widening.
+The track stores absolute centers, so render output does not depend on hidden
+accumulated curvature. Move `camera.position.z` to advance and x to steer. Adjust
+y to follow road elevation. Viewport resizing is handled on every render.
+All pointers are borrowed for the call; no `Init`/`Free` pair is needed.
 
-- Geometry: `TDUAL_TYPE(float)`, `TTRIPLE_TYPE(float)` (and existing integer variants), from `Struct`.
-- Math: interpolation/clamp/trigonometric helpers or appropriately contained replacements consistent with the **no `-lm` mandatory link** policy.
-- Rasterization: horizontal spans/scanline fill and cell output.
-- Canvas: clipping, UTF-8 glyph selection/attributes and explicit Update.
-- Chronometry: optional frame timing/delta. No duplicate timers.
-
-## Proposed subpackages
-
-| Component | Work |
-|---|---|
-| Track | road curvature, elevation, width and segment data |
-| Camera | horizon, lateral offset, depth and field-of-view |
-| Projection | segment-to-screen/scanline transform |
-| Render | grass/road/edge/shading by row or cell |
-| Demo | scroll/steer, resize and frames through Canvas_Update |
-
-## Conceptual signatures
+## API
 
 ```c
+OPSTATUS ROAD_FUNC(TrackValidate)(const ROAD_TYPE(TTrack) *track);
 OPSTATUS ROAD_FUNC(Project)(
-    const ROAD_TYPE(TTrack) *track,
-    const ROAD_TYPE(TCamera) *camera,
-    ROAD_TYPE(TProjection) *outProjection);
+    const ROAD_TYPE(TCamera) *camera, TDUAL_TYPE(uint16) viewport,
+    const ROAD_TYPE(TNode) *node, ROAD_TYPE(TProjection) *outProjection);
+ROAD_TYPE(TStyle) ROAD_FUNC(StyleDefault)(void);
 OPSTATUS ROAD_FUNC(Render)(
-    TERMINAL_TYPE(TCanvas) *canvas,
-    const ROAD_TYPE(TTrack) *track,
-    const ROAD_TYPE(TCamera) *camera);
+    TERMINAL_TYPE(TCanvas) *canvas, const ROAD_TYPE(TTrack) *track,
+    const ROAD_TYPE(TCamera) *camera, const ROAD_TYPE(TStyle) *style);
 ```
 
-These are tentative domain types/functions; do not commit implementations before their layout/ownership semantics are reviewed.
+Default names: `Road_TrackValidate`, `Road_Project`, `Road_StyleDefault`, `Road_Render`.
 
-## Contracts
+## Projection and drawing rules
 
-- No raw terminal output from rendering.
-- Row/segment traversal must remain bounded; handle horizon, clipping and zero-sized canvases.
-- Prefer reused Struct aggregates for positions/vectors; add only semantic Track/Camera/Projection structures.
-- Defer to Canvas's glyph-width and attribute fallback policies.
+- `depth = node.z - camera.z`; `scale = focalLength * viewportHeight / depth`.
+  Screen x is viewportWidth/2 + (node.x-camera.x)×scale; screen y is
+  horizon×viewportHeight − (node.y-camera.y)×scale. Projected halfWidth is
+  world halfWidth×scale. Units are cells; no physical cell-aspect assumption.
+- `Project` returns `OUT_OF_RANGE` for points outside the near/far range or
+  projections not representable as floats. Invalid/nonfinite arguments return
+  `INVALID_ARGUMENT`. The output is modified only on success.
+- `Render` validates the whole track before drawing, clips segments against
+  near and far depth, and interpolates clipped endpoints before projection.
+  Projected spans are clipped before converting to integer cell coordinates.
+- Segments are traversed near to far. A monotonically decreasing visible row
+  boundary prevents distant descending road from showing through hill crests.
+  This is the traditional single-road scanline model, not a general 3D depth
+  buffer; bridges, tunnels, overhangs and crossing roads are unsupported.
+- Curves/elevation/width are linear between nodes. Use more nodes to approximate
+  smooth curves. Screen edges are interpolated across each projected trapezoid.
+- Default style uses colored backgrounds and spaces, alternating road/grass/
+  curb palettes, three lanes and intermittent lane markers. Call `StyleDefault`
+  then edit ordinary struct fields. `stripeSegments` must be nonzero; stripes
+  follow segment index (use equal z spacing for uniform world stripe lengths).
+- `edgeFraction` is curb width per side divided by the full road width, in [0,1].
+  `laneFraction` is marker width divided by the full road width, in [0,1/lanes].
+  `lanes >= 1`; one lane disables internal markers. A zero edge/marker fraction
+  disables that component. Lane marks are drawn on alternate stripe groups.
+- Sky and grass fill uncovered rows. Views, including nested views, use local
+  coordinates. Rasterization preserves wide glyphs crossing view boundaries.
+  No terminal I/O occurs until the caller invokes `Canvas_Update`.
+- Rendering costs O(node count + visible rows × (canvas width + lane count)),
+  without temporary framebuffers. Extremely large float world coordinates can
+  lose geometric precision; periodically rebase long-running tracks if needed.
 
-## Tests
+## Example and validation
 
-Straight road; high curvature; hills; camera movement; clipping; aspect ratios; terminal resize; rendering into a nested borrowed Canvas view.
+`Codespace/Examples/Graphics/Pseudo3DRoad.c` draws a curved, elevated road:
+
+```sh
+cc -std=c11 -D_POSIX_C_SOURCE=200809L Codespace/Examples/Graphics/Pseudo3DRoad.c -o road
+./road
+make -C Codespace/Tests/Terminal
+```
+
+Run examples in an interactive terminal. Tests cover exact perspective values,
+near clipping, track validation, curves, hills/crest occlusion, movement,
+resizing to 1×1, nested views, invalid styles/numbers and unchanged error outputs.
+Track looping, traffic, roadside sprites and gameplay are left to the caller.

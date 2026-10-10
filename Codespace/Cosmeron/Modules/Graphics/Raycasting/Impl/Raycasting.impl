@@ -1,0 +1,121 @@
+#pragma once
+static inline bool RAYCAST_INS(Finite)(double value) {
+  return value>=-DBL_MAX && value<=DBL_MAX;
+}
+static inline bool RAYCAST_INS(MapValid)(const RAYCAST_TYPE(TGridMap) *map) {
+  size_t rows;
+  if (!map || !map->cells || !map->size.x || !map->size.y ||
+      map->stride<map->size.x) return false;
+  rows=(size_t)map->size.y-1;
+  return rows<=(SIZE_MAX-map->size.x)/map->stride &&
+      rows*map->stride+map->size.x<=map->cellCount;
+}
+static inline bool RAYCAST_INS(CameraValid)(const RAYCAST_TYPE(TCamera) *camera) {
+  double norm,dot,planeNorm;
+  const double tolerance=0.0001;
+  if (!camera || !RAYCAST_INS(Finite)(camera->position.x) ||
+      !RAYCAST_INS(Finite)(camera->position.y) ||
+      !RAYCAST_INS(Finite)(camera->direction.x) ||
+      !RAYCAST_INS(Finite)(camera->direction.y) ||
+      !RAYCAST_INS(Finite)(camera->plane.x) || !RAYCAST_INS(Finite)(camera->plane.y) ||
+      !RAYCAST_INS(Finite)(camera->maxDistance) || camera->maxDistance<=0 ||
+      !RAYCAST_INS(Finite)(camera->wallHeight) || camera->wallHeight<=0 ||
+      !RAYCAST_INS(Finite)(camera->horizon) || camera->horizon<0 || camera->horizon>1)
+    return false;
+  norm=(double)camera->direction.x*camera->direction.x+
+       (double)camera->direction.y*camera->direction.y;
+  dot=(double)camera->direction.x*camera->plane.x+
+      (double)camera->direction.y*camera->plane.y;
+  planeNorm=(double)camera->plane.x*camera->plane.x+(double)camera->plane.y*camera->plane.y;
+  return norm>=1-tolerance && norm<=1+tolerance && planeNorm>0 &&
+      dot*dot<=tolerance*tolerance*planeNorm;
+}
+RAYCAST_CAMERA_RAY_PROTOTYPE {
+  RAYCAST_TYPE(TRay2D) ray;
+  double screen,x,y;
+  if (!outRay || !RAYCAST_INS(CameraValid)(camera) || !columns || column>=columns)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  screen=2.0*((double)column+0.5)/columns-1.0;
+  x=camera->direction.x+screen*camera->plane.x;
+  y=camera->direction.y+screen*camera->plane.y;
+  if (x>FLT_MAX || x<-FLT_MAX || y>FLT_MAX || y<-FLT_MAX)
+    return STATUS_CONST(OUT_OF_RANGE);
+  ray.origin=camera->position;
+  ray.direction=(TDUAL_TYPE(float)){.x=(float)x,.y=(float)y};
+  ray.maxDistance=camera->maxDistance;
+  *outRay=ray;
+  return STATUS_CONST(SUCCESS);
+}
+RAYCAST_GRID_CAST_PROTOTYPE {
+  double origin[2],direction[2],entry=0,exitDistance,next[2],delta[2];
+  int32_t cell[2],step[2];
+  uint32_t size[2],axis,iteration;
+  RAYCAST_TYPE(Side) side=RAYCAST_CONST(SIDE_NONE);
+  if (!outHit || !RAYCAST_INS(MapValid)(map) || !ray ||
+      !RAYCAST_INS(Finite)(ray->origin.x) || !RAYCAST_INS(Finite)(ray->origin.y) ||
+      !RAYCAST_INS(Finite)(ray->direction.x) || !RAYCAST_INS(Finite)(ray->direction.y) ||
+      !RAYCAST_INS(Finite)(ray->maxDistance) || ray->maxDistance<0 ||
+      (ray->direction.x==0 && ray->direction.y==0))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  origin[0]=ray->origin.x;origin[1]=ray->origin.y;
+  direction[0]=ray->direction.x;direction[1]=ray->direction.y;
+  size[0]=map->size.x;size[1]=map->size.y;
+  exitDistance=ray->maxDistance;
+  /* Slab clipping permits origins outside the map without unbounded walking. */
+  for (axis=0;axis<2;axis++) {
+    double nearDistance,farDistance;
+    if (direction[axis]==0) {
+      if (origin[axis]<0 || origin[axis]>=size[axis]) return STATUS_CONST(NOT_FOUND);
+      continue;
+    }
+    nearDistance=(0-origin[axis])/direction[axis];
+    farDistance=(size[axis]-origin[axis])/direction[axis];
+    if (nearDistance>farDistance) {double temp=nearDistance;nearDistance=farDistance;farDistance=temp;}
+    if (nearDistance>entry) {entry=nearDistance;side=axis==0 ? RAYCAST_CONST(SIDE_X) : RAYCAST_CONST(SIDE_Y);}
+    if (farDistance<exitDistance) exitDistance=farDistance;
+  }
+  if (entry>exitDistance) return STATUS_CONST(NOT_FOUND);
+  for (axis=0;axis<2;axis++) {
+    double position=origin[axis]+entry*direction[axis];
+    /* Clamp roundoff at the slab surface before integer conversion. */
+    if (position<0) position=0;
+    if (position>size[axis]) position=size[axis];
+    cell[axis]=(int32_t)position;
+    step[axis]=direction[axis]<0 ? -1 : 1;
+    if (direction[axis]<0 && position==cell[axis]) cell[axis]--;
+    if (cell[axis]<0 || cell[axis]>=(int32_t)size[axis]) return STATUS_CONST(NOT_FOUND);
+    if (direction[axis]==0) {next[axis]=delta[axis]=DBL_MAX;}
+    else {
+      double boundary=cell[axis]+(step[axis]>0 ? 1 : 0);
+      next[axis]=(boundary-origin[axis])/direction[axis];
+      delta[axis]=step[axis]/direction[axis];
+    }
+  }
+  for (iteration=0;iteration<=size[0]+size[1];iteration++) {
+    uint16_t material=map->cells[(size_t)cell[1]*map->stride+(size_t)cell[0]];
+    if (material) {
+      RAYCAST_TYPE(THit) hit={0};
+      double wall,hitX=origin[0]+entry*direction[0],hitY=origin[1]+entry*direction[1];
+      if (hitX<0) hitX=0;
+      if (hitX>size[0]) hitX=size[0];
+      if (hitY<0) hitY=0;
+      if (hitY>size[1]) hitY=size[1];
+      hit.cell=(TDUAL_TYPE(int32)){.x=cell[0],.y=cell[1]};
+      hit.position=(TDUAL_TYPE(float)){.x=(float)hitX,.y=(float)hitY};
+      hit.distance=(float)entry;hit.material=material;hit.side=side;
+      if (side==RAYCAST_CONST(SIDE_X)) hit.normal.x=(float)-step[0];
+      if (side==RAYCAST_CONST(SIDE_Y)) hit.normal.y=(float)-step[1];
+      wall=side==RAYCAST_CONST(SIDE_X) ? hit.position.y : hit.position.x;
+      hit.wallCoordinate=(float)(wall-(uint32_t)wall);
+      *outHit=hit;
+      return STATUS_CONST(SUCCESS);
+    }
+    axis=next[0]<=next[1] ? 0 : 1; /* X wins exact corner ties. */
+    entry=next[axis];
+    if (entry>exitDistance) return STATUS_CONST(NOT_FOUND);
+    next[axis]+=delta[axis];cell[axis]+=step[axis];
+    if (cell[axis]<0 || cell[axis]>=(int32_t)size[axis]) return STATUS_CONST(NOT_FOUND);
+    side=axis==0 ? RAYCAST_CONST(SIDE_X) : RAYCAST_CONST(SIDE_Y);
+  }
+  return STATUS_CONST(NOT_FOUND);
+}

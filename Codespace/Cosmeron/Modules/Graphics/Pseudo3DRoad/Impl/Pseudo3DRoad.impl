@@ -1,0 +1,43 @@
+#pragma once
+static inline bool ROAD_INS(Finite)(double value) {
+  return value>=-DBL_MAX && value<=DBL_MAX;
+}
+static inline bool ROAD_INS(NodeValid)(const ROAD_TYPE(TNode) *node) {
+  return node && ROAD_INS(Finite)(node->position.x) && ROAD_INS(Finite)(node->position.y) &&
+    ROAD_INS(Finite)(node->position.z) && ROAD_INS(Finite)(node->halfWidth) && node->halfWidth>0;
+}
+static inline bool ROAD_INS(CameraValid)(const ROAD_TYPE(TCamera) *camera) {
+  return camera && ROAD_INS(Finite)(camera->position.x) && ROAD_INS(Finite)(camera->position.y) &&
+    ROAD_INS(Finite)(camera->position.z) && ROAD_INS(Finite)(camera->focalLength) && camera->focalLength>0 &&
+    ROAD_INS(Finite)(camera->nearClip) && camera->nearClip>0 &&
+    ROAD_INS(Finite)(camera->drawDistance) && camera->drawDistance>camera->nearClip &&
+    ROAD_INS(Finite)(camera->horizon) && camera->horizon>=0 && camera->horizon<=1;
+}
+ROAD_TRACK_VALIDATE_PROTOTYPE {
+  size_t i;
+  if (!track || !track->nodes || track->count<2) return STATUS_CONST(INVALID_ARGUMENT);
+  for (i=0;i<track->count;i++) {
+    if (!ROAD_INS(NodeValid)(&track->nodes[i]) ||
+        (i && track->nodes[i].position.z<=track->nodes[i-1].position.z))
+      return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  return STATUS_CONST(SUCCESS);
+}
+ROAD_PROJECT_PROTOTYPE {
+  ROAD_TYPE(TProjection) projection;
+  double depth,scale,x,y,width;
+  if (!outProjection || !ROAD_INS(CameraValid)(camera) || !ROAD_INS(NodeValid)(node) ||
+      !viewport.x || !viewport.y) return STATUS_CONST(INVALID_ARGUMENT);
+  depth=(double)node->position.z-camera->position.z;
+  if (depth<camera->nearClip || depth>camera->drawDistance) return STATUS_CONST(OUT_OF_RANGE);
+  scale=(double)camera->focalLength*viewport.y/depth;
+  x=viewport.x/2.0+((double)node->position.x-camera->position.x)*scale;
+  y=(double)camera->horizon*viewport.y-((double)node->position.y-camera->position.y)*scale;
+  width=node->halfWidth*scale;
+  if (x<-FLT_MAX || x>FLT_MAX || y<-FLT_MAX || y>FLT_MAX || width>FLT_MAX || scale>FLT_MAX)
+    return STATUS_CONST(OUT_OF_RANGE);
+  projection.center=(TDUAL_TYPE(float)){.x=(float)x,.y=(float)y};
+  projection.halfWidth=(float)width;projection.depth=(float)depth;projection.scale=(float)scale;
+  *outProjection=projection;
+  return STATUS_CONST(SUCCESS);
+}

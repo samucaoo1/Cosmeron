@@ -6,3 +6,5 @@
 #include "FIGlet/FIGlet.h"
 
 #include "Rasterization/Rasterization.h"
+#include "Raycasting/Render.h"
+#include "Pseudo3DRoad/Render.h"
