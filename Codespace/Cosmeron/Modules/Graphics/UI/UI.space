@@ -190,7 +190,7 @@ typedef struct UI_TYPE(TContext) {
   TDUAL_TYPE(uint16) pointer;
   UI_TYPE(WidgetId) focus, held, idScope;
   UI_TYPE(WidgetId) dialogChoiceId;
-  size_t dialogChoice;
+  size_t dialogChoice, dialogHeldChoice;
   UI_TYPE(WidgetId) focusIds[UI_MAX_WIDGETS];
   size_t focusCount;
   TERMINAL_TYPE(TKey) keys[UI_MAX_KEYS];
