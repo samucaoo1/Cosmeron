@@ -705,3 +705,5 @@ TERMINAL_KEY_GET_PROTOTYPE {
 TERMINAL_KEY_GET_ECHO_PROTOTYPE {
   return TERMINAL_INS(ReadKey)(outKey,true);
 }
+
+#include "../Internal/Event.inc"
