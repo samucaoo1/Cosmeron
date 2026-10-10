@@ -102,6 +102,7 @@ typedef struct UI_TYPE(TInputText) {
   char *buffer;
   size_t capacity, length;
   bool disabled;
+  size_t caret, selectionAnchor, firstVisible;
 } UI_TYPE(TInputText);
 typedef UI_TYPE(TInputText) UI_TYPE(TTextArea);
 typedef struct UI_TYPE(TList) {
@@ -111,6 +112,7 @@ typedef struct UI_TYPE(TList) {
   const char *const *items;
   size_t count, *selected;
   bool disabled;
+  size_t firstVisible;
 } UI_TYPE(TList);
 typedef struct UI_TYPE(TSeparator) {
   TQUAD_TYPE(uint16) region;
@@ -146,4 +148,6 @@ typedef struct UI_TYPE(TContext) {
   TERMINAL_TYPE(TCanvas) views[UI_MAX_SCOPES];
   size_t panelDepth;
   int32_t scroll;
+  bool resized;
+  TDUAL_TYPE(uint16) newSize;
 } UI_TYPE(TContext);
