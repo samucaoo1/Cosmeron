@@ -1,0 +1,30 @@
+#pragma once
+#include "../Canvas/Canvas.h"
+#include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
+
+#define FONT_MOD Font
+#define FONT_NS(NAME) GNS2(LIB_PREFIX(FONT_MOD), NAME)
+#define FONT_INS(NAME) GNS3(LIB_PREFIX(FONT_MOD), Internal, NAME)
+#define FONT_TYPE(NAME) FONT_NS(NAME)
+#define FONT_FUNC(NAME) FONT_NS(NAME)
+#define FONT_MAX_HEIGHT 32
+
+typedef enum FONT_TYPE(Format) {
+  FONT_NS(FORMAT_ASF)=1, FONT_NS(FORMAT_FIGLET)=2
+} FONT_TYPE(Format);
+typedef struct FONT_TYPE(TGlyph) {
+  size_t offset;
+  uint16_t columns;
+  bool present;
+} FONT_TYPE(TGlyph);
+typedef struct FONT_TYPE(TFont) {
+  /* Borrows data: source must outlive this font; no Init/Free. */
+  const char *data;
+  size_t length;
+  uint16_t height;
+  char hardblank;
+  FONT_TYPE(Format) format;
+  FONT_TYPE(TGlyph) glyphs[95]; /* printable ASCII 32..126 */
+} FONT_TYPE(TFont);
