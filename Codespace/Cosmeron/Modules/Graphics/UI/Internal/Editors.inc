@@ -79,8 +79,7 @@ UI_INPUT_TEXT_PASTE_PROTOTYPE {
      input->length-removed+byteLength>=input->capacity)
     return STATUS_CONST(INSUFFICIENT_SPACE);
   /* Caller must not use the edited buffer as the paste source. */
-  if(byteLength && utf8Text>=input->buffer &&
-     utf8Text<input->buffer+input->capacity)return STATUS_CONST(INVALID_ARGUMENT);
+  /* Paste sources must not alias the destination buffer. */
   memmove(input->buffer+start+byteLength,input->buffer+finish,
           input->length-finish+1U);
   if(byteLength)memcpy(input->buffer+start,utf8Text,byteLength);
@@ -316,7 +315,7 @@ UI_LIST_EX_PROTOTYPE {
   const UI_TYPE(TVisual) *visual;
   TEXT_GRID_ATTRIBUTE_TYPE(Cell) normal,highlight;
   uint32_t top,bottom,y;
-  size_t i;
+  size_t i,visible;
   OPSTATUS status;
   if(!list || !list->selected || (list->count && !list->items))
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -338,8 +337,13 @@ UI_LIST_EX_PROTOTYPE {
           ++*list->selected;context->keys[i]=0;
         }
       }
-      if(context->scroll>0 && *list->selected>0)--*list->selected;
-      if(context->scroll<0 && *list->selected+1<list->count)++*list->selected;
+    }
+    if(context->scroll && UI_INS(Hovered)(context,list->region)) {
+      if(context->scroll>0 && list->firstVisible)
+        --list->firstVisible;
+      else if(context->scroll<0 && list->firstVisible+1<list->count)
+        ++list->firstVisible;
+      context->scroll=0;
     }
     if(context->pointerReleased && context->held==id &&
        UI_INS(Hovered)(context,list->region)) {
@@ -347,7 +351,8 @@ UI_LIST_EX_PROTOTYPE {
       uint32_t localY=(uint32_t)context->pointer.y-canvas->origin.y;
       uint32_t firstRow=(uint32_t)list->region.top+
            (visual->border!=UI_CONST(BORDER_NONE));
-      size_t candidate=localY>=firstRow?(size_t)(localY-firstRow):list->count;
+      size_t candidate=localY>=firstRow?
+          list->firstVisible+(size_t)(localY-firstRow):list->count;
       if(candidate<list->count)*list->selected=candidate;
     }
     if(context->pointerPressed && UI_INS(Hovered)(context,list->region))
@@ -359,8 +364,19 @@ UI_LIST_EX_PROTOTYPE {
   if(status!=STATUS_CONST(SUCCESS))return status;
   top=(uint32_t)list->region.top+(visual->border!=UI_CONST(BORDER_NONE));
   bottom=(uint32_t)list->region.bottom-(visual->border!=UI_CONST(BORDER_NONE));
-  for(y=top;y<=bottom && (size_t)(y-top)<list->count;y++) {
-    size_t index=(size_t)(y-top);
+  if(top>bottom)return STATUS_CONST(OUT_OF_RANGE);
+  visible=(size_t)(bottom-top+1U);
+  if(!visible)return STATUS_CONST(SUCCESS);
+  if(context->focus==id && list->count) {
+    if(*list->selected<list->firstVisible)
+      list->firstVisible=*list->selected;
+    else if(*list->selected-list->firstVisible>=visible)
+      list->firstVisible=*list->selected-visible+1U;
+  }
+  if(list->firstVisible>list->count)
+    list->firstVisible=list->count;
+  for(y=top;y<=bottom && list->firstVisible+(size_t)(y-top)<list->count;y++) {
+    size_t index=list->firstVisible+(size_t)(y-top);
     TEXT_GRID_ATTRIBUTE_TYPE(Cell) attr=index==*list->selected?highlight:normal;
     uint32_t x,left=(uint32_t)list->region.left+
         (visual->border!=UI_CONST(BORDER_NONE));
