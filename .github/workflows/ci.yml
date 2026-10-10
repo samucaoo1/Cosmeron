@@ -120,6 +120,10 @@ jobs:
         shell: bash
         run: make -C Codespace/Tests/Input clean run CC=gcc
 
+      - name: Terminal and Canvas
+        shell: bash
+        run: make -C Codespace/Tests/Terminal clean run CC=gcc
+
       - name: Audio
         if: ${{ hashFiles('Codespace/Tests/Audio/**') != '' }}
         shell: bash
@@ -257,6 +261,8 @@ jobs:
 
       - name: Input
         run: make -C Codespace/Tests/Input clean run CC=clang CFLAGS="$SAN_FLAGS"
+      - name: Terminal and Canvas
+        run: make -C Codespace/Tests/Terminal clean run CC=clang CFLAGS="$SAN_FLAGS"
       - name: Audio
         run: make -C Codespace/Tests/Audio clean run CC=clang CFLAGS="$SAN_FLAGS"
       - name: Core
