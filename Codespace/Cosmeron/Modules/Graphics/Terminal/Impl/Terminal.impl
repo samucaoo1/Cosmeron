@@ -707,3 +707,41 @@ TERMINAL_KEY_GET_ECHO_PROTOTYPE {
 }
 
 #include "../Internal/Event.inc"
+
+
+TERMINAL_CAPABILITIES_GET_PROTOTYPE {
+  TERMINAL_TYPE(TCapabilities) cap={0};
+  if(!outCapabilities)return STATUS_CONST(INVALID_ARGUMENT);
+  cap.interactive=TERMINAL_INS(IsTTY)(stdout);
+  if(!cap.interactive) {
+    *outCapabilities=cap;
+    return STATUS_CONST(SUCCESS);
+  }
+#if OS_WINDOWS
+  {
+    DWORD mode=0;
+    cap.ansi=GetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE),&mode)!=0 &&
+             (mode&ENABLE_VIRTUAL_TERMINAL_PROCESSING)!=0;
+    cap.unicode=GetConsoleOutputCP()==CP_UTF8;
+    cap.trueColor=cap.ansi;
+    cap.mouse=TERMINAL_INS(IsTTY)(stdin);
+  }
+#else
+  {
+    const char *term=getenv("TERM");
+    const char *colorterm=getenv("COLORTERM");
+    const char *locale=getenv("LC_ALL");
+    if(!locale||!*locale)locale=getenv("LC_CTYPE");
+    if(!locale||!*locale)locale=getenv("LANG");
+    cap.ansi=term && strcmp(term,"dumb")!=0;
+    cap.trueColor=cap.ansi && colorterm &&
+        (strstr(colorterm,"truecolor")||strstr(colorterm,"24bit"));
+    cap.unicode=locale &&
+        (strstr(locale,"UTF-8")||strstr(locale,"utf8")||
+         strstr(locale,"utf-8")||strstr(locale,"UTF8"));
+    cap.mouse=cap.ansi && TERMINAL_INS(IsTTY)(stdin);
+  }
+#endif
+  *outCapabilities=cap;
+  return STATUS_CONST(SUCCESS);
+}
