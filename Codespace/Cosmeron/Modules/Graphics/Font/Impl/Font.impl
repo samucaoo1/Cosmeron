@@ -347,10 +347,11 @@ FONT_PARSE_ASF2_PROTOTYPE {
     font.glyphs[letter-32U].paintOffset=cursor;
     while(cursor<size){
       size_t look=cursor,lnStart=0,lnLength=0;
+      unsigned nextLetter=0;
       uint32_t color,which;
       if(!FONT_INS(Line)(data,size,&look,&lnStart,&lnLength))break;
       if(lnLength<1||data[lnStart]=='#'||
-         FONT_INS(ASF2Glyph)(data+lnStart,lnLength,&letter))break;
+         FONT_INS(ASF2Glyph)(data+lnStart,lnLength,&nextLetter))break;
       if(!FONT_INS(ASF2Color)(data+lnStart,lnLength,&which,&color)||
          which>=font.height)return STATUS_CONST(INVALID_SEQUENCE);
       cursor=look;
