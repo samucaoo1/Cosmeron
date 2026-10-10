@@ -1,0 +1,13 @@
+#pragma once
+
+INPUT_EVENT_POLL_PROTOTYPE {
+  INPUT_INS(State) *s = &INPUT_INS(state);
+  if (!event || !s->count) return false;
+  *event = s->events[s->head];
+  s->head = (s->head + 1) % INPUT_EVENT_CAPACITY; --s->count;
+  return true;
+}
+
+INPUT_EVENT_CLEAR_PROTOTYPE { INPUT_INS(state).head = INPUT_INS(state).count = 0; }
+
+INPUT_EVENT_GET_DROPPED_COUNT_PROTOTYPE { return INPUT_INS(state).dropped; }

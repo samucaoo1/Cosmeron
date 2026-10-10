@@ -1,0 +1,28 @@
+#pragma once
+
+INPUT_MOUSE_IS_DOWN_PROTOTYPE {
+  return button >= 0 && button < INPUT_CONST(MOUSE_BUTTON_COUNT) && INPUT_INS(state).mouse[button].down;
+}
+
+INPUT_MOUSE_IS_PRESSED_PROTOTYPE {
+  return button >= 0 && button < INPUT_CONST(MOUSE_BUTTON_COUNT) && INPUT_INS(state).mouse[button].pressed;
+}
+
+INPUT_MOUSE_IS_RELEASED_PROTOTYPE {
+  return button >= 0 && button < INPUT_CONST(MOUSE_BUTTON_COUNT) && INPUT_INS(state).mouse[button].released;
+}
+
+INPUT_MOUSE_GET_POSITION_PROTOTYPE {
+  if (x) *x = INPUT_INS(state).x;
+  if (y) *y = INPUT_INS(state).y;
+}
+
+INPUT_MOUSE_GET_DELTA_PROTOTYPE {
+  if (x) *x = INPUT_INS(state).dx;
+  if (y) *y = INPUT_INS(state).dy;
+}
+
+INPUT_MOUSE_GET_SCROLL_PROTOTYPE {
+  if (x) *x = INPUT_INS(state).sx;
+  if (y) *y = INPUT_INS(state).sy;
+}

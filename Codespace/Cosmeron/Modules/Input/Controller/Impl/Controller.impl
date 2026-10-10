@@ -1,0 +1,87 @@
+#pragma once
+
+INPUT_CONTROLLER_ENUMERATE_PROTOTYPE {
+  size_t i, total = 0;
+  if (!count || (!controllers && capacity)) return STATUS_CONST(INVALID_ARGUMENT);
+  for (i = 0; i < INPUT_DEVICE_CAPACITY; ++i) if (INPUT_INS(state).devices[i].connected) ++total;
+  *count = total; /* documented exception: required size on insufficient space */
+  if (!controllers && !capacity) return STATUS_CONST(SUCCESS);
+  if (capacity < total) return STATUS_CONST(INSUFFICIENT_SPACE);
+  total = 0;
+  for (i = 0; i < INPUT_DEVICE_CAPACITY; ++i)
+    if (INPUT_INS(state).devices[i].connected) controllers[total++] = INPUT_INS(state).devices[i].id;
+  return STATUS_CONST(SUCCESS);
+}
+
+INPUT_CONTROLLER_IS_CONNECTED_PROTOTYPE { return INPUT_INS(Find)(controller) != NULL; }
+
+INPUT_CONTROLLER_GET_NAME_PROTOTYPE {
+  INPUT_INS(Device) *d;
+  size_t length;
+  if (!required || (!buffer && capacity)) return STATUS_CONST(INVALID_ARGUMENT);
+  d = INPUT_INS(Find)(controller);
+  if (!d) return STATUS_CONST(NOT_FOUND);
+  length = strlen(d->name) + 1;
+  *required = length; /* includes NUL; produced even when buffer is too small */
+  if (!buffer && !capacity) return STATUS_CONST(SUCCESS);
+  if (capacity < length) return STATUS_CONST(INSUFFICIENT_SPACE);
+  memcpy(buffer, d->name, length);
+  return STATUS_CONST(SUCCESS);
+}
+
+INPUT_CONTROLLER_GET_BUTTON_COUNT_PROTOTYPE {
+  INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
+  return d ? d->buttonCount : 0;
+}
+
+INPUT_CONTROLLER_GET_AXIS_COUNT_PROTOTYPE {
+  INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
+  return d ? d->axisCount : 0;
+}
+
+INPUT_CONTROLLER_GET_HAT_COUNT_PROTOTYPE {
+  INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
+  return d ? d->hatCount : 0;
+}
+
+INPUT_CONTROLLER_HAS_RUMBLE_PROTOTYPE {
+  INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
+  return d && d->rumble;
+}
+
+INPUT_CONTROLLER_IS_DOWN_PROTOTYPE {
+  INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
+  return d && button < d->buttonCount && d->buttons[button].down;
+}
+
+INPUT_CONTROLLER_IS_PRESSED_PROTOTYPE {
+  INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
+  return d && button < d->buttonCount && d->buttons[button].pressed;
+}
+
+INPUT_CONTROLLER_IS_RELEASED_PROTOTYPE {
+  INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
+  return d && button < d->buttonCount && d->buttons[button].released;
+}
+
+INPUT_CONTROLLER_GET_AXIS_PROTOTYPE {
+  INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
+  return d && axis < d->axisCount ? d->axes[axis] : 0;
+}
+
+INPUT_CONTROLLER_GET_HAT_PROTOTYPE {
+  INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
+  return d && hat < d->hatCount ? d->hats[hat] : INPUT_CONST(HAT_CENTERED);
+}
+
+INPUT_CONTROLLER_RUMBLE_PROTOTYPE {
+  INPUT_INS(Device) *d;
+  if (!(lowFrequency >= 0 && lowFrequency <= 1) || !(highFrequency >= 0 && highFrequency <= 1)) return STATUS_CONST(INVALID_ARGUMENT);
+  d = INPUT_INS(Find)(controller);
+  if (!d) return STATUS_CONST(NOT_FOUND);
+  return INPUT_INS(BackendRumble)(d, lowFrequency, highFrequency, durationMs);
+}
+
+INPUT_CONTROLLER_STOP_RUMBLE_PROTOTYPE {
+  return INPUT_CONTROLLER_FUNC(Rumble)(controller, 0, 0, 0);
+}

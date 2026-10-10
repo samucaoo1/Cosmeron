@@ -48,7 +48,7 @@ Input_Keyboard_IsDown(INPUT_KEY_W);
 | `Gamepad/Gamepad.h` | Standardized view using the same controller ID |
 | `Event/Event.h` | Ordered events and overflow accounting |
 
-Package headers expose the same shared implementation; include order does not create separate snapshots. Event coordinate pairs reuse `Struct_TPair_float`.
+Each package header declares its own API through prototype macros and includes its corresponding `Impl/<Package>.impl`. `Input.h` owns Update and aggregates all five package headers. Internal state and native backends remain shared; include order does not create separate snapshots. Event coordinate pairs reuse `Struct_TPair_float`.
 
 ## Public types
 

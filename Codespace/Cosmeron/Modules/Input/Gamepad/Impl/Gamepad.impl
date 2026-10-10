@@ -1,0 +1,45 @@
+#pragma once
+
+INPUT_GAMEPAD_IS_MAPPED_PROTOTYPE {
+  INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
+  return d && d->mapped;
+}
+
+INPUT_GAMEPAD_IS_DOWN_PROTOTYPE {
+  INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
+  int index;
+  if (!d || !d->mapped || button < 0 || button >= INPUT_CONST(GAMEPAD_BUTTON_COUNT)) return false;
+  index = d->gamepadButtons[button];
+  return index >= 0 && (uint32_t)index < d->buttonCount && d->buttons[index].down;
+}
+
+INPUT_GAMEPAD_IS_PRESSED_PROTOTYPE {
+  INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
+  int index;
+  if (!d || !d->mapped || button < 0 || button >= INPUT_CONST(GAMEPAD_BUTTON_COUNT)) return false;
+  index = d->gamepadButtons[button];
+  return index >= 0 && (uint32_t)index < d->buttonCount && d->buttons[index].pressed;
+}
+
+INPUT_GAMEPAD_IS_RELEASED_PROTOTYPE {
+  INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
+  int index;
+  if (!d || !d->mapped || button < 0 || button >= INPUT_CONST(GAMEPAD_BUTTON_COUNT)) return false;
+  index = d->gamepadButtons[button];
+  return index >= 0 && (uint32_t)index < d->buttonCount && d->buttons[index].released;
+}
+
+INPUT_GAMEPAD_GET_AXIS_PROTOTYPE {
+  INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
+  int index;
+  float value;
+  if (!d || !d->mapped || axis < 0 || axis >= INPUT_CONST(GAMEPAD_AXIS_COUNT)) return 0;
+  index = d->gamepadAxes[axis];
+  if (index < 0 || (uint32_t)index >= d->axisCount) return 0;
+  value = d->axes[index];
+  if (axis == INPUT_CONST(GAMEPAD_AXIS_LEFT_TRIGGER) || axis == INPUT_CONST(GAMEPAD_AXIS_RIGHT_TRIGGER)) return (value + 1) * 0.5f;
+#if defined(__linux__) && !defined(INPUT_NO_NATIVE)
+  if (axis == INPUT_CONST(GAMEPAD_AXIS_LEFT_Y) || axis == INPUT_CONST(GAMEPAD_AXIS_RIGHT_Y)) return -value;
+#endif
+  return value;
+}

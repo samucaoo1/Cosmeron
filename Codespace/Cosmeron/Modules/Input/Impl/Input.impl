@@ -1,0 +1,6 @@
+#pragma once
+
+INPUT_UPDATE_PROTOTYPE {
+  INPUT_INS(Begin)();
+  return INPUT_INS(BackendUpdate)();
+}
