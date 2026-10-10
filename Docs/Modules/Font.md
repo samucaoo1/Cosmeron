@@ -209,3 +209,32 @@ figlet -f Codespace/Cosmeron/Modules/Graphics/Font/Fonts/NibbleBits.flf COSMERON
 
 Test suites: `Codespace/Tests/Terminal/FontCosmeron.c`
 and `FontNibbleBits.c`.
+
+### Cosmeron Bold (.flf) — thick orbital wordmark
+
+The **Bold** companion uses heavy Unicode box-drawing strokes (`━`, `┃`, etc.),
+reinforced diagonals and rounded orbital corners, following the thick strokes
+of the reference COSMERON wordmark. The two `O` characters contain the solid
+core `●`; type `COSMER0N` (zero) for the power-bar version of the second ring.
+
+- [Cosmeron-Bold.flf](../../Codespace/Cosmeron/Modules/Graphics/Font/Fonts/Cosmeron-Bold.flf): UTF-8 heavy-line variant.
+- [Cosmeron-Bold-ASCII.flf](../../Codespace/Cosmeron/Modules/Graphics/Font/Fonts/Cosmeron-Bold-ASCII.flf): ASCII fallback, using dense `#` and `=` strokes.
+
+Both fonts have **9 rows and 12 columns per character**, support all 95
+printable ASCII inputs and the seven traditional FIGlet extended slots, and
+use full-width layout (no smushing). The original regular Cosmeron and
+**NibbleBits** fonts remain unchanged.
+
+```sh
+figlet -f Codespace/Cosmeron/Modules/Graphics/Font/Fonts/Cosmeron-Bold-ASCII.flf COSMER0N
+python3 Tools/asf_compile.py \\
+  Codespace/Cosmeron/Modules/Graphics/Font/Fonts/Cosmeron-Bold.flf \\
+  --symbol CosmeronBold -o CosmeronBold.flf.h
+```
+
+FIGlet artwork is monochrome. The bright white/cyan neon and light bloom of
+the original wordmark are presentation effects: use `Font_Draw` with colored
+Text/Grid attributes or convert to ASF for per-glyph colors. They are not
+encoded into the `.flf` itself.
+
+CI covers both fonts in `Codespace/Tests/Terminal/FontCosmeronBold.c`.
