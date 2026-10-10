@@ -2,16 +2,16 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include "../../Cosmeron/Modules/Graphics/Font/Font.h"
+#include "../../Cosmeron/Modules/Graphics/FIGlet/FIGlet.h"
 
 #define OK STATUS_CONST(SUCCESS)
 
 int main(void) {
   static char source[16384];
-  const char *path="../../Cosmeron/Modules/Graphics/Font/Fonts/NibbleBits.flf";
+  const char *path="../../Asset/FIGlet/NibbleBits.flf";
   FILE *file=fopen(path,"rb");
   size_t size;
-  FONT_TYPE(TFont) font={0};
+  FIGLET_TYPE(TFont) font={0};
   TERMINAL_TYPE(TCanvas) canvas={0};
   TDUAL_TYPE(uint16) measured={0};
   TEXT_GRID_ATTRIBUTE_TYPE(Cell) attr=TEXT_GRID_ATTRIBUTE_FUNC(Default)();
@@ -23,19 +23,19 @@ int main(void) {
   assert(feof(file)!=0);
   assert(fclose(file)==0);
   assert(size>1000 && size<sizeof(source));
-  assert(FONT_FUNC(ParseFIGlet)(source,size,&font)==OK);
-  assert(font.height==7 && font.format==FONT_NS(FORMAT_FIGLET));
+  assert(FIGLET_FUNC(Parse)(source,size,&font)==OK);
+  assert(font.height==7 && font.data==source);
   for(index=0;index<95;index++) {
-    assert(font.glyphs[index].present);
+    assert(font.glyphs[index].columns>0);
     assert(font.glyphs[index].columns==8);
   }
-  assert(FONT_FUNC(Measure)(&font,"COSMERON",&measured)==OK);
+  assert(FIGLET_FUNC(Measure)(&font,"COSMERON",&measured)==OK);
   assert(measured.col==64 && measured.row==7);
-  assert(FONT_FUNC(Measure)(&font,"Cosmeron\n2026",&measured)==OK);
+  assert(FIGLET_FUNC(Measure)(&font,"Cosmeron\n2026",&measured)==OK);
   assert(measured.col==64 && measured.row==14);
   assert(TERMINAL_FUNC(Canvas_Create)(&canvas,
       (TDUAL_TYPE(uint16)){.col=80,.row=20})==OK);
-  assert(FONT_FUNC(Draw)(&canvas,
+  assert(FIGLET_FUNC(Draw)(&canvas,
       (TDUAL_TYPE(uint16)){.x=0,.y=0},
       &font,"COSMERON",attr)==OK);
   for(index=0;index<64;index++) {
@@ -49,7 +49,7 @@ int main(void) {
     }
   }
   assert(inkCount>100);
-  assert(FONT_FUNC(Draw)(&canvas,
+  assert(FIGLET_FUNC(Draw)(&canvas,
       (TDUAL_TYPE(uint16)){.x=20,.y=16},
       &font,"COSMERON",attr)==STATUS_CONST(OUT_OF_RANGE));
   TERMINAL_FUNC(Canvas_Free)(&canvas);

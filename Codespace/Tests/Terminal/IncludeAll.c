@@ -9,3 +9,4 @@ int main(void) {
   TERMINAL_FUNC(Canvas_Free)(&canvas);
   return 0;
 }
+#include "../../Cosmeron/Modules/Graphics/FIGlet/FIGlet.h"

@@ -16,7 +16,6 @@ static const FONT_TYPE(TFont) VGA8x8_Font = {
     .name = "VGA 8x8 Basic",
     .author = "Daniel Hepper / Marcel Sondaar",
     .license = "Public Domain",
-    .format = FONT_NS(FORMAT_STATIC),
     .height = 8,
     .letterSpacing = 1,
     .lineSpacing = 1,

@@ -4,7 +4,6 @@
 #include "../Font.h"
 
 static const FONT_TYPE(TFont) Readable_Font = {
-    .format = FONT_NS(FORMAT_STATIC),
     .height = 3,
     .name = "Readable",
     .author = "Cosmeron contributors",

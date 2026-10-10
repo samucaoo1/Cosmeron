@@ -1,0 +1,180 @@
+#pragma once
+#include <string.h>
+static inline bool FIGLET_INS(Line)(const char*s,size_t n,size_t*cursor,
+                                    size_t*start,size_t*length){
+  size_t end;
+  if(!s||!cursor||!start||!length||*cursor>=n)return false;
+  *start=*cursor;end=*cursor;
+  while(end<n&&s[end]!='\n'&&s[end]!='\r')++end;
+  *length=end-*start;
+  if(end<n&&s[end]=='\r')++end;
+  if(end<n&&s[end]=='\n')++end;
+  *cursor=end;return true;
+}
+static inline bool FIGLET_INS(Unsigned)(
+    const char*s,size_t n,size_t*at,uint32_t*out){
+  size_t i=*at;uint32_t value=0;
+  while(i<n&&(s[i]==' '||s[i]=='\t'))++i;
+  if(i>=n||s[i]<'0'||s[i]>'9')return false;
+  while(i<n&&s[i]>='0'&&s[i]<='9'){
+    uint32_t digit=(uint32_t)(s[i]-'0');
+    if(value>(UINT32_MAX-digit)/10U)return false;
+    value=value*10U+digit;++i;
+  }
+  *at=i;*out=value;return true;
+}
+static inline bool FIGLET_INS(Signed)(const char*s,size_t n,size_t*at){
+  size_t i=*at;
+  while(i<n&&(s[i]==' '||s[i]=='\t'))++i;
+  if(i<n&&(s[i]=='-'||s[i]=='+'))++i;
+  if(i>=n||s[i]<'0'||s[i]>'9')return false;
+  while(i<n&&s[i]>='0'&&s[i]<='9')++i;
+  *at=i;return true;
+}
+static inline OPSTATUS FIGLET_INS(Strip)(const char*text,size_t*length){
+  size_t n=*length;char mark;
+  if(!n)return STATUS_CONST(INVALID_SEQUENCE);
+  mark=text[n-1U];
+  if(!mark||mark==' '||(unsigned char)mark>=128)
+    return STATUS_CONST(INVALID_SEQUENCE);
+  --n;if(n&&text[n-1U]==mark)--n;
+  if(n&&text[n-1U]==mark)return STATUS_CONST(INVALID_SEQUENCE);
+  *length=n;return STATUS_CONST(SUCCESS);
+}
+static inline OPSTATUS FIGLET_INS(RowWidth)(
+    const char*s,size_t n,uint16_t*out){
+  size_t i=0,col=0;
+  while(i<n){
+    TEXT_TYPE(TChar32)cp=0;size_t read=0;int width=0;
+    OPSTATUS st=TEXT_UTF8_FUNC(Decode)((const unsigned char*)s+i,n-i,&cp,&read);
+    if(st!=STATUS_CONST(SUCCESS))return st;
+    if(!cp||cp=='\n'||cp=='\r'||cp=='\t')
+      return STATUS_CONST(INVALID_SEQUENCE);
+    st=TEXT_WIDTH_FUNC(Codepoint)(cp,&width);
+    if(st!=STATUS_CONST(SUCCESS)||width<1||width>2)
+      return STATUS_CONST(NOT_SUPPORTED);
+    col+=(size_t)width;if(col>UINT16_MAX)return STATUS_CONST(OUT_OF_RANGE);
+    i+=read;
+  }
+  *out=(uint16_t)col;return STATUS_CONST(SUCCESS);
+}
+static inline OPSTATUS FIGLET_INS(Row)(
+    const FIGLET_TYPE(TFont)*font,unsigned char code,uint16_t row,
+    const char**out,size_t*length){
+  size_t start=0,len=0,pos;uint16_t i;OPSTATUS st;
+  if(!font||!font->data||!out||!length||code<32||code>126||
+     row>=font->height)return STATUS_CONST(INVALID_ARGUMENT);
+  pos=font->glyphs[code-32U].offset;
+  for(i=0;i<=row;i++)
+    if(!FIGLET_INS(Line)(font->data,font->length,&pos,&start,&len))
+      return STATUS_CONST(INVALID_SEQUENCE);
+  st=FIGLET_INS(Strip)(font->data+start,&len);
+  if(st!=STATUS_CONST(SUCCESS))return st;
+  *out=font->data+start;*length=len;return STATUS_CONST(SUCCESS);
+}
+FIGLET_PARSE_PROTOTYPE {
+  FIGLET_TYPE(TFont)font={0};
+  size_t cursor=0,start=0,len=0,at=6;
+  uint32_t height=0,baseline=0,maxLen=0,comments=0;
+  unsigned code,row;
+  if(!data||!size||!outFont)return STATUS_CONST(INVALID_ARGUMENT);
+  if(!FIGLET_INS(Line)(data,size,&cursor,&start,&len)||len<12U||
+     memcmp(data+start,"flf2a",5)!=0||
+     !FIGLET_INS(Unsigned)(data+start,len,&at,&height)||
+     !FIGLET_INS(Unsigned)(data+start,len,&at,&baseline)||
+     !FIGLET_INS(Unsigned)(data+start,len,&at,&maxLen))
+    return STATUS_CONST(INVALID_SEQUENCE);
+  while(at<len&&(data[start+at]==' '||data[start+at]=='\t'))++at;
+  if(!FIGLET_INS(Signed)(data+start,len,&at)||
+     !FIGLET_INS(Unsigned)(data+start,len,&at,&comments)||
+     !height||height>FIGLET_MAX_HEIGHT||baseline>height||
+     maxLen>UINT16_MAX||comments>10000U)
+    return STATUS_CONST(INVALID_SEQUENCE);
+  font.data=data;font.length=size;font.height=(uint16_t)height;
+  font.hardblank=data[5];
+  for(row=0;row<comments;row++)
+    if(!FIGLET_INS(Line)(data,size,&cursor,&start,&len))
+      return STATUS_CONST(INVALID_SEQUENCE);
+  for(code=32;code<=126;code++){
+    uint16_t first=0;
+    font.glyphs[code-32U].offset=cursor;
+    for(row=0;row<height;row++){
+      uint16_t width=0;OPSTATUS st;
+      if(!FIGLET_INS(Line)(data,size,&cursor,&start,&len))
+        return STATUS_CONST(INVALID_SEQUENCE);
+      st=FIGLET_INS(Strip)(data+start,&len);
+      if(st!=STATUS_CONST(SUCCESS))return st;
+      st=FIGLET_INS(RowWidth)(data+start,len,&width);
+      if(st!=STATUS_CONST(SUCCESS))return st;
+      if(row&&width!=first)return STATUS_CONST(INVALID_SEQUENCE);
+      first=width;
+    }
+    font.glyphs[code-32U].columns=first;
+  }
+  *outFont=font;return STATUS_CONST(SUCCESS);
+}
+FIGLET_MEASURE_PROTOTYPE {
+  const unsigned char*p=(const unsigned char*)asciiText;
+  uint32_t x=0,largest=0,lines=1;
+  if(!font||!font->data||!outSize||!p||!font->height)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  while(*p){
+    if(*p=='\n'){
+      if(x>largest)largest=x;
+      x=0;if(lines==UINT32_MAX)return STATUS_CONST(OUT_OF_RANGE);
+      ++lines;
+    }else{
+      uint32_t width;
+      if(*p<32||*p>126)return STATUS_CONST(NOT_SUPPORTED);
+      width=font->glyphs[*p-32U].columns;
+      if(x>UINT16_MAX-width)return STATUS_CONST(OUT_OF_RANGE);
+      x+=width;
+    }
+    ++p;
+  }
+  if(x>largest)largest=x;
+  if((uint64_t)lines*font->height>UINT16_MAX)
+    return STATUS_CONST(OUT_OF_RANGE);
+  *outSize=(TDUAL_TYPE(uint16)){
+    .col=(uint16_t)largest,.row=(uint16_t)(lines*font->height)};
+  return STATUS_CONST(SUCCESS);
+}
+FIGLET_DRAW_PROTOTYPE {
+  TDUAL_TYPE(uint16)size={0};
+  const unsigned char*p=(const unsigned char*)asciiText;
+  uint32_t x=position.col,y=position.row;
+  OPSTATUS st;
+  if(!canvas||!font||!p)return STATUS_CONST(INVALID_ARGUMENT);
+  st=FIGLET_FUNC(Measure)(font,asciiText,&size);
+  if(st!=STATUS_CONST(SUCCESS))return st;
+  if((uint32_t)position.col+size.col>canvas->size.col||
+     (uint32_t)position.row+size.row>canvas->size.row)
+    return STATUS_CONST(OUT_OF_RANGE);
+  while(*p){
+    uint16_t row;
+    if(*p=='\n'){x=position.col;y+=font->height;++p;continue;}
+    for(row=0;row<font->height;row++){
+      const char*source=NULL;size_t n=0,i=0;
+      uint32_t at=x;
+      st=FIGLET_INS(Row)(font,*p,row,&source,&n);
+      if(st!=STATUS_CONST(SUCCESS))return st;
+      while(i<n){
+        TEXT_TYPE(TChar32)cp=0;size_t read=0;int width=0;
+        st=TEXT_UTF8_FUNC(Decode)((const unsigned char*)source+i,n-i,&cp,&read);
+        if(st!=STATUS_CONST(SUCCESS))return st;
+        if(cp==(unsigned char)font->hardblank)cp=' ';
+        st=TEXT_WIDTH_FUNC(Codepoint)(cp,&width);
+        if(st!=STATUS_CONST(SUCCESS)||width<1||width>2)
+          return STATUS_CONST(NOT_SUPPORTED);
+        st=TERMINAL_FUNC(Canvas_Set)(canvas,
+          (TDUAL_TYPE(uint16)){.x=(uint16_t)at,.y=(uint16_t)(y+row)},
+          cp,defaultStyle);
+        if(st!=STATUS_CONST(SUCCESS))return st;
+        at+=(uint32_t)width;i+=read;
+      }
+    }
+    x+=font->glyphs[*p-32U].columns;
+    ++p;
+  }
+  return STATUS_CONST(SUCCESS);
+}

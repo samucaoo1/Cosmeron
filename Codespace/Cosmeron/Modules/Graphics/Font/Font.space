@@ -3,48 +3,24 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-
 #define FONT_MOD Font
-#define FONT_NS(NAME) GNS2(LIB_PREFIX(FONT_MOD), NAME)
-#define FONT_INS(NAME) GNS3(LIB_PREFIX(FONT_MOD), Internal, NAME)
+#define FONT_NS(NAME) GNS2(LIB_PREFIX(FONT_MOD),NAME)
+#define FONT_INS(NAME) GNS3(LIB_PREFIX(FONT_MOD),Internal,NAME)
 #define FONT_TYPE(NAME) FONT_NS(NAME)
 #define FONT_FUNC(NAME) FONT_NS(NAME)
 #define FONT_MAX_HEIGHT 32
-/* Compile-time C11 designated initializer: FONT_GLYPH('A') = {...}. */
-#define FONT_GLYPH(CHARACTER) [(CHARACTER) - 32]
+#define FONT_GLYPH(CHARACTER) [(CHARACTER)-32]
 
-typedef enum FONT_TYPE(Format) {
-  FONT_NS(FORMAT_ASF)=1, FONT_NS(FORMAT_FIGLET)=2,
-  FONT_NS(FORMAT_ASF2)=3, FONT_NS(FORMAT_STATIC)=4
-} FONT_TYPE(Format);
 typedef struct FONT_TYPE(TGlyph) {
-  size_t offset;
-  size_t paintOffset, paintEnd; /* ASF2-only metadata after glyph art. */
-  uint16_t columns;
-  bool present;
-  /* Static C11 source: immutable rows separated by '\\n'.
-   * No runtime parsing, separate header generation, or allocation. */
-  const char *art;
-  uint32_t foreground, foregroundRows; /* Bit 0 = art row 0. */
-  uint32_t background, backgroundRows;
+  uint16_t columns; /* Optional advance width; 0 means auto-measure. */
+  const char *art;  /* Compile-time UTF-8 drawing, rows separated by '\n'. */
+  uint32_t foreground,foregroundRows;
+  uint32_t background,backgroundRows;
 } FONT_TYPE(TGlyph);
+
 typedef struct FONT_TYPE(TFont) {
-  /* Borrowed data for parsed formats; FORMAT_STATIC uses embedded .art. */
-  const char *data;
-  size_t length;
   uint16_t height;
-  char hardblank;
-  FONT_TYPE(Format) format;
-
-  /* Optional descriptive fields. Parsed fonts may leave these NULL. */
-  const char *name;
-  const char *author;
-  const char *license;
-
-  /* Terminal cell spacing, shared by Measure and Draw. */
-  uint16_t letterSpacing;
-  uint16_t lineSpacing;
-
-  /* Always the final field: authoring static C11 fonts starts here. */
-  FONT_TYPE(TGlyph) glyphs[95]; /* printable ASCII 32..126 */
+  const char *name,*author,*license;
+  uint16_t letterSpacing,lineSpacing;
+  FONT_TYPE(TGlyph) glyphs[95]; /* Always last: printable ASCII 32-126. */
 } FONT_TYPE(TFont);

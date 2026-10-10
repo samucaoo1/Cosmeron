@@ -51,11 +51,6 @@ jobs:
       - name: Input
         run: make -C Codespace/Tests/Input clean run CC=${{ matrix.cc }}
 
-      - name: Verify embedded ASF generator
-        run: |
-          python3 Tools/asf_compile.py Codespace/Tests/Terminal/Fixtures/Retro.asf --symbol RetroTestFont -o /tmp/Retro.asf.h
-          cmp /tmp/Retro.asf.h Codespace/Tests/Terminal/Fixtures/Retro.asf.h
-
       - name: Terminal
         run: make -C Codespace/Tests/Terminal clean run CC=${{ matrix.cc }}
 

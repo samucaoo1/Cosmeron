@@ -3,3 +3,4 @@
 #include "Canvas/Canvas.h"
 #include "UI/UI.h"
 #include "Font/Font.h"
+#include "FIGlet/FIGlet.h"

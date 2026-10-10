@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include "../../Cosmeron/Modules/Graphics/Font/Font.h"
+#include "../../Cosmeron/Modules/Graphics/FIGlet/FIGlet.h"
 
 #define OK STATUS_CONST(SUCCESS)
 static size_t ReadFixture(const char *name, char *buffer, size_t capacity) {
@@ -18,27 +18,27 @@ static size_t ReadFixture(const char *name, char *buffer, size_t capacity) {
 static void CheckCosmeron(void) {
   static char source[32768];
   size_t bytes=ReadFixture(
-      "../../Cosmeron/Modules/Graphics/Font/Fonts/Cosmeron.flf",
+      "../../Asset/FIGlet/Cosmeron.flf",
       source,sizeof(source));
-  FONT_TYPE(TFont) font={0};
+  FIGLET_TYPE(TFont) font={0};
   TERMINAL_TYPE(TCanvas) canvas={0};
   TDUAL_TYPE(uint16) measured={0};
   TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute=TEXT_GRID_ATTRIBUTE_FUNC(Default)();
   uint32_t cp=0;
   unsigned index,nonblank=0;
-  assert(FONT_FUNC(ParseFIGlet)(source,bytes,&font)==OK);
-  assert(font.height==9 && font.format==FONT_NS(FORMAT_FIGLET));
+  assert(FIGLET_FUNC(Parse)(source,bytes,&font)==OK);
+  assert(font.height==9 && font.data==source);
   for(index=0;index<95;index++){
-    assert(font.glyphs[index].present);
+    assert(font.glyphs[index].columns>0);
     assert(font.glyphs[index].columns==12);
   }
-  assert(FONT_FUNC(Measure)(&font,"COSMERON",&measured)==OK);
+  assert(FIGLET_FUNC(Measure)(&font,"COSMERON",&measured)==OK);
   assert(measured.col==96 && measured.row==9);
-  assert(FONT_FUNC(Measure)(&font,"COSMER0N\n2026",&measured)==OK);
+  assert(FIGLET_FUNC(Measure)(&font,"COSMER0N\n2026",&measured)==OK);
   assert(measured.col==96 && measured.row==18);
   assert(TERMINAL_FUNC(Canvas_Create)(&canvas,
       (TDUAL_TYPE(uint16)){.col=112,.row=26})==OK);
-  assert(FONT_FUNC(Draw)(&canvas,
+  assert(FIGLET_FUNC(Draw)(&canvas,
       (TDUAL_TYPE(uint16)){.x=0,.y=0},
       &font,"COSMERON",attribute)==OK);
   assert(TERMINAL_FUNC(Canvas_Get)(&canvas,
@@ -48,7 +48,7 @@ static void CheckCosmeron(void) {
       (TDUAL_TYPE(uint16)){.x=78,.y=4},
       &cp,&attribute)==OK && cp==0x2022U); /* second O */
   TERMINAL_FUNC(Canvas_Clear)(&canvas);
-  assert(FONT_FUNC(Draw)(&canvas,
+  assert(FIGLET_FUNC(Draw)(&canvas,
       (TDUAL_TYPE(uint16)){.x=0,.y=0},
       &font,"COSMER0N",attribute)==OK);
   assert(TERMINAL_FUNC(Canvas_Get)(&canvas,
@@ -64,7 +64,7 @@ static void CheckCosmeron(void) {
     }
   }
   assert(nonblank>85);
-  assert(FONT_FUNC(Draw)(&canvas,
+  assert(FIGLET_FUNC(Draw)(&canvas,
       (TDUAL_TYPE(uint16)){.x=20,.y=20},
       &font,"COSMERON",attribute)==STATUS_CONST(OUT_OF_RANGE));
   TERMINAL_FUNC(Canvas_Free)(&canvas);
@@ -72,20 +72,20 @@ static void CheckCosmeron(void) {
 static void CheckAsciiFallback(void) {
   static char source[32768];
   size_t bytes=ReadFixture(
-      "../../Cosmeron/Modules/Graphics/Font/Fonts/Cosmeron-ASCII.flf",
+      "../../Asset/FIGlet/Cosmeron-ASCII.flf",
       source,sizeof(source));
-  FONT_TYPE(TFont) font={0};
+  FIGLET_TYPE(TFont) font={0};
   TERMINAL_TYPE(TCanvas) canvas={0};
   TDUAL_TYPE(uint16) size={0};
   TEXT_GRID_ATTRIBUTE_TYPE(Cell) style=TEXT_GRID_ATTRIBUTE_FUNC(Default)();
   uint32_t cp=0;
-  assert(FONT_FUNC(ParseFIGlet)(source,bytes,&font)==OK);
+  assert(FIGLET_FUNC(Parse)(source,bytes,&font)==OK);
   assert(font.height==9);
-  assert(FONT_FUNC(Measure)(&font,"COSMER0N",&size)==OK);
+  assert(FIGLET_FUNC(Measure)(&font,"COSMER0N",&size)==OK);
   assert(size.col==96 && size.row==9);
   assert(TERMINAL_FUNC(Canvas_Create)(&canvas,
       (TDUAL_TYPE(uint16)){.col=96,.row=9})==OK);
-  assert(FONT_FUNC(Draw)(&canvas,
+  assert(FIGLET_FUNC(Draw)(&canvas,
       (TDUAL_TYPE(uint16)){0},&font,"COSMER0N",style)==OK);
   assert(TERMINAL_FUNC(Canvas_Get)(&canvas,
       (TDUAL_TYPE(uint16)){.x=78,.y=4},&cp,&style)==OK);
