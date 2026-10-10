@@ -102,6 +102,10 @@
 
 /* Poll one event without blocking; all outputs are assigned on success.
  * Mouse_Enable is optional and explicitly scoped to the process console. */
+#define TERMINAL_CAPABILITIES_GET_PROTOTYPE \
+  static inline OPSTATUS TERMINAL_FUNC(Capabilities_Get)( \
+      TERMINAL_TYPE(TCapabilities) *outCapabilities)
+
 #define TERMINAL_EVENT_POLL_PROTOTYPE \
   static inline OPSTATUS TERMINAL_FUNC(Event_Poll)( \
       TERMINAL_TYPE(TEvent) *outEvent, bool *outAvailable)
@@ -160,6 +164,7 @@ TERMINAL_ATTRIBUTE_SET_PROTOTYPE;
 TERMINAL_ATTRIBUTE_ADD_PROTOTYPE;
 TERMINAL_ATTRIBUTE_REMOVE_PROTOTYPE;
 TERMINAL_ATTRIBUTE_RESET_PROTOTYPE;
+TERMINAL_CAPABILITIES_GET_PROTOTYPE;
 TERMINAL_EVENT_POLL_PROTOTYPE;
 TERMINAL_MOUSE_ENABLE_PROTOTYPE;
 TERMINAL_KEY_GET_PROTOTYPE;
