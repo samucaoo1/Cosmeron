@@ -1,10 +1,10 @@
-# Font — FIGlet (.flf) and ASF1 (.asf)
+# Font — fontes estáticas C11 (.asf), ASF1/ASF2 e FIGlet (.flf)
 
 Path: \`Codespace/Cosmeron/Modules/Graphics/Font/Font.h\`
 Namespace: \`FONT_TYPE(TFont)\` and \`FONT_FUNC(...)\`.
 
-The Font package borrows font source bytes, checks them, measures ASCII banner
-text and renders into the **existing terminal Canvas**, preserving the same
+The Font package accepts static C11 font definitions or borrowed source bytes,
+measures ASCII banner text and renders into the **existing terminal Canvas**, preserving the same
 Text/Grid style cells. It never prints ANSI escape sequences to stdout and
 does not create separate color, geometry or frame-buffer types.
 
@@ -34,6 +34,72 @@ Default symbol names are \`Font_ParseASF\`, \`Font_ParseFIGlet\`,
 \`Parse*\` fills them without allocation. **Do not discard, overwrite, or free
 the input bytes before your last Draw/Measure call**. A parsed font contains
 offsets into that source memory.
+
+## ASF nativo — \`static const struct\` C11 (recomendado)
+
+O formato recomendado para fontes que serão **compiladas junto do programa**
+é um \`.asf\` contendo uma definição C11 **diretamente**. Não é preciso
+executar scripts, converter o arquivo, carregar bytes nem chamar
+\`Font_ParseASF\`. É apenas um \`#include\`:
+
+\`\`\`c
+/* FonteExemplo.asf */
+#pragma once
+#include "../Font.h" /* ajuste conforme a localização da fonte */
+
+static const FONT_TYPE(TFont) FonteExemplo = {
+    .format = FONT_NS(FORMAT_STATIC),
+    .height = 3,
+    .glyphs = {
+        FONT_GLYPH('A') = {
+            .art = "  A\n"
+                   " A A\n"
+                   "AAAAA"
+        },
+        FONT_GLYPH('B') = {
+            .art = "BBBBB\n"
+                   "B   B\n"
+                   "BBBBB",
+            .foreground = 0xFF281EU,
+            .foregroundRows = UINT32_C(1) << 0
+        }
+    }
+};
+\`\`\`
+
+O conteúdo da fonte fica visualmente legível como FIGlet, **mas cada linha
+precisa ser uma string C entre aspas**: a linguagem C11 não tem strings
+multilinha brutas e um inicializador \`const struct\` exige sintaxe C.
+Espaços à direita não são necessários; a largura de cada glifo é inferida
+automaticamente pela maior linha. \`FONT_GLYPH('A')\` é um índice designado
+C11 equivalente a \`['A'-32]\`. O suporte inicial é ASCII imprimível para
+*caracteres de entrada*; os caracteres desenhados podem usar UTF-8.
+
+Cores não atrapalham a arte: \`.foregroundRows\` é uma máscara de bits,
+na qual bit 0 significa a primeira linha, bit 1 a segunda e assim por
+diante. \`.foreground\` é a cor RGB compartilhada entre as linhas marcadas.
+Há também \`.background\` e \`.backgroundRows\`. Para pintar todas as linhas,
+use \`UINT32_MAX\`. Atributos não definidos preservam o estilo padrão
+fornecido a \`Font_Draw\`.
+
+\`\`\`c
+#include "Cosmeron/Modules/Graphics/Font/Font.h"
+#include "FonteExemplo.asf"
+
+FONT_FUNC(Draw)(&canvas, (TDUAL_TYPE(uint16)){.x=1,.y=1},
+    &FonteExemplo, "AB", TEXT_GRID_ATTRIBUTE_FUNC(Default)());
+\`\`\`
+
+**Vantagens:** somente dados \`static const\`, sem dependência de Python,
+sem \`#embed\` C23, sem alocação dinâmica ou linkagem adicional, compilação
+normal no C11, com a mesma API \`Font_Measure\`/\`Font_Draw\`.
+
+O arquivo [Readable.asf](../../Codespace/Cosmeron/Modules/Graphics/Font/Fonts/Readable.asf)
+é um exemplo funcional. Para arquivos \`.flf\` tradicionais ou ASF1/ASF2
+em texto, os leitores anteriores continuam disponíveis; o script de
+conversão é **opcional e apenas para essas fontes legadas**.
+
+---
 
 ## ASF2 — fonte legível, estilo FIGlet
 
