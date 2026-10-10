@@ -1,7 +1,7 @@
 CC ?= gcc
 CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L
 BUILD ?= build
-SOURCES := IncludeAll Terminal Canvas UI UIAdvanced UIGameWidgets UIOverlays Font FontCosmeron
+SOURCES := IncludeAll Terminal Canvas UI UIAdvanced UIGameWidgets UIOverlays Font FontCosmeron FontNibbleBits
 .PHONY: all run clean
 all: run
 run: $(addprefix $(BUILD)/,$(SOURCES))

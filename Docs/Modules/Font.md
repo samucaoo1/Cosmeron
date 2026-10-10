@@ -136,51 +136,76 @@ not pixel-identical output with every option of the \`figlet\` executable.
   **not** grant usage rights to those fonts.
 
 
-## Cosmeron Binary Orbit (bundled FIGlet font)
+## Bundled FIGlet fonts: Cosmeron and NibbleBits
 
-The project ships a custom **Cosmeron.flf** under
-[\`Graphics/Font/Fonts/Cosmeron.flf\`](../../Codespace/Cosmeron/Modules/Graphics/Font/Fonts/Cosmeron.flf).
+Two distinct fonts are available in
+[Graphics/Font/Fonts](../../Codespace/Cosmeron/Modules/Graphics/Font/Fonts).
 
-This font uses sharply defined 7-row, fixed-width glyphs whose **only
-visible stroke characters are 0 and 1**, alternating like a stream of binary
-digits in the Cosmeron orbital branding. The background is ordinary spaces.
-There are 95 printable ASCII glyphs, plus the seven conventional FIGlet
-extended glyph slots (Ä Ö Ü ä ö ü ß). No ANSI color or \`.asf\` markup is
-embedded in this font — the appearance works on monochrome terminals.
+### Cosmeron.flf — orbital wordmark
 
-FIGlet header: \`flf2a$ 7 7 10 -1 6 0 0 0\` (7-row height, full-width layout,
-six comment lines). It deliberately uses **full-width/no smushing** so its
-0/1 geometry is preserved without FIGlet's character-merging rules.
+The new **Cosmeron.flf** is inspired by the project's wordmark: sharp,
+minimal, futuristic strokes, open C/S shapes, an angular M, segmented E
+and R, plus a round orbital O containing a central dot.
 
-Usage in a standard FIGlet installation (load via explicit font file path):
+Because a FIGlet font maps each source character to one glyph, both O
+letters in ordinary `COSMERON` share the same orbital-dot form.
+Type **`COSMER0N` (zero)** to use the alternate O with a power-button
+vertical bar in the penultimate position, like the reference logo.
 
-\`\`\`sh
-figlet -f Codespace/Cosmeron/Modules/Graphics/Font/Fonts/Cosmeron.flf COSMERON
-\`\`\`
+This **UTF-8 FIGfont** uses Unicode box-drawing characters and is 9 rows
+high; each printable ASCII input glyph occupies 12 terminal cells.
+All 95 standard printable ASCII glyphs and seven legacy FIGlet extended
+positions are present. This is a monochrome font; pass white/cyan
+`TEXT_GRID_ATTRIBUTE_TYPE(Cell)` styles to `Font_Draw` to add color.
 
-Usage in a C11 application built with Cosmeron:
+Compatibility note: Cosmeron's own UTF-8 Canvas reader supports this
+FIGfont. Legacy versions of the external `figlet` program may not
+measure or render UTF-8 glyph artwork correctly. For those tools, use
+**Cosmeron-ASCII.flf**, the same letterforms translated to basic ASCII
+strokes; its geometry is also 9 rows × 12 columns.
 
-\`\`\`sh
+Example:
+
+```sh
+# Portable ASCII fallback for the classic figlet CLI:
+figlet -f Codespace/Cosmeron/Modules/Graphics/Font/Fonts/Cosmeron-ASCII.flf COSMER0N
+
+# Embed the Unicode variant directly as C11 data, no runtime file loading:
 python3 Tools/asf_compile.py \
   Codespace/Cosmeron/Modules/Graphics/Font/Fonts/Cosmeron.flf \
-  --symbol CosmeronBinary -o CosmeronBinary.flf.h
-\`\`\`
+  --symbol CosmeronWordmark -o CosmeronWordmark.flf.h
+```
 
-\`\`\`c
+```c
 #include "Cosmeron/Modules/Graphics/Font/Font.h"
-#include "CosmeronBinary.flf.h"
+#include "CosmeronWordmark.flf.h"
 
-FONT_TYPE(TFont) binary={0};
+FONT_TYPE(TFont) wordmark={0};
 OPSTATUS status=FONT_FUNC(ParseFIGlet)(
-    (const char *)CosmeronBinary_Data,
-    sizeof(CosmeronBinary_Data), &binary);
+    (const char *)CosmeronWordmark_Data,
+    sizeof(CosmeronWordmark_Data), &wordmark);
 
-if(status==STATUS_CONST(SUCCESS))
+if(status==STATUS_CONST(SUCCESS)){
     status=FONT_FUNC(Draw)(&canvas,
         (TDUAL_TYPE(uint16)){.x=0,.y=0},
-        &binary,"COSMERON",TEXT_GRID_ATTRIBUTE_FUNC(Default)());
-\`\`\`
+        &wordmark,"COSMER0N",TEXT_GRID_ATTRIBUTE_FUNC(Default)());
+}
+```
 
-The \`.flf\` source is the editable asset; the compiled header is optional.
-Run \`Codespace/Tests/Terminal/FontCosmeron.c\` for validation of the
-7-row layout, all 95 ASCII glyphs and direct rendering through Canvas.
+The rendering size for an eight-letter wordmark is **96 columns × 9
+rows**, requiring an appropriately sized Canvas and terminal viewport.
+
+### NibbleBits.flf — original binary font
+
+The previous Cosmeron Binary Orbit design has been preserved as
+**NibbleBits.flf** rather than overwritten. It is built from the
+characters `0` and `1` only, with 7-row glyphs and 8 columns per
+character. It supports the same 95 ASCII characters and seven optional
+FIGlet extended positions.
+
+```sh
+figlet -f Codespace/Cosmeron/Modules/Graphics/Font/Fonts/NibbleBits.flf COSMERON
+```
+
+Test suites: `Codespace/Tests/Terminal/FontCosmeron.c`
+and `FontNibbleBits.c`.
