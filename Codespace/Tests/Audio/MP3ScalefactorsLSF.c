@@ -66,8 +66,8 @@ int main(void) {
   check(499,1,0,0,0,65,15,0,0); /* 6x4 + 5x4 + 7x3 */
   check(500,1,0,0,0,0,0,0,0);
   check(511,1,0,0,0,53,7,0,0); /* 11x3 + 10x2 */
-  check(399,1,0,2,0,126,0,15); /* 9x4 + 9x4 + 9x3 + 9x3 */
-  check(399,1,0,2,1,114,15,15); /* 6x4 + 9x4 + 9x3 + 9x3 */
+  check(399,1,0,2,0,126,0,15,0); /* 9x4 + 9x4 + 9x3 + 9x3 */
+  check(399,1,0,2,1,114,15,15,0); /* 6x4 + 9x4 + 9x3 + 9x3 */
 
   /* Intensity-stereo right channel halves scalefac_compress, leaving
    * the low bit as intensity_scale. All-ones values are preserved raw. */
