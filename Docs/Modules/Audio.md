@@ -1865,10 +1865,19 @@ the calculated raw PCM start and presentation length. The earlier high
 residual on `Tone.mp3` resulted from comparing unmatched sample
 positions before correcting the decoder-priming offset.
 
+`Audio_Codec_MP3_ParseScalefactorsLSF` adds a standalone,
+bounded **MPEG-2/2.5 low-sampling-frequency scalefactor parser**, using
+the three partition families for ordinary channels and three for
+intensity-coded right channels. It supports long, short and mixed
+blocks, exposes the LSF intensity-scale bit and reports `part2Bits`
+without dynamic allocations. This is **not** an LSF PCM decoder:
+requantization, intensity-band factors, short-block reorder, IMDCT and
+full frame playback still need to be adapted and tested for LSF rates.
+
 **The coverage is not universal**. Automatic intensity-stereo
 band handling is implemented but is still awaiting independent
-intensity-encoded PCM fixtures. MPEG-2/2.5 low-sampling-frequency
-scalefactors, file/reader streaming, seeks, and several gapless metadata
+intensity-encoded PCM fixtures. MPEG-2/2.5 full PCM synthesis and intensity scaling,
+file/reader streaming, seeks, and several gapless metadata
 cases are still unimplemented. Production
 `OpenFile`, `OpenMemory` and `OpenReader` therefore **remain on
 miniaudio** until broader fixture parity and robustness are verified.
