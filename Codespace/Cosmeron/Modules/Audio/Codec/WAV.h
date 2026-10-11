@@ -1,12 +1,14 @@
 #pragma once
 /*
  * Pure C11 RIFF/WAVE PCM decoder and writer. No Miniaudio, libm, pthread.
- * Decodes unsigned PCM8 / signed little-endian PCM16 to interleaved f32.
+ * Decodes unsigned PCM8, signed PCM16/24/32 and IEEE float32 to interleaved
+ * f32. The writer deliberately retains PCM16 output for compatibility.
  * Intentionally rejects unsupported formats instead of guessing.
  */
 #include "../Audio.space"
 #include "../PCM/PCM.h"
 #include <stdio.h>
+#include <float.h>
 
 #define AUDIO_CODEC_WAV_DECODE_MEMORY_PROTOTYPE                                \
   static inline OPSTATUS AUDIO_CODEC_FUNC(WAV_DecodeMemory)(                  \
@@ -82,8 +84,17 @@ AUDIO_CODEC_WAV_DECODE_MEMORY_PROTOTYPE {
   }
   if (!foundFmt || !foundData)
     return STATUS_CONST(INVALID_ARGUMENT);
-  if (format != 1u || (bits != 8u && bits != 16u))
+  if (format == 1u) {
+    if (bits != 8u && bits != 16u && bits != 24u && bits != 32u)
+      return STATUS_CONST(NOT_SUPPORTED);
+  } else if (format == 3u) {
+    /* IEEE binary32 only. Do not reinterpret arbitrary host float layouts. */
+    if (bits != 32u || sizeof(float) != 4 ||
+        FLT_RADIX != 2 || FLT_MANT_DIG != 24 || FLT_MAX_EXP != 128)
+      return STATUS_CONST(NOT_SUPPORTED);
+  } else {
     return STATUS_CONST(NOT_SUPPORTED);
+  }
   if (!AUDIO_INS(ValidFormat)(rate, channels) ||
       align != channels * (uint16_t)(bits / 8u) ||
       audioBytes % align != 0)
@@ -95,12 +106,32 @@ AUDIO_CODEC_WAV_DECODE_MEMORY_PROTOTYPE {
   result = AUDIO_PCM_FUNC(Init)(outBuffer, frames, channels, rate);
   if (result != STATUS_CONST(SUCCESS)) return result;
   for (i = 0; i < count; ++i) {
-    if (bits == 8u) {
+    if (format == 3u) {
+      uint32_t raw = AUDIO_INS(WAV_U32)(audioData + 4u * i);
+      float decoded;
+      memcpy(&decoded, &raw, sizeof decoded);
+      if (!AUDIO_INS(Finite)(decoded)) {
+        AUDIO_PCM_FUNC(Destroy)(outBuffer);
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      outBuffer->samples[i] = decoded;
+    } else if (bits == 8u) {
       outBuffer->samples[i] = ((float)audioData[i] - 128.0f) / 128.0f;
-    } else {
+    } else if (bits == 16u) {
       uint16_t raw = AUDIO_INS(WAV_U16)(audioData + 2u * i);
-      int32_t signedValue = raw >= 0x8000u ? (int32_t)raw - 65536 : (int32_t)raw;
-      outBuffer->samples[i] = (float)signedValue / 32768.0f;
+      int32_t v = raw >= 0x8000u ? (int32_t)raw - 65536 : (int32_t)raw;
+      outBuffer->samples[i] = (float)v / 32768.0f;
+    } else if (bits == 24u) {
+      const unsigned char *q = audioData + 3u * i;
+      uint32_t raw = (uint32_t)q[0] | ((uint32_t)q[1] << 8) |
+                     ((uint32_t)q[2] << 16);
+      int32_t v = (raw & 0x800000u) ? (int32_t)raw - 16777216 : (int32_t)raw;
+      outBuffer->samples[i] = (float)v / 8388608.0f;
+    } else { /* signed PCM32: use int64_t to avoid implementation-defined casts */
+      uint32_t raw = AUDIO_INS(WAV_U32)(audioData + 4u * i);
+      int64_t v = raw >= 0x80000000u ?
+        (int64_t)raw - INT64_C(4294967296) : (int64_t)raw;
+      outBuffer->samples[i] = (float)v / 2147483648.0f;
     }
   }
   return STATUS_CONST(SUCCESS);

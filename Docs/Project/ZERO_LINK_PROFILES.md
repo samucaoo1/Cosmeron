@@ -88,3 +88,14 @@ thread is automatically created by the adapter. This does **not** turn the
 native `Thread`, `Mutex`, or `ThreadPool` implementations into zero-link
 backends. See [EXTERNAL_EXECUTOR.md](EXTERNAL_EXECUTOR.md).
 
+
+## WAV decode variants
+
+The pure C11 `Codec/WAV.h` decoder now supports RIFF/WAVE `WAVE_FORMAT_PCM`
+for unsigned 8-bit and signed little-endian **16/24/32-bit** samples, and
+`WAVE_FORMAT_IEEE_FLOAT` **32-bit** samples when the host uses IEEE binary32.
+Output remains interleaved float PCM; the writer deliberately remains signed
+PCM16 WAV. Non-finite float input is rejected, and any allocated output is
+released on rejection. `WAVE_FORMAT_EXTENSIBLE`, floating-point 64-bit,
+compressed ADPCM, RF64 and big-endian RIFX are still unsupported. Regression:
+`Codespace/Tests/Audio/WAVFormats.c`.

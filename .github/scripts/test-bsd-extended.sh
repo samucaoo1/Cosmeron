@@ -175,7 +175,7 @@ echo "[bsd-extended] AUDIO_MANUAL_PUMP_SIMULATED=PASS"
 echo "[bsd-extended] AUDIO_MANUAL_ZERO_LINK=PASS (compile+codec conversion; no device opened)"
 record AudioManual PASS 'OSS/audio4/sndio compile+PCM; no audio hardware opened'
 stage=AudioOffline
-suite Audio Synthesis OfflineStandalone OfflineCompat NativeWAV WAVRobustness
+suite Audio Synthesis OfflineStandalone OfflineCompat NativeWAV WAVRobustness WAVFormats
 echo "[bsd-extended] run Audio/OfflineMultiTU (zero-link)"
 (
   cd Codespace/Tests/Audio
