@@ -112,5 +112,50 @@ int main(void) {
         &cursor, 4, 2, &x, &y) == STATUS_CONST(SUCCESS));
     assert(cursor == 4 && x == -1 && y == 0);
   }
+  {
+    AUDIO_CODEC_TYPE(TMP3SideInfo) side = {0};
+    AUDIO_CODEC_TYPE(TMP3Scalefactors) scale = {0};
+    unsigned char packed[16] = {0};
+    int32_t spectrum[576], expected[8] = {-1,0,0,1,-1,0,0,1};
+    size_t bit = 0, produced = 0, i;
+    side.channels = 1;
+    side.granules = 2;
+    side.parts[0][0].bigValues = 2;
+    side.parts[0][0].tableSelect[0] = 1;
+    side.parts[0][0].count1TableSelect = 1;
+    side.parts[0][0].part23Length = 15;
+    /* Pair (1,0): 01 + sign 1. Pair (0,1): 001 + sign 0. */
+    putBits(packed, &bit, 1, 2);
+    putBits(packed, &bit, 1, 1);
+    putBits(packed, &bit, 1, 3);
+    putBits(packed, &bit, 0, 1);
+    /* Count1 B nibble 1001 => code 0110, signs for v/y = 1/0. */
+    putBits(packed, &bit, 6, 4);
+    putBits(packed, &bit, 1, 1);
+    putBits(packed, &bit, 0, 1);
+    putBits(packed, &bit, 0, 2); /* final stuffing */
+    assert(bit == 15);
+    assert(AUDIO_CODEC_FUNC(MP3_HuffmanGranule)(
+        packed, sizeof packed, &side, &scale, 0, 0, 44100,
+        spectrum, &produced) == STATUS_CONST(SUCCESS));
+    assert(produced == 8);
+    for (i = 0; i < 8; ++i) assert(spectrum[i] == expected[i]);
+    for (i = 8; i < 576; ++i) assert(spectrum[i] == 0);
+    side.parts[0][0].part23Length = 5;
+    spectrum[0] = 12345;
+    assert(AUDIO_CODEC_FUNC(MP3_HuffmanGranule)(
+        packed, sizeof packed, &side, &scale, 0, 0, 44100,
+        spectrum, &produced) == STATUS_CONST(INCOMPLETE_SEQUENCE));
+    assert(spectrum[0] == 12345);
+    side.parts[0][0].part23Length = 15;
+    assert(AUDIO_CODEC_FUNC(MP3_HuffmanGranule)(
+        packed, sizeof packed, &side, &scale, 0, 0, 12345,
+        spectrum, &produced) == STATUS_CONST(NOT_SUPPORTED));
+    side.parts[0][0].windowSwitching = 1;
+    side.parts[0][0].blockType = 2;
+    assert(AUDIO_CODEC_FUNC(MP3_HuffmanGranule)(
+        packed, sizeof packed, &side, &scale, 0, 0, 44100,
+        spectrum, &produced) == STATUS_CONST(SUCCESS));
+  }
   return 0;
 }
