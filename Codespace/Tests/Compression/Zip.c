@@ -1,0 +1,54 @@
+#include "../../Cosmeron/Modules/Compression/Compression.h"
+#include <assert.h>
+int main(void) {
+  Compression_TZipWriter writer = {0};
+  Compression_TZipReader reader = {0};
+  Compression_TBuffer archive = {0}, data = {0};
+  Compression_TZipEntry entry;
+  char name[32], content[64];
+  size_t count = 999, index, size = 999;
+  assert(Compression_ZipCount(&reader, &count) == STATUS_INVALID_ARGUMENT && count == 999);
+  assert(Compression_ZipCreate(&writer) == STATUS_SUCCESS);
+  assert(Compression_ZipCreate(&writer) == STATUS_INVALID_ARGUMENT);
+  assert(Compression_ZipAdd(&writer, "docs/", NULL, 0, 0) == STATUS_SUCCESS);
+  assert(Compression_ZipAdd(&writer, "docs/a.txt", "Cosmeron", 8, 9) == STATUS_SUCCESS);
+  assert(Compression_ZipAdd(&writer, "empty", NULL, 0, -1) == STATUS_SUCCESS);
+  assert(Compression_ZipAdd(&writer, "stored", "bytes", 5, 0) == STATUS_SUCCESS);
+  assert(Compression_ZipAdd(&writer, "../escape", "a", 1, 0) == STATUS_INVALID_ARGUMENT);
+  assert(Compression_ZipAdd(&writer, "/absolute", "a", 1, 0) == STATUS_INVALID_ARGUMENT);
+  assert(Compression_ZipAdd(&writer, "C:\\absolute", "a", 1, 0) == STATUS_INVALID_ARGUMENT);
+  assert(Compression_ZipAdd(&writer, "a//b", "a", 1, 0) == STATUS_INVALID_ARGUMENT);
+  assert(Compression_ZipAdd(&writer, "folder/", "a", 1, 0) == STATUS_INVALID_ARGUMENT);
+  assert(Compression_ZipFinish(&writer, &archive) == STATUS_SUCCESS && !writer.native);
+  assert(Compression_ZipFinish(&writer, &data) == STATUS_INVALID_ARGUMENT);
+  assert(Compression_ZipOpen(&reader, archive.data, archive.size) == STATUS_SUCCESS);
+  assert(Compression_ZipOpen(&reader, archive.data, archive.size) == STATUS_INVALID_ARGUMENT);
+  assert(Compression_ZipCount(&reader, &count) == STATUS_SUCCESS && count == 4);
+  assert(Compression_ZipEntry(&reader, 0, &entry) == STATUS_SUCCESS && entry.directory);
+  assert(Compression_ZipName(&reader, 1, name, sizeof(name), &size) == STATUS_SUCCESS && !strcmp(name, "docs/a.txt") && size == 10);
+  size = 999;
+  assert(Compression_ZipName(&reader, 1, name, 2, &size) == STATUS_INSUFFICIENT_SPACE && size == 999);
+  assert(Compression_ZipFind(&reader, "docs/a.txt", &index) == STATUS_SUCCESS && index == 1);
+  index = 999;
+  assert(Compression_ZipFind(&reader, "DOCS/a.txt", &index) == STATUS_NOT_FOUND && index == 999);
+  assert(Compression_ZipExtract(&reader, 1, content, 7, &size) == STATUS_INSUFFICIENT_SPACE && size == 999);
+  assert(Compression_ZipExtract(&reader, 1, content, sizeof(content), &size) == STATUS_SUCCESS && size == 8 && !memcmp(content, "Cosmeron", 8));
+  assert(Compression_ZipExtractAlloc(&reader, 1, 7, &data) == STATUS_INSUFFICIENT_SPACE && !data.data);
+  assert(Compression_ZipExtractAlloc(&reader, 1, 8, &data) == STATUS_SUCCESS && data.size == 8);
+  Compression_BufferFree(&data);
+  assert(Compression_ZipExtract(&reader, 2, NULL, 0, &size) == STATUS_SUCCESS && !size);
+  assert(Compression_ZipExtract(&reader, 3, content, sizeof(content), &size) == STATUS_SUCCESS && size == 5 && !memcmp(content, "bytes", 5));
+  assert(Compression_ZipEntry(&reader, count, &entry) == STATUS_OUT_OF_RANGE);
+  assert(Compression_ZipExtract(&reader, 1, archive.data, archive.size, &size) == STATUS_INVALID_ARGUMENT);
+  Compression_ZipClose(&reader); Compression_ZipClose(&reader);
+  assert(Compression_ZipOpen(&reader, archive.data, 4) != STATUS_SUCCESS && !reader.native);
+  Compression_BufferFree(&archive);
+  assert(Compression_ZipCreate(&writer) == STATUS_SUCCESS);
+  assert(Compression_ZipFinish(&writer, &archive) == STATUS_SUCCESS);
+  assert(Compression_ZipOpen(&reader, archive.data, archive.size) == STATUS_SUCCESS);
+  assert(Compression_ZipCount(&reader, &count) == STATUS_SUCCESS && !count);
+  Compression_ZipClose(&reader); Compression_BufferFree(&archive);
+  assert(Compression_ZipCreate(&writer) == STATUS_SUCCESS);
+  Compression_ZipDiscard(&writer); Compression_ZipDiscard(&writer);
+  return 0;
+}

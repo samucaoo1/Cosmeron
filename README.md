@@ -38,6 +38,7 @@ The current architecture covers or is designed around:
 - **CLI:** argument queries, declarative commands, subcommands and help.
 - **Parsing:** INI, JSON, CSV/TSV and documented TOML/XML/YAML profiles.
 
+- **Compression:** DEFLATE, zlib, gzip and ZIP with an embedded engine and bounded decompression.
 - **Database:** embedded SQLite, prepared statements, typed columns and transactions.
 - **Math:** arithmetic, ranges, clamps, values, and equation helpers.
 - **Network:** addresses, sockets, listeners, datagrams, polling, and name resolution.

@@ -1,0 +1,4 @@
+build*/
+.msvc/
+*.tmp
+__pycache__/

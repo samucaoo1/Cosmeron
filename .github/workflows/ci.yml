@@ -53,6 +53,9 @@ jobs:
           make -C Codespace/Tests/CLI clean run CC=${{ matrix.cc }}
           make -C Codespace/Tests/Parsing clean run CC=${{ matrix.cc }}
 
+      - name: Compression
+        run: make -C Codespace/Tests/Compression clean run interop CC=${{ matrix.cc }}
+
       - name: Database
         run: make -C Codespace/Tests/Database clean run CC=${{ matrix.cc }}
 
@@ -132,6 +135,10 @@ jobs:
         run: |
           make -C Codespace/Tests/CLI clean run CC=gcc
           make -C Codespace/Tests/Parsing clean run CC=gcc
+
+      - name: Compression
+        shell: bash
+        run: make -C Codespace/Tests/Compression clean run interop CC=gcc
 
       - name: Database
         shell: bash
@@ -289,6 +296,8 @@ jobs:
           make -C Codespace/Tests/CLI clean run CC=clang CFLAGS="$SAN_FLAGS"
           make -C Codespace/Tests/Parsing clean run CC=clang CFLAGS="$SAN_FLAGS"
 
+      - name: Compression
+        run: make -C Codespace/Tests/Compression clean run interop CC=clang CFLAGS="$SAN_FLAGS"
       - name: Database
         run: make -C Codespace/Tests/Database clean run CC=clang CFLAGS="$SAN_FLAGS"
       - name: File
@@ -341,6 +350,8 @@ jobs:
           make -C Codespace/Tests/CLI clean run CC=gcc CFLAGS="$CFLAGS32"
           make -C Codespace/Tests/Parsing clean run CC=gcc CFLAGS="$CFLAGS32"
 
+      - name: Compression
+        run: make -C Codespace/Tests/Compression clean run interop CC=gcc CFLAGS="$CFLAGS32"
       - name: Database
         run: make -C Codespace/Tests/Database clean run CC=gcc CFLAGS="$CFLAGS32"
       - name: File

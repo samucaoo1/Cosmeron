@@ -180,12 +180,12 @@ The GUI and TUI are separate frontends.
 ### 15. Compression and Archive
 
 - [ ] TAR reader/writer
-- [ ] Archive entry metadata
+- [x] ZIP entry metadata
 - [ ] Streaming extraction/creation
-- [ ] Evaluate Deflate
-- [ ] Evaluate ZIP
+- [x] DEFLATE, zlib and gzip compression/decompression
+- [x] ZIP memory reader/writer (Store and Deflate)
 - [ ] Incremental compression/decompression
-- [ ] Buffer/file helpers
+- [x] Bounded buffer/file helpers
 
 ### 16. Logging
 

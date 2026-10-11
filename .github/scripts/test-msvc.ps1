@@ -143,3 +143,12 @@ foreach ($name in @("IncludeAll", "Database", "Persistence", "Namespace")) {
   Invoke-CosmeronTest "Codespace/Tests/Database" $name @("$name.c", ".msvc/Backend.obj")
 }
 Invoke-CosmeronTest "Codespace/Tests/Database" "multi-tu" @("MultiTU_A.c", "MultiTU_B.c", "MultiTU_Main.c", ".msvc/Backend.obj")
+
+foreach ($name in @("IncludeAll", "Codec", "Zip", "File", "Namespace", "FunctionTableOff", "Robustness", "Allocation")) {
+  Invoke-CosmeronTest "Codespace/Tests/Compression" $name @("$name.c")
+}
+Invoke-CosmeronTest "Codespace/Tests/Compression" "multi-tu" @("MultiTU_A.c", "MultiTU_B.c", "MultiTU_Main.c")
+& cl /nologo /std:c11 /W4 /WX /D_CRT_SECURE_NO_WARNINGS Codespace/Tests/Compression/Interop.c /Fe:Codespace/Tests/Compression/.msvc/Interop.exe
+if ($LASTEXITCODE -ne 0) { throw "cl failed: Compression interoperability" }
+python Codespace/Tests/Compression/interop.py Codespace/Tests/Compression/.msvc/Interop.exe
+if ($LASTEXITCODE -ne 0) { throw "Compression interoperability failed" }

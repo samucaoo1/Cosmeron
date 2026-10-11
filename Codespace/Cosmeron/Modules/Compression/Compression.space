@@ -1,0 +1,84 @@
+#pragma once
+#include "../../Core/Namespace.h"
+#include "../../Core/Error/Status.h"
+#include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <limits.h>
+#include <stdlib.h>
+#include <string.h>
+#include "Vendor/Miniz.inc"
+
+#define COMPRESSION_MOD Compression
+#define COMPRESSION_CMOD COMPRESSION
+#ifndef COMPRESSION_NS
+#define COMPRESSION_NS(NAME) GNS2(LIB_PREFIX(COMPRESSION_MOD), NAME)
+#endif
+#ifndef COMPRESSION_CNS
+#define COMPRESSION_CNS(NAME) CNS2(LIB_PREFIX_CONST(COMPRESSION_CMOD), NAME)
+#endif
+#define COMPRESSION_INS(NAME) GNS3(LIB_PREFIX(COMPRESSION_MOD), Internal, NAME)
+#define COMPRESSION_CINS(NAME) CNS3(LIB_PREFIX_CONST(COMPRESSION_CMOD), INTERNAL, NAME)
+#define COMPRESSION_TYPE(NAME) COMPRESSION_NS(NAME)
+#define COMPRESSION_FUNC(NAME) COMPRESSION_NS(NAME)
+#define COMPRESSION_CONST(NAME) COMPRESSION_CNS(NAME)
+
+typedef enum COMPRESSION_TYPE(Format) {
+  COMPRESSION_CONST(DEFLATE), COMPRESSION_CONST(ZLIB), COMPRESSION_CONST(GZIP)
+} COMPRESSION_TYPE(Format);
+enum { COMPRESSION_CONST(LEVEL_DEFAULT) = -1,
+       COMPRESSION_CONST(LEVEL_STORE) = 0, COMPRESSION_CONST(LEVEL_FAST) = 1,
+       COMPRESSION_CONST(LEVEL_BEST) = 9 };
+enum { COMPRESSION_CINS(GZIP_HEADER_SIZE) = 10,
+       COMPRESSION_CINS(GZIP_TRAILER_SIZE) = 8,
+       COMPRESSION_CINS(WINDOW_BITS) = 15,
+       COMPRESSION_CINS(MEMORY_LEVEL) = 8,
+       COMPRESSION_CINS(BYTE_BITS) = 8,
+       COMPRESSION_CINS(GZIP_MAGIC_1) = 0x1f,
+       COMPRESSION_CINS(GZIP_MAGIC_2) = 0x8b,
+       COMPRESSION_CINS(GZIP_METHOD) = 8,
+       COMPRESSION_CINS(GZIP_FHCRC) = 2,
+       COMPRESSION_CINS(GZIP_FEXTRA) = 4,
+       COMPRESSION_CINS(GZIP_FNAME) = 8,
+       COMPRESSION_CINS(GZIP_FCOMMENT) = 16,
+       COMPRESSION_CINS(GZIP_RESERVED) = 0xe0,
+       COMPRESSION_CINS(GZIP_OS_UNKNOWN) = 255,
+       COMPRESSION_CINS(INITIAL_OUTPUT_CAPACITY) = 4096 };
+/* Owned outputs: zero-initialize, do not copy; Free clears ownership. */
+typedef struct COMPRESSION_TYPE(TBuffer) {
+  unsigned char *data;
+  size_t size;
+} COMPRESSION_TYPE(TBuffer);
+typedef struct COMPRESSION_TYPE(TZipReader) { void *native; } COMPRESSION_TYPE(TZipReader);
+typedef struct COMPRESSION_TYPE(TZipWriter) { void *native; } COMPRESSION_TYPE(TZipWriter);
+typedef struct COMPRESSION_TYPE(TZipEntry) {
+  uint64_t compressedSize, size;
+  uint32_t crc32;
+  bool directory, supported;
+} COMPRESSION_TYPE(TZipEntry);
+
+static inline OPSTATUS COMPRESSION_INS(Status)(int status) {
+  switch (status) {
+  case cosmeron_compression_vendor_MZ_OK:
+  case cosmeron_compression_vendor_MZ_STREAM_END: return STATUS_CONST(SUCCESS);
+  case cosmeron_compression_vendor_MZ_MEM_ERROR: return STATUS_CONST(OUT_OF_MEMORY);
+  case cosmeron_compression_vendor_MZ_BUF_ERROR: return STATUS_CONST(INSUFFICIENT_SPACE);
+  case cosmeron_compression_vendor_MZ_DATA_ERROR: return STATUS_CONST(INVALID_SEQUENCE);
+  default: return STATUS_CONST(GENERIC_ERROR);
+  }
+}
+static inline bool COMPRESSION_INS(FormatValid)(COMPRESSION_TYPE(Format) format) {
+  return format == COMPRESSION_CONST(DEFLATE) || format == COMPRESSION_CONST(ZLIB) ||
+         format == COMPRESSION_CONST(GZIP);
+}
+static inline bool COMPRESSION_INS(LevelValid)(int level) {
+  return level >= COMPRESSION_CONST(LEVEL_DEFAULT) && level <= COMPRESSION_CONST(LEVEL_BEST);
+}
+static inline uint32_t COMPRESSION_INS(Read32)(const unsigned char *p) {
+  return (uint32_t)p[0] | ((uint32_t)p[1] << 8) |
+         ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
+}
+static inline void COMPRESSION_INS(Write32)(unsigned char *p, uint32_t value) {
+  size_t i;
+  for (i = 0; i < sizeof(value); ++i) p[i] = (unsigned char)(value >> (i * COMPRESSION_CINS(BYTE_BITS)));
+}

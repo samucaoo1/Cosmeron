@@ -42,6 +42,7 @@ Module-by-module API and usage documentation.
 - [CLI](Modules/CLI.md) — arguments, declarative commands and help
 - [Parsing](Modules/Parsing.md) — INI, JSON, CSV/TSV, TOML, XML and YAML profiles
 - [File](Modules/File.md) — files, paths, directories and atomic content replacement
+- [Compression](Modules/Compression.md) — DEFLATE, zlib, gzip, ZIP, checksums and bounded file helpers
 - [Database](Modules/Database.md) — embedded SQLite, prepared SQL, typed columns and transactions
 - [Bit](Modules/Bit.md)
 
