@@ -166,7 +166,7 @@ record Database PASS 'SQLite single-thread profile; no parallel callers'
 stage=AudioManual
 suite Audio Manual
 echo "[bsd-extended] AUDIO_MANUAL_ZERO_LINK=PASS (compile+codec conversion; no device opened)"
-record AudioManual PASS 'OSS/audio4 build and PCM conversion; hardware not opened'
+record AudioManual PASS 'OSS/audio4/sndio compile+PCM; no audio hardware opened'
 stage=AudioOffline
 suite Audio Synthesis OfflineStandalone OfflineCompat NativeWAV
 echo "[bsd-extended] run Audio/OfflineMultiTU (zero-link)"
