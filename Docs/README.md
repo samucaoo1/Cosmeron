@@ -83,6 +83,26 @@ The Graphics umbrella aggregates packages that can also be included individually
 - [UI](Modules/UI.md) — terminal-based widgets and layout
 - [Window](Modules/Window.md) — native window presentation and host adapters
 
+### Documentation verification
+
+The repository verifies the presence and reference-section consistency of
+module documentation. Complete, compilable C11 examples are marked in their
+Markdown source with `<!-- cosmeron-c11-test -->`, immediately before the
+fenced `c` block. Other snippets are usage fragments and are not compiled as
+standalone translation units.
+
+From the repository root:
+
+```sh
+python3 Tools/check_doc_examples.py --cc gcc --min-tests 6
+python3 Tools/check_doc_examples.py --cc clang --min-tests 6
+```
+
+The tool compiles each opted-in example with strict C11 flags and runs it. It
+uses temporary build paths, requires no third-party Python packages, and does
+not write generated files to the repository. The main CI workflow runs it on
+Linux (GCC/Clang) and macOS (Clang).
+
 ### [Translations](Translations/)
 
 Localized project documentation.
