@@ -17,131 +17,7 @@ The **Audio** module provides portable sound synthesis and optional desktop audi
 | [Envelope](#envelope-package) | ADSR-style gain shaping of audio samples. | Yes |
 | [Sequence](#sequence-package) | Musical events, MML parsing and streaming or whole-buffer rendering. | Yes |
 | [Beep](#beep-package) | Square-wave beep and MML synthesis, plus desktop playback helpers. | Yes (render only) |
-| [Codec](#codec-package) | WAV, MP3 and FLAC decoding, custom readers and WAV export.
-
-The independent `Audio/Codec/MP3.h` offers C11 framing primitives:
-`Audio_Codec_MP3_ParseHeader` extracts MPEG-1/2/2.5 Layer III bitrate,
-sample rate, channels, samples per frame, frame length and CRC mode;
-`Audio_Codec_MP3_SkipID3` skips an optional ID3v2 tag; and
-`Audio_Codec_MP3_FindFrame` locates a complete candidate frame.
-**These functions inspect MP3 structure; they do not decode MP3 samples.**
-`Audio_Codec_MP3_ParseSideInfo` now inspects the bit-packed
-granule parameters for MPEG-1/2/2.5, including `main_data_begin`,
-`scfsi`, bit lengths, gains, Huffman table selections, switched windows
-and short-block gain. `Audio_Codec_MP3_ReservoirFeed` uses a zero-initialized
-`Audio_Codec_TMP3Reservoir` to reassemble a frame's compressed main data
-from up to 511 bytes of retained history plus the new frame payload;
-the returned pointer remains valid only until the next feed. If history
-is missing, it returns `INCOMPLETE_SEQUENCE` but retains the current
-payload for possible recovery on subsequent frames. Neither function
-allocates memory or decodes audio samples.
-
-`Audio_Codec_MP3_ParseScalefactors` can now parse MPEG-1
-scalefactors (long, short and mixed windows), reuse granule 0 bands via
-`scfsi` in granule 1 and report the exact part2 bit length. The parser
-uses `part2_3_length` to reject malformed frame bit spans and never
-claims to decode Huffman coefficients. MPEG-2/2.5 low-sampling-frequency
-scalefactor rules are explicitly `NOT_SUPPORTED` until added.
-
-The C11 `Audio_Codec_MP3_HuffmanPair` and
-`Audio_Codec_MP3_HuffmanCount1` functions decode all standard MP3 Layer III
-Huffman codebooks (0–31 for quantized coefficient pairs and 32/33 for
-`count1` quadruples). They handle reserved table rejection, escape
-`linbits`, nonzero sign bits and explicit bit boundaries without
-allocations. The caller supplies `ioBit` and an upper bound `endBit`;
-a truncated or invalid symbol does not advance `ioBit`. These functions
-produce signed quantized integers, **not audio PCM**.
-`Audio_Codec_MP3_HuffmanGranule` assembles up to 576 coefficients for one
-MPEG Layer III granule/channel using long scalefactor-band boundaries or
-the short-block 36-line split, decoding region-specific tables and the
-count1 partition. It takes the `part2Bits` field produced by
-`MP3_ParseScalefactors` and enforces the declared `part2_3_length`.
-Unsupported or malformed bit sequences return an `OPSTATUS` without
-publishing partially populated output. The `Audio_Codec_MP3_Requantize` function converts the
-576 signed quantized Huffman coefficients of one MPEG-1 granule/channel
-into floating-point spectral values. It supports long, short and mixed
-windows, `global_gain`, `scalefac_scale`, preflag/pretab, long and short
-scalefactors and subblock gains. It uses deterministic precomputed
-mathematical lookup tables for x^(4/3) and power-of-two scaling, so
-there is **no dependency on `libm`**. The calculation stays
-independent of the miniaudio PCM decoder.
-
-The `Audio_Codec_MP3_ReorderShort` function reorders MPEG-1 short
-and mixed blocks from the Huffman window-major to hybrid frequency-major
-layout; mixed long lines 0–35 remain unchanged. The
-`Audio_Codec_MP3_StereoMS` operation applies the normalized mid/side
-matrix to an explicit spectral-line interval, useful when a joint-stereo
-frame uses MS coding. MPEG-1 intensity-stereo bands are **not yet
-decoded** and must be excluded when requesting MS. Finally,
-`Audio_Codec_MP3_Antialias` applies eight alias-cancellation
-butterflies at 31 long-block subband boundaries, skips pure short blocks,
-and handles the first long boundary of mixed blocks.
-
-All three functions use caller-provided arrays, accept in-place operation
-where outputs do not alias one another, validate inputs and avoid
-additional linking. The new `Audio_Codec_MP3_IMDCT` function computes 36-point
-IMDCT for long/start/stop windows or three 12-point IMDCTs for short
-windows, applies the MPEG hybrid window, and overlaps 18 samples per
-subband across consecutive granules. The zero-initialized
-`Audio_Codec_TMP3HybridState` is owned by the caller, one per audio
-channel; it contains the previous overlap buffer and needs no
-initialization or freeing function. `Audio_Codec_MP3_FrequencyInvert`
-negates odd time samples in odd subbands after overlap-add. Neither
-function uses `-lm`, dynamic allocation or an external decoder.
-
-`Audio_Codec_MP3_SynthesisSlot` now completes the 32-band MPEG
-polyphase filter for one 32-sample time slot, using the ISO 512-point
-synthesis window and a precomputed 64×32 cosine matrix.
-`Audio_Codec_MP3_Synthesize` consumes the 32×18 time/subband output
-of the hybrid IMDCT and returns 576 contiguous floating-point PCM
-samples. The zero-initialized `Audio_Codec_TMP3SynthesisState` owns the
-1024-entry delay line per channel; no `Init`, `Free`, `libm`, or
-dynamic allocation is required. A rejected input leaves the caller's
-state and output unchanged. Standalone synthesis and a real `Tone.mp3`
-pipeline are covered by native C11 tests.
-
-The frame parser also reports `channelMode`, `modeExtension`,
-`msStereo` and `intensityStereo` from the MPEG header. For MPEG-1
-joint-stereo material, `Audio_Codec_MP3_IntensityBand` implements
-the standardized `is_pos` 0–6 power ratios (and `is_pos=7` meaning
-no intensity treatment) over an **explicit spectral interval**.
-The caller must identify intensity-coded high-frequency bands from the
-right-channel scalefactors and ensure the band's right coefficients
-were not transmitted. Mid/side must not be applied again to the same
-band. These two operations are intentionally separate until an
-integrated joint-stereo frame decoder passes differential PCM tests.
-
-An opt-in `Audio/Codec/MP3Experimental.h` now chains native MPEG-1
-frame parsing, bit reservoir, scalefactors, Huffman, requantization,
-MS stereo when signaled, spectral reordering, antialiasing, IMDCT,
-frequency inversion, and 32-band synthesis. Its
-`Audio_Codec_MP3_ExperimentFrame` takes a complete MPEG-1 Layer III
-frame, a **zero-initialized** `Audio_Codec_TMP3Experimental` stream
-state and a caller-owned buffer of at least 1,152 output frames.
-It emits **1,152 interleaved f32 PCM frames** (mono or stereo) per
-successful input frame, with preserved per-channel synthesis/overlap
-history. Truncated pre-roll frames can fill the bit reservoir but
-do not publish PCM. Frame errors leave the state/output unchanged.
-
-This experiment deliberately **rejects intensity-stereo frames and
-MPEG-2/2.5** while correct band routing and LSF scalefactors remain
-unimplemented. It has no automatic gapless trimming, VBR index, seeking,
-file or callback reader yet. It must not be mistaken for a verified
-replacement for the production MP3 decoder: PCM parity testing and
-corrections are prerequisites to promotion into the public API.
-
-**The public MP3 decoder still uses miniaudio**: standalone synthesis
-does not yet establish a complete reference-matching MP3 stream decoder.
-Intensity stereo, MPEG-2/2.5 LSF, bit reservoir edge cases, gapless
-metadata, interleaving and PCM parity checks remain necessary before
-the native path can replace the existing backend.
-The numerical codebook assignments are standardized MPEG Layer III values;
-the matching implementation is original Cosmeron C11.
-
-The public `OpenMemory`/`OpenFile`/`OpenReader` MP3 PCM decoder
-still uses miniaudio until its independent Huffman/synthesis stages are
-implemented and verified. The standalone `Codec/MP3.h` introduces
-no separate linking dependencies. | No |
+| [Codec](#codec-package) | WAV, FLAC and MP3 decoding, custom readers and WAV export. | No |
 | [Device](#device-package) | Callback-driven hardware audio output. | No |
 | [Mixer](#mixer-package) | Master gain and per-voice gain/pan. | No |
 | [Player](#player-package) | Voice playback, file and buffer sources, and offline mixing. | No |
@@ -1932,6 +1808,42 @@ Header: `Cosmeron/Modules/Audio/Codec/Codec.h`
 WAV, MP3 and FLAC decoding, custom readers and WAV export.
 
 **Desktop-only**: not included when `AUDIO_NO_DESKTOP` is enabled.
+
+**Note about header-only native codecs:** the separate
+`Audio/Codec/WAV.h`, `Audio/Codec/FLAC.h` and
+`Audio/Codec/MP3.h` headers expose portable codec primitives that do not
+require desktop audio backends. `Codec.h` still imports miniaudio for
+production MP3 decode and exposes the general file/reader API.
+
+### Native MP3 progress and experimental PCM decoder
+
+`Audio/Codec/MP3.h` contains independent C11 MPEG-1 Layer III frame
+inspection, ID3v2, side information, a bounded bit reservoir, scalefactors,
+Huffman codebooks (including `linbits` and `count1`), requantization,
+short-block reordering, mid/side processing, antialiasing, stateful
+IMDCT/overlap-add, frequency inversion, 32-subband polyphase synthesis and
+explicit-band MPEG-1 intensity coefficients.
+
+The opt-in `Audio/Codec/MP3Experimental.h` supplies
+`Audio_Codec_MP3_ExperimentFrame` and
+`Audio_Codec_TMP3Experimental`, a zero-initialized per-stream state.
+Pass a complete MPEG-1 frame and an output buffer for **1,152 frames**
+of interleaved float PCM; mono and stereo are supported. The call retains
+reservoir, overlap and synthesis state across frames and rejects
+unsupported intensity-stereo modes rather than emitting knowingly incorrect
+PCM. It does not provide file-level reading, seeking, gapless handling or
+support for MPEG-2/2.5 LSF.
+
+**Fidelity is not yet established.** The differential test
+`MP3ExperimentalCompare.c` reports the delay-aligned and gain-fitted PCM
+residual against miniaudio; the `Tone.mp3` fixture currently has
+non-negligible residual error (approximately 0.35 on Linux Clang).
+This metric is a diagnostic, not a passing parity assertion, and the
+tone's periodicity makes the estimated offset ambiguous. The default
+`OpenFile`, `OpenMemory` and `OpenReader` MP3 decoder therefore
+**remains on miniaudio**. The next steps are multitone/impulse PCM parity,
+correct intensity-band routing, LSF variants and gapless metadata.
+
 
 
 
