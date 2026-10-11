@@ -460,7 +460,7 @@ jobs:
       - name: Concurrency under ThreadSanitizer
         run: make -C Codespace/Tests/Concurrency clean run CC=gcc BUILD=build-tsan CFLAGS="$TSAN_FLAGS"
 
-gate:
+  gate:
     name: CI / Gate
     if: ${{ always() }}
     needs:
@@ -475,6 +475,8 @@ gate:
       - thread-sanitizer
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Summary and required checks
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
