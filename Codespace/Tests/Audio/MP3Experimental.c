@@ -39,13 +39,14 @@ static void syntheticTests(void) {
   assert(info.channels == 2 && frames == 1152);
   for (i = 0; i < frames * 2; ++i) assert(pcm[i] == 0);
 
-  frame[3] = 0x54; /* joint intensity not automatically routed */
-  snapshot = decoder;
+  frame[3] = 0x54; /* MPEG-1 joint intensity: synthetic zero-energy bands */
   pcm[0] = 789.f;
   assert(AUDIO_CODEC_FUNC(MP3_ExperimentFrame)(
       &decoder, frame, sizeof frame, pcm, 1152, &frames, &info) ==
-      STATUS_CONST(NOT_SUPPORTED));
-  assert(pcm[0] == 789 && !memcmp(&snapshot, &decoder, sizeof decoder));
+      STATUS_CONST(SUCCESS));
+  assert(info.intensityStereo && frames == 1152);
+  for (i = 0; i < frames * 2; ++i) assert(pcm[i] == 0);
+  pcm[0] = 789.f;
 
   /* Missing prior main_data_begin does not publish PCM, but contributes
    * current compressed payload bytes to a future frame's reservoir. */
