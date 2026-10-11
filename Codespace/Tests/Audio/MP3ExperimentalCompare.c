@@ -160,6 +160,48 @@ int main(int argc, char **argv) {
          bestNativeEnergy,
          (unsigned int)hasXing, (unsigned int)xing.encodedFrames,
          (unsigned int)xing.encoderDelay, (unsigned int)xing.endPadding);
+  /* A constant encoder delay should imply the same lag in every section.
+   * Diverging best-shifts indicate drift or a reconstruction problem,
+   * rather than an ordinary one-off leading-sample trim. */
+  if (trimmedStart && expectedGaplessFrames >= 14000) {
+    unsigned int section;
+    for (section = 0; section < 3; ++section) {
+      const size_t blockAnchor = trimmedStart + 384U + section * 5000U;
+      const size_t blockLength = 1024U;
+      int lower, upper, lag, winner = 0;
+      double best = 1e100, gainBest = 0, meanSquare = 0;
+      if (blockAnchor + blockLength > used ||
+          frames < blockLength) continue;
+      lower = -(int)blockAnchor;
+      upper = (int)frames - (int)(blockAnchor + blockLength);
+      for (lag = lower; lag <= upper; lag += 8) {
+        double gain = 0, energy = 0;
+        double ratio = compare_at(nativePCM, referencePCM, blockAnchor,
+            blockLength, channels, lag, &gain, &energy);
+        if (ratio < best) {
+          best = ratio;
+          winner = lag;
+          gainBest = gain;
+          meanSquare = energy;
+        }
+      }
+      for (lag = winner - 8; lag <= winner + 8; ++lag) {
+        double gain = 0, energy = 0, ratio;
+        if (lag < lower || lag > upper) continue;
+        ratio = compare_at(nativePCM, referencePCM, blockAnchor,
+            blockLength, channels, lag, &gain, &energy);
+        if (ratio < best) {
+          best = ratio;
+          winner = lag;
+          gainBest = gain;
+          meanSquare = energy;
+        }
+      }
+      printf("[mp3 parity segment] section=%u anchor=%zu shift=%d "
+          "normalized-residual=%.8g gain=%.8g native-energy=%.8g\\n",
+          section, blockAnchor, winner, best, gainBest, meanSquare);
+    }
+  }
   assert(bestRatio >= -0.0000001 && bestRatio <= 1.0000001);
   cosmeron_audio_vendor_ma_decoder_uninit(&reference);
   free(nativePCM);
