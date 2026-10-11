@@ -148,3 +148,12 @@ process's symbols). A missing runtime math implementation returns
 `NOT_AVAILABLE` from decoder construction, not an unchecked call through
 a null function pointer. **This is not independence from the OS math
 runtime.** A statically linked application needs separate validation.
+
+### Decoder-only header across translation units
+
+`CodecMinimalTU_A.c` and `CodecMinimalTU_B.c` independently include
+`CodecMinimal.h`, exercise decoder and math functionality, and link with a
+third translation unit. The executable is tested under strict C11, without
+additional `-lm` or `-pthread`, in each BSD VM and Linux libc container.
+This checks real multi-TU link behavior for the header-only minimal mode;
+Miniaudio math/runtime dependencies remain as documented above.

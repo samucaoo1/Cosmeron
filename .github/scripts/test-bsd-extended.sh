@@ -221,6 +221,22 @@ else
   echo "[bsd-extended] AUDIO_CODEC_MINIMAL_ZERO_LINK=NOT_SUPPORTED on $(uname -s)"
   minimal_codec_zero_link=NOT_SUPPORTED
 fi
+# Prove header-only decoder-only mode across multiple translation units.
+# This must actually link and run, not merely compile individual headers.
+minimal_multitu_zero_link=PASS
+if (
+  cd Codespace/Tests/Audio
+  "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
+    ${audio_features} ${extra} \
+    CodecMinimalTU_A.c CodecMinimalTU_B.c CodecMinimalTU_Main.c \
+    -o ../../../.build-bsd-extended/Audio_CodecMinimalMultiTU
+) && .build-bsd-extended/Audio_CodecMinimalMultiTU; then
+  echo "[bsd-extended] AUDIO_CODEC_MINIMAL_MULTITU_ZERO_LINK=PASS"
+else
+  echo "[bsd-extended] AUDIO_CODEC_MINIMAL_MULTITU_ZERO_LINK=NOT_SUPPORTED"
+  minimal_multitu_zero_link=NOT_SUPPORTED
+  minimal_codec_zero_link=NOT_SUPPORTED
+fi
 # Probe codec and desktop entrypoints independently. Diagnostic link flags
 # are used only for the functional suite, never to label a backend zero-link.
 codec_zero_link=PASS
@@ -276,6 +292,7 @@ fi
 suite Audio CodecStandalone DesktopStandalone Codec Player IncludeAll
 multitu Audio
 record AudioCodecMinimal "$minimal_codec_zero_link" 'decoder-only; system libm is runtime dependency, no device/threading'
+record AudioCodecMinimalMultiTU "$minimal_multitu_zero_link" 'two decoder-only TUs; no flags; no duplicate vendor symbols'
 record AudioCodec "$codec_zero_link" 'WAV/MP3/FLAC offline decoding; no hardware'
 record AudioDevice "$device_zero_link" 'public device API exercised without physical device'
 record Audio "$audio_zero_link" 'Miniaudio desktop integration; no physical device'

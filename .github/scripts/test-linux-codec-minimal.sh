@@ -12,4 +12,11 @@ for test in CodecMinimal CodecMath CodecCompressed; do
     -o ".build-linux-codec/$test"
   ".build-linux-codec/$test"
 done
+echo "[linux-codec] CodecMinimalMultiTU, strict C11, zero extra linker flags"
+"$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
+  Codespace/Tests/Audio/CodecMinimalTU_A.c \
+  Codespace/Tests/Audio/CodecMinimalTU_B.c \
+  Codespace/Tests/Audio/CodecMinimalTU_Main.c \
+  -o .build-linux-codec/CodecMinimalMultiTU
+.build-linux-codec/CodecMinimalMultiTU
 echo "[linux-codec] PASS (libc/libm runtime dependencies still apply)"

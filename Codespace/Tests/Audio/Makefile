@@ -12,13 +12,15 @@ $(BUILD)/%: %.c $(HEADERS) | $(BUILD)
 # Physical-device helper: compiled as part of build, never in automatic run.
 $(BUILD)/ManualHardware: ManualHardware.c $(HEADERS) | $(BUILD)
 	$(CC) $(CFLAGS) $< -o $@
+$(BUILD)/CodecMinimalMultiTU: CodecMinimalTU_A.c CodecMinimalTU_B.c CodecMinimalTU_Main.c $(HEADERS) | $(BUILD)
+	$(CC) $(CFLAGS) CodecMinimalTU_A.c CodecMinimalTU_B.c CodecMinimalTU_Main.c -o $@
 $(BUILD)/OfflineMultiTU: OfflineTU_A.c OfflineTU_B.c OfflineTU_Main.c $(HEADERS) | $(BUILD)
 	$(CC) $(CFLAGS) OfflineTU_A.c OfflineTU_B.c OfflineTU_Main.c -o $@
 $(BUILD)/MultiTU: MultiTU_A.c MultiTU_B.c MultiTU_Main.c $(HEADERS) | $(BUILD)
 	$(CC) $(CFLAGS) MultiTU_A.c MultiTU_B.c MultiTU_Main.c -o $@
-build: $(TESTS:%=$(BUILD)/%) $(BUILD)/ManualHardware $(BUILD)/OfflineMultiTU $(BUILD)/MultiTU
+build: $(TESTS:%=$(BUILD)/%) $(BUILD)/ManualHardware $(BUILD)/CodecMinimalMultiTU $(BUILD)/OfflineMultiTU $(BUILD)/MultiTU
 run: build
-	@set -e; for test in $(TESTS:%=$(BUILD)/%) $(BUILD)/OfflineMultiTU $(BUILD)/MultiTU; do \
+	@set -e; for test in $(TESTS:%=$(BUILD)/%) $(BUILD)/CodecMinimalMultiTU $(BUILD)/OfflineMultiTU $(BUILD)/MultiTU; do \
 	  echo "[audio] run $$test"; \
 	  if "$$test"; then :; else result=$$?; echo "[audio] FAILED $$test (exit $$result)"; exit "$$result"; fi; \
 	done
