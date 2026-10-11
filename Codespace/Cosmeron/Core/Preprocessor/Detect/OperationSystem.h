@@ -18,6 +18,14 @@
 #define OS_MAC 0
 #endif
 
+/* OHOS is a target ABI/userland; its standard profile can also
+ * define __linux__. Keep OS_OHOS as an overlay, not a second kernel. */
+#if defined(__OHOS__)
+#define OS_OHOS 1
+#else
+#define OS_OHOS 0
+#endif
+
 #if defined(__linux__) || defined(__linux)
 #define OS_LINUX 1
 #else
@@ -51,5 +59,5 @@
 #define OS_BSD (OS_FREEBSD || OS_OPENBSD || OS_NETBSD || OS_DRAGONFLY)
 #define OS_UNIX (OS_LINUX || OS_MAC || OS_BSD)
 #define OS_POSIX (OS_LINUX || OS_MAC || OS_BSD)
-#define OS_KNOWN (OS_WINDOWS || OS_MAC || OS_LINUX || OS_BSD)
+#define OS_KNOWN (OS_WINDOWS || OS_MAC || OS_LINUX || OS_BSD || OS_OHOS)
 /* EOF */

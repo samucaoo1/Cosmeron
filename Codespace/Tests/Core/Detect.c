@@ -20,7 +20,7 @@
 #error "COMPILER_KNOWN must describe, not constrain, compiler detection."
 #endif
 
-#if OS_KNOWN != (OS_WINDOWS || OS_MAC || OS_LINUX || OS_BSD)
+#if OS_KNOWN != (OS_WINDOWS || OS_MAC || OS_LINUX || OS_BSD || OS_OHOS)
 #error "OS_KNOWN must describe, not constrain, operating-system detection."
 #endif
 
@@ -52,6 +52,7 @@ int main(void) {
       !DETECT_BOOLEAN_VALUE(OS_LINUX) || !DETECT_BOOLEAN_VALUE(OS_FREEBSD) ||
       !DETECT_BOOLEAN_VALUE(OS_OPENBSD) || !DETECT_BOOLEAN_VALUE(OS_NETBSD) ||
       !DETECT_BOOLEAN_VALUE(OS_DRAGONFLY) || !DETECT_BOOLEAN_VALUE(OS_BSD) ||
+      !DETECT_BOOLEAN_VALUE(OS_OHOS) ||
       !DETECT_BOOLEAN_VALUE(OS_UNIX) || !DETECT_BOOLEAN_VALUE(OS_POSIX) ||
       !DETECT_BOOLEAN_VALUE(OS_KNOWN))
     return 2;

@@ -38,3 +38,8 @@ native socket operation, audio output, HID access or thread linkage.
 Disable this supplementary target temporarily while investigating SDK
 support with `OHOS_SYSTEM_PROBES=OFF`; the baseline portable tests and
 multi-translation-unit link will still execute.
+
+The public preprocessor now exposes `OS_OHOS` when the SDK defines
+`__OHOS__`. On the standard Linux-kernel OHOS profile `OS_LINUX` may
+also be true; `OS_OHOS` identifies the ABI without claiming every Linux
+kernel/device API is available. This macro does not prove HarmonyOS NEXT.
