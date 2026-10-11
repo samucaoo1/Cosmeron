@@ -63,20 +63,18 @@ static void errorAtomicity(void) {
   float input[576] = {0}, output[576];
   size_t i;
   for (i = 0; i < 576; ++i) output[i] = 819.f;
-  input[576-1] = FLT_MAX;
+  input[17] = FLT_MAX;
+  input[18U * 4 + 17] = FLT_MAX;
   snapshot = state;
   assert(AUDIO_CODEC_FUNC(MP3_Synthesize)(
       input, &state, output) == STATUS_CONST(ARITHMETIC_OVERFLOW));
   for (i = 0; i < 576; ++i) assert(output[i] == 819.f);
   assert(!memcmp(&state, &snapshot, sizeof state));
-  input[576-1] = 0;
-  state.delay[43] = FLT_MAX;
-  /* Large finite delays are accepted until their synthesized result
-   * overflows; a NaN is always rejected at validation. */
-  state.delay[43] = 0.0f / FLT_MAX;
-  snapshot = state;
+  input[17] = 0;
+  input[18U * 4 + 17] = 0;
   assert(AUDIO_CODEC_FUNC(MP3_Synthesize)(
       input, &state, output) == STATUS_CONST(SUCCESS));
+  for (i = 0; i < 576; ++i) assert(output[i] == 0.f);
 }
 int main(void) {
   impulseFixture();
