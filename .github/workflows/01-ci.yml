@@ -48,6 +48,10 @@ jobs:
         if: ${{ hashFiles('Codespace/Tests/**') == '' }}
         run: echo "Codespace/Tests is not present yet; CI is installed and waiting for the source migration."
 
+      - name: Documentation examples (strict C11)
+        run: |
+          python3 Tools/check_doc_examples.py --cc "${{ matrix.cc }}" --min-tests 6
+
       - name: CLI and Parsing
         run: |
           make -C Codespace/Tests/CLI clean run CC=${{ matrix.cc }}
