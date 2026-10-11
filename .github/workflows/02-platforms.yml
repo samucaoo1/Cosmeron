@@ -8,6 +8,10 @@ on:
       - '.github/scripts/test-bsd-native.sh'
       - '.github/scripts/test-bsd-extended.sh'
       - '.github/scripts/test-input-posix.sh'
+      - 'Tools/ohos/**'
+      - 'flake.nix'
+      - 'flake.lock'
+      - 'Tools/crostini/**'
       - '.github/workflows/02-platforms.yml'
   pull_request:
     paths:
@@ -16,10 +20,25 @@ on:
       - '.github/scripts/test-bsd-native.sh'
       - '.github/scripts/test-bsd-extended.sh'
       - '.github/scripts/test-input-posix.sh'
+      - 'Tools/ohos/**'
+      - 'flake.nix'
+      - 'flake.lock'
+      - 'Tools/crostini/**'
       - '.github/workflows/02-platforms.yml'
   schedule:
     - cron: '17 4 * * 1'
   workflow_dispatch:
+    inputs:
+      nixos_vm:
+        description: 'Run real NixOS QEMU guest'
+        type: boolean
+        required: false
+        default: false
+      ohos_sdk:
+        description: 'Run public native OpenHarmony SDK cross-compile'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -117,10 +136,52 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v31
-      - name: Run strict tests with Nix GCC
+      - name: Build locked Nix package (strict C11)
         run: |
           nix --extra-experimental-features 'nix-command flakes' \
-            shell nixpkgs#gcc -c sh .github/scripts/test-portable-core.sh
+            build '.#checks.x86_64-linux.portable' -L --no-write-lock-file
+
+  nixos-vm:
+    name: NixOS / QEMU actual guest
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.nixos_vm) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Boot NixOS VM and run packaged C11 binaries
+        run: |
+          nix --extra-experimental-features 'nix-command flakes' \
+            build '.#nixos-vm' -L --no-write-lock-file
+
+  ohos-sdk:
+    name: OpenHarmony / ARM64 SDK compile + link (no device)
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.ohos_sdk) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install native OpenHarmony SDK 6.0
+        id: sdk
+        uses: openharmony-rs/setup-ohos-sdk@eb82b94ef522b07269679195c2512f22e922ef3b
+        with:
+          version: '6.0'
+          components: native
+          cache: 'true'
+      - name: Compile & link OHOS C11
+        env:
+          OHOS_SDK: ${{ steps.sdk.outputs.ohos_sdk_native }}
+          OHOS_ARCH: arm64-v8a
+        run: sh Tools/ohos/check-portability.sh
+      - name: Save target compiler diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ohos-native-target-diagnostics
+          path: |
+            .build-ohos/target-macros.txt
+            .build-ohos/target-triple.txt
+          if-no-files-found: ignore
 
   compatibility-summary:
     name: Compatibility / Summary
