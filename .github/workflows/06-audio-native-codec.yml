@@ -36,6 +36,21 @@ jobs:
           cd Codespace/Tests/Audio
           /tmp/nativewav
           /tmp/wavformats
+  native-mp3-sanitizer:
+    name: Linux / native MP3 UB + address sanitizers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Native MP3 side-info and reservoir with sanitizers
+        run: |
+          set -eu
+          cd Codespace/Tests/Audio
+          for test in MP3Headers MP3SideInfo; do
+            cc -std=c11 -Wall -Wextra -Wpedantic -Werror \\
+              -fsanitize=address,undefined -fno-omit-frame-pointer \\
+              "$test.c" -o "/tmp/$test"
+            "/tmp/$test"
+          done
   windows-mingw:
     name: Windows MinGW / codec
     runs-on: windows-latest
@@ -57,7 +72,7 @@ jobs:
           run: |
             set -eu
             cd Codespace/Tests/Audio
-            for test in FLACMetadata FLACFrames FLACStandalone; do
+            for test in FLACMetadata FLACFrames FLACStandalone MP3Headers MP3SideInfo; do
               cc -std=c11 -Wall -Wextra -Wpedantic -Werror "$test.c" -o "./$test"
               "./$test"
             done
@@ -71,7 +86,7 @@ jobs:
         shell: pwsh
         run: |
           cd Codespace/Tests/Audio
-          foreach ($test in @("FLACMetadata", "FLACFrames", "FLACStandalone")) {
+          foreach ($test in @("FLACMetadata", "FLACFrames", "FLACStandalone", "MP3Headers", "MP3SideInfo")) {
             cl /nologo /std:c11 /W4 /WX /D_CRT_SECURE_NO_WARNINGS /TC "$test.c" "/Fe:$test.exe"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             & "./$test.exe"

@@ -25,6 +25,17 @@ sample rate, channels, samples per frame, frame length and CRC mode;
 `Audio_Codec_MP3_SkipID3` skips an optional ID3v2 tag; and
 `Audio_Codec_MP3_FindFrame` locates a complete candidate frame.
 **These functions inspect MP3 structure; they do not decode MP3 samples.**
+`Audio_Codec_MP3_ParseSideInfo` now inspects the bit-packed
+granule parameters for MPEG-1/2/2.5, including `main_data_begin`,
+`scfsi`, bit lengths, gains, Huffman table selections, switched windows
+and short-block gain. `Audio_Codec_MP3_ReservoirFeed` uses a zero-initialized
+`Audio_Codec_TMP3Reservoir` to reassemble a frame's compressed main data
+from up to 511 bytes of retained history plus the new frame payload;
+the returned pointer remains valid only until the next feed. If history
+is missing, it returns `INCOMPLETE_SEQUENCE` but retains the current
+payload for possible recovery on subsequent frames. Neither function
+allocates memory or decodes audio samples.
+
 The public `OpenMemory`/`OpenFile`/`OpenReader` MP3 PCM decoder
 still uses miniaudio until its independent Huffman/synthesis stages are
 implemented and verified. The standalone `Codec/MP3.h` introduces
