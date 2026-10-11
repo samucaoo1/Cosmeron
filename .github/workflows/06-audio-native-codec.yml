@@ -46,9 +46,7 @@ jobs:
           set -eu
           cd Codespace/Tests/Audio
           for test in MP3Headers MP3SideInfo; do
-            cc -std=c11 -Wall -Wextra -Wpedantic -Werror \\
-              -fsanitize=address,undefined -fno-omit-frame-pointer \\
-              "$test.c" -o "/tmp/$test"
+            cc -std=c11 -Wall -Wextra -Wpedantic -Werror -fsanitize=address,undefined -fno-omit-frame-pointer "$test.c" -o "/tmp/$test"
             "/tmp/$test"
           done
   windows-mingw:
