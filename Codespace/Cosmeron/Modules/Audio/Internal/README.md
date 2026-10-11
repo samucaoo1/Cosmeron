@@ -96,3 +96,24 @@ library causes `Audio_Codec_Open*` to return `NOT_AVAILABLE` instead of
 attempting a null function-pointer call. This feature removes the need to
 pass `-lm` during **linking**, not the runtime dependency on `libm`.
 The standard threaded desktop Miniaudio profile remains unchanged.
+
+## BSD threaded backend and implicit linker support
+
+The decoder-only `CodecMinimal.h` and explicit `Device/Manual.h` pump retain
+their real zero-extra-linking API. They have different threading semantics
+from the full desktop Miniaudio backend; they are **not** drop-in replacements
+for background device callbacks or a native thread pool.
+
+The full backend can embed `#pragma comment(lib, "pthread")` and `"m"`
+on BSD **Clang + ELF-autolinking linkers**. This can remove manual
+`-pthread`/`-lm` command-line arguments. The compiler may still record
+`libpthread`/`libthr`/`libm` as dynamically linked dependencies. It is
+not a claim of dependency-free linkage, and GCC or GNU ld may still need
+normal linker options. Define `COSMERON_NO_IMPLICIT_LINK` to suppress the
+pragma. No pthread calls are reimplemented via unsafe `dlopen` shims; on
+some BSD variants the pthread runtime must be loaded before application
+startup for reliable synchronization and errno interposition.
+
+The BSD CI records both the strict no-library outcome and a distinct
+`NO_MANUAL_FLAGS` result. The former does **not** become PASS merely because
+the linker obtained pthread automatically.
