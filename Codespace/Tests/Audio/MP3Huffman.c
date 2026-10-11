@@ -1,6 +1,7 @@
 #include "../../Cosmeron/Modules/Audio/Codec/MP3.h"
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
 
 static void putBits(unsigned char *data, size_t *cursor, unsigned int value,
                     unsigned int bits) {
@@ -156,6 +157,57 @@ int main(void) {
     assert(AUDIO_CODEC_FUNC(MP3_HuffmanGranule)(
         packed, sizeof packed, &side, &scale, 0, 0, 44100,
         spectrum, &produced) == STATUS_CONST(SUCCESS));
+  }
+  {
+    FILE *file = fopen("Fixtures/Tone.mp3", "rb");
+    unsigned char encoded[65536];
+    AUDIO_CODEC_TYPE(TMP3Reservoir) reservoir = {0};
+    AUDIO_CODEC_TYPE(TMP3FrameInfo) header;
+    AUDIO_CODEC_TYPE(TMP3SideInfo) side;
+    AUDIO_CODEC_TYPE(TMP3Scalefactors) first[2];
+    const unsigned char *mainData = NULL;
+    size_t bytes, offset = 0, frameCount = 0, unpacked = 0;
+    assert(file);
+    bytes = fread(encoded, 1, sizeof encoded, file);
+    assert(!fclose(file) && bytes > 1000);
+    assert(AUDIO_CODEC_FUNC(MP3_FindFrame)(encoded, bytes, 0,
+        &offset, &header) == STATUS_CONST(SUCCESS));
+    while (bytes - offset >= 4 && frameCount < 50) {
+      size_t mainBytes = 0;
+      unsigned int gr, ch;
+      OPSTATUS status = AUDIO_CODEC_FUNC(MP3_ParseHeader)(
+          encoded + offset, bytes - offset, &header);
+      if (status != STATUS_CONST(SUCCESS) ||
+          header.frameBytes > bytes - offset) break;
+      status = AUDIO_CODEC_FUNC(MP3_ReservoirFeed)(&reservoir,
+          encoded + offset, header.frameBytes,
+          &mainData, &mainBytes, &side);
+      assert(status == STATUS_CONST(SUCCESS) ||
+          status == STATUS_CONST(INCOMPLETE_SEQUENCE));
+      if (status == STATUS_CONST(SUCCESS) && header.mpegVersion == 1) {
+        for (gr = 0; gr < side.granules; ++gr) {
+          for (ch = 0; ch < side.channels; ++ch) {
+            AUDIO_CODEC_TYPE(TMP3Scalefactors) scale;
+            int32_t coefficient[576];
+            size_t quantized = 0;
+            status = AUDIO_CODEC_FUNC(MP3_ParseScalefactors)(
+                mainData, mainBytes, &side, gr, ch,
+                gr ? &first[ch] : NULL, &scale);
+            assert(status == STATUS_CONST(SUCCESS));
+            if (gr == 0) first[ch] = scale;
+            status = AUDIO_CODEC_FUNC(MP3_HuffmanGranule)(
+                mainData, mainBytes, &side, &scale, gr, ch,
+                header.sampleRate, coefficient, &quantized);
+            assert(status == STATUS_CONST(SUCCESS));
+            assert(quantized <= 576 && quantized >= side.parts[gr][ch].bigValues * 2);
+            ++unpacked;
+          }
+        }
+      }
+      offset += header.frameBytes;
+      ++frameCount;
+    }
+    assert(frameCount > 3 && unpacked > 0);
   }
   return 0;
 }
