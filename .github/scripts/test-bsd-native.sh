@@ -3,6 +3,12 @@
 # Unlike the portable baseline, these probe libc, filesystem and socket APIs.
 set -eu
 CC=${CC:-cc}
+# NetBSD 10 hides symlink() from POSIX.1-2008-only headers despite POSIX
+# specifying it; explicitly request the NetBSD interfaces for test sources.
+case "$(uname -s)" in
+  NetBSD) BSD_FEATURE_CFLAGS=-D_NETBSD_SOURCE=1 ;;
+  *) BSD_FEATURE_CFLAGS= ;;
+esac
 mkdir -p .build-bsd-native
 echo "[bsd-native] $(uname -s) $(uname -m), compiler=$CC"
 
@@ -14,7 +20,7 @@ run_suite() {
     (
       cd "Codespace/Tests/$module"
       "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
-        -D_POSIX_C_SOURCE=200809L "$test.c" \
+        -D_POSIX_C_SOURCE=200809L ${BSD_FEATURE_CFLAGS} "$test.c" \
         -o "../../../.build-bsd-native/${module}_${test}"
       "../../../.build-bsd-native/${module}_${test}"
     )
@@ -26,7 +32,7 @@ run_multi_tu() {
   (
     cd "Codespace/Tests/$module"
     "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
-      -D_POSIX_C_SOURCE=200809L MultiTU_A.c MultiTU_B.c MultiTU_Main.c \
+      -D_POSIX_C_SOURCE=200809L ${BSD_FEATURE_CFLAGS} MultiTU_A.c MultiTU_B.c MultiTU_Main.c \
       -o "../../../.build-bsd-native/${module}_MultiTU"
     "../../../.build-bsd-native/${module}_MultiTU"
   )
