@@ -172,6 +172,7 @@ jobs:
         env:
           OHOS_SDK: ${{ steps.sdk.outputs.ohos_sdk_native }}
           OHOS_ARCH: arm64-v8a
+          OHOS_SYSTEM_PROBES: 'ON'
         run: sh Tools/ohos/check-portability.sh
       - name: Save target compiler diagnostics
         if: ${{ always() }}

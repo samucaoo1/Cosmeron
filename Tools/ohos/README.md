@@ -25,3 +25,16 @@ macros are recorded in `.build-ohos/`. This does not execute anything.
 - Check LiteOS-derived minimal systems separately from standard OHOS.
 - Huawei HarmonyOS NEXT is a separate SDK/ArkTS/native-bridge and permissions
   target. Neither Android nor OpenHarmony builds certify it automatically.
+
+
+## OS-backed compile-only probes (SDK)
+
+The `COSMERON_OHOS_SYSTEM_PROBES` CMake option defaults to `ON`.
+It compiles the existing Random, Chronometry, File, Concurrency, Network,
+Input and Terminal IncludeAll tests with SDK Clang in **strict C11**.
+These are object-only checks: successful compilation does not demonstrate
+native socket operation, audio output, HID access or thread linkage.
+
+Disable this supplementary target temporarily while investigating SDK
+support with `OHOS_SYSTEM_PROBES=OFF`; the baseline portable tests and
+multi-translation-unit link will still execute.

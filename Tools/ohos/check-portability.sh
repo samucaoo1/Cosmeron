@@ -7,7 +7,8 @@ toolchain=$sdk_native/build/cmake/ohos.toolchain.cmake
 if [ ! -f "$toolchain" ]; then echo "Missing SDK toolchain: $toolchain" >&2; exit 2; fi
 build_dir=${OHOS_BUILD_DIR:-.build-ohos}
 cmake -S Tools/ohos -B "$build_dir" \
-  -DCMAKE_TOOLCHAIN_FILE="$toolchain" -DOHOS_ARCH="$OHOS_ARCH" -DCMAKE_BUILD_TYPE=Release
+  -DCMAKE_TOOLCHAIN_FILE="$toolchain" -DOHOS_ARCH="$OHOS_ARCH" -DCMAKE_BUILD_TYPE=Release \
+  -DCOSMERON_OHOS_SYSTEM_PROBES="${OHOS_SYSTEM_PROBES:-ON}"
 cmake --build "$build_dir" --parallel 2
 if [ -x "$sdk_native/llvm/bin/clang" ]; then
   case "$OHOS_ARCH" in
