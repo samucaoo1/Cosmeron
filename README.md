@@ -37,6 +37,8 @@ The current architecture covers or is designed around:
 - **Container:** generic arrays, strings, vectors, queues, stacks, linked structures, trees, hashes, and graphs.
 - **CLI:** argument queries, declarative commands, subcommands and help.
 - **Parsing:** INI, JSON, CSV/TSV and documented TOML/XML/YAML profiles.
+
+- **Database:** embedded SQLite, prepared statements, typed columns and transactions.
 - **Math:** arithmetic, ranges, clamps, values, and equation helpers.
 - **Network:** addresses, sockets, listeners, datagrams, polling, and name resolution.
 - **Random:** entropy sources, deterministic engines, distributions, mixers, and shuffling.
@@ -94,3 +96,8 @@ See [Why EUPL 1.2?](Docs/Governance/LICENSING.md) for the project's licensing ra
 > Stay curious. Break things. Learn.
 
 The [File module](Docs/Modules/File.md) provides native file I/O, UTF-8 paths on Windows, directory iteration, whole-file loading and atomic saves without additional linker flags.
+
+The [Database module](Docs/Modules/Database.md) embeds SQLite with prepared SQL,
+copied parameters and explicit transactions. Define `DATABASE_SQLITE_IMPLEMENTATION`
+before the first include in one C file; other files share that engine through the
+header API. No `-lsqlite3` is required.

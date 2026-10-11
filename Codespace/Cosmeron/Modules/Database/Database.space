@@ -1,0 +1,110 @@
+#pragma once
+
+#include "SQLite/SQLite.h"
+#include "../../Core/Namespace.h"
+#include "../../Core/Error/Status.h"
+#include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <limits.h>
+#include <string.h>
+
+#define DATABASE_MOD Database
+#define DATABASE_CMOD DATABASE
+#ifndef DATABASE_NS
+#define DATABASE_NS(NAME) GNS2(LIB_PREFIX(DATABASE_MOD), NAME)
+#endif
+#ifndef DATABASE_CNS
+#define DATABASE_CNS(NAME) CNS2(LIB_PREFIX_CONST(DATABASE_CMOD), NAME)
+#endif
+#define DATABASE_INS(NAME) GNS3(LIB_PREFIX(DATABASE_MOD), Internal, NAME)
+#define DATABASE_CINS(NAME) CNS3(LIB_PREFIX_CONST(DATABASE_CMOD), INTERNAL, NAME)
+#define DATABASE_TYPE(NAME) DATABASE_NS(NAME)
+#define DATABASE_FUNC(NAME) DATABASE_NS(NAME)
+#define DATABASE_CONST(NAME) DATABASE_CNS(NAME)
+
+typedef enum DATABASE_TYPE(Backend) {
+  DATABASE_CONST(BACKEND_SQLITE)
+} DATABASE_TYPE(Backend);
+typedef enum DATABASE_TYPE(OpenFlags) {
+  DATABASE_CONST(OPEN_READ_ONLY) = 1u << 0,
+  DATABASE_CONST(OPEN_READ_WRITE) = 1u << 1,
+  DATABASE_CONST(OPEN_CREATE) = 1u << 2
+} DATABASE_TYPE(OpenFlags);
+typedef enum DATABASE_TYPE(ColumnKind) {
+  DATABASE_CONST(COLUMN_NULL), DATABASE_CONST(COLUMN_INTEGER),
+  DATABASE_CONST(COLUMN_REAL), DATABASE_CONST(COLUMN_TEXT),
+  DATABASE_CONST(COLUMN_BLOB)
+} DATABASE_TYPE(ColumnKind);
+typedef enum DATABASE_INS(StatementState_InternalType_) {
+  DATABASE_CINS(READY), DATABASE_CINS(ROW),
+  DATABASE_CINS(DONE), DATABASE_CINS(FAILED)
+} DATABASE_INS(StatementState_InternalType_);
+enum {
+  DATABASE_CINS(DEFAULT_TIMEOUT_MS) = 3000,
+  DATABASE_CINS(DIAGNOSTIC_CAPACITY) = 256,
+  DATABASE_CINS(PRIMARY_CODE_MASK) = 255
+};
+/* Owned handles: zero-initialize, do not copy, synchronize shared use. */
+typedef struct DATABASE_TYPE(TDatabase) {
+  void *native;
+} DATABASE_TYPE(TDatabase);
+typedef struct DATABASE_TYPE(TStatement) {
+  void *native;
+  DATABASE_INS(StatementState_InternalType_) state;
+} DATABASE_TYPE(TStatement);
+typedef struct DATABASE_TYPE(TConfig) {
+  DATABASE_TYPE(Backend) backend;
+  const char *path;
+  uint32_t flags;
+  uint32_t timeoutMs;
+} DATABASE_TYPE(TConfig);
+/* Optional explicit diagnostic outputs; there is no LastError state. */
+typedef struct DATABASE_TYPE(TDiagnostic) {
+  int nativeCode;
+  char message[DATABASE_CINS(DIAGNOSTIC_CAPACITY)];
+  bool truncated;
+} DATABASE_TYPE(TDiagnostic);
+
+static inline OPSTATUS DATABASE_INS(Status)(int code) {
+  switch (code & DATABASE_CINS(PRIMARY_CODE_MASK)) {
+  case cosmeron_database_vendor_SQLITE_OK:
+  case cosmeron_database_vendor_SQLITE_DONE:
+  case cosmeron_database_vendor_SQLITE_ROW: return STATUS_CONST(SUCCESS);
+  case cosmeron_database_vendor_SQLITE_NOMEM: return STATUS_CONST(OUT_OF_MEMORY);
+  case cosmeron_database_vendor_SQLITE_BUSY:
+  case cosmeron_database_vendor_SQLITE_LOCKED: return STATUS_CONST(BUSY);
+  case cosmeron_database_vendor_SQLITE_RANGE:
+  case cosmeron_database_vendor_SQLITE_TOOBIG: return STATUS_CONST(OUT_OF_RANGE);
+  case cosmeron_database_vendor_SQLITE_MISUSE: return STATUS_CONST(INVALID_ARGUMENT);
+  case cosmeron_database_vendor_SQLITE_MISMATCH: return STATUS_CONST(INVALID_ARGUMENT);
+  case cosmeron_database_vendor_SQLITE_INTERRUPT: return STATUS_CONST(CANCELLED);
+  case cosmeron_database_vendor_SQLITE_NOTFOUND: return STATUS_CONST(NOT_FOUND);
+  default: return STATUS_CONST(GENERIC_ERROR);
+  }
+}
+static inline OPSTATUS DATABASE_INS(Diagnostic)(
+    cosmeron_database_vendor_sqlite3 *native, int code,
+    DATABASE_TYPE(TDiagnostic) *outDiagnostic) {
+  if (outDiagnostic) {
+    DATABASE_TYPE(TDiagnostic) diagnostic = {0};
+    const char *message = code == cosmeron_database_vendor_SQLITE_OK
+        ? "" : (native ? cosmeron_database_vendor_sqlite3_errmsg(native)
+                        : cosmeron_database_vendor_sqlite3_errstr(code));
+    size_t length = strlen(message);
+    diagnostic.nativeCode = code;
+    diagnostic.truncated = length >= sizeof(diagnostic.message);
+    if (diagnostic.truncated) length = sizeof(diagnostic.message) - 1;
+    memcpy(diagnostic.message, message, length);
+    *outDiagnostic = diagnostic;
+  }
+  return DATABASE_INS(Status)(code);
+}
+static inline cosmeron_database_vendor_sqlite3 *DATABASE_INS(Connection)(
+    const DATABASE_TYPE(TDatabase) *database) {
+  return database ? (cosmeron_database_vendor_sqlite3 *)database->native : NULL;
+}
+static inline cosmeron_database_vendor_sqlite3_stmt *DATABASE_INS(Statement)(
+    const DATABASE_TYPE(TStatement) *statement) {
+  return statement ? (cosmeron_database_vendor_sqlite3_stmt *)statement->native : NULL;
+}

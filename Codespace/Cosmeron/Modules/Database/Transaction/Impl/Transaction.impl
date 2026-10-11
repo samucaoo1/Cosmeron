@@ -1,0 +1,36 @@
+static inline OPSTATUS DATABASE_INS(Savepoint)(
+    DATABASE_TYPE(TDatabase) *database, const char *operation, const char *name) {
+  char *sql;
+  OPSTATUS status;
+  if (!DATABASE_INS(Connection)(database) || !name || !*name)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (strlen(name) >= INT_MAX) return STATUS_CONST(OUT_OF_RANGE);
+  /* %w escapes double quotes. Savepoint names never become executable SQL. */
+  sql = cosmeron_database_vendor_sqlite3_mprintf("%s \"%w\"", operation, name);
+  if (!sql) return STATUS_CONST(OUT_OF_MEMORY);
+  status = DATABASE_FUNC(Execute)(database, sql);
+  cosmeron_database_vendor_sqlite3_free(sql);
+  return status;
+}
+DATABASE_TRANSACTION_BEGIN_PROTOTYPE {
+  return DATABASE_FUNC(Execute)(database, "BEGIN");
+}
+DATABASE_TRANSACTION_COMMIT_PROTOTYPE {
+  return DATABASE_FUNC(Execute)(database, "COMMIT");
+}
+DATABASE_TRANSACTION_ROLLBACK_PROTOTYPE {
+  return DATABASE_FUNC(Execute)(database, "ROLLBACK");
+}
+DATABASE_TRANSACTION_SAVEPOINT_PROTOTYPE {
+  return DATABASE_INS(Savepoint)(database, "SAVEPOINT", name);
+}
+DATABASE_TRANSACTION_ROLLBACK_TO_PROTOTYPE {
+  return DATABASE_INS(Savepoint)(database, "ROLLBACK TO", name);
+}
+DATABASE_TRANSACTION_RELEASE_PROTOTYPE {
+  return DATABASE_INS(Savepoint)(database, "RELEASE", name);
+}
+DATABASE_TRANSACTION_IS_ACTIVE_PROTOTYPE {
+  return DATABASE_INS(Connection)(database) &&
+      !cosmeron_database_vendor_sqlite3_get_autocommit(DATABASE_INS(Connection)(database));
+}

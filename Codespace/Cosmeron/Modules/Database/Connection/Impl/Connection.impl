@@ -1,0 +1,156 @@
+/* One SQL statement per Prepare/Execute; trailing comments and empty statements
+ * are accepted. No subsequent SQL instruction is silently discarded. */
+static inline bool DATABASE_INS(EmptyTail)(const char *tail) {
+  while (*tail) {
+    if (*tail == ' ' || *tail == '\t' || *tail == '\r' ||
+        *tail == '\n' || *tail == '\f' || *tail == ';') { ++tail; continue; }
+    if (tail[0] == '-' && tail[1] == '-') {
+      tail += 2;
+      while (*tail && *tail != '\n') ++tail;
+      continue;
+    }
+    if (tail[0] == '/' && tail[1] == '*') {
+      tail += 2;
+      while (*tail && !(tail[0] == '*' && tail[1] == '/')) ++tail;
+      if (*tail) tail += 2;
+      continue;
+    }
+    return false;
+  }
+  return true;
+}
+static inline OPSTATUS DATABASE_INS(Prepare)(
+    cosmeron_database_vendor_sqlite3 *database, const char *sql,
+    cosmeron_database_vendor_sqlite3_stmt **outStatement,
+    DATABASE_TYPE(TDiagnostic) *outDiagnostic) {
+  cosmeron_database_vendor_sqlite3_stmt *native = NULL;
+  const char *tail = NULL;
+  int code;
+  if (!database || !sql) return STATUS_CONST(INVALID_ARGUMENT);
+  if (strlen(sql) >= INT_MAX) return STATUS_CONST(OUT_OF_RANGE);
+  code = cosmeron_database_vendor_sqlite3_prepare_v2(database, sql, -1, &native, &tail);
+  if (code != cosmeron_database_vendor_SQLITE_OK) {
+    OPSTATUS status = DATABASE_INS(Diagnostic)(database, code, outDiagnostic);
+    cosmeron_database_vendor_sqlite3_finalize(native);
+    return status;
+  }
+  if (!native || !DATABASE_INS(EmptyTail)(tail)) {
+    cosmeron_database_vendor_sqlite3_finalize(native);
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  *outStatement = native;
+  return STATUS_CONST(SUCCESS);
+}
+
+DATABASE_CONFIG_PROTOTYPE {
+  DATABASE_TYPE(TConfig) config = {0};
+  config.backend = DATABASE_CONST(BACKEND_SQLITE);
+  config.path = path;
+  config.flags = DATABASE_CONST(OPEN_READ_WRITE) | DATABASE_CONST(OPEN_CREATE);
+  config.timeoutMs = DATABASE_CINS(DEFAULT_TIMEOUT_MS);
+  return config;
+}
+DATABASE_OPEN_WITH_DIAGNOSTIC_PROTOTYPE {
+  cosmeron_database_vendor_sqlite3 *native = NULL;
+  int flags, code;
+  const uint32_t known = DATABASE_CONST(OPEN_READ_ONLY) |
+      DATABASE_CONST(OPEN_READ_WRITE) | DATABASE_CONST(OPEN_CREATE);
+  if (!database || !config || !config->path || !*config->path)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (database->native) return STATUS_CONST(BUSY);
+  if (config->backend != DATABASE_CONST(BACKEND_SQLITE)) return STATUS_CONST(NOT_SUPPORTED);
+  if ((config->flags & ~known) ||
+      (!!(config->flags & DATABASE_CONST(OPEN_READ_ONLY)) ==
+       !!(config->flags & DATABASE_CONST(OPEN_READ_WRITE))) ||
+      ((config->flags & DATABASE_CONST(OPEN_CREATE)) &&
+       !(config->flags & DATABASE_CONST(OPEN_READ_WRITE))))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (config->timeoutMs > INT_MAX) return STATUS_CONST(OUT_OF_RANGE);
+  flags = config->flags & DATABASE_CONST(OPEN_READ_ONLY)
+      ? cosmeron_database_vendor_SQLITE_OPEN_READONLY
+      : cosmeron_database_vendor_SQLITE_OPEN_READWRITE;
+  if (config->flags & DATABASE_CONST(OPEN_CREATE)) flags |= cosmeron_database_vendor_SQLITE_OPEN_CREATE;
+  flags |= cosmeron_database_vendor_SQLITE_OPEN_FULLMUTEX;
+  code = cosmeron_database_vendor_sqlite3_open_v2(config->path, &native, flags, NULL);
+  if (code == cosmeron_database_vendor_SQLITE_OK)
+    code = cosmeron_database_vendor_sqlite3_extended_result_codes(native, 1);
+  if (code == cosmeron_database_vendor_SQLITE_OK)
+    code = cosmeron_database_vendor_sqlite3_busy_timeout(native, (int)config->timeoutMs);
+  if (code != cosmeron_database_vendor_SQLITE_OK) {
+    OPSTATUS status = DATABASE_INS(Diagnostic)(native, code, outDiagnostic);
+    cosmeron_database_vendor_sqlite3_close(native);
+    return status;
+  }
+  DATABASE_INS(Diagnostic)(native, code, outDiagnostic);
+  database->native = native;
+  return STATUS_CONST(SUCCESS);
+}
+DATABASE_OPEN_WITH_PROTOTYPE {
+  return DATABASE_FUNC(OpenWithDiagnostic)(database, config, NULL);
+}
+DATABASE_OPEN_PROTOTYPE {
+  DATABASE_TYPE(TConfig) config = DATABASE_FUNC(Config)(path);
+  return DATABASE_FUNC(OpenWith)(database, &config);
+}
+DATABASE_CLOSE_PROTOTYPE {
+  int code;
+  if (!database) return STATUS_CONST(INVALID_ARGUMENT);
+  if (!database->native) return STATUS_CONST(SUCCESS);
+  code = cosmeron_database_vendor_sqlite3_close(DATABASE_INS(Connection)(database));
+  if (code == cosmeron_database_vendor_SQLITE_OK) database->native = NULL;
+  return DATABASE_INS(Status)(code);
+}
+DATABASE_PREPARE_WITH_DIAGNOSTIC_PROTOTYPE {
+  cosmeron_database_vendor_sqlite3_stmt *native;
+  OPSTATUS status;
+  if (!statement) return STATUS_CONST(INVALID_ARGUMENT);
+  if (statement->native) return STATUS_CONST(BUSY);
+  status = DATABASE_INS(Prepare)(DATABASE_INS(Connection)(database), sql, &native, outDiagnostic);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  statement->native = native;
+  statement->state = DATABASE_CINS(READY);
+  DATABASE_INS(Diagnostic)(DATABASE_INS(Connection)(database),
+      cosmeron_database_vendor_SQLITE_OK, outDiagnostic);
+  return status;
+}
+DATABASE_PREPARE_PROTOTYPE {
+  return DATABASE_FUNC(PrepareWithDiagnostic)(database, sql, statement, NULL);
+}
+DATABASE_EXECUTE_WITH_DIAGNOSTIC_PROTOTYPE {
+  cosmeron_database_vendor_sqlite3_stmt *statement;
+  cosmeron_database_vendor_sqlite3 *native = DATABASE_INS(Connection)(database);
+  OPSTATUS status = DATABASE_INS(Prepare)(native, sql, &statement, outDiagnostic);
+  int code, finalCode;
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  if (cosmeron_database_vendor_sqlite3_column_count(statement)) {
+    cosmeron_database_vendor_sqlite3_finalize(statement);
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  code = cosmeron_database_vendor_sqlite3_step(statement);
+  status = DATABASE_INS(Diagnostic)(native,
+      code == cosmeron_database_vendor_SQLITE_DONE ? cosmeron_database_vendor_SQLITE_OK : code,
+      outDiagnostic);
+  finalCode = cosmeron_database_vendor_sqlite3_finalize(statement);
+  if (status == STATUS_CONST(SUCCESS) && finalCode != cosmeron_database_vendor_SQLITE_OK)
+    status = DATABASE_INS(Diagnostic)(native, finalCode, outDiagnostic);
+  return status;
+}
+DATABASE_EXECUTE_PROTOTYPE {
+  return DATABASE_FUNC(ExecuteWithDiagnostic)(database, sql, NULL);
+}
+DATABASE_AFFECTED_ROWS_PROTOTYPE {
+  if (!DATABASE_INS(Connection)(database) || !outCount) return STATUS_CONST(INVALID_ARGUMENT);
+  *outCount = (uint64_t)cosmeron_database_vendor_sqlite3_changes64(DATABASE_INS(Connection)(database));
+  return STATUS_CONST(SUCCESS);
+}
+DATABASE_LAST_INSERT_ID_PROTOTYPE {
+  if (!DATABASE_INS(Connection)(database) || !outId) return STATUS_CONST(INVALID_ARGUMENT);
+  *outId = (int64_t)cosmeron_database_vendor_sqlite3_last_insert_rowid(DATABASE_INS(Connection)(database));
+  return STATUS_CONST(SUCCESS);
+}
+DATABASE_SET_TIMEOUT_PROTOTYPE {
+  if (!DATABASE_INS(Connection)(database)) return STATUS_CONST(INVALID_ARGUMENT);
+  if (timeoutMs > INT_MAX) return STATUS_CONST(OUT_OF_RANGE);
+  return DATABASE_INS(Status)(cosmeron_database_vendor_sqlite3_busy_timeout(
+      DATABASE_INS(Connection)(database), (int)timeoutMs));
+}

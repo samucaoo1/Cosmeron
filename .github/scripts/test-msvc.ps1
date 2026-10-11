@@ -133,3 +133,13 @@ foreach ($name in @("Common", "JSON", "INI", "CSV", "TOML", "YAML", "XML", "Incl
   Invoke-CosmeronTest "Codespace/Tests/Parsing" $name @("$name.c")
 }
 Invoke-CosmeronTest "Codespace/Tests/Parsing" "multi-tu" @("MultiTU_A.c", "MultiTU_B.c", "MultiTU_Main.c")
+
+# Compile the shared embedded engine once for the Database suite.
+$databaseBuild = "Codespace/Tests/Database/.msvc"
+New-Item -ItemType Directory -Force -Path $databaseBuild | Out-Null
+& cl /nologo /std:c11 /W4 /WX /D_CRT_SECURE_NO_WARNINGS /c Codespace/Tests/Database/Backend.c "/Fo:$databaseBuild/Backend.obj"
+if ($LASTEXITCODE -ne 0) { throw "cl failed: Database backend" }
+foreach ($name in @("IncludeAll", "Database", "Persistence", "Namespace")) {
+  Invoke-CosmeronTest "Codespace/Tests/Database" $name @("$name.c", ".msvc/Backend.obj")
+}
+Invoke-CosmeronTest "Codespace/Tests/Database" "multi-tu" @("MultiTU_A.c", "MultiTU_B.c", "MultiTU_Main.c", ".msvc/Backend.obj")

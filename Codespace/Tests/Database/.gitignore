@@ -1,0 +1,3 @@
+/build*/
+/.msvc/
+/database-persistence-test.db*
