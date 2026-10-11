@@ -77,6 +77,7 @@ record Network PASS 'localhost sockets only'
 stage=ConcurrencyCooperative
 suite Concurrency Cooperative
 echo "[bsd-extended] CONCURRENCY_COOPERATIVE_ZERO_LINK=PASS"
+record ConcurrencyCooperative PASS 'single-thread cooperative tasks, not OS threads'
 
 # Thread primitives, synchronisation, tasks and thread pool, no explicit -pthread.
 # Probe the public zero-extra-link contract *before* running the thread tests.
@@ -155,6 +156,7 @@ echo "[bsd-extended] run Audio/OfflineMultiTU (zero-link)"
   ../../../.build-bsd-extended/Audio_OfflineMultiTU
 )
 echo "[bsd-extended] AUDIO_OFFLINE_ZERO_LINK=PASS"
+record AudioOffline PASS 'synthesis only; no device backend'
 
 # Audio runs in offline mode; no hardware access is claimed.
 # Some BSD libc implementations do not export sin/exp without libm. A strict

@@ -39,8 +39,15 @@ in the test matrix. Unsupported platforms do not acquire a zero-link promise.
 
 A null desktop backend is disabled: opening a nonexistent device must not claim
 to play audible sound. Offline mixing is an explicit Player configuration.
-`AUDIO_NO_DESKTOP` removes this integration from `Audio.h`; Oscillator, Envelope,
-PCM, Sequence and offline Beep rendering then have no OS backend dependency.
+`Audio/Offline.h` is now the explicit dependency-free entrypoint for PCM,
+Oscillator, Envelope, Sequence and offline Beep rendering. It does not include
+the Miniaudio implementation and passes strict C11 multi-translation-unit
+link tests **without `-lm` or `-pthread`**. Legacy
+`#define AUDIO_NO_DESKTOP` before including `Audio.h` is still supported.
+
+Do not confuse the no-device `Player` engine (which still imports Miniaudio)
+with the independent `Offline.h` synthesis path. `Codec`, `Player` and
+`Device` remain desktop-backend features until separately certified.
 
 Do not expose vendor types through public function signatures. Public objects
 contain opaque state pointers; callers must not inspect the pointed-to state.

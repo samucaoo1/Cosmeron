@@ -13,8 +13,8 @@ a workflow existing does not mean it has passed.
 | Linux GCC/Clang | Native GitHub runners | [CI](../../.github/workflows/01-ci.yml) | Existing module integration suites |
 | Windows MinGW/MSVC | Native GitHub runners | [CI](../../.github/workflows/01-ci.yml) | Existing module integration suites |
 | macOS Clang | Native GitHub runner | [CI](../../.github/workflows/01-ci.yml) | Existing module integration suites |
-| FreeBSD | Native FreeBSD guest VM via vmactions | [Continuous Integration](../../.github/workflows/01-ci.yml) | Portable C11 + extended Network, Concurrency, Compression, Database, offline Audio, noninteractive Terminal and Input; extended suite under validation |
-| OpenBSD / NetBSD / DragonFly BSD | Native guest VMs via vmactions | [Platform Compatibility](../../.github/workflows/02-platforms.yml) | Portable C11, native smoke, Input, extended Network/Concurrency/Compression/Database/Audio/Terminal (extended suite under validation) |
+| FreeBSD | Native FreeBSD guest VM via vmactions | [Continuous Integration](../../.github/workflows/01-ci.yml) | Portable + extended native suites; per-module reports distinguish zero-link profiles |
+| OpenBSD / NetBSD / DragonFly BSD | Native guest VMs via vmactions | [Platform Compatibility](../../.github/workflows/02-platforms.yml) | Portable + extended native suites; per-module reports distinguish zero-link profiles |
 | Fedora / Arch | Native Linux userspace containers | [Platform Compatibility](../../.github/workflows/02-platforms.yml) | Same ten portable suites |
 | Void glibc / Void musl | Native Linux userspace containers | [Platform Compatibility](../../.github/workflows/02-platforms.yml) | Same ten portable suites; libc coverage |
 | Nix toolchain / NixOS VM | Pinned Nix derivation on Ubuntu and real NixOS QEMU guest | [Platform Compatibility](../../.github/workflows/02-platforms.yml) | Strict portable C11 passed as package and inside NixOS VM ([run](https://github.com/samucaoo1/Cosmeron/actions/runs/38141169787)); not full hardware certification |
@@ -23,13 +23,25 @@ a workflow existing does not mean it has passed.
 The portable smoke suite is [test-portable-core.sh](../../.github/scripts/test-portable-core.sh).
 It compiles and executes the repository's existing test sources, with
 `-std=c11 -Wall -Wextra -Wpedantic -Werror` and no explicit extra link libraries.
-The [BSD extended runner](../../.github/scripts/test-bsd-extended.sh) additionally
-executes OS-backed Network, Concurrency, embedded SQLite, Compression, offline
-Audio and noninteractive Terminal suites, but its expanded results are still
-being stabilized. In some BSDs, threaded Concurrency and SQLite need
-`-pthread` for diagnostic runtime tests; these are explicitly **not** zero-link
-certifications. Interactive hardware, audio devices and full OS integration
-remain out of scope of the smoke suites.
+The [BSD extended runner](../../.github/scripts/test-bsd-extended.sh)
+executes Network, Concurrency, SQLite, Compression, Audio, Input and
+noninteractive Terminal/Canvas. It emits a **per-module CI job summary**
+distinguishing compilation, executed runtime, zero-extra-link and device scope.
+
+The embedded SQLite uses a **single-threaded mutex-free** implementation by
+default on BSD and passed zero-extra-link tests on all four BSD guests
+([SQLite design](SQLITE_LINKING.md)). It must not be accessed concurrently.
+
+Audio and Concurrency have separate, pure zero-link subsets:
+[Audio/Offline.h](../../Codespace/Cosmeron/Modules/Audio/Offline.h) provides
+PCM, synthesis, sequences and beep rendering without Miniaudio or OS threads;
+[Concurrency/Cooperative.h](../../Codespace/Cosmeron/Modules/Concurrency/Cooperative.h)
+provides atomics, coroutines and direct tasks **without native threading**.
+These are not equivalent to the desktop Audio/Device or pthread ThreadPool
+backends. On some BSDs the native threaded and audio-device backends still
+require `-pthread` and/or `-lm`, so their functional compatibility tests
+are explicitly **not** zero-link certifications. Physical devices and
+interactive TTYs remain untested.
 
 ## Additional platform feasibility
 
