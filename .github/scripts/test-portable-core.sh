@@ -1,34 +1,49 @@
 #!/bin/sh
-# Strict portable C11 smoke and regression suite.
-# Runs on native BSD VMs, GNU/Linux containers, and a Nix-provided toolchain.
+# Portable C11 regression suite: cc + POSIX shell only. No GNU make required.
+# Deliberately uses the real module tests, not fabricated compile-only probes.
 set -eu
-
 CC=${CC:-cc}
 export CC
-
-echo "[portable] OS: $(uname -s) / $(uname -m)"
-echo "[portable] compiler: $CC"
-"$CC" --version 2>/dev/null | head -n 1 || true
-
-# Each Makefile executes its test binaries, not merely compiles them.
-# The subset below intentionally avoids OS-specific device and GUI services.
-for module in Core Bit Struct Type Math Random Chronometry; do
-  echo "[portable] testing $module"
-  make -C "Codespace/Tests/$module" clean run CC="$CC"
-done
-
-echo "[portable] testing Container (strict, multiple translation units)"
-make -C Codespace/Tests/Container clean strict multi-tu CC="$CC"
-
-echo "[portable] testing Text"
-make -C Codespace/Tests/Text clean run CC="$CC"
-
-# Sort does not have a standalone Makefile; run both catalog suites explicitly.
-echo "[portable] testing Sort"
 mkdir -p .build-portable
-for src in Sort SortCatalog; do
+printf '[portable] %s %s | compiler: %s\n' "$(uname -s)" "$(uname -m)" "$CC"
+
+run_suite() {
+  module=$1
+  shift
+  for test in "$@"; do
+    echo "[portable] $module/$test"
+    (
+      cd "Codespace/Tests/$module"
+      "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
+        -D_POSIX_C_SOURCE=200809L "$test.c" \
+        -o "../../../.build-portable/${module}_${test}"
+      "../../../.build-portable/${module}_${test}"
+    )
+  done
+}
+
+run_suite Core Namespace Cast Preprocessor Detect Error Memory MemoryOperations MemoryUtilities Algorithm IncludeAll
+run_suite Bit Bit Widths IncludeAll
+run_suite Struct Struct Variants AllTypes IncludeAll
+run_suite Type Type TypeNoFunctionTable AllFunctions IncludeAll FundamentalSmall
+run_suite Math Math Arithmetic Value Equations AllTypes IncludeAll
+run_suite Random Random Engines Distribution IncludeAll
+run_suite Chronometry Chronometry Duration Instant Calendar DateTime EpochTimezoneFormat ClockTimer IncludeAll
+run_suite Container Functional LinearExtra LinearAllTypes TreeAllFunctions Hash Graph \
+  FunctionTableOff TreeFunctionTableOff CustomType IncludeAll IncludeAllOff
+echo "[portable] Container/MultiTU"
+(
+  cd Codespace/Tests/Container
+  "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L \
+    MultiTU_A.c MultiTU_B.c MultiTU_Main.c -o ../../../.build-portable/Container_MultiTU
+  ../../../.build-portable/Container_MultiTU
+)
+run_suite Text IncludeAll Text Namespace Unicode AllFunctions
+
+echo "[portable] Sort"
+for test in Sort SortCatalog; do
   "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror -I Codespace \
-    "Codespace/Tests/$src.c" -o ".build-portable/$src"
-  ".build-portable/$src"
+    "Codespace/Tests/$test.c" -o ".build-portable/$test"
+  ".build-portable/$test"
 done
-echo "[portable] core suites passed"
+echo "[portable] all selected C11 suites passed"
