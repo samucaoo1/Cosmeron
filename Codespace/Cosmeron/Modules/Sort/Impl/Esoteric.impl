@@ -155,7 +155,7 @@ SORT_MIRACLE_PROTOTYPE {
   OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
   if (s != STATUS_CONST(SUCCESS)) return s;
   SORT_INS(ComparatorAdapter_InternalType_) adapter = { compare };
-  for (size_t i = 0; i <= maxChecks; ++i) {
+  for (size_t i = 0;; ++i) {
     if (SORT_INS(IsOrdered)(data, count, elementSize,
         SORT_INS(CompareAdapter), &adapter)) return STATUS_CONST(SUCCESS);
     if (i == maxChecks) break;
