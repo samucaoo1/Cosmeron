@@ -1,0 +1,164 @@
+#pragma once
+
+/* Stalin Sort is actually a stable, lossy, longest nondecreasing subsequence
+ * obtained by retaining the first item and discarding each lower successor. */
+SORT_STALIN_CONTEXT_PROTOTYPE {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  if (!outCount) return STATUS_CONST(INVALID_ARGUMENT);
+  unsigned char *a = data;
+  size_t kept = count ? 1u : 0u;
+  for (size_t i = 1; i < count; ++i) {
+    if (compare(a + (kept - 1) * elementSize, a + i * elementSize,
+                context) != COMPARISON_HIGHER_CONST) {
+      if (kept != i) memmove(a + kept * elementSize, a + i * elementSize,
+                             elementSize);
+      ++kept;
+    }
+  }
+  *outCount = kept;
+  return STATUS_CONST(SUCCESS);
+}
+SORT_STALIN_PROTOTYPE {
+  SORT_INS(ComparatorAdapter_InternalType_) adapter = { compare };
+  return SORT_FUNC(StalinWithContext)(data, count, elementSize,
+      compare ? SORT_INS(CompareAdapter) : NULL, &adapter, outCount);
+}
+
+/* All PRNG state belongs to the call; zero seed is well-defined. */
+static inline uint64_t SORT_INS(NextRandom)(uint64_t *state) {
+  uint64_t x = *state;
+  x ^= x >> 12;
+  x ^= x << 25;
+  x ^= x >> 27;
+  *state = x;
+  return x * UINT64_C(2685821657736338717);
+}
+static inline bool SORT_INS(IsOrdered)(
+    const unsigned char *a, size_t count, size_t size,
+    COMPARISON_TYPE(ContextComparator) cmp, void *ctx) {
+  for (size_t i = 1; i < count; ++i)
+    if (cmp(a + (i - 1) * size, a + i * size, ctx) ==
+        COMPARISON_HIGHER_CONST) return false;
+  return true;
+}
+
+SORT_RANDOM_CONTEXT_PROTOTYPE(Bogo) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  unsigned char *a = data;
+  uint64_t state = seed ? seed : UINT64_C(0x9e3779b97f4a7c15);
+  if (SORT_INS(IsOrdered)(a, count, elementSize, compare, context))
+    return STATUS_CONST(SUCCESS);
+  for (size_t step = 0; step < maxSteps; ++step) {
+    for (size_t i = count; i > 1; --i) {
+      size_t j = (size_t)(SORT_INS(NextRandom)(&state) % i);
+      SORT_INS(Swap)(a + (i - 1) * elementSize,
+                     a + j * elementSize, elementSize);
+    }
+    if (SORT_INS(IsOrdered)(a, count, elementSize, compare, context))
+      return STATUS_CONST(SUCCESS);
+  }
+  return STATUS_CONST(TIMEOUT);
+}
+SORT_RANDOM_CONTEXT_PROTOTYPE(Bozo) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  unsigned char *a = data;
+  uint64_t state = seed ? seed : UINT64_C(0x9e3779b97f4a7c15);
+  if (SORT_INS(IsOrdered)(a, count, elementSize, compare, context))
+    return STATUS_CONST(SUCCESS);
+  for (size_t step = 0; step < maxSteps; ++step) {
+    size_t i = (size_t)(SORT_INS(NextRandom)(&state) % count);
+    size_t j = (size_t)(SORT_INS(NextRandom)(&state) % count);
+    SORT_INS(Swap)(a + i * elementSize, a + j * elementSize, elementSize);
+    if (SORT_INS(IsOrdered)(a, count, elementSize, compare, context))
+      return STATUS_CONST(SUCCESS);
+  }
+  return STATUS_CONST(TIMEOUT);
+}
+
+#define COSMERON_MACRO_INTERNAL_SORT_RANDOM_ADAPT(NAME)                       \
+  SORT_RANDOM_PROTOTYPE(NAME) {                                               \
+    SORT_INS(ComparatorAdapter_InternalType_) adapter = { compare };         \
+    return SORT_FUNC(PP_OP_CAT2(NAME, WithContext))(                          \
+        data, count, elementSize,                                            \
+        compare ? SORT_INS(CompareAdapter) : NULL, &adapter, seed, maxSteps); \
+  }
+COSMERON_MACRO_INTERNAL_SORT_RANDOM_ADAPT(Bogo)
+COSMERON_MACRO_INTERNAL_SORT_RANDOM_ADAPT(Bozo)
+#undef COSMERON_MACRO_INTERNAL_SORT_RANDOM_ADAPT
+
+/* Stooge and Slowsort are intentionally size-limited to avoid inadvertently
+ * freezing an application for astronomically long execution periods. */
+#define COSMERON_MACRO_INTERNAL_SORT_STOOGE_LIMIT 128u
+#define COSMERON_MACRO_INTERNAL_SORT_SLOW_LIMIT 20u
+
+static inline void SORT_INS(StoogeRange)(
+    unsigned char *a, size_t lo, size_t hi, size_t size,
+    COMPARISON_TYPE(ContextComparator) cmp, void *ctx) {
+  if (hi - lo < 2) return;
+  if (cmp(a + lo * size, a + (hi - 1) * size, ctx) ==
+      COMPARISON_HIGHER_CONST)
+    SORT_INS(Swap)(a + lo * size, a + (hi - 1) * size, size);
+  if (hi - lo > 2) {
+    size_t third = (hi - lo) / 3;
+    SORT_INS(StoogeRange)(a, lo, hi - third, size, cmp, ctx);
+    SORT_INS(StoogeRange)(a, lo + third, hi, size, cmp, ctx);
+    SORT_INS(StoogeRange)(a, lo, hi - third, size, cmp, ctx);
+  }
+}
+SORT_ESOTERIC_CONTEXT_PROTOTYPE(Stooge) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  if (count > COSMERON_MACRO_INTERNAL_SORT_STOOGE_LIMIT)
+    return STATUS_CONST(OUT_OF_RANGE);
+  if (count > 1) SORT_INS(StoogeRange)(data, 0, count, elementSize,
+                                     compare, context);
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline void SORT_INS(SlowRange)(
+    unsigned char *a, size_t lo, size_t hi, size_t size,
+    COMPARISON_TYPE(ContextComparator) cmp, void *ctx) {
+  if (hi - lo <= 1) return;
+  size_t mid = lo + (hi - lo) / 2;
+  SORT_INS(SlowRange)(a, lo, mid, size, cmp, ctx);
+  SORT_INS(SlowRange)(a, mid, hi, size, cmp, ctx);
+  if (cmp(a + (mid - 1) * size, a + (hi - 1) * size, ctx) ==
+      COMPARISON_HIGHER_CONST)
+    SORT_INS(Swap)(a + (mid - 1) * size, a + (hi - 1) * size, size);
+  SORT_INS(SlowRange)(a, lo, hi - 1, size, cmp, ctx);
+}
+SORT_ESOTERIC_CONTEXT_PROTOTYPE(Slow) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  if (count > COSMERON_MACRO_INTERNAL_SORT_SLOW_LIMIT)
+    return STATUS_CONST(OUT_OF_RANGE);
+  if (count > 1) SORT_INS(SlowRange)(data, 0, count, elementSize,
+                                   compare, context);
+  return STATUS_CONST(SUCCESS);
+}
+#define COSMERON_MACRO_INTERNAL_SORT_ESOTERIC_ADAPT(NAME)                     \
+  SORT_ESOTERIC_PROTOTYPE(NAME) {                                             \
+    SORT_INS(ComparatorAdapter_InternalType_) adapter = { compare };         \
+    return SORT_FUNC(PP_OP_CAT2(NAME, WithContext))(                          \
+        data, count, elementSize,                                            \
+        compare ? SORT_INS(CompareAdapter) : NULL, &adapter);                \
+  }
+COSMERON_MACRO_INTERNAL_SORT_ESOTERIC_ADAPT(Stooge)
+COSMERON_MACRO_INTERNAL_SORT_ESOTERIC_ADAPT(Slow)
+#undef COSMERON_MACRO_INTERNAL_SORT_ESOTERIC_ADAPT
+
+/* Miracle Sort is a pedagogical non-algorithm: it NEVER moves data. */
+SORT_MIRACLE_PROTOTYPE {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  SORT_INS(ComparatorAdapter_InternalType_) adapter = { compare };
+  for (size_t i = 0; i <= maxChecks; ++i) {
+    if (SORT_INS(IsOrdered)(data, count, elementSize,
+        SORT_INS(CompareAdapter), &adapter)) return STATUS_CONST(SUCCESS);
+    if (i == maxChecks) break;
+  }
+  return STATUS_CONST(TIMEOUT);
+}

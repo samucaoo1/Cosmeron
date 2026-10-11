@@ -1,0 +1,269 @@
+#pragma once
+
+/* Algorithms are deliberately distinct, rather than aliases of Introsort. */
+SORT_CLASSICAL_CONTEXT_PROTOTYPE(Bubble) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  unsigned char *a = data;
+  for (size_t end = count; end > 1; --end) {
+    bool changed = false;
+    for (size_t i = 1; i < end; ++i) {
+      if (compare(a + (i - 1) * elementSize, a + i * elementSize,
+                  context) == COMPARISON_HIGHER_CONST) {
+        SORT_INS(Swap)(a + (i - 1) * elementSize, a + i * elementSize, elementSize);
+        changed = true;
+      }
+    }
+    if (!changed) break;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+SORT_CLASSICAL_CONTEXT_PROTOTYPE(Cocktail) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  unsigned char *a = data;
+  size_t lo = 0, hi = count;
+  while (hi > lo + 1) {
+    bool changed = false;
+    for (size_t i = lo + 1; i < hi; ++i)
+      if (compare(a + (i - 1) * elementSize, a + i * elementSize,
+                  context) == COMPARISON_HIGHER_CONST) {
+        SORT_INS(Swap)(a + (i - 1) * elementSize, a + i * elementSize, elementSize);
+        changed = true;
+      }
+    if (!changed) break;
+    --hi;
+    changed = false;
+    for (size_t i = hi; i > lo + 1; --i)
+      if (compare(a + (i - 2) * elementSize, a + (i - 1) * elementSize,
+                  context) == COMPARISON_HIGHER_CONST) {
+        SORT_INS(Swap)(a + (i - 2) * elementSize, a + (i - 1) * elementSize, elementSize);
+        changed = true;
+      }
+    ++lo;
+    if (!changed) break;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+SORT_CLASSICAL_CONTEXT_PROTOTYPE(Comb) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  if (count < 2) return STATUS_CONST(SUCCESS);
+  unsigned char *a = data;
+  size_t gap = count;
+  bool changed = true;
+  while (gap > 1 || changed) {
+    gap = (gap / 13u) * 10u + ((gap % 13u) * 10u) / 13u;
+    if (gap < 1) gap = 1;
+    changed = false;
+    for (size_t i = 0; i < count - gap; ++i)
+      if (compare(a + i * elementSize, a + (i + gap) * elementSize,
+                  context) == COMPARISON_HIGHER_CONST) {
+        SORT_INS(Swap)(a + i * elementSize, a + (i + gap) * elementSize,
+                       elementSize);
+        changed = true;
+      }
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+SORT_CLASSICAL_CONTEXT_PROTOTYPE(Gnome) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  unsigned char *a = data;
+  size_t i = 1;
+  while (i < count) {
+    if (i == 0 ||
+        compare(a + (i - 1) * elementSize, a + i * elementSize,
+                context) != COMPARISON_HIGHER_CONST) ++i;
+    else {
+      SORT_INS(Swap)(a + (i - 1) * elementSize, a + i * elementSize, elementSize);
+      --i;
+    }
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+SORT_CLASSICAL_CONTEXT_PROTOTYPE(OddEven) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  unsigned char *a = data;
+  bool changed = true;
+  while (changed) {
+    changed = false;
+    for (size_t pass = 0; pass < 2; ++pass)
+      for (size_t i = pass; i < count && count - i > 1; i += 2)
+        if (compare(a + i * elementSize, a + (i + 1) * elementSize,
+                    context) == COMPARISON_HIGHER_CONST) {
+          SORT_INS(Swap)(a + i * elementSize, a + (i + 1) * elementSize,
+                         elementSize);
+          changed = true;
+        }
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+SORT_CLASSICAL_CONTEXT_PROTOTYPE(Selection) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  unsigned char *a = data;
+  for (size_t i = 0; i < count; ++i) {
+    size_t best = i;
+    for (size_t j = i + 1; j < count; ++j)
+      if (compare(a + j * elementSize, a + best * elementSize,
+                  context) == COMPARISON_LOWER_CONST) best = j;
+    SORT_INS(Swap)(a + i * elementSize, a + best * elementSize, elementSize);
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+SORT_CLASSICAL_CONTEXT_PROTOTYPE(DoubleSelection) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  unsigned char *a = data;
+  size_t lo = 0, hi = count;
+  while (hi > lo + 1) {
+    size_t min = lo, max = lo;
+    for (size_t i = lo + 1; i < hi; ++i) {
+      if (compare(a + i * elementSize, a + min * elementSize,
+                  context) == COMPARISON_LOWER_CONST) min = i;
+      if (compare(a + i * elementSize, a + max * elementSize,
+                  context) == COMPARISON_HIGHER_CONST) max = i;
+    }
+    SORT_INS(Swap)(a + lo * elementSize, a + min * elementSize, elementSize);
+    if (max == lo) max = min;
+    SORT_INS(Swap)(a + (hi - 1) * elementSize, a + max * elementSize,
+                   elementSize);
+    ++lo;
+    --hi;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+SORT_CLASSICAL_CONTEXT_PROTOTYPE(Shell) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  unsigned char *a = data;
+  for (size_t gap = count / 2; gap; gap /= 2) {
+    for (size_t i = gap; i < count; ++i) {
+      size_t j = i;
+      while (j >= gap &&
+          compare(a + (j - gap) * elementSize, a + j * elementSize,
+                  context) == COMPARISON_HIGHER_CONST) {
+        SORT_INS(Swap)(a + (j - gap) * elementSize, a + j * elementSize,
+                       elementSize);
+        j -= gap;
+      }
+    }
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline void SORT_INS(FlipPrefix)(unsigned char *a, size_t count,
+                                         size_t size) {
+  for (size_t i = 0; i < count / 2; ++i)
+    SORT_INS(Swap)(a + i * size, a + (count - 1 - i) * size, size);
+}
+
+SORT_CLASSICAL_CONTEXT_PROTOTYPE(Pancake) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  unsigned char *a = data;
+  for (size_t end = count; end > 1; --end) {
+    size_t best = 0;
+    for (size_t i = 1; i < end; ++i)
+      if (compare(a + i * elementSize, a + best * elementSize,
+                  context) == COMPARISON_HIGHER_CONST) best = i;
+    if (best == end - 1) continue;
+    if (best) SORT_INS(FlipPrefix)(a, best + 1, elementSize);
+    SORT_INS(FlipPrefix)(a, end, elementSize);
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+/* Lomuto Quick Sort, recursing into the smaller range to bound stack use. */
+static inline void SORT_INS(QuickRange)(
+    unsigned char *a, size_t lo, size_t hi, size_t size,
+    COMPARISON_TYPE(ContextComparator) cmp, void *ctx) {
+  while (hi - lo > 1) {
+    size_t pivot = hi - 1, boundary = lo;
+    for (size_t i = lo; i < pivot; ++i)
+      if (cmp(a + i * size, a + pivot * size, ctx) == COMPARISON_LOWER_CONST) {
+        SORT_INS(Swap)(a + i * size, a + boundary * size, size);
+        ++boundary;
+      }
+    SORT_INS(Swap)(a + boundary * size, a + pivot * size, size);
+    if (boundary - lo < hi - (boundary + 1)) {
+      SORT_INS(QuickRange)(a, lo, boundary, size, cmp, ctx);
+      lo = boundary + 1;
+    } else {
+      SORT_INS(QuickRange)(a, boundary + 1, hi, size, cmp, ctx);
+      hi = boundary;
+    }
+  }
+}
+
+SORT_CLASSICAL_CONTEXT_PROTOTYPE(Quick) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  if (count > 1) SORT_INS(QuickRange)(data, 0, count, elementSize,
+                                     compare, context);
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline void SORT_INS(QuickThreeWayRange)(
+    unsigned char *a, size_t lo, size_t hi, size_t size,
+    COMPARISON_TYPE(ContextComparator) cmp, void *ctx) {
+  while (hi - lo > 1) {
+    size_t pivot = hi - 1, lt = lo, i = lo, gt = pivot;
+    while (i < gt) {
+      CMPOUT order = cmp(a + i * size, a + pivot * size, ctx);
+      if (order == COMPARISON_LOWER_CONST) {
+        SORT_INS(Swap)(a + lt * size, a + i * size, size);
+        ++lt; ++i;
+      } else if (order == COMPARISON_HIGHER_CONST) {
+        --gt;
+        SORT_INS(Swap)(a + i * size, a + gt * size, size);
+      } else ++i;
+    }
+    SORT_INS(Swap)(a + gt * size, a + pivot * size, size);
+    if (lt - lo < hi - (gt + 1)) {
+      SORT_INS(QuickThreeWayRange)(a, lo, lt, size, cmp, ctx);
+      lo = gt + 1;
+    } else {
+      SORT_INS(QuickThreeWayRange)(a, gt + 1, hi, size, cmp, ctx);
+      hi = lt;
+    }
+  }
+}
+
+SORT_CLASSICAL_CONTEXT_PROTOTYPE(QuickThreeWay) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  if (count > 1) SORT_INS(QuickThreeWayRange)(
+      data, 0, count, elementSize, compare, context);
+  return STATUS_CONST(SUCCESS);
+}
+
+#define COSMERON_MACRO_INTERNAL_SORT_CLASSICAL_ADAPT(NAME)                    \
+  SORT_CLASSICAL_PROTOTYPE(NAME) {                                            \
+    SORT_INS(ComparatorAdapter_InternalType_) adapter = { compare };         \
+    return SORT_FUNC(PP_OP_CAT2(NAME, WithContext))(                          \
+        data, count, elementSize,                                            \
+        compare ? SORT_INS(CompareAdapter) : NULL, &adapter);                \
+  }
+
+COSMERON_MACRO_INTERNAL_SORT_CLASSICAL_ADAPT(Bubble)
+COSMERON_MACRO_INTERNAL_SORT_CLASSICAL_ADAPT(Cocktail)
+COSMERON_MACRO_INTERNAL_SORT_CLASSICAL_ADAPT(Comb)
+COSMERON_MACRO_INTERNAL_SORT_CLASSICAL_ADAPT(Gnome)
+COSMERON_MACRO_INTERNAL_SORT_CLASSICAL_ADAPT(OddEven)
+COSMERON_MACRO_INTERNAL_SORT_CLASSICAL_ADAPT(Selection)
+COSMERON_MACRO_INTERNAL_SORT_CLASSICAL_ADAPT(DoubleSelection)
+COSMERON_MACRO_INTERNAL_SORT_CLASSICAL_ADAPT(Shell)
+COSMERON_MACRO_INTERNAL_SORT_CLASSICAL_ADAPT(Pancake)
+COSMERON_MACRO_INTERNAL_SORT_CLASSICAL_ADAPT(Quick)
+COSMERON_MACRO_INTERNAL_SORT_CLASSICAL_ADAPT(QuickThreeWay)
+#undef COSMERON_MACRO_INTERNAL_SORT_CLASSICAL_ADAPT

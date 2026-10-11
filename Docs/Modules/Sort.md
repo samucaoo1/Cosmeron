@@ -1,42 +1,90 @@
 # Sort
 
-C11, header-only, allocation-free introsort/heap/insertion and stable merge
-and radix variants. The module depends only on the Cosmeron Core headers.
+C11, header-only, zero external link libraries. Namespace, status returns,
+three-way comparators, optional function table, and implementation packaging
+follow [PATTERN.md](../Reference/PATTERN.md).
+
+## Public API
 
 ```c
 #include "Cosmeron/Modules/Sort/Sort.h"
-
-int numbers[] = { 4, 1, 3, 1 };
-Sort_Array(numbers, 4, sizeof numbers[0], myComparator);
-Sort_Radix_U32(ids, idCount, SORT_ASCENDING);
+int values[] = {4, 1, 3, 2};
+Sort_Bubble(values, 4, sizeof values[0], compareInt);
+Sort_QuickThreeWay(values, 4, sizeof values[0], compareInt);
+Sort_Stable(values, 4, sizeof values[0], compareInt);
 ```
 
-- **Array / Intro**: 3-way introsort, insertion cutoff and heapsort fallback.
-  O(n log n) worst-case, O(log n) stack, nonstable.
-- **Insertion**: stable, O(n²) worst-case, O(1) storage.
-- **Heap**: O(n log n), O(1) storage, nonstable.
-- **Stable / Merge**: stable mergesort, O(n log n), O(n) scratch allocation
-  through `Memory_AllocArray`. `StableWithBuffer` uses a caller-owned buffer.
-- **Radix_U32 / I32 / U64 / I64**: stable 8-bit LSD radix, numeric signed
-  ordering, ascending/descending, O(n) on fixed-width keys.
-  `RadixWithBuffer` accepts a disjoint array of at least `count` elements.
-- **Typed**: include `Typed.h`, then use
-  `SORT_IMPLEMENT_ALL(T, Suffix, typedPointerComparator)`.
-  This creates specialized entry points backed by the generic engine,
-  not direct value-based sorting implementations.
+The generic engine is `Sort_Array` (3-way Introsort). Stable merge, heap,
+insertion, and typed U32/I32/U64/I64 radix variants are retained unchanged.
 
-An empty array is accepted with a valid comparator/elementSize; no null data
-with positive count. Overflow is detected before modification.
-Buffer allocation occurs before stable sorting mutates the input. Caller
-buffers must be disjoint from the array; providing an overlapping region
-violates the precondition. A custom comparator must define a consistent
-three-way order, including any special floating-point values.
+### Classical algorithms
 
-`SORT_DISABLE_FUNCTION_TABLE` suppresses the optional static const table.
-Define `COSMERON_NAMESPACE` / `COSMERON_NAMESPACE_CONST` before including
-the headers for alternate symbol prefixes. No global mutable state is used.
+| Function | Typical complexity | Stable | Extra storage |
+|---|---|---|---|
+| Bubble | O(n²), O(n) best | Yes | O(1) |
+| Cocktail | O(n²), O(n) best | Yes | O(1) |
+| Comb | O(n²) worst | No | O(1) |
+| Gnome | O(n²), O(n) best | Yes | O(1) |
+| OddEven | O(n²), O(n) best | Yes | O(1) |
+| Selection | O(n²) | No | O(1) |
+| DoubleSelection | O(n²) | No | O(1) |
+| Shell | gap-dependent | No | O(1) |
+| Pancake | O(n²) | No | O(1) |
+| Quick | O(n log n) average, O(n²) worst | No | O(log n) stack |
+| QuickThreeWay | O(n log n) average, O(n²) worst | No | O(log n) stack |
 
-Linked-list node mergesort is deliberately outside this module; an adapter
-belongs in `Container` and should not copy node payloads.
+All provide `WithContext` variants and report `OPSTATUS`.
+No allocations, shared state, or OS-specific calls.
 
-Tests: `Codespace/Tests/Sort.c`.
+### Esoteric algorithms
+
+```c
+size_t retained = 0;
+Sort_Stalin(values, 4, sizeof(int), compareInt, &retained);
+Sort_Bogo(values, 4, sizeof(int), compareInt, 42, 10000);
+Sort_Bozo(values, 4, sizeof(int), compareInt, 42, 10000);
+Sort_Stooge(values, 4, sizeof(int), compareInt);
+Sort_Slow(values, 4, sizeof(int), compareInt);
+Sort_Miracle(values, 4, sizeof(int), compareInt, 100);
+```
+
+- **Stalin**: lossy stable subsequence filter. `outCount` reports retained
+  prefix size; trailing slots are unspecified. It is not a permutation sort.
+- **Bogo**: repeatedly shuffles with a call-local seeded PRNG. `maxSteps`
+  bounds the number of shuffles. Returns `STATUS_TIMEOUT` if unsorted.
+- **Bozo**: random pair swaps, with the same seed and step-budget semantics.
+- **Stooge** and **Slow**: purposely expensive deterministic examples.
+  Reject arrays larger than 128 and 20 elements respectively, without
+  modifying the input, returning `STATUS_OUT_OF_RANGE`.
+- **Miracle**: checks whether data is sorted but deliberately never mutates it;
+  returns `STATUS_TIMEOUT` after bounded observations.
+- PRNG is deterministic for a given seed; no cryptographic guarantees.
+- All functions validate comparator, element size, pointers, and overflow.
+- This module does not claim these examples are appropriate for production.
+
+## Architecture / expansion
+
+```text
+Sort/
+  Sort.h             Aggregate public header
+  Sort.space         Naming and public enums
+  Array.h            Introsort, Merge, Heap, Insertion
+  Classical.h        Quadratic and partition exchange algorithms
+  Esoteric.h         Recreational and bounded stochastic algorithms
+  Integer.h          Typed LSD Radix
+  Typed.h            Generic typed wrappers
+  Utility.h          IsSorted, Reverse
+  Impl/              Implementations split per family
+  FunctionTable/     Optional table
+```
+
+No global mutable state. Add further sorting families as independent headers
+and .impl files. In-place algorithms do not allocate. Sorting by comparator
+requires a consistent total ordering. Random generators aren't suitable for
+security purposes.
+
+Compile the test suite:
+```sh
+cc -std=c11 -Wall -Wextra -Wpedantic -Werror -I Codespace Codespace/Tests/Sort.c -o /tmp/cosmeron-sort
+/tmp/cosmeron-sort
+```

@@ -4,4 +4,6 @@
 #include "Integer.h"
 #include "Utility.h"
 #include "Typed.h"
+#include "Classical.h"
+#include "Esoteric.h"
 #include "FunctionTable/Sort.inc"
