@@ -162,6 +162,7 @@ int main(void) {
     FILE *file = fopen("Fixtures/Tone.mp3", "rb");
     unsigned char encoded[65536];
     AUDIO_CODEC_TYPE(TMP3Reservoir) reservoir = {0};
+    AUDIO_CODEC_TYPE(TMP3HybridState) hybridState[2] = {{0}};
     AUDIO_CODEC_TYPE(TMP3FrameInfo) header;
     AUDIO_CODEC_TYPE(TMP3SideInfo) side;
     AUDIO_CODEC_TYPE(TMP3Scalefactors) first[2];
@@ -189,7 +190,7 @@ int main(void) {
           for (ch = 0; ch < side.channels; ++ch) {
             AUDIO_CODEC_TYPE(TMP3Scalefactors) scale;
             int32_t coefficient[576];
-            float spectral[576];
+            float spectral[576], subband[576];
             size_t quantized = 0;
             status = AUDIO_CODEC_FUNC(MP3_ParseScalefactors)(
                 mainData, mainBytes, &side, gr, ch,
@@ -210,6 +211,11 @@ int main(void) {
             assert(AUDIO_CODEC_FUNC(MP3_Antialias)(
                 spectral, &side.parts[gr][ch], spectral) ==
                 STATUS_CONST(SUCCESS));
+            assert(AUDIO_CODEC_FUNC(MP3_IMDCT)(
+                spectral, &side.parts[gr][ch], &hybridState[ch],
+                subband) == STATUS_CONST(SUCCESS));
+            assert(AUDIO_CODEC_FUNC(MP3_FrequencyInvert)(
+                subband, subband) == STATUS_CONST(SUCCESS));
             ++unpacked;
           }
         }
