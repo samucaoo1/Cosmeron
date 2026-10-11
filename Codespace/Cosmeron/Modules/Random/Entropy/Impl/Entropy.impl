@@ -28,7 +28,7 @@ RANDOM_ENTROPY_SYSTEM_PROTOTYPE {
     size -= (size_t)read_size;
   }
   return STATUS_CONST(SUCCESS);
-#elif OS_MAC || OS_FREEBSD
+#elif OS_MAC || OS_BSD
   unsigned char *output = destination;
   int descriptor = open("/dev/urandom", O_RDONLY);
   if (descriptor < 0)
@@ -64,7 +64,12 @@ RANDOM_ENTROPY_ADDRESS_PROTOTYPE {
 RANDOM_ENTROPY_CLOCK_PROTOTYPE {
   struct timespec time_point;
   uint64_t value = (uint64_t)clock();
+  /* Some BSD C11 libraries expose POSIX clock_gettime but not timespec_get. */
+#if OS_NETBSD || OS_OPENBSD || OS_DRAGONFLY
+  if (clock_gettime(CLOCK_REALTIME, &time_point) == 0) {
+#else
   if (timespec_get(&time_point, TIME_UTC) == TIME_UTC) {
+#endif
     value ^= (uint64_t)time_point.tv_sec;
     value ^= (uint64_t)time_point.tv_nsec << 32U;
   }
