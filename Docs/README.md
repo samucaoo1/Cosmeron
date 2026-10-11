@@ -35,20 +35,53 @@ Cross-project technical conventions.
 
 ### [Modules](Modules/)
 
-Module-by-module API and usage documentation.
+Canonical module and package API references. Each document includes the exported APIs, argument and return contracts, examples and portability notes, following the [Bit reference style](Modules/Bit.md).
 
-- [GUI](Modules/GUI.md) — pixel widgets, shared TUI interaction, direct and persistent APIs
-- [Surface](Modules/Surface.md) — owned or borrowed ARGB pixels and clipped views
-- [Window](Modules/Window.md) — native Win32/X11 presentation and host adapters
-- [UI](Modules/UI.md) — terminal widgets
-- [Input](Modules/Input.md) — keyboard, mouse, controllers and gamepad state without public initialization
-- [Audio](Modules/Audio.md) — synthesis, beep music, codecs and playback
-- [CLI](Modules/CLI.md) — arguments, declarative commands and help
-- [Parsing](Modules/Parsing.md) — INI, JSON, CSV/TSV, TOML, XML and YAML profiles
-- [File](Modules/File.md) — files, paths, directories and atomic content replacement
-- [Compression](Modules/Compression.md) — DEFLATE, zlib, gzip, ZIP, checksums and bounded file helpers
-- [Database](Modules/Database.md) — embedded SQLite, prepared SQL, typed columns and transactions
-- [Bit](Modules/Bit.md)
+#### Core
+
+- [Algorithm](Modules/Algorithm.md) — three-way comparison callbacks and helpers
+- [Cast](Modules/Cast.md) — type-conversion namespace infrastructure
+- [Error](Modules/Error.md) — statuses, panic and errors
+- [Memory](Modules/Memory.md) — allocation, arenas and memory operations
+- [Preprocessor](Modules/Preprocessor.md) — token operations, expansion and iteration
+
+#### Main modules
+
+- [Audio](Modules/Audio.md) — audio buffers, oscillator, playback, codecs and sequencing
+- [Bit](Modules/Bit.md) — flags, masks, rotations and bit fields
+- [CLI](Modules/CLI.md) — arguments, schemas and help output
+- [Chronometry](Modules/Chronometry.md) — clocks, duration and calendar operations
+- [Compression](Modules/Compression.md) — DEFLATE, gzip, ZIP and checksums
+- [Concurrency](Modules/Concurrency.md) — threads, atomics, synchronization and cooperative tasks
+- [Container](Modules/Container.md) — vector, queues, stacks, trees and strings
+- [Database](Modules/Database.md) — embedded SQLite, prepared statements and transactions
+- [File](Modules/File.md) — paths, streams, directories and atomic file replacement
+- [Input](Modules/Input.md) — keyboard, pointer and controller events
+- [Math](Modules/Math.md) — numeric arithmetic and utility operations
+- [Network](Modules/Network.md) — addressing, resolution, sockets and polling
+- [Parsing](Modules/Parsing.md) — JSON, INI, CSV, TOML, XML and YAML
+- [Random](Modules/Random.md) — entropy sources, distributions and shuffle
+- [Sort](Modules/Sort.md) — comparison sorts, radix and educational algorithms
+- [Struct](Modules/Struct.md) — general-purpose tuple structures
+- [Text](Modules/Text.md) — Unicode, encoding, text grids and formatting
+- [Type](Modules/Type.md) — fundamental typed primitives
+
+#### Graphics packages
+
+The Graphics umbrella aggregates packages that can also be included individually.
+
+- [Canvas](Modules/Canvas.md) — retained terminal-cell surfaces and differential presentation
+- [FIGlet](Modules/FIGlet.md) — FIGfont parsing, measuring and drawing
+- [Font](Modules/Font.md) — native C11 compile-time .asf fonts
+- [GUI](Modules/GUI.md) — pixel-based immediate widgets and struct variants
+- [Pseudo3DRoad](Modules/Pseudo3DRoad.md) — road curves, hills, projection and renderer
+- [Rasterization](Modules/Rasterization.md) — 2D primitives for Canvas
+- [Raycasting](Modules/Raycasting.md) — grid DDA and depth-aware wall/sprite rendering
+- [Sprite](Modules/Sprite.md) — borrowed Canvas sprites, layers and animation
+- [Surface](Modules/Surface.md) — owned and borrowed ARGB pixel storage
+- [Terminal](Modules/Terminal.md) — immediate streams, cursor, attributes and events
+- [UI](Modules/UI.md) — terminal-based widgets and layout
+- [Window](Modules/Window.md) — native window presentation and host adapters
 
 ### [Translations](Translations/)
 
