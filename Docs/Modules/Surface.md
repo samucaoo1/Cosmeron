@@ -429,3 +429,25 @@ Surface pixels are straight-alpha 0xAARRGGBB. Stride and capacity count pixels, 
 OPSTATUS status = GRAPHICS_FUNC(Surface_Line)(&surface, (TDUAL_TYPE(int32)){.x=0,.y=0}, (TDUAL_TYPE(int32)){.x=20,.y=10}, UINT32_C(0xFFFFFFFF));
 ```
 
+# C11 smoke test
+
+This complete example checks ownership and pixel fill without creating an operating-system window.
+
+<!-- cosmeron-c11-test -->
+```c
+#include "Cosmeron/Modules/Graphics/Surface/Surface.h"
+#include <assert.h>
+
+int main(void) {
+    GRAPHICS_TYPE(TSurface) surface = {0};
+    assert(GRAPHICS_FUNC(Surface_Create)(
+               &surface, (TDUAL_TYPE(uint32)){.x=4, .y=3}) ==
+           STATUS_CONST(SUCCESS));
+    assert(GRAPHICS_FUNC(Surface_Clear)(
+               &surface, UINT32_C(0xFF102030)) == STATUS_CONST(SUCCESS));
+    assert(surface.pixels[0] == UINT32_C(0xFF102030));
+    GRAPHICS_FUNC(Surface_Free)(&surface);
+    assert(surface.pixels == NULL);
+    return 0;
+}
+```
