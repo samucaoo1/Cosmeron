@@ -50,8 +50,16 @@ Huffman codebooks (0–31 for quantized coefficient pairs and 32/33 for
 `linbits`, nonzero sign bits and explicit bit boundaries without
 allocations. The caller supplies `ioBit` and an upper bound `endBit`;
 a truncated or invalid symbol does not advance `ioBit`. These functions
-produce signed quantized integers, **not audio PCM**. Huffman-granule
-region handling, requantization and synthesis are separate later stages.
+produce signed quantized integers, **not audio PCM**.
+`Audio_Codec_MP3_HuffmanGranule` assembles up to 576 coefficients for one
+MPEG Layer III granule/channel using long scalefactor-band boundaries or
+the short-block 36-line split, decoding region-specific tables and the
+count1 partition. It takes the `part2Bits` field produced by
+`MP3_ParseScalefactors` and enforces the declared `part2_3_length`.
+Unsupported or malformed bit sequences return an `OPSTATUS` without
+publishing partially populated output. Requantization, short-block
+reordering, stereo reconstruction, IMDCT and subband synthesis are
+separate later stages.
 The numerical codebook assignments are standardized MPEG Layer III values;
 the matching implementation is original Cosmeron C11.
 
