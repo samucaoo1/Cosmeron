@@ -5,11 +5,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Diagnostic, not a parity certification. The MPEG encoder's delay
- * can shift the two streams; we report the best +/-576-frame alignment
- * and least-squares gain without hiding the residual error. */
+/* Diagnostic, not a parity certification. MP3 encoder delay/gapless
+ * metadata can shift the two streams by over 1000 samples. Search the
+ * entire common valid window and report a least-squares gain as well as
+ * residual power. A tonal fixture alone cannot certify sample parity. */
 int main(void) {
-  enum { MAX_FRAMES = 48 * 1152, ANALYSIS = 2048, BASE = 768 };
+  enum { MAX_FRAMES = 48 * 1152, ANALYSIS = 2048, BASE = 1536 };
   unsigned char bytes[65536];
   AUDIO_CODEC_TYPE(TMP3Experimental) native = {0};
   AUDIO_CODEC_TYPE(TMP3FrameInfo) header = {0};
@@ -69,10 +70,34 @@ int main(void) {
            result == cosmeron_audio_vendor_MA_AT_END);
   }
   frames = (size_t)received;
-  if (used >= BASE + ANALYSIS + 576 &&
-      frames >= BASE + ANALYSIS + 576) {
-    for (shift = -576; shift <= 576; shift += 8) {
+  if (used >= BASE + ANALYSIS && frames >= ANALYSIS) {
+    const int minimum = -(int)BASE;
+    const int maximum = (int)frames - (BASE + ANALYSIS);
+    for (shift = minimum; shift <= maximum; shift += 4) {
       double xx = 0, xy = 0, yy = 0, residual, gain;
+      for (i = 0; i < ANALYSIS * channels; ++i) {
+        const size_t sample = i / channels, ch = i % channels;
+        const size_t a = (BASE + sample) * channels + ch;
+        const size_t b = (size_t)((int)(BASE + sample) + shift) *
+                         channels + ch;
+        const double x = nativePCM[a], y = referencePCM[b];
+        xx += x * x;
+        xy += x * y;
+        yy += y * y;
+      }
+      if (xx < 1e-12 || yy < 1e-12) continue;
+      gain = xy / xx;
+      residual = 1.0 - xy * xy / (xx * yy);
+      if (residual < bestRatio) {
+        bestRatio = residual;
+        bestGain = gain;
+        bestNativeEnergy = xx / (ANALYSIS * channels);
+        bestShift = shift;
+      }
+    }
+    for (shift = bestShift - 4; shift <= bestShift + 4; ++shift) {
+      double xx = 0, xy = 0, yy = 0, residual, gain;
+      if (shift < minimum || shift > maximum) continue;
       for (i = 0; i < ANALYSIS * channels; ++i) {
         const size_t sample = i / channels, ch = i % channels;
         const size_t a = (BASE + sample) * channels + ch;
