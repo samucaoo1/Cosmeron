@@ -138,8 +138,8 @@ uint32_t Compression_Adler32(uint32_t previous, const void *data, size_t size);
 ```
 
 Start CRC32 at 0 and Adler32 at 1. Pass the previous result for subsequent
-chunks. Nonzero size requires readable data. With NULL data, the checksum functions
-return the previous value unchanged.
+chunks. Nonzero size requires readable data. With NULL data, CRC32 returns 0 and Adler32 returns 1, matching the
+standard initial values.
 
 ## ZIP API
 

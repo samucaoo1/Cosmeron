@@ -12,7 +12,7 @@ COMPRESSION_CRC32_PROTOTYPE {
   const unsigned char *bytes = (const unsigned char *)data;
   uint32_t crc = ~previous;
   size_t i;
-  if (!bytes) return previous;
+  if (!bytes) return 0;
   for (i = 0; i < size; ++i) {
     unsigned int bit;
     crc ^= bytes[i];
@@ -26,7 +26,7 @@ COMPRESSION_ADLER32_PROTOTYPE {
   const unsigned char *bytes = (const unsigned char *)data;
   uint32_t a = previous & UINT32_C(65535);
   uint32_t b = previous >> 16;
-  if (!bytes) return previous;
+  if (!bytes) return 1;
   while (size) {
     size_t i, count = size > 5552 ? 5552 : size;
     for (i = 0; i < count; ++i) {
