@@ -73,8 +73,8 @@ It configures miniaudio 0.11.23 with
 `MA_NO_DEVICE_IO`, `MA_NO_THREADING`, `MA_NO_RESOURCE_MANAGER`,
 `MA_NO_ENGINE`, `MA_NO_NODE_GRAPH`, and `MA_NO_GENERATION`.
 This can reduce vendor footprint and removes its internally created device
-threads. It does **not** automatically remove `-lm`, convert MP3/FLAC to
-native Cosmeron codecs, or certify hardware. The generated code may still
+threads. It does **not** automatically remove `-lm`, replace the remaining MP3
+vendor implementation, or certify hardware. The generated code may still
 depend on the host's math runtime.
 
 `CodecMinimal.h` and `Desktop.h` must not be combined in **one TU**;
@@ -134,6 +134,27 @@ source bytes; `OpenReader` retains the provided callback/userData;
 
 The native WAV writer is shared by `WriteWAV` and `WAV_WriteFile`.
 `Codec/WAV.h` can still be included independently without the
-vendored desktop backend. MP3/FLAC decoding and all desktop-device
-features still require Miniaudio until independent replacements pass
-interoperability tests.
+vendored desktop backend. The FLAC path is also independent in
+`Audio/Codec/FLAC.h` and via the generic OpenMemory/OpenFile/OpenReader API;
+MP3 decoding and desktop-device features still require Miniaudio.
+
+## Native FLAC file and callback streaming
+
+The native FLAC engine decodes `Audio_Codec_OpenMemory`, `OpenFile`, and
+`OpenReader` through original C11 parsing, frame checksums and PCM
+reconstruction. The file/reader paths parse STREAMINFO with a small stack
+buffer and skip ancillary metadata through the caller-provided seek callback.
+They refill a **bounded compressed-frame buffer** until a full CRC-verified
+frame is available, respecting the STREAMINFO maximum frame size when
+provided (otherwise an 8 MiB safety ceiling). They do not materialize the
+entire input or PCM recording in memory.
+
+`OpenFile` owns the native FILE handle and releases it on Close.
+`OpenReader` borrows the supplied reader state and never closes it.
+`OpenMemory` borrows its encoded byte array; clients must keep it alive
+until Close. `SeekFrame` currently decompresses skipped frames to maintain
+correctness; a random-access frame index can be added later.
+
+The standalone `Audio/Codec/FLAC.h` does not import Miniaudio.
+The desktop Codec aggregation still imports Miniaudio for MP3. STREAMINFO
+MD5 authentication and indexed seek optimization remain future work.
