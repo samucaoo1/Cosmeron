@@ -49,6 +49,18 @@ typedef struct AUDIO_CODEC_TYPE(TMP3Scalefactors) {
 
 AUDIO_CODEC_MP3_PARSE_SCALEFACTORS_PROTOTYPE;
 
+#define AUDIO_CODEC_MP3_HUFFMAN_PAIR_PROTOTYPE                                 \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_HuffmanPair)(                   \
+      const unsigned char *data, size_t size, size_t *ioBit, size_t endBit,    \
+      unsigned int table, int32_t *outX, int32_t *outY)
+#define AUDIO_CODEC_MP3_HUFFMAN_COUNT1_PROTOTYPE                               \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_HuffmanCount1)(                 \
+      const unsigned char *data, size_t size, size_t *ioBit, size_t endBit,    \
+      unsigned int table, int32_t outQuad[4])
+
+AUDIO_CODEC_MP3_HUFFMAN_PAIR_PROTOTYPE;
+AUDIO_CODEC_MP3_HUFFMAN_COUNT1_PROTOTYPE;
+
 /* Plain zero-initialized state; no init/free call, allocator or globals. */
 typedef struct AUDIO_CODEC_TYPE(TMP3Reservoir) {
   unsigned char history[511];
@@ -184,3 +196,4 @@ AUDIO_CODEC_MP3_FIND_FRAME_PROTOTYPE {
 
 #include "Impl/MP3SideInfo.inc"
 #include "Impl/MP3Scalefactors.inc"
+#include "Impl/MP3Huffman.inc"
