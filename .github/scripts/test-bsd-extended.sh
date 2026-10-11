@@ -116,7 +116,7 @@ else
   thread_zero_link=NOT_SUPPORTED
   linkflags=-pthread
 fi
-suite Concurrency IncludeAll ModuleSurface Mutex Once RWLock Semaphore \
+suite Concurrency NativeStandalone IncludeAll ModuleSurface Mutex Once RWLock Semaphore \
   Thread Coroutine Condition Barrier Contention ProducerConsumer \
   ThreadPool ThreadPoolMultiProducer ThreadPoolShutdown Future
 record Concurrency "$thread_zero_link" 'threads tested in VM (with -pthread if required)'
