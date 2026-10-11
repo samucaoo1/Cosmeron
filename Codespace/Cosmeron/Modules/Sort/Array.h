@@ -34,7 +34,7 @@
       COMPARISON_TYPE(Comparator) compare, void *buffer, size_t bufferSize)
 
 #define SORT_CONTEXT_PROTOTYPE(NAME)                                          \
-  static inline OPSTATUS SORT_FUNC(NAME##WithContext)(                        \
+  static inline OPSTATUS SORT_FUNC(PP_OP_CAT2(NAME, WithContext))(                        \
       void *data, size_t count, size_t elementSize,                           \
       COMPARISON_TYPE(ContextComparator) compare, void *context)
 #define SORT_STABLE_BUFFER_CONTEXT_PROTOTYPE                                  \
