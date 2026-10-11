@@ -14,14 +14,22 @@ static double (*AUDIO_INS(PowPtr))(double, double);
 static pthread_once_t AUDIO_INS(MathOnce) = PTHREAD_ONCE_INIT;
 static bool AUDIO_INS(MathReady);
 static void AUDIO_INS(LoadMath)(void) {
+  /* glibc exposes a separate libm.so.6. On musl, math is part of libc,
+   * and compatibility libm.so can be an empty linker stub. Fall back to
+   * lookup in the running process only when no shared libm can be loaded. */
   void *handle = dlopen("libm.so.6", RTLD_NOW | RTLD_LOCAL);
+  bool ownHandle = true;
   void *symbol;
   if (handle == NULL)
-    return;
+    handle = dlopen("libm.so", RTLD_NOW | RTLD_LOCAL);
+  if (handle == NULL) {
+    handle = RTLD_DEFAULT;
+    ownHandle = false;
+  }
 #define COSMERON_MACRO_INTERNAL_AUDIO_MATH_LOAD(NAME, SYMBOL)                  \
   symbol = dlsym(handle, SYMBOL);                                              \
   if (symbol == NULL || sizeof(symbol) != sizeof(AUDIO_INS(NAME))) {           \
-    dlclose(handle);                                                           \
+    if (ownHandle) dlclose(handle);                                            \
     return;                                                                    \
   }                                                                            \
   memcpy(&AUDIO_INS(NAME), &symbol, sizeof(symbol))
@@ -38,24 +46,29 @@ static inline bool AUDIO_INS(PrepareMath)(void) {
          AUDIO_INS(MathReady);
 }
 static inline double AUDIO_INS(Sin)(double x) {
-  (void)AUDIO_INS(PrepareMath)();
-  return AUDIO_INS(SinPtr)(x);
+  /* Decoder constructors return NOT_AVAILABLE on failed math initialization;
+   * guard direct internal adapter calls too, avoiding NULL dereferences. */
+  return AUDIO_INS(PrepareMath)() ? AUDIO_INS(SinPtr)(x) : 0.0;
 }
 static inline double AUDIO_INS(Exp)(double x) {
-  (void)AUDIO_INS(PrepareMath)();
-  return AUDIO_INS(ExpPtr)(x);
+  /* Decoder constructors return NOT_AVAILABLE on failed math initialization;
+   * guard direct internal adapter calls too, avoiding NULL dereferences. */
+  return AUDIO_INS(PrepareMath)() ? AUDIO_INS(ExpPtr)(x) : 0.0;
 }
 static inline double AUDIO_INS(Log)(double x) {
-  (void)AUDIO_INS(PrepareMath)();
-  return AUDIO_INS(LogPtr)(x);
+  /* Decoder constructors return NOT_AVAILABLE on failed math initialization;
+   * guard direct internal adapter calls too, avoiding NULL dereferences. */
+  return AUDIO_INS(PrepareMath)() ? AUDIO_INS(LogPtr)(x) : 0.0;
 }
 static inline double AUDIO_INS(Sqrt)(double x) {
-  (void)AUDIO_INS(PrepareMath)();
-  return AUDIO_INS(SqrtPtr)(x);
+  /* Decoder constructors return NOT_AVAILABLE on failed math initialization;
+   * guard direct internal adapter calls too, avoiding NULL dereferences. */
+  return AUDIO_INS(PrepareMath)() ? AUDIO_INS(SqrtPtr)(x) : 0.0;
 }
 static inline double AUDIO_INS(Pow)(double x, double y) {
-  (void)AUDIO_INS(PrepareMath)();
-  return AUDIO_INS(PowPtr)(x, y);
+  /* Decoder constructors return NOT_AVAILABLE on failed math initialization;
+   * guard direct internal adapter calls too, avoiding NULL dereferences. */
+  return AUDIO_INS(PrepareMath)() ? AUDIO_INS(PowPtr)(x, y) : 0.0;
 }
 #elif defined(AUDIO_MINIAUDIO_CODEC_MINIMAL) && \
     (defined(__FreeBSD__) || defined(__OpenBSD__) || \

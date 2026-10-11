@@ -135,3 +135,16 @@ link flags where tested.
 
 **Remaining gap:** the complete threaded device/Player backend still
 needs its platform-specific libraries. Hardware tests remain opt-in.
+
+## Linux libc variants and the decoder-only runtime
+
+The minimal Miniaudio decoder is now smoke-tested under **Fedora, Arch,
+Void glibc, Void musl and Debian** in real containers, using the
+`test-linux-codec-minimal.sh` C11 suite. The suite decodes in-memory WAV,
+MP3 and FLAC and exercises the five math operations without extra linker
+flags. On glibc, dynamic math resolution first tries `libm.so.6`; for
+other libc layouts it tries `libm.so`, then `RTLD_DEFAULT` (the running
+process's symbols). A missing runtime math implementation returns
+`NOT_AVAILABLE` from decoder construction, not an unchecked call through
+a null function pointer. **This is not independence from the OS math
+runtime.** A statically linked application needs separate validation.
