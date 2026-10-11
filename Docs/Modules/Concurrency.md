@@ -483,7 +483,7 @@ A ordem de memória determina as garantias de sincronização; `Relaxed` não es
 ### Example
 
 ```c
-uint32_t expected = 1; /* tipo igual ao atomic correspondente */
+uint64_t expected = 1; /* tipo igual ao atomic correspondente */
 bool ok = ATOMIC_FUNC(U64_CompareExchange)(&atomic, &expected, 2, CONCURRENCY_CONST(ATOMIC, MEMORY_ORDER_SEQ_CST), CONCURRENCY_CONST(ATOMIC, MEMORY_ORDER_RELAXED));
 ```
 
@@ -524,7 +524,7 @@ A ordem de memória determina as garantias de sincronização; `Relaxed` não es
 ### Example
 
 ```c
-uint32_t expected = 1; /* tipo igual ao atomic correspondente */
+uintptr_t expected = 1; /* tipo igual ao atomic correspondente */
 bool ok = ATOMIC_FUNC(Ptr_CompareExchange)(&atomic, &expected, 2, CONCURRENCY_CONST(ATOMIC, MEMORY_ORDER_SEQ_CST), CONCURRENCY_CONST(ATOMIC, MEMORY_ORDER_RELAXED));
 ```
 
