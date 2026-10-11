@@ -8,6 +8,7 @@ case "$(uname -s)" in
   *) extra= ;;
 esac
 mkdir -p .build-bsd-extended
+linkflags=
 
 suite() {
   module=$1; shift
@@ -16,7 +17,7 @@ suite() {
     (
       cd "Codespace/Tests/$module"
       "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
-        -D_POSIX_C_SOURCE=200809L ${extra} "$test.c" \
+        -D_POSIX_C_SOURCE=200809L ${extra} "$test.c" ${linkflags} \
         -o "../../../.build-bsd-extended/${module}_${test}"
       "../../../.build-bsd-extended/${module}_${test}"
     )
@@ -43,16 +44,25 @@ suite Network TCP UDP Poller NonBlocking PollerClose UDPClearPeer IPv6 \
 multitu Network
 
 # Thread primitives, synchronisation, tasks and thread pool, no explicit -pthread.
-if [ "$(uname -s)" = DragonFly ]; then
-  # DragonFly's libpthread is separate from libc. Do NOT add forbidden -pthread
-  # or mark its threaded backend as zero-link certified.
-  echo "[bsd-extended] NOT CERTIFIED: DragonFly threaded Concurrency requires libpthread linkage"
-  suite Concurrency Coroutine
+# Probe the public zero-extra-link contract *before* running the thread tests.
+# The CI may use -pthread solely to diagnose the backend on systems with
+# separately linked libpthread; it MUST report that this does not meet the
+# Cosmeron zero-link policy for consumers.
+if (
+  cd Codespace/Tests/Concurrency
+  "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
+    -D_POSIX_C_SOURCE=200809L ${extra} ModuleSurface.c \
+    -o ../../../.build-bsd-extended/Concurrency_ZeroLink
+); then
+  echo "[bsd-extended] THREAD_ZERO_LINK=PASS"
 else
-  suite Concurrency IncludeAll ModuleSurface Mutex Once RWLock Semaphore \
-    Thread Coroutine Condition Barrier Contention ProducerConsumer \
-    ThreadPool ThreadPoolMultiProducer ThreadPoolShutdown Future
+  echo "[bsd-extended] THREAD_ZERO_LINK=NOT_SUPPORTED on $(uname -s) (requires native libpthread)"
+  linkflags=-pthread
 fi
+suite Concurrency IncludeAll ModuleSurface Mutex Once RWLock Semaphore \
+  Thread Coroutine Condition Barrier Contention ProducerConsumer \
+  ThreadPool ThreadPoolMultiProducer ThreadPoolShutdown Future
+linkflags=
 
 # Miniz codec/ZIP and SQLite in the single-implementation translation unit.
 suite Compression Codec Zip File Namespace FunctionTableOff Robustness Allocation
