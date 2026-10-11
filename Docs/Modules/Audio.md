@@ -111,6 +111,25 @@ were not transmitted. Mid/side must not be applied again to the same
 band. These two operations are intentionally separate until an
 integrated joint-stereo frame decoder passes differential PCM tests.
 
+An opt-in `Audio/Codec/MP3Experimental.h` now chains native MPEG-1
+frame parsing, bit reservoir, scalefactors, Huffman, requantization,
+MS stereo when signaled, spectral reordering, antialiasing, IMDCT,
+frequency inversion, and 32-band synthesis. Its
+`Audio_Codec_MP3_ExperimentFrame` takes a complete MPEG-1 Layer III
+frame, a **zero-initialized** `Audio_Codec_TMP3Experimental` stream
+state and a caller-owned buffer of at least 1,152 output frames.
+It emits **1,152 interleaved f32 PCM frames** (mono or stereo) per
+successful input frame, with preserved per-channel synthesis/overlap
+history. Truncated pre-roll frames can fill the bit reservoir but
+do not publish PCM. Frame errors leave the state/output unchanged.
+
+This experiment deliberately **rejects intensity-stereo frames and
+MPEG-2/2.5** while correct band routing and LSF scalefactors remain
+unimplemented. It has no automatic gapless trimming, VBR index, seeking,
+file or callback reader yet. It must not be mistaken for a verified
+replacement for the production MP3 decoder: PCM parity testing and
+corrections are prerequisites to promotion into the public API.
+
 **The public MP3 decoder still uses miniaudio**: standalone synthesis
 does not yet establish a complete reference-matching MP3 stream decoder.
 Intensity stereo, MPEG-2/2.5 LSF, bit reservoir edge cases, gapless
