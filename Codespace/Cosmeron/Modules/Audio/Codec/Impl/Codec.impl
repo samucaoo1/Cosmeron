@@ -1,4 +1,5 @@
 /* Implementation included by Codec.h. */
+#include "FLACFrame.inc"
 
 typedef struct AUDIO_INS(Decoder) {
   cosmeron_audio_vendor_ma_decoder native;
@@ -6,7 +7,12 @@ typedef struct AUDIO_INS(Decoder) {
   AUDIO_INS(TWAVView) wav;
   uint64_t wavCursor, wavDataOffset;
   FILE *ownedFile;
-  bool nativeWav, wavStreaming;
+  bool nativeWav, wavStreaming, nativeFlac;
+  AUDIO_INS(TFLACStreamInfo) flac;
+  const unsigned char *flacBytes;
+  size_t flacSize, flacOffset, flacBlockFrames, flacBlockOffset;
+  uint64_t flacCursor;
+  float *flacBlock;
 } AUDIO_INS(Decoder);
 
 #include "WAVReader.inc"
@@ -123,6 +129,31 @@ AUDIO_CODEC_OPEN_MEMORY_PROTOTYPE {
     decoder->internal = value;
     return STATUS_CONST(SUCCESS);
   }
+  if (size >= 4 && !memcmp(data, "fLaC", 4)) {
+    AUDIO_INS(TFLACStreamInfo) info = {0};
+    OPSTATUS status = AUDIO_INS(FLAC_ParseMetadata)(data, size, &info);
+    if (status == STATUS_CONST(SUCCESS)) {
+      size_t sampleCapacity;
+      if (info.maximumBlockSize > SIZE_MAX / info.channels / sizeof(float))
+        return STATUS_CONST(ARITHMETIC_OVERFLOW);
+      sampleCapacity = info.maximumBlockSize * info.channels;
+      value = (AUDIO_INS(Decoder) *)calloc(1, sizeof(*value));
+      if (!value) return STATUS_CONST(OUT_OF_MEMORY);
+      value->flacBlock = (float *)malloc(sampleCapacity * sizeof(float));
+      if (!value->flacBlock) {
+        free(value);
+        return STATUS_CONST(OUT_OF_MEMORY);
+      }
+      value->nativeFlac = true;
+      value->flac = info;
+      value->flacBytes = (const unsigned char *)data;
+      value->flacSize = size;
+      value->flacOffset = info.frameOffset;
+      decoder->internal = value;
+      return STATUS_CONST(SUCCESS);
+    }
+    if (status != STATUS_CONST(NOT_SUPPORTED)) return status;
+  }
   if (!AUDIO_INS(PrepareMath)())
     return STATUS_CONST(NOT_AVAILABLE);
   value = (AUDIO_INS(Decoder) *)calloc(1, sizeof(*value));
@@ -195,6 +226,14 @@ AUDIO_CODEC_GET_INFO_PROTOTYPE {
   if (decoder == NULL || decoder->internal == NULL || outInfo == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
   value = (AUDIO_INS(Decoder) *)decoder->internal;
+  if (value->nativeFlac) {
+    info.channels = value->flac.channels;
+    info.sampleRate = value->flac.sampleRate;
+    info.frameCount = value->flac.totalSamples;
+    info.lengthKnown = value->flac.totalSamples != 0;
+    *outInfo = info;
+    return STATUS_CONST(SUCCESS);
+  }
   if (value->nativeWav) {
     info.channels = value->wav.channels;
     info.sampleRate = value->wav.sampleRate;
@@ -232,6 +271,48 @@ AUDIO_CODEC_READ_FRAMES_PROTOTYPE {
     *outFrames = frames;
     return status;
   }
+  if (value->nativeFlac) {
+    size_t completed = 0;
+    if (frameCapacity > SIZE_MAX / value->flac.channels / sizeof(float))
+      return STATUS_CONST(ARITHMETIC_OVERFLOW);
+    while (completed < frameCapacity) {
+      size_t n;
+      if (value->flac.totalSamples && value->flacCursor >= value->flac.totalSamples)
+        break;
+      if (value->flacBlockOffset == value->flacBlockFrames) {
+        size_t frames = 0, next = 0;
+        OPSTATUS status;
+        if (value->flacOffset == value->flacSize) break;
+        status = AUDIO_INS(FLAC_DecodeFrame)(value->flacBytes,
+            value->flacSize, &value->flac, value->flacOffset,
+            value->flacBlock, value->flac.maximumBlockSize, &frames, &next);
+        if (status != STATUS_CONST(SUCCESS)) {
+          *outFrames = completed;
+          return status;
+        }
+        if (!frames || next <= value->flacOffset) {
+          *outFrames = completed;
+          return STATUS_CONST(INVALID_SEQUENCE);
+        }
+        value->flacOffset = next;
+        value->flacBlockFrames = frames;
+        value->flacBlockOffset = 0;
+      }
+      n = value->flacBlockFrames - value->flacBlockOffset;
+      if (n > frameCapacity - completed) n = frameCapacity - completed;
+      if (value->flac.totalSamples && n > value->flac.totalSamples - value->flacCursor)
+        n = (size_t)(value->flac.totalSamples - value->flacCursor);
+      if (!n) break;
+      memcpy(outSamples + completed * value->flac.channels,
+          value->flacBlock + value->flacBlockOffset * value->flac.channels,
+          n * value->flac.channels * sizeof(float));
+      value->flacBlockOffset += n;
+      value->flacCursor += n;
+      completed += n;
+    }
+    *outFrames = completed;
+    return STATUS_CONST(SUCCESS);
+  }
   if (value->native.outputChannels == 0 ||
       frameCapacity > SIZE_MAX / value->native.outputChannels / sizeof(float))
     return STATUS_CONST(ARITHMETIC_OVERFLOW);
@@ -254,6 +335,40 @@ AUDIO_CODEC_SEEK_FRAME_PROTOTYPE {
   if (decoder == NULL || decoder->internal == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
   value = (AUDIO_INS(Decoder) *)decoder->internal;
+  if (value->nativeFlac) {
+    if (value->flac.totalSamples && frameIndex > value->flac.totalSamples)
+      return STATUS_CONST(OUT_OF_RANGE);
+    if (frameIndex < value->flacCursor) {
+      value->flacOffset = value->flac.frameOffset;
+      value->flacCursor = 0;
+      value->flacBlockFrames = 0;
+      value->flacBlockOffset = 0;
+    }
+    while (value->flacCursor < frameIndex) {
+      size_t available, step;
+      if (value->flacBlockOffset == value->flacBlockFrames) {
+        size_t frames = 0, next = 0;
+        OPSTATUS status;
+        if (value->flacOffset == value->flacSize)
+          return STATUS_CONST(OUT_OF_RANGE);
+        status = AUDIO_INS(FLAC_DecodeFrame)(value->flacBytes,
+            value->flacSize, &value->flac, value->flacOffset,
+            value->flacBlock, value->flac.maximumBlockSize, &frames, &next);
+        if (status != STATUS_CONST(SUCCESS)) return status;
+        if (!frames || next <= value->flacOffset)
+          return STATUS_CONST(INVALID_SEQUENCE);
+        value->flacOffset = next;
+        value->flacBlockFrames = frames;
+        value->flacBlockOffset = 0;
+      }
+      available = value->flacBlockFrames - value->flacBlockOffset;
+      step = frameIndex - value->flacCursor > available ?
+          available : (size_t)(frameIndex - value->flacCursor);
+      value->flacBlockOffset += step;
+      value->flacCursor += step;
+    }
+    return STATUS_CONST(SUCCESS);
+  }
   if (value->nativeWav) {
     if (frameIndex > value->wav.frameCount)
       return STATUS_CONST(OUT_OF_RANGE);
@@ -269,8 +384,9 @@ AUDIO_CODEC_CLOSE_PROTOTYPE {
   if (decoder != NULL && decoder->internal != NULL) {
     AUDIO_INS(Decoder) *value = (AUDIO_INS(Decoder) *)decoder->internal;
     decoder->internal = NULL;
-    if (!value->nativeWav)
+    if (!value->nativeWav && !value->nativeFlac)
       cosmeron_audio_vendor_ma_decoder_uninit(&value->native);
+    free(value->flacBlock);
     if (value->ownedFile) fclose(value->ownedFile);
     free(value);
   }
