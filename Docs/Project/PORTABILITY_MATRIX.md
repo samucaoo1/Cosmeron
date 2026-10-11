@@ -13,30 +13,33 @@ a workflow existing does not mean it has passed.
 | Linux GCC/Clang | Native GitHub runners | [CI](../../.github/workflows/01-ci.yml) | Existing module integration suites |
 | Windows MinGW/MSVC | Native GitHub runners | [CI](../../.github/workflows/01-ci.yml) | Existing module integration suites |
 | macOS Clang | Native GitHub runner | [CI](../../.github/workflows/01-ci.yml) | Existing module integration suites |
-| FreeBSD | Native FreeBSD guest VM via vmactions | [Continuous Integration](../../.github/workflows/01-ci.yml) | Portable C11, OS-native smoke and Input suites |
-| OpenBSD / NetBSD / DragonFly BSD | Native guest VMs via vmactions | [Platform Compatibility](../../.github/workflows/02-platforms.yml) | Portable C11, OS-native smoke and Input suites |
+| FreeBSD | Native FreeBSD guest VM via vmactions | [Continuous Integration](../../.github/workflows/01-ci.yml) | Portable C11 + extended Network, Concurrency, Compression, Database, offline Audio, noninteractive Terminal and Input; extended suite under validation |
+| OpenBSD / NetBSD / DragonFly BSD | Native guest VMs via vmactions | [Platform Compatibility](../../.github/workflows/02-platforms.yml) | Portable C11, native smoke, Input, extended Network/Concurrency/Compression/Database/Audio/Terminal (extended suite under validation) |
 | Fedora / Arch | Native Linux userspace containers | [Platform Compatibility](../../.github/workflows/02-platforms.yml) | Same ten portable suites |
 | Void glibc / Void musl | Native Linux userspace containers | [Platform Compatibility](../../.github/workflows/02-platforms.yml) | Same ten portable suites; libc coverage |
-| Nix toolchain | Nix-provided compiler on Ubuntu | [Platform Compatibility](../../.github/workflows/02-platforms.yml) | Same ten portable suites; **not** native NixOS |
+| Nix toolchain / NixOS VM | Pinned Nix derivation on Ubuntu and real NixOS QEMU guest | [Platform Compatibility](../../.github/workflows/02-platforms.yml) | Strict portable C11 passed as package and inside NixOS VM ([run](https://github.com/samucaoo1/Cosmeron/actions/runs/38141169787)); not full hardware certification |
 | ChromeOS Crostini proxy | Debian container on Ubuntu | [Platform Compatibility](../../.github/workflows/02-platforms.yml) | Same ten suites; **not** a real Chromebook |
 
 The portable smoke suite is [test-portable-core.sh](../../.github/scripts/test-portable-core.sh).
 It compiles and executes the repository's existing test sources, with
 `-std=c11 -Wall -Wextra -Wpedantic -Werror` and no explicit extra link libraries.
-Network, OS-backed concurrency, terminal, file I/O, audio devices, full compression
-and database paths require additional integration and/or target-specific tests.
+The [BSD extended runner](../../.github/scripts/test-bsd-extended.sh) additionally
+executes OS-backed Network, Concurrency, embedded SQLite, Compression, offline
+Audio and noninteractive Terminal suites, but its expanded results are still
+being stabilized. In some BSDs, threaded Concurrency and SQLite need
+`-pthread` for diagnostic runtime tests; these are explicitly **not** zero-link
+certifications. Interactive hardware, audio devices and full OS integration
+remain out of scope of the smoke suites.
 
 ## Additional platform feasibility
 
 ### NixOS
 
-**Feasible, not yet natively certified.** Since Cosmeron is source-level C11, the
-normal Nixpkgs GCC/Clang toolchains should be usable for its portable modules.
-The Nix-toolchain job tests development-environment reproducibility, not NixOS's
-kernel integration, packaging, sandboxing or system layout.
-
-Next step: ship a `flake.nix` devShell plus derivation/check; then run a true NixOS VM
-or self-hosted NixOS runner for OS-specific modules. Pin Nixpkgs for reproducibility.
+**Verified for the selected portable C11 test subset on a real NixOS VM.**
+`flake.nix` and `flake.lock` pin Nixpkgs, expose a derivation/check and boot a
+QEMU NixOS guest which executes the packaged tests. Both the pinned package
+and the real NixOS VM [passed CI](https://github.com/samucaoo1/Cosmeron/actions/runs/38141169787).
+OS-specific hardware, permissions and drivers remain unverified.
 
 ### ChromeOS
 
@@ -45,7 +48,9 @@ environment exposes Debian inside a managed VM/container. The portable modules
 should behave like their Linux counterparts. The Debian CI job approximates its
 userspace but does *not* exercise the ChromeOS kernel/device permissions.
 
-Native ChromeOS apps are a different target; terminal access to HID, evdev,
+A real Chromebook verification script exists at [Tools/crostini/check.sh](../../Tools/crostini/check.sh);
+it has not been executed on a Chromebook. Native ChromeOS apps are a different
+target; terminal access to HID, evdev,
 joysticks, USB and GUI/input capture may be mediated or blocked. Validate Input,
 Network, Audio and Terminal on real Chromebook hardware. Consider Android-on-
 ChromeOS builds separately; the Crostini job is not an Android NDK test.
@@ -57,11 +62,12 @@ Official references:
 
 ### OpenHarmony
 
-**Technically feasible for the pure C11 subset; no CI or device certification yet.**
-OpenHarmony offers a native C/C++ SDK with Clang, a sysroot and an
-`ohos.toolchain.cmake`. Compile-time verification needs the specific target
-architecture and SDK version (e.g. ARM64/standard system); running tests requires
-an OpenHarmony VM, emulator, development board or device.
+**Native SDK 6.0 ARM64 C11 cross-build and multi-translation-unit link passed CI**:
+[actual OpenHarmony SDK run](https://github.com/samucaoo1/Cosmeron/actions/runs/38141169787).
+Target macros and triple are preserved in the workflow artifacts.
+The [Tools/ohos](../../Tools/ohos/README.md) compiler proof does **not**
+execute the code. OpenHarmony runtime, OS-backed APIs, LiteOS devices, Huawei
+HarmonyOS NEXT and hardware permissions remain unverified.
 
 Sequence:
 1. Acquire and pin a trusted OpenHarmony native SDK/toolchain.
@@ -102,8 +108,9 @@ Official developer portal:
 2. **Broader BSD integration:** CLI, Parsing, Compression, Database, File, Audio,
    Terminal/Canvas, Concurrency, Network; diagnose failures by actual BSD
    headers, syscalls and linker behavior, not by disabling warnings.
-3. **Additional coverage:** libc variants and ARM64 runners; real NixOS VM,
-   real Chromebook, OHOS SDK cross-compile, hardware runtime tests.
+3. **Additional coverage:** libc variants, real Chromebook, OpenHarmony device,
+   full BSD zero-link backends and hardware runtime tests. NixOS VM and OHOS
+   ARM64 cross-compile are already implemented and have passing runs.
 4. **Per-module certification:** publish results and backend limitations.
    Distinguish compiled, unit-tested, integrated, and hardware-tested states.
 
