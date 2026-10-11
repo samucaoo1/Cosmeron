@@ -49,7 +49,7 @@ multitu() {
     cd "Codespace/Tests/$module"
     "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
       ${module_features} ${extra} \
-      MultiTU_A.c MultiTU_B.c MultiTU_Main.c \
+      MultiTU_A.c MultiTU_B.c MultiTU_Main.c ${linkflags} \
       -o "../../../.build-bsd-extended/${module}_MultiTU"
     "../../../.build-bsd-extended/${module}_MultiTU"
   )
@@ -121,8 +121,27 @@ echo "[bsd-extended] compile+run Database (one shared embedded SQLite object)"
 )
 
 # Audio runs in offline mode; no hardware access is claimed.
+# Some BSD libc implementations do not export sin/exp without libm. A strict
+# zero-link *probe* must be recorded before enabling a diagnostic workaround.
+audio_features=-D_POSIX_C_SOURCE=200809L
+case "$(uname -s)" in
+  DragonFly|FreeBSD) audio_features= ;;
+  OpenBSD) audio_features="-D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE=1" ;;
+esac
+if (
+  cd Codespace/Tests/Audio
+  "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
+    ${audio_features} ${extra} Codec.c \
+    -o ../../../.build-bsd-extended/Audio_ZeroLink 2>/dev/null
+); then
+  echo "[bsd-extended] AUDIO_ZERO_LINK=PASS"
+else
+  echo "[bsd-extended] AUDIO_ZERO_LINK=NOT_SUPPORTED on $(uname -s); using -lm for offline runtime diagnostics"
+  linkflags=-lm
+fi
 suite Audio Synthesis Codec Player IncludeAll
 multitu Audio
+linkflags=
 
 # Only noninteractive graphics, canvas, text UI and font regression sources.
 suite Terminal IncludeAll Rasterization Sprite Curves ProjectionSprites \
