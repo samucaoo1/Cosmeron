@@ -143,7 +143,7 @@ jobs:
 
   nixos-vm:
     name: NixOS / QEMU actual guest
-    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.nixos_vm) }}
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[portability-probe]')) || (github.event_name == 'workflow_dispatch' && inputs.nixos_vm) }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -156,7 +156,7 @@ jobs:
 
   ohos-sdk:
     name: OpenHarmony / ARM64 SDK compile + link (no device)
-    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.ohos_sdk) }}
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[portability-probe]')) || (github.event_name == 'workflow_dispatch' && inputs.ohos_sdk) }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
