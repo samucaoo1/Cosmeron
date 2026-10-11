@@ -199,7 +199,7 @@ SORT_CONTEXT_PROTOTYPE(Stable) {
 #define COSMERON_MACRO_INTERNAL_SORT_ADAPT(NAME)                              \
   SORT_##NAME##_PROTOTYPE {                                                   \
     SORT_INS(ComparatorAdapter_InternalType_) adapter = { compare };         \
-    return SORT_FUNC(NAME##WithContext)(data, count, elementSize,            \
+    return SORT_FUNC(PP_OP_CAT2(NAME, WithContext))(data, count, elementSize,            \
         compare ? SORT_INS(CompareAdapter) : NULL, &adapter);                \
   }
 
