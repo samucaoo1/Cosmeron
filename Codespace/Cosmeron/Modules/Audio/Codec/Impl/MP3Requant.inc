@@ -9,7 +9,8 @@ static inline OPSTATUS AUDIO_INS(MP3_RequantBand)(
     const int32_t *quantized, size_t first, size_t count, float gain,
     float *output) {
   size_t i;
-  if (count > 576 - first) return STATUS_CONST(OUT_OF_RANGE);
+  if (first > 576 || count > 576 - first)
+    return STATUS_CONST(OUT_OF_RANGE);
   for (i = first; i < first + count; ++i) {
     int64_t magnitude = quantized[i] < 0 ?
         -(int64_t)quantized[i] : (int64_t)quantized[i];
