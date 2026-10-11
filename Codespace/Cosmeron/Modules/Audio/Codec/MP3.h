@@ -33,6 +33,22 @@ typedef struct AUDIO_CODEC_TYPE(TMP3SideInfo) {
   AUDIO_CODEC_TYPE(TMP3Granule) parts[2][2];
 } AUDIO_CODEC_TYPE(TMP3SideInfo);
 
+typedef struct AUDIO_CODEC_TYPE(TMP3Scalefactors) {
+  uint8_t longBands[22];
+  uint8_t shortBands[13][3];
+  uint16_t part2Bits;
+} AUDIO_CODEC_TYPE(TMP3Scalefactors);
+
+#define AUDIO_CODEC_MP3_PARSE_SCALEFACTORS_PROTOTYPE                          \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_ParseScalefactors)(             \
+      const unsigned char *mainData, size_t mainDataBytes,                    \
+      const AUDIO_CODEC_TYPE(TMP3SideInfo) *side,                              \
+      unsigned int granule, unsigned int channel,                              \
+      const AUDIO_CODEC_TYPE(TMP3Scalefactors) *firstGranule,                  \
+      AUDIO_CODEC_TYPE(TMP3Scalefactors) *outScale)
+
+AUDIO_CODEC_MP3_PARSE_SCALEFACTORS_PROTOTYPE;
+
 /* Plain zero-initialized state; no init/free call, allocator or globals. */
 typedef struct AUDIO_CODEC_TYPE(TMP3Reservoir) {
   unsigned char history[511];
@@ -167,3 +183,4 @@ AUDIO_CODEC_MP3_FIND_FRAME_PROTOTYPE {
 }
 
 #include "Impl/MP3SideInfo.inc"
+#include "Impl/MP3Scalefactors.inc"
