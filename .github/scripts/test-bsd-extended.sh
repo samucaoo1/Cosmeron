@@ -79,6 +79,24 @@ suite Concurrency Cooperative
 echo "[bsd-extended] CONCURRENCY_COOPERATIVE_ZERO_LINK=PASS"
 record ConcurrencyCooperative PASS 'single-thread cooperative tasks, not OS threads'
 
+# Evaluate the alternative C11 thrd_* ABI without hiding a library load.
+# thrd_create + thrd_join must LINK and RUN without -pthread/-lstdthreads.
+# This is an independent feasibility probe, not a replacement for the existing
+# pthread-based public Thread/Mutex/ThreadPool implementation.
+stage=C11ThreadProbe
+if (
+  cd Codespace/Tests/Concurrency
+  "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
+    -D_POSIX_C_SOURCE=200809L ${extra} C11ThreadsProbe.c \
+    -o ../../../.build-bsd-extended/C11ThreadsProbe >/dev/null 2>&1
+) && .build-bsd-extended/C11ThreadsProbe; then
+  echo "[bsd-extended] C11_THREAD_NATIVE_ZERO_LINK=PASS"
+  record C11ThreadsProbe PASS 'C11 native threads executed; separate from pthread API'
+else
+  echo "[bsd-extended] C11_THREAD_NATIVE_ZERO_LINK=NOT_SUPPORTED"
+  printf '%s\n' '| C11ThreadsProbe | NOT SUPPORTED | NOT CERTIFIED | NOT SUPPORTED | no device needed |' >> "$coverage"
+fi
+
 # Thread primitives, synchronisation, tasks and thread pool, no explicit -pthread.
 # Probe the public zero-extra-link contract *before* running the thread tests.
 # The CI may use -pthread solely to diagnose the backend on systems with
