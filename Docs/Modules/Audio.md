@@ -66,9 +66,22 @@ mathematical lookup tables for x^(4/3) and power-of-two scaling, so
 there is **no dependency on `libm`**. The calculation stays
 independent of the miniaudio PCM decoder.
 
-The function does not reorder short blocks, reconstruct stereo channels
-or perform IMDCT/subband synthesis. MPEG-2/2.5 LSF scalefactors and their
-requantization remain explicitly unsupported.
+The `Audio_Codec_MP3_ReorderShort` function reorders MPEG-1 short
+and mixed blocks from the Huffman window-major to hybrid frequency-major
+layout; mixed long lines 0–35 remain unchanged. The
+`Audio_Codec_MP3_StereoMS` operation applies the normalized mid/side
+matrix to an explicit spectral-line interval, useful when a joint-stereo
+frame uses MS coding. MPEG-1 intensity-stereo bands are **not yet
+decoded** and must be excluded when requesting MS. Finally,
+`Audio_Codec_MP3_Antialias` applies eight alias-cancellation
+butterflies at 31 long-block subband boundaries, skips pure short blocks,
+and handles the first long boundary of mixed blocks.
+
+All three functions use caller-provided arrays, accept in-place operation
+where outputs do not alias one another, validate inputs and avoid
+additional linking. They **do not produce PCM**: IMDCT with windowing
+and overlap-add, frequency inversion, and synthesis filterbank remain
+pending. MPEG-2/2.5 LSF scalefactors and requantization are also pending.
 The numerical codebook assignments are standardized MPEG Layer III values;
 the matching implementation is original Cosmeron C11.
 
