@@ -66,10 +66,12 @@ RANDOM_ENTROPY_INS(BCryptGenRandom)(void) {
 }
 #elif OS_LINUX
 #include <sys/random.h>
-#elif OS_MAC || OS_FREEBSD
+#elif OS_MAC || OS_BSD
 #include <fcntl.h>
-#include <pthread.h>
 #include <unistd.h>
+#if OS_MAC || OS_FREEBSD
+#include <pthread.h>
+#endif
 #endif
 
 #define RANDOM_ENTROPY_SYSTEM_PROTOTYPE                                      \
