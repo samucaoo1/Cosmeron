@@ -46,6 +46,16 @@ elif command -v bsdtar >/dev/null 2>&1; then
   bsdtar -xOf "$work/cosmeron.zip" payload.bin > "$work/external-zip-content"
   cmp "$src" "$work/external-zip-content"
   zip_status=PASS
+elif command -v perl >/dev/null 2>&1 && \
+     perl -MIO::Uncompress::Unzip -e 1 >/dev/null 2>&1; then
+  # Some BSD base images omit unzip/bsdtar but ship Perl's core ZIP reader.
+  perl -MIO::Uncompress::Unzip -e '
+    my ($input, $output) = @ARGV;
+    IO::Uncompress::Unzip::unzip $input => $output, Name => "payload.bin"
+      or die $IO::Uncompress::Unzip::UnzipError;
+  ' "$work/cosmeron.zip" "$work/external-zip-content"
+  cmp "$src" "$work/external-zip-content"
+  zip_status=PASS
 fi
 
 # In the other direction, exercise an archive made by the external zip tool
@@ -53,6 +63,16 @@ fi
 zip_import=NOT_AVAILABLE
 if command -v zip >/dev/null 2>&1; then
   (cd "$work" && zip -q native.zip payload.bin)
+  "$testbin" zipread 0 "$work/native.zip" "$work/cosmeron-unzipped"
+  cmp "$src" "$work/cosmeron-unzipped"
+  zip_import=PASS
+elif command -v perl >/dev/null 2>&1 && \
+     perl -MIO::Compress::Zip -e 1 >/dev/null 2>&1; then
+  perl -MIO::Compress::Zip -e '
+    my ($input, $output) = @ARGV;
+    IO::Compress::Zip::zip $input => $output, Name => "payload.bin"
+      or die $IO::Compress::Zip::ZipError;
+  ' "$src" "$work/native.zip"
   "$testbin" zipread 0 "$work/native.zip" "$work/cosmeron-unzipped"
   cmp "$src" "$work/cosmeron-unzipped"
   zip_import=PASS
