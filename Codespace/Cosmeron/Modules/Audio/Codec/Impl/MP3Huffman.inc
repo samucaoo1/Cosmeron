@@ -105,8 +105,8 @@ AUDIO_CODEC_MP3_HUFFMAN_COUNT1_PROTOTYPE {
     return STATUS_CONST(INVALID_ARGUMENT);
   cursor = *ioBit;
   status = AUDIO_INS(MP3_MatchHuffman)(data, size, &cursor, endBit,
-      AUDIO_INS(MP3QuadCodes0) + (table - 32) * 0,
-      AUDIO_INS(MP3QuadLengths0) + (table - 32) * 0,
+      AUDIO_INS(MP3QuadCodes0),
+      AUDIO_INS(MP3QuadLengths0),
       16, 6, &symbol);
   /* Table 33 has an independent, fixed-width 4-bit assignment. */
   if (table == 33) {
