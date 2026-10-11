@@ -100,6 +100,17 @@ dynamic allocation is required. A rejected input leaves the caller's
 state and output unchanged. Standalone synthesis and a real `Tone.mp3`
 pipeline are covered by native C11 tests.
 
+The frame parser also reports `channelMode`, `modeExtension`,
+`msStereo` and `intensityStereo` from the MPEG header. For MPEG-1
+joint-stereo material, `Audio_Codec_MP3_IntensityBand` implements
+the standardized `is_pos` 0–6 power ratios (and `is_pos=7` meaning
+no intensity treatment) over an **explicit spectral interval**.
+The caller must identify intensity-coded high-frequency bands from the
+right-channel scalefactors and ensure the band's right coefficients
+were not transmitted. Mid/side must not be applied again to the same
+band. These two operations are intentionally separate until an
+integrated joint-stereo frame decoder passes differential PCM tests.
+
 **The public MP3 decoder still uses miniaudio**: standalone synthesis
 does not yet establish a complete reference-matching MP3 stream decoder.
 Intensity stereo, MPEG-2/2.5 LSF, bit reservoir edge cases, gapless
