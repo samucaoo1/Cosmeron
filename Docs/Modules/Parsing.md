@@ -3117,3 +3117,28 @@ OPSTATUS status = PARSING_FUNC(YAML_AtMutable)(array, 0, &found);
 - Input strings use explicit byte sizes; document edits must be made through documented functions to retain ownership safety.
 - JSON, CSV, INI and XML readers borrow original source bytes; TOML/YAML expose owned document parsing.
 - See [File](File.md) for file handling, [Text](Text.md) for UTF-8, [CLI](CLI.md) for command-line arguments, and [Bit](Bit.md) for reference layout.
+
+# C11 smoke test (JSON)
+
+This standalone test exercises document ownership, object lookup and checked typed conversion.
+
+<!-- cosmeron-c11-test -->
+```c
+#include "Cosmeron/Modules/Parsing/JSON/JSON.h"
+#include <assert.h>
+
+int main(void) {
+    const char source[] = "{\"answer\":42}";
+    PARSING_TYPE(TJSONDocument) doc = {0};
+    const PARSING_TYPE(TJSONValue) *value = NULL;
+    int64_t answer = 0;
+    assert(PARSING_FUNC(JSON_Parse)(source, sizeof source - 1,
+                                    &doc, NULL) == STATUS_CONST(SUCCESS));
+    assert(PARSING_FUNC(JSON_Get)(PARSING_FUNC(JSON_Root)(&doc),
+                                  "answer", &value) == STATUS_CONST(SUCCESS));
+    assert(PARSING_FUNC(JSON_I64)(value, &answer) == STATUS_CONST(SUCCESS));
+    assert(answer == 42);
+    PARSING_FUNC(JSON_Free)(&doc);
+    return 0;
+}
+```
