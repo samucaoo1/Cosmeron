@@ -59,3 +59,21 @@ callback returns; the caller owns synchronization and the sink context.
 for 513 stereo frames, forces partial 37-byte writes, checks every output
 sample, and verifies lifecycle and error cases. Passing this suite does not
 certify any physical audio device.
+
+## Manual hardware acceptance test (not run by CI)
+
+The optional `ManualHardware.c` builds under strict C11 as part of the
+Audio test suite. It is **not automatically executed** by CI. On a BSD
+host with a reachable audio device, run:
+
+```sh
+make -C Codespace/Tests/Audio hardware-test CC=cc
+# Or explicitly choose the device with:
+Codespace/Tests/Audio/.build/ManualHardware /dev/dsp
+```
+
+It requests a low-volume 440 Hz tone for half a second, checks the OS
+calls, closes resources and asks the person running it to confirm audio was
+heard without underruns. This is not appropriate for unattended CI runners
+without speaker/permissions. OpenBSD's optional argument denotes a sndio
+server/device name rather than a /dev/dsp path.

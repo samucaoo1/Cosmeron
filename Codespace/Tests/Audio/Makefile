@@ -9,16 +9,22 @@ $(BUILD):
 	mkdir -p $(BUILD)
 $(BUILD)/%: %.c $(HEADERS) | $(BUILD)
 	$(CC) $(CFLAGS) $< -o $@
+# Physical-device helper: compiled as part of build, never in automatic run.
+$(BUILD)/ManualHardware: ManualHardware.c $(HEADERS) | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@
 $(BUILD)/OfflineMultiTU: OfflineTU_A.c OfflineTU_B.c OfflineTU_Main.c $(HEADERS) | $(BUILD)
 	$(CC) $(CFLAGS) OfflineTU_A.c OfflineTU_B.c OfflineTU_Main.c -o $@
 $(BUILD)/MultiTU: MultiTU_A.c MultiTU_B.c MultiTU_Main.c $(HEADERS) | $(BUILD)
 	$(CC) $(CFLAGS) MultiTU_A.c MultiTU_B.c MultiTU_Main.c -o $@
-build: $(TESTS:%=$(BUILD)/%) $(BUILD)/OfflineMultiTU $(BUILD)/MultiTU
+build: $(TESTS:%=$(BUILD)/%) $(BUILD)/ManualHardware $(BUILD)/OfflineMultiTU $(BUILD)/MultiTU
 run: build
 	@set -e; for test in $(TESTS:%=$(BUILD)/%) $(BUILD)/OfflineMultiTU $(BUILD)/MultiTU; do \
 	  echo "[audio] run $test"; \
 	  if "$test"; then :; else result=$?; echo "[audio] FAILED $test (exit $result)"; exit "$result"; fi; \
 	done
+hardware-test: $(BUILD)/ManualHardware
+	@echo "WARNING: this opens real audio hardware and plays a short tone."
+	$(BUILD)/ManualHardware
 clean:
 	rm -rf $(BUILD) roundtrip.wav
-.PHONY: all build run clean
+.PHONY: all build run clean hardware-test

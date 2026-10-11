@@ -164,6 +164,12 @@ record Database PASS 'SQLite single-thread profile; no parallel callers'
 
 # Audio offline: strict zero-extra-link, multiple translation units.
 stage=AudioManual
+echo "[bsd-extended] compile Audio/ManualHardware (do not execute in VM)"
+(
+  cd Codespace/Tests/Audio
+  "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
+    ManualHardware.c -o ../../../.build-bsd-extended/Audio_ManualHardware
+)
 suite Audio Manual ManualSink
 echo "[bsd-extended] AUDIO_MANUAL_PUMP_SIMULATED=PASS"
 echo "[bsd-extended] AUDIO_MANUAL_ZERO_LINK=PASS (compile+codec conversion; no device opened)"
