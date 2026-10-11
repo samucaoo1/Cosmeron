@@ -162,7 +162,7 @@ int main(void) {
     FILE *file = fopen("Fixtures/Tone.mp3", "rb");
     unsigned char encoded[65536];
     AUDIO_CODEC_TYPE(TMP3Reservoir) reservoir = {0};
-    AUDIO_CODEC_TYPE(TMP3HybridState) hybridState[2] = {{0}};
+    AUDIO_CODEC_TYPE(TMP3HybridState) hybridState[2];
     AUDIO_CODEC_TYPE(TMP3FrameInfo) header;
     AUDIO_CODEC_TYPE(TMP3SideInfo) side;
     AUDIO_CODEC_TYPE(TMP3Scalefactors) first[2];
@@ -171,6 +171,7 @@ int main(void) {
     assert(file);
     bytes = fread(encoded, 1, sizeof encoded, file);
     assert(!fclose(file) && bytes > 1000);
+    memset(hybridState, 0, sizeof hybridState);
     assert(AUDIO_CODEC_FUNC(MP3_FindFrame)(encoded, bytes, 0,
         &offset, &header) == STATUS_CONST(SUCCESS));
     while (bytes - offset >= 4 && frameCount < 50) {
