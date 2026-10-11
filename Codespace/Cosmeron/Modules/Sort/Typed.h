@@ -7,8 +7,15 @@
 #define SORT_TYPED_COMPARE_PROTOTYPE(TYPE, SUFFIX)                             \
   static inline CMPOUT SORT_TYPED_INS(Compare, SUFFIX)(                       \
       const void *a, const void *b, void *context)
+/* Generated family members may be intentionally unused by a translation unit.
+ * Preserve strict -Werror builds without requiring users to call each member. */
+#if defined(__clang__) || defined(__GNUC__)
+#define SORT_TYPED_UNUSED __attribute__((unused))
+#else
+#define SORT_TYPED_UNUSED
+#endif
 #define SORT_TYPED_OPERATION_PROTOTYPE(TYPE, NAME, SUFFIX)                     \
-  static inline OPSTATUS SORT_TYPED_FUNC(NAME, SUFFIX)(TYPE *data, size_t count)
+  static inline SORT_TYPED_UNUSED OPSTATUS SORT_TYPED_FUNC(NAME, SUFFIX)(TYPE *data, size_t count)
 
 #define SORT_IMPLEMENT_ALL(TYPE, SUFFIX, COMPARE)                              \
   SORT_TYPED_COMPARE_PROTOTYPE(TYPE, SUFFIX) {                                \
