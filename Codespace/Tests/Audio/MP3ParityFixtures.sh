@@ -33,7 +33,14 @@ ffmpeg -nostdin -hide_banner -loglevel error -y \
   -i 'aevalsrc=0.16*sin(2*PI*(191*t+240*t*t))+0.09*sin(2*PI*457*t)|0.17*sin(2*PI*(317*t+140*t*t))+0.06*sin(2*PI*911*t):s=48000:d=0.46' \
   -ac 2 -ar 48000 -c:a libmp3lame -joint_stereo 0 -b:a 192k "$dir/stereo48.mp3"
 
+# Correlated channels encourage MS frames in LAME.
+ffmpeg -nostdin -hide_banner -loglevel error -y \
+  -f lavfi \
+  -i 'aevalsrc=0.18*sin(2*PI*(211*t+151*t*t))+0.08*sin(2*PI*673*t)|0.16*sin(2*PI*(211*t+151*t*t))+0.07*sin(2*PI*673*t):s=44100:d=0.46' \
+  -ac 2 -ar 44100 -c:a libmp3lame -joint_stereo 1 -b:a 128k "$dir/jointMS.mp3"
+
 COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/mono.mp3"
 COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/stereo.mp3"
 COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/mono32.mp3"
 COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/stereo48.mp3"
+COSMERON_MP3_PARITY_STRICT=1 COSMERON_MP3_REQUIRE_MS=1 "$dir/mp3compare" "$dir/jointMS.mp3"
