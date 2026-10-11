@@ -43,6 +43,18 @@ uses `part2_3_length` to reject malformed frame bit spans and never
 claims to decode Huffman coefficients. MPEG-2/2.5 low-sampling-frequency
 scalefactor rules are explicitly `NOT_SUPPORTED` until added.
 
+The C11 `Audio_Codec_MP3_HuffmanPair` and
+`Audio_Codec_MP3_HuffmanCount1` functions decode all standard MP3 Layer III
+Huffman codebooks (0–31 for quantized coefficient pairs and 32/33 for
+`count1` quadruples). They handle reserved table rejection, escape
+`linbits`, nonzero sign bits and explicit bit boundaries without
+allocations. The caller supplies `ioBit` and an upper bound `endBit`;
+a truncated or invalid symbol does not advance `ioBit`. These functions
+produce signed quantized integers, **not audio PCM**. Huffman-granule
+region handling, requantization and synthesis are separate later stages.
+The numerical codebook assignments are standardized MPEG Layer III values;
+the matching implementation is original Cosmeron C11.
+
 The public `OpenMemory`/`OpenFile`/`OpenReader` MP3 PCM decoder
 still uses miniaudio until its independent Huffman/synthesis stages are
 implemented and verified. The standalone `Codec/MP3.h` introduces
