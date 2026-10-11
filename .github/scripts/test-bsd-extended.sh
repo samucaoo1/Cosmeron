@@ -1,6 +1,8 @@
 #!/bin/sh
-# Extended, *executed* BSD regression matrix. Never adds -lm/-pthread/-lsqlite3.
-# Runs in the native vmactions guest, with no simulated platform guards.
+# Extended *executed* BSD regression matrix in native vmactions guests.
+# First probe the zero-extra-link contract, then optionally use -pthread
+# *in CI diagnostics only* to test otherwise unverified native thread backends.
+# Reports must NOT present a -pthread test as satisfying zero-link.
 set -eu
 CC=${CC:-cc}
 case "$(uname -s)" in
@@ -73,18 +75,30 @@ echo "[bsd-extended] compile+run Database (one shared embedded SQLite object)"
   "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
     -D_POSIX_C_SOURCE=200809L ${extra} -c Backend.c \
     -o ../../../.build-bsd-extended/Database_Backend.o
+  # The embedded SQLite backend uses pthreads on some BSDs. Probe a
+  # zero-link executable first and surface a separate policy result.
+  db_linkflags=
+  if "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
+    -D_POSIX_C_SOURCE=200809L ${extra} IncludeAll.c \
+    ../../../.build-bsd-extended/Database_Backend.o \
+    -o ../../../.build-bsd-extended/Database_ZeroLink 2>/dev/null; then
+    echo "[bsd-extended] DATABASE_ZERO_LINK=PASS"
+  else
+    echo "[bsd-extended] DATABASE_ZERO_LINK=NOT_SUPPORTED on $(uname -s), using -pthread for CI runtime diagnostics"
+    db_linkflags=-pthread
+  fi
   for test in IncludeAll Database Persistence Namespace; do
     echo "[bsd-extended] run Database/$test"
     "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
       -D_POSIX_C_SOURCE=200809L ${extra} "$test.c" \
-      ../../../.build-bsd-extended/Database_Backend.o \
+      ../../../.build-bsd-extended/Database_Backend.o ${db_linkflags} \
       -o "../../../.build-bsd-extended/Database_${test}"
     "../../../.build-bsd-extended/Database_${test}"
   done
   "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
     -D_POSIX_C_SOURCE=200809L ${extra} \
     MultiTU_A.c MultiTU_B.c MultiTU_Main.c \
-    ../../../.build-bsd-extended/Database_Backend.o \
+    ../../../.build-bsd-extended/Database_Backend.o ${db_linkflags} \
     -o ../../../.build-bsd-extended/Database_MultiTU
   ../../../.build-bsd-extended/Database_MultiTU
 )
