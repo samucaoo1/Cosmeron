@@ -19,9 +19,9 @@
 #elif defined(__NetBSD__)
 #include <sys/audioio.h>
 #endif
-#define AUDIO_INS(MANUAL_BSD) 1
+#define AUDIO_MANUAL_BSD_BACKEND 1
 #else
-#define AUDIO_INS(MANUAL_BSD) 0
+#define AUDIO_MANUAL_BSD_BACKEND 0
 #endif
 
 typedef void (*AUDIO_DEVICE_TYPE(TManualRender))(void *userData,
@@ -99,7 +99,7 @@ AUDIO_DEVICE_MANUAL_OPEN_PROTOTYPE {
     return STATUS_CONST(INVALID_ARGUMENT);
   if (device->internal != NULL)
     return STATUS_CONST(BUSY);
-#if AUDIO_INS(MANUAL_BSD)
+#if AUDIO_MANUAL_BSD_BACKEND
   {
     const char *path = config->path != NULL ? config->path :
 #if defined(__NetBSD__)
@@ -188,7 +188,7 @@ AUDIO_DEVICE_MANUAL_PUMP_PROTOTYPE {
     return STATUS_CONST(NOT_AVAILABLE);
   if (frames == 0)
     return STATUS_CONST(SUCCESS);
-#if AUDIO_INS(MANUAL_BSD)
+#if AUDIO_MANUAL_BSD_BACKEND
   {
     float samples[512u * AUDIO_CONST(MAX_CHANNELS)];
     unsigned char pcm[512u * AUDIO_CONST(MAX_CHANNELS) * 2u];
@@ -196,7 +196,6 @@ AUDIO_DEVICE_MANUAL_PUMP_PROTOTYPE {
       size_t count = frames < 512 ? frames : 512;
       size_t sampleCount = count * (size_t)state->config.channels;
       size_t bytes = sampleCount * 2u, written = 0;
-      size_t i;
       memset(samples, 0, sampleCount * sizeof(float));
       state->config.render(state->config.userData, samples, count,
                            state->config.channels);
@@ -210,7 +209,6 @@ AUDIO_DEVICE_MANUAL_PUMP_PROTOTYPE {
         written += (size_t)n;
       }
       /* The render callback runs on the CALLING thread; never on a worker. */
-      (void)i;
       frames -= count;
     }
     return STATUS_CONST(SUCCESS);
@@ -226,7 +224,7 @@ AUDIO_DEVICE_MANUAL_CLOSE_PROTOTYPE {
     AUDIO_INS(ManualState_InternalType_) *state =
       (AUDIO_INS(ManualState_InternalType_) *)device->internal;
     device->internal = NULL;
-#if AUDIO_INS(MANUAL_BSD)
+#if AUDIO_MANUAL_BSD_BACKEND
     if (state->fd >= 0) (void)close(state->fd);
 #endif
     free(state);
