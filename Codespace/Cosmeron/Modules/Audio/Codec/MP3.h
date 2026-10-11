@@ -61,6 +61,23 @@ AUDIO_CODEC_MP3_PARSE_SCALEFACTORS_PROTOTYPE;
 AUDIO_CODEC_MP3_HUFFMAN_PAIR_PROTOTYPE;
 AUDIO_CODEC_MP3_HUFFMAN_COUNT1_PROTOTYPE;
 
+#define AUDIO_CODEC_MP3_REORDER_SHORT_PROTOTYPE                            \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_ReorderShort)(                  \
+      const float input[576], const AUDIO_CODEC_TYPE(TMP3Granule) *part,     \
+      uint32_t sampleRate, float output[576])
+#define AUDIO_CODEC_MP3_STEREO_MS_PROTOTYPE                                \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_StereoMS)(                     \
+      const float mid[576], const float side[576],                          \
+      size_t first, size_t last, float outLeft[576], float outRight[576])
+#define AUDIO_CODEC_MP3_ANTIALIAS_PROTOTYPE                                \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_Antialias)(                    \
+      const float input[576], const AUDIO_CODEC_TYPE(TMP3Granule) *part,    \
+      float output[576])
+
+AUDIO_CODEC_MP3_REORDER_SHORT_PROTOTYPE;
+AUDIO_CODEC_MP3_STEREO_MS_PROTOTYPE;
+AUDIO_CODEC_MP3_ANTIALIAS_PROTOTYPE;
+
 #define AUDIO_CODEC_MP3_REQUANTIZE_PROTOTYPE                                 \
   static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_Requantize)(                    \
       const int32_t quantized[576],                                           \
@@ -217,3 +234,4 @@ AUDIO_CODEC_MP3_FIND_FRAME_PROTOTYPE {
 #include "Impl/MP3Scalefactors.inc"
 #include "Impl/MP3Huffman.inc"
 #include "Impl/MP3Requant.inc"
+#include "Impl/MP3Hybrid.inc"

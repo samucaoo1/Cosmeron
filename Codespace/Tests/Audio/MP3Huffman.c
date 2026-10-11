@@ -204,6 +204,12 @@ int main(void) {
             assert(AUDIO_CODEC_FUNC(MP3_Requantize)(
                 coefficient, &side.parts[gr][ch], &scale, header.sampleRate,
                 spectral) == STATUS_CONST(SUCCESS));
+            assert(AUDIO_CODEC_FUNC(MP3_ReorderShort)(
+                spectral, &side.parts[gr][ch], header.sampleRate,
+                spectral) == STATUS_CONST(SUCCESS));
+            assert(AUDIO_CODEC_FUNC(MP3_Antialias)(
+                spectral, &side.parts[gr][ch], spectral) ==
+                STATUS_CONST(SUCCESS));
             ++unpacked;
           }
         }

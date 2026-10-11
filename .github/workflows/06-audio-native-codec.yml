@@ -1,7 +1,7 @@
 name: "06 · Native Audio Codec"
 on:
   push:
-    branches: [audio-native-codecs, audio-flac-native, audio-flac-frames, audio-flac-streaming, audio-mp3-native, audio-mp3-reservoir, audio-mp3-scalefactors, audio-mp3-huffman, audio-mp3-requantize, audio-module]
+    branches: [audio-native-codecs, audio-flac-native, audio-flac-frames, audio-flac-streaming, audio-mp3-native, audio-mp3-reservoir, audio-mp3-scalefactors, audio-mp3-huffman, audio-mp3-requantize, audio-mp3-hybrid, audio-module]
     paths:
       - "Codespace/Cosmeron/Modules/Audio/**"
       - "Codespace/Tests/Audio/**"
@@ -45,7 +45,7 @@ jobs:
         run: |
           set -eu
           cd Codespace/Tests/Audio
-          for test in MP3Headers MP3SideInfo MP3Scalefactors MP3Huffman MP3Requant; do
+          for test in MP3Headers MP3SideInfo MP3Scalefactors MP3Huffman MP3Requant MP3Hybrid; do
             cc -std=c11 -Wall -Wextra -Wpedantic -Werror -fsanitize=address,undefined -fno-omit-frame-pointer "$test.c" -o "/tmp/$test"
             "/tmp/$test"
           done
@@ -70,7 +70,7 @@ jobs:
           run: |
             set -eu
             cd Codespace/Tests/Audio
-            for test in FLACMetadata FLACFrames FLACStandalone MP3Headers MP3SideInfo MP3Scalefactors MP3Huffman MP3Requant; do
+            for test in FLACMetadata FLACFrames FLACStandalone MP3Headers MP3SideInfo MP3Scalefactors MP3Huffman MP3Requant MP3Hybrid; do
               cc -std=c11 -Wall -Wextra -Wpedantic -Werror "$test.c" -o "./$test"
               "./$test"
             done
@@ -84,7 +84,7 @@ jobs:
         shell: pwsh
         run: |
           cd Codespace/Tests/Audio
-          foreach ($test in @("FLACMetadata", "FLACFrames", "FLACStandalone", "MP3Headers", "MP3SideInfo", "MP3Scalefactors", "MP3Huffman", "MP3Requant")) {
+          foreach ($test in @("FLACMetadata", "FLACFrames", "FLACStandalone", "MP3Headers", "MP3SideInfo", "MP3Scalefactors", "MP3Huffman", "MP3Requant", "MP3Hybrid")) {
             cl /nologo /std:c11 /W4 /WX /D_CRT_SECURE_NO_WARNINGS /TC "$test.c" "/Fe:$test.exe"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             & "./$test.exe"
