@@ -104,7 +104,7 @@ echo "[bsd-extended] compile+run Database (one shared embedded SQLite object)"
     echo "[bsd-extended] DATABASE_ZERO_LINK=NOT_SUPPORTED on $(uname -s), using -pthread for CI runtime diagnostics"
     db_linkflags=-pthread
   fi
-  for test in IncludeAll Database Persistence Namespace; do
+  for test in IncludeAll Database Persistence Namespace SQLiteThreadMode; do
     echo "[bsd-extended] run Database/$test"
     "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
       -D_POSIX_C_SOURCE=200809L ${extra} "$test.c" \

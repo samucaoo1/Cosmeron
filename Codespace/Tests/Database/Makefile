@@ -1,7 +1,7 @@
 CC ?= gcc
 CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -Werror
 BUILD ?= build
-SOURCES := IncludeAll Database Persistence Namespace
+SOURCES := IncludeAll Database Persistence Namespace SQLiteThreadMode
 HEADERS := $(shell find ../../Cosmeron/Modules/Database -type f)
 BACKEND_HEADERS := $(shell find ../../Cosmeron/Modules/Database/SQLite -type f)
 .PHONY: all run clean
