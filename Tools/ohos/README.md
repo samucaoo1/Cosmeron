@@ -53,3 +53,20 @@ The executable must **link without user-provided external libraries**.
 The tool does **not execute** it on the GitHub runner. A linked binary
 is stronger evidence than compiling headers alone, but remains short
 of actual device compatibility.
+
+## Run linked probes on a real OpenHarmony target
+
+After cross-building with `Tools/ohos/check-portability.sh`, connect a compatible
+OpenHarmony device or emulator with the `hdc` utility installed:
+
+```sh
+HDC_TARGET=<device-id> sh Tools/ohos/check-device.sh
+```
+
+`OHOS_BUILD_DIR`, `HDC` and `OHOS_DEVICE_REPORT` are configurable.
+The script uploads and executes both linked executables and requires an
+explicit zero exit status, recording evidence in `ohos-device-report.txt`.
+This test covers only C11 multi-TU and the POSIX clock/resolver probe; it
+does **not** certify other backends, peripheral permissions, LiteOS or
+Huawei HarmonyOS NEXT. Save device model, firmware, architecture and report
+in issue #122.
