@@ -1,0 +1,46 @@
+name: "06 · Native Audio Codec"
+on:
+  push:
+    branches: [audio-native-codecs, audio-module]
+    paths:
+      - "Codespace/Cosmeron/Modules/Audio/**"
+      - "Codespace/Tests/Audio/**"
+      - ".github/workflows/06-audio-native-codec.yml"
+  pull_request:
+    paths:
+      - "Codespace/Cosmeron/Modules/Audio/**"
+      - "Codespace/Tests/Audio/**"
+  workflow_dispatch:
+permissions:
+  contents: read
+
+jobs:
+  native-wav:
+    name: "${{ matrix.name }}"
+    runs-on: "${{ matrix.os }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {name: "GCC Linux", os: ubuntu-latest, cc: gcc}
+          - {name: "Clang Linux", os: ubuntu-latest, cc: clang}
+          - {name: "Clang macOS", os: macos-latest, cc: clang}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Strict C11 Audio suite and codecless fallback
+        run: make -C Codespace/Tests/Audio clean run CC=${{ matrix.cc }}
+      - name: Zero-extra-link standalone native WAV
+        run: |
+          ${{ matrix.cc }} -std=c11 -Wall -Wextra -Wpedantic -Werror Codespace/Tests/Audio/NativeWAV.c -o /tmp/nativewav
+          ${{ matrix.cc }} -std=c11 -Wall -Wextra -Wpedantic -Werror Codespace/Tests/Audio/WAVFormats.c -o /tmp/wavformats
+          cd Codespace/Tests/Audio
+          /tmp/nativewav
+          /tmp/wavformats
+  windows-mingw:
+    name: Windows MinGW / codec
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Strict C11 Audio suite (headless)
+        shell: bash
+        run: make -C Codespace/Tests/Audio clean run CC=gcc
