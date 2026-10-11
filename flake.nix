@@ -79,8 +79,10 @@ EOF
         nixos-vm = nixosVM;
         native = native;
       };
-      checks.${system}.portable = portable;
-      checks.${system}.native = native;
+      checks.${system} = {
+        portable = portable;
+        native = native;
+      };
       devShells.${system}.default = pkgs.mkShell {
         packages = [ pkgs.gcc pkgs.clang pkgs.cmake pkgs.gnumake ];
       };
