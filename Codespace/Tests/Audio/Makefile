@@ -15,7 +15,10 @@ $(BUILD)/MultiTU: MultiTU_A.c MultiTU_B.c MultiTU_Main.c $(HEADERS) | $(BUILD)
 	$(CC) $(CFLAGS) MultiTU_A.c MultiTU_B.c MultiTU_Main.c -o $@
 build: $(TESTS:%=$(BUILD)/%) $(BUILD)/OfflineMultiTU $(BUILD)/MultiTU
 run: build
-	@set -e; for test in $(TESTS:%=$(BUILD)/%) $(BUILD)/OfflineMultiTU $(BUILD)/MultiTU; do "$$test"; done
+	@set -e; for test in $(TESTS:%=$(BUILD)/%) $(BUILD)/OfflineMultiTU $(BUILD)/MultiTU; do \
+	  echo "[audio] run $test"; \
+	  if "$test"; then :; else result=$?; echo "[audio] FAILED $test (exit $result)"; exit "$result"; fi; \
+	done
 clean:
 	rm -rf $(BUILD) roundtrip.wav
 .PHONY: all build run clean
