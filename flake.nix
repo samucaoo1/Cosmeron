@@ -45,8 +45,10 @@ EOF
         '';
       };
     in {
-      packages.${system}.default = portable;
-      packages.${system}.nixos-vm = nixosVM;
+      packages.${system} = {
+        default = portable;
+        nixos-vm = nixosVM;
+      };
       checks.${system}.portable = portable;
       devShells.${system}.default = pkgs.mkShell {
         packages = [ pkgs.gcc pkgs.clang pkgs.cmake pkgs.gnumake ];
