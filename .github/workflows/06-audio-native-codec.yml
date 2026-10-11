@@ -1,7 +1,7 @@
 name: "06 · Native Audio Codec"
 on:
   push:
-    branches: [audio-native-codecs, audio-flac-native, audio-module]
+    branches: [audio-native-codecs, audio-flac-native, audio-flac-frames, audio-module]
     paths:
       - "Codespace/Cosmeron/Modules/Audio/**"
       - "Codespace/Tests/Audio/**"
@@ -44,3 +44,36 @@ jobs:
       - name: Strict C11 Audio suite (headless)
         shell: bash
         run: make -C Codespace/Tests/Audio clean run CC=gcc
+
+  freebsd-flac:
+    name: FreeBSD / native FLAC C11
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: vmactions/freebsd-vm@c46abacb49f09938ca4e1702d15d836285d694cc
+        with:
+          usesh: true
+          run: |
+            set -eu
+            cd Codespace/Tests/Audio
+            for test in FLACMetadata FLACFrames FLACStandalone; do
+              cc -std=c11 -Wall -Wextra -Wpedantic -Werror "$test.c" -o "./$test"
+              "./$test"
+            done
+  windows-msvc-flac:
+    name: Windows MSVC / native FLAC C11
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: FLAC standalone strict C11 (no vendor backend)
+        shell: pwsh
+        run: |
+          cd Codespace/Tests/Audio
+          foreach ($test in @("FLACMetadata", "FLACFrames", "FLACStandalone")) {
+            cl /nologo /std:c11 /W4 /WX /D_CRT_SECURE_NO_WARNINGS /TC "$test.c" "/Fe:$test.exe"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            & "./$test.exe"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
