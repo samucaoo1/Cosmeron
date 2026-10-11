@@ -127,7 +127,7 @@ jobs:
   freebsd:
     name: FreeBSD / Clang / C11
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 85
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -140,6 +140,7 @@ jobs:
             set -eu
             sh .github/scripts/test-portable-core.sh
             sh .github/scripts/test-bsd-native.sh
+            sh .github/scripts/test-bsd-extended.sh
             sh .github/scripts/test-input-posix.sh
       - name: Report FreeBSD coverage
         if: ${{ always() }}
@@ -152,7 +153,7 @@ jobs:
             echo ''
             echo '| Suite | Result |'
             echo '|---|---|'
-            echo "| Portable + native + Input | $TEST_RESULT |"
+            echo "| Portable + native + extended + Input | $TEST_RESULT |"
             echo ''
             echo 'Tests run on a genuine FreeBSD VM through vmactions, not a Linux container.'
           } >> "$GITHUB_STEP_SUMMARY"

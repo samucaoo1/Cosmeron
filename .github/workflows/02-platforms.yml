@@ -6,6 +6,7 @@ on:
       - 'Codespace/**'
       - '.github/scripts/test-portable-core.sh'
       - '.github/scripts/test-bsd-native.sh'
+      - '.github/scripts/test-bsd-extended.sh'
       - '.github/scripts/test-input-posix.sh'
       - '.github/workflows/02-platforms.yml'
   pull_request:
@@ -13,6 +14,7 @@ on:
       - 'Codespace/**'
       - '.github/scripts/test-portable-core.sh'
       - '.github/scripts/test-bsd-native.sh'
+      - '.github/scripts/test-bsd-extended.sh'
       - '.github/scripts/test-input-posix.sh'
       - '.github/workflows/02-platforms.yml'
   schedule:
@@ -30,7 +32,7 @@ jobs:
   openbsd:
     name: OpenBSD / portable + native C11
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 85
     steps:
       - uses: actions/checkout@v4
       - uses: vmactions/openbsd-vm@5f7b2c933b8846a138361d6843c52af4bef5d945
@@ -40,12 +42,13 @@ jobs:
             set -eu
             sh .github/scripts/test-portable-core.sh
             sh .github/scripts/test-bsd-native.sh
+            sh .github/scripts/test-bsd-extended.sh
             sh .github/scripts/test-input-posix.sh
 
   netbsd:
     name: NetBSD / portable + native C11
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 85
     steps:
       - uses: actions/checkout@v4
       - uses: vmactions/netbsd-vm@c8a0d7ddb84619a7a8cc4e652efa7950b3fd9f92
@@ -55,12 +58,13 @@ jobs:
             set -eu
             sh .github/scripts/test-portable-core.sh
             sh .github/scripts/test-bsd-native.sh
+            sh .github/scripts/test-bsd-extended.sh
             sh .github/scripts/test-input-posix.sh
 
   dragonflybsd:
     name: DragonFly BSD / portable + native C11
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 85
     steps:
       - uses: actions/checkout@v4
       - uses: vmactions/dragonflybsd-vm@4ab776fa9f914fbea72f13715b451e77e7ef5c41
@@ -70,6 +74,7 @@ jobs:
             set -eu
             sh .github/scripts/test-portable-core.sh
             sh .github/scripts/test-bsd-native.sh
+            sh .github/scripts/test-bsd-extended.sh
             sh .github/scripts/test-input-posix.sh
 
   distributions:
