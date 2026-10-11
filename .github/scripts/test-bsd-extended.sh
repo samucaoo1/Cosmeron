@@ -43,9 +43,16 @@ suite Network TCP UDP Poller NonBlocking PollerClose UDPClearPeer IPv6 \
 multitu Network
 
 # Thread primitives, synchronisation, tasks and thread pool, no explicit -pthread.
-suite Concurrency IncludeAll ModuleSurface Mutex Once RWLock Semaphore \
-  Thread Coroutine Condition Barrier Contention ProducerConsumer \
-  ThreadPool ThreadPoolMultiProducer ThreadPoolShutdown Future
+if [ "$(uname -s)" = DragonFly ]; then
+  # DragonFly's libpthread is separate from libc. Do NOT add forbidden -pthread
+  # or mark its threaded backend as zero-link certified.
+  echo "[bsd-extended] NOT CERTIFIED: DragonFly threaded Concurrency requires libpthread linkage"
+  suite Concurrency Coroutine
+else
+  suite Concurrency IncludeAll ModuleSurface Mutex Once RWLock Semaphore \
+    Thread Coroutine Condition Barrier Contention ProducerConsumer \
+    ThreadPool ThreadPoolMultiProducer ThreadPoolShutdown Future
+fi
 
 # Miniz codec/ZIP and SQLite in the single-implementation translation unit.
 suite Compression Codec Zip File Namespace FunctionTableOff Robustness Allocation
