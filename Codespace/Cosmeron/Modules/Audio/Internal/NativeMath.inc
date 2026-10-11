@@ -70,12 +70,11 @@ static inline double AUDIO_INS(Pow)(double x, double y) {
    * guard direct internal adapter calls too, avoiding NULL dereferences. */
   return AUDIO_INS(PrepareMath)() ? AUDIO_INS(PowPtr)(x, y) : 0.0;
 }
-#elif defined(AUDIO_MINIAUDIO_CODEC_MINIMAL) && \
-    (defined(__FreeBSD__) || defined(__OpenBSD__) || \
-     defined(__NetBSD__) || defined(__DragonFly__))
+#elif defined(__FreeBSD__) || defined(__OpenBSD__) || \
+      defined(__NetBSD__) || defined(__DragonFly__)
 /*
- * BSD decoder-only profile:
- *  - the native threadless Miniaudio build still needs math functions;
+ * BSD dynamic native math adapter (codec and desktop profiles):
+ *  - the embedded Miniaudio backend still needs math functions;
  *  - dlopen/dlsym come from the target's runtime linker, with no -ldl flag;
  *  - libm is a RUNTIME requirement, not an embedded implementation;
  *  - a C11 atomic state machine makes initialization safe with concurrent
