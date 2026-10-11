@@ -1,4 +1,5 @@
 #pragma once
+#include <limits.h>
 
 static inline OPSTATUS AUDIO_INS(WAV_ReadExact)(
     const AUDIO_CODEC_TYPE(TReader) *reader, void *out, size_t bytes) {
@@ -20,7 +21,8 @@ static inline OPSTATUS AUDIO_INS(WAV_ParseReader)(
     const AUDIO_CODEC_TYPE(TReader) *reader, AUDIO_INS(TWAVView) *outView,
     uint64_t *outDataOffset) {
   unsigned char riff[12], chunk[8], fmt[40] = {0};
-  size_t offset = 12, riffEnd, fmtSize = 0, dataSize = 0;
+  uint64_t offset = 12, riffEnd;
+  size_t fmtSize = 0, dataSize = 0;
   uint64_t dataOffset = 0;
   bool haveFmt = false, haveData = false;
   OPSTATUS status;
@@ -34,7 +36,7 @@ static inline OPSTATUS AUDIO_INS(WAV_ParseReader)(
     return STATUS_CONST(NOT_SUPPORTED);
   if (AUDIO_INS(WAV_U32)(riff + 4) < 4)
     return STATUS_CONST(INVALID_ARGUMENT);
-  riffEnd = (size_t)AUDIO_INS(WAV_U32)(riff + 4) + 8;
+  riffEnd = (uint64_t)AUDIO_INS(WAV_U32)(riff + 4) + 8;
   while (offset < riffEnd) {
     size_t bytes, skip;
     if (riffEnd - offset < 8) return STATUS_CONST(INVALID_ARGUMENT);
