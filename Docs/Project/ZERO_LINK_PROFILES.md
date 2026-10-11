@@ -25,9 +25,10 @@ aggregator; defining `AUDIO_NO_DESKTOP` still selects the former reduced
 behavior. Tests: `Synthesis`, `OfflineStandalone`, `OfflineCompat` and
 `OfflineMultiTU` under `Codespace/Tests/Audio/`.
 
-**Not included:** WAV/FLAC/MP3 decoding, audio device playback and the
-Miniaudio-backed Player (including its own “offline” engine configuration).
-These still need independent per-platform linker tests.
+The pure C11 WAV decoder is available separately through `Offline.h` /
+`Codec/WAV.h`; this does **not** enable Miniaudio's FLAC or MP3 decoder.
+Desktop device playback and the Miniaudio-backed Player still need native
+OS runtime integration.
 
 ## Concurrency (cooperative only)
 
@@ -71,13 +72,13 @@ playback is **not** yet certified.
 ## WAV codec without vendor
 
 Include `Cosmeron/Modules/Audio/Codec/WAV.h` or `Audio/Offline.h`.
-`Audio_Codec_WAV_DecodeMemory` reads RIFF/WAVE **PCM unsigned 8-bit** and
-**PCM signed little-endian 16-bit** into an owning float PCM buffer.
-`Audio_Codec_WAV_WriteFile` writes PCM16. Both use C11 only: no Miniaudio,
-threads, `-lm` or extra link flags. Compressed/float/extensible WAVE and
-container formats other than RIFF/WAVE return a documented status rather
-than being decoded incorrectly. Fuzzing and more WAV variants remain future
-work.
+`Audio_Codec_WAV_DecodeMemory` supports RIFF/WAVE unsigned PCM8,
+signed PCM16/24/32 and IEEE float32 (on IEEE binary32 hosts) into an owning
+interleaved float PCM buffer. `Audio_Codec_WAV_WriteFile` writes PCM16.
+Neither imports Miniaudio, threads or libm. Compressed/Extensible WAVE,
+RF64 and big-endian RIFX are unsupported; inputs are bounded by RIFF and
+data chunk lengths. The `NativeWAV`, `WAVRobustness` and `WAVFormats`
+test programs verify supported formats and reject malformed files.
 
 ## User-supplied task executor
 
@@ -89,13 +90,41 @@ native `Thread`, `Mutex`, or `ThreadPool` implementations into zero-link
 backends. See [EXTERNAL_EXECUTOR.md](EXTERNAL_EXECUTOR.md).
 
 
-## WAV decode variants
+## Miniaudio decoder-only profile (without device threads)
 
-The pure C11 `Codec/WAV.h` decoder now supports RIFF/WAVE `WAVE_FORMAT_PCM`
-for unsigned 8-bit and signed little-endian **16/24/32-bit** samples, and
-`WAVE_FORMAT_IEEE_FLOAT` **32-bit** samples when the host uses IEEE binary32.
-Output remains interleaved float PCM; the writer deliberately remains signed
-PCM16 WAV. Non-finite float input is rejected, and any allocated output is
-released on rejection. `WAVE_FORMAT_EXTENSIBLE`, floating-point 64-bit,
-compressed ADPCM, RF64 and big-endian RIFX are still unsupported. Regression:
-`Codespace/Tests/Audio/WAVFormats.c`.
+Include `Cosmeron/Modules/Audio/CodecMinimal.h` to retain the public
+`Audio_Codec_*` decoder API, including Miniaudio MP3/FLAC support, but
+compile the pinned Miniaudio vendor with Device I/O, native threading,
+resource manager, engine, node graph and generation APIs disabled.
+
+```c
+#include "Cosmeron/Modules/Audio/CodecMinimal.h"
+
+int main(void) {
+  AUDIO_CODEC_TYPE(TDecoder) decoder = {0};
+  /* Audio_Codec_OpenFile(&decoder, "sample.flac");
+     ... Audio_Codec_Close(&decoder); */
+  return 0;
+}
+```
+
+This is **not** the same as the no-vendor WAV decoder above. On the
+four BSD VMs, actual memory decoding in this profile passed with `-lm`
+and **without `-pthread`**, but failed to link with no extra flags.
+The result is recorded as `AUDIO_CODEC_MINIMAL_FUNCTIONAL=PASS` and
+`AUDIO_CODEC_MINIMAL_ZERO_LINK=NOT_SUPPORTED`.
+
+A translation unit must select either `CodecMinimal.h` or `Desktop.h`
+because the embedded Miniaudio configuration is fixed by its first include.
+The unchanged `CodecOnly.h` preserves the old full-vendor profile.
+Miniaudio's decoder-specific features (including MP3/FLAC) remain covered
+by their respective full and minimal vendor tests.
+
+The Linux math adapter currently uses `pthread_once` to initialize
+runtime math symbols, even though the minimal Miniaudio build itself
+creates no worker threads. This configuration does not claim to avoid
+every possible runtime dependency; it only avoids new user `-pthread`
+link flags where tested.
+
+**Remaining gap:** the complete threaded device/Player backend still
+needs its platform-specific libraries. Hardware tests remain opt-in.
