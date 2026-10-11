@@ -75,7 +75,7 @@ record Network PASS 'localhost sockets only'
 
 # Cooperative mode is intentionally independent of pthread and libm.
 stage=ConcurrencyCooperative
-suite Concurrency Cooperative
+suite Concurrency Cooperative Executor
 echo "[bsd-extended] CONCURRENCY_COOPERATIVE_ZERO_LINK=PASS"
 record ConcurrencyCooperative PASS 'single-thread cooperative tasks, not OS threads'
 

@@ -3,7 +3,7 @@ CFLAGS := -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L
 BUILD := build
 WINDOWS_CC ?= x86_64-w64-mingw32-gcc
 WINDOWS_BUILD := build-windows
-TESTS := include-all module-surface native-standalone cooperative atomic mutex once rwlock semaphore thread coroutine condition barrier contention producer-consumer thread-pool thread-pool-multi-producer thread-pool-shutdown future
+TESTS := include-all module-surface native-standalone cooperative executor atomic mutex once rwlock semaphore thread coroutine condition barrier contention producer-consumer thread-pool thread-pool-multi-producer thread-pool-shutdown future
 
 .PHONY: all strict gcc clang run zero-link windows clean
 all: strict
@@ -24,6 +24,8 @@ $(BUILD):
 $(BUILD)/include-all: IncludeAll.c | $(BUILD)
 	$(CC) $(CFLAGS) $< -o $@
 $(BUILD)/module-surface: ModuleSurface.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@
+$(BUILD)/executor: Executor.c | $(BUILD)
 	$(CC) $(CFLAGS) $< -o $@
 $(BUILD)/native-standalone: NativeStandalone.c | $(BUILD)
 	$(CC) $(CFLAGS) $< -o $@
@@ -69,6 +71,7 @@ windows: | $(WINDOWS_BUILD)
 	$(WINDOWS_CC) $(CFLAGS) ModuleSurface.c -o $(WINDOWS_BUILD)/module-surface.exe
 	$(WINDOWS_CC) $(CFLAGS) NativeStandalone.c -o $(WINDOWS_BUILD)/native-standalone.exe
 	$(WINDOWS_CC) $(CFLAGS) Cooperative.c -o $(WINDOWS_BUILD)/cooperative.exe
+	$(WINDOWS_CC) $(CFLAGS) Executor.c -o $(WINDOWS_BUILD)/executor.exe
 	$(WINDOWS_CC) $(CFLAGS) Atomic.c -o $(WINDOWS_BUILD)/atomic.exe
 	$(WINDOWS_CC) $(CFLAGS) Mutex.c -o $(WINDOWS_BUILD)/mutex.exe
 	$(WINDOWS_CC) $(CFLAGS) Once.c -o $(WINDOWS_BUILD)/once.exe
