@@ -43,6 +43,48 @@ def collect_examples(folder: pathlib.Path) -> list[tuple[pathlib.Path, int, str]
     return examples
 
 
+PUBLIC_GRAPHICS_PACKAGES = {
+    "Canvas", "FIGlet", "Font", "GUI", "Pseudo3DRoad",
+    "Rasterization", "Raycasting", "Sprite", "Surface",
+    "Terminal", "UI", "Window",
+}
+
+
+def validate_doc_coverage(root: pathlib.Path) -> None:
+    """Require documentation for every first-class module and graphics package."""
+    codespace = root / "Codespace" / "Cosmeron"
+    core = {p.name for p in (codespace / "Core").iterdir() if p.is_dir()}
+    modules = {
+        p.name for p in (codespace / "Modules").iterdir()
+        if p.is_dir() and p.name != "Graphics"
+    }
+    graphics_root = codespace / "Modules" / "Graphics"
+    graphics = {
+        name for name in PUBLIC_GRAPHICS_PACKAGES
+        if (graphics_root / name).is_dir()
+    }
+    expected = core | modules | graphics
+    module_docs = root / "Docs" / "Modules"
+    present = {p.stem for p in module_docs.glob("*.md")}
+    missing = sorted(expected - present)
+    if missing:
+        raise ValueError("Missing module documentation: " + ", ".join(missing))
+
+    for name in sorted(expected):
+        content = (module_docs / (name + ".md")).read_text(encoding="utf-8")
+        counts = {
+            heading: len(re.findall("^### " + heading + "$", content, re.MULTILINE))
+            for heading in ("Syntax", "Parameters", "Return value", "Remarks", "Example")
+        }
+        # Error documents type aliases and X-macros, not just runtime functions:
+        # its standalone type section does not have a Parameters heading.
+        if name == "Error":
+            continue
+        if counts["Syntax"] == 0 or len(set(counts.values())) != 1:
+            raise ValueError(f"{name}.md has incomplete reference sections: {counts}")
+    print(f"OK: documentation files and sections checked for {len(expected)} APIs.")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cc", default="cc", help="C compiler (default: cc)")
@@ -56,6 +98,7 @@ def main() -> int:
     args = parser.parse_args()
     root = args.root.resolve()
     try:
+        validate_doc_coverage(root)
         examples = collect_examples(root / "Docs" / "Modules")
     except (OSError, ValueError) as error:
         print(f"Documentation error: {error}", file=sys.stderr)
