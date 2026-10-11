@@ -73,6 +73,11 @@ suite Network TCP UDP Poller NonBlocking PollerClose UDPClearPeer IPv6 \
 multitu Network
 record Network PASS 'localhost sockets only'
 
+# Cooperative mode is intentionally independent of pthread and libm.
+stage=ConcurrencyCooperative
+suite Concurrency Cooperative
+echo "[bsd-extended] CONCURRENCY_COOPERATIVE_ZERO_LINK=PASS"
+
 # Thread primitives, synchronisation, tasks and thread pool, no explicit -pthread.
 # Probe the public zero-extra-link contract *before* running the thread tests.
 # The CI may use -pthread solely to diagnose the backend on systems with
