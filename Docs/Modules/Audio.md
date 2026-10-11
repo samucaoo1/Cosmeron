@@ -1834,6 +1834,16 @@ unsupported intensity-stereo modes rather than emitting knowingly incorrect
 PCM. It does not provide file-level reading, seeking, gapless handling or
 support for MPEG-2/2.5 LSF.
 
+The standalone `MP3_ParseXing` primitive now inspects the first
+frame's `Xing`/`Info` header for encoded frame/byte counts and
+optional LAME-family encoder delay/end padding. These raw fields alone
+do **not** yet account for Layer III decoder priming. The optional
+host-side `MP3ParityFixtures.sh` (requires ffmpeg/libmp3lame for fixture
+generation only) compares non-periodic chirped/multitone mono and stereo
+signals to miniaudio and prints best alignment, fitted gain and
+normalized residual. These are diagnostics; the production decoder
+still uses miniaudio.
+
 **Fidelity is not yet established.** The differential test
 `MP3ExperimentalCompare.c` reports the delay-aligned and gain-fitted PCM
 residual against miniaudio; the `Tone.mp3` fixture currently has
