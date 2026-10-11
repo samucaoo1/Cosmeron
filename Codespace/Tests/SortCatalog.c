@@ -3,6 +3,8 @@
 #include "Cosmeron/Modules/Sort/Sort.h"
 #include <assert.h>
 #include <string.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 static CMPOUT cmpInt(const void *a, const void *b) {
   int x = *(const int *)a, y = *(const int *)b;
@@ -25,7 +27,46 @@ static void checkAlgorithm(SortFunc fn) {
   assert(fn(NULL, 2, sizeof(int), cmpInt) == STATUS_CONST(INVALID_ARGUMENT));
   assert(fn(values, 9, 0, cmpInt) == STATUS_CONST(INVALID_ARGUMENT));
 }
+/* Compare every practical generic algorithm with the C standard library
+ * across empty, short and longer arrays (including repeated/negative keys).
+ * The PRNG is deterministic and does not depend on global rand() state. */
+static int stdlibCompareInt(const void *a, const void *b) {
+  int x = *(const int *)a, y = *(const int *)b;
+  return x < y ? -1 : (x > y ? 1 : 0);
+}
+static void checkProperties(void) {
+  SortFunc algorithms[] = {
+    SORT_FUNC(Array), SORT_FUNC(Stable), SORT_FUNC(Insertion),
+    SORT_FUNC(Heap), SORT_FUNC(Intro), SORT_FUNC(Merge),
+    SORT_FUNC(Bubble), SORT_FUNC(Cocktail), SORT_FUNC(Comb),
+    SORT_FUNC(Gnome), SORT_FUNC(OddEven), SORT_FUNC(Selection),
+    SORT_FUNC(DoubleSelection), SORT_FUNC(Shell), SORT_FUNC(Pancake),
+    SORT_FUNC(Quick), SORT_FUNC(QuickThreeWay)
+  };
+  uint32_t state = UINT32_C(0x12345678);
+  for (size_t count = 0; count <= 128; ++count) {
+    for (unsigned round = 0; round < 4u; ++round) {
+      int original[128], expected[128], actual[128];
+      for (size_t i = 0; i < count; ++i) {
+        state = state * UINT32_C(1664525) + UINT32_C(1013904223);
+        original[i] = (int)((state >> 8) % 101u) - 50;
+      }
+      memcpy(expected, original, count * sizeof(int));
+      qsort(expected, count, sizeof(int), stdlibCompareInt);
+      for (size_t algorithm = 0;
+           algorithm < sizeof algorithms / sizeof algorithms[0];
+           ++algorithm) {
+        memcpy(actual, original, count * sizeof(int));
+        assert(algorithms[algorithm](actual, count, sizeof(int), cmpInt)
+               == STATUS_CONST(SUCCESS));
+        assert(memcmp(actual, expected, count * sizeof(int)) == 0);
+      }
+    }
+  }
+}
+
 int main(void) {
+  checkProperties();
   checkAlgorithm(SORT_FUNC(Bubble));
   checkAlgorithm(SORT_FUNC(Cocktail));
   checkAlgorithm(SORT_FUNC(Comb));
