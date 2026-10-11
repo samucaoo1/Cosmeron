@@ -27,9 +27,10 @@ AUDIO_CODEC_MP3_PARSE_SCALEFACTORS_PROTOTYPE {
   size_t offset = 0, limit, index, j, k;
   unsigned int l1, l2, group;
   if (!mainData || !side || !outScale ||
-      side->granules != 2 || side->channels < 1 || side->channels > 2 ||
+      side->channels < 1 || side->channels > 2 ||
       granule >= 2 || channel >= side->channels)
     return STATUS_CONST(INVALID_ARGUMENT);
+  if (side->granules != 2) return STATUS_CONST(NOT_SUPPORTED);
   if (mainDataBytes > SIZE_MAX / 8) return STATUS_CONST(OUT_OF_RANGE);
   for (j = 0; j < granule; ++j)
     for (k = 0; k < side->channels; ++k)
