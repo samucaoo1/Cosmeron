@@ -52,6 +52,19 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  portability-script-lint:
+    name: Portability scripts / POSIX shell syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse hardware-side scripts without claiming hardware validation
+        run: |
+          set -eu
+          for script in Tools/ohos/check-device.sh Tools/crostini/check-hardware.sh Tools/bsd/check-tty.sh; do
+            sh -n "$script"
+            echo "syntax PASS: $script"
+          done
+
   openbsd:
     name: OpenBSD / portable + native C11
     runs-on: ubuntu-latest
