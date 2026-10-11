@@ -41,6 +41,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install host-side MP3 fixture encoder (diagnostic only)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
       - name: Compare time-varying mono/stereo MP3 against miniaudio
         run: |
           cd Codespace/Tests/Audio
