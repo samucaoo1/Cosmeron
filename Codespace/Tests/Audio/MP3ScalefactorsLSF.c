@@ -74,7 +74,7 @@ int main(void) {
   check(1,2,1,0,0,0,0,0,1);
   check(359,2,1,0,0,98,15,0,1); /* 7x4 + 7x5 + 7x5 */
   check(360,2,1,0,0,0,0,0,0);
-  check(487,2,1,0,0,56,7,0,1); /* 6x3 + 6x3 + 6x3 + 3x0 = 54? */
+  check(487,2,1,0,0,54,7,0,1); /* 6x3 + 6x3 + 6x3 */
   check(488,2,1,0,0,0,0,0,0);
   /* MPEG2.5 has identical LSF scalefactor compression tables. */
   {
