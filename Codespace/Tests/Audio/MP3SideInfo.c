@@ -70,7 +70,7 @@ int main(void) {
   assert(AUDIO_CODEC_FUNC(MP3_ReservoirFeed)(&reservoir, c, sizeof c,
       &mainData, &mainSize, &info) == STATUS_CONST(SUCCESS));
   assert(mainSize == 907 && mainData[0] == 0x42 &&
-      mainData[115] == 0x42 && mainData[116] == 0x99 &&
+      mainData[114] == 0x42 && mainData[115] == 0x99 &&
       mainData[511] == 0x55);
   memset(&reservoir, 0, sizeof reservoir);
   assert(AUDIO_CODEC_FUNC(MP3_ReservoirFeed)(&reservoir, b, sizeof b,
