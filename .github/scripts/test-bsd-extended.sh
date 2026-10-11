@@ -28,7 +28,7 @@ trap 'rc=$?; if [ "$rc" -ne 0 ]; then printf "| %s | FAIL | NOT COMPLETED | UNVE
 native_link_dependencies() {
   executable=$1
   if command -v ldd >/dev/null 2>&1; then
-    ldd "$executable" 2>&1 | grep -E 'lib(pthread|thr|thread_xu|m)\\.so' || :
+    ldd "$executable" 2>&1 | grep -E 'lib(pthread|thr|thread_xu|m)\.so' || :
   fi
 }
 
@@ -124,7 +124,7 @@ if (
   native_libs=$(native_link_dependencies .build-bsd-extended/Concurrency_ZeroLink)
   if [ -n "$native_libs" ]; then
     echo "[bsd-extended] THREAD_NO_MANUAL_FLAGS=PASS; native library auto-linked:"
-    printf '%s\\n' "$native_libs"
+    printf '%s\n' "$native_libs"
     thread_zero_link=NOT_SUPPORTED
     echo "[bsd-extended] THREAD_ZERO_LINK=NOT_SUPPORTED (external runtime link dependency)"
   else
@@ -269,7 +269,7 @@ if (
   codec_libs=$(native_link_dependencies .build-bsd-extended/Audio_CodecZeroLink)
   if [ -n "$codec_libs" ]; then
     echo "[bsd-extended] AUDIO_CODEC_NO_MANUAL_FLAGS=PASS, linked system libraries:"
-    printf '%s\\n' "$codec_libs"
+    printf '%s\n' "$codec_libs"
     codec_zero_link=NOT_SUPPORTED
   else
     echo "[bsd-extended] AUDIO_CODEC_ZERO_LINK=PASS"
@@ -290,7 +290,7 @@ if (
   device_libs=$(native_link_dependencies .build-bsd-extended/Audio_DeviceZeroLink)
   if [ -n "$device_libs" ]; then
     echo "[bsd-extended] AUDIO_DEVICE_NO_MANUAL_FLAGS=PASS, linked system libraries:"
-    printf '%s\\n' "$device_libs"
+    printf '%s\n' "$device_libs"
     device_zero_link=NOT_SUPPORTED
   else
     echo "[bsd-extended] AUDIO_DEVICE_ZERO_LINK=PASS"
