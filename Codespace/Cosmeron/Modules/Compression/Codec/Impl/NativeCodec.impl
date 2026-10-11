@@ -1,0 +1,164 @@
+#pragma once
+#include "Inflate.impl"
+#include "NativeDeflate.impl"
+#include "NativeDynamic.impl"
+
+static inline OPSTATUS COMPRESSION_INS(NativeCompress)(
+    COMPRESSION_TYPE(Format) format, const void *source, size_t size,
+    void *destination, size_t capacity, int level, size_t *outSize) {
+  const unsigned char *input = (const unsigned char *)source;
+  unsigned char *output = (unsigned char *)destination;
+  const size_t prefix = format == COMPRESSION_CONST(GZIP) ? 10 :
+                        format == COMPRESSION_CONST(ZLIB) ? 2 : 0;
+  const size_t suffix = format == COMPRESSION_CONST(GZIP) ? 8 :
+                        format == COMPRESSION_CONST(ZLIB) ? 4 : 0;
+  size_t blocks, storedSize, fixedSize = 0, dynamicSize = 0, payloadSize;
+  size_t required, pos = prefix, consumed = 0;
+  bool useFixed = false, useDynamic = false;
+  if (!outSize || (!source && size) || (!destination && capacity) ||
+      !COMPRESSION_INS(FormatValid)(format) || !COMPRESSION_INS(LevelValid)(level) ||
+      COMPRESSION_INS(Overlap)(source, size, destination, capacity))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (size > UINT_MAX || capacity > UINT_MAX)
+    return STATUS_CONST(OUT_OF_RANGE);
+  blocks = size ? 1 + (size - 1) / 65535 : 1;
+  if (blocks > (SIZE_MAX - prefix - suffix - size) / 5)
+    return STATUS_CONST(OUT_OF_RANGE);
+  storedSize = size + blocks * 5;
+  payloadSize = storedSize;
+  if (size && level != COMPRESSION_CONST(LEVEL_STORE)) {
+    if (!COMPRESSION_INS(DeflateFixed)(input, size, NULL, SIZE_MAX,
+        &fixedSize, level))
+      return STATUS_CONST(OUT_OF_RANGE);
+    if (fixedSize < storedSize) {
+      payloadSize = fixedSize;
+      useFixed = true;
+    }
+    if (level > COMPRESSION_CONST(LEVEL_FAST) &&
+        COMPRESSION_INS(DeflateDynamic)(input, size, NULL, SIZE_MAX,
+            &dynamicSize, level) && dynamicSize < payloadSize) {
+      payloadSize = dynamicSize;
+      useFixed = false;
+      useDynamic = true;
+    }
+  }
+  required = prefix + payloadSize + suffix;
+  if (required > capacity) return STATUS_CONST(INSUFFICIENT_SPACE);
+
+  if (format == COMPRESSION_CONST(ZLIB)) {
+    output[0] = 0x78;
+    output[1] = 0x01;
+  } else if (format == COMPRESSION_CONST(GZIP)) {
+    static const unsigned char header[10] = {
+      0x1f,0x8b,8,0,0,0,0,0,0,255
+    };
+    memcpy(output, header, sizeof header);
+  }
+  if (useDynamic) {
+    size_t written = 0;
+    if (!COMPRESSION_INS(DeflateDynamic)(input, size, output + pos,
+        dynamicSize, &written, level) || written != dynamicSize)
+      return STATUS_CONST(GENERIC_ERROR);
+    pos += written;
+  } else if (useFixed) {
+    size_t written = 0;
+    if (!COMPRESSION_INS(DeflateFixed)(input, size, output + pos,
+        fixedSize, &written, level) || written != fixedSize)
+      return STATUS_CONST(GENERIC_ERROR);
+    pos += written;
+  } else {
+    do {
+      const size_t remaining = size - consumed;
+      const unsigned int count = (unsigned int)(remaining > 65535 ? 65535 : remaining);
+      const bool final = consumed + count == size;
+      output[pos++] = final ? 1 : 0;
+      output[pos++] = (unsigned char)count;
+      output[pos++] = (unsigned char)(count >> 8);
+      output[pos++] = (unsigned char)(~count);
+      output[pos++] = (unsigned char)(~count >> 8);
+      if (count) memcpy(output + pos, input + consumed, count);
+      pos += count;
+      consumed += count;
+    } while (consumed != size);
+  }
+  if (format == COMPRESSION_CONST(ZLIB)) {
+    const uint32_t adler = COMPRESSION_FUNC(Adler32)(1, source, size);
+    output[pos++] = (unsigned char)(adler >> 24);
+    output[pos++] = (unsigned char)(adler >> 16);
+    output[pos++] = (unsigned char)(adler >> 8);
+    output[pos++] = (unsigned char)adler;
+  } else if (format == COMPRESSION_CONST(GZIP)) {
+    COMPRESSION_INS(Write32)(output + pos, COMPRESSION_FUNC(CRC32)(0, source, size));
+    pos += 4;
+    COMPRESSION_INS(Write32)(output + pos, (uint32_t)size);
+    pos += 4;
+  }
+  *outSize = pos;
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline OPSTATUS COMPRESSION_INS(NativeDecompress)(
+    COMPRESSION_TYPE(Format) format, const void *source, size_t size,
+    void *destination, size_t capacity, size_t *outSize) {
+  const unsigned char *input = (const unsigned char *)source;
+  unsigned char *output = (unsigned char *)destination;
+  size_t offset = 0, total = 0, used, count;
+  OPSTATUS status;
+  if (!outSize || (!source && size) || (!destination && capacity) ||
+      !COMPRESSION_INS(FormatValid)(format) ||
+      COMPRESSION_INS(Overlap)(source, size, destination, capacity))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (size > UINT_MAX || capacity > UINT_MAX)
+    return STATUS_CONST(OUT_OF_RANGE);
+  if (!size) return STATUS_CONST(INCOMPLETE_SEQUENCE);
+  if (format == COMPRESSION_CONST(ZLIB)) {
+    unsigned int header;
+    if (size < 2) return STATUS_CONST(INCOMPLETE_SEQUENCE);
+    header = ((unsigned int)input[0] << 8) | input[1];
+    if ((input[0] & 15U) != 8 || (input[0] >> 4) > 7 ||
+        header % 31U != 0)
+      return STATUS_CONST(INVALID_SEQUENCE);
+    if (input[1] & 0x20U) return STATUS_CONST(NOT_SUPPORTED);
+    if (size < 6) return STATUS_CONST(INCOMPLETE_SEQUENCE);
+    status = COMPRESSION_INS(InflateRaw)(input + 2, size - 6,
+        output, capacity, &used, &count);
+    if (status != STATUS_CONST(SUCCESS)) return status;
+    if (used != size - 6) return STATUS_CONST(INVALID_SEQUENCE);
+    if (COMPRESSION_FUNC(Adler32)(1, output, count) !=
+        ((uint32_t)input[size - 4] << 24 | (uint32_t)input[size - 3] << 16 |
+         (uint32_t)input[size - 2] << 8 | input[size - 1]))
+      return STATUS_CONST(INVALID_SEQUENCE);
+    *outSize = count;
+    return STATUS_CONST(SUCCESS);
+  }
+  if (format == COMPRESSION_CONST(DEFLATE)) {
+    status = COMPRESSION_INS(InflateRaw)(input, size,
+        output, capacity, &used, &count);
+    if (status != STATUS_CONST(SUCCESS)) return status;
+    if (used != size) return STATUS_CONST(INVALID_SEQUENCE);
+    *outSize = count;
+    return STATUS_CONST(SUCCESS);
+  }
+  while (offset < size) {
+    size_t headerSize = 0;
+    if (size - offset < COMPRESSION_CINS(GZIP_HEADER_SIZE))
+      return STATUS_CONST(INCOMPLETE_SEQUENCE);
+    status = COMPRESSION_INS(GzipHeader)(input + offset, size - offset, &headerSize);
+    if (status != STATUS_CONST(SUCCESS)) return status;
+    offset += headerSize;
+    status = COMPRESSION_INS(InflateRaw)(input + offset, size - offset,
+        output ? output + total : NULL, capacity - total, &used, &count);
+    if (status != STATUS_CONST(SUCCESS)) return status;
+    offset += used;
+    if (size - offset < COMPRESSION_CINS(GZIP_TRAILER_SIZE))
+      return STATUS_CONST(INCOMPLETE_SEQUENCE);
+    if (COMPRESSION_INS(Read32)(input + offset) !=
+        COMPRESSION_FUNC(CRC32)(0, count ? output + total : NULL, count) ||
+        COMPRESSION_INS(Read32)(input + offset + 4) != (uint32_t)count)
+      return STATUS_CONST(INVALID_SEQUENCE);
+    offset += COMPRESSION_CINS(GZIP_TRAILER_SIZE);
+    total += count;
+  }
+  *outSize = total;
+  return STATUS_CONST(SUCCESS);
+}

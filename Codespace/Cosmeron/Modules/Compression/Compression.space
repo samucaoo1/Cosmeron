@@ -7,7 +7,6 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
-#include "Vendor/Miniz.inc"
 
 #define COMPRESSION_MOD Compression
 #define COMPRESSION_CMOD COMPRESSION
@@ -57,16 +56,6 @@ typedef struct COMPRESSION_TYPE(TZipEntry) {
   bool directory, supported;
 } COMPRESSION_TYPE(TZipEntry);
 
-static inline OPSTATUS COMPRESSION_INS(Status)(int status) {
-  switch (status) {
-  case cosmeron_compression_vendor_MZ_OK:
-  case cosmeron_compression_vendor_MZ_STREAM_END: return STATUS_CONST(SUCCESS);
-  case cosmeron_compression_vendor_MZ_MEM_ERROR: return STATUS_CONST(OUT_OF_MEMORY);
-  case cosmeron_compression_vendor_MZ_BUF_ERROR: return STATUS_CONST(INSUFFICIENT_SPACE);
-  case cosmeron_compression_vendor_MZ_DATA_ERROR: return STATUS_CONST(INVALID_SEQUENCE);
-  default: return STATUS_CONST(GENERIC_ERROR);
-  }
-}
 static inline bool COMPRESSION_INS(FormatValid)(COMPRESSION_TYPE(Format) format) {
   return format == COMPRESSION_CONST(DEFLATE) || format == COMPRESSION_CONST(ZLIB) ||
          format == COMPRESSION_CONST(GZIP);

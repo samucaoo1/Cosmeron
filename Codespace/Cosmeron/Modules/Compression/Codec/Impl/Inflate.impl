@@ -1,0 +1,225 @@
+#pragma once
+#include "../../Compression.space"
+typedef struct COMPRESSION_INS(TBits) {
+  const unsigned char *data;
+  size_t size, offset;
+  uint32_t bits;
+  unsigned int available;
+} COMPRESSION_INS(TBits);
+
+typedef struct COMPRESSION_INS(THuffman) {
+  int16_t next[640][2];
+  size_t nodes;
+} COMPRESSION_INS(THuffman);
+
+static inline bool COMPRESSION_INS(BitsRead)(
+    COMPRESSION_INS(TBits) *stream, unsigned int count, unsigned int *value) {
+  uint32_t mask;
+  while (stream->available < count) {
+    if (stream->offset == stream->size) return false;
+    stream->bits |= (uint32_t)stream->data[stream->offset++] << stream->available;
+    stream->available += 8;
+  }
+  mask = count ? (UINT32_C(1) << count) - 1 : 0;
+  *value = stream->bits & mask;
+  stream->bits >>= count;
+  stream->available -= count;
+  return true;
+}
+
+static inline bool COMPRESSION_INS(HuffmanBuild)(
+    COMPRESSION_INS(THuffman) *tree, const unsigned char *lengths, size_t size) {
+  unsigned int counts[16] = {0}, codes[16] = {0}, code = 0;
+  int remaining = 1;
+  size_t i;
+  memset(tree, 0, sizeof(*tree));
+  tree->nodes = 1;
+  for (i = 0; i < size; ++i) {
+    if (lengths[i] > 15) return false;
+    ++counts[lengths[i]];
+  }
+  for (i = 1; i < 16; ++i) {
+    remaining = remaining * 2 - (int)counts[i];
+    if (remaining < 0) return false;
+    code = (code + counts[i - 1] - (i == 1 ? counts[0] : 0)) << 1;
+    codes[i] = code;
+  }
+  for (i = 0; i < size; ++i) {
+    unsigned int j, length = lengths[i], current, node = 0;
+    if (!length) continue;
+    current = codes[length]++;
+    for (j = 0; j < length; ++j) {
+      unsigned int bit = (current >> (length - j - 1)) & 1U;
+      int16_t next = tree->next[node][bit];
+      if (j + 1 == length) {
+        if (next) return false;
+        tree->next[node][bit] = (int16_t)(-(int)i - 1);
+      } else {
+        if (next < 0) return false;
+        if (!next) {
+          if (tree->nodes >= 640) return false;
+          next = (int16_t)tree->nodes++;
+          tree->next[node][bit] = next;
+        }
+        node = (unsigned int)next;
+      }
+    }
+  }
+  return true;
+}
+
+static inline OPSTATUS COMPRESSION_INS(HuffmanRead)(
+    COMPRESSION_INS(TBits) *bits, const COMPRESSION_INS(THuffman) *tree,
+    unsigned int *symbol) {
+  unsigned int node = 0, i, bit;
+  for (i = 0; i < 15; ++i) {
+    int16_t child;
+    if (!COMPRESSION_INS(BitsRead)(bits, 1, &bit))
+      return STATUS_CONST(INCOMPLETE_SEQUENCE);
+    child = tree->next[node][bit];
+    if (!child) return STATUS_CONST(INVALID_SEQUENCE);
+    if (child < 0) {
+      *symbol = (unsigned int)(-child - 1);
+      return STATUS_CONST(SUCCESS);
+    }
+    node = (unsigned int)child;
+  }
+  return STATUS_CONST(INVALID_SEQUENCE);
+}
+
+static inline OPSTATUS COMPRESSION_INS(InflateRaw)(
+    const unsigned char *source, size_t size, unsigned char *destination,
+    size_t capacity, size_t *outUsed, size_t *outSize) {
+  static const unsigned short lengthBase[29] = {
+    3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258
+  };
+  static const unsigned char lengthExtra[29] = {
+    0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0
+  };
+  static const unsigned short distBase[30] = {
+    1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577
+  };
+  static const unsigned char distExtra[30] = {
+    0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13
+  };
+  static const unsigned char order[19] = {
+    16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15
+  };
+  COMPRESSION_INS(TBits) bits = {source, size, 0, 0, 0};
+  COMPRESSION_INS(THuffman) literal, distance, codeTree;
+  unsigned char literalLengths[288], distanceLengths[32], allLengths[320], codeLengths[19];
+  size_t written = 0;
+  unsigned int final = 0, type, value;
+  OPSTATUS status;
+  while (!final) {
+    unsigned int hlit, hdist, hclen, i;
+    if (!COMPRESSION_INS(BitsRead)(&bits, 1, &final) ||
+        !COMPRESSION_INS(BitsRead)(&bits, 2, &type))
+      return STATUS_CONST(INCOMPLETE_SEQUENCE);
+    if (type == 0) {
+      unsigned int length, check;
+      if (!COMPRESSION_INS(BitsRead)(&bits, bits.available & 7U, &value) ||
+          !COMPRESSION_INS(BitsRead)(&bits, 16, &length) ||
+          !COMPRESSION_INS(BitsRead)(&bits, 16, &check))
+        return STATUS_CONST(INCOMPLETE_SEQUENCE);
+      if ((length ^ check) != 65535U) return STATUS_CONST(INVALID_SEQUENCE);
+      if ((size_t)length > capacity - written)
+        return STATUS_CONST(INSUFFICIENT_SPACE);
+      for (i = 0; i < length; ++i) {
+        if (!COMPRESSION_INS(BitsRead)(&bits, 8, &value))
+          return STATUS_CONST(INCOMPLETE_SEQUENCE);
+        destination[written++] = (unsigned char)value;
+      }
+      continue;
+    }
+    if (type == 3) return STATUS_CONST(INVALID_SEQUENCE);
+    if (type == 1) {
+      for (i = 0; i < 288; ++i)
+        literalLengths[i] = (unsigned char)(i < 144 ? 8 : i < 256 ? 9 : i < 280 ? 7 : 8);
+      for (i = 0; i < 32; ++i) distanceLengths[i] = 5;
+    } else {
+      unsigned int total, current = 0, previous = 0;
+      if (!COMPRESSION_INS(BitsRead)(&bits, 5, &hlit) ||
+          !COMPRESSION_INS(BitsRead)(&bits, 5, &hdist) ||
+          !COMPRESSION_INS(BitsRead)(&bits, 4, &hclen))
+        return STATUS_CONST(INCOMPLETE_SEQUENCE);
+      hlit += 257; hdist += 1; hclen += 4;
+      if (hlit > 286 || hdist > 32) return STATUS_CONST(INVALID_SEQUENCE);
+      memset(codeLengths, 0, sizeof(codeLengths));
+      for (i = 0; i < hclen; ++i) {
+        if (!COMPRESSION_INS(BitsRead)(&bits, 3, &value))
+          return STATUS_CONST(INCOMPLETE_SEQUENCE);
+        codeLengths[order[i]] = (unsigned char)value;
+      }
+      if (!COMPRESSION_INS(HuffmanBuild)(&codeTree, codeLengths, 19))
+        return STATUS_CONST(INVALID_SEQUENCE);
+      total = hlit + hdist;
+      memset(allLengths, 0, sizeof(allLengths));
+      while (current < total) {
+        unsigned int repeat = 1;
+        status = COMPRESSION_INS(HuffmanRead)(&bits, &codeTree, &value);
+        if (status != STATUS_CONST(SUCCESS)) return status;
+        if (value <= 15) {
+          previous = value;
+        } else {
+          unsigned int extra, extraBits;
+          if (value == 16) {
+            if (!current) return STATUS_CONST(INVALID_SEQUENCE);
+            extraBits = 2;
+          } else if (value == 17) {
+            extraBits = 3; previous = 0;
+          } else if (value == 18) {
+            extraBits = 7; previous = 0;
+          } else return STATUS_CONST(INVALID_SEQUENCE);
+          if (!COMPRESSION_INS(BitsRead)(&bits, extraBits, &extra))
+            return STATUS_CONST(INCOMPLETE_SEQUENCE);
+          repeat = extra + (value == 16 ? 3 : value == 17 ? 3 : 11);
+        }
+        if (repeat > total - current) return STATUS_CONST(INVALID_SEQUENCE);
+        while (repeat--) allLengths[current++] = (unsigned char)previous;
+      }
+      memset(literalLengths, 0, sizeof(literalLengths));
+      memset(distanceLengths, 0, sizeof(distanceLengths));
+      memcpy(literalLengths, allLengths, hlit);
+      memcpy(distanceLengths, allLengths + hlit, hdist);
+      if (!literalLengths[256]) return STATUS_CONST(INVALID_SEQUENCE);
+    }
+    if (!COMPRESSION_INS(HuffmanBuild)(&literal, literalLengths, 288) ||
+        !COMPRESSION_INS(HuffmanBuild)(&distance, distanceLengths, 32))
+      return STATUS_CONST(INVALID_SEQUENCE);
+    for (;;) {
+      unsigned int symbol;
+      status = COMPRESSION_INS(HuffmanRead)(&bits, &literal, &symbol);
+      if (status != STATUS_CONST(SUCCESS)) return status;
+      if (symbol < 256) {
+        if (written == capacity) return STATUS_CONST(INSUFFICIENT_SPACE);
+        destination[written++] = (unsigned char)symbol;
+      } else if (symbol == 256) break;
+      else {
+        unsigned int len, dist, extra, index;
+        if (symbol > 285) return STATUS_CONST(INVALID_SEQUENCE);
+        index = symbol - 257;
+        len = lengthBase[index];
+        if (!COMPRESSION_INS(BitsRead)(&bits, lengthExtra[index], &extra))
+          return STATUS_CONST(INCOMPLETE_SEQUENCE);
+        len += extra;
+        status = COMPRESSION_INS(HuffmanRead)(&bits, &distance, &symbol);
+        if (status != STATUS_CONST(SUCCESS)) return status;
+        if (symbol >= 30) return STATUS_CONST(INVALID_SEQUENCE);
+        dist = distBase[symbol];
+        if (!COMPRESSION_INS(BitsRead)(&bits, distExtra[symbol], &extra))
+          return STATUS_CONST(INCOMPLETE_SEQUENCE);
+        dist += extra;
+        if (dist > written) return STATUS_CONST(INVALID_SEQUENCE);
+        if (len > capacity - written) return STATUS_CONST(INSUFFICIENT_SPACE);
+        while (len--) {
+          destination[written] = destination[written - dist];
+          ++written;
+        }
+      }
+    }
+  }
+  *outUsed = bits.offset;
+  *outSize = written;
+  return STATUS_CONST(SUCCESS);
+}

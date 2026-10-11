@@ -33,8 +33,8 @@ the table's type, instance and bindings.
 | `COMPRESSION_NS(Functions)` | `Compression_Functions` |
 
 `COSMERON_NAMESPACE`, `COSMERON_NAMESPACE_CONST`, `COMPRESSION_NS` and
-`COMPRESSION_CNS` customize the public namespace. Vendor symbols have a fixed
-private prefix and internal linkage; zlib compatibility aliases are disabled.
+`COMPRESSION_CNS` customize the public namespace. The native implementation uses internal Cosmeron namespaces and does not
+expose third-party types or zlib compatibility aliases.
 
 | Type | Fields / meaning |
 | --- | --- |
@@ -77,10 +77,9 @@ independent operations have no global lifecycle or LastError state.
 | `NOT_FOUND` | ZIP name missing |
 | `NOT_SUPPORTED` | ZIP method, encryption or feature unavailable |
 
-File failures preserve the existing File statuses. Some vendor write failures
-report GENERIC_ERROR because the engine does not retain the underlying
-allocation cause. Discard a writer after a failed Add or Finish; it may contain
-partially written archive data.
+File failures preserve the existing File statuses. Native allocations return
+OUT_OF_MEMORY. Discard a writer after an unsuccessful Add or Finish if the
+application does not explicitly retry.
 
 ## Codec API
 
@@ -139,8 +138,8 @@ uint32_t Compression_Adler32(uint32_t previous, const void *data, size_t size);
 ```
 
 Start CRC32 at 0 and Adler32 at 1. Pass the previous result for subsequent
-chunks. Nonzero size requires readable data. NULL data resets the checksum to
-its initial value, matching the embedded engine.
+chunks. Nonzero size requires readable data. With NULL data, the checksum functions
+return the previous value unchanged.
 
 ## ZIP API
 
@@ -187,9 +186,12 @@ Finish transfers an owned archive buffer to the caller and clears the writer.
 Discard releases an unfinished writer. Creation uses a deterministic DOS
 1980-01-01 timestamp and emits UTF-8 filename flags without validating encoding.
 
-Store and Deflate are supported, with ZIP64 handling inherited from miniz.
-Multidisk archives and encrypted entries are unsupported. No filesystem tree
-extraction, permissions restoration or symlink creation is provided.
+Store and Deflate are supported. The reader accepts ZIP64 end records,
+64-bit central-directory sizes/offsets, and ZIP64 entry metadata. The writer
+emits ZIP64 metadata when sizes, offsets or entry counts require it. Archives
+must still fit available addressable memory. Multidisk and encrypted archives
+are unsupported. No filesystem tree extraction, permissions restoration or
+symlink creation is provided.
 
 ## File API
 
@@ -221,13 +223,18 @@ allocations. There is no public streaming API yet.
 RAR, 7z, TAR, bzip2, xz, Zstandard and LZ4 are not implemented. No format
 autodetection or compression of directory trees is implied by this API.
 
-The embedded engine is miniz **3.1.0**, commit
-`174573d60290f447c13a2b1b3405de2b96e27d6c`, under the MIT license preserved in
-`Compression/Vendor/LICENSE.txt`. `Tools/vendor_miniz.py` regenerates the vendor
-include from that checkout, prefixes its identifiers, gives exported functions
-internal linkage, disables stdio/time/zlib aliases, uses portable aligned reads,
-sets valid deterministic ZIP dates and fixes temporary-compressor cleanup on
-early heap-write failures. Upstream vendor code retains its original style.
+Compression now uses a native C11 engine rather than embedding miniz.
+The RFC 1951 decoder accepts stored, fixed-Huffman and dynamic-Huffman streams.
+The compressor compares stored, LZ77 + fixed-Huffman and LZ77 + dynamic-Huffman
+streams and chooses the smallest. Level 0 forces stored blocks; other levels
+control the LZ77 match-length search. Unrepresentable Huffman trees trigger
+fallback to another valid block type. The encoder is educational and may not
+match production codecs in ratio or throughput. Native RFC 1950 zlib and RFC
+1952 gzip wrappers validate Adler32, CRC32 and decoded member lengths.
+
+The earlier miniz 3.1.0 component was removed from Compression. Its origin,
+author credits and MIT notice remain in `Docs/Legal/THIRD_PARTY.md` and
+`Docs/Legal/Licenses/Miniz.MIT.txt` as historical provenance.
 
 ## Validation
 
@@ -241,7 +248,7 @@ and zipfile implementations. CI includes GCC, Clang, macOS, MinGW, MSVC,
 sanitizers and 32-bit builds; platform results depend on those CI runs.
 
 ```sh
-make -C Codespace/Tests/Compression run interop
+make -C Codespace/Tests/Compression run interop zip64
 ```
 
 
