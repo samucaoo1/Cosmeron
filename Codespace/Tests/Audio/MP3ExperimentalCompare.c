@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
   FILE *file = fopen(path, "rb");
   float *nativePCM, *referencePCM;
   size_t length, offset = 0, frames = 0, used = 0, decoded = 0;
-  size_t skipped = 0, preroll = 0, channels = 0, i;
+  size_t skipped = 0, preroll = 0, channels = 0;
   double bestRatio = 1e100, bestGain = 0, bestNativeEnergy = 0;
   double metadataRatio = 1e100, metadataGain = 0, metadataEnergy = 0;
   size_t trimmedStart = 0, expectedGaplessFrames = 0, anchor = 1536;
