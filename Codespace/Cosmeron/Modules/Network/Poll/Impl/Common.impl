@@ -99,7 +99,8 @@ static inline bool NETWORK_POLLER_INS(StreamClosed)(
   char byte;
 #if OS_WINDOWS
   int result = TSOCKET_NATIVE_RECV(handle, &byte, 1, MSG_PEEK);
-#elif OS_MAC
+#elif OS_MAC || !defined(MSG_DONTWAIT)
+  /* Some BSDs hide MSG_DONTWAIT in strict C11: socket is readable after poll. */
   ssize_t result = TSOCKET_NATIVE_RECV(handle, &byte, 1, MSG_PEEK);
 #else
   ssize_t result = TSOCKET_NATIVE_RECV(handle, &byte, 1, MSG_PEEK | MSG_DONTWAIT);
