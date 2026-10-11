@@ -197,6 +197,22 @@ case "$(uname -s)" in
   DragonFly|FreeBSD) audio_features= ;;
   OpenBSD) audio_features="-D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE=1" ;;
 esac
+# A separately compiled Miniaudio codec-only profile disables device I/O
+# and internal threading, but it may still require libm on BSD. Probe first
+# without flags and report that result independently from both Desktop and
+# native WAV. The functional run uses -lm only when required.
+minimal_codec_zero_link=PASS
+if (
+  cd Codespace/Tests/Audio
+  "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
+    ${audio_features} ${extra} CodecMinimal.c \
+    -o ../../../.build-bsd-extended/Audio_CodecMinimalZeroLink 2>/dev/null
+); then
+  echo "[bsd-extended] AUDIO_CODEC_MINIMAL_ZERO_LINK=PASS"
+else
+  echo "[bsd-extended] AUDIO_CODEC_MINIMAL_ZERO_LINK=NOT_SUPPORTED on $(uname -s)"
+  minimal_codec_zero_link=NOT_SUPPORTED
+fi
 # Probe codec and desktop entrypoints independently. Diagnostic link flags
 # are used only for the functional suite, never to label a backend zero-link.
 codec_zero_link=PASS
@@ -231,8 +247,23 @@ else
   echo "[bsd-extended] AUDIO_ZERO_LINK=NOT_SUPPORTED"
   audio_zero_link=NOT_SUPPORTED
 fi
+# CodecMinimal has no device/worker requirements. The full suite below
+# retains its own platform-specific native-link diagnostics.
+if (
+  cd Codespace/Tests/Audio
+  "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
+    ${audio_features} ${extra} CodecMinimal.c \
+    -lm -o ../../../.build-bsd-extended/Audio_CodecMinimalFunctional
+); then
+  .build-bsd-extended/Audio_CodecMinimalFunctional
+  echo "[bsd-extended] AUDIO_CODEC_MINIMAL_FUNCTIONAL=PASS"
+else
+  echo "[bsd-extended] AUDIO_CODEC_MINIMAL_FUNCTIONAL=FAIL"
+  exit 1
+fi
 suite Audio CodecStandalone DesktopStandalone Codec Player IncludeAll
 multitu Audio
+record AudioCodecMinimal "$minimal_codec_zero_link" 'vendor decoder without device/threading; may need libm'
 record AudioCodec "$codec_zero_link" 'WAV/MP3/FLAC offline decoding; no hardware'
 record AudioDevice "$device_zero_link" 'public device API exercised without physical device'
 record Audio "$audio_zero_link" 'Miniaudio desktop integration; no physical device'

@@ -1,4 +1,5 @@
 #pragma once
+#define AUDIO_MINIAUDIO_BACKEND_INCLUDED 1
 #include "../Audio.space"
 #include "NativeMath.inc"
 
@@ -21,7 +22,28 @@
 #define cosmeron_audio_vendor_MA_NO_NULL
 #define cosmeron_audio_vendor_MA_NO_JACK
 #define cosmeron_audio_vendor_MA_NO_ENCODING
+/* Optional decoder-only vendor profile.  Miniaudio's documented build
+ * switches are scoped to this single header inclusion, so a separate TU
+ * can select full desktop support without changing public decoder types.
+ * No promise about -lm is made: only thread/device code is excluded. */
+#if defined(AUDIO_MINIAUDIO_CODEC_MINIMAL)
+#define AUDIO_MINIAUDIO_CODEC_MINIMAL_SELECTED 1
+#define cosmeron_audio_vendor_MA_NO_DEVICE_IO
+#define cosmeron_audio_vendor_MA_NO_THREADING
+#define cosmeron_audio_vendor_MA_NO_RESOURCE_MANAGER
+#define cosmeron_audio_vendor_MA_NO_ENGINE
+#define cosmeron_audio_vendor_MA_NO_NODE_GRAPH
+#define cosmeron_audio_vendor_MA_NO_GENERATION
+#endif
 #include "Miniaudio.inc"
+#if defined(AUDIO_MINIAUDIO_CODEC_MINIMAL_SELECTED)
+#undef cosmeron_audio_vendor_MA_NO_DEVICE_IO
+#undef cosmeron_audio_vendor_MA_NO_THREADING
+#undef cosmeron_audio_vendor_MA_NO_RESOURCE_MANAGER
+#undef cosmeron_audio_vendor_MA_NO_ENGINE
+#undef cosmeron_audio_vendor_MA_NO_NODE_GRAPH
+#undef cosmeron_audio_vendor_MA_NO_GENERATION
+#endif
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #elif defined(__GNUC__)

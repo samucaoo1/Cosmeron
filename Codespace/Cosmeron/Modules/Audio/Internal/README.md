@@ -65,3 +65,21 @@ contain opaque state pointers; callers must not inspect the pointed-to state.
 
 The CI probes Codec and Device **separately**, distinguishes functional
 compatibility from zero-extra-link, and tests both standalone include paths.
+
+## Optional decoder-only vendor build
+
+`CodecMinimal.h` is an explicit profile for the same `Audio_Codec_*` API.
+It configures miniaudio 0.11.23 with
+`MA_NO_DEVICE_IO`, `MA_NO_THREADING`, `MA_NO_RESOURCE_MANAGER`,
+`MA_NO_ENGINE`, `MA_NO_NODE_GRAPH`, and `MA_NO_GENERATION`.
+This can reduce vendor footprint and removes its internally created device
+threads. It does **not** automatically remove `-lm`, convert MP3/FLAC to
+native Cosmeron codecs, or certify hardware. The generated code may still
+depend on the host's math runtime.
+
+`CodecMinimal.h` and `Desktop.h` must not be combined in **one TU**;
+separate TUs may each select their own build profile, with only public
+opaque decoder types crossing interfaces. The preexisting `CodecOnly.h`
+remains full-profile compatible. The C11 regression `CodecMinimal.c`
+executes a real WAV decode and the BSD CI records an independent
+`AUDIO_CODEC_MINIMAL_ZERO_LINK` result.
