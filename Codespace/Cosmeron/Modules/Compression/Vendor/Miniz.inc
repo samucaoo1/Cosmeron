@@ -5,6 +5,7 @@
 #define cosmeron_compression_vendor_MINIZ_NO_TIME
 #define cosmeron_compression_vendor_MINIZ_NO_ZLIB_COMPATIBLE_NAMES
 #define cosmeron_compression_vendor_MINIZ_USE_UNALIGNED_LOADS_AND_STORES 0
+static inline int cosmeron_compression_vendor_exceeds_u32(unsigned long long value) { return value > 0xFFFFFFFFULL; }
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-function"
@@ -1842,7 +1843,7 @@ cosmeron_compression_vendor_mz_ulong cosmeron_compression_vendor_mz_crc32(cosmer
         memset(&stream, 0, sizeof(stream));
 
         /* In case cosmeron_compression_vendor_mz_ulong is 64-bits (argh I hate longs). */
-        if ((cosmeron_compression_vendor_mz_uint64)(source_len | *pDest_len) > 0xFFFFFFFFU)
+        if (cosmeron_compression_vendor_exceeds_u32((cosmeron_compression_vendor_mz_uint64)(source_len | *pDest_len)))
             return cosmeron_compression_vendor_MZ_PARAM_ERROR;
 
         stream.next_in = pSource;
@@ -2085,7 +2086,7 @@ cosmeron_compression_vendor_mz_ulong cosmeron_compression_vendor_mz_crc32(cosmer
         memset(&stream, 0, sizeof(stream));
 
         /* In case cosmeron_compression_vendor_mz_ulong is 64-bits (argh I hate longs). */
-        if ((cosmeron_compression_vendor_mz_uint64)(*pSource_len | *pDest_len) > 0xFFFFFFFFU)
+        if (cosmeron_compression_vendor_exceeds_u32((cosmeron_compression_vendor_mz_uint64)(*pSource_len | *pDest_len)))
             return cosmeron_compression_vendor_MZ_PARAM_ERROR;
 
         stream.next_in = pSource;
@@ -7842,7 +7843,7 @@ static int cosmeron_compression_vendor_mz_stat64(const char *path, struct __stat
                 pState->m_zip64 = cosmeron_compression_vendor_MZ_TRUE;
                 /*return cosmeron_compression_vendor_mz_zip_set_error(pZip, cosmeron_compression_vendor_MZ_ZIP_TOO_MANY_FILES); */
             }
-            if (((cosmeron_compression_vendor_mz_uint64)buf_size > 0xFFFFFFFF) || (uncomp_size > 0xFFFFFFFF))
+            if ((cosmeron_compression_vendor_exceeds_u32((cosmeron_compression_vendor_mz_uint64)buf_size)) || (uncomp_size > 0xFFFFFFFF))
             {
                 pState->m_zip64 = cosmeron_compression_vendor_MZ_TRUE;
                 /*return cosmeron_compression_vendor_mz_zip_set_error(pZip, cosmeron_compression_vendor_MZ_ZIP_ARCHIVE_TOO_LARGE); */
