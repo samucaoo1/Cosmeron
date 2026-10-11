@@ -51,3 +51,17 @@ with the independent `Offline.h` synthesis path. `Codec`, `Player` and
 
 Do not expose vendor types through public function signatures. Public objects
 contain opaque state pointers; callers must not inspect the pointed-to state.
+
+## Public entrypoints
+
+- `Audio/Offline.h`: pure synthesis and PCM; no vendor backend.
+- `Audio/CodecOnly.h`: offline synthesis and decoder/encoder public API,
+  **without public Device/Player/Mixer headers**. The decoder still includes
+  Miniaudio internally; its native math/thread dependencies may remain.
+- `Audio/Desktop.h`: explicitly imports Codec, Device, Player, Mixer and
+  Beep playback. Device access requires hardware/permissions at runtime.
+- `Audio/Audio.h`: backwards-compatible aggregator; `AUDIO_NO_DESKTOP`
+  preserves the offline-only behavior.
+
+The CI probes Codec and Device **separately**, distinguishes functional
+compatibility from zero-extra-link, and tests both standalone include paths.

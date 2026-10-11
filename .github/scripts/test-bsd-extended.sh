@@ -168,21 +168,45 @@ case "$(uname -s)" in
   DragonFly|FreeBSD) audio_features= ;;
   OpenBSD) audio_features="-D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE=1" ;;
 esac
+# Probe codec and desktop entrypoints independently. Diagnostic link flags
+# are used only for the functional suite, never to label a backend zero-link.
+codec_zero_link=PASS
+device_zero_link=PASS
 if (
   cd Codespace/Tests/Audio
   "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
-    ${audio_features} ${extra} Codec.c \
-    -o ../../../.build-bsd-extended/Audio_ZeroLink 2>/dev/null
+    ${audio_features} ${extra} CodecStandalone.c \
+    -o ../../../.build-bsd-extended/Audio_CodecZeroLink 2>/dev/null
 ); then
-  echo "[bsd-extended] AUDIO_ZERO_LINK=PASS"
+  echo "[bsd-extended] AUDIO_CODEC_ZERO_LINK=PASS"
 else
-  echo "[bsd-extended] AUDIO_ZERO_LINK=NOT_SUPPORTED on $(uname -s); using -lm -pthread for offline runtime diagnostics"
-  audio_zero_link=NOT_SUPPORTED
+  echo "[bsd-extended] AUDIO_CODEC_ZERO_LINK=NOT_SUPPORTED on $(uname -s)"
+  codec_zero_link=NOT_SUPPORTED
   linkflags="-lm -pthread"
 fi
-suite Audio Codec Player IncludeAll
+if (
+  cd Codespace/Tests/Audio
+  "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
+    ${audio_features} ${extra} DesktopStandalone.c \
+    -o ../../../.build-bsd-extended/Audio_DeviceZeroLink 2>/dev/null
+); then
+  echo "[bsd-extended] AUDIO_DEVICE_ZERO_LINK=PASS"
+else
+  echo "[bsd-extended] AUDIO_DEVICE_ZERO_LINK=NOT_SUPPORTED on $(uname -s)"
+  device_zero_link=NOT_SUPPORTED
+  linkflags="-lm -pthread"
+fi
+if [ "$codec_zero_link" = PASS ] && [ "$device_zero_link" = PASS ]; then
+  echo "[bsd-extended] AUDIO_ZERO_LINK=PASS"
+else
+  echo "[bsd-extended] AUDIO_ZERO_LINK=NOT_SUPPORTED"
+  audio_zero_link=NOT_SUPPORTED
+fi
+suite Audio CodecStandalone DesktopStandalone Codec Player IncludeAll
 multitu Audio
-record Audio "$audio_zero_link" 'offline only, no sound device'
+record AudioCodec "$codec_zero_link" 'WAV/MP3/FLAC offline decoding; no hardware'
+record AudioDevice "$device_zero_link" 'public device API exercised without physical device'
+record Audio "$audio_zero_link" 'Miniaudio desktop integration; no physical device'
 linkflags=
 
 # Only noninteractive graphics, canvas, text UI and font regression sources.
