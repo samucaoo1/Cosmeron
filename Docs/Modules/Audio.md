@@ -17,7 +17,18 @@ The **Audio** module provides portable sound synthesis and optional desktop audi
 | [Envelope](#envelope-package) | ADSR-style gain shaping of audio samples. | Yes |
 | [Sequence](#sequence-package) | Musical events, MML parsing and streaming or whole-buffer rendering. | Yes |
 | [Beep](#beep-package) | Square-wave beep and MML synthesis, plus desktop playback helpers. | Yes (render only) |
-| [Codec](#codec-package) | WAV, MP3 and FLAC decoding, custom readers and WAV export. | No |
+| [Codec](#codec-package) | WAV, MP3 and FLAC decoding, custom readers and WAV export.
+
+The independent `Audio/Codec/MP3.h` offers C11 framing primitives:
+`Audio_Codec_MP3_ParseHeader` extracts MPEG-1/2/2.5 Layer III bitrate,
+sample rate, channels, samples per frame, frame length and CRC mode;
+`Audio_Codec_MP3_SkipID3` skips an optional ID3v2 tag; and
+`Audio_Codec_MP3_FindFrame` locates a complete candidate frame.
+**These functions inspect MP3 structure; they do not decode MP3 samples.**
+The public `OpenMemory`/`OpenFile`/`OpenReader` MP3 PCM decoder
+still uses miniaudio until its independent Huffman/synthesis stages are
+implemented and verified. The standalone `Codec/MP3.h` introduces
+no separate linking dependencies. | No |
 | [Device](#device-package) | Callback-driven hardware audio output. | No |
 | [Mixer](#mixer-package) | Master gain and per-voice gain/pan. | No |
 | [Player](#player-package) | Voice playback, file and buffer sources, and offline mixing. | No |
