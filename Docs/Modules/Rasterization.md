@@ -718,3 +718,33 @@ OPSTATUS status = RASTER_FUNC(BezierCubic)(&canvas, (TDUAL_TYPE(int32)){.x = 2, 
 - The package draws to or computes values for Canvas, never implicitly performs terminal presentation.
 - [Canvas](Canvas.md), [Terminal](Terminal.md), [Struct](Struct.md), [Text](Text.md), [Bit](Bit.md).
 - Detailed design notes: [Rasterization README](../../Codespace/Cosmeron/Modules/Graphics/Rasterization/README.md).
+
+# C11 smoke test
+
+The Canvas owns its backing Text/Grid storage. Rasterization writes cells only; presenting them on a terminal is a separate step.
+
+<!-- cosmeron-c11-test -->
+```c
+#include "Cosmeron/Modules/Graphics/Rasterization/Rasterization.h"
+#include <assert.h>
+
+int main(void) {
+    TERMINAL_TYPE(TCanvas) canvas = {0};
+    TEXT_GRID_ATTRIBUTE_TYPE(Cell) style =
+        TEXT_GRID_ATTRIBUTE_FUNC(Default)();
+    uint32_t codepoint = 0;
+    TEXT_GRID_ATTRIBUTE_TYPE(Cell) readStyle;
+    assert(TERMINAL_FUNC(Canvas_Create)(
+               &canvas, (TDUAL_TYPE(uint16)){.x=12, .y=8}) ==
+           STATUS_CONST(SUCCESS));
+    assert(RASTER_FUNC(Point)(
+               &canvas, (TDUAL_TYPE(int32)){.x=2, .y=3},
+               '#', style) == STATUS_CONST(SUCCESS));
+    assert(TERMINAL_FUNC(Canvas_Get)(
+               &canvas, (TDUAL_TYPE(uint16)){.x=2, .y=3},
+               &codepoint, &readStyle) == STATUS_CONST(SUCCESS));
+    assert(codepoint == '#');
+    TERMINAL_FUNC(Canvas_Free)(&canvas);
+    return 0;
+}
+```
