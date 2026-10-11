@@ -12,7 +12,7 @@
 
 #include "Impl/Integer.impl"
 
-SORT_RADIX_IMPLEMENT(uint32_t, U32, uint32_t, 32u)
-SORT_RADIX_IMPLEMENT(int32_t, I32, uint32_t, 32u)
-SORT_RADIX_IMPLEMENT(uint64_t, U64, uint64_t, 64u)
-SORT_RADIX_IMPLEMENT(int64_t, I64, uint64_t, 64u)
+SORT_RADIX_IMPLEMENT(uint32_t, U32, uint32_t, 32u, false)
+SORT_RADIX_IMPLEMENT(int32_t, I32, uint32_t, 32u, true)
+SORT_RADIX_IMPLEMENT(uint64_t, U64, uint64_t, 64u, false)
+SORT_RADIX_IMPLEMENT(int64_t, I64, uint64_t, 64u, true)
