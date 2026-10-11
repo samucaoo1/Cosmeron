@@ -66,6 +66,11 @@ static inline OPSTATUS AUDIO_INS(FLAC_StreamNextFrame)(
     return STATUS_CONST(INVALID_ARGUMENT);
   *outFrames = 0;
   if (decoder->flacOffset > INT64_MAX) return STATUS_CONST(OUT_OF_RANGE);
+  if (decoder->flac.maximumFrameBytes) {
+    if (decoder->flac.maximumFrameBytes > limit)
+      return STATUS_CONST(NOT_SUPPORTED);
+    limit = decoder->flac.maximumFrameBytes;
+  }
   if (decoder->flac.maximumBlockSize > SIZE_MAX / decoder->flac.channels / 8)
     return STATUS_CONST(ARITHMETIC_OVERFLOW);
   if (decoder->flac.minimumBlockSize == 0 || decoder->flac.maximumBlockSize == 0)
