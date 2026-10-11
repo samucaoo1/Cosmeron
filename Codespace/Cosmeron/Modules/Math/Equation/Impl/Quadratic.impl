@@ -85,7 +85,7 @@
     }                                                                          \
     TYPE discriminant = EQUATION_TYPED_FUNC(QuadraticDiscriminant, SUFFIX)(a, b, c); \
     COMPLEX_TYPE root = discriminant < (TYPE)0                                \
-                            ? (COMPLEX_TYPE)(SQRT(-discriminant) * I)           \
+                            ? __builtin_complex((TYPE)0, SQRT(-discriminant))     \
                             : (COMPLEX_TYPE)SQRT(discriminant);                 \
     COMPLEX_TYPE denominator = (TYPE)2 * a;                                    \
     *outResult1 = (-b + root) / denominator;                                      \
