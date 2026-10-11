@@ -49,7 +49,6 @@ AUDIO_CODEC_MP3_SCALEFACTORS_LSF_PROTOTYPE {
   intensity = header->intensityStereo && channel == 1;
   code = part->scalefacCompress;
   if (intensity) {
-    *outIntensityScale = 0; /* committed only on successful read below */
     code >>= 1;
     if (code < 180) {
       family = 3;
@@ -95,13 +94,12 @@ AUDIO_CODEC_MP3_SCALEFACTORS_LSF_PROTOTYPE {
   for (group = 0; group < 4; ++group) {
     n = partitions[family][kind][group];
     for (i = 0; i < n; ++i) {
-      unsigned int v = 0, j;
+      unsigned int v = 0;
       if (at >= 36 || bits.cursor > limit ||
           slen[group] > limit - bits.cursor ||
           !AUDIO_INS(MP3_ReadBits)(&bits, slen[group], &v))
         return STATUS_CONST(INVALID_SEQUENCE);
       raw[at++] = (uint8_t)v;
-      (void)j;
     }
   }
   if (kind == 0) {
