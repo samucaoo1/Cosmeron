@@ -14,6 +14,45 @@ typedef struct AUDIO_CODEC_TYPE(TMP3FrameInfo) {
   bool crcProtected;
 } AUDIO_CODEC_TYPE(TMP3FrameInfo);
 
+/* A granule stores the side-info parameters required by the subsequent
+ * Huffman/scalefactor and synthesis stages; no PCM decoding occurs here. */
+typedef struct AUDIO_CODEC_TYPE(TMP3Granule) {
+  uint32_t part23Length;
+  uint16_t bigValues, scalefacCompress;
+  uint8_t globalGain, blockType, mixedBlock, windowSwitching;
+  uint8_t tableSelect[3], subblockGain[3];
+  uint8_t region0Count, region1Count;
+  uint8_t preflag, scalefacScale, count1TableSelect;
+} AUDIO_CODEC_TYPE(TMP3Granule);
+
+typedef struct AUDIO_CODEC_TYPE(TMP3SideInfo) {
+  uint16_t mainDataBegin;
+  uint8_t privateBits, channels, granules;
+  uint8_t scfsi[2][4];
+  uint32_t totalPart23Bits, mainDataBytes;
+  AUDIO_CODEC_TYPE(TMP3Granule) parts[2][2];
+} AUDIO_CODEC_TYPE(TMP3SideInfo);
+
+/* Plain zero-initialized state; no init/free call, allocator or globals. */
+typedef struct AUDIO_CODEC_TYPE(TMP3Reservoir) {
+  unsigned char history[511];
+  size_t historySize;
+  unsigned char frame[2048];
+  size_t frameSize;
+} AUDIO_CODEC_TYPE(TMP3Reservoir);
+
+#define AUDIO_CODEC_MP3_PARSE_SIDE_INFO_PROTOTYPE                             \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_ParseSideInfo)(                 \
+      const void *frame, size_t bytes, AUDIO_CODEC_TYPE(TMP3SideInfo) *outSideInfo)
+#define AUDIO_CODEC_MP3_RESERVOIR_FEED_PROTOTYPE                              \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_ReservoirFeed)(                 \
+      AUDIO_CODEC_TYPE(TMP3Reservoir) *reservoir, const void *frame,          \
+      size_t bytes, const unsigned char **outMainData, size_t *outBytes,       \
+      AUDIO_CODEC_TYPE(TMP3SideInfo) *outSideInfo)
+
+AUDIO_CODEC_MP3_PARSE_SIDE_INFO_PROTOTYPE;
+AUDIO_CODEC_MP3_RESERVOIR_FEED_PROTOTYPE;
+
 #define AUDIO_CODEC_MP3_PARSE_HEADER_PROTOTYPE                                 \
   static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_ParseHeader)(                   \
       const void *bytes, size_t size, AUDIO_CODEC_TYPE(TMP3FrameInfo) *outInfo)
@@ -126,3 +165,5 @@ AUDIO_CODEC_MP3_FIND_FRAME_PROTOTYPE {
   }
   return STATUS_CONST(NOT_FOUND);
 }
+
+#include "Impl/MP3SideInfo.inc"
