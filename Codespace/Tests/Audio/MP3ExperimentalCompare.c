@@ -9,7 +9,7 @@
  * metadata can shift the two streams by over 1000 samples. Search the
  * entire common valid window and report a least-squares gain as well as
  * residual power. A tonal fixture alone cannot certify sample parity. */
-int main(void) {
+int main(int argc, char **argv) {
   enum { MAX_FRAMES = 48 * 1152, ANALYSIS = 2048, BASE = 1536 };
   unsigned char bytes[65536];
   AUDIO_CODEC_TYPE(TMP3Experimental) native = {0};
@@ -17,7 +17,10 @@ int main(void) {
   cosmeron_audio_vendor_ma_decoder reference;
   cosmeron_audio_vendor_ma_decoder_config config;
   cosmeron_audio_vendor_ma_uint64 received = 0;
-  FILE *file = fopen("Fixtures/Tone.mp3", "rb");
+  const char *path = argc > 1 ? argv[1] : "Fixtures/Tone.mp3";
+  AUDIO_CODEC_TYPE(TMP3XingInfo) xing = {0};
+  bool hasXing = false;
+  FILE *file = fopen(path, "rb");
   float *nativePCM, *referencePCM;
   size_t length, offset = 0, frames = 0, used = 0, decoded = 0;
   size_t skipped = 0, preroll = 0, channels = 0, i;
@@ -31,6 +34,8 @@ int main(void) {
   assert(nativePCM && referencePCM);
   assert(AUDIO_CODEC_FUNC(MP3_FindFrame)(bytes, length, 0,
       &offset, &header) == STATUS_CONST(SUCCESS));
+  hasXing = AUDIO_CODEC_FUNC(MP3_ParseXing)(
+      bytes + offset, length - offset, &xing) == STATUS_CONST(SUCCESS);
   while (length - offset >= 4 && used + 1152 <= MAX_FRAMES) {
     OPSTATUS result;
     size_t produced = 0;
@@ -119,13 +124,16 @@ int main(void) {
       }
     }
   }
-  printf("[mp3 experimental parity] native=%zu frames, reference=%zu frames, "
-         "decoded=%zu preroll=%zu unsupported=%zu, "
+  printf("[mp3 experimental parity] path=%s native=%zu reference=%zu "
+         "decoded=%zu preroll=%zu unsupported=%zu "
          "best-shift=%d best-gain=%.8g normalized-residual=%.8g "
-         "native-mean-square=%.8g (DIAGNOSTIC ONLY)\n",
-         used, frames, decoded, preroll, skipped,
-         bestShift, bestGain, bestRatio, bestNativeEnergy);
-  assert(bestRatio >= 0 && bestRatio <= 1e100);
+         "native-mean-square=%.8g xing=%u encoded-frames=%u "
+         "encoder-delay=%u end-padding=%u (DIAGNOSTIC ONLY)\\n",
+         path, used, frames, decoded, preroll, skipped,
+         bestShift, bestGain, bestRatio, bestNativeEnergy,
+         (unsigned int)hasXing, (unsigned int)xing.encodedFrames,
+         (unsigned int)xing.encoderDelay, (unsigned int)xing.endPadding);
+  assert(bestRatio >= -0.0000001 && bestRatio <= 1.0000001);
   cosmeron_audio_vendor_ma_decoder_uninit(&reference);
   free(nativePCM);
   free(referencePCM);
