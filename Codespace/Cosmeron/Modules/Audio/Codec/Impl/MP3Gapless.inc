@@ -8,7 +8,7 @@ AUDIO_CODEC_MP3_PARSE_XING_PROTOTYPE {
   const unsigned char *p = (const unsigned char *)frame;
   AUDIO_CODEC_TYPE(TMP3FrameInfo) header;
   AUDIO_CODEC_TYPE(TMP3XingInfo) result = {0};
-  size_t at, body, tag;
+  size_t at, tag;
   unsigned int flags;
   OPSTATUS status;
   if (!p || !outInfo) return STATUS_CONST(INVALID_ARGUMENT);
@@ -60,12 +60,10 @@ AUDIO_CODEC_MP3_PARSE_XING_PROTOTYPE {
     result.endPadding = ((uint16_t)(p[tag+22] & 15U) << 8) | p[tag+23];
     result.hasGapless = true;
   }
-  body = (size_t)header.frameBytes;
   if (result.encodedFrames &&
       (uint64_t)result.encoderDelay + result.endPadding >
           (uint64_t)result.encodedFrames * header.samplesPerFrame)
     return STATUS_CONST(INVALID_SEQUENCE);
-  (void)body;
   *outInfo = result;
   return STATUS_CONST(SUCCESS);
 }
