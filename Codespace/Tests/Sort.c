@@ -56,6 +56,22 @@ int main(void) {
   int typed[] = {5, -10, 5, 0, 11};
   assert(SORT_TYPED_FUNC(Stable, IntTest)(typed, 5) == STATUS_CONST(SUCCESS));
   assert(typed[0] == -10 && typed[4] == 11);
+  /* All six typed wrappers must compile and sort correctly, independently. */
+  typedef OPSTATUS (*TypedSort)(int *, size_t);
+  TypedSort typedSorts[] = {
+    SORT_TYPED_FUNC(Array, IntTest),
+    SORT_TYPED_FUNC(Insertion, IntTest),
+    SORT_TYPED_FUNC(Heap, IntTest),
+    SORT_TYPED_FUNC(Stable, IntTest),
+    SORT_TYPED_FUNC(Intro, IntTest),
+    SORT_TYPED_FUNC(Merge, IntTest)
+  };
+  for (size_t variant = 0; variant < sizeof typedSorts / sizeof typedSorts[0];
+       ++variant) {
+    int sample[] = {5, -10, 5, 0, 11};
+    assert(typedSorts[variant](sample, 5) == STATUS_CONST(SUCCESS));
+    for (size_t i = 1; i < 5; ++i) assert(sample[i - 1] <= sample[i]);
+  }
   assert(SORT_FUNC(Reverse)(typed, 5, sizeof(int)) == STATUS_CONST(SUCCESS));
   assert(typed[0] == 11 && typed[4] == -10);
 
