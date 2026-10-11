@@ -2,6 +2,32 @@
 #include <assert.h>
 #include <string.h>
 
+#include <stdio.h>
+
+typedef struct TMemoryReader {
+  const unsigned char *bytes;
+  size_t size, offset;
+} TMemoryReader;
+static OPSTATUS readMemory(void *user, void *destination, size_t capacity, size_t *outCount) {
+  TMemoryReader *reader = (TMemoryReader *)user;
+  size_t count = reader->size - reader->offset;
+  if (count > capacity) count = capacity;
+  if (count > 7) count = 7;
+  if (count) memcpy(destination, reader->bytes + reader->offset, count);
+  reader->offset += count;
+  *outCount = count;
+  return STATUS_CONST(SUCCESS);
+}
+static OPSTATUS seekMemory(void *user, int64_t delta, AUDIO_CODEC_TYPE(TSeekOrigin) origin) {
+  TMemoryReader *reader = (TMemoryReader *)user;
+  int64_t base = origin == AUDIO_CODEC_CONST(SEEK_START) ? 0 :
+      origin == AUDIO_CODEC_CONST(SEEK_CURRENT) ? (int64_t)reader->offset : (int64_t)reader->size;
+  if (delta < -base || delta > (int64_t)reader->size - base)
+    return STATUS_CONST(OUT_OF_RANGE);
+  reader->offset = (size_t)(base + delta);
+  return STATUS_CONST(SUCCESS);
+}
+
 static void store16(unsigned char *p, unsigned int n) {
   p[0] = (unsigned char)n;
   p[1] = (unsigned char)(n >> 8);
@@ -69,6 +95,33 @@ static void exercise(bool extensible) {
       STATUS_CONST(SUCCESS) && pcm.frameCount == 2);
   assert(pcm.samples[0] == -1.f && pcm.samples[1] > .999f);
   AUDIO_PCM_FUNC(Destroy)(&pcm);
+  {
+    TMemoryReader input = {wav, size, 0};
+    AUDIO_CODEC_TYPE(TReader) reader = {&input, readMemory, seekMemory};
+    assert(AUDIO_CODEC_FUNC(OpenReader)(&decoder, &reader) ==
+        STATUS_CONST(SUCCESS));
+    assert(((AUDIO_INS(Decoder) *)decoder.internal)->wavStreaming);
+    assert(AUDIO_CODEC_FUNC(ReadFrames)(&decoder, samples, 1, &count) ==
+        STATUS_CONST(SUCCESS) && count == 1 && samples[0] == -1.f);
+    assert(AUDIO_CODEC_FUNC(SeekFrame)(&decoder, 1) == STATUS_CONST(SUCCESS));
+    assert(AUDIO_CODEC_FUNC(ReadFrames)(&decoder, samples, 3, &count) ==
+        STATUS_CONST(SUCCESS) && count == 1 && samples[0] > .999f);
+    AUDIO_CODEC_FUNC(Close)(&decoder);
+  }
+  {
+    FILE *file = fopen("native-wav-stream.wav", "wb");
+    assert(file != NULL);
+    assert(fwrite(wav, 1, size, file) == size);
+    assert(fclose(file) == 0);
+    assert(AUDIO_CODEC_FUNC(OpenFile)(&decoder, "native-wav-stream.wav") ==
+        STATUS_CONST(SUCCESS));
+    assert(((AUDIO_INS(Decoder) *)decoder.internal)->nativeWav);
+    assert(((AUDIO_INS(Decoder) *)decoder.internal)->wavStreaming);
+    assert(AUDIO_CODEC_FUNC(ReadFrames)(&decoder, samples, 2, &count) ==
+        STATUS_CONST(SUCCESS) && count == 2);
+    AUDIO_CODEC_FUNC(Close)(&decoder);
+    assert(remove("native-wav-stream.wav") == 0);
+  }
   store32(wav + 28, 7);
   assert(AUDIO_CODEC_FUNC(OpenMemory)(&decoder, wav, size) ==
       STATUS_CONST(INVALID_ARGUMENT) && !decoder.internal);
