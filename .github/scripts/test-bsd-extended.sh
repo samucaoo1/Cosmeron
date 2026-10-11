@@ -102,7 +102,10 @@ linkflags=
 stage=Compression
 suite Compression Codec Zip File Namespace FunctionTableOff Robustness Allocation
 multitu Compression
-record Compression PASS 'ZIP/zlib internal tests, no external Python interop'
+sh .github/scripts/test-bsd-interop.sh
+zip_external=$(sed -n 's/^ZIP_EXTERNAL=//p' .build-bsd-extended/interop-status.txt)
+zip_import=$(sed -n 's/^ZIP_IMPORT=//p' .build-bsd-extended/interop-status.txt)
+record Compression PASS "gzip external: PASS; ZIP external: $zip_external; ZIP import: $zip_import"
 stage=Database
 echo "[bsd-extended] compile+run Database (one shared embedded SQLite object)"
 (
