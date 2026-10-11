@@ -33,6 +33,18 @@ typedef struct AUDIO_CODEC_TYPE(TMP3XingInfo) {
 
 AUDIO_CODEC_MP3_PARSE_XING_PROTOTYPE;
 
+/* Hybrid/synthesis decoder priming beyond LAME's encoded delay field.
+ * This is relevant to raw MPEG Layer III decode-to-gapless mapping. */
+enum { AUDIO_CODEC_CONST(MP3_DECODER_PRIMING) = 529 };
+
+#define AUDIO_CODEC_MP3_GAPLESS_SPAN_PROTOTYPE                                 \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_GaplessSpan)(                  \
+      const AUDIO_CODEC_TYPE(TMP3XingInfo) *xing,                            \
+      uint16_t samplesPerFrame, uint32_t metadataFrames,                     \
+      uint64_t *outFirstPCM, uint64_t *outFrames)
+
+AUDIO_CODEC_MP3_GAPLESS_SPAN_PROTOTYPE;
+
 /* A granule stores the side-info parameters required by the subsequent
  * Huffman/scalefactor and synthesis stages; no PCM decoding occurs here. */
 typedef struct AUDIO_CODEC_TYPE(TMP3Granule) {

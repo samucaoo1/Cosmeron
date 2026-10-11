@@ -67,3 +67,28 @@ AUDIO_CODEC_MP3_PARSE_XING_PROTOTYPE {
   *outInfo = result;
   return STATUS_CONST(SUCCESS);
 }
+
+/* Map a raw native MP3 decode to gapless presentation samples. The
+ * caller explicitly supplies the number of leading Xing/Info frames
+ * excluded from encodedFrames (usually one for LAME), and must have
+ * decoded that many frames before indexing the returned start. */
+AUDIO_CODEC_MP3_GAPLESS_SPAN_PROTOTYPE {
+  uint64_t encoded, raw, first, presentation;
+  if (!xing || !outFirstPCM || !outFrames ||
+      (samplesPerFrame != 1152 && samplesPerFrame != 576))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (!xing->hasGapless || !xing->encodedFrames)
+    return STATUS_CONST(NOT_FOUND);
+  encoded = (uint64_t)xing->encodedFrames * samplesPerFrame;
+  raw = ((uint64_t)xing->encodedFrames + metadataFrames) * samplesPerFrame;
+  if ((uint64_t)xing->encoderDelay + xing->endPadding > encoded)
+    return STATUS_CONST(INVALID_SEQUENCE);
+  presentation = encoded - xing->encoderDelay - xing->endPadding;
+  first = (uint64_t)metadataFrames * samplesPerFrame +
+      xing->encoderDelay + AUDIO_CODEC_CONST(MP3_DECODER_PRIMING);
+  if (first > raw || presentation > raw - first)
+    return STATUS_CONST(NOT_SUPPORTED);
+  *outFirstPCM = first;
+  *outFrames = presentation;
+  return STATUS_CONST(SUCCESS);
+}
