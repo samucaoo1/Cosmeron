@@ -1,5 +1,6 @@
 #pragma once
 #include "MP3HuffmanTables.inc"
+#include "MP3HuffmanBands.inc"
 
 /* Consume only bits within [*ioBit, endBit). A partial codeword leaves
  * caller's bit cursor untouched, so streaming input can be retried. */
@@ -127,5 +128,82 @@ AUDIO_CODEC_MP3_HUFFMAN_COUNT1_PROTOTYPE {
     } else outQuad[i] = 0;
   }
   *ioBit = bits.cursor;
+  return STATUS_CONST(SUCCESS);
+}
+
+/* Read quantized spectral coefficients of one granule/channel. Region
+ * boundaries use MPEG long-window scalefactor bands; switched short blocks
+ * use the format-defined 36-line boundary. This is pre-requantization data. */
+AUDIO_CODEC_MP3_HUFFMAN_GRANULE_PROTOTYPE {
+  const AUDIO_CODEC_TYPE(TMP3Granule) *part;
+  int32_t quantized[576] = {0};
+  size_t offset = 0, end, cursor, pair, count = 0, region0 = 576, region1 = 576;
+  unsigned int rateIndex, i, table;
+  OPSTATUS status;
+  if (!mainData || !side || !scales || !outValues || !outCount ||
+      side->channels < 1 || side->channels > 2 ||
+      side->granules < 1 || side->granules > 2 ||
+      granule >= side->granules || channel >= side->channels)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (mainDataBytes > SIZE_MAX / 8)
+    return STATUS_CONST(OUT_OF_RANGE);
+  for (i = 0; i < granule; ++i) {
+    unsigned int c;
+    for (c = 0; c < side->channels; ++c)
+      offset += side->parts[i][c].part23Length;
+  }
+  for (i = 0; i < channel; ++i)
+    offset += side->parts[granule][i].part23Length;
+  part = &side->parts[granule][channel];
+  if (part->part23Length > mainDataBytes * 8 ||
+      offset > mainDataBytes * 8 - part->part23Length)
+    return STATUS_CONST(INCOMPLETE_SEQUENCE);
+  if (scales->part2Bits > part->part23Length || part->bigValues > 288)
+    return STATUS_CONST(INVALID_SEQUENCE);
+  end = offset + part->part23Length;
+  cursor = offset + scales->part2Bits;
+  if (part->windowSwitching && part->blockType == 2) {
+    region0 = 36;
+    region1 = 576;
+  } else {
+    unsigned int boundary0 = (unsigned int)part->region0Count + 1U;
+    unsigned int boundary1 = boundary0 + part->region1Count + 1U;
+    for (rateIndex = 0; rateIndex < 9; ++rateIndex)
+      if (AUDIO_INS(MP3_LongRates)[rateIndex] == sampleRate) break;
+    if (rateIndex == 9) return STATUS_CONST(NOT_SUPPORTED);
+    if (boundary0 > 22 || boundary1 > 22)
+      return STATUS_CONST(INVALID_SEQUENCE);
+    region0 = AUDIO_INS(MP3_LongBands)[rateIndex][boundary0];
+    region1 = AUDIO_INS(MP3_LongBands)[rateIndex][boundary1];
+  }
+  for (pair = 0; pair < part->bigValues; ++pair) {
+    int32_t x, y;
+    count = pair * 2;
+    table = count < region0 ? part->tableSelect[0] :
+        count < region1 ? part->tableSelect[1] : part->tableSelect[2];
+    status = AUDIO_CODEC_FUNC(MP3_HuffmanPair)(
+        mainData, mainDataBytes, &cursor, end, table, &x, &y);
+    if (status != STATUS_CONST(SUCCESS)) return status;
+    quantized[count] = x;
+    quantized[count + 1] = y;
+  }
+  count = part->bigValues * 2;
+  /* The count1 partition may end in stuffing. Incomplete final quadruples
+   * are ignored, preserving the previously decoded pair coefficients. */
+  while (count <= 572 && cursor < end) {
+    int32_t values[4] = {0};
+    size_t trial = cursor;
+    status = AUDIO_CODEC_FUNC(MP3_HuffmanCount1)(
+        mainData, mainDataBytes, &trial, end,
+        32U + part->count1TableSelect, values);
+    if (status == STATUS_CONST(INCOMPLETE_SEQUENCE)) break;
+    if (status != STATUS_CONST(SUCCESS)) return status;
+    if (trial <= cursor) return STATUS_CONST(INVALID_SEQUENCE);
+    memcpy(quantized + count, values, sizeof values);
+    cursor = trial;
+    count += 4;
+  }
+  memcpy(outValues, quantized, sizeof quantized);
+  *outCount = count;
   return STATUS_CONST(SUCCESS);
 }
