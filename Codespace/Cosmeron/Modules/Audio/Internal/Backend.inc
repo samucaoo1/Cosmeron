@@ -4,7 +4,7 @@
 #include "NativeMath.inc"
 /* Desktop miniaudio requires the real OS pthread library. For Clang+lld
  * ELF toolchains this records the dependency automatically, with no manual
- * command-line flags. GCC and linkers without ELF autolink still require
+ * pthread link flags. GCC and linkers without ELF autolink still require
  * explicit native link options. This is NOT a no-library-dependency build.
  * Keep decoder-only mode independent of pthread and libm linker options. */
 #if (defined(__FreeBSD__) || defined(__OpenBSD__) || \
@@ -12,7 +12,6 @@
     defined(__clang__) && !defined(COSMERON_NO_IMPLICIT_LINK) && \
     !defined(AUDIO_MINIAUDIO_CODEC_MINIMAL)
 #pragma comment(lib, "pthread")
-#pragma comment(lib, "m")
 #endif
 
 /* Warning isolation applies only to the pinned third-party implementation. */
