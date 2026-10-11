@@ -1,5 +1,4 @@
-#define AUDIO_NO_DESKTOP
-#include "../../Cosmeron/Modules/Audio/Audio.h"
+#include "../../Cosmeron/Modules/Audio/Offline.h"
 #include <assert.h>
 #include <stdio.h>
 

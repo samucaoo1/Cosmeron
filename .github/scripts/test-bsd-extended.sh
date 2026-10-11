@@ -138,6 +138,19 @@ echo "[bsd-extended] compile+run Database (one shared embedded SQLite object)"
 )
 record Database PASS 'SQLite single-thread profile; no parallel callers'
 
+# Audio offline: strict zero-extra-link, multiple translation units.
+stage=AudioOffline
+suite Audio Synthesis OfflineStandalone OfflineCompat
+echo "[bsd-extended] run Audio/OfflineMultiTU (zero-link)"
+(
+  cd Codespace/Tests/Audio
+  "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
+    OfflineTU_A.c OfflineTU_B.c OfflineTU_Main.c \
+    -o ../../../.build-bsd-extended/Audio_OfflineMultiTU
+  ../../../.build-bsd-extended/Audio_OfflineMultiTU
+)
+echo "[bsd-extended] AUDIO_OFFLINE_ZERO_LINK=PASS"
+
 # Audio runs in offline mode; no hardware access is claimed.
 # Some BSD libc implementations do not export sin/exp without libm. A strict
 # zero-link *probe* must be recorded before enabling a diagnostic workaround.
@@ -160,7 +173,7 @@ else
   audio_zero_link=NOT_SUPPORTED
   linkflags="-lm -pthread"
 fi
-suite Audio Synthesis Codec Player IncludeAll
+suite Audio Codec Player IncludeAll
 multitu Audio
 record Audio "$audio_zero_link" 'offline only, no sound device'
 linkflags=
