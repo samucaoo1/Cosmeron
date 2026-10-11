@@ -10,7 +10,7 @@ static inline OPSTATUS PARSING_INS(XMLDecode)(PARSING_TYPE(TSlice) source, PARSI
     if (entities && source.data[i] == '&') {
       const char *end = (const char *)memchr(source.data + i, ';', source.size - i);
       uint32_t cp = 0;
-      PARSING_TYPE(TSlice) name;
+      PARSING_TYPE(TSlice) name = {0};
       if (!end) return STATUS_CONST(INVALID_SEQUENCE);
       name = PARSING_INS(Slice)(source.data + i + 1, (size_t)(end - source.data - i - 1));
       if (PARSING_INS(Equal)(name, PARSING_INS(Slice)("amp", 3))) cp = '&';
@@ -34,14 +34,14 @@ static inline OPSTATUS PARSING_INS(XMLDecode)(PARSING_TYPE(TSlice) source, PARSI
       if (!PARSING_INS(XMLChar)(cp)) return STATUS_CONST(INVALID_SEQUENCE);
       {
         unsigned char encoded[4];
-        size_t units;
+        size_t units = 0;
         status = TEXT_UTF8_FUNC(Encode)(cp, encoded, sizeof(encoded), &units);
         if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(buffer, (const char *)encoded, units);
       }
       i = (size_t)(end - source.data) + 1;
     } else {
       TEXT_TYPE(TChar32) cp;
-      size_t units;
+      size_t units = 0;
       status = TEXT_UTF8_FUNC(Decode)((const unsigned char *)source.data + i, source.size - i, &cp, &units);
       if (status != STATUS_CONST(SUCCESS) || !PARSING_INS(XMLChar)(cp)) return STATUS_CONST(INVALID_SEQUENCE);
       if (cp == '\r') {
@@ -74,7 +74,7 @@ static inline bool PARSING_INS(XMLName)(PARSING_INS(Cursor) *cursor, PARSING_TYP
   bool first = true;
   while (cursor->position < cursor->size) {
     TEXT_TYPE(TChar32) cp;
-    size_t units;
+    size_t units = 0;
     if (TEXT_UTF8_FUNC(Decode)((const unsigned char *)cursor->source + cursor->position, cursor->size - cursor->position, &cp, &units) != STATUS_CONST(SUCCESS)) break;
     if (!PARSING_INS(XMLNameStart)(cp) && (first || !(cp == '-' || cp == '.' || (cp >= '0' && cp <= '9') || cp == 0xb7 || (cp >= 0x300 && cp <= 0x36f) || (cp >= 0x203f && cp <= 0x2040)))) break;
     cursor->position += units;
@@ -90,7 +90,7 @@ static inline void PARSING_INS(XMLSpace)(PARSING_INS(Cursor) *cursor) {
 
 static inline OPSTATUS PARSING_INS(XMLAttribute)(PARSING_INS(Cursor) *cursor, PARSING_TYPE(TXMLEvent) *event) {
   char quote;
-  size_t start;
+  size_t start = 0;
   if (!PARSING_INS(XMLName)(cursor, &event->name)) return STATUS_CONST(INVALID_SEQUENCE);
   PARSING_INS(XMLSpace)(cursor);
   if (cursor->position >= cursor->size || cursor->source[cursor->position++] != '=') return STATUS_CONST(INVALID_SEQUENCE);
@@ -118,7 +118,7 @@ PARSING_XML_READER_CREATE_PROTOTYPE {
 }
 
 PARSING_XML_NEXT_PROTOTYPE {
-  PARSING_TYPE(TXMLReader) next;
+  PARSING_TYPE(TXMLReader) next = {0};
   PARSING_TYPE(TXMLEvent) event = {0};
   OPSTATUS status = STATUS_CONST(SUCCESS);
   if (!reader || !outEvent || !outEnd) return STATUS_CONST(INVALID_ARGUMENT);
@@ -191,7 +191,7 @@ PARSING_XML_NEXT_PROTOTYPE {
         continue;
       }
       {
-        size_t i;
+        size_t i = 0;
         for (i = 0; i + 2 < event.text.size; ++i) if (!memcmp(event.text.data + i, "]]>", 3)) {
           status = STATUS_CONST(INVALID_SEQUENCE);
           break;
@@ -265,7 +265,7 @@ PARSING_XML_NEXT_PROTOTYPE {
       event.text = PARSING_INS(Slice)(cursor->source + contentStart, cursor->position - contentStart);
       cursor->position += closeSize;
       if (event.kind == PARSING_CONST(XML_COMMENT)) {
-        size_t i;
+        size_t i = 0;
         for (i = 0; i + 1 < event.text.size; ++i) if (event.text.data[i] == '-' && event.text.data[i+1] == '-') {
           status = STATUS_CONST(INVALID_SEQUENCE);
           break;
@@ -350,7 +350,7 @@ PARSING_XML_TEXT_WRITE_PROTOTYPE {
 }
 
 PARSING_XML_FREE_PROTOTYPE {
-  size_t i;
+  size_t i = 0;
   if (!document) return;
   for (i = 0; i < document->events.size; ++i) {
     free((void *)document->events.data[i].name.data);
@@ -360,11 +360,11 @@ PARSING_XML_FREE_PROTOTYPE {
 }
 
 PARSING_XML_PARSE_PROTOTYPE {
-  PARSING_TYPE(TXMLReader) reader;
+  PARSING_TYPE(TXMLReader) reader = {0};
   PARSING_TYPE(TXMLDocument) document = {0};
-  PARSING_TYPE(TXMLEvent) event;
+  PARSING_TYPE(TXMLEvent) event = {0};
   OPSTATUS status;
-  bool end;
+  bool end = false;
   if (!outDocument || outDocument->events.data || outDocument->events.size) return STATUS_CONST(INVALID_ARGUMENT);
   status = PARSING_FUNC(XML_ReaderCreate)(source, size, &reader, diagnostic);
   if (status != STATUS_CONST(SUCCESS)) return status;
@@ -396,7 +396,7 @@ PARSING_XML_PARSE_PROTOTYPE {
 }
 
 PARSING_XML_ATTRIBUTE_PROTOTYPE {
-  size_t i;
+  size_t i = 0;
   if (!document || !name || !outValue) return STATUS_CONST(INVALID_ARGUMENT);
   if (elementIndex >= document->events.size || document->events.data[elementIndex].kind != PARSING_CONST(XML_BEGIN)) return STATUS_CONST(OUT_OF_RANGE);
   for (i = elementIndex + 1; i < document->events.size && document->events.data[i].kind == PARSING_CONST(XML_ATTRIBUTE); ++i)
@@ -408,11 +408,11 @@ PARSING_XML_ATTRIBUTE_PROTOTYPE {
 }
 
 PARSING_XML_SET_ATTRIBUTE_PROTOTYPE {
-  size_t i;
+  size_t i = 0;
   char *copy;
   OPSTATUS status;
   PARSING_INS(Cursor) cursor = {0};
-  PARSING_TYPE(TSlice) parsedName;
+  PARSING_TYPE(TSlice) parsedName = {0};
   PARSING_INS(Buffer) validated = {0};
   if (!document || !name || (!value.data && value.size)) return STATUS_CONST(INVALID_ARGUMENT);
   cursor.source = name;
@@ -448,7 +448,7 @@ PARSING_XML_SET_ATTRIBUTE_PROTOTYPE {
 }
 
 static inline OPSTATUS PARSING_INS(XMLEscape)(PARSING_INS(Buffer) *buffer, PARSING_TYPE(TSlice) text, bool attribute) {
-  size_t i;
+  size_t i = 0;
   OPSTATUS status = STATUS_CONST(SUCCESS);
   for (i = 0; i < text.size && status == STATUS_CONST(SUCCESS); ++i) {
     const char *replacement = NULL;
@@ -476,7 +476,7 @@ static inline OPSTATUS PARSING_INS(XMLEscape)(PARSING_INS(Buffer) *buffer, PARSI
 
 PARSING_XML_WRITE_PROTOTYPE {
   PARSING_INS(Buffer) text = {0};
-  size_t i;
+  size_t i = 0;
   bool open = false;
   OPSTATUS status = STATUS_CONST(SUCCESS);
   if (!document || !outSize || (!buffer && capacity)) return STATUS_CONST(INVALID_ARGUMENT);

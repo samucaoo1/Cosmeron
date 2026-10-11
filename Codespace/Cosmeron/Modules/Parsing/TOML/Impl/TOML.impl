@@ -21,13 +21,13 @@ PARSING_TOML_FREE_PROTOTYPE {
 }
 
 static inline PARSING_TYPE(TTOMLValue) *PARSING_INS(TOMLFind)(const PARSING_TYPE(TTOMLValue) *table, PARSING_TYPE(TSlice) key) {
-  PARSING_TYPE(TTOMLValue) *child;
+  PARSING_TYPE(TTOMLValue) *child = NULL;
   for (child = table->first; child; child = child->next) if (PARSING_INS(Equal)(PARSING_INS(Slice)(child->key, child->keySize), key)) return child;
   return NULL;
 }
 
 static inline OPSTATUS PARSING_INS(TOMLNew)(PARSING_INS(Cursor) *cursor, PARSING_TYPE(TOMLKind) kind, PARSING_TYPE(TTOMLValue) **out) {
-  void *memory;
+  void *memory = NULL;
   OPSTATUS status;
   if (++cursor->nodes > cursor->limits.maxNodes) return PARSING_INS(Fail)(cursor, PARSING_CONST(DIAGNOSTIC_LIMIT), STATUS_CONST(OUT_OF_RANGE));
   status = MEMORY_FUNC(AllocBytes)(&memory, sizeof(**out));
@@ -138,7 +138,7 @@ static inline OPSTATUS PARSING_INS(TOMLString)(PARSING_INS(Cursor) *cursor, char
 }
 
 static inline OPSTATUS PARSING_INS(TOMLKey)(PARSING_INS(Cursor) *cursor, char **out, size_t *outSize) {
-  size_t start;
+  size_t start = 0;
   PARSING_INS(TOMLSpace)(cursor, false);
   if (cursor->position == cursor->size) return PARSING_INS(TOMLError)(cursor, STATUS_CONST(INCOMPLETE_SEQUENCE));
   if (cursor->source[cursor->position] == '"' || cursor->source[cursor->position] == '\'') {
@@ -163,8 +163,8 @@ char **outKey, size_t *outSize, size_t *outDepth, bool fromHeader) {
   size_t depth = *outDepth;
   for (;;) {
     char *key;
-    size_t keySize;
-    PARSING_TYPE(TTOMLValue) *child;
+    size_t keySize = 0;
+    PARSING_TYPE(TTOMLValue) *child = NULL;
     OPSTATUS status = PARSING_INS(TOMLKey)(cursor, &key, &keySize);
     if (status != STATUS_CONST(SUCCESS)) return status;
     PARSING_INS(TOMLSpace)(cursor, false);
@@ -204,7 +204,7 @@ char **outKey, size_t *outSize, size_t *outDepth, bool fromHeader) {
 
 static inline OPSTATUS PARSING_INS(TOMLScalar)(PARSING_INS(Cursor) *cursor, PARSING_TYPE(TSlice) raw, PARSING_TYPE(TTOMLValue) *value) {
   PARSING_INS(Buffer) clean = {0};
-  size_t i;
+  size_t i = 0;
   OPSTATUS status = STATUS_CONST(SUCCESS);
   unsigned base = 10;
   size_t start = 0;
@@ -249,7 +249,7 @@ static inline OPSTATUS PARSING_INS(TOMLScalar)(PARSING_INS(Cursor) *cursor, PARS
     if (status == STATUS_CONST(SUCCESS)) {
       if (base != 10) {
         uint64_t number = 0;
-        size_t n;
+        size_t n = 0;
         if (clean.size <= 2) status = STATUS_CONST(INVALID_SEQUENCE);
         for (n = 2; status == STATUS_CONST(SUCCESS) && n < clean.size; ++n) {
           int digit = PARSING_INS(Hex)(clean.data[n]);
@@ -265,7 +265,7 @@ static inline OPSTATUS PARSING_INS(TOMLScalar)(PARSING_INS(Cursor) *cursor, PARS
         status = PARSING_FUNC(JSON_Parse)(digits, clean.size - (size_t)(digits-clean.data), &number, NULL);
         if (status == STATUS_CONST(SUCCESS) && number.root->kind != PARSING_CONST(JSON_NUMBER)) status = STATUS_CONST(INVALID_SEQUENCE);
         if (status == STATUS_CONST(SUCCESS) && !floating) {
-          int64_t integer;
+          int64_t integer = 0;
           status = PARSING_FUNC(Slice_I64)(PARSING_INS(Slice)(clean.data, clean.size), &integer);
         }
         PARSING_FUNC(JSON_Free)(&number);
@@ -281,7 +281,7 @@ static inline OPSTATUS PARSING_INS(TOMLScalar)(PARSING_INS(Cursor) *cursor, PARS
 }
 
 static inline OPSTATUS PARSING_INS(TOMLValue)(PARSING_INS(Cursor) *cursor, size_t depth, PARSING_TYPE(TTOMLValue) **out) {
-  PARSING_TYPE(TTOMLValue) *value;
+  PARSING_TYPE(TTOMLValue) *value = NULL;
   OPSTATUS status;
   char c;
   if (depth >= cursor->limits.maxDepth) return PARSING_INS(Fail)(cursor, PARSING_CONST(DIAGNOSTIC_DEPTH), STATUS_CONST(OUT_OF_RANGE));
@@ -354,9 +354,9 @@ static inline OPSTATUS PARSING_INS(TOMLValue)(PARSING_INS(Cursor) *cursor, size_
 }
 
 PARSING_TOML_PARSE_PROTOTYPE {
-  PARSING_INS(Cursor) cursor;
+  PARSING_INS(Cursor) cursor = {0};
   PARSING_TYPE(TTOMLDocument) document = {0};
-  PARSING_TYPE(TTOMLValue) *current;
+  PARSING_TYPE(TTOMLValue) *current = NULL;
   size_t currentDepth = 0;
   OPSTATUS status;
   if (!outDocument || outDocument->root) return STATUS_CONST(INVALID_ARGUMENT);
@@ -382,7 +382,7 @@ PARSING_TOML_PARSE_PROTOTYPE {
     PARSING_INS(TOMLSpace)(&cursor, true);
     if (cursor.position == cursor.size) break;
     if (cursor.source[cursor.position] == '[') {
-      bool arrayHeader;
+      bool arrayHeader = false;
       ++cursor.position;
       arrayHeader = cursor.position < cursor.size && cursor.source[cursor.position] == '[';
       if (arrayHeader) ++cursor.position;
@@ -481,7 +481,7 @@ PARSING_TOML_PARSE_PROTOTYPE {
 }
 
 PARSING_TOML_GET_PROTOTYPE {
-  PARSING_TYPE(TTOMLValue) *value;
+  PARSING_TYPE(TTOMLValue) *value = NULL;
   if (!table || table->kind != PARSING_CONST(TOML_TABLE) || !key || !outValue) return STATUS_CONST(INVALID_ARGUMENT);
   value = PARSING_INS(TOMLFind)(table, PARSING_INS(Slice)(key, strlen(key)));
   if (!value) return STATUS_CONST(NOT_FOUND);
@@ -490,7 +490,7 @@ PARSING_TOML_GET_PROTOTYPE {
 }
 
 PARSING_TOML_AT_PROTOTYPE {
-  const PARSING_TYPE(TTOMLValue) *value;
+  const PARSING_TYPE(TTOMLValue) *value = NULL;
   if (!array || array->kind != PARSING_CONST(TOML_ARRAY) || !outValue) return STATUS_CONST(INVALID_ARGUMENT);
   if (index >= array->count) return STATUS_CONST(OUT_OF_RANGE);
   value = array->first;
@@ -527,7 +527,7 @@ PARSING_TOML_I64_PROTOTYPE {
 }
 PARSING_TOML_F64_PROTOTYPE {
   PARSING_INS(Buffer) text = {0};
-  size_t i;
+  size_t i = 0;
   OPSTATUS status = STATUS_CONST(SUCCESS);
   if (!value || value->kind != PARSING_CONST(TOML_FLOAT) || !outValue) return STATUS_CONST(INVALID_ARGUMENT);
   if (strstr(value->text, "inf") || strstr(value->text, "nan")) return STATUS_CONST(NOT_SUPPORTED);
@@ -543,7 +543,7 @@ PARSING_TOML_BOOL_PROTOTYPE {
 }
 
 static inline OPSTATUS PARSING_INS(TOMLWriteValue)(const PARSING_TYPE(TTOMLValue) *value, PARSING_INS(Buffer) *buffer, size_t depth) {
-  const PARSING_TYPE(TTOMLValue) *child;
+  const PARSING_TYPE(TTOMLValue) *child = NULL;
   OPSTATUS status;
   bool first = true;
   if (depth >= PARSING_CONST(DEFAULT_DEPTH)) return STATUS_CONST(OUT_OF_RANGE);
@@ -564,7 +564,7 @@ static inline OPSTATUS PARSING_INS(TOMLWriteValue)(const PARSING_TYPE(TTOMLValue
 
 PARSING_TOML_WRITE_PROTOTYPE {
   PARSING_INS(Buffer) text = {0};
-  const PARSING_TYPE(TTOMLValue) *value;
+  const PARSING_TYPE(TTOMLValue) *value = NULL;
   OPSTATUS status = STATUS_CONST(SUCCESS);
   if (!document || !document->root || !outSize || (!buffer && capacity)) return STATUS_CONST(INVALID_ARGUMENT);
   for (value = document->root->first; status == STATUS_CONST(SUCCESS) && value; value = value->next) {
@@ -581,7 +581,7 @@ PARSING_TOML_WRITE_PROTOTYPE {
 }
 
 PARSING_TOML_SET_PROTOTYPE {
-  PARSING_INS(Cursor) cursor;
+  PARSING_INS(Cursor) cursor = {0};
   PARSING_TYPE(TTOMLValue) *value, *existing, *previous = NULL;
   OPSTATUS status;
   if (!document || !document->root || !key || !TEXT_UTF8_FUNC(Validate)((const unsigned char *)key, strlen(key))) return STATUS_CONST(INVALID_ARGUMENT);

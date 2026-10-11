@@ -26,7 +26,7 @@ static inline OPSTATUS PARSING_INS(YAMLError)(PARSING_INS(Cursor) *cursor, OPSTA
 }
 
 static inline OPSTATUS PARSING_INS(YAMLNew)(PARSING_INS(Cursor) *cursor, PARSING_TYPE(YAMLKind) kind, PARSING_TYPE(TYAMLValue) **out) {
-  void *memory;
+  void *memory = NULL;
   OPSTATUS status;
   if (++cursor->nodes > cursor->limits.maxNodes) return PARSING_INS(Fail)(cursor, PARSING_CONST(DIAGNOSTIC_LIMIT), STATUS_CONST(OUT_OF_RANGE));
   status = MEMORY_FUNC(AllocBytes)(&memory, sizeof(**out));
@@ -38,7 +38,7 @@ static inline OPSTATUS PARSING_INS(YAMLNew)(PARSING_INS(Cursor) *cursor, PARSING
 }
 
 static inline OPSTATUS PARSING_INS(YAMLLine)(PARSING_INS(Cursor) *cursor, PARSING_TYPE(TSlice) *outLine, size_t *outIndent, bool *outEnd) {
-  PARSING_TYPE(TSlice) line;
+  PARSING_TYPE(TSlice) line = {0};
   while (PARSING_INS(Line)(cursor, &line)) {
     size_t indent = 0, i;
     char quote = 0;
@@ -79,7 +79,7 @@ static inline OPSTATUS PARSING_INS(YAMLLine)(PARSING_INS(Cursor) *cursor, PARSIN
 }
 
 static inline size_t PARSING_INS(YAMLColon)(PARSING_TYPE(TSlice) line) {
-  size_t i;
+  size_t i = 0;
   char quote = 0;
   for (i = 0; i < line.size; ++i) {
     char c = line.data[i];
@@ -148,7 +148,7 @@ char **out, size_t *outSize, bool *outQuoted) {
         }
         if (special) {
           unsigned char encoded[4];
-          size_t units;
+          size_t units = 0;
           status = TEXT_UTF8_FUNC(Encode)(special, encoded, sizeof(encoded), &units);
           if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, (const char *)encoded, units);
           continue;
@@ -170,7 +170,7 @@ char **out, size_t *outSize, bool *outQuoted) {
   }
   if (source.data[0] == '\'') {
     PARSING_INS(Buffer) text = {0};
-    size_t i;
+    size_t i = 0;
     OPSTATUS status = STATUS_CONST(SUCCESS);
     if (source.size < 2 || source.data[source.size-1] != '\'') return PARSING_INS(YAMLError)(cursor, STATUS_CONST(INCOMPLETE_SEQUENCE));
     for (i = 1; status == STATUS_CONST(SUCCESS) && i+1 < source.size; ++i) {
@@ -205,7 +205,7 @@ static inline void PARSING_INS(YAMLFlowSpace)(PARSING_INS(Cursor) *cursor) {
 
 static inline OPSTATUS PARSING_INS(YAMLFlowText)(PARSING_INS(Cursor) *cursor, bool key,
 char **out, size_t *outSize, bool *quoted) {
-  size_t start;
+  size_t start = 0;
   char quote = 0;
   PARSING_INS(YAMLFlowSpace)(cursor);
   start = cursor->position;
@@ -234,7 +234,7 @@ char **out, size_t *outSize, bool *quoted) {
 
 static inline OPSTATUS PARSING_INS(YAMLFlowValue)(PARSING_INS(Cursor) *cursor, size_t depth,
 PARSING_TYPE(TYAMLValue) **out) {
-  PARSING_TYPE(TYAMLValue) *value;
+  PARSING_TYPE(TYAMLValue) *value = NULL;
   char open = 0;
   OPSTATUS status;
   if (depth >= cursor->limits.maxDepth) return PARSING_INS(Fail)(cursor, PARSING_CONST(DIAGNOSTIC_DEPTH), STATUS_CONST(OUT_OF_RANGE));
@@ -318,11 +318,11 @@ static inline bool PARSING_INS(YAMLSequence)(PARSING_TYPE(TSlice) line) {
 
 static inline OPSTATUS PARSING_INS(YAMLBlock)(PARSING_INS(Cursor) *cursor, size_t indent, size_t depth,
 PARSING_TYPE(TYAMLValue) **out) {
-  PARSING_TYPE(TYAMLValue) *value;
-  PARSING_INS(Cursor) look;
-  PARSING_TYPE(TSlice) line;
-  size_t nextIndent;
-  bool end;
+  PARSING_TYPE(TYAMLValue) *value = NULL;
+  PARSING_INS(Cursor) look = {0};
+  PARSING_TYPE(TSlice) line = {0};
+  size_t nextIndent = 0;
+  bool end = false;
   OPSTATUS status;
   if (depth >= cursor->limits.maxDepth) return PARSING_INS(Fail)(cursor, PARSING_CONST(DIAGNOSTIC_DEPTH), STATUS_CONST(OUT_OF_RANGE));
   look = *cursor;
@@ -351,11 +351,11 @@ PARSING_TYPE(TYAMLValue) **out) {
       *cursor = look;
     }
   } else while (status == STATUS_CONST(SUCCESS)) {
-    PARSING_TYPE(TSlice) content;
+    PARSING_TYPE(TSlice) content = {0};
     PARSING_TYPE(TYAMLValue) *child = NULL;
     char *key = NULL;
     size_t keySize = 0;
-    bool keyQuoted;
+    bool keyQuoted = false;
     look = *cursor;
     status = PARSING_INS(YAMLLine)(&look, &line, &nextIndent, &end);
     if (status != STATUS_CONST(SUCCESS) || end || nextIndent < indent) break;
@@ -365,7 +365,7 @@ PARSING_TYPE(TYAMLValue) **out) {
     }
     if (value->kind == PARSING_CONST(YAML_MAPPING)) {
       size_t colon = PARSING_INS(YAMLColon)(line);
-      PARSING_TYPE(TYAMLValue) *existing;
+      PARSING_TYPE(TYAMLValue) *existing = NULL;
       if (colon == SIZE_MAX) {
         status = PARSING_INS(YAMLError)(&look, STATUS_CONST(INVALID_SEQUENCE));
         break;
@@ -432,9 +432,9 @@ PARSING_TYPE(TYAMLValue) **out) {
 PARSING_YAML_PARSE_PROTOTYPE {
   PARSING_INS(Cursor) cursor, look;
   PARSING_TYPE(TYAMLDocument) document = {0};
-  PARSING_TYPE(TSlice) line;
-  size_t indent;
-  bool end;
+  PARSING_TYPE(TSlice) line = {0};
+  size_t indent = 0;
+  bool end = false;
   OPSTATUS status;
   if (!outDocument || outDocument->root) return STATUS_CONST(INVALID_ARGUMENT);
   status = PARSING_INS(CursorCreate)(source, size, NULL, diagnostic, &cursor);
@@ -486,7 +486,7 @@ PARSING_YAML_PARSE_PROTOTYPE {
 }
 
 PARSING_YAML_GET_PROTOTYPE {
-  const PARSING_TYPE(TYAMLValue) *value;
+  const PARSING_TYPE(TYAMLValue) *value = NULL;
   if (!mapping || mapping->kind != PARSING_CONST(YAML_MAPPING) || !key || !outValue) return STATUS_CONST(INVALID_ARGUMENT);
   for (value = mapping->first; value; value = value->next) if (PARSING_INS(Equal)(PARSING_INS(Slice)(value->key, value->keySize), PARSING_INS(Slice)(key, strlen(key)))) {
     *outValue = value;
@@ -496,7 +496,7 @@ PARSING_YAML_GET_PROTOTYPE {
 }
 
 PARSING_YAML_AT_PROTOTYPE {
-  const PARSING_TYPE(TYAMLValue) *value;
+  const PARSING_TYPE(TYAMLValue) *value = NULL;
   if (!sequence || sequence->kind != PARSING_CONST(YAML_SEQUENCE) || !outValue) return STATUS_CONST(INVALID_ARGUMENT);
   if (index >= sequence->count) return STATUS_CONST(OUT_OF_RANGE);
   value = sequence->first;
@@ -512,14 +512,14 @@ PARSING_YAML_SCALAR_PROTOTYPE {
 }
 
 static inline OPSTATUS PARSING_INS(YAMLIndent)(PARSING_INS(Buffer) *buffer, size_t depth) {
-  size_t i;
+  size_t i = 0;
   OPSTATUS status = STATUS_CONST(SUCCESS);
   for (i = 0; status == STATUS_CONST(SUCCESS) && i < depth; ++i) status = PARSING_INS(Append)(buffer, "  ", 2);
   return status;
 }
 
 static inline OPSTATUS PARSING_INS(YAMLWriteValue)(const PARSING_TYPE(TYAMLValue) *value, PARSING_INS(Buffer) *buffer, size_t depth) {
-  const PARSING_TYPE(TYAMLValue) *child;
+  const PARSING_TYPE(TYAMLValue) *child = NULL;
   OPSTATUS status = STATUS_CONST(SUCCESS);
   if (depth >= PARSING_CONST(DEFAULT_DEPTH)) return STATUS_CONST(OUT_OF_RANGE);
   if (value->kind == PARSING_CONST(YAML_SCALAR)) return value->quoted ? PARSING_INS(JSONQuote)(buffer, PARSING_INS(Slice)(value->text, value->textSize)) : PARSING_INS(Append)(buffer, value->text, value->textSize);
@@ -568,7 +568,7 @@ PARSING_YAML_SET_SCALAR_PROTOTYPE {
 }
 
 PARSING_YAML_GET_MUTABLE_PROTOTYPE {
-  const PARSING_TYPE(TYAMLValue) *value;
+  const PARSING_TYPE(TYAMLValue) *value = NULL;
   OPSTATUS status;
   if (!outValue) return STATUS_CONST(INVALID_ARGUMENT);
   status = PARSING_FUNC(YAML_Get)(object, key, &value);
@@ -577,7 +577,7 @@ PARSING_YAML_GET_MUTABLE_PROTOTYPE {
 }
 
 PARSING_YAML_AT_MUTABLE_PROTOTYPE {
-  const PARSING_TYPE(TYAMLValue) *value;
+  const PARSING_TYPE(TYAMLValue) *value = NULL;
   OPSTATUS status;
   if (!outValue) return STATUS_CONST(INVALID_ARGUMENT);
   status = PARSING_FUNC(YAML_At)(array, index, &value);

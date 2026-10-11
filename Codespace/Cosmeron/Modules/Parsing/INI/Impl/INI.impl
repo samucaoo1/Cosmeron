@@ -9,9 +9,9 @@ PARSING_INI_READER_CREATE_PROTOTYPE {
 }
 
 PARSING_INI_NEXT_PROTOTYPE {
-  PARSING_TYPE(TINIReader) next;
-  PARSING_TYPE(TSlice) line;
-  PARSING_TYPE(TINIEntry) entry;
+  PARSING_TYPE(TINIReader) next = {0};
+  PARSING_TYPE(TSlice) line = {0};
+  PARSING_TYPE(TINIEntry) entry = {0};
   if (!reader || !outEntry || !outEnd) return STATUS_CONST(INVALID_ARGUMENT);
   next = *reader;
   while (PARSING_INS(Line)(&next.cursor, &line)) {
@@ -25,7 +25,7 @@ PARSING_INI_NEXT_PROTOTYPE {
     }
     if (line.data[0] == '[') {
       const char *close = (const char *)memchr(line.data + 1, ']', line.size - 1);
-      PARSING_TYPE(TSlice) rest;
+      PARSING_TYPE(TSlice) rest = {0};
       if (!close) {
         next.cursor.position = start;
         return PARSING_INS(Fail)(&next.cursor, PARSING_CONST(DIAGNOSTIC_SYNTAX), STATUS_CONST(INVALID_SEQUENCE));
@@ -101,7 +101,7 @@ static inline OPSTATUS PARSING_INS(INIStore)(PARSING_TYPE(TINIDocument) *documen
   status = PARSING_INS(Copy)(entry.section, &section);
   if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Copy)(entry.key, &key);
   if (status == STATUS_CONST(SUCCESS)) {
-    void *memory;
+    void *memory = NULL;
     status = MEMORY_FUNC(AllocBytes)(&memory, sizeof(*node));
     if (status == STATUS_CONST(SUCCESS)) node = (PARSING_INS(ININode) *)memory;
   }
@@ -123,10 +123,10 @@ static inline OPSTATUS PARSING_INS(INIStore)(PARSING_TYPE(TINIDocument) *documen
 }
 
 PARSING_INI_PARSE_PROTOTYPE {
-  PARSING_TYPE(TINIReader) reader;
+  PARSING_TYPE(TINIReader) reader = {0};
   PARSING_TYPE(TINIDocument) document = {0};
-  PARSING_TYPE(TINIEntry) entry;
-  bool end;
+  PARSING_TYPE(TINIEntry) entry = {0};
+  bool end = false;
   OPSTATUS status;
   if (!outDocument || outDocument->first || outDocument->last || outDocument->count) return STATUS_CONST(INVALID_ARGUMENT);
   status = PARSING_FUNC(INI_ReaderCreate)(source, size, &reader, diagnostic);
@@ -162,7 +162,7 @@ static inline bool PARSING_INS(INITextValid)(const char *text) {
 }
 
 PARSING_INI_SET_PROTOTYPE {
-  PARSING_TYPE(TINIEntry) entry;
+  PARSING_TYPE(TINIEntry) entry = {0};
   if (!document || !PARSING_INS(INITextValid)(section) || !PARSING_INS(INITextValid)(key) || !PARSING_INS(INITextValid)(value) || !*key ||
   strchr(section, ']') || strchr(key, '=') || *key == '[' || *key == '#' || *key == ';') return STATUS_CONST(INVALID_ARGUMENT);
   entry.section = PARSING_INS(Slice)(section, strlen(section));
