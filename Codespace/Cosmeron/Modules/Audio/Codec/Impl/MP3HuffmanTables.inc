@@ -313,7 +313,7 @@ static const uint8_t AUDIO_INS(MP3Lengths24)[256] = {
   8, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 4,
 };
 
-static const uint8_t AUDIO_INS(MP3QuadCodes0)[16] = {
+static const uint16_t AUDIO_INS(MP3QuadCodes0)[16] = {
   1, 5, 4, 5, 6, 5, 4, 4, 7, 3, 6, 0, 7, 2, 3, 1,
 };
 
@@ -321,7 +321,7 @@ static const uint8_t AUDIO_INS(MP3QuadLengths0)[16] = {
   1, 4, 4, 5, 4, 6, 5, 6, 4, 5, 5, 6, 5, 6, 6, 6,
 };
 
-static const uint8_t AUDIO_INS(MP3QuadCodes1)[16] = {
+static const uint16_t AUDIO_INS(MP3QuadCodes1)[16] = {
   15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
 };
 

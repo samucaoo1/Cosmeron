@@ -50,7 +50,7 @@ static void checkPair(unsigned int table, unsigned int symbol) {
   }
 }
 static void checkQuad(unsigned int table, unsigned int symbol) {
-  const unsigned char *codes = table == 32 ?
+  const uint16_t *codes = table == 32 ?
       AUDIO_INS(MP3QuadCodes0) : AUDIO_INS(MP3QuadCodes1);
   const unsigned char *lengths = table == 32 ?
       AUDIO_INS(MP3QuadLengths0) : AUDIO_INS(MP3QuadLengths1);
