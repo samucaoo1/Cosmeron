@@ -371,3 +371,23 @@ The module uses `ALGORITHM_MOD`, `ALGORITHM_NS`, `ALGORITHM_TYPE`, `ALGORITHM_FU
 - [Sort](Sort.md): generic and integer-specific sorting built around comparison callbacks.
 - [Container](Container.md): collections that may use order-based operations.
 - [Bit](Bit.md): reference for the documentation style.
+
+# C11 smoke test
+
+The following complete example is compiled and executed by `Tools/check_doc_examples.py`. Unlike the individual API fragments above, it can be copied into one C11 translation unit.
+
+<!-- cosmeron-c11-test -->
+```c
+#include "Cosmeron/Core/Algorithm/Comparison.h"
+#include <assert.h>
+
+int main(void) {
+    const unsigned char a[] = {1, 2};
+    const unsigned char b[] = {1, 2, 3};
+    assert(COMPARISON_FUNC(int)(2, 3) == COMPARISON_LOWER_CONST);
+    assert(COMPARISON_FUNC(double)(3.0, 3.0) == COMPARISON_EQUAL_CONST);
+    assert(COMPARISON_FUNC(Bytes)(a, sizeof a, b, sizeof b) ==
+           COMPARISON_LOWER_CONST);
+    return 0;
+}
+```
