@@ -38,7 +38,7 @@ static inline OPSTATUS AUDIO_INS(FLAC_ParseReader)(
     last = (header[0] & 0x80U) != 0;
     length = AUDIO_INS(FLAC_BigEndian24)(header + 1);
     if (offset > SIZE_MAX - 4 - length ||
-        offset > INT64_MAX - 4 - length)
+        (uint64_t)offset > (uint64_t)INT64_MAX - UINT64_C(4) - length)
       return STATUS_CONST(OUT_OF_RANGE);
     offset += 4 + length;
   }
