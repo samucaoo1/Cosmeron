@@ -23,6 +23,6 @@ foreach(target cosmeron_ohos_c11_check cosmeron_ohos_multi_tu)
   set_target_properties(${target} PROPERTIES
     C_STANDARD 11 C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
   target_include_directories(${target} PRIVATE "${COSMERON_ROOT}/Codespace")
-  target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  # The official SDK injects --gcc-toolchain into Clang, although Clang's\n  # native cross compiler does not consume that option. Suppress only this\n  # toolchain noise; preserve -Werror for actual Cosmeron diagnostics.\n  target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Werror -Qunused-arguments)
 endforeach()
 message(STATUS "OHOS target architecture: ${OHOS_ARCH}; compile and link only, no device")
