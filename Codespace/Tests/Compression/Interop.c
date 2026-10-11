@@ -26,6 +26,15 @@ int main(int argc, char **argv) {
     assert(Compression_ZipAdd(&writer, "payload.bin", data, size, 6) == STATUS_SUCCESS);
     assert(Compression_ZipAdd(&writer, "empty", NULL, 0, 0) == STATUS_SUCCESS);
     status = Compression_ZipFinish(&writer, &out);
+  } else if (!strcmp(argv[1], "zipwrite64")) {
+    Compression_TZipWriter writer = {0};
+    char filename[32];
+    assert(Compression_ZipCreate(&writer) == STATUS_SUCCESS);
+    for (i = 0; i < 65536; ++i) {
+      assert(snprintf(filename, sizeof filename, "entry-%05u", (unsigned)i) > 0);
+      assert(Compression_ZipAdd(&writer, filename, NULL, 0, 0) == STATUS_SUCCESS);
+    }
+    status = Compression_ZipFinish(&writer, &out);
   } else if (!strcmp(argv[1], "zipread")) {
     Compression_TZipReader reader = {0}; size_t count; Compression_TZipEntry entry;
     assert(Compression_ZipOpen(&reader, data, size) == STATUS_SUCCESS);

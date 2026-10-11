@@ -1,6 +1,7 @@
 """Independent format interoperability; standard library only."""
 import gzip
 import os
+import random
 from pathlib import Path
 import struct
 import subprocess
@@ -42,6 +43,23 @@ with tempfile.TemporaryDirectory() as tmp:
                 archive.writestr('directory/',b'')
                 archive.writestr('payload.bin',payload)
             run('zipread',0); assert decoded.read_bytes() == payload
+    # Deterministic cross-implementation differential corpus with varied entropy.
+    rng = random.Random(0xC05E2026)
+    for length in (1, 2, 3, 31, 257, 4095, 8193, 65535):
+        for sample in (
+            bytes(rng.randrange(256) for _ in range(length)),
+            bytes(65 + rng.randrange(8) for _ in range(length)),
+            (b"Cosmeron-DEFLATE-" * ((length + 16) // 17))[:length]
+        ):
+            source.write_bytes(sample)
+            for fmt, window in ((0, -15), (1, 15), (2, 31)):
+                run("encode", fmt)
+                assert zlib.decompress(encoded.read_bytes(), window) == sample
+                compressor = zlib.compressobj(9, zlib.DEFLATED, window)
+                encoded.write_bytes(compressor.compress(sample) + compressor.flush())
+                run("decode", fmt)
+                assert decoded.read_bytes() == sample
+
     with zipfile.ZipFile(encoded,'w',compression=zipfile.ZIP_DEFLATED) as archive:
         with archive.open('zip64-small', 'w', force_zip64=True) as entry:
             entry.write(b'ZIP64 header')

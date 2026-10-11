@@ -1,5 +1,4 @@
 #pragma once
-/* Overlap is forbidden; pointer differences avoid overflowing end addresses. */
 static inline bool COMPRESSION_INS(Overlap)(const void *a, size_t aSize,
     const void *b, size_t bSize) {
   uintptr_t x = (uintptr_t)a, y = (uintptr_t)b;
@@ -9,55 +8,12 @@ COMPRESSION_BOUND_PROTOTYPE {
   uint64_t bound;
   if (!outBound || !COMPRESSION_INS(FormatValid)(format)) return STATUS_CONST(INVALID_ARGUMENT);
   if (size > UINT_MAX) return STATUS_CONST(OUT_OF_RANGE);
-  /* Conservative miniz bound, evaluated in uint64_t to avoid ILP32 overflow. */
+  /* Conservative DEFLATE capacity limit; arithmetic uses uint64_t. */
   bound = 256 + (uint64_t)size + (uint64_t)size / 10;
   if (format == COMPRESSION_CONST(GZIP))
     bound += COMPRESSION_CINS(GZIP_HEADER_SIZE) + COMPRESSION_CINS(GZIP_TRAILER_SIZE);
   if (bound > UINT_MAX || bound > SIZE_MAX) return STATUS_CONST(OUT_OF_RANGE);
   *outBound = (size_t)bound;
-  return STATUS_CONST(SUCCESS);
-}
-COMPRESSION_COMPRESS_PROTOTYPE {
-  cosmeron_compression_vendor_mz_stream stream;
-  const unsigned char empty = 0;
-  unsigned char *output = (unsigned char *)destination;
-  size_t offset = 0, resultSize;
-  int code;
-  if (!outSize || (!source && size) || (!destination && capacity) ||
-      !COMPRESSION_INS(FormatValid)(format) || !COMPRESSION_INS(LevelValid)(level) ||
-      COMPRESSION_INS(Overlap)(source, size, destination, capacity)) return STATUS_CONST(INVALID_ARGUMENT);
-  if (size > UINT_MAX || capacity > UINT_MAX) return STATUS_CONST(OUT_OF_RANGE);
-  if (format == COMPRESSION_CONST(GZIP)) {
-    if (capacity < COMPRESSION_CINS(GZIP_HEADER_SIZE) + COMPRESSION_CINS(GZIP_TRAILER_SIZE))
-      return STATUS_CONST(INSUFFICIENT_SPACE);
-    offset = COMPRESSION_CINS(GZIP_HEADER_SIZE);
-  }
-  if (capacity <= offset) return STATUS_CONST(INSUFFICIENT_SPACE);
-  memset(&stream, 0, sizeof(stream));
-  code = cosmeron_compression_vendor_mz_deflateInit2(&stream, level,
-      cosmeron_compression_vendor_MZ_DEFLATED,
-      format == COMPRESSION_CONST(ZLIB) ? COMPRESSION_CINS(WINDOW_BITS) : -COMPRESSION_CINS(WINDOW_BITS),
-      COMPRESSION_CINS(MEMORY_LEVEL), cosmeron_compression_vendor_MZ_DEFAULT_STRATEGY);
-  if (code != cosmeron_compression_vendor_MZ_OK) return COMPRESSION_INS(Status)(code);
-  stream.next_in = source ? (const unsigned char *)source : &empty;
-  stream.avail_in = (unsigned int)size;
-  stream.next_out = output + offset;
-  stream.avail_out = (unsigned int)(capacity - offset -
-      (format == COMPRESSION_CONST(GZIP) ? COMPRESSION_CINS(GZIP_TRAILER_SIZE) : 0));
-  code = cosmeron_compression_vendor_mz_deflate(&stream, cosmeron_compression_vendor_MZ_FINISH);
-  resultSize = offset + stream.total_out;
-  cosmeron_compression_vendor_mz_deflateEnd(&stream);
-  if (code != cosmeron_compression_vendor_MZ_STREAM_END)
-    return code == cosmeron_compression_vendor_MZ_OK ? STATUS_CONST(INSUFFICIENT_SPACE) : COMPRESSION_INS(Status)(code);
-  if (format == COMPRESSION_CONST(GZIP)) {
-    memset(output, 0, COMPRESSION_CINS(GZIP_HEADER_SIZE));
-    output[0] = COMPRESSION_CINS(GZIP_MAGIC_1); output[1] = COMPRESSION_CINS(GZIP_MAGIC_2);
-    output[2] = COMPRESSION_CINS(GZIP_METHOD); output[9] = COMPRESSION_CINS(GZIP_OS_UNKNOWN);
-    COMPRESSION_INS(Write32)(output + resultSize, COMPRESSION_FUNC(CRC32)(0, source, size));
-    COMPRESSION_INS(Write32)(output + resultSize + sizeof(uint32_t), (uint32_t)size);
-    resultSize += COMPRESSION_CINS(GZIP_TRAILER_SIZE);
-  }
-  *outSize = resultSize;
   return STATUS_CONST(SUCCESS);
 }
 static inline OPSTATUS COMPRESSION_INS(GzipHeader)(const unsigned char *data,
@@ -94,55 +50,15 @@ static inline OPSTATUS COMPRESSION_INS(GzipHeader)(const unsigned char *data,
   }
   *outOffset = offset; return STATUS_CONST(SUCCESS);
 }
+#include "NativeCodec.impl"
+
+COMPRESSION_COMPRESS_PROTOTYPE {
+  return COMPRESSION_INS(NativeCompress)(format, source, size,
+      destination, capacity, level, outSize);
+}
 COMPRESSION_DECOMPRESS_PROTOTYPE {
-  const unsigned char *input = (const unsigned char *)source;
-  unsigned char *output = (unsigned char *)destination, dummy = 0;
-  size_t inputOffset = 0, outputOffset = 0;
-  if (!outSize || (!source && size) || (!destination && capacity) ||
-      !COMPRESSION_INS(FormatValid)(format) ||
-      COMPRESSION_INS(Overlap)(source, size, destination, capacity)) return STATUS_CONST(INVALID_ARGUMENT);
-  if (size > UINT_MAX || capacity > UINT_MAX) return STATUS_CONST(OUT_OF_RANGE);
-  if (!size) return STATUS_CONST(INCOMPLETE_SEQUENCE);
-  do {
-    cosmeron_compression_vendor_mz_stream stream;
-    size_t headerSize = 0, consumed, produced;
-    int code;
-    OPSTATUS status;
-    if (format == COMPRESSION_CONST(GZIP)) {
-      status = COMPRESSION_INS(GzipHeader)(input + inputOffset, size - inputOffset, &headerSize);
-      if (status != STATUS_CONST(SUCCESS)) return status;
-    }
-    inputOffset += headerSize;
-    memset(&stream, 0, sizeof(stream));
-    code = cosmeron_compression_vendor_mz_inflateInit2(&stream,
-        format == COMPRESSION_CONST(ZLIB) ? COMPRESSION_CINS(WINDOW_BITS) : -COMPRESSION_CINS(WINDOW_BITS));
-    if (code != cosmeron_compression_vendor_MZ_OK) return COMPRESSION_INS(Status)(code);
-    stream.next_in = input + inputOffset; stream.avail_in = (unsigned int)(size - inputOffset);
-    stream.next_out = outputOffset < capacity ? output + outputOffset : &dummy;
-    stream.avail_out = outputOffset < capacity ? (unsigned int)(capacity - outputOffset) : 1;
-    code = cosmeron_compression_vendor_mz_inflate(&stream, cosmeron_compression_vendor_MZ_FINISH);
-    consumed = stream.total_in; produced = stream.total_out;
-    if (produced > capacity - outputOffset) status = STATUS_CONST(INSUFFICIENT_SPACE);
-    else if (code == cosmeron_compression_vendor_MZ_STREAM_END) status = STATUS_CONST(SUCCESS);
-    else if (code == cosmeron_compression_vendor_MZ_DATA_ERROR) status = STATUS_CONST(INVALID_SEQUENCE);
-    else if (stream.avail_out == 0) status = STATUS_CONST(INSUFFICIENT_SPACE);
-    else if (code == cosmeron_compression_vendor_MZ_BUF_ERROR || code == cosmeron_compression_vendor_MZ_OK)
-      status = STATUS_CONST(INCOMPLETE_SEQUENCE);
-    else status = COMPRESSION_INS(Status)(code);
-    cosmeron_compression_vendor_mz_inflateEnd(&stream);
-    if (status != STATUS_CONST(SUCCESS)) return status;
-    inputOffset += consumed;
-    if (format == COMPRESSION_CONST(GZIP)) {
-      if (size - inputOffset < COMPRESSION_CINS(GZIP_TRAILER_SIZE)) return STATUS_CONST(INCOMPLETE_SEQUENCE);
-      if (COMPRESSION_INS(Read32)(input + inputOffset) !=
-          COMPRESSION_FUNC(CRC32)(0, produced ? output + outputOffset : &dummy, produced) ||
-          COMPRESSION_INS(Read32)(input + inputOffset + sizeof(uint32_t)) != (uint32_t)produced)
-        return STATUS_CONST(INVALID_SEQUENCE);
-      inputOffset += COMPRESSION_CINS(GZIP_TRAILER_SIZE);
-    } else if (inputOffset != size) return STATUS_CONST(INVALID_SEQUENCE);
-    outputOffset += produced;
-  } while (inputOffset < size);
-  *outSize = outputOffset; return STATUS_CONST(SUCCESS);
+  return COMPRESSION_INS(NativeDecompress)(format, source, size,
+      destination, capacity, outSize);
 }
 COMPRESSION_COMPRESS_ALLOC_PROTOTYPE {
   COMPRESSION_TYPE(TBuffer) result = {0};

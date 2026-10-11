@@ -1,9 +1,9 @@
 CC ?= gcc
 CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -Werror
 BUILD ?= build
-SOURCES := IncludeAll Codec Zip Namespace FunctionTableOff Robustness Allocation File
+SOURCES := IncludeAll Codec Zip Namespace FunctionTableOff Robustness Allocation File NativeInflate NativeCodec
 HEADERS := $(shell find ../../Cosmeron/Modules/Compression -type f)
-.PHONY: all run clean interop
+.PHONY: all run clean interop zip64
 all: run
 run: $(addprefix $(BUILD)/,$(SOURCES)) $(BUILD)/MultiTU
 	@set -e; $(foreach test,$(SOURCES),$(BUILD)/$(test);) $(BUILD)/MultiTU;
@@ -18,3 +18,6 @@ clean:
 
 interop: $(BUILD)/Interop
 	python3 interop.py $(BUILD)/Interop
+
+zip64: $(BUILD)/Zip64 $(BUILD)/Interop
+	python3 zip64.py $(BUILD)/Zip64
