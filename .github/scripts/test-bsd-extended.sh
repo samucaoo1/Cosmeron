@@ -19,7 +19,7 @@ suite() {
     # Native sound headers use BSD u_char/u_short; choose matching extensions
     # without weakening -std=c11 or -Werror.
     case "$(uname -s)" in
-      DragonFly) module_features= ;;
+      DragonFly|FreeBSD) module_features= ;;
       OpenBSD) module_features="-D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE=1" ;;
     esac
     echo "[bsd-extended] Audio header profile: ${module_features:-BSD native defaults}"
@@ -40,7 +40,7 @@ multitu() {
   module_features=-D_POSIX_C_SOURCE=200809L
   if [ "$module" = Audio ]; then
     case "$(uname -s)" in
-      DragonFly) module_features= ;;
+      DragonFly|FreeBSD) module_features= ;;
       OpenBSD) module_features="-D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE=1" ;;
     esac
   fi
