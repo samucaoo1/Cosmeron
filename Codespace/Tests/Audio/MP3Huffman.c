@@ -189,6 +189,7 @@ int main(void) {
           for (ch = 0; ch < side.channels; ++ch) {
             AUDIO_CODEC_TYPE(TMP3Scalefactors) scale;
             int32_t coefficient[576];
+            float spectral[576];
             size_t quantized = 0;
             status = AUDIO_CODEC_FUNC(MP3_ParseScalefactors)(
                 mainData, mainBytes, &side, gr, ch,
@@ -200,6 +201,9 @@ int main(void) {
                 header.sampleRate, coefficient, &quantized);
             assert(status == STATUS_CONST(SUCCESS));
             assert(quantized <= 576 && quantized >= side.parts[gr][ch].bigValues * 2);
+            assert(AUDIO_CODEC_FUNC(MP3_Requantize)(
+                coefficient, &side.parts[gr][ch], &scale, header.sampleRate,
+                spectral) == STATUS_CONST(SUCCESS));
             ++unpacked;
           }
         }
