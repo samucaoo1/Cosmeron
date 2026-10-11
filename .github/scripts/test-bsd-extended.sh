@@ -14,12 +14,22 @@ linkflags=
 
 suite() {
   module=$1; shift
+  module_features=-D_POSIX_C_SOURCE=200809L
+  if [ "$module" = Audio ]; then
+    # Native sound headers use BSD u_char/u_short; choose matching extensions
+    # without weakening -std=c11 or -Werror.
+    case "$(uname -s)" in
+      DragonFly) module_features= ;;
+      OpenBSD) module_features="-D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE=1" ;;
+    esac
+    echo "[bsd-extended] Audio header profile: ${module_features:-BSD native defaults}"
+  fi
   for test in "$@"; do
     echo "[bsd-extended] run $module/$test"
     (
       cd "Codespace/Tests/$module"
       "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
-        -D_POSIX_C_SOURCE=200809L ${extra} "$test.c" ${linkflags} \
+        ${module_features} ${extra} "$test.c" ${linkflags} \
         -o "../../../.build-bsd-extended/${module}_${test}"
       "../../../.build-bsd-extended/${module}_${test}"
     )
@@ -27,11 +37,18 @@ suite() {
 }
 multitu() {
   module=$1
+  module_features=-D_POSIX_C_SOURCE=200809L
+  if [ "$module" = Audio ]; then
+    case "$(uname -s)" in
+      DragonFly) module_features= ;;
+      OpenBSD) module_features="-D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE=1" ;;
+    esac
+  fi
   echo "[bsd-extended] run $module/MultiTU"
   (
     cd "Codespace/Tests/$module"
     "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
-      -D_POSIX_C_SOURCE=200809L ${extra} \
+      ${module_features} ${extra} \
       MultiTU_A.c MultiTU_B.c MultiTU_Main.c \
       -o "../../../.build-bsd-extended/${module}_MultiTU"
     "../../../.build-bsd-extended/${module}_MultiTU"
