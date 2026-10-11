@@ -108,11 +108,18 @@ int main(void) {
 }
 ```
 
-This is **not** the same as the no-vendor WAV decoder above. On the
-four BSD VMs, actual memory decoding in this profile passed with `-lm`
-and **without `-pthread`**, but failed to link with no extra flags.
-The result is recorded as `AUDIO_CODEC_MINIMAL_FUNCTIONAL=PASS` and
-`AUDIO_CODEC_MINIMAL_ZERO_LINK=NOT_SUPPORTED`.
+This is **not** the same as the no-vendor WAV decoder above.
+The BSD codec-only profile now resolves the five required math symbols
+(`sin`, `exp`, `log`, `sqrt`, `pow`) from the host `libm` at runtime,
+using `dlopen`/`dlsym` and a C11-atomic one-time initializer. The
+implementation remains *dependent on a compatible shared libm installed
+in the target system*. No device or thread worker is created by this
+decoder-only Miniaudio configuration.
+
+`CodecMinimal.c` and `CodecMath.c` are compiled **and run** with no
+additional linker flags on each BSD guest. A successful probe is recorded as
+`AUDIO_CODEC_MINIMAL_ZERO_LINK=PASS`; failure remains `NOT_SUPPORTED`.
+The desktop Device/Player backend still requires its own platform linkage.
 
 A translation unit must select either `CodecMinimal.h` or `Desktop.h`
 because the embedded Miniaudio configuration is fixed by its first include.

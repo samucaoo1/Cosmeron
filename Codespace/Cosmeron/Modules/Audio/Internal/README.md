@@ -83,3 +83,16 @@ opaque decoder types crossing interfaces. The preexisting `CodecOnly.h`
 remains full-profile compatible. The C11 regression `CodecMinimal.c`
 executes a real WAV decode and the BSD CI records an independent
 `AUDIO_CODEC_MINIMAL_ZERO_LINK` result.
+
+### BSD codec-only math
+
+For `AUDIO_MINIAUDIO_CODEC_MINIMAL` on the four BSD families, the five
+vendor math functions are resolved once per translation unit from a system
+`libm` shared object via `dlopen`/`dlsym`. A C11 atomic state machine
+serializes initialization without introducing `pthread_once` or requiring
+`-pthread` for the decoder-only profile. The library handle is deliberately
+kept alive for the process lifetime. A missing or incompatible runtime math
+library causes `Audio_Codec_Open*` to return `NOT_AVAILABLE` instead of
+attempting a null function-pointer call. This feature removes the need to
+pass `-lm` during **linking**, not the runtime dependency on `libm`.
+The standard threaded desktop Miniaudio profile remains unchanged.
