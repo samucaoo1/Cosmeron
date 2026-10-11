@@ -61,36 +61,92 @@ static inline OPSTATUS PARSING_INS(TOMLError)(PARSING_INS(Cursor) *cursor, OPSTA
 
 static inline OPSTATUS PARSING_INS(TOMLString)(PARSING_INS(Cursor) *cursor, char **out, size_t *outSize) {
   char quote = cursor->source[cursor->position];
-  size_t start;
-  if (cursor->size - cursor->position >= 3 && cursor->source[cursor->position+1] == quote && cursor->source[cursor->position+2] == quote) return PARSING_INS(TOMLError)(cursor, STATUS_CONST(NOT_SUPPORTED));
-  if (quote == '"') {
-    size_t i = cursor->position + 1;
-    while (i < cursor->size && cursor->source[i] != '"') {
-      if (cursor->source[i] == '\\') {
-        if (++i >= cursor->size) break;
-        if (cursor->source[i] == '/' || cursor->source[i] == 'U' || cursor->source[i] == 'e' || cursor->source[i] == 'x') return PARSING_INS(TOMLError)(cursor, STATUS_CONST(NOT_SUPPORTED));
+  bool multiline = cursor->size - cursor->position >= 3 &&
+    cursor->source[cursor->position+1] == quote && cursor->source[cursor->position+2] == quote;
+  bool closed = false;
+  PARSING_INS(Buffer) text = {0};
+  OPSTATUS status = STATUS_CONST(SUCCESS);
+  cursor->position += multiline ? 3 : 1;
+  if (multiline && cursor->position < cursor->size) {
+    if (cursor->source[cursor->position] == '\n') ++cursor->position;
+    else if (cursor->size - cursor->position >= 2 && cursor->source[cursor->position] == '\r' && cursor->source[cursor->position+1] == '\n') cursor->position += 2;
+  }
+  while (status == STATUS_CONST(SUCCESS) && cursor->position < cursor->size) {
+    char c = cursor->source[cursor->position++];
+    if (c == quote) {
+      size_t count = 1;
+      if (!multiline) { closed = true; break; }
+      while (cursor->position < cursor->size && cursor->source[cursor->position] == quote) { ++count; ++cursor->position; }
+      if (count >= 3) {
+        if (count > 5) { status = STATUS_CONST(INVALID_SEQUENCE); break; }
+        count -= 3;
+        closed = true;
       }
-      ++i;
+      while (count-- && status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, &quote, 1);
+      if (closed) break;
+      continue;
     }
-    return PARSING_INS(JSONString)(cursor, out, outSize);
+    if ((unsigned char)c < 0x20 && c != '\t' && !(multiline && (c == '\r' || c == '\n'))) {
+      status = STATUS_CONST(INVALID_SEQUENCE); break;
+    }
+    if ((unsigned char)c == 0x7f) { status = STATUS_CONST(INVALID_SEQUENCE); break; }
+    if (c == '\r') {
+      if (cursor->position == cursor->size || cursor->source[cursor->position++] != '\n') { status = STATUS_CONST(INVALID_SEQUENCE); break; }
+      c = '\n';
+    }
+    if (quote == '"' && c == '\\') {
+      size_t look = cursor->position;
+      if (multiline) {
+        while (look < cursor->size && (cursor->source[look] == ' ' || cursor->source[look] == '\t')) ++look;
+        if (look < cursor->size && (cursor->source[look] == '\n' || cursor->source[look] == '\r')) {
+          if (cursor->source[look] == '\r' && (look+1 == cursor->size || cursor->source[look+1] != '\n')) { status = STATUS_CONST(INVALID_SEQUENCE); break; }
+          cursor->position = look;
+          while (cursor->position < cursor->size && PARSING_INS(Space)(cursor->source[cursor->position])) {
+            if (cursor->source[cursor->position] == '\r' && (cursor->position+1 == cursor->size || cursor->source[cursor->position+1] != '\n')) { status = STATUS_CONST(INVALID_SEQUENCE); break; }
+            ++cursor->position;
+          }
+          continue;
+        }
+      }
+      if (cursor->position == cursor->size) { status = STATUS_CONST(INCOMPLETE_SEQUENCE); break; }
+      c = cursor->source[cursor->position++];
+      switch (c) {
+        case '"': case '\\': break;
+        case 'b': c = '\b'; break;
+        case 't': c = '\t'; break;
+        case 'n': c = '\n'; break;
+        case 'f': c = '\f'; break;
+        case 'r': c = '\r'; break;
+        case 'e': c = 0x1b; break;
+        case 'x': case 'u': case 'U':
+          status = PARSING_INS(UnicodeEscape)(cursor, c == 'x' ? 2 : (c == 'u' ? 4 : 8), &text);
+          continue;
+        default: status = STATUS_CONST(INVALID_SEQUENCE); break;
+      }
+    }
+    if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, &c, 1);
   }
-  start = ++cursor->position;
-  while (cursor->position < cursor->size && cursor->source[cursor->position] != '\'') {
-    unsigned char c = (unsigned char)cursor->source[cursor->position];
-    if ((c < 0x20 && c != '\t') || c == 0x7f) return PARSING_INS(TOMLError)(cursor, STATUS_CONST(INVALID_SEQUENCE));
-    ++cursor->position;
+  if (status == STATUS_CONST(SUCCESS) && !closed) status = STATUS_CONST(INCOMPLETE_SEQUENCE);
+  if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, "", 0);
+  if (status != STATUS_CONST(SUCCESS)) {
+    free(text.data);
+    return status == STATUS_CONST(OUT_OF_MEMORY) ? status : PARSING_INS(TOMLError)(cursor, status);
   }
-  if (cursor->position == cursor->size) return PARSING_INS(TOMLError)(cursor, STATUS_CONST(INCOMPLETE_SEQUENCE));
-  *outSize = cursor->position - start;
-  ++cursor->position;
-  return PARSING_INS(Copy)(PARSING_INS(Slice)(cursor->source + start, *outSize), out);
+  *out = text.data;
+  *outSize = text.size;
+  return STATUS_CONST(SUCCESS);
 }
 
 static inline OPSTATUS PARSING_INS(TOMLKey)(PARSING_INS(Cursor) *cursor, char **out, size_t *outSize) {
   size_t start;
   PARSING_INS(TOMLSpace)(cursor, false);
   if (cursor->position == cursor->size) return PARSING_INS(TOMLError)(cursor, STATUS_CONST(INCOMPLETE_SEQUENCE));
-  if (cursor->source[cursor->position] == '"' || cursor->source[cursor->position] == '\'') return PARSING_INS(TOMLString)(cursor, out, outSize);
+  if (cursor->source[cursor->position] == '"' || cursor->source[cursor->position] == '\'') {
+    char quote = cursor->source[cursor->position];
+    if (cursor->size - cursor->position >= 3 && cursor->source[cursor->position+1] == quote && cursor->source[cursor->position+2] == quote)
+      return PARSING_INS(TOMLError)(cursor, STATUS_CONST(INVALID_SEQUENCE));
+    return PARSING_INS(TOMLString)(cursor, out, outSize);
+  }
   start = cursor->position;
   while (cursor->position < cursor->size) {
     char c = cursor->source[cursor->position];
@@ -126,6 +182,10 @@ char **outKey, size_t *outSize, size_t *outDepth, bool fromHeader) {
     child = PARSING_INS(TOMLFind)(*inoutTable, PARSING_INS(Slice)(key, keySize));
     if (child) {
       free(key);
+      if (child->kind == PARSING_CONST(TOML_ARRAY) && child->tableArray && child->last) {
+        child = child->last;
+        if (++depth >= cursor->limits.maxDepth) return PARSING_INS(Fail)(cursor, PARSING_CONST(DIAGNOSTIC_DEPTH), STATUS_CONST(OUT_OF_RANGE));
+      }
       if (child->kind != PARSING_CONST(TOML_TABLE) || child->sealed) return PARSING_INS(TOMLError)(cursor, STATUS_CONST(ALREADY_EXISTS));
     } else {
       status = PARSING_INS(TOMLNew)(cursor, PARSING_CONST(TOML_TABLE), &child);
@@ -175,7 +235,7 @@ static inline OPSTATUS PARSING_INS(TOMLScalar)(PARSING_INS(Cursor) *cursor, PARS
         }
       } else {
         if (base == 10 && (raw.data[i] == '.' || raw.data[i] == 'e' || raw.data[i] == 'E')) floating = true;
-        if (base == 10 && (raw.data[i] == ':' || (raw.data[i] == '-' && i > start) || raw.data[i] == 'T' || raw.data[i] == 't' || raw.data[i] == 'Z' || raw.data[i] == 'z')) {
+        if (base == 10 && (raw.data[i] == ':' || (raw.data[i] == '-' && i > start && raw.data[i-1] != 'e' && raw.data[i-1] != 'E') || raw.data[i] == 'T' || raw.data[i] == 't' || raw.data[i] == 'Z' || raw.data[i] == 'z')) {
           status = STATUS_CONST(NOT_SUPPORTED);
           break;
         }
@@ -237,28 +297,30 @@ static inline OPSTATUS PARSING_INS(TOMLValue)(PARSING_INS(Cursor) *cursor, size_
     value->declared = true;
     value->sealed = c == '{';
     ++cursor->position;
-    PARSING_INS(TOMLSpace)(cursor, c == '[');
+    PARSING_INS(TOMLSpace)(cursor, true);
     if (cursor->position < cursor->size && cursor->source[cursor->position] == close) ++cursor->position;
     else for (;;) {
       PARSING_TYPE(TTOMLValue) *child = NULL;
       char *key = NULL;
-      size_t keySize = 0;
+      size_t keySize = 0, childDepth = depth + 1;
+      PARSING_TYPE(TTOMLValue) *table = value;
       if (c == '{') {
-        status = PARSING_INS(TOMLKey)(cursor, &key, &keySize);
+        size_t tableDepth = depth;
+        status = PARSING_INS(TOMLPath)(cursor, &table, &key, &keySize, &tableDepth, false);
+        childDepth = tableDepth + 1;
         PARSING_INS(TOMLSpace)(cursor, false);
-        if (status == STATUS_CONST(SUCCESS) && cursor->position < cursor->size && cursor->source[cursor->position] == '.') status = PARSING_INS(TOMLError)(cursor, STATUS_CONST(NOT_SUPPORTED));
         if (status == STATUS_CONST(SUCCESS) && (cursor->position == cursor->size || cursor->source[cursor->position++] != '=')) status = PARSING_INS(TOMLError)(cursor, STATUS_CONST(INVALID_SEQUENCE));
-        if (status == STATUS_CONST(SUCCESS) && PARSING_INS(TOMLFind)(value, PARSING_INS(Slice)(key, keySize))) status = PARSING_INS(TOMLError)(cursor, STATUS_CONST(ALREADY_EXISTS));
+        if (status == STATUS_CONST(SUCCESS) && PARSING_INS(TOMLFind)(table, PARSING_INS(Slice)(key, keySize))) status = PARSING_INS(TOMLError)(cursor, STATUS_CONST(ALREADY_EXISTS));
       }
-      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(TOMLValue)(cursor, depth + 1, &child);
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(TOMLValue)(cursor, childDepth, &child);
       if (status != STATUS_CONST(SUCCESS)) {
         free(key);
         break;
       }
       child->key = key;
       child->keySize = keySize;
-      PARSING_INS(TOMLLink)(value, child);
-      PARSING_INS(TOMLSpace)(cursor, c == '[');
+      PARSING_INS(TOMLLink)(table, child);
+      PARSING_INS(TOMLSpace)(cursor, true);
       if (cursor->position == cursor->size) {
         status = PARSING_INS(TOMLError)(cursor, STATUS_CONST(INCOMPLETE_SEQUENCE));
         break;
@@ -271,10 +333,9 @@ static inline OPSTATUS PARSING_INS(TOMLValue)(PARSING_INS(Cursor) *cursor, size_
         status = PARSING_INS(TOMLError)(cursor, STATUS_CONST(INVALID_SEQUENCE));
         break;
       }
-      PARSING_INS(TOMLSpace)(cursor, c == '[');
+      PARSING_INS(TOMLSpace)(cursor, true);
       if (cursor->position < cursor->size && cursor->source[cursor->position] == close) {
-        if (c == '{') status = PARSING_INS(TOMLError)(cursor, STATUS_CONST(NOT_SUPPORTED));
-        else ++cursor->position;
+        ++cursor->position;
         break;
       }
     }
@@ -321,33 +382,53 @@ PARSING_TOML_PARSE_PROTOTYPE {
     PARSING_INS(TOMLSpace)(&cursor, true);
     if (cursor.position == cursor.size) break;
     if (cursor.source[cursor.position] == '[') {
+      bool arrayHeader;
       ++cursor.position;
-      if (cursor.position < cursor.size && cursor.source[cursor.position] == '[') {
-        status = PARSING_INS(TOMLError)(&cursor, STATUS_CONST(NOT_SUPPORTED));
-        break;
-      }
+      arrayHeader = cursor.position < cursor.size && cursor.source[cursor.position] == '[';
+      if (arrayHeader) ++cursor.position;
       table = document.root;
       depth = 0;
       status = PARSING_INS(TOMLPath)(&cursor, &table, &key, &keySize, &depth, true);
       if (status != STATUS_CONST(SUCCESS)) break;
-      if (cursor.position == cursor.size || cursor.source[cursor.position++] != ']') {
+      if (cursor.position == cursor.size || cursor.source[cursor.position++] != ']' ||
+          (arrayHeader && (cursor.position == cursor.size || cursor.source[cursor.position++] != ']'))) {
         free(key);
         status = PARSING_INS(TOMLError)(&cursor, STATUS_CONST(INVALID_SEQUENCE));
         break;
       }
       value = PARSING_INS(TOMLFind)(table, PARSING_INS(Slice)(key, keySize));
-      if (value) {
+      if (arrayHeader) {
+        PARSING_TYPE(TTOMLValue) *array = value;
+        if (array && (array->kind != PARSING_CONST(TOML_ARRAY) || !array->tableArray)) {
+          free(key);
+          status = PARSING_INS(TOMLError)(&cursor, STATUS_CONST(ALREADY_EXISTS));
+          break;
+        }
+        if (!array) {
+          status = PARSING_INS(TOMLNew)(&cursor, PARSING_CONST(TOML_ARRAY), &array);
+          if (status != STATUS_CONST(SUCCESS)) { free(key); break; }
+          array->key = key;
+          array->keySize = keySize;
+          array->tableArray = true;
+          PARSING_INS(TOMLLink)(table, array);
+        } else free(key);
+        ++depth;
+        if (depth + 1 >= cursor.limits.maxDepth) {
+          status = PARSING_INS(Fail)(&cursor, PARSING_CONST(DIAGNOSTIC_DEPTH), STATUS_CONST(OUT_OF_RANGE));
+          break;
+        }
+        status = PARSING_INS(TOMLNew)(&cursor, PARSING_CONST(TOML_TABLE), &value);
+        if (status != STATUS_CONST(SUCCESS)) break;
+        PARSING_INS(TOMLLink)(array, value);
+      } else if (value) {
         free(key);
-        if (value->kind != PARSING_CONST(TOML_TABLE) || value->declared) {
+        if (value->kind != PARSING_CONST(TOML_TABLE) || value->declared || value->sealed) {
           status = PARSING_INS(TOMLError)(&cursor, STATUS_CONST(ALREADY_EXISTS));
           break;
         }
       } else {
         status = PARSING_INS(TOMLNew)(&cursor, PARSING_CONST(TOML_TABLE), &value);
-        if (status != STATUS_CONST(SUCCESS)) {
-          free(key);
-          break;
-        }
+        if (status != STATUS_CONST(SUCCESS)) { free(key); break; }
         value->key = key;
         value->keySize = keySize;
         PARSING_INS(TOMLLink)(table, value);

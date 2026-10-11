@@ -38,8 +38,8 @@ FILE_LOAD_TEXT_PROTOTYPE {
 static inline OPSTATUS FILE_INS(Save)(const char *path, const void *data, size_t size, bool append) {
   FILE_TYPE(TFile) file = {0}; OPSTATUS s, closed;
   if (!data && size) return STATUS_CONST(INVALID_ARGUMENT);
-  s = FILE_FUNC(Open)(&file, path, FILE_CONST(WRITE) | FILE_CONST(CREATE) |
-      (append ? FILE_CONST(APPEND) : FILE_CONST(TRUNCATE)));
+  s = FILE_FUNC(Open)(&file, path, FILE_CONST(WRITE) | FILE_CONST(OPEN_CREATE) |
+      (append ? FILE_CONST(APPEND) : FILE_CONST(OPEN_TRUNCATE)));
   if (s != STATUS_CONST(SUCCESS)) return s;
   s = FILE_INS(WriteAll)(&file, data, size); closed = FILE_FUNC(Close)(&file);
   return s == STATUS_CONST(SUCCESS) ? closed : s;
@@ -64,7 +64,7 @@ FILE_SAVE_ATOMIC_PROTOTYPE {
   for (attempt = 0; attempt < FILE_CINS(TEMP_ATTEMPTS); ++attempt) {
     int count = snprintf(temporary, length + suffixCapacity, "%s.cosmeron-%lu-%u.tmp", path, process, attempt);
     if (count < 0 || (size_t)count >= length + suffixCapacity) { s = STATUS_CONST(OUT_OF_RANGE); break; }
-    s = FILE_FUNC(Open)(&file, temporary, FILE_CONST(WRITE) | FILE_CONST(CREATE) | FILE_CONST(EXCLUSIVE));
+    s = FILE_FUNC(Open)(&file, temporary, FILE_CONST(WRITE) | FILE_CONST(OPEN_CREATE) | FILE_CONST(EXCLUSIVE));
     if (s != STATUS_CONST(ALREADY_EXISTS)) break;
   }
   if (s != STATUS_CONST(SUCCESS)) { free(temporary); return s; }

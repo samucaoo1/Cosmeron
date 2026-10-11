@@ -340,7 +340,7 @@ static inline OPSTATUS PARSING_INS(JSONQuote)(PARSING_INS(Buffer) *buffer, PARSI
         '\\', (char)c
       };
       status = PARSING_INS(Append)(buffer, escaped, 2);
-    } else if (c < 0x20) {
+    } else if (c < 0x20 || c == 0x7f) {
       char escaped[7];
       (void)snprintf(escaped, sizeof(escaped), "\\u%04x", (unsigned)c);
       status = PARSING_INS(Append)(buffer, escaped, 6);

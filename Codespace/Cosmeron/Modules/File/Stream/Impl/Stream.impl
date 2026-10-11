@@ -1,18 +1,18 @@
 #pragma once
 FILE_OPEN_PROTOTYPE {
   int descriptor, mode;
-  const uint32_t known = FILE_CONST(READ) | FILE_CONST(WRITE) | FILE_CONST(CREATE) |
-      FILE_CONST(TRUNCATE) | FILE_CONST(APPEND) | FILE_CONST(EXCLUSIVE);
+  const uint32_t known = FILE_CONST(READ) | FILE_CONST(WRITE) | FILE_CONST(OPEN_CREATE) |
+      FILE_CONST(OPEN_TRUNCATE) | FILE_CONST(APPEND) | FILE_CONST(EXCLUSIVE);
   if (!file || !FILE_INS(PathValid)(path) || (flags & ~known) ||
       !(flags & (FILE_CONST(READ) | FILE_CONST(WRITE))) ||
-      ((flags & (FILE_CONST(TRUNCATE) | FILE_CONST(APPEND))) && !(flags & FILE_CONST(WRITE))) ||
-      ((flags & FILE_CONST(EXCLUSIVE)) && !(flags & FILE_CONST(CREATE))) ||
-      ((flags & FILE_CONST(TRUNCATE)) && (flags & FILE_CONST(APPEND))))
+      ((flags & (FILE_CONST(OPEN_TRUNCATE) | FILE_CONST(APPEND))) && !(flags & FILE_CONST(WRITE))) ||
+      ((flags & FILE_CONST(EXCLUSIVE)) && !(flags & FILE_CONST(OPEN_CREATE))) ||
+      ((flags & FILE_CONST(OPEN_TRUNCATE)) && (flags & FILE_CONST(APPEND))))
     return STATUS_CONST(INVALID_ARGUMENT);
   if (file->native) return STATUS_CONST(BUSY);
   mode = (flags & FILE_CONST(READ)) ? ((flags & FILE_CONST(WRITE)) ? O_RDWR : O_RDONLY) : O_WRONLY;
-  if (flags & FILE_CONST(CREATE)) mode |= O_CREAT;
-  if (flags & FILE_CONST(TRUNCATE)) mode |= O_TRUNC;
+  if (flags & FILE_CONST(OPEN_CREATE)) mode |= O_CREAT;
+  if (flags & FILE_CONST(OPEN_TRUNCATE)) mode |= O_TRUNC;
   if (flags & FILE_CONST(APPEND)) mode |= O_APPEND;
   if (flags & FILE_CONST(EXCLUSIVE)) mode |= O_EXCL;
 #ifdef _WIN32

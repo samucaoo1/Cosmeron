@@ -119,7 +119,7 @@ foreach ($name in @("Terminal", "Canvas", "UI", "UIAdvanced", "UIGameWidgets", "
   Invoke-CosmeronTest "Codespace/Tests/Terminal" $name @("$name.c")
 }
 
-foreach ($name in @("IncludeAll", "Path", "File", "Namespace")) {
+foreach ($name in @("IncludeAll", "Path", "File", "Namespace", "WindowsMacros")) {
   Invoke-CosmeronTest "Codespace/Tests/File" $name @("$name.c")
 }
 Invoke-CosmeronTest "Codespace/Tests/File" "multi-tu" @("MultiTU_A.c", "MultiTU_B.c", "MultiTU_Main.c")

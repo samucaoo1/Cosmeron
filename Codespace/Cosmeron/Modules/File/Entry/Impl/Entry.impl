@@ -79,7 +79,7 @@ FILE_COPY_PROTOTYPE {
   if (info.kind != FILE_CONST(KIND_REGULAR)) return STATUS_CONST(NOT_SUPPORTED);
   s = FILE_FUNC(Open)(&input, source, FILE_CONST(READ));
   if (s != STATUS_CONST(SUCCESS)) return s;
-  s = FILE_FUNC(Open)(&output, destination, FILE_CONST(WRITE) | FILE_CONST(CREATE) |
+  s = FILE_FUNC(Open)(&output, destination, FILE_CONST(WRITE) | FILE_CONST(OPEN_CREATE) |
       (replace ? 0u : FILE_CONST(EXCLUSIVE)));
   if (s != STATUS_CONST(SUCCESS)) { FILE_FUNC(Close)(&input); return s; }
   /* Compare opened objects before truncation, including hard-link aliases. */

@@ -58,7 +58,7 @@ static inline OPSTATUS PARSING_INS(YAMLLine)(PARSING_INS(Cursor) *cursor, PARSIN
           if (quote == '\'' && i+1 < line.size && line.data[i+1] == '\'') ++i;
           else quote = 0;
         }
-      } else if ((c == '"' || c == '\'') && (i == 0 || line.data[i-1] == ' ' || line.data[i-1] == ':')) quote = c;
+      } else if ((c == '"' || c == '\'') && (i == 0 || line.data[i-1] == ' ' || line.data[i-1] == ':' || strchr("[{,", line.data[i-1]))) quote = c;
       else if (c == '#' && (!i || PARSING_INS(Space)(line.data[i-1]))) {
         line.size = i;
         break;
@@ -93,6 +93,7 @@ static inline size_t PARSING_INS(YAMLColon)(PARSING_TYPE(TSlice) line) {
         else quote = 0;
       }
     } else if (c == '\'' || c == '"') quote = c;
+    else if (c == '[' || c == '{') return SIZE_MAX;
     else if (c == ':' && (i+1 == line.size || PARSING_INS(Space)(line.data[i+1]))) return i;
   }
   return SIZE_MAX;
@@ -114,23 +115,56 @@ char **out, size_t *outSize, bool *outQuoted) {
     string.size = source.size;
     string.position = 0;
     string.diagnostic = NULL;
-    /* YAML has additional escapes; unsupported ones must not be accepted as plain text. */
-    { size_t index;
-      for (index = 1; index + 1 < source.size; ++index) {
-        if (source.data[index] == '\\') {
-          ++index;
-          if (!strchr("\"\\/bfnrtu", source.data[index]))
-            return PARSING_INS(YAMLError)(cursor, STATUS_CONST(NOT_SUPPORTED));
+    PARSING_INS(Buffer) text = {0};
+    bool closed = false;
+    ++string.position;
+    status = STATUS_CONST(SUCCESS);
+    while (status == STATUS_CONST(SUCCESS) && string.position < string.size) {
+      char c = string.source[string.position++];
+      if (c == '"') { closed = true; break; }
+      if (c == '\\') {
+        uint32_t special = 0;
+        if (string.position == string.size) { status = STATUS_CONST(INCOMPLETE_SEQUENCE); break; }
+        c = string.source[string.position++];
+        switch (c) {
+          case '"': case '\\': case '/': case ' ': case '\t': break;
+          case '0': c = 0; break;
+          case 'a': c = '\a'; break;
+          case 'b': c = '\b'; break;
+          case 't': c = '\t'; break;
+          case 'n': c = '\n'; break;
+          case 'v': c = '\v'; break;
+          case 'f': c = '\f'; break;
+          case 'r': c = '\r'; break;
+          case 'e': c = 0x1b; break;
+          case 'N': special = 0x85; break;
+          case '_': special = 0xa0; break;
+          case 'L': special = 0x2028; break;
+          case 'P': special = 0x2029; break;
+          case 'x': case 'u': case 'U':
+            status = PARSING_INS(UnicodeEscape)(&string, c == 'x' ? 2 : (c == 'u' ? 4 : 8), &text);
+            continue;
+          default: status = STATUS_CONST(INVALID_SEQUENCE); break;
+        }
+        if (special) {
+          unsigned char encoded[4];
+          size_t units;
+          status = TEXT_UTF8_FUNC(Encode)(special, encoded, sizeof(encoded), &units);
+          if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, (const char *)encoded, units);
+          continue;
         }
       }
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, &c, 1);
     }
-    status = PARSING_INS(JSONString)(&string, out, outSize);
-    if (status != STATUS_CONST(SUCCESS)) return PARSING_INS(YAMLError)(cursor, status);
-    if (string.position != source.size) {
-      free(*out);
-      *out = NULL;
-      return PARSING_INS(YAMLError)(cursor, STATUS_CONST(INVALID_SEQUENCE));
+    if (status == STATUS_CONST(SUCCESS) && !closed) status = STATUS_CONST(INCOMPLETE_SEQUENCE);
+    if (status == STATUS_CONST(SUCCESS) && string.position != string.size) status = STATUS_CONST(INVALID_SEQUENCE);
+    if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, "", 0);
+    if (status != STATUS_CONST(SUCCESS)) {
+      free(text.data);
+      return status == STATUS_CONST(OUT_OF_MEMORY) ? status : PARSING_INS(YAMLError)(cursor, status);
     }
+    *out = text.data;
+    *outSize = text.size;
     *outQuoted = true;
     return STATUS_CONST(SUCCESS);
   }
@@ -164,6 +198,120 @@ char **out, size_t *outSize, bool *outQuoted) {
   return PARSING_INS(Copy)(source, out);
 }
 
+/* Single-line flow collections. Keys remain textual scalars. */
+static inline void PARSING_INS(YAMLFlowSpace)(PARSING_INS(Cursor) *cursor) {
+  while (cursor->position < cursor->size && (cursor->source[cursor->position] == ' ' || cursor->source[cursor->position] == '\t')) ++cursor->position;
+}
+
+static inline OPSTATUS PARSING_INS(YAMLFlowText)(PARSING_INS(Cursor) *cursor, bool key,
+char **out, size_t *outSize, bool *quoted) {
+  size_t start;
+  char quote = 0;
+  PARSING_INS(YAMLFlowSpace)(cursor);
+  start = cursor->position;
+  if (start < cursor->size && (cursor->source[start] == '"' || cursor->source[start] == '\'')) quote = cursor->source[cursor->position++];
+  if (quote) {
+    bool closed = false;
+    while (cursor->position < cursor->size) {
+      char c = cursor->source[cursor->position++];
+      if (quote == '"' && c == '\\') { if (cursor->position < cursor->size) ++cursor->position; continue; }
+      if (c == quote) {
+        if (quote == '\'' && cursor->position < cursor->size && cursor->source[cursor->position] == '\'') { ++cursor->position; continue; }
+        closed = true; break;
+      }
+    }
+    if (!closed) return STATUS_CONST(INCOMPLETE_SEQUENCE);
+  } else {
+    while (cursor->position < cursor->size) {
+      char c = cursor->source[cursor->position];
+      if (strchr(",[]{}", c) || (key && c == ':' &&
+          (cursor->position+1 == cursor->size || PARSING_INS(Space)(cursor->source[cursor->position+1]) || strchr(",[]{}", cursor->source[cursor->position+1])))) break;
+      ++cursor->position;
+    }
+  }
+  return PARSING_INS(YAMLText)(cursor, PARSING_INS(Slice)(cursor->source+start, cursor->position-start), out, outSize, quoted);
+}
+
+static inline OPSTATUS PARSING_INS(YAMLFlowValue)(PARSING_INS(Cursor) *cursor, size_t depth,
+PARSING_TYPE(TYAMLValue) **out) {
+  PARSING_TYPE(TYAMLValue) *value;
+  char open = 0;
+  OPSTATUS status;
+  if (depth >= cursor->limits.maxDepth) return PARSING_INS(Fail)(cursor, PARSING_CONST(DIAGNOSTIC_DEPTH), STATUS_CONST(OUT_OF_RANGE));
+  PARSING_INS(YAMLFlowSpace)(cursor);
+  if (cursor->position < cursor->size && strchr("[{", cursor->source[cursor->position])) open = cursor->source[cursor->position++];
+  status = PARSING_INS(YAMLNew)(cursor, open == '[' ? PARSING_CONST(YAML_SEQUENCE) : (open == '{' ? PARSING_CONST(YAML_MAPPING) : PARSING_CONST(YAML_SCALAR)), &value);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  if (!open) {
+    status = PARSING_INS(YAMLFlowText)(cursor, false, &value->text, &value->textSize, &value->quoted);
+    if (status == STATUS_CONST(SUCCESS) && !value->textSize && !value->quoted) {
+      free(value->text);
+      value->text = NULL;
+      value->textSize = 4;
+      status = PARSING_INS(Copy)(PARSING_INS(Slice)("null", 4), &value->text);
+    }
+  } else {
+    char close = open == '[' ? ']' : '}';
+    PARSING_INS(YAMLFlowSpace)(cursor);
+    if (cursor->position < cursor->size && cursor->source[cursor->position] == close) ++cursor->position;
+    else while (status == STATUS_CONST(SUCCESS)) {
+      char *key = NULL;
+      size_t keySize = 0;
+      bool quoted = false;
+      PARSING_TYPE(TYAMLValue) *child = NULL, *existing;
+      if (open == '{') {
+        status = PARSING_INS(YAMLFlowText)(cursor, true, &key, &keySize, &quoted);
+        PARSING_INS(YAMLFlowSpace)(cursor);
+        if (status == STATUS_CONST(SUCCESS) && !keySize) status = STATUS_CONST(NOT_SUPPORTED);
+        if (status == STATUS_CONST(SUCCESS) && (cursor->position == cursor->size || cursor->source[cursor->position++] != ':')) status = STATUS_CONST(INVALID_SEQUENCE);
+        for (existing = value->first; status == STATUS_CONST(SUCCESS) && existing; existing = existing->next)
+          if (PARSING_INS(Equal)(PARSING_INS(Slice)(existing->key, existing->keySize), PARSING_INS(Slice)(key, keySize))) status = STATUS_CONST(ALREADY_EXISTS);
+      } else if (cursor->position == cursor->size || cursor->source[cursor->position] == ',') status = STATUS_CONST(INVALID_SEQUENCE);
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(YAMLFlowValue)(cursor, depth+1, &child);
+      if (status != STATUS_CONST(SUCCESS)) { free(key); break; }
+      child->key = key;
+      child->keySize = keySize;
+      if (value->last) value->last->next = child;
+      else value->first = child;
+      value->last = child;
+      ++value->count;
+      PARSING_INS(YAMLFlowSpace)(cursor);
+      if (cursor->position == cursor->size) { status = STATUS_CONST(INCOMPLETE_SEQUENCE); break; }
+      if (cursor->source[cursor->position] == close) { ++cursor->position; break; }
+      if (cursor->source[cursor->position++] != ',') { status = STATUS_CONST(INVALID_SEQUENCE); break; }
+      PARSING_INS(YAMLFlowSpace)(cursor);
+      if (cursor->position < cursor->size && cursor->source[cursor->position] == close) { ++cursor->position; break; }
+    }
+  }
+  if (status != STATUS_CONST(SUCCESS)) { PARSING_INS(YAMLFreeValue)(value); return status; }
+  *out = value;
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline OPSTATUS PARSING_INS(YAMLInline)(PARSING_INS(Cursor) *cursor, PARSING_TYPE(TSlice) text,
+size_t depth, PARSING_TYPE(TYAMLValue) **out) {
+  PARSING_INS(Cursor) flow = *cursor;
+  PARSING_TYPE(TDiagnostic) diagnostic = {0};
+  PARSING_TYPE(TYAMLValue) *value = NULL;
+  OPSTATUS status;
+  flow.source = text.data;
+  flow.size = text.size;
+  flow.position = 0;
+  flow.diagnostic = &diagnostic;
+  status = PARSING_INS(YAMLFlowValue)(&flow, depth, &value);
+  PARSING_INS(YAMLFlowSpace)(&flow);
+  if (status == STATUS_CONST(SUCCESS) && flow.position != flow.size) status = STATUS_CONST(INVALID_SEQUENCE);
+  cursor->nodes = flow.nodes;
+  if (status != STATUS_CONST(SUCCESS)) {
+    PARSING_INS(YAMLFreeValue)(value);
+    if (status == STATUS_CONST(OUT_OF_MEMORY)) return status;
+    if (diagnostic.code != PARSING_CONST(DIAGNOSTIC_NONE)) return PARSING_INS(Fail)(cursor, diagnostic.code, status);
+    return PARSING_INS(YAMLError)(cursor, status);
+  }
+  *out = value;
+  return STATUS_CONST(SUCCESS);
+}
+
 static inline bool PARSING_INS(YAMLSequence)(PARSING_TYPE(TSlice) line) {
   return line.size && line.data[0] == '-' && (line.size == 1 || PARSING_INS(Space)(line.data[1]));
 }
@@ -181,6 +329,11 @@ PARSING_TYPE(TYAMLValue) **out) {
   status = PARSING_INS(YAMLLine)(&look, &line, &nextIndent, &end);
   if (status != STATUS_CONST(SUCCESS)) return status;
   if (end) return PARSING_INS(YAMLError)(cursor, STATUS_CONST(INCOMPLETE_SEQUENCE));
+  if (line.data[0] == '[' || line.data[0] == '{') {
+    status = PARSING_INS(YAMLInline)(cursor, line, depth, out);
+    if (status == STATUS_CONST(SUCCESS)) { look.nodes = cursor->nodes; *cursor = look; }
+    return status;
+  }
   status = PARSING_INS(YAMLNew)(cursor, PARSING_INS(YAMLSequence)(line) ? PARSING_CONST(YAML_SEQUENCE) :
   (PARSING_INS(YAMLColon)(line) != SIZE_MAX ? PARSING_CONST(YAML_MAPPING) : PARSING_CONST(YAML_SCALAR)), &value);
   if (status != STATUS_CONST(SUCCESS)) return status;
@@ -250,11 +403,11 @@ PARSING_TYPE(TYAMLValue) **out) {
         }
       }
     } else {
-      PARSING_TYPE(YAMLKind) kind = PARSING_INS(Equal)(content, PARSING_INS(Slice)("{}", 2)) ? PARSING_CONST(YAML_MAPPING) :
-      (PARSING_INS(Equal)(content, PARSING_INS(Slice)("[]", 2)) ? PARSING_CONST(YAML_SEQUENCE) : PARSING_CONST(YAML_SCALAR));
-      if (depth + 1 >= cursor->limits.maxDepth) status = PARSING_INS(Fail)(cursor, PARSING_CONST(DIAGNOSTIC_DEPTH), STATUS_CONST(OUT_OF_RANGE));
-      else status = PARSING_INS(YAMLNew)(cursor, kind, &child);
-      if (status == STATUS_CONST(SUCCESS) && kind == PARSING_CONST(YAML_SCALAR)) status = PARSING_INS(YAMLText)(cursor, content, &child->text, &child->textSize, &child->quoted);
+      if (content.data[0] == '[' || content.data[0] == '{') status = PARSING_INS(YAMLInline)(cursor, content, depth + 1, &child);
+      else {
+        status = PARSING_INS(YAMLNew)(cursor, PARSING_CONST(YAML_SCALAR), &child);
+        if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(YAMLText)(cursor, content, &child->text, &child->textSize, &child->quoted);
+      }
     }
     if (status != STATUS_CONST(SUCCESS)) {
       free(key);

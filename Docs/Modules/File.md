@@ -44,12 +44,15 @@ Required output pointers must be non-NULL. Outputs change only on SUCCESS, with 
 | --- | --- |
 | `FILE_CONST(READ)` | Permit reads |
 | `FILE_CONST(WRITE)` | Permit writes |
-| `FILE_CONST(CREATE)` | Create if missing; preserve existing content |
-| `FILE_CONST(TRUNCATE)` | Clear existing content; requires WRITE |
+| `FILE_CONST(OPEN_CREATE)` | Create if missing; preserve existing content |
+| `FILE_CONST(OPEN_TRUNCATE)` | Clear existing content; requires WRITE |
 | `FILE_CONST(APPEND)` | Write at the end; requires WRITE |
-| `FILE_CONST(EXCLUSIVE)` | Fail if the destination exists; requires CREATE |
+| `FILE_CONST(EXCLUSIVE)` | Fail if the destination exists; requires OPEN_CREATE |
 
-At least READ or WRITE is required. Unknown flags and APPEND combined with TRUNCATE are rejected.
+
+`OPEN_CREATE` and `OPEN_TRUNCATE` replace the original `CREATE`/`TRUNCATE` flag names to avoid Windows SDK macro collisions. Their bit values and behavior are unchanged.
+
+At least READ or WRITE is required. Unknown flags and APPEND combined with OPEN_TRUNCATE are rejected.
 
 Seek origins are `FILE_CONST(SEEK_BEGIN)`, `FILE_CONST(SEEK_CURRENT)` and `FILE_CONST(SEEK_END)`.
 

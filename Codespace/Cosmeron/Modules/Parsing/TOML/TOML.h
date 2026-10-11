@@ -7,7 +7,7 @@ typedef enum PARSING_TYPE(TOMLKind) {
 } PARSING_TYPE(TOMLKind);
 typedef struct PARSING_TYPE(TTOMLValue) {
   PARSING_TYPE(TOMLKind) kind; char *key, *text; size_t keySize, textSize, count;
-  bool declared, sealed;
+  bool declared, sealed, tableArray;
   struct PARSING_TYPE(TTOMLValue) *first, *last, *next;
 } PARSING_TYPE(TTOMLValue);
 typedef struct PARSING_TYPE(TTOMLDocument) { PARSING_TYPE(TTOMLValue) *root; } PARSING_TYPE(TTOMLDocument);

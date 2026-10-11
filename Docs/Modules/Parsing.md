@@ -20,7 +20,7 @@ The **Parsing** module reads, queries, edits and serializes structured text. It 
 | XML | UTF-8 XML 1.0 profile without DTD; reader and ordered document |
 | YAML | Single-document block profile with mappings, sequences and text scalars |
 
-**TOML, YAML and XML are documented profiles, not claims of complete standards conformance.** Unsupported features are rejected rather than skipped. Incremental chunk input, custom arenas, full YAML flow syntax/aliases, complete TOML and exact source-format preservation remain future extensions. There is no automatic cross-format conversion in this release.
+**TOML, YAML and XML are documented profiles, not claims of complete standards conformance.** Unsupported features are rejected rather than skipped. Incremental chunk input, custom arenas, multiline YAML flow syntax/aliases, TOML date/time values and exact source-format preservation remain future extensions. There is no automatic cross-format conversion in this release.
 
 ## Dependencies and namespaces
 
@@ -94,9 +94,9 @@ Delimiter may be any non-NUL ASCII character except quote, CR or LF. Use comma f
 
 ## TOML configuration profile
 
-Supported: bare/quoted keys, dotted assignment keys, explicit/dotted tables, single-line basic/literal strings, decimal/hex/octal/binary integers, underscores between digits, decimal floats, booleans, arrays (including multiline arrays/trailing commas), nested arrays and inline tables with simple keys. Integers are bounded to signed 64-bit. Scalar spelling is retained; TOML_F64 converts finite decimal floats. `inf` and `nan` are retained as float literals, with numeric conversion returning NOT_SUPPORTED.
+Supported: bare/quoted keys, dotted assignment keys, explicit/dotted tables, single-line and multiline basic/literal strings, decimal/hex/octal/binary integers, underscores between digits, decimal floats, booleans, arrays (including multiline arrays/trailing commas), nested arrays, arrays of tables and inline tables with dotted keys (including TOML 1.1 multiline/trailing commas). Integers are bounded to signed 64-bit. Scalar spelling is retained; TOML_F64 converts finite decimal floats. `inf` and `nan` are retained as float literals, with numeric conversion returning NOT_SUPPORTED.
 
-Rejected extensions include datetime values, multiline strings, arrays of tables, dotted keys inside inline tables, multiline inline tables and additional TOML escapes (`\U`, `\e`, `\x`, escaped slash). Literal tab inside a basic string is outside this initial decoder profile. This is a subset of TOML syntax, not a complete TOML 1.0/1.1 parser.
+Basic strings support literal tabs and all TOML 1.1 escapes (`\u`, `\U`, `\x`, `\e` included). Multiline strings normalize CRLF to LF, trim the initial newline and implement line-ending backslash folding. Quoted keys remain single-line. Invalid Unicode scalar escapes and escaped slash are syntax errors. Datetime values remain unsupported; this is not a complete TOML 1.0/1.1 parser.
 
 TOML_Get navigates one literal key at a time, without interpreting dots inside its argument. TOML_At indexes arrays. TOML_Set/Remove edit a root-table member; Set takes one TOML value literal. Serialization emits root assignments and nested inline tables, preserving the data rather than its original section layout.
 
@@ -110,11 +110,11 @@ XML_Next exposes raw borrowed events. XML_TextWrite decodes raw event text. XML_
 
 ## YAML block profile
 
-Supported: one optional leading `---`, block mappings with textual keys, block sequences, nested indentation, single-line plain/single-quoted/double-quoted scalars, doubled apostrophes, JSON-compatible Unicode escapes, comments and empty `{}`/`[]` collections. Indentation uses spaces. Duplicate textual keys are rejected.
+Supported: one optional leading `---`, block mappings with textual keys, block sequences, nested indentation, single-line plain/single-quoted/double-quoted scalars, doubled apostrophes, all single-line YAML double-quoted escapes, comments and single-line flow `{}`/`[]` collections (nested values, textual keys and trailing commas). Indentation uses spaces. Duplicate textual keys are rejected.
 
 This representation has **no implicit scalar schema**: `true`, `null`, dates and numbers retain their spelling as unquoted scalars. Use Common conversions explicitly when your application requires them. Empty mapping/sequence values become the plain scalar `null`. Quoted status is retained so serialization preserves string intent. YAML_SetScalar writes a quoted textual scalar.
 
-Unsupported: nonempty flow collections, inline mapping entries after a sequence dash, multiline quoted/block scalars, complex/empty keys, tags, anchors, aliases, directives, end markers, multi-document streams and full YAML escape syntax. These features return an error rather than being silently dropped. YAML_Write emits normalized block indentation and quoted keys.
+Unsupported: multiline flow collections, implicit flow mapping entries/pairs, inline mapping entries after a sequence dash, multiline quoted/block scalars, complex/empty keys, tags, anchors, aliases, directives, end markers and multi-document streams. These features return an error rather than being silently dropped. YAML_Write emits normalized block indentation and quoted keys.
 
 # File integration
 

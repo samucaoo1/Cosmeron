@@ -37,7 +37,7 @@
 
 typedef enum FILE_TYPE(OpenFlags) {
   FILE_CONST(READ) = 1u << 0, FILE_CONST(WRITE) = 1u << 1,
-  FILE_CONST(CREATE) = 1u << 2, FILE_CONST(TRUNCATE) = 1u << 3,
+  FILE_CONST(OPEN_CREATE) = 1u << 2, FILE_CONST(OPEN_TRUNCATE) = 1u << 3,
   FILE_CONST(APPEND) = 1u << 4, FILE_CONST(EXCLUSIVE) = 1u << 5
 } FILE_TYPE(OpenFlags);
 typedef enum FILE_TYPE(SeekOrigin) {

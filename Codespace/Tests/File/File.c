@@ -48,9 +48,9 @@ int main(void) {
   assert(File_Truncate(&file, UINT64_MAX) == STATUS_CONST(OUT_OF_RANGE));
   OK(File_Close(&file)); OK(File_Close(&file));
   assert(file.native == 0);
-  assert(File_Open(&file, path, FILE_CONST(WRITE) | FILE_CONST(CREATE) | FILE_CONST(EXCLUSIVE)) == STATUS_CONST(ALREADY_EXISTS));
-  assert(File_Open(&file, path, FILE_CONST(READ) | FILE_CONST(TRUNCATE)) == STATUS_CONST(INVALID_ARGUMENT));
-  OK(File_Open(&file, path, FILE_CONST(WRITE) | FILE_CONST(CREATE)));
+  assert(File_Open(&file, path, FILE_CONST(WRITE) | FILE_CONST(OPEN_CREATE) | FILE_CONST(EXCLUSIVE)) == STATUS_CONST(ALREADY_EXISTS));
+  assert(File_Open(&file, path, FILE_CONST(READ) | FILE_CONST(OPEN_TRUNCATE)) == STATUS_CONST(INVALID_ARGUMENT));
+  OK(File_Open(&file, path, FILE_CONST(WRITE) | FILE_CONST(OPEN_CREATE)));
   OK(File_Size(&file, &large)); assert(large == 3); OK(File_Close(&file));
   OK(File_Info(path, true, &info)); assert(info.kind == FILE_CONST(KIND_REGULAR) && info.size == 3);
   assert(info.available & FILE_CONST(INFO_MODIFIED));

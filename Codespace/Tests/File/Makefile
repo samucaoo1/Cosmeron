@@ -1,7 +1,7 @@
 CC ?= gcc
 CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -Werror
 BUILD ?= build
-SOURCES := IncludeAll Path File Namespace
+SOURCES := IncludeAll Path File Namespace WindowsMacros
 .PHONY: all run clean
 all: run
 run: $(addprefix $(BUILD)/,$(SOURCES)) $(BUILD)/MultiTU

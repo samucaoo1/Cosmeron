@@ -96,3 +96,24 @@ static inline int PARSING_INS(Hex)(char c) {
   if (c >= 'A' && c <= 'F') return c - 'A' + 10;
   return -1;
 }
+
+/* TOML/YAML escapes encode Unicode scalar values, not JSON surrogate pairs. */
+static inline OPSTATUS PARSING_INS(UnicodeEscape)(PARSING_INS(Cursor) *cursor,
+size_t digits, PARSING_INS(Buffer) *buffer) {
+  uint32_t codepoint = 0;
+  size_t i, units;
+  unsigned char encoded[4];
+  OPSTATUS status;
+  if (cursor->size - cursor->position < digits) return STATUS_CONST(INCOMPLETE_SEQUENCE);
+  for (i = 0; i < digits; ++i) {
+    int digit = PARSING_INS(Hex)(cursor->source[cursor->position]);
+    if (digit < 0) return STATUS_CONST(INVALID_SEQUENCE);
+    codepoint = codepoint * 16u + (unsigned)digit;
+    ++cursor->position;
+  }
+  if (codepoint > 0x10ffffu || (codepoint >= 0xd800u && codepoint <= 0xdfffu))
+    return STATUS_CONST(INVALID_SEQUENCE);
+  status = TEXT_UTF8_FUNC(Encode)(codepoint, encoded, sizeof(encoded), &units);
+  return status == STATUS_CONST(SUCCESS) ?
+    PARSING_INS(Append)(buffer, (const char *)encoded, units) : status;
+}

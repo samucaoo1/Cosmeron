@@ -27,8 +27,8 @@ int main(void) {
   const char *json="{\"x\":[1,2,\"a\\u0000b\"],\"y\":{\"z\":true}}";
   const char *ini="global=yes\n[a]\nx=1\ny=2";
   const char *csv="a,b,c\n1,\"a\"\"b\",3";
-  const char *toml="x=[1,2,3]\n[a]\nx={a=1,b=2}";
-  const char *yaml="x:\n  - one\n  - two\na:\n  b: c";
+  const char *toml="x=[1,2,3]\ntext=\"\"\"\nhello \\\n world\\U0001F600\"\"\"\n[[items]]\nx={a.b=1,a.c=2,}\n[[items]]\nx=2";
+  const char *yaml="x: [one, {a: [\"\\U0001F600\\0\\L\", two]},]\na:\n  b: c";
   const char *xml="<a x='a&amp;b'><b>text</b><![CDATA[other]]></a>";
   for(budget=0;budget<200;++budget) {
     PARSING_TYPE(TJSONDocument) j={0}; PARSING_TYPE(TINIDocument) i={0}; PARSING_TYPE(TCSVDocument) c={0};
