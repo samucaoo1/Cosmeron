@@ -104,10 +104,12 @@ their real zero-extra-linking API. They have different threading semantics
 from the full desktop Miniaudio backend; they are **not** drop-in replacements
 for background device callbacks or a native thread pool.
 
-The full backend can embed `#pragma comment(lib, "pthread")` and `"m"`
-on BSD **Clang + ELF-autolinking linkers**. This can remove manual
-`-pthread`/`-lm` command-line arguments. The compiler may still record
-`libpthread`/`libthr`/`libm` as dynamically linked dependencies. It is
+The full backend can embed `#pragma comment(lib, "pthread")`
+on BSD **Clang + ELF-autolinking linkers**. The system math adapter
+resolves libm dynamically rather than adding a libm link dependency.
+This can remove manual `-pthread`/`-lm` command-line arguments. The
+compiler may still record `libpthread`/`libthr` as a dynamically linked
+dependency. It is
 not a claim of dependency-free linkage, and GCC or GNU ld may still need
 normal linker options. Define `COSMERON_NO_IMPLICIT_LINK` to suppress the
 pragma. No pthread calls are reimplemented via unsafe `dlopen` shims; on
