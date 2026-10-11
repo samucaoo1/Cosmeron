@@ -1,7 +1,7 @@
 #pragma once
 /* Radix by arithmetic bit extraction; no host-endianness dependency. Signed
  * values use the sign-bit flip, including INT_MIN, without signed overflow. */
-#define SORT_RADIX_IMPLEMENT(TYPE, SUFFIX, UNSIGNED, BITS)                    \
+#define SORT_RADIX_IMPLEMENT(TYPE, SUFFIX, UNSIGNED, BITS, SIGNED)                    \
   SORT_RADIX_BUFFER_PROTOTYPE(TYPE, SUFFIX) {                                 \
     if (order != SORT_CONST(ASCENDING) && order != SORT_CONST(DESCENDING))    \
       return STATUS_CONST(INVALID_ARGUMENT);                                  \
@@ -16,7 +16,7 @@
       size_t buckets[256] = {0};                                              \
       for (size_t i = 0; i < count; ++i) {                                     \
         UNSIGNED key = (UNSIGNED)source[i];                                   \
-        if ((TYPE)-1 < (TYPE)0) key ^= (UNSIGNED)1 << (BITS - 1u);             \
+        if (SIGNED) key ^= (UNSIGNED)1 << (BITS - 1u);             \
         if (order == SORT_CONST(DESCENDING)) key = ~key;                      \
         ++buckets[(unsigned)((key >> shift) & (UNSIGNED)255)];                 \
       }                                                                       \
@@ -27,7 +27,7 @@
       }                                                                       \
       for (size_t i = 0; i < count; ++i) {                                     \
         UNSIGNED key = (UNSIGNED)source[i];                                   \
-        if ((TYPE)-1 < (TYPE)0) key ^= (UNSIGNED)1 << (BITS - 1u);             \
+        if (SIGNED) key ^= (UNSIGNED)1 << (BITS - 1u);             \
         if (order == SORT_CONST(DESCENDING)) key = ~key;                      \
         target[buckets[(unsigned)((key >> shift) & (UNSIGNED)255)]++] =        \
             source[i];                                                        \
