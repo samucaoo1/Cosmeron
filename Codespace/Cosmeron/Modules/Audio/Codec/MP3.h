@@ -61,6 +61,15 @@ AUDIO_CODEC_MP3_PARSE_SCALEFACTORS_PROTOTYPE;
 AUDIO_CODEC_MP3_HUFFMAN_PAIR_PROTOTYPE;
 AUDIO_CODEC_MP3_HUFFMAN_COUNT1_PROTOTYPE;
 
+#define AUDIO_CODEC_MP3_REQUANTIZE_PROTOTYPE                                 \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_Requantize)(                    \
+      const int32_t quantized[576],                                           \
+      const AUDIO_CODEC_TYPE(TMP3Granule) *part,                              \
+      const AUDIO_CODEC_TYPE(TMP3Scalefactors) *scales,                        \
+      uint32_t sampleRate, float outSpectral[576])
+
+AUDIO_CODEC_MP3_REQUANTIZE_PROTOTYPE;
+
 #define AUDIO_CODEC_MP3_HUFFMAN_GRANULE_PROTOTYPE                              \
   static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_HuffmanGranule)(                \
       const unsigned char *mainData, size_t mainDataBytes,                    \
@@ -207,3 +216,4 @@ AUDIO_CODEC_MP3_FIND_FRAME_PROTOTYPE {
 #include "Impl/MP3SideInfo.inc"
 #include "Impl/MP3Scalefactors.inc"
 #include "Impl/MP3Huffman.inc"
+#include "Impl/MP3Requant.inc"
