@@ -1,4 +1,4 @@
-name: CI
+name: 01 · Continuous Integration
 
 on:
   push:
@@ -19,7 +19,7 @@ permissions:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   posix:
@@ -115,6 +115,48 @@ jobs:
       - name: Network
         if: ${{ hashFiles('Codespace/Tests/**') != '' }}
         run: make -C Codespace/Tests/Network clean strict CC=${{ matrix.cc }}
+
+      - name: Sort catalog (strict C11)
+        run: |
+          for src in Codespace/Tests/Sort.c Codespace/Tests/SortCatalog.c; do
+            "${{ matrix.cc }}" -std=c11 -Wall -Wextra -Wpedantic -Werror -I Codespace "$src" -o sort-test
+            ./sort-test
+          done
+
+
+  freebsd:
+    name: FreeBSD / Clang / C11
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run portable, native and Input suites in FreeBSD VM
+        id: tests
+        uses: vmactions/freebsd-vm@c46abacb49f09938ca4e1702d15d836285d694cc
+        with:
+          usesh: true
+          run: |
+            set -eu
+            sh .github/scripts/test-portable-core.sh
+            sh .github/scripts/test-bsd-native.sh
+            sh .github/scripts/test-input-posix.sh
+      - name: Report FreeBSD coverage
+        if: ${{ always() }}
+        shell: bash
+        env:
+          TEST_RESULT: ${{ steps.tests.outcome }}
+        run: |
+          {
+            echo '### FreeBSD / C11'
+            echo ''
+            echo '| Suite | Result |'
+            echo '|---|---|'
+            echo "| Portable + native + Input | $TEST_RESULT |"
+            echo ''
+            echo 'Tests run on a genuine FreeBSD VM through vmactions, not a Linux container.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
 
   mingw:
     name: Windows / MinGW
@@ -222,6 +264,15 @@ jobs:
           make -C Codespace/Tests/Network clean windows WINDOWS_CC=gcc
           for t in Codespace/Tests/Network/build-windows/*.exe; do "$t"; done
 
+      - name: Sort catalog (strict C11)
+        shell: bash
+        run: |
+          for src in Codespace/Tests/Sort.c Codespace/Tests/SortCatalog.c; do
+            gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -I Codespace "$src" -o sort-test.exe
+            ./sort-test.exe
+          done
+
+
   msvc:
     name: Windows / MSVC
     runs-on: windows-latest
@@ -244,6 +295,17 @@ jobs:
         if: ${{ hashFiles('Codespace/Tests/**') != '' }}
         shell: pwsh
         run: .github/scripts/test-msvc.ps1
+
+      - name: Sort catalog (MSVC)
+        shell: pwsh
+        run: |
+          foreach ($src in @("Codespace/Tests/Sort.c", "Codespace/Tests/SortCatalog.c")) {
+            cl /nologo /W4 /WX /TC /I Codespace $src /Fe:sort-test.exe
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            .\sort-test.exe
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
 
   standalone-headers:
     name: Standalone headers / ${{ matrix.cc }}
@@ -397,3 +459,24 @@ jobs:
 
       - name: Concurrency under ThreadSanitizer
         run: make -C Codespace/Tests/Concurrency clean run CC=gcc BUILD=build-tsan CFLAGS="$TSAN_FLAGS"
+
+gate:
+    name: CI / Gate
+    if: ${{ always() }}
+    needs:
+      - posix
+      - freebsd
+      - mingw
+      - msvc
+      - standalone-headers
+      - entropy-tests
+      - sanitizers
+      - linux-32bit
+      - thread-sanitizer
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary and required checks
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          REPORT_TITLE: Continuous Integration
+        run: python3 .github/scripts/report-results.py

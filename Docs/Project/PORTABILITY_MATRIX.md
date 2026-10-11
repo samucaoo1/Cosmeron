@@ -10,15 +10,15 @@ a workflow existing does not mean it has passed.
 
 | Target | Environment | Workflow | Scope |
 | --- | --- | --- | --- |
-| Linux GCC/Clang | Native GitHub runners | [CI](../../.github/workflows/ci.yml) | Existing module integration suites |
-| Windows MinGW/MSVC | Native GitHub runners | [CI](../../.github/workflows/ci.yml) | Existing module integration suites |
-| macOS Clang | Native GitHub runner | [CI](../../.github/workflows/ci.yml) | Existing module integration suites |
-| FreeBSD / OpenBSD / NetBSD / DragonFly BSD | Real guest VMs through vmactions | [Portable BSD C11](../../.github/workflows/portable-bsd.yml) | Core, Bit, Struct, Type, Math, Random, Chronometry, Container, Text, Sort |
-| BSD Input | Real guest VMs through vmactions | [Input BSD](../../.github/workflows/input-bsd.yml) | Input, HID and controller transport |
-| Fedora / Arch | Native Linux userspace containers | [Linux distributions and Nix](../../.github/workflows/linux-distros.yml) | Same ten portable suites |
-| Void glibc / Void musl | Native Linux userspace containers | [Linux distributions and Nix](../../.github/workflows/linux-distros.yml) | Same ten portable suites; libc coverage |
-| Nix toolchain | Nix-provided compiler on Ubuntu | [Linux distributions and Nix](../../.github/workflows/linux-distros.yml) | Same ten portable suites; **not** native NixOS |
-| ChromeOS Crostini proxy | Debian container on Ubuntu | [Linux distributions and Nix](../../.github/workflows/linux-distros.yml) | Same ten suites; **not** a real Chromebook |
+| Linux GCC/Clang | Native GitHub runners | [CI](../../.github/workflows/01-ci.yml) | Existing module integration suites |
+| Windows MinGW/MSVC | Native GitHub runners | [CI](../../.github/workflows/01-ci.yml) | Existing module integration suites |
+| macOS Clang | Native GitHub runner | [CI](../../.github/workflows/01-ci.yml) | Existing module integration suites |
+| FreeBSD | Native FreeBSD guest VM via vmactions | [Continuous Integration](../../.github/workflows/01-ci.yml) | Portable C11, OS-native smoke and Input suites |
+| OpenBSD / NetBSD / DragonFly BSD | Native guest VMs via vmactions | [Platform Compatibility](../../.github/workflows/02-platforms.yml) | Portable C11, OS-native smoke and Input suites |
+| Fedora / Arch | Native Linux userspace containers | [Platform Compatibility](../../.github/workflows/02-platforms.yml) | Same ten portable suites |
+| Void glibc / Void musl | Native Linux userspace containers | [Platform Compatibility](../../.github/workflows/02-platforms.yml) | Same ten portable suites; libc coverage |
+| Nix toolchain | Nix-provided compiler on Ubuntu | [Platform Compatibility](../../.github/workflows/02-platforms.yml) | Same ten portable suites; **not** native NixOS |
+| ChromeOS Crostini proxy | Debian container on Ubuntu | [Platform Compatibility](../../.github/workflows/02-platforms.yml) | Same ten suites; **not** a real Chromebook |
 
 The portable smoke suite is [test-portable-core.sh](../../.github/scripts/test-portable-core.sh).
 It compiles and executes the repository's existing test sources, with
