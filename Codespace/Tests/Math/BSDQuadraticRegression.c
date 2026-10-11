@@ -16,7 +16,8 @@ int main(void) {
     return 1;
   if (solution != MATH_CONST(SOLUTION_MULTIPLE))
     return 2;
-  if (first != I || second != -I)
+  if (creal(first) != 0.0 || cimag(first) != 1.0 ||
+      creal(second) != 0.0 || cimag(second) != -1.0)
     return 3;
 
   if (Math_Equation_QuadraticComplex_F64(1.0, -3.0, 2.0,
