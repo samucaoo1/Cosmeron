@@ -17,10 +17,13 @@ static inline CMPOUT SORT_INS(CompareAdapter)(const void *left,
 
 static inline OPSTATUS SORT_INS(Validate)(const void *data, size_t count,
                                           size_t size, bool hasComparator) {
-  if (!size || !hasComparator || (count && !data))
+  if (!size || !hasComparator)
     return STATUS_CONST(INVALID_ARGUMENT);
+  /* Reject impossible byte extents before checking a null data pointer. */
   if (count > SIZE_MAX / size)
     return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  if (count && !data)
+    return STATUS_CONST(INVALID_ARGUMENT);
   return STATUS_CONST(SUCCESS);
 }
 
