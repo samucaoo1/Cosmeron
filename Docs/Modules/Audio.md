@@ -1856,7 +1856,7 @@ Returns `STATUS_CONST(SUCCESS)` or a failure `OPSTATUS` (usually `INVALID_ARGUME
 
 ### Remarks
 
-Decoder must be zero-initialized. BUSY if already open. RIFF/WAV uses a native C11 streaming reader (including WAVE_FORMAT_EXTENSIBLE PCM/float32). In-memory FLAC now decodes using an independent C11 frame/subframe engine; MP3 and FLAC file/callback paths still use the embedded backend.
+Decoder must be zero-initialized. BUSY if already open. RIFF/WAV uses a native C11 streaming reader (including WAVE_FORMAT_EXTENSIBLE PCM/float32). FLAC memory, file and callback decoders now use an independent C11 frame/subframe engine; MP3 remains on the embedded backend.
 
 ---
 
@@ -3345,7 +3345,7 @@ cc -std=c11 Codespace/Examples/Audio/BeepMusic.c -o beep-music
 ./beep-music --play
 ```
 
-The desktop adapter still embeds the miniaudio-derived implementation for MP3, FLAC file/callback playback and device backends. WAV uses the Cosmeron-native bounded reader for OpenMemory, OpenFile and OpenReader, or the independent WAV_DecodeMemory API. FLAC OpenMemory now parses STREAMINFO, frame headers, CRC8/CRC16, Rice residuals, fixed/LPC prediction and stereo decorrelation using original C11 code. The complete FLAC input bytes remain borrowed until Close, and seeking rescans/decompresses frames (not an indexed constant-time seek). An additional header, `Audio/Codec/FLAC.h`, exposes
+The desktop adapter still embeds the miniaudio-derived implementation for MP3 and device backends; WAV and FLAC decoding use independent C11 implementations. WAV uses the Cosmeron-native bounded reader for OpenMemory, OpenFile and OpenReader, or the independent WAV_DecodeMemory API. FLAC OpenMemory now parses STREAMINFO, frame headers, CRC8/CRC16, Rice residuals, fixed/LPC prediction and stereo decorrelation using original C11 code. For OpenMemory, the complete FLAC input bytes remain borrowed until Close. OpenFile owns its FILE handle; OpenReader borrows the caller's callbacks and userData. File/Reader decode a bounded compressed-frame window (normally at most 8 MiB, or the smaller advertised maximum frame size), without copying the full file into RAM. Seeking rescans/decompresses frames (not an indexed constant-time seek). An additional header, `Audio/Codec/FLAC.h`, exposes
 `Audio_Codec_FLAC_DecodeMemory(data, size, outBuffer)` without the vendor
 codec. Its `outBuffer` is an owned `Audio_PCM_TBuffer`, released with
 `Audio_PCM_Destroy`. This convenience function validates the whole stream
