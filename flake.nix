@@ -52,3 +52,4 @@ EOF
         packages = [ pkgs.gcc pkgs.clang pkgs.cmake pkgs.gnumake ];
       };
     };
+}
