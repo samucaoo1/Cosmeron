@@ -136,6 +136,16 @@ AUDIO_CODEC_MP3_FREQUENCY_INVERT_PROTOTYPE;
 
 AUDIO_CODEC_MP3_INTENSITY_BAND_PROTOTYPE;
 
+#define AUDIO_CODEC_MP3_JOINT_STEREO_PROTOTYPE                                \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_JointStereo)(                   \
+      const AUDIO_CODEC_TYPE(TMP3FrameInfo) *header,                          \
+      const AUDIO_CODEC_TYPE(TMP3Granule) *rightPart,                         \
+      const AUDIO_CODEC_TYPE(TMP3Scalefactors) *rightScale,                   \
+      const float left[576], const float right[576],                           \
+      float outLeft[576], float outRight[576])
+
+AUDIO_CODEC_MP3_JOINT_STEREO_PROTOTYPE;
+
 #define AUDIO_CODEC_MP3_REORDER_SHORT_PROTOTYPE                            \
   static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_ReorderShort)(                  \
       const float input[576], const AUDIO_CODEC_TYPE(TMP3Granule) *part,     \
@@ -319,4 +329,5 @@ AUDIO_CODEC_MP3_FIND_FRAME_PROTOTYPE {
 #include "Impl/MP3IMDCT.inc"
 #include "Impl/MP3Synthesis.inc"
 #include "Impl/MP3Intensity.inc"
+#include "Impl/MP3JointStereo.inc"
 #include "Impl/MP3Gapless.inc"
