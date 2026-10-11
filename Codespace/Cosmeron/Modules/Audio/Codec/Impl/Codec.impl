@@ -4,9 +4,12 @@ typedef struct AUDIO_INS(Decoder) {
   cosmeron_audio_vendor_ma_decoder native;
   AUDIO_CODEC_TYPE(TReader) reader;
   AUDIO_INS(TWAVView) wav;
-  uint64_t wavCursor;
-  bool nativeWav;
+  uint64_t wavCursor, wavDataOffset;
+  FILE *ownedFile;
+  bool nativeWav, wavStreaming;
 } AUDIO_INS(Decoder);
+
+#include "WAVReader.inc"
 static cosmeron_audio_vendor_ma_result
 AUDIO_INS(DecoderRead)(cosmeron_audio_vendor_ma_decoder *decoder, void *buffer,
                        size_t capacity, size_t *outCount) {
@@ -54,6 +57,35 @@ AUDIO_CODEC_OPEN_FILE_PROTOTYPE {
     return STATUS_CONST(INVALID_ARGUMENT);
   if (decoder->internal != NULL)
     return STATUS_CONST(BUSY);
+  {
+    FILE *file = fopen(path, "rb");
+    if (file) {
+      AUDIO_CODEC_TYPE(TReader) reader;
+      AUDIO_INS(TWAVView) wav = {0};
+      uint64_t dataOffset = 0;
+      OPSTATUS status;
+      reader.userData = file;
+      reader.read = AUDIO_INS(WAV_FileRead);
+      reader.seek = AUDIO_INS(WAV_FileSeek);
+      status = AUDIO_INS(WAV_ParseReader)(&reader, &wav, &dataOffset);
+      if (status == STATUS_CONST(SUCCESS)) {
+        value = (AUDIO_INS(Decoder) *)calloc(1, sizeof(*value));
+        if (!value) { fclose(file); return STATUS_CONST(OUT_OF_MEMORY); }
+        value->reader = reader;
+        value->wav = wav;
+        value->wavDataOffset = dataOffset;
+        value->ownedFile = file;
+        value->nativeWav = true;
+        value->wavStreaming = true;
+        decoder->internal = value;
+        return STATUS_CONST(SUCCESS);
+      }
+      fclose(file);
+      if (status != STATUS_CONST(NOT_SUPPORTED) &&
+          status != STATUS_CONST(OUT_OF_RANGE))
+        return status;
+    }
+  }
   if (!AUDIO_INS(PrepareMath)())
     return STATUS_CONST(NOT_AVAILABLE);
   value = (AUDIO_INS(Decoder) *)calloc(1, sizeof(*value));
@@ -117,6 +149,26 @@ AUDIO_CODEC_OPEN_READER_PROTOTYPE {
     return STATUS_CONST(INVALID_ARGUMENT);
   if (decoder->internal != NULL)
     return STATUS_CONST(BUSY);
+  {
+    AUDIO_INS(TWAVView) wav = {0};
+    uint64_t offset = 0;
+    OPSTATUS status = AUDIO_INS(WAV_ParseReader)(reader, &wav, &offset);
+    if (status == STATUS_CONST(SUCCESS)) {
+      value = (AUDIO_INS(Decoder) *)calloc(1, sizeof(*value));
+      if (!value) return STATUS_CONST(OUT_OF_MEMORY);
+      value->reader = *reader;
+      value->wav = wav;
+      value->wavDataOffset = offset;
+      value->nativeWav = true;
+      value->wavStreaming = true;
+      decoder->internal = value;
+      return STATUS_CONST(SUCCESS);
+    }
+    if (status != STATUS_CONST(NOT_SUPPORTED))
+      return status;
+    status = reader->seek(reader->userData, 0, AUDIO_CODEC_CONST(SEEK_START));
+    if (status != STATUS_CONST(SUCCESS)) return status;
+  }
   if (!AUDIO_INS(PrepareMath)())
     return STATUS_CONST(NOT_AVAILABLE);
   value = (AUDIO_INS(Decoder) *)calloc(1, sizeof(*value));
@@ -171,9 +223,12 @@ AUDIO_CODEC_READ_FRAMES_PROTOTYPE {
   value = (AUDIO_INS(Decoder) *)decoder->internal;
   if (value->nativeWav) {
     size_t frames = 0;
-    OPSTATUS status = AUDIO_INS(WAV_ReadRange)(&value->wav,
-        value->wavCursor, outSamples, frameCapacity, &frames);
-    if (status == STATUS_CONST(SUCCESS)) value->wavCursor += frames;
+    OPSTATUS status = value->wavStreaming ?
+        AUDIO_INS(WAV_StreamFrames)(value, outSamples, frameCapacity, &frames) :
+        AUDIO_INS(WAV_ReadRange)(&value->wav, value->wavCursor,
+                                outSamples, frameCapacity, &frames);
+    if (status == STATUS_CONST(SUCCESS) && !value->wavStreaming)
+      value->wavCursor += frames;
     *outFrames = frames;
     return status;
   }
@@ -216,6 +271,7 @@ AUDIO_CODEC_CLOSE_PROTOTYPE {
     decoder->internal = NULL;
     if (!value->nativeWav)
       cosmeron_audio_vendor_ma_decoder_uninit(&value->native);
+    if (value->ownedFile) fclose(value->ownedFile);
     free(value);
   }
 }
