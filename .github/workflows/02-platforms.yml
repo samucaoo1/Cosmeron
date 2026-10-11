@@ -117,12 +117,14 @@ jobs:
           nix --extra-experimental-features 'nix-command flakes' \
             shell nixpkgs#gcc -c sh .github/scripts/test-portable-core.sh
 
-compatibility-summary:
+  compatibility-summary:
     name: Compatibility / Summary
     if: ${{ always() }}
     needs: [openbsd, netbsd, dragonflybsd, distributions, nix-toolchain]
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Summarize OS test results
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
