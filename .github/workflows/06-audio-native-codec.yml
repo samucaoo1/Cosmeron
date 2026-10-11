@@ -1,7 +1,7 @@
 name: "06 · Native Audio Codec"
 on:
   push:
-    branches: [audio-native-codecs, audio-flac-native, audio-module]
+    branches: [audio-native-codecs, audio-flac-native, audio-flac-frames, audio-module]
     paths:
       - "Codespace/Cosmeron/Modules/Audio/**"
       - "Codespace/Tests/Audio/**"
