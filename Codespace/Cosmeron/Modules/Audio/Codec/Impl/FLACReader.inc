@@ -119,3 +119,31 @@ static inline OPSTATUS AUDIO_INS(FLAC_StreamNextFrame)(
     }
   }
 }
+
+static inline OPSTATUS AUDIO_INS(FLAC_OpenReader)(
+    AUDIO_CODEC_TYPE(TDecoder) *handle,
+    const AUDIO_CODEC_TYPE(TReader) *reader,
+    const AUDIO_INS(TFLACStreamInfo) *metadata, FILE *ownedFile) {
+  AUDIO_INS(Decoder) *decoder;
+  size_t total;
+  if (!handle || !reader || !metadata || !metadata->channels)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (metadata->maximumBlockSize > SIZE_MAX / metadata->channels / sizeof(float))
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  total = metadata->maximumBlockSize * metadata->channels;
+  decoder = (AUDIO_INS(Decoder) *)calloc(1, sizeof(*decoder));
+  if (!decoder) return STATUS_CONST(OUT_OF_MEMORY);
+  decoder->flacBlock = (float *)malloc(total * sizeof(float));
+  if (!decoder->flacBlock) {
+    free(decoder);
+    return STATUS_CONST(OUT_OF_MEMORY);
+  }
+  decoder->reader = *reader;
+  decoder->ownedFile = ownedFile;
+  decoder->nativeFlac = true;
+  decoder->flacStreaming = true;
+  decoder->flac = *metadata;
+  decoder->flacOffset = metadata->frameOffset;
+  handle->internal = decoder;
+  return STATUS_CONST(SUCCESS);
+}
