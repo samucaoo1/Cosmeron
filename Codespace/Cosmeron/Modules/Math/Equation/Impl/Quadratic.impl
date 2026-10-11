@@ -84,12 +84,18 @@
       return STATUS_CONST(SUCCESS);                                            \
     }                                                                          \
     TYPE discriminant = EQUATION_TYPED_FUNC(QuadraticDiscriminant, SUFFIX)(a, b, c); \
-    COMPLEX_TYPE root = discriminant < (TYPE)0                                \
-                            ? __builtin_complex((TYPE)0, SQRT(-discriminant))     \
-                            : (COMPLEX_TYPE)SQRT(discriminant);                 \
-    COMPLEX_TYPE denominator = (TYPE)2 * a;                                    \
-    *outResult1 = (-b + root) / denominator;                                      \
-    *outResult2 = (-b - root) / denominator;                                      \
+    TYPE denominator = (TYPE)2 * a;                                           \
+    /* Avoid complex division: FreeBSD compiler-rt may require -lm there. */  \
+    if (discriminant < (TYPE)0) {                                              \
+      TYPE realPart = -b / denominator;                                        \
+      TYPE imaginaryPart = SQRT(-discriminant) / denominator;                  \
+      *outResult1 = __builtin_complex(realPart, imaginaryPart);               \
+      *outResult2 = __builtin_complex(realPart, -imaginaryPart);              \
+    } else {                                                                   \
+      TYPE root = SQRT(discriminant);                                          \
+      *outResult1 = __builtin_complex((-b + root) / denominator, (TYPE)0);     \
+      *outResult2 = __builtin_complex((-b - root) / denominator, (TYPE)0);     \
+    }                                      \
     *outSolution = discriminant == (TYPE)0 ? MATH_CONST(SOLUTION_ONE)            \
                                         : MATH_CONST(SOLUTION_MULTIPLE);       \
     return STATUS_CONST(SUCCESS);                                              \
