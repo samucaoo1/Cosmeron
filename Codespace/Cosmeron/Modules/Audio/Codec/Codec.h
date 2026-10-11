@@ -4,6 +4,7 @@
 #include "../Internal/Backend.inc"
 #include "../PCM/PCM.h"
 #include "WAV.h"
+#include "FLAC.h"
 #include <stdio.h>
 
 typedef struct AUDIO_CODEC_TYPE(TDecoder) {
