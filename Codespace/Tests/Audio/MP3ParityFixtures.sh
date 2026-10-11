@@ -23,5 +23,5 @@ ffmpeg -nostdin -hide_banner -loglevel error -y \
   -i 'aevalsrc=0.17*sin(2*PI*(181*t+240*t*t))+0.08*sin(2*PI*487*t)|0.16*sin(2*PI*(349*t+157*t*t))+0.07*sin(2*PI*863*t):s=44100:d=0.46' \
   -ac 2 -ar 44100 -c:a libmp3lame -joint_stereo 0 -b:a 192k "$dir/stereo.mp3"
 
-"$dir/mp3compare" "$dir/mono.mp3"
-"$dir/mp3compare" "$dir/stereo.mp3"
+COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/mono.mp3"
+COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/stereo.mp3"

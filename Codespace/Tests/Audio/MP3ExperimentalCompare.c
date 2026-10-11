@@ -106,14 +106,17 @@ int main(int argc, char **argv) {
    * rather than silently treating all MP3 encoders as identical. */
   if (hasXing && xing.hasGapless && xing.encodedFrames > 0 &&
       decoded >= xing.encodedFrames &&
-      decoded - xing.encodedFrames <= 2 &&
-      (uint64_t)xing.encoderDelay + xing.endPadding <=
-          (uint64_t)xing.encodedFrames * 1152) {
-    trimmedStart = (decoded - xing.encodedFrames) * 1152U +
-        xing.encoderDelay;
-    expectedGaplessFrames = (size_t)xing.encodedFrames * 1152U -
-        xing.encoderDelay - xing.endPadding;
-    anchor = trimmedStart + 384;
+      decoded - xing.encodedFrames <= 2) {
+    uint64_t rawFirst = 0, rawCount = 0;
+    if (AUDIO_CODEC_FUNC(MP3_GaplessSpan)(&xing,
+        header.samplesPerFrame,
+        (uint32_t)(decoded - xing.encodedFrames),
+        &rawFirst, &rawCount) == STATUS_CONST(SUCCESS) &&
+        rawFirst < used && rawCount <= SIZE_MAX) {
+      trimmedStart = (size_t)rawFirst;
+      expectedGaplessFrames = (size_t)rawCount;
+      anchor = trimmedStart + 384;
+    }
   }
   if (used >= anchor + ANALYSIS && frames >= ANALYSIS) {
     const int minimum = -(int)anchor;
@@ -203,6 +206,11 @@ int main(int argc, char **argv) {
     }
   }
   assert(bestRatio >= -0.0000001 && bestRatio <= 1.0000001);
+  if (getenv("COSMERON_MP3_PARITY_STRICT") != NULL) {
+    assert(hasXing && trimmedStart && expectedGaplessFrames == frames);
+    assert(metadataRatio >= -0.0000001 && metadataRatio < 0.00001);
+    assert(metadataGain > 0.999 && metadataGain < 1.001);
+  }
   cosmeron_audio_vendor_ma_decoder_uninit(&reference);
   free(nativePCM);
   free(referencePCM);

@@ -1844,15 +1844,21 @@ signals to miniaudio and prints best alignment, fitted gain and
 normalized residual. These are diagnostics; the production decoder
 still uses miniaudio.
 
-**Fidelity is not yet established.** The differential test
-`MP3ExperimentalCompare.c` reports the delay-aligned and gain-fitted PCM
-residual against miniaudio; the `Tone.mp3` fixture currently has
-non-negligible residual error (approximately 0.35 on Linux Clang).
-This metric is a diagnostic, not a passing parity assertion, and the
-tone's periodicity makes the estimated offset ambiguous. The default
-`OpenFile`, `OpenMemory` and `OpenReader` MP3 decoder therefore
-**remains on miniaudio**. The next steps are multitone/impulse PCM parity,
-correct intensity-band routing, LSF variants and gapless metadata.
+**MP3 PCM parity is now verified for the covered non-periodic
+MPEG-1 mono and ordinary stereo fixtures**, using
+`MP3ExperimentalCompare.c` with the correct extra **529 decoder-priming
+samples** and metadata-based Xing/LAME delay/padding. The CLI parity
+harness enforces gain within 0.1% and normalized residual under
+`1e-5` for time-varying multitone signals; `MP3_GaplessSpan` exposes
+the calculated raw PCM start and presentation length. The earlier high
+residual on `Tone.mp3` resulted from comparing unmatched sample
+positions before correcting the decoder-priming offset.
+
+**The coverage is not universal**. Intensity stereo, MPEG-2/2.5
+low-sampling-frequency scalefactors, file/reader streaming, seeks, and
+several gapless metadata cases are still unimplemented. Production
+`OpenFile`, `OpenMemory` and `OpenReader` therefore **remain on
+miniaudio** until broader fixture parity and robustness are verified.
 
 
 
