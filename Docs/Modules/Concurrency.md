@@ -68,12 +68,12 @@ Cooperative coroutines are explicit state machines: `Resume` advances until they
 #### Macro form
 
 ```c
-COROUTINE_FUNC(Resume)(/* pointer to coroutine */);
+OPSTATUS COROUTINE_FUNC(Resume)(CONCURRENCY_TYPE(TCoroutine) *coroutine);
 ```
 
 #### Direct form
 
-The default namespace produces a `Concurrency_Coroutine_Resume` family identifier. Use the macro for portable prefix configuration.
+`OPSTATUS Concurrency_Coroutine_Resume(Concurrency_TCoroutine *coroutine);` with the default prefix. Use the macro for portable prefix configuration.
 
 ### Parameters
 
@@ -105,12 +105,12 @@ The public atomic types include `CONCURRENCY_TYPE(TAtomicU32)`, `TAtomicU64`, `T
 #### Macro form
 
 ```c
-ATOMIC_FUNC(U32_Load)(/* atomic pointer, memory order */);
+uint32_t ATOMIC_FUNC(U32_Load)(const CONCURRENCY_TYPE(TAtomicU32) *atomic, CONCURRENCY_TYPE(MemoryOrder) order);
 ```
 
 #### Direct form
 
-Use `CONCURRENCY`'s configured public namespace; the function family is `Atomic_U32_Load` within it.
+`uint32_t Concurrency_Atomic_U32_Load(const Concurrency_TAtomicU32 *atomic, Concurrency_MemoryOrder order);` in the default namespace.
 
 ### Parameters
 
@@ -139,12 +139,12 @@ Load alone does not perform a compound compare/update. Consult the documented me
 #### Macro form
 
 ```c
-MUTEX_FUNC(Lock)(/* pointer to initialized TMutex */);
+OPSTATUS MUTEX_FUNC(Lock)(CONCURRENCY_TYPE(TMutex) *mutex);
 ```
 
 #### Direct form
 
-The default namespace provides `Concurrency_Mutex_Lock`.
+`OPSTATUS Concurrency_Mutex_Lock(Concurrency_TMutex *mutex);` in the default namespace.
 
 ### Parameters
 
@@ -162,7 +162,7 @@ Pair locking with `MUTEX_FUNC(Unlock)`; release the native resource with `MUTEX_
 
 ```c
 CONCURRENCY_TYPE(TMutex) mutex;
-if (MUTEX_FUNC(Init)(&mutex) == OPSTATUS_SUCCESS) {
+if (MUTEX_FUNC(Init)(&mutex) == STATUS_CONST(SUCCESS)) {
     /* Check Lock status before accessing shared data. */
     MUTEX_FUNC(Lock)(&mutex);
     MUTEX_FUNC(Unlock)(&mutex);
