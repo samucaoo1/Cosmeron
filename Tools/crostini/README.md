@@ -18,3 +18,19 @@ with consent and document the results.
 
 Linux Crostini, Android applications on ChromeOS, and native ChromeOS
 applications are three distinct targets and must not share a certification.
+
+## Hardware exposure inventory
+
+On the same physical Chromebook, run:
+
+```sh
+sh Tools/crostini/check-hardware.sh
+```
+
+Attach `crostini-hardware-report.txt` alongside `crostini-report.txt` to
+issue #123. Detection of Crostini-specific filesystem markers is a guard
+against accidentally treating a generic Linux CI container as ChromeOS.
+Device nodes and their access bits are an **inventory**, not proof of
+keyboard, USB/HID/joystick, audio or GPU functionality. If a supported
+Crostini release lacks the markers, document the host evidence before
+updating the guard. No elevated permissions are acquired by this script.
