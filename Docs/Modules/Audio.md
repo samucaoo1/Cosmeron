@@ -79,9 +79,19 @@ and handles the first long boundary of mixed blocks.
 
 All three functions use caller-provided arrays, accept in-place operation
 where outputs do not alias one another, validate inputs and avoid
-additional linking. They **do not produce PCM**: IMDCT with windowing
-and overlap-add, frequency inversion, and synthesis filterbank remain
-pending. MPEG-2/2.5 LSF scalefactors and requantization are also pending.
+additional linking. The new `Audio_Codec_MP3_IMDCT` function computes 36-point
+IMDCT for long/start/stop windows or three 12-point IMDCTs for short
+windows, applies the MPEG hybrid window, and overlaps 18 samples per
+subband across consecutive granules. The zero-initialized
+`Audio_Codec_TMP3HybridState` is owned by the caller, one per audio
+channel; it contains the previous overlap buffer and needs no
+initialization or freeing function. `Audio_Codec_MP3_FrequencyInvert`
+negates odd time samples in odd subbands after overlap-add. Neither
+function uses `-lm`, dynamic allocation or an external decoder.
+
+**They still do not produce PCM**: the resulting 32×18 subband-time
+samples require polyphase synthesis, clipping and output conversion.
+MPEG-1 intensity stereo and MPEG-2/2.5 LSF variants remain pending.
 The numerical codebook assignments are standardized MPEG Layer III values;
 the matching implementation is original Cosmeron C11.
 
