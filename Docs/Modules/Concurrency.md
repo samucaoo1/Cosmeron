@@ -3323,3 +3323,44 @@ void RunSteps(void) {
 - [Error](Error.md) — status codes.
 - [Algorithm](Algorithm.md) — comparison callback patterns.
 - [Bit](Bit.md) — documentation reference template.
+
+# C11 smoke test (cooperative subset)
+
+The executable example uses the explicitly cooperative header so that no native OS thread or extra linker flag is required. Native synchronization remains covered by the module's regular test suite.
+
+<!-- cosmeron-c11-test -->
+```c
+#include "Cosmeron/Modules/Concurrency/Cooperative.h"
+#include <assert.h>
+
+typedef struct Counter {
+    unsigned value;
+} Counter;
+
+static void CountSteps(CONCURRENCY_TYPE(TCoroutine) *self, void *argument) {
+    Counter *counter = (Counter *)argument;
+    COROUTINE_BEGIN(self);
+    counter->value += 1;
+    COROUTINE_YIELD(self);
+    counter->value += 1;
+    COROUTINE_END(self);
+}
+
+int main(void) {
+    CONCURRENCY_TYPE(TAtomicU32) atomic = ATOMIC_U32_INIT(0);
+    const CONCURRENCY_TYPE(MemoryOrder) order =
+        CONCURRENCY_CONST(ATOMIC, MEMORY_ORDER_SEQ_CST);
+    ATOMIC_FUNC(U32_Store)(&atomic, 7, order);
+    assert(ATOMIC_FUNC(U32_Load)(&atomic, order) == 7);
+
+    Counter counter = {0};
+    CONCURRENCY_TYPE(TCoroutine) coroutine =
+        COROUTINE_INIT(CountSteps, &counter);
+    assert(COROUTINE_FUNC(Resume)(&coroutine) == STATUS_CONST(SUCCESS));
+    assert(counter.value == 1);
+    assert(COROUTINE_FUNC(Resume)(&coroutine) == STATUS_CONST(SUCCESS));
+    assert(counter.value == 2);
+    assert(COROUTINE_FUNC(IsFinished)(&coroutine));
+    return 0;
+}
+```
