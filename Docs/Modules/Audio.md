@@ -1856,7 +1856,7 @@ Returns `STATUS_CONST(SUCCESS)` or a failure `OPSTATUS` (usually `INVALID_ARGUME
 
 ### Remarks
 
-Decoder must be zero-initialized. BUSY if already open. Supports backend-recognized WAV/MP3/FLAC.
+Decoder must be zero-initialized. BUSY if already open. RIFF/WAV uses a native C11 streaming reader (including WAVE_FORMAT_EXTENSIBLE PCM/float32); MP3 and FLAC temporarily use the embedded backend.
 
 ---
 
@@ -3345,7 +3345,7 @@ cc -std=c11 Codespace/Examples/Audio/BeepMusic.c -o beep-music
 ./beep-music --play
 ```
 
-The desktop adapter includes a namespaced vendored miniaudio-derived implementation with WAV/MP3/FLAC decoders. Supported desktop profiles compile without separate audio, math or pthread **link flags**; they can still require runtime system libraries and installed audio services. On Linux desktop, the implementation targets glibc >= 2.34.
+The desktop adapter still embeds the miniaudio-derived implementation for MP3/FLAC and device backends. WAV now uses the Cosmeron-native bounded reader for OpenMemory, OpenFile and OpenReader, or the independent WAV_DecodeMemory API. Supported desktop profiles compile without separate audio, math or pthread **link flags**; they can still require runtime system libraries and installed audio services. On Linux desktop, the implementation targets glibc >= 2.34.
 
 `AUDIO_NO_DESKTOP` excludes the whole Codec/Device/Mixer/Player API, not merely sound hardware use. The offline Player mode still belongs to the desktop-backed API. No implementation macro is necessary.
 
