@@ -61,6 +61,16 @@ AUDIO_CODEC_MP3_PARSE_SCALEFACTORS_PROTOTYPE;
 AUDIO_CODEC_MP3_HUFFMAN_PAIR_PROTOTYPE;
 AUDIO_CODEC_MP3_HUFFMAN_COUNT1_PROTOTYPE;
 
+#define AUDIO_CODEC_MP3_HUFFMAN_GRANULE_PROTOTYPE                              \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_HuffmanGranule)(                \
+      const unsigned char *mainData, size_t mainDataBytes,                    \
+      const AUDIO_CODEC_TYPE(TMP3SideInfo) *side,                              \
+      const AUDIO_CODEC_TYPE(TMP3Scalefactors) *scales,                        \
+      unsigned int granule, unsigned int channel, uint32_t sampleRate,        \
+      int32_t outValues[576], size_t *outCount)
+
+AUDIO_CODEC_MP3_HUFFMAN_GRANULE_PROTOTYPE;
+
 /* Plain zero-initialized state; no init/free call, allocator or globals. */
 typedef struct AUDIO_CODEC_TYPE(TMP3Reservoir) {
   unsigned char history[511];
