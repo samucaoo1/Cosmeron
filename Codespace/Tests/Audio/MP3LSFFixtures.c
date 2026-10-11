@@ -1,6 +1,7 @@
 #include "../../Cosmeron/Modules/Audio/Codec/MP3.h"
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 /* Host-generated MPEG-2/2.5 fixtures: validate actual scalefac_compress,
