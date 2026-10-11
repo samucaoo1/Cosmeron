@@ -57,9 +57,18 @@ the short-block 36-line split, decoding region-specific tables and the
 count1 partition. It takes the `part2Bits` field produced by
 `MP3_ParseScalefactors` and enforces the declared `part2_3_length`.
 Unsupported or malformed bit sequences return an `OPSTATUS` without
-publishing partially populated output. Requantization, short-block
-reordering, stereo reconstruction, IMDCT and subband synthesis are
-separate later stages.
+publishing partially populated output. The `Audio_Codec_MP3_Requantize` function converts the
+576 signed quantized Huffman coefficients of one MPEG-1 granule/channel
+into floating-point spectral values. It supports long, short and mixed
+windows, `global_gain`, `scalefac_scale`, preflag/pretab, long and short
+scalefactors and subblock gains. It uses deterministic precomputed
+mathematical lookup tables for x^(4/3) and power-of-two scaling, so
+there is **no dependency on `libm`**. The calculation stays
+independent of the miniaudio PCM decoder.
+
+The function does not reorder short blocks, reconstruct stereo channels
+or perform IMDCT/subband synthesis. MPEG-2/2.5 LSF scalefactors and their
+requantization remain explicitly unsupported.
 The numerical codebook assignments are standardized MPEG Layer III values;
 the matching implementation is original Cosmeron C11.
 

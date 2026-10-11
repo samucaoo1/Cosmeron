@@ -1,7 +1,7 @@
 CC ?= cc
 CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -Werror
 BUILD ?= .build
-TESTS := Synthesis OfflineStandalone OfflineCompat Manual ManualSink NativeWAV NativeWAVStream WAVRobustness FLACMetadata FLACFrames FLACPublic FLACStandalone FLACRobustness FLACStreaming MP3Headers MP3SideInfo MP3Scalefactors MP3Huffman WAVFormats CodecMinimal CodecMath CodecCompressed CodecStandalone DesktopStandalone Codec Player IncludeAll
+TESTS := Synthesis OfflineStandalone OfflineCompat Manual ManualSink NativeWAV NativeWAVStream WAVRobustness FLACMetadata FLACFrames FLACPublic FLACStandalone FLACRobustness FLACStreaming MP3Headers MP3SideInfo MP3Scalefactors MP3Huffman MP3Requant WAVFormats CodecMinimal CodecMath CodecCompressed CodecStandalone DesktopStandalone Codec Player IncludeAll
 HEADERS := $(shell find ../../Cosmeron/Modules/Audio ../../Cosmeron/Core -type f)
 
 all: run
