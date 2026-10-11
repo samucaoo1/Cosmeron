@@ -9,6 +9,9 @@ typedef struct AUDIO_CODEC_TYPE(TMP3FrameInfo) {
   uint32_t frameBytes;
   uint16_t samplesPerFrame;
   uint8_t channels;
+  uint8_t channelMode;     /* 0=stereo, 1=joint, 2=dual, 3=mono. */
+  uint8_t modeExtension;   /* meaningful only in joint stereo. */
+  bool msStereo, intensityStereo;
   uint8_t mpegVersion; /* MPEG-1 = 1, MPEG-2 = 2, MPEG-2.5 = 25. */
   uint8_t sideInfoBytes;
   bool crcProtected;
@@ -96,6 +99,14 @@ typedef struct AUDIO_CODEC_TYPE(TMP3HybridState) {
 
 AUDIO_CODEC_MP3_IMDCT_PROTOTYPE;
 AUDIO_CODEC_MP3_FREQUENCY_INVERT_PROTOTYPE;
+
+#define AUDIO_CODEC_MP3_INTENSITY_BAND_PROTOTYPE                             \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_IntensityBand)(                 \
+      const float left[576], const float right[576],                           \
+      size_t first, size_t last, unsigned int isPosition,                     \
+      float outLeft[576], float outRight[576])
+
+AUDIO_CODEC_MP3_INTENSITY_BAND_PROTOTYPE;
 
 #define AUDIO_CODEC_MP3_REORDER_SHORT_PROTOTYPE                            \
   static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_ReorderShort)(                  \
@@ -206,6 +217,12 @@ AUDIO_CODEC_MP3_PARSE_HEADER_PROTOTYPE {
   frameBytes = (versionBits == 3 ? UINT32_C(144000) : UINT32_C(72000)) *
                kiloBits / frame.sampleRate + padding;
   frame.channels = mode == 3 ? 1 : 2;
+  frame.channelMode = (uint8_t)mode;
+  frame.modeExtension = mode == 1 ?
+      (uint8_t)((header >> 4) & 3U) : 0U;
+  frame.msStereo = mode == 1 && (frame.modeExtension & 2U) != 0;
+  frame.intensityStereo = mode == 1 &&
+      (frame.modeExtension & 1U) != 0;
   frame.sideInfoBytes = versionBits == 3 ?
       (frame.channels == 1 ? 17 : 32) :
       (frame.channels == 1 ? 9 : 17);
@@ -273,3 +290,4 @@ AUDIO_CODEC_MP3_FIND_FRAME_PROTOTYPE {
 #include "Impl/MP3Hybrid.inc"
 #include "Impl/MP3IMDCT.inc"
 #include "Impl/MP3Synthesis.inc"
+#include "Impl/MP3Intensity.inc"
