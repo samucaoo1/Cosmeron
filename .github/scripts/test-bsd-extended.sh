@@ -245,11 +245,13 @@ if (
   cd Codespace/Tests/Audio
   "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
     ${audio_features} ${extra} CodecStandalone.c \
-    -o ../../../.build-bsd-extended/Audio_CodecZeroLink 2>/dev/null
+    -o ../../../.build-bsd-extended/Audio_CodecZeroLink 2>../../../.build-bsd-extended/Audio_CodecZeroLink.stderr
 ); then
   echo "[bsd-extended] AUDIO_CODEC_ZERO_LINK=PASS"
 else
   echo "[bsd-extended] AUDIO_CODEC_ZERO_LINK=NOT_SUPPORTED on $(uname -s)"
+  echo "[bsd-extended] unresolved codec dependencies:"
+  sed -n '1,70p' .build-bsd-extended/Audio_CodecZeroLink.stderr
   codec_zero_link=NOT_SUPPORTED
   linkflags="-lm -pthread"
 fi
@@ -257,11 +259,13 @@ if (
   cd Codespace/Tests/Audio
   "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
     ${audio_features} ${extra} DesktopStandalone.c \
-    -o ../../../.build-bsd-extended/Audio_DeviceZeroLink 2>/dev/null
+    -o ../../../.build-bsd-extended/Audio_DeviceZeroLink 2>../../../.build-bsd-extended/Audio_DeviceZeroLink.stderr
 ); then
   echo "[bsd-extended] AUDIO_DEVICE_ZERO_LINK=PASS"
 else
   echo "[bsd-extended] AUDIO_DEVICE_ZERO_LINK=NOT_SUPPORTED on $(uname -s)"
+  echo "[bsd-extended] unresolved device dependencies:"
+  sed -n '1,70p' .build-bsd-extended/Audio_DeviceZeroLink.stderr
   device_zero_link=NOT_SUPPORTED
   linkflags="-lm -pthread"
 fi
