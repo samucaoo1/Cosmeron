@@ -30,17 +30,26 @@
 #define OS_FREEBSD 0
 #endif
 
-#if OS_LINUX || OS_MAC || OS_FREEBSD
-#define OS_UNIX 1
+#if defined(__OpenBSD__)
+#define OS_OPENBSD 1
 #else
-#define OS_UNIX 0
+#define OS_OPENBSD 0
 #endif
 
-#if OS_LINUX || OS_MAC || OS_FREEBSD
-#define OS_POSIX 1
+#if defined(__NetBSD__)
+#define OS_NETBSD 1
 #else
-#define OS_POSIX 0
+#define OS_NETBSD 0
 #endif
 
-#define OS_KNOWN (OS_WINDOWS || OS_MAC || OS_LINUX || OS_FREEBSD)
+#if defined(__DragonFly__)
+#define OS_DRAGONFLY 1
+#else
+#define OS_DRAGONFLY 0
+#endif
+
+#define OS_BSD (OS_FREEBSD || OS_OPENBSD || OS_NETBSD || OS_DRAGONFLY)
+#define OS_UNIX (OS_LINUX || OS_MAC || OS_BSD)
+#define OS_POSIX (OS_LINUX || OS_MAC || OS_BSD)
+#define OS_KNOWN (OS_WINDOWS || OS_MAC || OS_LINUX || OS_BSD)
 /* EOF */
