@@ -3,7 +3,9 @@
 #if OS_WINDOWS
 #include <windows.h>
 #include "StacktraceWindows.inc"
-#elif OS_UNIX
+#elif OS_UNIX && (!OS_LINUX || defined(__GLIBC__))
+/* On Linux, execinfo/backtrace is provided by glibc, not by musl's libc.
+ * Keep the optional diagnostic out of the zero-link musl build. */
 #include <execinfo.h>
 #include "StacktraceUnix.inc"
 #else
