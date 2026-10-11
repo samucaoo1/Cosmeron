@@ -10,3 +10,4 @@
 #include "Sequence/Sequence.h"
 #include "Beep/Render.h"
 #include "Codec/WAV.h"
+#include "Codec/FLAC.h"
