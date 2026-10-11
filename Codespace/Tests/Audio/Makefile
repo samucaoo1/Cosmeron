@@ -19,8 +19,8 @@ $(BUILD)/MultiTU: MultiTU_A.c MultiTU_B.c MultiTU_Main.c $(HEADERS) | $(BUILD)
 build: $(TESTS:%=$(BUILD)/%) $(BUILD)/ManualHardware $(BUILD)/OfflineMultiTU $(BUILD)/MultiTU
 run: build
 	@set -e; for test in $(TESTS:%=$(BUILD)/%) $(BUILD)/OfflineMultiTU $(BUILD)/MultiTU; do \
-	  echo "[audio] run $test"; \
-	  if "$test"; then :; else result=$?; echo "[audio] FAILED $test (exit $result)"; exit "$result"; fi; \
+	  echo "[audio] run $$test"; \
+	  if "$$test"; then :; else result=$$?; echo "[audio] FAILED $$test (exit $$result)"; exit "$$result"; fi; \
 	done
 hardware-test: $(BUILD)/ManualHardware
 	@echo "WARNING: this opens real audio hardware and plays a short tone."
