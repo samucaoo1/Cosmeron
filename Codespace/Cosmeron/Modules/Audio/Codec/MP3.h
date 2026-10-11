@@ -61,6 +61,24 @@ AUDIO_CODEC_MP3_PARSE_SCALEFACTORS_PROTOTYPE;
 AUDIO_CODEC_MP3_HUFFMAN_PAIR_PROTOTYPE;
 AUDIO_CODEC_MP3_HUFFMAN_COUNT1_PROTOTYPE;
 
+/* 1024-entry synthesis delay, separate from the 32x18 IMDCT overlap.
+ * The owner retains one zero-initialized state per audio channel. */
+typedef struct AUDIO_CODEC_TYPE(TMP3SynthesisState) {
+  float delay[1024];
+} AUDIO_CODEC_TYPE(TMP3SynthesisState);
+
+#define AUDIO_CODEC_MP3_SYNTHESIS_SLOT_PROTOTYPE                              \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_SynthesisSlot)(                \
+      const float subbands[32],                                              \
+      AUDIO_CODEC_TYPE(TMP3SynthesisState) *state, float outPCM[32])
+#define AUDIO_CODEC_MP3_SYNTHESIZE_PROTOTYPE                                  \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_Synthesize)(                   \
+      const float subbandTime[576],                                          \
+      AUDIO_CODEC_TYPE(TMP3SynthesisState) *state, float outPCM[576])
+
+AUDIO_CODEC_MP3_SYNTHESIS_SLOT_PROTOTYPE;
+AUDIO_CODEC_MP3_SYNTHESIZE_PROTOTYPE;
+
 /* One zero-initialized state per channel, retained across granules.
  * No Init/Free or opaque vendor object is required. */
 typedef struct AUDIO_CODEC_TYPE(TMP3HybridState) {
@@ -254,3 +272,4 @@ AUDIO_CODEC_MP3_FIND_FRAME_PROTOTYPE {
 #include "Impl/MP3Requant.inc"
 #include "Impl/MP3Hybrid.inc"
 #include "Impl/MP3IMDCT.inc"
+#include "Impl/MP3Synthesis.inc"
