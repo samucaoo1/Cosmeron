@@ -15,6 +15,7 @@
 #else
 #include <netdb.h>
 #include <sys/socket.h>
+#include <netinet/in.h> /* sockaddr_in / sockaddr_in6 are not in sys/socket.h on every BSD */
 #endif
 
 FLAT_VECTOR_IMPLEMENT_ALL(NETWORK_ADDRESS_TYPE(TAddress), Network_Address)
