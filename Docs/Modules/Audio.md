@@ -1822,22 +1822,33 @@ inspection, ID3v2, side information, a bounded bit reservoir, scalefactors,
 Huffman codebooks (including `linbits` and `count1`), requantization,
 short-block reordering, mid/side processing, antialiasing, stateful
 IMDCT/overlap-add, frequency inversion, 32-subband polyphase synthesis and
-explicit-band MPEG-1 intensity coefficients.
+MPEG-1 intensity coefficients and automatic scalefactor-band intensity/MS routing.
 
 The opt-in `Audio/Codec/MP3Experimental.h` supplies
 `Audio_Codec_MP3_ExperimentFrame` and
 `Audio_Codec_TMP3Experimental`, a zero-initialized per-stream state.
 Pass a complete MPEG-1 frame and an output buffer for **1,152 frames**
 of interleaved float PCM; mono and stereo are supported. The call retains
-reservoir, overlap and synthesis state across frames and rejects
-unsupported intensity-stereo modes rather than emitting knowingly incorrect
-PCM. It does not provide file-level reading, seeking, gapless handling or
+reservoir, overlap and synthesis state across frames. For stereo,
+`MP3_JointStereo` identifies right-channel nonzero spectral bands before
+the short-block reorder, applies intensity-stereo scalefactors above the
+transmitted right-hand region, and uses MS only on other bands when the
+MPEG header requests it. It includes long, short, mixed and untransmitted
+terminal-scalefactor-band treatment, and can combine MS+intensity.
+
+The standalone `MP3JointStereo.c` tests cover this routing, while the
+PCM regression harness uses a separate LAME-generated MS joint-stereo
+fixture. **Real-world intensity-stereo PCM parity is not yet certified**:
+the ordinary LAME fixtures mostly exercise MS stereo; additional
+reference-encoded intensity bitstreams and edge-case tests remain needed.
+The experimental API does not provide file-level reading, seeking or
 support for MPEG-2/2.5 LSF.
 
 The standalone `MP3_ParseXing` primitive now inspects the first
 frame's `Xing`/`Info` header for encoded frame/byte counts and
-optional LAME-family encoder delay/end padding. These raw fields alone
-do **not** yet account for Layer III decoder priming. The optional
+optional LAME-family encoder delay/end padding. `MP3_GaplessSpan`
+adds the 529-sample Layer III synthesis priming for supported files.
+The optional
 host-side `MP3ParityFixtures.sh` (requires ffmpeg/libmp3lame for fixture
 generation only) compares non-periodic chirped/multitone mono and stereo
 signals to miniaudio and prints best alignment, fitted gain and
@@ -1854,9 +1865,11 @@ the calculated raw PCM start and presentation length. The earlier high
 residual on `Tone.mp3` resulted from comparing unmatched sample
 positions before correcting the decoder-priming offset.
 
-**The coverage is not universal**. Intensity stereo, MPEG-2/2.5
-low-sampling-frequency scalefactors, file/reader streaming, seeks, and
-several gapless metadata cases are still unimplemented. Production
+**The coverage is not universal**. Automatic intensity-stereo
+band handling is implemented but is still awaiting independent
+intensity-encoded PCM fixtures. MPEG-2/2.5 low-sampling-frequency
+scalefactors, file/reader streaming, seeks, and several gapless metadata
+cases are still unimplemented. Production
 `OpenFile`, `OpenMemory` and `OpenReader` therefore **remain on
 miniaudio** until broader fixture parity and robustness are verified.
 

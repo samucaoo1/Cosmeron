@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
   FILE *file = fopen(path, "rb");
   float *nativePCM, *referencePCM;
   size_t length, offset = 0, frames = 0, used = 0, decoded = 0;
-  size_t skipped = 0, preroll = 0, channels = 0;
+  size_t skipped = 0, preroll = 0, channels = 0, msFrames = 0, intensityFrames = 0;
   double bestRatio = 1e100, bestGain = 0, bestNativeEnergy = 0;
   double metadataRatio = 1e100, metadataGain = 0, metadataEnergy = 0;
   size_t trimmedStart = 0, expectedGaplessFrames = 0, anchor = 1536;
@@ -68,6 +68,8 @@ int main(int argc, char **argv) {
     assert(AUDIO_CODEC_FUNC(MP3_ParseHeader)(bytes + offset,
         length - offset, &header) == STATUS_CONST(SUCCESS));
     if (header.frameBytes > length - offset) break;
+    if (header.msStereo) ++msFrames;
+    if (header.intensityStereo) ++intensityFrames;
     result = AUDIO_CODEC_FUNC(MP3_ExperimentFrame)(&native,
         bytes + offset, header.frameBytes,
         nativePCM + used * header.channels, MAX_FRAMES - used,
@@ -155,12 +157,13 @@ int main(int argc, char **argv) {
          "best-shift=%d best-gain=%.8g normalized-residual=%.8g "
          "metadata-leading=%zu metadata-play-frames=%zu "
          "metadata-residual=%.8g metadata-gain=%.8g "
-         "native-mean-square=%.8g xing=%u encoded-frames=%u "
+         "native-mean-square=%.8g ms-frames=%zu intensity-frames=%zu "
+         "xing=%u encoded-frames=%u "
          "encoder-delay=%u end-padding=%u (DIAGNOSTIC ONLY)\n",
          path, used, frames, decoded, preroll, skipped,
          bestShift, bestGain, bestRatio, trimmedStart,
          expectedGaplessFrames, metadataRatio, metadataGain,
-         bestNativeEnergy,
+         bestNativeEnergy, msFrames, intensityFrames,
          (unsigned int)hasXing, (unsigned int)xing.encodedFrames,
          (unsigned int)xing.encoderDelay, (unsigned int)xing.endPadding);
   /* A constant encoder delay should imply the same lag in every section.
@@ -210,6 +213,9 @@ int main(int argc, char **argv) {
     assert(hasXing && trimmedStart && expectedGaplessFrames == frames);
     assert(metadataRatio >= -0.0000001 && metadataRatio < 0.00001);
     assert(metadataGain > 0.999 && metadataGain < 1.001);
+    if (getenv("COSMERON_MP3_REQUIRE_MS") != NULL)
+      assert(msFrames > 0);
+
   }
   cosmeron_audio_vendor_ma_decoder_uninit(&reference);
   free(nativePCM);

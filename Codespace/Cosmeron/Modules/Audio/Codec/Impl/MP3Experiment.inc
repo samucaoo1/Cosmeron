@@ -9,7 +9,7 @@ AUDIO_CODEC_MP3_EXPERIMENT_FRAME_PROTOTYPE {
   AUDIO_CODEC_TYPE(TMP3Experimental) work;
   AUDIO_CODEC_TYPE(TMP3FrameInfo) header;
   AUDIO_CODEC_TYPE(TMP3SideInfo) side;
-  AUDIO_CODEC_TYPE(TMP3Scalefactors) previous[2];
+  AUDIO_CODEC_TYPE(TMP3Scalefactors) previous[2], scaleByChannel[2];
   float stage[1152 * 2], channels[2][576];
   const unsigned char *mainData = NULL;
   size_t mainBytes = 0, produced, i;
@@ -19,7 +19,7 @@ AUDIO_CODEC_MP3_EXPERIMENT_FRAME_PROTOTYPE {
     return STATUS_CONST(INVALID_ARGUMENT);
   status = AUDIO_CODEC_FUNC(MP3_ParseHeader)(frame, size, &header);
   if (status != STATUS_CONST(SUCCESS)) return status;
-  if (header.mpegVersion != 1 || header.intensityStereo)
+  if (header.mpegVersion != 1)
     return STATUS_CONST(NOT_SUPPORTED);
   if (frameCapacity < 1152U)
     return STATUS_CONST(OUT_OF_RANGE);
@@ -29,6 +29,7 @@ AUDIO_CODEC_MP3_EXPERIMENT_FRAME_PROTOTYPE {
   if (size < header.frameBytes)
     return STATUS_CONST(INCOMPLETE_SEQUENCE);
   memset(previous, 0, sizeof previous);
+  memset(scaleByChannel, 0, sizeof scaleByChannel);
   work = *state;
   status = AUDIO_CODEC_FUNC(MP3_ReservoirFeed)(&work.reservoir,
       frame, header.frameBytes, &mainData, &mainBytes, &side);
@@ -51,6 +52,7 @@ AUDIO_CODEC_MP3_EXPERIMENT_FRAME_PROTOTYPE {
           gr ? &previous[ch] : NULL, &scale);
       if (status != STATUS_CONST(SUCCESS)) return status;
       if (gr == 0) previous[ch] = scale;
+      scaleByChannel[ch] = scale;
       status = AUDIO_CODEC_FUNC(MP3_HuffmanGranule)(
           mainData, mainBytes, &side, &scale, gr, ch,
           header.sampleRate, coefficients, &written);
@@ -62,10 +64,11 @@ AUDIO_CODEC_MP3_EXPERIMENT_FRAME_PROTOTYPE {
     }
     /* Stereo processing belongs after requantization, before spectral
      * reordering, alias reduction and the hybrid synthesis. */
-    if (header.channels == 2 && header.msStereo) {
-      status = AUDIO_CODEC_FUNC(MP3_StereoMS)(
-          channels[0], channels[1], 0, 576,
-          channels[0], channels[1]);
+    if (header.channels == 2 &&
+        (header.msStereo || header.intensityStereo)) {
+      status = AUDIO_CODEC_FUNC(MP3_JointStereo)(
+          &header, &side.parts[gr][1], &scaleByChannel[1],
+          channels[0], channels[1], channels[0], channels[1]);
       if (status != STATUS_CONST(SUCCESS)) return status;
     }
     for (ch = 0; ch < header.channels; ++ch) {
