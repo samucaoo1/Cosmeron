@@ -9,3 +9,4 @@
 #include "Envelope/Envelope.h"
 #include "Sequence/Sequence.h"
 #include "Beep/Render.h"
+#include "Codec/WAV.h"

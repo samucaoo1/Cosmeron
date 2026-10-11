@@ -168,7 +168,7 @@ suite Audio Manual
 echo "[bsd-extended] AUDIO_MANUAL_ZERO_LINK=PASS (compile+codec conversion; no device opened)"
 record AudioManual PASS 'OSS/audio4 build and PCM conversion; hardware not opened'
 stage=AudioOffline
-suite Audio Synthesis OfflineStandalone OfflineCompat
+suite Audio Synthesis OfflineStandalone OfflineCompat NativeWAV
 echo "[bsd-extended] run Audio/OfflineMultiTU (zero-link)"
 (
   cd Codespace/Tests/Audio

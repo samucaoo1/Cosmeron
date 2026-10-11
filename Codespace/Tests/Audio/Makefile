@@ -1,7 +1,7 @@
 CC ?= cc
 CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -Werror
 BUILD ?= .build
-TESTS := Synthesis OfflineStandalone OfflineCompat Manual CodecStandalone DesktopStandalone Codec Player IncludeAll
+TESTS := Synthesis OfflineStandalone OfflineCompat Manual NativeWAV CodecStandalone DesktopStandalone Codec Player IncludeAll
 HEADERS := $(shell find ../../Cosmeron/Modules/Audio ../../Cosmeron/Core -type f)
 
 all: run
