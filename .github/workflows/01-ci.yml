@@ -157,6 +157,12 @@ jobs:
             echo ''
             echo 'Tests run on a genuine FreeBSD VM through vmactions, not a Linux container.'
           } >> "$GITHUB_STEP_SUMMARY"
+          if [ -f .build-bsd-extended/coverage.md ]; then
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            cat .build-bsd-extended/coverage.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Extended BSD report unavailable (check VM setup logs).' >> "$GITHUB_STEP_SUMMARY"
+          fi
 
 
   mingw:

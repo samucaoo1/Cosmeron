@@ -11,6 +11,15 @@ case "$(uname -s)" in
 esac
 mkdir -p .build-bsd-extended
 linkflags=
+coverage=.build-bsd-extended/coverage.md
+stage=Initialization
+printf '%s\n' "### BSD native integration — $(uname -s)" "" \
+  '| Module | C11 compile | Runtime | Zero-extra-link | Hardware/device |' \
+  '|---|---|---|---|---|' > "$coverage"
+record() {
+  printf '| %s | PASS | PASS | %s | %s |\n' "$1" "$2" "$3" >> "$coverage"
+}
+trap 'rc=$?; if [ "$rc" -ne 0 ]; then printf "| %s | FAIL | NOT COMPLETED | UNVERIFIED | NOT TESTED |\\n" "$stage" >> "$coverage"; fi' EXIT
 
 suite() {
   module=$1; shift
@@ -56,17 +65,21 @@ multitu() {
 }
 
 # Local loopback only; no Internet is required.
+stage=Network
 suite Network TCP UDP Poller NonBlocking PollerClose UDPClearPeer IPv6 \
   Lifecycle SocketRecreate PollerEmpty ConnectionNonBlocking \
   PollerDescriptorLimit PollerTimeout ConnectionArguments \
   DatagramArguments Surface IncludeOrder
 multitu Network
+record Network PASS 'localhost sockets only'
 
 # Thread primitives, synchronisation, tasks and thread pool, no explicit -pthread.
 # Probe the public zero-extra-link contract *before* running the thread tests.
 # The CI may use -pthread solely to diagnose the backend on systems with
 # separately linked libpthread; it MUST report that this does not meet the
 # Cosmeron zero-link policy for consumers.
+stage=Concurrency
+thread_zero_link=PASS
 if (
   cd Codespace/Tests/Concurrency
   "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
@@ -76,34 +89,35 @@ if (
   echo "[bsd-extended] THREAD_ZERO_LINK=PASS"
 else
   echo "[bsd-extended] THREAD_ZERO_LINK=NOT_SUPPORTED on $(uname -s) (requires native libpthread)"
+  thread_zero_link=NOT_SUPPORTED
   linkflags=-pthread
 fi
 suite Concurrency IncludeAll ModuleSurface Mutex Once RWLock Semaphore \
   Thread Coroutine Condition Barrier Contention ProducerConsumer \
   ThreadPool ThreadPoolMultiProducer ThreadPoolShutdown Future
+record Concurrency "$thread_zero_link" 'threads tested in VM (with -pthread if required)'
 linkflags=
 
 # Miniz codec/ZIP and SQLite in the single-implementation translation unit.
+stage=Compression
 suite Compression Codec Zip File Namespace FunctionTableOff Robustness Allocation
 multitu Compression
+record Compression PASS 'ZIP/zlib internal tests, no external Python interop'
+stage=Database
 echo "[bsd-extended] compile+run Database (one shared embedded SQLite object)"
 (
   cd Codespace/Tests/Database
   "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
     -D_POSIX_C_SOURCE=200809L ${extra} -c Backend.c \
     -o ../../../.build-bsd-extended/Database_Backend.o
-  # The embedded SQLite backend uses pthreads on some BSDs. Probe a
-  # zero-link executable first and surface a separate policy result.
+  # BSD SQLite defaults to mutex-free single-thread mode. This is a
+  # mandatory zero-extra-link contract test, not a diagnostic fallback.
   db_linkflags=
-  if "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
+  "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
     -D_POSIX_C_SOURCE=200809L ${extra} IncludeAll.c \
     ../../../.build-bsd-extended/Database_Backend.o \
-    -o ../../../.build-bsd-extended/Database_ZeroLink 2>/dev/null; then
-    echo "[bsd-extended] DATABASE_ZERO_LINK=PASS"
-  else
-    echo "[bsd-extended] DATABASE_ZERO_LINK=NOT_SUPPORTED on $(uname -s), using -pthread for CI runtime diagnostics"
-    db_linkflags=-pthread
-  fi
+    -o ../../../.build-bsd-extended/Database_ZeroLink
+  echo "[bsd-extended] DATABASE_ZERO_LINK=PASS (mutex-free SQLite)"
   for test in IncludeAll Database Persistence Namespace SQLiteThreadMode; do
     echo "[bsd-extended] run Database/$test"
     "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
@@ -119,10 +133,13 @@ echo "[bsd-extended] compile+run Database (one shared embedded SQLite object)"
     -o ../../../.build-bsd-extended/Database_MultiTU
   ../../../.build-bsd-extended/Database_MultiTU
 )
+record Database PASS 'SQLite single-thread profile; no parallel callers'
 
 # Audio runs in offline mode; no hardware access is claimed.
 # Some BSD libc implementations do not export sin/exp without libm. A strict
 # zero-link *probe* must be recorded before enabling a diagnostic workaround.
+stage=Audio
+audio_zero_link=PASS
 audio_features=-D_POSIX_C_SOURCE=200809L
 case "$(uname -s)" in
   DragonFly|FreeBSD) audio_features= ;;
@@ -137,15 +154,20 @@ if (
   echo "[bsd-extended] AUDIO_ZERO_LINK=PASS"
 else
   echo "[bsd-extended] AUDIO_ZERO_LINK=NOT_SUPPORTED on $(uname -s); using -lm -pthread for offline runtime diagnostics"
+  audio_zero_link=NOT_SUPPORTED
   linkflags="-lm -pthread"
 fi
 suite Audio Synthesis Codec Player IncludeAll
 multitu Audio
+record Audio "$audio_zero_link" 'offline only, no sound device'
 linkflags=
 
 # Only noninteractive graphics, canvas, text UI and font regression sources.
+stage=Terminal
 suite Terminal IncludeAll Rasterization Sprite Curves ProjectionSprites \
   Raycasting Pseudo3DRoad ProjectionCore Canvas UI UIAdvanced UIGameWidgets \
   UIOverlays Font FIGlet FontCosmeron FontCosmeronBold FontNibbleBits
+record Terminal PASS 'noninteractive rendering, no real TTY'
+stage=Complete
 
 echo "[bsd-extended] all noninteractive integration suites passed"
