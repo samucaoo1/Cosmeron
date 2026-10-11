@@ -61,6 +61,24 @@ AUDIO_CODEC_MP3_PARSE_SCALEFACTORS_PROTOTYPE;
 AUDIO_CODEC_MP3_HUFFMAN_PAIR_PROTOTYPE;
 AUDIO_CODEC_MP3_HUFFMAN_COUNT1_PROTOTYPE;
 
+/* One zero-initialized state per channel, retained across granules.
+ * No Init/Free or opaque vendor object is required. */
+typedef struct AUDIO_CODEC_TYPE(TMP3HybridState) {
+  float overlap[32][18];
+} AUDIO_CODEC_TYPE(TMP3HybridState);
+
+#define AUDIO_CODEC_MP3_IMDCT_PROTOTYPE                                       \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_IMDCT)(                         \
+      const float spectrum[576],                                              \
+      const AUDIO_CODEC_TYPE(TMP3Granule) *part,                               \
+      AUDIO_CODEC_TYPE(TMP3HybridState) *state, float outSubband[576])
+#define AUDIO_CODEC_MP3_FREQUENCY_INVERT_PROTOTYPE                             \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_FrequencyInvert)(               \
+      const float input[576], float output[576])
+
+AUDIO_CODEC_MP3_IMDCT_PROTOTYPE;
+AUDIO_CODEC_MP3_FREQUENCY_INVERT_PROTOTYPE;
+
 #define AUDIO_CODEC_MP3_REORDER_SHORT_PROTOTYPE                            \
   static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_ReorderShort)(                  \
       const float input[576], const AUDIO_CODEC_TYPE(TMP3Granule) *part,     \
@@ -235,3 +253,4 @@ AUDIO_CODEC_MP3_FIND_FRAME_PROTOTYPE {
 #include "Impl/MP3Huffman.inc"
 #include "Impl/MP3Requant.inc"
 #include "Impl/MP3Hybrid.inc"
+#include "Impl/MP3IMDCT.inc"
