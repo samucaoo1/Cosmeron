@@ -136,8 +136,8 @@ if (
 ); then
   echo "[bsd-extended] AUDIO_ZERO_LINK=PASS"
 else
-  echo "[bsd-extended] AUDIO_ZERO_LINK=NOT_SUPPORTED on $(uname -s); using -lm for offline runtime diagnostics"
-  linkflags=-lm
+  echo "[bsd-extended] AUDIO_ZERO_LINK=NOT_SUPPORTED on $(uname -s); using -lm -pthread for offline runtime diagnostics"
+  linkflags="-lm -pthread"
 fi
 suite Audio Synthesis Codec Player IncludeAll
 multitu Audio
