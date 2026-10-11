@@ -2616,3 +2616,32 @@ cc -std=c11 -Wall -Wextra -Wpedantic -Werror -I Codespace Codespace/Tests/Sort.c
 - [Memory](Memory.md) — scratch allocation conventions.
 - [Container](Container.md) — container operations.
 - [Bit](Bit.md) — reference format.
+
+# C11 smoke test
+
+This is a complete executable example; the individual function-reference examples above are usage fragments.
+
+<!-- cosmeron-c11-test -->
+```c
+#include "Cosmeron/Modules/Sort/Sort.h"
+#include <assert.h>
+#include <stdint.h>
+
+static CMPOUT CompareInt(const void *left, const void *right) {
+    const int a = *(const int *)left;
+    const int b = *(const int *)right;
+    return COMPARISON_FUNC(int)(a, b);
+}
+
+int main(void) {
+    int values[] = {4, 1, 3, 2};
+    uint32_t integers[] = {9, 1, 5, 0};
+    assert(SORT_FUNC(Array)(values, 4, sizeof values[0], CompareInt) ==
+           STATUS_CONST(SUCCESS));
+    assert(values[0] == 1 && values[3] == 4);
+    assert(SORT_TYPED_FUNC(Radix, U32)(
+               integers, 4, SORT_CONST(ASCENDING)) == STATUS_CONST(SUCCESS));
+    assert(integers[0] == 0 && integers[3] == 9);
+    return 0;
+}
+```
