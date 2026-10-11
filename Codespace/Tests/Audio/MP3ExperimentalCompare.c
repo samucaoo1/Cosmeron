@@ -5,12 +5,36 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Gain-compensated normalized residual between two corresponding windows.
+ * This is diagnostic: the output is 0 for equal signals up to gain,
+ * and 1 for orthogonal signals. It does not prove MP3 fidelity. */
+static double compare_at(const float *native, const float *reference,
+    size_t anchor, size_t count, size_t channels, int shift,
+    double *outGain, double *outMeanSquare) {
+  size_t i;
+  double xx = 0, xy = 0, yy = 0;
+  for (i = 0; i < count * channels; ++i) {
+    const size_t sample = i / channels, channel = i % channels;
+    const size_t a = (anchor + sample) * channels + channel;
+    const size_t b = (size_t)((int)(anchor + sample) + shift) *
+                     channels + channel;
+    const double x = native[a], y = reference[b];
+    xx += x*x;
+    xy += x*y;
+    yy += y*y;
+  }
+  if (xx < 1e-14 || yy < 1e-14) return 1e100;
+  *outGain = xy/xx;
+  *outMeanSquare = xx/(count*channels);
+  return 1.0 - xy*xy/(xx*yy);
+}
+
 /* Diagnostic, not a parity certification. MP3 encoder delay/gapless
  * metadata can shift the two streams by over 1000 samples. Search the
  * entire common valid window and report a least-squares gain as well as
  * residual power. A tonal fixture alone cannot certify sample parity. */
 int main(int argc, char **argv) {
-  enum { MAX_FRAMES = 48 * 1152, ANALYSIS = 2048, BASE = 1536 };
+  enum { MAX_FRAMES = 48 * 1152, ANALYSIS = 2048 };
   unsigned char bytes[65536];
   AUDIO_CODEC_TYPE(TMP3Experimental) native = {0};
   AUDIO_CODEC_TYPE(TMP3FrameInfo) header = {0};
@@ -25,6 +49,8 @@ int main(int argc, char **argv) {
   size_t length, offset = 0, frames = 0, used = 0, decoded = 0;
   size_t skipped = 0, preroll = 0, channels = 0, i;
   double bestRatio = 1e100, bestGain = 0, bestNativeEnergy = 0;
+  double metadataRatio = 1e100, metadataGain = 0, metadataEnergy = 0;
+  size_t trimmedStart = 0, expectedGaplessFrames = 0, anchor = 1536;
   int bestShift = 0, shift;
   assert(file);
   length = fread(bytes, 1, sizeof bytes, file);
@@ -75,62 +101,63 @@ int main(int argc, char **argv) {
            result == cosmeron_audio_vendor_MA_AT_END);
   }
   frames = (size_t)received;
-  if (used >= BASE + ANALYSIS && frames >= ANALYSIS) {
-    const int minimum = -(int)BASE;
-    const int maximum = (int)frames - (BASE + ANALYSIS);
+  /* XING frame count excludes the Info frame for the LAME fixtures.
+   * Keep the assumption explicit: it is checked against actual counts
+   * rather than silently treating all MP3 encoders as identical. */
+  if (hasXing && xing.hasGapless && xing.encodedFrames > 0 &&
+      decoded >= xing.encodedFrames &&
+      decoded - xing.encodedFrames <= 2 &&
+      (uint64_t)xing.encoderDelay + xing.endPadding <=
+          (uint64_t)xing.encodedFrames * 1152) {
+    trimmedStart = (decoded - xing.encodedFrames) * 1152U +
+        xing.encoderDelay;
+    expectedGaplessFrames = (size_t)xing.encodedFrames * 1152U -
+        xing.encoderDelay - xing.endPadding;
+    anchor = trimmedStart + 384;
+  }
+  if (used >= anchor + ANALYSIS && frames >= ANALYSIS) {
+    const int minimum = -(int)anchor;
+    const int maximum = (int)frames - (int)(anchor + ANALYSIS);
     for (shift = minimum; shift <= maximum; shift += 4) {
-      double xx = 0, xy = 0, yy = 0, residual, gain;
-      for (i = 0; i < ANALYSIS * channels; ++i) {
-        const size_t sample = i / channels, ch = i % channels;
-        const size_t a = (BASE + sample) * channels + ch;
-        const size_t b = (size_t)((int)(BASE + sample) + shift) *
-                         channels + ch;
-        const double x = nativePCM[a], y = referencePCM[b];
-        xx += x * x;
-        xy += x * y;
-        yy += y * y;
-      }
-      if (xx < 1e-12 || yy < 1e-12) continue;
-      gain = xy / xx;
-      residual = 1.0 - xy * xy / (xx * yy);
+      double gain = 0, square = 0;
+      double residual = compare_at(nativePCM, referencePCM,
+          anchor, ANALYSIS, channels, shift, &gain, &square);
       if (residual < bestRatio) {
         bestRatio = residual;
         bestGain = gain;
-        bestNativeEnergy = xx / (ANALYSIS * channels);
+        bestNativeEnergy = square;
         bestShift = shift;
       }
     }
     for (shift = bestShift - 4; shift <= bestShift + 4; ++shift) {
-      double xx = 0, xy = 0, yy = 0, residual, gain;
+      double gain = 0, square = 0, residual;
       if (shift < minimum || shift > maximum) continue;
-      for (i = 0; i < ANALYSIS * channels; ++i) {
-        const size_t sample = i / channels, ch = i % channels;
-        const size_t a = (BASE + sample) * channels + ch;
-        const size_t b = (size_t)((int)(BASE + sample) + shift) *
-                         channels + ch;
-        const double x = nativePCM[a], y = referencePCM[b];
-        xx += x * x;
-        xy += x * y;
-        yy += y * y;
-      }
-      if (xx < 1e-12 || yy < 1e-12) continue;
-      gain = xy / xx;
-      residual = 1.0 - xy * xy / (xx * yy);
+      residual = compare_at(nativePCM, referencePCM,
+          anchor, ANALYSIS, channels, shift, &gain, &square);
       if (residual < bestRatio) {
         bestRatio = residual;
         bestGain = gain;
-        bestNativeEnergy = xx / (ANALYSIS * channels);
+        bestNativeEnergy = square;
         bestShift = shift;
       }
     }
+    if (trimmedStart && -(int)trimmedStart >= minimum &&
+        -(int)trimmedStart <= maximum)
+      metadataRatio = compare_at(nativePCM, referencePCM,
+          anchor, ANALYSIS, channels, -(int)trimmedStart,
+          &metadataGain, &metadataEnergy);
   }
   printf("[mp3 experimental parity] path=%s native=%zu reference=%zu "
          "decoded=%zu preroll=%zu unsupported=%zu "
          "best-shift=%d best-gain=%.8g normalized-residual=%.8g "
+         "metadata-leading=%zu metadata-play-frames=%zu "
+         "metadata-residual=%.8g metadata-gain=%.8g "
          "native-mean-square=%.8g xing=%u encoded-frames=%u "
          "encoder-delay=%u end-padding=%u (DIAGNOSTIC ONLY)\\n",
          path, used, frames, decoded, preroll, skipped,
-         bestShift, bestGain, bestRatio, bestNativeEnergy,
+         bestShift, bestGain, bestRatio, trimmedStart,
+         expectedGaplessFrames, metadataRatio, metadataGain,
+         bestNativeEnergy,
          (unsigned int)hasXing, (unsigned int)xing.encodedFrames,
          (unsigned int)xing.encoderDelay, (unsigned int)xing.endPadding);
   assert(bestRatio >= -0.0000001 && bestRatio <= 1.0000001);
