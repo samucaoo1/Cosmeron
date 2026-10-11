@@ -36,15 +36,18 @@ for binary in cosmeron_ohos_multi_tu cosmeron_ohos_posix_link; do
   # hdc propagates the shell command failure on supported SDK versions.
   # The marker independently verifies the program's own exit status.
   token="COSMERON_EXIT_"
-  output=$(hdc shell "chmod 700 '$remote_dir/$binary'; '$remote_dir/$binary'; rc=\$?; echo ${token}\$rc") || {
+  output=$(hdc shell "chmod 700 '$remote_dir/$binary' && '$remote_dir/$binary'; rc=\$?; echo ${token}\$rc") || {
     printf '%s\n' "$binary: HDC_TRANSPORT_FAILURE" >> "$report"
     exit 1
   }
   printf '%s\n' "$output" >> "$report"
-  case "$output" in
-    *"${token}0"*) echo "$binary: PASS" >> "$report" ;;
-    *) echo "$binary: FAIL" >> "$report"; exit 1 ;;
-  esac
+  exit_code=$(printf "%s\n" "$output" | sed -n "s/.*${token}\([0-9][0-9]*\).*/\1/p" | tail -n 1)
+  if [ "$exit_code" = 0 ]; then
+    echo "$binary: PASS" >> "$report"
+  else
+    echo "$binary: FAIL (exit=${exit_code:-missing})" >> "$report"
+    exit 1
+  fi
 done
 echo "PASS: linked C11 multi-TU and native POSIX probe executed on OHOS target" >> "$report"
 echo "Device report: $report"
