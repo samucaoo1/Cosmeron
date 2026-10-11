@@ -10,6 +10,10 @@ is a zero-initializable struct and requires no `Init`/`Free`. Widget values
 are held by the application; persistent structs group options but do not own
 native windows or grids.
 
+The [pixel GUI](GUI.md) follows the same lifecycle and shares identity hashing,
+focus traversal, pointer capture and UTF-8 editor primitives. Canvas and
+Surface remain separate render targets.
+
 ## API, direct and struct
 
 ```c

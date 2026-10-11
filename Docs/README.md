@@ -37,6 +37,10 @@ Cross-project technical conventions.
 
 Module-by-module API and usage documentation.
 
+- [GUI](Modules/GUI.md) — pixel widgets, shared TUI interaction, direct and persistent APIs
+- [Surface](Modules/Surface.md) — owned or borrowed ARGB pixels and clipped views
+- [Window](Modules/Window.md) — native Win32/X11 presentation and host adapters
+- [UI](Modules/UI.md) — terminal widgets
 - [Input](Modules/Input.md) — keyboard, mouse, controllers and gamepad state without public initialization
 - [Audio](Modules/Audio.md) — synthesis, beep music, codecs and playback
 - [CLI](Modules/CLI.md) — arguments, declarative commands and help

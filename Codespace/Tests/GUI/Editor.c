@@ -1,0 +1,80 @@
+#include "Test.h"
+int main(void) {
+  GRAPHICS_TYPE(TSurface) s = {0};
+  GUI_TYPE(TContext) c = {0};
+  GUI_TYPE(TInputText) w = {0};
+  char buffer[64] = "AéB", copy[64];
+  size_t n = 99;
+  w.id = 55;
+  w.region = rect(5, 5, 150, 30);
+  w.buffer = buffer;
+  w.capacity = sizeof(buffer);
+  w.length = strlen(buffer);
+  w.caret = w.length;
+  w.selectionAnchor = w.caret;
+  OK(GRAPHICS_FUNC(Surface_Create)(&s, (TDUAL_TYPE(uint32)){.x = 200, .y = 100}));
+  OK(GUI_FUNC(Focus_Set)(&c, w.id));
+  OK(GUI_FUNC(Begin)(&c, &s));
+  key(&c, LIB_PREFIX_CONST(INPUT_KEY_LEFT), 0);
+  key(&c, LIB_PREFIX_CONST(INPUT_KEY_BACKSPACE), 0);
+  OK(GUI_FUNC(InputTextEx)(&c, &w));
+  assert(strcmp(buffer, "AB") == 0 && w.caret == 1);
+  OK(GUI_FUNC(End)(&c));
+  OK(GUI_FUNC(InputText_Select)(&w, 0, 2));
+  OK(GUI_FUNC(InputText_Copy)(&w, copy, sizeof(copy), &n));
+  assert(n == 2 && strcmp(copy, "AB") == 0);
+  OK(GUI_FUNC(InputText_Paste)(&w, "ação", strlen("ação")));
+  assert(strcmp(buffer, "ação") == 0);
+  assert(GUI_FUNC(InputText_Select)(&w, 2, 3) == STATUS_CONST(INVALID_ARGUMENT));
+  OK(GUI_FUNC(InputText_Select)(&w, 0, w.length));
+  OK(GUI_FUNC(InputText_Cut)(&w, copy, sizeof(copy), &n));
+  assert(!w.length && strcmp(copy, "ação") == 0);
+  OK(GUI_FUNC(Begin)(&c, &s));
+  text(&c, "Olá 😀");
+  OK(GUI_FUNC(InputTextEx)(&c, &w));
+  assert(strcmp(buffer, "Olá 😀") == 0);
+  OK(GUI_FUNC(End)(&c));
+  {
+    char small[4] = "ab";
+    GUI_TYPE(TInputText) t = w;
+    t.buffer = small;
+    t.capacity = 4;
+    t.length = 2;
+    t.caret = 2;
+    t.selectionAnchor = 2;
+    OK(GUI_FUNC(Begin)(&c, &s));
+    text(&c, "cd");
+    assert(GUI_FUNC(InputTextEx)(&c, &t) == STATUS_CONST(INSUFFICIENT_SPACE));
+    assert(strcmp(small, "ab") == 0 && t.length == 2);
+    OK(GUI_FUNC(End)(&c));
+  }
+  OK(GUI_FUNC(Begin)(&c, &s));
+  {
+    INPUT_TYPE(TEvent) e = {0};
+    e.type = INPUT_CONST(EVENT_TEXT_COMPOSITION);
+    strcpy(e.data.text.utf8, "é");
+    e.data.text.length = 2;
+    e.data.text.caret = 2;
+    OK(GUI_FUNC(Event)(&c, &e));
+  }
+  OK(GUI_FUNC(InputTextEx)(&c, &w));
+  assert(c.compositionLength == 2);
+  OK(GUI_FUNC(End)(&c));
+  OK(GUI_FUNC(Begin)(&c, &s));
+  text(&c, "é");
+  OK(GUI_FUNC(InputTextEx)(&c, &w));
+  assert(c.compositionLength == 0);
+  OK(GUI_FUNC(End)(&c));
+  strcpy(buffer, "Aé\nBC");
+  w.length = strlen(buffer);
+  w.caret = 5;
+  w.selectionAnchor = 5;
+  OK(GUI_FUNC(Begin)(&c, &s));
+  key(&c, LIB_PREFIX_CONST(INPUT_KEY_UP), 0);
+  OK(GUI_FUNC(TextAreaEx)(&c, &w));
+  assert(w.caret == 1);
+  OK(GUI_FUNC(End)(&c));
+  GRAPHICS_FUNC(Surface_Free)(&s);
+  puts("Editor passed");
+  return 0;
+}

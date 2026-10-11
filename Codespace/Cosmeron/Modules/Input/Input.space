@@ -133,14 +133,20 @@ typedef enum INPUT_TYPE(EventType) {
   INPUT_CONST(EVENT_FOCUS_GAINED),
   INPUT_CONST(EVENT_FOCUS_LOST),
   INPUT_CONST(EVENT_SOURCE_REMOVED),
+  INPUT_CONST(EVENT_TEXT_INPUT),
+  INPUT_CONST(EVENT_TEXT_COMPOSITION),
 } INPUT_TYPE(EventType);
 typedef struct INPUT_TYPE(TEvent) {
   INPUT_TYPE(EventType) type;
   INPUT_TYPE(ControllerId) controller; /* zero for keyboard/mouse */
   uint64_t sequence;
   uint32_t source; /* application device slot, independent of controller ID */
+  INPUT_TYPE(Modifiers) modifiers;
   INPUT_TYPE(Key) physicalKey; /* UNKNOWN if unavailable */
   union {
+    /* UTF-8 bytes excluding the terminator; composition offsets are byte offsets.
+     * Fixed storage keeps events safe to copy through queues. */
+    struct { char utf8[64]; size_t length, caret, selection; } text;
     INPUT_TYPE(Key) key;
     INPUT_TYPE(MouseButton) mouseButton;
     TPAIR_TYPE(float) motion; /* displacement, not absolute position */

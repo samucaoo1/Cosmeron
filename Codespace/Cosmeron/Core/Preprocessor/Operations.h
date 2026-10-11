@@ -4,6 +4,9 @@
 
 #define PP_OP_EXPAND(...) __VA_ARGS__
 
+#define PP_OP_STRING_RAW(VALUE) #VALUE
+#define PP_OP_STRING(VALUE) PP_OP_STRING_RAW(VALUE)
+
 #define PP_OP_CAT(a, b) a##b
 #define PP_OP_CAT2(a, b) PP_OP_CAT(a, b)
 

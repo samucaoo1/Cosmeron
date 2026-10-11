@@ -119,6 +119,11 @@ foreach ($name in @("Terminal", "Canvas", "UI", "UIAdvanced", "UIGameWidgets", "
   Invoke-CosmeronTest "Codespace/Tests/Terminal" $name @("$name.c")
 }
 
+foreach ($name in @("Surface", "Interaction", "Editor", "Render", "Containers", "Failure", "InputText", "Window", "WindowNative", "Advanced", "IncludeAll", "Namespace", "FunctionTableOff")) {
+  Invoke-CosmeronTest "Codespace/Tests/GUI" $name @("$name.c")
+}
+Invoke-CosmeronTest "Codespace/Tests/GUI" "multi-tu" @("MultiTU_A.c", "MultiTU_B.c", "MultiTU_Main.c")
+
 foreach ($name in @("IncludeAll", "Path", "File", "Namespace", "WindowsMacros")) {
   Invoke-CosmeronTest "Codespace/Tests/File" $name @("$name.c")
 }

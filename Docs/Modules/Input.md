@@ -117,6 +117,17 @@ Input_Modifiers Input_Keyboard_GetModifiers(void);
 
 Keys include A–Z, digits (`INPUT_KEY_DIGIT_0` etc.), F1–F12, navigation, punctuation, and sided modifiers. Invalid/unknown keys return false. Modifier bits represent Shift, Control, Alt and Super; lock-toggle state is not exposed. Native repeat generates `KEY_REPEAT`, not another `KEY_PRESS`.
 
+## Application text events
+
+`EVENT_TEXT_INPUT` commits UTF-8 text, while `EVENT_TEXT_COMPOSITION` carries
+provisional IME text. `TEvent.data.text` owns `utf8[64]`, `length`, `caret` and
+`selection`; the latter two are byte offsets/lengths at codepoint boundaries.
+The payload holds at most 63 bytes plus its terminator. Split longer commits
+at codepoint boundaries. Event_Submit validates and copies the payload, and
+application capture preserves the submitted keyboard `modifiers` field.
+Native polling key state does not synthesize text; use Window's committed text
+or a host text/IME adapter for GUI editing.
+
 ## Mouse
 
 ```c

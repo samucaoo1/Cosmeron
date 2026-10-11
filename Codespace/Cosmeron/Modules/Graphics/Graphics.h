@@ -9,3 +9,7 @@
 #include "Raycasting/Render.h"
 #include "Pseudo3DRoad/Render.h"
 #include "Sprite/Sprite.h"
+
+#include "Surface/Surface.h"
+#include "GUI/GUI.h"
+#include "Window/Window.h"

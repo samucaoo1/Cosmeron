@@ -278,7 +278,11 @@ static inline void INPUT_INS(ApplyPending)(void) {
     if (s->unfocused) continue;
     switch (e->type) {
     case INPUT_CONST(EVENT_KEY_PRESS): case INPUT_CONST(EVENT_KEY_RELEASE): case INPUT_CONST(EVENT_KEY_REPEAT):
-      INPUT_INS(SourceKey)(e->source, e->data.key, e->physicalKey, e->type != INPUT_CONST(EVENT_KEY_RELEASE), e->type == INPUT_CONST(EVENT_KEY_REPEAT));
+      {
+        uint64_t before=s->sequence;size_t index;
+        INPUT_INS(SourceKey)(e->source, e->data.key, e->physicalKey, e->type != INPUT_CONST(EVENT_KEY_RELEASE), e->type == INPUT_CONST(EVENT_KEY_REPEAT));
+        for(index=0;index<s->count;++index){INPUT_TYPE(TEvent) *queued=&s->events[(s->head+index)%INPUT_EVENT_CAPACITY];if(queued->sequence>before)queued->modifiers=e->modifiers;}
+      }
       if (e->data.key != LIB_PREFIX_CONST(INPUT_KEY_UNKNOWN)) s->capabilities |= INPUT_CONST(CAPABILITY_LOGICAL_KEYS);
       if (e->physicalKey != LIB_PREFIX_CONST(INPUT_KEY_UNKNOWN)) s->capabilities |= INPUT_CONST(CAPABILITY_PHYSICAL_KEYS);
       s->capabilities |= INPUT_CONST(CAPABILITY_KEYBOARD); break;
@@ -288,6 +292,8 @@ static inline void INPUT_INS(ApplyPending)(void) {
     case INPUT_CONST(EVENT_MOUSE_MOVE): case INPUT_CONST(EVENT_MOUSE_SCROLL):
       INPUT_INS(Motion)(e->data.motion.x, e->data.motion.y, e->type == INPUT_CONST(EVENT_MOUSE_SCROLL));
       s->capabilities |= e->type == INPUT_CONST(EVENT_MOUSE_SCROLL) ? INPUT_CONST(CAPABILITY_SCROLL) | INPUT_CONST(CAPABILITY_PRECISE_SCROLL) : INPUT_CONST(CAPABILITY_RAW_MOTION); break;
+    case INPUT_CONST(EVENT_TEXT_INPUT): case INPUT_CONST(EVENT_TEXT_COMPOSITION):
+      INPUT_INS(Push)(*e); break;
     case INPUT_CONST(EVENT_MOUSE_POSITION):
       s->x = e->data.motion.x; s->y = e->data.motion.y;
       s->capabilities |= INPUT_CONST(CAPABILITY_POINTER_POSITION); INPUT_INS(Push)(*e); break;

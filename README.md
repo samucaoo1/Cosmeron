@@ -40,6 +40,7 @@ The current architecture covers or is designed around:
 
 - **Compression:** DEFLATE, zlib, gzip and ZIP with an embedded engine and bounded decompression.
 - **Database:** embedded SQLite, prepared statements, typed columns and transactions.
+- **Graphics:** Terminal/Canvas, TUI, pixel GUI, ARGB surfaces and explicit native/host windows.
 - **Math:** arithmetic, ranges, clamps, values, and equation helpers.
 - **Network:** addresses, sockets, listeners, datagrams, polling, and name resolution.
 - **Random:** entropy sources, deterministic engines, distributions, mixers, and shuffling.
@@ -49,7 +50,10 @@ The current architecture covers or is designed around:
 
 The [Input module](Docs/Modules/Input.md) provides keyboard, mouse and controller state through Windows/Linux backends, macOS capture, BSD paths and a host-event adapter. Controllers use native IOHIDManager on macOS and evdev/uhid/ujoy on BSD; SDL 3 is an optional fallback on macOS and non-evdev BSD.
 
-Planned domains such as Filesystem, Terminal, TUI, Graphics, Serialization, Event Loop, Audio, and more are tracked in the [roadmap](Docs/Project/ROADMAP.md).
+The [GUI module](Docs/Modules/GUI.md) shares the TUI interaction model and provides
+direct and persistent widget APIs. See the [GUI Lab](Codespace/Examples/GUI/) example.
+
+Planned domains such as Filesystem, Serialization, Event Loop, Audio, and more are tracked in the [roadmap](Docs/Project/ROADMAP.md).
 
 ## Architecture
 

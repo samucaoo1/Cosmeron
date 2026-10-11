@@ -1,8 +1,7 @@
 #pragma once
 /* Selection and cursor offsets are always UTF-8 byte offsets. */
 static inline bool UI_INS(Boundary)(const UI_TYPE(TInputText) *input,size_t at) {
-  return at<=input->length && (at==input->length ||
-    ((unsigned char)input->buffer[at]&0xC0U)!=0x80U);
+  return COSMERON_MACRO_INTERNAL_UI_SHARED(Boundary)(input->buffer,input->length,at);
 }
 static inline bool UI_INS(EditValid)(const UI_TYPE(TInputText) *input) {
   return input && input->buffer && input->capacity && input->length<input->capacity &&
@@ -11,17 +10,10 @@ static inline bool UI_INS(EditValid)(const UI_TYPE(TInputText) *input) {
      UI_INS(Boundary)(input,input->selectionAnchor);
 }
 static inline size_t UI_INS(Previous)(const UI_TYPE(TInputText) *input,size_t at) {
-  if(!at)return 0;
-  do { --at; }
-  while(at && ((unsigned char)input->buffer[at]&0xC0U)==0x80U);
-  return at;
+  return COSMERON_MACRO_INTERNAL_UI_SHARED(Previous)(input->buffer,at);
 }
 static inline size_t UI_INS(Next)(const UI_TYPE(TInputText) *input,size_t at) {
-  if(at>=input->length)return input->length;
-  ++at;
-  while(at<input->length &&
-        ((unsigned char)input->buffer[at]&0xC0U)==0x80U)++at;
-  return at;
+  return COSMERON_MACRO_INTERNAL_UI_SHARED(Next)(input->buffer,input->length,at);
 }
 static inline size_t UI_INS(SelectionStart)(const UI_TYPE(TInputText) *input) {
   return input->caret<input->selectionAnchor?input->caret:input->selectionAnchor;
@@ -31,9 +23,7 @@ static inline size_t UI_INS(SelectionEnd)(const UI_TYPE(TInputText) *input) {
 }
 static inline void UI_INS(DeleteRange)(
     UI_TYPE(TInputText) *input,size_t start,size_t finish) {
-  memmove(input->buffer+start,input->buffer+finish,
-          input->length-finish+1U);
-  input->length-=finish-start;
+  COSMERON_MACRO_INTERNAL_UI_SHARED(DeleteRange)(input->buffer,&input->length,start,finish);
   input->caret=input->selectionAnchor=start;
   if(input->firstVisible>input->length)input->firstVisible=0;
 }
@@ -88,12 +78,10 @@ UI_INPUT_TEXT_PASTE_PROTOTYPE {
   return STATUS_CONST(SUCCESS);
 }
 static inline size_t UI_INS(LineStart)(const UI_TYPE(TInputText) *input,size_t at) {
-  while(at && input->buffer[at-1]!='\n')--at;
-  return at;
+  return COSMERON_MACRO_INTERNAL_UI_SHARED(LineStart)(input->buffer,at);
 }
 static inline size_t UI_INS(LineEnd)(const UI_TYPE(TInputText) *input,size_t at) {
-  while(at<input->length && input->buffer[at]!='\n')++at;
-  return at;
+  return COSMERON_MACRO_INTERNAL_UI_SHARED(LineEnd)(input->buffer,input->length,at);
 }
 /* Text-aware cursor movement, based on Unicode scalars rather than bytes. */
 static inline size_t UI_INS(Column)(const UI_TYPE(TInputText) *input,size_t at) {

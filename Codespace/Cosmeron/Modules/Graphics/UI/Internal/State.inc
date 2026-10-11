@@ -1,6 +1,7 @@
 #pragma once
 #include <string.h>
 #include <stdlib.h>
+#include "Interaction.inc"
 
 /* TVisual reuses Text/Grid attributes; no alternate color or cell structures. */
 UI_VISUAL_DEFAULT_PROTOTYPE {
@@ -127,13 +128,7 @@ static inline OPSTATUS UI_INS(Check)(
 }
 static inline UI_TYPE(WidgetId) UI_INS(HashText)(
     UI_TYPE(WidgetId) hash,const char *text) {
-  const unsigned char *p=(const unsigned char *)text;
-  if(!text) return hash;
-  while(*p) {
-    hash^=(UI_TYPE(WidgetId))*p++;
-    hash*=UINT64_C(1099511628211);
-  }
-  return hash?hash:UINT64_C(1);
+  return COSMERON_MACRO_INTERNAL_UI_SHARED(HashText)(hash, text);
 }
 UI_GET_ID_PROTOTYPE {
   UI_TYPE(WidgetId) hash;
@@ -161,16 +156,10 @@ UI_FOCUS_SET_PROTOTYPE {
 }
 UI_IS_FOCUSED_PROTOTYPE { return context && widget && context->focus==widget; }
 static inline OPSTATUS UI_INS(FocusStep)(UI_TYPE(TContext) *context, bool forward) {
-  size_t i, index=0;
   if(!context) return STATUS_CONST(INVALID_ARGUMENT);
   if(!context->focusCount) return STATUS_CONST(NOT_FOUND);
-  for(i=0;i<context->focusCount;i++) {
-    if(context->focusIds[i]==context->focus) {index=i;break;}
-  }
-  if(i==context->focusCount) index=forward?context->focusCount-1:0;
-  index=forward?(index+1)%context->focusCount:
-                (index+context->focusCount-1)%context->focusCount;
-  context->focus=context->focusIds[index];
+  context->focus=COSMERON_MACRO_INTERNAL_UI_SHARED(FocusStep)(
+      context->focusIds,context->focusCount,context->focus,forward);
   return STATUS_CONST(SUCCESS);
 }
 UI_FOCUS_NEXT_PROTOTYPE {return UI_INS(FocusStep)(context,true);}
@@ -206,11 +195,9 @@ static inline bool UI_INS(Activate)(
   bool hovered=UI_INS(Hovered)(context,region);
   bool fire=false;
   if(disabled) return false;
-  if(context->pointerPressed && hovered) {
-    context->held=id;
-    context->focus=id;
-  }
-  if(context->pointerReleased && hovered && context->held==id) fire=true;
+  fire=COSMERON_MACRO_INTERNAL_UI_SHARED(PointerActivate)(
+      &context->focus,&context->held,id,context->pointerPressed,
+      context->pointerReleased,hovered,hovered,disabled);
   if(context->focus==id) for(i=0;i<context->keyCount;i++) {
     TERMINAL_TYPE(TKey) key=context->keys[i];
     if(key==TERMINAL_CONST(KEY_ENTER) || key==' ') {

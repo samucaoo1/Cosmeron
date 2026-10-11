@@ -1,5 +1,5 @@
 #pragma once
-#include "../Canvas/Canvas.h"
+#include "../../../Core/Namespace.h"
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>

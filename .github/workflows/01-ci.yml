@@ -68,6 +68,16 @@ jobs:
       - name: Terminal
         run: make -C Codespace/Tests/Terminal clean run CC=${{ matrix.cc }}
 
+      - name: GUI and headless example
+        run: make -C Codespace/Tests/GUI clean run CC=${{ matrix.cc }}
+
+      - name: Native GUI / X11
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libx11-dev xvfb
+          CC=${{ matrix.cc }} sh .github/scripts/test-gui-native.sh
+
       - name: Audio
         if: ${{ hashFiles('Codespace/Tests/Audio/**') != '' }}
         run: make -C Codespace/Tests/Audio clean run CC=${{ matrix.cc }}
@@ -204,6 +214,10 @@ jobs:
       - name: Terminal and Canvas
         shell: bash
         run: make -C Codespace/Tests/Terminal clean run CC=gcc
+
+      - name: GUI and headless example
+        shell: bash
+        run: make -C Codespace/Tests/GUI clean run CC=gcc
 
       - name: Audio
         if: ${{ hashFiles('Codespace/Tests/Audio/**') != '' }}
@@ -375,6 +389,8 @@ jobs:
         run: make -C Codespace/Tests/Input clean run CC=clang CFLAGS="$SAN_FLAGS"
       - name: Terminal and Canvas
         run: make -C Codespace/Tests/Terminal clean run CC=clang CFLAGS="$SAN_FLAGS"
+      - name: GUI and headless example
+        run: make -C Codespace/Tests/GUI clean run CC=clang CFLAGS="$SAN_FLAGS"
       - name: Audio
         run: make -C Codespace/Tests/Audio clean run CC=clang CFLAGS="$SAN_FLAGS"
       - name: Core

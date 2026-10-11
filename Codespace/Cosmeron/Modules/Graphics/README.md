@@ -1,6 +1,12 @@
 # Graphics — implementation project
 
-Status: **Terminal and Canvas foundations implemented**. UI, Rasterization, Raycasting and Pseudo3DRoad remain design specifications.
+Status: **Terminal, Canvas, UI, Rasterization, Surface, GUI and Window implemented**.
+Raycasting and Pseudo3DRoad remain design specifications.
+
+The pixel GUI follows the TUI's explicit frame and application-owned widget state,
+with shared focus, pointer, identity and UTF-8 editing primitives. See
+[GUI](GUI/README.md), [Surface](Surface/README.md) and [Window](Window/README.md).
+The historical terminal design below describes the cell output path.
 
 ## Purpose
 
@@ -31,6 +37,9 @@ Application
 |---|---|---|
 | [Terminal](Terminal/README.md) | Standard I/O, keyboard, console state, one-shot drawing, normalized backends | Core, Struct, Text |
 | [Canvas](Canvas/README.md) | In-memory textual surfaces, views, composition, explicit presentation | Struct, Text/Grid; Terminal only for presentation |
+| [Surface](Surface/README.md) | Owned/borrowed ARGB pixel surfaces, views and blending | Core, Struct |
+| [GUI](GUI/README.md) | Pixel widgets and software command rendering | Surface, shared UI interaction, Text, Font descriptors |
+| [Window](Window/README.md) | Explicit native Win32/X11 or host presentation | Surface, Input event descriptors |
 | [UI](UI/README.md) | TUI layout, widgets, focus and event processing | Canvas, Terminal input |
 | [Rasterization](Rasterization/README.md) | Geometry-to-cells primitives, line/shape/fill operations | Canvas, Struct, Math as needed |
 | [Raycasting](Raycasting/README.md) | Ray traversal, intersections and projections | Math/Struct, Rasterization/Canvas |
@@ -49,7 +58,7 @@ The **existing** `Modules/Struct/TDual.h` and `TQuad.h` provide geometry:
 
 Follow [PATTERN.md](../../../../Docs/Reference/PATTERN.md) (repository-relative source: `Docs/Reference/PATTERN.md`): `*_NS`, `*_TYPE`, `*_FUNC`, `*_CONST`; one readable `*_PROTOTYPE` macro per public function; `OPSTATUS` for fallible operations; outputs via `out` parameters; `camelCase` parameter names. Illustrative logical function names in package docs are `TERMINAL_FUNC(Print)`, `TERMINAL_FUNC(Canvas_Print)` etc. Actual include/API wiring is an implementation task.
 
-This is a **proposed contract**, not a compilation-ready header.
+Implemented packages expose compilation-ready headers; the remaining design specifications describe proposed contracts.
 
 ## Portability and lifecycle
 

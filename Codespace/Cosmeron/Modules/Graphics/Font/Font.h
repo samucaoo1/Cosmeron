@@ -1,5 +1,6 @@
 #pragma once
 #include "Font.space"
+#include "../Canvas/Canvas.h"
 /* Only native compile-time static-const .asf definitions are accepted. */
 #define FONT_MEASURE_PROTOTYPE \
   static inline OPSTATUS FONT_FUNC(Measure)( \

@@ -1,4 +1,5 @@
 #pragma once
+#include "../../Internal/Primitives.inc"
 
 static inline OPSTATUS RASTER_INS(Validate)(
     TERMINAL_TYPE(TCanvas) *canvas, uint32_t codepoint) {
@@ -28,28 +29,23 @@ static inline void RASTER_INS(Plot)(TERMINAL_TYPE(TCanvas) *canvas,
       (TDUAL_TYPE(uint16)){.x=(uint16_t)x,.y=(uint16_t)y},codepoint,style);
 }
 
+typedef struct RASTER_INS(LineTarget) {
+  TERMINAL_TYPE(TCanvas) *canvas;uint32_t codepoint;TEXT_GRID_ATTRIBUTE_TYPE(Cell) style;
+} RASTER_INS(LineTarget);
+static inline void RASTER_INS(LinePlot)(void *user,int64_t x,int64_t y) {
+  RASTER_INS(LineTarget) *target=(RASTER_INS(LineTarget) *)user;
+  RASTER_INS(Plot)(target->canvas,x,y,target->codepoint,target->style);
+}
+
 /* Evaluate the original Bresenham lattice only along the visible major axis.
  * Canonical direction makes reversal identical, including halfway ties.
  * Products fit uint64_t even for INT32_MIN -> INT32_MAX. */
 static inline void RASTER_INS(Line)(TERMINAL_TYPE(TCanvas) *canvas,
     TDUAL_TYPE(int32) from, TDUAL_TYPE(int32) to,
     uint32_t codepoint, TEXT_GRID_ATTRIBUTE_TYPE(Cell) style) {
-  int64_t dx=(int64_t)to.x-from.x,dy=(int64_t)to.y-from.y;
-  bool steep=(dy<0 ? -dy : dy)>(dx<0 ? -dx : dx);
-  int64_t a=steep ? from.y : from.x, b=steep ? from.x : from.y;
-  int64_t end=steep ? to.y : to.x, other=steep ? to.x : to.y;
-  int64_t first,last,p,delta,sign;
-  uint64_t major,minor;
-  if (a>end) { int64_t temp=a;a=end;end=temp;temp=b;b=other;other=temp; }
-  major=(uint64_t)(end-a); delta=other-b; sign=delta<0 ? -1 : 1;
-  minor=(uint64_t)(delta<0 ? -delta : delta);
-  first=a<0 ? 0 : a;
-  last=(steep ? canvas->size.row : canvas->size.col)-1;
-  if (last>end) last=end;
-  for (p=first;p<=last;p++) {
-    int64_t q=b+(major ? sign*(int64_t)(((uint64_t)(p-a)*minor+major/2)/major) : 0);
-    RASTER_INS(Plot)(canvas,steep ? q : p,steep ? p : q,codepoint,style);
-  }
+  RASTER_INS(LineTarget) target;
+  target.canvas=canvas;target.codepoint=codepoint;target.style=style;
+  COSMERON_MACRO_INTERNAL_GRAPHICS_SHARED(WalkLine)(canvas->size.col,canvas->size.row,from,to,RASTER_INS(LinePlot),&target);
 }
 
 RASTER_POINT_PROTOTYPE {

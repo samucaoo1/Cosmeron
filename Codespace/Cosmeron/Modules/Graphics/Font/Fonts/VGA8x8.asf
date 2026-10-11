@@ -10,7 +10,7 @@
  * This is a C11 includeable font definition, NOT a textual .flf/.asf parser
  * input. It needs no script at build time and no runtime file access.
  */
-#include "../Font.h"
+#include "../Font.space"
 
 static const FONT_TYPE(TFont) VGA8x8_Font = {
     .name = "VGA 8x8 Basic",

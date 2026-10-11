@@ -1,0 +1,101 @@
+#pragma once
+#include <string.h>
+#include <stdlib.h>
+#include <limits.h>
+/* Backend stores its function pointers per window; no global hidden singleton. */
+#if defined(_WIN32)
+#include "Windows.inc"
+#elif !defined(WINDOW_DISABLE_X11) && defined(__has_include)
+#if __has_include(<X11/Xlib.h>) && __has_include(<X11/Xutil.h>)
+#define COSMERON_MACRO_INTERNAL_WINDOW_X11 1
+#include "X11.inc"
+#endif
+#endif
+#if !defined(_WIN32) && !defined(COSMERON_MACRO_INTERNAL_WINDOW_X11)
+static inline OPSTATUS WINDOW_INS(NativeOpen)(WINDOW_TYPE(TWindow) * w, const char *title,
+                                              TDUAL_TYPE(uint32) size) {
+  (void)w;
+  (void)title;
+  (void)size;
+  return STATUS_CONST(NOT_SUPPORTED);
+}
+static inline OPSTATUS WINDOW_INS(NativePoll)(WINDOW_TYPE(TWindow) * w, WINDOW_TYPE(TEvent) * out) {
+  (void)w;
+  (void)out;
+  return STATUS_CONST(NOT_SUPPORTED);
+}
+static inline OPSTATUS WINDOW_INS(NativeUpdate)(WINDOW_TYPE(TWindow) * w,
+                                                const GRAPHICS_TYPE(TSurface) * surface) {
+  (void)w;
+  (void)surface;
+  return STATUS_CONST(NOT_SUPPORTED);
+}
+static inline void WINDOW_INS(NativeClose)(WINDOW_TYPE(TWindow) * w) { (void)w; }
+#endif
+WINDOW_OPEN_WITH_PROTOTYPE {
+  WINDOW_TYPE(TWindow) result = {0};
+  OPSTATUS status;
+  if (!outWindow || outWindow->native || outWindow->adapter.poll || !title || !size.x || !size.y ||
+      size.x > INT_MAX || size.y > INT_MAX)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (!TEXT_UTF8_FUNC(Validate)((const unsigned char *)title, strlen(title)))
+    return STATUS_CONST(INVALID_SEQUENCE);
+  if (adapter) {
+    if (!adapter->open || !adapter->poll || !adapter->update || !adapter->close)
+      return STATUS_CONST(INVALID_ARGUMENT);
+    result.adapter = *adapter;
+    status = adapter->open(adapter->user, title, size);
+  } else
+    status = WINDOW_INS(NativeOpen)(&result, title, size);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+  result.open = true;
+  result.size = size;
+  *outWindow = result;
+  return STATUS_CONST(SUCCESS);
+}
+WINDOW_OPEN_PROTOTYPE { return WINDOW_FUNC(OpenWith)(outWindow, title, size, NULL); }
+WINDOW_POLL_PROTOTYPE {
+  WINDOW_TYPE(TEvent) event = {0};
+  OPSTATUS status;
+  if (!window || !outEvent || (!window->native && !window->adapter.poll))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  status = window->adapter.poll ? window->adapter.poll(window->adapter.user, &event)
+                                : WINDOW_INS(NativePoll)(window, &event);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+  if (event.type == WINDOW_CONST(EVENT_CLOSE))
+    window->open = false;
+  else if (event.type == WINDOW_CONST(EVENT_RESIZE)) {
+    if (!event.size.x || !event.size.y || event.size.x > INT_MAX || event.size.y > INT_MAX)
+      return STATUS_CONST(INVALID_ARGUMENT);
+    window->size = event.size;
+  } else if (event.type != WINDOW_CONST(EVENT_INPUT))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  *outEvent = event;
+  return STATUS_CONST(SUCCESS);
+}
+WINDOW_UPDATE_PROTOTYPE {
+  if (!window || !window->open || !GRAPHICS_FUNC(Surface_IsValid)(surface))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (surface->size.x != window->size.x || surface->size.y != window->size.y)
+    return STATUS_CONST(OUT_OF_RANGE);
+  return window->adapter.update ? window->adapter.update(window->adapter.user, surface)
+                                : WINDOW_INS(NativeUpdate)(window, surface);
+}
+WINDOW_CLOSE_PROTOTYPE {
+  if (!window)
+    return;
+  if (window->adapter.close)
+    window->adapter.close(window->adapter.user);
+  else if (window->native)
+    WINDOW_INS(NativeClose)(window);
+  memset(window, 0, sizeof(*window));
+}
+WINDOW_IS_OPEN_PROTOTYPE { return window && window->open; }
+WINDOW_GET_SIZE_PROTOTYPE {
+  if (!window || !outSize || (!window->native && !window->adapter.poll))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  *outSize = window->size;
+  return STATUS_CONST(SUCCESS);
+}
