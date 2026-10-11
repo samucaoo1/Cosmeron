@@ -156,7 +156,7 @@ int main(int argc, char **argv) {
          "metadata-leading=%zu metadata-play-frames=%zu "
          "metadata-residual=%.8g metadata-gain=%.8g "
          "native-mean-square=%.8g xing=%u encoded-frames=%u "
-         "encoder-delay=%u end-padding=%u (DIAGNOSTIC ONLY)\\n",
+         "encoder-delay=%u end-padding=%u (DIAGNOSTIC ONLY)\n",
          path, used, frames, decoded, preroll, skipped,
          bestShift, bestGain, bestRatio, trimmedStart,
          expectedGaplessFrames, metadataRatio, metadataGain,
@@ -201,7 +201,7 @@ int main(int argc, char **argv) {
         }
       }
       printf("[mp3 parity segment] section=%u anchor=%zu shift=%d "
-          "normalized-residual=%.8g gain=%.8g native-energy=%.8g\\n",
+          "normalized-residual=%.8g gain=%.8g native-energy=%.8g\n",
           section, blockAnchor, winner, best, gainBest, meanSquare);
     }
   }
