@@ -60,7 +60,7 @@ jobs:
       - name: Parse hardware-side scripts without claiming hardware validation
         run: |
           set -eu
-          for script in Tools/ohos/check-device.sh Tools/crostini/check-hardware.sh Tools/bsd/check-tty.sh; do
+          for script in .github/scripts/test-bsd-extended.sh Tools/ohos/check-device.sh Tools/crostini/check-hardware.sh Tools/bsd/check-tty.sh; do
             sh -n "$script"
             echo "syntax PASS: $script"
           done
