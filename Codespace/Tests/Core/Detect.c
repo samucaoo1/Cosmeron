@@ -6,7 +6,7 @@
 #error "Primary compiler-family detection must be mutually exclusive."
 #endif
 
-#if (OS_WINDOWS + OS_MAC + OS_LINUX + OS_FREEBSD) > 1
+#if (OS_WINDOWS + OS_MAC + OS_LINUX + OS_FREEBSD + OS_OPENBSD + OS_NETBSD + OS_DRAGONFLY) > 1
 #error "Operating-system detection must identify at most one supported target."
 #endif
 
@@ -20,7 +20,7 @@
 #error "COMPILER_KNOWN must describe, not constrain, compiler detection."
 #endif
 
-#if OS_KNOWN != (OS_WINDOWS || OS_MAC || OS_LINUX || OS_FREEBSD)
+#if OS_KNOWN != (OS_WINDOWS || OS_MAC || OS_LINUX || OS_BSD)
 #error "OS_KNOWN must describe, not constrain, operating-system detection."
 #endif
 
@@ -30,11 +30,11 @@
 #error "PROCESSOR_KNOWN must describe, not constrain, processor detection."
 #endif
 
-#if OS_UNIX != (OS_LINUX || OS_MAC || OS_FREEBSD)
+#if OS_UNIX != (OS_LINUX || OS_MAC || OS_BSD)
 #error "OS_UNIX classification is inconsistent."
 #endif
 
-#if OS_POSIX != (OS_LINUX || OS_MAC || OS_FREEBSD)
+#if OS_POSIX != (OS_LINUX || OS_MAC || OS_BSD)
 #error "OS_POSIX classification is inconsistent."
 #endif
 
@@ -50,6 +50,8 @@ int main(void) {
 
   if (!DETECT_BOOLEAN_VALUE(OS_WINDOWS) || !DETECT_BOOLEAN_VALUE(OS_MAC) ||
       !DETECT_BOOLEAN_VALUE(OS_LINUX) || !DETECT_BOOLEAN_VALUE(OS_FREEBSD) ||
+      !DETECT_BOOLEAN_VALUE(OS_OPENBSD) || !DETECT_BOOLEAN_VALUE(OS_NETBSD) ||
+      !DETECT_BOOLEAN_VALUE(OS_DRAGONFLY) || !DETECT_BOOLEAN_VALUE(OS_BSD) ||
       !DETECT_BOOLEAN_VALUE(OS_UNIX) || !DETECT_BOOLEAN_VALUE(OS_POSIX) ||
       !DETECT_BOOLEAN_VALUE(OS_KNOWN))
     return 2;
