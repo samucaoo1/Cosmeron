@@ -1,3 +1,5 @@
+/* Match File.space: Core status declarations precede Windows headers. */
+#include "../../Cosmeron/Core/Error/Status.h"
 /* Windows SDK collisions can also be checked by a POSIX preprocessor. */
 #ifdef _WIN32
 #include <windows.h>

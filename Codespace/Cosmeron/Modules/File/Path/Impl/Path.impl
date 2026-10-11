@@ -103,7 +103,7 @@ FILE_PATH_RESOLVE_PROTOTYPE {
   if (!FILE_INS(PathValid)(path) || !outRequired || (!output && capacity)) return STATUS_CONST(INVALID_ARGUMENT);
 #ifdef _WIN32
   {
-    wchar_t *wide, *resolved; char *utf8; HANDLE handle; DWORD count;
+    wchar_t *wide, *resolved; char *utf8 = NULL; HANDLE handle; DWORD count;
     typedef DWORD (WINAPI *FILE_INS(FinalPathFunction))(HANDLE, LPWSTR, DWORD, DWORD);
     FILE_INS(FinalPathFunction) finalPath;
     FARPROC address = GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "GetFinalPathNameByHandleW");

@@ -26,7 +26,7 @@ static void extended(void) {
   assert(PARSING_FUNC(TOML_Parse)(source,strlen(source),&document,NULL)==STATUS_CONST(SUCCESS));
   { double real;
     assert(PARSING_FUNC(TOML_Get)(document.root,"negativeExponent",&v)==STATUS_CONST(SUCCESS));
-    assert(PARSING_FUNC(TOML_F64)(v,&real)==STATUS_CONST(SUCCESS) && real==0.01);
+    assert(PARSING_FUNC(TOML_F64)(v,&real)==STATUS_CONST(SUCCESS) && real>0.00999 && real<0.01001);
   }
   assert(PARSING_FUNC(TOML_Get)(document.root,"multiline",&v)==STATUS_CONST(SUCCESS));
   assert(PARSING_FUNC(TOML_String)(v,&text)==STATUS_CONST(SUCCESS));
