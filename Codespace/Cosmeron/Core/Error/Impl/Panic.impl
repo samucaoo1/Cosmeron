@@ -3,13 +3,15 @@
 #if OS_WINDOWS
 #include <windows.h>
 #include "StacktraceWindows.inc"
-#elif OS_UNIX && (!OS_LINUX || defined(__GLIBC__))
-/* On Linux, execinfo/backtrace is provided by glibc, not by musl's libc.
- * Keep the optional diagnostic out of the zero-link musl build. */
+#elif OS_MAC || (OS_LINUX && defined(__GLIBC__))
+/* execinfo/backtrace may need a separate link library on BSD and musl.
+ * Retain it only where it is known to satisfy the zero-link policy. */
 #include <execinfo.h>
 #include "StacktraceUnix.inc"
 #else
-PANIC_STACKTRACE_PROTOTYPE {}
+PANIC_STACKTRACE_PROTOTYPE {
+  fprintf(stderr, "stacktrace unavailable (no zero-link platform backend)\n");
+}
 #endif
 
 PANIC_TRIGGER_PROTOTYPE {
