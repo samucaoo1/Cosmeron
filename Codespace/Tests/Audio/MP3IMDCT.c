@@ -67,7 +67,7 @@ static void frequencyAndSafety(void) {
       input, out) == STATUS_CONST(SUCCESS));
   assert(out[0] == 1 && out[18] == 19 && out[19] == -20);
   assert(out[37] == 38 && out[55] == -56);
-  assert(out[576-1] == 576);
+  assert(out[576-1] == -576);
   assert(AUDIO_CODEC_FUNC(MP3_FrequencyInvert)(
       out, out) == STATUS_CONST(SUCCESS));
   assert(!memcmp(out, input, sizeof out));
