@@ -4,8 +4,12 @@
 #include <stdio.h>
 #ifdef _WIN32
 #include <windows.h>
-#else
+#endif
+/* SDK availability differs between MSVC and MinGW; simulate missing macros. */
+#ifndef FILE_CREATE
 #define FILE_CREATE 2
+#endif
+#ifndef _TRUNCATE
 #define _TRUNCATE ((size_t)-1)
 #endif
 /* _TRUNCATE can expand during namespace separator concatenation. */
