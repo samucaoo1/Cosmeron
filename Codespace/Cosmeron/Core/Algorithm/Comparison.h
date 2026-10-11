@@ -38,6 +38,9 @@ typedef COMPARISON_TYPE(Result) CMPOUT;
 
 typedef CMPOUT (*COMPARISON_TYPE(Comparator))(const void *left, const void *right);
 
+typedef CMPOUT (*COMPARISON_TYPE(ContextComparator))(
+    const void *left, const void *right, void *context);
+
 #define COMPARISON_TYPED_PROTOTYPE(TYPE, SUFFIX)                               \
   static inline CMPOUT COMPARISON_FUNC(SUFFIX)(TYPE left, TYPE right)
 
