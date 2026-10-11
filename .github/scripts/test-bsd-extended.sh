@@ -21,6 +21,17 @@ record() {
 }
 trap 'rc=$?; if [ "$rc" -ne 0 ]; then printf "| %s | FAIL | NOT COMPLETED | UNVERIFIED | NOT TESTED |\\n" "$stage" >> "$coverage"; fi' EXIT
 
+# A compiler can auto-link libraries through object metadata (Clang/lld).
+# An executable with libpthread/libthr/libm as a DT_NEEDED dependency does NOT
+# satisfy the stricter "no external link libraries" requirement, even when
+# the user supplied no -pthread/-lm flags.
+native_link_dependencies() {
+  executable=$1
+  if command -v ldd >/dev/null 2>&1; then
+    ldd "$executable" 2>&1 | grep -E 'lib(pthread|thr|thread_xu|m)\\.so' || :
+  fi
+}
+
 suite() {
   module=$1; shift
   module_features=-D_POSIX_C_SOURCE=200809L
@@ -110,7 +121,15 @@ if (
     -D_POSIX_C_SOURCE=200809L ${extra} ModuleSurface.c \
     -o ../../../.build-bsd-extended/Concurrency_ZeroLink
 ); then
-  echo "[bsd-extended] THREAD_ZERO_LINK=PASS"
+  native_libs=$(native_link_dependencies .build-bsd-extended/Concurrency_ZeroLink)
+  if [ -n "$native_libs" ]; then
+    echo "[bsd-extended] THREAD_NO_MANUAL_FLAGS=PASS; native library auto-linked:"
+    printf '%s\\n' "$native_libs"
+    thread_zero_link=NOT_SUPPORTED
+    echo "[bsd-extended] THREAD_ZERO_LINK=NOT_SUPPORTED (external runtime link dependency)"
+  else
+    echo "[bsd-extended] THREAD_ZERO_LINK=PASS"
+  fi
 else
   echo "[bsd-extended] THREAD_ZERO_LINK=NOT_SUPPORTED on $(uname -s) (requires native libpthread)"
   thread_zero_link=NOT_SUPPORTED
@@ -247,7 +266,14 @@ if (
     ${audio_features} ${extra} CodecStandalone.c \
     -o ../../../.build-bsd-extended/Audio_CodecZeroLink 2>../../../.build-bsd-extended/Audio_CodecZeroLink.stderr
 ); then
-  echo "[bsd-extended] AUDIO_CODEC_ZERO_LINK=PASS"
+  codec_libs=$(native_link_dependencies .build-bsd-extended/Audio_CodecZeroLink)
+  if [ -n "$codec_libs" ]; then
+    echo "[bsd-extended] AUDIO_CODEC_NO_MANUAL_FLAGS=PASS, linked system libraries:"
+    printf '%s\\n' "$codec_libs"
+    codec_zero_link=NOT_SUPPORTED
+  else
+    echo "[bsd-extended] AUDIO_CODEC_ZERO_LINK=PASS"
+  fi
 else
   echo "[bsd-extended] AUDIO_CODEC_ZERO_LINK=NOT_SUPPORTED on $(uname -s)"
   echo "[bsd-extended] unresolved codec dependencies:"
@@ -261,7 +287,14 @@ if (
     ${audio_features} ${extra} DesktopStandalone.c \
     -o ../../../.build-bsd-extended/Audio_DeviceZeroLink 2>../../../.build-bsd-extended/Audio_DeviceZeroLink.stderr
 ); then
-  echo "[bsd-extended] AUDIO_DEVICE_ZERO_LINK=PASS"
+  device_libs=$(native_link_dependencies .build-bsd-extended/Audio_DeviceZeroLink)
+  if [ -n "$device_libs" ]; then
+    echo "[bsd-extended] AUDIO_DEVICE_NO_MANUAL_FLAGS=PASS, linked system libraries:"
+    printf '%s\\n' "$device_libs"
+    device_zero_link=NOT_SUPPORTED
+  else
+    echo "[bsd-extended] AUDIO_DEVICE_ZERO_LINK=PASS"
+  fi
 else
   echo "[bsd-extended] AUDIO_DEVICE_ZERO_LINK=NOT_SUPPORTED on $(uname -s)"
   echo "[bsd-extended] unresolved device dependencies:"
