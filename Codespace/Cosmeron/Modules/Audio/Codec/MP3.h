@@ -80,6 +80,16 @@ typedef struct AUDIO_CODEC_TYPE(TMP3Scalefactors) {
 
 AUDIO_CODEC_MP3_PARSE_SCALEFACTORS_PROTOTYPE;
 
+#define AUDIO_CODEC_MP3_SCALEFACTORS_LSF_PROTOTYPE                             \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_ParseScalefactorsLSF)(          \
+      const unsigned char *mainData, size_t mainDataBytes,                    \
+      const AUDIO_CODEC_TYPE(TMP3FrameInfo) *header,                           \
+      const AUDIO_CODEC_TYPE(TMP3SideInfo) *side, unsigned int channel,       \
+      AUDIO_CODEC_TYPE(TMP3Scalefactors) *outScale,                            \
+      uint8_t *outIntensityScale)
+
+AUDIO_CODEC_MP3_SCALEFACTORS_LSF_PROTOTYPE;
+
 #define AUDIO_CODEC_MP3_HUFFMAN_PAIR_PROTOTYPE                                 \
   static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_HuffmanPair)(                   \
       const unsigned char *data, size_t size, size_t *ioBit, size_t endBit,    \
@@ -323,6 +333,7 @@ AUDIO_CODEC_MP3_FIND_FRAME_PROTOTYPE {
 
 #include "Impl/MP3SideInfo.inc"
 #include "Impl/MP3Scalefactors.inc"
+#include "Impl/MP3ScalefactorsLSF.inc"
 #include "Impl/MP3Huffman.inc"
 #include "Impl/MP3Requant.inc"
 #include "Impl/MP3Hybrid.inc"
