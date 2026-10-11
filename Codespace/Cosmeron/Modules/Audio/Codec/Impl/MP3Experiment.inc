@@ -9,7 +9,7 @@ AUDIO_CODEC_MP3_EXPERIMENT_FRAME_PROTOTYPE {
   AUDIO_CODEC_TYPE(TMP3Experimental) work;
   AUDIO_CODEC_TYPE(TMP3FrameInfo) header;
   AUDIO_CODEC_TYPE(TMP3SideInfo) side;
-  AUDIO_CODEC_TYPE(TMP3Scalefactors) previous[2] = {{0}};
+  AUDIO_CODEC_TYPE(TMP3Scalefactors) previous[2];
   float stage[1152 * 2], channels[2][576];
   const unsigned char *mainData = NULL;
   size_t mainBytes = 0, produced, i;
@@ -28,6 +28,7 @@ AUDIO_CODEC_MP3_EXPERIMENT_FRAME_PROTOTYPE {
     return STATUS_CONST(INVALID_SEQUENCE);
   if (size < header.frameBytes)
     return STATUS_CONST(INCOMPLETE_SEQUENCE);
+  memset(previous, 0, sizeof previous);
   work = *state;
   status = AUDIO_CODEC_FUNC(MP3_ReservoirFeed)(&work.reservoir,
       frame, header.frameBytes, &mainData, &mainBytes, &side);
