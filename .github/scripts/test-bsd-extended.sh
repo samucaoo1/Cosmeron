@@ -209,9 +209,13 @@ if (
     -o ../../../.build-bsd-extended/Audio_CodecMinimalZeroLink &&
   "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
     ${audio_features} ${extra} CodecMath.c \
-    -o ../../../.build-bsd-extended/Audio_CodecMinimalMathZeroLink
+    -o ../../../.build-bsd-extended/Audio_CodecMinimalMathZeroLink &&
+  "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
+    ${audio_features} ${extra} CodecCompressed.c \
+    -o ../../../.build-bsd-extended/Audio_CodecCompressedZeroLink
 ) && .build-bsd-extended/Audio_CodecMinimalZeroLink &&
-     .build-bsd-extended/Audio_CodecMinimalMathZeroLink; then
+     .build-bsd-extended/Audio_CodecMinimalMathZeroLink &&
+     .build-bsd-extended/Audio_CodecCompressedZeroLink; then
   echo "[bsd-extended] AUDIO_CODEC_MINIMAL_ZERO_LINK=PASS (libm loaded at runtime)"
 else
   echo "[bsd-extended] AUDIO_CODEC_MINIMAL_ZERO_LINK=NOT_SUPPORTED on $(uname -s)"
@@ -257,9 +261,13 @@ if (
   cd Codespace/Tests/Audio
   "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
     ${audio_features} ${extra} CodecMinimal.c \
-    -lm -o ../../../.build-bsd-extended/Audio_CodecMinimalFunctional
+    -lm -o ../../../.build-bsd-extended/Audio_CodecMinimalFunctional &&
+  "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
+    ${audio_features} ${extra} CodecCompressed.c \
+    -lm -o ../../../.build-bsd-extended/Audio_CodecCompressedFunctional
 ); then
   .build-bsd-extended/Audio_CodecMinimalFunctional
+  .build-bsd-extended/Audio_CodecCompressedFunctional
   echo "[bsd-extended] AUDIO_CODEC_MINIMAL_FUNCTIONAL=PASS"
 else
   echo "[bsd-extended] AUDIO_CODEC_MINIMAL_FUNCTIONAL=FAIL"
