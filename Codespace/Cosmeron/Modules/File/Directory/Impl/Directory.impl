@@ -1,0 +1,148 @@
+#pragma once
+FILE_DIRECTORY_CREATE_PROTOTYPE {
+  if (!FILE_INS(PathValid)(path)) return STATUS_CONST(INVALID_ARGUMENT);
+#ifdef _WIN32
+  { wchar_t *wide; OPSTATUS s = FILE_INS(Wide)(path, &wide);
+    if (s != STATUS_CONST(SUCCESS)) return s;
+    if (!CreateDirectoryW(wide, NULL)) s = FILE_INS(WinError)(GetLastError());
+    free(wide); return s;
+  }
+#else
+  return mkdir(path, FILE_CINS(DIRECTORY_MODE)) ? FILE_INS(Error)(errno) : STATUS_CONST(SUCCESS);
+#endif
+}
+static inline OPSTATUS FILE_INS(EnsureDirectory)(const char *path) {
+  OPSTATUS s = FILE_FUNC(Directory_Create)(path);
+  if (s == STATUS_CONST(ALREADY_EXISTS)) {
+    FILE_TYPE(TFileInfo) info;
+    s = FILE_FUNC(Info)(path, true, &info);
+    if (s == STATUS_CONST(SUCCESS) && info.kind != FILE_CONST(KIND_DIRECTORY)) s = STATUS_CONST(ALREADY_EXISTS);
+  }
+  return s;
+}
+FILE_DIRECTORY_CREATE_ALL_PROTOTYPE {
+  size_t length, root, p; char *copy; OPSTATUS s = STATUS_CONST(SUCCESS);
+  if (!FILE_INS(PathValid)(path)) return STATUS_CONST(INVALID_ARGUMENT);
+  length = strlen(path); root = FILE_INS(RootLength)(path);
+  copy = (char *)malloc(length + 1);
+  if (!copy) return STATUS_CONST(OUT_OF_MEMORY);
+  memcpy(copy, path, length + 1);
+  for (p = root; p <= length; ++p) {
+    if (p && (copy[p] == '\0' || FILE_INS(Separator)(copy[p]))) {
+      char saved = copy[p]; copy[p] = '\0';
+      s = FILE_INS(EnsureDirectory)(copy);
+      copy[p] = saved;
+      if (s != STATUS_CONST(SUCCESS)) break;
+    }
+  }
+  if (root == length) s = FILE_INS(EnsureDirectory)(path);
+  free(copy); return s;
+}
+FILE_DIRECTORY_OPEN_PROTOTYPE {
+  if (!directory || !FILE_INS(PathValid)(path)) return STATUS_CONST(INVALID_ARGUMENT);
+  if (directory->native) return STATUS_CONST(BUSY);
+#ifdef _WIN32
+  {
+    FILE_TYPE(TFileInfo) info; wchar_t *wide; char *pattern;
+    WIN32_FIND_DATAW entry; HANDLE native; size_t length = strlen(path);
+    OPSTATUS s = FILE_FUNC(Info)(path, true, &info);
+    if (s != STATUS_CONST(SUCCESS)) return s;
+    if (info.kind != FILE_CONST(KIND_DIRECTORY)) return STATUS_CONST(INVALID_ARGUMENT);
+    if (length > SIZE_MAX - 3) return STATUS_CONST(OUT_OF_RANGE);
+    pattern = (char *)malloc(length + 3);
+    if (!pattern) return STATUS_CONST(OUT_OF_MEMORY);
+    memcpy(pattern, path, length); pattern[length++] = '/'; pattern[length++] = '*'; pattern[length] = '\0';
+    s = FILE_INS(Wide)(pattern, &wide); free(pattern);
+    if (s != STATUS_CONST(SUCCESS)) return s;
+    native = FindFirstFileW(wide, &entry); free(wide);
+    if (native == INVALID_HANDLE_VALUE && GetLastError() != ERROR_FILE_NOT_FOUND)
+      return FILE_INS(WinError)(GetLastError());
+    directory->native = native; directory->first = native != INVALID_HANDLE_VALUE;
+    if (directory->first) directory->entry = entry;
+    directory->name = NULL;
+  }
+#else
+  {
+    DIR *native = opendir(path); char *copy;
+    if (!native) return FILE_INS(Error)(errno);
+    copy = (char *)malloc(strlen(path) + 1);
+    if (!copy) { closedir(native); return STATUS_CONST(OUT_OF_MEMORY); }
+    strcpy(copy, path); directory->native = native; directory->path = copy;
+  }
+#endif
+  return STATUS_CONST(SUCCESS);
+}
+FILE_DIRECTORY_NEXT_PROTOTYPE {
+  if (!directory || !directory->native || !outEntry || !outFound) return STATUS_CONST(INVALID_ARGUMENT);
+#ifdef _WIN32
+  {
+    OPSTATUS s; char *name; FILE_TYPE(TFileEntry) result;
+    if (directory->native == INVALID_HANDLE_VALUE) { *outFound = false; return STATUS_CONST(SUCCESS); }
+    for (;;) {
+      if (directory->first) directory->first = false;
+      else if (!FindNextFileW(directory->native, &directory->entry)) {
+        DWORD error = GetLastError();
+        if (error != ERROR_NO_MORE_FILES) return FILE_INS(WinError)(error);
+        *outFound = false; return STATUS_CONST(SUCCESS);
+      }
+      if (wcscmp(directory->entry.cFileName, L".") && wcscmp(directory->entry.cFileName, L"..")) break;
+    }
+    s = FILE_INS(Utf8)(directory->entry.cFileName, &name);
+    if (s != STATUS_CONST(SUCCESS)) return s;
+    free(directory->name); directory->name = name;
+    result.name = name;
+    result.kind = (directory->entry.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) ? FILE_CONST(KIND_LINK) :
+        ((directory->entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? FILE_CONST(KIND_DIRECTORY) : FILE_CONST(KIND_REGULAR));
+    *outEntry = result;
+  }
+#else
+  {
+    struct dirent *entry; FILE_TYPE(TFileEntry) result; FILE_TYPE(TFileInfo) info;
+    size_t base, name; char *full; OPSTATUS s;
+    do {
+      errno = 0; entry = readdir(directory->native);
+      if (!entry) {
+        if (errno) return FILE_INS(Error)(errno);
+        *outFound = false; return STATUS_CONST(SUCCESS);
+      }
+    } while (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."));
+    base = strlen(directory->path); name = strlen(entry->d_name);
+    if (base > SIZE_MAX - name - 2) return STATUS_CONST(OUT_OF_RANGE);
+    full = (char *)malloc(base + name + 2);
+    if (!full) return STATUS_CONST(OUT_OF_MEMORY);
+    memcpy(full, directory->path, base); full[base] = '/';
+    memcpy(full + base + 1, entry->d_name, name + 1);
+    s = FILE_FUNC(Info)(full, false, &info); free(full);
+    if (s != STATUS_CONST(SUCCESS) && s != STATUS_CONST(NOT_FOUND)) return s;
+    result.name = entry->d_name;
+    result.kind = s == STATUS_CONST(SUCCESS) ? info.kind : FILE_CONST(KIND_UNKNOWN);
+    *outEntry = result;
+  }
+#endif
+  *outFound = true; return STATUS_CONST(SUCCESS);
+}
+FILE_DIRECTORY_CLOSE_PROTOTYPE {
+  OPSTATUS s = STATUS_CONST(SUCCESS);
+  if (!directory) return STATUS_CONST(INVALID_ARGUMENT);
+  if (!directory->native) return s;
+#ifdef _WIN32
+  if (directory->native != INVALID_HANDLE_VALUE && !FindClose(directory->native)) s = FILE_INS(WinError)(GetLastError());
+  free(directory->name); directory->name = NULL; directory->first = false;
+#else
+  if (closedir(directory->native)) s = FILE_INS(Error)(errno);
+  free(directory->path); directory->path = NULL;
+#endif
+  directory->native = 0; return s;
+}
+FILE_DIRECTORY_REMOVE_PROTOTYPE {
+  if (!FILE_INS(PathValid)(path)) return STATUS_CONST(INVALID_ARGUMENT);
+#ifdef _WIN32
+  { wchar_t *wide; OPSTATUS s = FILE_INS(Wide)(path, &wide);
+    if (s != STATUS_CONST(SUCCESS)) return s;
+    if (!RemoveDirectoryW(wide)) s = FILE_INS(WinError)(GetLastError());
+    free(wide); return s;
+  }
+#else
+  return rmdir(path) ? FILE_INS(Error)(errno) : STATUS_CONST(SUCCESS);
+#endif
+}

@@ -1,0 +1,147 @@
+#pragma once
+#include "../../Core/Namespace.h"
+#include "../../Core/Error/Status.h"
+#include "../Chronometry/Instant/Instant.h"
+#include <errno.h>
+#include <limits.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <wchar.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#ifdef _WIN32
+#include <windows.h>
+#include <io.h>
+#include <direct.h>
+#else
+#include <unistd.h>
+#include <dirent.h>
+#endif
+
+#define FILE_MOD File
+#define FILE_CMOD FILE
+#ifndef FILE_NS
+#define FILE_NS(NAME) GNS2(LIB_PREFIX(FILE_MOD), NAME)
+#endif
+#ifndef FILE_CNS
+#define FILE_CNS(NAME) CNS2(LIB_PREFIX_CONST(FILE_CMOD), NAME)
+#endif
+#define FILE_INS(NAME) GNS3(LIB_PREFIX(FILE_MOD), Internal, NAME)
+#define FILE_CINS(NAME) CNS3(LIB_PREFIX_CONST(FILE_CMOD), INTERNAL, NAME)
+#define FILE_TYPE(NAME) FILE_NS(NAME)
+#define FILE_FUNC(NAME) FILE_NS(NAME)
+#define FILE_CONST(NAME) FILE_CNS(NAME)
+
+typedef enum FILE_TYPE(OpenFlags) {
+  FILE_CONST(READ) = 1u << 0, FILE_CONST(WRITE) = 1u << 1,
+  FILE_CONST(CREATE) = 1u << 2, FILE_CONST(TRUNCATE) = 1u << 3,
+  FILE_CONST(APPEND) = 1u << 4, FILE_CONST(EXCLUSIVE) = 1u << 5
+} FILE_TYPE(OpenFlags);
+typedef enum FILE_TYPE(SeekOrigin) {
+  FILE_CONST(SEEK_BEGIN), FILE_CONST(SEEK_CURRENT), FILE_CONST(SEEK_END)
+} FILE_TYPE(SeekOrigin);
+typedef enum FILE_TYPE(Kind) {
+  FILE_CONST(KIND_UNKNOWN), FILE_CONST(KIND_REGULAR),
+  FILE_CONST(KIND_DIRECTORY), FILE_CONST(KIND_LINK), FILE_CONST(KIND_OTHER)
+} FILE_TYPE(Kind);
+enum { FILE_CONST(INFO_MODIFIED) = 1u << 0, FILE_CONST(INFO_ACCESSED) = 1u << 1 };
+enum { FILE_CINS(COPY_BLOCK) = 16384, FILE_CINS(DEFAULT_MODE) = 0666,
+       FILE_CINS(DIRECTORY_MODE) = 0777, FILE_CINS(TEMP_ATTEMPTS) = 128 };
+/* Zero initialization is the closed state. Native descriptor is stored + 1. */
+typedef struct FILE_TYPE(TFile) { intptr_t native; uint32_t flags; } FILE_TYPE(TFile);
+typedef struct FILE_TYPE(TFileInfo) {
+  FILE_TYPE(Kind) kind;
+  uint64_t size;
+  CHRONOMETRY_TYPE(Instant) modified, accessed;
+  uint32_t available;
+} FILE_TYPE(TFileInfo);
+typedef struct FILE_TYPE(TFileEntry) {
+  const char *name;
+  FILE_TYPE(Kind) kind;
+} FILE_TYPE(TFileEntry);
+typedef struct FILE_TYPE(TDirectory) {
+#ifdef _WIN32
+  HANDLE native;
+  WIN32_FIND_DATAW entry;
+  char *name;
+  bool first;
+#else
+  DIR *native;
+  char *path;
+#endif
+} FILE_TYPE(TDirectory);
+
+static inline OPSTATUS FILE_INS(Error)(int code) {
+  switch (code) {
+  case ENOENT: return STATUS_CONST(NOT_FOUND);
+  case EEXIST: return STATUS_CONST(ALREADY_EXISTS);
+  case ENOMEM: return STATUS_CONST(OUT_OF_MEMORY);
+  case EINVAL: return STATUS_CONST(INVALID_ARGUMENT);
+#ifdef EOVERFLOW
+  case EOVERFLOW: return STATUS_CONST(OUT_OF_RANGE);
+#endif
+  case EBUSY: return STATUS_CONST(BUSY);
+  default: return STATUS_CONST(GENERIC_ERROR);
+  }
+}
+static inline bool FILE_INS(PathValid)(const char *path) { return path && *path; }
+static inline bool FILE_INS(Separator)(char c) {
+#ifdef _WIN32
+  return c == '/' || c == '\\';
+#else
+  return c == '/';
+#endif
+}
+static inline OPSTATUS FILE_INS(Output)(const char *text, size_t length,
+    char *output, size_t capacity, size_t *outRequired) {
+  if (!outRequired || (!output && capacity)) return STATUS_CONST(INVALID_ARGUMENT);
+  if (length == SIZE_MAX) return STATUS_CONST(OUT_OF_RANGE);
+  *outRequired = length + 1;
+  if (!output || capacity <= length) return STATUS_CONST(OUT_OF_RANGE);
+  memmove(output, text, length); output[length] = '\0';
+  return STATUS_CONST(SUCCESS);
+}
+#ifdef _WIN32
+static inline OPSTATUS FILE_INS(WinError)(DWORD code) {
+  switch (code) {
+  case ERROR_FILE_NOT_FOUND: case ERROR_PATH_NOT_FOUND: return STATUS_CONST(NOT_FOUND);
+  case ERROR_ALREADY_EXISTS: case ERROR_FILE_EXISTS: return STATUS_CONST(ALREADY_EXISTS);
+  case ERROR_NOT_ENOUGH_MEMORY: case ERROR_OUTOFMEMORY: return STATUS_CONST(OUT_OF_MEMORY);
+  case ERROR_INVALID_NAME: case ERROR_NO_UNICODE_TRANSLATION: return STATUS_CONST(INVALID_ARGUMENT);
+  case ERROR_SHARING_VIOLATION: case ERROR_LOCK_VIOLATION: return STATUS_CONST(BUSY);
+  default: return STATUS_CONST(GENERIC_ERROR);
+  }
+}
+static inline OPSTATUS FILE_INS(Wide)(const char *path, wchar_t **out) {
+  int count; wchar_t *wide;
+  if (!FILE_INS(PathValid)(path)) return STATUS_CONST(INVALID_ARGUMENT);
+  count = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, NULL, 0);
+  if (!count) return FILE_INS(WinError)(GetLastError());
+  wide = (wchar_t *)malloc((size_t)count * sizeof(*wide));
+  if (!wide) return STATUS_CONST(OUT_OF_MEMORY);
+  if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, wide, count)) {
+    OPSTATUS s = FILE_INS(WinError)(GetLastError()); free(wide); return s;
+  }
+  *out = wide; return STATUS_CONST(SUCCESS);
+}
+static inline OPSTATUS FILE_INS(Utf8)(const wchar_t *wide, char **out) {
+  int count = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide, -1, NULL, 0, NULL, NULL);
+  char *text;
+  if (!count) return FILE_INS(WinError)(GetLastError());
+  text = (char *)malloc((size_t)count);
+  if (!text) return STATUS_CONST(OUT_OF_MEMORY);
+  if (!WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide, -1, text, count, NULL, NULL)) {
+    OPSTATUS s = FILE_INS(WinError)(GetLastError()); free(text); return s;
+  }
+  *out = text; return STATUS_CONST(SUCCESS);
+}
+#else
+/* POSIX declarations hidden by strict libc feature profiles. No feature macros
+ * are set here: applications remain in control of their libc configuration. */
+extern int ftruncate(int, off_t);
+extern int lstat(const char *, struct stat *);
+extern char *realpath(const char * restrict, char * restrict);
+#endif

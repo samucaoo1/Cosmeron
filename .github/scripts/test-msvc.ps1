@@ -118,3 +118,8 @@ Invoke-CosmeronTest "Codespace/Tests/Input" "multi-tu" @("MultiTU_A.c", "MultiTU
 foreach ($name in @("Terminal", "Canvas", "UI", "UIAdvanced", "UIGameWidgets", "UIOverlays", "Font", "FIGlet", "FontCosmeron", "FontCosmeronBold", "FontNibbleBits", "IncludeAll")) {
   Invoke-CosmeronTest "Codespace/Tests/Terminal" $name @("$name.c")
 }
+
+foreach ($name in @("IncludeAll", "Path", "File", "Namespace")) {
+  Invoke-CosmeronTest "Codespace/Tests/File" $name @("$name.c")
+}
+Invoke-CosmeronTest "Codespace/Tests/File" "multi-tu" @("MultiTU_A.c", "MultiTU_B.c", "MultiTU_Main.c")

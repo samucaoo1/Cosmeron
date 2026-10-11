@@ -1,0 +1,144 @@
+#pragma once
+#ifdef _WIN32
+static inline CHRONOMETRY_TYPE(Instant) FILE_INS(WinInstant)(FILETIME time) {
+  const uint64_t ticksPerSecond = UINT64_C(10000000);
+  const int64_t epochOffset = INT64_C(11644473600);
+  uint64_t ticks = ((uint64_t)time.dwHighDateTime << 32) | time.dwLowDateTime;
+  CHRONOMETRY_TYPE(Instant) instant;
+  instant.seconds = (int64_t)(ticks / ticksPerSecond) - epochOffset;
+  instant.nanoseconds = (uint32_t)(ticks % ticksPerSecond) * 100u;
+  return instant;
+}
+#endif
+FILE_INFO_PROTOTYPE {
+  FILE_TYPE(TFileInfo) result = {0};
+  if (!FILE_INS(PathValid)(path) || !outInfo) return STATUS_CONST(INVALID_ARGUMENT);
+#ifdef _WIN32
+  {
+    wchar_t *wide; HANDLE handle; BY_HANDLE_FILE_INFORMATION info;
+    OPSTATUS s = FILE_INS(Wide)(path, &wide);
+    if (s != STATUS_CONST(SUCCESS)) return s;
+    handle = CreateFileW(wide, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | (followLinks ? 0 : FILE_FLAG_OPEN_REPARSE_POINT), NULL);
+    free(wide);
+    if (handle == INVALID_HANDLE_VALUE) return FILE_INS(WinError)(GetLastError());
+    if (!GetFileInformationByHandle(handle, &info)) {
+      s = FILE_INS(WinError)(GetLastError()); CloseHandle(handle); return s;
+    }
+    CloseHandle(handle);
+    result.kind = (!followLinks && (info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)) ? FILE_CONST(KIND_LINK) :
+        ((info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? FILE_CONST(KIND_DIRECTORY) : FILE_CONST(KIND_REGULAR));
+    result.size = ((uint64_t)info.nFileSizeHigh << 32) | info.nFileSizeLow;
+    result.modified = FILE_INS(WinInstant)(info.ftLastWriteTime);
+    result.accessed = FILE_INS(WinInstant)(info.ftLastAccessTime);
+  }
+#else
+  {
+    struct stat info;
+    if ((followLinks ? stat(path, &info) : lstat(path, &info))) return FILE_INS(Error)(errno);
+    result.kind = S_ISREG(info.st_mode) ? FILE_CONST(KIND_REGULAR) :
+        (S_ISDIR(info.st_mode) ? FILE_CONST(KIND_DIRECTORY) :
+        (S_ISLNK(info.st_mode) ? FILE_CONST(KIND_LINK) : FILE_CONST(KIND_OTHER)));
+    if (info.st_size < 0) return STATUS_CONST(OUT_OF_RANGE);
+    result.size = (uint64_t)info.st_size;
+    result.modified.seconds = (int64_t)info.st_mtime;
+    result.accessed.seconds = (int64_t)info.st_atime;
+    /* Second precision is universally available; nanoseconds remain zero. */
+  }
+#endif
+  result.available = FILE_CONST(INFO_MODIFIED) | FILE_CONST(INFO_ACCESSED);
+  *outInfo = result; return STATUS_CONST(SUCCESS);
+}
+FILE_EXISTS_PROTOTYPE {
+  FILE_TYPE(TFileInfo) info; OPSTATUS s;
+  if (!outExists) return STATUS_CONST(INVALID_ARGUMENT);
+  s = FILE_FUNC(Info)(path, false, &info);
+  if (s == STATUS_CONST(NOT_FOUND)) { *outExists = false; return STATUS_CONST(SUCCESS); }
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  *outExists = true; return STATUS_CONST(SUCCESS);
+}
+FILE_REMOVE_PROTOTYPE {
+  if (!FILE_INS(PathValid)(path)) return STATUS_CONST(INVALID_ARGUMENT);
+#ifdef _WIN32
+  { wchar_t *wide; OPSTATUS s = FILE_INS(Wide)(path, &wide);
+    if (s != STATUS_CONST(SUCCESS)) return s;
+    if (!DeleteFileW(wide)) s = FILE_INS(WinError)(GetLastError());
+    free(wide); return s;
+  }
+#else
+  return unlink(path) ? FILE_INS(Error)(errno) : STATUS_CONST(SUCCESS);
+#endif
+}
+FILE_COPY_PROTOTYPE {
+  FILE_TYPE(TFile) input = {0}, output = {0};
+  FILE_TYPE(TFileInfo) info; OPSTATUS s, closed;
+  unsigned char buffer[FILE_CINS(COPY_BLOCK)];
+  if (!FILE_INS(PathValid)(source) || !FILE_INS(PathValid)(destination)) return STATUS_CONST(INVALID_ARGUMENT);
+  s = FILE_FUNC(Info)(source, true, &info);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  if (info.kind != FILE_CONST(KIND_REGULAR)) return STATUS_CONST(NOT_SUPPORTED);
+  s = FILE_FUNC(Open)(&input, source, FILE_CONST(READ));
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  s = FILE_FUNC(Open)(&output, destination, FILE_CONST(WRITE) | FILE_CONST(CREATE) |
+      (replace ? 0u : FILE_CONST(EXCLUSIVE)));
+  if (s != STATUS_CONST(SUCCESS)) { FILE_FUNC(Close)(&input); return s; }
+  /* Compare opened objects before truncation, including hard-link aliases. */
+#ifdef _WIN32
+  {
+    BY_HANDLE_FILE_INFORMATION a, b;
+    HANDLE inHandle = (HANDLE)_get_osfhandle((int)(input.native - 1));
+    HANDLE outHandle = (HANDLE)_get_osfhandle((int)(output.native - 1));
+    if (!GetFileInformationByHandle(inHandle, &a) || !GetFileInformationByHandle(outHandle, &b)) s = FILE_INS(WinError)(GetLastError());
+    else if (a.dwVolumeSerialNumber == b.dwVolumeSerialNumber && a.nFileIndexHigh == b.nFileIndexHigh && a.nFileIndexLow == b.nFileIndexLow)
+      s = STATUS_CONST(INVALID_ARGUMENT);
+  }
+#else
+  {
+    struct stat a, b;
+    if (fstat((int)(input.native - 1), &a) || fstat((int)(output.native - 1), &b)) s = FILE_INS(Error)(errno);
+    else if (!S_ISREG(a.st_mode) || !S_ISREG(b.st_mode)) s = STATUS_CONST(NOT_SUPPORTED);
+    else if (a.st_dev == b.st_dev && a.st_ino == b.st_ino) s = STATUS_CONST(INVALID_ARGUMENT);
+  }
+#endif
+  if (s == STATUS_CONST(SUCCESS)) s = FILE_FUNC(Truncate)(&output, 0);
+  while (s == STATUS_CONST(SUCCESS)) {
+    size_t count;
+    s = FILE_FUNC(Read)(&input, buffer, sizeof(buffer), &count);
+    if (s != STATUS_CONST(SUCCESS) || !count) break;
+    s = FILE_INS(WriteAll)(&output, buffer, count);
+  }
+  closed = FILE_FUNC(Close)(&output);
+  if (s == STATUS_CONST(SUCCESS)) s = closed;
+  closed = FILE_FUNC(Close)(&input);
+  return s == STATUS_CONST(SUCCESS) ? closed : s;
+}
+FILE_MOVE_PROTOTYPE {
+  if (!FILE_INS(PathValid)(source) || !FILE_INS(PathValid)(destination)) return STATUS_CONST(INVALID_ARGUMENT);
+#ifdef _WIN32
+  {
+    wchar_t *a, *b; OPSTATUS s = FILE_INS(Wide)(source, &a);
+    if (s != STATUS_CONST(SUCCESS)) return s;
+    s = FILE_INS(Wide)(destination, &b);
+    if (s != STATUS_CONST(SUCCESS)) { free(a); return s; }
+    if (!MoveFileExW(a, b, MOVEFILE_COPY_ALLOWED | (replace ? MOVEFILE_REPLACE_EXISTING : 0))) s = FILE_INS(WinError)(GetLastError());
+    free(a); free(b); return s;
+  }
+#else
+  {
+    OPSTATUS s; FILE_TYPE(TFileInfo) info;
+    if (replace) {
+      if (!rename(source, destination)) return STATUS_CONST(SUCCESS);
+      if (errno != EXDEV) return FILE_INS(Error)(errno);
+    } else {
+      s = FILE_FUNC(Info)(source, false, &info);
+      if (s != STATUS_CONST(SUCCESS)) return s;
+      if (info.kind != FILE_CONST(KIND_REGULAR)) return STATUS_CONST(NOT_SUPPORTED);
+      if (!link(source, destination)) return FILE_FUNC(Remove)(source);
+      if (errno != EXDEV) return FILE_INS(Error)(errno);
+    }
+    s = FILE_FUNC(Copy)(source, destination, replace);
+    if (s != STATUS_CONST(SUCCESS)) return s;
+    return FILE_FUNC(Remove)(source);
+  }
+#endif
+}

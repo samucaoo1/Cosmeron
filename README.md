@@ -90,3 +90,5 @@ See [Why EUPL 1.2?](Docs/Governance/LICENSING.md) for the project's licensing ra
 ---
 
 > Stay curious. Break things. Learn.
+
+The [File module](Docs/Modules/File.md) provides native file I/O, UTF-8 paths on Windows, directory iteration, whole-file loading and atomic saves without additional linker flags.
