@@ -169,6 +169,8 @@ jobs:
         run: |
           nix --extra-experimental-features 'nix-command flakes' \
             build '.#checks.x86_64-linux.portable' -L --no-write-lock-file
+          nix --extra-experimental-features 'nix-command flakes' \
+            build '.#checks.x86_64-linux.native' -L --no-write-lock-file
 
   nixos-vm:
     name: NixOS / QEMU actual guest

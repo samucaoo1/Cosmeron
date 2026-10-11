@@ -43,3 +43,13 @@ The public preprocessor now exposes `OS_OHOS` when the SDK defines
 `__OHOS__`. On the standard Linux-kernel OHOS profile `OS_LINUX` may
 also be true; `OS_OHOS` identifies the ABI without claiming every Linux
 kernel/device API is available. This macro does not prove HarmonyOS NEXT.
+
+## Integrated POSIX link probe
+
+`cosmeron_ohos_posix_link` (three translation units) now calls
+Cosmeron's `CLOCK_FUNC(Now)` and `NETWORK_RESOLVE_FUNC(Address)`
+for the standard OHOS libc clock and loopback resolver interfaces.
+The executable must **link without user-provided external libraries**.
+The tool does **not execute** it on the GitHub runner. A linked binary
+is stronger evidence than compiling headers alone, but remains short
+of actual device compatibility.

@@ -20,6 +20,13 @@ set(COSMERON_TARGETS
 )
 add_library(cosmeron_ohos_c11_check OBJECT ${COSMERON_TARGETS})
 add_executable(cosmeron_ohos_multi_tu MultiTU_A.c MultiTU_B.c MultiTU_Main.c)
+# A separate, linked POSIX surface probe exercises actual Cosmeron wrappers:
+# Clock_Now -> clock_gettime and Network_Resolve_Address -> getaddrinfo.
+# It is NOT executed and cannot certify hardware or runtime permissions.
+add_executable(cosmeron_ohos_posix_link
+  OSLink_Time.c OSLink_Network.c OSLink_Main.c)
+target_compile_definitions(cosmeron_ohos_posix_link PRIVATE
+  _POSIX_C_SOURCE=200809L)
 
 # Expand the compile-only probe to the SDK's POSIX and device API surface.
 # Object libraries do not prove link availability, permissions or runtime.
@@ -27,6 +34,7 @@ option(COSMERON_OHOS_SYSTEM_PROBES "Compile OS-backed Cosmeron headers" ON)
 set(COSMERON_OHOS_CHECK_TARGETS
   cosmeron_ohos_c11_check
   cosmeron_ohos_multi_tu
+  cosmeron_ohos_posix_link
 )
 if(COSMERON_OHOS_SYSTEM_PROBES)
   set(COSMERON_OS_SOURCES
