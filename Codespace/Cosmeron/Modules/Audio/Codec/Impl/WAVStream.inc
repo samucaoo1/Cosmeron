@@ -8,48 +8,17 @@ typedef struct AUDIO_INS(TWAVView) {
   uint16_t format, bits;
 } AUDIO_INS(TWAVView);
 
-/* The view borrows the caller's RIFF bytes. No frame buffer is allocated. */
-static inline OPSTATUS AUDIO_INS(WAV_Parse)(
-    const void *source, size_t size, AUDIO_INS(TWAVView) *outView) {
+/* Shared format validation for memory, file and callback-backed WAV. */
+static inline OPSTATUS AUDIO_INS(WAV_Format)(
+    const unsigned char *fmt, size_t fmtSize, size_t dataSize,
+    AUDIO_INS(TWAVView) *outView) {
   static const unsigned char extensibleGuidTail[14] = {
     0, 0, 0, 0, 0x10, 0, 0x80, 0, 0, 0xaa, 0, 0x38, 0x9b, 0x71
   };
-  const unsigned char *p = (const unsigned char *)source, *fmt = NULL;
-  const unsigned char *samples = NULL;
-  size_t offset = 12, riffEnd, fmtSize = 0, dataSize = 0;
-  uint32_t rate = 0, byteRate;
-  uint16_t format = 0, channels = 0, bits = 0, align = 0;
-  bool haveFmt = false, haveData = false;
+  uint32_t rate, byteRate;
+  uint16_t format, channels, bits, align;
   AUDIO_INS(TWAVView) view = {0};
-  if (!p || !outView || size < 12 ||
-      memcmp(p, "RIFF", 4) || memcmp(p + 8, "WAVE", 4))
-    return STATUS_CONST(INVALID_ARGUMENT);
-  if (AUDIO_INS(WAV_U32)(p + 4) < 4 ||
-      (size_t)AUDIO_INS(WAV_U32)(p + 4) > size - 8)
-    return STATUS_CONST(INVALID_ARGUMENT);
-  riffEnd = (size_t)AUDIO_INS(WAV_U32)(p + 4) + 8;
-  while (offset < riffEnd) {
-    size_t length, padded;
-    const unsigned char *chunk;
-    if (riffEnd - offset < 8) return STATUS_CONST(INVALID_ARGUMENT);
-    length = (size_t)AUDIO_INS(WAV_U32)(p + offset + 4);
-    chunk = p + offset + 8;
-    offset += 8;
-    if (length > riffEnd - offset) return STATUS_CONST(INVALID_ARGUMENT);
-    if (!haveFmt && !memcmp(chunk - 8, "fmt ", 4)) {
-      if (length < 16) return STATUS_CONST(INVALID_ARGUMENT);
-      fmt = chunk; fmtSize = length; haveFmt = true;
-    } else if (!haveData && !memcmp(chunk - 8, "data", 4)) {
-      samples = chunk; dataSize = length; haveData = true;
-    }
-    padded = length + (length & 1U);
-    if (padded > riffEnd - offset) {
-      if (length != riffEnd - offset) return STATUS_CONST(INVALID_ARGUMENT);
-      padded = length;
-    }
-    offset += padded;
-  }
-  if (!haveFmt || !haveData) return STATUS_CONST(INVALID_ARGUMENT);
+  if (!fmt || fmtSize < 16 || !outView) return STATUS_CONST(INVALID_ARGUMENT);
   format = AUDIO_INS(WAV_U16)(fmt);
   channels = AUDIO_INS(WAV_U16)(fmt + 2);
   rate = AUDIO_INS(WAV_U32)(fmt + 4);
@@ -79,13 +48,57 @@ static inline OPSTATUS AUDIO_INS(WAV_Parse)(
       (uint64_t)rate * align != byteRate || !align ||
       dataSize % align != 0)
     return STATUS_CONST(INVALID_ARGUMENT);
-  view.data = samples;
   view.byteCount = dataSize;
   view.frameCount = dataSize / align;
   view.channels = channels;
   view.sampleRate = rate;
   view.format = format;
   view.bits = bits;
+  *outView = view;
+  return STATUS_CONST(SUCCESS);
+}
+
+/* The view borrows the caller's RIFF bytes. No frame buffer is allocated. */
+static inline OPSTATUS AUDIO_INS(WAV_Parse)(
+    const void *source, size_t size, AUDIO_INS(TWAVView) *outView) {
+  const unsigned char *p = (const unsigned char *)source, *fmt = NULL;
+  const unsigned char *samples = NULL;
+  size_t offset = 12, riffEnd, fmtSize = 0, dataSize = 0;
+  bool haveFmt = false, haveData = false;
+  AUDIO_INS(TWAVView) view = {0};
+  if (!p || !outView || size < 12 ||
+      memcmp(p, "RIFF", 4) || memcmp(p + 8, "WAVE", 4))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (AUDIO_INS(WAV_U32)(p + 4) < 4 ||
+      (size_t)AUDIO_INS(WAV_U32)(p + 4) > size - 8)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  riffEnd = (size_t)AUDIO_INS(WAV_U32)(p + 4) + 8;
+  while (offset < riffEnd) {
+    size_t length, padded;
+    const unsigned char *chunk;
+    if (riffEnd - offset < 8) return STATUS_CONST(INVALID_ARGUMENT);
+    length = (size_t)AUDIO_INS(WAV_U32)(p + offset + 4);
+    chunk = p + offset + 8;
+    offset += 8;
+    if (length > riffEnd - offset) return STATUS_CONST(INVALID_ARGUMENT);
+    if (!haveFmt && !memcmp(chunk - 8, "fmt ", 4)) {
+      if (length < 16) return STATUS_CONST(INVALID_ARGUMENT);
+      fmt = chunk; fmtSize = length; haveFmt = true;
+    } else if (!haveData && !memcmp(chunk - 8, "data", 4)) {
+      samples = chunk; dataSize = length; haveData = true;
+    }
+    padded = length;
+    if ((length & 1U) && length < riffEnd - offset) ++padded;
+    if (padded > riffEnd - offset)
+      return STATUS_CONST(INVALID_ARGUMENT);
+    offset += padded;
+  }
+  if (!haveFmt || !haveData) return STATUS_CONST(INVALID_ARGUMENT);
+  {
+    OPSTATUS status = AUDIO_INS(WAV_Format)(fmt, fmtSize, dataSize, &view);
+    if (status != STATUS_CONST(SUCCESS)) return status;
+  }
+  view.data = samples;
   *outView = view;
   return STATUS_CONST(SUCCESS);
 }
