@@ -55,7 +55,8 @@ AUDIO_CODEC_MP3_STEREO_MS_PROTOTYPE {
   float l[576], r[576];
   const float invSqrt2 = 0.70710678118654752440f;
   size_t i;
-  if (!mid || !side || !outLeft || !outRight || first > last || last > 576)
+  if (!mid || !side || !outLeft || !outRight || outLeft == outRight ||
+      first > last || last > 576)
     return STATUS_CONST(INVALID_ARGUMENT);
   memcpy(l, mid, sizeof l);
   memcpy(r, side, sizeof r);
