@@ -36,7 +36,7 @@ int main(void) {
 
   /* Truncated RIFF length: never trust the declared data length. */
   for (len = 0; len < sizeof good; ++len)
-    if (!ExpectStatus(good,len,STATUS_CONST(INVALID_ARGUMENT))) return 1;
+    if (ExpectStatus(good,len,STATUS_CONST(INVALID_ARGUMENT))) return 1;
   memcpy(broken,good,sizeof good);
   broken[4] = 0xff;
   if (ExpectStatus(broken,sizeof broken,
