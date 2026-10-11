@@ -36,3 +36,17 @@ assembly are original C11 Cosmeron implementations. FFmpeg decoding
 functions, lookup algorithms and headers have not been incorporated as
 third-party code. This reference is kept outside the generated include
 files in keeping with Cosmeron's consolidated provenance documentation.
+
+## MPEG Layer III synthesis numerical table reference
+
+The standalone `Audio/Codec/Impl/MP3SynthesisTables.inc` stores the
+standardized 512-entry synthesis-window sequence from ISO/IEC 11172-3
+(Table B.3) and the mathematical 64×32 cosine matrix computed from the
+formula cos((16+i)(2k+1)pi/64). The numerical window values were
+cross-checked against the half-window integer sequence in FFmpeg 4.3,
+`libavcodec/mpegaudiodsp_data.c`:
+https://github.com/FFmpeg/FFmpeg/blob/release/4.3/libavcodec/mpegaudiodsp_data.c
+
+The Cosmeron `MP3_SynthesisSlot` and `MP3_Synthesize` implementations
+are original C11 routines; vendor decoding algorithms, headers and
+runtime objects have not been imported.

@@ -89,9 +89,22 @@ initialization or freeing function. `Audio_Codec_MP3_FrequencyInvert`
 negates odd time samples in odd subbands after overlap-add. Neither
 function uses `-lm`, dynamic allocation or an external decoder.
 
-**They still do not produce PCM**: the resulting 32×18 subband-time
-samples require polyphase synthesis, clipping and output conversion.
-MPEG-1 intensity stereo and MPEG-2/2.5 LSF variants remain pending.
+`Audio_Codec_MP3_SynthesisSlot` now completes the 32-band MPEG
+polyphase filter for one 32-sample time slot, using the ISO 512-point
+synthesis window and a precomputed 64×32 cosine matrix.
+`Audio_Codec_MP3_Synthesize` consumes the 32×18 time/subband output
+of the hybrid IMDCT and returns 576 contiguous floating-point PCM
+samples. The zero-initialized `Audio_Codec_TMP3SynthesisState` owns the
+1024-entry delay line per channel; no `Init`, `Free`, `libm`, or
+dynamic allocation is required. A rejected input leaves the caller's
+state and output unchanged. Standalone synthesis and a real `Tone.mp3`
+pipeline are covered by native C11 tests.
+
+**The public MP3 decoder still uses miniaudio**: standalone synthesis
+does not yet establish a complete reference-matching MP3 stream decoder.
+Intensity stereo, MPEG-2/2.5 LSF, bit reservoir edge cases, gapless
+metadata, interleaving and PCM parity checks remain necessary before
+the native path can replace the existing backend.
 The numerical codebook assignments are standardized MPEG Layer III values;
 the matching implementation is original Cosmeron C11.
 
