@@ -3345,7 +3345,14 @@ cc -std=c11 Codespace/Examples/Audio/BeepMusic.c -o beep-music
 ./beep-music --play
 ```
 
-The desktop adapter still embeds the miniaudio-derived implementation for MP3, FLAC file/callback playback and device backends. WAV uses the Cosmeron-native bounded reader for OpenMemory, OpenFile and OpenReader, or the independent WAV_DecodeMemory API. FLAC OpenMemory now parses STREAMINFO, frame headers, CRC8/CRC16, Rice residuals, fixed/LPC prediction and stereo decorrelation using original C11 code. The complete FLAC input bytes remain borrowed until Close, and seeking rescans/decompresses frames (not an indexed constant-time seek). Supported desktop profiles compile without separate audio, math or pthread **link flags**; they can still require runtime system libraries and installed audio services. On Linux desktop, the implementation targets glibc >= 2.34.
+The desktop adapter still embeds the miniaudio-derived implementation for MP3, FLAC file/callback playback and device backends. WAV uses the Cosmeron-native bounded reader for OpenMemory, OpenFile and OpenReader, or the independent WAV_DecodeMemory API. FLAC OpenMemory now parses STREAMINFO, frame headers, CRC8/CRC16, Rice residuals, fixed/LPC prediction and stereo decorrelation using original C11 code. The complete FLAC input bytes remain borrowed until Close, and seeking rescans/decompresses frames (not an indexed constant-time seek). An additional header, `Audio/Codec/FLAC.h`, exposes
+`Audio_Codec_FLAC_DecodeMemory(data, size, outBuffer)` without the vendor
+codec. Its `outBuffer` is an owned `Audio_PCM_TBuffer`, released with
+`Audio_PCM_Destroy`. This convenience function validates the whole stream
+and uses a two-pass decode so that unknown STREAMINFO sample counts can
+still allocate an exact PCM buffer. Header parsing, frame CRC8/CRC16 and
+PCM bounds are checked; full STREAMINFO MD5 authentication and indexed
+constant-time seeking are not yet implemented. Supported desktop profiles compile without separate audio, math or pthread **link flags**; they can still require runtime system libraries and installed audio services. On Linux desktop, the implementation targets glibc >= 2.34.
 
 `AUDIO_NO_DESKTOP` excludes the whole Codec/Device/Mixer/Player API, not merely sound hardware use. The offline Player mode still belongs to the desktop-backed API. No implementation macro is necessary.
 
