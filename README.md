@@ -35,6 +35,8 @@ The current architecture covers or is designed around:
 - **Chronometry:** calendars, clocks, dates, durations, timers, epochs, and time zones.
 - **Concurrency:** atomics, threads, synchronization, coroutines, tasks/futures, and thread pools.
 - **Container:** generic arrays, strings, vectors, queues, stacks, linked structures, trees, hashes, and graphs.
+- **CLI:** argument queries, declarative commands, subcommands and help.
+- **Parsing:** INI, JSON, CSV/TSV and documented TOML/XML/YAML profiles.
 - **Math:** arithmetic, ranges, clamps, values, and equation helpers.
 - **Network:** addresses, sockets, listeners, datagrams, polling, and name resolution.
 - **Random:** entropy sources, deterministic engines, distributions, mixers, and shuffling.
@@ -44,7 +46,7 @@ The current architecture covers or is designed around:
 
 The [Input module](Docs/Modules/Input.md) provides keyboard, mouse and controller state through Windows/Linux backends, macOS capture, BSD paths and a host-event adapter. Controllers use native IOHIDManager on macOS and evdev/uhid/ujoy on BSD; SDL 3 is an optional fallback on macOS and non-evdev BSD.
 
-Planned domains such as Filesystem, Terminal, TUI, Graphics, Parsing, Serialization, Event Loop, Audio, and more are tracked in the [roadmap](Docs/Project/ROADMAP.md).
+Planned domains such as Filesystem, Terminal, TUI, Graphics, Serialization, Event Loop, Audio, and more are tracked in the [roadmap](Docs/Project/ROADMAP.md).
 
 ## Architecture
 

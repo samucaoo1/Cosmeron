@@ -123,3 +123,13 @@ foreach ($name in @("IncludeAll", "Path", "File", "Namespace")) {
   Invoke-CosmeronTest "Codespace/Tests/File" $name @("$name.c")
 }
 Invoke-CosmeronTest "Codespace/Tests/File" "multi-tu" @("MultiTU_A.c", "MultiTU_B.c", "MultiTU_Main.c")
+
+foreach ($name in @("CLI", "IncludeAll", "Namespace", "FunctionTableOff")) {
+  Invoke-CosmeronTest "Codespace/Tests/CLI" $name @("$name.c")
+}
+Invoke-CosmeronTest "Codespace/Tests/CLI" "multi-tu" @("MultiTU_A.c", "MultiTU_B.c", "MultiTU_Main.c")
+
+foreach ($name in @("Common", "JSON", "INI", "CSV", "TOML", "YAML", "XML", "IncludeAll", "Namespace", "FunctionTableOff", "Robustness", "Allocation")) {
+  Invoke-CosmeronTest "Codespace/Tests/Parsing" $name @("$name.c")
+}
+Invoke-CosmeronTest "Codespace/Tests/Parsing" "multi-tu" @("MultiTU_A.c", "MultiTU_B.c", "MultiTU_Main.c")

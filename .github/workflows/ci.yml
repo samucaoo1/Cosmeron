@@ -48,6 +48,11 @@ jobs:
         if: ${{ hashFiles('Codespace/Tests/**') == '' }}
         run: echo "Codespace/Tests is not present yet; CI is installed and waiting for the source migration."
 
+      - name: CLI and Parsing
+        run: |
+          make -C Codespace/Tests/CLI clean run CC=${{ matrix.cc }}
+          make -C Codespace/Tests/Parsing clean run CC=${{ matrix.cc }}
+
       - name: File
         run: make -C Codespace/Tests/File clean run CC=${{ matrix.cc }}
 
@@ -118,6 +123,12 @@ jobs:
         if: ${{ hashFiles('Codespace/Tests/**') == '' }}
         shell: bash
         run: echo "Codespace/Tests is not present yet; CI is installed and waiting for the source migration."
+
+      - name: CLI and Parsing
+        shell: bash
+        run: |
+          make -C Codespace/Tests/CLI clean run CC=gcc
+          make -C Codespace/Tests/Parsing clean run CC=gcc
 
       - name: File
         shell: bash
@@ -266,6 +277,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: CLI and Parsing
+        run: |
+          make -C Codespace/Tests/CLI clean run CC=clang CFLAGS="$SAN_FLAGS"
+          make -C Codespace/Tests/Parsing clean run CC=clang CFLAGS="$SAN_FLAGS"
       - name: File
         run: make -C Codespace/Tests/File clean run CC=clang CFLAGS="$SAN_FLAGS"
       - name: Input
@@ -311,6 +326,10 @@ jobs:
       - name: Install 32-bit libc
         run: sudo apt-get update && sudo apt-get install -y gcc-multilib libc6-dev-i386
 
+      - name: CLI and Parsing
+        run: |
+          make -C Codespace/Tests/CLI clean run CC=gcc CFLAGS="$CFLAGS32"
+          make -C Codespace/Tests/Parsing clean run CC=gcc CFLAGS="$CFLAGS32"
       - name: File
         run: make -C Codespace/Tests/File clean run CC=gcc CFLAGS="$CFLAGS32"
       - name: Input

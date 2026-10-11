@@ -1,0 +1,206 @@
+#pragma once
+static inline bool PARSING_INS(CSVDelimiter)(char delimiter) {
+  return (unsigned char)delimiter < 0x80 && delimiter && delimiter != '"' && delimiter != '\r' && delimiter != '\n';
+}
+
+PARSING_CSV_READER_CREATE_PROTOTYPE {
+  PARSING_TYPE(TCSVReader) reader = {0};
+  OPSTATUS status;
+  if (!outReader || !PARSING_INS(CSVDelimiter)(delimiter)) return STATUS_CONST(INVALID_ARGUMENT);
+  status = PARSING_INS(CursorCreate)(source, size, NULL, diagnostic, &reader.cursor);
+  if (status == STATUS_CONST(SUCCESS)) {
+    reader.delimiter = delimiter;
+    *outReader = reader;
+  }
+  return status;
+}
+
+PARSING_CSV_NEXT_PROTOTYPE {
+  PARSING_TYPE(TCSVReader) next;
+  PARSING_TYPE(TCSVField) field = {0};
+  size_t start;
+  bool closed = false;
+  if (!reader || !outField || !outEnd) return STATUS_CONST(INVALID_ARGUMENT);
+  next = *reader;
+  if (next.cursor.position >= next.cursor.size && !next.pendingEmpty) {
+    *outEnd = true;
+    return STATUS_CONST(SUCCESS);
+  }
+  next.pendingEmpty = false;
+  start = next.cursor.position;
+  if (start < next.cursor.size && next.cursor.source[start] == '"') {
+    field.quoted = true;
+    start = ++next.cursor.position;
+    while (next.cursor.position < next.cursor.size) {
+      if (next.cursor.source[next.cursor.position] == '"') {
+        if (next.cursor.position + 1 < next.cursor.size && next.cursor.source[next.cursor.position+1] == '"') {
+          next.cursor.position += 2;
+          continue;
+        }
+        field.text = PARSING_INS(Slice)(next.cursor.source + start, next.cursor.position - start);
+        ++next.cursor.position;
+        closed = true;
+        break;
+      }
+      ++next.cursor.position;
+    }
+    if (!closed) return PARSING_INS(Fail)(&next.cursor, PARSING_CONST(DIAGNOSTIC_SYNTAX), STATUS_CONST(INCOMPLETE_SEQUENCE));
+  } else {
+    while (next.cursor.position < next.cursor.size && next.cursor.source[next.cursor.position] != next.delimiter && next.cursor.source[next.cursor.position] != '\r' && next.cursor.source[next.cursor.position] != '\n') {
+      if (next.cursor.source[next.cursor.position] == '"') return PARSING_INS(Fail)(&next.cursor, PARSING_CONST(DIAGNOSTIC_SYNTAX), STATUS_CONST(INVALID_SEQUENCE));
+      ++next.cursor.position;
+    }
+    field.text = PARSING_INS(Slice)(next.cursor.source + start, next.cursor.position - start);
+  }
+  field.recordIndex = next.recordIndex;
+  field.fieldIndex = next.fieldIndex;
+  if (next.cursor.position < next.cursor.size) {
+    char c = next.cursor.source[next.cursor.position++];
+    if (c == next.delimiter) {
+      next.pendingEmpty = true;
+      ++next.fieldIndex;
+    } else if (c == '\r' || c == '\n') {
+      if (c == '\r' && next.cursor.position < next.cursor.size && next.cursor.source[next.cursor.position] == '\n') ++next.cursor.position;
+      field.recordEnd = true;
+      ++next.recordIndex;
+      next.fieldIndex = 0;
+    } else {
+      --next.cursor.position;
+      return PARSING_INS(Fail)(&next.cursor, PARSING_CONST(DIAGNOSTIC_SYNTAX), STATUS_CONST(INVALID_SEQUENCE));
+    }
+  } else {
+    field.recordEnd = true;
+    ++next.recordIndex;
+    next.fieldIndex = 0;
+  }
+  if (++next.cursor.nodes > next.cursor.limits.maxNodes) return PARSING_INS(Fail)(&next.cursor, PARSING_CONST(DIAGNOSTIC_LIMIT), STATUS_CONST(OUT_OF_RANGE));
+  *reader = next;
+  *outField = field;
+  *outEnd = false;
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline OPSTATUS PARSING_INS(CSVDecode)(const PARSING_TYPE(TCSVField) *field, PARSING_INS(Buffer) *text) {
+  size_t i;
+  OPSTATUS status = STATUS_CONST(SUCCESS);
+  for (i = 0; status == STATUS_CONST(SUCCESS) && i < field->text.size; ++i) {
+    status = PARSING_INS(Append)(text, field->text.data + i, 1);
+    if (field->quoted && field->text.data[i] == '"' && i+1 < field->text.size && field->text.data[i+1] == '"') ++i;
+  }
+  return status == STATUS_CONST(SUCCESS) ? PARSING_INS(Append)(text, "", 0) : status;
+}
+
+PARSING_CSV_FIELD_WRITE_PROTOTYPE {
+  PARSING_INS(Buffer) text = {0};
+  OPSTATUS status;
+  if (!field || (!field->text.data && field->text.size) || !outSize || (!buffer && capacity)) return STATUS_CONST(INVALID_ARGUMENT);
+  status = PARSING_INS(CSVDecode)(field, &text);
+  if (status != STATUS_CONST(SUCCESS)) {
+    free(text.data);
+    return status;
+  }
+  return PARSING_INS(Output)(&text, buffer, capacity, outSize);
+}
+
+PARSING_CSV_FREE_PROTOTYPE {
+  size_t i, j;
+  if (!document) return;
+  for (i = 0; i < document->records.size; ++i) {
+    for (j = 0; j < document->records.data[i].count; ++j) free((void *)document->records.data[i].fields[j].data);
+    free(document->records.data[i].fields);
+  }
+  FLAT_VECTOR_FUNC(PARSING_INS(CSVRecords), Destroy)(&document->records);
+  document->delimiter = 0;
+}
+
+PARSING_CSV_PARSE_PROTOTYPE {
+  PARSING_TYPE(TCSVReader) reader;
+  PARSING_TYPE(TCSVDocument) document = {0};
+  PARSING_TYPE(TCSVRecord) record = {0};
+  PARSING_TYPE(TCSVField) field;
+  bool end;
+  OPSTATUS status;
+  if (!outDocument || outDocument->records.data || outDocument->records.size) return STATUS_CONST(INVALID_ARGUMENT);
+  status = PARSING_FUNC(CSV_ReaderCreate)(source, size, delimiter, &reader, diagnostic);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  status = FLAT_VECTOR_FUNC(PARSING_INS(CSVRecords), Init)(&document.records);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  document.delimiter = delimiter;
+  while ((status = PARSING_FUNC(CSV_Next)(&reader, &field, &end)) == STATUS_CONST(SUCCESS) && !end) {
+    PARSING_INS(Buffer) decoded = {0};
+    void *memory = record.fields;
+    status = PARSING_INS(CSVDecode)(&field, &decoded);
+    if (status == STATUS_CONST(SUCCESS)) status = MEMORY_FUNC(ReallocArray)(&memory, record.count + 1, sizeof(*record.fields));
+    if (status != STATUS_CONST(SUCCESS)) {
+      free(decoded.data);
+      break;
+    }
+    record.fields = (PARSING_TYPE(TSlice) *)memory;
+    record.fields[record.count++] = PARSING_INS(Slice)(decoded.data, decoded.size);
+    if (field.recordEnd) {
+      status = FLAT_VECTOR_FUNC(PARSING_INS(CSVRecords), PushBack)(&document.records, record);
+      if (status != STATUS_CONST(SUCCESS)) break;
+      memset(&record, 0, sizeof(record));
+    }
+  }
+  if (status != STATUS_CONST(SUCCESS)) {
+    size_t i;
+    for (i = 0; i < record.count; ++i) free((void *)record.fields[i].data);
+    free(record.fields);
+    PARSING_FUNC(CSV_Free)(&document);
+    return status;
+  }
+  *outDocument = document;
+  if (diagnostic) memset(diagnostic, 0, sizeof(*diagnostic));
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_CSV_FIELD_PROTOTYPE {
+  if (!record || !outValue) return STATUS_CONST(INVALID_ARGUMENT);
+  if (index >= record->count) return STATUS_CONST(OUT_OF_RANGE);
+  *outValue = record->fields[index];
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_CSV_SET_PROTOTYPE {
+  PARSING_TYPE(TCSVRecord) *record;
+  char *copy;
+  OPSTATUS status;
+  if (!document || (!value.data && value.size) || !TEXT_UTF8_FUNC(Validate)((const unsigned char *)value.data, value.size)) return STATUS_CONST(INVALID_ARGUMENT);
+  if (recordIndex >= document->records.size) return STATUS_CONST(OUT_OF_RANGE);
+  record = document->records.data + recordIndex;
+  if (fieldIndex >= record->count) return STATUS_CONST(OUT_OF_RANGE);
+  status = PARSING_INS(Copy)(value, &copy);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  free((void *)record->fields[fieldIndex].data);
+  record->fields[fieldIndex] = PARSING_INS(Slice)(copy, value.size);
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_CSV_WRITE_PROTOTYPE {
+  PARSING_INS(Buffer) text = {0};
+  size_t i, j, k;
+  OPSTATUS status = STATUS_CONST(SUCCESS);
+  if (!document || !PARSING_INS(CSVDelimiter)(document->delimiter) || !outSize || (!buffer && capacity)) return STATUS_CONST(INVALID_ARGUMENT);
+  for (i = 0; status == STATUS_CONST(SUCCESS) && i < document->records.size; ++i) {
+    const PARSING_TYPE(TCSVRecord) *record = document->records.data + i;
+    for (j = 0; status == STATUS_CONST(SUCCESS) && j < record->count; ++j) {
+      PARSING_TYPE(TSlice) field = record->fields[j];
+      bool quote = !field.size;
+      for (k = 0; k < field.size; ++k) if (field.data[k] == document->delimiter || field.data[k] == '"' || field.data[k] == '\r' || field.data[k] == '\n') quote = true;
+      if (j) status = PARSING_INS(Append)(&text, &document->delimiter, 1);
+      if (status == STATUS_CONST(SUCCESS) && quote) status = PARSING_INS(Append)(&text, "\"", 1);
+      for (k = 0; status == STATUS_CONST(SUCCESS) && k < field.size; ++k) {
+        status = PARSING_INS(Append)(&text, field.data + k, 1);
+        if (status == STATUS_CONST(SUCCESS) && field.data[k] == '"') status = PARSING_INS(Append)(&text, "\"", 1);
+      }
+      if (status == STATUS_CONST(SUCCESS) && quote) status = PARSING_INS(Append)(&text, "\"", 1);
+    }
+    if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, "\r\n", 2);
+  }
+  if (status != STATUS_CONST(SUCCESS)) {
+    free(text.data);
+    return status;
+  }
+  return PARSING_INS(Output)(&text, buffer, capacity, outSize);
+}

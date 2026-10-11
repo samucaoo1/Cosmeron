@@ -1,0 +1,9 @@
+#pragma once
+#include "Common/Common.h"
+#include "INI/INI.h"
+#include "JSON/JSON.h"
+#include "CSV/CSV.h"
+#include "TOML/TOML.h"
+#include "XML/XML.h"
+#include "YAML/YAML.h"
+#include "FunctionTable/Parsing.inc"

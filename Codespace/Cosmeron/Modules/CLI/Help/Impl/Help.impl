@@ -1,0 +1,64 @@
+#pragma once
+CLI_HELP_WRITE_PROTOTYPE {
+  PARSING_INS(Buffer) text = {0};
+  size_t i;
+  OPSTATUS status;
+  if (!outSize || (!buffer && capacity) || CLI_INS(Schema)(command, 0) != STATUS_CONST(SUCCESS)) return STATUS_CONST(INVALID_ARGUMENT);
+  status = PARSING_INS(Append)(&text, command->name, strlen(command->name));
+  if (status == STATUS_CONST(SUCCESS) && command->description) {
+    status = PARSING_INS(Append)(&text, " - ", 3);
+    if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, command->description, strlen(command->description));
+  }
+  if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, "\n", 1);
+  for (i = 0; status == STATUS_CONST(SUCCESS) && i < command->optionCount; ++i) {
+    const CLI_TYPE(TOption) *option = command->options + i;
+    status = PARSING_INS(Append)(&text, "  ", 2);
+    if (status == STATUS_CONST(SUCCESS) && option->shortName) {
+      char name[2] = {
+        '-', option->shortName
+      };
+      status = PARSING_INS(Append)(&text, name, 2);
+      if (status == STATUS_CONST(SUCCESS) && option->longName) status = PARSING_INS(Append)(&text, ", ", 2);
+    }
+    if (status == STATUS_CONST(SUCCESS) && option->longName) {
+      status = PARSING_INS(Append)(&text, "--", 2);
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, option->longName, strlen(option->longName));
+    }
+    if (status == STATUS_CONST(SUCCESS) && option->kind == CLI_CONST(VALUE)) {
+      const char *name = option->valueName ? option->valueName : "value";
+      status = PARSING_INS(Append)(&text, " ", 1);
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, name, strlen(name));
+    }
+    if (status == STATUS_CONST(SUCCESS) && option->help) {
+      status = PARSING_INS(Append)(&text, "\t", 1);
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, option->help, strlen(option->help));
+    }
+    if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, "\n", 1);
+  }
+  for (i = 0; status == STATUS_CONST(SUCCESS) && i < command->positionalCount; ++i) {
+    const CLI_TYPE(TPositional) *position = command->positionals + i;
+    status = PARSING_INS(Append)(&text, position->required ? "  <" : "  [", 3);
+    if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, position->name, strlen(position->name));
+    if (status == STATUS_CONST(SUCCESS) && position->variadic) status = PARSING_INS(Append)(&text, "...", 3);
+    if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, position->required ? ">" : "]", 1);
+    if (status == STATUS_CONST(SUCCESS) && position->help) {
+      status = PARSING_INS(Append)(&text, "\t", 1);
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, position->help, strlen(position->help));
+    }
+    if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, "\n", 1);
+  }
+  for (i = 0; status == STATUS_CONST(SUCCESS) && i < command->commandCount; ++i) {
+    status = PARSING_INS(Append)(&text, "  ", 2);
+    if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, command->commands[i].name, strlen(command->commands[i].name));
+    if (status == STATUS_CONST(SUCCESS) && command->commands[i].description) {
+      status = PARSING_INS(Append)(&text, "\t", 1);
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, command->commands[i].description, strlen(command->commands[i].description));
+    }
+    if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, "\n", 1);
+  }
+  if (status != STATUS_CONST(SUCCESS)) {
+    free(text.data);
+    return status;
+  }
+  return PARSING_INS(Output)(&text, buffer, capacity, outSize);
+}

@@ -1,0 +1,192 @@
+#pragma once
+static inline const CLI_TYPE(TOption) *CLI_INS(Option)(const CLI_TYPE(TCommand) *command,
+const char *name, size_t length, char shortName) {
+  size_t i;
+  for (i = 0; i < command->optionCount; ++i) {
+    const CLI_TYPE(TOption) *option = command->options + i;
+    if (shortName ? option->shortName == shortName : (option->longName && strlen(option->longName) == length && !memcmp(option->longName, name, length))) return option;
+  }
+  return NULL;
+}
+
+static inline bool CLI_INS(NameValid)(const char *name) {
+  if (!name || !*name) return false;
+  for (; *name; ++name) if (PARSING_INS(Space)(*name) || *name == '=') return false;
+  return true;
+}
+
+static inline OPSTATUS CLI_INS(Schema)(const CLI_TYPE(TCommand) *command, size_t depth) {
+  size_t i, j;
+  bool optional = false;
+  if (!command || depth >= CLI_CONST(MAX_COMMAND_DEPTH) || !CLI_INS(NameValid)(command->name) ||
+  (command->optionCount && !command->options) || (command->positionalCount && !command->positionals) ||
+  (command->commandCount && !command->commands) || (command->commandCount && command->positionalCount) ||
+  (command->requireCommand && !command->commandCount)) return STATUS_CONST(INVALID_ARGUMENT);
+  for (i = 0; i < command->optionCount; ++i) {
+    const CLI_TYPE(TOption) *option = command->options + i;
+    if ((!option->shortName && !option->longName) || (option->longName && (!CLI_INS(NameValid)(option->longName) || option->longName[0] == '-')) ||
+    (option->shortName && ((unsigned char)option->shortName <= ' ' || option->shortName == '-' || option->shortName == '=')) ||
+    (option->kind != CLI_CONST(FLAG) && option->kind != CLI_CONST(VALUE))) return STATUS_CONST(INVALID_ARGUMENT);
+    for (j = 0; j < i; ++j) if ((option->shortName && option->shortName == command->options[j].shortName) ||
+    (option->longName && command->options[j].longName && !strcmp(option->longName, command->options[j].longName))) return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  for (i = 0; i < command->positionalCount; ++i) {
+    const CLI_TYPE(TPositional) *positional = command->positionals + i;
+    if (!CLI_INS(NameValid)(positional->name) || (positional->variadic && i+1 != command->positionalCount) ||
+    (optional && positional->required)) return STATUS_CONST(INVALID_ARGUMENT);
+    if (!positional->required) optional = true;
+  }
+  for (i = 0; i < command->commandCount; ++i) {
+    if (CLI_INS(Schema)(command->commands + i, depth + 1) != STATUS_CONST(SUCCESS)) return STATUS_CONST(INVALID_ARGUMENT);
+    for (j = 0; j < i; ++j) if (!strcmp(command->commands[i].name, command->commands[j].name)) return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline OPSTATUS CLI_INS(Next)(CLI_INS(Scanner) *scanner, CLI_TYPE(TMatch) *out,
+bool *outEnd, CLI_TYPE(TDiagnostic) *diagnostic) {
+  CLI_TYPE(TMatch) match = {0};
+  const char *argument;
+  while (scanner->index < (size_t)scanner->arguments.argc) {
+    argument = scanner->arguments.argv[scanner->index];
+    match.command = scanner->command;
+    match.argumentIndex = scanner->index;
+    if (!scanner->stopped && !strcmp(argument, "--")) {
+      scanner->stopped = true;
+      ++scanner->index;
+      continue;
+    }
+    if (!scanner->stopped && argument[0] == '-' && argument[1]) {
+      const CLI_TYPE(TOption) *option;
+      const char *attached = NULL;
+      if (argument[1] == '-') {
+        const char *equals = strchr(argument + 2, '=');
+        size_t length = equals ? (size_t)(equals - argument - 2) : strlen(argument + 2);
+        option = CLI_INS(Option)(scanner->command, argument + 2, length, 0);
+        if (equals) attached = equals + 1;
+      } else {
+        if (!scanner->shortOffset) scanner->shortOffset = 1;
+        option = CLI_INS(Option)(scanner->command, NULL, 0, argument[scanner->shortOffset]);
+        if (option && option->kind == CLI_CONST(VALUE) && argument[scanner->shortOffset + 1]) attached = argument + scanner->shortOffset + 1;
+      }
+      if (!option) return CLI_INS(Fail)(diagnostic, CLI_CONST(DIAGNOSTIC_UNKNOWN), scanner->index, argument, STATUS_CONST(NOT_FOUND));
+      match.option = option;
+      if (option->kind == CLI_CONST(VALUE)) {
+        if (!attached) {
+          if (scanner->index + 1 >= (size_t)scanner->arguments.argc || !strcmp(scanner->arguments.argv[scanner->index+1], "--"))
+          return CLI_INS(Fail)(diagnostic, CLI_CONST(DIAGNOSTIC_MISSING_VALUE), scanner->index, argument, STATUS_CONST(INCOMPLETE_SEQUENCE));
+          attached = scanner->arguments.argv[++scanner->index];
+        }
+        match.value = attached;
+        scanner->shortOffset = 0;
+        ++scanner->index;
+      } else {
+        if (attached) return CLI_INS(Fail)(diagnostic, CLI_CONST(DIAGNOSTIC_SCHEMA), scanner->index, argument, STATUS_CONST(INVALID_ARGUMENT));
+        if (argument[1] != '-' && argument[++scanner->shortOffset]) {
+          /* Next short flag belongs to the same argv element. */
+        } else {
+          scanner->shortOffset = 0;
+          ++scanner->index;
+        }
+      }
+    } else if (scanner->command->commandCount) {
+      size_t i;
+      for (i = 0; i < scanner->command->commandCount; ++i) if (!strcmp(argument, scanner->command->commands[i].name)) break;
+      if (i == scanner->command->commandCount) return CLI_INS(Fail)(diagnostic, CLI_CONST(DIAGNOSTIC_UNKNOWN), scanner->index, argument, STATUS_CONST(NOT_FOUND));
+      scanner->command = scanner->command->commands + i;
+      scanner->positionalIndex = 0;
+      ++scanner->depth;
+      match.command = scanner->command;
+      match.value = argument;
+      ++scanner->index;
+    } else {
+      if (scanner->positionalIndex >= scanner->command->positionalCount) return CLI_INS(Fail)(diagnostic, CLI_CONST(DIAGNOSTIC_POSITIONAL), scanner->index, argument, STATUS_CONST(OUT_OF_RANGE));
+      match.positional = scanner->command->positionals + scanner->positionalIndex;
+      match.value = argument;
+      ++scanner->index;
+      if (!match.positional->variadic) ++scanner->positionalIndex;
+    }
+    *out = match;
+    *outEnd = false;
+    return STATUS_CONST(SUCCESS);
+  }
+  *outEnd = true;
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline CLI_INS(Scanner) CLI_INS(ScannerCreate)(const CLI_TYPE(TCommand) *command, int argc, char **argv) {
+  CLI_INS(Scanner) scanner = {0};
+  scanner.command = command;
+  scanner.index = argc ? 1u : 0u;
+  scanner.arguments = CLI_FUNC(Arguments_Create)(argc, argv);
+  return scanner;
+}
+
+static inline OPSTATUS CLI_INS(CheckCommand)(const CLI_TYPE(TCommand) *root,
+const CLI_TYPE(TCommand) *command, int argc, char **argv, CLI_TYPE(TDiagnostic) *diagnostic) {
+  size_t i;
+  bool selectedChild = false;
+  for (i = 0; i < command->optionCount + command->positionalCount + 1; ++i) {
+    CLI_INS(Scanner) scanner = CLI_INS(ScannerCreate)(root, argc, argv);
+    CLI_TYPE(TMatch) match;
+    size_t count = 0;
+    bool end;
+    OPSTATUS status;
+    const CLI_TYPE(TOption) *option = i < command->optionCount ? command->options + i : NULL;
+    const CLI_TYPE(TPositional) *positional = i >= command->optionCount && i < command->optionCount + command->positionalCount ? command->positionals + i - command->optionCount : NULL;
+    while ((status = CLI_INS(Next)(&scanner, &match, &end, diagnostic)) == STATUS_CONST(SUCCESS) && !end) {
+      if (match.command == command && ((option && match.option == option) || (positional && match.positional == positional))) {
+        ++count;
+        if (option && count > 1 && !option->repeatable) return CLI_INS(Fail)(diagnostic, CLI_CONST(DIAGNOSTIC_REPEATED), match.argumentIndex, option->longName, STATUS_CONST(ALREADY_EXISTS));
+      }
+      if (option && option->exclusiveGroup && match.command == command && match.option && match.option != option && match.option->exclusiveGroup == option->exclusiveGroup) {
+        CLI_INS(Scanner) other = CLI_INS(ScannerCreate)(root, argc, argv);
+        CLI_TYPE(TMatch) candidate;
+        bool done;
+        while (CLI_INS(Next)(&other, &candidate, &done, NULL) == STATUS_CONST(SUCCESS) && !done)
+        if (candidate.command == command && candidate.option == option) return CLI_INS(Fail)(diagnostic, CLI_CONST(DIAGNOSTIC_EXCLUSIVE), match.argumentIndex, option->longName, STATUS_CONST(INVALID_ARGUMENT));
+      }
+      if (!match.option && !match.positional) {
+        size_t j;
+        for (j = 0; j < command->commandCount; ++j) if (match.command == command->commands + j) selectedChild = true;
+      }
+    }
+    if (status != STATUS_CONST(SUCCESS)) return status;
+    if (!count && ((option && option->required) || (positional && positional->required))) return CLI_INS(Fail)(diagnostic, CLI_CONST(DIAGNOSTIC_REQUIRED), (size_t)argc, option ? option->longName : positional->name, STATUS_CONST(NOT_FOUND));
+  }
+  if (command->requireCommand && !selectedChild) return CLI_INS(Fail)(diagnostic, CLI_CONST(DIAGNOSTIC_REQUIRED), (size_t)argc, command->name, STATUS_CONST(NOT_FOUND));
+  return STATUS_CONST(SUCCESS);
+}
+
+CLI_COMMAND_PARSE_PROTOTYPE {
+  CLI_INS(Scanner) scanner;
+  CLI_TYPE(TArguments) arguments = CLI_FUNC(Arguments_Create)(argc, argv);
+  CLI_TYPE(TMatch) match;
+  bool end;
+  size_t count = 0;
+  OPSTATUS status;
+  if (!CLI_INS(ArgumentsValid)(&arguments) || !outMatchCount || (!matches && matchCapacity)) return STATUS_CONST(INVALID_ARGUMENT);
+  if (CLI_INS(Schema)(command, 0) != STATUS_CONST(SUCCESS)) return CLI_INS(Fail)(diagnostic, CLI_CONST(DIAGNOSTIC_SCHEMA), 0, NULL, STATUS_CONST(INVALID_ARGUMENT));
+  scanner = CLI_INS(ScannerCreate)(command, argc, argv);
+  while ((status = CLI_INS(Next)(&scanner, &match, &end, diagnostic)) == STATUS_CONST(SUCCESS) && !end) ++count;
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  status = CLI_INS(CheckCommand)(command, command, argc, argv, diagnostic);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  scanner = CLI_INS(ScannerCreate)(command, argc, argv);
+  while (CLI_INS(Next)(&scanner, &match, &end, NULL) == STATUS_CONST(SUCCESS) && !end) if (!match.option && !match.positional) {
+    status = CLI_INS(CheckCommand)(command, match.command, argc, argv, diagnostic);
+    if (status != STATUS_CONST(SUCCESS)) return status;
+  }
+  if (count > matchCapacity || (!matches && count)) {
+    *outMatchCount = count;
+    return CLI_INS(Fail)(diagnostic, CLI_CONST(DIAGNOSTIC_CAPACITY), 0, NULL, STATUS_CONST(INSUFFICIENT_SPACE));
+  }
+  scanner = CLI_INS(ScannerCreate)(command, argc, argv);
+  count = 0;
+  while (CLI_INS(Next)(&scanner, &match, &end, NULL) == STATUS_CONST(SUCCESS) && !end) matches[count++] = match;
+  *outMatchCount = count;
+  if (diagnostic) {
+    memset(diagnostic, 0, sizeof(*diagnostic));
+  }
+  return STATUS_CONST(SUCCESS);
+}

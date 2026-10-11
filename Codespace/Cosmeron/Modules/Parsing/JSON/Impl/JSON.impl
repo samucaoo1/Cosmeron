@@ -1,0 +1,624 @@
+#pragma once
+static inline void PARSING_INS(JSONFreeValue)(PARSING_TYPE(TJSONValue) *value) {
+  /* Iterative postorder avoids recursive destruction even after many edits. */
+  while (value) {
+    if (value->first) {
+      PARSING_TYPE(TJSONValue) *child = value->first;
+      value->first = child->next;
+      child->next = NULL;
+      value = child;
+    } else {
+      PARSING_TYPE(TJSONValue) *parent = value->parent;
+      free(value->text);
+      free(value->key);
+      free(value);
+      value = parent;
+    }
+  }
+}
+
+PARSING_JSON_FREE_PROTOTYPE {
+  if (document) {
+    PARSING_INS(JSONFreeValue)(document->root);
+    document->root = NULL;
+  }
+}
+
+static inline void PARSING_INS(JSONSpace)(PARSING_INS(Cursor) *cursor) {
+  while (cursor->position < cursor->size && PARSING_INS(Space)(cursor->source[cursor->position])) ++cursor->position;
+}
+
+static inline OPSTATUS PARSING_INS(JSONSyntax)(PARSING_INS(Cursor) *cursor) {
+  return PARSING_INS(Fail)(cursor, PARSING_CONST(DIAGNOSTIC_SYNTAX), STATUS_CONST(INVALID_SEQUENCE));
+}
+
+static inline OPSTATUS PARSING_INS(JSONCodepoint)(PARSING_INS(Cursor) *cursor, uint32_t *out) {
+  uint32_t value = 0;
+  size_t i;
+  if (cursor->size - cursor->position < 4) return PARSING_INS(JSONSyntax)(cursor);
+  for (i = 0; i < 4; ++i) {
+    int digit = PARSING_INS(Hex)(cursor->source[cursor->position]);
+    if (digit < 0) return PARSING_INS(JSONSyntax)(cursor);
+    value = value * 16u + (unsigned)digit;
+    ++cursor->position;
+  }
+  *out = value;
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline OPSTATUS PARSING_INS(JSONString)(PARSING_INS(Cursor) *cursor, char **outText, size_t *outSize) {
+  PARSING_INS(Buffer) buffer = {0};
+  OPSTATUS status = STATUS_CONST(SUCCESS);
+  bool closed = false;
+  PARSING_INS(Buffer) *sink = outText ? &buffer : NULL;
+  if (cursor->position >= cursor->size || cursor->source[cursor->position] != '"') return PARSING_INS(JSONSyntax)(cursor);
+  ++cursor->position;
+  while (cursor->position < cursor->size) {
+    char c = cursor->source[cursor->position++];
+    if (c == '"') {
+      closed = true;
+      break;
+    }
+    if ((unsigned char)c < 0x20) {
+      --cursor->position;
+      status = PARSING_INS(JSONSyntax)(cursor);
+      break;
+    }
+    if (c == '\\') {
+      if (cursor->position >= cursor->size) {
+        status = PARSING_INS(JSONSyntax)(cursor);
+        break;
+      }
+      c = cursor->source[cursor->position++];
+      switch (c) {
+        case '"': case '\\': case '/': break;
+        case 'b': c = '\b';
+        break;
+        case 'f': c = '\f';
+        break;
+        case 'n': c = '\n';
+        break;
+        case 'r': c = '\r';
+        break;
+        case 't': c = '\t';
+        break;
+        case 'u': {
+          uint32_t cp;
+          unsigned char encoded[4];
+          size_t units;
+          status = PARSING_INS(JSONCodepoint)(cursor, &cp);
+          if (status != STATUS_CONST(SUCCESS)) break;
+          if (cp >= 0xd800 && cp <= 0xdbff) {
+            uint32_t low;
+            if (cursor->size - cursor->position < 6 || cursor->source[cursor->position] != '\\' || cursor->source[cursor->position+1] != 'u') {
+              status = PARSING_INS(JSONSyntax)(cursor);
+              break;
+            }
+            cursor->position += 2;
+            status = PARSING_INS(JSONCodepoint)(cursor, &low);
+            if (status != STATUS_CONST(SUCCESS)) break;
+            if (low < 0xdc00 || low > 0xdfff) {
+              status = PARSING_INS(JSONSyntax)(cursor);
+              break;
+            }
+            cp = 0x10000u + ((cp - 0xd800u) << 10) + low - 0xdc00u;
+          } else if (cp >= 0xdc00 && cp <= 0xdfff) {
+            status = PARSING_INS(JSONSyntax)(cursor);
+            break;
+          }
+          status = TEXT_UTF8_FUNC(Encode)(cp, encoded, sizeof(encoded), &units);
+          if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(sink, (const char *)encoded, units);
+          if (status != STATUS_CONST(SUCCESS)) break;
+          continue;
+        }
+        default: status = PARSING_INS(JSONSyntax)(cursor);
+        break;
+      }
+    }
+    if (status != STATUS_CONST(SUCCESS)) break;
+    status = PARSING_INS(Append)(sink, &c, 1);
+    if (status != STATUS_CONST(SUCCESS)) break;
+  }
+  if (status == STATUS_CONST(SUCCESS) && !closed) status = PARSING_INS(JSONSyntax)(cursor);
+  if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(sink, "", 0);
+  if (status != STATUS_CONST(SUCCESS)) {
+    free(buffer.data);
+    return status;
+  }
+  if (outText) *outText = buffer.data;
+  if (outSize) *outSize = buffer.size;
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline OPSTATUS PARSING_INS(JSONValue)(PARSING_INS(Cursor) *cursor, size_t depth, PARSING_TYPE(TJSONValue) **out) {
+  PARSING_TYPE(TJSONValue) *value;
+  void *memory;
+  OPSTATUS status;
+  char c;
+  PARSING_INS(JSONSpace)(cursor);
+  if (depth >= cursor->limits.maxDepth) return PARSING_INS(Fail)(cursor, PARSING_CONST(DIAGNOSTIC_DEPTH), STATUS_CONST(OUT_OF_RANGE));
+  if (cursor->nodes >= cursor->limits.maxNodes) return PARSING_INS(Fail)(cursor, PARSING_CONST(DIAGNOSTIC_LIMIT), STATUS_CONST(OUT_OF_RANGE));
+  if (cursor->position >= cursor->size) return PARSING_INS(JSONSyntax)(cursor);
+  status = MEMORY_FUNC(AllocBytes)(&memory, sizeof(*value));
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  value = (PARSING_TYPE(TJSONValue) *)memory;
+  memset(value, 0, sizeof(*value));
+  ++cursor->nodes;
+  c = cursor->source[cursor->position];
+  if (c == '"') {
+    value->kind = PARSING_CONST(JSON_STRING);
+    status = PARSING_INS(JSONString)(cursor, &value->text, &value->textSize);
+  } else if (c == '{' || c == '[') {
+    char close = c == '{' ? '}' : ']';
+    value->kind = c == '{' ? PARSING_CONST(JSON_OBJECT) : PARSING_CONST(JSON_ARRAY);
+    ++cursor->position;
+    PARSING_INS(JSONSpace)(cursor);
+    status = STATUS_CONST(SUCCESS);
+    if (cursor->position < cursor->size && cursor->source[cursor->position] == close) ++cursor->position;
+    else while (status == STATUS_CONST(SUCCESS)) {
+      char *key = NULL;
+      size_t keySize = 0;
+      PARSING_TYPE(TJSONValue) *child = NULL;
+      if (value->kind == PARSING_CONST(JSON_OBJECT)) {
+        PARSING_TYPE(TJSONValue) *existing;
+        status = PARSING_INS(JSONString)(cursor, &key, &keySize);
+        if (status != STATUS_CONST(SUCCESS)) break;
+        for (existing = value->first; existing; existing = existing->next)
+        if (PARSING_INS(Equal)(PARSING_INS(Slice)(existing->key, existing->keySize), PARSING_INS(Slice)(key, keySize))) break;
+        if (existing) {
+          free(key);
+          status = PARSING_INS(Fail)(cursor, PARSING_CONST(DIAGNOSTIC_DUPLICATE), STATUS_CONST(ALREADY_EXISTS));
+          break;
+        }
+        PARSING_INS(JSONSpace)(cursor);
+        if (cursor->position >= cursor->size || cursor->source[cursor->position++] != ':') {
+          free(key);
+          status = PARSING_INS(JSONSyntax)(cursor);
+          break;
+        }
+      }
+      status = PARSING_INS(JSONValue)(cursor, depth + 1, &child);
+      if (status != STATUS_CONST(SUCCESS)) {
+        free(key);
+        break;
+      }
+      child->key = key;
+      child->keySize = keySize;
+      child->parent = value;
+      if (value->last) value->last->next = child;
+      else value->first = child;
+      value->last = child;
+      ++value->count;
+      PARSING_INS(JSONSpace)(cursor);
+      if (cursor->position >= cursor->size) {
+        status = PARSING_INS(JSONSyntax)(cursor);
+        break;
+      }
+      c = cursor->source[cursor->position++];
+      if (c == close) break;
+      if (c != ',') {
+        status = PARSING_INS(JSONSyntax)(cursor);
+        break;
+      }
+      PARSING_INS(JSONSpace)(cursor);
+    }
+  } else if (c == 'n' || c == 't' || c == 'f') {
+    const char *literal = c == 'n' ? "null" : (c == 't' ? "true" : "false");
+    size_t length = strlen(literal);
+    if (cursor->size - cursor->position < length || memcmp(cursor->source + cursor->position, literal, length)) status = PARSING_INS(JSONSyntax)(cursor);
+    else {
+      cursor->position += length;
+      value->kind = c == 'n' ? PARSING_CONST(JSON_NULL) : PARSING_CONST(JSON_BOOL);
+      value->boolean = c == 't';
+      status = STATUS_CONST(SUCCESS);
+    }
+  } else {
+    size_t start = cursor->position;
+    value->kind = PARSING_CONST(JSON_NUMBER);
+    if (c == '-') ++cursor->position;
+    if (cursor->position >= cursor->size) status = PARSING_INS(JSONSyntax)(cursor);
+    else {
+      c = cursor->source[cursor->position];
+      status = STATUS_CONST(SUCCESS);
+      if (c == '0') ++cursor->position;
+      else if (c >= '1' && c <= '9') while (cursor->position < cursor->size && cursor->source[cursor->position] >= '0' && cursor->source[cursor->position] <= '9') ++cursor->position;
+      else status = PARSING_INS(JSONSyntax)(cursor);
+      if (status == STATUS_CONST(SUCCESS) && cursor->position < cursor->size && cursor->source[cursor->position] == '.') {
+        size_t digits = ++cursor->position;
+        while (cursor->position < cursor->size && cursor->source[cursor->position] >= '0' && cursor->source[cursor->position] <= '9') ++cursor->position;
+        if (digits == cursor->position) status = PARSING_INS(JSONSyntax)(cursor);
+      }
+      if (status == STATUS_CONST(SUCCESS) && cursor->position < cursor->size && (cursor->source[cursor->position] == 'e' || cursor->source[cursor->position] == 'E')) {
+        size_t digits;
+        ++cursor->position;
+        if (cursor->position < cursor->size && (cursor->source[cursor->position] == '+' || cursor->source[cursor->position] == '-')) ++cursor->position;
+        digits = cursor->position;
+        while (cursor->position < cursor->size && cursor->source[cursor->position] >= '0' && cursor->source[cursor->position] <= '9') ++cursor->position;
+        if (digits == cursor->position) status = PARSING_INS(JSONSyntax)(cursor);
+      }
+      if (status == STATUS_CONST(SUCCESS)) {
+        value->textSize = cursor->position - start;
+        status = PARSING_INS(Copy)(PARSING_INS(Slice)(cursor->source + start, value->textSize), &value->text);
+      }
+    }
+  }
+  if (status != STATUS_CONST(SUCCESS)) {
+    PARSING_INS(JSONFreeValue)(value);
+    return status;
+  }
+  *out = value;
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_JSON_PARSE_WITH_LIMITS_PROTOTYPE {
+  PARSING_INS(Cursor) cursor;
+  PARSING_TYPE(TJSONDocument) document = {0};
+  OPSTATUS status;
+  if (!outDocument || outDocument->root) return STATUS_CONST(INVALID_ARGUMENT);
+  status = PARSING_INS(CursorCreate)(source, sourceSize, limits, diagnostic, &cursor);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  status = PARSING_INS(JSONValue)(&cursor, 0, &document.root);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  PARSING_INS(JSONSpace)(&cursor);
+  if (cursor.position != cursor.size) {
+    PARSING_FUNC(JSON_Free)(&document);
+    return PARSING_INS(JSONSyntax)(&cursor);
+  }
+  *outDocument = document;
+  if (diagnostic) memset(diagnostic, 0, sizeof(*diagnostic));
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_JSON_PARSE_PROTOTYPE {
+  return PARSING_FUNC(JSON_ParseWithLimits)(source, sourceSize, NULL, outDocument, diagnostic);
+}
+
+PARSING_JSON_ROOT_PROTOTYPE {
+  return document ? document->root : NULL;
+}
+
+PARSING_JSON_SIZE_PROTOTYPE {
+  return value ? value->count : 0;
+}
+
+PARSING_JSON_GET_SLICE_PROTOTYPE {
+  const PARSING_TYPE(TJSONValue) *child;
+  if (!object || object->kind != PARSING_CONST(JSON_OBJECT) || (!key.data && key.size) || !outValue) return STATUS_CONST(INVALID_ARGUMENT);
+  for (child = object->first; child; child = child->next) if (PARSING_INS(Equal)(key, PARSING_INS(Slice)(child->key, child->keySize))) {
+    *outValue = child;
+    return STATUS_CONST(SUCCESS);
+  }
+  return STATUS_CONST(NOT_FOUND);
+}
+
+PARSING_JSON_GET_PROTOTYPE {
+  if (!key) return STATUS_CONST(INVALID_ARGUMENT);
+  return PARSING_FUNC(JSON_GetSlice)(object, PARSING_INS(Slice)(key, strlen(key)), outValue);
+}
+
+PARSING_JSON_AT_PROTOTYPE {
+  const PARSING_TYPE(TJSONValue) *child;
+  if (!array || array->kind != PARSING_CONST(JSON_ARRAY) || !outValue) return STATUS_CONST(INVALID_ARGUMENT);
+  if (index >= array->count) return STATUS_CONST(OUT_OF_RANGE);
+  child = array->first;
+  while (index--) child = child->next;
+  *outValue = child;
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_JSON_STRING_PROTOTYPE {
+  if (!value || value->kind != PARSING_CONST(JSON_STRING) || !outValue) return STATUS_CONST(INVALID_ARGUMENT);
+  *outValue = PARSING_INS(Slice)(value->text, value->textSize);
+  return STATUS_CONST(SUCCESS);
+}
+PARSING_JSON_I64_PROTOTYPE {
+  if (!value || value->kind != PARSING_CONST(JSON_NUMBER)) return STATUS_CONST(INVALID_ARGUMENT);
+  return PARSING_FUNC(Slice_I64)(PARSING_INS(Slice)(value->text, value->textSize), outValue);
+}
+PARSING_JSON_U64_PROTOTYPE {
+  if (!value || value->kind != PARSING_CONST(JSON_NUMBER)) return STATUS_CONST(INVALID_ARGUMENT);
+  return PARSING_FUNC(Slice_U64)(PARSING_INS(Slice)(value->text, value->textSize), outValue);
+}
+PARSING_JSON_F64_PROTOTYPE {
+  if (!value || value->kind != PARSING_CONST(JSON_NUMBER)) return STATUS_CONST(INVALID_ARGUMENT);
+  return PARSING_FUNC(Slice_F64)(PARSING_INS(Slice)(value->text, value->textSize), outValue);
+}
+
+PARSING_JSON_BOOL_PROTOTYPE {
+  if (!value || value->kind != PARSING_CONST(JSON_BOOL) || !outValue) return STATUS_CONST(INVALID_ARGUMENT);
+  *outValue = value->boolean;
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline OPSTATUS PARSING_INS(JSONQuote)(PARSING_INS(Buffer) *buffer, PARSING_TYPE(TSlice) text) {
+  size_t i;
+  OPSTATUS status = PARSING_INS(Append)(buffer, "\"", 1);
+  for (i = 0; status == STATUS_CONST(SUCCESS) && i < text.size; ++i) {
+    unsigned char c = (unsigned char)text.data[i];
+    if (c == '"' || c == '\\') {
+      char escaped[2] = {
+        '\\', (char)c
+      };
+      status = PARSING_INS(Append)(buffer, escaped, 2);
+    } else if (c < 0x20) {
+      char escaped[7];
+      (void)snprintf(escaped, sizeof(escaped), "\\u%04x", (unsigned)c);
+      status = PARSING_INS(Append)(buffer, escaped, 6);
+    } else status = PARSING_INS(Append)(buffer, (const char *)&text.data[i], 1);
+  }
+  return status == STATUS_CONST(SUCCESS) ? PARSING_INS(Append)(buffer, "\"", 1) : status;
+}
+
+static inline OPSTATUS PARSING_INS(JSONWriteValue)(const PARSING_TYPE(TJSONValue) *value, PARSING_INS(Buffer) *buffer, size_t depth) {
+  const PARSING_TYPE(TJSONValue) *child;
+  OPSTATUS status = STATUS_CONST(SUCCESS);
+  bool first = true;
+  if (depth >= PARSING_CONST(DEFAULT_DEPTH)) return STATUS_CONST(OUT_OF_RANGE);
+  switch (value->kind) {
+    case PARSING_CONST(JSON_NULL): return PARSING_INS(Append)(buffer, "null", 4);
+    case PARSING_CONST(JSON_BOOL): return PARSING_INS(Append)(buffer, value->boolean ? "true" : "false", value->boolean ? 4 : 5);
+    case PARSING_CONST(JSON_NUMBER): return PARSING_INS(Append)(buffer, value->text, value->textSize);
+    case PARSING_CONST(JSON_STRING): return PARSING_INS(JSONQuote)(buffer, PARSING_INS(Slice)(value->text, value->textSize));
+    case PARSING_CONST(JSON_ARRAY): case PARSING_CONST(JSON_OBJECT):
+    status = PARSING_INS(Append)(buffer, value->kind == PARSING_CONST(JSON_ARRAY) ? "[" : "{", 1);
+    for (child = value->first; status == STATUS_CONST(SUCCESS) && child; child = child->next) {
+      if (!first) status = PARSING_INS(Append)(buffer, ",", 1);
+      first = false;
+      if (status == STATUS_CONST(SUCCESS) && value->kind == PARSING_CONST(JSON_OBJECT)) {
+        status = PARSING_INS(JSONQuote)(buffer, PARSING_INS(Slice)(child->key, child->keySize));
+        if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(buffer, ":", 1);
+      }
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(JSONWriteValue)(child, buffer, depth + 1);
+    }
+    return status == STATUS_CONST(SUCCESS) ? PARSING_INS(Append)(buffer, value->kind == PARSING_CONST(JSON_ARRAY) ? "]" : "}", 1) : status;
+    default: return STATUS_CONST(INVALID_ARGUMENT);
+  }
+}
+
+PARSING_JSON_WRITE_PROTOTYPE {
+  PARSING_INS(Buffer) text = {0};
+  OPSTATUS status;
+  if (!document || !document->root || !outSize || (!buffer && capacity)) return STATUS_CONST(INVALID_ARGUMENT);
+  status = PARSING_INS(JSONWriteValue)(document->root, &text, 0);
+  if (status != STATUS_CONST(SUCCESS)) {
+    free(text.data);
+    return status;
+  }
+  return PARSING_INS(Output)(&text, buffer, capacity, outSize);
+}
+
+static inline OPSTATUS PARSING_INS(JSONEditValue)(PARSING_TYPE(TJSONValue) *parent,
+const char *source, size_t size, PARSING_TYPE(TJSONDocument) *out, PARSING_TYPE(TDiagnostic) *diagnostic) {
+  PARSING_TYPE(TLimits) limits = {
+    PARSING_CONST(DEFAULT_DEPTH), PARSING_CONST(DEFAULT_NODES), PARSING_CONST(DEFAULT_BYTES)
+  };
+  PARSING_TYPE(TJSONValue) *ancestor;
+  size_t depth = 0;
+  for (ancestor = parent; ancestor; ancestor = ancestor->parent) if (++depth >= limits.maxDepth) return STATUS_CONST(OUT_OF_RANGE);
+  limits.maxDepth -= depth;
+  return PARSING_FUNC(JSON_ParseWithLimits)(source, size, &limits, out, diagnostic);
+}
+
+PARSING_JSON_SET_PROTOTYPE {
+  PARSING_TYPE(TJSONDocument) document = {0};
+  PARSING_TYPE(TJSONValue) *existing, *previous = NULL;
+  OPSTATUS status;
+  if (!object || object->kind != PARSING_CONST(JSON_OBJECT) || !key || !TEXT_UTF8_FUNC(Validate)((const unsigned char *)key, strlen(key))) return STATUS_CONST(INVALID_ARGUMENT);
+  status = PARSING_INS(JSONEditValue)(object, json, jsonSize, &document, diagnostic);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  status = PARSING_INS(Copy)(PARSING_INS(Slice)(key, strlen(key)), &document.root->key);
+  if (status != STATUS_CONST(SUCCESS)) {
+    PARSING_FUNC(JSON_Free)(&document);
+    return status;
+  }
+  document.root->keySize = strlen(key);
+  document.root->parent = object;
+  for (existing = object->first; existing; previous = existing, existing = existing->next) if (existing->keySize == strlen(key) && !memcmp(existing->key, key, existing->keySize)) break;
+  if (existing) {
+    document.root->next = existing->next;
+    if (previous) previous->next = document.root;
+    else object->first = document.root;
+    if (object->last == existing) object->last = document.root;
+    existing->parent = NULL;
+    existing->next = NULL;
+    PARSING_INS(JSONFreeValue)(existing);
+  } else {
+    if (object->last) object->last->next = document.root;
+    else object->first = document.root;
+    object->last = document.root;
+    ++object->count;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_JSON_APPEND_PROTOTYPE {
+  PARSING_TYPE(TJSONDocument) document = {0};
+  OPSTATUS status;
+  if (!array || array->kind != PARSING_CONST(JSON_ARRAY)) return STATUS_CONST(INVALID_ARGUMENT);
+  status = PARSING_INS(JSONEditValue)(array, json, jsonSize, &document, diagnostic);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  document.root->parent = array;
+  if (array->last) array->last->next = document.root;
+  else array->first = document.root;
+  array->last = document.root;
+  ++array->count;
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_JSON_REMOVE_PROTOTYPE {
+  PARSING_TYPE(TJSONValue) *value, *previous = NULL;
+  if (!object || object->kind != PARSING_CONST(JSON_OBJECT) || !key) return STATUS_CONST(INVALID_ARGUMENT);
+  for (value = object->first; value; previous = value, value = value->next) if (value->keySize == strlen(key) && !memcmp(value->key, key, value->keySize)) break;
+  if (!value) return STATUS_CONST(NOT_FOUND);
+  if (previous) previous->next = value->next;
+  else object->first = value->next;
+  if (object->last == value) object->last = previous;
+  value->parent = NULL;
+  value->next = NULL;
+  PARSING_INS(JSONFreeValue)(value);
+  --object->count;
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_JSON_READER_CREATE_PROTOTYPE {
+  PARSING_TYPE(TJSONReader) reader = {0};
+  OPSTATUS status;
+  if (!outReader) return STATUS_CONST(INVALID_ARGUMENT);
+  status = PARSING_INS(CursorCreate)(source, size, NULL, diagnostic, &reader.cursor);
+  if (status == STATUS_CONST(SUCCESS)) *outReader = reader;
+  return status;
+}
+
+PARSING_JSON_NEXT_PROTOTYPE {
+  PARSING_TYPE(TJSONReader) next;
+  PARSING_TYPE(TJSONToken) token = {0};
+  OPSTATUS status = STATUS_CONST(SUCCESS);
+  PARSING_INS(Cursor) *cursor;
+  size_t start;
+  char c;
+  if (!reader || !outToken || !outEnd) return STATUS_CONST(INVALID_ARGUMENT);
+  next = *reader;
+  cursor = &next.cursor;
+  for (;;) {
+    PARSING_INS(JSONReadState) state;
+    PARSING_INS(JSONSpace)(cursor);
+    start = cursor->position;
+    if (!next.depth && next.rootSeen) {
+      if (start != cursor->size) return PARSING_INS(JSONSyntax)(cursor);
+      *reader = next;
+      *outEnd = true;
+      return STATUS_CONST(SUCCESS);
+    }
+    if (start == cursor->size) return PARSING_INS(JSONSyntax)(cursor);
+    c = cursor->source[start];
+    token.depth = next.depth;
+    if (!next.depth) break;
+    state = next.stack[next.depth-1];
+    if ((state == PARSING_INS(JSON_OBJECT_FIRST) || state == PARSING_INS(JSON_OBJECT_COMMA)) && c == '}') {
+      token.kind = PARSING_CONST(JSON_TOKEN_OBJECT_END);
+      ++cursor->position;
+      token.depth = --next.depth;
+      goto ready;
+    }
+    if ((state == PARSING_INS(JSON_ARRAY_FIRST) || state == PARSING_INS(JSON_ARRAY_COMMA)) && c == ']') {
+      token.kind = PARSING_CONST(JSON_TOKEN_ARRAY_END);
+      ++cursor->position;
+      token.depth = --next.depth;
+      goto ready;
+    }
+    if (state == PARSING_INS(JSON_OBJECT_COMMA) || state == PARSING_INS(JSON_ARRAY_COMMA)) {
+      if (c != ',') return PARSING_INS(JSONSyntax)(cursor);
+      ++cursor->position;
+      next.stack[next.depth-1] = state == PARSING_INS(JSON_OBJECT_COMMA) ? PARSING_INS(JSON_OBJECT_KEY) : PARSING_INS(JSON_ARRAY_VALUE);
+      continue;
+    }
+    if (state == PARSING_INS(JSON_OBJECT_FIRST) || state == PARSING_INS(JSON_OBJECT_KEY)) {
+      status = PARSING_INS(JSONString)(cursor, NULL, NULL);
+      if (status != STATUS_CONST(SUCCESS)) return status;
+      token.kind = PARSING_CONST(JSON_TOKEN_KEY);
+      token.text = PARSING_INS(Slice)(cursor->source + start + 1, cursor->position - start - 2);
+      PARSING_INS(JSONSpace)(cursor);
+      if (cursor->position == cursor->size || cursor->source[cursor->position++] != ':') return PARSING_INS(JSONSyntax)(cursor);
+      next.stack[next.depth-1] = PARSING_INS(JSON_OBJECT_VALUE);
+      goto ready;
+    }
+    next.stack[next.depth-1] = state == PARSING_INS(JSON_OBJECT_VALUE) ? PARSING_INS(JSON_OBJECT_COMMA) : PARSING_INS(JSON_ARRAY_COMMA);
+    break;
+  }
+  next.rootSeen = true;
+  if (next.depth >= PARSING_CONST(DEFAULT_DEPTH)) return PARSING_INS(Fail)(cursor, PARSING_CONST(DIAGNOSTIC_DEPTH), STATUS_CONST(OUT_OF_RANGE));
+  if (++cursor->nodes > cursor->limits.maxNodes) return PARSING_INS(Fail)(cursor, PARSING_CONST(DIAGNOSTIC_LIMIT), STATUS_CONST(OUT_OF_RANGE));
+  if (c == '{' || c == '[') {
+    token.kind = c == '{' ? PARSING_CONST(JSON_TOKEN_OBJECT_BEGIN) : PARSING_CONST(JSON_TOKEN_ARRAY_BEGIN);
+    next.stack[next.depth++] = c == '{' ? PARSING_INS(JSON_OBJECT_FIRST) : PARSING_INS(JSON_ARRAY_FIRST);
+    ++cursor->position;
+  } else if (c == '"') {
+    status = PARSING_INS(JSONString)(cursor, NULL, NULL);
+    if (status != STATUS_CONST(SUCCESS)) return status;
+    token.kind = PARSING_CONST(JSON_TOKEN_STRING);
+    token.text = PARSING_INS(Slice)(cursor->source + start + 1, cursor->position - start - 2);
+  } else if (c == 't' || c == 'f' || c == 'n') {
+    const char *literal = c == 't' ? "true" : (c == 'f' ? "false" : "null");
+    size_t length = strlen(literal);
+    if (cursor->size - start < length || memcmp(cursor->source + start, literal, length)) return PARSING_INS(JSONSyntax)(cursor);
+    cursor->position += length;
+    token.kind = c == 'n' ? PARSING_CONST(JSON_TOKEN_NULL) : PARSING_CONST(JSON_TOKEN_BOOL);
+    token.text = PARSING_INS(Slice)(cursor->source + start, length);
+  } else {
+    size_t digits;
+    token.kind = PARSING_CONST(JSON_TOKEN_NUMBER);
+    if (c == '-') ++cursor->position;
+    if (cursor->position == cursor->size) return PARSING_INS(JSONSyntax)(cursor);
+    c = cursor->source[cursor->position];
+    if (c == '0') ++cursor->position;
+    else if (c >= '1' && c <= '9') while (cursor->position < cursor->size && cursor->source[cursor->position] >= '0' && cursor->source[cursor->position] <= '9') ++cursor->position;
+    else return PARSING_INS(JSONSyntax)(cursor);
+    if (cursor->position < cursor->size && cursor->source[cursor->position] == '.') {
+      digits = ++cursor->position;
+      while (cursor->position < cursor->size && cursor->source[cursor->position] >= '0' && cursor->source[cursor->position] <= '9') ++cursor->position;
+      if (digits == cursor->position) return PARSING_INS(JSONSyntax)(cursor);
+    }
+    if (cursor->position < cursor->size && (cursor->source[cursor->position] == 'e' || cursor->source[cursor->position] == 'E')) {
+      ++cursor->position;
+      if (cursor->position < cursor->size && (cursor->source[cursor->position] == '+' || cursor->source[cursor->position] == '-')) ++cursor->position;
+      digits = cursor->position;
+      while (cursor->position < cursor->size && cursor->source[cursor->position] >= '0' && cursor->source[cursor->position] <= '9') ++cursor->position;
+      if (digits == cursor->position) return PARSING_INS(JSONSyntax)(cursor);
+    }
+    token.text = PARSING_INS(Slice)(cursor->source + start, cursor->position - start);
+  }
+  ready:
+  *reader = next;
+  *outToken = token;
+  *outEnd = false;
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_JSON_TOKEN_WRITE_PROTOTYPE {
+  PARSING_INS(Buffer) text = {0};
+  OPSTATUS status;
+  if (!token || !outSize || (!buffer && capacity) || (!token->text.data && token->text.size)) return STATUS_CONST(INVALID_ARGUMENT);
+  if (token->kind == PARSING_CONST(JSON_TOKEN_STRING) || token->kind == PARSING_CONST(JSON_TOKEN_KEY)) {
+    PARSING_INS(Buffer) quoted = {0};
+    PARSING_INS(Cursor) cursor = {0};
+    char *decoded = NULL;
+    size_t size;
+    status = PARSING_INS(Append)(&quoted, "\"", 1);
+    if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&quoted, token->text.data, token->text.size);
+    if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&quoted, "\"", 1);
+    if (status == STATUS_CONST(SUCCESS)) {
+      cursor.source = quoted.data;
+      cursor.size = quoted.size;
+      status = PARSING_INS(JSONString)(&cursor, &decoded, &size);
+    }
+    if (status == STATUS_CONST(SUCCESS)) {
+      text.data = decoded;
+      text.size = size;
+      text.capacity = size + 1;
+    }
+    free(quoted.data);
+  } else status = PARSING_INS(Append)(&text, token->text.data, token->text.size);
+  if (status != STATUS_CONST(SUCCESS)) {
+    free(text.data);
+    return status;
+  }
+  return PARSING_INS(Output)(&text, buffer, capacity, outSize);
+}
+
+PARSING_JSON_GET_MUTABLE_PROTOTYPE {
+  const PARSING_TYPE(TJSONValue) *value;
+  OPSTATUS status;
+  if (!outValue) return STATUS_CONST(INVALID_ARGUMENT);
+  status = PARSING_FUNC(JSON_Get)(object, key, &value);
+  if (status == STATUS_CONST(SUCCESS)) *outValue = (PARSING_TYPE(TJSONValue) *)value;
+  return status;
+}
+
+PARSING_JSON_AT_MUTABLE_PROTOTYPE {
+  const PARSING_TYPE(TJSONValue) *value;
+  OPSTATUS status;
+  if (!outValue) return STATUS_CONST(INVALID_ARGUMENT);
+  status = PARSING_FUNC(JSON_At)(array, index, &value);
+  if (status == STATUS_CONST(SUCCESS)) *outValue = (PARSING_TYPE(TJSONValue) *)value;
+  return status;
+}

@@ -39,6 +39,8 @@ Module-by-module API and usage documentation.
 
 - [Input](Modules/Input.md) — keyboard, mouse, controllers and gamepad state without public initialization
 - [Audio](Modules/Audio.md) — synthesis, beep music, codecs and playback
+- [CLI](Modules/CLI.md) — arguments, declarative commands and help
+- [Parsing](Modules/Parsing.md) — INI, JSON, CSV/TSV, TOML, XML and YAML profiles
 - [File](Modules/File.md) — files, paths, directories and atomic content replacement
 - [Bit](Modules/Bit.md)
 

@@ -1,0 +1,224 @@
+#pragma once
+PARSING_INI_READER_CREATE_PROTOTYPE {
+  PARSING_TYPE(TINIReader) reader = {0};
+  OPSTATUS status;
+  if (!outReader) return STATUS_CONST(INVALID_ARGUMENT);
+  status = PARSING_INS(CursorCreate)(source, size, NULL, diagnostic, &reader.cursor);
+  if (status == STATUS_CONST(SUCCESS)) *outReader = reader;
+  return status;
+}
+
+PARSING_INI_NEXT_PROTOTYPE {
+  PARSING_TYPE(TINIReader) next;
+  PARSING_TYPE(TSlice) line;
+  PARSING_TYPE(TINIEntry) entry;
+  if (!reader || !outEntry || !outEnd) return STATUS_CONST(INVALID_ARGUMENT);
+  next = *reader;
+  while (PARSING_INS(Line)(&next.cursor, &line)) {
+    const char *equals;
+    size_t start = (size_t)(line.data - next.cursor.source);
+    line = PARSING_INS(Trim)(line);
+    if (!line.size || line.data[0] == ';' || line.data[0] == '#') continue;
+    if (memchr(line.data, '\0', line.size)) {
+      next.cursor.position = start;
+      return PARSING_INS(Fail)(&next.cursor, PARSING_CONST(DIAGNOSTIC_SYNTAX), STATUS_CONST(INVALID_SEQUENCE));
+    }
+    if (line.data[0] == '[') {
+      const char *close = (const char *)memchr(line.data + 1, ']', line.size - 1);
+      PARSING_TYPE(TSlice) rest;
+      if (!close) {
+        next.cursor.position = start;
+        return PARSING_INS(Fail)(&next.cursor, PARSING_CONST(DIAGNOSTIC_SYNTAX), STATUS_CONST(INVALID_SEQUENCE));
+      }
+      rest = PARSING_INS(Trim)(PARSING_INS(Slice)(close + 1, line.size - (size_t)(close + 1 - line.data)));
+      if (rest.size && rest.data[0] != ';' && rest.data[0] != '#') {
+        next.cursor.position = start;
+        return PARSING_INS(Fail)(&next.cursor, PARSING_CONST(DIAGNOSTIC_SYNTAX), STATUS_CONST(INVALID_SEQUENCE));
+      }
+      next.section = PARSING_INS(Trim)(PARSING_INS(Slice)(line.data + 1, (size_t)(close - line.data - 1)));
+      if (!next.section.size) {
+        next.cursor.position = start;
+        return PARSING_INS(Fail)(&next.cursor, PARSING_CONST(DIAGNOSTIC_SYNTAX), STATUS_CONST(INVALID_SEQUENCE));
+      }
+      continue;
+    }
+    equals = (const char *)memchr(line.data, '=', line.size);
+    if (!equals) {
+      next.cursor.position = start;
+      return PARSING_INS(Fail)(&next.cursor, PARSING_CONST(DIAGNOSTIC_SYNTAX), STATUS_CONST(INVALID_SEQUENCE));
+    }
+    entry.section = next.section;
+    entry.key = PARSING_INS(Trim)(PARSING_INS(Slice)(line.data, (size_t)(equals - line.data)));
+    entry.value = PARSING_INS(Trim)(PARSING_INS(Slice)(equals + 1, line.size - (size_t)(equals + 1 - line.data)));
+    if (!entry.key.size) {
+      next.cursor.position = start;
+      return PARSING_INS(Fail)(&next.cursor, PARSING_CONST(DIAGNOSTIC_SYNTAX), STATUS_CONST(INVALID_SEQUENCE));
+    }
+    if (++next.cursor.nodes > next.cursor.limits.maxNodes) return PARSING_INS(Fail)(&next.cursor, PARSING_CONST(DIAGNOSTIC_LIMIT), STATUS_CONST(OUT_OF_RANGE));
+    *reader = next;
+    *outEntry = entry;
+    *outEnd = false;
+    return STATUS_CONST(SUCCESS);
+  }
+  *reader = next;
+  *outEnd = true;
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_INI_FREE_PROTOTYPE {
+  if (document) {
+    PARSING_INS(ININode) *node = document->first;
+    while (node) {
+      PARSING_INS(ININode) *next = node->next;
+      free((void *)node->entry.section.data);
+      free((void *)node->entry.key.data);
+      free((void *)node->entry.value.data);
+      free(node);
+      node = next;
+    }
+    memset(document, 0, sizeof(*document));
+  }
+}
+
+static inline PARSING_INS(ININode) *PARSING_INS(INIFind)(const PARSING_TYPE(TINIDocument) *document,
+PARSING_TYPE(TSlice) section, PARSING_TYPE(TSlice) key) {
+  PARSING_INS(ININode) *node;
+  for (node = document->first; node; node = node->next) if (PARSING_INS(Equal)(node->entry.section, section) && PARSING_INS(Equal)(node->entry.key, key)) return node;
+  return NULL;
+}
+
+static inline OPSTATUS PARSING_INS(INIStore)(PARSING_TYPE(TINIDocument) *document, PARSING_TYPE(TINIEntry) entry) {
+  PARSING_INS(ININode) *node = PARSING_INS(INIFind)(document, entry.section, entry.key);
+  char *section = NULL, *key = NULL, *value = NULL;
+  OPSTATUS status;
+  status = PARSING_INS(Copy)(entry.value, &value);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  if (node) {
+    free((void *)node->entry.value.data);
+    node->entry.value = PARSING_INS(Slice)(value, entry.value.size);
+    return STATUS_CONST(SUCCESS);
+  }
+  status = PARSING_INS(Copy)(entry.section, &section);
+  if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Copy)(entry.key, &key);
+  if (status == STATUS_CONST(SUCCESS)) {
+    void *memory;
+    status = MEMORY_FUNC(AllocBytes)(&memory, sizeof(*node));
+    if (status == STATUS_CONST(SUCCESS)) node = (PARSING_INS(ININode) *)memory;
+  }
+  if (status != STATUS_CONST(SUCCESS)) {
+    free(section);
+    free(key);
+    free(value);
+    return status;
+  }
+  node->entry.section = PARSING_INS(Slice)(section, entry.section.size);
+  node->entry.key = PARSING_INS(Slice)(key, entry.key.size);
+  node->entry.value = PARSING_INS(Slice)(value, entry.value.size);
+  node->next = NULL;
+  if (document->last) document->last->next = node;
+  else document->first = node;
+  document->last = node;
+  ++document->count;
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_INI_PARSE_PROTOTYPE {
+  PARSING_TYPE(TINIReader) reader;
+  PARSING_TYPE(TINIDocument) document = {0};
+  PARSING_TYPE(TINIEntry) entry;
+  bool end;
+  OPSTATUS status;
+  if (!outDocument || outDocument->first || outDocument->last || outDocument->count) return STATUS_CONST(INVALID_ARGUMENT);
+  status = PARSING_FUNC(INI_ReaderCreate)(source, size, &reader, diagnostic);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  while ((status = PARSING_FUNC(INI_Next)(&reader, &entry, &end)) == STATUS_CONST(SUCCESS) && !end) {
+    if (PARSING_INS(INIFind)(&document, entry.section, entry.key)) {
+      status = PARSING_INS(Fail)(&reader.cursor, PARSING_CONST(DIAGNOSTIC_DUPLICATE), STATUS_CONST(ALREADY_EXISTS));
+      break;
+    }
+    status = PARSING_INS(INIStore)(&document, entry);
+    if (status != STATUS_CONST(SUCCESS)) break;
+  }
+  if (status != STATUS_CONST(SUCCESS)) {
+    PARSING_FUNC(INI_Free)(&document);
+    return status;
+  }
+  *outDocument = document;
+  if (diagnostic) memset(diagnostic, 0, sizeof(*diagnostic));
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_INI_GET_PROTOTYPE {
+  PARSING_INS(ININode) *node;
+  if (!document || !section || !key || !outValue) return STATUS_CONST(INVALID_ARGUMENT);
+  node = PARSING_INS(INIFind)(document, PARSING_INS(Slice)(section, strlen(section)), PARSING_INS(Slice)(key, strlen(key)));
+  if (!node) return STATUS_CONST(NOT_FOUND);
+  *outValue = node->entry.value;
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline bool PARSING_INS(INITextValid)(const char *text) {
+  return text && !strchr(text, '\r') && !strchr(text, '\n') && TEXT_UTF8_FUNC(Validate)((const unsigned char *)text, strlen(text));
+}
+
+PARSING_INI_SET_PROTOTYPE {
+  PARSING_TYPE(TINIEntry) entry;
+  if (!document || !PARSING_INS(INITextValid)(section) || !PARSING_INS(INITextValid)(key) || !PARSING_INS(INITextValid)(value) || !*key ||
+  strchr(section, ']') || strchr(key, '=') || *key == '[' || *key == '#' || *key == ';') return STATUS_CONST(INVALID_ARGUMENT);
+  entry.section = PARSING_INS(Slice)(section, strlen(section));
+  entry.key = PARSING_INS(Slice)(key, strlen(key));
+  entry.value = PARSING_INS(Slice)(value, strlen(value));
+  if (!PARSING_INS(Equal)(entry.section, PARSING_INS(Trim)(entry.section)) || !PARSING_INS(Equal)(entry.key, PARSING_INS(Trim)(entry.key)) ||
+  !PARSING_INS(Equal)(entry.value, PARSING_INS(Trim)(entry.value))) return STATUS_CONST(INVALID_ARGUMENT);
+  return PARSING_INS(INIStore)(document, entry);
+}
+
+PARSING_INI_REMOVE_PROTOTYPE {
+  PARSING_INS(ININode) *node, *previous = NULL;
+  if (!document || !section || !key) return STATUS_CONST(INVALID_ARGUMENT);
+  for (node = document->first; node; previous = node, node = node->next) if (PARSING_INS(Equal)(node->entry.section, PARSING_INS(Slice)(section, strlen(section))) && PARSING_INS(Equal)(node->entry.key, PARSING_INS(Slice)(key, strlen(key)))) break;
+  if (!node) return STATUS_CONST(NOT_FOUND);
+  if (previous) previous->next = node->next;
+  else document->first = node->next;
+  if (document->last == node) document->last = previous;
+  free((void *)node->entry.section.data);
+  free((void *)node->entry.key.data);
+  free((void *)node->entry.value.data);
+  free(node);
+  --document->count;
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_INI_WRITE_PROTOTYPE {
+  PARSING_INS(Buffer) text = {0};
+  PARSING_INS(ININode) *node, *entry;
+  OPSTATUS status = STATUS_CONST(SUCCESS);
+  if (!document || !outSize || (!buffer && capacity)) return STATUS_CONST(INVALID_ARGUMENT);
+  /* Emit the global section first; then group each named section once. */
+  for (node = document->first; status == STATUS_CONST(SUCCESS) && node; node = node->next) {
+    if (node->entry.section.size) continue;
+    status = PARSING_INS(Append)(&text, node->entry.key.data, node->entry.key.size);
+    if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, "=", 1);
+    if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, node->entry.value.data, node->entry.value.size);
+    if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, "\n", 1);
+  }
+  for (node = document->first; status == STATUS_CONST(SUCCESS) && node; node = node->next) {
+    if (!node->entry.section.size) continue;
+    for (entry = document->first; entry != node; entry = entry->next) if (PARSING_INS(Equal)(entry->entry.section, node->entry.section)) break;
+    if (entry != node) continue;
+    status = PARSING_INS(Append)(&text, "[", 1);
+    if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, node->entry.section.data, node->entry.section.size);
+    if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, "]\n", 2);
+    for (entry = node; status == STATUS_CONST(SUCCESS) && entry; entry = entry->next) if (PARSING_INS(Equal)(entry->entry.section, node->entry.section)) {
+      status = PARSING_INS(Append)(&text, entry->entry.key.data, entry->entry.key.size);
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, "=", 1);
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, entry->entry.value.data, entry->entry.value.size);
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, "\n", 1);
+    }
+  }
+  if (status != STATUS_CONST(SUCCESS)) {
+    free(text.data);
+    return status;
+  }
+  return PARSING_INS(Output)(&text, buffer, capacity, outSize);
+}
