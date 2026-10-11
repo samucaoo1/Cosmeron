@@ -24,12 +24,12 @@ static inline bool AUDIO_INS(MP3_ReadBits)(
   return true;
 }
 
-#define AUDIO_INS_MP3_READ(WIDTH, FIELD)                                      \
+#define AUDIO_INS_MP3_READ(WIDTH, FIELD, TYPE)                                      \
   do {                                                                        \
     unsigned int _mp3BitsValue;                                               \
     if (!AUDIO_INS(MP3_ReadBits)(&bits, (WIDTH), &_mp3BitsValue))              \
       return STATUS_CONST(INCOMPLETE_SEQUENCE);                               \
-    (FIELD) = _mp3BitsValue;                                                  \
+    (FIELD) = (TYPE)_mp3BitsValue;                                                  \
   } while (0)
 
 AUDIO_CODEC_MP3_PARSE_SIDE_INFO_PROTOTYPE {
@@ -52,33 +52,33 @@ AUDIO_CODEC_MP3_PARSE_SIDE_INFO_PROTOTYPE {
   result.granules = header.mpegVersion == 1 ? 2 : 1;
   result.channels = header.channels;
   if (header.mpegVersion == 1) {
-    AUDIO_INS_MP3_READ(9, result.mainDataBegin);
-    AUDIO_INS_MP3_READ(header.channels == 1 ? 5U : 3U, result.privateBits);
+    AUDIO_INS_MP3_READ(9, result.mainDataBegin, uint16_t);
+    AUDIO_INS_MP3_READ(header.channels == 1 ? 5U : 3U, result.privateBits, uint8_t);
     for (ch = 0; ch < header.channels; ++ch)
       for (band = 0; band < 4; ++band)
-        AUDIO_INS_MP3_READ(1, result.scfsi[ch][band]);
+        AUDIO_INS_MP3_READ(1, result.scfsi[ch][band], uint8_t);
   } else {
-    AUDIO_INS_MP3_READ(8, result.mainDataBegin);
-    AUDIO_INS_MP3_READ(header.channels == 1 ? 1U : 2U, result.privateBits);
+    AUDIO_INS_MP3_READ(8, result.mainDataBegin, uint16_t);
+    AUDIO_INS_MP3_READ(header.channels == 1 ? 1U : 2U, result.privateBits, uint8_t);
   }
   for (gr = 0; gr < result.granules; ++gr) {
     for (ch = 0; ch < result.channels; ++ch) {
       AUDIO_CODEC_TYPE(TMP3Granule) *part = &result.parts[gr][ch];
       unsigned int switched = 0, value;
-      AUDIO_INS_MP3_READ(12, part->part23Length);
-      AUDIO_INS_MP3_READ(9, part->bigValues);
-      AUDIO_INS_MP3_READ(8, part->globalGain);
+      AUDIO_INS_MP3_READ(12, part->part23Length, uint32_t);
+      AUDIO_INS_MP3_READ(9, part->bigValues, uint16_t);
+      AUDIO_INS_MP3_READ(8, part->globalGain, uint8_t);
       AUDIO_INS_MP3_READ(header.mpegVersion == 1 ? 4U : 9U,
-                         part->scalefacCompress);
-      AUDIO_INS_MP3_READ(1, switched);
+                         part->scalefacCompress, uint16_t);
+      AUDIO_INS_MP3_READ(1, switched, unsigned int);
       part->windowSwitching = switched != 0;
       if (part->windowSwitching) {
-        AUDIO_INS_MP3_READ(2, part->blockType);
-        AUDIO_INS_MP3_READ(1, part->mixedBlock);
-        AUDIO_INS_MP3_READ(5, part->tableSelect[0]);
-        AUDIO_INS_MP3_READ(5, part->tableSelect[1]);
+        AUDIO_INS_MP3_READ(2, part->blockType, uint8_t);
+        AUDIO_INS_MP3_READ(1, part->mixedBlock, uint8_t);
+        AUDIO_INS_MP3_READ(5, part->tableSelect[0], uint8_t);
+        AUDIO_INS_MP3_READ(5, part->tableSelect[1], uint8_t);
         for (band = 0; band < 3; ++band)
-          AUDIO_INS_MP3_READ(3, part->subblockGain[band]);
+          AUDIO_INS_MP3_READ(3, part->subblockGain[band], uint8_t);
         part->region0Count = part->blockType == 2 &&
             !part->mixedBlock ? 8 : 7;
         part->region1Count = 20U - part->region0Count;
@@ -86,14 +86,14 @@ AUDIO_CODEC_MP3_PARSE_SIDE_INFO_PROTOTYPE {
           return STATUS_CONST(INVALID_SEQUENCE);
       } else {
         for (band = 0; band < 3; ++band)
-          AUDIO_INS_MP3_READ(5, part->tableSelect[band]);
-        AUDIO_INS_MP3_READ(4, part->region0Count);
-        AUDIO_INS_MP3_READ(3, part->region1Count);
+          AUDIO_INS_MP3_READ(5, part->tableSelect[band], uint8_t);
+        AUDIO_INS_MP3_READ(4, part->region0Count, uint8_t);
+        AUDIO_INS_MP3_READ(3, part->region1Count, uint8_t);
       }
       if (header.mpegVersion == 1)
-        AUDIO_INS_MP3_READ(1, part->preflag);
-      AUDIO_INS_MP3_READ(1, part->scalefacScale);
-      AUDIO_INS_MP3_READ(1, part->count1TableSelect);
+        AUDIO_INS_MP3_READ(1, part->preflag, uint8_t);
+      AUDIO_INS_MP3_READ(1, part->scalefacScale, uint8_t);
+      AUDIO_INS_MP3_READ(1, part->count1TableSelect, uint8_t);
       if (part->bigValues > 288 ||
           part->tableSelect[0] == 4 || part->tableSelect[0] == 14 ||
           part->tableSelect[1] == 4 || part->tableSelect[1] == 14 ||
