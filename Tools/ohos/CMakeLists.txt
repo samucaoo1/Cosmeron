@@ -39,6 +39,9 @@ if(COSMERON_OHOS_SYSTEM_PROBES)
     "${COSMERON_ROOT}/Codespace/Tests/Terminal/IncludeAll.c"
   )
   add_library(cosmeron_ohos_system_headers OBJECT ${COSMERON_OS_SOURCES})
+  # Expose the POSIX clock/socket declarations in OHOS libc headers.
+  target_compile_definitions(cosmeron_ohos_system_headers PRIVATE
+    _POSIX_C_SOURCE=200809L)
   list(APPEND COSMERON_OHOS_CHECK_TARGETS cosmeron_ohos_system_headers)
 endif()
 
@@ -48,8 +51,10 @@ foreach(target IN LISTS COSMERON_OHOS_CHECK_TARGETS)
   target_include_directories(${target} PRIVATE "${COSMERON_ROOT}/Codespace")
   # OHOS SDK injects --gcc-toolchain, which is unused by its native Clang.
   # Ignore only unused driver flags; retain -Werror for source diagnostics.
+  # IncludeAll/test objects contain assertions: never optimize their
+  # dependent variables away with NDEBUG, even in a release-configured SDK.
   target_compile_options(${target} PRIVATE
-    -Wall -Wextra -Wpedantic -Werror -Qunused-arguments)
+    -Wall -Wextra -Wpedantic -Werror -Qunused-arguments -UNDEBUG)
 endforeach()
 
 message(STATUS "OHOS target ABI: ${OHOS_ARCH}")
