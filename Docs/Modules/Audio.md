@@ -36,6 +36,13 @@ is missing, it returns `INCOMPLETE_SEQUENCE` but retains the current
 payload for possible recovery on subsequent frames. Neither function
 allocates memory or decodes audio samples.
 
+`Audio_Codec_MP3_ParseScalefactors` can now parse MPEG-1
+scalefactors (long, short and mixed windows), reuse granule 0 bands via
+`scfsi` in granule 1 and report the exact part2 bit length. The parser
+uses `part2_3_length` to reject malformed frame bit spans and never
+claims to decode Huffman coefficients. MPEG-2/2.5 low-sampling-frequency
+scalefactor rules are explicitly `NOT_SUPPORTED` until added.
+
 The public `OpenMemory`/`OpenFile`/`OpenReader` MP3 PCM decoder
 still uses miniaudio until its independent Huffman/synthesis stages are
 implemented and verified. The standalone `Codec/MP3.h` introduces
