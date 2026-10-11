@@ -1,0 +1,54 @@
+#pragma once
+/* Radix by arithmetic bit extraction; no host-endianness dependency. Signed
+ * values use the sign-bit flip, including INT_MIN, without signed overflow. */
+#define SORT_RADIX_IMPLEMENT(TYPE, SUFFIX, UNSIGNED, BITS)                    \
+  SORT_RADIX_BUFFER_PROTOTYPE(TYPE, SUFFIX) {                                 \
+    if (order != SORT_CONST(ASCENDING) && order != SORT_CONST(DESCENDING))    \
+      return STATUS_CONST(INVALID_ARGUMENT);                                  \
+    if (count && !data) return STATUS_CONST(INVALID_ARGUMENT);               \
+    if (count > SIZE_MAX / sizeof(TYPE))                                      \
+      return STATUS_CONST(ARITHMETIC_OVERFLOW);                               \
+    if (count < 2) return STATUS_CONST(SUCCESS);                              \
+    if (!buffer || bufferCount < count)                                       \
+      return STATUS_CONST(INSUFFICIENT_SPACE);                                \
+    TYPE *source = data, *target = buffer;                                    \
+    for (unsigned shift = 0; shift < BITS; shift += 8u) {                     \
+      size_t buckets[256] = {0};                                              \
+      for (size_t i = 0; i < count; ++i) {                                     \
+        UNSIGNED key = (UNSIGNED)source[i];                                   \
+        if ((TYPE)-1 < (TYPE)0) key ^= (UNSIGNED)1 << (BITS - 1u);             \
+        if (order == SORT_CONST(DESCENDING)) key = ~key;                      \
+        ++buckets[(unsigned)((key >> shift) & (UNSIGNED)255)];                 \
+      }                                                                       \
+      size_t offset = 0;                                                      \
+      for (size_t i = 0; i < 256; ++i) {                                      \
+        size_t frequency = buckets[i];                                        \
+        buckets[i] = offset; offset += frequency;                             \
+      }                                                                       \
+      for (size_t i = 0; i < count; ++i) {                                     \
+        UNSIGNED key = (UNSIGNED)source[i];                                   \
+        if ((TYPE)-1 < (TYPE)0) key ^= (UNSIGNED)1 << (BITS - 1u);             \
+        if (order == SORT_CONST(DESCENDING)) key = ~key;                      \
+        target[buckets[(unsigned)((key >> shift) & (UNSIGNED)255)]++] =        \
+            source[i];                                                        \
+      }                                                                       \
+      TYPE *swap = source; source = target; target = swap;                     \
+    }                                                                         \
+    if (source != data) memcpy(data, source, count * sizeof(TYPE));           \
+    return STATUS_CONST(SUCCESS);                                             \
+  }                                                                           \
+  SORT_RADIX_PROTOTYPE(TYPE, SUFFIX) {                                        \
+    if (order != SORT_CONST(ASCENDING) && order != SORT_CONST(DESCENDING))    \
+      return STATUS_CONST(INVALID_ARGUMENT);                                  \
+    if (count && !data) return STATUS_CONST(INVALID_ARGUMENT);               \
+    if (count > SIZE_MAX / sizeof(TYPE))                                      \
+      return STATUS_CONST(ARITHMETIC_OVERFLOW);                               \
+    if (count < 2) return STATUS_CONST(SUCCESS);                              \
+    void *scratch = NULL;                                                     \
+    OPSTATUS status = ALLOC_FUNC(AllocArray)(&scratch, count, sizeof(TYPE));   \
+    if (status != STATUS_CONST(SUCCESS)) return status;                       \
+    status = SORT_TYPED_FUNC(RadixWithBuffer, SUFFIX)(                         \
+        data, count, order, scratch, count);                                   \
+    ALLOC_FUNC(FreePointer)(&scratch);                                         \
+    return status;                                                            \
+  }
