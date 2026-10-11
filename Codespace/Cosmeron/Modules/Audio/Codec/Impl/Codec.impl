@@ -7,15 +7,18 @@ typedef struct AUDIO_INS(Decoder) {
   AUDIO_INS(TWAVView) wav;
   uint64_t wavCursor, wavDataOffset;
   FILE *ownedFile;
-  bool nativeWav, wavStreaming, nativeFlac;
+  bool nativeWav, wavStreaming, nativeFlac, flacStreaming;
   AUDIO_INS(TFLACStreamInfo) flac;
   const unsigned char *flacBytes;
   size_t flacSize, flacOffset, flacBlockFrames, flacBlockOffset;
   uint64_t flacCursor;
   float *flacBlock;
+  unsigned char *flacEncoded;
+  size_t flacEncodedCapacity;
 } AUDIO_INS(Decoder);
 
 #include "WAVReader.inc"
+#include "FLACReader.inc"
 static cosmeron_audio_vendor_ma_result
 AUDIO_INS(DecoderRead)(cosmeron_audio_vendor_ma_decoder *decoder, void *buffer,
                        size_t capacity, size_t *outCount) {
@@ -85,6 +88,17 @@ AUDIO_CODEC_OPEN_FILE_PROTOTYPE {
         value->wavStreaming = true;
         decoder->internal = value;
         return STATUS_CONST(SUCCESS);
+      }
+      if (status == STATUS_CONST(NOT_SUPPORTED)) {
+        AUDIO_INS(TFLACStreamInfo) flac = {0};
+        status = AUDIO_INS(FLAC_ParseReader)(&reader, &flac);
+        if (status == STATUS_CONST(SUCCESS)) {
+          OPSTATUS opened = AUDIO_INS(FLAC_OpenReader)(
+              decoder, &reader, &flac, file);
+          if (opened == STATUS_CONST(SUCCESS)) return opened;
+          fclose(file);
+          return opened;
+        }
       }
       fclose(file);
       if (status != STATUS_CONST(NOT_SUPPORTED) &&
@@ -195,6 +209,12 @@ AUDIO_CODEC_OPEN_READER_PROTOTYPE {
       decoder->internal = value;
       return STATUS_CONST(SUCCESS);
     }
+    if (status == STATUS_CONST(NOT_SUPPORTED)) {
+      AUDIO_INS(TFLACStreamInfo) flac = {0};
+      status = AUDIO_INS(FLAC_ParseReader)(reader, &flac);
+      if (status == STATUS_CONST(SUCCESS))
+        return AUDIO_INS(FLAC_OpenReader)(decoder, reader, &flac, NULL);
+    }
     if (status != STATUS_CONST(NOT_SUPPORTED))
       return status;
     status = reader->seek(reader->userData, 0, AUDIO_CODEC_CONST(SEEK_START));
@@ -282,19 +302,31 @@ AUDIO_CODEC_READ_FRAMES_PROTOTYPE {
       if (value->flacBlockOffset == value->flacBlockFrames) {
         size_t frames = 0, next = 0;
         OPSTATUS status;
-        if (value->flacOffset == value->flacSize) break;
-        status = AUDIO_INS(FLAC_DecodeFrame)(value->flacBytes,
-            value->flacSize, &value->flac, value->flacOffset,
-            value->flacBlock, value->flac.maximumBlockSize, &frames, &next);
+        if (value->flacStreaming) {
+          status = AUDIO_INS(FLAC_StreamNextFrame)(value, &frames);
+          if (status == STATUS_CONST(SUCCESS) && !frames) {
+            if (value->flac.totalSamples &&
+                value->flacCursor != value->flac.totalSamples) {
+              *outFrames = completed;
+              return STATUS_CONST(INCOMPLETE_SEQUENCE);
+            }
+            break;
+          }
+        } else {
+          if (value->flacOffset == value->flacSize) break;
+          status = AUDIO_INS(FLAC_DecodeFrame)(value->flacBytes,
+              value->flacSize, &value->flac, value->flacOffset,
+              value->flacBlock, value->flac.maximumBlockSize, &frames, &next);
+        }
         if (status != STATUS_CONST(SUCCESS)) {
           *outFrames = completed;
           return status;
         }
-        if (!frames || next <= value->flacOffset) {
+        if (!frames || (!value->flacStreaming && next <= value->flacOffset)) {
           *outFrames = completed;
           return STATUS_CONST(INVALID_SEQUENCE);
         }
-        value->flacOffset = next;
+        if (!value->flacStreaming) value->flacOffset = next;
         value->flacBlockFrames = frames;
         value->flacBlockOffset = 0;
       }
@@ -349,15 +381,19 @@ AUDIO_CODEC_SEEK_FRAME_PROTOTYPE {
       if (value->flacBlockOffset == value->flacBlockFrames) {
         size_t frames = 0, next = 0;
         OPSTATUS status;
-        if (value->flacOffset == value->flacSize)
-          return STATUS_CONST(OUT_OF_RANGE);
-        status = AUDIO_INS(FLAC_DecodeFrame)(value->flacBytes,
-            value->flacSize, &value->flac, value->flacOffset,
-            value->flacBlock, value->flac.maximumBlockSize, &frames, &next);
+        if (value->flacStreaming) {
+          status = AUDIO_INS(FLAC_StreamNextFrame)(value, &frames);
+        } else {
+          if (value->flacOffset == value->flacSize)
+            return STATUS_CONST(OUT_OF_RANGE);
+          status = AUDIO_INS(FLAC_DecodeFrame)(value->flacBytes,
+              value->flacSize, &value->flac, value->flacOffset,
+              value->flacBlock, value->flac.maximumBlockSize, &frames, &next);
+        }
         if (status != STATUS_CONST(SUCCESS)) return status;
-        if (!frames || next <= value->flacOffset)
+        if (!frames || (!value->flacStreaming && next <= value->flacOffset))
           return STATUS_CONST(INVALID_SEQUENCE);
-        value->flacOffset = next;
+        if (!value->flacStreaming) value->flacOffset = next;
         value->flacBlockFrames = frames;
         value->flacBlockOffset = 0;
       }
@@ -387,6 +423,7 @@ AUDIO_CODEC_CLOSE_PROTOTYPE {
     if (!value->nativeWav && !value->nativeFlac)
       cosmeron_audio_vendor_ma_decoder_uninit(&value->native);
     free(value->flacBlock);
+    free(value->flacEncoded);
     if (value->ownedFile) fclose(value->ownedFile);
     free(value);
   }

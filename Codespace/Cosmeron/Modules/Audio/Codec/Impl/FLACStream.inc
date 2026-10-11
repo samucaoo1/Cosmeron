@@ -7,6 +7,8 @@ typedef struct AUDIO_INS(TFLACStreamInfo) {
   uint32_t bitsPerSample;
   uint32_t minimumBlockSize;
   uint32_t maximumBlockSize;
+  uint32_t minimumFrameBytes;
+  uint32_t maximumFrameBytes;
   uint64_t totalSamples;
   size_t frameOffset;
   unsigned char md5[16];
@@ -54,13 +56,17 @@ static inline OPSTATUS AUDIO_INS(FLAC_ParseMetadata)(
         return STATUS_CONST(INVALID_SEQUENCE);
       result.minimumBlockSize = ((uint32_t)block[0] << 8) | block[1];
       result.maximumBlockSize = ((uint32_t)block[2] << 8) | block[3];
+      result.minimumFrameBytes = AUDIO_INS(FLAC_BigEndian24)(block + 4);
+      result.maximumFrameBytes = AUDIO_INS(FLAC_BigEndian24)(block + 7);
       packed = AUDIO_INS(FLAC_BigEndian64)(block + 10);
       result.sampleRate = (uint32_t)((packed >> 44) & UINT64_C(0xfffff));
       result.channels = (uint32_t)(((packed >> 41) & 7U) + 1U);
       result.bitsPerSample = (uint32_t)(((packed >> 36) & 31U) + 1U);
       result.totalSamples = packed & UINT64_C(0xfffffffff);
       memcpy(result.md5, block + 18, sizeof result.md5);
-      if (result.minimumBlockSize < 16 ||
+      if ((result.minimumFrameBytes && result.maximumFrameBytes &&
+           result.minimumFrameBytes > result.maximumFrameBytes) ||
+          result.minimumBlockSize < 16 ||
           result.maximumBlockSize < result.minimumBlockSize ||
           result.bitsPerSample < 4 || result.bitsPerSample > 32)
         return STATUS_CONST(INVALID_SEQUENCE);
