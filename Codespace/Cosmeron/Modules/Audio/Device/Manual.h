@@ -20,6 +20,11 @@
 #include <sys/audioio.h>
 #endif
 #define AUDIO_MANUAL_BSD_BACKEND 1
+#elif defined(__OpenBSD__)
+#include <sndio.h>
+#include <dlfcn.h>
+#define AUDIO_MANUAL_BSD_BACKEND 1
+#define AUDIO_MANUAL_SNDIO_BACKEND 1
 #else
 #define AUDIO_MANUAL_BSD_BACKEND 0
 #endif
@@ -73,7 +78,25 @@ typedef struct AUDIO_INS(ManualState_InternalType_) {
   int fd;
   AUDIO_DEVICE_TYPE(TManualConfig) config;
   bool started;
+#if defined(AUDIO_MANUAL_SNDIO_BACKEND)
+  void *library;
+  struct sio_hdl *stream;
+  int (*startStream)(struct sio_hdl *);
+  int (*stopStream)(struct sio_hdl *);
+  size_t (*writeStream)(struct sio_hdl *, const void *, size_t);
+  void (*closeStream)(struct sio_hdl *);
+#endif
 } AUDIO_INS(ManualState_InternalType_);
+
+#if defined(AUDIO_MANUAL_SNDIO_BACKEND)
+static inline bool AUDIO_INS(Manual_LoadSymbol)(void *handle, const char *name,
+                                                void *destination, size_t bytes) {
+  void *symbol = dlsym(handle, name);
+  if (symbol == NULL || bytes != sizeof symbol) return false;
+  memcpy(destination, &symbol, bytes);
+  return true;
+}
+#endif
 
 AUDIO_DEVICE_MANUAL_ENCODE_PROTOTYPE {
   size_t i;
@@ -101,20 +124,80 @@ AUDIO_DEVICE_MANUAL_OPEN_PROTOTYPE {
     return STATUS_CONST(BUSY);
 #if AUDIO_MANUAL_BSD_BACKEND
   {
-    const char *path = config->path != NULL ? config->path :
-#if defined(__NetBSD__)
-      "/dev/sound";
-#else
-      "/dev/dsp";
-#endif
     AUDIO_INS(ManualState_InternalType_) *state =
       (AUDIO_INS(ManualState_InternalType_) *)calloc(1, sizeof(*state));
-    if (state == NULL)
-      return STATUS_CONST(OUT_OF_MEMORY);
-    state->fd = open(path, O_WRONLY);
-    if (state->fd < 0) {
-      free(state);
-      return STATUS_CONST(NOT_AVAILABLE);
+    if (state == NULL) return STATUS_CONST(OUT_OF_MEMORY);
+    state->fd = -1;
+#if defined(AUDIO_MANUAL_SNDIO_BACKEND)
+    {
+      /* OpenBSD's dlopen/dlsym are in libc. -lsndio is not required;
+       * libsndio remains a required RUNTIME dependency for playback. */
+      const char *names[] = {"libsndio.so", "libsndio.so.7.0",
+                             "libsndio.so.7.1", "libsndio.so.8.0"};
+      size_t k;
+      struct sio_hdl *(*openStream)(const char *, unsigned int, int) = NULL;
+      int (*setParameters)(struct sio_hdl *, struct sio_par *) = NULL;
+      int (*getParameters)(struct sio_hdl *, struct sio_par *) = NULL;
+      void (*initParameters)(struct sio_par *) = NULL;
+      struct sio_par par;
+      for (k = 0; k < sizeof names / sizeof names[0]; ++k) {
+        state->library = dlopen(names[k], RTLD_NOW | RTLD_LOCAL);
+        if (state->library != NULL) break;
+      }
+      if (state->library == NULL) { free(state); return STATUS_CONST(NOT_AVAILABLE); }
+      if (!AUDIO_INS(Manual_LoadSymbol)(state->library, "sio_open",
+          &openStream, sizeof openStream) ||
+          !AUDIO_INS(Manual_LoadSymbol)(state->library, "sio_setpar",
+          &setParameters, sizeof setParameters) ||
+          !AUDIO_INS(Manual_LoadSymbol)(state->library, "sio_getpar",
+          &getParameters, sizeof getParameters) ||
+          !AUDIO_INS(Manual_LoadSymbol)(state->library, "sio_initpar",
+          &initParameters, sizeof initParameters) ||
+          !AUDIO_INS(Manual_LoadSymbol)(state->library, "sio_start",
+          &state->startStream, sizeof state->startStream) ||
+          !AUDIO_INS(Manual_LoadSymbol)(state->library, "sio_stop",
+          &state->stopStream, sizeof state->stopStream) ||
+          !AUDIO_INS(Manual_LoadSymbol)(state->library, "sio_write",
+          &state->writeStream, sizeof state->writeStream) ||
+          !AUDIO_INS(Manual_LoadSymbol)(state->library, "sio_close",
+          &state->closeStream, sizeof state->closeStream)) {
+        dlclose(state->library); free(state);
+        return STATUS_CONST(NOT_AVAILABLE);
+      }
+      state->stream = openStream(config->path, SIO_PLAY, 0);
+      if (state->stream == NULL) {
+        dlclose(state->library); free(state);
+        return STATUS_CONST(NOT_AVAILABLE);
+      }
+      initParameters(&par);
+      par.bits = 16;
+      par.bps = 2;
+      par.sig = 1;
+      par.le = 1;
+      par.rate = config->sampleRate;
+      par.pchan = config->channels;
+      if (!setParameters(state->stream, &par) ||
+          !getParameters(state->stream, &par) ||
+          par.bits != 16 || par.bps != 2 || par.sig != 1 || par.le != 1 ||
+          par.rate != config->sampleRate || par.pchan != config->channels) {
+        state->closeStream(state->stream);
+        dlclose(state->library); free(state);
+        return STATUS_CONST(NOT_SUPPORTED);
+      }
+    }
+#else
+    {
+      const char *path = config->path != NULL ? config->path :
+#if defined(__NetBSD__)
+        "/dev/sound";
+#else
+        "/dev/dsp";
+#endif
+      state->fd = open(path, O_WRONLY);
+      if (state->fd < 0) {
+        free(state);
+        return STATUS_CONST(NOT_AVAILABLE);
+      }
     }
 #if defined(__NetBSD__)
     {
@@ -152,6 +235,7 @@ AUDIO_DEVICE_MANUAL_OPEN_PROTOTYPE {
       }
     }
 #endif
+#endif /* no sndio */
     state->config = *config;
     device->internal = state;
     return STATUS_CONST(SUCCESS);
@@ -165,13 +249,29 @@ AUDIO_DEVICE_MANUAL_OPEN_PROTOTYPE {
 AUDIO_DEVICE_MANUAL_START_PROTOTYPE {
   if (device == NULL || device->internal == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
-  ((AUDIO_INS(ManualState_InternalType_) *)device->internal)->started = true;
+  {
+    AUDIO_INS(ManualState_InternalType_) *state =
+      (AUDIO_INS(ManualState_InternalType_) *)device->internal;
+#if defined(AUDIO_MANUAL_SNDIO_BACKEND)
+    if (!state->started && !state->startStream(state->stream))
+      return STATUS_CONST(GENERIC_ERROR);
+#endif
+    state->started = true;
+  }
   return STATUS_CONST(SUCCESS);
 }
 AUDIO_DEVICE_MANUAL_STOP_PROTOTYPE {
   if (device == NULL || device->internal == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
-  ((AUDIO_INS(ManualState_InternalType_) *)device->internal)->started = false;
+  {
+    AUDIO_INS(ManualState_InternalType_) *state =
+      (AUDIO_INS(ManualState_InternalType_) *)device->internal;
+#if defined(AUDIO_MANUAL_SNDIO_BACKEND)
+    if (state->started && !state->stopStream(state->stream))
+      return STATUS_CONST(GENERIC_ERROR);
+#endif
+    state->started = false;
+  }
   return STATUS_CONST(SUCCESS);
 }
 AUDIO_DEVICE_MANUAL_IS_STARTED_PROTOTYPE {
@@ -203,10 +303,17 @@ AUDIO_DEVICE_MANUAL_PUMP_PROTOTYPE {
           STATUS_CONST(SUCCESS))
         return STATUS_CONST(GENERIC_ERROR);
       while (written < bytes) {
+#if defined(AUDIO_MANUAL_SNDIO_BACKEND)
+        size_t n = state->writeStream(state->stream, pcm + written,
+                                      bytes - written);
+        if (n == 0) return STATUS_CONST(GENERIC_ERROR);
+        written += n;
+#else
         ssize_t n = write(state->fd, pcm + written, bytes - written);
         if (n < 0 && errno == EINTR) continue;
         if (n <= 0) return STATUS_CONST(GENERIC_ERROR);
         written += (size_t)n;
+#endif
       }
       /* The render callback runs on the CALLING thread; never on a worker. */
       frames -= count;
@@ -225,7 +332,12 @@ AUDIO_DEVICE_MANUAL_CLOSE_PROTOTYPE {
       (AUDIO_INS(ManualState_InternalType_) *)device->internal;
     device->internal = NULL;
 #if AUDIO_MANUAL_BSD_BACKEND
+#if defined(AUDIO_MANUAL_SNDIO_BACKEND)
+    if (state->stream != NULL) state->closeStream(state->stream);
+    if (state->library != NULL) (void)dlclose(state->library);
+#else
     if (state->fd >= 0) (void)close(state->fd);
+#endif
 #endif
     free(state);
   }

@@ -9,12 +9,13 @@ PCM, and `Manual_Stop` / `Manual_Close` release it.
 
 - FreeBSD and DragonFly BSD: OSS `/dev/dsp` and SNDCTL_DSP_* ioctls
 - NetBSD: native `/dev/sound` and `AUDIO_SETINFO` / `AUDIO_GETINFO`
-- OpenBSD: separate sndio integration needed; this backend returns
-  `NOT_SUPPORTED` instead of silently accessing `/dev/audio`.
+- OpenBSD: sndio via a **runtime-loaded** `libsndio.so` and its documented
+  `sio_*` API. No `-lsndio` is used, but the library/server is required
+  **at runtime**. If it is missing, `Manual_Open` returns `NOT_AVAILABLE`.
 - Linux/macOS/Windows: returns `NOT_SUPPORTED`; Miniaudio is unaffected.
 
-No `-lm`/`-pthread` or Miniaudio headers are required merely to compile
-and link this module. The backend uses the selected OS's libc and driver;
+No `-lm`/`-pthread`/`-lsndio` or Miniaudio headers are required to
+compile and link this module. `sndio.h` is required on OpenBSD. The backend uses the selected OS's libc and driver;
 it is not independent of system runtime services.
 
 ```c
