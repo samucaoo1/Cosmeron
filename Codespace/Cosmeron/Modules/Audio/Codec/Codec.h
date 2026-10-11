@@ -3,6 +3,7 @@
 #include "../Audio.space"
 #include "../Internal/Backend.inc"
 #include "../PCM/PCM.h"
+#include "WAV.h"
 #include <stdio.h>
 
 typedef struct AUDIO_CODEC_TYPE(TDecoder) {
