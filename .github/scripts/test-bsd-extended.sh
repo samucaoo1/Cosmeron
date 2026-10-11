@@ -279,7 +279,7 @@ else
   echo "[bsd-extended] unresolved codec dependencies:"
   sed -n '1,70p' .build-bsd-extended/Audio_CodecZeroLink.stderr
   codec_zero_link=NOT_SUPPORTED
-  linkflags="-lm -pthread"
+  linkflags=-pthread
 fi
 if (
   cd Codespace/Tests/Audio
@@ -300,7 +300,7 @@ else
   echo "[bsd-extended] unresolved device dependencies:"
   sed -n '1,70p' .build-bsd-extended/Audio_DeviceZeroLink.stderr
   device_zero_link=NOT_SUPPORTED
-  linkflags="-lm -pthread"
+  linkflags=-pthread
 fi
 if [ "$codec_zero_link" = PASS ] && [ "$device_zero_link" = PASS ]; then
   echo "[bsd-extended] AUDIO_ZERO_LINK=PASS"
@@ -314,10 +314,10 @@ if (
   cd Codespace/Tests/Audio
   "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
     ${audio_features} ${extra} CodecMinimal.c \
-    -lm -o ../../../.build-bsd-extended/Audio_CodecMinimalFunctional &&
+    -o ../../../.build-bsd-extended/Audio_CodecMinimalFunctional &&
   "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
     ${audio_features} ${extra} CodecCompressed.c \
-    -lm -o ../../../.build-bsd-extended/Audio_CodecCompressedFunctional
+    -o ../../../.build-bsd-extended/Audio_CodecCompressedFunctional
 ); then
   .build-bsd-extended/Audio_CodecMinimalFunctional
   .build-bsd-extended/Audio_CodecCompressedFunctional
