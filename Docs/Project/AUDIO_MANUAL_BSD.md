@@ -45,3 +45,17 @@ The supplied CI tests **only compilation, integer conversion and linkage**,
 without opening a sound device. A real hardware run is required to certify
 rate negotiation, scheduling, underruns and permissions. The callback must
 be quick and must not assume there is a dedicated audio thread.
+
+## Simulated PCM sink and end-to-end tests
+
+`Manual_OpenSink(device, config, writeSink, userData)` opens a manual stream
+without touching audio hardware on any operating system. The sink callback
+receives signed 16-bit little-endian PCM and reports the number of accepted
+bytes. Partial writes are supported, but returning zero bytes with a success
+status is treated as an I/O error. Its buffer may not be retained after the
+callback returns; the caller owns synchronization and the sink context.
+
+`Codespace/Tests/Audio/ManualSink.c` calls the actual `Manual_Pump` function
+for 513 stereo frames, forces partial 37-byte writes, checks every output
+sample, and verifies lifecycle and error cases. Passing this suite does not
+certify any physical audio device.

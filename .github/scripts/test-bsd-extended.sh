@@ -164,7 +164,8 @@ record Database PASS 'SQLite single-thread profile; no parallel callers'
 
 # Audio offline: strict zero-extra-link, multiple translation units.
 stage=AudioManual
-suite Audio Manual
+suite Audio Manual ManualSink
+echo "[bsd-extended] AUDIO_MANUAL_PUMP_SIMULATED=PASS"
 echo "[bsd-extended] AUDIO_MANUAL_ZERO_LINK=PASS (compile+codec conversion; no device opened)"
 record AudioManual PASS 'OSS/audio4/sndio compile+PCM; no audio hardware opened'
 stage=AudioOffline

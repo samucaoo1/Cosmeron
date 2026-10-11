@@ -32,6 +32,12 @@ typedef void (*AUDIO_DEVICE_TYPE(TManualRender))(void *userData,
                                                  float *outSamples,
                                                  size_t frameCount,
                                                  uint32_t channels);
+/* A sink receives S16LE bytes and reports how many bytes were accepted.
+ * Returning SUCCESS with zero or an excessive count is an I/O error.
+ * Implementations may accept partial buffers. The callback is synchronous,
+ * runs on the calling thread, and must not retain the passed byte pointer. */
+typedef OPSTATUS (*AUDIO_DEVICE_TYPE(TManualWrite))(
+    void *userData, const void *bytes, size_t capacity, size_t *outWritten);
 typedef struct AUDIO_DEVICE_TYPE(TManualConfig) {
   uint32_t sampleRate, channels;
   AUDIO_DEVICE_TYPE(TManualRender) render;
@@ -46,6 +52,11 @@ typedef struct AUDIO_DEVICE_TYPE(TManual) {
   static inline OPSTATUS AUDIO_DEVICE_FUNC(Manual_Open)(                      \
       AUDIO_DEVICE_TYPE(TManual) *device,                                     \
       const AUDIO_DEVICE_TYPE(TManualConfig) *config)
+#define AUDIO_DEVICE_MANUAL_OPEN_SINK_PROTOTYPE                                \
+  static inline OPSTATUS AUDIO_DEVICE_FUNC(Manual_OpenSink)(                  \
+      AUDIO_DEVICE_TYPE(TManual) *device,                                      \
+      const AUDIO_DEVICE_TYPE(TManualConfig) *config,                         \
+      AUDIO_DEVICE_TYPE(TManualWrite) writeSink, void *sinkUserData)
 #define AUDIO_DEVICE_MANUAL_START_PROTOTYPE                                    \
   static inline OPSTATUS AUDIO_DEVICE_FUNC(Manual_Start)(                     \
       AUDIO_DEVICE_TYPE(TManual) *device)
@@ -66,6 +77,7 @@ typedef struct AUDIO_DEVICE_TYPE(TManual) {
       const float *samples, size_t sampleCount, unsigned char *outBytes)
 
 AUDIO_DEVICE_MANUAL_OPEN_PROTOTYPE;
+AUDIO_DEVICE_MANUAL_OPEN_SINK_PROTOTYPE;
 AUDIO_DEVICE_MANUAL_START_PROTOTYPE;
 AUDIO_DEVICE_MANUAL_STOP_PROTOTYPE;
 AUDIO_DEVICE_MANUAL_PUMP_PROTOTYPE;
@@ -77,6 +89,8 @@ typedef struct AUDIO_INS(ManualState_InternalType_) {
   int fd;
   AUDIO_DEVICE_TYPE(TManualConfig) config;
   bool started;
+  AUDIO_DEVICE_TYPE(TManualWrite) writeSink;
+  void *sinkUserData;
 #if defined(AUDIO_MANUAL_SNDIO_BACKEND)
   void *library;
   struct sio_hdl *stream;
@@ -245,6 +259,25 @@ AUDIO_DEVICE_MANUAL_OPEN_PROTOTYPE {
 #endif
 }
 
+AUDIO_DEVICE_MANUAL_OPEN_SINK_PROTOTYPE {
+  AUDIO_INS(ManualState_InternalType_) *state;
+  if (device == NULL || config == NULL || config->render == NULL ||
+      writeSink == NULL ||
+      !AUDIO_INS(ValidFormat)(config->sampleRate, config->channels))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (device->internal != NULL)
+    return STATUS_CONST(BUSY);
+  state = (AUDIO_INS(ManualState_InternalType_) *)calloc(1, sizeof(*state));
+  if (state == NULL)
+    return STATUS_CONST(OUT_OF_MEMORY);
+  state->fd = -1;
+  state->config = *config;
+  state->writeSink = writeSink;
+  state->sinkUserData = sinkUserData;
+  device->internal = state;
+  return STATUS_CONST(SUCCESS);
+}
+
 AUDIO_DEVICE_MANUAL_START_PROTOTYPE {
   if (device == NULL || device->internal == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -252,7 +285,8 @@ AUDIO_DEVICE_MANUAL_START_PROTOTYPE {
     AUDIO_INS(ManualState_InternalType_) *state =
       (AUDIO_INS(ManualState_InternalType_) *)device->internal;
 #if defined(AUDIO_MANUAL_SNDIO_BACKEND)
-    if (!state->started && !state->startStream(state->stream))
+    if (!state->started && state->stream != NULL &&
+        !state->startStream(state->stream))
       return STATUS_CONST(GENERIC_ERROR);
 #endif
     state->started = true;
@@ -266,7 +300,8 @@ AUDIO_DEVICE_MANUAL_STOP_PROTOTYPE {
     AUDIO_INS(ManualState_InternalType_) *state =
       (AUDIO_INS(ManualState_InternalType_) *)device->internal;
 #if defined(AUDIO_MANUAL_SNDIO_BACKEND)
-    if (state->started && !state->stopStream(state->stream))
+    if (state->started && state->stream != NULL &&
+        !state->stopStream(state->stream))
       return STATUS_CONST(GENERIC_ERROR);
 #endif
     state->started = false;
@@ -287,7 +322,6 @@ AUDIO_DEVICE_MANUAL_PUMP_PROTOTYPE {
     return STATUS_CONST(NOT_AVAILABLE);
   if (frames == 0)
     return STATUS_CONST(SUCCESS);
-#if AUDIO_MANUAL_BSD_BACKEND
   {
     float samples[512u * AUDIO_CONST(MAX_CHANNELS)];
     unsigned char pcm[512u * AUDIO_CONST(MAX_CHANNELS) * 2u];
@@ -302,27 +336,36 @@ AUDIO_DEVICE_MANUAL_PUMP_PROTOTYPE {
           STATUS_CONST(SUCCESS))
         return STATUS_CONST(GENERIC_ERROR);
       while (written < bytes) {
+        if (state->writeSink != NULL) {
+          size_t n = 0;
+          OPSTATUS status = state->writeSink(state->sinkUserData,
+                              pcm + written, bytes - written, &n);
+          if (status != STATUS_CONST(SUCCESS))
+            return status;
+          if (n == 0 || n > bytes - written)
+            return STATUS_CONST(GENERIC_ERROR);
+          written += n;
+        } else {
 #if defined(AUDIO_MANUAL_SNDIO_BACKEND)
-        size_t n = state->writeStream(state->stream, pcm + written,
-                                      bytes - written);
-        if (n == 0) return STATUS_CONST(GENERIC_ERROR);
-        written += n;
+          size_t n = state->writeStream(state->stream, pcm + written,
+                                        bytes - written);
+          if (n == 0 || n > bytes - written)
+            return STATUS_CONST(GENERIC_ERROR);
+          written += n;
+#elif AUDIO_MANUAL_BSD_BACKEND
+          ssize_t n = write(state->fd, pcm + written, bytes - written);
+          if (n < 0 && errno == EINTR) continue;
+          if (n <= 0) return STATUS_CONST(GENERIC_ERROR);
+          written += (size_t)n;
 #else
-        ssize_t n = write(state->fd, pcm + written, bytes - written);
-        if (n < 0 && errno == EINTR) continue;
-        if (n <= 0) return STATUS_CONST(GENERIC_ERROR);
-        written += (size_t)n;
+          return STATUS_CONST(NOT_SUPPORTED);
 #endif
+        }
       }
-      /* The render callback runs on the CALLING thread; never on a worker. */
       frames -= count;
     }
-    return STATUS_CONST(SUCCESS);
   }
-#else
-  (void)state;
-  return STATUS_CONST(NOT_SUPPORTED);
-#endif
+  return STATUS_CONST(SUCCESS);
 }
 
 AUDIO_DEVICE_MANUAL_CLOSE_PROTOTYPE {
