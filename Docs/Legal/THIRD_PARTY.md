@@ -20,3 +20,19 @@ represent miniz as a current runtime or header dependency.
 When adding future third-party sources, record their revision, origin,
 copyright owners, modifications and complete license notices here and
 keep the required notice files with all redistributed substantial copies.
+
+## Numerical MPEG Layer III Huffman codebook reference
+
+The `Audio/Codec/Impl/MP3HuffmanTables.inc` file records the numerical
+codeword and length assignments required by the MPEG Layer III audio
+format (ISO/IEC 11172-3 and 13818-3). The assignment matrices were
+cross-checked against the FFmpeg 4.3 public documentation and source
+reference at
+https://github.com/FFmpeg/FFmpeg/blob/release/4.3/libavcodec/mpegaudiodectab.h .
+
+Only format-defined numerical codebook values are represented; the
+Huffman bitstream reader, escape handling, count1 parsing and granule
+assembly are original C11 Cosmeron implementations. FFmpeg decoding
+functions, lookup algorithms and headers have not been incorporated as
+third-party code. This reference is kept outside the generated include
+files in keeping with Cosmeron's consolidated provenance documentation.
