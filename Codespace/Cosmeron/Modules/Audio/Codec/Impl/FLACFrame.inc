@@ -218,7 +218,7 @@ static inline OPSTATUS AUDIO_INS(FLAC_DecodeFrame)(
     size_t *outFrames, size_t *outNext) {
   AUDIO_INS(TFLACBits) bits = {source, size, 0};
   uint64_t sync, blocking, blockCode, rateCode, assignment, depthCode, reserved;
-  uint64_t number, code, value;
+  uint64_t number, value;
   uint32_t channels, sampleBits, sampleRate;
   size_t headerEnd, count, i, frameBytes, frameStart = offset;
   int64_t *pcm = NULL;
