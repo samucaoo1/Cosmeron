@@ -38,101 +38,27 @@ static inline void AUDIO_INS(WAV_Store32)(unsigned char *p, uint32_t n) {
   p[3] = (unsigned char)(n >> 24);
 }
 
+#include "Impl/WAVStream.inc"
+
 AUDIO_CODEC_WAV_DECODE_MEMORY_PROTOTYPE {
-  const unsigned char *p = (const unsigned char *)data;
-  const unsigned char *audioData = NULL;
-  size_t offset = 12, riffEnd, audioBytes = 0, frames, count, i;
-  uint16_t format = 0, channels = 0, bits = 0, align = 0;
-  uint32_t rate = 0;
-  bool foundFmt = false, foundData = false;
+  AUDIO_INS(TWAVView) view;
   OPSTATUS result;
-  if (p == NULL || size < 12 || outBuffer == NULL)
-    return STATUS_CONST(INVALID_ARGUMENT);
-  if (outBuffer->samples != NULL)
-    return STATUS_CONST(BUSY);
-  if (memcmp(p, "RIFF", 4) != 0 || memcmp(p + 8, "WAVE", 4) != 0)
-    return STATUS_CONST(INVALID_ARGUMENT);
-  if (AUDIO_INS(WAV_U32)(p + 4) < 4u ||
-      (size_t)AUDIO_INS(WAV_U32)(p + 4) > size - 8u)
-    return STATUS_CONST(INVALID_ARGUMENT);
-  riffEnd = (size_t)AUDIO_INS(WAV_U32)(p + 4) + 8u;
-  while (offset < riffEnd) {
-    size_t n, advance;
-    if (riffEnd - offset < 8u) return STATUS_CONST(INVALID_ARGUMENT);
-    n = (size_t)AUDIO_INS(WAV_U32)(p + offset + 4u);
-    offset += 8u;
-    if (n > riffEnd - offset) return STATUS_CONST(INVALID_ARGUMENT);
-    if (memcmp(p + offset - 8u, "fmt ", 4) == 0 && !foundFmt) {
-      if (n < 16u) return STATUS_CONST(INVALID_ARGUMENT);
-      format = AUDIO_INS(WAV_U16)(p + offset);
-      channels = AUDIO_INS(WAV_U16)(p + offset + 2);
-      rate = AUDIO_INS(WAV_U32)(p + offset + 4);
-      align = AUDIO_INS(WAV_U16)(p + offset + 12);
-      bits = AUDIO_INS(WAV_U16)(p + offset + 14);
-      foundFmt = true;
-    } else if (memcmp(p + offset - 8u, "data", 4) == 0 && !foundData) {
-      audioData = p + offset;
-      audioBytes = n;
-      foundData = true;
-    }
-    advance = n + (n & 1u);
-    if (advance > riffEnd - offset) {
-      if (n == riffEnd - offset) advance = n; /* tolerate unpadded last chunk */
-      else return STATUS_CONST(INVALID_ARGUMENT);
-    }
-    offset += advance;
-  }
-  if (!foundFmt || !foundData)
-    return STATUS_CONST(INVALID_ARGUMENT);
-  if (format == 1u) {
-    if (bits != 8u && bits != 16u && bits != 24u && bits != 32u)
-      return STATUS_CONST(NOT_SUPPORTED);
-  } else if (format == 3u) {
-    /* IEEE binary32 only. Do not reinterpret arbitrary host float layouts. */
-    if (bits != 32u || sizeof(float) != 4 ||
-        FLT_RADIX != 2 || FLT_MANT_DIG != 24 || FLT_MAX_EXP != 128)
-      return STATUS_CONST(NOT_SUPPORTED);
-  } else {
-    return STATUS_CONST(NOT_SUPPORTED);
-  }
-  if (!AUDIO_INS(ValidFormat)(rate, channels) ||
-      align != channels * (uint16_t)(bits / 8u) ||
-      audioBytes % align != 0)
-    return STATUS_CONST(INVALID_ARGUMENT);
-  frames = audioBytes / align;
-  if (frames > SIZE_MAX / channels)
-    return STATUS_CONST(ARITHMETIC_OVERFLOW);
-  count = frames * channels;
-  result = AUDIO_PCM_FUNC(Init)(outBuffer, frames, channels, rate);
+  size_t frames = 0;
+  if (!outBuffer) return STATUS_CONST(INVALID_ARGUMENT);
+  if (outBuffer->samples) return STATUS_CONST(BUSY);
+  result = AUDIO_INS(WAV_Parse)(data, size, &view);
   if (result != STATUS_CONST(SUCCESS)) return result;
-  for (i = 0; i < count; ++i) {
-    if (format == 3u) {
-      uint32_t raw = AUDIO_INS(WAV_U32)(audioData + 4u * i);
-      float decoded;
-      memcpy(&decoded, &raw, sizeof decoded);
-      if (!AUDIO_INS(Finite)(decoded)) {
-        AUDIO_PCM_FUNC(Destroy)(outBuffer);
-        return STATUS_CONST(INVALID_ARGUMENT);
-      }
-      outBuffer->samples[i] = decoded;
-    } else if (bits == 8u) {
-      outBuffer->samples[i] = ((float)audioData[i] - 128.0f) / 128.0f;
-    } else if (bits == 16u) {
-      uint16_t raw = AUDIO_INS(WAV_U16)(audioData + 2u * i);
-      int32_t v = raw >= 0x8000u ? (int32_t)raw - 65536 : (int32_t)raw;
-      outBuffer->samples[i] = (float)v / 32768.0f;
-    } else if (bits == 24u) {
-      const unsigned char *q = audioData + 3u * i;
-      uint32_t raw = (uint32_t)q[0] | ((uint32_t)q[1] << 8) |
-                     ((uint32_t)q[2] << 16);
-      int32_t v = (raw & 0x800000u) ? (int32_t)raw - 16777216 : (int32_t)raw;
-      outBuffer->samples[i] = (float)v / 8388608.0f;
-    } else { /* signed PCM32: use int64_t to avoid implementation-defined casts */
-      uint32_t raw = AUDIO_INS(WAV_U32)(audioData + 4u * i);
-      int64_t v = raw >= 0x80000000u ?
-        (int64_t)raw - INT64_C(4294967296) : (int64_t)raw;
-      outBuffer->samples[i] = (float)v / 2147483648.0f;
-    }
+  if (view.frameCount > SIZE_MAX / view.channels)
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  result = AUDIO_PCM_FUNC(Init)(outBuffer, (size_t)view.frameCount,
+      view.channels, view.sampleRate);
+  if (result != STATUS_CONST(SUCCESS)) return result;
+  result = AUDIO_INS(WAV_ReadRange)(&view, 0, outBuffer->samples,
+      (size_t)view.frameCount, &frames);
+  if (result != STATUS_CONST(SUCCESS) || frames != view.frameCount) {
+    AUDIO_PCM_FUNC(Destroy)(outBuffer);
+    return result == STATUS_CONST(INVALID_SEQUENCE) ?
+        STATUS_CONST(INVALID_ARGUMENT) : result;
   }
   return STATUS_CONST(SUCCESS);
 }

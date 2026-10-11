@@ -119,3 +119,21 @@ startup for reliable synchronization and errno interposition.
 The BSD CI records both the strict no-library outcome and a distinct
 `NO_MANUAL_FLAGS` result. The former does **not** become PASS merely because
 the linker obtained pthread automatically.
+
+## Native WAV codec integration
+
+`Audio_Codec_OpenMemory`, `Audio_Codec_OpenFile` and
+`Audio_Codec_OpenReader` select the Cosmeron-native RIFF/WAV decoder
+when the format is WAV. PCM8/16/24/32, IEEE float32 and supported
+WAVE_FORMAT_EXTENSIBLE layouts are decoded as interleaved f32.
+`Audio_Codec_ReadFrames` decodes a bounded chunk (at most 4096 raw bytes
+per internal iteration) and supports `SeekFrame` without allocating
+a second copy of the complete PCM output. `OpenMemory` borrows its
+source bytes; `OpenReader` retains the provided callback/userData;
+`OpenFile` owns and closes its WAV file handle.
+
+The native WAV writer is shared by `WriteWAV` and `WAV_WriteFile`.
+`Codec/WAV.h` can still be included independently without the
+vendored desktop backend. MP3/FLAC decoding and all desktop-device
+features still require Miniaudio until independent replacements pass
+interoperability tests.
