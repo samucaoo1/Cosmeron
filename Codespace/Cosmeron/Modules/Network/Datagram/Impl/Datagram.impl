@@ -212,7 +212,8 @@ NETWORK_DATAGRAM_CLEAR_PEER_PROTOTYPE {
       int nativeError = TSOCKET_NATIVE_ERROR_CODE();
       if (nativeError != WSAEAFNOSUPPORT && nativeError != WSAEINVAL)
         domainError = SOCKET_INS(MapNativeError)(nativeError);
-#elif OS_MAC
+#elif OS_MAC || OS_BSD
+      /* Some BSD sockets return EAFNOSUPPORT/EINVAL for AF_UNSPEC UDP disconnect. */
       int nativeError = TSOCKET_NATIVE_ERROR_CODE();
       if (nativeError != EAFNOSUPPORT && nativeError != EINVAL)
         domainError = SOCKET_INS(MapNativeError)(nativeError);
