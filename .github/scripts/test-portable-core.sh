@@ -26,7 +26,7 @@ run_suite Core Namespace Cast Preprocessor Detect Error Memory MemoryOperations 
 run_suite Bit Bit Widths IncludeAll
 run_suite Struct Struct Variants AllTypes IncludeAll
 run_suite Type Type TypeNoFunctionTable AllFunctions IncludeAll FundamentalSmall
-run_suite Math Math Arithmetic Value Equations AllTypes IncludeAll
+run_suite Math Math Arithmetic Value Equations BSDQuadraticRegression AllTypes IncludeAll
 run_suite Random Random Engines Distribution IncludeAll
 run_suite Chronometry Chronometry Duration Instant Calendar DateTime EpochTimezoneFormat ClockTimer IncludeAll
 run_suite Container Functional LinearExtra LinearAllTypes TreeAllFunctions Hash Graph \
