@@ -209,6 +209,7 @@ int main(int argc, char **argv) {
           section, blockAnchor, winner, best, gainBest, meanSquare);
     }
   }
+  fflush(stdout); /* preserve diagnostics if a strict parity assertion fails */
   assert(bestRatio >= -0.0000001 && bestRatio <= 1.0000001);
   if (getenv("COSMERON_MP3_PARITY_STRICT") != NULL) {
     assert(hasXing && trimmedStart && expectedGaplessFrames == frames);
