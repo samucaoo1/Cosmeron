@@ -182,14 +182,31 @@ AUDIO_CODEC_MP3_MEMORY_SEEK_PROTOTYPE {
   value = (AUDIO_INS(TMP3MemoryDecoder) *)stream->internal;
   if (frameIndex > value->frameCount) return STATUS_CONST(OUT_OF_RANGE);
   if (frameIndex == value->presented) return STATUS_CONST(SUCCESS);
+  /* The compressed decoder state is already at the end of the staged
+   * PCM frame. A seek inside that frame requires no additional decode,
+   * I/O or allocation, even when moving backwards. */
+  if (value->stagedFrames) {
+    uint64_t rawTarget = value->rawFirst + frameIndex;
+    uint64_t stagedEnd = value->stagedFirst + value->stagedFrames;
+    if (rawTarget >= value->stagedFirst && rawTarget <= stagedEnd) {
+      value->stagedCursor = (size_t)(rawTarget - value->stagedFirst);
+      value->presented = frameIndex;
+      return STATUS_CONST(SUCCESS);
+    }
+  }
+  /* A forward seek can reuse the entire reservoir/overlap/synthesis
+   * history. Backward seeks outside the staged frame must replay from
+   * the beginning. Either path is transactional on failure. */
   scratch = (AUDIO_INS(TMP3MemoryDecoder) *)malloc(sizeof(*scratch));
   if (!scratch) return STATUS_CONST(OUT_OF_MEMORY);
   *scratch = *value;
-  memset(&scratch->decoder, 0, sizeof scratch->decoder);
-  scratch->nextByte = value->firstByte;
-  scratch->rawDecoded = scratch->stagedFirst = scratch->presented = 0;
-  scratch->stagedCursor = scratch->stagedFrames = 0;
-  remain = frameIndex;
+  if (frameIndex < value->presented) {
+    memset(&scratch->decoder, 0, sizeof scratch->decoder);
+    scratch->nextByte = value->firstByte;
+    scratch->rawDecoded = scratch->stagedFirst = scratch->presented = 0;
+    scratch->stagedCursor = scratch->stagedFrames = 0;
+  }
+  remain = frameIndex - scratch->presented;
   while (remain) {
     size_t got = 0;
     size_t n = remain > 1152 ? 1152 : (size_t)remain;
