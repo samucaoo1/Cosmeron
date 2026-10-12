@@ -29,6 +29,38 @@ static inline bool AUDIO_INS(FLAC_Signed)(
       (int64_t)raw - (int64_t)(UINT64_C(1) << width) : (int64_t)raw;
   return true;
 }
+/* FLAC bitstreams are untrusted. LPC coefficients and decoded residuals
+ * can individually fit int64_t while their arithmetic overflows it.
+ * Guard each operation before evaluating signed expressions (portable C11). */
+static inline bool AUDIO_INS(FLAC_AddI64)(
+    int64_t a, int64_t b, int64_t *result) {
+  if ((b > 0 && a > INT64_MAX - b) ||
+      (b < 0 && a < INT64_MIN - b)) return false;
+  *result = a + b;
+  return true;
+}
+static inline bool AUDIO_INS(FLAC_SubI64)(
+    int64_t a, int64_t b, int64_t *result) {
+  if ((b > 0 && a < INT64_MIN + b) ||
+      (b < 0 && a > INT64_MAX + b)) return false;
+  *result = a - b;
+  return true;
+}
+static inline bool AUDIO_INS(FLAC_MulI64)(
+    int64_t a, int64_t b, int64_t *result) {
+  if (a && b) {
+    if (a > 0) {
+      if ((b > 0 && a > INT64_MAX / b) ||
+          (b < 0 && b < INT64_MIN / a)) return false;
+    } else {
+      if ((b > 0 && a < INT64_MIN / b) ||
+          (b < 0 && a < INT64_MAX / b)) return false;
+    }
+  }
+  *result = a * b;
+  return true;
+}
+
 static inline unsigned int AUDIO_INS(FLAC_CRC8)(
     const unsigned char *data, size_t size) {
   unsigned int crc = 0;
@@ -176,35 +208,58 @@ static inline bool AUDIO_INS(FLAC_Subframe)(
       if (lpc) {
         int64_t shiftValue = rawShift & 16U ? (int64_t)rawShift - 32 :
             (int64_t)rawShift;
-        for (j = 0; j < order; ++j)
-          prediction += coeff[j] * samples[i - j - 1];
-        if (shiftValue >= 0) prediction >>= (unsigned int)shiftValue;
-        else {
-          if (prediction > INT64_MAX >> (unsigned int)-shiftValue ||
-              prediction < INT64_MIN / (INT64_C(1) << (unsigned int)-shiftValue))
+        for (j = 0; j < order; ++j) {
+          int64_t term;
+          if (!AUDIO_INS(FLAC_MulI64)(
+                  coeff[j], samples[i - j - 1], &term) ||
+              !AUDIO_INS(FLAC_AddI64)(prediction, term, &prediction))
             return false;
-          prediction *= INT64_C(1) << (unsigned int)-shiftValue;
         }
+        if (shiftValue >= 0) {
+          /* Right shift of negative signed values is implementation-
+           * defined in C11; FLAC requires floor division. */
+          int64_t divisor = INT64_C(1) << (unsigned int)shiftValue;
+          int64_t quotient = prediction / divisor;
+          if (prediction < 0 && prediction % divisor) --quotient;
+          prediction = quotient;
+        } else if (!AUDIO_INS(FLAC_MulI64)(
+                       prediction, INT64_C(1) << (unsigned int)-shiftValue,
+                       &prediction)) return false;
       } else {
+        int64_t term;
         switch (order) {
         case 0: prediction = 0; break;
         case 1: prediction = samples[i - 1]; break;
-        case 2: prediction = 2 * samples[i - 1] - samples[i - 2]; break;
-        case 3: prediction = 3 * samples[i - 1] - 3 * samples[i - 2] + samples[i - 3]; break;
-        default: prediction = 4 * samples[i - 1] - 6 * samples[i - 2] +
-            4 * samples[i - 3] - samples[i - 4]; break;
+        case 2:
+          if (!AUDIO_INS(FLAC_MulI64)(2, samples[i - 1], &prediction) ||
+              !AUDIO_INS(FLAC_SubI64)(prediction, samples[i - 2], &prediction))
+            return false;
+          break;
+        case 3:
+          if (!AUDIO_INS(FLAC_MulI64)(3, samples[i - 1], &prediction) ||
+              !AUDIO_INS(FLAC_MulI64)(3, samples[i - 2], &term) ||
+              !AUDIO_INS(FLAC_SubI64)(prediction, term, &prediction) ||
+              !AUDIO_INS(FLAC_AddI64)(prediction, samples[i - 3], &prediction))
+            return false;
+          break;
+        default:
+          if (!AUDIO_INS(FLAC_MulI64)(4, samples[i - 1], &prediction) ||
+              !AUDIO_INS(FLAC_MulI64)(6, samples[i - 2], &term) ||
+              !AUDIO_INS(FLAC_SubI64)(prediction, term, &prediction) ||
+              !AUDIO_INS(FLAC_MulI64)(4, samples[i - 3], &term) ||
+              !AUDIO_INS(FLAC_AddI64)(prediction, term, &prediction) ||
+              !AUDIO_INS(FLAC_SubI64)(prediction, samples[i - 4], &prediction))
+            return false;
         }
       }
-      if ((samples[i] > 0 && prediction > INT64_MAX - samples[i]) ||
-          (samples[i] < 0 && prediction < INT64_MIN - samples[i])) return false;
-      samples[i] += prediction;
+      if (!AUDIO_INS(FLAC_AddI64)(samples[i], prediction, &samples[i]))
+        return false;
     }
   } else return false;
   if (shift) {
     for (i = 0; i < count; ++i) {
-      if (samples[i] > INT64_MAX / (INT64_C(1) << shift) ||
-          samples[i] < INT64_MIN / (INT64_C(1) << shift)) return false;
-      samples[i] *= INT64_C(1) << shift;
+      if (!AUDIO_INS(FLAC_MulI64)(
+              samples[i], INT64_C(1) << shift, &samples[i])) return false;
     }
   }
   return true;
@@ -287,12 +342,19 @@ static inline OPSTATUS AUDIO_INS(FLAC_DecodeFrame)(
     goto end;
   for (i = 0; i < count; ++i) {
     int64_t left = pcm[i], right = channels == 2 ? pcm[count + i] : 0;
-    if (assignment == 8) right = left - right;
-    else if (assignment == 9) left += right;
-    else if (assignment == 10) {
-      int64_t mid = left * 2 + (right & 1);
-      left = (mid + right) / 2;
-      right = (mid - right) / 2;
+    if (assignment == 8) {
+      if (!AUDIO_INS(FLAC_SubI64)(left, right, &right)) goto end;
+    } else if (assignment == 9) {
+      if (!AUDIO_INS(FLAC_AddI64)(left, right, &left)) goto end;
+    } else if (assignment == 10) {
+      int64_t mid, restoredLeft, restoredRight;
+      if (!AUDIO_INS(FLAC_MulI64)(left, 2, &mid) ||
+          !AUDIO_INS(FLAC_AddI64)(mid, right & 1, &mid) ||
+          !AUDIO_INS(FLAC_AddI64)(mid, right, &restoredLeft) ||
+          !AUDIO_INS(FLAC_SubI64)(mid, right, &restoredRight))
+        goto end;
+      left = restoredLeft / 2;
+      right = restoredRight / 2;
     }
     for (ch = 0; ch < channels; ++ch) {
       int64_t sample = ch == 0 ? left : right;
