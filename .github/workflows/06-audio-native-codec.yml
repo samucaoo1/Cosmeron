@@ -50,6 +50,25 @@ jobs:
           cd Codespace/Tests/Audio
           sh MP3ParityFixtures.sh
 
+  mp3-lsf-intensity-parity:
+    name: Linux / independently authored LSF intensity PCM parity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate intensity bitstreams and verify PCM against miniaudio
+        run: |
+          set -eu
+          cd Codespace/Tests/Audio
+          cc -std=c11 -Wall -Wextra -Wpedantic -Werror MP3ExperimentalCompare.c -o /tmp/mp3-lsf-is-compare
+          dir="$(mktemp -d)"
+          trap 'rm -rf "$dir"' EXIT
+          for ms in 0 1; do
+            for scale in 0 1; do
+              python3 MP3LSFIntensityFixture.py "$dir/intensity-$ms-$scale.mp3" "$ms" "$scale"
+              COSMERON_MP3_LSF_INTENSITY_STRICT=1 /tmp/mp3-lsf-is-compare "$dir/intensity-$ms-$scale.mp3"
+            done
+          done
+
   native-mp3-sanitizer:
     name: Linux / native MP3 UB + address sanitizers
     runs-on: ubuntu-latest
