@@ -15,7 +15,8 @@ int main(int argc, char **argv) {
   cosmeron_audio_vendor_ma_decoder_config config;
   cosmeron_audio_vendor_ma_uint64 received = 0;
   uint32_t rate = 0, channels = 0;
-  uint64_t frames = 0, known = 0;
+  uint64_t frames = 0;
+  cosmeron_audio_vendor_ma_uint64 known = 0;
   size_t n, count, got = 0, completed = 0, i, len;
   double xx = 0, xy = 0, yy = 0, residual, gain;
   FILE *file;
