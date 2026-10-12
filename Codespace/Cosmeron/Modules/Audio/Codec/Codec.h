@@ -6,6 +6,10 @@
 #include "WAV.h"
 #include "FLAC.h"
 #include "MP3.h"
+/* Explicit opt-in only: default MP3 Codec_Open* still uses miniaudio. */
+#if defined(AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3)
+#include "MP3Memory.h"
+#endif
 #include <stdio.h>
 
 typedef struct AUDIO_CODEC_TYPE(TDecoder) {
