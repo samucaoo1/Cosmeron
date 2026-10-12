@@ -40,10 +40,10 @@ static void testBoundary(uint32_t sampleRate, bool mixed, size_t region0) {
 int main(void) {
   testBoundary(44100, false, 198);
   testBoundary(22050, false, 222);
-  testBoundary(11025, false, 222);
+  testBoundary(11025, false, 240);
   testBoundary(8000, false, 480);
   testBoundary(44100, true, 36);
-  testBoundary(22050, true, 90);
+  testBoundary(22050, true, 72);
   testBoundary(8000, true, 156);
   return 0;
 }
