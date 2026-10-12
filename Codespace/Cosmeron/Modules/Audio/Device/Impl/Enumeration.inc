@@ -28,7 +28,7 @@ AUDIO_DEVICE_ENUMERATE_PROTOTYPE {
       if (status!=STATUS_CONST(SUCCESS)) break;
     }
     if (list) release(list);
-    
+
   }
 #elif defined(_WIN32)
   {

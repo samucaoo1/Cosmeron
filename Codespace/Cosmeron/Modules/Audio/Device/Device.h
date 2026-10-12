@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Audio.space"
+#include "../PCM/PCM.h"
 #ifndef AUDIO_DEVICE_MINIAUDIO_FALLBACK
 #define AUDIO_DEVICE_MINIAUDIO_FALLBACK 1
 #endif

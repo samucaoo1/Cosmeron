@@ -112,8 +112,9 @@ static inline void AUDIO_INS(NativeDeviceRender)(AUDIO_INS(TNativeDevice) *s) {
   for (i=0;i<count;++i) {
     float f=AUDIO_INS(Finite)(s->pcm[i]) ? AUDIO_INS(Clamp)(s->pcm[i]) : 0;
     s->pcm[i]=f;
-    s->integerPCM[i]=f<=-1 ? INT16_MIN : (int16_t)(f*32767);
+
   }
+  (void)AUDIO_PCM_FUNC(ToS16)(s->pcm,count,s->integerPCM);
 }
 #if defined(_WIN32)
 #define AUDIO_DEVICE_SYMBOL(F,N) do { FARPROC symbol=GetProcAddress(s->library,N); if (!symbol || sizeof symbol!=sizeof s->F) goto fail; memcpy(&s->F,&symbol,sizeof symbol); } while(0)
