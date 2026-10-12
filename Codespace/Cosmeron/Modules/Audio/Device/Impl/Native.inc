@@ -216,6 +216,15 @@ static inline void AUDIO_INS(NativeDeviceRelease)(AUDIO_INS(TNativeDevice) *s) {
 #endif
   free(s);
 }
+#if defined(__APPLE__)
+typedef struct AUDIO_INS(TDeviceMatch) { const char *id; bool found; } AUDIO_INS(TDeviceMatch);
+static OPSTATUS AUDIO_INS(NativeDeviceMatch)(void *user, const char *id, const char *name) {
+  AUDIO_INS(TDeviceMatch) *match=(AUDIO_INS(TDeviceMatch) *)user;
+  (void)name;
+  if (!strcmp(id,match->id)) match->found=true;
+  return STATUS_CONST(SUCCESS);
+}
+#endif
 static inline OPSTATUS AUDIO_INS(NativeDeviceOpen)(
     AUDIO_INS(TNativeDevice) **out, const AUDIO_DEVICE_TYPE(TConfig) *config,
     const char *id) {
@@ -249,6 +258,12 @@ static inline OPSTATUS AUDIO_INS(NativeDeviceOpen)(
 #elif defined(__APPLE__)
   {
     AudioStreamBasicDescription format={0}; unsigned int i;
+    /* AudioQueue may accept an unknown UID and defer failure until Start.
+     * Check CoreAudio enumeration before promising that selection opened. */
+    if (id && strcmp(id,"default")) {
+      AUDIO_INS(TDeviceMatch) match={id,false};
+      if (AUDIO_DEVICE_FUNC(Enumerate)(AUDIO_INS(NativeDeviceMatch),&match)!=STATUS_CONST(SUCCESS) || !match.found) goto fail;
+    }
 
     s->library=dlopen("/System/Library/Frameworks/AudioToolbox.framework/AudioToolbox",RTLD_NOW|RTLD_LOCAL);
     if (!s->library) goto fail;

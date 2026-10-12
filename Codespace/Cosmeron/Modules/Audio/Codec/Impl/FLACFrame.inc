@@ -278,7 +278,7 @@ static inline OPSTATUS AUDIO_INS(FLAC_DecodeFrameDigest)(
   uint32_t channels, sampleBits, sampleRate;
   size_t headerEnd, count, i, frameBytes, frameStart = offset;
   int64_t *pcm = NULL;
-  AUDIO_INS(TFLACMD5) digestWork;
+  AUDIO_INS(TFLACMD5) digestWork = {0};
   if (digest) digestWork = *digest;
   unsigned int ch;
   OPSTATUS status = STATUS_CONST(INVALID_SEQUENCE);
