@@ -47,9 +47,17 @@ static void reorderTests(void) {
     }
   }
   part.mixedBlock = 0;
+  assert(AUDIO_CODEC_FUNC(MP3_ReorderShort)(
+      source, &part, 22050, target) == STATUS_CONST(SUCCESS));
+  assert(target[0] == source[0]);
+  part.mixedBlock = 1;
+  assert(AUDIO_CODEC_FUNC(MP3_ReorderShort)(
+      source, &part, 8000, target) == STATUS_CONST(SUCCESS));
+  for (i = 0; i < 72; ++i) assert(target[i] == source[i]);
+  part.mixedBlock = 0;
   target[0] = 77.f;
   assert(AUDIO_CODEC_FUNC(MP3_ReorderShort)(
-      source, &part, 22050, target) == STATUS_CONST(NOT_SUPPORTED));
+      source, &part, 12345, target) == STATUS_CONST(NOT_SUPPORTED));
   assert(target[0] == 77.f);
   part.blockType = 0;
   assert(AUDIO_CODEC_FUNC(MP3_ReorderShort)(
