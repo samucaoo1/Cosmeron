@@ -70,6 +70,7 @@ static void syntheticTests(void) {
   }
   frame[1] = 0xfb;
   frame[2] = 0x90;
+  pcm[0] = 789.f; /* restore sentinel after successful 8-kHz decoding */
 
   /* Missing prior main_data_begin does not publish PCM, but contributes
    * current compressed payload bytes to a future frame's reservoir. */
