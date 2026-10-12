@@ -1,15 +1,67 @@
 #pragma once
+#include "MP3SeekIndex.inc"
 
 typedef struct AUDIO_INS(TMP3MemoryDecoder) {
   AUDIO_CODEC_TYPE(TMP3Experimental) decoder;
   const unsigned char *source;
   size_t size, firstByte, lastByte, nextByte;
+  uint64_t droppedBytes, concealedFrames;
   uint64_t rawDecoded, rawFirst, frameCount, presented, stagedFirst;
   uint32_t rate, channels;
   uint16_t samplesPerFrame;
+  struct AUDIO_INS(TMP3MemoryDecoderCheckpoint) *checkpoints;
+  AUDIO_INS(TMP3SeekIndex) seekIndex;
+  size_t checkpointCount;
+  uint64_t checkpointStride;
+  bool indexingDisabled;
   size_t stagedFrames, stagedCursor;
   float stage[1152 * 2];
 } AUDIO_INS(TMP3MemoryDecoder);
+
+/* Sparse exact-state checkpoints: reservoir, hybrid overlap and synthesis
+ * history must all be restored for sample-identical VBR backward seeks.
+ * Lazy population avoids decoding the entire file during open. */
+typedef struct AUDIO_INS(TMP3MemoryDecoderCheckpoint) {
+  AUDIO_INS(TMP3MemoryDecoder) state;
+  struct AUDIO_INS(TMP3MemoryDecoderCheckpoint) *next;
+} AUDIO_INS(TMP3MemoryDecoderCheckpoint);
+static inline void AUDIO_INS(TMP3MemoryDecoder_Remember)(AUDIO_INS(TMP3MemoryDecoder) *s) {
+  AUDIO_INS(TMP3MemoryDecoderCheckpoint) *p;
+  if (s->indexingDisabled || !s->rawDecoded || s->rawDecoded % (s->checkpointStride * s->samplesPerFrame) ||
+      s->checkpointCount >= 1024) return;
+  for (p = s->checkpoints; p; p = p->next)
+    if (p->state.rawDecoded == s->rawDecoded) return;
+  p = (AUDIO_INS(TMP3MemoryDecoderCheckpoint) *)malloc(sizeof *p);
+  if (!p) return; /* optional optimization; decode remains usable */
+  p->state = *s;
+  p->next = s->checkpoints;
+  s->checkpoints = p;
+  ++s->checkpointCount;
+}
+static inline void AUDIO_INS(TMP3MemoryDecoder_Forget)(AUDIO_INS(TMP3MemoryDecoder) *s) {
+  AUDIO_INS(TMP3MemoryDecoderCheckpoint) *p = s->checkpoints;
+  while (p) { AUDIO_INS(TMP3MemoryDecoderCheckpoint) *next = p->next; free(p); p = next; }
+  free(s->seekIndex.points);
+}
+
+
+#if AUDIO_CODEC_MP3_RECOVER_ERRORS
+static inline OPSTATUS AUDIO_INS(MP3_ResyncMemory)(const unsigned char *data,
+    size_t size,size_t start,uint32_t rate,uint32_t channels,uint16_t spf,
+    size_t *next,AUDIO_CODEC_TYPE(TMP3FrameInfo) *header) {
+  size_t step;
+  for(step=1;step<=AUDIO_CODEC_MP3_MAX_RESYNC_BYTES && step<=size-start;++step) {
+    size_t at=start+step;
+    if(size-at<4) break;
+    if(AUDIO_CODEC_FUNC(MP3_ParseHeader)(data+at,size-at,header)==STATUS_CONST(SUCCESS) &&
+        header->frameBytes<=size-at && header->sampleRate==rate &&
+        header->channels==channels && header->samplesPerFrame==spf) {
+      *next=at; return STATUS_CONST(SUCCESS);
+    }
+  }
+  return STATUS_CONST(INVALID_SEQUENCE);
+}
+#endif
 
 /* A complete frame is either published to the staging buffer or leaves
  * the synthesis state intact. MPEG reservoir preroll is allowed only
@@ -24,7 +76,8 @@ static inline OPSTATUS AUDIO_INS(MP3_MemoryConsume)(
     uint64_t rawEnd = value->rawFirst + value->frameCount;
     size_t available, n;
     if (value->stagedCursor == value->stagedFrames) {
-      AUDIO_CODEC_TYPE(TMP3FrameInfo) header;
+      AUDIO_INS(TMP3MemoryDecoder_Remember)(value);
+      AUDIO_CODEC_TYPE(TMP3FrameInfo) header = {0};
       size_t decoded = 0;
       if (value->nextByte >= value->lastByte) {
         status = STATUS_CONST(INCOMPLETE_SEQUENCE);
@@ -33,18 +86,37 @@ static inline OPSTATUS AUDIO_INS(MP3_MemoryConsume)(
       status = AUDIO_CODEC_FUNC(MP3_ParseHeader)(
           value->source + value->nextByte,
           value->lastByte - value->nextByte, &header);
-      if (status != STATUS_CONST(SUCCESS)) break;
-      if (header.frameBytes > value->lastByte - value->nextByte ||
-          header.sampleRate != value->rate ||
-          header.channels != value->channels ||
-          header.samplesPerFrame != value->samplesPerFrame) {
-        status = STATUS_CONST(INVALID_SEQUENCE);
+      if (status==STATUS_CONST(SUCCESS) && header.frameBytes>value->lastByte-value->nextByte) {
+        status=STATUS_CONST(INCOMPLETE_SEQUENCE); break;
+      }
+      if (status != STATUS_CONST(SUCCESS) || header.sampleRate!=value->rate ||
+          header.channels!=value->channels || header.samplesPerFrame!=value->samplesPerFrame) {
+#if AUDIO_CODEC_MP3_RECOVER_ERRORS
+        size_t next;
+        status=AUDIO_INS(MP3_ResyncMemory)(value->source,value->lastByte,value->nextByte,
+            value->rate,value->channels,value->samplesPerFrame,&next,&header);
+        if(status!=STATUS_CONST(SUCCESS)) break;
+        value->droppedBytes+=next-value->nextByte; value->nextByte=next;
+        memset(&value->decoder,0,sizeof value->decoder);
+#else
+        if(status==STATUS_CONST(SUCCESS)) status=STATUS_CONST(INVALID_SEQUENCE);
         break;
+#endif
       }
       status = AUDIO_CODEC_FUNC(MP3_ExperimentFrame)(
           &value->decoder, value->source + value->nextByte,
           header.frameBytes, value->stage, 1152,
           &decoded, &header);
+#if AUDIO_CODEC_MP3_RECOVER_ERRORS
+      if(status==STATUS_CONST(INVALID_SEQUENCE) ||
+          (status==STATUS_CONST(INCOMPLETE_SEQUENCE) &&
+           value->rawDecoded+value->samplesPerFrame>value->rawFirst)) {
+        if(status==STATUS_CONST(INVALID_SEQUENCE)) memset(&value->decoder,0,sizeof value->decoder);
+        memset(value->stage,0,value->samplesPerFrame*value->channels*sizeof(float));
+        decoded=value->samplesPerFrame; value->concealedFrames+=decoded;
+        status=STATUS_CONST(SUCCESS);
+      }
+#endif
       if (status != STATUS_CONST(SUCCESS) &&
           status != STATUS_CONST(INCOMPLETE_SEQUENCE)) break;
       if (status == STATUS_CONST(SUCCESS) &&
@@ -91,10 +163,11 @@ static inline OPSTATUS AUDIO_INS(MP3_MemoryConsume)(
 
 AUDIO_CODEC_MP3_MEMORY_OPEN_PROTOTYPE {
   const unsigned char *data = (const unsigned char *)bytes;
-  AUDIO_CODEC_TYPE(TMP3FrameInfo) first, current;
+  AUDIO_CODEC_TYPE(TMP3FrameInfo) first = {0}, current = {0};
   AUDIO_CODEC_TYPE(TMP3XingInfo) xing = {0};
   AUDIO_INS(TMP3MemoryDecoder) *value;
   OPSTATUS status;
+  bool resynced=false;
   size_t beginning = 0, offset, count = 0;
   uint64_t rawFrames, presentation = 0, rawFirst = 0;
   if (!stream || !bytes || !size) return STATUS_CONST(INVALID_ARGUMENT);
@@ -102,31 +175,42 @@ AUDIO_CODEC_MP3_MEMORY_OPEN_PROTOTYPE {
   status = AUDIO_CODEC_FUNC(MP3_FindFrame)(
       bytes, size, 0, &beginning, &first);
   if (status != STATUS_CONST(SUCCESS)) return status;
+  value = (AUDIO_INS(TMP3MemoryDecoder) *)calloc(1, sizeof(*value));
+  if (!value) return STATUS_CONST(OUT_OF_MEMORY);
+  value->seekIndex.disabled=AUDIO_CODEC_MP3_RECOVER_ERRORS!=0;
   offset = beginning;
   while (size - offset >= 4) {
     status = AUDIO_CODEC_FUNC(MP3_ParseHeader)(
         data + offset, size - offset, &current);
-    if (status != STATUS_CONST(SUCCESS)) break;
-    if (current.frameBytes > size - offset)
-      return STATUS_CONST(INCOMPLETE_SEQUENCE);
-    if (current.sampleRate != first.sampleRate ||
-        current.channels != first.channels ||
-        current.mpegVersion != first.mpegVersion ||
-        current.samplesPerFrame != first.samplesPerFrame)
-      return STATUS_CONST(INVALID_SEQUENCE);
+    if(status==STATUS_CONST(SUCCESS) && current.frameBytes>size-offset)
+      { status=STATUS_CONST(INCOMPLETE_SEQUENCE); goto fail; }
+    if(status!=STATUS_CONST(SUCCESS) || current.sampleRate!=first.sampleRate ||
+        current.channels!=first.channels || current.samplesPerFrame!=first.samplesPerFrame) {
+      if(size-offset==128 && !memcmp(data+offset,"TAG",3)) break;
+#if AUDIO_CODEC_MP3_RECOVER_ERRORS
+      size_t next;
+      status=AUDIO_INS(MP3_ResyncMemory)(data,size,offset,first.sampleRate,first.channels,
+          first.samplesPerFrame,&next,&current);
+      if(status!=STATUS_CONST(SUCCESS)) goto fail;
+      offset=next; resynced=true;
+#else
+      status=STATUS_CONST(INVALID_SEQUENCE); goto fail;
+#endif
+    }
+    AUDIO_INS(MP3_IndexRecord)(&value->seekIndex,count,offset);
     if (++count > UINT64_MAX / first.samplesPerFrame)
-      return STATUS_CONST(ARITHMETIC_OVERFLOW);
+      { status = STATUS_CONST(ARITHMETIC_OVERFLOW); goto fail; }
     offset += current.frameBytes;
   }
-  if (count < 2) return STATUS_CONST(NOT_SUPPORTED);
+  if (count < 2) { status = STATUS_CONST(NOT_SUPPORTED); goto fail; }
   /* Permit standard ID3v1 footer; reject interrupted or unknown audio
    * segments rather than silently truncating the file's duration. */
   if (offset != size &&
       (size - offset != 128 || memcmp(data + offset, "TAG", 3)))
-    return STATUS_CONST(INVALID_SEQUENCE);
+    { status = STATUS_CONST(INVALID_SEQUENCE); goto fail; }
   rawFrames = (uint64_t)count * first.samplesPerFrame;
   presentation = rawFrames;
-  if (AUDIO_CODEC_FUNC(MP3_ParseXing)(
+  if (!resynced && AUDIO_CODEC_FUNC(MP3_ParseXing)(
       data + beginning, size - beginning, &xing) ==
       STATUS_CONST(SUCCESS) && xing.hasGapless && xing.encodedFrames &&
       count >= xing.encodedFrames && count - xing.encodedFrames <= 2) {
@@ -136,8 +220,6 @@ AUDIO_CODEC_MP3_MEMORY_OPEN_PROTOTYPE {
         (uint32_t)(count - xing.encodedFrames), &rawFirst, &length);
     if (status == STATUS_CONST(SUCCESS)) presentation = length;
   }
-  value = (AUDIO_INS(TMP3MemoryDecoder) *)calloc(1, sizeof(*value));
-  if (!value) return STATUS_CONST(OUT_OF_MEMORY);
   value->source = data;
   value->size = size;
   value->firstByte = beginning;
@@ -148,8 +230,12 @@ AUDIO_CODEC_MP3_MEMORY_OPEN_PROTOTYPE {
   value->rate = first.sampleRate;
   value->channels = first.channels;
   value->samplesPerFrame = first.samplesPerFrame;
+  value->checkpointStride = count / 1024 + 1;
+  if (value->checkpointStride < 64) value->checkpointStride = 64;
   stream->internal = value;
   return STATUS_CONST(SUCCESS);
+fail:
+  AUDIO_INS(TMP3MemoryDecoder_Forget)(value); free(value); return status;
 }
 
 AUDIO_CODEC_MP3_MEMORY_INFO_PROTOTYPE {
@@ -200,11 +286,45 @@ AUDIO_CODEC_MP3_MEMORY_SEEK_PROTOTYPE {
   scratch = (AUDIO_INS(TMP3MemoryDecoder) *)malloc(sizeof(*scratch));
   if (!scratch) return STATUS_CONST(OUT_OF_MEMORY);
   *scratch = *value;
+  scratch->indexingDisabled = true;
   if (frameIndex < value->presented) {
     memset(&scratch->decoder, 0, sizeof scratch->decoder);
     scratch->nextByte = value->firstByte;
     scratch->rawDecoded = scratch->stagedFirst = scratch->presented = 0;
     scratch->stagedCursor = scratch->stagedFrames = 0;
+    scratch->droppedBytes=scratch->concealedFrames=0;
+  }
+  {
+    AUDIO_INS(TMP3MemoryDecoderCheckpoint) *p, *best = NULL;
+    for (p = value->checkpoints; p; p = p->next)
+      if (p->state.presented <= frameIndex &&
+          p->state.presented > scratch->presented &&
+          (!best || p->state.presented > best->state.presented)) best = p;
+    if (best) { *scratch = best->state; scratch->indexingDisabled = true; }
+  }
+  {
+    uint64_t target=(value->rawFirst+frameIndex)/value->samplesPerFrame;
+    const AUDIO_INS(TMP3SeekPoint) *point=target>514 ?
+        AUDIO_INS(MP3_IndexBefore)(&value->seekIndex,target-514) : NULL;
+    if(point && point->frame*value->samplesPerFrame>scratch->rawDecoded) {
+      uint64_t frame=point->frame; size_t at=point->byte;
+      memset(&scratch->decoder,0,sizeof scratch->decoder);
+      while(frame<target) {
+        AUDIO_CODEC_TYPE(TMP3FrameInfo) header={0};
+        OPSTATUS status=AUDIO_CODEC_FUNC(MP3_ParseHeader)(value->source+at,value->lastByte-at,&header);
+        if(status==STATUS_CONST(SUCCESS) && (header.frameBytes>value->lastByte-at ||
+            header.sampleRate!=value->rate || header.channels!=value->channels ||
+            header.samplesPerFrame!=value->samplesPerFrame)) status=STATUS_CONST(INVALID_SEQUENCE);
+        if(status==STATUS_CONST(SUCCESS)) status=AUDIO_INS(MP3_SeekPrerollFrame)(
+            &scratch->decoder,value->source+at,&header,frame+2>=target,scratch->stage);
+        if(status!=STATUS_CONST(SUCCESS)) { free(scratch); return status; }
+        at+=header.frameBytes; ++frame;
+      }
+      scratch->nextByte=at; scratch->rawDecoded=target*value->samplesPerFrame;
+      scratch->stagedFirst=scratch->rawDecoded;
+      scratch->stagedCursor=scratch->stagedFrames=0;
+      scratch->presented=scratch->rawDecoded>scratch->rawFirst ? scratch->rawDecoded-scratch->rawFirst : 0;
+    }
   }
   remain = frameIndex - scratch->presented;
   while (remain) {
@@ -219,6 +339,10 @@ AUDIO_CODEC_MP3_MEMORY_SEEK_PROTOTYPE {
     }
     remain -= got;
   }
+  scratch->seekIndex = value->seekIndex;
+  scratch->checkpoints = value->checkpoints;
+  scratch->checkpointCount = value->checkpointCount;
+  scratch->indexingDisabled = false;
   *value = *scratch;
   free(scratch);
   return STATUS_CONST(SUCCESS);
@@ -226,6 +350,7 @@ AUDIO_CODEC_MP3_MEMORY_SEEK_PROTOTYPE {
 
 AUDIO_CODEC_MP3_MEMORY_CLOSE_PROTOTYPE {
   if (stream && stream->internal) {
+    AUDIO_INS(TMP3MemoryDecoder_Forget)((AUDIO_INS(TMP3MemoryDecoder) *)stream->internal);
     free(stream->internal);
     stream->internal = NULL;
   }

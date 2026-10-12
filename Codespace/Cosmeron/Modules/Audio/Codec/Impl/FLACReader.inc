@@ -97,9 +97,9 @@ static inline OPSTATUS AUDIO_INS(FLAC_StreamNextFrame)(
       count += received;
     }
     if (!count && eof) return STATUS_CONST(SUCCESS);
-    status = AUDIO_INS(FLAC_DecodeFrame)(decoder->flacEncoded, count,
+    status = AUDIO_INS(FLAC_DecodeFrameDigest)(decoder->flacEncoded, count,
         &decoder->flac, 0, decoder->flacBlock,
-        decoder->flac.maximumBlockSize, &frames, &next);
+        decoder->flac.maximumBlockSize, &frames, &next, decoder->flacDigest);
     if (status == STATUS_CONST(SUCCESS)) {
       if (!frames || !next || next > count ||
           next > SIZE_MAX - decoder->flacOffset)

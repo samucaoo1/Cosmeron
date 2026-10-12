@@ -27,10 +27,10 @@ int main(void) {
       info.endPadding == 100 && !info.hasTOC);
   {
     uint64_t first = 0, count = 0;
-    /* Insufficient padding to cover 529 decoder priming requires
-     * a decoder with tail flushing: reject fixed-buffer indexing. */
+    /* Short-padding encoders omit unavailable priming tail samples. */
     assert(AUDIO_CODEC_FUNC(MP3_GaplessSpan)(&info, 1152, 1,
-        &first, &count) == STATUS_CONST(NOT_SUPPORTED));
+        &first, &count) == STATUS_CONST(SUCCESS));
+    assert(first == 2257 && count == 5807);
     frame[lame + 22] = 0x02; /* end padding 0x2d0 = 720 */
     frame[lame + 23] = 0xd0;
     assert(AUDIO_CODEC_FUNC(MP3_ParseXing)(frame, sizeof frame, &info) ==

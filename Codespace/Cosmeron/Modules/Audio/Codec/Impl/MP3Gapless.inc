@@ -83,7 +83,15 @@ AUDIO_CODEC_MP3_GAPLESS_SPAN_PROTOTYPE {
   raw = ((uint64_t)xing->encodedFrames + metadataFrames) * samplesPerFrame;
   if ((uint64_t)xing->encoderDelay + xing->endPadding > encoded)
     return STATUS_CONST(INVALID_SEQUENCE);
-  presentation = encoded - xing->encoderDelay - xing->endPadding;
+  /* Encoders writing zero/short end padding still require synthesis
+   * priming. Do not expose samples beyond the complete raw decode. */
+  {
+    uint64_t tail = xing->endPadding < AUDIO_CODEC_CONST(MP3_DECODER_PRIMING) ?
+        AUDIO_CODEC_CONST(MP3_DECODER_PRIMING) : xing->endPadding;
+    if ((uint64_t)xing->encoderDelay + tail > encoded)
+      return STATUS_CONST(INVALID_SEQUENCE);
+    presentation = encoded - xing->encoderDelay - tail;
+  }
   first = (uint64_t)metadataFrames * samplesPerFrame +
       xing->encoderDelay + AUDIO_CODEC_CONST(MP3_DECODER_PRIMING);
   if (first > raw || presentation > raw - first)

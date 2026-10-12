@@ -1,12 +1,21 @@
 #pragma once
 
 #include "../Audio.space"
+#if !defined(AUDIO_CODEC_NATIVE_ONLY)
 #include "../Internal/Backend.inc"
+#endif
 #include "../PCM/PCM.h"
 #include "WAV.h"
 #include "FLAC.h"
 #include "MP3.h"
-/* Explicit opt-in only: default MP3 Codec_Open* still uses miniaudio. */
+/* Native MP3 is preferred. The vendor backend remains an explicit opt-out
+ * for comparison and compatibility with inputs outside native coverage. */
+#ifndef AUDIO_CODEC_NATIVE_MP3
+#define AUDIO_CODEC_NATIVE_MP3 1
+#endif
+#if AUDIO_CODEC_NATIVE_MP3 && !defined(AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3)
+#define AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3 1
+#endif
 #if defined(AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3)
 #include "MP3Memory.h"
 #endif
@@ -79,5 +88,17 @@ AUDIO_CODEC_READ_FRAMES_PROTOTYPE;
 AUDIO_CODEC_SEEK_FRAME_PROTOTYPE;
 AUDIO_CODEC_CLOSE_PROTOTYPE;
 AUDIO_CODEC_WRITE_WAV_PROTOTYPE;
+#define AUDIO_CODEC_VERIFY_INTEGRITY_PROTOTYPE \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(VerifyIntegrity)(AUDIO_CODEC_TYPE(TDecoder) *decoder)
+AUDIO_CODEC_VERIFY_INTEGRITY_PROTOTYPE;
+/* Diagnostics describe the current (seek-restorable) native MP3 state. */
+#define AUDIO_CODEC_GET_RECOVERY_COUNTS_PROTOTYPE \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(GetRecoveryCounts)( \
+      const AUDIO_CODEC_TYPE(TDecoder) *decoder,uint64_t *outDroppedBytes, \
+      uint64_t *outConcealedFrames)
+AUDIO_CODEC_GET_RECOVERY_COUNTS_PROTOTYPE;
+#define AUDIO_CODEC_BUILD_SEEK_INDEX_PROTOTYPE \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(BuildSeekIndex)(AUDIO_CODEC_TYPE(TDecoder) *decoder)
+AUDIO_CODEC_BUILD_SEEK_INDEX_PROTOTYPE;
 
 #include "Impl/Codec.impl"

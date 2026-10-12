@@ -45,10 +45,13 @@ def granule(bits, part_length, big_values, gain, compress, table, short=False, m
     bits.put(0, 1)  # count1table_select
 
 
-def make_frame(frame_num, ms, intensity_scale, baseline=False, mono=False, short=False, mixed=False):
+def make_frame(frame_num, ms, intensity_scale, baseline=False, mono=False, short=False, mixed=False, rate=22050, bitrate=64, coded=False):
     mode = 0xC0 if mono else 0x60 if ms and baseline else (
         0x40 if baseline else 0x70 if ms else 0x50)
-    header = bytes((0xFF, 0xF3, 0x80, mode))
+    version = 0xf3 if rate >= 16000 else 0xe3
+    rate_bits = {22050: 0, 24000: 4, 16000: 8, 11025: 0, 12000: 4, 8000: 8}[rate]
+    bitrate_bits = {8: 1, 16: 2, 32: 4, 64: 8}[bitrate] << 4
+    header = bytes((0xFF, version, bitrate_bits | rate_bits, mode))
     # MPEG-2 22.05kHz, 64kbps, stereo: 208 bytes, 17-byte side info.
     bands = (list(range(0, 72, 6)) if mixed else
              list(range(0, 48, 4)) if short else
@@ -75,6 +78,11 @@ def make_frame(frame_num, ms, intensity_scale, baseline=False, mono=False, short
             code.put(pos, 1 if mixed and k >= 6 else 2)
     right_part_length = 0 if baseline else (
         27 if mixed else len(positions) * 2)
+    if coded and not mono:
+        for pair in range(3):
+            code.put(0b01, 2)
+            code.put((frame_num + pair) % 2, 1)
+        right_part_length += 9
     while len(code.data) % 8:
         code.put(0, 1)
     main_bytes = code.output()
@@ -85,12 +93,12 @@ def make_frame(frame_num, ms, intensity_scale, baseline=False, mono=False, short
     granule(info, left_part_length, count, 188 + (frame_num % 5), 0, 1, short, mixed)
     # scalefac_compress>>1=72 => slen=(2,0,0,0), seven two-bit positions
     if not mono:
-        granule(info, right_part_length, 0, 210,
+        granule(info, right_part_length, 3 if coded else 0, 188,
                 0 if baseline else (156 if mixed else 144) + intensity_scale,
-                0, short, mixed)
+                1 if coded else 0, short, mixed)
     info_bytes = info.output()
     assert len(info_bytes) == (9 if mono else 17)
-    length = 208
+    length = 72000 * bitrate // rate
     assert len(header) + len(info_bytes) + len(main_bytes) <= length
     return header + info_bytes + main_bytes + bytes(
         length - len(header) - len(info_bytes) - len(main_bytes)
@@ -98,21 +106,24 @@ def make_frame(frame_num, ms, intensity_scale, baseline=False, mono=False, short
 
 
 def main():
-    if len(sys.argv) not in (4, 5):
+    if len(sys.argv) not in (4, 5, 8, 9):
         sys.exit("usage: MP3LSFIntensityFixture.py OUT.mp3 MS(0|1) INTENSITY_SCALE(0|1) [baseline]")
     path, ms, scale = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
     if ms not in (0, 1) or scale not in (0, 1):
         sys.exit("MS and intensity_scale must be 0 or 1")
-    mode = sys.argv[4] if len(sys.argv) == 5 else "long"
+    mode = sys.argv[4] if len(sys.argv) >= 5 else "long"
     if mode not in ("long", "short", "mixed", "baseline", "mono", "baseline-short", "baseline-mixed"):
         sys.exit("unrecognized fixture mode")
     baseline = mode in ("baseline", "mono", "baseline-short", "baseline-mixed")
     mono = mode == "mono"
     short = mode in ("short", "baseline-short", "mixed", "baseline-mixed")
     mixed = mode in ("mixed", "baseline-mixed")
+    rate = int(sys.argv[5]) if len(sys.argv) >= 8 else 22050
+    bitrate = int(sys.argv[6]) if len(sys.argv) >= 8 else 64
+    coded = bool(int(sys.argv[7])) if len(sys.argv) >= 8 else False
     with open(path, "wb") as out:
-        for i in range(32):
-            out.write(make_frame(i, bool(ms), scale, baseline, mono, short, mixed))
+        for i in range(int(sys.argv[8]) if len(sys.argv)==9 else 32):
+            out.write(make_frame(i, bool(ms), scale, baseline, mono, short, mixed, rate, bitrate, coded))
 
 
 if __name__ == "__main__":

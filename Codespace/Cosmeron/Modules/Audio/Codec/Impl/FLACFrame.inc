@@ -1,4 +1,5 @@
 #pragma once
+#include "FLACMD5.inc"
 #include "FLACStream.inc"
 
 typedef struct AUDIO_INS(TFLACBits) {
@@ -266,17 +267,19 @@ static inline bool AUDIO_INS(FLAC_Subframe)(
 }
 
 /* Fully checks the frame header/subframes and CRCs before exposing PCM. */
-static inline OPSTATUS AUDIO_INS(FLAC_DecodeFrame)(
+static inline OPSTATUS AUDIO_INS(FLAC_DecodeFrameDigest)(
     const unsigned char *source, size_t size,
     const AUDIO_INS(TFLACStreamInfo) *stream, size_t offset,
     float *destination, size_t capacityFrames,
-    size_t *outFrames, size_t *outNext) {
+    size_t *outFrames, size_t *outNext, AUDIO_INS(TFLACMD5) *digest) {
   AUDIO_INS(TFLACBits) bits = {source, size, 0};
   uint64_t sync, blocking, blockCode, rateCode, assignment, depthCode, reserved;
   uint64_t number, value;
   uint32_t channels, sampleBits, sampleRate;
   size_t headerEnd, count, i, frameBytes, frameStart = offset;
   int64_t *pcm = NULL;
+  AUDIO_INS(TFLACMD5) digestWork = {0};
+  if (digest) digestWork = *digest;
   unsigned int ch;
   OPSTATUS status = STATUS_CONST(INVALID_SEQUENCE);
   if (!source || !stream || !destination || !outFrames || !outNext ||
@@ -289,7 +292,7 @@ static inline OPSTATUS AUDIO_INS(FLAC_DecodeFrame)(
       !AUDIO_INS(FLAC_ReadBits)(&bits, 4, &rateCode) || rateCode == 15 ||
       !AUDIO_INS(FLAC_ReadBits)(&bits, 4, &assignment) || assignment > 10 ||
       !AUDIO_INS(FLAC_ReadBits)(&bits, 3, &depthCode) ||
-      depthCode == 3 || depthCode == 7 ||
+      depthCode == 3 ||
       !AUDIO_INS(FLAC_ReadBits)(&bits, 1, &reserved) || reserved ||
       !AUDIO_INS(FLAC_UTF8Number)(&bits, &number))
     return STATUS_CONST(INVALID_SEQUENCE);
@@ -315,7 +318,7 @@ static inline OPSTATUS AUDIO_INS(FLAC_DecodeFrame)(
   channels = assignment <= 7 ? (uint32_t)assignment + 1 : 2;
   sampleBits = depthCode == 0 ? stream->bitsPerSample :
       depthCode == 1 ? 8 : depthCode == 2 ? 12 :
-      depthCode == 4 ? 16 : depthCode == 5 ? 20 : 24;
+      depthCode == 4 ? 16 : depthCode == 5 ? 20 : depthCode == 6 ? 24 : 32;
   if (channels != stream->channels || sampleRate != stream->sampleRate ||
       sampleBits != stream->bitsPerSample || count > capacityFrames ||
       count > SIZE_MAX / channels / sizeof(int64_t))
@@ -360,14 +363,30 @@ static inline OPSTATUS AUDIO_INS(FLAC_DecodeFrame)(
       int64_t sample = ch == 0 ? left : right;
       if (sample < -(INT64_C(1) << (sampleBits - 1)) ||
           sample >= (INT64_C(1) << (sampleBits - 1))) goto end;
+      if (digest) {
+        unsigned char encoded[4];
+        unsigned int j, width = (sampleBits + 7U) / 8U;
+        for (j = 0; j < width; ++j)
+          encoded[j] = (unsigned char)((uint64_t)sample >> (8U*j));
+        AUDIO_INS(FLAC_MD5Update)(&digestWork, encoded, width);
+      }
       destination[i * channels + ch] =
           (float)((double)sample / (double)(INT64_C(1) << (sampleBits - 1)));
     }
   }
+  if (digest) *digest = digestWork;
   *outFrames = count;
   *outNext = bits.bit / 8;
   status = STATUS_CONST(SUCCESS);
 end:
   free(pcm);
   return status;
+}
+
+static inline OPSTATUS AUDIO_INS(FLAC_DecodeFrame)(
+    const unsigned char *source, size_t size,
+    const AUDIO_INS(TFLACStreamInfo) *stream, size_t offset,
+    float *destination, size_t capacityFrames, size_t *outFrames, size_t *outNext) {
+  return AUDIO_INS(FLAC_DecodeFrameDigest)(source, size, stream, offset,
+      destination, capacityFrames, outFrames, outNext, NULL);
 }

@@ -136,7 +136,10 @@ AUDIO_CODEC_MP3_RESERVOIR_FEED_PROTOTYPE {
   status = AUDIO_CODEC_FUNC(MP3_ParseSideInfo)(frame, bytes, &side);
   if (status != STATUS_CONST(SUCCESS)) return status;
   payloadOffset = 4U + (header.crcProtected ? 2U : 0U) + header.sideInfoBytes;
+  if (payloadOffset > header.frameBytes || payloadOffset > bytes)
+    return STATUS_CONST(INVALID_SEQUENCE);
   payload = header.frameBytes - payloadOffset;
+  if (payload > bytes - payloadOffset) return STATUS_CONST(INCOMPLETE_SEQUENCE);
   if (side.mainDataBegin > sizeof reservoir->history ||
       payload > sizeof reservoir->frame - side.mainDataBegin)
     return STATUS_CONST(OUT_OF_RANGE);

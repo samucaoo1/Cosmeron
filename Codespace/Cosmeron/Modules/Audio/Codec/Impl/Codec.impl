@@ -1,8 +1,12 @@
 /* Implementation included by Codec.h. */
 #include "FLACFrame.inc"
 
+typedef struct AUDIO_INS(TFLACSeekPoint) { uint64_t frame; size_t byte; } AUDIO_INS(TFLACSeekPoint);
+
 typedef struct AUDIO_INS(Decoder) {
+#if !defined(AUDIO_CODEC_NATIVE_ONLY)
   cosmeron_audio_vendor_ma_decoder native;
+#endif
   AUDIO_CODEC_TYPE(TReader) reader;
   AUDIO_INS(TWAVView) wav;
   uint64_t wavCursor, wavDataOffset;
@@ -20,16 +24,38 @@ typedef struct AUDIO_INS(Decoder) {
   const unsigned char *flacBytes;
   size_t flacSize, flacOffset, flacBlockFrames, flacBlockOffset;
   uint64_t flacCursor;
+  AUDIO_INS(TFLACMD5) *flacDigest;
   float *flacBlock;
   unsigned char *flacEncoded;
   size_t flacEncodedCapacity;
+  AUDIO_INS(TFLACSeekPoint) *flacIndex;
+  size_t flacIndexCount, flacIndexCapacity;
 } AUDIO_INS(Decoder);
 
+/* Lazy frame index shared by memory and seekable readers. No PCM is retained.
+ * A bounded index is optional: allocation failure never interrupts decoding. */
+static inline void AUDIO_INS(FLAC_Remember)(AUDIO_INS(Decoder) *s) {
+  AUDIO_INS(TFLACSeekPoint) *index;
+  size_t n = s->flacIndexCount;
+  if (n && s->flacIndex[n-1].frame >= s->flacCursor) return;
+  if (n >= 65536) return;
+  if (n == s->flacIndexCapacity) {
+    size_t capacity = s->flacIndexCapacity ? s->flacIndexCapacity * 2 : 64;
+    index = (AUDIO_INS(TFLACSeekPoint) *)realloc(s->flacIndex, capacity * sizeof *index);
+    if (!index) return;
+    s->flacIndex = index;
+    s->flacIndexCapacity = capacity;
+  }
+  s->flacIndex[n].frame = s->flacCursor;
+  s->flacIndex[n].byte = s->flacOffset;
+  ++s->flacIndexCount;
+}
 #include "WAVReader.inc"
 #include "FLACReader.inc"
 #if defined(AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3)
 #include "MP3Reader.inc"
 #endif
+#if !defined(AUDIO_CODEC_NATIVE_ONLY)
 static cosmeron_audio_vendor_ma_result
 AUDIO_INS(DecoderRead)(cosmeron_audio_vendor_ma_decoder *decoder, void *buffer,
                        size_t capacity, size_t *outCount) {
@@ -69,10 +95,13 @@ AUDIO_INS(DecoderSeek)(cosmeron_audio_vendor_ma_decoder *decoder,
              ? cosmeron_audio_vendor_MA_SUCCESS
              : cosmeron_audio_vendor_MA_BAD_SEEK;
 }
+#endif
 AUDIO_CODEC_OPEN_FILE_PROTOTYPE {
   AUDIO_INS(Decoder) * value;
+#if !defined(AUDIO_CODEC_NATIVE_ONLY)
   cosmeron_audio_vendor_ma_result result;
   cosmeron_audio_vendor_ma_decoder_config config;
+#endif
   if (decoder == NULL || path == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (decoder->internal != NULL)
@@ -123,6 +152,7 @@ AUDIO_CODEC_OPEN_FILE_PROTOTYPE {
         return status;
     }
   }
+#if !defined(AUDIO_CODEC_NATIVE_ONLY)
   if (!AUDIO_INS(PrepareMath)())
     return STATUS_CONST(NOT_AVAILABLE);
   value = (AUDIO_INS(Decoder) *)calloc(1, sizeof(*value));
@@ -138,12 +168,17 @@ AUDIO_CODEC_OPEN_FILE_PROTOTYPE {
   }
   decoder->internal = value;
   return STATUS_CONST(SUCCESS);
+#else
+  return STATUS_CONST(NOT_SUPPORTED);
+#endif
 }
 
 AUDIO_CODEC_OPEN_MEMORY_PROTOTYPE {
   AUDIO_INS(Decoder) * value;
+#if !defined(AUDIO_CODEC_NATIVE_ONLY)
   cosmeron_audio_vendor_ma_result result;
   cosmeron_audio_vendor_ma_decoder_config config;
+#endif
   if (decoder == NULL || data == NULL || size == 0)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (decoder->internal != NULL)
@@ -216,6 +251,7 @@ AUDIO_CODEC_OPEN_MEMORY_PROTOTYPE {
     }
   }
 #endif
+#if !defined(AUDIO_CODEC_NATIVE_ONLY)
   if (!AUDIO_INS(PrepareMath)())
     return STATUS_CONST(NOT_AVAILABLE);
   value = (AUDIO_INS(Decoder) *)calloc(1, sizeof(*value));
@@ -231,17 +267,26 @@ AUDIO_CODEC_OPEN_MEMORY_PROTOTYPE {
   }
   decoder->internal = value;
   return STATUS_CONST(SUCCESS);
+#else
+  return STATUS_CONST(NOT_SUPPORTED);
+#endif
 }
 
 AUDIO_CODEC_OPEN_READER_PROTOTYPE {
   AUDIO_INS(Decoder) * value;
+#if !defined(AUDIO_CODEC_NATIVE_ONLY)
   cosmeron_audio_vendor_ma_result result;
   cosmeron_audio_vendor_ma_decoder_config config;
-  if (decoder == NULL || reader == NULL || reader->read == NULL ||
-      reader->seek == NULL)
+#endif
+  if (decoder == NULL || reader == NULL || reader->read == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (decoder->internal != NULL)
     return STATUS_CONST(BUSY);
+#if defined(AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3)
+  if (!reader->seek) return AUDIO_INS(MP3_SequentialOpen)(decoder, reader);
+#else
+  if (!reader->seek) return STATUS_CONST(NOT_SUPPORTED);
+#endif
   {
     AUDIO_INS(TWAVView) wav = {0};
     uint64_t offset = 0;
@@ -273,6 +318,7 @@ AUDIO_CODEC_OPEN_READER_PROTOTYPE {
     status = reader->seek(reader->userData, 0, AUDIO_CODEC_CONST(SEEK_START));
     if (status != STATUS_CONST(SUCCESS)) return status;
   }
+#if !defined(AUDIO_CODEC_NATIVE_ONLY)
   if (!AUDIO_INS(PrepareMath)())
     return STATUS_CONST(NOT_AVAILABLE);
   value = (AUDIO_INS(Decoder) *)calloc(1, sizeof(*value));
@@ -290,12 +336,17 @@ AUDIO_CODEC_OPEN_READER_PROTOTYPE {
   }
   decoder->internal = value;
   return STATUS_CONST(SUCCESS);
+#else
+  return STATUS_CONST(NOT_SUPPORTED);
+#endif
 }
 
 AUDIO_CODEC_GET_INFO_PROTOTYPE {
   AUDIO_INS(Decoder) * value;
   AUDIO_CODEC_TYPE(TInfo) info = {0};
+#if !defined(AUDIO_CODEC_NATIVE_ONLY)
   cosmeron_audio_vendor_ma_uint64 length = 0;
+#endif
   if (decoder == NULL || decoder->internal == NULL || outInfo == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
   value = (AUDIO_INS(Decoder) *)decoder->internal;
@@ -303,8 +354,8 @@ AUDIO_CODEC_GET_INFO_PROTOTYPE {
   if (value->nativeMp3Streaming) {
     info.sampleRate = value->mp3Stream->rate;
     info.channels = value->mp3Stream->channels;
-    info.frameCount = value->mp3Stream->frameCount;
-    info.lengthKnown = true;
+    info.lengthKnown = value->mp3Stream->lengthKnown;
+    info.frameCount = info.lengthKnown ? value->mp3Stream->frameCount : 0;
     *outInfo = info;
     return STATUS_CONST(SUCCESS);
   }
@@ -333,6 +384,7 @@ AUDIO_CODEC_GET_INFO_PROTOTYPE {
     *outInfo = info;
     return STATUS_CONST(SUCCESS);
   }
+#if !defined(AUDIO_CODEC_NATIVE_ONLY)
   info.channels = value->native.outputChannels;
   info.sampleRate = value->native.outputSampleRate;
   info.lengthKnown =
@@ -341,12 +393,17 @@ AUDIO_CODEC_GET_INFO_PROTOTYPE {
   info.frameCount = length;
   *outInfo = info;
   return STATUS_CONST(SUCCESS);
+#else
+  return STATUS_CONST(NOT_SUPPORTED);
+#endif
 }
 
 AUDIO_CODEC_READ_FRAMES_PROTOTYPE {
   AUDIO_INS(Decoder) * value;
+#if !defined(AUDIO_CODEC_NATIVE_ONLY)
   cosmeron_audio_vendor_ma_uint64 count = 0;
   cosmeron_audio_vendor_ma_result result;
+#endif
   if (decoder == NULL || decoder->internal == NULL || outSamples == NULL ||
       outFrames == NULL)
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -382,6 +439,7 @@ AUDIO_CODEC_READ_FRAMES_PROTOTYPE {
       if (value->flacBlockOffset == value->flacBlockFrames) {
         size_t frames = 0, next = 0;
         OPSTATUS status;
+        AUDIO_INS(FLAC_Remember)(value);
         if (value->flacStreaming) {
           status = AUDIO_INS(FLAC_StreamNextFrame)(value, &frames);
           if (status == STATUS_CONST(SUCCESS) && !frames) {
@@ -394,9 +452,9 @@ AUDIO_CODEC_READ_FRAMES_PROTOTYPE {
           }
         } else {
           if (value->flacOffset == value->flacSize) break;
-          status = AUDIO_INS(FLAC_DecodeFrame)(value->flacBytes,
+          status = AUDIO_INS(FLAC_DecodeFrameDigest)(value->flacBytes,
               value->flacSize, &value->flac, value->flacOffset,
-              value->flacBlock, value->flac.maximumBlockSize, &frames, &next);
+              value->flacBlock, value->flac.maximumBlockSize, &frames, &next, value->flacDigest);
         }
         if (status != STATUS_CONST(SUCCESS)) {
           *outFrames = completed;
@@ -425,6 +483,7 @@ AUDIO_CODEC_READ_FRAMES_PROTOTYPE {
     *outFrames = completed;
     return STATUS_CONST(SUCCESS);
   }
+#if !defined(AUDIO_CODEC_NATIVE_ONLY)
   if (value->native.outputChannels == 0 ||
       frameCapacity > SIZE_MAX / value->native.outputChannels / sizeof(float))
     return STATUS_CONST(ARITHMETIC_OVERFLOW);
@@ -440,6 +499,9 @@ AUDIO_CODEC_READ_FRAMES_PROTOTYPE {
   if (result == cosmeron_audio_vendor_MA_AT_END)
     return STATUS_CONST(SUCCESS);
   return AUDIO_INS(BackendStatus)(result);
+#else
+  return STATUS_CONST(NOT_SUPPORTED);
+#endif
 }
 
 AUDIO_CODEC_SEEK_FRAME_PROTOTYPE {
@@ -462,19 +524,33 @@ AUDIO_CODEC_SEEK_FRAME_PROTOTYPE {
       value->flacBlockFrames = 0;
       value->flacBlockOffset = 0;
     }
+    if (value->flacIndexCount) {
+      size_t lo = 0, hi = value->flacIndexCount;
+      while (lo < hi) {
+        size_t mid = lo + (hi-lo)/2;
+        if (value->flacIndex[mid].frame <= frameIndex) lo = mid+1;
+        else hi = mid;
+      }
+      if (lo && value->flacIndex[lo-1].frame > value->flacCursor) {
+        value->flacCursor = value->flacIndex[lo-1].frame;
+        value->flacOffset = value->flacIndex[lo-1].byte;
+        value->flacBlockFrames = value->flacBlockOffset = 0;
+      }
+    }
     while (value->flacCursor < frameIndex) {
       size_t available, step;
       if (value->flacBlockOffset == value->flacBlockFrames) {
         size_t frames = 0, next = 0;
         OPSTATUS status;
+        AUDIO_INS(FLAC_Remember)(value);
         if (value->flacStreaming) {
           status = AUDIO_INS(FLAC_StreamNextFrame)(value, &frames);
         } else {
           if (value->flacOffset == value->flacSize)
             return STATUS_CONST(OUT_OF_RANGE);
-          status = AUDIO_INS(FLAC_DecodeFrame)(value->flacBytes,
+          status = AUDIO_INS(FLAC_DecodeFrameDigest)(value->flacBytes,
               value->flacSize, &value->flac, value->flacOffset,
-              value->flacBlock, value->flac.maximumBlockSize, &frames, &next);
+              value->flacBlock, value->flac.maximumBlockSize, &frames, &next, value->flacDigest);
         }
         if (status != STATUS_CONST(SUCCESS)) return status;
         if (!frames || (!value->flacStreaming && next <= value->flacOffset))
@@ -497,9 +573,13 @@ AUDIO_CODEC_SEEK_FRAME_PROTOTYPE {
     value->wavCursor = frameIndex;
     return STATUS_CONST(SUCCESS);
   }
+#if !defined(AUDIO_CODEC_NATIVE_ONLY)
   return AUDIO_INS(BackendStatus)(
       cosmeron_audio_vendor_ma_decoder_seek_to_pcm_frame(&value->native,
                                                          frameIndex));
+#else
+  return STATUS_CONST(NOT_SUPPORTED);
+#endif
 }
 
 AUDIO_CODEC_CLOSE_PROTOTYPE {
@@ -509,12 +589,18 @@ AUDIO_CODEC_CLOSE_PROTOTYPE {
 #if defined(AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3)
     if (value->nativeMp3)
       AUDIO_CODEC_FUNC(MP3_MemoryClose)(&value->mp3);
-    else if (value->nativeMp3Streaming)
+    else if (value->nativeMp3Streaming) {
+      AUDIO_INS(TMP3ReaderStream_Forget)(value->mp3Stream);
       free(value->mp3Stream);
+    }
     else
 #endif
-    if (!value->nativeWav && !value->nativeFlac)
+    if (!value->nativeWav && !value->nativeFlac) {
+#if !defined(AUDIO_CODEC_NATIVE_ONLY)
       cosmeron_audio_vendor_ma_decoder_uninit(&value->native);
+#endif
+    }
+    free(value->flacIndex);
     free(value->flacBlock);
     free(value->flacEncoded);
     if (value->ownedFile) fclose(value->ownedFile);
@@ -524,4 +610,89 @@ AUDIO_CODEC_CLOSE_PROTOTYPE {
 
 AUDIO_CODEC_WRITE_WAV_PROTOTYPE {
   return AUDIO_CODEC_FUNC(WAV_WriteFile)(path, buffer);
+}
+
+/* Explicit full-stream FLAC MD5 pass. Playback position is restored, and
+ * failed verification remains observable even if restoration succeeds. */
+AUDIO_CODEC_VERIFY_INTEGRITY_PROTOTYPE {
+  AUDIO_INS(Decoder) *s;
+  AUDIO_INS(TFLACMD5) digest;
+  unsigned char actual[16], zero[16] = {0};
+  float scratch[256*8];
+  uint64_t saved;
+  OPSTATUS status, restored;
+  if (!decoder || !decoder->internal) return STATUS_CONST(INVALID_ARGUMENT);
+  s = (AUDIO_INS(Decoder) *)decoder->internal;
+  if (!s->nativeFlac) return STATUS_CONST(NOT_SUPPORTED);
+  if (!memcmp(s->flac.md5, zero, 16)) return STATUS_CONST(NOT_AVAILABLE);
+  saved = s->flacCursor;
+  /* Bypass the index for a complete integrity pass. */
+  s->flacOffset = s->flac.frameOffset;
+  s->flacCursor = 0;
+  s->flacBlockFrames = s->flacBlockOffset = 0;
+  AUDIO_INS(FLAC_MD5Init)(&digest);
+  s->flacDigest = &digest;
+  for (;;) {
+    size_t got = 0;
+    status = AUDIO_CODEC_FUNC(ReadFrames)(decoder, scratch, 256, &got);
+    if (status != STATUS_CONST(SUCCESS) || !got) break;
+  }
+  s->flacDigest = NULL;
+  if (status == STATUS_CONST(SUCCESS)) {
+    AUDIO_INS(FLAC_MD5Final)(&digest, actual);
+    if (memcmp(actual, s->flac.md5, 16)) status = STATUS_CONST(INVALID_SEQUENCE);
+  }
+  s->flacOffset = s->flac.frameOffset;
+  s->flacCursor = 0;
+  s->flacBlockFrames = s->flacBlockOffset = 0;
+  restored = AUDIO_CODEC_FUNC(SeekFrame)(decoder, saved);
+  return status == STATUS_CONST(SUCCESS) ? restored : status;
+}
+
+/* Optional one-pass index preparation for workloads dominated by random
+ * seeks. Normal playback also populates indices lazily. */
+AUDIO_CODEC_BUILD_SEEK_INDEX_PROTOTYPE {
+  AUDIO_INS(Decoder) *s;
+  uint64_t saved;
+  float scratch[256*8];
+  OPSTATUS status, restored;
+  if (!decoder || !decoder->internal) return STATUS_CONST(INVALID_ARGUMENT);
+  s=(AUDIO_INS(Decoder) *)decoder->internal;
+  if (s->nativeFlac) saved=s->flacCursor;
+#if defined(AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3)
+  else if (s->nativeMp3) saved=((AUDIO_INS(TMP3MemoryDecoder) *)s->mp3.internal)->presented;
+  else if (s->nativeMp3Streaming) {
+    if (s->mp3Stream->sequential) return STATUS_CONST(NOT_SUPPORTED);
+    saved=s->mp3Stream->presented;
+  }
+#endif
+  else return STATUS_CONST(NOT_SUPPORTED);
+  status=AUDIO_CODEC_FUNC(SeekFrame)(decoder,0);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  for (;;) {
+    size_t got=0;
+    status=AUDIO_CODEC_FUNC(ReadFrames)(decoder,scratch,256,&got);
+    if (status!=STATUS_CONST(SUCCESS) || !got) break;
+  }
+  restored=AUDIO_CODEC_FUNC(SeekFrame)(decoder,saved);
+  return status==STATUS_CONST(SUCCESS) ? restored : status;
+}
+
+AUDIO_CODEC_GET_RECOVERY_COUNTS_PROTOTYPE {
+  const AUDIO_INS(Decoder) *s;
+  if(!decoder || !decoder->internal || !outDroppedBytes || !outConcealedFrames)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  s=(const AUDIO_INS(Decoder) *)decoder->internal;
+#if defined(AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3)
+  if(s->nativeMp3) {
+    const AUDIO_INS(TMP3MemoryDecoder) *m=(const AUDIO_INS(TMP3MemoryDecoder) *)s->mp3.internal;
+    *outDroppedBytes=m->droppedBytes; *outConcealedFrames=m->concealedFrames;
+    return STATUS_CONST(SUCCESS);
+  }
+  if(s->nativeMp3Streaming) {
+    *outDroppedBytes=s->mp3Stream->droppedBytes; *outConcealedFrames=s->mp3Stream->concealedFrames;
+    return STATUS_CONST(SUCCESS);
+  }
+#endif
+  (void)s; return STATUS_CONST(NOT_SUPPORTED);
 }
