@@ -1831,8 +1831,8 @@ Pass a complete MPEG-1 frame (1,152 output frames) or
 MPEG-2/2.5 LSF frame (576 output frames) and a caller-owned buffer of
 interleaved float PCM. Mono, ordinary stereo and MS stereo are supported
 for the specified verified variants. MPEG-2/2.5 intensity stereo and
-8-kHz PCM currently return `NOT_SUPPORTED` while their waveform
-fidelity remains unverified. The call retains
+MPEG-2/2.5 intensity stereo returns `NOT_SUPPORTED` while its
+waveform fidelity remains unverified. The call retains
 reservoir, overlap and synthesis state across frames. For stereo,
 `MP3_JointStereo` identifies right-channel nonzero spectral bands before
 the short-block reorder, applies intensity-stereo scalefactors above the
@@ -1878,21 +1878,21 @@ blocks, exposes the LSF intensity-scale bit and reports `part2Bits`
 without dynamic allocations. The experimental frame decoder also
 chains LSF Huffman, requantization, short-block reorder, alias reduction,
 IMDCT and 32-band synthesis into 576 frames of PCM for
-**11.025, 12, 16, 22.05 and 24 kHz**. Non-periodic audio fixtures
+**8, 11.025, 12, 16, 22.05 and 24 kHz**. Non-periodic audio fixtures
 at these rates must meet a normalized residual under `1e-5` and
 gain within 0.1% against miniaudio.
 
-The **8-kHz MPEG-2.5 case is intentionally rejected by the experimental
-PCM decoder**: its tested LAME fixture produced residual ~0.0306,
-despite valid framing/scalefactor parsing. A preliminary four-long-
-subband mixed-block path exists and has synthetic tests, but the 8-kHz
-fixture contains only two short blocks and the divergence remains
-unresolved. 8-kHz headers, side-info, reservoir and scalefactor parsing
-remain available as independent primitives.
+MPEG Layer III switched Huffman boundaries now follow the actual
+short/mixed scalefactor bands instead of using a hard-coded 36-line
+split. At 8 kHz the boundary for pure short blocks is 72 spectral
+coefficients, versus 36 for the other supported frequencies. The dedicated `MP3HuffmanRegions.c` test checks the
+switch between codebooks for MPEG-1, MPEG-2 and MPEG-2.5, including
+mixed windows. PCM parity at 8 kHz is enforced by the same nonperiodic
+waveform gate as the other MPEG-2/2.5 sample rates.
 
 **The coverage is not universal**. Automatic intensity-stereo
 band handling is implemented but is still awaiting independent
-intensity-encoded PCM fixtures. MPEG-2/2.5 intensity-stereo PCM, 8-kHz spectral parity,
+intensity-encoded PCM fixtures. MPEG-2/2.5 intensity-stereo PCM,
 file/reader streaming, seeks, and several gapless metadata
 cases remain unfinished. Production
 `OpenFile`, `OpenMemory` and `OpenReader` therefore **remain on
