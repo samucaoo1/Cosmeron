@@ -68,7 +68,8 @@ def make_frame(frame_num, ms, intensity_scale, baseline=False):
     info.put(0, 2)  # private_bits
     granule(info, left_part_length, 22, 210 + (frame_num % 5), 0, 1)
     # scalefac_compress>>1=72 => slen=(2,0,0,0), seven two-bit positions
-    granule(info, right_part_length, 0, 210,\n            0 if baseline else 144 + intensity_scale, 0)
+    granule(info, right_part_length, 0, 210,
+            0 if baseline else 144 + intensity_scale, 0)
     info_bytes = info.output()
     assert len(info_bytes) == 17
     length = 208
