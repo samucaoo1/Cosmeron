@@ -11,6 +11,102 @@
  *
  * All computations take place in temporaries so failures never publish
  * partial stereo channels. */
+/* LSF-specific stereo scalings: is_pos=0 shares channel energy equally
+ * only in the MS-normalized representation when requested; 255 disables
+ * intensity. Use base 2^(-1/4) and 2^(-1/2) factors, without libm. */
+AUDIO_CODEC_MP3_JOINT_STEREO_LSF_PROTOTYPE {
+  static const float quarter[4] = {1.0f,0.8408964153f,
+      0.7071067812f,0.5946035575f};
+  float l[576], r[576];
+  uint8_t pos[576];
+  int lastLong = -1, lastShort[3] = {-1,-1,-1};
+  unsigned int rate, band, win, nLong, shortStart;
+  size_t at = 0, i;
+  bool mixed, shortBlock;
+  if (!header || !part || !scale || !left || !right ||
+      !outLeft || !outRight || outLeft == outRight || intensityScale > 1)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (header->mpegVersion == 1 || header->channels != 2)
+    return STATUS_CONST(NOT_SUPPORTED);
+  for (rate=0;rate<9;++rate)
+    if (AUDIO_INS(MP3_LongRates)[rate] == header->sampleRate) break;
+  if (rate==9) return STATUS_CONST(NOT_SUPPORTED);
+  shortBlock = part->windowSwitching && part->blockType==2;
+  mixed = shortBlock && part->mixedBlock;
+  if (part->mixedBlock > 1 || (part->mixedBlock && !shortBlock))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  for (i=0;i<576;++i)
+    if (!AUDIO_INS(Finite)(left[i]) || !AUDIO_INS(Finite)(right[i]))
+      return STATUS_CONST(INVALID_SEQUENCE);
+  memset(pos,255,sizeof pos);
+  nLong = mixed ? 6U : shortBlock ? 0U : 22U;
+  shortStart = mixed ? 3U : 0U;
+  for (band=0;band<nLong;++band)
+    for (i=AUDIO_INS(MP3_LongBands)[rate][band];
+         i<AUDIO_INS(MP3_LongBands)[rate][band+1];++i)
+      if (right[i]!=0) {lastLong=(int)band; break;}
+  if (shortBlock) {
+    at = mixed ? 3U*AUDIO_INS(MP3_ShortBands)[rate][3] : 0U;
+    for (band=shortStart;band<13;++band) {
+      size_t width=AUDIO_INS(MP3_ShortBands)[rate][band+1]-
+          AUDIO_INS(MP3_ShortBands)[rate][band];
+      if (width>(576U-at)/3U) return STATUS_CONST(INVALID_SEQUENCE);
+      for (win=0;win<3;++win)
+        for (i=0;i<width;++i)
+          if (right[at+win*width+i]!=0) {
+            lastShort[win]=(int)band; break;
+          }
+      at+=3U*width;
+    }
+    if (at!=576) return STATUS_CONST(INVALID_SEQUENCE);
+  }
+  for (band=0;band<nLong;++band) {
+    unsigned int p=band==21 ?
+        scale->lsfIntensityLong[20] : scale->lsfIntensityLong[band];
+    if ((int)band>lastLong && p!=255)
+      for (i=AUDIO_INS(MP3_LongBands)[rate][band];
+           i<AUDIO_INS(MP3_LongBands)[rate][band+1];++i)
+        pos[i]=(uint8_t)p;
+  }
+  if (shortBlock) {
+    at=mixed ? 3U*AUDIO_INS(MP3_ShortBands)[rate][3] : 0U;
+    for (band=shortStart;band<13;++band) {
+      size_t width=AUDIO_INS(MP3_ShortBands)[rate][band+1]-
+          AUDIO_INS(MP3_ShortBands)[rate][band];
+      for (win=0;win<3;++win) {
+        unsigned int p=band==12 ? scale->lsfIntensityShort[11][win] :
+            scale->lsfIntensityShort[band][win];
+        if ((int)band>lastShort[win] && p!=255)
+          for (i=0;i<width;++i) pos[at+win*width+i]=(uint8_t)p;
+      }
+      at+=width*3U;
+    }
+  }
+  for (i=0;i<576;++i) {
+    float a=left[i],b=right[i];
+    if (pos[i]!=255) {
+      unsigned int position=pos[i];
+      unsigned int exp=(position+1U)/2U << intensityScale;
+      float q=1.0f;
+      unsigned int z;
+      /* Every four quarter exponents lower the value by one half. */
+      for (z=0;z<exp/4U;++z) q*=0.5f;
+      q*=quarter[exp%4U];
+      if (position&1U) {l[i]=a*q; r[i]=a;}
+      else {l[i]=a; r[i]=a*q;}
+      if (header->msStereo) {l[i]*=1.41421356237f;r[i]*=1.41421356237f;}
+      if (b!=0) return STATUS_CONST(INVALID_SEQUENCE);
+    } else if (header->msStereo) {
+      l[i]=(a+b)*0.70710678118f;
+      r[i]=(a-b)*0.70710678118f;
+    } else {l[i]=a;r[i]=b;}
+    if (!AUDIO_INS(Finite)(l[i]) || !AUDIO_INS(Finite)(r[i]))
+      return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  }
+  memcpy(outLeft,l,sizeof l);memcpy(outRight,r,sizeof r);
+  return STATUS_CONST(SUCCESS);
+}
+
 AUDIO_CODEC_MP3_JOINT_STEREO_PROTOTYPE {
   static const float panLeft[7] = {
     0.0f, 0.2113248654f, 0.3660254038f, 0.5f,
