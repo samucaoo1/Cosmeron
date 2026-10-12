@@ -188,6 +188,11 @@ static inline OPSTATUS AUDIO_INS(MP3_ReaderConsume)(
       }
       status = AUDIO_INS(MP3_ReaderHeader)(
           reader, stream->nextByte, prefix);
+      /* The complete encoded span was validated during OpenReader.
+       * A callback reporting EOF inside it means the source was
+       * truncated or changed, not that playback ended normally. */
+      if (status == STATUS_CONST(NOT_FOUND))
+        status = STATUS_CONST(INCOMPLETE_SEQUENCE);
       if (status != STATUS_CONST(SUCCESS)) break;
       status = AUDIO_CODEC_FUNC(MP3_ParseHeader)(
           prefix, sizeof prefix, &header);
