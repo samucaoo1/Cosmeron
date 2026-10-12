@@ -1,6 +1,8 @@
 #pragma once
 #include "MP3HuffmanTables.inc"
 #include "MP3HuffmanBands.inc"
+/* Scalefactor band positions also determine the switched Huffman region. */
+#include "MP3RequantTables.inc"
 
 /* Consume only bits within [*ioBit, endBit). A partial codeword leaves
  * caller's bit cursor untouched, so streaming input can be retried. */
@@ -162,15 +164,29 @@ AUDIO_CODEC_MP3_HUFFMAN_GRANULE_PROTOTYPE {
     return STATUS_CONST(INVALID_SEQUENCE);
   end = offset + part->part23Length;
   cursor = offset + scales->part2Bits;
+  for (rateIndex = 0; rateIndex < 9; ++rateIndex)
+    if (AUDIO_INS(MP3_LongRates)[rateIndex] == sampleRate) break;
+  if (rateIndex == 9) return STATUS_CONST(NOT_SUPPORTED);
   if (part->windowSwitching && part->blockType == 2) {
-    region0 = 36;
+    if (!part->mixedBlock) {
+      /* 9 whole short scalefactor bands (three windows each). The 8-kHz
+       * MPEG-2.5 layout reaches line 480, not line 36. */
+      region0 = 3U * AUDIO_INS(MP3_ShortBands)[rateIndex][9];
+    } else {
+      /* Mixed blocks have 8 region-0 bands: 8 long MPEG-1 sfb, or
+       * 6 long LSF sfb followed by 2 short (3-window) sfb. */
+      const unsigned int nLong = rateIndex < 3 ? 8U : 6U;
+      region0 = AUDIO_INS(MP3_LongBands)[rateIndex][nLong];
+      if (nLong == 6U)
+        region0 += 3U * (
+            AUDIO_INS(MP3_ShortBands)[rateIndex][5] -
+            AUDIO_INS(MP3_ShortBands)[rateIndex][3]);
+    }
     region1 = 576;
+    if (region0 > 576) return STATUS_CONST(INVALID_SEQUENCE);
   } else {
     unsigned int boundary0 = (unsigned int)part->region0Count + 1U;
     unsigned int boundary1 = boundary0 + part->region1Count + 1U;
-    for (rateIndex = 0; rateIndex < 9; ++rateIndex)
-      if (AUDIO_INS(MP3_LongRates)[rateIndex] == sampleRate) break;
-    if (rateIndex == 9) return STATUS_CONST(NOT_SUPPORTED);
     if (boundary0 > 22 || boundary1 > 22)
       return STATUS_CONST(INVALID_SEQUENCE);
     region0 = AUDIO_INS(MP3_LongBands)[rateIndex][boundary0];
