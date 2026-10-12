@@ -50,6 +50,31 @@ jobs:
           cd Codespace/Tests/Audio
           sh MP3ParityFixtures.sh
 
+  mp3-mpeg1-intensity-parity:
+    name: Linux / independent MPEG-1 intensity stereo PCM parity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify original MPEG-1 intensity and MS+intensity frames
+        run: |
+          set -eu
+          cd Codespace/Tests/Audio
+          cc -std=c11 -Wall -Wextra -Wpedantic -Werror MP3ExperimentalCompare.c -o /tmp/mp3-mpeg1-compare
+          dir="$(mktemp -d)"
+          trap 'rm -rf "$dir"' EXIT
+          python3 MP3MPEG1IntensityFixture.py "$dir/mono.mp3" 0 mono 32
+          /tmp/mp3-mpeg1-compare "$dir/mono.mp3"
+          for ms in 0 1; do
+            python3 MP3MPEG1IntensityFixture.py "$dir/baseline-$ms.mp3" "$ms" baseline 32
+            /tmp/mp3-mpeg1-compare "$dir/baseline-$ms.mp3"
+            python3 MP3MPEG1IntensityFixture.py "$dir/intensity-$ms.mp3" "$ms" intensity 32
+            if [ "$ms" -eq 1 ]; then
+              COSMERON_MP3_MPEG1_INTENSITY_STRICT=1 COSMERON_MP3_REQUIRE_MS=1 /tmp/mp3-mpeg1-compare "$dir/intensity-$ms.mp3"
+            else
+              COSMERON_MP3_MPEG1_INTENSITY_STRICT=1 /tmp/mp3-mpeg1-compare "$dir/intensity-$ms.mp3"
+            fi
+          done
+
   mp3-lsf-intensity-parity:
     name: Linux / independently authored LSF intensity PCM parity
     runs-on: ubuntu-latest
