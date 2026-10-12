@@ -9,6 +9,10 @@ typedef struct AUDIO_INS(Decoder) {
   FILE *ownedFile;
   bool nativeWav, wavStreaming, nativeFlac, flacStreaming;
 #if defined(AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3)
+  bool nativeMp3Streaming;
+  struct AUDIO_INS(TMP3ReaderStream) *mp3Stream;
+#endif
+#if defined(AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3)
   bool nativeMp3;
   AUDIO_CODEC_TYPE(TMP3Memory) mp3;
 #endif
@@ -23,6 +27,9 @@ typedef struct AUDIO_INS(Decoder) {
 
 #include "WAVReader.inc"
 #include "FLACReader.inc"
+#if defined(AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3)
+#include "MP3Reader.inc"
+#endif
 static cosmeron_audio_vendor_ma_result
 AUDIO_INS(DecoderRead)(cosmeron_audio_vendor_ma_decoder *decoder, void *buffer,
                        size_t capacity, size_t *outCount) {
@@ -104,6 +111,12 @@ AUDIO_CODEC_OPEN_FILE_PROTOTYPE {
           return opened;
         }
       }
+#if defined(AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3)
+      if (status == STATUS_CONST(NOT_SUPPORTED)) {
+        status = AUDIO_INS(MP3_ReaderOpen)(decoder, &reader, file);
+        if (status == STATUS_CONST(SUCCESS)) return status;
+      }
+#endif
       fclose(file);
       if (status != STATUS_CONST(NOT_SUPPORTED) &&
           status != STATUS_CONST(OUT_OF_RANGE))
@@ -245,6 +258,11 @@ AUDIO_CODEC_OPEN_READER_PROTOTYPE {
     }
     if (status != STATUS_CONST(NOT_SUPPORTED))
       return status;
+#if defined(AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3)
+    status = AUDIO_INS(MP3_ReaderOpen)(decoder, reader, NULL);
+    if (status == STATUS_CONST(SUCCESS)) return status;
+    if (status != STATUS_CONST(NOT_SUPPORTED)) return status;
+#endif
     status = reader->seek(reader->userData, 0, AUDIO_CODEC_CONST(SEEK_START));
     if (status != STATUS_CONST(SUCCESS)) return status;
   }
@@ -275,6 +293,14 @@ AUDIO_CODEC_GET_INFO_PROTOTYPE {
     return STATUS_CONST(INVALID_ARGUMENT);
   value = (AUDIO_INS(Decoder) *)decoder->internal;
 #if defined(AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3)
+  if (value->nativeMp3Streaming) {
+    info.sampleRate = value->mp3Stream->rate;
+    info.channels = value->mp3Stream->channels;
+    info.frameCount = value->mp3Stream->frameCount;
+    info.lengthKnown = true;
+    *outInfo = info;
+    return STATUS_CONST(SUCCESS);
+  }
   if (value->nativeMp3) {
     OPSTATUS status = AUDIO_CODEC_FUNC(MP3_MemoryInfo)(
         &value->mp3, &info.sampleRate, &info.channels, &info.frameCount);
@@ -319,6 +345,10 @@ AUDIO_CODEC_READ_FRAMES_PROTOTYPE {
     return STATUS_CONST(INVALID_ARGUMENT);
   value = (AUDIO_INS(Decoder) *)decoder->internal;
 #if defined(AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3)
+  if (value->nativeMp3Streaming)
+    return AUDIO_INS(MP3_ReaderConsume)(
+        &value->reader, value->mp3Stream,
+        outSamples, frameCapacity, outFrames);
   if (value->nativeMp3)
     return AUDIO_CODEC_FUNC(MP3_MemoryRead)(
         &value->mp3, outSamples, frameCapacity, outFrames);
@@ -411,6 +441,8 @@ AUDIO_CODEC_SEEK_FRAME_PROTOTYPE {
     return STATUS_CONST(INVALID_ARGUMENT);
   value = (AUDIO_INS(Decoder) *)decoder->internal;
 #if defined(AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3)
+  if (value->nativeMp3Streaming)
+    return AUDIO_INS(MP3_ReaderSeek)(value, frameIndex);
   if (value->nativeMp3)
     return AUDIO_CODEC_FUNC(MP3_MemorySeek)(&value->mp3, frameIndex);
 #endif
@@ -470,6 +502,8 @@ AUDIO_CODEC_CLOSE_PROTOTYPE {
 #if defined(AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3)
     if (value->nativeMp3)
       AUDIO_CODEC_FUNC(MP3_MemoryClose)(&value->mp3);
+    else if (value->nativeMp3Streaming)
+      free(value->mp3Stream);
     else
 #endif
     if (!value->nativeWav && !value->nativeFlac)
