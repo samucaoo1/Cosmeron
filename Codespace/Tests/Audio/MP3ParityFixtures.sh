@@ -91,3 +91,7 @@ cc -std=c11 -Wall -Wextra -Wpedantic -Werror MP3Memory.c -o "$dir/mp3memory"
 for file in mono stereo jointMS mpeg2-lsf mpeg25-lsf mpeg25-8k; do
   "$dir/mp3memory" "$dir/$file.mp3"
 done
+cc -std=c11 -Wall -Wextra -Wpedantic -Werror MP3MemoryParity.c -o "$dir/mp3memoryparity"
+for file in mono stereo jointMS mpeg2-lsf mpeg25-lsf mpeg25-8k; do
+  "$dir/mp3memoryparity" "$dir/$file.mp3"
+done
