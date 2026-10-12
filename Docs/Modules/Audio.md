@@ -1968,6 +1968,17 @@ file and callback paths, including 3/7-byte partial reads and parity
 against the natively decoded memory stream. The callback reader must
 support absolute seeks; the caller retains ownership of its stream.
 
+**Malformed MP3 regression and fuzzing.** The independent
+`MP3MutationFuzz.c` harness accepts arbitrary bytes and exercises
+MPEG frame parsing, ID3 tags, native memory opening, frame reads and
+seeks, closing every successfully opened stream. Without extra tools
+it runs 384 deterministic mutations of valid MPEG frames plus all
+partial headers; on Linux it can also be built with
+`clang -DCOSMERON_MP3_LIBFUZZER -fsanitize=fuzzer,address,undefined`
+and tested against MPEG-1/LSF/ID3 corpus seeds in CI. This raises
+robustness coverage; it does not imply proof against all malformed
+inputs or replace independent encoder tests.
+
 **The coverage is not universal**. MPEG-2/2.5 intensity-stereo
 has verified PCM against independently constructed long/short/mixed
 bitstreams at 22.05 kHz, but additional sample rates, spectral
