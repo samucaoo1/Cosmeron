@@ -30,9 +30,9 @@ static void longBlocks(void) {
       left, right, l, r) == STATUS_CONST(SUCCESS));
   assert(near(l[13],6*0.70710678118f));
   assert(near(r[13],-2*0.70710678118f));
-  assert(near(l[74],4*1.41421356237f));
-  assert(near(r[74],4*1.41421356237f));
-  assert(near(l[419],8*0.7886751346f*1.41421356237f));
+  assert(near(l[74],4));
+  assert(near(r[74],4));
+  assert(near(l[419],8*0.7886751346f));
 
   /* An intensity position of 7 marks a normal/MS frequency band. */
   scales.longBands[12] = 7;
@@ -47,7 +47,7 @@ static void longBlocks(void) {
   memcpy(r, right, sizeof r);
   assert(AUDIO_CODEC_FUNC(MP3_JointStereo)(&hdr, &part, &scales,
       l, r, l, r) == STATUS_CONST(SUCCESS));
-  assert(near(l[74],4*1.41421356237f));
+  assert(near(l[74],4));
 
   /* Preserve both outputs atomically after a rejected input. */
   right[74] = 9.0f;
@@ -96,15 +96,15 @@ static void shortAndMixed(void) {
   assert(near(l[48],0) && near(r[48],6*1.41421356237f));
   assert(near(l[54],6*0.70710678118f));
   assert(near(r[54],6*0.70710678118f));
-  assert(near(l[60],6*1.41421356237f));
+  assert(near(l[60],6));
   /* Last sfb 12 inherits the position of band 11 if no higher right
    * information was transmitted in that specific window. */
   scale.shortBands[11][2] = 3;
   left[575] = 10; /* last short band, window 2 */
   assert(AUDIO_CODEC_FUNC(MP3_JointStereo)(&hdr, &part, &scale,
       left,right,l,r) == STATUS_CONST(SUCCESS));
-  assert(near(l[575],5*1.41421356237f));
-  assert(near(r[575],5*1.41421356237f));
+  assert(near(l[575],5));
+  assert(near(r[575],5));
 
   /* Mixed blocks preserve first 36 long lines, short coding starts at
    * scalefactor band 3, with the first short band at coefficient 36. */
@@ -119,8 +119,8 @@ static void shortAndMixed(void) {
       left,right,l,r) == STATUS_CONST(SUCCESS));
   assert(near(l[0],7*0.70710678118f));
   assert(near(r[0],3*0.70710678118f));
-  assert(near(l[36],4*1.41421356237f));
-  assert(near(r[36],4*1.41421356237f));
+  assert(near(l[36],4));
+  assert(near(r[36],4));
 }
 int main(void) {
   longBlocks();

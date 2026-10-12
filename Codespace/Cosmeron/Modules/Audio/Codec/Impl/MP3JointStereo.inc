@@ -122,7 +122,6 @@ AUDIO_CODEC_MP3_JOINT_STEREO_PROTOTYPE {
     0.3660254038f, 0.2113248654f, 0.0f
   };
   const float invSqrt2 = 0.7071067811865475244f;
-  const float sqrt2 = 1.4142135623730950488f;
   const bool switched = rightPart && rightPart->windowSwitching &&
       rightPart->blockType == 2;
   const bool mixed = switched && rightPart->mixedBlock;
@@ -218,8 +217,10 @@ AUDIO_CODEC_MP3_JOINT_STEREO_PROTOTYPE {
     if (positions[i] != 255) {
       unsigned int p = positions[i];
       if (b != 0.0f) return STATUS_CONST(INVALID_SEQUENCE);
-      l[i] = a * panLeft[p] * (header->msStereo ? sqrt2 : 1.0f);
-      r[i] = a * panRight[p] * (header->msStereo ? sqrt2 : 1.0f);
+      /* Mid/side is already normalized in the ordinary spectral path.
+       * Applying sqrt(2) to intensity bands again over-amplifies them. */
+      l[i] = a * panLeft[p];
+      r[i] = a * panRight[p];
     } else if (header->msStereo) {
       l[i] = (a+b)*invSqrt2;
       r[i] = (a-b)*invSqrt2;
