@@ -1908,6 +1908,28 @@ tested encodings.** Independent intensity-stereo fixtures at other
 rates/bitrates, more varied coded right-channel spectra and other
 encoders still need differential testing before production adoption.
 
+**Native MP3 memory stream (opt-in).** Include
+`Audio/Codec/MP3Memory.h` to use `MP3_MemoryOpen`,
+`MP3_MemoryInfo`, `MP3_MemoryRead`, `MP3_MemorySeek`
+and `MP3_MemoryClose`. The memory source is borrowed and must
+outlive the stream. PCM is decoded a frame at a time into a fixed
+1152-frame staging buffer, allowing small caller read sizes and
+constant buffering independent of file length. Xing/LAME delay,
+end-padding and synthesis priming are trimmed only when metadata is
+present and internally consistent; otherwise raw frame count is
+reported. Seeking reconstructs reservoir, IMDCT overlap and synthesis
+state from the beginning (correct but O(number of preceding frames)).
+Malformed or discontinuous streams are rejected rather than guessed.
+This native backend can also be exercised through the **usual**
+`Audio_Codec_OpenMemory/GetInfo/ReadFrames/SeekFrame/Close` calls
+by defining `AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3=1` **before including
+`Codec.h` or `CodecMinimal.h`**. This is opt-in per translation unit:
+WAV/FLAC, file-based and callback-based MP3 remain unchanged. The
+default `OpenMemory` MP3 backend is still miniaudio. The `CodecMP3OptIn`
+test checks the ordinary API with this macro. Only complete, contiguous
+and supported MP3 frames are accepted by the experimental memory path;
+additional file/reader and interoperability coverage is still needed.
+
 **The coverage is not universal**. MPEG-2/2.5 intensity-stereo
 has verified PCM against independently constructed long/short/mixed
 bitstreams at 22.05 kHz, but additional sample rates, spectral

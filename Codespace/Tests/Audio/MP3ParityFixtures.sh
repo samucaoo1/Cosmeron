@@ -84,3 +84,14 @@ COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/stereo.mp3"
 COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/mono32.mp3"
 COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/stereo48.mp3"
 COSMERON_MP3_PARITY_STRICT=1 COSMERON_MP3_REQUIRE_MS=1 "$dir/mp3compare" "$dir/jointMS.mp3"
+
+# The opt-in C11 memory reader must reproduce its own PCM exactly across
+# non-frame-aligned chunks, seeks and Xing/LAME gapless presentation.
+cc -std=c11 -Wall -Wextra -Wpedantic -Werror MP3Memory.c -o "$dir/mp3memory"
+for file in mono stereo jointMS mpeg2-lsf mpeg25-lsf mpeg25-8k; do
+  "$dir/mp3memory" "$dir/$file.mp3"
+done
+cc -std=c11 -Wall -Wextra -Wpedantic -Werror MP3MemoryParity.c -o "$dir/mp3memoryparity"
+for file in mono stereo jointMS mpeg2-lsf mpeg25-lsf mpeg25-8k; do
+  "$dir/mp3memoryparity" "$dir/$file.mp3"
+done
