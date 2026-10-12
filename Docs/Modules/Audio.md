@@ -1884,8 +1884,8 @@ gain within 0.1% against miniaudio.
 
 MPEG Layer III switched Huffman boundaries now follow the actual
 short/mixed scalefactor bands instead of using a hard-coded 36-line
-split. At 8 kHz the boundary for pure short blocks is 480 spectral
-coefficients. The dedicated `MP3HuffmanRegions.c` test checks the
+split. At 8 kHz the boundary for pure short blocks is 72 spectral
+coefficients, versus 36 for the other supported frequencies. The dedicated `MP3HuffmanRegions.c` test checks the
 switch between codebooks for MPEG-1, MPEG-2 and MPEG-2.5, including
 mixed windows. PCM parity at 8 kHz is enforced by the same nonperiodic
 waveform gate as the other MPEG-2/2.5 sample rates.
