@@ -1917,8 +1917,11 @@ outlive the stream. PCM is decoded a frame at a time into a fixed
 constant buffering independent of file length. Xing/LAME delay,
 end-padding and synthesis priming are trimmed only when metadata is
 present and internally consistent; otherwise raw frame count is
-reported. Seeking reconstructs reservoir, IMDCT overlap and synthesis
-state from the beginning (correct but O(number of preceding frames)).
+reported. Seeking within the cached PCM frame requires no additional decoding
+or I/O. Forward seeks reuse the current reservoir/overlap/synthesis
+state and only decode the intervening frames; backward seeks beyond
+the cached frame rebuild from the beginning. Seeks remain exact and
+transactional on failure, but long backward jumps are still O(n).
 Malformed or discontinuous streams are rejected rather than guessed.
 This native backend can also be exercised through the **usual**
 `Audio_Codec_OpenMemory/GetInfo/ReadFrames/SeekFrame/Close` calls
