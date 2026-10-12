@@ -162,8 +162,11 @@ validated PCM, not a demonstrated performance win.
 
 The `07-audio-fuzz.yml` workflow maintains a persistent corpus and runs
 ASan/UBSan/libFuzzer over native memory, seekable and forward-only callback
-paths on relevant PRs. Its weekly schedule activates after this workflow reaches
-the repository default branch. Crashing inputs are uploaded as reproducers.
+paths on relevant PRs in both strict and recovery modes. The default-branch
+`08-audio-native-weekly.yml` wrapper checks out `audio-module` and runs those
+profiles every Monday at 04:23 UTC, with manual dispatch also available. This
+keeps the schedule active before the full Audio branch reaches `main` (PR #164).
+Crashing inputs are uploaded as reproducers and the corpus persists between runs.
 CRC-protected MP3 headers/side information are checked before decoder state
 is published; this CRC does not cover all main data. Strict mode reports corrupt frames and lost synchronization as errors.
 Define `AUDIO_CODEC_MP3_RECOVER_ERRORS=1` to enable bounded resynchronization
@@ -188,3 +191,4 @@ variants and physical large-file stress remain open validation/work items.
 A virtual 4.33-GB source tests 64-bit offsets/counters and a bounded cold seek;
 it does not establish physical disk performance.
 Do not remove miniaudio or close the umbrella issues based on headless results.
+
