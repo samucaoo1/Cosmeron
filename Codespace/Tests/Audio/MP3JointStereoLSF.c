@@ -16,21 +16,21 @@ int main(void) {
   sf.lsfIntensityLong[5]=0;
   sf.lsfIntensityLong[6]=1;
   sf.lsfIntensityLong[7]=2;
-  l[24]=4.0f;l[32]=4.0f;l[42]=4.0f;
+  l[30]=4.0f;l[36]=4.0f;l[44]=4.0f;
   assert(AUDIO_CODEC_FUNC(MP3_JointStereoLSF)(
       &h,&g,&sf,0,l,r,a,b)==STATUS_CONST(SUCCESS));
-  assert(near(a[24],4)&&near(b[24],4));
-  assert(near(a[32],4*0.8408964153f)&&near(b[32],4));
-  assert(near(a[42],4)&&near(b[42],4*0.8408964153f));
+  assert(near(a[30],4)&&near(b[30],4));
+  assert(near(a[36],4*0.8408964153f)&&near(b[36],4));
+  assert(near(a[44],4)&&near(b[44],4*0.8408964153f));
   assert(AUDIO_CODEC_FUNC(MP3_JointStereoLSF)(
       &h,&g,&sf,1,l,r,a,b)==STATUS_CONST(SUCCESS));
-  assert(near(a[32],4*0.70710678118f)&&near(b[32],4));
-  assert(near(a[42],4)&&near(b[42],4*0.70710678118f));
+  assert(near(a[36],4*0.70710678118f)&&near(b[36],4));
+  assert(near(a[44],4)&&near(b[44],4*0.70710678118f));
   h.msStereo=true;
   assert(AUDIO_CODEC_FUNC(MP3_JointStereoLSF)(
       &h,&g,&sf,0,l,r,a,b)==STATUS_CONST(SUCCESS));
-  assert(near(a[24],4*1.41421356237f));
-  assert(near(b[42],4*0.8408964153f*1.41421356237f));
+  assert(near(a[30],4*1.41421356237f));
+  assert(near(b[44],4*0.8408964153f*1.41421356237f));
   l[0]=2;r[0]=2;
   assert(AUDIO_CODEC_FUNC(MP3_JointStereoLSF)(
       &h,&g,&sf,0,l,r,a,b)==STATUS_CONST(SUCCESS));
