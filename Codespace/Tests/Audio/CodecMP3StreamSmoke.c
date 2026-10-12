@@ -1,6 +1,7 @@
 #define AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3 1
 #include "../../Cosmeron/Modules/Audio/CodecMinimal.h"
 #include <assert.h>
+#include <limits.h>
 #include <string.h>
 #include <stdio.h>
 
