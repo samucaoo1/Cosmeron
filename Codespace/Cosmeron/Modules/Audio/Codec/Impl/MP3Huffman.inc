@@ -168,20 +168,16 @@ AUDIO_CODEC_MP3_HUFFMAN_GRANULE_PROTOTYPE {
     if (AUDIO_INS(MP3_LongRates)[rateIndex] == sampleRate) break;
   if (rateIndex == 9) return STATUS_CONST(NOT_SUPPORTED);
   if (part->windowSwitching && part->blockType == 2) {
-    if (!part->mixedBlock) {
-      /* 9 whole short scalefactor bands (three windows each). The 8-kHz
-       * MPEG-2.5 layout reaches line 480, not line 36. */
-      region0 = 3U * AUDIO_INS(MP3_ShortBands)[rateIndex][9];
-    } else {
-      /* Mixed blocks have 8 region-0 bands: 8 long MPEG-1 sfb, or
-       * 6 long LSF sfb followed by 2 short (3-window) sfb. */
-      const unsigned int nLong = rateIndex < 3 ? 8U : 6U;
-      region0 = AUDIO_INS(MP3_LongBands)[rateIndex][nLong];
-      if (nLong == 6U)
-        region0 += 3U * (
-            AUDIO_INS(MP3_ShortBands)[rateIndex][5] -
-            AUDIO_INS(MP3_ShortBands)[rateIndex][3]);
-    }
+    /* Region counts address *scalefactor entries*, not whole groups of
+     * three short windows. Switched region0 spans 9 entries for pure
+     * short blocks (3 short bands x 3 windows), or 8 entries in mixed
+     * blocks. At 8 kHz a pure short band is 8 lines per window, hence
+     * the boundary is 72 instead of 36. */
+    static const uint16_t mixedRegion0[9] = {
+      36, 36, 36, 48, 52, 52, 48, 48, 64
+    };
+    region0 = part->mixedBlock ? mixedRegion0[rateIndex] :
+        3U * AUDIO_INS(MP3_ShortBands)[rateIndex][3];
     region1 = 576;
     if (region0 > 576) return STATUS_CONST(INVALID_SEQUENCE);
   } else {
