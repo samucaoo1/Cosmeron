@@ -1930,6 +1930,23 @@ test checks the ordinary API with this macro. Only complete, contiguous
 and supported MP3 frames are accepted by the experimental memory path;
 additional file/reader and interoperability coverage is still needed.
 
+**Native MP3 seekable file/reader streams (opt-in).** With
+`AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3=1`, the generic
+`Audio_Codec_OpenFile` and `Audio_Codec_OpenReader` now also choose
+native MPEG Layer III when the source is a valid contiguous MP3.
+An initial header scan determines the exact encoded length and checks
+rate, channels and frame bounds; the stream then keeps one compressed
+frame (up to 4096 bytes) plus one PCM frame in memory. Reads through
+callbacks tolerate partial delivery. `SeekFrame` reconstructs reservoir,
+IMDCT overlap and synthesis from the beginning, so it is O(target frame)
+but independent of overall file size in RAM. Xing/LAME gapless metadata
+uses the same validation rules as `MP3_MemoryOpen`. MP3 remains
+**miniaudio-backed without the opt-in macro**. The new cross-platform
+`CodecMP3StreamSmoke.c` and host-side `CodecMP3Stream.c` test both
+file and callback paths, including 3/7-byte partial reads and parity
+against the natively decoded memory stream. The callback reader must
+support absolute seeks; the caller retains ownership of its stream.
+
 **The coverage is not universal**. MPEG-2/2.5 intensity-stereo
 has verified PCM against independently constructed long/short/mixed
 bitstreams at 22.05 kHz, but additional sample rates, spectral
