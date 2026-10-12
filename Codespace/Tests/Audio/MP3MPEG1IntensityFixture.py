@@ -54,10 +54,12 @@ def payload(frame_no, granule, baseline, mono):
             l.put(1, 1)  # table 1 (0,0)
     r = Bits()
     if not baseline and not mono:
-        # MPEG-1 scalefac_compress=5 => slen1=1, slen2=0.
-        # There are 11 transmitted one-bit long scalefactors (sfb0..10).
-        for band in range(11):
-            r.put(((frame_no // 3) + granule + band) & 1, 1)
+        # MPEG-1 scalefac_compress=5 => slen1=slen2=1.
+        # All 21 long sfb have one transmitted bit. Upper bands remain
+        # position 0 so left-side spectral energy is intensity-coded.
+        for band in range(21):
+            r.put((((frame_no // 3) + granule + band) & 1)
+                  if band < 11 else 0, 1)
     return l, r
 
 
