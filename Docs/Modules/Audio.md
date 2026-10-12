@@ -2232,7 +2232,7 @@ OPSTATUS status = AUDIO_CODEC_FUNC(WriteWAV)(path, buffer);
 Header: `Cosmeron/Modules/Audio/Device/Device.h`
 
 Native callback output on Linux (ALSA), Windows (waveOut), macOS (AudioQueue)
-and FreeBSD/DragonFly (OSS), with temporary miniaudio fallback. Define
+FreeBSD/DragonFly (OSS), OpenBSD (sndio) and NetBSD (audioio), with temporary miniaudio fallback. Define
 `AUDIO_DEVICE_MINIAUDIO_FALLBACK=0` to exclude the imported backend.
 `OpenNamed` selects an enumerated native ID; `Enumerate`, `GetFormat` and
 `GetStatus` expose selection, callback format and asynchronous failure.

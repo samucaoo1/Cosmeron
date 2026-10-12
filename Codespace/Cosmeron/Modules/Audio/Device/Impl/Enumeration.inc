@@ -95,12 +95,22 @@ AUDIO_DEVICE_ENUMERATE_PROTOTYPE {
     }
     free(devices); dlclose(cf.library); dlclose(library);
   }
-#elif defined(__FreeBSD__) || defined(__DragonFly__)
+#elif defined(__FreeBSD__) || defined(__DragonFly__) || defined(__OpenBSD__) || defined(__NetBSD__)
   {
     unsigned int i;
     for(i=0;i<32;++i) {
-      char id[32]; snprintf(id,sizeof id,"/dev/dsp%u",i);
-      if (!access(id,F_OK)) status=callback(userData,id,id);
+      char id[32], path[32];
+#if defined(__OpenBSD__)
+      snprintf(path,sizeof path,"/dev/audio%u",i);
+      snprintf(id,sizeof id,"rsnd/%u",i);
+#elif defined(__NetBSD__)
+      snprintf(path,sizeof path,"/dev/audio%u",i);
+      snprintf(id,sizeof id,"%s",path);
+#else
+      snprintf(path,sizeof path,"/dev/dsp%u",i);
+      snprintf(id,sizeof id,"%s",path);
+#endif
+      if (!access(path,F_OK)) status=callback(userData,id,path);
       if (status!=STATUS_CONST(SUCCESS)) break;
     }
   }

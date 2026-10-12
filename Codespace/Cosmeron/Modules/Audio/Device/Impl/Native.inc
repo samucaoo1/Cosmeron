@@ -25,12 +25,19 @@ typedef atomic_int AUDIO_INS(TDeviceAtomic);
 #include <dlfcn.h>
 #include <pthread.h>
 #include <poll.h>
-#if defined(__FreeBSD__) || defined(__DragonFly__)
+#if defined(__FreeBSD__) || defined(__DragonFly__) || defined(__NetBSD__)
+#if defined(__NetBSD__)
+#include <sys/audioio.h>
+#else
 #include <sys/soundcard.h>
+#endif
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#elif defined(__OpenBSD__)
+#include <sndio.h>
+#include <unistd.h>
 #endif
 #endif
 
@@ -96,6 +103,17 @@ typedef struct AUDIO_INS(TNativeDevice) {
   int (*prepare)(void *);
   int (*drop)(void *);
   int (*close)(void *);
+#elif defined(__OpenBSD__)
+  struct sio_hdl *output;
+  struct sio_hdl *(*open)(const char *,unsigned int,int);
+  void (*initParams)(struct sio_par *);
+  int (*setParams)(struct sio_hdl *,struct sio_par *);
+  int (*getParams)(struct sio_hdl *,struct sio_par *);
+  size_t (*write)(struct sio_hdl *,const void *,size_t);
+  int (*start)(struct sio_hdl *);
+  int (*stop)(struct sio_hdl *);
+  int (*eof)(struct sio_hdl *);
+  void (*close)(struct sio_hdl *);
 #else
   int fd;
 #endif
@@ -174,9 +192,12 @@ static void AUDIO_INS(NativeQueueRender)(void *user, AudioQueueRef queue, AudioQ
 static void *AUDIO_INS(NativeDeviceWorker)(void *user) {
   AUDIO_INS(TNativeDevice) *s=(AUDIO_INS(TNativeDevice) *)user;
   while (AUDIO_DEVICE_LOAD(&s->started)) {
-    size_t done=0;
+    size_t done=0, total=512;
+#if !defined(__linux__)
+    total=512*s->config.channels*sizeof(int16_t);
+#endif
     AUDIO_INS(NativeDeviceRender)(s);
-    while (done<512 && AUDIO_DEVICE_LOAD(&s->started)) {
+    while (done<total && AUDIO_DEVICE_LOAD(&s->started)) {
 #if defined(__linux__)
       long n=s->write(s->output,s->pcm+done*s->config.channels,(unsigned long)(512-done));
       if (n==-EAGAIN || n==0) { (void)poll(NULL,0,5); continue; }
@@ -192,15 +213,23 @@ static void *AUDIO_INS(NativeDeviceWorker)(void *user) {
         AUDIO_DEVICE_STORE(&s->started,0); break;
       }
       done+=(size_t)n;
-#elif defined(__FreeBSD__) || defined(__DragonFly__)
-      size_t bytes=(512-done)*s->config.channels*sizeof(int16_t);
-      ssize_t n=write(s->fd,s->integerPCM+done*s->config.channels,bytes);
-      if (n<0 && (errno==EAGAIN || errno==EINTR)) { (void)poll(NULL,0,5); continue; }
-      if (n<=0 || (size_t)n%(s->config.channels*sizeof(int16_t))) {
+#elif defined(__OpenBSD__)
+      size_t n=s->write(s->output,(const unsigned char *)s->integerPCM+done,total-done);
+      if (!n && !s->eof(s->output)) { (void)poll(NULL,0,5); continue; }
+      if (!n || n>total-done) {
         AUDIO_DEVICE_STORE(&s->status,STATUS_CONST(NOT_AVAILABLE));
         AUDIO_DEVICE_STORE(&s->started,0); break;
       }
-      done+=(size_t)n/s->config.channels/sizeof(int16_t);
+      done+=n;
+#elif defined(__FreeBSD__) || defined(__DragonFly__) || defined(__NetBSD__)
+      size_t bytes=total-done;
+      ssize_t n=write(s->fd,(const unsigned char *)s->integerPCM+done,bytes);
+      if (n<0 && (errno==EAGAIN || errno==EINTR)) { (void)poll(NULL,0,5); continue; }
+      if (n<=0 || (size_t)n>bytes) {
+        AUDIO_DEVICE_STORE(&s->status,STATUS_CONST(NOT_AVAILABLE));
+        AUDIO_DEVICE_STORE(&s->started,0); break;
+      }
+      done+=(size_t)n;
 #else
       AUDIO_DEVICE_STORE(&s->status,STATUS_CONST(NOT_SUPPORTED));
       AUDIO_DEVICE_STORE(&s->started,0);
@@ -209,6 +238,12 @@ static void *AUDIO_INS(NativeDeviceWorker)(void *user) {
   }
 #if defined(__linux__)
   s->drop(s->output);
+#elif defined(__OpenBSD__)
+  (void)s->stop(s->output);
+#elif defined(__NetBSD__)
+  (void)ioctl(s->fd,AUDIO_FLUSH,0);
+#elif defined(__FreeBSD__) || defined(__DragonFly__)
+  (void)ioctl(s->fd,SNDCTL_DSP_RESET,0);
 #endif
   AUDIO_DEVICE_STORE(&s->started,0);
   return NULL;
@@ -226,7 +261,9 @@ static inline void AUDIO_INS(NativeDeviceRelease)(AUDIO_INS(TNativeDevice) *s) {
 #else
 #if defined(__linux__)
   if (s->output) s->close(s->output);
-#elif defined(__FreeBSD__) || defined(__DragonFly__)
+#elif defined(__OpenBSD__)
+  if (s->output) s->close(s->output);
+#elif defined(__FreeBSD__) || defined(__DragonFly__) || defined(__NetBSD__)
   if (s->fd>=0) close(s->fd);
 #endif
 #if !defined(__linux__)
@@ -322,6 +359,45 @@ static inline OPSTATUS AUDIO_INS(NativeDeviceOpen)(
     int format=s->formatValue(*(unsigned char *)&endian ? "FLOAT_LE" : "FLOAT_BE");
     if (format<0 || s->setParams(s->output,format,3,config->channels,config->sampleRate,1,40000)<0) goto fail;
   }
+#elif defined(__OpenBSD__)
+  {
+    struct sio_par format;
+    unsigned int little; uint16_t endian=1;
+    s->library=dlopen("libsndio.so",RTLD_NOW|RTLD_LOCAL); if (!s->library) goto fail;
+    AUDIO_DEVICE_SYMBOL(open,"sio_open"); AUDIO_DEVICE_SYMBOL(initParams,"sio_initpar");
+    AUDIO_DEVICE_SYMBOL(setParams,"sio_setpar"); AUDIO_DEVICE_SYMBOL(getParams,"sio_getpar");
+    AUDIO_DEVICE_SYMBOL(write,"sio_write"); AUDIO_DEVICE_SYMBOL(start,"sio_start");
+    AUDIO_DEVICE_SYMBOL(stop,"sio_flush"); AUDIO_DEVICE_SYMBOL(eof,"sio_eof");
+    AUDIO_DEVICE_SYMBOL(close,"sio_close");
+    s->output=s->open((!id || !strcmp(id,"default")) ? SIO_DEVANY : id,SIO_PLAY,1);
+    if (!s->output) goto fail;
+    little=*(unsigned char *)&endian ? 1U : 0U;
+    s->initParams(&format);
+    format.bits=16; format.bps=2; format.sig=1; format.le=little;
+    format.pchan=config->channels; format.rate=config->sampleRate;
+    format.appbufsz=512*3;
+    if (!s->setParams(s->output,&format) || !s->getParams(s->output,&format) ||
+        format.bits!=16 || format.bps!=2 || format.sig!=1 || format.le!=little ||
+        format.pchan!=config->channels || format.rate!=config->sampleRate) goto fail;
+  }
+#elif defined(__NetBSD__)
+  {
+    audio_info_t format;
+    uint16_t endian=1;
+    s->fd=-1;
+    if (!id || !strcmp(id,"default")) snprintf(s->id,sizeof s->id,"/dev/audio");
+    s->fd=open(s->id,O_WRONLY|O_NONBLOCK); if (s->fd<0) goto fail;
+    AUDIO_INITINFO(&format);
+    format.mode=AUMODE_PLAY;
+    format.play.sample_rate=config->sampleRate;
+    format.play.channels=config->channels;
+    format.play.precision=16;
+    format.play.encoding=*(unsigned char *)&endian ? AUDIO_ENCODING_SLINEAR_LE : AUDIO_ENCODING_SLINEAR_BE;
+    format.play.pause=0;
+    if (ioctl(s->fd,AUDIO_SETINFO,&format)<0 || ioctl(s->fd,AUDIO_GETINFO,&format)<0 ||
+        format.play.sample_rate!=config->sampleRate || format.play.channels!=config->channels ||
+        format.play.precision!=16 || format.play.encoding!=(unsigned int)(*(unsigned char *)&endian ? AUDIO_ENCODING_SLINEAR_LE : AUDIO_ENCODING_SLINEAR_BE)) goto fail;
+  }
 #elif defined(__FreeBSD__) || defined(__DragonFly__)
   s->fd=-1;
   if (!id || !strcmp(id,"default")) snprintf(s->id,sizeof s->id,"/dev/dsp");
@@ -393,6 +469,8 @@ static inline OPSTATUS AUDIO_INS(NativeDeviceStart)(AUDIO_INS(TNativeDevice) *s)
   AUDIO_DEVICE_STORE(&s->status,STATUS_CONST(SUCCESS));
 #if defined(__linux__)
   if (s->prepare(s->output)<0) return STATUS_CONST(NOT_AVAILABLE);
+#elif defined(__OpenBSD__)
+  if (!s->start(s->output)) return STATUS_CONST(NOT_AVAILABLE);
 #endif
   AUDIO_DEVICE_STORE(&s->started,1);
 #if defined(_WIN32)
@@ -408,7 +486,11 @@ static inline OPSTATUS AUDIO_INS(NativeDeviceStart)(AUDIO_INS(TNativeDevice) *s)
   }
 #else
   if (s->threadCreate(&s->worker,NULL,AUDIO_INS(NativeDeviceWorker),s)) {
-    AUDIO_DEVICE_STORE(&s->started,0); return STATUS_CONST(NOT_AVAILABLE);
+    AUDIO_DEVICE_STORE(&s->started,0);
+#if defined(__OpenBSD__)
+    (void)s->stop(s->output);
+#endif
+    return STATUS_CONST(NOT_AVAILABLE);
   }
 #endif
   s->workerCreated=true;

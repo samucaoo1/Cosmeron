@@ -54,7 +54,7 @@ typedef OPSTATUS (*AUDIO_DEVICE_TYPE(TEnumerateCallback))(
   static inline OPSTATUS AUDIO_DEVICE_FUNC(Enumerate)( \
       AUDIO_DEVICE_TYPE(TEnumerateCallback) callback, void *userData)
 AUDIO_DEVICE_ENUMERATE_PROTOTYPE;
-/* Native names are ALSA PCM names, waveOut numeric IDs CoreAudio UIDs or OSS paths.
+/* Native names are ALSA PCM names, waveOut numeric IDs CoreAudio UIDs or BSD audio identifiers.
  * NULL selects the default output. */
 #define AUDIO_DEVICE_OPEN_NAMED_PROTOTYPE \
   static inline OPSTATUS AUDIO_DEVICE_FUNC(OpenNamed)( \

@@ -236,3 +236,54 @@ jobs:
           ffmpeg -nostdin -v error -y -f lavfi -i 'aevalsrc=0.2*sin(2*PI*(173*t+111*t*t)):s=44100:d=8' -c:a libmp3lame -q:a 4 /tmp/benchmark.mp3
           /tmp/codec-benchmark native /tmp/benchmark.mp3
           /tmp/codec-benchmark miniaudio /tmp/benchmark.mp3
+
+  openbsd-native-devices:
+    name: OpenBSD / native sndio headers and headless lifecycle
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: vmactions/openbsd-vm@5f7b2c933b8846a138361d6843c52af4bef5d945
+        with:
+          usesh: true
+          run: |
+            set -eu
+            cd Codespace/Tests/Audio
+            for test in DeviceNative PCMProduction NativeCodecProduction FLACIntegrity MP3CRC; do
+              cc -std=c11 -Wall -Wextra -Wpedantic -Werror "$test.c" -o "/tmp/$test"
+              "/tmp/$test"
+            done
+
+  netbsd-native-devices:
+    name: NetBSD / native audioio headers and headless lifecycle
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: vmactions/netbsd-vm@c8a0d7ddb84619a7a8cc4e652efa7950b3fd9f92
+        with:
+          usesh: true
+          run: |
+            set -eu
+            cd Codespace/Tests/Audio
+            for test in DeviceNative PCMProduction NativeCodecProduction FLACIntegrity MP3CRC; do
+              cc -std=c11 -Wall -Wextra -Wpedantic -Werror "$test.c" -o "/tmp/$test"
+              "/tmp/$test"
+            done
+
+  dragonfly-native-devices:
+    name: DragonFly / native OSS headers and headless lifecycle
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: vmactions/dragonflybsd-vm@4ab776fa9f914fbea72f13715b451e77e7ef5c41
+        with:
+          usesh: true
+          run: |
+            set -eu
+            cd Codespace/Tests/Audio
+            for test in DeviceNative PCMProduction NativeCodecProduction FLACIntegrity MP3CRC; do
+              cc -std=c11 -Wall -Wextra -Wpedantic -Werror "$test.c" -o "/tmp/$test"
+              "/tmp/$test"
+            done

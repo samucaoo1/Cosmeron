@@ -94,9 +94,10 @@ For standalone output without imported code, define
 | Windows | Runtime-loaded waveOut | signed16 interleaved, double-buffered | Numeric output ID |
 | macOS | Runtime-loaded AudioQueue/CoreAudio | float32 interleaved | CoreAudio device UID |
 | FreeBSD/DragonFly | OSS | native-endian signed16 | `/dev/dsp*` path |
-| OpenBSD/NetBSD | Compatibility fallback | backend dependent | Default |
+| OpenBSD | Runtime-loaded sndio | native-endian signed16 | sndio name (`rsnd/N`) |
+| NetBSD | audioio | native-endian signed16 | `/dev/audio*` path |
 
-BSD OSS workers require a thread runtime already loaded by the host at startup.
+BSD workers require a thread runtime already loaded by the host at startup.
 `RTLD_NOLOAD` explicitly prevents unsafe late loading of libthr/libpthread.
 Without it, Open returns `NOT_AVAILABLE`; default configuration can use the
 compatibility fallback. A standalone native-only BSD callback build therefore
@@ -170,7 +171,6 @@ right samples as expected output. Broader independent validation is still needed
 before claiming complete 8-kHz mixed/intensity conformance.
 
 Headless CI and ALSA `null` validate compilation and lifecycle only. Physical
-playback, unplug/underrun behavior on actual drivers, native OpenBSD/NetBSD
-backends, broader LSF intensity encoder coverage, APE/iTunSMPB/VBRI gapless
+playback, unplug/underrun behavior on actual drivers, native BSD real-driver validation, broader LSF intensity encoder coverage, APE/iTunSMPB/VBRI gapless
 variants and arbitrary large-file stress remain open validation/work items.
 Do not remove miniaudio or close the umbrella issues based on headless results.
