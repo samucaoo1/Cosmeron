@@ -94,7 +94,9 @@ AUDIO_CODEC_MP3_JOINT_STEREO_LSF_PROTOTYPE {
       q*=quarter[exp%4U];
       if (position&1U) {l[i]=a*q; r[i]=a;}
       else {l[i]=a; r[i]=a*q;}
-      if (header->msStereo) {l[i]*=1.41421356237f;r[i]*=1.41421356237f;}
+      /* Cosmeron's MS path already uses the 1/sqrt(2) normalization.
+       * Unlike the unnormalized reference's mid/side transform, the
+       * intensity path must not receive an additional sqrt(2) gain. */
       if (b!=0) return STATUS_CONST(INVALID_SEQUENCE);
     } else if (header->msStereo) {
       l[i]=(a+b)*0.70710678118f;
