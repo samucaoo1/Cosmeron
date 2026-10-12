@@ -38,7 +38,8 @@ def granule(bits, part_length, big_values, gain, compress, table):
 
 
 def make_frame(frame_num, ms, intensity_scale, baseline=False):
-    header = bytes((0xFF, 0xF3, 0x80, 0x60 if ms and baseline else\n                    0x40 if baseline else 0x70 if ms else 0x50))
+    header = bytes((0xFF, 0xF3, 0x80, 0x60 if ms and baseline else
+                    0x40 if baseline else 0x70 if ms else 0x50))
     # MPEG-2 22.05kHz, 64kbps, stereo: 208 bytes, 17-byte side info.
     bands = [0, 6, 12, 18, 24, 30, 36]
     code = Bits()
