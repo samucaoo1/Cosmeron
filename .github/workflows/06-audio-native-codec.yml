@@ -62,6 +62,8 @@ jobs:
           cc -std=c11 -Wall -Wextra -Wpedantic -Werror MP3ExperimentalCompare.c -o /tmp/mp3-lsf-is-compare
           dir="$(mktemp -d)"
           trap 'rm -rf "$dir"' EXIT
+          python3 MP3LSFIntensityFixture.py "$dir/mono.mp3" 0 0 mono
+          COSMERON_MP3_BASELINE_STRICT=1 /tmp/mp3-lsf-is-compare "$dir/mono.mp3"
           python3 MP3LSFIntensityFixture.py "$dir/baseline.mp3" 0 0 baseline
           COSMERON_MP3_BASELINE_STRICT=1 /tmp/mp3-lsf-is-compare "$dir/baseline.mp3"
           for ms in 0 1; do
