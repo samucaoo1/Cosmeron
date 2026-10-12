@@ -1908,6 +1908,21 @@ tested encodings.** Independent intensity-stereo fixtures at other
 rates/bitrates, more varied coded right-channel spectra and other
 encoders still need differential testing before production adoption.
 
+**Native MP3 memory stream (opt-in).** Include
+`Audio/Codec/MP3Memory.h` to use `MP3_MemoryOpen`,
+`MP3_MemoryInfo`, `MP3_MemoryRead`, `MP3_MemorySeek`
+and `MP3_MemoryClose`. The memory source is borrowed and must
+outlive the stream. PCM is decoded a frame at a time into a fixed
+1152-frame staging buffer, allowing small caller read sizes and
+constant buffering independent of file length. Xing/LAME delay,
+end-padding and synthesis priming are trimmed only when metadata is
+present and internally consistent; otherwise raw frame count is
+reported. Seeking reconstructs reservoir, IMDCT overlap and synthesis
+state from the beginning (correct but O(number of preceding frames)).
+Malformed or discontinuous streams are rejected rather than guessed.
+This standalone path is intended for differential validation **before
+promotion to `Audio_Codec_OpenMemory/OpenFile/OpenReader`**.
+
 **The coverage is not universal**. MPEG-2/2.5 intensity-stereo
 has verified PCM against independently constructed long/short/mixed
 bitstreams at 22.05 kHz, but additional sample rates, spectral
