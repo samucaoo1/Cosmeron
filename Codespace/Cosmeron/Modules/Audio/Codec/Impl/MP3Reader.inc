@@ -58,9 +58,21 @@ static inline OPSTATUS AUDIO_INS(MP3_ReaderOpen)(
   /* The first 10 bytes suffice to inspect an optional ID3v2 tag. */
   status = AUDIO_INS(WAV_ReadExact)(reader, probe, sizeof probe);
   if (status != STATUS_CONST(SUCCESS)) return status;
-  status = AUDIO_CODEC_FUNC(MP3_SkipID3)(
-      probe, sizeof probe, &beginning);
-  if (status != STATUS_CONST(SUCCESS)) return status;
+  /* MP3_SkipID3 requires the entire tag in memory. A seekable
+   * reader has only its ten-byte header, so decode the synchsafe
+   * tag length in place and skip the payload without allocating. */
+  if (!memcmp(probe, "ID3", 3)) {
+    size_t tagSize = 0, i;
+    if (probe[3] < 2 || probe[3] > 4 || probe[4] == 0xff)
+      return STATUS_CONST(NOT_SUPPORTED);
+    for (i = 6; i < 10; ++i) {
+      if (probe[i] & 0x80U) return STATUS_CONST(INVALID_SEQUENCE);
+      tagSize = (tagSize << 7) | probe[i];
+    }
+    beginning = 10 + tagSize +
+        ((probe[3] == 4 && (probe[5] & 0x10U)) ? 10U : 0U);
+    if (beginning > INT64_MAX) return STATUS_CONST(OUT_OF_RANGE);
+  }
   offset = beginning;
   for (;;) {
     status = AUDIO_INS(MP3_ReaderHeader)(reader, offset, headerBytes);
