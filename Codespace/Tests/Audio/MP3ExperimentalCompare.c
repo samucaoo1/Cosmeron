@@ -234,6 +234,36 @@ int main(int argc, char **argv) {
     assert(bestRatio >= -0.0000001 && bestRatio < 0.00001);
     assert(bestGain > 0.999 && bestGain < 1.001);
   }
+  if (getenv("COSMERON_MP3_MPEG1_BASELINE_STRICT") != NULL) {
+    double gain = 0, energy = 0, ratio;
+    assert(!hasXing && intensityFrames == 0 && skipped == 0);
+    assert(used >= 1536 + 2048 && frames >= 1536 + 2048);
+    ratio = compare_at(nativePCM, referencePCM,1536,2048,
+                       channels,0,&gain,&energy);
+    printf("[MPEG1 baseline fixed alignment] residual=%.10g gain=%.10g\n",
+           ratio,gain);
+    fflush(stdout);
+    assert(ratio >= -0.0000001 && ratio < 0.00001);
+    assert(gain > 0.999 && gain < 1.001);
+  }
+  if (getenv("COSMERON_MP3_MPEG1_INTENSITY_STRICT") != NULL) {
+    /* Independent MPEG-1 bitstreams, no Xing/gapless metatags. */
+    double gain = 0, energy = 0, ratio;
+    assert(!hasXing && intensityFrames >= 16 && skipped == 0);
+    if (getenv("COSMERON_MP3_REQUIRE_MS") != NULL)
+      assert(msFrames >= 16);
+    /* Our self-contained frame generator carries no Xing or encoder
+     * delay: compare the same samples rather than optimizing lag across
+     * repeated spectral frames with ambiguous correlations. */
+    assert(used >= 1536 + 2048 && frames >= 1536 + 2048);
+    ratio = compare_at(nativePCM, referencePCM,1536,2048,
+                       channels,0,&gain,&energy);
+    printf("[MPEG1 intensity fixed alignment] residual=%.10g gain=%.10g\n",
+           ratio,gain);
+    fflush(stdout);
+    assert(ratio >= -0.0000001 && ratio < 0.00001);
+    assert(gain > 0.999 && gain < 1.001);
+  }
   if (getenv("COSMERON_MP3_LSF_INTENSITY_STRICT") != NULL) {
     /* An MP3 made by our independent intensity-stereo fixture generator
      * has no Xing/LAME tags. Accept arbitrary decoder latency, but insist

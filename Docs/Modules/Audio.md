@@ -1829,10 +1829,10 @@ The opt-in `Audio/Codec/MP3Experimental.h` supplies
 `Audio_Codec_TMP3Experimental`, a zero-initialized per-stream state.
 Pass a complete MPEG-1 frame (1,152 output frames) or
 MPEG-2/2.5 LSF frame (576 output frames) and a caller-owned buffer of
-interleaved float PCM. Mono, ordinary stereo and MS stereo are supported
-for the specified verified variants. MPEG-2/2.5 intensity stereo and
-MPEG-2/2.5 intensity stereo returns `NOT_SUPPORTED` while its
-waveform fidelity remains unverified. The call retains
+interleaved float PCM. Mono, ordinary stereo, MS stereo and intensity stereo are
+supported experimentally in the covered MPEG-1, MPEG-2 and MPEG-2.5
+frame variants. All PCM modes still require broader cross-encoder
+and malformed-stream interoperability testing before default adoption. The call retains
 reservoir, overlap and synthesis state across frames. For stereo,
 `MP3_JointStereo` identifies right-channel nonzero spectral bands before
 the short-block reorder, applies intensity-stereo scalefactors above the
@@ -1840,14 +1840,20 @@ transmitted right-hand region, and uses MS only on other bands when the
 MPEG header requests it. It includes long, short, mixed and untransmitted
 terminal-scalefactor-band treatment, and can combine MS+intensity.
 
-The standalone `MP3JointStereo.c` tests cover this routing, while the
-PCM regression harness uses a separate LAME-generated MS joint-stereo
-fixture. **Real-world intensity-stereo PCM parity is not yet certified**:
-the ordinary LAME fixtures mostly exercise MS stereo; additional
-reference-encoded intensity bitstreams and edge-case tests remain needed.
-The experimental API does not provide file-level reading or seeking.
-MPEG-2/2.5 ordinary stereo/mono PCM is available on a limited,
-opt-in basis only after the corresponding LSF parity checks.
+The standalone `MP3JointStereo.c` tests cover spectral routing.
+`MP3MPEG1IntensityFixture.py` independently constructs genuine
+MPEG-1 Layer III long-block frames with transmitted intensity positions
+and nonzero Huffman data. The PCM CI compares intensity and
+MS+intensity against miniaudio with **zero-lag, near-unity gain**
+and residual below `1e-5`, alongside mono and ordinary stereo
+controls. The newly corrected MPEG-1 path does not apply a duplicate
+`sqrt(2)` intensity gain when MS is enabled.
+
+MPEG-2/2.5 intensity long/short/mixed frames also have independent
+parity coverage. All these modes remain experimental; broader
+intensity fixtures from unrelated encoders, bitrates and sample
+rates are still needed. Opt-in native MP3 file, memory and seekable
+callback streaming are described below; default MP3 remains miniaudio.
 
 The standalone `MP3_ParseXing` primitive now inspects the first
 frame's `Xing`/`Info` header for encoded frame/byte counts and
