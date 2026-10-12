@@ -140,6 +140,28 @@ static void runFaults(const unsigned char *bytes, size_t size) {
   assert(status == STATUS_CONST(GENERIC_ERROR) && context.failSeek == 0);
   checkNext(&stream, &reference, current, channels);
   current += 37;
+  /* Premature callback EOF and invalid over-reporting at seek time
+   * must also leave the active decoder positioned at the old PCM frame. */
+  context.returnEOF = 1;
+  status = AUDIO_CODEC_FUNC(SeekFrame)(&stream, frames/2);
+  assert(status == STATUS_CONST(INCOMPLETE_SEQUENCE));
+  checkNext(&stream, &reference, current, channels);
+  current += 37;
+  context.overreport = 1;
+  status = AUDIO_CODEC_FUNC(SeekFrame)(&stream, frames/2);
+  assert(status == STATUS_CONST(INVALID_SEQUENCE));
+  checkNext(&stream, &reference, current, channels);
+  current += 37;
+  {
+    size_t previousSize = context.size;
+    /* Simulate a previously valid file becoming shorter after Open. */
+    context.size = previousSize / 3;
+    status = AUDIO_CODEC_FUNC(SeekFrame)(&stream, frames/2);
+    assert(status != STATUS_CONST(SUCCESS));
+    context.size = previousSize;
+    checkNext(&stream, &reference, current, channels);
+    current += 37;
+  }
   assert(AUDIO_CODEC_FUNC(SeekFrame)(
       &stream, frames+1) == STATUS_CONST(OUT_OF_RANGE));
   checkNext(&stream, &reference, current, channels);
