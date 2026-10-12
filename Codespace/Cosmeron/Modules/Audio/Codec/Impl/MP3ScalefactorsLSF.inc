@@ -115,6 +115,25 @@ AUDIO_CODEC_MP3_SCALEFACTORS_LSF_PROTOTYPE {
     for (i = 6; i < 33; ++i)
       result.shortBands[3U + (i-6U)/3U][(i-6U)%3U] = raw[i];
   }
+  if (intensity) {
+    uint8_t sentinel[4];
+    unsigned int g, k = 0;
+    for (g = 0; g < 4; ++g)
+      sentinel[g] = slen[g] ? (uint8_t)((1U << slen[g]) - 1U) : 255U;
+    for (g = 0; g < 4; ++g) {
+      for (i = 0; i < partitions[family][kind][g]; ++i, ++k) {
+        uint8_t pos = raw[k] == sentinel[g] ? 255U : raw[k];
+        if (kind == 0)
+          result.lsfIntensityLong[k] = pos;
+        else if (kind == 1)
+          result.lsfIntensityShort[k / 3U][k % 3U] = pos;
+        else if (k < 6)
+          result.lsfIntensityLong[k] = pos;
+        else
+          result.lsfIntensityShort[3U+(k-6U)/3U][(k-6U)%3U] = pos;
+      }
+    }
+  }
   result.part2Bits = (uint16_t)(bits.cursor-offset);
   *outScale = result;
   *outIntensityScale = intensity ?
