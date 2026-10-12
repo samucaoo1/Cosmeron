@@ -259,14 +259,29 @@ static inline OPSTATUS AUDIO_INS(MP3_ReaderSeek)(
   current = decoder->mp3Stream;
   if (frameIndex > current->frameCount) return STATUS_CONST(OUT_OF_RANGE);
   if (frameIndex == current->presented) return STATUS_CONST(SUCCESS);
+  /* In-frame seeks can adjust the staged PCM cursor without touching
+   * the Reader callbacks or restarting the synthesis filterbank. */
+  if (current->stagedFrames) {
+    uint64_t rawTarget = current->rawFirst + frameIndex;
+    uint64_t stagedEnd = current->stagedFirst + current->stagedFrames;
+    if (rawTarget >= current->stagedFirst && rawTarget <= stagedEnd) {
+      current->stagedCursor = (size_t)(rawTarget - current->stagedFirst);
+      current->presented = frameIndex;
+      return STATUS_CONST(SUCCESS);
+    }
+  }
   scratch = (AUDIO_INS(TMP3ReaderStream) *)malloc(sizeof *scratch);
   if (!scratch) return STATUS_CONST(OUT_OF_MEMORY);
   *scratch = *current;
-  memset(&scratch->decoder, 0, sizeof scratch->decoder);
-  scratch->nextByte = scratch->firstByte;
-  scratch->rawDecoded = scratch->stagedFirst = scratch->presented = 0;
-  scratch->stagedCursor = scratch->stagedFrames = 0;
-  remaining = frameIndex;
+  /* Reuse decoded history for a forward seek. Only an older target
+   * outside the current PCM stage requires a full stream replay. */
+  if (frameIndex < current->presented) {
+    memset(&scratch->decoder, 0, sizeof scratch->decoder);
+    scratch->nextByte = scratch->firstByte;
+    scratch->rawDecoded = scratch->stagedFirst = scratch->presented = 0;
+    scratch->stagedCursor = scratch->stagedFrames = 0;
+  }
+  remaining = frameIndex - scratch->presented;
   while (remaining) {
     size_t n = remaining > 1152 ? 1152 : (size_t)remaining, got = 0;
     OPSTATUS status = AUDIO_INS(MP3_ReaderConsume)(
