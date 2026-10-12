@@ -182,8 +182,10 @@ static inline OPSTATUS AUDIO_INS(MP3_ReaderConsume)(
       AUDIO_CODEC_TYPE(TMP3FrameInfo) header;
       unsigned char prefix[4];
       size_t decoded = 0;
-      if (stream->nextByte >= stream->lastByte)
-        return STATUS_CONST(INCOMPLETE_SEQUENCE);
+      if (stream->nextByte >= stream->lastByte) {
+        status = STATUS_CONST(INCOMPLETE_SEQUENCE);
+        break;
+      }
       status = AUDIO_INS(MP3_ReaderHeader)(
           reader, stream->nextByte, prefix);
       if (status != STATUS_CONST(SUCCESS)) break;
