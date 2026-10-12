@@ -22,11 +22,12 @@ AUDIO_CODEC_MP3_JOINT_STEREO_LSF_PROTOTYPE {
   int lastLong = -1, lastShort[3] = {-1,-1,-1};
   unsigned int rate, band, win, nLong, shortStart;
   size_t at = 0, i;
-  bool mixed, shortBlock;
+  bool mixed, shortBlock, anyShort = false;
   if (!header || !part || !scale || !left || !right ||
       !outLeft || !outRight || outLeft == outRight || intensityScale > 1)
     return STATUS_CONST(INVALID_ARGUMENT);
-  if (header->mpegVersion == 1 || header->channels != 2)
+  if ((header->mpegVersion != 2 && header->mpegVersion != 25) ||
+      header->channels != 2 || !header->intensityStereo)
     return STATUS_CONST(NOT_SUPPORTED);
   for (rate=0;rate<9;++rate)
     if (AUDIO_INS(MP3_LongRates)[rate] == header->sampleRate) break;
@@ -54,7 +55,7 @@ AUDIO_CODEC_MP3_JOINT_STEREO_LSF_PROTOTYPE {
       for (win=0;win<3;++win)
         for (i=0;i<width;++i)
           if (right[at+win*width+i]!=0) {
-            lastShort[win]=(int)band; break;
+            lastShort[win]=(int)band; anyShort=true; break;
           }
       at+=3U*width;
     }
@@ -62,8 +63,9 @@ AUDIO_CODEC_MP3_JOINT_STEREO_LSF_PROTOTYPE {
   }
   for (band=0;band<nLong;++band) {
     unsigned int p=band==21 ?
-        scale->lsfIntensityLong[20] : scale->lsfIntensityLong[band];
-    if ((int)band>lastLong && p!=255)
+        (lastLong>=20 ? 0U : scale->lsfIntensityLong[20]) :
+        scale->lsfIntensityLong[band];
+    if ((int)band>lastLong && !anyShort && p!=255)
       for (i=AUDIO_INS(MP3_LongBands)[rate][band];
            i<AUDIO_INS(MP3_LongBands)[rate][band+1];++i)
         pos[i]=(uint8_t)p;
@@ -74,7 +76,8 @@ AUDIO_CODEC_MP3_JOINT_STEREO_LSF_PROTOTYPE {
       size_t width=AUDIO_INS(MP3_ShortBands)[rate][band+1]-
           AUDIO_INS(MP3_ShortBands)[rate][band];
       for (win=0;win<3;++win) {
-        unsigned int p=band==12 ? scale->lsfIntensityShort[11][win] :
+        unsigned int p=band==12 ?
+            (lastShort[win]>=11 ? 0U : scale->lsfIntensityShort[11][win]) :
             scale->lsfIntensityShort[band][win];
         if ((int)band>lastShort[win] && p!=255)
           for (i=0;i<width;++i) pos[at+win*width+i]=(uint8_t)p;
