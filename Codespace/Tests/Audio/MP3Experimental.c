@@ -48,8 +48,9 @@ static void syntheticTests(void) {
   for (i = 0; i < frames * 2; ++i) assert(pcm[i] == 0);
   pcm[0] = 789.f;
 
-  /* MPEG-2.5, 8-kHz raw frame: fail closed until PCM is bitstream-
-   * equivalent to the reference; preserve stream state and output. */
+  /* MPEG-2.5, 8-kHz zero-energy frame on a fresh logical stream.
+   * Reusing the 44.1-kHz state is intentionally invalid, but a clean
+   * decoder should produce exactly 576 zero PCM frames. */
   frame[1] = 0xe3;
   frame[2] = 0x48;
   frame[3] = 0xc4;
@@ -57,8 +58,16 @@ static void syntheticTests(void) {
   pcm[0] = 789.f;
   assert(AUDIO_CODEC_FUNC(MP3_ExperimentFrame)(
       &decoder, frame, sizeof frame, pcm, 576, &frames, &info) ==
-      STATUS_CONST(NOT_SUPPORTED));
+      STATUS_CONST(INVALID_SEQUENCE));
   assert(pcm[0] == 789.f && !memcmp(&snapshot,&decoder,sizeof decoder));
+  {
+    AUDIO_CODEC_TYPE(TMP3Experimental) lowRate = {0};
+    assert(AUDIO_CODEC_FUNC(MP3_ExperimentFrame)(
+        &lowRate, frame, sizeof frame, pcm, 576, &frames, &info) ==
+        STATUS_CONST(SUCCESS));
+    assert(info.sampleRate == 8000 && frames == 576);
+    for (i = 0; i < frames; ++i) assert(pcm[i] == 0.f);
+  }
   frame[1] = 0xfb;
   frame[2] = 0x90;
 
