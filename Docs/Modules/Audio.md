@@ -1890,18 +1890,30 @@ switch between codebooks for MPEG-1, MPEG-2 and MPEG-2.5, including
 mixed windows. PCM parity at 8 kHz is enforced by the same nonperiodic
 waveform gate as the other MPEG-2/2.5 sample rates.
 
-The opt-in frame-level decoder now additionally routes MPEG-2/2.5
+The opt-in frame-level decoder additionally routes MPEG-2/2.5
 intensity stereo using the LSF intensity positions and the
-`intensity_scale` bit (including mid/side combinations). A separate
-`MP3JointStereoLSF.c` regression tests spectral factors and malformed
-inputs; **PCM parity on independently encoded LSF intensity streams
-is not yet established**, so this is experimental.
+`intensity_scale` bit (including mid/side combinations).
+`MP3JointStereoLSF.c` checks the spectral factors, coded-band
+eligibility and malformed inputs. The independent generator
+`MP3LSFIntensityFixture.py` constructs valid MPEG-2/22.05-kHz
+Layer III bitstreams from Huffman symbols and scalefactor positions,
+without depending on a third-party MP3 encoder. For **long, short
+and mixed blocks**, `intensity_scale` 0/1, and MS enabled/disabled,
+the CI requires PCM residual below `1e-5` and gain within 0.1%
+against miniaudio. On those 12 cases, residuals are approximately
+`1.8e-8` to `5.3e-8` (including baseline streams).
 
-**The coverage is not universal**. Automatic intensity-stereo
-band handling is implemented but is still awaiting independent
-intensity-encoded PCM fixtures. MPEG-2/2.5 intensity-stereo PCM,
-file/reader streaming, seeks, and several gapless metadata
-cases remain unfinished. Production
+**The resulting native PCM coverage is deliberately limited to these
+tested encodings.** Independent intensity-stereo fixtures at other
+rates/bitrates, more varied coded right-channel spectra and other
+encoders still need differential testing before production adoption.
+
+**The coverage is not universal**. MPEG-2/2.5 intensity-stereo
+has verified PCM against independently constructed long/short/mixed
+bitstreams at 22.05 kHz, but additional sample rates, spectral
+patterns, bitrates and third-party-encoder streams need verification.
+File/reader streaming, seeks and several gapless metadata variants
+also remain unfinished. Production
 `OpenFile`, `OpenMemory` and `OpenReader` therefore **remain on
 miniaudio** until broader fixture parity and robustness are verified.
 
