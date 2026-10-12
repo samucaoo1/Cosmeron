@@ -161,6 +161,17 @@ AUDIO_CODEC_MP3_INTENSITY_BAND_PROTOTYPE;
 
 AUDIO_CODEC_MP3_JOINT_STEREO_PROTOTYPE;
 
+#define AUDIO_CODEC_MP3_JOINT_STEREO_LSF_PROTOTYPE                            \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_JointStereoLSF)(                \
+      const AUDIO_CODEC_TYPE(TMP3FrameInfo) *header,                          \
+      const AUDIO_CODEC_TYPE(TMP3Granule) *part,                              \
+      const AUDIO_CODEC_TYPE(TMP3Scalefactors) *scale,                        \
+      uint8_t intensityScale,                                                \
+      const float left[576], const float right[576],                          \
+      float outLeft[576], float outRight[576])
+
+AUDIO_CODEC_MP3_JOINT_STEREO_LSF_PROTOTYPE;
+
 #define AUDIO_CODEC_MP3_REORDER_SHORT_PROTOTYPE                            \
   static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_ReorderShort)(                  \
       const float input[576], const AUDIO_CODEC_TYPE(TMP3Granule) *part,     \
