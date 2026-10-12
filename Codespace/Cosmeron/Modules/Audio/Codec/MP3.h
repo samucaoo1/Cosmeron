@@ -1,4 +1,11 @@
 #pragma once
+/* Recovery is explicitly lossy; strict frame validation remains the default. */
+#ifndef AUDIO_CODEC_MP3_RECOVER_ERRORS
+#define AUDIO_CODEC_MP3_RECOVER_ERRORS 0
+#endif
+#ifndef AUDIO_CODEC_MP3_MAX_RESYNC_BYTES
+#define AUDIO_CODEC_MP3_MAX_RESYNC_BYTES 65536U
+#endif
 /* Native MPEG Layer III framing. This is not yet an MP3 PCM decoder.
  * C11, header-only, independent of vendor decoders and external linking. */
 #include "../Audio.space"

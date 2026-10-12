@@ -32,12 +32,21 @@ ffmpeg -nostdin -v error -y -f lavfi \
   -c:a libshine -b:a 128k "$dir/shine.mp3"
 "$build/MP3MemoryParity" "$dir/shine.mp3"
 "$build/NativeCodecProduction" "$dir/shine.mp3"
-# Long VBR stream crosses several checkpoint intervals.
+# Long VBR stream exercises cold indexed seeking and sample-exact preroll.
 ffmpeg -nostdin -v error -y -f lavfi \
-  -i 'aevalsrc=0.2*sin(2*PI*(173*t+111*t*t)):s=44100:d=8' \
+  -i 'aevalsrc=0.2*sin(2*PI*(173*t+111*t*t)):s=44100:d=24' \
   -c:a libmp3lame -q:a 4 "$dir/long-vbr.mp3"
 "$build/MP3MemoryParity" "$dir/long-vbr.mp3"
 "$build/NativeCodecProduction" "$dir/long-vbr.mp3"
+# Long independent short/mixed streams check hybrid and filterbank restoration.
+for layout in long short mixed; do
+  python3 MP3MPEG1IntensityFixture.py "$dir/seek.mp3" 1 intensity 2048 "$layout" 32000 1 64
+  "$build/NativeCodecProduction" "$dir/seek.mp3"
+  for rate in 8000 11025 12000 16000 22050 24000; do
+    python3 MP3LSFIntensityFixture.py "$dir/seek-lsf.mp3" 1 1 "$layout" "$rate" 32 1 2048
+    "$build/NativeCodecProduction" "$dir/seek-lsf.mp3"
+  done
+done
 for encoder in libFLAC ffmpeg; do
   for depth in 16 24 32; do
     if [ "$encoder" = ffmpeg ]; then

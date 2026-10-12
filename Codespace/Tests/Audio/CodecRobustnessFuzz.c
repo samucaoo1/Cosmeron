@@ -17,7 +17,7 @@ static OPSTATUS seek_bytes(void *user,int64_t offset,AUDIO_CODEC_TYPE(TSeekOrigi
 int LLVMFuzzerTestOneInput(const uint8_t *data,size_t size) {
   AUDIO_CODEC_TYPE(TDecoder) decoder={0};
   float pcm[128*8]; size_t got=0; unsigned int mode;
-  if (size<4 || size>1024*1024) return 0;
+  if (size<4 || size>65536) return 0;
   /* Only native recognizable input; never fuzz third-party fallbacks. */
   if (memcmp(data,"fLaC",4) && memcmp(data,"ID3",3) &&
       !(data[0]==0xff && (data[1]&0xe0)==0xe0)) return 0;
@@ -30,6 +30,14 @@ int LLVMFuzzerTestOneInput(const uint8_t *data,size_t size) {
       unsigned int i;
       for(i=0;i<4;++i) {
         if (AUDIO_CODEC_FUNC(ReadFrames)(&decoder,pcm,128,&got)!=STATUS_CONST(SUCCESS)) break;
+      }
+      {
+        AUDIO_CODEC_TYPE(TInfo) info;
+        if(mode!=2 && AUDIO_CODEC_FUNC(GetInfo)(&decoder,&info)==STATUS_CONST(SUCCESS) &&
+            info.frameCount>64*1152 && info.frameCount<1024*1152) {
+          (void)AUDIO_CODEC_FUNC(SeekFrame)(&decoder,info.frameCount*3/4);
+          (void)AUDIO_CODEC_FUNC(BuildSeekIndex)(&decoder);
+        }
       }
       (void)AUDIO_CODEC_FUNC(SeekFrame)(&decoder,0);
       (void)AUDIO_CODEC_FUNC(ReadFrames)(&decoder,pcm,128,&got);

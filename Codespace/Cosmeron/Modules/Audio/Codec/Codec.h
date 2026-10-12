@@ -91,6 +91,12 @@ AUDIO_CODEC_WRITE_WAV_PROTOTYPE;
 #define AUDIO_CODEC_VERIFY_INTEGRITY_PROTOTYPE \
   static inline OPSTATUS AUDIO_CODEC_FUNC(VerifyIntegrity)(AUDIO_CODEC_TYPE(TDecoder) *decoder)
 AUDIO_CODEC_VERIFY_INTEGRITY_PROTOTYPE;
+/* Diagnostics describe the current (seek-restorable) native MP3 state. */
+#define AUDIO_CODEC_GET_RECOVERY_COUNTS_PROTOTYPE \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(GetRecoveryCounts)( \
+      const AUDIO_CODEC_TYPE(TDecoder) *decoder,uint64_t *outDroppedBytes, \
+      uint64_t *outConcealedFrames)
+AUDIO_CODEC_GET_RECOVERY_COUNTS_PROTOTYPE;
 #define AUDIO_CODEC_BUILD_SEEK_INDEX_PROTOTYPE \
   static inline OPSTATUS AUDIO_CODEC_FUNC(BuildSeekIndex)(AUDIO_CODEC_TYPE(TDecoder) *decoder)
 AUDIO_CODEC_BUILD_SEEK_INDEX_PROTOTYPE;

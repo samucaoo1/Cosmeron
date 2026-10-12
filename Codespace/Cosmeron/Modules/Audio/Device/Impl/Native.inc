@@ -7,19 +7,18 @@
 typedef volatile LONG AUDIO_INS(TDeviceAtomic);
 #define AUDIO_DEVICE_LOAD(P) InterlockedCompareExchange((P),0,0)
 #define AUDIO_DEVICE_STORE(P,V) InterlockedExchange((P),(V))
-#define AUDIO_DEVICE_TLS __declspec(thread)
 #else
 #include <stdatomic.h>
 typedef atomic_int AUDIO_INS(TDeviceAtomic);
 #define AUDIO_DEVICE_LOAD(P) atomic_load(P)
 #define AUDIO_DEVICE_STORE(P,V) atomic_store((P),(V))
-#define AUDIO_DEVICE_TLS _Thread_local
 #endif
 #if defined(_WIN32)
 #include <windows.h>
 #include <mmsystem.h>
 #elif defined(__APPLE__)
 #include <AudioToolbox/AudioToolbox.h>
+#include <pthread.h>
 #include <dlfcn.h>
 #else
 #include <dlfcn.h>
@@ -40,6 +39,86 @@ typedef atomic_int AUDIO_INS(TDeviceAtomic);
 #include <unistd.h>
 #endif
 #endif
+
+/* The identity belongs to the device, so callback-side calls made from a
+ * different translation unit cannot accidentally join their own thread. */
+typedef struct AUDIO_INS(TCallbackGuard) {
+#if defined(_WIN32)
+  AUDIO_INS(TDeviceAtomic) thread;
+#else
+  _Atomic(uintptr_t) thread;
+  void *runtime;
+  pthread_t (*self)(void);
+#endif
+} AUDIO_INS(TCallbackGuard);
+static inline void AUDIO_INS(CallbackGuardZero)(AUDIO_INS(TCallbackGuard) *g) {
+#if defined(_WIN32)
+  AUDIO_DEVICE_STORE(&g->thread,0);
+#else
+  atomic_init(&g->thread,0); g->runtime=NULL; g->self=NULL;
+#endif
+}
+static inline uintptr_t AUDIO_INS(CallbackThread)(const AUDIO_INS(TCallbackGuard) *g) {
+#if defined(_WIN32)
+  (void)g; return (uintptr_t)GetCurrentThreadId();
+#else
+  uintptr_t identity=0;
+  pthread_t thread=g->self();
+  _Static_assert(sizeof thread<=sizeof identity,"pthread_t identity storage");
+  memcpy(&identity,&thread,sizeof thread); return identity;
+#endif
+}
+static inline void AUDIO_INS(CallbackGuardRelease)(AUDIO_INS(TCallbackGuard) *g) {
+#if !defined(_WIN32)
+  if (g->runtime) dlclose(g->runtime);
+  g->runtime=NULL; g->self=NULL;
+#else
+  (void)g;
+#endif
+}
+static inline bool AUDIO_INS(CallbackGuardOpen)(AUDIO_INS(TCallbackGuard) *g) {
+  AUDIO_INS(CallbackGuardZero)(g);
+#if !defined(_WIN32)
+  {
+    void *symbol;
+#if defined(__linux__)
+    g->runtime=dlopen(NULL,RTLD_NOW|RTLD_LOCAL);
+#elif defined(__APPLE__)
+    g->runtime=dlopen("/usr/lib/libSystem.B.dylib",RTLD_NOW|RTLD_LOCAL|RTLD_NOLOAD);
+#else
+#if defined(__FreeBSD__) || defined(__DragonFly__)
+    g->runtime=dlopen("libthr.so.3",RTLD_NOW|RTLD_LOCAL|RTLD_NOLOAD);
+#endif
+    if (!g->runtime) g->runtime=dlopen("libpthread.so",RTLD_NOW|RTLD_LOCAL|RTLD_NOLOAD);
+#endif
+    if (!g->runtime) return false;
+    symbol=dlsym(g->runtime,"pthread_self");
+    if (!symbol || sizeof symbol!=sizeof g->self) {
+      AUDIO_INS(CallbackGuardRelease)(g); return false;
+    }
+    memcpy(&g->self,&symbol,sizeof symbol);
+    if (!AUDIO_INS(CallbackThread)(g)) {
+      AUDIO_INS(CallbackGuardRelease)(g); return false;
+    }
+  }
+#endif
+  return true;
+}
+static inline void AUDIO_INS(CallbackGuardSet)(AUDIO_INS(TCallbackGuard) *g, bool active) {
+#if defined(_WIN32)
+  AUDIO_DEVICE_STORE(&g->thread,(LONG)(active ? AUDIO_INS(CallbackThread)(g) : 0));
+#else
+  atomic_store(&g->thread,active ? AUDIO_INS(CallbackThread)(g) : 0);
+#endif
+}
+static inline bool AUDIO_INS(InCallback)(AUDIO_INS(TCallbackGuard) *g) {
+#if defined(_WIN32)
+  uintptr_t thread=(uint32_t)AUDIO_DEVICE_LOAD(&g->thread);
+#else
+  uintptr_t thread=atomic_load(&g->thread);
+#endif
+  return thread && thread==AUDIO_INS(CallbackThread)(g);
+}
 
 #if defined(__linux__)
 /* ALSA owns a process-global configuration cache. Keep one runtime-loader
@@ -64,6 +143,7 @@ typedef struct AUDIO_INS(TNativeDevice) {
   AUDIO_DEVICE_TYPE(TConfig) config;
   AUDIO_INS(TDeviceAtomic) started, status;
   bool workerCreated;
+  AUDIO_INS(TCallbackGuard) callback;
   float pcm[512*8];
   int16_t integerPCM[512*8];
   char id[256];
@@ -119,14 +199,13 @@ typedef struct AUDIO_INS(TNativeDevice) {
 #endif
 #endif
 } AUDIO_INS(TNativeDevice);
-static AUDIO_DEVICE_TLS AUDIO_INS(TNativeDevice) *AUDIO_INS(NativeCallbackDevice);
 
 static inline void AUDIO_INS(NativeDeviceRender)(AUDIO_INS(TNativeDevice) *s) {
   size_t i, count=512*s->config.channels;
   memset(s->pcm,0,count*sizeof(float));
-  AUDIO_INS(NativeCallbackDevice)=s;
+  AUDIO_INS(CallbackGuardSet)(&s->callback,true);
   s->config.render(s->config.userData,s->pcm,512,s->config.channels);
-  AUDIO_INS(NativeCallbackDevice)=NULL;
+  AUDIO_INS(CallbackGuardSet)(&s->callback,false);
   for (i=0;i<count;++i) {
     float f=AUDIO_INS(Finite)(s->pcm[i]) ? AUDIO_INS(Clamp)(s->pcm[i]) : 0;
     s->pcm[i]=f;
@@ -271,6 +350,7 @@ static inline void AUDIO_INS(NativeDeviceRelease)(AUDIO_INS(TNativeDevice) *s) {
 #endif
   if (s->threadLibrary) dlclose(s->threadLibrary);
 #endif
+  AUDIO_INS(CallbackGuardRelease)(&s->callback);
   free(s);
 }
 #if defined(__APPLE__)
@@ -289,6 +369,7 @@ static inline OPSTATUS AUDIO_INS(NativeDeviceOpen)(
   if (!s) return STATUS_CONST(OUT_OF_MEMORY);
   s->config=*config;
   if (id && strlen(id)>=sizeof s->id) { free(s); return STATUS_CONST(INVALID_ARGUMENT); }
+  if (!AUDIO_INS(CallbackGuardOpen)(&s->callback)) { free(s); return STATUS_CONST(NOT_AVAILABLE); }
   snprintf(s->id,sizeof s->id,"%s",id ? id : "default");
   AUDIO_DEVICE_STORE(&s->started,0);
   AUDIO_DEVICE_STORE(&s->status,STATUS_CONST(SUCCESS));
@@ -445,7 +526,7 @@ fail:
 #undef AUDIO_DEVICE_SYMBOL
 static inline OPSTATUS AUDIO_INS(NativeDeviceStop)(AUDIO_INS(TNativeDevice) *s) {
   AUDIO_DEVICE_STORE(&s->started,0);
-  if (AUDIO_INS(NativeCallbackDevice)==s) return STATUS_CONST(BUSY);
+  if (AUDIO_INS(InCallback)(&s->callback)) return STATUS_CONST(BUSY);
 #if defined(_WIN32)
   if (s->workerCreated) {
     if (WaitForSingleObject(s->worker,INFINITE)!=WAIT_OBJECT_0) return STATUS_CONST(GENERIC_ERROR);
@@ -460,7 +541,7 @@ static inline OPSTATUS AUDIO_INS(NativeDeviceStop)(AUDIO_INS(TNativeDevice) *s) 
   return STATUS_CONST(SUCCESS);
 }
 static inline OPSTATUS AUDIO_INS(NativeDeviceStart)(AUDIO_INS(TNativeDevice) *s) {
-  if (AUDIO_INS(NativeCallbackDevice)==s) return STATUS_CONST(BUSY);
+  if (AUDIO_INS(InCallback)(&s->callback)) return STATUS_CONST(BUSY);
   if (AUDIO_DEVICE_LOAD(&s->started)) return STATUS_CONST(SUCCESS);
   if (s->workerCreated) {
     OPSTATUS status=AUDIO_INS(NativeDeviceStop)(s);

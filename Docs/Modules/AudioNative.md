@@ -13,7 +13,8 @@ For a translation unit that must contain no miniaudio implementation:
 #include "Cosmeron/Modules/Audio/CodecNative.h"
 ```
 
-Select the profile before other desktop Audio headers in that translation
+Use consistent compilation profiles in translation units sharing live Audio
+handles. Select the profile before other desktop Audio headers in that translation
 unit. `CodecNative.h` provides the shared decoder API without imported
 code, math, threads or device libraries. WAV and FLAC callback readers
 still require seeking. MP3 readers accept `TReader.seek = NULL`.
@@ -43,18 +44,25 @@ A failed OpenReader may have consumed bytes from a forward-only source.
 OPSTATUS Audio_Codec_BuildSeekIndex(Audio_Codec_TDecoder *decoder);
 ```
 
-Normal playback populates indices lazily. `BuildSeekIndex` performs one full
+Normal playback populates exact-state checkpoints and FLAC indices lazily. `BuildSeekIndex` performs one full
 native decoding pass and restores the playback position, preparing a file
 for repeated random seeks. It is optional and rejects forward-only sources.
 
-MP3 checkpoints retain exact reservoir, IMDCT overlap and polyphase history,
-plus compressed offsets and presentation positions. Seeking chooses the
-closest usable saved state; it does not approximate from bitrate. Intervals
-are at least 64 MPEG frames, widened for large files, with at most 1,024
-checkpoints. Allocation failure falls back to replay. Thus an unvisited span
-still needs decoding and index construction is not free. FLAC retains up to
-65,536 decoded frame positions and uses binary search. No whole PCM recording
-is retained. FLAC SEEKTABLE ingestion is not yet implemented.
+Seekable MP3 opens collect byte offsets in the existing header scan. The
+thin index initially stores every 64th frame, compacts by doubling its stride
+at 65,536 entries, and uses at most 1 MiB. A cold distant seek loads a nearby
+offset, feeds at least 512 predecessor payload bytes into the reservoir,
+then decodes two predecessor frames to restore hybrid and synthesis history.
+It does not decode the entire prefix. Nonzero VBR and long/short/mixed
+MPEG-1/2/2.5 tests compare seek output byte-for-byte with continuous decode.
+
+Playback also retains sparse exact-state checkpoints (up to 1,024, intervals
+at least 64 MPEG frames). Nearby seeks reuse those states. Allocation failure
+falls back to available states or replay. Recovery mode disables the thin
+index because damaged boundaries need sequential interpretation.
+
+FLAC retains up to 65,536 decoded frame positions and uses binary search. No
+whole PCM recording is retained. FLAC SEEKTABLE ingestion is not yet implemented.
 
 ## FLAC integrity
 
@@ -157,10 +165,14 @@ ASan/UBSan/libFuzzer over native memory, seekable and forward-only callback
 paths on relevant PRs. Its weekly schedule activates after this workflow reaches
 the repository default branch. Crashing inputs are uploaded as reproducers.
 CRC-protected MP3 headers/side information are checked before decoder state
-is published; this CRC does not cover all main data. Corrupt frames and lost
-sync currently produce explicit errors. Automatic resynchronization and audio
-concealment are not yet implemented, and strict preflight rejects interrupted
-seekable MP3 streams.
+is published; this CRC does not cover all main data. Strict mode reports corrupt frames and lost synchronization as errors.
+Define `AUDIO_CODEC_MP3_RECOVER_ERRORS=1` to enable bounded resynchronization
+(up to `AUDIO_CODEC_MP3_MAX_RESYNC_BYTES`, default 65,536) and silence for
+complete damaged frames. I/O failures, allocation failures and truncated
+frames remain errors. `GetRecoveryCounts` reports discarded compressed bytes
+and concealed PCM frames in the current seek-restorable state. Recovery is
+lossy and gapless trimming is disabled after preflight resynchronization;
+forward-only streams discard duration/trim assumptions after lost sync.
 
 MPEG-2.5 8-kHz mixed blocks remain a reference-disagreement case. In a baseline
 fixture with a silent encoded right channel, native output preserves silence;
@@ -172,5 +184,7 @@ before claiming complete 8-kHz mixed/intensity conformance.
 
 Headless CI and ALSA `null` validate compilation and lifecycle only. Physical
 playback, unplug/underrun behavior on actual drivers, native BSD real-driver validation, broader LSF intensity encoder coverage, APE/iTunSMPB/VBRI gapless
-variants and arbitrary large-file stress remain open validation/work items.
+variants and physical large-file stress remain open validation/work items.
+A virtual 4.33-GB source tests 64-bit offsets/counters and a bounded cold seek;
+it does not establish physical disk performance.
 Do not remove miniaudio or close the umbrella issues based on headless results.

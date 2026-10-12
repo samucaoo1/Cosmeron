@@ -677,3 +677,22 @@ AUDIO_CODEC_BUILD_SEEK_INDEX_PROTOTYPE {
   restored=AUDIO_CODEC_FUNC(SeekFrame)(decoder,saved);
   return status==STATUS_CONST(SUCCESS) ? restored : status;
 }
+
+AUDIO_CODEC_GET_RECOVERY_COUNTS_PROTOTYPE {
+  const AUDIO_INS(Decoder) *s;
+  if(!decoder || !decoder->internal || !outDroppedBytes || !outConcealedFrames)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  s=(const AUDIO_INS(Decoder) *)decoder->internal;
+#if defined(AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3)
+  if(s->nativeMp3) {
+    const AUDIO_INS(TMP3MemoryDecoder) *m=(const AUDIO_INS(TMP3MemoryDecoder) *)s->mp3.internal;
+    *outDroppedBytes=m->droppedBytes; *outConcealedFrames=m->concealedFrames;
+    return STATUS_CONST(SUCCESS);
+  }
+  if(s->nativeMp3Streaming) {
+    *outDroppedBytes=s->mp3Stream->droppedBytes; *outConcealedFrames=s->mp3Stream->concealedFrames;
+    return STATUS_CONST(SUCCESS);
+  }
+#endif
+  (void)s; return STATUS_CONST(NOT_SUPPORTED);
+}

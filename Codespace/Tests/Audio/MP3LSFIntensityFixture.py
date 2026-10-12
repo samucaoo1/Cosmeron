@@ -50,7 +50,7 @@ def make_frame(frame_num, ms, intensity_scale, baseline=False, mono=False, short
         0x40 if baseline else 0x70 if ms else 0x50)
     version = 0xf3 if rate >= 16000 else 0xe3
     rate_bits = {22050: 0, 24000: 4, 16000: 8, 11025: 0, 12000: 4, 8000: 8}[rate]
-    bitrate_bits = {16: 2, 32: 4, 64: 8}[bitrate] << 4
+    bitrate_bits = {8: 1, 16: 2, 32: 4, 64: 8}[bitrate] << 4
     header = bytes((0xFF, version, bitrate_bits | rate_bits, mode))
     # MPEG-2 22.05kHz, 64kbps, stereo: 208 bytes, 17-byte side info.
     bands = (list(range(0, 72, 6)) if mixed else
@@ -106,7 +106,7 @@ def make_frame(frame_num, ms, intensity_scale, baseline=False, mono=False, short
 
 
 def main():
-    if len(sys.argv) not in (4, 5, 8):
+    if len(sys.argv) not in (4, 5, 8, 9):
         sys.exit("usage: MP3LSFIntensityFixture.py OUT.mp3 MS(0|1) INTENSITY_SCALE(0|1) [baseline]")
     path, ms, scale = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
     if ms not in (0, 1) or scale not in (0, 1):
@@ -118,11 +118,11 @@ def main():
     mono = mode == "mono"
     short = mode in ("short", "baseline-short", "mixed", "baseline-mixed")
     mixed = mode in ("mixed", "baseline-mixed")
-    rate = int(sys.argv[5]) if len(sys.argv) == 8 else 22050
-    bitrate = int(sys.argv[6]) if len(sys.argv) == 8 else 64
-    coded = bool(int(sys.argv[7])) if len(sys.argv) == 8 else False
+    rate = int(sys.argv[5]) if len(sys.argv) >= 8 else 22050
+    bitrate = int(sys.argv[6]) if len(sys.argv) >= 8 else 64
+    coded = bool(int(sys.argv[7])) if len(sys.argv) >= 8 else False
     with open(path, "wb") as out:
-        for i in range(32):
+        for i in range(int(sys.argv[8]) if len(sys.argv)==9 else 32):
             out.write(make_frame(i, bool(ms), scale, baseline, mono, short, mixed, rate, bitrate, coded))
 
 

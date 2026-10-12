@@ -2,13 +2,13 @@
 
 typedef struct AUDIO_INS(Device) {
   AUDIO_INS(TNativeDevice) *nativeDevice;
+  AUDIO_INS(TCallbackGuard) callback;
 #if AUDIO_DEVICE_MINIAUDIO_FALLBACK
   cosmeron_audio_vendor_ma_device native;
 #endif
   AUDIO_DEVICE_TYPE(TConfig) config;
 } AUDIO_INS(Device);
 #if AUDIO_DEVICE_MINIAUDIO_FALLBACK
-static AUDIO_DEVICE_TLS AUDIO_INS(Device) *AUDIO_INS(FallbackCallbackDevice);
 static void
 AUDIO_INS(DeviceRender)(cosmeron_audio_vendor_ma_device *native, void *output,
                         const void *input,
@@ -18,10 +18,10 @@ AUDIO_INS(DeviceRender)(cosmeron_audio_vendor_ma_device *native, void *output,
   float *samples = (float *)output;
   (void)input;
   memset(samples, 0, count * sizeof(float));
-  AUDIO_INS(FallbackCallbackDevice)=device;
+  AUDIO_INS(CallbackGuardSet)(&device->callback,true);
   device->config.render(device->config.userData, samples, frameCount,
                         device->config.channels);
-  AUDIO_INS(FallbackCallbackDevice)=NULL;
+  AUDIO_INS(CallbackGuardSet)(&device->callback,false);
   for (i = 0; i < count; ++i)
     samples[i] =
         AUDIO_INS(Finite)(samples[i]) ? AUDIO_INS(Clamp)(samples[i]) : 0.0f;
@@ -46,6 +46,7 @@ AUDIO_DEVICE_OPEN_NAMED_PROTOTYPE {
   value = (AUDIO_INS(Device) *)calloc(1, sizeof(*value));
   if (value == NULL)
     return STATUS_CONST(OUT_OF_MEMORY);
+  AUDIO_INS(CallbackGuardZero)(&value->callback);
   value->config = *config;
   status = AUDIO_INS(NativeDeviceOpen)(&value->nativeDevice, config, id);
   if (status == STATUS_CONST(SUCCESS)) {
@@ -57,6 +58,7 @@ AUDIO_DEVICE_OPEN_NAMED_PROTOTYPE {
   }
 #if AUDIO_DEVICE_MINIAUDIO_FALLBACK
   if (!AUDIO_INS(PrepareMath)()) { free(value); return STATUS_CONST(NOT_AVAILABLE); }
+  if (!AUDIO_INS(CallbackGuardOpen)(&value->callback)) { free(value); return STATUS_CONST(NOT_AVAILABLE); }
   native = cosmeron_audio_vendor_ma_device_config_init(
       cosmeron_audio_vendor_ma_device_type_playback);
   native.playback.format = cosmeron_audio_vendor_ma_format_f32;
@@ -66,6 +68,7 @@ AUDIO_DEVICE_OPEN_NAMED_PROTOTYPE {
   native.pUserData = value;
   result = cosmeron_audio_vendor_ma_device_init(NULL, &native, &value->native);
   if (result != cosmeron_audio_vendor_MA_SUCCESS) {
+    AUDIO_INS(CallbackGuardRelease)(&value->callback);
     free(value);
     return AUDIO_INS(BackendStatus)(result);
   }
@@ -82,7 +85,7 @@ AUDIO_DEVICE_START_PROTOTYPE {
   if (((AUDIO_INS(Device) *)device->internal)->nativeDevice)
     return AUDIO_INS(NativeDeviceStart)(((AUDIO_INS(Device) *)device->internal)->nativeDevice);
 #if AUDIO_DEVICE_MINIAUDIO_FALLBACK
-  if (AUDIO_INS(FallbackCallbackDevice)==device->internal) return STATUS_CONST(BUSY);
+  if (AUDIO_INS(InCallback)(&((AUDIO_INS(Device) *)device->internal)->callback)) return STATUS_CONST(BUSY);
   return AUDIO_INS(BackendStatus)(cosmeron_audio_vendor_ma_device_start(
       &((AUDIO_INS(Device) *)device->internal)->native));
 #else
@@ -96,7 +99,7 @@ AUDIO_DEVICE_STOP_PROTOTYPE {
   if (((AUDIO_INS(Device) *)device->internal)->nativeDevice)
     return AUDIO_INS(NativeDeviceStop)(((AUDIO_INS(Device) *)device->internal)->nativeDevice);
 #if AUDIO_DEVICE_MINIAUDIO_FALLBACK
-  if (AUDIO_INS(FallbackCallbackDevice)==device->internal) return STATUS_CONST(BUSY);
+  if (AUDIO_INS(InCallback)(&((AUDIO_INS(Device) *)device->internal)->callback)) return STATUS_CONST(BUSY);
   return AUDIO_INS(BackendStatus)(cosmeron_audio_vendor_ma_device_stop(
       &((AUDIO_INS(Device) *)device->internal)->native));
 #else
@@ -133,7 +136,7 @@ AUDIO_DEVICE_CLOSE_PROTOTYPE {
   if (device && device->internal) {
     AUDIO_INS(Device) *s=(AUDIO_INS(Device) *)device->internal;
 #if AUDIO_DEVICE_MINIAUDIO_FALLBACK
-    if (AUDIO_INS(FallbackCallbackDevice)==s) return;
+    if (AUDIO_INS(InCallback)(&s->callback)) return;
 #endif
     if (s->nativeDevice) {
       /* A callback may request stop, but destruction must be completed by
@@ -144,6 +147,7 @@ AUDIO_DEVICE_CLOSE_PROTOTYPE {
 #if AUDIO_DEVICE_MINIAUDIO_FALLBACK
     else cosmeron_audio_vendor_ma_device_uninit(&s->native);
 #endif
+    AUDIO_INS(CallbackGuardRelease)(&s->callback);
     device->internal=NULL; free(s);
   }
 }

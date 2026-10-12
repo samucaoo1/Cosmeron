@@ -54,6 +54,39 @@ int main(int argc, char **argv) {
   assert(AUDIO_CODEC_FUNC(SeekFrame)(&pipe,0)==STATUS_CONST(NOT_SUPPORTED));
   reader=(AUDIO_CODEC_TYPE(TReader)){&indexedSrc,read_bytes,seek_bytes};
   assert(AUDIO_CODEC_FUNC(OpenReader)(&indexed,&reader)==STATUS_CONST(SUCCESS));
+  /* Compare cold distant seeks against sequentially decoded expected PCM.
+   * Reset both fresh sources for each target to exercise the offset index. */
+  if (info.frameCount>1152*600) {
+    uint64_t targets[]={info.frameCount*3/4,info.frameCount-257,1152*550+13};
+    size_t t;
+    for(t=0;t<sizeof targets/sizeof targets[0];++t) {
+      uint64_t target=targets[t], consumed=0;
+      AUDIO_CODEC_FUNC(Close)(&mem);
+      assert(AUDIO_CODEC_FUNC(OpenMemory)(&mem,bytes,size)==STATUS_CONST(SUCCESS));
+      while(consumed<target) {
+        size_t cap=target-consumed>257 ? 257 : (size_t)(target-consumed);
+        assert(AUDIO_CODEC_FUNC(ReadFrames)(&mem,a,cap,&n)==STATUS_CONST(SUCCESS) && n==cap);
+        consumed+=n;
+      }
+      assert(AUDIO_CODEC_FUNC(ReadFrames)(&mem,a,257,&n)==STATUS_CONST(SUCCESS));
+      baseReads=indexedSrc.reads;
+      assert(AUDIO_CODEC_FUNC(SeekFrame)(&indexed,target)==STATUS_CONST(SUCCESS));
+      assert(indexedSrc.reads-baseReads<60000); /* callback intentionally returns seven bytes */
+      assert(AUDIO_CODEC_FUNC(ReadFrames)(&indexed,b,257,&total)==STATUS_CONST(SUCCESS));
+      assert(total==n && !memcmp(a,b,n*info.channels*sizeof(float)));
+      AUDIO_CODEC_FUNC(Close)(&indexed);
+      assert(AUDIO_CODEC_FUNC(OpenReader)(&indexed,&reader)==STATUS_CONST(SUCCESS));
+      /* Memory offset index must agree with the same continuous reference. */
+      assert(AUDIO_CODEC_FUNC(SeekFrame)(&indexed,target)==STATUS_CONST(SUCCESS));
+      AUDIO_CODEC_FUNC(Close)(&mem);
+      assert(AUDIO_CODEC_FUNC(OpenMemory)(&mem,bytes,size)==STATUS_CONST(SUCCESS));
+      assert(AUDIO_CODEC_FUNC(SeekFrame)(&mem,target)==STATUS_CONST(SUCCESS));
+      assert(AUDIO_CODEC_FUNC(ReadFrames)(&mem,b,257,&total)==STATUS_CONST(SUCCESS));
+      assert(total==n && !memcmp(a,b,n*info.channels*sizeof(float)));
+      AUDIO_CODEC_FUNC(Close)(&indexed);
+      assert(AUDIO_CODEC_FUNC(OpenReader)(&indexed,&reader)==STATUS_CONST(SUCCESS));
+    }
+  }
   total=0;
   while(total<info.frameCount) {
     assert(AUDIO_CODEC_FUNC(ReadFrames)(&indexed,b,257,&n)==STATUS_CONST(SUCCESS));

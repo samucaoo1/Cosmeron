@@ -1,7 +1,7 @@
 CC ?= cc
 CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -Werror
 BUILD ?= .build
-TESTS := MP3CRC DeviceNative PCMProduction CodecRobustnessFuzz NativeCodecProduction FLACIntegrity Synthesis OfflineStandalone OfflineCompat Manual ManualSink NativeWAV NativeWAVStream WAVRobustness FLACMetadata FLACFrames FLACPublic FLACStandalone FLACRobustness FLACArithmetic FLACStreaming MP3Headers MP3ID3Readers MP3MutationFuzz MP3SideInfo MP3Scalefactors MP3ScalefactorsLSF MP3Huffman MP3HuffmanRegions MP3Requant MP3Hybrid MP3IMDCT MP3Synthesis MP3Intensity MP3JointStereo MP3JointStereoLSF MP3Xing MP3Experimental MP3MemorySmoke CodecMP3OptIn CodecMP3StreamSmoke CodecMP3ReaderFaults MP3ExperimentalCompare WAVFormats CodecMinimal CodecMath CodecCompressed CodecStandalone DesktopStandalone Codec Player IncludeAll
+TESTS := MP3Recovery MP3CRC DeviceNative PCMProduction CodecRobustnessFuzz NativeCodecProduction FLACIntegrity Synthesis OfflineStandalone OfflineCompat Manual ManualSink NativeWAV NativeWAVStream WAVRobustness FLACMetadata FLACFrames FLACPublic FLACStandalone FLACRobustness FLACArithmetic FLACStreaming MP3Headers MP3ID3Readers MP3MutationFuzz MP3SideInfo MP3Scalefactors MP3ScalefactorsLSF MP3Huffman MP3HuffmanRegions MP3Requant MP3Hybrid MP3IMDCT MP3Synthesis MP3Intensity MP3JointStereo MP3JointStereoLSF MP3Xing MP3Experimental MP3MemorySmoke CodecMP3OptIn CodecMP3StreamSmoke CodecMP3ReaderFaults MP3ExperimentalCompare WAVFormats CodecMinimal CodecMath CodecCompressed CodecStandalone DesktopStandalone Codec Player IncludeAll
 HEADERS := $(shell find ../../Cosmeron/Modules/Audio ../../Cosmeron/Core -type f)
 
 all: run
@@ -18,9 +18,11 @@ $(BUILD)/OfflineMultiTU: OfflineTU_A.c OfflineTU_B.c OfflineTU_Main.c $(HEADERS)
 	$(CC) $(CFLAGS) OfflineTU_A.c OfflineTU_B.c OfflineTU_Main.c -o $@
 $(BUILD)/MultiTU: MultiTU_A.c MultiTU_B.c MultiTU_Main.c $(HEADERS) | $(BUILD)
 	$(CC) $(CFLAGS) MultiTU_A.c MultiTU_B.c MultiTU_Main.c -o $@
-build: $(TESTS:%=$(BUILD)/%) $(BUILD)/ManualHardware $(BUILD)/CodecMinimalMultiTU $(BUILD)/OfflineMultiTU $(BUILD)/MultiTU
+$(BUILD)/DeviceGuardMultiTU: DeviceGuardTU_A.c DeviceGuardTU_B.c $(HEADERS) | $(BUILD)
+	$(CC) $(CFLAGS) DeviceGuardTU_A.c DeviceGuardTU_B.c -o $@
+build: $(BUILD)/DeviceGuardMultiTU $(TESTS:%=$(BUILD)/%) $(BUILD)/ManualHardware $(BUILD)/CodecMinimalMultiTU $(BUILD)/OfflineMultiTU $(BUILD)/MultiTU
 run: build
-	@set -e; for test in $(TESTS:%=$(BUILD)/%) $(BUILD)/CodecMinimalMultiTU $(BUILD)/OfflineMultiTU $(BUILD)/MultiTU; do \
+	@set -e; for test in $(BUILD)/DeviceGuardMultiTU $(TESTS:%=$(BUILD)/%) $(BUILD)/CodecMinimalMultiTU $(BUILD)/OfflineMultiTU $(BUILD)/MultiTU; do \
 	  echo "[audio] run $$test"; \
 	  if "$$test"; then :; else result=$$?; echo "[audio] FAILED $$test (exit $$result)"; exit "$$result"; fi; \
 	done
