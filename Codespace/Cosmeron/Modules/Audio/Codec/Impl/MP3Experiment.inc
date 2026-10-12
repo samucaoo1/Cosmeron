@@ -86,20 +86,20 @@ AUDIO_CODEC_MP3_EXPERIMENT_FRAME_PROTOTYPE {
     }
     for (ch = 0; ch < header.channels; ++ch) {
       float subband[576];
-      /* 8 kHz mixed blocks have 4 long subbands (72 lines), not
-       * the 2 subbands in the MPEG-1 hybrid filterbank. */
-      if (header.sampleRate == 8000 && side.parts[gr][ch].mixedBlock)
-        return STATUS_CONST(NOT_SUPPORTED);
+      /* 8 kHz mixed blocks contain 72 long spectral coefficients
+       * (four subbands); other MPEG versions use 36 (two subbands). */
       status = AUDIO_CODEC_FUNC(MP3_ReorderShort)(
           channels[ch], &side.parts[gr][ch],
           header.sampleRate, channels[ch]);
       if (status != STATUS_CONST(SUCCESS)) return status;
-      status = AUDIO_CODEC_FUNC(MP3_Antialias)(
-          channels[ch], &side.parts[gr][ch], channels[ch]);
+      status = AUDIO_INS(MP3_AntialiasMixedBoundaries)(
+          channels[ch], &side.parts[gr][ch], channels[ch],
+          header.sampleRate == 8000 ? 3U : 1U);
       if (status != STATUS_CONST(SUCCESS)) return status;
-      status = AUDIO_CODEC_FUNC(MP3_IMDCT)(
+      status = AUDIO_INS(MP3_IMDCTMixedSubbands)(
           channels[ch], &side.parts[gr][ch],
-          &work.hybrid[ch], subband);
+          &work.hybrid[ch], subband,
+          header.sampleRate == 8000 ? 4U : 2U);
       if (status != STATUS_CONST(SUCCESS)) return status;
       status = AUDIO_CODEC_FUNC(MP3_FrequencyInvert)(
           subband, subband);

@@ -79,7 +79,9 @@ AUDIO_CODEC_MP3_STEREO_MS_PROTOTYPE {
  * subbands, with cs=1/sqrt(1+ci^2) and ca=ci*cs (Table B.9).
  * Pure short: no butterflies; mixed: one long-band boundary at line 18;
  * other block types: all 31 subband boundaries. */
-AUDIO_CODEC_MP3_ANTIALIAS_PROTOTYPE {
+static inline OPSTATUS AUDIO_INS(MP3_AntialiasMixedBoundaries)(
+    const float input[576], const AUDIO_CODEC_TYPE(TMP3Granule) *part,
+    float output[576], unsigned int mixedBoundaries) {
   static const float cs[8] = {
     0.8574929257f, 0.8817419973f, 0.9496286491f, 0.9833145925f, 0.9955178161f, 0.9991605582f, 0.9998991952f, 0.9999931551f
   };
@@ -94,12 +96,13 @@ AUDIO_CODEC_MP3_ANTIALIAS_PROTOTYPE {
       (part->windowSwitching &&
           (part->blockType == 0 || part->blockType > 3)))
     return STATUS_CONST(INVALID_ARGUMENT);
+  if (mixedBoundaries > 31) return STATUS_CONST(INVALID_ARGUMENT);
   for (i = 0; i < 576; ++i)
     if (!AUDIO_INS(Finite)(input[i]))
       return STATUS_CONST(INVALID_SEQUENCE);
   memcpy(transformed, input, sizeof transformed);
   boundaries = part->windowSwitching && part->blockType == 2 ?
-      (part->mixedBlock ? 1U : 0U) : 31U;
+      (part->mixedBlock ? mixedBoundaries : 0U) : 31U;
   for (sb = 1; sb <= boundaries; ++sb) {
     for (butterfly = 0; butterfly < 8; ++butterfly) {
       const size_t lower = 18U * sb - 1U - butterfly;
@@ -114,4 +117,8 @@ AUDIO_CODEC_MP3_ANTIALIAS_PROTOTYPE {
   }
   memcpy(output, transformed, sizeof transformed);
   return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_CODEC_MP3_ANTIALIAS_PROTOTYPE {
+  return AUDIO_INS(MP3_AntialiasMixedBoundaries)(input,part,output,1U);
 }
