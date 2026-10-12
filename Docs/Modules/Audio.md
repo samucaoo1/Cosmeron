@@ -1908,6 +1908,15 @@ tested encodings.** Independent intensity-stereo fixtures at other
 rates/bitrates, more varied coded right-channel spectra and other
 encoders still need differential testing before production adoption.
 
+**ID3 metadata compatibility.** MPEG Layer III memory and seekable
+callback readers now share the same ID3v2.2/v2.3/v2.4 ten-byte header
+validation, including version-specific flag masks, synchsafe lengths
+and a verified ID3v2.4 footer (when present). This does not allocate
+the metadata payload: the callback reader seeks past it and reads only
+the ten footer bytes, if needed. Invalid flags, truncated metadata and
+inconsistent footers fail before exposing PCM. ID3v1 endings remain
+supported.
+
 **Native MP3 memory stream (opt-in).** Include
 `Audio/Codec/MP3Memory.h` to use `MP3_MemoryOpen`,
 `MP3_MemoryInfo`, `MP3_MemoryRead`, `MP3_MemorySeek`
