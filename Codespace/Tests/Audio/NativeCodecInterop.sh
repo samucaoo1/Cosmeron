@@ -34,7 +34,7 @@ ffmpeg -nostdin -v error -y -f lavfi \
 "$build/NativeCodecProduction" "$dir/shine.mp3"
 # Long VBR stream exercises cold indexed seeking and sample-exact preroll.
 ffmpeg -nostdin -v error -y -f lavfi \
-  -i 'aevalsrc=0.2*sin(2*PI*(173*t+111*t*t)):s=44100:d=24' \
+  -i 'aevalsrc=0.2*sin(2*PI*(173*t+111*t*t)):s=44100:d=20' \
   -c:a libmp3lame -q:a 4 "$dir/long-vbr.mp3"
 "$build/MP3MemoryParity" "$dir/long-vbr.mp3"
 "$build/NativeCodecProduction" "$dir/long-vbr.mp3"

@@ -111,24 +111,24 @@ static inline OPSTATUS AUDIO_INS(MP3_ReaderOpen)(
   if (!stream) return STATUS_CONST(OUT_OF_MEMORY);
   stream->seekIndex.disabled=AUDIO_CODEC_MP3_RECOVER_ERRORS!=0;
   status = reader->seek(reader->userData, 0, AUDIO_CODEC_CONST(SEEK_START));
-  if (status != STATUS_CONST(SUCCESS)) { status = status; goto fail; }
+  if (status != STATUS_CONST(SUCCESS)) goto fail;
   /* The first 10 bytes suffice to inspect an optional ID3v2 tag. */
   status = AUDIO_INS(WAV_ReadExact)(reader, probe, sizeof probe);
-  if (status != STATUS_CONST(SUCCESS)) { status = status; goto fail; }
+  if (status != STATUS_CONST(SUCCESS)) goto fail;
   /* Use the same strict ten-byte validation as MP3_SkipID3.
    * Validate v2.4 footers with a bounded read, independent of tag size. */
   if (!memcmp(probe, "ID3", 3)) {
     tagged = true;
     status = AUDIO_INS(MP3_ID3Header)(probe, &beginning);
-    if (status != STATUS_CONST(SUCCESS)) { status = status; goto fail; }
+    if (status != STATUS_CONST(SUCCESS)) goto fail;
     if (beginning > INT64_MAX) { status = STATUS_CONST(OUT_OF_RANGE); goto fail; }
     if (probe[3] == 4 && (probe[5] & 0x10U)) {
       unsigned char footer[10];
       status = reader->seek(reader->userData, (int64_t)(beginning - 10U),
                             AUDIO_CODEC_CONST(SEEK_START));
-      if (status != STATUS_CONST(SUCCESS)) { status = status; goto fail; }
+      if (status != STATUS_CONST(SUCCESS)) goto fail;
       status = AUDIO_INS(WAV_ReadExact)(reader, footer, sizeof footer);
-      if (status != STATUS_CONST(SUCCESS)) { status = status; goto fail; }
+      if (status != STATUS_CONST(SUCCESS)) goto fail;
       if (!AUDIO_INS(MP3_ID3Footer)(probe, footer))
         { status = STATUS_CONST(INVALID_SEQUENCE); goto fail; }
     }
@@ -137,7 +137,7 @@ static inline OPSTATUS AUDIO_INS(MP3_ReaderOpen)(
   for (;;) {
     status = AUDIO_INS(MP3_ReaderHeader)(reader, offset, headerBytes);
     if (status == STATUS_CONST(NOT_FOUND)) break;
-    if (status != STATUS_CONST(SUCCESS)) { status = status; goto fail; }
+    if (status != STATUS_CONST(SUCCESS)) goto fail;
     status = AUDIO_CODEC_FUNC(MP3_ParseHeader)(
         headerBytes, sizeof headerBytes, &current);
     if (status != STATUS_CONST(SUCCESS) || (found &&
@@ -150,11 +150,11 @@ static inline OPSTATUS AUDIO_INS(MP3_ReaderOpen)(
         if (offset > INT64_MAX-128) { status = STATUS_CONST(OUT_OF_RANGE); goto fail; }
         status = reader->seek(reader->userData, (int64_t)offset,
                               AUDIO_CODEC_CONST(SEEK_START));
-        if (status != STATUS_CONST(SUCCESS)) { status = status; goto fail; }
+        if (status != STATUS_CONST(SUCCESS)) goto fail;
         status = AUDIO_INS(WAV_ReadExact)(reader, trailer, sizeof trailer);
-        if (status != STATUS_CONST(SUCCESS)) { status = status; goto fail; }
+        if (status != STATUS_CONST(SUCCESS)) goto fail;
         status = reader->read(reader->userData, &check, 1, &received);
-        if (status != STATUS_CONST(SUCCESS)) { status = status; goto fail; }
+        if (status != STATUS_CONST(SUCCESS)) goto fail;
         if (received || memcmp(trailer, "TAG", 3))
           { status = STATUS_CONST(INVALID_SEQUENCE); goto fail; }
         break;
@@ -184,10 +184,10 @@ static inline OPSTATUS AUDIO_INS(MP3_ReaderOpen)(
     if (frames == 0) {
       status = reader->seek(reader->userData, (int64_t)offset,
                             AUDIO_CODEC_CONST(SEEK_START));
-      if (status != STATUS_CONST(SUCCESS)) { status = status; goto fail; }
+      if (status != STATUS_CONST(SUCCESS)) goto fail;
       status = AUDIO_INS(WAV_ReadExact)(
           reader, firstFrame, current.frameBytes);
-      if (status != STATUS_CONST(SUCCESS)) { status = status; goto fail; }
+      if (status != STATUS_CONST(SUCCESS)) goto fail;
       encoded = current.frameBytes;
     }
     AUDIO_INS(MP3_IndexRecord)(&stream->seekIndex,frames,offset);
@@ -206,9 +206,9 @@ static inline OPSTATUS AUDIO_INS(MP3_ReaderOpen)(
     unsigned char tail;
     status = reader->seek(reader->userData, (int64_t)(offset-1),
                           AUDIO_CODEC_CONST(SEEK_START));
-    if (status != STATUS_CONST(SUCCESS)) { status = status; goto fail; }
+    if (status != STATUS_CONST(SUCCESS)) goto fail;
     status = AUDIO_INS(WAV_ReadExact)(reader, &tail, 1);
-    if (status != STATUS_CONST(SUCCESS)) { status = status; goto fail; }
+    if (status != STATUS_CONST(SUCCESS)) goto fail;
   }
   presentation = frames * first.samplesPerFrame;
   if (!resynced && AUDIO_CODEC_FUNC(MP3_ParseXing)(
