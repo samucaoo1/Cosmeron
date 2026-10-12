@@ -81,6 +81,10 @@ int main(void) {
   assert(spectrum[0] == 789.f);
   q[575] = 0;
   assert(AUDIO_CODEC_FUNC(MP3_Requantize)(q, &part, &scale, 22050,
+      spectrum) == STATUS_CONST(SUCCESS));
+  assert(near(spectrum[0], 8.f));
+  spectrum[0] = 789.f;
+  assert(AUDIO_CODEC_FUNC(MP3_Requantize)(q, &part, &scale, 12345,
       spectrum) == STATUS_CONST(NOT_SUPPORTED));
   assert(spectrum[0] == 789.f);
   part.scalefacScale = 2;
