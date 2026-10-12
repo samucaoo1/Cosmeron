@@ -19,8 +19,7 @@ static inline OPSTATUS AUDIO_INS(MP3_MemoryConsume)(
     size_t *outCount) {
   size_t done = 0;
   OPSTATUS status = STATUS_CONST(SUCCESS);
-  if (!value || !outCount || (capacity && !dst && capacity != SIZE_MAX))
-    return STATUS_CONST(INVALID_ARGUMENT);
+  if (!value || !outCount) return STATUS_CONST(INVALID_ARGUMENT);
   while (done < capacity && value->presented < value->frameCount) {
     uint64_t rawEnd = value->rawFirst + value->frameCount;
     size_t available, n;
@@ -31,37 +30,32 @@ static inline OPSTATUS AUDIO_INS(MP3_MemoryConsume)(
         status = STATUS_CONST(INCOMPLETE_SEQUENCE);
         break;
       }
+      status = AUDIO_CODEC_FUNC(MP3_ParseHeader)(
+          value->source + value->nextByte,
+          value->lastByte - value->nextByte, &header);
+      if (status != STATUS_CONST(SUCCESS)) break;
+      if (header.frameBytes > value->lastByte - value->nextByte ||
+          header.sampleRate != value->rate ||
+          header.channels != value->channels ||
+          header.samplesPerFrame != value->samplesPerFrame) {
+        status = STATUS_CONST(INVALID_SEQUENCE);
+        break;
+      }
       status = AUDIO_CODEC_FUNC(MP3_ExperimentFrame)(
           &value->decoder, value->source + value->nextByte,
-          value->lastByte - value->nextByte, value->stage, 1152,
+          header.frameBytes, value->stage, 1152,
           &decoded, &header);
       if (status != STATUS_CONST(SUCCESS) &&
           status != STATUS_CONST(INCOMPLETE_SEQUENCE)) break;
-      /* This frame was checked when the stream was opened. */
       if (status == STATUS_CONST(SUCCESS) &&
-          (header.sampleRate != value->rate ||
-           header.channels != value->channels ||
-           decoded != value->samplesPerFrame)) {
+          decoded != value->samplesPerFrame) {
         status = STATUS_CONST(INVALID_SEQUENCE);
         break;
       }
       value->stagedFirst = value->rawDecoded;
       value->rawDecoded += value->samplesPerFrame;
-      value->nextByte += header.frameBytes ?
-          header.frameBytes : value->samplesPerFrame == 1152 ?
-          (size_t)0 : (size_t)0;
-      /* A reservoir-incomplete frame still has a valid fixed header;
-       * parse it separately to advance the byte offset correctly. */
+      value->nextByte += header.frameBytes;
       if (status == STATUS_CONST(INCOMPLETE_SEQUENCE)) {
-        AUDIO_CODEC_TYPE(TMP3FrameInfo) frame;
-        if (AUDIO_CODEC_FUNC(MP3_ParseHeader)(
-            value->source + value->nextByte,
-            value->lastByte - value->nextByte, &frame) !=
-            STATUS_CONST(SUCCESS)) {
-          status = STATUS_CONST(INVALID_SEQUENCE);
-          break;
-        }
-        value->nextByte += frame.frameBytes;
         if (value->rawDecoded > value->rawFirst) break;
         value->stagedFrames = 0;
         value->stagedCursor = 0;
