@@ -93,7 +93,7 @@ static void shortAndMixed(void) {
   hdr.msStereo = true;
   assert(AUDIO_CODEC_FUNC(MP3_JointStereo)(&hdr, &part, &scale,
       left,right,l,r) == STATUS_CONST(SUCCESS));
-  assert(near(l[48],0) && near(r[48],6*1.41421356237f));
+  assert(near(l[48],0) && near(r[48],6));
   assert(near(l[54],6*0.70710678118f));
   assert(near(r[54],6*0.70710678118f));
   assert(near(l[60],6));
