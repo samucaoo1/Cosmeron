@@ -53,6 +53,9 @@ ffmpeg -nostdin -hide_banner -loglevel error -y \
   -ar 11025 -ac 2 -c:a libmp3lame -b:a 32k "$dir/mpeg25-lsf.mp3"
 "$dir/lsfcheck" "$dir/mpeg2-lsf.mp3" 2
 "$dir/lsfcheck" "$dir/mpeg25-lsf.mp3" 25
+# LSF PCM comparisons are diagnostic until numerical parity is demonstrated.
+"$dir/mp3compare" "$dir/mpeg2-lsf.mp3"
+"$dir/mp3compare" "$dir/mpeg25-lsf.mp3"
 
 COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/mono.mp3"
 COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/stereo.mp3"
