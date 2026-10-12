@@ -71,3 +71,38 @@ done:
   free(scratch);
   return status;
 }
+
+#define AUDIO_CODEC_FLAC_VERIFY_MEMORY_PROTOTYPE \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(FLAC_VerifyMemory)( \
+      const void *data, size_t size)
+AUDIO_CODEC_FLAC_VERIFY_MEMORY_PROTOTYPE {
+  AUDIO_INS(TFLACStreamInfo) info = {0};
+  AUDIO_INS(TFLACMD5) digest;
+  unsigned char actual[16], zero[16] = {0};
+  float *scratch;
+  size_t offset;
+  uint64_t total = 0;
+  OPSTATUS status = AUDIO_INS(FLAC_ParseMetadata)(data, size, &info);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  if (!memcmp(info.md5, zero, 16)) return STATUS_CONST(NOT_AVAILABLE);
+  scratch = (float *)malloc((size_t)info.maximumBlockSize * info.channels * sizeof(float));
+  if (!scratch) return STATUS_CONST(OUT_OF_MEMORY);
+  AUDIO_INS(FLAC_MD5Init)(&digest);
+  offset = info.frameOffset;
+  while (offset < size) {
+    size_t frames = 0, next = 0;
+    status = AUDIO_INS(FLAC_DecodeFrameDigest)((const unsigned char *)data, size,
+        &info, offset, scratch, info.maximumBlockSize, &frames, &next, &digest);
+    if (status != STATUS_CONST(SUCCESS)) break;
+    if (!frames || next <= offset) { status = STATUS_CONST(INVALID_SEQUENCE); break; }
+    total += frames;
+    offset = next;
+  }
+  if (status == STATUS_CONST(SUCCESS)) {
+    AUDIO_INS(FLAC_MD5Final)(&digest, actual);
+    if ((info.totalSamples && total != info.totalSamples) || memcmp(actual, info.md5, 16))
+      status = STATUS_CONST(INVALID_SEQUENCE);
+  }
+  free(scratch);
+  return status;
+}

@@ -12,7 +12,7 @@ The **Audio** module provides portable sound synthesis and optional desktop audi
 
 | Package | Purpose | `AUDIO_NO_DESKTOP` |
 | --- | --- | --- |
-| [PCM](#pcm-package) | Owning float PCM buffers and signed-16-bit conversion. | Yes |
+| [PCM](#pcm-package) | Owning float PCM buffers, signed 16/24/32-bit conversion and normalization. | Yes |
 | [Oscillator](#oscillator-package) | Sine, square, triangle, saw, noise and wavetable synthesis. | Yes |
 | [Envelope](#envelope-package) | ADSR-style gain shaping of audio samples. | Yes |
 | [Sequence](#sequence-package) | Musical events, MML parsing and streaming or whole-buffer rendering. | Yes |
@@ -145,7 +145,7 @@ Exposes PCM, Oscillator, Envelope, Sequence and Beep offline rendering. Without 
 
 Header: `Cosmeron/Modules/Audio/PCM/PCM.h`
 
-Owning float PCM buffers and signed-16-bit conversion.
+Owning float PCM buffers, signed 16/24/32-bit conversion and normalization.
 
 
 
@@ -1810,198 +1810,24 @@ WAV, MP3 and FLAC decoding, custom readers and WAV export.
 **Desktop-only**: not included when `AUDIO_NO_DESKTOP` is enabled.
 
 **Note about header-only native codecs:** the separate
-`Audio/Codec/WAV.h`, `Audio/Codec/FLAC.h` and
-`Audio/Codec/MP3.h` headers expose portable codec primitives that do not
-require desktop audio backends. `Codec.h` still imports miniaudio for
-production MP3 decode and exposes the general file/reader API.
+`Audio/CodecNative.h` exposes the shared WAV/FLAC/MP3 API without miniaudio.
+`Codec.h` also prefers the native decoders, with `AUDIO_CODEC_NATIVE_MP3=0`
+as an explicit MP3 compatibility opt-out. MP3 callbacks can be forward-only;
+FLAC/WAV callbacks require seek. Sources are borrowed until Close.
 
-### Native MP3 progress and experimental PCM decoder
+See [Native audio production paths](AudioNative.md) for sparse MP3 checkpoints,
+FLAC frame indices and optional MD5, independent encoder/conformance tests,
+PCM conversions, fuzzing, benchmarks, device backends and remaining limitations.
 
-`Audio/Codec/MP3.h` contains independent C11 MPEG-1 Layer III frame
-inspection, ID3v2, side information, a bounded bit reservoir, scalefactors,
-Huffman codebooks (including `linbits` and `count1`), requantization,
-short-block reordering, mid/side processing, antialiasing, stateful
-IMDCT/overlap-add, frequency inversion, 32-subband polyphase synthesis and
-MPEG-1 intensity coefficients and automatic scalefactor-band intensity/MS routing.
+```c
+OPSTATUS Audio_Codec_BuildSeekIndex(Audio_Codec_TDecoder *decoder);
+OPSTATUS Audio_Codec_VerifyIntegrity(Audio_Codec_TDecoder *decoder);
+OPSTATUS Audio_Codec_FLAC_VerifyMemory(const void *data, size_t size);
+```
 
-The opt-in `Audio/Codec/MP3Experimental.h` supplies
-`Audio_Codec_MP3_ExperimentFrame` and
-`Audio_Codec_TMP3Experimental`, a zero-initialized per-stream state.
-Pass a complete MPEG-1 frame (1,152 output frames) or
-MPEG-2/2.5 LSF frame (576 output frames) and a caller-owned buffer of
-interleaved float PCM. Mono, ordinary stereo, MS stereo and intensity stereo are
-supported experimentally in the covered MPEG-1, MPEG-2 and MPEG-2.5
-frame variants. All PCM modes still require broader cross-encoder
-and malformed-stream interoperability testing before default adoption. The call retains
-reservoir, overlap and synthesis state across frames. For stereo,
-`MP3_JointStereo` identifies right-channel nonzero spectral bands before
-the short-block reorder, applies intensity-stereo scalefactors above the
-transmitted right-hand region, and uses MS only on other bands when the
-MPEG header requests it. It includes long, short, mixed and untransmitted
-terminal-scalefactor-band treatment, and can combine MS+intensity.
-
-The standalone `MP3JointStereo.c` tests cover spectral routing.
-`MP3MPEG1IntensityFixture.py` independently constructs genuine
-MPEG-1 Layer III long-block frames with transmitted intensity positions
-and nonzero Huffman data. The PCM CI compares intensity and
-MS+intensity against miniaudio with **zero-lag, near-unity gain**
-and residual below `1e-5`, alongside mono and ordinary stereo
-controls. The newly corrected MPEG-1 path does not apply a duplicate
-`sqrt(2)` intensity gain when MS is enabled.
-
-MPEG-2/2.5 intensity long/short/mixed frames also have independent
-parity coverage. All these modes remain experimental; broader
-intensity fixtures from unrelated encoders, bitrates and sample
-rates are still needed. Opt-in native MP3 file, memory and seekable
-callback streaming are described below; default MP3 remains miniaudio.
-
-The standalone `MP3_ParseXing` primitive now inspects the first
-frame's `Xing`/`Info` header for encoded frame/byte counts and
-optional LAME-family encoder delay/end padding. `MP3_GaplessSpan`
-adds the 529-sample Layer III synthesis priming for supported files.
-The optional
-host-side `MP3ParityFixtures.sh` (requires ffmpeg/libmp3lame for fixture
-generation only) compares non-periodic chirped/multitone mono and stereo
-signals to miniaudio and prints best alignment, fitted gain and
-normalized residual. These are diagnostics; the production decoder
-still uses miniaudio.
-
-**MP3 PCM parity is now verified for the covered non-periodic
-MPEG-1 mono and ordinary stereo fixtures**, using
-`MP3ExperimentalCompare.c` with the correct extra **529 decoder-priming
-samples** and metadata-based Xing/LAME delay/padding. The CLI parity
-harness enforces gain within 0.1% and normalized residual under
-`1e-5` for time-varying multitone signals; `MP3_GaplessSpan` exposes
-the calculated raw PCM start and presentation length. The earlier high
-residual on `Tone.mp3` resulted from comparing unmatched sample
-positions before correcting the decoder-priming offset.
-
-`Audio_Codec_MP3_ParseScalefactorsLSF` adds a standalone,
-bounded **MPEG-2/2.5 low-sampling-frequency scalefactor parser**, using
-the three partition families for ordinary channels and three for
-intensity-coded right channels. It supports long, short and mixed
-blocks, exposes the LSF intensity-scale bit and reports `part2Bits`
-without dynamic allocations. The experimental frame decoder also
-chains LSF Huffman, requantization, short-block reorder, alias reduction,
-IMDCT and 32-band synthesis into 576 frames of PCM for
-**8, 11.025, 12, 16, 22.05 and 24 kHz**. Non-periodic audio fixtures
-at these rates must meet a normalized residual under `1e-5` and
-gain within 0.1% against miniaudio.
-
-MPEG Layer III switched Huffman boundaries now follow the actual
-short/mixed scalefactor bands instead of using a hard-coded 36-line
-split. At 8 kHz the boundary for pure short blocks is 72 spectral
-coefficients, versus 36 for the other supported frequencies. The dedicated `MP3HuffmanRegions.c` test checks the
-switch between codebooks for MPEG-1, MPEG-2 and MPEG-2.5, including
-mixed windows. PCM parity at 8 kHz is enforced by the same nonperiodic
-waveform gate as the other MPEG-2/2.5 sample rates.
-
-The opt-in frame-level decoder additionally routes MPEG-2/2.5
-intensity stereo using the LSF intensity positions and the
-`intensity_scale` bit (including mid/side combinations).
-`MP3JointStereoLSF.c` checks the spectral factors, coded-band
-eligibility and malformed inputs. The independent generator
-`MP3LSFIntensityFixture.py` constructs valid MPEG-2/22.05-kHz
-Layer III bitstreams from Huffman symbols and scalefactor positions,
-without depending on a third-party MP3 encoder. For **long, short
-and mixed blocks**, `intensity_scale` 0/1, and MS enabled/disabled,
-the CI requires PCM residual below `1e-5` and gain within 0.1%
-against miniaudio. On those 12 cases, residuals are approximately
-`1.8e-8` to `5.3e-8` (including baseline streams).
-
-**The resulting native PCM coverage is deliberately limited to these
-tested encodings.** Independent intensity-stereo fixtures at other
-rates/bitrates, more varied coded right-channel spectra and other
-encoders still need differential testing before production adoption.
-
-**ID3 metadata compatibility.** MPEG Layer III memory and seekable
-callback readers now share the same ID3v2.2/v2.3/v2.4 ten-byte header
-validation, including version-specific flag masks, synchsafe lengths
-and a verified ID3v2.4 footer (when present). This does not allocate
-the metadata payload: the callback reader seeks past it and reads only
-the ten footer bytes, if needed. Invalid flags, truncated metadata and
-inconsistent footers fail before exposing PCM. ID3v1 endings remain
-supported.
-
-**Native MP3 memory stream (opt-in).** Include
-`Audio/Codec/MP3Memory.h` to use `MP3_MemoryOpen`,
-`MP3_MemoryInfo`, `MP3_MemoryRead`, `MP3_MemorySeek`
-and `MP3_MemoryClose`. The memory source is borrowed and must
-outlive the stream. PCM is decoded a frame at a time into a fixed
-1152-frame staging buffer, allowing small caller read sizes and
-constant buffering independent of file length. Xing/LAME delay,
-end-padding and synthesis priming are trimmed only when metadata is
-present and internally consistent; otherwise raw frame count is
-reported. Seeking within the cached PCM frame requires no additional decoding
-or I/O. Forward seeks reuse the current reservoir/overlap/synthesis
-state and only decode the intervening frames; backward seeks beyond
-the cached frame rebuild from the beginning. Seeks remain exact and
-transactional on failure, but long backward jumps are still O(n).
-Malformed or discontinuous streams are rejected rather than guessed.
-This native backend can also be exercised through the **usual**
-`Audio_Codec_OpenMemory/GetInfo/ReadFrames/SeekFrame/Close` calls
-by defining `AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3=1` **before including
-`Codec.h` or `CodecMinimal.h`**. This is opt-in per translation unit:
-WAV/FLAC, file-based and callback-based MP3 remain unchanged. The
-default `OpenMemory` MP3 backend is still miniaudio. The `CodecMP3OptIn`
-test checks the ordinary API with this macro. Only complete, contiguous
-and supported MP3 frames are accepted by the experimental memory path;
-additional file/reader and interoperability coverage is still needed.
-
-**Fault-tolerant MP3 callbacks (opt-in).** The callback reader is
-tested with 2- and 3-byte reads, interrupted reads and seeks,
-premature EOF, invalid short-read lengths, and corrupted/truncated
-ID3/MP3 input. On a failed forward `SeekFrame`, the logical PCM cursor
-and decoder state are preserved, allowing retry. `ReadFrames` may
-return an error together with a partial count when it has already
-copied PCM frames; callers must consume that reported count before
-retrying. See `CodecMP3ReaderFaults.c` in the cross-platform suite.
-
-**Native MP3 seekable file/reader streams (opt-in).** With
-`AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3=1`, the generic
-`Audio_Codec_OpenFile` and `Audio_Codec_OpenReader` now also choose
-native MPEG Layer III when the source is a valid contiguous MP3.
-An initial header scan determines the exact encoded length and checks
-rate, channels and frame bounds; the stream then keeps one compressed
-frame (up to 4096 bytes) plus one PCM frame in memory. Reads through
-callbacks tolerate partial delivery. `SeekFrame` reconstructs reservoir,
-IMDCT overlap and synthesis from the beginning, so it is O(target frame)
-but independent of overall file size in RAM. Xing/LAME gapless metadata
-uses the same validation rules as `MP3_MemoryOpen`. MP3 remains
-**miniaudio-backed without the opt-in macro**. The new cross-platform
-`CodecMP3StreamSmoke.c` and host-side `CodecMP3Stream.c` test both
-file and callback paths, including 3/7-byte partial reads and parity
-against the natively decoded memory stream. The callback reader must
-support absolute seeks; the caller retains ownership of its stream.
-
-**Malformed MP3 regression and fuzzing.** The independent
-`MP3MutationFuzz.c` harness accepts arbitrary bytes and exercises
-MPEG frame parsing, ID3 tags, native memory opening, frame reads and
-seeks, closing every successfully opened stream. Without extra tools
-it runs 384 deterministic mutations of valid MPEG frames plus all
-partial headers; on Linux it can also be built with
-`clang -DCOSMERON_MP3_LIBFUZZER -fsanitize=fuzzer,address,undefined`
-and tested against MPEG-1/LSF/ID3 corpus seeds in CI. This raises
-robustness coverage; it does not imply proof against all malformed
-inputs or replace independent encoder tests.
-
-**The coverage is not universal**. MPEG-2/2.5 intensity-stereo
-has verified PCM against independently constructed long/short/mixed
-bitstreams at 22.05 kHz, but additional sample rates, spectral
-patterns, bitrates and third-party-encoder streams need verification.
-File/reader streaming, seeks and several gapless metadata variants
-also remain unfinished. Production
-`OpenFile`, `OpenMemory` and `OpenReader` therefore **remain on
-miniaudio** until broader fixture parity and robustness are verified.
-
-
-
-
-### Types and constants
-
-`TDecoder` owns opaque state; `TInfo` has rate/channels/frameCount/lengthKnown. `TReader` has userData and read/seek callbacks. Seek origin constants: `SEEK_START`, `SEEK_CURRENT`, `SEEK_END`.
-
-Examples below are usage excerpts; when a variable is not declared locally, it represents the previously initialized object named in the parameters table.
+`BuildSeekIndex` prepares native seekable MP3/FLAC and restores the cursor.
+`VerifyIntegrity` explicitly checks complete native FLAC MD5 and restores the
+cursor; it returns `NOT_AVAILABLE` when STREAMINFO supplies no digest.
 
 ---
 
@@ -2405,17 +2231,13 @@ OPSTATUS status = AUDIO_CODEC_FUNC(WriteWAV)(path, buffer);
 
 Header: `Cosmeron/Modules/Audio/Device/Device.h`
 
-Callback-driven hardware audio output.
-
-**Desktop-only**: not included when `AUDIO_NO_DESKTOP` is enabled.
-
-
-
-### Types and constants
-
-`TDevice` owns an opaque backend; `TConfig` contains rate/channels/render callback/userData. Callback: `void (*)(void *userData, float *outSamples, size_t frameCount, uint32_t channels)`.
-
-Examples below are usage excerpts; when a variable is not declared locally, it represents the previously initialized object named in the parameters table.
+Native callback output on Linux (ALSA), Windows (waveOut), macOS (AudioQueue)
+and FreeBSD/DragonFly (OSS), with temporary miniaudio fallback. Define
+`AUDIO_DEVICE_MINIAUDIO_FALLBACK=0` to exclude the imported backend.
+`OpenNamed` selects an enumerated native ID; `Enumerate`, `GetFormat` and
+`GetStatus` expose selection, callback format and asynchronous failure.
+See [Native devices and lifecycle](AudioNative.md#output-devices) for ownership,
+reentrant Close behavior, runtime dependencies and hardware-validation limits.
 
 ---
 

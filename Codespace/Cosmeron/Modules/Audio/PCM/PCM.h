@@ -30,4 +30,22 @@ AUDIO_PCM_DESTROY_PROTOTYPE;
 AUDIO_PCM_FROM_S16_PROTOTYPE;
 AUDIO_PCM_TO_S16_PROTOTYPE;
 
+#define AUDIO_PCM_FROM_S32_PROTOTYPE \
+  static inline OPSTATUS AUDIO_PCM_FUNC(FromS32)(const int32_t *samples, size_t sampleCount, float *outSamples)
+#define AUDIO_PCM_TO_S32_PROTOTYPE \
+  static inline OPSTATUS AUDIO_PCM_FUNC(ToS32)(const float *samples, size_t sampleCount, int32_t *outSamples)
+#define AUDIO_PCM_FROM_S24LE_PROTOTYPE \
+  static inline OPSTATUS AUDIO_PCM_FUNC(FromS24LE)(const unsigned char *samples, size_t sampleCount, float *outSamples)
+#define AUDIO_PCM_TO_S24LE_PROTOTYPE \
+  static inline OPSTATUS AUDIO_PCM_FUNC(ToS24LE)(const float *samples, size_t sampleCount, unsigned char *outSamples)
+#define AUDIO_PCM_NORMALIZE_PROTOTYPE \
+  static inline OPSTATUS AUDIO_PCM_FUNC(Normalize)(float *samples, size_t sampleCount, float peak)
+#define AUDIO_PCM_SANITIZE_PROTOTYPE \
+  static inline OPSTATUS AUDIO_PCM_FUNC(Sanitize)(float *samples, size_t sampleCount)
+AUDIO_PCM_FROM_S32_PROTOTYPE;
+AUDIO_PCM_TO_S32_PROTOTYPE;
+AUDIO_PCM_FROM_S24LE_PROTOTYPE;
+AUDIO_PCM_TO_S24LE_PROTOTYPE;
+AUDIO_PCM_NORMALIZE_PROTOTYPE;
+AUDIO_PCM_SANITIZE_PROTOTYPE;
 #include "Impl/PCM.impl"

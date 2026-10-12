@@ -375,6 +375,7 @@ AUDIO_CODEC_MP3_FIND_FRAME_PROTOTYPE {
   return STATUS_CONST(NOT_FOUND);
 }
 
+#include "Impl/MP3CRC.inc"
 #include "Impl/MP3SideInfo.inc"
 #include "Impl/MP3Scalefactors.inc"
 #include "Impl/MP3ScalefactorsLSF.inc"

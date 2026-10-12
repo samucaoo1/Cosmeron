@@ -29,6 +29,8 @@ AUDIO_CODEC_MP3_EXPERIMENT_FRAME_PROTOTYPE {
     return STATUS_CONST(INVALID_SEQUENCE);
   if (size < header.frameBytes)
     return STATUS_CONST(INCOMPLETE_SEQUENCE);
+  status = AUDIO_CODEC_FUNC(MP3_CheckCRC)(frame, size);
+  if (status != STATUS_CONST(SUCCESS)) return status;
   memset(previous, 0, sizeof previous);
   memset(scaleByChannel, 0, sizeof scaleByChannel);
   work = *state;

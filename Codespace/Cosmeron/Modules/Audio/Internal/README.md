@@ -136,7 +136,7 @@ The native WAV writer is shared by `WriteWAV` and `WAV_WriteFile`.
 `Codec/WAV.h` can still be included independently without the
 vendored desktop backend. The FLAC path is also independent in
 `Audio/Codec/FLAC.h` and via the generic OpenMemory/OpenFile/OpenReader API;
-MP3 decoding and desktop-device features still require Miniaudio.
+Native MP3 and native device backends are now preferred; Miniaudio remains a compatibility fallback. See Docs/Modules/AudioNative.md.
 
 ## Native FLAC file and callback streaming
 
@@ -152,9 +152,7 @@ entire input or PCM recording in memory.
 `OpenFile` owns the native FILE handle and releases it on Close.
 `OpenReader` borrows the supplied reader state and never closes it.
 `OpenMemory` borrows its encoded byte array; clients must keep it alive
-until Close. `SeekFrame` currently decompresses skipped frames to maintain
-correctness; a random-access frame index can be added later.
+until Close. Frame indices populate lazily; BuildSeekIndex prepares them explicitly.
 
 The standalone `Audio/Codec/FLAC.h` does not import Miniaudio.
-The desktop Codec aggregation still imports Miniaudio for MP3. STREAMINFO
-MD5 authentication and indexed seek optimization remain future work.
+The default Codec aggregation retains Miniaudio as fallback; CodecNative.h excludes it. Optional exact-integer STREAMINFO MD5 verification and indexed seeking are implemented. See Docs/Modules/AudioNative.md.

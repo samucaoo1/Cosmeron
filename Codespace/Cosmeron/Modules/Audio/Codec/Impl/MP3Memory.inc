@@ -7,9 +7,39 @@ typedef struct AUDIO_INS(TMP3MemoryDecoder) {
   uint64_t rawDecoded, rawFirst, frameCount, presented, stagedFirst;
   uint32_t rate, channels;
   uint16_t samplesPerFrame;
+  struct AUDIO_INS(TMP3MemoryDecoderCheckpoint) *checkpoints;
+  size_t checkpointCount;
+  uint64_t checkpointStride;
+  bool indexingDisabled;
   size_t stagedFrames, stagedCursor;
   float stage[1152 * 2];
 } AUDIO_INS(TMP3MemoryDecoder);
+
+/* Sparse exact-state checkpoints: reservoir, hybrid overlap and synthesis
+ * history must all be restored for sample-identical VBR backward seeks.
+ * Lazy population avoids decoding the entire file during open. */
+typedef struct AUDIO_INS(TMP3MemoryDecoderCheckpoint) {
+  AUDIO_INS(TMP3MemoryDecoder) state;
+  struct AUDIO_INS(TMP3MemoryDecoderCheckpoint) *next;
+} AUDIO_INS(TMP3MemoryDecoderCheckpoint);
+static inline void AUDIO_INS(TMP3MemoryDecoder_Remember)(AUDIO_INS(TMP3MemoryDecoder) *s) {
+  AUDIO_INS(TMP3MemoryDecoderCheckpoint) *p;
+  if (s->indexingDisabled || !s->rawDecoded || s->rawDecoded % (s->checkpointStride * s->samplesPerFrame) ||
+      s->checkpointCount >= 1024) return;
+  for (p = s->checkpoints; p; p = p->next)
+    if (p->state.rawDecoded == s->rawDecoded) return;
+  p = (AUDIO_INS(TMP3MemoryDecoderCheckpoint) *)malloc(sizeof *p);
+  if (!p) return; /* optional optimization; decode remains usable */
+  p->state = *s;
+  p->next = s->checkpoints;
+  s->checkpoints = p;
+  ++s->checkpointCount;
+}
+static inline void AUDIO_INS(TMP3MemoryDecoder_Forget)(AUDIO_INS(TMP3MemoryDecoder) *s) {
+  AUDIO_INS(TMP3MemoryDecoderCheckpoint) *p = s->checkpoints;
+  while (p) { AUDIO_INS(TMP3MemoryDecoderCheckpoint) *next = p->next; free(p); p = next; }
+}
+
 
 /* A complete frame is either published to the staging buffer or leaves
  * the synthesis state intact. MPEG reservoir preroll is allowed only
@@ -24,6 +54,7 @@ static inline OPSTATUS AUDIO_INS(MP3_MemoryConsume)(
     uint64_t rawEnd = value->rawFirst + value->frameCount;
     size_t available, n;
     if (value->stagedCursor == value->stagedFrames) {
+      AUDIO_INS(TMP3MemoryDecoder_Remember)(value);
       AUDIO_CODEC_TYPE(TMP3FrameInfo) header;
       size_t decoded = 0;
       if (value->nextByte >= value->lastByte) {
@@ -148,6 +179,8 @@ AUDIO_CODEC_MP3_MEMORY_OPEN_PROTOTYPE {
   value->rate = first.sampleRate;
   value->channels = first.channels;
   value->samplesPerFrame = first.samplesPerFrame;
+  value->checkpointStride = count / 1024 + 1;
+  if (value->checkpointStride < 64) value->checkpointStride = 64;
   stream->internal = value;
   return STATUS_CONST(SUCCESS);
 }
@@ -200,11 +233,20 @@ AUDIO_CODEC_MP3_MEMORY_SEEK_PROTOTYPE {
   scratch = (AUDIO_INS(TMP3MemoryDecoder) *)malloc(sizeof(*scratch));
   if (!scratch) return STATUS_CONST(OUT_OF_MEMORY);
   *scratch = *value;
+  scratch->indexingDisabled = true;
   if (frameIndex < value->presented) {
     memset(&scratch->decoder, 0, sizeof scratch->decoder);
     scratch->nextByte = value->firstByte;
     scratch->rawDecoded = scratch->stagedFirst = scratch->presented = 0;
     scratch->stagedCursor = scratch->stagedFrames = 0;
+  }
+  {
+    AUDIO_INS(TMP3MemoryDecoderCheckpoint) *p, *best = NULL;
+    for (p = value->checkpoints; p; p = p->next)
+      if (p->state.presented <= frameIndex &&
+          p->state.presented > scratch->presented &&
+          (!best || p->state.presented > best->state.presented)) best = p;
+    if (best) { *scratch = best->state; scratch->indexingDisabled = true; }
   }
   remain = frameIndex - scratch->presented;
   while (remain) {
@@ -219,6 +261,9 @@ AUDIO_CODEC_MP3_MEMORY_SEEK_PROTOTYPE {
     }
     remain -= got;
   }
+  scratch->checkpoints = value->checkpoints;
+  scratch->checkpointCount = value->checkpointCount;
+  scratch->indexingDisabled = false;
   *value = *scratch;
   free(scratch);
   return STATUS_CONST(SUCCESS);
@@ -226,6 +271,7 @@ AUDIO_CODEC_MP3_MEMORY_SEEK_PROTOTYPE {
 
 AUDIO_CODEC_MP3_MEMORY_CLOSE_PROTOTYPE {
   if (stream && stream->internal) {
+    AUDIO_INS(TMP3MemoryDecoder_Forget)((AUDIO_INS(TMP3MemoryDecoder) *)stream->internal);
     free(stream->internal);
     stream->internal = NULL;
   }

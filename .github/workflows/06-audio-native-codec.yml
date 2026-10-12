@@ -1,7 +1,7 @@
 name: "06 · Native Audio Codec"
 on:
   push:
-    branches: [audio-native-codecs, audio-flac-native, audio-flac-frames, audio-flac-streaming, audio-mp3-native, audio-mp3-reservoir, audio-mp3-scalefactors, audio-mp3-huffman, audio-mp3-requantize, audio-mp3-hybrid, audio-mp3-imdct, audio-mp3-polyphase, audio-mp3-intensity, audio-mp3-experimental, audio-mp3-fidelity, audio-mp3-intensity-routing, audio-mp3-lsf, audio-mp3-lsf-pcm, audio-mp3-8k-huffman-regions, audio-mp3-lsf-intensity, audio-mp3-memory-stream, audio-mp3-reader-stream, audio-mp3-seek-optimization, audio-mp3-reader-robustness, audio-flac-overflow-guard, audio-mp3-id3-hardening, audio-mp3-mutation-fuzz, audio-mp3-mpeg1-intensity-parity, audio-module]
+    branches: [audio-native-production, audio-native-codecs, audio-flac-native, audio-flac-frames, audio-flac-streaming, audio-mp3-native, audio-mp3-reservoir, audio-mp3-scalefactors, audio-mp3-huffman, audio-mp3-requantize, audio-mp3-hybrid, audio-mp3-imdct, audio-mp3-polyphase, audio-mp3-intensity, audio-mp3-experimental, audio-mp3-fidelity, audio-mp3-intensity-routing, audio-mp3-lsf, audio-mp3-lsf-pcm, audio-mp3-8k-huffman-regions, audio-mp3-lsf-intensity, audio-mp3-memory-stream, audio-mp3-reader-stream, audio-mp3-seek-optimization, audio-mp3-reader-robustness, audio-flac-overflow-guard, audio-mp3-id3-hardening, audio-mp3-mutation-fuzz, audio-mp3-mpeg1-intensity-parity, audio-module]
     paths:
       - "Codespace/Cosmeron/Modules/Audio/**"
       - "Codespace/Tests/Audio/**"
@@ -200,7 +200,7 @@ jobs:
           run: |
             set -eu
             cd Codespace/Tests/Audio
-            for test in FLACMetadata FLACFrames FLACArithmetic FLACStandalone MP3Headers MP3ID3Readers MP3MutationFuzz MP3SideInfo MP3Scalefactors MP3ScalefactorsLSF MP3Huffman MP3HuffmanRegions MP3Requant MP3Hybrid MP3IMDCT MP3Synthesis MP3Intensity MP3JointStereo MP3JointStereoLSF MP3Xing MP3Experimental MP3MemorySmoke CodecMP3OptIn CodecMP3StreamSmoke CodecMP3ReaderFaults; do
+            for test in DeviceNative PCMProduction NativeCodecProduction MP3CRC FLACIntegrity CodecRobustnessFuzz FLACMetadata FLACFrames FLACArithmetic FLACStandalone MP3Headers MP3ID3Readers MP3MutationFuzz MP3SideInfo MP3Scalefactors MP3ScalefactorsLSF MP3Huffman MP3HuffmanRegions MP3Requant MP3Hybrid MP3IMDCT MP3Synthesis MP3Intensity MP3JointStereo MP3JointStereoLSF MP3Xing MP3Experimental MP3MemorySmoke CodecMP3OptIn CodecMP3StreamSmoke CodecMP3ReaderFaults; do
               cc -std=c11 -Wall -Wextra -Wpedantic -Werror "$test.c" -o "./$test"
               "./$test"
             done
@@ -214,9 +214,25 @@ jobs:
         shell: pwsh
         run: |
           cd Codespace/Tests/Audio
-          foreach ($test in @("FLACMetadata", "FLACFrames", "FLACArithmetic", "FLACStandalone", "MP3Headers", "MP3MutationFuzz", "MP3SideInfo", "MP3Scalefactors", "MP3ScalefactorsLSF", "MP3Huffman", "MP3HuffmanRegions", "MP3Requant", "MP3Hybrid", "MP3IMDCT", "MP3Synthesis", "MP3Intensity", "MP3JointStereo", "MP3JointStereoLSF", "MP3Xing", "MP3Experimental", "MP3MemorySmoke", "CodecMP3OptIn", "CodecMP3StreamSmoke", "CodecMP3ReaderFaults")) {
+          foreach ($test in @("DeviceNative", "PCMProduction", "NativeCodecProduction", "MP3CRC", "FLACIntegrity", "CodecRobustnessFuzz", "FLACMetadata", "FLACFrames", "FLACArithmetic", "FLACStandalone", "MP3Headers", "MP3MutationFuzz", "MP3SideInfo", "MP3Scalefactors", "MP3ScalefactorsLSF", "MP3Huffman", "MP3HuffmanRegions", "MP3Requant", "MP3Hybrid", "MP3IMDCT", "MP3Synthesis", "MP3Intensity", "MP3JointStereo", "MP3JointStereoLSF", "MP3Xing", "MP3Experimental", "MP3MemorySmoke", "CodecMP3OptIn", "CodecMP3StreamSmoke", "CodecMP3ReaderFaults")) {
             cl /nologo /std:c11 /W4 /WX /D_CRT_SECURE_NO_WARNINGS /TC "$test.c" "/Fe:$test.exe"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             & "./$test.exe"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
+
+  native-interoperability:
+    name: Linux / native codec production interoperability
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg libflac12
+      - name: Independent encoders, intensity layouts, VBR and nonseekable readers
+        run: cd Codespace/Tests/Audio && sh NativeCodecInterop.sh
+      - name: CPU and resident memory measurements (no threshold)
+        run: |
+          cd Codespace/Tests/Audio
+          cc -O2 -std=c11 -Wall -Wextra -Wpedantic -Werror CodecBenchmark.c -o /tmp/codec-benchmark
+          ffmpeg -nostdin -v error -y -f lavfi -i 'aevalsrc=0.2*sin(2*PI*(173*t+111*t*t)):s=44100:d=8' -c:a libmp3lame -q:a 4 /tmp/benchmark.mp3
+          /tmp/codec-benchmark native /tmp/benchmark.mp3
+          /tmp/codec-benchmark miniaudio /tmp/benchmark.mp3

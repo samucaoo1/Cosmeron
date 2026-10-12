@@ -45,7 +45,72 @@ AUDIO_PCM_TO_S16_PROTOTYPE {
       return STATUS_CONST(INVALID_ARGUMENT);
   for (i = 0; i < sampleCount; ++i) {
     float value = AUDIO_INS(Clamp)(samples[i]);
-    outSamples[i] = value <= -1.0f ? INT16_MIN : (int16_t)(value * 32767.0f);
+    double scaled=(double)value*32768.0;
+    scaled=scaled<0 ? scaled-0.5 : scaled+0.5;
+    outSamples[i]=scaled<=INT16_MIN ? INT16_MIN : scaled>=INT16_MAX ? INT16_MAX : (int16_t)scaled;
   }
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_PCM_FROM_S32_PROTOTYPE {
+  size_t i;
+  if (!samples || !outSamples) return STATUS_CONST(INVALID_ARGUMENT);
+  for(i=0;i<sampleCount;++i) outSamples[i]=(float)((double)samples[i]/2147483648.0);
+  return STATUS_CONST(SUCCESS);
+}
+AUDIO_PCM_TO_S32_PROTOTYPE {
+  size_t i;
+  if (!samples || !outSamples) return STATUS_CONST(INVALID_ARGUMENT);
+  for(i=0;i<sampleCount;++i) if (!AUDIO_INS(Finite)(samples[i])) return STATUS_CONST(INVALID_ARGUMENT);
+  for(i=0;i<sampleCount;++i) {
+    double value=(double)AUDIO_INS(Clamp)(samples[i])*2147483648.0;
+    value=value<0 ? value-0.5 : value+0.5;
+    outSamples[i]=value<=INT32_MIN ? INT32_MIN : value>=INT32_MAX ? INT32_MAX : (int32_t)value;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+AUDIO_PCM_FROM_S24LE_PROTOTYPE {
+  size_t i;
+  if (!samples || !outSamples) return STATUS_CONST(INVALID_ARGUMENT);
+  if (sampleCount>SIZE_MAX/3) return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  for(i=0;i<sampleCount;++i) {
+    const unsigned char *p=samples+3*i;
+    uint32_t raw=(uint32_t)p[0]|((uint32_t)p[1]<<8)|((uint32_t)p[2]<<16);
+    int32_t value=raw&0x800000U ? (int32_t)raw-16777216 : (int32_t)raw;
+    outSamples[i]=(float)value/8388608.0f;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+AUDIO_PCM_TO_S24LE_PROTOTYPE {
+  size_t i;
+  if (!samples || !outSamples) return STATUS_CONST(INVALID_ARGUMENT);
+  if (sampleCount>SIZE_MAX/3) return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  for(i=0;i<sampleCount;++i) if (!AUDIO_INS(Finite)(samples[i])) return STATUS_CONST(INVALID_ARGUMENT);
+  for(i=0;i<sampleCount;++i) {
+    double scaled=(double)AUDIO_INS(Clamp)(samples[i])*8388608.0;
+    uint32_t raw; unsigned int j;
+    scaled=scaled<0 ? scaled-0.5 : scaled+0.5;
+    raw=(uint32_t)(scaled<=-8388608 ? -8388608 : scaled>=8388607 ? 8388607 : (int32_t)scaled);
+    for(j=0;j<3;++j) outSamples[i*3+j]=(unsigned char)(raw>>(8*j));
+  }
+  return STATUS_CONST(SUCCESS);
+}
+AUDIO_PCM_NORMALIZE_PROTOTYPE {
+  size_t i; double maximum=0;
+  if (!samples || !AUDIO_INS(Finite)(peak) || peak<=0 || peak>1) return STATUS_CONST(INVALID_ARGUMENT);
+  for(i=0;i<sampleCount;++i) {
+    double value=samples[i];
+    if (!AUDIO_INS(Finite)(value)) return STATUS_CONST(INVALID_ARGUMENT);
+    if (value<0) value=-value;
+    if (value>maximum) maximum=value;
+  }
+  if (maximum) for(i=0;i<sampleCount;++i)
+    samples[i]=(float)(((double)samples[i]/maximum)*peak);
+  return STATUS_CONST(SUCCESS);
+}
+AUDIO_PCM_SANITIZE_PROTOTYPE {
+  size_t i;
+  if (!samples) return STATUS_CONST(INVALID_ARGUMENT);
+  for(i=0;i<sampleCount;++i) samples[i]=AUDIO_INS(Finite)(samples[i]) ? AUDIO_INS(Clamp)(samples[i]) : 0;
   return STATUS_CONST(SUCCESS);
 }
