@@ -38,12 +38,16 @@ static void testBoundary(uint32_t sampleRate, bool mixed, size_t region0) {
   assert(out[region0] == 1 && out[region0 + 1] == 0);
 }
 int main(void) {
-  testBoundary(44100, false, 198);
-  testBoundary(22050, false, 222);
-  testBoundary(11025, false, 240);
-  testBoundary(8000, false, 480);
+  testBoundary(44100, false, 36);
+  testBoundary(22050, false, 36);
+  testBoundary(11025, false, 36);
+  testBoundary(8000, false, 72);
   testBoundary(44100, true, 36);
-  testBoundary(22050, true, 72);
-  testBoundary(8000, true, 156);
+  testBoundary(22050, true, 48);
+  testBoundary(24000, true, 52);
+  testBoundary(16000, true, 52);
+  testBoundary(11025, true, 48);
+  testBoundary(12000, true, 48);
+  testBoundary(8000, true, 64);
   return 0;
 }
