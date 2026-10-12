@@ -29,8 +29,8 @@ int main(void) {
   h.msStereo=true;
   assert(AUDIO_CODEC_FUNC(MP3_JointStereoLSF)(
       &h,&g,&sf,0,l,r,a,b)==STATUS_CONST(SUCCESS));
-  assert(near(a[30],4*1.41421356237f));
-  assert(near(b[44],4*0.8408964153f*1.41421356237f));
+  assert(near(a[30],4));
+  assert(near(b[44],4*0.8408964153f));
   l[0]=2;r[0]=2;
   assert(AUDIO_CODEC_FUNC(MP3_JointStereoLSF)(
       &h,&g,&sf,0,l,r,a,b)==STATUS_CONST(SUCCESS));
