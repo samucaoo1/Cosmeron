@@ -340,7 +340,18 @@ static inline OPSTATUS AUDIO_INS(NativeDeviceOpen)(
 #if defined(__linux__)
     s->threadLibrary=dlopen("libpthread.so.0",RTLD_NOW|RTLD_LOCAL);
 #else
-    s->threadLibrary=dlopen("libpthread.so",RTLD_NOW|RTLD_LOCAL);
+    /* BSD libthr/libpthread may require startup TLS/runtime setup. Never
+     * load a thread runtime late merely to satisfy a no-manual-flags build.
+     * Reuse a runtime already loaded by the host or return unavailable. */
+#if defined(RTLD_NOLOAD)
+#if defined(__FreeBSD__)
+    s->threadLibrary=dlopen("libthr.so.3",RTLD_NOW|RTLD_LOCAL|RTLD_NOLOAD);
+#endif
+    if (!s->threadLibrary)
+      s->threadLibrary=dlopen("libpthread.so",RTLD_NOW|RTLD_LOCAL|RTLD_NOLOAD);
+#else
+    goto fail;
+#endif
 #endif
     if (!s->threadLibrary) goto fail;
     symbol=dlsym(s->threadLibrary,"pthread_create");

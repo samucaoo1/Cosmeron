@@ -96,6 +96,12 @@ For standalone output without imported code, define
 | FreeBSD/DragonFly | OSS | native-endian signed16 | `/dev/dsp*` path |
 | OpenBSD/NetBSD | Compatibility fallback | backend dependent | Default |
 
+BSD OSS workers require a thread runtime already loaded by the host at startup.
+`RTLD_NOLOAD` explicitly prevents unsafe late loading of libthr/libpthread.
+Without it, Open returns `NOT_AVAILABLE`; default configuration can use the
+compatibility fallback. A standalone native-only BSD callback build therefore
+is not certified as an independent zero-link thread runtime.
+
 No manual ALSA, WinMM, Apple framework or pthread link flags are introduced
 for these native backends. ALSA keeps a shared runtime-loader reference per translation unit for process
 lifetime: unloading its global configuration cache on each device Close orphaned
