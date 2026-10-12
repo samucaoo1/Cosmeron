@@ -1827,8 +1827,12 @@ MPEG-1 intensity coefficients and automatic scalefactor-band intensity/MS routin
 The opt-in `Audio/Codec/MP3Experimental.h` supplies
 `Audio_Codec_MP3_ExperimentFrame` and
 `Audio_Codec_TMP3Experimental`, a zero-initialized per-stream state.
-Pass a complete MPEG-1 frame and an output buffer for **1,152 frames**
-of interleaved float PCM; mono and stereo are supported. The call retains
+Pass a complete MPEG-1 frame (1,152 output frames) or
+MPEG-2/2.5 LSF frame (576 output frames) and a caller-owned buffer of
+interleaved float PCM. Mono, ordinary stereo and MS stereo are supported
+for the specified verified variants. MPEG-2/2.5 intensity stereo and
+8-kHz PCM currently return `NOT_SUPPORTED` while their waveform
+fidelity remains unverified. The call retains
 reservoir, overlap and synthesis state across frames. For stereo,
 `MP3_JointStereo` identifies right-channel nonzero spectral bands before
 the short-block reorder, applies intensity-stereo scalefactors above the
@@ -1841,8 +1845,9 @@ PCM regression harness uses a separate LAME-generated MS joint-stereo
 fixture. **Real-world intensity-stereo PCM parity is not yet certified**:
 the ordinary LAME fixtures mostly exercise MS stereo; additional
 reference-encoded intensity bitstreams and edge-case tests remain needed.
-The experimental API does not provide file-level reading, seeking or
-support for MPEG-2/2.5 LSF.
+The experimental API does not provide file-level reading or seeking.
+MPEG-2/2.5 ordinary stereo/mono PCM is available on a limited,
+opt-in basis only after the corresponding LSF parity checks.
 
 The standalone `MP3_ParseXing` primitive now inspects the first
 frame's `Xing`/`Info` header for encoded frame/byte counts and
@@ -1870,15 +1875,26 @@ bounded **MPEG-2/2.5 low-sampling-frequency scalefactor parser**, using
 the three partition families for ordinary channels and three for
 intensity-coded right channels. It supports long, short and mixed
 blocks, exposes the LSF intensity-scale bit and reports `part2Bits`
-without dynamic allocations. This is **not** an LSF PCM decoder:
-requantization, intensity-band factors, short-block reorder, IMDCT and
-full frame playback still need to be adapted and tested for LSF rates.
+without dynamic allocations. The experimental frame decoder also
+chains LSF Huffman, requantization, short-block reorder, alias reduction,
+IMDCT and 32-band synthesis into 576 frames of PCM for
+**11.025, 12, 16, 22.05 and 24 kHz**. Non-periodic audio fixtures
+at these rates must meet a normalized residual under `1e-5` and
+gain within 0.1% against miniaudio.
+
+The **8-kHz MPEG-2.5 case is intentionally rejected by the experimental
+PCM decoder**: its tested LAME fixture produced residual ~0.0306,
+despite valid framing/scalefactor parsing. A preliminary four-long-
+subband mixed-block path exists and has synthetic tests, but the 8-kHz
+fixture contains only two short blocks and the divergence remains
+unresolved. 8-kHz headers, side-info, reservoir and scalefactor parsing
+remain available as independent primitives.
 
 **The coverage is not universal**. Automatic intensity-stereo
 band handling is implemented but is still awaiting independent
-intensity-encoded PCM fixtures. MPEG-2/2.5 full PCM synthesis and intensity scaling,
+intensity-encoded PCM fixtures. MPEG-2/2.5 intensity-stereo PCM, 8-kHz spectral parity,
 file/reader streaming, seeks, and several gapless metadata
-cases are still unimplemented. Production
+cases remain unfinished. Production
 `OpenFile`, `OpenMemory` and `OpenReader` therefore **remain on
 miniaudio** until broader fixture parity and robustness are verified.
 
