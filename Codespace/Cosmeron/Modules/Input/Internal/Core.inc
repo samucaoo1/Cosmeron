@@ -132,8 +132,14 @@ static inline INPUT_INS(Device) *INPUT_INS(Connect)(size_t slot, const char *nam
     d->gamepadAxes[i] = -1; d->gamepadScale[i] = 1;
   }
   if (name) {
-    strncpy(d->name, name, sizeof(d->name) - 1);
-    d->name[sizeof(d->name) - 1] = '\0';
+    size_t length = 0;
+    /* Copy only complete bytes that fit, with a guaranteed terminator.
+     * strncpy warns under GCC -Wstringop-truncation and zero-fills
+     * unnecessarily; explicit bounds work on all libc variants. */
+    while (length + 1 < sizeof(d->name) && name[length])
+      ++length;
+    memcpy(d->name, name, length);
+    d->name[length] = '\0';
   }
   e.type = INPUT_CONST(EVENT_DEVICE_CONNECTED); e.controller = d->id;
   INPUT_INS(Push)(e);
