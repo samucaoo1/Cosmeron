@@ -175,7 +175,7 @@ jobs:
         run: |
           set -eu
           cd Codespace/Tests/Audio
-          for test in MP3Headers MP3ID3Readers MP3MutationFuzz MP3SideInfo MP3Scalefactors MP3ScalefactorsLSF MP3Huffman MP3HuffmanRegions MP3Requant MP3Hybrid MP3IMDCT MP3Synthesis MP3Intensity MP3JointStereo MP3JointStereoLSF MP3Xing MP3Experimental MP3MemorySmoke CodecMP3OptIn CodecMP3StreamSmoke CodecMP3ReaderFaults; do
+          for test in MP3CRC DeviceNative PCMProduction NativeCodecProduction FLACIntegrity CodecRobustnessFuzz MP3Headers MP3ID3Readers MP3MutationFuzz MP3SideInfo MP3Scalefactors MP3ScalefactorsLSF MP3Huffman MP3HuffmanRegions MP3Requant MP3Hybrid MP3IMDCT MP3Synthesis MP3Intensity MP3JointStereo MP3JointStereoLSF MP3Xing MP3Experimental MP3MemorySmoke CodecMP3OptIn CodecMP3StreamSmoke CodecMP3ReaderFaults; do
             cc -std=c11 -Wall -Wextra -Wpedantic -Werror -fsanitize=address,undefined -fno-omit-frame-pointer "$test.c" -o "/tmp/$test"
             "/tmp/$test"
           done
