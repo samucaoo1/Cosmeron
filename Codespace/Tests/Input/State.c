@@ -113,6 +113,19 @@ int main(void) {
   assert(Input_Controller_GetName(oldId, name, sizeof(name), &required) == STATUS_NOT_FOUND);
   assert(Input_Controller_StopRumble(oldId) == STATUS_NOT_FOUND);
   d = Input_Internal_Connect(0, "New controller"); assert(d && d->id != oldId);
+  {
+    /* Long backend names must be bounded and NUL-terminated on both
+     * glibc and musl, including a source longer than the fixed field. */
+    char longName[sizeof(d->name) + 8];
+    memset(longName, 'Q', sizeof(longName));
+    longName[sizeof(longName) - 1] = '\0';
+    Input_Internal_Disconnect(0);
+    d = Input_Internal_Connect(0, longName);
+    assert(d != NULL);
+    assert(d->name[sizeof(d->name) - 1] == '\0');
+    for (i = 0; i + 1 < sizeof(d->name); ++i)
+      assert(d->name[i] == 'Q');
+  }
 
   Input_Event_Clear(); Input_Internal_state.dropped = 0;
   for (i = 0; i < INPUT_EVENT_CAPACITY + 2; ++i) Input_Internal_Motion(1, 0, false);
