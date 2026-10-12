@@ -118,11 +118,13 @@ AUDIO_CODEC_MP3_SCALEFACTORS_LSF_PROTOTYPE {
   if (intensity) {
     uint8_t sentinel[4];
     unsigned int g, k = 0;
+    /* For slen=0 no bit is transmitted and is_pos is exactly 0.
+     * Only explicit all-one bit patterns mean "no intensity". */
     for (g = 0; g < 4; ++g)
       sentinel[g] = slen[g] ? (uint8_t)((1U << slen[g]) - 1U) : 255U;
     for (g = 0; g < 4; ++g) {
       for (i = 0; i < partitions[family][kind][g]; ++i, ++k) {
-        uint8_t pos = raw[k] == sentinel[g] ? 255U : raw[k];
+        uint8_t pos = slen[g] && raw[k] == sentinel[g] ? 255U : raw[k];
         if (kind == 0)
           result.lsfIntensityLong[k] = pos;
         else if (kind == 1)
