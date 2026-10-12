@@ -68,12 +68,16 @@ jobs:
           COSMERON_MP3_BASELINE_STRICT=1 /tmp/mp3-lsf-is-compare "$dir/baseline.mp3"
           python3 MP3LSFIntensityFixture.py "$dir/baseline-short.mp3" 0 0 baseline-short
           COSMERON_MP3_BASELINE_STRICT=1 /tmp/mp3-lsf-is-compare "$dir/baseline-short.mp3"
+          python3 MP3LSFIntensityFixture.py "$dir/baseline-mixed.mp3" 0 0 baseline-mixed
+          COSMERON_MP3_BASELINE_STRICT=1 /tmp/mp3-lsf-is-compare "$dir/baseline-mixed.mp3"
           for ms in 0 1; do
             for scale in 0 1; do
               python3 MP3LSFIntensityFixture.py "$dir/intensity-$ms-$scale.mp3" "$ms" "$scale"
               COSMERON_MP3_LSF_INTENSITY_STRICT=1 /tmp/mp3-lsf-is-compare "$dir/intensity-$ms-$scale.mp3"
               python3 MP3LSFIntensityFixture.py "$dir/intensity-short-$ms-$scale.mp3" "$ms" "$scale" short
               COSMERON_MP3_LSF_INTENSITY_STRICT=1 /tmp/mp3-lsf-is-compare "$dir/intensity-short-$ms-$scale.mp3"
+              python3 MP3LSFIntensityFixture.py "$dir/intensity-mixed-$ms-$scale.mp3" "$ms" "$scale" mixed
+              COSMERON_MP3_LSF_INTENSITY_STRICT=1 /tmp/mp3-lsf-is-compare "$dir/intensity-mixed-$ms-$scale.mp3"
             done
           done
 
