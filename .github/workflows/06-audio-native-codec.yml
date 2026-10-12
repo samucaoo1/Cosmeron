@@ -92,7 +92,7 @@ jobs:
         run: |
           set -eu
           cd Codespace/Tests/Audio
-          for test in MP3Headers MP3SideInfo MP3Scalefactors MP3ScalefactorsLSF MP3Huffman MP3HuffmanRegions MP3Requant MP3Hybrid MP3IMDCT MP3Synthesis MP3Intensity MP3JointStereo MP3JointStereoLSF MP3Xing MP3Experimental MP3MemorySmoke; do
+          for test in MP3Headers MP3SideInfo MP3Scalefactors MP3ScalefactorsLSF MP3Huffman MP3HuffmanRegions MP3Requant MP3Hybrid MP3IMDCT MP3Synthesis MP3Intensity MP3JointStereo MP3JointStereoLSF MP3Xing MP3Experimental MP3MemorySmoke CodecMP3OptIn; do
             cc -std=c11 -Wall -Wextra -Wpedantic -Werror -fsanitize=address,undefined -fno-omit-frame-pointer "$test.c" -o "/tmp/$test"
             "/tmp/$test"
           done
@@ -117,7 +117,7 @@ jobs:
           run: |
             set -eu
             cd Codespace/Tests/Audio
-            for test in FLACMetadata FLACFrames FLACStandalone MP3Headers MP3SideInfo MP3Scalefactors MP3ScalefactorsLSF MP3Huffman MP3HuffmanRegions MP3Requant MP3Hybrid MP3IMDCT MP3Synthesis MP3Intensity MP3JointStereo MP3JointStereoLSF MP3Xing MP3Experimental MP3MemorySmoke; do
+            for test in FLACMetadata FLACFrames FLACStandalone MP3Headers MP3SideInfo MP3Scalefactors MP3ScalefactorsLSF MP3Huffman MP3HuffmanRegions MP3Requant MP3Hybrid MP3IMDCT MP3Synthesis MP3Intensity MP3JointStereo MP3JointStereoLSF MP3Xing MP3Experimental MP3MemorySmoke CodecMP3OptIn; do
               cc -std=c11 -Wall -Wextra -Wpedantic -Werror "$test.c" -o "./$test"
               "./$test"
             done
@@ -131,7 +131,7 @@ jobs:
         shell: pwsh
         run: |
           cd Codespace/Tests/Audio
-          foreach ($test in @("FLACMetadata", "FLACFrames", "FLACStandalone", "MP3Headers", "MP3SideInfo", "MP3Scalefactors", "MP3ScalefactorsLSF", "MP3Huffman", "MP3HuffmanRegions", "MP3Requant", "MP3Hybrid", "MP3IMDCT", "MP3Synthesis", "MP3Intensity", "MP3JointStereo", "MP3JointStereoLSF", "MP3Xing", "MP3Experimental", "MP3MemorySmoke")) {
+          foreach ($test in @("FLACMetadata", "FLACFrames", "FLACStandalone", "MP3Headers", "MP3SideInfo", "MP3Scalefactors", "MP3ScalefactorsLSF", "MP3Huffman", "MP3HuffmanRegions", "MP3Requant", "MP3Hybrid", "MP3IMDCT", "MP3Synthesis", "MP3Intensity", "MP3JointStereo", "MP3JointStereoLSF", "MP3Xing", "MP3Experimental", "MP3MemorySmoke", "CodecMP3OptIn")) {
             cl /nologo /std:c11 /W4 /WX /D_CRT_SECURE_NO_WARNINGS /TC "$test.c" "/Fe:$test.exe"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             & "./$test.exe"

@@ -1920,8 +1920,15 @@ present and internally consistent; otherwise raw frame count is
 reported. Seeking reconstructs reservoir, IMDCT overlap and synthesis
 state from the beginning (correct but O(number of preceding frames)).
 Malformed or discontinuous streams are rejected rather than guessed.
-This standalone path is intended for differential validation **before
-promotion to `Audio_Codec_OpenMemory/OpenFile/OpenReader`**.
+This native backend can also be exercised through the **usual**
+`Audio_Codec_OpenMemory/GetInfo/ReadFrames/SeekFrame/Close` calls
+by defining `AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3=1` **before including
+`Codec.h` or `CodecMinimal.h`**. This is opt-in per translation unit:
+WAV/FLAC, file-based and callback-based MP3 remain unchanged. The
+default `OpenMemory` MP3 backend is still miniaudio. The `CodecMP3OptIn`
+test checks the ordinary API with this macro. Only complete, contiguous
+and supported MP3 frames are accepted by the experimental memory path;
+additional file/reader and interoperability coverage is still needed.
 
 **The coverage is not universal**. MPEG-2/2.5 intensity-stereo
 has verified PCM against independently constructed long/short/mixed
