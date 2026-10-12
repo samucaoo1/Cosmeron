@@ -3,7 +3,8 @@
  * EXPERIMENTAL: MPEG-1 Layer III frame -> interleaved f32 PCM.
  * This is an opt-in, header-only development API, not a replacement for
  * Audio_Codec_OpenFile/OpenMemory/OpenReader or the miniaudio backend.
- * Currently rejects intensity stereo, MPEG-2/2.5 and unsupported frames.
+ * Currently rejects MPEG-2/2.5 intensity stereo, 8-kHz mixed blocks
+ * and unsupported frames. MPEG-1 intensity is supported experimentally.
  */
 #include "MP3.h"
 

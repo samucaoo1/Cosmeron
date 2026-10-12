@@ -32,9 +32,7 @@ AUDIO_CODEC_MP3_REQUANTIZE_PROTOTYPE {
     return STATUS_CONST(INVALID_ARGUMENT);
   for (rate = 0; rate < 9; ++rate)
     if (AUDIO_INS(MP3_LongRates)[rate] == sampleRate) break;
-  /* MPEG2/2.5 use other low-sampling-frequency scalefactor rules, which
-   * the native scalefactor stage does not yet implement. */
-  if (rate >= 3) return STATUS_CONST(NOT_SUPPORTED);
+  if (rate == 9) return STATUS_CONST(NOT_SUPPORTED);
   if (part->scalefacScale > 1 || part->preflag > 1 ||
       part->blockType > 3 || part->mixedBlock > 1)
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -46,7 +44,7 @@ AUDIO_CODEC_MP3_REQUANTIZE_PROTOTYPE {
       unsigned int sf = scales->longBands[band];
       unsigned int pre = part->preflag ? AUDIO_INS(MP3_Pretab)[band] : 0;
       unsigned int attenuation = (sf + pre) * sfFactor;
-      if (sf > 15 || attenuation >= 64)
+      if (sf > (rate < 3 ? 15U : 31U) || attenuation >= 64)
         return STATUS_CONST(INVALID_ARGUMENT);
       first = AUDIO_INS(MP3_LongBands)[rate][band];
       last = AUDIO_INS(MP3_LongBands)[rate][band+1];
@@ -58,7 +56,7 @@ AUDIO_CODEC_MP3_REQUANTIZE_PROTOTYPE {
   } else {
     first = 0;
     if (part->mixedBlock) {
-      for (band = 0; band < 8; ++band) {
+      for (band = 0; band < (rate < 3 ? 8U : 6U); ++band) {
         unsigned int sf = scales->longBands[band];
         unsigned int pre = part->preflag ? AUDIO_INS(MP3_Pretab)[band] : 0;
         unsigned int attenuation = (sf + pre) * sfFactor;
@@ -78,7 +76,7 @@ AUDIO_CODEC_MP3_REQUANTIZE_PROTOTYPE {
       for (window = 0; window < 3; ++window) {
         unsigned int sf = scales->shortBands[band][window];
         unsigned int attenuation = sf * sfFactor;
-        if (sf > 15 || attenuation >= 64 ||
+        if (sf > (rate < 3 ? 15U : 31U) || attenuation >= 64 ||
             part->subblockGain[window] > 7)
           return STATUS_CONST(INVALID_ARGUMENT);
         status = AUDIO_INS(MP3_RequantBand)(

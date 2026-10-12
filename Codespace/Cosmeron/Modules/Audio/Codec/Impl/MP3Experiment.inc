@@ -1,7 +1,7 @@
 #pragma once
 
-/* Experimental MPEG-1 Layer III native frame decode. All 1,152 PCM
- * frames are staged before publication; the caller's state, PCM output,
+/* Experimental MPEG Layer III native frame decode. All MPEG-1 1,152
+ * or MPEG-2/2.5 576 frames are staged before publication. The caller's state, PCM output,
  * metadata and frame count stay intact if the frame is malformed.
  * Exception: INCOMPLETE_SEQUENCE for missing pre-roll advances only
  * the reservoir history so subsequent frames can become decodable. */
@@ -19,9 +19,7 @@ AUDIO_CODEC_MP3_EXPERIMENT_FRAME_PROTOTYPE {
     return STATUS_CONST(INVALID_ARGUMENT);
   status = AUDIO_CODEC_FUNC(MP3_ParseHeader)(frame, size, &header);
   if (status != STATUS_CONST(SUCCESS)) return status;
-  if (header.mpegVersion != 1)
-    return STATUS_CONST(NOT_SUPPORTED);
-  if (frameCapacity < 1152U)
+  if (frameCapacity < header.samplesPerFrame)
     return STATUS_CONST(OUT_OF_RANGE);
   if ((state->sampleRate && state->sampleRate != header.sampleRate) ||
       (state->channels && state->channels != header.channels))
@@ -40,16 +38,24 @@ AUDIO_CODEC_MP3_EXPERIMENT_FRAME_PROTOTYPE {
     return status;
   }
   if (status != STATUS_CONST(SUCCESS)) return status;
-  if (side.channels != header.channels || side.granules != 2)
+  if (side.channels != header.channels ||
+      side.granules != (header.mpegVersion == 1 ? 2U : 1U))
     return STATUS_CONST(INVALID_SEQUENCE);
-  for (gr = 0; gr < 2; ++gr) {
+  for (gr = 0; gr < side.granules; ++gr) {
     for (ch = 0; ch < header.channels; ++ch) {
       AUDIO_CODEC_TYPE(TMP3Scalefactors) scale;
       int32_t coefficients[576];
       size_t written = 0;
-      status = AUDIO_CODEC_FUNC(MP3_ParseScalefactors)(
-          mainData, mainBytes, &side, gr, ch,
-          gr ? &previous[ch] : NULL, &scale);
+      if (header.mpegVersion == 1) {
+        status = AUDIO_CODEC_FUNC(MP3_ParseScalefactors)(
+            mainData, mainBytes, &side, gr, ch,
+            gr ? &previous[ch] : NULL, &scale);
+      } else {
+        uint8_t intensityScale = 0;
+        status = AUDIO_CODEC_FUNC(MP3_ParseScalefactorsLSF)(
+            mainData, mainBytes, &header, &side, ch,
+            &scale, &intensityScale);
+      }
       if (status != STATUS_CONST(SUCCESS)) return status;
       if (gr == 0) previous[ch] = scale;
       scaleByChannel[ch] = scale;
@@ -66,13 +72,24 @@ AUDIO_CODEC_MP3_EXPERIMENT_FRAME_PROTOTYPE {
      * reordering, alias reduction and the hybrid synthesis. */
     if (header.channels == 2 &&
         (header.msStereo || header.intensityStereo)) {
-      status = AUDIO_CODEC_FUNC(MP3_JointStereo)(
-          &header, &side.parts[gr][1], &scaleByChannel[1],
-          channels[0], channels[1], channels[0], channels[1]);
+      if (header.mpegVersion == 1)
+        status = AUDIO_CODEC_FUNC(MP3_JointStereo)(
+            &header, &side.parts[gr][1], &scaleByChannel[1],
+            channels[0], channels[1], channels[0], channels[1]);
+      else if (header.intensityStereo)
+        status = STATUS_CONST(NOT_SUPPORTED); /* LSF intensity scalings differ */
+      else
+        status = AUDIO_CODEC_FUNC(MP3_StereoMS)(
+            channels[0], channels[1], 0, 576,
+            channels[0], channels[1]);
       if (status != STATUS_CONST(SUCCESS)) return status;
     }
     for (ch = 0; ch < header.channels; ++ch) {
       float subband[576];
+      /* 8 kHz mixed blocks have 4 long subbands (72 lines), not
+       * the 2 subbands in the MPEG-1 hybrid filterbank. */
+      if (header.sampleRate == 8000 && side.parts[gr][ch].mixedBlock)
+        return STATUS_CONST(NOT_SUPPORTED);
       status = AUDIO_CODEC_FUNC(MP3_ReorderShort)(
           channels[ch], &side.parts[gr][ch],
           header.sampleRate, channels[ch]);
@@ -98,12 +115,12 @@ AUDIO_CODEC_MP3_EXPERIMENT_FRAME_PROTOTYPE {
         stage[position + ch] = channels[ch][i];
     }
   }
-  produced = 1152U * header.channels;
+  produced = (size_t)header.samplesPerFrame * header.channels;
   memcpy(outInterleaved, stage, produced * sizeof(float));
   work.sampleRate = header.sampleRate;
   work.channels = header.channels;
   *state = work;
-  *outFrames = 1152U;
+  *outFrames = header.samplesPerFrame;
   *outInfo = header;
   return STATUS_CONST(SUCCESS);
 }

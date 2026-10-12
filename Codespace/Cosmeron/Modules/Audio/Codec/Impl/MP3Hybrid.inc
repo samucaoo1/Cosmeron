@@ -17,12 +17,13 @@ AUDIO_CODEC_MP3_REORDER_SHORT_PROTOTYPE {
     memmove(output, input, sizeof reordered);
     return STATUS_CONST(SUCCESS);
   }
-  for (rate = 0; rate < 3; ++rate)
+  for (rate = 0; rate < 9; ++rate)
     if (AUDIO_INS(MP3_LongRates)[rate] == sampleRate) break;
-  if (rate == 3) return STATUS_CONST(NOT_SUPPORTED);
+  if (rate == 9) return STATUS_CONST(NOT_SUPPORTED);
   if (part->mixedBlock) {
-    memcpy(reordered, input, 36 * sizeof(float));
-    inputStart = 36;
+    inputStart = 3U * AUDIO_INS(MP3_ShortBands)[rate][3];
+    if (inputStart > 576) return STATUS_CONST(INVALID_SEQUENCE);
+    memcpy(reordered, input, inputStart * sizeof(float));
   }
   for (band = part->mixedBlock ? 3U : 0U; band < 13; ++band) {
     const size_t bandStart = 3U * AUDIO_INS(MP3_ShortBands)[rate][band];
