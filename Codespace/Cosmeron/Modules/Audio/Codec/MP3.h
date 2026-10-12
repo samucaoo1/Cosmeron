@@ -68,6 +68,11 @@ typedef struct AUDIO_CODEC_TYPE(TMP3Scalefactors) {
   uint8_t longBands[22];
   uint8_t shortBands[13][3];
   uint16_t part2Bits;
+  /* LSF right-channel intensity positions after no-intensity sentinel
+   * expansion: 255 means that the band carries ordinary L/R or MS.
+   * The ordinary scalefactor arrays remain untouched for requantization. */
+  uint8_t lsfIntensityLong[22];
+  uint8_t lsfIntensityShort[13][3];
 } AUDIO_CODEC_TYPE(TMP3Scalefactors);
 
 #define AUDIO_CODEC_MP3_PARSE_SCALEFACTORS_PROTOTYPE                          \
