@@ -65,6 +65,42 @@ int main(void){
       &decoder,samples,8,&got)==STATUS_CONST(SUCCESS) && got==8);
   AUDIO_CODEC_FUNC(Close)(&decoder);
   assert(fclose(file)==0);
+  /* Test an ID3v2 payload deliberately larger than the ten-byte
+   * probe buffer, plus the optional fixed 128-byte ID3v1 footer. */
+  {
+    unsigned char header[18]={'I','D','3',3,0,0,0,0,0,8};
+    unsigned char footer[128]={0};
+    memcpy(footer,"TAG",3);
+    file=fopen(path,"wb");
+    assert(file);
+    assert(fwrite(header,1,sizeof header,file)==sizeof header);
+    assert(fwrite(data,1,sizeof data,file)==sizeof data);
+    assert(fwrite(footer,1,sizeof footer,file)==sizeof footer);
+    assert(fclose(file)==0);
+    assert(AUDIO_CODEC_FUNC(OpenFile)(
+        &decoder,path)==STATUS_CONST(SUCCESS));
+    assert(AUDIO_CODEC_FUNC(GetInfo)(
+        &decoder,&info)==STATUS_CONST(SUCCESS));
+    assert(info.frameCount==3456);
+    AUDIO_CODEC_FUNC(Close)(&decoder);
+    file=fopen(path,"rb");
+    assert(file);
+    reader.userData=file;
+    assert(AUDIO_CODEC_FUNC(OpenReader)(
+        &decoder,&reader)==STATUS_CONST(SUCCESS));
+    AUDIO_CODEC_FUNC(Close)(&decoder);
+    assert(fclose(file)==0);
+    /* Truncated footer must never be mistaken for a shorter track. */
+    file=fopen(path,"wb");
+    assert(file);
+    assert(fwrite(header,1,sizeof header,file)==sizeof header);
+    assert(fwrite(data,1,sizeof data,file)==sizeof data);
+    assert(fwrite(footer,1,sizeof footer-1,file)==sizeof footer-1);
+    assert(fclose(file)==0);
+    assert(AUDIO_CODEC_FUNC(OpenFile)(
+        &decoder,path)!=STATUS_CONST(SUCCESS));
+    assert(decoder.internal==NULL);
+  }
   assert(remove(path)==0);
   return 0;
 }
