@@ -67,7 +67,7 @@ def make_frame(frame_num, ms, intensity_scale, baseline=False, mono=False):
     info = Bits()
     info.put(0, 8)  # main_data_begin
     info.put(0, 1 if mono else 2)  # private_bits
-    granule(info, left_part_length, 22, 210 + (frame_num % 5), 0, 1)
+    granule(info, left_part_length, 22, 188 + (frame_num % 5), 0, 1)
     # scalefac_compress>>1=72 => slen=(2,0,0,0), seven two-bit positions
     if not mono:
         granule(info, right_part_length, 0, 210,
