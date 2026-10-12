@@ -191,8 +191,15 @@ AUDIO_CODEC_OPEN_MEMORY_PROTOTYPE {
   {
     size_t mp3Start = 0;
     AUDIO_CODEC_TYPE(TMP3FrameInfo) first;
-    if (AUDIO_CODEC_FUNC(MP3_FindFrame)(
-        data, size, 0, &mp3Start, &first) == STATUS_CONST(SUCCESS)) {
+    OPSTATUS detected = AUDIO_CODEC_FUNC(MP3_FindFrame)(
+        data, size, 0, &mp3Start, &first);
+    /* A recognized ID3v2 prefix must not bypass native validation by
+     * silently falling through to the vendor decoder on malformed tags. */
+    if (size >= 3 && !memcmp(data, "ID3", 3) &&
+        detected != STATUS_CONST(SUCCESS) &&
+        detected != STATUS_CONST(NOT_FOUND))
+      return detected;
+    if (detected == STATUS_CONST(SUCCESS)) {
       AUDIO_CODEC_TYPE(TMP3Memory) stream = {0};
       OPSTATUS status = AUDIO_CODEC_FUNC(MP3_MemoryOpen)(
           &stream, data, size);

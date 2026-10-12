@@ -49,7 +49,7 @@ static inline OPSTATUS AUDIO_INS(MP3_ReaderOpen)(
   AUDIO_INS(Decoder) *decoder;
   uint64_t frames = 0, firstPCM = 0, presentation;
   size_t beginning = 0, offset = 0, encoded = 0;
-  bool found = false;
+  bool found = false, tagged = false;
   OPSTATUS status;
   if (!handle || !reader || !reader->read || !reader->seek)
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -58,20 +58,23 @@ static inline OPSTATUS AUDIO_INS(MP3_ReaderOpen)(
   /* The first 10 bytes suffice to inspect an optional ID3v2 tag. */
   status = AUDIO_INS(WAV_ReadExact)(reader, probe, sizeof probe);
   if (status != STATUS_CONST(SUCCESS)) return status;
-  /* MP3_SkipID3 requires the entire tag in memory. A seekable
-   * reader has only its ten-byte header, so decode the synchsafe
-   * tag length in place and skip the payload without allocating. */
+  /* Use the same strict ten-byte validation as MP3_SkipID3.
+   * Validate v2.4 footers with a bounded read, independent of tag size. */
   if (!memcmp(probe, "ID3", 3)) {
-    size_t tagSize = 0, i;
-    if (probe[3] < 2 || probe[3] > 4 || probe[4] == 0xff)
-      return STATUS_CONST(NOT_SUPPORTED);
-    for (i = 6; i < 10; ++i) {
-      if (probe[i] & 0x80U) return STATUS_CONST(INVALID_SEQUENCE);
-      tagSize = (tagSize << 7) | probe[i];
-    }
-    beginning = 10 + tagSize +
-        ((probe[3] == 4 && (probe[5] & 0x10U)) ? 10U : 0U);
+    tagged = true;
+    status = AUDIO_INS(MP3_ID3Header)(probe, &beginning);
+    if (status != STATUS_CONST(SUCCESS)) return status;
     if (beginning > INT64_MAX) return STATUS_CONST(OUT_OF_RANGE);
+    if (probe[3] == 4 && (probe[5] & 0x10U)) {
+      unsigned char footer[10];
+      status = reader->seek(reader->userData, (int64_t)(beginning - 10U),
+                            AUDIO_CODEC_CONST(SEEK_START));
+      if (status != STATUS_CONST(SUCCESS)) return status;
+      status = AUDIO_INS(WAV_ReadExact)(reader, footer, sizeof footer);
+      if (status != STATUS_CONST(SUCCESS)) return status;
+      if (!AUDIO_INS(MP3_ID3Footer)(probe, footer))
+        return STATUS_CONST(INVALID_SEQUENCE);
+    }
   }
   offset = beginning;
   for (;;) {
@@ -123,7 +126,10 @@ static inline OPSTATUS AUDIO_INS(MP3_ReaderOpen)(
       return STATUS_CONST(ARITHMETIC_OVERFLOW);
     offset += current.frameBytes;
   }
-  if (!found || frames < 2) return STATUS_CONST(NOT_SUPPORTED);
+  if (!found)
+    return tagged ? STATUS_CONST(INCOMPLETE_SEQUENCE) :
+                    STATUS_CONST(NOT_SUPPORTED);
+  if (frames < 2) return STATUS_CONST(NOT_SUPPORTED);
   /* Verify final frame payload, not just its 4-byte header. */
   if (!offset || offset > INT64_MAX) return STATUS_CONST(OUT_OF_RANGE);
   {

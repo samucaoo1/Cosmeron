@@ -298,27 +298,55 @@ AUDIO_CODEC_MP3_PARSE_HEADER_PROTOTYPE {
   return STATUS_CONST(SUCCESS);
 }
 
-/* The ID3v2 size excludes the ten-byte tag header; v2.4 optionally adds
- * a ten-byte footer. Accept only synchsafe size octets and versions 2-4. */
+/* Parse exactly the ten-byte ID3v2 header, allowing a seekable reader to
+ * skip arbitrarily large metadata without allocating a tag-sized buffer.
+ * Versions 2.2, 2.3 and 2.4 have distinct permitted header-flag masks. */
+static inline OPSTATUS AUDIO_INS(MP3_ID3Header)(
+    const unsigned char header[10], size_t *outTotal) {
+  size_t body = 0;
+  unsigned int i, flags;
+  if (!header || !outTotal) return STATUS_CONST(INVALID_ARGUMENT);
+  if (memcmp(header, "ID3", 3)) return STATUS_CONST(NOT_FOUND);
+  if (header[3] < 2 || header[3] > 4 || header[4] == 0xff)
+    return STATUS_CONST(NOT_SUPPORTED);
+  flags = header[5];
+  if (flags & (header[3] == 2 ? 0x3fU :
+               header[3] == 3 ? 0x1fU : 0x0fU))
+    return STATUS_CONST(INVALID_SEQUENCE);
+  for (i = 6; i < 10; ++i) {
+    if (header[i] & 0x80U) return STATUS_CONST(INVALID_SEQUENCE);
+    body = (body << 7) | header[i];
+  }
+  *outTotal = 10U + body +
+      ((header[3] == 4 && (flags & 0x10U)) ? 10U : 0U);
+  return STATUS_CONST(SUCCESS);
+}
+
+/* A v2.4 footer is the same as the header with a reversed "3DI"
+ * identifier. Validate every field rather than trusting only the flag. */
+static inline bool AUDIO_INS(MP3_ID3Footer)(
+    const unsigned char header[10], const unsigned char footer[10]) {
+  return !memcmp(footer, "3DI", 3) &&
+         !memcmp(header + 3, footer + 3, 7);
+}
+
+/* The ID3v2 size excludes its ten-byte header and optional v2.4 footer. */
 AUDIO_CODEC_MP3_SKIP_ID3_PROTOTYPE {
   const unsigned char *p = (const unsigned char *)bytes;
-  size_t total, length;
-  unsigned int i;
+  size_t total = 0;
+  OPSTATUS status;
   if (!p || !outStart) return STATUS_CONST(INVALID_ARGUMENT);
   if (size < 3 || memcmp(p, "ID3", 3)) {
     *outStart = 0;
     return STATUS_CONST(SUCCESS);
   }
   if (size < 10) return STATUS_CONST(INCOMPLETE_SEQUENCE);
-  if (p[3] < 2 || p[3] > 4 || p[4] == 0xff)
-    return STATUS_CONST(NOT_SUPPORTED);
-  length = 0;
-  for (i = 6; i < 10; ++i) {
-    if (p[i] & 0x80U) return STATUS_CONST(INVALID_SEQUENCE);
-    length = (length << 7) | p[i];
-  }
-  total = 10 + length + ((p[3] == 4 && (p[5] & 0x10U)) ? 10U : 0U);
+  status = AUDIO_INS(MP3_ID3Header)(p, &total);
+  if (status != STATUS_CONST(SUCCESS)) return status;
   if (total > size) return STATUS_CONST(INCOMPLETE_SEQUENCE);
+  if ((p[5] & 0x10U) && p[3] == 4 &&
+      !AUDIO_INS(MP3_ID3Footer)(p, p + total - 10))
+    return STATUS_CONST(INVALID_SEQUENCE);
   *outStart = total;
   return STATUS_CONST(SUCCESS);
 }
