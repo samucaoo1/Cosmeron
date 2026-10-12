@@ -37,9 +37,10 @@ def granule(bits, part_length, big_values, gain, compress, table):
     bits.put(0, 1)  # count1table_select
 
 
-def make_frame(frame_num, ms, intensity_scale, baseline=False):
-    header = bytes((0xFF, 0xF3, 0x80, 0x60 if ms and baseline else
-                    0x40 if baseline else 0x70 if ms else 0x50))
+def make_frame(frame_num, ms, intensity_scale, baseline=False, mono=False):
+    mode = 0xC0 if mono else 0x60 if ms and baseline else (
+        0x40 if baseline else 0x70 if ms else 0x50)
+    header = bytes((0xFF, 0xF3, 0x80, mode))
     # MPEG-2 22.05kHz, 64kbps, stereo: 208 bytes, 17-byte side info.
     bands = [0, 6, 12, 18, 24, 30, 36]
     code = Bits()
@@ -65,13 +66,14 @@ def make_frame(frame_num, ms, intensity_scale, baseline=False):
 
     info = Bits()
     info.put(0, 8)  # main_data_begin
-    info.put(0, 2)  # private_bits
+    info.put(0, 1 if mono else 2)  # private_bits
     granule(info, left_part_length, 22, 210 + (frame_num % 5), 0, 1)
     # scalefac_compress>>1=72 => slen=(2,0,0,0), seven two-bit positions
-    granule(info, right_part_length, 0, 210,
-            0 if baseline else 144 + intensity_scale, 0)
+    if not mono:
+        granule(info, right_part_length, 0, 210,
+                0 if baseline else 144 + intensity_scale, 0)
     info_bytes = info.output()
-    assert len(info_bytes) == 17
+    assert len(info_bytes) == (9 if mono else 17)
     length = 208
     assert len(header) + len(info_bytes) + len(main_bytes) <= length
     return header + info_bytes + main_bytes + bytes(
@@ -85,10 +87,11 @@ def main():
     path, ms, scale = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
     if ms not in (0, 1) or scale not in (0, 1):
         sys.exit("MS and intensity_scale must be 0 or 1")
-    baseline = len(sys.argv) == 5 and sys.argv[4] == "baseline"
+    baseline = len(sys.argv) == 5 and sys.argv[4] in ("baseline", "mono")
+    mono = len(sys.argv) == 5 and sys.argv[4] == "mono"
     with open(path, "wb") as out:
         for i in range(32):
-            out.write(make_frame(i, bool(ms), scale, baseline))
+            out.write(make_frame(i, bool(ms), scale, baseline, mono))
 
 
 if __name__ == "__main__":
