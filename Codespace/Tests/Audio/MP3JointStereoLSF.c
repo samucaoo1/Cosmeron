@@ -35,6 +35,23 @@ int main(void) {
   assert(AUDIO_CODEC_FUNC(MP3_JointStereoLSF)(
       &h,&g,&sf,0,l,r,a,b)==STATUS_CONST(SUCCESS));
   assert(near(a[0],2*1.41421356237f)&&near(b[0],0));
+  /* Right-channel spectral data in a coded sfb disables intensity
+   * in that band and all preceding bands, even if their is_pos is zero. */
+  r[36]=3;
+  assert(AUDIO_CODEC_FUNC(MP3_JointStereoLSF)(
+      &h,&g,&sf,0,l,r,a,b)==STATUS_CONST(SUCCESS));
+  assert(near(a[30],4*0.70710678118f));
+  assert(near(b[30],4*0.70710678118f));
+  assert(near(a[36],7*0.70710678118f));
+  assert(near(b[36],1*0.70710678118f));
+  assert(near(a[44],4));
+  r[36]=0;
+  h.intensityStereo=false;
+  a[0]=999;
+  assert(AUDIO_CODEC_FUNC(MP3_JointStereoLSF)(
+      &h,&g,&sf,0,l,r,a,b)==STATUS_CONST(NOT_SUPPORTED));
+  assert(a[0]==999);
+  h.intensityStereo=true;
   h.sampleRate=0;a[0]=999;
   assert(AUDIO_CODEC_FUNC(MP3_JointStereoLSF)(
       &h,&g,&sf,0,l,r,a,b)==STATUS_CONST(NOT_SUPPORTED));
