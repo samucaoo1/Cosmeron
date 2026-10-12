@@ -97,7 +97,10 @@ For standalone output without imported code, define
 | OpenBSD/NetBSD | Compatibility fallback | backend dependent | Default |
 
 No manual ALSA, WinMM, Apple framework or pthread link flags are introduced
-for these native backends. Native system runtimes/drivers remain dependencies;
+for these native backends. ALSA keeps a shared runtime-loader reference per translation unit for process
+lifetime: unloading its global configuration cache on each device Close orphaned
+allocations. Publication is atomic; individual PCM devices and workers still
+close normally. Native system runtimes/drivers remain dependencies;
 this is not a freestanding build. Unsupported native API/format initialization
 returns `NOT_AVAILABLE`, and default Open can try miniaudio. Named output does
 not silently choose a different device. ALSA allows its PCM plugin layer to
@@ -127,7 +130,9 @@ also rejects reentrant lifecycle calls, but requires owner-thread Stop.
 `NativeCodecInterop.sh` exercises 108 authored MPEG-1 intensity combinations:
 long/short/mixed, 32/44.1/48 kHz, MS off/on, coded right-channel data off/on,
 and 64/128/320 kbps. It compares identical encoded bytes against miniaudio.
-It also verifies LAME VBR at all nine sample rates and three quality settings,
+`MP3LSFInterop.sh` additionally verifies 408 MPEG-2/2.5 intensity combinations
+across six rates, three bitrates, layouts, MS/intensity_scale and coded right
+patterns. It also verifies LAME VBR at all nine sample rates and three quality settings,
 Shine, long VBR indexed replay, forward-only callbacks, and independent
 libFLAC/FFmpeg streams. Thresholds require normalized residual <1e-5 and gain
 within 0.1%, with presentation frame counts equal for encoder fixtures.
@@ -140,14 +145,23 @@ portable per-decoder memory guarantees. SIMD/fast transform optimization
 remains worthwhile. Native-first selection prioritizes independent code and
 validated PCM, not a demonstrated performance win.
 
-The scheduled `07-audio-fuzz.yml` maintains a persistent corpus and runs
+The `07-audio-fuzz.yml` workflow maintains a persistent corpus and runs
 ASan/UBSan/libFuzzer over native memory, seekable and forward-only callback
-paths weekly and on relevant PRs. Crashing inputs are uploaded as reproducers.
+paths on relevant PRs. Its weekly schedule activates after this workflow reaches
+the repository default branch. Crashing inputs are uploaded as reproducers.
 CRC-protected MP3 headers/side information are checked before decoder state
 is published; this CRC does not cover all main data. Corrupt frames and lost
 sync currently produce explicit errors. Automatic resynchronization and audio
 concealment are not yet implemented, and strict preflight rejects interrupted
 seekable MP3 streams.
+
+MPEG-2.5 8-kHz mixed blocks remain a reference-disagreement case. In a baseline
+fixture with a silent encoded right channel, native output preserves silence;
+miniaudio emits right-channel energy (~23.24), although left PCM matches within
+~1.51e-8 residual. FFmpeg's mixed output also differs. `MP3Mixed8kReference.c`
+checks native silence and left parity without treating incorrect reference
+right samples as expected output. Broader independent validation is still needed
+before claiming complete 8-kHz mixed/intensity conformance.
 
 Headless CI and ALSA `null` validate compilation and lifecycle only. Physical
 playback, unplug/underrun behavior on actual drivers, native OpenBSD/NetBSD

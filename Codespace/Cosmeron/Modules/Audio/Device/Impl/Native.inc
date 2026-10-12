@@ -34,6 +34,23 @@ typedef atomic_int AUDIO_INS(TDeviceAtomic);
 #endif
 #endif
 
+#if defined(__linux__)
+/* ALSA owns a process-global configuration cache. Keep one runtime-loader
+ * reference per TU so unloading it cannot orphan that cache on every Close.
+ * Atomic publication also supports concurrent device owners. */
+static inline void *AUDIO_INS(NativeALSALibrary)(void) {
+  static _Atomic(void *) shared;
+  void *library=atomic_load(&shared);
+  if (!library) {
+    void *opened=dlopen("libasound.so.2",RTLD_NOW|RTLD_LOCAL), *expected=NULL;
+    if (!opened) return NULL;
+    if (!atomic_compare_exchange_strong(&shared,&expected,opened)) {
+      dlclose(opened); library=expected;
+    } else library=opened;
+  }
+  return library;
+}
+#endif
 #include "CoreFoundation.inc"
 
 typedef struct AUDIO_INS(TNativeDevice) {
@@ -211,7 +228,9 @@ static inline void AUDIO_INS(NativeDeviceRelease)(AUDIO_INS(TNativeDevice) *s) {
 #elif defined(__FreeBSD__) || defined(__DragonFly__)
   if (s->fd>=0) close(s->fd);
 #endif
+#if !defined(__linux__)
   if (s->library) dlclose(s->library);
+#endif
   if (s->threadLibrary) dlclose(s->threadLibrary);
 #endif
   free(s);
@@ -291,7 +310,7 @@ static inline OPSTATUS AUDIO_INS(NativeDeviceOpen)(
   }
 #else
 #if defined(__linux__)
-  s->library=dlopen("libasound.so.2",RTLD_NOW|RTLD_LOCAL); if (!s->library) goto fail;
+  s->library=AUDIO_INS(NativeALSALibrary)(); if (!s->library) goto fail;
   AUDIO_DEVICE_SYMBOL(open,"snd_pcm_open"); AUDIO_DEVICE_SYMBOL(setParams,"snd_pcm_set_params");
   AUDIO_DEVICE_SYMBOL(formatValue,"snd_pcm_format_value"); AUDIO_DEVICE_SYMBOL(write,"snd_pcm_writei");
   AUDIO_DEVICE_SYMBOL(recover,"snd_pcm_recover"); AUDIO_DEVICE_SYMBOL(prepare,"snd_pcm_prepare");

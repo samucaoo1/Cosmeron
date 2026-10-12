@@ -16,6 +16,7 @@ for layout in long short mixed; do
     done
   done
 done
+sh MP3LSFInterop.sh
 for rate in 8000 11025 12000 16000 22050 24000 32000 44100 48000; do
   for quality in 0 4 9; do
     ffmpeg -nostdin -v error -y -f lavfi \

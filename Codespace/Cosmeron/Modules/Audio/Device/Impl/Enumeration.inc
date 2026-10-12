@@ -8,18 +8,18 @@ AUDIO_DEVICE_ENUMERATE_PROTOTYPE {
   if (status!=STATUS_CONST(SUCCESS)) return status;
 #if defined(__linux__)
   {
-    void *library=dlopen("libasound.so.2",RTLD_NOW|RTLD_LOCAL), *symbol;
+    void *library=AUDIO_INS(NativeALSALibrary)(), *symbol;
     int (*hints)(int,const char *,void ***);
     char *(*get)(const void *,const char *);
     int (*release)(void **);
     void **list=NULL; size_t i;
     if (!library) return STATUS_CONST(NOT_AVAILABLE);
-#define AUDIO_DEVICE_ENUM_SYMBOL(F,N) do { symbol=dlsym(library,N); if (!symbol || sizeof symbol!=sizeof F) { dlclose(library); return STATUS_CONST(NOT_AVAILABLE); } memcpy(&F,&symbol,sizeof symbol); } while(0)
+#define AUDIO_DEVICE_ENUM_SYMBOL(F,N) do { symbol=dlsym(library,N); if (!symbol || sizeof symbol!=sizeof F) {  return STATUS_CONST(NOT_AVAILABLE); } memcpy(&F,&symbol,sizeof symbol); } while(0)
     AUDIO_DEVICE_ENUM_SYMBOL(hints,"snd_device_name_hint");
     AUDIO_DEVICE_ENUM_SYMBOL(get,"snd_device_name_get_hint");
     AUDIO_DEVICE_ENUM_SYMBOL(release,"snd_device_name_free_hint");
 #undef AUDIO_DEVICE_ENUM_SYMBOL
-    if (hints(-1,"pcm",&list)<0) { dlclose(library); return STATUS_CONST(NOT_AVAILABLE); }
+    if (hints(-1,"pcm",&list)<0) {  return STATUS_CONST(NOT_AVAILABLE); }
     for(i=0;list && list[i];++i) {
       char *name=get(list[i],"NAME"), *description=get(list[i],"DESC"), *io=get(list[i],"IOID");
       if (name && strcmp(name,"default") && (!io || strcmp(io,"Input")))
@@ -28,7 +28,7 @@ AUDIO_DEVICE_ENUMERATE_PROTOTYPE {
       if (status!=STATUS_CONST(SUCCESS)) break;
     }
     if (list) release(list);
-    dlclose(library);
+    
   }
 #elif defined(_WIN32)
   {
