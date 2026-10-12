@@ -49,7 +49,7 @@ static inline OPSTATUS AUDIO_INS(MP3_ReaderOpen)(
   AUDIO_INS(Decoder) *decoder;
   uint64_t frames = 0, firstPCM = 0, presentation;
   size_t beginning = 0, offset = 0, encoded = 0;
-  bool found = false;
+  bool found = false, tagged = false;
   OPSTATUS status;
   if (!handle || !reader || !reader->read || !reader->seek)
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -61,6 +61,7 @@ static inline OPSTATUS AUDIO_INS(MP3_ReaderOpen)(
   /* Use the same strict ten-byte validation as MP3_SkipID3.
    * Validate v2.4 footers with a bounded read, independent of tag size. */
   if (!memcmp(probe, "ID3", 3)) {
+    tagged = true;
     status = AUDIO_INS(MP3_ID3Header)(probe, &beginning);
     if (status != STATUS_CONST(SUCCESS)) return status;
     if (beginning > INT64_MAX) return STATUS_CONST(OUT_OF_RANGE);
@@ -125,7 +126,10 @@ static inline OPSTATUS AUDIO_INS(MP3_ReaderOpen)(
       return STATUS_CONST(ARITHMETIC_OVERFLOW);
     offset += current.frameBytes;
   }
-  if (!found || frames < 2) return STATUS_CONST(NOT_SUPPORTED);
+  if (!found)
+    return tagged ? STATUS_CONST(INCOMPLETE_SEQUENCE) :
+                    STATUS_CONST(NOT_SUPPORTED);
+  if (frames < 2) return STATUS_CONST(NOT_SUPPORTED);
   /* Verify final frame payload, not just its 4-byte header. */
   if (!offset || offset > INT64_MAX) return STATUS_CONST(OUT_OF_RANGE);
   {
