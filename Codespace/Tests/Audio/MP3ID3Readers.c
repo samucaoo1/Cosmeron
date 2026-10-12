@@ -107,6 +107,7 @@ static void checkInvalid(unsigned int version, unsigned int flags,
   buf[3]=(unsigned char)version;
   buf[5]=(unsigned char)flags;
   buf[9] = shortTag ? 0x7f : 6;
+  if (shortTag) buf[6] = buf[7] = buf[8] = 0x7f;
   if(version==4&&(flags&16U)){
     memcpy(buf+16,"3DI",3);
     memcpy(buf+19,buf+3,7);
