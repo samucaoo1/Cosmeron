@@ -58,20 +58,22 @@ static inline OPSTATUS AUDIO_INS(MP3_ReaderOpen)(
   /* The first 10 bytes suffice to inspect an optional ID3v2 tag. */
   status = AUDIO_INS(WAV_ReadExact)(reader, probe, sizeof probe);
   if (status != STATUS_CONST(SUCCESS)) return status;
-  /* MP3_SkipID3 requires the entire tag in memory. A seekable
-   * reader has only its ten-byte header, so decode the synchsafe
-   * tag length in place and skip the payload without allocating. */
+  /* Use the same strict ten-byte validation as MP3_SkipID3.
+   * Validate v2.4 footers with a bounded read, independent of tag size. */
   if (!memcmp(probe, "ID3", 3)) {
-    size_t tagSize = 0, i;
-    if (probe[3] < 2 || probe[3] > 4 || probe[4] == 0xff)
-      return STATUS_CONST(NOT_SUPPORTED);
-    for (i = 6; i < 10; ++i) {
-      if (probe[i] & 0x80U) return STATUS_CONST(INVALID_SEQUENCE);
-      tagSize = (tagSize << 7) | probe[i];
-    }
-    beginning = 10 + tagSize +
-        ((probe[3] == 4 && (probe[5] & 0x10U)) ? 10U : 0U);
+    status = AUDIO_INS(MP3_ID3Header)(probe, &beginning);
+    if (status != STATUS_CONST(SUCCESS)) return status;
     if (beginning > INT64_MAX) return STATUS_CONST(OUT_OF_RANGE);
+    if (probe[3] == 4 && (probe[5] & 0x10U)) {
+      unsigned char footer[10];
+      status = reader->seek(reader->userData, (int64_t)(beginning - 10U),
+                            AUDIO_CODEC_CONST(SEEK_START));
+      if (status != STATUS_CONST(SUCCESS)) return status;
+      status = AUDIO_INS(WAV_ReadExact)(reader, footer, sizeof footer);
+      if (status != STATUS_CONST(SUCCESS)) return status;
+      if (!AUDIO_INS(MP3_ID3Footer)(probe, footer))
+        return STATUS_CONST(INVALID_SEQUENCE);
+    }
   }
   offset = beginning;
   for (;;) {
