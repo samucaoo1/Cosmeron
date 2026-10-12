@@ -48,6 +48,7 @@ int main(int argc, char **argv) {
   float *nativePCM, *referencePCM;
   size_t length, offset = 0, frames = 0, used = 0, decoded = 0;
   size_t skipped = 0, preroll = 0, channels = 0, msFrames = 0, intensityFrames = 0;
+  size_t shortBlocks = 0, mixedBlocks = 0;
   double bestRatio = 1e100, bestGain = 0, bestNativeEnergy = 0;
   double metadataRatio = 1e100, metadataGain = 0, metadataEnergy = 0;
   size_t trimmedStart = 0, expectedGaplessFrames = 0, anchor = 1536;
@@ -69,6 +70,22 @@ int main(int argc, char **argv) {
         length - offset, &header) == STATUS_CONST(SUCCESS));
     if (header.frameBytes > length - offset ||
         used + header.samplesPerFrame > MAX_FRAMES) break;
+    {
+      AUDIO_CODEC_TYPE(TMP3SideInfo) sideInfo;
+      if (AUDIO_CODEC_FUNC(MP3_ParseSideInfo)(
+          bytes + offset, header.frameBytes, &sideInfo) ==
+          STATUS_CONST(SUCCESS)) {
+        unsigned int gr, channel;
+        for (gr = 0; gr < sideInfo.granules; ++gr)
+          for (channel = 0; channel < sideInfo.channels; ++channel) {
+            const AUDIO_CODEC_TYPE(TMP3Granule) *g =
+                &sideInfo.parts[gr][channel];
+            if (g->windowSwitching && g->blockType == 2)
+              ++shortBlocks;
+            if (g->mixedBlock) ++mixedBlocks;
+          }
+      }
+    }
     if (header.msStereo) ++msFrames;
     if (header.intensityStereo) ++intensityFrames;
     result = AUDIO_CODEC_FUNC(MP3_ExperimentFrame)(&native,
@@ -159,12 +176,13 @@ int main(int argc, char **argv) {
          "metadata-leading=%zu metadata-play-frames=%zu "
          "metadata-residual=%.8g metadata-gain=%.8g "
          "native-mean-square=%.8g ms-frames=%zu intensity-frames=%zu "
+         "short-blocks=%zu mixed-blocks=%zu "
          "xing=%u encoded-frames=%u "
          "encoder-delay=%u end-padding=%u (DIAGNOSTIC ONLY)\n",
          path, used, frames, decoded, preroll, skipped,
          bestShift, bestGain, bestRatio, trimmedStart,
          expectedGaplessFrames, metadataRatio, metadataGain,
-         bestNativeEnergy, msFrames, intensityFrames,
+         bestNativeEnergy, msFrames, intensityFrames, shortBlocks, mixedBlocks,
          (unsigned int)hasXing, (unsigned int)xing.encodedFrames,
          (unsigned int)xing.encoderDelay, (unsigned int)xing.endPadding);
   /* A constant encoder delay should imply the same lag in every section.
