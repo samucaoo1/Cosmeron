@@ -7,14 +7,17 @@
 
 /* Deliberately short reads verify that a callback is not assumed to
  * deliver a full header or MPEG frame in one call. */
+static size_t mp3ReaderCalls = 0, mp3SeekCalls = 0;
 static OPSTATUS shortRead(void *user, void *bytes, size_t n, size_t *got) {
   FILE *file = (FILE *)user;
+  ++mp3ReaderCalls;
   if (n > 7) n = 7;
   *got = fread(bytes, 1, n, file);
   return ferror(file) ? STATUS_CONST(GENERIC_ERROR) : STATUS_CONST(SUCCESS);
 }
 static OPSTATUS shortSeek(
     void *user, int64_t offset, AUDIO_CODEC_TYPE(TSeekOrigin) origin) {
+  ++mp3SeekCalls;
   int how = origin == AUDIO_CODEC_CONST(SEEK_START) ? SEEK_SET :
             origin == AUDIO_CODEC_CONST(SEEK_CURRENT) ? SEEK_CUR : SEEK_END;
   if (offset > LONG_MAX || offset < LONG_MIN) return STATUS_CONST(OUT_OF_RANGE);
@@ -58,6 +61,33 @@ static void run(const char *path, int callbacks) {
       &stream,&info)==STATUS_CONST(SUCCESS));
   assert(info.lengthKnown && info.frameCount == length &&
       info.channels==channels && info.sampleRate==rate);
+  if (callbacks && length > 600) {
+    float probe[200*2], seeked[16*2], expectedPCM[16*2];
+    size_t readCalls, seekCalls, used = 0, cmpFrames = 0;
+    assert(AUDIO_CODEC_FUNC(ReadFrames)(
+        &stream, probe, 200, &used) == STATUS_CONST(SUCCESS));
+    assert(used == 200);
+    readCalls = mp3ReaderCalls;
+    seekCalls = mp3SeekCalls;
+    /* Rewind inside the existing PCM stage without any callback I/O. */
+    assert(AUDIO_CODEC_FUNC(SeekFrame)(
+        &stream, 193) == STATUS_CONST(SUCCESS));
+    assert(mp3ReaderCalls == readCalls && mp3SeekCalls == seekCalls);
+    assert(AUDIO_CODEC_FUNC(ReadFrames)(
+        &stream, seeked, 16, &used) == STATUS_CONST(SUCCESS));
+    assert(used == 16 && mp3ReaderCalls == readCalls &&
+           mp3SeekCalls == seekCalls);
+    assert(AUDIO_CODEC_FUNC(MP3_MemorySeek)(
+        &memory, 193) == STATUS_CONST(SUCCESS));
+    assert(AUDIO_CODEC_FUNC(MP3_MemoryRead)(
+        &memory, expectedPCM, 16, &cmpFrames) == STATUS_CONST(SUCCESS));
+    assert(cmpFrames == 16 &&
+           memcmp(seeked, expectedPCM, channels*16*sizeof(float)) == 0);
+    /* In-frame forward seeks must not restart the MPEG decoder. */
+    assert(AUDIO_CODEC_FUNC(SeekFrame)(
+        &stream, 256) == STATUS_CONST(SUCCESS));
+    assert(mp3ReaderCalls == readCalls && mp3SeekCalls == seekCalls);
+  }
   positions[0]=0;
   positions[1]=length/2;
   positions[2]=length>193 ? length-193 : 0;
