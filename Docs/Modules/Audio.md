@@ -1890,6 +1890,13 @@ switch between codebooks for MPEG-1, MPEG-2 and MPEG-2.5, including
 mixed windows. PCM parity at 8 kHz is enforced by the same nonperiodic
 waveform gate as the other MPEG-2/2.5 sample rates.
 
+The opt-in frame-level decoder now additionally routes MPEG-2/2.5
+intensity stereo using the LSF intensity positions and the
+`intensity_scale` bit (including mid/side combinations). A separate
+`MP3JointStereoLSF.c` regression tests spectral factors and malformed
+inputs; **PCM parity on independently encoded LSF intensity streams
+is not yet established**, so this is experimental.
+
 **The coverage is not universal**. Automatic intensity-stereo
 band handling is implemented but is still awaiting independent
 intensity-encoded PCM fixtures. MPEG-2/2.5 intensity-stereo PCM,
