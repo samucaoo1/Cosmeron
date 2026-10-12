@@ -68,6 +68,11 @@ typedef struct AUDIO_CODEC_TYPE(TMP3Scalefactors) {
   uint8_t longBands[22];
   uint8_t shortBands[13][3];
   uint16_t part2Bits;
+  /* LSF right-channel intensity positions after no-intensity sentinel
+   * expansion: 255 means that the band carries ordinary L/R or MS.
+   * The ordinary scalefactor arrays remain untouched for requantization. */
+  uint8_t lsfIntensityLong[22];
+  uint8_t lsfIntensityShort[13][3];
 } AUDIO_CODEC_TYPE(TMP3Scalefactors);
 
 #define AUDIO_CODEC_MP3_PARSE_SCALEFACTORS_PROTOTYPE                          \
@@ -155,6 +160,17 @@ AUDIO_CODEC_MP3_INTENSITY_BAND_PROTOTYPE;
       float outLeft[576], float outRight[576])
 
 AUDIO_CODEC_MP3_JOINT_STEREO_PROTOTYPE;
+
+#define AUDIO_CODEC_MP3_JOINT_STEREO_LSF_PROTOTYPE                            \
+  static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_JointStereoLSF)(                \
+      const AUDIO_CODEC_TYPE(TMP3FrameInfo) *header,                          \
+      const AUDIO_CODEC_TYPE(TMP3Granule) *part,                              \
+      const AUDIO_CODEC_TYPE(TMP3Scalefactors) *scale,                        \
+      uint8_t intensityScale,                                                \
+      const float left[576], const float right[576],                          \
+      float outLeft[576], float outRight[576])
+
+AUDIO_CODEC_MP3_JOINT_STEREO_LSF_PROTOTYPE;
 
 #define AUDIO_CODEC_MP3_REORDER_SHORT_PROTOTYPE                            \
   static inline OPSTATUS AUDIO_CODEC_FUNC(MP3_ReorderShort)(                  \

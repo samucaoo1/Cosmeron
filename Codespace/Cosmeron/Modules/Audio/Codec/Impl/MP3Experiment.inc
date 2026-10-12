@@ -14,6 +14,7 @@ AUDIO_CODEC_MP3_EXPERIMENT_FRAME_PROTOTYPE {
   const unsigned char *mainData = NULL;
   size_t mainBytes = 0, produced, i;
   unsigned int gr, ch;
+  uint8_t lsfIntensityScale = 0;
   OPSTATUS status;
   if (!state || !frame || !outInterleaved || !outFrames || !outInfo)
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -57,6 +58,7 @@ AUDIO_CODEC_MP3_EXPERIMENT_FRAME_PROTOTYPE {
         status = AUDIO_CODEC_FUNC(MP3_ParseScalefactorsLSF)(
             mainData, mainBytes, &header, &side, ch,
             &scale, &intensityScale);
+        if (ch == 1) lsfIntensityScale = intensityScale;
       }
       if (status != STATUS_CONST(SUCCESS)) return status;
       if (gr == 0) previous[ch] = scale;
@@ -79,7 +81,10 @@ AUDIO_CODEC_MP3_EXPERIMENT_FRAME_PROTOTYPE {
             &header, &side.parts[gr][1], &scaleByChannel[1],
             channels[0], channels[1], channels[0], channels[1]);
       else if (header.intensityStereo)
-        status = STATUS_CONST(NOT_SUPPORTED); /* LSF intensity scalings differ */
+        status = AUDIO_CODEC_FUNC(MP3_JointStereoLSF)(
+            &header, &side.parts[gr][1], &scaleByChannel[1],
+            lsfIntensityScale, channels[0], channels[1],
+            channels[0], channels[1]);
       else
         status = AUDIO_CODEC_FUNC(MP3_StereoMS)(
             channels[0], channels[1], 0, 576,

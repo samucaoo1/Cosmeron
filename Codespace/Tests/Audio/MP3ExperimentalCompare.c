@@ -229,6 +229,19 @@ int main(int argc, char **argv) {
   }
   fflush(stdout); /* preserve diagnostics if a strict parity assertion fails */
   assert(bestRatio >= -0.0000001 && bestRatio <= 1.0000001);
+  if (getenv("COSMERON_MP3_BASELINE_STRICT") != NULL) {
+    assert(!hasXing && intensityFrames == 0 && skipped == 0);
+    assert(bestRatio >= -0.0000001 && bestRatio < 0.00001);
+    assert(bestGain > 0.999 && bestGain < 1.001);
+  }
+  if (getenv("COSMERON_MP3_LSF_INTENSITY_STRICT") != NULL) {
+    /* An MP3 made by our independent intensity-stereo fixture generator
+     * has no Xing/LAME tags. Accept arbitrary decoder latency, but insist
+     * on matching nonperiodic PCM, correct stereo gain and real IS flags. */
+    assert(!hasXing && intensityFrames >= 16 && skipped == 0);
+    assert(bestRatio >= -0.0000001 && bestRatio < 0.00001);
+    assert(bestGain > 0.999 && bestGain < 1.001);
+  }
   if (getenv("COSMERON_MP3_PARITY_STRICT") != NULL) {
     assert(hasXing && trimmedStart && expectedGaplessFrames == frames);
     assert(metadataRatio >= -0.0000001 && metadataRatio < 0.00001);

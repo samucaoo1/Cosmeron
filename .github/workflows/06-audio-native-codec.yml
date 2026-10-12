@@ -1,7 +1,7 @@
 name: "06 · Native Audio Codec"
 on:
   push:
-    branches: [audio-native-codecs, audio-flac-native, audio-flac-frames, audio-flac-streaming, audio-mp3-native, audio-mp3-reservoir, audio-mp3-scalefactors, audio-mp3-huffman, audio-mp3-requantize, audio-mp3-hybrid, audio-mp3-imdct, audio-mp3-polyphase, audio-mp3-intensity, audio-mp3-experimental, audio-mp3-fidelity, audio-mp3-intensity-routing, audio-mp3-lsf, audio-mp3-lsf-pcm, audio-mp3-8k-huffman-regions, audio-module]
+    branches: [audio-native-codecs, audio-flac-native, audio-flac-frames, audio-flac-streaming, audio-mp3-native, audio-mp3-reservoir, audio-mp3-scalefactors, audio-mp3-huffman, audio-mp3-requantize, audio-mp3-hybrid, audio-mp3-imdct, audio-mp3-polyphase, audio-mp3-intensity, audio-mp3-experimental, audio-mp3-fidelity, audio-mp3-intensity-routing, audio-mp3-lsf, audio-mp3-lsf-pcm, audio-mp3-8k-huffman-regions, audio-mp3-lsf-intensity, audio-module]
     paths:
       - "Codespace/Cosmeron/Modules/Audio/**"
       - "Codespace/Tests/Audio/**"
@@ -50,6 +50,37 @@ jobs:
           cd Codespace/Tests/Audio
           sh MP3ParityFixtures.sh
 
+  mp3-lsf-intensity-parity:
+    name: Linux / independently authored LSF intensity PCM parity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate intensity bitstreams and verify PCM against miniaudio
+        run: |
+          set -eu
+          cd Codespace/Tests/Audio
+          cc -std=c11 -Wall -Wextra -Wpedantic -Werror MP3ExperimentalCompare.c -o /tmp/mp3-lsf-is-compare
+          dir="$(mktemp -d)"
+          trap 'rm -rf "$dir"' EXIT
+          python3 MP3LSFIntensityFixture.py "$dir/mono.mp3" 0 0 mono
+          COSMERON_MP3_BASELINE_STRICT=1 /tmp/mp3-lsf-is-compare "$dir/mono.mp3"
+          python3 MP3LSFIntensityFixture.py "$dir/baseline.mp3" 0 0 baseline
+          COSMERON_MP3_BASELINE_STRICT=1 /tmp/mp3-lsf-is-compare "$dir/baseline.mp3"
+          python3 MP3LSFIntensityFixture.py "$dir/baseline-short.mp3" 0 0 baseline-short
+          COSMERON_MP3_BASELINE_STRICT=1 /tmp/mp3-lsf-is-compare "$dir/baseline-short.mp3"
+          python3 MP3LSFIntensityFixture.py "$dir/baseline-mixed.mp3" 0 0 baseline-mixed
+          COSMERON_MP3_BASELINE_STRICT=1 /tmp/mp3-lsf-is-compare "$dir/baseline-mixed.mp3"
+          for ms in 0 1; do
+            for scale in 0 1; do
+              python3 MP3LSFIntensityFixture.py "$dir/intensity-$ms-$scale.mp3" "$ms" "$scale"
+              COSMERON_MP3_LSF_INTENSITY_STRICT=1 /tmp/mp3-lsf-is-compare "$dir/intensity-$ms-$scale.mp3"
+              python3 MP3LSFIntensityFixture.py "$dir/intensity-short-$ms-$scale.mp3" "$ms" "$scale" short
+              COSMERON_MP3_LSF_INTENSITY_STRICT=1 /tmp/mp3-lsf-is-compare "$dir/intensity-short-$ms-$scale.mp3"
+              python3 MP3LSFIntensityFixture.py "$dir/intensity-mixed-$ms-$scale.mp3" "$ms" "$scale" mixed
+              COSMERON_MP3_LSF_INTENSITY_STRICT=1 /tmp/mp3-lsf-is-compare "$dir/intensity-mixed-$ms-$scale.mp3"
+            done
+          done
+
   native-mp3-sanitizer:
     name: Linux / native MP3 UB + address sanitizers
     runs-on: ubuntu-latest
@@ -59,7 +90,7 @@ jobs:
         run: |
           set -eu
           cd Codespace/Tests/Audio
-          for test in MP3Headers MP3SideInfo MP3Scalefactors MP3ScalefactorsLSF MP3Huffman MP3HuffmanRegions MP3Requant MP3Hybrid MP3IMDCT MP3Synthesis MP3Intensity MP3JointStereo MP3Xing MP3Experimental; do
+          for test in MP3Headers MP3SideInfo MP3Scalefactors MP3ScalefactorsLSF MP3Huffman MP3HuffmanRegions MP3Requant MP3Hybrid MP3IMDCT MP3Synthesis MP3Intensity MP3JointStereo MP3JointStereoLSF MP3Xing MP3Experimental; do
             cc -std=c11 -Wall -Wextra -Wpedantic -Werror -fsanitize=address,undefined -fno-omit-frame-pointer "$test.c" -o "/tmp/$test"
             "/tmp/$test"
           done
@@ -84,7 +115,7 @@ jobs:
           run: |
             set -eu
             cd Codespace/Tests/Audio
-            for test in FLACMetadata FLACFrames FLACStandalone MP3Headers MP3SideInfo MP3Scalefactors MP3ScalefactorsLSF MP3Huffman MP3HuffmanRegions MP3Requant MP3Hybrid MP3IMDCT MP3Synthesis MP3Intensity MP3JointStereo MP3Xing MP3Experimental; do
+            for test in FLACMetadata FLACFrames FLACStandalone MP3Headers MP3SideInfo MP3Scalefactors MP3ScalefactorsLSF MP3Huffman MP3HuffmanRegions MP3Requant MP3Hybrid MP3IMDCT MP3Synthesis MP3Intensity MP3JointStereo MP3JointStereoLSF MP3Xing MP3Experimental; do
               cc -std=c11 -Wall -Wextra -Wpedantic -Werror "$test.c" -o "./$test"
               "./$test"
             done
@@ -98,7 +129,7 @@ jobs:
         shell: pwsh
         run: |
           cd Codespace/Tests/Audio
-          foreach ($test in @("FLACMetadata", "FLACFrames", "FLACStandalone", "MP3Headers", "MP3SideInfo", "MP3Scalefactors", "MP3ScalefactorsLSF", "MP3Huffman", "MP3HuffmanRegions", "MP3Requant", "MP3Hybrid", "MP3IMDCT", "MP3Synthesis", "MP3Intensity", "MP3JointStereo", "MP3Xing", "MP3Experimental")) {
+          foreach ($test in @("FLACMetadata", "FLACFrames", "FLACStandalone", "MP3Headers", "MP3SideInfo", "MP3Scalefactors", "MP3ScalefactorsLSF", "MP3Huffman", "MP3HuffmanRegions", "MP3Requant", "MP3Hybrid", "MP3IMDCT", "MP3Synthesis", "MP3Intensity", "MP3JointStereo", "MP3JointStereoLSF", "MP3Xing", "MP3Experimental")) {
             cl /nologo /std:c11 /W4 /WX /D_CRT_SECURE_NO_WARNINGS /TC "$test.c" "/Fe:$test.exe"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             & "./$test.exe"
