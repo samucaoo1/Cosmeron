@@ -48,6 +48,20 @@ static void syntheticTests(void) {
   for (i = 0; i < frames * 2; ++i) assert(pcm[i] == 0);
   pcm[0] = 789.f;
 
+  /* MPEG-2.5, 8-kHz raw frame: fail closed until PCM is bitstream-
+   * equivalent to the reference; preserve stream state and output. */
+  frame[1] = 0xe3;
+  frame[2] = 0x48;
+  frame[3] = 0xc4;
+  snapshot = decoder;
+  pcm[0] = 789.f;
+  assert(AUDIO_CODEC_FUNC(MP3_ExperimentFrame)(
+      &decoder, frame, sizeof frame, pcm, 576, &frames, &info) ==
+      STATUS_CONST(NOT_SUPPORTED));
+  assert(pcm[0] == 789.f && !memcmp(&snapshot,&decoder,sizeof decoder));
+  frame[1] = 0xfb;
+  frame[2] = 0x90;
+
   /* Missing prior main_data_begin does not publish PCM, but contributes
    * current compressed payload bytes to a future frame's reservoir. */
   memset(&decoder, 0, sizeof decoder);

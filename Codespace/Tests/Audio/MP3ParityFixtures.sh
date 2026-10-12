@@ -53,6 +53,31 @@ ffmpeg -nostdin -hide_banner -loglevel error -y \
   -ar 11025 -ac 2 -c:a libmp3lame -b:a 32k "$dir/mpeg25-lsf.mp3"
 "$dir/lsfcheck" "$dir/mpeg2-lsf.mp3" 2
 "$dir/lsfcheck" "$dir/mpeg25-lsf.mp3" 25
+# LSF PCM comparisons are diagnostic until numerical parity is demonstrated.
+# Additional low-rate MPEG-2/2.5 coverage includes 8-kHz mixed/short
+# block machinery; every fixture must meet the existing waveform gate.
+ffmpeg -nostdin -hide_banner -loglevel error -y \
+  -f lavfi \
+  -i 'aevalsrc=0.2*sin(2*PI*(151*t+110*t*t))+0.08*sin(2*PI*743*t):s=8000:d=0.58' \
+  -ar 8000 -ac 1 -c:a libmp3lame -b:a 24k "$dir/mpeg25-8k.mp3"
+ffmpeg -nostdin -hide_banner -loglevel error -y \
+  -f lavfi \
+  -i 'aevalsrc=0.18*sin(2*PI*(157*t+129*t*t))+0.06*sin(2*PI*613*t):s=12000:d=0.58' \
+  -ar 12000 -ac 1 -c:a libmp3lame -b:a 32k "$dir/mpeg25-12k.mp3"
+ffmpeg -nostdin -hide_banner -loglevel error -y \
+  -f lavfi \
+  -i 'aevalsrc=0.17*sin(2*PI*(167*t+137*t*t))+0.06*sin(2*PI*697*t):s=16000:d=0.58' \
+  -ar 16000 -ac 1 -c:a libmp3lame -b:a 48k "$dir/mpeg2-16k.mp3"
+ffmpeg -nostdin -hide_banner -loglevel error -y \
+  -f lavfi \
+  -i 'aevalsrc=0.16*sin(2*PI*(179*t+143*t*t))+0.07*sin(2*PI*887*t):s=24000:d=0.58' \
+  -ar 24000 -ac 1 -c:a libmp3lame -b:a 64k "$dir/mpeg2-24k.mp3"
+COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/mpeg2-lsf.mp3"
+COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/mpeg25-lsf.mp3"
+"$dir/lsfcheck" "$dir/mpeg25-8k.mp3" 25 # frame/LSF parser still supported
+COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/mpeg25-12k.mp3"
+COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/mpeg2-16k.mp3"
+COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/mpeg2-24k.mp3"
 
 COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/mono.mp3"
 COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/stereo.mp3"

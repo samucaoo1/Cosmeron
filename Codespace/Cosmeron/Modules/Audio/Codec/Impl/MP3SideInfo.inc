@@ -92,6 +92,8 @@ AUDIO_CODEC_MP3_PARSE_SIDE_INFO_PROTOTYPE {
       }
       if (header.mpegVersion == 1)
         AUDIO_INS_MP3_READ(1, part->preflag, uint8_t);
+      else part->preflag = (part->scalefacCompress >= 500U &&
+                           !(header.intensityStereo && ch == 1));
       AUDIO_INS_MP3_READ(1, part->scalefacScale, uint8_t);
       AUDIO_INS_MP3_READ(1, part->count1TableSelect, uint8_t);
       if (part->bigValues > 288 ||

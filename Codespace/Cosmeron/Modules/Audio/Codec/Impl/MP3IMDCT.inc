@@ -4,11 +4,15 @@
 /* Stateful MPEG Layer III hybrid filterbank: 18 spectral inputs -> 36
  * windowed time values per subband, overlapping 18 with prior granule.
  * The output is 32 x 18 subband time samples, NOT final PCM. */
-AUDIO_CODEC_MP3_IMDCT_PROTOTYPE {
+static inline OPSTATUS AUDIO_INS(MP3_IMDCTMixedSubbands)(
+    const float spectrum[576], const AUDIO_CODEC_TYPE(TMP3Granule) *part,
+    AUDIO_CODEC_TYPE(TMP3HybridState) *state, float outSubband[576],
+    unsigned int mixedLongSubbands) {
   float subband[576], overlap[32][18], y[36];
   unsigned int sb, block, n, k, win;
   size_t i;
-  if (!spectrum || !part || !state || !outSubband)
+  if (!spectrum || !part || !state || !outSubband ||
+      mixedLongSubbands > 32)
     return STATUS_CONST(INVALID_ARGUMENT);
   if ((part->windowSwitching && (part->blockType == 0 ||
                                  part->blockType > 3)) ||
@@ -25,7 +29,7 @@ AUDIO_CODEC_MP3_IMDCT_PROTOTYPE {
   }
   for (sb = 0; sb < 32; ++sb) {
     block = part->windowSwitching ? part->blockType : 0U;
-    if (part->mixedBlock && sb < 2) block = 0;
+    if (part->mixedBlock && sb < mixedLongSubbands) block = 0;
     for (n = 0; n < 36; ++n) y[n] = 0.0f;
     if (block == 2U) {
       for (win = 0; win < 3; ++win) {
@@ -58,6 +62,11 @@ AUDIO_CODEC_MP3_IMDCT_PROTOTYPE {
   memcpy(outSubband, subband, sizeof subband);
   memcpy(state->overlap, overlap, sizeof overlap);
   return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_CODEC_MP3_IMDCT_PROTOTYPE {
+  return AUDIO_INS(MP3_IMDCTMixedSubbands)(
+      spectrum,part,state,outSubband,2U);
 }
 
 /* Standard MPEG Layer III frequency inversion: negate odd time positions
