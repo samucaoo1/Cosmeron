@@ -67,7 +67,8 @@ int main(int argc, char **argv) {
     size_t produced = 0;
     assert(AUDIO_CODEC_FUNC(MP3_ParseHeader)(bytes + offset,
         length - offset, &header) == STATUS_CONST(SUCCESS));
-    if (header.frameBytes > length - offset) break;
+    if (header.frameBytes > length - offset ||
+        used + header.samplesPerFrame > MAX_FRAMES) break;
     if (header.msStereo) ++msFrames;
     if (header.intensityStereo) ++intensityFrames;
     result = AUDIO_CODEC_FUNC(MP3_ExperimentFrame)(&native,
@@ -75,7 +76,7 @@ int main(int argc, char **argv) {
         nativePCM + used * header.channels, MAX_FRAMES - used,
         &produced, &header);
     if (result == STATUS_CONST(SUCCESS)) {
-      assert(produced == 1152);
+      assert(produced == header.samplesPerFrame);
       channels = header.channels;
       used += produced;
       ++decoded;
