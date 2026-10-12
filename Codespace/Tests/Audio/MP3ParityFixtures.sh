@@ -74,7 +74,7 @@ ffmpeg -nostdin -hide_banner -loglevel error -y \
   -ar 24000 -ac 1 -c:a libmp3lame -b:a 64k "$dir/mpeg2-24k.mp3"
 COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/mpeg2-lsf.mp3"
 COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/mpeg25-lsf.mp3"
-"$dir/mp3compare" "$dir/mpeg25-8k.mp3" # diagnostic until 8 kHz mismatch is fixed
+"$dir/lsfcheck" "$dir/mpeg25-8k.mp3" 25 # frame/LSF parser still supported
 COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/mpeg25-12k.mp3"
 COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/mpeg2-16k.mp3"
 COSMERON_MP3_PARITY_STRICT=1 "$dir/mp3compare" "$dir/mpeg2-24k.mp3"
