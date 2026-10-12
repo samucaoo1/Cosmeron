@@ -1,7 +1,7 @@
 #include "Test.h"
 static float advance(void *user, uint32_t cp) {
   (void)user;
-  return cp == 'i' ? 3 : 7;
+  return cp == 'i' ? 3.0f : 7.0f;
 }
 static uint8_t coverage(void *user, uint32_t cp, uint32_t x, uint32_t y) {
   (void)user;

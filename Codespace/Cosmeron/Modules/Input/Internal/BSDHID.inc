@@ -11,9 +11,12 @@
 #if defined(__DragonFly__)
 #include <bus/u4b/usb.h>
 #include <bus/u4b/usb_ioctl.h>
-#else
+#elif !defined(__OpenBSD__)
 #include <dev/usb/usb.h>
 #endif
+/* OpenBSD's dev/usb/usb.h needs non-POSIX u_int/u_char/u_long typedefs,
+ * which are unavailable under strict -std=c11. Only the HID report-ID
+ * request is required here; OpenBSD defines it as _IOR('U', 25, int). */
 #include <usbhid.h>
 #include "Dynamic.inc"
 #include "HID.inc"
@@ -90,7 +93,16 @@ static inline void INPUT_INS(BSDHIDOpen)(const char *path) {
   if (slot == INPUT_DEVICE_CAPACITY) return;
   fd = open(path, O_RDONLY | O_NONBLOCK);
   if (fd < 0) return;
-  if (fcntl(fd, F_SETFD, FD_CLOEXEC) < 0 || ioctl(fd, USB_GET_REPORT_ID, &id) < 0) { close(fd); return; }
+  #if defined(__OpenBSD__)
+  if (fcntl(fd, F_SETFD, FD_CLOEXEC) < 0 ||
+      ioctl(fd, _IOR('U', 25, int), &id) < 0) {
+#else
+  if (fcntl(fd, F_SETFD, FD_CLOEXEC) < 0 ||
+      ioctl(fd, USB_GET_REPORT_ID, &id) < 0) {
+#endif
+    close(fd);
+    return;
+  }
   descriptor = s->descriptor(fd);
   if (!descriptor) { close(fd); return; }
   length = s->size(descriptor, hid_input, id);

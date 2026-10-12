@@ -38,6 +38,16 @@ COSMERON_INPUT_STORAGE INPUT_INS(LinuxState) INPUT_INS(linuxState);
 #else
 COSMERON_INPUT_STORAGE INPUT_INS(LinuxState) INPUT_INS(linuxState) = {0};
 #endif
+/* musl ioctl takes int requests, glibc and BSD take unsigned long.
+ * Convert the Linux evdev encoding to the libc request type explicitly. */
+static inline int INPUT_INS(EvdevIoctl)(int fd, unsigned long request,
+                                       void *result) {
+#if defined(__linux__) && !defined(__GLIBC__)
+  return ioctl(fd, (int)request, result);
+#else
+  return ioctl(fd, request, result);
+#endif
+}
 static inline bool INPUT_INS(Bit)(const unsigned char *bits, unsigned index) {
   return (bits[index / CHAR_BIT] & (1u << (index % CHAR_BIT))) != 0;
 }
@@ -123,7 +133,7 @@ static inline void INPUT_INS(LinuxAbs)(size_t slot, unsigned code, int value) {
 static inline bool INPUT_INS(LinuxSync)(size_t slot) {
   INPUT_INS(LinuxDevice) *n = &INPUT_INS(linuxState).devices[slot];
   unsigned code;
-  if (ioctl(n->fd, EVIOCGKEY(sizeof(n->keys)), n->keys) < 0) return false;
+  if (INPUT_INS(EvdevIoctl)(n->fd, EVIOCGKEY(sizeof(n->keys)), n->keys) < 0) return false;
   for (code = 0; code < KEY_CNT; ++code) {
     if (n->controller) {
       if (n->buttonMap[code] >= 0)
@@ -133,7 +143,7 @@ static inline bool INPUT_INS(LinuxSync)(size_t slot) {
   if (n->controller) for (code = 0; code < ABS_CNT; ++code) {
     if (n->axisMap[code] >= 0 || (code >= ABS_HAT0X && code <= ABS_HAT3Y)) {
       struct input_absinfo a;
-      if (ioctl(n->fd, EVIOCGABS(code), &a) == 0) INPUT_INS(LinuxAbs)(slot, code, a.value);
+      if (INPUT_INS(EvdevIoctl)(n->fd, EVIOCGABS(code), &a) == 0) INPUT_INS(LinuxAbs)(slot, code, a.value);
     }
   }
   return true;
@@ -152,7 +162,7 @@ static inline void INPUT_INS(LinuxOpen)(const char *path, size_t slot) {
   if (fd < 0) fd = open(path, O_RDONLY | O_NONBLOCK);
   if (fd < 0) return;
   if (fcntl(fd, F_SETFD, FD_CLOEXEC) < 0 || fstat(fd, &st) < 0 ||
-      ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(bits)), bits) < 0) { close(fd); return; }
+      INPUT_INS(EvdevIoctl)(fd, EVIOCGBIT(EV_KEY, sizeof(bits)), bits) < 0) { close(fd); return; }
   memset(n, 0, sizeof(*n));
   n->keyboard = INPUT_INS(Bit)(bits, KEY_A); n->mouse = INPUT_INS(Bit)(bits, BTN_LEFT);
   n->controller = INPUT_INS(Bit)(bits, BTN_GAMEPAD) || INPUT_INS(Bit)(bits, BTN_JOYSTICK);
@@ -164,17 +174,17 @@ static inline void INPUT_INS(LinuxOpen)(const char *path, size_t slot) {
   for (code = 0; code < KEY_CNT; ++code) n->buttonMap[code] = -1;
   for (code = 0; code < ABS_CNT; ++code) n->axisMap[code] = -1;
   if (n->controller) {
-    (void)ioctl(fd, EVIOCGNAME(sizeof(name)), name); name[sizeof(name)-1] = '\0';
+    (void)INPUT_INS(EvdevIoctl)(fd, EVIOCGNAME(sizeof(name)), name); name[sizeof(name)-1] = '\0';
     d = INPUT_INS(Connect)(slot, name);
     if (!d) { close(fd); n->used = false; return; }
     { struct input_id identity;
-      if (ioctl(fd, EVIOCGID, &identity) == 0) { d->vendor = identity.vendor; d->product = identity.product; }
+      if (INPUT_INS(EvdevIoctl)(fd, EVIOCGID, &identity) == 0) { d->vendor = identity.vendor; d->product = identity.product; }
     }
     for (code = BTN_MISC; code < KEY_CNT && d->buttonCount < INPUT_CONST(MAX_BUTTONS); ++code)
       if (INPUT_INS(Bit)(bits, code)) n->buttonMap[code] = (int)d->buttonCount++;
-    (void)ioctl(fd, EVIOCGBIT(EV_ABS, sizeof(absBits)), absBits);
+    (void)INPUT_INS(EvdevIoctl)(fd, EVIOCGBIT(EV_ABS, sizeof(absBits)), absBits);
     for (code = 0; code < ABS_CNT; ++code) if (INPUT_INS(Bit)(absBits, code)) {
-      if (ioctl(fd, EVIOCGABS(code), &n->abs[code]) < 0) continue;
+      if (INPUT_INS(EvdevIoctl)(fd, EVIOCGABS(code), &n->abs[code]) < 0) continue;
       if (code >= ABS_HAT0X && code <= ABS_HAT3Y) {
         unsigned count = (code - ABS_HAT0X) / 2 + 1;
         if (count > d->hatCount) d->hatCount = count;
@@ -193,11 +203,11 @@ static inline void INPUT_INS(LinuxOpen)(const char *path, size_t slot) {
         for (code = INPUT_CONST(GAMEPAD_BUTTON_UP); code <= INPUT_CONST(GAMEPAD_BUTTON_RIGHT); ++code)
           d->gamepadButtons[code] = (int)d->buttonCount++;
     }
-    (void)ioctl(fd, EVIOCGBIT(EV_FF, sizeof(ffBits)), ffBits);
+    (void)INPUT_INS(EvdevIoctl)(fd, EVIOCGBIT(EV_FF, sizeof(ffBits)), ffBits);
     d->rumble = writable && INPUT_INS(Bit)(ffBits, FF_RUMBLE);
   }
   { unsigned char relBits[(REL_CNT + CHAR_BIT - 1) / CHAR_BIT] = {0};
-    (void)ioctl(fd, EVIOCGBIT(EV_REL, sizeof(relBits)), relBits);
+    (void)INPUT_INS(EvdevIoctl)(fd, EVIOCGBIT(EV_REL, sizeof(relBits)), relBits);
 #ifdef REL_WHEEL_HI_RES
     n->preciseY = INPUT_INS(Bit)(relBits, REL_WHEEL_HI_RES);
     n->preciseX = INPUT_INS(Bit)(relBits, REL_HWHEEL_HI_RES);
@@ -313,7 +323,7 @@ static inline OPSTATUS INPUT_INS(BackendRumble)(INPUT_INS(Device) *d, float low,
   effect.u.rumble.strong_magnitude = (uint16_t)(low * UINT16_MAX);
   effect.u.rumble.weak_magnitude = (uint16_t)(high * UINT16_MAX);
   effect.replay.length = (uint16_t)ms;
-  if (ioctl(n->fd, EVIOCSFF, &effect) < 0) return STATUS_CONST(GENERIC_ERROR);
+  if (INPUT_INS(EvdevIoctl)(n->fd, EVIOCSFF, &effect) < 0) return STATUS_CONST(GENERIC_ERROR);
   n->effect = effect.id; event.code = (uint16_t)effect.id; event.value = 1;
   return write(n->fd, &event, sizeof(event)) == (ssize_t)sizeof(event) ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR);
 }
