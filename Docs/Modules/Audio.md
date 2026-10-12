@@ -1933,6 +1933,15 @@ test checks the ordinary API with this macro. Only complete, contiguous
 and supported MP3 frames are accepted by the experimental memory path;
 additional file/reader and interoperability coverage is still needed.
 
+**Fault-tolerant MP3 callbacks (opt-in).** The callback reader is
+tested with 2- and 3-byte reads, interrupted reads and seeks,
+premature EOF, invalid short-read lengths, and corrupted/truncated
+ID3/MP3 input. On a failed forward `SeekFrame`, the logical PCM cursor
+and decoder state are preserved, allowing retry. `ReadFrames` may
+return an error together with a partial count when it has already
+copied PCM frames; callers must consume that reported count before
+retrying. See `CodecMP3ReaderFaults.c` in the cross-platform suite.
+
 **Native MP3 seekable file/reader streams (opt-in).** With
 `AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3=1`, the generic
 `Audio_Codec_OpenFile` and `Audio_Codec_OpenReader` now also choose
