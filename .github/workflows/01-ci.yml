@@ -6,6 +6,7 @@ on:
       - main
       - pattern-refactor
       - audio-module
+      - portability-ci-recovery
   pull_request:
     branches:
       - main

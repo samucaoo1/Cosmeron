@@ -92,11 +92,12 @@ static inline size_t GUI_INS(HitText)(GUI_TYPE(TInputText) * w, GUI_TYPE(TFont) 
   float x = 0, y = 0, targetX = p.x - w->region.value1 - 5 + w->scrollX,
         targetY = p.y - w->region.value2 - 5 + w->scrollY;
   while (offset < w->length) {
-    TEXT_TYPE(TChar32) cp;
-    size_t n;
+    TEXT_TYPE(TChar32) cp = 0;
+    size_t n = 0;
     float advance;
-    (void)TEXT_UTF8_FUNC(Decode)((const unsigned char *)w->buffer + offset, w->length - offset, &cp,
-                                 &n);
+    if (TEXT_UTF8_FUNC(Decode)((const unsigned char *)w->buffer + offset,
+                              w->length - offset, &cp, &n) !=
+            STATUS_CONST(SUCCESS) || !n) return offset;
     if (cp == '\n' && multiline) {
       if (targetY < y + (font.height + 1) * scale)
         return offset;
@@ -247,8 +248,8 @@ static inline OPSTATUS GUI_INS(Editor)(GUI_TYPE(TContext) * c, GUI_TYPE(TInputTe
   selectionStart = w.caret < w.selectionAnchor ? w.caret : w.selectionAnchor;
   selectionEnd = w.caret > w.selectionAnchor ? w.caret : w.selectionAnchor;
   for (offset = 0; offset <= w.length;) {
-    TEXT_TYPE(TChar32) cp;
-    size_t n;
+    TEXT_TYPE(TChar32) cp = 0;
+    size_t n = 0;
     float advance;
     if (offset == w.caret) {
       caretX = x;
@@ -256,8 +257,9 @@ static inline OPSTATUS GUI_INS(Editor)(GUI_TYPE(TContext) * c, GUI_TYPE(TInputTe
     }
     if (offset == w.length)
       break;
-    (void)TEXT_UTF8_FUNC(Decode)((const unsigned char *)w.buffer + offset, w.length - offset, &cp,
-                                 &n);
+    if (TEXT_UTF8_FUNC(Decode)((const unsigned char *)w.buffer + offset,
+                              w.length - offset, &cp, &n) !=
+            STATUS_CONST(SUCCESS) || !n) return STATUS_CONST(INVALID_SEQUENCE);
     advance = GUI_INS(Advance)(font, cp) * v->fontScale;
     if (offset >= selectionStart && offset < selectionEnd)
       GUI_INS(Rect)

@@ -48,8 +48,8 @@ static inline OPSTATUS GUI_INS(UTF8)(const char *text, size_t length) {
   if (!text)
     return STATUS_CONST(INVALID_ARGUMENT);
   while (offset < length) {
-    TEXT_TYPE(TChar32) cp;
-    size_t consumed;
+    TEXT_TYPE(TChar32) cp = 0;
+    size_t consumed = 0;
     OPSTATUS s = TEXT_UTF8_FUNC(Decode)((const unsigned char *)text + offset, length - offset, &cp,
                                         &consumed);
     if (s != STATUS_CONST(SUCCESS))
@@ -93,8 +93,8 @@ static inline OPSTATUS GUI_INS(Measure)(GUI_TYPE(TFont) font, const char *text, 
   if (!GUI_INS(FontValid)(font) || !(scale > 0 && scale <= 1024))
     return STATUS_CONST(INVALID_ARGUMENT);
   while (offset < length) {
-    TEXT_TYPE(TChar32) cp;
-    size_t n;
+    TEXT_TYPE(TChar32) cp = 0;
+    size_t n = 0;
     OPSTATUS s =
         TEXT_UTF8_FUNC(Decode)((const unsigned char *)text + offset, length - offset, &cp, &n);
     if (s != STATUS_CONST(SUCCESS))
