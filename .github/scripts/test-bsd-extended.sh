@@ -332,7 +332,7 @@ record AudioCodecMinimal "$minimal_codec_zero_link" 'decoder-only; system libm i
 record AudioCodecMinimalMultiTU "$minimal_multitu_zero_link" 'two decoder-only TUs; no flags; no duplicate vendor symbols'
 record AudioCodec "$codec_zero_link" 'WAV/MP3/FLAC offline decoding; no hardware'
 record AudioDevice "$device_zero_link" 'public device API exercised without physical device'
-record Audio "$audio_zero_link" 'Miniaudio desktop integration; no physical device'
+record Audio "$audio_zero_link" 'Desktop audio integration; no physical device'
 linkflags=
 
 # Only noninteractive graphics, canvas, text UI and font regression sources.

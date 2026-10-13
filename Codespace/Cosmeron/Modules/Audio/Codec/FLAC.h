@@ -3,7 +3,7 @@
 #include "../PCM/PCM.h"
 #include "Impl/FLACFrame.inc"
 
-/* Public standalone lossless decoder. No miniaudio, libm or device backend.
+/* Public standalone lossless decoder. No libm or device backend.
  * The caller owns the decoded PCM and frees it with Audio_PCM_Destroy. */
 #define AUDIO_CODEC_FLAC_DECODE_MEMORY_PROTOTYPE \
   static inline OPSTATUS AUDIO_CODEC_FUNC(FLAC_DecodeMemory)( \

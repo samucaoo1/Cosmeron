@@ -1,5 +1,5 @@
 #include "../../Cosmeron/Modules/Audio/CodecMinimal.h"
-/* Minimal Miniaudio decoder in the first translation unit. */
+/* Minimal decoder in the first translation unit. */
 int CodecMinimalTU_Decode(void) {
   static const unsigned char pcm_wav[] = {
     'R','I','F','F',38,0,0,0, 'W','A','V','E',

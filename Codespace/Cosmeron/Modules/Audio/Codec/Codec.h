@@ -1,9 +1,6 @@
 #pragma once
 
 #include "../Audio.space"
-#if !defined(AUDIO_CODEC_NATIVE_ONLY)
-#include "../Internal/Backend.inc"
-#endif
 #include "../PCM/PCM.h"
 #include "WAV.h"
 #include "FLAC.h"

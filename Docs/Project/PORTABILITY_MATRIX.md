@@ -34,7 +34,7 @@ default on BSD and passed zero-extra-link tests on all four BSD guests
 
 Audio and Concurrency have separate, pure zero-link subsets:
 [Audio/Offline.h](../../Codespace/Cosmeron/Modules/Audio/Offline.h) provides
-PCM, synthesis, sequences and beep rendering without Miniaudio or OS threads;
+PCM, synthesis, sequences and beep rendering without device I/O or OS threads;
 [Concurrency/Cooperative.h](../../Codespace/Cosmeron/Modules/Concurrency/Cooperative.h)
 provides atomics, coroutines and direct tasks **without native threading**.
 These are not equivalent to the desktop Audio/Device or pthread ThreadPool

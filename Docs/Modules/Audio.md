@@ -1810,9 +1810,9 @@ WAV, MP3 and FLAC decoding, custom readers and WAV export.
 **Desktop-only**: not included when `AUDIO_NO_DESKTOP` is enabled.
 
 **Note about header-only native codecs:** the separate
-`Audio/CodecNative.h` exposes the shared WAV/FLAC/MP3 API without miniaudio.
-`Codec.h` also prefers the native decoders, with `AUDIO_CODEC_NATIVE_MP3=0`
-as an explicit MP3 compatibility opt-out. MP3 callbacks can be forward-only;
+`Audio/CodecNative.h` exposes the shared WAV/FLAC/MP3 API.
+`Codec.h` provides native decoders without external dependencies.
+MP3 callbacks can be forward-only;
 FLAC/WAV callbacks require seek. Sources are borrowed until Close.
 
 See [Native audio production paths](AudioNative.md) for sparse MP3 checkpoints,
@@ -2231,9 +2231,8 @@ OPSTATUS status = AUDIO_CODEC_FUNC(WriteWAV)(path, buffer);
 
 Header: `Cosmeron/Modules/Audio/Device/Device.h`
 
-Native callback output on Linux (ALSA), Windows (waveOut), macOS (AudioQueue)
-FreeBSD/DragonFly (OSS), OpenBSD (sndio) and NetBSD (audioio), with temporary miniaudio fallback. Define
-`AUDIO_DEVICE_MINIAUDIO_FALLBACK=0` to exclude the imported backend.
+Native callback output on Linux (ALSA), Windows (waveOut), macOS (AudioQueue),
+FreeBSD/DragonFly (OSS), OpenBSD (sndio) and NetBSD (audioio).
 `OpenNamed` selects an enumerated native ID; `Enumerate`, `GetFormat` and
 `GetStatus` expose selection, callback format and asynchronous failure.
 See [Native devices and lifecycle](AudioNative.md#output-devices) for ownership,
@@ -3353,7 +3352,7 @@ cc -std=c11 Codespace/Examples/Audio/BeepMusic.c -o beep-music
 ./beep-music --play
 ```
 
-The desktop adapter retains miniaudio as a temporary fallback. Native WAV/FLAC/MP3 decoding and OS device backends are preferred; CodecNative.h and AUDIO_DEVICE_MINIAUDIO_FALLBACK=0 exclude the imported implementation. WAV uses the Cosmeron-native bounded reader for OpenMemory, OpenFile and OpenReader, or the independent WAV_DecodeMemory API. FLAC OpenMemory now parses STREAMINFO, frame headers, CRC8/CRC16, Rice residuals, fixed/LPC prediction and stereo decorrelation using original C11 code. For OpenMemory, the complete FLAC input bytes remain borrowed until Close. OpenFile owns its FILE handle; OpenReader borrows the caller's callbacks and userData. File/Reader decode a bounded compressed-frame window (normally at most 8 MiB, or the smaller advertised maximum frame size), without copying the full file into RAM. Seeking uses lazy frame indices; BuildSeekIndex prepares them explicitly. See AudioNative.md for optional MD5, performance and validation limits. An additional header, `Audio/Codec/FLAC.h`, exposes
+The desktop adapter provides pure native C11 WAV/FLAC/MP3 decoding and zero-link OS device backends. WAV uses the Cosmeron-native bounded reader for OpenMemory, OpenFile and OpenReader, or the independent WAV_DecodeMemory API. FLAC OpenMemory now parses STREAMINFO, frame headers, CRC8/CRC16, Rice residuals, fixed/LPC prediction and stereo decorrelation using original C11 code. For OpenMemory, the complete FLAC input bytes remain borrowed until Close. OpenFile owns its FILE handle; OpenReader borrows the caller's callbacks and userData. File/Reader decode a bounded compressed-frame window (normally at most 8 MiB, or the smaller advertised maximum frame size), without copying the full file into RAM. Seeking uses lazy frame indices; BuildSeekIndex prepares them explicitly. See AudioNative.md for optional MD5, performance and validation limits. An additional header, `Audio/Codec/FLAC.h`, exposes
 `Audio_Codec_FLAC_DecodeMemory(data, size, outBuffer)` without the vendor
 codec. Its `outBuffer` is an owned `Audio_PCM_TBuffer`, released with
 `Audio_PCM_Destroy`. This convenience function validates the whole stream

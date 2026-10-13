@@ -1,5 +1,6 @@
 #!/usr/bin/env sh
 set -eu
+cd "$(dirname "$0")"
 build="${BUILD:-.build}"
 make "$build/MP3MemoryParity" "$build/NativeCodecProduction" "$build/FLACIntegrity" "$build/MP3ExperimentalCompare"
 dir="$(mktemp -d)"
@@ -27,11 +28,13 @@ for rate in 8000 11025 12000 16000 22050 24000 32000 44100 48000; do
   done
 done
 # Independent fixed-point encoder; Lavf writes zero delay/padding here.
-ffmpeg -nostdin -v error -y -f lavfi \
-  -i 'aevalsrc=0.2*sin(2*PI*(173*t+111*t*t)):s=44100:d=8' \
-  -c:a libshine -b:a 128k "$dir/shine.mp3"
-"$build/MP3MemoryParity" "$dir/shine.mp3"
-"$build/NativeCodecProduction" "$dir/shine.mp3"
+if ffmpeg -encoders 2>/dev/null | grep -q libshine; then
+  ffmpeg -nostdin -v error -y -f lavfi \
+    -i 'aevalsrc=0.2*sin(2*PI*(173*t+111*t*t)):s=44100:d=8' \
+    -c:a libshine -b:a 128k "$dir/shine.mp3"
+  "$build/MP3MemoryParity" "$dir/shine.mp3"
+  "$build/NativeCodecProduction" "$dir/shine.mp3"
+fi
 # Long VBR stream exercises cold indexed seeking and sample-exact preroll.
 ffmpeg -nostdin -v error -y -f lavfi \
   -i 'aevalsrc=0.2*sin(2*PI*(173*t+111*t*t)):s=44100:d=20' \

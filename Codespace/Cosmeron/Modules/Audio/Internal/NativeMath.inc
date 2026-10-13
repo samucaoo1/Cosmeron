@@ -74,7 +74,7 @@ static inline double AUDIO_INS(Pow)(double x, double y) {
       defined(__NetBSD__) || defined(__DragonFly__)
 /*
  * BSD dynamic native math adapter (codec and desktop profiles):
- *  - the embedded Miniaudio backend still needs math functions;
+ *  - dynamic math symbols (sqrt, pow, sin, exp) resolved at runtime;
  *  - dlopen/dlsym come from the target's runtime linker, with no -ldl flag;
  *  - libm is a RUNTIME requirement, not an embedded implementation;
  *  - a C11 atomic state machine makes initialization safe with concurrent

@@ -19,16 +19,15 @@ int main(void) {
 }
 ```
 
-Works without importing the vendor Miniaudio backend. The namespace and
+Works without any third-party audio vendor backends. The namespace and
 function signatures are unchanged. `Audio.h` remains the full desktop
 aggregator; defining `AUDIO_NO_DESKTOP` still selects the former reduced
 behavior. Tests: `Synthesis`, `OfflineStandalone`, `OfflineCompat` and
 `OfflineMultiTU` under `Codespace/Tests/Audio/`.
 
-The pure C11 WAV decoder is available separately through `Offline.h` /
-`Codec/WAV.h`; this does **not** enable Miniaudio's FLAC or MP3 decoder.
-Desktop device playback and the Miniaudio-backed Player still need native
-OS runtime integration.
+The pure C11 WAV and FLAC decoders are available separately through `Offline.h` /
+`Codec/WAV.h` / `Codec/FLAC.h`.
+Desktop device playback and Player use zero-link native OS runtime integration.
 
 ## Concurrency (cooperative only)
 
@@ -61,7 +60,7 @@ See [AUDIO_MANUAL_BSD.md](AUDIO_MANUAL_BSD.md). Include
 `Manual_Open`, `Manual_Start`, `Manual_Pump`, `Manual_Stop`, and
 `Manual_Close` API. Each pump call renders interleaved float PCM, converts
 to S16LE and writes using the host calling thread. There is no automatic
-thread or Miniaudio vendor dependency in this header.
+thread or vendor dependency in this header.
 
 FreeBSD / DragonFly: native OSS; NetBSD: audio(4); OpenBSD: sndio resolved
 through `dlopen`. OpenBSD has **no explicit `-lsndio` flag**, but *does*
@@ -75,7 +74,7 @@ Include `Cosmeron/Modules/Audio/Codec/WAV.h` or `Audio/Offline.h`.
 `Audio_Codec_WAV_DecodeMemory` supports RIFF/WAVE unsigned PCM8,
 signed PCM16/24/32 and IEEE float32 (on IEEE binary32 hosts) into an owning
 interleaved float PCM buffer. `Audio_Codec_WAV_WriteFile` writes PCM16.
-Neither imports Miniaudio, threads or libm. Compressed/Extensible WAVE,
+Neither imports external vendors, threads or libm. Compressed/Extensible WAVE,
 RF64 and big-endian RIFX are unsupported; inputs are bounded by RIFF and
 data chunk lengths. The `NativeWAV`, `WAVRobustness` and `WAVFormats`
 test programs verify supported formats and reject malformed files.
@@ -90,12 +89,11 @@ native `Thread`, `Mutex`, or `ThreadPool` implementations into zero-link
 backends. See [EXTERNAL_EXECUTOR.md](EXTERNAL_EXECUTOR.md).
 
 
-## Miniaudio decoder-only profile (without device threads)
+## Native decoder-only profile (without device threads)
 
 Include `Cosmeron/Modules/Audio/CodecMinimal.h` to retain the public
-`Audio_Codec_*` decoder API, including Miniaudio MP3/FLAC support, but
-compile the pinned Miniaudio vendor with Device I/O, native threading,
-resource manager, engine, node graph and generation APIs disabled.
+`Audio_Codec_*` decoder API, including native WAV, MP3 and FLAC support,
+with Device I/O, native threading and player components excluded.
 
 ```c
 #include "Cosmeron/Modules/Audio/CodecMinimal.h"
@@ -109,36 +107,32 @@ int main(void) {
 ```
 
 This is **not** the same as the no-vendor WAV decoder above.
-The BSD codec-only profile now resolves the five required math symbols
+The BSD codec-only profile resolves required math symbols
 (`sin`, `exp`, `log`, `sqrt`, `pow`) from the host `libm` at runtime,
 using `dlopen`/`dlsym` and a C11-atomic one-time initializer. The
 implementation remains *dependent on a compatible shared libm installed
 in the target system*. No device or thread worker is created by this
-decoder-only Miniaudio configuration.
+decoder-only configuration.
 
 `CodecMinimal.c` and `CodecMath.c` are compiled **and run** with no
 additional linker flags on each BSD guest. A successful probe is recorded as
 `AUDIO_CODEC_MINIMAL_ZERO_LINK=PASS`; failure remains `NOT_SUPPORTED`.
-The desktop Device/Player backend still requires its own platform linkage.
+The desktop Device/Player backend uses zero-link dynamic loading.
 
-A translation unit must select either `CodecMinimal.h` or `Desktop.h`
-because the embedded Miniaudio configuration is fixed by its first include.
-The unchanged `CodecOnly.h` preserves the old full-vendor profile.
-Miniaudio's decoder-specific features (including MP3/FLAC) remain covered
-by their respective full and minimal vendor tests.
+A translation unit selecting `CodecMinimal.h` compiles standalone decoders
+without playback device threads.
+Native decoder features (WAV, FLAC, MP3) remain covered
+by their respective tests.
 
-The Linux math adapter currently uses `pthread_once` to initialize
-runtime math symbols, even though the minimal Miniaudio build itself
-creates no worker threads. This configuration does not claim to avoid
+The Linux math adapter uses `pthread_once` to initialize
+runtime math symbols when dynamic math resolution is needed.
+This configuration does not claim to avoid
 every possible runtime dependency; it only avoids new user `-pthread`
 link flags where tested.
 
-**Remaining gap:** the complete threaded device/Player backend still
-needs its platform-specific libraries. Hardware tests remain opt-in.
-
 ## Linux libc variants and the decoder-only runtime
 
-The minimal Miniaudio decoder is now smoke-tested under **Fedora, Arch,
+The minimal decoder is now smoke-tested under **Fedora, Arch,
 Void glibc, Void musl and Debian** in real containers, using the
 `test-linux-codec-minimal.sh` C11 suite. The suite decodes in-memory WAV,
 MP3 and FLAC and exercises the five math operations without extra linker
@@ -156,4 +150,4 @@ runtime.** A statically linked application needs separate validation.
 third translation unit. The executable is tested under strict C11, without
 additional `-lm` or `-pthread`, in each BSD VM and Linux libc container.
 This checks real multi-TU link behavior for the header-only minimal mode;
-Miniaudio math/runtime dependencies remain as documented above.
+dynamic math/runtime dependencies remain as documented above.

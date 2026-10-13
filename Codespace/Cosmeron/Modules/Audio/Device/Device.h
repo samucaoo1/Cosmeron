@@ -2,12 +2,6 @@
 
 #include "../Audio.space"
 #include "../PCM/PCM.h"
-#ifndef AUDIO_DEVICE_MINIAUDIO_FALLBACK
-#define AUDIO_DEVICE_MINIAUDIO_FALLBACK 1
-#endif
-#if AUDIO_DEVICE_MINIAUDIO_FALLBACK
-#include "../Internal/Backend.inc"
-#endif
 
 typedef void (*AUDIO_DEVICE_TYPE(TRenderCallback))(void *userData,
                                                    float *outSamples,

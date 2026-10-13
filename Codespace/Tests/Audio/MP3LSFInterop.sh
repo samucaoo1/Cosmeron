@@ -1,5 +1,6 @@
 #!/usr/bin/env sh
 set -eu
+cd "$(dirname "$0")"
 build="${BUILD:-.build}"
 make "$build/MP3MemoryParity" "$build/MP3Mixed8kReference"
 dir="$(mktemp -d)"

@@ -1,7 +1,8 @@
 #pragma once
 
 #include "../Audio.space"
-#include "../Internal/Backend.inc"
+#include "../Codec/Codec.h"
+#include "../Device/Device.h"
 #include "../PCM/PCM.h"
 
 typedef struct AUDIO_PLAYER_TYPE(TPlayer) {

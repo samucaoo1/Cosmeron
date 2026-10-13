@@ -2,7 +2,7 @@
 /*
  * EXPERIMENTAL: MPEG Layer III frame -> interleaved f32 PCM.
  * This is an opt-in, header-only development API, not a replacement for
- * Audio_Codec_OpenFile/OpenMemory/OpenReader or the miniaudio backend.
+ * Audio_Codec_OpenFile/OpenMemory/OpenReader.
  * MPEG-2/2.5 intensity stereo, MS+intensity, long/short/mixed frame
  * modes have independent authored-bitstream PCM parity regression tests.
  * Full MP3 streaming, seeking, gapless variants and broader encoder
