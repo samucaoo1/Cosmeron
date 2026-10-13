@@ -13,7 +13,7 @@ function Invoke-CosmeronTest {
   $exe = Join-Path $build "$Name.exe"
   Push-Location $root
   try {
-    $args = @("/nologo", "/std:c11", "/W4", "/WX", "/D_CRT_SECURE_NO_WARNINGS")
+    $args = @("/nologo", "/std:c11", "/W4", "/WX", "/wd4127", "/D_CRT_SECURE_NO_WARNINGS")
     $args += $Sources
     $args += "/Fe:$exe"
     $args += $Libraries

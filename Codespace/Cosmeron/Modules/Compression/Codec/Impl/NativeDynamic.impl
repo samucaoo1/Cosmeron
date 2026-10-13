@@ -21,6 +21,7 @@ static inline bool COMPRESSION_INS(HuffmanLengths)(
   }
   while (active > 1) {
     unsigned int a = UINT_MAX, b = UINT_MAX;
+    if (count >= 576) return false;
     for (i = 0; i < count; ++i) {
       if (!weight[i] || parent[i] != -1) continue;
       if (a == UINT_MAX || weight[i] < weight[a] ||
@@ -29,7 +30,7 @@ static inline bool COMPRESSION_INS(HuffmanLengths)(
       } else if (b == UINT_MAX || weight[i] < weight[b] ||
                  (weight[i] == weight[b] && i < b)) b = i;
     }
-    if (a == UINT_MAX || b == UINT_MAX || count >= 576) return false;
+    if (a == UINT_MAX || b == UINT_MAX) return false;
     parent[a] = (int)count;
     parent[b] = (int)count;
     weight[count++] = weight[a] + weight[b];

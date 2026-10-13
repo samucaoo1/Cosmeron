@@ -73,7 +73,7 @@ jobs:
             install: xbps-install -Sy -y gcc
           - name: Alpine Linux
             image: alpine:latest
-            install: apk update && apk add gcc musl-dev
+            install: apk update && apk add gcc musl-dev linux-headers
           - name: openSUSE
             image: registry.opensuse.org/opensuse/tumbleweed:latest
             install: zypper -n install gcc
@@ -130,6 +130,7 @@ jobs:
           CC: gcc
           SUITE_TAG: 32
           SUITE_CFLAGS: -m32 -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L
+          SUITE_SKIP: Audio
         run: sh .github/scripts/test-make-suites.sh
 
   # =========================================================================

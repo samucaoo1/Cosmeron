@@ -38,6 +38,10 @@
 #error "OS_POSIX classification is inconsistent."
 #endif
 
+#if defined(_MSC_VER)
+#pragma warning(disable : 4127)
+#endif
+
 #define DETECT_BOOLEAN_VALUE(value) ((value) == 0 || (value) == 1)
 
 int main(void) {

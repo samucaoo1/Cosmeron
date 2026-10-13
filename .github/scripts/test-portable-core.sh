@@ -26,7 +26,7 @@ run_suite() {
     echo "[portable] $module/$test"
     (
       cd "Codespace/Tests/$module"
-      "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
+      $CC -std=c11 -Wall -Wextra -Wpedantic -Werror \
         -D_POSIX_C_SOURCE=200809L "$test.c" \
         -o "../../../.build-portable/${module}_${test}"
       execute "../../../.build-portable/${module}_${test}"
@@ -46,7 +46,7 @@ run_suite Container Functional LinearExtra LinearAllTypes TreeAllFunctions Hash 
 echo "[portable] Container/MultiTU"
 (
   cd Codespace/Tests/Container
-  "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L \
+  $CC -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L \
     MultiTU_A.c MultiTU_B.c MultiTU_Main.c -o ../../../.build-portable/Container_MultiTU
   execute ../../../.build-portable/Container_MultiTU
 )
@@ -55,17 +55,17 @@ run_suite Text IncludeAll Text Namespace Unicode AllFunctions
 run_suite GUI Surface Interaction Editor Render Containers Failure InputText Window WindowNative Advanced IncludeAll Namespace FunctionTableOff
 (
   cd Codespace/Tests/GUI
-  "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L \
+  $CC -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L \
     MultiTU_A.c MultiTU_B.c MultiTU_Main.c -o ../../../.build-portable/GUI_MultiTU
   execute ../../../.build-portable/GUI_MultiTU
 )
-"$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L \
+$CC -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L \
   Codespace/Examples/GUI/Lab.c -o .build-portable/GUI_Lab
 execute .build-portable/GUI_Lab --ppm .build-portable/GUI_Lab.ppm
 
 echo "[portable] Sort"
 for test in Sort SortCatalog; do
-  "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror -I Codespace \
+  $CC -std=c11 -Wall -Wextra -Wpedantic -Werror -I Codespace \
     "Codespace/Tests/$test.c" -o ".build-portable/$test"
   execute ".build-portable/$test"
 done
