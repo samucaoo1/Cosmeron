@@ -100,6 +100,32 @@ static OPSTATUS savePPM(const GRAPHICS_TYPE(TSurface) * surface, const char *pat
     }
   return fclose(file) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR);
 }
+static const char *resolvePpmPath(const char *arg) {
+  static const char *const allowed[] = {
+      ".build-portable/GUI_Lab.ppm",
+      "./.build-portable/GUI_Lab.ppm",
+      "build-portable/GUI_Lab.ppm",
+      "./build-portable/GUI_Lab.ppm",
+      ".build/Lab.ppm",
+      "./.build/Lab.ppm",
+      "build/Lab.ppm",
+      "./build/Lab.ppm",
+      "Lab.ppm",
+      "./Lab.ppm",
+      "preview.ppm",
+      "./preview.ppm",
+      "/tmp/cosmeron.ppm",
+      "/tmp/lab.ppm"
+  };
+  size_t i;
+  if (!arg || !*arg)
+    return "preview.ppm";
+  for (i = 0; i < sizeof(allowed) / sizeof(allowed[0]); ++i) {
+    if (strcmp(arg, allowed[i]) == 0)
+      return allowed[i];
+  }
+  return NULL;
+}
 int main(int argc, char **argv) {
   GRAPHICS_TYPE(TSurface) surface = {0};
   GUI_TYPE(TContext) gui = {0};
@@ -109,12 +135,14 @@ int main(int argc, char **argv) {
   const char *ppm = NULL;
   OPSTATUS status;
   setlocale(LC_CTYPE, "");
-  if (argc == 3 && strcmp(argv[1], "--ppm") == 0) {
-    const char *candidate = argv[2];
-    if (candidate && *candidate && strstr(candidate, "..") == NULL)
-      ppm = candidate;
-    else
+  if (argc == 2 && strcmp(argv[1], "--ppm") == 0) {
+    ppm = resolvePpmPath(NULL);
+  } else if (argc == 3 && strcmp(argv[1], "--ppm") == 0) {
+    ppm = resolvePpmPath(argv[2]);
+    if (!ppm) {
+      fprintf(stderr, "Disallowed PPM output path: %s\n", argv[2]);
       return 1;
+    }
   } else if (argc == 3 && strcmp(argv[1], "--frames") == 0)
     limit = strtoul(argv[2], NULL, 10);
   status = GRAPHICS_FUNC(Surface_Create)(&surface, (TDUAL_TYPE(uint32)){.x = 640, .y = 448});
