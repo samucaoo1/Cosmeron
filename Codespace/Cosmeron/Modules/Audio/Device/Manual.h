@@ -1,7 +1,7 @@
 #pragma once
 /*
  * Pull-based native playback: OSS (FreeBSD/DragonFly), audio(4) (NetBSD),
- * and sndio (OpenBSD, loaded dynamically at runtime). No Miniaudio, libm,
+ * and sndio (OpenBSD, loaded dynamically at runtime). No libm,
  * pthread or extra user link flags. The caller owns the event loop and must
  * pump regularly to avoid underruns. No background worker is created.
  */

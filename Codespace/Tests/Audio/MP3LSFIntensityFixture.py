@@ -2,7 +2,7 @@
 """Build original MPEG-2 Layer III intensity-stereo frames for codec parity.
 No third-party encoder, MP3 decoder or copyrighted recording is embedded.
 The frames carry non-zero left-channel Huffman data and 2-bit right-channel
-LSF intensity positions. A separate decoder (miniaudio) supplies reference PCM.
+LSF intensity positions.
 """
 import sys
 

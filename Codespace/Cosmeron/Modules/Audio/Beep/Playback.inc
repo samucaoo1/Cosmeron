@@ -61,6 +61,12 @@ AUDIO_BEEP_PLAY_MML_PROTOTYPE {
   AUDIO_SEQUENCE_FUNC(Destroy)(&sequence);
   return status;
 }
+#if defined(_WIN32)
+#include <windows.h>
+#else
+#include <poll.h>
+#endif
+
 AUDIO_BEEP_PLAY_BLOCKING_PROTOTYPE {
   AUDIO_PLAYER_TYPE(TVoice) voice;
   OPSTATUS status;
@@ -73,13 +79,16 @@ AUDIO_BEEP_PLAY_BLOCKING_PROTOTYPE {
   if (status != STATUS_CONST(SUCCESS))
     return status;
   while (AUDIO_PLAYER_FUNC(IsPlaying)(player, voice)) {
-    if (!cosmeron_audio_vendor_ma_device_is_started(
-            cosmeron_audio_vendor_ma_engine_get_device(
-                &((AUDIO_INS(Player) *)player->internal)->native))) {
+    if (!AUDIO_DEVICE_FUNC(IsStarted)(
+            &((AUDIO_INS(Player) *)player->internal)->device)) {
       (void)AUDIO_PLAYER_FUNC(Stop)(player, voice);
       return STATUS_CONST(NOT_AVAILABLE);
     }
-    cosmeron_audio_vendor_ma_sleep(10);
+#if defined(_WIN32)
+    Sleep(10);
+#else
+    (void)poll(NULL, 0, 10);
+#endif
   }
   return AUDIO_PLAYER_FUNC(Stop)(player, voice);
 }

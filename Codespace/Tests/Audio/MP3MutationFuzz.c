@@ -1,5 +1,5 @@
 /* Self-contained C11 MP3 input-mutation regression and optional libFuzzer
- * target. Exercises the independent native decoder, not miniaudio.
+ * target. Exercises the independent native decoder.
  *
  * Strict C11: cc -std=c11 -Wall -Wextra -Wpedantic -Werror MP3MutationFuzz.c
  * Fuzzing: clang -DCOSMERON_MP3_LIBFUZZER -fsanitize=fuzzer,address,undefined

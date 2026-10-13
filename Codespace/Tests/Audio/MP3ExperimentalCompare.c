@@ -38,9 +38,8 @@ int main(int argc, char **argv) {
   unsigned char bytes[65536];
   AUDIO_CODEC_TYPE(TMP3Experimental) native = {0};
   AUDIO_CODEC_TYPE(TMP3FrameInfo) header = {0};
-  cosmeron_audio_vendor_ma_decoder reference;
-  cosmeron_audio_vendor_ma_decoder_config config;
-  cosmeron_audio_vendor_ma_uint64 received = 0;
+  AUDIO_CODEC_TYPE(TDecoder) reference = {0};
+  AUDIO_CODEC_TYPE(TInfo) refInfo = {0};
   const char *path = argc > 1 ? argv[1] : "Fixtures/Tone.mp3";
   AUDIO_CODEC_TYPE(TMP3XingInfo) xing = {0};
   bool hasXing = false;
@@ -107,20 +106,24 @@ int main(int argc, char **argv) {
     offset += header.frameBytes;
   }
   assert(decoded >= 2 && used >= 2304 && channels > 0);
-  config = cosmeron_audio_vendor_ma_decoder_config_init(
-      cosmeron_audio_vendor_ma_format_f32, 0, 0);
-  assert(cosmeron_audio_vendor_ma_decoder_init_memory(
-      bytes, length, &config, &reference) ==
-      cosmeron_audio_vendor_MA_SUCCESS);
-  assert(reference.outputChannels == channels);
+  assert(AUDIO_CODEC_FUNC(OpenMemory)(&reference, bytes, length) ==
+         STATUS_CONST(SUCCESS));
+  assert(AUDIO_CODEC_FUNC(GetInfo)(&reference, &refInfo) ==
+         STATUS_CONST(SUCCESS));
+  assert(refInfo.channels == channels);
   {
-    const cosmeron_audio_vendor_ma_result result =
-        cosmeron_audio_vendor_ma_decoder_read_pcm_frames(
-          &reference, referencePCM, MAX_FRAMES, &received);
-    assert(result == cosmeron_audio_vendor_MA_SUCCESS ||
-           result == cosmeron_audio_vendor_MA_AT_END);
+    size_t totalRead = 0;
+    while (totalRead < MAX_FRAMES) {
+      size_t got = 0;
+      size_t cap = MAX_FRAMES - totalRead > 512 ? 512 : MAX_FRAMES - totalRead;
+      OPSTATUS r = AUDIO_CODEC_FUNC(ReadFrames)(
+          &reference, referencePCM + totalRead * channels, cap, &got);
+      if (r != STATUS_CONST(SUCCESS) || got == 0)
+        break;
+      totalRead += got;
+    }
+    frames = totalRead;
   }
-  frames = (size_t)received;
   /* XING frame count excludes the Info frame for the LAME fixtures.
    * Keep the assumption explicit: it is checked against actual counts
    * rather than silently treating all MP3 encoders as identical. */
@@ -280,7 +283,7 @@ int main(int argc, char **argv) {
       assert(msFrames > 0);
 
   }
-  cosmeron_audio_vendor_ma_decoder_uninit(&reference);
+  AUDIO_CODEC_FUNC(Close)(&reference);
   free(nativePCM);
   free(referencePCM);
   return 0;

@@ -10,5 +10,4 @@ case is compiled with `-std=c11 -Wall -Wextra -Wpedantic -Werror`.
 | FreeBSD complex-root linker regression | `Math/BSDQuadraticRegression.c`, run in `test-portable-core.sh` on all BSDs | Links without `-lm` and verifies real and imaginary quadratic roots |
 
 **Scope:** These test paths verify narrow regressions, not full OS or device
-certification. In particular, the pthread-backed Concurrency/SQLite and
-Miniaudio desktop backends may still need extra linker flags on the BSDs.
+certification. In particular, pthread-backed Concurrency/SQLite backends may still need extra linker flags on the BSDs.

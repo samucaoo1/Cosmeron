@@ -2,7 +2,7 @@
 
 **Entry point:** `Cosmeron/Modules/Audio/Device/Manual.h`.
 
-Unlike the Miniaudio Device backend, this API has no worker thread:
+Unlike background device workers, this API has no worker thread:
 `Manual_Open` configures the device, `Manual_Start` enables the state,
 `Manual_Pump` renders and writes **blocking** signed 16-bit little-endian
 PCM, and `Manual_Stop` / `Manual_Close` release it.
@@ -12,9 +12,9 @@ PCM, and `Manual_Stop` / `Manual_Close` release it.
 - OpenBSD: sndio via a **runtime-loaded** `libsndio.so` and its documented
   `sio_*` API. No `-lsndio` is used, but the library/server is required
   **at runtime**. If it is missing, `Manual_Open` returns `NOT_AVAILABLE`.
-- Linux/macOS/Windows: returns `NOT_SUPPORTED`; Miniaudio is unaffected.
+- Linux/macOS/Windows: returns `NOT_SUPPORTED`.
 
-No `-lm`/`-pthread`/`-lsndio` or Miniaudio headers are required to
+No `-lm`/`-pthread`/`-lsndio` link flags are required to
 compile and link this module. `sndio.h` is required on OpenBSD. The backend uses the selected OS's libc and driver;
 it is not independent of system runtime services.
 

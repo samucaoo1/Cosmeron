@@ -1,6 +1,6 @@
 #pragma once
 /*
- * Pure C11 RIFF/WAVE PCM decoder and writer. No Miniaudio, libm, pthread.
+ * Pure C11 RIFF/WAVE PCM decoder and writer. No libm or pthread.
  * Decodes unsigned PCM8, signed PCM16/24/32 and IEEE float32 to interleaved
  * f32. The writer deliberately retains PCM16 output for compatibility.
  * Intentionally rejects unsupported formats instead of guessing.

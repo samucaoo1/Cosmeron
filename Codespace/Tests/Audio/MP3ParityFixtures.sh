@@ -1,5 +1,6 @@
 #!/usr/bin/env sh
 set -eu
+cd "$(dirname "$0")"
 
 # Diagnostic fixtures only. Production decoding never depends on ffmpeg.
 # Two non-periodic signals make lag estimation less ambiguous than Tone.mp3.
