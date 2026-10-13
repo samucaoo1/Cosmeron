@@ -1,11 +1,23 @@
 #!/bin/sh
 # Portable C11 regression suite: cc + POSIX shell only. No GNU make required.
 # Deliberately uses the real module tests, not fabricated compile-only probes.
+# PORTABLE_RUN=0 builds and links every suite without executing it; used by
+# cross-compilation targets (Android, iOS) whose binaries run elsewhere.
 set -eu
 CC=${CC:-cc}
+PORTABLE_RUN=${PORTABLE_RUN:-1}
 export CC
 mkdir -p .build-portable
-printf '[portable] %s %s | compiler: %s\n' "$(uname -s)" "$(uname -m)" "$CC"
+printf '[portable] %s %s | compiler: %s | execute: %s\n' \
+  "$(uname -s)" "$(uname -m)" "$CC" "$PORTABLE_RUN"
+
+execute() {
+  if [ "$PORTABLE_RUN" = 1 ]; then
+    "$@"
+  else
+    echo "[portable] built, not executed: $1"
+  fi
+}
 
 run_suite() {
   module=$1
@@ -17,7 +29,7 @@ run_suite() {
       "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror \
         -D_POSIX_C_SOURCE=200809L "$test.c" \
         -o "../../../.build-portable/${module}_${test}"
-      "../../../.build-portable/${module}_${test}"
+      execute "../../../.build-portable/${module}_${test}"
     )
   done
 }
@@ -36,7 +48,7 @@ echo "[portable] Container/MultiTU"
   cd Codespace/Tests/Container
   "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L \
     MultiTU_A.c MultiTU_B.c MultiTU_Main.c -o ../../../.build-portable/Container_MultiTU
-  ../../../.build-portable/Container_MultiTU
+  execute ../../../.build-portable/Container_MultiTU
 )
 run_suite Text IncludeAll Text Namespace Unicode AllFunctions
 
@@ -45,16 +57,20 @@ run_suite GUI Surface Interaction Editor Render Containers Failure InputText Win
   cd Codespace/Tests/GUI
   "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L \
     MultiTU_A.c MultiTU_B.c MultiTU_Main.c -o ../../../.build-portable/GUI_MultiTU
-  ../../../.build-portable/GUI_MultiTU
+  execute ../../../.build-portable/GUI_MultiTU
 )
 "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L \
   Codespace/Examples/GUI/Lab.c -o .build-portable/GUI_Lab
-.build-portable/GUI_Lab --ppm .build-portable/GUI_Lab.ppm
+execute .build-portable/GUI_Lab --ppm .build-portable/GUI_Lab.ppm
 
 echo "[portable] Sort"
 for test in Sort SortCatalog; do
   "$CC" -std=c11 -Wall -Wextra -Wpedantic -Werror -I Codespace \
     "Codespace/Tests/$test.c" -o ".build-portable/$test"
-  ".build-portable/$test"
+  execute ".build-portable/$test"
 done
-echo "[portable] all selected C11 suites passed"
+if [ "$PORTABLE_RUN" = 1 ]; then
+  echo "[portable] all selected C11 suites passed"
+else
+  echo "[portable] all selected C11 suites compiled and linked (not executed)"
+fi

@@ -10,15 +10,15 @@ a workflow existing does not mean it has passed.
 
 | Target | Environment | Workflow | Scope |
 | --- | --- | --- | --- |
-| Linux GCC/Clang | Native GitHub runners | [CI](../../.github/workflows/01-ci.yml) | Existing module integration suites |
-| Windows MinGW/MSVC | Native GitHub runners | [CI](../../.github/workflows/01-ci.yml) | Existing module integration suites |
-| macOS Clang | Native GitHub runner | [CI](../../.github/workflows/01-ci.yml) | Existing module integration suites |
-| FreeBSD | Native FreeBSD guest VM via vmactions | [Continuous Integration](../../.github/workflows/01-ci.yml) | Portable + extended native suites; per-module reports distinguish zero-link profiles |
-| OpenBSD / NetBSD / DragonFly BSD | Native guest VMs via vmactions | [Platform Compatibility](../../.github/workflows/02-platforms.yml) | Portable + extended native suites; per-module reports distinguish zero-link profiles |
-| Fedora / Arch | Native Linux userspace containers | [Platform Compatibility](../../.github/workflows/02-platforms.yml) | Same ten portable suites |
-| Void glibc / Void musl | Native Linux userspace containers | [Platform Compatibility](../../.github/workflows/02-platforms.yml) | Same ten portable suites; libc coverage |
-| Nix toolchain / NixOS VM | Pinned Nix derivation on Ubuntu and real NixOS QEMU guest | [Platform Compatibility](../../.github/workflows/02-platforms.yml) | Strict portable C11 passed as package and inside NixOS VM ([run](https://github.com/samucaoo1/Cosmeron/actions/runs/38141169787)); not full hardware certification |
-| ChromeOS Crostini proxy | Debian container on Ubuntu | [Platform Compatibility](../../.github/workflows/02-platforms.yml) | Same ten suites; **not** a real Chromebook |
+| Linux GCC/Clang | Native GitHub runners | [By Operating System](../../.github/workflows/03-by-operating-system.yml) / [Simple Test](../../.github/workflows/01-simple-test.yml) | Existing module integration suites |
+| Windows MinGW/MSVC (10 & 11) | Native GitHub runners | [By Operating System](../../.github/workflows/03-by-operating-system.yml) | Existing module integration suites |
+| macOS Clang (Apple Silicon & Intel) | Native GitHub runners | [By Operating System](../../.github/workflows/03-by-operating-system.yml) | Existing module integration suites |
+| FreeBSD | Native FreeBSD guest VM via vmactions | [By Operating System](../../.github/workflows/03-by-operating-system.yml) | Portable + extended native suites; per-module reports distinguish zero-link profiles |
+| OpenBSD / NetBSD / DragonFly BSD | Native guest VMs via vmactions | [By Operating System](../../.github/workflows/03-by-operating-system.yml) | Portable + extended native suites; per-module reports distinguish zero-link profiles |
+| Fedora / Arch / Debian / Ubuntu / openSUSE / Gentoo / Alpine | Native Linux userspace containers | [By Operating System](../../.github/workflows/03-by-operating-system.yml) | Portable + native suites across diverse libc implementations |
+| Void glibc / Void musl | Native Linux userspace containers | [By Operating System](../../.github/workflows/03-by-operating-system.yml) | Portable suites; glibc and musl coverage |
+| Nix toolchain / NixOS VM | Pinned Nix derivation on Ubuntu and real NixOS QEMU guest | [By Operating System](../../.github/workflows/03-by-operating-system.yml) | Strict portable C11 passed as package and inside NixOS VM ([run](https://github.com/samucaoo1/Cosmeron/actions/runs/38141169787)); not full hardware certification |
+| ChromeOS Crostini proxy | Debian container on Ubuntu | [Experimental](../../.github/workflows/04-experimental.yml) | Portable and native suites inside Crostini container approximation; **not** a real Chromebook |
 
 The portable smoke suite is [test-portable-core.sh](../../.github/scripts/test-portable-core.sh).
 It compiles and executes the repository's existing test sources, with

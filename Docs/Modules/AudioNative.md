@@ -153,12 +153,10 @@ portable per-decoder memory guarantees. SIMD/fast transform optimization
 remains worthwhile. Native-first selection prioritizes independent code and
 validated PCM, not a demonstrated performance win.
 
-The `07-audio-fuzz.yml` workflow maintains a persistent corpus and runs
+The `02 · Security` workflow maintains a persistent corpus and runs
 ASan/UBSan/libFuzzer over native memory, seekable and forward-only callback
-paths on relevant PRs in both strict and recovery modes. The default-branch
-`08-audio-native-weekly.yml` wrapper checks out `audio-module` and runs those
-profiles every Monday at 04:23 UTC, with manual dispatch also available. This
-keeps the schedule active before the full Audio branch reaches `main` (PR #164).
+paths in both strict and recovery modes, while `04 · Experimental` exercises
+independent multi-tone MP3/FLAC parity fixtures and benchmark measurements.
 Crashing inputs are uploaded as reproducers and the corpus persists between runs.
 CRC-protected MP3 headers/side information are checked before decoder state
 is published; this CRC does not cover all main data. Strict mode reports corrupt frames and lost synchronization as errors.

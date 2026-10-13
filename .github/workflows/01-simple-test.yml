@@ -1,0 +1,107 @@
+name: 01 · Simple Test
+
+# Fast feedback for every push and pull request: one Linux host, both
+# compilers, the portable C11 suite, standalone headers, documentation
+# examples and the repository tooling itself. Platform depth lives in 03.
+
+on:
+  push:
+    branches-ignore:
+      - 'automation/**'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: simple-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  ACTIONLINT_VERSION: 1.7.12
+
+jobs:
+  portable:
+    name: Simple / Portable C11 / ${{ matrix.cc }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Documentation examples (strict C11)
+        run: python3 Tools/check_doc_examples.py --cc "${{ matrix.cc }}" --min-tests 6
+
+      - name: Portable C11 suites
+        env:
+          CC: ${{ matrix.cc }}
+        run: sh .github/scripts/test-portable-core.sh
+
+  headers:
+    name: Simple / Standalone headers / ${{ matrix.cc }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compile every public header independently
+        run: python3 .github/scripts/test-public-headers.py --compiler ${{ matrix.cc }}
+
+  tooling:
+    name: Simple / Repository tooling
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Entropy algorithm
+        run: |
+          python3 .github/entropy/test_entropy.py -v
+          python3 .github/entropy/entropy.py --provisional --output-dir "$RUNNER_TEMP/entropy-preview"
+
+      - name: Badge renderer
+        run: python3 .github/cosmeron/test_badges.py -v
+
+      - name: Python syntax
+        run: python3 -m py_compile .github/scripts/*.py .github/entropy/*.py .github/cosmeron/*.py Tools/*.py
+
+      - name: POSIX shell syntax (no hardware claims)
+        run: |
+          set -eu
+          for script in .github/scripts/*.sh Tools/*/*.sh; do
+            sh -n "$script"
+            echo "syntax PASS: $script"
+          done
+
+      - name: Workflow lint (actionlint)
+        run: |
+          set -eu
+          bash <(curl -fsSL "https://raw.githubusercontent.com/rhysd/actionlint/v${ACTIONLINT_VERSION}/scripts/download-actionlint.bash") "$ACTIONLINT_VERSION" "$RUNNER_TEMP"
+          "$RUNNER_TEMP/actionlint" -color -shellcheck= -pyflakes=
+
+  gate:
+    name: Simple Test / Gate
+    if: ${{ always() }}
+    needs: [portable, headers, tooling]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Summary and required checks
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          REPORT_TITLE: Simple Test
+        run: python3 .github/scripts/report-results.py

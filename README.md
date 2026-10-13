@@ -2,6 +2,14 @@
   <img src="Docs/Assets/Brand/Cosmeron-Horizontal.png" alt="Cosmeron — modular C11 systems programming library" width="900">
 </p>
 
+<p align="center">
+  <a href="Docs/Project/ENTROPY.md"><img src=".github/badges/entropy.svg" alt="Entropy"></a>
+  <a href=".github/WORKFLOWS.md"><img src=".github/badges/c11.svg" alt="C11 Standard"></a>
+  <a href=".github/WORKFLOWS.md"><img src=".github/badges/platforms.svg" alt="Platforms"></a>
+  <a href=".github/WORKFLOWS.md"><img src=".github/badges/security.svg" alt="Security"></a>
+  <a href="Docs/Governance/LICENSING.md"><img src=".github/badges/license.svg" alt="License"></a>
+</p>
+
 **Cosmeron is a modular, header-oriented C11 library for portable systems programming, experimentation, education, and reusable low-level components.** It favors readable APIs, explicit ownership, consistent naming, composable modules, and portability without hiding how the machine works.
 
 Cosmeron continues the project previously developed as **Congro;Library**, carrying its architecture and design principles into a cleaner repository and a new public identity.
