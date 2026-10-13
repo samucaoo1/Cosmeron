@@ -144,7 +144,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Install Nix
-        uses: cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@b85815f71a6de0ddee80b8a80a98d43f4bcc66c7 # v31
       - name: Build locked Nix packages (strict C11)
         run: |
           nix --extra-experimental-features 'nix-command flakes' \
@@ -161,7 +161,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Install Nix
-        uses: cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@b85815f71a6de0ddee80b8a80a98d43f4bcc66c7 # v31
       - name: Boot NixOS VM and run packaged C11 test binaries
         run: |
           nix --extra-experimental-features 'nix-command flakes' \
@@ -302,7 +302,7 @@ jobs:
 
       - name: Set up MSVC
         if: matrix.toolchain == 'msvc'
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
 
       - name: MSVC suites
         if: matrix.toolchain == 'msvc'
@@ -340,7 +340,7 @@ jobs:
 
       - name: Set up MSVC
         if: matrix.toolchain == 'msvc'
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
 
       - name: MSVC suites
         if: matrix.toolchain == 'msvc'

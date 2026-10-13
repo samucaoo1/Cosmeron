@@ -9,6 +9,11 @@
 #include "../../Cosmeron/Modules/Chronometry/Timer/Timer.h"
 #include <stdio.h>
 #include <locale.h>
+#if !defined(_WIN32)
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 static TQUAD_TYPE(float) region(float x, float y, float width, float height) {
   TQUAD_TYPE(float) r;
   r.value1 = x;
@@ -69,7 +74,14 @@ static OPSTATUS draw(GUI_TYPE(TContext) * gui) {
   return STATUS_CONST(SUCCESS);
 }
 static OPSTATUS savePPM(const GRAPHICS_TYPE(TSurface) * surface, const char *path) {
-  FILE *file = fopen(path, "wb");
+  FILE *file = NULL;
+#if defined(_WIN32)
+  file = fopen(path, "wb");
+#else
+  int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+  if (fd >= 0)
+    file = fdopen(fd, "wb");
+#endif
   uint32_t x, y;
   if (!file)
     return STATUS_CONST(GENERIC_ERROR);
@@ -97,9 +109,13 @@ int main(int argc, char **argv) {
   const char *ppm = NULL;
   OPSTATUS status;
   setlocale(LC_CTYPE, "");
-  if (argc == 3 && strcmp(argv[1], "--ppm") == 0)
-    ppm = argv[2];
-  else if (argc == 3 && strcmp(argv[1], "--frames") == 0)
+  if (argc == 3 && strcmp(argv[1], "--ppm") == 0) {
+    const char *candidate = argv[2];
+    if (candidate && *candidate && strstr(candidate, "..") == NULL)
+      ppm = candidate;
+    else
+      return 1;
+  } else if (argc == 3 && strcmp(argv[1], "--frames") == 0)
     limit = strtoul(argv[2], NULL, 10);
   status = GRAPHICS_FUNC(Surface_Create)(&surface, (TDUAL_TYPE(uint32)){.x = 640, .y = 448});
   if (status != STATUS_CONST(SUCCESS))

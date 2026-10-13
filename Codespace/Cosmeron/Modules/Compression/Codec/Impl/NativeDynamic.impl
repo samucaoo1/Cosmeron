@@ -25,10 +25,10 @@ static inline bool COMPRESSION_INS(HuffmanLengths)(
     for (i = 0; i < count; ++i) {
       if (!weight[i] || parent[i] != -1) continue;
       if (a == UINT_MAX || weight[i] < weight[a] ||
-          (weight[i] == weight[a] && i < a)) {
+          (i < a && weight[i] == weight[a])) {
         b = a; a = i;
       } else if (b == UINT_MAX || weight[i] < weight[b] ||
-                 (weight[i] == weight[b] && i < b)) b = i;
+                 (i < b && weight[i] == weight[b])) b = i;
     }
     if (a == UINT_MAX || b == UINT_MAX) return false;
     parent[a] = (int)count;
