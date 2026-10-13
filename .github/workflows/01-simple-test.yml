@@ -32,7 +32,7 @@ jobs:
         cc: [gcc, clang]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Documentation examples (strict C11)
         run: python3 Tools/check_doc_examples.py --cc "${{ matrix.cc }}" --min-tests 6
@@ -52,7 +52,7 @@ jobs:
         cc: [gcc, clang]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Compile every public header independently
         run: python3 .github/scripts/test-public-headers.py --compiler ${{ matrix.cc }}
@@ -63,7 +63,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -99,7 +99,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Summary and required checks
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
