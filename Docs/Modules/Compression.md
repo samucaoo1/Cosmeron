@@ -138,8 +138,8 @@ uint32_t Compression_Adler32(uint32_t previous, const void *data, size_t size);
 ```
 
 Start CRC32 at 0 and Adler32 at 1. Pass the previous result for subsequent
-chunks. Nonzero size requires readable data. With NULL data, CRC32 returns 0 and Adler32 returns 1, matching the
-standard initial values.
+chunks. Nonzero size requires readable data. With NULL data or zero size, the
+checksum functions return the previous value unchanged.
 
 ## ZIP API
 
@@ -568,7 +568,7 @@ Retorna o CRC32 de 32 bits, sem OPSTATUS.
 
 ### Remarks
 
-Comece com zero; passe o resultado anterior para continuar. Um ponteiro de dados NULL reinicializa o checksum conforme o motor incorporado. Integridade não implica autenticidade.
+Comece com zero; passe o resultado anterior para continuar. Dados NULL ou tamanho zero preservam o valor anterior inalterado. Integridade não implica autenticidade.
 
 ### Example
 
@@ -607,7 +607,7 @@ Retorna o Adler32 de 32 bits, sem OPSTATUS.
 
 ### Remarks
 
-Comece com 1 e continue com o resultado anterior. Dados com tamanho não nulo devem ser legíveis; NULL reinicializa segundo o motor incorporado.
+Comece com 1 e continue com o resultado anterior. Dados com tamanho não nulo devem ser legíveis; NULL ou tamanho zero preservam o valor anterior inalterado.
 
 ### Example
 
