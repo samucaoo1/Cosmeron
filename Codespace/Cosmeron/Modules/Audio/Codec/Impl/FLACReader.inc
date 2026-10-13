@@ -27,7 +27,7 @@ static inline OPSTATUS AUDIO_INS(FLAC_ParseReader)(
   if (status != STATUS_CONST(SUCCESS)) return status;
   while (!last) {
     uint32_t length;
-    if (offset > INT64_MAX) return STATUS_CONST(OUT_OF_RANGE);
+    if (SIZE_MAX > INT64_MAX && offset > (size_t)INT64_MAX) return STATUS_CONST(OUT_OF_RANGE);
     status = reader->seek(reader->userData, (int64_t)offset,
                           AUDIO_CODEC_CONST(SEEK_START));
     if (status != STATUS_CONST(SUCCESS)) return status;
@@ -38,7 +38,7 @@ static inline OPSTATUS AUDIO_INS(FLAC_ParseReader)(
     last = (header[0] & 0x80U) != 0;
     length = AUDIO_INS(FLAC_BigEndian24)(header + 1);
     if (offset > SIZE_MAX - 4 - length ||
-        (uint64_t)offset > (uint64_t)INT64_MAX - UINT64_C(4) - length)
+        (SIZE_MAX > INT64_MAX && offset > (size_t)INT64_MAX - 4 - length))
       return STATUS_CONST(OUT_OF_RANGE);
     offset += 4 + length;
   }
@@ -65,7 +65,7 @@ static inline OPSTATUS AUDIO_INS(FLAC_StreamNextFrame)(
   if (!decoder || !outFrames || !decoder->flacStreaming)
     return STATUS_CONST(INVALID_ARGUMENT);
   *outFrames = 0;
-  if (decoder->flacOffset > INT64_MAX) return STATUS_CONST(OUT_OF_RANGE);
+  if (SIZE_MAX > INT64_MAX && decoder->flacOffset > (size_t)INT64_MAX) return STATUS_CONST(OUT_OF_RANGE);
   if (decoder->flac.maximumFrameBytes) {
     if (decoder->flac.maximumFrameBytes > limit)
       return STATUS_CONST(NOT_SUPPORTED);

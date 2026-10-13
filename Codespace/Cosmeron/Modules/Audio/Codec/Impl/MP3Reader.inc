@@ -56,7 +56,7 @@ static inline OPSTATUS AUDIO_INS(MP3_ReaderHeader)(
     unsigned char bytes[4]) {
   size_t filled = 0;
   OPSTATUS status;
-  if (position > INT64_MAX) return STATUS_CONST(OUT_OF_RANGE);
+  if (SIZE_MAX > INT64_MAX && position > (size_t)INT64_MAX) return STATUS_CONST(OUT_OF_RANGE);
   status = reader->seek(reader->userData, (int64_t)position,
                         AUDIO_CODEC_CONST(SEEK_START));
   if (status != STATUS_CONST(SUCCESS)) return status;
@@ -121,7 +121,7 @@ static inline OPSTATUS AUDIO_INS(MP3_ReaderOpen)(
     tagged = true;
     status = AUDIO_INS(MP3_ID3Header)(probe, &beginning);
     if (status != STATUS_CONST(SUCCESS)) goto fail;
-    if (beginning > INT64_MAX) { status = STATUS_CONST(OUT_OF_RANGE); goto fail; }
+    if (SIZE_MAX > INT64_MAX && beginning > (size_t)INT64_MAX) { status = STATUS_CONST(OUT_OF_RANGE); goto fail; }
     if (probe[3] == 4 && (probe[5] & 0x10U)) {
       unsigned char footer[10];
       status = reader->seek(reader->userData, (int64_t)(beginning - 10U),
@@ -147,7 +147,7 @@ static inline OPSTATUS AUDIO_INS(MP3_ReaderOpen)(
       if (frames && !memcmp(headerBytes, "TAG", 3)) {
         unsigned char trailer[128], check;
         size_t received = 0;
-        if (offset > INT64_MAX-128) { status = STATUS_CONST(OUT_OF_RANGE); goto fail; }
+        if (SIZE_MAX > INT64_MAX && offset > (size_t)(INT64_MAX - 128)) { status = STATUS_CONST(OUT_OF_RANGE); goto fail; }
         status = reader->seek(reader->userData, (int64_t)offset,
                               AUDIO_CODEC_CONST(SEEK_START));
         if (status != STATUS_CONST(SUCCESS)) goto fail;
@@ -179,7 +179,7 @@ static inline OPSTATUS AUDIO_INS(MP3_ReaderOpen)(
         current.samplesPerFrame != first.samplesPerFrame)
       { status = STATUS_CONST(INVALID_SEQUENCE); goto fail; }
     if (current.frameBytes > sizeof firstFrame ||
-        current.frameBytes > INT64_MAX - offset)
+        (SIZE_MAX > INT64_MAX && offset > (size_t)INT64_MAX - current.frameBytes))
       { status = STATUS_CONST(NOT_SUPPORTED); goto fail; }
     if (frames == 0) {
       status = reader->seek(reader->userData, (int64_t)offset,
@@ -201,7 +201,7 @@ static inline OPSTATUS AUDIO_INS(MP3_ReaderOpen)(
                     STATUS_CONST(NOT_SUPPORTED); goto fail; }
   if (frames < 2) { status = STATUS_CONST(NOT_SUPPORTED); goto fail; }
   /* Verify final frame payload, not just its 4-byte header. */
-  if (!offset || offset > INT64_MAX) { status = STATUS_CONST(OUT_OF_RANGE); goto fail; }
+  if (!offset || (SIZE_MAX > INT64_MAX && offset > (size_t)INT64_MAX)) { status = STATUS_CONST(OUT_OF_RANGE); goto fail; }
   {
     unsigned char tail;
     status = reader->seek(reader->userData, (int64_t)(offset-1),
