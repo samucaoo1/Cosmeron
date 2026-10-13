@@ -57,7 +57,7 @@ jobs:
             build-mode: none
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
@@ -86,7 +86,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Reject local machine paths in tracked files
         run: python3 .github/scripts/check-privacy.py
 
@@ -96,7 +96,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Every make suite under AddressSanitizer and UBSan
         env:
           CC: clang
@@ -113,7 +113,7 @@ jobs:
       TSAN_OPTIONS: halt_on_error=1
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Concurrency under ThreadSanitizer
         run: make -C Codespace/Tests/Concurrency clean run CC=gcc BUILD=build-tsan CFLAGS="$TSAN_FLAGS"
 
@@ -123,7 +123,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Native Compression decoders
         run: |
@@ -159,7 +159,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Build fuzz target and seed corpus
         working-directory: Codespace/Tests/Audio
@@ -206,7 +206,7 @@ jobs:
         recovery: [0, 1]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Restore persistent corpus
         uses: actions/cache@v4
@@ -254,7 +254,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Summary and required checks
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
