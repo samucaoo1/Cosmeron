@@ -1,0 +1,49 @@
+# Schedule lives on main; tests run the integrated native Audio branch.
+name: "08 · Native Audio Weekly"
+on:
+  schedule:
+    - cron: '23 4 * * 1'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/08-audio-native-weekly.yml'
+permissions:
+  contents: read
+jobs:
+  native-stream-fuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        recovery: [0, 1]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audio-module
+      - uses: actions/cache@v4
+        with:
+          path: /tmp/audio-corpus
+          key: audio-weekly-corpus-${{ runner.os }}-${{ matrix.recovery }}-${{ github.run_id }}
+          restore-keys: audio-weekly-corpus-${{ runner.os }}-${{ matrix.recovery }}-
+      - name: Native memory, seekable and forward-only callback fuzzing
+        run: |
+          set -eu
+          cd Codespace/Tests/Audio
+          clang -std=c11 -O1 -g -Wall -Wextra -Wpedantic -Werror \
+            -DCOSMERON_CODEC_LIBFUZZER -DAUDIO_CODEC_MP3_RECOVER_ERRORS=${{ matrix.recovery }} -fsanitize=fuzzer,address,undefined \
+            -fno-omit-frame-pointer CodecRobustnessFuzz.c -o /tmp/audio-fuzz
+          mkdir -p /tmp/audio-corpus /tmp/audio-crashes
+          cp Fixtures/Tone.mp3 Fixtures/Tone.flac /tmp/audio-corpus/
+          python3 MP3MPEG1IntensityFixture.py /tmp/audio-corpus/mixed.mp3 1 intensity 32 mixed 32000 1 64
+          python3 MP3LSFIntensityFixture.py /tmp/audio-corpus/lsf.mp3 1 1 mixed
+          python3 MP3LSFIntensityFixture.py /tmp/audio-corpus/index.mp3 1 1 long 8000 8 0 896
+          /tmp/audio-fuzz -max_total_time=300 -max_len=65536 -timeout=10 \
+            -rss_limit_mb=1536 -artifact_prefix=/tmp/audio-crashes/ /tmp/audio-corpus
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: audio-fuzz-reproducers-${{ matrix.recovery }}
+          path: /tmp/audio-crashes
+          if-no-files-found: ignore
+

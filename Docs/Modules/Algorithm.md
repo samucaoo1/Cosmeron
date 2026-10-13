@@ -1,393 +1,519 @@
 # Algorithm
 
-The **Algorithm** core module currently exposes a three-way comparison package. It supplies the comparison result and callback types reused by sorting and other generic routines. This document describes the API implemented in the current branch, rather than proposed algorithm packages.
+The **Algorithm** module supplies a consistent three-way comparison interface for numerical values, strings, byte sequences, and custom comparators. It is a foundation for searching, sorting, and ordered containers.
+
+The currently implemented package is **Comparison**.
 
 ```c
 #include "Cosmeron/Core/Algorithm/Comparison.h"
 ```
+
+> **Source layout:** This API was verified against `Codespace/Congro/Core/Algorithm/Comparison.h` on the existing `network-pattern-refactor` code branch. The include above is the corresponding planned Cosmeron path; it is not yet present on Cosmeron's `main` branch.
 
 ---
 
 # Overview
 
-A comparison produces one of three results: lower, equal, or higher. The comparison package has typed scalar helpers, a C-string comparison, an unsigned byte-sequence comparison, and a callback invoker. All functions are `static inline` and require no extra linker library.
+All comparison functions return `TComparisonResult`.
 
-| Purpose | Macro form | Direct form (default namespace) |
-| --- | --- | --- |
-| Integer comparison | `COMPARISON_FUNC(int)` | `Algorithm_Comparison_int` |
-| Float comparison | `COMPARISON_FUNC(float)` | `Algorithm_Comparison_float` |
-| Double comparison | `COMPARISON_FUNC(double)` | `Algorithm_Comparison_double` |
-| Long-double comparison | `COMPARISON_FUNC(LongDouble)` | `Algorithm_Comparison_LongDouble` |
-| C-string comparison | `COMPARISON_FUNC(CString)` | `Algorithm_Comparison_CString` |
-| Byte-sequence comparison | `COMPARISON_FUNC(Bytes)` | `Algorithm_Comparison_Bytes` |
-| Callback invocation | `COMPARISON_FUNC(Invoke)` | `Algorithm_Comparison_Invoke` |
+| Constant | Value | Meaning |
+| --- | ---: | --- |
+| `COMPARISON_CONST(LOWER)` | -1 | Left precedes right |
+| `COMPARISON_CONST(EQUAL)` | 0 | Both compare equally |
+| `COMPARISON_CONST(HIGHER)` | 1 | Left follows right |
+
+Two equivalent call forms are supported:
 
 ### Macro form
 
 ```c
-CMPOUT order = COMPARISON_FUNC(int)(2, 7);
+COMPARISON_FUNC(int)(3, 7);
 ```
 
 ### Direct form
 
 ```c
-CMPOUT order = Algorithm_Comparison_int(2, 7);
+Comparison_int(3, 7);
 ```
 
-The direct form above assumes the library's default namespace. Prefer the namespace macro when building with custom prefixes.
+The macro form automatically respects the configured library namespace. Direct names shown here assume the default namespace.
 
-# Types, constants, and contracts
+A third convenience form is also available:
 
 ```c
-typedef enum COMPARISON_TYPE(Result) {
-    COMPARISON_LOWER_CONST  = -1,
-    COMPARISON_EQUAL_CONST  = 0,
-    COMPARISON_HIGHER_CONST = 1
-} COMPARISON_TYPE(Result);
-
-typedef COMPARISON_TYPE(Result) CMPOUT;
-
-typedef CMPOUT (*COMPARISON_TYPE(Comparator))(
-    const void *left, const void *right);
-
-typedef CMPOUT (*COMPARISON_TYPE(ContextComparator))(
-    const void *left, const void *right, void *context);
+Comparison_Compare(int, 3, 7);
 ```
 
-The declarations above expand the result constants for readability; in the actual header they are instantiated through `COMPARISON_TABLE(X)`. The public shorthand for the result is `CMPOUT`.
-
-A comparison returns `COMPARISON_LOWER_CONST` if the left operand precedes the right operand, `COMPARISON_EQUAL_CONST` if they compare equal, and `COMPARISON_HIGHER_CONST` if the left operand follows the right operand. These names are namespace macros; use them instead of assuming numerical values when possible.
-
-`COMPARISON_TYPE(Comparator)` receives pointers to two elements. `COMPARISON_TYPE(ContextComparator)` additionally accepts a caller-provided context; the latter is consumed by APIs such as Sort but has no separate invoker in this package.
-
-The functions do not allocate, retain pointers, or report `OPSTATUS`. Pointers passed to CString, Bytes, and Invoke must satisfy the underlying C operations; no runtime validation is performed.
+---
 
 # API reference
 
 ## Function summary
 
-| Function | Arguments | Result |
+| Function | Description | Modifies input |
 | --- | --- | --- |
-| `int` | `int left, int right` | `CMPOUT` |
-| `float` | `float left, float right` | `CMPOUT` |
-| `double` | `double left, double right` | `CMPOUT` |
-| `LongDouble` | `long double left, long double right` | `CMPOUT` |
-| `CString` | `const char *left, const char *right` | `CMPOUT` |
-| `Bytes` | `const void *left, size_t leftSize, const void *right, size_t rightSize` | `CMPOUT` |
-| `Invoke` | `const void *left, const void *right, COMPARISON_TYPE(Comparator) comparator` | `CMPOUT` |
+| [`int`](#int) | Compares two `int` values | No |
+| [`float`](#float) | Compares two `float` values | No |
+| [`double`](#double) | Compares two `double` values | No |
+| [`LongDouble`](#longdouble) | Compares two `long double` values | No |
+| [`CString`](#cstring) | Compares two `const char *` values | No |
+| [`Bytes`](#bytes) | Lexicographic comparison of sized byte buffers | No |
+| [`Invoke`](#invoke) | Invokes a custom comparison callback | No |
 
-# Scalar comparison
+---
 
-The five scalar/string specializations below are generated from the `COMPARISON_TYPED_PROTOTYPE` and `COMPARISON_STRING_PROTOTYPE` declarations.
+# Comparison types and constants
 
-## int
+### Types
+
+| Type | Description |
+| --- | --- |
+| `TComparisonResult` | Enumeration with LOWER, EQUAL, HIGHER |
+| `TComparator` | Callback `TComparisonResult (*)(const void *, const void *)` |
+
+Use `COMPARISON_CONST(NAME)` to access the namespaced comparison constants.
+
+### X-macro
+
+`COMPARISON_TABLE(X)` expands `X` once for each of the three comparison constants, in the order LOWER, EQUAL, HIGHER:
+
+```c
+#define CASE_VALUE(value) case value:
+switch (result) {
+    COMPARISON_TABLE(CASE_VALUE)
+        break;
+}
+#undef CASE_VALUE
+```
+
+---
+
+# Numeric and string comparisons
+
+Functions in this group receive their inputs by value and return a comparison result without modifying either argument.
+
+---
+
+# int
+
+Compares two `int` values.
 
 ### Syntax
 
 #### Macro form
 
 ```c
-CMPOUT COMPARISON_FUNC(int)(int left, int right);
+TComparisonResult result = COMPARISON_FUNC(int)(left, right);
 ```
 
 #### Direct form
 
 ```c
-CMPOUT Algorithm_Comparison_int(int left, int right);
+TComparisonResult result = Comparison_int(left, right);
 ```
+
+---
 
 ### Parameters
 
-- `left`: first signed integer.
-- `right`: second signed integer.
+| Parameter | Explanation |
+| --- | --- |
+| `left` | First `int` value |
+| `right` | Second `int` value |
+
+---
 
 ### Return value
 
-The lower/equal/higher comparison of `left` against `right`.
+Returns `COMPARISON_CONST(LOWER)` when left compares lower, `COMPARISON_CONST(HIGHER)` when higher, or `COMPARISON_CONST(EQUAL)` otherwise.
+
+---
 
 ### Remarks
 
-Uses relational comparisons without subtraction, avoiding comparison overflow.
+Integer comparisons use relational operators, avoiding subtraction overflow.
+
+---
 
 ### Example
 
 ```c
-CMPOUT result = COMPARISON_FUNC(int)(-1, 2);
-/* result == COMPARISON_LOWER_CONST */
+TComparisonResult result =
+    COMPARISON_FUNC(int)(1, 2);
+
+/* result == COMPARISON_CONST(LOWER) */
 ```
 
-## float
+---
+
+# float
+
+Compares two `float` values.
 
 ### Syntax
 
 #### Macro form
 
 ```c
-CMPOUT COMPARISON_FUNC(float)(float left, float right);
+TComparisonResult result = COMPARISON_FUNC(float)(left, right);
 ```
 
 #### Direct form
 
 ```c
-CMPOUT Algorithm_Comparison_float(float left, float right);
+TComparisonResult result = Comparison_float(left, right);
 ```
+
+---
 
 ### Parameters
 
-- `left`: first `float`.
-- `right`: second `float`.
+| Parameter | Explanation |
+| --- | --- |
+| `left` | First `float` value |
+| `right` | Second `float` value |
+
+---
 
 ### Return value
 
-Lower, equal, or higher according to the implemented relational checks.
+Returns `COMPARISON_CONST(LOWER)` when left compares lower, `COMPARISON_CONST(HIGHER)` when higher, or `COMPARISON_CONST(EQUAL)` otherwise.
+
+---
 
 ### Remarks
 
-The implementation evaluates `left < right` and `left > right`; if both are false it returns equal. **Unordered NaN comparisons therefore return equal**, not a distinct unordered status. This helper is not a total ordering of IEEE floating-point values.
+Exact comparison, no tolerance. NaN is incorrectly classified as EQUAL by the current implementation because both relational checks are false.
+
+---
 
 ### Example
 
 ```c
-CMPOUT result = COMPARISON_FUNC(float)(1.0f, 2.0f);
+TComparisonResult result =
+    COMPARISON_FUNC(float)(1.0f, 2.0f);
+
+/* result == COMPARISON_CONST(LOWER) */
 ```
 
-## double
+---
+
+# double
+
+Compares two `double` values.
 
 ### Syntax
 
 #### Macro form
 
 ```c
-CMPOUT COMPARISON_FUNC(double)(double left, double right);
+TComparisonResult result = COMPARISON_FUNC(double)(left, right);
 ```
 
 #### Direct form
 
 ```c
-CMPOUT Algorithm_Comparison_double(double left, double right);
+TComparisonResult result = Comparison_double(left, right);
 ```
+
+---
 
 ### Parameters
 
-- `left`: first `double`.
-- `right`: second `double`.
+| Parameter | Explanation |
+| --- | --- |
+| `left` | First `double` value |
+| `right` | Second `double` value |
+
+---
 
 ### Return value
 
-Lower, equal, or higher according to the relational checks.
+Returns `COMPARISON_CONST(LOWER)` when left compares lower, `COMPARISON_CONST(HIGHER)` when higher, or `COMPARISON_CONST(EQUAL)` otherwise.
+
+---
 
 ### Remarks
 
-The same unordered-NaN limitation as `float` applies.
+Exact comparison; NaN is classified as EQUAL, so this is not a total-order comparator.
+
+---
 
 ### Example
 
 ```c
-CMPOUT result = COMPARISON_FUNC(double)(3.0, 3.0);
-/* result == COMPARISON_EQUAL_CONST */
+TComparisonResult result =
+    COMPARISON_FUNC(double)(3.0, 3.0);
+
+/* result == COMPARISON_CONST(EQUAL) */
 ```
 
-## LongDouble
+---
+
+# LongDouble
+
+Compares two `long double` values.
 
 ### Syntax
 
 #### Macro form
 
 ```c
-CMPOUT COMPARISON_FUNC(LongDouble)(long double left, long double right);
+TComparisonResult result = COMPARISON_FUNC(LongDouble)(left, right);
 ```
 
 #### Direct form
 
 ```c
-CMPOUT Algorithm_Comparison_LongDouble(long double left, long double right);
+TComparisonResult result = Comparison_LongDouble(left, right);
 ```
+
+---
 
 ### Parameters
 
-- `left`: first `long double`.
-- `right`: second `long double`.
+| Parameter | Explanation |
+| --- | --- |
+| `left` | First `long double` value |
+| `right` | Second `long double` value |
+
+---
 
 ### Return value
 
-Lower, equal, or higher according to the relational checks.
+Returns `COMPARISON_CONST(LOWER)` when left compares lower, `COMPARISON_CONST(HIGHER)` when higher, or `COMPARISON_CONST(EQUAL)` otherwise.
+
+---
 
 ### Remarks
 
-The same unordered-NaN limitation applies. The suffix is `LongDouble`, not `long double`.
+The function suffix is LongDouble. NaN has the same limitation as float and double.
+
+---
 
 ### Example
 
 ```c
-CMPOUT result = COMPARISON_FUNC(LongDouble)(1.0L, 0.0L);
-/* result == COMPARISON_HIGHER_CONST */
+TComparisonResult result =
+    COMPARISON_FUNC(LongDouble)(1.0L, 2.0L);
+
+/* result == COMPARISON_CONST(LOWER) */
 ```
 
-## CString
+---
+
+# CString
+
+Compares two `const char *` values.
 
 ### Syntax
 
 #### Macro form
 
 ```c
-CMPOUT COMPARISON_FUNC(CString)(const char *left, const char *right);
+TComparisonResult result = COMPARISON_FUNC(CString)(left, right);
 ```
 
 #### Direct form
 
 ```c
-CMPOUT Algorithm_Comparison_CString(const char *left, const char *right);
+TComparisonResult result = Comparison_CString(left, right);
 ```
+
+---
 
 ### Parameters
 
-- `left`: pointer to the first null-terminated C string.
-- `right`: pointer to the second null-terminated C string.
+| Parameter | Explanation |
+| --- | --- |
+| `left` | First `const char *` value |
+| `right` | Second `const char *` value |
+
+---
 
 ### Return value
 
-The sign of `strcmp(left, right)`, normalized to lower/equal/higher.
+Returns `COMPARISON_CONST(LOWER)` when left compares lower, `COMPARISON_CONST(HIGHER)` when higher, or `COMPARISON_CONST(EQUAL)` otherwise.
+
+---
 
 ### Remarks
 
-Both strings must be valid null-terminated byte strings. Comparison is lexicographic on their byte values, not Unicode collation, case folding, or locale-specific ordering. Does not accept NULL pointers.
+Calls strcmp. Both arguments must be valid, null-terminated strings; comparison is case-sensitive and not locale-aware.
+
+---
 
 ### Example
 
 ```c
-CMPOUT result = COMPARISON_FUNC(CString)("alpha", "beta");
+TComparisonResult result =
+    COMPARISON_FUNC(CString)("apple", "banana");
+
+/* result == COMPARISON_CONST(LOWER) */
 ```
 
-# Byte and callback operations
+---
 
-## Bytes
+# Byte comparisons
+
+Byte comparisons operate on buffers with explicit lengths and therefore do not require null terminators.
+
+---
+
+# Bytes
+
+Compares two byte sequences lexicographically, using `memcmp` for the shared prefix and comparing lengths if that prefix is identical.
 
 ### Syntax
 
 #### Macro form
 
 ```c
-CMPOUT COMPARISON_FUNC(Bytes)(
-    const void *left, size_t leftSize,
-    const void *right, size_t rightSize);
+TComparisonResult result =
+    COMPARISON_FUNC(Bytes)(left, leftSize, right, rightSize);
 ```
 
 #### Direct form
 
 ```c
-CMPOUT Algorithm_Comparison_Bytes(
-    const void *left, size_t leftSize,
-    const void *right, size_t rightSize);
+TComparisonResult result =
+    Comparison_Bytes(left, leftSize, right, rightSize);
 ```
+
+---
 
 ### Parameters
 
-- `left`, `right`: readable byte ranges of the declared sizes.
-- `leftSize`, `rightSize`: byte counts.
+| Parameter | Explanation |
+| --- | --- |
+| `left` | First buffer |
+| `leftSize` | Its length in bytes |
+| `right` | Second buffer |
+| `rightSize` | Its length in bytes |
+
+---
 
 ### Return value
 
-`memcmp` order on the shared prefix; if that prefix compares equally, the shorter range precedes the longer range.
+Returns LOWER or HIGHER for the first differing byte; if all shared bytes are equal, the shorter sequence is LOWER. Equal contents and equal lengths return EQUAL.
+
+---
 
 ### Remarks
 
-The function compares at most `min(leftSize, rightSize)` bytes, then compares lengths. It does not allocate or append terminators. Provide valid readable pointers for the ranges, including pointers satisfying the platform C-library requirements when a length is zero.
+- Buffers must be readable for the bytes compared.
+- It compares bytes, not logical typed elements.
+- Neither buffer is modified.
+
+---
 
 ### Example
 
 ```c
 const unsigned char a[] = {1, 2};
-const unsigned char b[] = {1, 2, 3};
-CMPOUT result = COMPARISON_FUNC(Bytes)(a, sizeof a, b, sizeof b);
-/* result == COMPARISON_LOWER_CONST */
+const unsigned char b[] = {1, 3};
+
+TComparisonResult result =
+    COMPARISON_FUNC(Bytes)(a, sizeof a, b, sizeof b);
+
+/* result == COMPARISON_CONST(LOWER) */
 ```
 
-## Invoke
+---
+
+# Custom comparisons
+
+Custom callbacks let caller-defined types follow the same three-way ordering convention.
+
+---
+
+# Invoke
+
+Calls a `TComparator` supplied by the caller.
 
 ### Syntax
 
 #### Macro form
 
 ```c
-CMPOUT COMPARISON_FUNC(Invoke)(
-    const void *left, const void *right,
-    COMPARISON_TYPE(Comparator) comparator);
+TComparisonResult result =
+    COMPARISON_FUNC(Invoke)(left, right, comparator);
 ```
 
 #### Direct form
 
 ```c
-CMPOUT Algorithm_Comparison_Invoke(
-    const void *left, const void *right,
-    Algorithm_Comparison_Comparator comparator);
+TComparisonResult result =
+    Comparison_Invoke(left, right, comparator);
 ```
+
+---
 
 ### Parameters
 
-- `left`, `right`: operands passed unchanged to the callback.
-- `comparator`: non-null function pointer conforming to `COMPARISON_TYPE(Comparator)`.
+| Parameter | Explanation |
+| --- | --- |
+| `left` | First object pointer |
+| `right` | Second object pointer |
+| `comparator` | Valid non-null `TComparator` callback |
+
+---
 
 ### Return value
 
-The callback's return value, unchanged.
+Returns the comparator result unchanged.
+
+---
 
 ### Remarks
 
-Does not validate pointers or normalize the callback's result. This is a simple call-through; a context comparator cannot be supplied to `Invoke`.
+- Does not inspect or validate object contents.
+- Does not validate the callback pointer or normalize its result.
+- The comparator must implement consistent ordering where required by the caller.
+
+---
 
 ### Example
 
 ```c
-static CMPOUT CompareIntegers(const void *a, const void *b) {
-    return COMPARISON_FUNC(int)(*(const int *)a, *(const int *)b);
+static TComparisonResult CompareIntegers(
+    const void *left, const void *right
+) {
+    const int a = *(const int *)left;
+    const int b = *(const int *)right;
+    return COMPARISON_FUNC(int)(a, b);
 }
 
-int first = 7, second = 9;
-CMPOUT result = COMPARISON_FUNC(Invoke)(
-    &first, &second, CompareIntegers);
+int a = 4, b = 9;
+TComparisonResult result =
+    COMPARISON_FUNC(Invoke)(&a, &b, CompareIntegers);
+
+/* result == COMPARISON_CONST(LOWER) */
 ```
 
-# Convenience macro
+---
 
-`Comparison_Compare(TYPE, left, right)` invokes `COMPARISON_FUNC(TYPE)(left, right)`. Its first argument is the suffix, such as `int`, `double`, `LongDouble`, or `CString`. Unlike a regular C function, this macro expands before type checking; pass arguments suitable for the selected suffix.
+# Convenience macros
+
+## Comparison_Compare
 
 ```c
-CMPOUT result = Comparison_Compare(int, 4, 5);
+Comparison_Compare(TYPE, left, right)
 ```
 
-# Naming and namespace
+Expands to `COMPARISON_FUNC(TYPE)((left), (right))`.
 
-The module uses `ALGORITHM_MOD`, `ALGORITHM_NS`, `ALGORITHM_TYPE`, `ALGORITHM_FUNC`, `ALGORITHM_CONST`, and package-specific `COMPARISON_TYPE`/`COMPARISON_FUNC` macros. Use the exported result constants rather than hardcoding `-1`, `0`, or `1`.
+Supported suffixes: `int`, `float`, `double`, `LongDouble`, `CString`. `Bytes` and `Invoke` have different argument lists and should be called via `COMPARISON_FUNC`.
 
-# Requirements
-
-- C11; `<stddef.h>` and `<string.h>` via the public header.
-- Header-only; no extra linker flags.
-- Valid inputs are the caller's responsibility.
-- No global state, heap allocation, or extra initialization.
-
-# See also
-
-- [Sort](Sort.md): generic and integer-specific sorting built around comparison callbacks.
-- [Container](Container.md): collections that may use order-based operations.
-- [Bit](Bit.md): reference for the documentation style.
-
-# C11 smoke test
-
-The following complete example is compiled and executed by `Tools/check_doc_examples.py`. Unlike the individual API fragments above, it can be copied into one C11 translation unit.
-
-<!-- cosmeron-c11-test -->
 ```c
-#include "Cosmeron/Core/Algorithm/Comparison.h"
-#include <assert.h>
-
-int main(void) {
-    const unsigned char a[] = {1, 2};
-    const unsigned char b[] = {1, 2, 3};
-    assert(COMPARISON_FUNC(int)(2, 3) == COMPARISON_LOWER_CONST);
-    assert(COMPARISON_FUNC(double)(3.0, 3.0) == COMPARISON_EQUAL_CONST);
-    assert(COMPARISON_FUNC(Bytes)(a, sizeof a, b, sizeof b) ==
-           COMPARISON_LOWER_CONST);
-    return 0;
-}
+TComparisonResult result = Comparison_Compare(int, 5, 8);
 ```
+
+---
+
+# Notes
+
+- The implementations are `static inline`.
+- No sort or search API is currently defined by the verified Algorithm source; this document covers the existing Comparison package only.
+- Floating-point comparisons are not a total ordering for NaNs, which matters for sorted containers and tree keys.
+- Direct names in this document presume the default namespace; use `COMPARISON_FUNC` for namespace-independent code.
