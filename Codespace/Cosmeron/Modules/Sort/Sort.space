@@ -1,0 +1,27 @@
+#pragma once
+
+#include "../../Core/Namespace.h"
+#include "../../Core/Preprocessor/Compiling.inc"
+#include "../../Core/Error/Status.h"
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+#define SORT_MOD Sort
+#define SORT_CMOD SORT
+#define SORT_NS(NAME) GNS2(LIB_PREFIX(SORT_MOD), NAME)
+#define SORT_CNS(NAME) CNS2(LIB_PREFIX_CONST(SORT_CMOD), NAME)
+#define SORT_INS(NAME) GNS3(LIB_PREFIX(SORT_MOD), Internal, NAME)
+#define SORT_CINS(NAME) CNS3(LIB_PREFIX_CONST(SORT_CMOD), INTERNAL, NAME)
+#define SORT_TYPE(NAME) SORT_NS(NAME)
+#define SORT_FUNC(NAME) SORT_NS(NAME)
+#define SORT_TYPED_FUNC(NAME, SUFFIX) GNS2(SORT_FUNC(NAME), SUFFIX)
+#define SORT_TYPED_INS(NAME, SUFFIX) GNS2(SORT_INS(NAME), SUFFIX)
+#define SORT_CONST(NAME) SORT_CNS(NAME)
+
+typedef enum SORT_TYPE(TOrder) {
+  SORT_CONST(ASCENDING),
+  SORT_CONST(DESCENDING)
+} SORT_TYPE(TOrder);

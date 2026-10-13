@@ -1,0 +1,17 @@
+#include "../Seed.impl"
+RANDOM_ENGINE_SEED_PROTOTYPE(Pcg) {
+  uint64_t split = seed;
+  state->state = RANDOM_ENGINE_SPLITMIX_STEP(split);
+  state->stream = RANDOM_ENGINE_SPLITMIX_STEP(split) | UINT64_C(1);
+}
+RANDOM_ENGINE_NEXT_PROTOTYPE(Pcg) {
+  uint64_t old = state->state;
+  uint32_t xorshifted;
+  uint32_t rotation;
+  state->state = old * UINT64_C(6364136223846793005) + state->stream;
+  xorshifted = (uint32_t)(((old >> 18U) ^ old) >> 27U);
+  rotation = (uint32_t)(old >> 59U);
+  return (uint64_t)((xorshifted >> rotation) |
+                    (xorshifted << ((0U - rotation) & 31U)));
+}
+

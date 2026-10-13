@@ -1,0 +1,75 @@
+/* Implementation included by Envelope.h. */
+
+AUDIO_ENVELOPE_INIT_PROTOTYPE {
+  AUDIO_ENVELOPE_TYPE(TEnvelope) value = {0};
+  if (envelope == NULL || !(sustain >= 0.0f && sustain <= 1.0f))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  value.attackFrames = attackFrames;
+  value.decayFrames = decayFrames;
+  value.releaseFrames = releaseFrames;
+  value.sustain = sustain;
+  *envelope = value;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_ENVELOPE_TRIGGER_PROTOTYPE {
+  if (envelope != NULL) {
+    envelope->stage = AUDIO_ENVELOPE_CONST(ATTACK);
+    envelope->position = 0;
+    envelope->level = 0;
+  }
+}
+
+AUDIO_ENVELOPE_RELEASE_PROTOTYPE {
+  if (envelope != NULL && envelope->stage != AUDIO_ENVELOPE_CONST(IDLE)) {
+    envelope->releaseLevel = envelope->level;
+    envelope->position = 0;
+    envelope->stage = AUDIO_ENVELOPE_CONST(RELEASE);
+  }
+}
+
+AUDIO_ENVELOPE_APPLY_PROTOTYPE {
+  size_t frame;
+  uint32_t channel;
+  if (envelope == NULL || samples == NULL || channels == 0 ||
+      channels > AUDIO_CONST(MAX_CHANNELS) || frameCount > SIZE_MAX / channels)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  for (frame = 0; frame < frameCount; ++frame) {
+    if (envelope->stage == AUDIO_ENVELOPE_CONST(ATTACK) &&
+        envelope->position >= envelope->attackFrames) {
+      envelope->stage = AUDIO_ENVELOPE_CONST(DECAY);
+      envelope->position = 0;
+    }
+    if (envelope->stage == AUDIO_ENVELOPE_CONST(DECAY) &&
+        envelope->position >= envelope->decayFrames)
+      envelope->stage = AUDIO_ENVELOPE_CONST(SUSTAIN);
+    if (envelope->stage == AUDIO_ENVELOPE_CONST(RELEASE) &&
+        envelope->position >= envelope->releaseFrames)
+      envelope->stage = AUDIO_ENVELOPE_CONST(IDLE);
+    switch (envelope->stage) {
+    case AUDIO_ENVELOPE_CONST(ATTACK):
+      envelope->level = (float)((double)++envelope->position /
+                                (double)envelope->attackFrames);
+      break;
+    case AUDIO_ENVELOPE_CONST(DECAY):
+      envelope->level = (float)(1.0 - (1.0 - envelope->sustain) *
+                                          (double)++envelope->position /
+                                          (double)envelope->decayFrames);
+      break;
+    case AUDIO_ENVELOPE_CONST(SUSTAIN):
+      envelope->level = envelope->sustain;
+      break;
+    case AUDIO_ENVELOPE_CONST(RELEASE):
+      envelope->level = (float)(envelope->releaseLevel *
+                                (1.0 - (double)++envelope->position /
+                                           (double)envelope->releaseFrames));
+      break;
+    default:
+      envelope->level = 0;
+      break;
+    }
+    for (channel = 0; channel < channels; ++channel)
+      samples[frame * channels + channel] *= envelope->level;
+  }
+  return STATUS_CONST(SUCCESS);
+}

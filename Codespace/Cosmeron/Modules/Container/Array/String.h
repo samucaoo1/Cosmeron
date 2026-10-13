@@ -1,0 +1,143 @@
+#pragma once
+
+#include "../../../Core/Algorithm/Comparison.h"
+#include "Flat.space"
+
+/* ============================================================
+ * TString - string sequencial com armazenamento direto
+ * ============================================================ */
+
+#define TSTRING_TYPE(SUFFIX) GNS2(FLAT_NS(TString), SUFFIX)
+#define TSTRING_NS(SUFFIX) GNS2(FLAT_NS(String), SUFFIX)
+#define TSTRING_FUNC(SUFFIX, FUNC) GNS2(TSTRING_NS(SUFFIX), FUNC)
+#define TSTRING_STRUCT_TAG(SUFFIX) GNS2(TSTRING_NS(SUFFIX), str)
+#define TSTRING_FUNCTION_TABLE_TYPE(SUFFIX) \
+  GNS2(TSTRING_NS(SUFFIX), FunctionTable)
+
+#define TSTRING_STRUCT(CHAR_TYPE, SUFFIX)                                      \
+  CONTAINER_API_FORWARD(TSTRING_FUNCTION_TABLE_TYPE(SUFFIX))                                \
+  typedef struct TSTRING_STRUCT_TAG(SUFFIX) {                                    \
+    CONTAINER_API_FIELD(TSTRING_FUNCTION_TABLE_TYPE(SUFFIX))                  \
+    CHAR_TYPE *data;                                                           \
+    size_t size;                                                               \
+    size_t capacity;                                                           \
+  } TSTRING_TYPE(SUFFIX);
+
+#define TSTRING_INIT_PROTOTYPE(SUFFIX)                                \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, Init)(TSTRING_TYPE(SUFFIX) * str)
+#define TSTRING_DESTROY_PROTOTYPE(SUFFIX)                             \
+  static inline void TSTRING_FUNC(SUFFIX, Destroy)(TSTRING_TYPE(SUFFIX) * str)
+#define TSTRING_FROM_CSTR_PROTOTYPE(CHAR_TYPE, SUFFIX)                \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, FromCStr)(                       \
+      TSTRING_TYPE(SUFFIX) * str, const CHAR_TYPE *cstr)
+#define TSTRING_CSTR_PROTOTYPE(CHAR_TYPE, SUFFIX)                             \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, CStr)(                          \
+      TSTRING_TYPE(SUFFIX) *str, const CHAR_TYPE **outCStr)
+#define TSTRING_LENGTH_PROTOTYPE(SUFFIX)                              \
+  static inline size_t TSTRING_FUNC(SUFFIX, Length)(const TSTRING_TYPE(SUFFIX) *str)
+#define TSTRING_EMPTY_PROTOTYPE(SUFFIX)                               \
+  static inline bool TSTRING_FUNC(SUFFIX, Empty)(const TSTRING_TYPE(SUFFIX) *str)
+#define TSTRING_CLEAR_PROTOTYPE(SUFFIX)                               \
+  static inline void TSTRING_FUNC(SUFFIX, Clear)(TSTRING_TYPE(SUFFIX) * str)
+#define TSTRING_RESERVE_PROTOTYPE(SUFFIX)                             \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, Reserve)(                        \
+      TSTRING_TYPE(SUFFIX) * str, size_t newCapacity)
+#define TSTRING_PUSH_BACK_PROTOTYPE(CHAR_TYPE, SUFFIX)                \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, PushBack)(                       \
+      TSTRING_TYPE(SUFFIX) * str, CHAR_TYPE ch)
+#define TSTRING_POP_BACK_PROTOTYPE(CHAR_TYPE, SUFFIX)                            \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX,                                  \
+                                      PopBack)(TSTRING_TYPE(SUFFIX) * str,      \
+                                               CHAR_TYPE *outValue)
+#define TSTRING_CAPACITY_PROTOTYPE(SUFFIX)                           \
+  static inline size_t TSTRING_FUNC(SUFFIX,                                    \
+                                    Capacity)(const TSTRING_TYPE(SUFFIX) *str)
+#define TSTRING_INSERT_CHAR_PROTOTYPE(CHAR_TYPE, SUFFIX)             \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, InsertChar)(                    \
+      TSTRING_TYPE(SUFFIX) * str, size_t pos, CHAR_TYPE ch)
+#define TSTRING_AT_PROTOTYPE(CHAR_TYPE, SUFFIX)                       \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, At)(                             \
+      TSTRING_TYPE(SUFFIX) * str, size_t index, CHAR_TYPE **out)
+#define TSTRING_FRONT_PROTOTYPE(CHAR_TYPE, SUFFIX)                    \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, Front)(                          \
+      TSTRING_TYPE(SUFFIX) * str, CHAR_TYPE **out)
+#define TSTRING_BACK_PROTOTYPE(CHAR_TYPE, SUFFIX)                     \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, Back)(                           \
+      TSTRING_TYPE(SUFFIX) * str, CHAR_TYPE **out)
+#define TSTRING_APPEND_PROTOTYPE(CHAR_TYPE, SUFFIX)                   \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, Append)(                         \
+      TSTRING_TYPE(SUFFIX) * str, const CHAR_TYPE *cstr)
+#define TSTRING_APPEND_STR_PROTOTYPE(SUFFIX)                          \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, AppendStr)(                      \
+      TSTRING_TYPE(SUFFIX) * str, TSTRING_TYPE(SUFFIX) * other)
+#define TSTRING_INSERT_PROTOTYPE(CHAR_TYPE, SUFFIX)                   \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, Insert)(                         \
+      TSTRING_TYPE(SUFFIX) * str, size_t pos, const CHAR_TYPE *cstr)
+#define TSTRING_ERASE_PROTOTYPE(SUFFIX)                               \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, Erase)(                          \
+      TSTRING_TYPE(SUFFIX) * str, size_t pos, size_t count)
+#define TSTRING_SUBSTR_PROTOTYPE(SUFFIX)                              \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, Substr)(                         \
+      TSTRING_TYPE(SUFFIX) * str, size_t pos, size_t count,                    \
+      TSTRING_TYPE(SUFFIX) * out)
+#define TSTRING_COMPARE_PROTOTYPE(SUFFIX)                                     \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, Compare)(                       \
+      const TSTRING_TYPE(SUFFIX) *str, const TSTRING_TYPE(SUFFIX) *other,     \
+      CMPOUT *outResult)
+#define TSTRING_FIND_PROTOTYPE(CHAR_TYPE, SUFFIX)                              \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, Find)(                          \
+      const TSTRING_TYPE(SUFFIX) *str, CHAR_TYPE ch, size_t start,            \
+      size_t *index)
+#define TSTRING_FIND_STR_PROTOTYPE(CHAR_TYPE, SUFFIX)                          \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, FindStr)(                       \
+      const TSTRING_TYPE(SUFFIX) *str, const CHAR_TYPE *needle, size_t start, \
+      size_t *index)
+#define TSTRING_DATA_PROTOTYPE(CHAR_TYPE, SUFFIX)                             \
+  static inline OPSTATUS TSTRING_FUNC(SUFFIX, Data)(                          \
+      TSTRING_TYPE(SUFFIX) *str, CHAR_TYPE **outData)
+
+#include "Impl/String.impl"
+#include "FunctionTable/String.h"
+
+#define TSTRING_IMPLEMENT_ALL(CHAR_TYPE, SUFFIX)                                     \
+  TSTRING_STRUCT(CHAR_TYPE, SUFFIX)                                            \
+  TSTRING_INIT_PROTOTYPE(SUFFIX);                                     \
+  TSTRING_DESTROY_PROTOTYPE(SUFFIX);                                  \
+  TSTRING_FROM_CSTR_PROTOTYPE(CHAR_TYPE, SUFFIX);                     \
+  TSTRING_CSTR_PROTOTYPE(CHAR_TYPE, SUFFIX);                          \
+  TSTRING_LENGTH_PROTOTYPE(SUFFIX);                                   \
+  TSTRING_EMPTY_PROTOTYPE(SUFFIX);                                    \
+  TSTRING_CLEAR_PROTOTYPE(SUFFIX);                                    \
+  TSTRING_RESERVE_PROTOTYPE(SUFFIX);                                  \
+  TSTRING_PUSH_BACK_PROTOTYPE(CHAR_TYPE, SUFFIX);                     \
+  TSTRING_POP_BACK_PROTOTYPE(CHAR_TYPE, SUFFIX);                                 \
+  TSTRING_CAPACITY_PROTOTYPE(SUFFIX);                                \
+  TSTRING_INSERT_CHAR_PROTOTYPE(CHAR_TYPE, SUFFIX);                  \
+  TSTRING_AT_PROTOTYPE(CHAR_TYPE, SUFFIX);                            \
+  TSTRING_FRONT_PROTOTYPE(CHAR_TYPE, SUFFIX);                         \
+  TSTRING_BACK_PROTOTYPE(CHAR_TYPE, SUFFIX);                          \
+  TSTRING_APPEND_PROTOTYPE(CHAR_TYPE, SUFFIX);                        \
+  TSTRING_APPEND_STR_PROTOTYPE(SUFFIX);                               \
+  TSTRING_INSERT_PROTOTYPE(CHAR_TYPE, SUFFIX);                        \
+  TSTRING_ERASE_PROTOTYPE(SUFFIX);                                    \
+  TSTRING_SUBSTR_PROTOTYPE(SUFFIX);                                   \
+  TSTRING_COMPARE_PROTOTYPE(SUFFIX);                                  \
+  TSTRING_FIND_PROTOTYPE(CHAR_TYPE, SUFFIX);                          \
+  TSTRING_FIND_STR_PROTOTYPE(CHAR_TYPE, SUFFIX);                      \
+  TSTRING_DATA_PROTOTYPE(CHAR_TYPE, SUFFIX);                          \
+  COSMERON_MACRO_INTERNAL_TSTRING_IMPLEMENT(CHAR_TYPE, SUFFIX)                                         \
+  TSTRING_FUNCTION_TABLE_STRUCT(CHAR_TYPE, SUFFIX)                                  \
+  TSTRING_FUNCTION_TABLE_INSTANCE(CHAR_TYPE, SUFFIX)
+
+#define TSTRING_INSTANCE_DECLARE(SUFFIX, NAME)                                                  \
+  TSTRING_TYPE(SUFFIX) NAME;                                                   \
+  CONTAINER_API_BIND(NAME, TSTRING_FUNC(SUFFIX, functions));                                 \
+  TSTRING_FUNC(SUFFIX, Init)(&NAME);
+/* Compatibility alias: prefer TSTRING_INSTANCE_DECLARE. */
+#define TString(SUFFIX, NAME) TSTRING_INSTANCE_DECLARE(SUFFIX, NAME)
+
+TSTRING_IMPLEMENT_ALL(uint8_t, 8)
+TSTRING_IMPLEMENT_ALL(uint16_t, 16)
+TSTRING_IMPLEMENT_ALL(uint32_t, 32)
+
+

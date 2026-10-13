@@ -1,0 +1,75 @@
+#pragma once
+
+#define COSMERON_MACRO_INTERNAL_BIT_MASK_EVEN_ODD_U64 0x5555555555555555ULL
+#define COSMERON_MACRO_INTERNAL_BIT_MASK_PAIRS_U64 0x3333333333333333ULL
+#define COSMERON_MACRO_INTERNAL_BIT_MASK_NIBBLES_U64 0x0F0F0F0F0F0F0F0FULL
+#define COSMERON_MACRO_INTERNAL_BIT_MASK_BYTE_U8 0xFFU
+
+#define BIT_POPCOUNT_IMPLEMENT(TYPE, SUFFIX)                                   \
+  BIT_POPCOUNT_PROTOTYPE(TYPE, SUFFIX) {                                       \
+    uint64_t temp = (uint64_t)value;                                           \
+    temp -= (temp >> 1) & COSMERON_MACRO_INTERNAL_BIT_MASK_EVEN_ODD_U64;      \
+    temp = (temp & COSMERON_MACRO_INTERNAL_BIT_MASK_PAIRS_U64) +               \
+           ((temp >> 2) & COSMERON_MACRO_INTERNAL_BIT_MASK_PAIRS_U64);         \
+    temp = (temp + (temp >> 4)) &                                              \
+           COSMERON_MACRO_INTERNAL_BIT_MASK_NIBBLES_U64;                       \
+    if (SUFFIX > 32)                                                           \
+      temp += temp >> 32;                                                      \
+    if (SUFFIX > 16)                                                           \
+      temp += temp >> 16;                                                      \
+    if (SUFFIX > 8)                                                            \
+      temp += temp >> 8;                                                       \
+    return temp & COSMERON_MACRO_INTERNAL_BIT_MASK_BYTE_U8;                    \
+  }
+
+#define BIT_IS_POWER_OF_TWO_IMPLEMENT(TYPE, SUFFIX)                            \
+  BIT_IS_POWER_OF_TWO_PROTOTYPE(TYPE, SUFFIX) {                                \
+    return value != 0 && (value & (TYPE)(value - 1)) == 0;                    \
+  }
+
+#define BIT_INDEX_LSB_IMPLEMENT(TYPE, SUFFIX)                                  \
+  BIT_INDEX_LSB_PROTOTYPE(TYPE, SUFFIX) {                                      \
+    if (outIndex == NULL)                                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (value == 0)                                                            \
+      return STATUS_CONST(NOT_FOUND);                                          \
+    TYPE position = 0;                                                         \
+    TYPE temp = value;                                                         \
+    while ((temp & (TYPE)1) == 0) {                                            \
+      ++position;                                                              \
+      temp >>= 1;                                                              \
+    }                                                                          \
+    *outIndex = position;                                                      \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define BIT_INDEX_MSB_IMPLEMENT(TYPE, SUFFIX)                                  \
+  BIT_INDEX_MSB_PROTOTYPE(TYPE, SUFFIX) {                                      \
+    if (outIndex == NULL)                                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (value == 0)                                                            \
+      return STATUS_CONST(NOT_FOUND);                                          \
+    TYPE position = 0;                                                         \
+    TYPE temp = value;                                                         \
+    while ((temp >>= 1) != 0)                                                  \
+      ++position;                                                              \
+    *outIndex = position;                                                      \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define BIT_ROTATE_LEFT_IMPLEMENT(TYPE, SUFFIX)                                \
+  BIT_ROTATE_LEFT_PROTOTYPE(TYPE, SUFFIX) {                                    \
+    shift %= SUFFIX;                                                           \
+    if (shift == 0)                                                            \
+      return value;                                                            \
+    return (TYPE)((value << shift) | (value >> (SUFFIX - shift)));            \
+  }
+
+#define BIT_ROTATE_RIGHT_IMPLEMENT(TYPE, SUFFIX)                               \
+  BIT_ROTATE_RIGHT_PROTOTYPE(TYPE, SUFFIX) {                                   \
+    shift %= SUFFIX;                                                           \
+    if (shift == 0)                                                            \
+      return value;                                                            \
+    return (TYPE)((value >> shift) | (value << (SUFFIX - shift)));            \
+  }
+/* EOF */

@@ -1,0 +1,23 @@
+#pragma once
+#include "../Canvas/Canvas.h"
+#include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
+#define FIGLET_MOD FIGlet
+#define FIGLET_NS(NAME) GNS2(LIB_PREFIX(FIGLET_MOD),NAME)
+#define FIGLET_INS(NAME) GNS3(LIB_PREFIX(FIGLET_MOD),Internal,NAME)
+#define FIGLET_TYPE(NAME) FIGLET_NS(NAME)
+#define FIGLET_FUNC(NAME) FIGLET_NS(NAME)
+#define FIGLET_MAX_HEIGHT 32
+
+typedef struct FIGLET_TYPE(TGlyph) {
+  size_t offset;
+  uint16_t columns;
+} FIGLET_TYPE(TGlyph);
+typedef struct FIGLET_TYPE(TFont) {
+  const char *data; /* Borrowed .flf bytes. */
+  size_t length;
+  uint16_t height;
+  char hardblank;
+  FIGLET_TYPE(TGlyph) glyphs[95];
+} FIGLET_TYPE(TFont);

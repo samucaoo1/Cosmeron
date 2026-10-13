@@ -1,0 +1,41 @@
+RANDOM_U64_PROTOTYPE {
+  return RANDOM_ENTROPY_FUNC(Collect)();
+}
+
+RANDOM_U64_FROM_SEED_PROTOTYPE {
+  RANDOM_ENGINE_TYPE(Xoshiro) state;
+  RANDOM_ENGINE_FUNC(Xoshiro, Seed)(&state, seed);
+  return RANDOM_ENGINE_FUNC(Xoshiro, Next)(&state);
+}
+
+static inline RANDOM_SOURCE_TYPE(Value) RANDOM_INS(StackSource)(
+    RANDOM_ENGINE_TYPE(Xoshiro) *state, uint64_t seed) {
+  RANDOM_SOURCE_TYPE(Value) source = {
+      &RANDOM_ENGINE_FUNC(Xoshiro, Descriptor), NULL, state, sizeof(*state), false};
+  source.engine->seed(source.state, seed);
+  return source;
+}
+
+RANDOM_RANGE_U64_PROTOTYPE {
+  RANDOM_ENGINE_TYPE(Xoshiro) state;
+  RANDOM_SOURCE_TYPE(Value) source =
+      RANDOM_INS(StackSource)(&state, RANDOM_FUNC(U64)());
+  return RANDOM_DISTRIBUTION_INS(U64Unchecked)(
+      &source, minimum, maximum);
+}
+
+RANDOM_RANGE_I64_PROTOTYPE {
+  RANDOM_ENGINE_TYPE(Xoshiro) state;
+  RANDOM_SOURCE_TYPE(Value) source =
+      RANDOM_INS(StackSource)(&state, RANDOM_FUNC(U64)());
+  return RANDOM_DISTRIBUTION_INS(I64Unchecked)(
+      &source, minimum, maximum);
+}
+
+RANDOM_F64_PROTOTYPE {
+  return (double)(RANDOM_FUNC(U64)() >> 11U) * 0x1.0p-53;
+}
+
+RANDOM_BOOL_PROTOTYPE {
+  return (RANDOM_FUNC(U64)() & UINT64_C(1)) != 0U;
+}

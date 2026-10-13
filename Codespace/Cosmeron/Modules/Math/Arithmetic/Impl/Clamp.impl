@@ -1,0 +1,83 @@
+#define MATH_ARITHMETIC_CLAMP_PREPARE(TYPE)                                   \
+  if (minimum > maximum) {                                                    \
+    (void)Memory_Swap(TYPE, minimum, maximum);                                 \
+  }
+
+#define MATH_ARITHMETIC_CLAMP_RESULT(TYPE, SUFFIX, VALUE)                     \
+  return VALUE_TYPED_FUNC(Clamp, SUFFIX)(VALUE, minimum, maximum)
+
+#define MATH_ARITHMETIC_CLAMP_ADD_SIGNED_IMPLEMENT(TYPE, SUFFIX)              \
+  MATH_ARITHMETIC_CLAMP_ADD_PROTOTYPE(TYPE, SUFFIX) {                         \
+    TYPE arithmeticResult;                                                     \
+    MATH_ARITHMETIC_CLAMP_PREPARE(TYPE)                                       \
+    if (ARITHMETIC_TYPED_FUNC(Add, SUFFIX)(a, b, &arithmeticResult) ==         \
+        STATUS_CONST(ARITHMETIC_OVERFLOW))                                     \
+      return b > (TYPE)0 ? maximum : minimum;                                 \
+    MATH_ARITHMETIC_CLAMP_RESULT(TYPE, SUFFIX, arithmeticResult);              \
+  }
+
+#define MATH_ARITHMETIC_CLAMP_ADD_UNSIGNED_IMPLEMENT(TYPE, SUFFIX)            \
+  MATH_ARITHMETIC_CLAMP_ADD_PROTOTYPE(TYPE, SUFFIX) {                         \
+    TYPE arithmeticResult;                                                     \
+    MATH_ARITHMETIC_CLAMP_PREPARE(TYPE)                                       \
+    if (ARITHMETIC_TYPED_FUNC(Add, SUFFIX)(a, b, &arithmeticResult) ==         \
+        STATUS_CONST(ARITHMETIC_OVERFLOW))                                     \
+      return maximum;                                                          \
+    MATH_ARITHMETIC_CLAMP_RESULT(TYPE, SUFFIX, arithmeticResult);              \
+  }
+
+#define MATH_ARITHMETIC_CLAMP_SUB_SIGNED_IMPLEMENT(TYPE, SUFFIX)              \
+  MATH_ARITHMETIC_CLAMP_SUB_PROTOTYPE(TYPE, SUFFIX) {                         \
+    TYPE arithmeticResult;                                                     \
+    MATH_ARITHMETIC_CLAMP_PREPARE(TYPE)                                       \
+    if (ARITHMETIC_TYPED_FUNC(Sub, SUFFIX)(a, b, &arithmeticResult) ==         \
+        STATUS_CONST(ARITHMETIC_OVERFLOW))                                     \
+      return b < (TYPE)0 ? maximum : minimum;                                 \
+    MATH_ARITHMETIC_CLAMP_RESULT(TYPE, SUFFIX, arithmeticResult);              \
+  }
+
+#define MATH_ARITHMETIC_CLAMP_SUB_UNSIGNED_IMPLEMENT(TYPE, SUFFIX)            \
+  MATH_ARITHMETIC_CLAMP_SUB_PROTOTYPE(TYPE, SUFFIX) {                         \
+    TYPE arithmeticResult;                                                     \
+    MATH_ARITHMETIC_CLAMP_PREPARE(TYPE)                                       \
+    if (ARITHMETIC_TYPED_FUNC(Sub, SUFFIX)(a, b, &arithmeticResult) ==         \
+        STATUS_CONST(ARITHMETIC_OVERFLOW))                                     \
+      return minimum;                                                          \
+    MATH_ARITHMETIC_CLAMP_RESULT(TYPE, SUFFIX, arithmeticResult);              \
+  }
+
+#define MATH_ARITHMETIC_CLAMP_MUL_SIGNED_IMPLEMENT(TYPE, SUFFIX)              \
+  MATH_ARITHMETIC_CLAMP_MUL_PROTOTYPE(TYPE, SUFFIX) {                         \
+    TYPE arithmeticResult;                                                     \
+    MATH_ARITHMETIC_CLAMP_PREPARE(TYPE)                                       \
+    if (ARITHMETIC_TYPED_FUNC(Mul, SUFFIX)(a, b, &arithmeticResult) ==         \
+        STATUS_CONST(ARITHMETIC_OVERFLOW))                                     \
+      return ((a < (TYPE)0) == (b < (TYPE)0)) ? maximum : minimum;            \
+    MATH_ARITHMETIC_CLAMP_RESULT(TYPE, SUFFIX, arithmeticResult);              \
+  }
+
+#define MATH_ARITHMETIC_CLAMP_MUL_UNSIGNED_IMPLEMENT(TYPE, SUFFIX)            \
+  MATH_ARITHMETIC_CLAMP_MUL_PROTOTYPE(TYPE, SUFFIX) {                         \
+    TYPE arithmeticResult;                                                     \
+    MATH_ARITHMETIC_CLAMP_PREPARE(TYPE)                                       \
+    if (ARITHMETIC_TYPED_FUNC(Mul, SUFFIX)(a, b, &arithmeticResult) ==         \
+        STATUS_CONST(ARITHMETIC_OVERFLOW))                                     \
+      return maximum;                                                          \
+    MATH_ARITHMETIC_CLAMP_RESULT(TYPE, SUFFIX, arithmeticResult);              \
+  }
+
+#define MATH_ARITHMETIC_SATURATING_IMPLEMENT(TYPE, SUFFIX, MINIMUM, MAXIMUM)  \
+  MATH_ARITHMETIC_SATURATING_ADD_PROTOTYPE(TYPE, SUFFIX) {                    \
+    return ARITHMETIC_TYPED_FUNC(ClampAdd, SUFFIX)(                            \
+        a, b, (TYPE)(MINIMUM), (TYPE)(MAXIMUM));                              \
+  }                                                                            \
+  MATH_ARITHMETIC_SATURATING_SUB_PROTOTYPE(TYPE, SUFFIX) {                    \
+    return ARITHMETIC_TYPED_FUNC(ClampSub, SUFFIX)(                            \
+        a, b, (TYPE)(MINIMUM), (TYPE)(MAXIMUM));                              \
+  }                                                                            \
+  MATH_ARITHMETIC_SATURATING_MUL_PROTOTYPE(TYPE, SUFFIX) {                    \
+    return ARITHMETIC_TYPED_FUNC(ClampMul, SUFFIX)(                            \
+        a, b, (TYPE)(MINIMUM), (TYPE)(MAXIMUM));                              \
+  }
+
+/* EOF */

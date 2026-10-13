@@ -1,0 +1,48 @@
+#pragma once
+
+#define COMPARISON_TYPED_IMPLEMENT(TYPE, SUFFIX)                               \
+  COMPARISON_TYPED_PROTOTYPE(TYPE, SUFFIX) {                                   \
+    return left < right                                                        \
+               ? COMPARISON_LOWER_CONST                                       \
+               : (left > right ? COMPARISON_HIGHER_CONST                      \
+                               : COMPARISON_EQUAL_CONST);                      \
+  }
+
+#define COMPARISON_STRING_IMPLEMENT(TYPE, SUFFIX, FUNCTION)                    \
+  COMPARISON_STRING_PROTOTYPE(TYPE, SUFFIX) {                                  \
+    int result = FUNCTION(left, right);                                         \
+    return result < 0                                                          \
+               ? COMPARISON_LOWER_CONST                                       \
+               : (result > 0 ? COMPARISON_HIGHER_CONST                        \
+                             : COMPARISON_EQUAL_CONST);                        \
+  }
+
+COMPARISON_BYTES_PROTOTYPE {
+  size_t minimumSize = leftSize < rightSize ? leftSize : rightSize;
+  int result = memcmp(left, right, minimumSize);
+
+  if (result < 0)
+    return COMPARISON_LOWER_CONST;
+  if (result > 0)
+    return COMPARISON_HIGHER_CONST;
+  if (leftSize < rightSize)
+    return COMPARISON_LOWER_CONST;
+  if (leftSize > rightSize)
+    return COMPARISON_HIGHER_CONST;
+
+  return COMPARISON_EQUAL_CONST;
+}
+
+COMPARISON_INVOKE_PROTOTYPE {
+  return comparator(left, right);
+}
+
+COMPARISON_TYPED_IMPLEMENT(int, int)
+COMPARISON_TYPED_IMPLEMENT(float, float)
+COMPARISON_TYPED_IMPLEMENT(double, double)
+COMPARISON_TYPED_IMPLEMENT(long double, LongDouble)
+COMPARISON_STRING_IMPLEMENT(const char *, CString, strcmp)
+
+#undef COMPARISON_TYPED_IMPLEMENT
+#undef COMPARISON_STRING_IMPLEMENT
+/* EOF */

@@ -1,0 +1,262 @@
+name: 02 · Security
+
+# Static analysis, memory/thread/undefined-behaviour sanitizers, fuzzing of
+# untrusted-input decoders (Compression, FLAC, MP3) and the public-repository
+# privacy invariant. Required for merge through "Security / Gate".
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '41 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      fuzz_seconds:
+        description: 'libFuzzer budget per audio stream profile (seconds)'
+        type: number
+        required: false
+        default: 300
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Long campaigns on schedule/manual runs; short smoke campaigns otherwise.
+  AUDIO_FUZZ_SECONDS: ${{ github.event_name == 'schedule' && 300 || github.event_name == 'workflow_dispatch' && inputs.fuzz_seconds || 60 }}
+  STRICT_SAN: -std=c11 -Wall -Wextra -Wpedantic -Werror -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer
+  ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+  UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+
+jobs:
+  codeql:
+    name: Security / CodeQL / ${{ matrix.language }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      security-events: write
+      packages: read
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: c-cpp
+            build-mode: manual
+          - language: python
+            build-mode: none
+          - language: actions
+            build-mode: none
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          queries: security-extended
+
+      - name: Build C11 sources for analysis
+        if: ${{ matrix.build-mode == 'manual' }}
+        env:
+          CC: gcc
+        run: |
+          sh .github/scripts/test-portable-core.sh
+          make -C Codespace/Tests/Compression clean run CC=gcc
+          make -C Codespace/Tests/Network clean strict CC=gcc
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}
+
+  privacy:
+    name: Security / Public repository privacy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Reject local machine paths in tracked files
+        run: python3 .github/scripts/check-privacy.py
+
+  sanitizers:
+    name: Security / ASan + UBSan / all modules
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Every make suite under AddressSanitizer and UBSan
+        env:
+          CC: clang
+          SUITE_TAG: sanitize
+          SUITE_CFLAGS: ${{ env.STRICT_SAN }} -D_POSIX_C_SOURCE=200809L
+        run: sh .github/scripts/test-make-suites.sh
+
+  thread-sanitizer:
+    name: Security / ThreadSanitizer / Concurrency
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      TSAN_FLAGS: -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L -O1 -g -fsanitize=thread -fno-omit-frame-pointer
+      TSAN_OPTIONS: halt_on_error=1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Concurrency under ThreadSanitizer
+        run: make -C Codespace/Tests/Concurrency clean run CC=gcc BUILD=build-tsan CFLAGS="$TSAN_FLAGS"
+
+  decoder-sanitizers:
+    name: Security / Decoders / ASan + UBSan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Native Compression decoders
+        run: |
+          set -eu
+          for test in NativeInflate NativeCodec Zip Allocation Robustness; do
+            clang $STRICT_SAN "Codespace/Tests/Compression/$test.c" -o "$RUNNER_TEMP/compression-$test"
+            "$RUNNER_TEMP/compression-$test"
+          done
+
+      - name: Malformed FLAC arithmetic safety
+        working-directory: Codespace/Tests/Audio
+        run: |
+          set -eu
+          for test in FLACArithmetic FLACRobustness FLACFrames; do
+            clang $STRICT_SAN "$test.c" -o "$RUNNER_TEMP/$test-flac"
+            "$RUNNER_TEMP/$test-flac"
+          done
+
+      - name: Native MP3 side-info, reservoir and readers
+        working-directory: Codespace/Tests/Audio
+        run: |
+          set -eu
+          for test in MP3Recovery MP3CRC DeviceNative PCMProduction NativeCodecProduction FLACIntegrity CodecRobustnessFuzz MP3Headers MP3ID3Readers MP3MutationFuzz MP3SideInfo MP3Scalefactors MP3ScalefactorsLSF MP3Huffman MP3HuffmanRegions MP3Requant MP3Hybrid MP3IMDCT MP3Synthesis MP3Intensity MP3JointStereo MP3JointStereoLSF MP3Xing MP3Experimental MP3MemorySmoke CodecMP3OptIn CodecMP3StreamSmoke CodecMP3ReaderFaults; do
+            cc -std=c11 -Wall -Wextra -Wpedantic -Werror -fsanitize=address,undefined -fno-omit-frame-pointer "$test.c" -o "$RUNNER_TEMP/$test"
+            "$RUNNER_TEMP/$test"
+          done
+          cc -std=c11 -Wall -Wextra -Wpedantic -Werror -fsanitize=address,undefined -fno-omit-frame-pointer DeviceGuardTU_A.c DeviceGuardTU_B.c -o "$RUNNER_TEMP/device-guard-tu"
+          "$RUNNER_TEMP/device-guard-tu"
+
+  mp3-mutation-fuzz:
+    name: Security / Fuzz / MP3 mutations
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build fuzz target and seed corpus
+        working-directory: Codespace/Tests/Audio
+        run: |
+          set -eu
+          clang $STRICT_SAN -DCOSMERON_MP3_LIBFUZZER -fsanitize=fuzzer \
+            MP3MutationFuzz.c -o "$RUNNER_TEMP/mp3-fuzz"
+          corpus="$RUNNER_TEMP/mp3-corpus"
+          mkdir -p "$corpus"
+          python3 - "$corpus" <<'PY'
+          import sys
+          from pathlib import Path
+          folder = Path(sys.argv[1])
+          FRAME_BYTES = 417
+          FRAME_COUNT = 4
+          HEADER = bytes((0xFF, 0xFB, 0x90, 0xC4))
+          ID3_HEADER = b"ID3" + bytes((4, 0, 0, 0, 0, 0, 0))
+          SHORT_BYTES = 17
+          mp3 = bytearray(FRAME_BYTES * FRAME_COUNT)
+          for offset in range(0, len(mp3), FRAME_BYTES):
+              mp3[offset:offset + len(HEADER)] = HEADER
+          (folder / "mpeg1.mp3").write_bytes(mp3)
+          (folder / "id3.mp3").write_bytes(ID3_HEADER + mp3)
+          (folder / "short.mp3").write_bytes(mp3[:SHORT_BYTES])
+          PY
+          python3 MP3LSFIntensityFixture.py "$corpus/lsf-intensity.mp3" 1 1 mixed
+
+      - name: Deterministic mutations and guided fuzz iterations
+        working-directory: Codespace/Tests/Audio
+        run: |
+          set -eu
+          clang $STRICT_SAN MP3MutationFuzz.c -o "$RUNNER_TEMP/mp3-mutations"
+          "$RUNNER_TEMP/mp3-mutations"
+          "$RUNNER_TEMP/mp3-fuzz" -runs=1200 -max_len=8192 -timeout=5 -rss_limit_mb=1024 \
+            "$RUNNER_TEMP/mp3-corpus"
+
+  audio-stream-fuzz:
+    name: Security / Fuzz / Audio streams / recovery=${{ matrix.recovery }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        recovery: [0, 1]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore persistent corpus
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/audio-corpus
+          key: audio-corpus-${{ runner.os }}-${{ matrix.recovery }}-${{ github.run_id }}
+          restore-keys: audio-corpus-${{ runner.os }}-${{ matrix.recovery }}-
+
+      - name: Memory, seekable and forward-only callback fuzzing
+        working-directory: Codespace/Tests/Audio
+        run: |
+          set -eu
+          corpus="$RUNNER_TEMP/audio-corpus"
+          crashes="$RUNNER_TEMP/audio-crashes"
+          clang $STRICT_SAN -fsanitize=fuzzer -DCOSMERON_CODEC_LIBFUZZER \
+            -DAUDIO_CODEC_MP3_RECOVER_ERRORS=${{ matrix.recovery }} \
+            CodecRobustnessFuzz.c -o "$RUNNER_TEMP/audio-fuzz"
+          mkdir -p "$corpus" "$crashes"
+          cp Fixtures/Tone.mp3 Fixtures/Tone.flac "$corpus/"
+          python3 MP3MPEG1IntensityFixture.py "$corpus/mixed.mp3" 1 intensity 32 mixed 32000 1 64
+          python3 MP3LSFIntensityFixture.py "$corpus/lsf.mp3" 1 1 mixed
+          python3 MP3LSFIntensityFixture.py "$corpus/index.mp3" 1 1 long 8000 8 0 896
+          "$RUNNER_TEMP/audio-fuzz" -max_total_time="$AUDIO_FUZZ_SECONDS" -max_len=65536 -timeout=10 \
+            -rss_limit_mb=1536 -artifact_prefix="$crashes/" "$corpus"
+
+      - name: Upload reproducers
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: audio-fuzz-reproducers-${{ matrix.recovery }}
+          path: ${{ runner.temp }}/audio-crashes
+          if-no-files-found: ignore
+
+  gate:
+    name: Security / Gate
+    if: ${{ always() }}
+    needs:
+      - codeql
+      - privacy
+      - sanitizers
+      - thread-sanitizer
+      - decoder-sanitizers
+      - mp3-mutation-fuzz
+      - audio-stream-fuzz
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Summary and required checks
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          REPORT_TITLE: Security
+        run: python3 .github/scripts/report-results.py

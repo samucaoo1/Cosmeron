@@ -1,0 +1,143 @@
+#pragma once
+GRAPHICS_SURFACE_IS_VALID_PROTOTYPE {
+  size_t last;
+  if (!surface || !surface->pixels || !surface->size.x || !surface->size.y ||
+      surface->stride < surface->size.x)
+    return false;
+  if ((size_t)(surface->size.y - 1) > (SIZE_MAX - surface->size.x) / surface->stride)
+    return false;
+  last = (size_t)(surface->size.y - 1) * surface->stride + surface->size.x;
+  return last <= surface->capacity && surface->capacity <= SIZE_MAX / sizeof(uint32_t);
+}
+GRAPHICS_SURFACE_CREATE_PROTOTYPE {
+  GRAPHICS_TYPE(TSurface) value = {0};
+  void *memory = NULL;
+  OPSTATUS status;
+  if (!outSurface || outSurface->pixels || !size.x || !size.y)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if ((size_t)size.y > SIZE_MAX / size.x)
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  value.capacity = (size_t)size.x * size.y;
+  status = ALLOC_FUNC(AllocArray)(&memory, value.capacity, sizeof(uint32_t));
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+  value.pixels = (uint32_t *)memory;
+  value.size = size;
+  value.stride = size.x;
+  value.owns = true;
+  memset(value.pixels, 0, value.capacity * sizeof(uint32_t));
+  *outSurface = value;
+  return STATUS_CONST(SUCCESS);
+}
+GRAPHICS_SURFACE_BORROW_PROTOTYPE {
+  GRAPHICS_TYPE(TSurface) value = {0};
+  if (!outSurface || outSurface->pixels)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  value.pixels = pixels;
+  value.size = size;
+  value.stride = stride;
+  value.capacity = capacity;
+  if (!GRAPHICS_FUNC(Surface_IsValid)(&value))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  *outSurface = value;
+  return STATUS_CONST(SUCCESS);
+}
+GRAPHICS_SURFACE_FREE_PROTOTYPE {
+  if (!surface)
+    return;
+  if (surface->owns)
+    Memory_Free(surface->pixels);
+  memset(surface, 0, sizeof(*surface));
+}
+GRAPHICS_SURFACE_RESIZE_PROTOTYPE {
+  GRAPHICS_TYPE(TSurface) next = {0};
+  uint32_t y, width, height;
+  OPSTATUS status;
+  if (!GRAPHICS_FUNC(Surface_IsValid)(surface))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (!surface->owns)
+    return STATUS_CONST(NOT_SUPPORTED);
+  status = GRAPHICS_FUNC(Surface_Create)(&next, size);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+  width = size.x < surface->size.x ? size.x : surface->size.x;
+  height = size.y < surface->size.y ? size.y : surface->size.y;
+  for (y = 0; y < height; ++y)
+    memcpy(next.pixels + y * next.stride, surface->pixels + y * surface->stride,
+           width * sizeof(uint32_t));
+  GRAPHICS_FUNC(Surface_Free)(surface);
+  *surface = next;
+  return STATUS_CONST(SUCCESS);
+}
+GRAPHICS_SURFACE_VIEW_PROTOTYPE {
+  GRAPHICS_TYPE(TSurface) value;
+  size_t offset;
+  /* region is x, y, width, height (value1..value4). */
+  if (!GRAPHICS_FUNC(Surface_IsValid)(source) || !outView || outView->pixels || !region.value3 ||
+      !region.value4 || region.value1 >= source->size.x || region.value2 >= source->size.y ||
+      region.value3 > source->size.x - region.value1 ||
+      region.value4 > source->size.y - region.value2)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  value = *source;
+  offset = region.value2 * source->stride + region.value1;
+  value.pixels += offset;
+  value.capacity -= offset;
+  value.owns = false;
+  value.size.x = region.value3;
+  value.size.y = region.value4;
+  *outView = value;
+  return STATUS_CONST(SUCCESS);
+}
+GRAPHICS_SURFACE_CLEAR_PROTOTYPE {
+  uint32_t x, y;
+  if (!GRAPHICS_FUNC(Surface_IsValid)(surface))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  for (y = 0; y < surface->size.y; ++y)
+    for (x = 0; x < surface->size.x; ++x)
+      surface->pixels[y * surface->stride + x] = color;
+  return STATUS_CONST(SUCCESS);
+}
+GRAPHICS_SURFACE_BLEND_PROTOTYPE {
+  uint32_t a = source >> 24, da = destination >> 24;
+  uint32_t denominator = a * 255U + da * (255U - a), result;
+  unsigned shift;
+  if (!denominator)
+    return 0;
+  result = ((denominator + 127U) / 255U) << 24;
+  for (shift = 0; shift < 24; shift += 8) {
+    uint32_t s = (source >> shift) & 255U, d = (destination >> shift) & 255U;
+    uint32_t c = (s * a * 255U + d * da * (255U - a) + denominator / 2U) / denominator;
+    result |= c << shift;
+  }
+  return result;
+}
+
+GRAPHICS_SURFACE_OVERLAPS_PROTOTYPE {
+  uintptr_t a, b;
+  if (!GRAPHICS_FUNC(Surface_IsValid)(left) || !GRAPHICS_FUNC(Surface_IsValid)(right))
+    return false;
+  a = (uintptr_t)left->pixels;
+  b = (uintptr_t)right->pixels;
+  return a <= b ? b - a < left->capacity * sizeof(uint32_t)
+                : a - b < right->capacity * sizeof(uint32_t);
+}
+
+typedef struct GRAPHICS_INS(LineTarget) {
+  GRAPHICS_TYPE(TSurface) * surface;
+  uint32_t color;
+} GRAPHICS_INS(LineTarget);
+static inline void GRAPHICS_INS(LinePlot)(void *user, int64_t x, int64_t y) {
+  GRAPHICS_INS(LineTarget) *target = (GRAPHICS_INS(LineTarget) *)user;
+  uint32_t *p = target->surface->pixels + (size_t)y * target->surface->stride + (size_t)x;
+  *p = GRAPHICS_FUNC(Surface_Blend)(*p, target->color);
+}
+GRAPHICS_SURFACE_LINE_PROTOTYPE {
+  GRAPHICS_INS(LineTarget) target;
+  if (!GRAPHICS_FUNC(Surface_IsValid)(surface))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  target.surface = surface;
+  target.color = color;
+  COSMERON_MACRO_INTERNAL_GRAPHICS_SHARED(WalkLine)
+  (surface->size.x, surface->size.y, from, to, GRAPHICS_INS(LinePlot), &target);
+  return STATUS_CONST(SUCCESS);
+}

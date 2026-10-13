@@ -1,0 +1,37 @@
+/* Output */
+TERMINAL_FUNC(Print)
+TERMINAL_FUNC(PrintLn)
+TERMINAL_FUNC(Write)
+TERMINAL_FUNC(WriteLn)
+TERMINAL_FUNC(PrintEx)
+TERMINAL_FUNC(WriteEx)
+TERMINAL_FUNC(Flush)
+
+/* Input */
+TERMINAL_FUNC(Read)
+TERMINAL_FUNC(ReadLine)
+TERMINAL_FUNC(Scan)
+TERMINAL_FUNC(ScanLine)
+TERMINAL_FUNC(Input)
+
+/* Cursor */
+TERMINAL_FUNC(Cursor, GetPosition)
+TERMINAL_FUNC(Cursor, SetPosition)
+TERMINAL_FUNC(Cursor, Move)
+TERMINAL_FUNC(Cursor, Show)
+TERMINAL_FUNC(Cursor, Hide)
+
+/* Screen */
+TERMINAL_FUNC(Clear)
+TERMINAL_FUNC(ClearLine)
+TERMINAL_FUNC(GetSize)
+
+/* Style */
+TERMINAL_FUNC(Color, Set)
+TERMINAL_FUNC(Color, Reset)
+TERMINAL_FUNC(Attribute, Set)
+TERMINAL_FUNC(Attribute, Reset)
+
+/* Terminal state */
+TERMINAL_FUNC(Title, Set)
+TERMINAL_FUNC(Bell)

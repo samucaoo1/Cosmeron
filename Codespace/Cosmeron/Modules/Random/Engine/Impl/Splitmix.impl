@@ -1,0 +1,6 @@
+#include "../Seed.impl"
+RANDOM_ENGINE_SEED_PROTOTYPE(Splitmix) { state->value = seed; }
+RANDOM_ENGINE_NEXT_PROTOTYPE(Splitmix) {
+  return RANDOM_ENGINE_SPLITMIX_STEP(state->value);
+}
+

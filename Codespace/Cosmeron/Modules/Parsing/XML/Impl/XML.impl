@@ -1,0 +1,531 @@
+#pragma once
+static inline bool PARSING_INS(XMLChar)(uint32_t cp) {
+  return cp == 9 || cp == 10 || cp == 13 || (cp >= 0x20 && cp <= 0xd7ff) || (cp >= 0xe000 && cp <= 0xfffd) || (cp >= 0x10000 && cp <= 0x10ffff);
+}
+
+static inline OPSTATUS PARSING_INS(XMLDecode)(PARSING_TYPE(TSlice) source, PARSING_INS(Buffer) *buffer, bool entities, bool attribute) {
+  size_t i = 0;
+  OPSTATUS status = STATUS_CONST(SUCCESS);
+  while (i < source.size && status == STATUS_CONST(SUCCESS)) {
+    if (entities && source.data[i] == '&') {
+      const char *end = (const char *)memchr(source.data + i, ';', source.size - i);
+      uint32_t cp = 0;
+      PARSING_TYPE(TSlice) name = {0};
+      if (!end) return STATUS_CONST(INVALID_SEQUENCE);
+      name = PARSING_INS(Slice)(source.data + i + 1, (size_t)(end - source.data - i - 1));
+      if (PARSING_INS(Equal)(name, PARSING_INS(Slice)("amp", 3))) cp = '&';
+      else if (PARSING_INS(Equal)(name, PARSING_INS(Slice)("lt", 2))) cp = '<';
+      else if (PARSING_INS(Equal)(name, PARSING_INS(Slice)("gt", 2))) cp = '>';
+      else if (PARSING_INS(Equal)(name, PARSING_INS(Slice)("quot", 4))) cp = '"';
+      else if (PARSING_INS(Equal)(name, PARSING_INS(Slice)("apos", 4))) cp = '\'';
+      else if (name.size && name.data[0] == '#') {
+        size_t n = 1, base = 10;
+        if (n < name.size && name.data[n] == 'x') {
+          ++n;
+          base = 16;
+        }
+        if (n == name.size) return STATUS_CONST(INVALID_SEQUENCE);
+        for (; n < name.size; ++n) {
+          int digit = PARSING_INS(Hex)(name.data[n]);
+          if (digit < 0 || (size_t)digit >= base || cp > (0x10ffffu - (unsigned)digit) / base) return STATUS_CONST(INVALID_SEQUENCE);
+          cp = cp * (uint32_t)base + (unsigned)digit;
+        }
+      } else return STATUS_CONST(NOT_SUPPORTED);
+      if (!PARSING_INS(XMLChar)(cp)) return STATUS_CONST(INVALID_SEQUENCE);
+      {
+        unsigned char encoded[4];
+        size_t units = 0;
+        status = TEXT_UTF8_FUNC(Encode)(cp, encoded, sizeof(encoded), &units);
+        if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(buffer, (const char *)encoded, units);
+      }
+      i = (size_t)(end - source.data) + 1;
+    } else {
+      TEXT_TYPE(TChar32) cp;
+      size_t units = 0;
+      status = TEXT_UTF8_FUNC(Decode)((const unsigned char *)source.data + i, source.size - i, &cp, &units);
+      if (status != STATUS_CONST(SUCCESS) || !PARSING_INS(XMLChar)(cp)) return STATUS_CONST(INVALID_SEQUENCE);
+      if (cp == '\r') {
+        const char normalized = attribute ? ' ' : '\n';
+        status = PARSING_INS(Append)(buffer, &normalized, 1);
+        i += units;
+        if (i < source.size && source.data[i] == '\n') ++i;
+      } else if (attribute && (cp == '\n' || cp == '\t')) {
+        status = PARSING_INS(Append)(buffer, " ", 1);
+        i += units;
+      } else {
+        status = PARSING_INS(Append)(buffer, source.data + i, units);
+        i += units;
+      }
+    }
+  }
+  return status == STATUS_CONST(SUCCESS) ? PARSING_INS(Append)(buffer, "", 0) : status;
+}
+
+static inline bool PARSING_INS(XMLNameStart)(uint32_t cp) {
+  return cp == ':' || cp == '_' || (cp >= 'A' && cp <= 'Z') || (cp >= 'a' && cp <= 'z') ||
+  (cp >= 0xc0 && cp <= 0xd6) || (cp >= 0xd8 && cp <= 0xf6) || (cp >= 0xf8 && cp <= 0x2ff) ||
+  (cp >= 0x370 && cp <= 0x37d) || (cp >= 0x37f && cp <= 0x1fff) || (cp >= 0x200c && cp <= 0x200d) ||
+  (cp >= 0x2070 && cp <= 0x218f) || (cp >= 0x2c00 && cp <= 0x2fef) || (cp >= 0x3001 && cp <= 0xd7ff) ||
+  (cp >= 0xf900 && cp <= 0xfdcf) || (cp >= 0xfdf0 && cp <= 0xfffd) || (cp >= 0x10000 && cp <= 0xeffff);
+}
+
+static inline bool PARSING_INS(XMLName)(PARSING_INS(Cursor) *cursor, PARSING_TYPE(TSlice) *out) {
+  size_t start = cursor->position;
+  bool first = true;
+  while (cursor->position < cursor->size) {
+    TEXT_TYPE(TChar32) cp;
+    size_t units = 0;
+    if (TEXT_UTF8_FUNC(Decode)((const unsigned char *)cursor->source + cursor->position, cursor->size - cursor->position, &cp, &units) != STATUS_CONST(SUCCESS)) break;
+    if (!PARSING_INS(XMLNameStart)(cp) && (first || !(cp == '-' || cp == '.' || (cp >= '0' && cp <= '9') || cp == 0xb7 || (cp >= 0x300 && cp <= 0x36f) || (cp >= 0x203f && cp <= 0x2040)))) break;
+    cursor->position += units;
+    first = false;
+  }
+  *out = PARSING_INS(Slice)(cursor->source + start, cursor->position - start);
+  return !first;
+}
+
+static inline void PARSING_INS(XMLSpace)(PARSING_INS(Cursor) *cursor) {
+  while (cursor->position < cursor->size && PARSING_INS(Space)(cursor->source[cursor->position])) ++cursor->position;
+}
+
+static inline OPSTATUS PARSING_INS(XMLAttribute)(PARSING_INS(Cursor) *cursor, PARSING_TYPE(TXMLEvent) *event) {
+  char quote;
+  size_t start = 0;
+  if (!PARSING_INS(XMLName)(cursor, &event->name)) return STATUS_CONST(INVALID_SEQUENCE);
+  PARSING_INS(XMLSpace)(cursor);
+  if (cursor->position >= cursor->size || cursor->source[cursor->position++] != '=') return STATUS_CONST(INVALID_SEQUENCE);
+  PARSING_INS(XMLSpace)(cursor);
+  if (cursor->position >= cursor->size || (cursor->source[cursor->position] != '\'' && cursor->source[cursor->position] != '"')) return STATUS_CONST(INVALID_SEQUENCE);
+  quote = cursor->source[cursor->position++];
+  start = cursor->position;
+  while (cursor->position < cursor->size && cursor->source[cursor->position] != quote) {
+    if (cursor->source[cursor->position] == '<') return STATUS_CONST(INVALID_SEQUENCE);
+    ++cursor->position;
+  }
+  if (cursor->position == cursor->size) return STATUS_CONST(INCOMPLETE_SEQUENCE);
+  event->text = PARSING_INS(Slice)(cursor->source + start, cursor->position - start);
+  ++cursor->position;
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_XML_READER_CREATE_PROTOTYPE {
+  PARSING_TYPE(TXMLReader) reader = {0};
+  OPSTATUS status;
+  if (!outReader) return STATUS_CONST(INVALID_ARGUMENT);
+  status = PARSING_INS(CursorCreate)(source, size, NULL, diagnostic, &reader.cursor);
+  if (status == STATUS_CONST(SUCCESS)) *outReader = reader;
+  return status;
+}
+
+PARSING_XML_NEXT_PROTOTYPE {
+  PARSING_TYPE(TXMLReader) next = {0};
+  PARSING_TYPE(TXMLEvent) event = {0};
+  OPSTATUS status = STATUS_CONST(SUCCESS);
+  if (!reader || !outEvent || !outEnd) return STATUS_CONST(INVALID_ARGUMENT);
+  next = *reader;
+  for (;;) {
+    PARSING_INS(Cursor) *cursor = &next.cursor;
+    size_t start = cursor->position;
+    if (next.inTag) {
+      PARSING_INS(XMLSpace)(cursor);
+      if (cursor->position == cursor->size) {
+        status = STATUS_CONST(INCOMPLETE_SEQUENCE);
+        break;
+      }
+      if (cursor->source[cursor->position] == '>') {
+        ++cursor->position;
+        next.inTag = false;
+        continue;
+      }
+      if (cursor->source[cursor->position] == '/' && cursor->position + 1 < cursor->size && cursor->source[cursor->position+1] == '>') {
+        cursor->position += 2;
+        next.inTag = false;
+        event.kind = PARSING_CONST(XML_END);
+        event.name = next.stack[--next.depth];
+        event.depth = next.depth;
+        if (!next.depth) next.rootClosed = true;
+        break;
+      }
+      if (start == cursor->position) {
+        status = STATUS_CONST(INVALID_SEQUENCE);
+        break;
+      }
+      event.kind = PARSING_CONST(XML_ATTRIBUTE);
+      event.depth = next.depth - 1;
+      status = PARSING_INS(XMLAttribute)(cursor, &event);
+      if (status == STATUS_CONST(SUCCESS)) {
+        PARSING_INS(Cursor) previous = *cursor;
+        previous.position = next.attributeStart;
+        while (previous.position < start) {
+          PARSING_TYPE(TXMLEvent) candidate = {0};
+          PARSING_INS(XMLSpace)(&previous);
+          if (previous.position >= start) break;
+          if (PARSING_INS(XMLAttribute)(&previous, &candidate) != STATUS_CONST(SUCCESS)) break;
+          if (PARSING_INS(Equal)(candidate.name, event.name)) {
+            status = STATUS_CONST(ALREADY_EXISTS);
+            break;
+          }
+        }
+      }
+      break;
+    }
+    if (start == cursor->size) {
+      if (next.depth || !next.rootSeen) {
+        status = STATUS_CONST(INCOMPLETE_SEQUENCE);
+        break;
+      }
+      *reader = next;
+      *outEnd = true;
+      return STATUS_CONST(SUCCESS);
+    }
+    event.depth = next.depth;
+    if (cursor->source[start] != '<') {
+      while (cursor->position < cursor->size && cursor->source[cursor->position] != '<') ++cursor->position;
+      event.kind = PARSING_CONST(XML_TEXT);
+      event.text = PARSING_INS(Slice)(cursor->source + start, cursor->position - start);
+      if (!next.depth) {
+        if (PARSING_INS(Trim)(event.text).size) {
+          status = STATUS_CONST(INVALID_SEQUENCE);
+          break;
+        }
+        continue;
+      }
+      {
+        size_t i = 0;
+        for (i = 0; i + 2 < event.text.size; ++i) if (!memcmp(event.text.data + i, "]]>", 3)) {
+          status = STATUS_CONST(INVALID_SEQUENCE);
+          break;
+        }
+      }
+      break;
+    }
+    ++cursor->position;
+    if (cursor->position == cursor->size) {
+      status = STATUS_CONST(INCOMPLETE_SEQUENCE);
+      break;
+    }
+    if (cursor->source[cursor->position] == '/') {
+      ++cursor->position;
+      event.kind = PARSING_CONST(XML_END);
+      if (!next.depth || !PARSING_INS(XMLName)(cursor, &event.name) || !PARSING_INS(Equal)(event.name, next.stack[next.depth-1])) {
+        status = STATUS_CONST(INVALID_SEQUENCE);
+        break;
+      }
+      PARSING_INS(XMLSpace)(cursor);
+      if (cursor->position == cursor->size || cursor->source[cursor->position++] != '>') {
+        status = STATUS_CONST(INVALID_SEQUENCE);
+        break;
+      }
+      event.depth = --next.depth;
+      if (!next.depth) next.rootClosed = true;
+      break;
+    }
+    if (cursor->source[cursor->position] == '!' || cursor->source[cursor->position] == '?') {
+      const char *close;
+      size_t closeSize, contentStart;
+      bool pi = cursor->source[cursor->position] == '?';
+      if (pi) {
+        ++cursor->position;
+        event.kind = PARSING_CONST(XML_PI);
+        if (!PARSING_INS(XMLName)(cursor, &event.name)) {
+          status = STATUS_CONST(INVALID_SEQUENCE);
+          break;
+        }
+        if (cursor->position < cursor->size && !PARSING_INS(Space)(cursor->source[cursor->position]) && cursor->source[cursor->position] != '?') {
+          status = STATUS_CONST(INVALID_SEQUENCE);
+          break;
+        }
+        PARSING_INS(XMLSpace)(cursor);
+        close = "?>";
+        closeSize = 2;
+      } else if (cursor->size - cursor->position >= 3 && !memcmp(cursor->source + cursor->position, "!--", 3)) {
+        cursor->position += 3;
+        event.kind = PARSING_CONST(XML_COMMENT);
+        close = "-->";
+        closeSize = 3;
+      } else if (cursor->size - cursor->position >= 8 && !memcmp(cursor->source + cursor->position, "![CDATA[", 8)) {
+        if (!next.depth) {
+          status = STATUS_CONST(INVALID_SEQUENCE);
+          break;
+        }
+        cursor->position += 8;
+        event.kind = PARSING_CONST(XML_CDATA);
+        close = "]]>";
+        closeSize = 3;
+      } else {
+        status = STATUS_CONST(NOT_SUPPORTED);
+        break;
+      }
+      contentStart = cursor->position;
+      while (cursor->size - cursor->position >= closeSize && memcmp(cursor->source + cursor->position, close, closeSize)) ++cursor->position;
+      if (cursor->size - cursor->position < closeSize) {
+        status = STATUS_CONST(INCOMPLETE_SEQUENCE);
+        break;
+      }
+      event.text = PARSING_INS(Slice)(cursor->source + contentStart, cursor->position - contentStart);
+      cursor->position += closeSize;
+      if (event.kind == PARSING_CONST(XML_COMMENT)) {
+        size_t i = 0;
+        for (i = 0; i + 1 < event.text.size; ++i) if (event.text.data[i] == '-' && event.text.data[i+1] == '-') {
+          status = STATUS_CONST(INVALID_SEQUENCE);
+          break;
+        }
+        if (event.text.size && event.text.data[event.text.size-1] == '-') status = STATUS_CONST(INVALID_SEQUENCE);
+      }
+      if (pi && event.name.size == 3 && (event.name.data[0] == 'x' || event.name.data[0] == 'X') && (event.name.data[1] == 'm' || event.name.data[1] == 'M') && (event.name.data[2] == 'l' || event.name.data[2] == 'L')) {
+        /* Declaration support is deliberately strict and UTF-8-only. */
+        PARSING_INS(Cursor) declaration = *cursor;
+        PARSING_TYPE(TXMLEvent) attribute = {0};
+        size_t n = 0;
+        bool standaloneSeen = false;
+        declaration.position = contentStart;
+        declaration.size = contentStart + event.text.size;
+        if (memcmp(event.name.data, "xml", 3) || start != (cursor->size >= 3 && !memcmp(cursor->source, "\xef\xbb\xbf", 3) ? 3u : 0u)) {
+          status = STATUS_CONST(INVALID_SEQUENCE);
+          break;
+        }
+        while (declaration.position < declaration.size) {
+          size_t previousPosition = declaration.position;
+          PARSING_INS(XMLSpace)(&declaration);
+          if (n && previousPosition == declaration.position) { status = STATUS_CONST(INVALID_SEQUENCE); break; }
+          if (declaration.position == declaration.size) break;
+          if (PARSING_INS(XMLAttribute)(&declaration, &attribute) != STATUS_CONST(SUCCESS)) {
+            status = STATUS_CONST(INVALID_SEQUENCE);
+            break;
+          }
+          if (!n) {
+            if (!PARSING_INS(Equal)(attribute.name, PARSING_INS(Slice)("version", 7)) || !PARSING_INS(Equal)(attribute.text, PARSING_INS(Slice)("1.0", 3))) status = STATUS_CONST(NOT_SUPPORTED);
+          } else if (PARSING_INS(Equal)(attribute.name, PARSING_INS(Slice)("encoding", 8)) && n == 1) {
+            if (!PARSING_INS(Equal)(attribute.text, PARSING_INS(Slice)("UTF-8", 5)) && !PARSING_INS(Equal)(attribute.text, PARSING_INS(Slice)("utf-8", 5))) status = STATUS_CONST(NOT_SUPPORTED);
+          } else if (PARSING_INS(Equal)(attribute.name, PARSING_INS(Slice)("standalone", 10)) && n <= 2 && !standaloneSeen) {
+            standaloneSeen = true;
+            if (!PARSING_INS(Equal)(attribute.text, PARSING_INS(Slice)("yes", 3)) && !PARSING_INS(Equal)(attribute.text, PARSING_INS(Slice)("no", 2))) status = STATUS_CONST(INVALID_SEQUENCE);
+          } else status = STATUS_CONST(INVALID_SEQUENCE);
+          ++n;
+          if (status != STATUS_CONST(SUCCESS)) break;
+        }
+        if (!n) status = STATUS_CONST(INVALID_SEQUENCE);
+      }
+      break;
+    }
+    event.kind = PARSING_CONST(XML_BEGIN);
+    if (next.rootClosed || !PARSING_INS(XMLName)(cursor, &event.name)) {
+      status = STATUS_CONST(INVALID_SEQUENCE);
+      break;
+    }
+    if (next.depth >= PARSING_CONST(DEFAULT_DEPTH)) {
+      status = STATUS_CONST(OUT_OF_RANGE);
+      break;
+    }
+    next.stack[next.depth++] = event.name;
+    next.inTag = true;
+    next.attributeStart = cursor->position;
+    next.rootSeen = true;
+    break;
+  }
+  if (status == STATUS_CONST(SUCCESS) && event.text.size) {
+    status = PARSING_INS(XMLDecode)(event.text, NULL,
+    event.kind == PARSING_CONST(XML_TEXT) || event.kind == PARSING_CONST(XML_ATTRIBUTE), event.kind == PARSING_CONST(XML_ATTRIBUTE));
+  }
+  if (status == STATUS_CONST(SUCCESS) && ++next.cursor.nodes > next.cursor.limits.maxNodes) status = STATUS_CONST(OUT_OF_RANGE);
+  if (status != STATUS_CONST(SUCCESS)) return PARSING_INS(Fail)(&next.cursor,
+  status == STATUS_CONST(NOT_SUPPORTED) ? PARSING_CONST(DIAGNOSTIC_UNSUPPORTED) :
+  (status == STATUS_CONST(ALREADY_EXISTS) ? PARSING_CONST(DIAGNOSTIC_DUPLICATE) : PARSING_CONST(DIAGNOSTIC_SYNTAX)), status);
+  *reader = next;
+  *outEvent = event;
+  *outEnd = false;
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_XML_TEXT_WRITE_PROTOTYPE {
+  PARSING_INS(Buffer) text = {0};
+  OPSTATUS status;
+  if (!event || (!event->text.data && event->text.size) || !outSize || (!buffer && capacity)) return STATUS_CONST(INVALID_ARGUMENT);
+  status = PARSING_INS(XMLDecode)(event->text, &text, event->kind == PARSING_CONST(XML_TEXT) || event->kind == PARSING_CONST(XML_ATTRIBUTE), event->kind == PARSING_CONST(XML_ATTRIBUTE));
+  if (status != STATUS_CONST(SUCCESS)) {
+    free(text.data);
+    return status;
+  }
+  return PARSING_INS(Output)(&text, buffer, capacity, outSize);
+}
+
+PARSING_XML_FREE_PROTOTYPE {
+  size_t i = 0;
+  if (!document) return;
+  for (i = 0; i < document->events.size; ++i) {
+    free((void *)document->events.data[i].name.data);
+    free((void *)document->events.data[i].text.data);
+  }
+  FLAT_VECTOR_FUNC(PARSING_INS(XMLEvents), Destroy)(&document->events);
+}
+
+PARSING_XML_PARSE_PROTOTYPE {
+  PARSING_TYPE(TXMLReader) reader = {0};
+  PARSING_TYPE(TXMLDocument) document = {0};
+  PARSING_TYPE(TXMLEvent) event = {0};
+  OPSTATUS status;
+  bool end = false;
+  if (!outDocument || outDocument->events.data || outDocument->events.size) return STATUS_CONST(INVALID_ARGUMENT);
+  status = PARSING_FUNC(XML_ReaderCreate)(source, size, &reader, diagnostic);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  status = FLAT_VECTOR_FUNC(PARSING_INS(XMLEvents), Init)(&document.events);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  while ((status = PARSING_FUNC(XML_Next)(&reader, &event, &end)) == STATUS_CONST(SUCCESS) && !end) {
+    char *name = NULL;
+    PARSING_INS(Buffer) text = {0};
+    status = PARSING_INS(Copy)(event.name, &name);
+    if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(XMLDecode)(event.text, &text, event.kind == PARSING_CONST(XML_TEXT) || event.kind == PARSING_CONST(XML_ATTRIBUTE), event.kind == PARSING_CONST(XML_ATTRIBUTE));
+    if (status == STATUS_CONST(SUCCESS)) {
+      event.name.data = name;
+      event.text = PARSING_INS(Slice)(text.data, text.size);
+      status = FLAT_VECTOR_FUNC(PARSING_INS(XMLEvents), PushBack)(&document.events, event);
+    }
+    if (status != STATUS_CONST(SUCCESS)) {
+      free(name);
+      free(text.data);
+      break;
+    }
+  }
+  if (status != STATUS_CONST(SUCCESS)) {
+    PARSING_FUNC(XML_Free)(&document);
+    return status;
+  }
+  *outDocument = document;
+  if (diagnostic) memset(diagnostic, 0, sizeof(*diagnostic));
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_XML_ATTRIBUTE_PROTOTYPE {
+  size_t i = 0;
+  if (!document || !name || !outValue) return STATUS_CONST(INVALID_ARGUMENT);
+  if (elementIndex >= document->events.size || document->events.data[elementIndex].kind != PARSING_CONST(XML_BEGIN)) return STATUS_CONST(OUT_OF_RANGE);
+  for (i = elementIndex + 1; i < document->events.size && document->events.data[i].kind == PARSING_CONST(XML_ATTRIBUTE); ++i)
+  if (PARSING_INS(Equal)(document->events.data[i].name, PARSING_INS(Slice)(name, strlen(name)))) {
+    *outValue = document->events.data[i].text;
+    return STATUS_CONST(SUCCESS);
+  }
+  return STATUS_CONST(NOT_FOUND);
+}
+
+PARSING_XML_SET_ATTRIBUTE_PROTOTYPE {
+  size_t i = 0;
+  char *copy;
+  OPSTATUS status;
+  PARSING_INS(Cursor) cursor = {0};
+  PARSING_TYPE(TSlice) parsedName = {0};
+  PARSING_INS(Buffer) validated = {0};
+  if (!document || !name || (!value.data && value.size)) return STATUS_CONST(INVALID_ARGUMENT);
+  cursor.source = name;
+  cursor.size = strlen(name);
+  if (!PARSING_INS(XMLName)(&cursor, &parsedName) || cursor.position != cursor.size) return STATUS_CONST(INVALID_ARGUMENT);
+  status = PARSING_INS(XMLDecode)(value, &validated, false, false);
+  free(validated.data);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  if (elementIndex >= document->events.size || document->events.data[elementIndex].kind != PARSING_CONST(XML_BEGIN)) return STATUS_CONST(OUT_OF_RANGE);
+  status = PARSING_INS(Copy)(value, &copy);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  for (i = elementIndex + 1; i < document->events.size && document->events.data[i].kind == PARSING_CONST(XML_ATTRIBUTE); ++i)
+  if (PARSING_INS(Equal)(document->events.data[i].name, parsedName)) {
+    free((void *)document->events.data[i].text.data);
+    document->events.data[i].text = PARSING_INS(Slice)(copy, value.size);
+    return STATUS_CONST(SUCCESS);
+  }
+  {
+    PARSING_TYPE(TXMLEvent) event = {0};
+    char *ownedName;
+    status = PARSING_INS(Copy)(parsedName, &ownedName);
+    if (status == STATUS_CONST(SUCCESS)) {
+      event.kind = PARSING_CONST(XML_ATTRIBUTE);
+      event.depth = document->events.data[elementIndex].depth;
+      event.name = PARSING_INS(Slice)(ownedName, parsedName.size);
+      event.text = PARSING_INS(Slice)(copy, value.size);
+      status = FLAT_VECTOR_FUNC(PARSING_INS(XMLEvents), Insert)(&document->events, i, event);
+      if (status != STATUS_CONST(SUCCESS)) free(ownedName);
+    }
+  }
+  if (status != STATUS_CONST(SUCCESS)) free(copy);
+  return status;
+}
+
+static inline OPSTATUS PARSING_INS(XMLEscape)(PARSING_INS(Buffer) *buffer, PARSING_TYPE(TSlice) text, bool attribute) {
+  size_t i = 0;
+  OPSTATUS status = STATUS_CONST(SUCCESS);
+  for (i = 0; i < text.size && status == STATUS_CONST(SUCCESS); ++i) {
+    const char *replacement = NULL;
+    switch (text.data[i]) {
+      case '&': replacement = "&amp;";
+      break;
+      case '<': replacement = "&lt;";
+      break;
+      case '>': replacement = "&gt;";
+      break;
+      case '"': if (attribute) replacement = "&quot;";
+      break;
+      case '\t': if (attribute) replacement = "&#9;";
+      break;
+      case '\n': if (attribute) replacement = "&#10;";
+      break;
+      case '\r': replacement = "&#13;";
+      break;
+      default: break;
+    }
+    status = replacement ? PARSING_INS(Append)(buffer, replacement, strlen(replacement)) : PARSING_INS(Append)(buffer, text.data + i, 1);
+  }
+  return status;
+}
+
+PARSING_XML_WRITE_PROTOTYPE {
+  PARSING_INS(Buffer) text = {0};
+  size_t i = 0;
+  bool open = false;
+  OPSTATUS status = STATUS_CONST(SUCCESS);
+  if (!document || !outSize || (!buffer && capacity)) return STATUS_CONST(INVALID_ARGUMENT);
+  for (i = 0; status == STATUS_CONST(SUCCESS) && i < document->events.size; ++i) {
+    const PARSING_TYPE(TXMLEvent) *event = document->events.data + i;
+    if (open && event->kind != PARSING_CONST(XML_ATTRIBUTE)) {
+      status = PARSING_INS(Append)(&text, ">", 1);
+      open = false;
+    }
+    if (status != STATUS_CONST(SUCCESS)) break;
+    switch (event->kind) {
+      case PARSING_CONST(XML_BEGIN):
+      status = PARSING_INS(Append)(&text, "<", 1);
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, event->name.data, event->name.size);
+      open = true;
+      break;
+      case PARSING_CONST(XML_ATTRIBUTE):
+      status = PARSING_INS(Append)(&text, " ", 1);
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, event->name.data, event->name.size);
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, "=\"", 2);
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(XMLEscape)(&text, event->text, true);
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, "\"", 1);
+      break;
+      case PARSING_CONST(XML_END):
+      status = PARSING_INS(Append)(&text, "</", 2);
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, event->name.data, event->name.size);
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, ">", 1);
+      break;
+      case PARSING_CONST(XML_TEXT): case PARSING_CONST(XML_CDATA): status = PARSING_INS(XMLEscape)(&text, event->text, false);
+      break;
+      case PARSING_CONST(XML_COMMENT):
+      status = PARSING_INS(Append)(&text, "<!--", 4);
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, event->text.data, event->text.size);
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, "-->", 3);
+      break;
+      case PARSING_CONST(XML_PI):
+      status = PARSING_INS(Append)(&text, "<?", 2);
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, event->name.data, event->name.size);
+      if (status == STATUS_CONST(SUCCESS) && event->text.size) status = PARSING_INS(Append)(&text, " ", 1);
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, event->text.data, event->text.size);
+      if (status == STATUS_CONST(SUCCESS)) status = PARSING_INS(Append)(&text, "?>", 2);
+      break;
+      default: status = STATUS_CONST(INVALID_ARGUMENT);
+      break;
+    }
+  }
+  if (status != STATUS_CONST(SUCCESS)) {
+    free(text.data);
+    return status;
+  }
+  return PARSING_INS(Output)(&text, buffer, capacity, outSize);
+}

@@ -1,0 +1,127 @@
+#pragma once
+
+#define TDECIMAL_IMPLEMENT(SUFFIX, TYPE)                                       \
+  DATA_TYPE_IMPLEMENT_CLEAR(TYPE, TDECIMAL_CLEAR_PROTOTYPE(SUFFIX),                \
+                            TDECIMAL_TYPE(SUFFIX))                             \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_INIT(TYPE, TDECIMAL_INIT_PROTOTYPE(SUFFIX),                  \
+                           TDECIMAL_FUNC(SUFFIX, Clear), TDECIMAL_TYPE(SUFFIX))\
+                                                                               \
+  DATA_TYPE_IMPLEMENT_ADD(TYPE, TDECIMAL_ADD_PROTOTYPE(SUFFIX),                    \
+                          TDECIMAL_TYPE(SUFFIX))                               \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_SUB(TYPE, TDECIMAL_SUB_PROTOTYPE(SUFFIX),                    \
+                          TDECIMAL_TYPE(SUFFIX))                               \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_AND(TYPE, TDECIMAL_AND_PROTOTYPE(SUFFIX),                    \
+                          TDECIMAL_TYPE(SUFFIX))                               \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_OR(TYPE, TDECIMAL_OR_PROTOTYPE(SUFFIX),                      \
+                          TDECIMAL_TYPE(SUFFIX))                               \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_XOR(TYPE, TDECIMAL_XOR_PROTOTYPE(SUFFIX),                    \
+                           TDECIMAL_TYPE(SUFFIX))                              \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_NOT(TYPE, TDECIMAL_NOT_PROTOTYPE(SUFFIX),                    \
+                           TDECIMAL_TYPE(SUFFIX))                              \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_SHIFT_LEFT(TYPE, TDECIMAL_SHIFT_LEFT_PROTOTYPE(SUFFIX),       \
+                                  TDECIMAL_TYPE(SUFFIX))                       \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_SHIFT_RIGHT(TYPE, TDECIMAL_SHIFT_RIGHT_PROTOTYPE(SUFFIX),     \
+                                   TDECIMAL_TYPE(SUFFIX))                      \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_ROTATE_LEFT(TYPE, TDECIMAL_ROTATE_LEFT_PROTOTYPE(SUFFIX),     \
+                                  TDECIMAL_TYPE(SUFFIX),                       \
+                                  TDECIMAL_FUNC(SUFFIX, ShiftLeft),            \
+                                  TDECIMAL_FUNC(SUFFIX, ShiftRight))           \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_ROTATE_RIGHT(TYPE, TDECIMAL_ROTATE_RIGHT_PROTOTYPE(SUFFIX),   \
+                                   TDECIMAL_TYPE(SUFFIX),                      \
+                                   TDECIMAL_FUNC(SUFFIX, ShiftLeft),           \
+                                   TDECIMAL_FUNC(SUFFIX, ShiftRight))          \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_BIT_SET(TYPE, TDECIMAL_BIT_SET_PROTOTYPE(SUFFIX),             \
+                              TDECIMAL_TYPE(SUFFIX), 64)                       \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_BIT_CLEAR(TYPE, TDECIMAL_BIT_CLEAR_PROTOTYPE(SUFFIX),         \
+                                TDECIMAL_TYPE(SUFFIX), 64)                     \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_BIT_CHECK(TYPE, TDECIMAL_BIT_CHECK_PROTOTYPE(SUFFIX),         \
+                                TDECIMAL_TYPE(SUFFIX), 64)                     \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_MUL(TYPE, TDECIMAL_MUL_PROTOTYPE(SUFFIX),                       \
+                           TDECIMAL_TYPE(SUFFIX), TDECIMAL_FUNC(SUFFIX, Add),          \
+                           TDECIMAL_FUNC(SUFFIX, ShiftLeft))                       \
+  DATA_TYPE_IMPLEMENT_DIV_MOD(TYPE, TDECIMAL_INS(SUFFIX, DivMod),               \
+                              TDECIMAL_TYPE(SUFFIX), TDECIMAL_FUNC(SUFFIX, IsZero),     \
+                              TDECIMAL_FUNC(SUFFIX, Compare), TDECIMAL_FUNC(SUFFIX, Sub), \
+                              TDECIMAL_FUNC(SUFFIX, ShiftLeft))                    \
+  TDECIMAL_DIV_MOD_PROTOTYPE(SUFFIX) {                                          \
+    if (!outQuotient || !outRemainder)                                        \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    return TDECIMAL_INS(SUFFIX, DivMod)(                                       \
+        dividend, divisor, outQuotient, outRemainder);                         \
+  }                                                                            \
+  TDECIMAL_DIV_PROTOTYPE(SUFFIX) {         \
+    if (!dividendDecimal || !divisorDecimal)                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    TDECIMAL_TYPE(SUFFIX) quotient;                                                \
+    OPSTATUS status = TDECIMAL_INS(SUFFIX, DivMod)(dividendDecimal, divisorDecimal, &quotient, NULL); \
+    if (status == STATUS_CONST(SUCCESS))                                       \
+      for (size_t i = 0; i < sizeof(dividendDecimal->limb) / sizeof(dividendDecimal->limb[0]); ++i) \
+      dividendDecimal->limb[i] = quotient.limb[i];                                                    \
+    return status;                                                             \
+  }                                                                            \
+  TDECIMAL_MOD_PROTOTYPE(SUFFIX) {         \
+    if (!dividendDecimal || !divisorDecimal)                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    TDECIMAL_TYPE(SUFFIX) remainder;                                               \
+    OPSTATUS status = TDECIMAL_INS(SUFFIX, DivMod)(dividendDecimal, divisorDecimal, NULL, &remainder); \
+    if (status == STATUS_CONST(SUCCESS))                                       \
+      for (size_t i = 0; i < sizeof(dividendDecimal->limb) / sizeof(dividendDecimal->limb[0]); ++i) \
+      dividendDecimal->limb[i] = remainder.limb[i];                                                   \
+    return status;                                                             \
+  }                                                                            \
+  DATA_TYPE_IMPLEMENT_INCREMENT(TYPE, TDECIMAL_INCREMENT_PROTOTYPE(SUFFIX),        \
+                                TDECIMAL_TYPE(SUFFIX))                         \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_DECREMENT(TYPE, TDECIMAL_DECREMENT_PROTOTYPE(SUFFIX),        \
+                                TDECIMAL_TYPE(SUFFIX))                         \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_COMPARE(TYPE, TDECIMAL_COMPARE_PROTOTYPE(SUFFIX),            \
+                              TDECIMAL_TYPE(SUFFIX))                           \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_EQUAL(TYPE, TDECIMAL_EQUAL_PROTOTYPE(SUFFIX),                \
+                            TDECIMAL_TYPE(SUFFIX))                             \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_NOT_EQUAL(TYPE, TDECIMAL_NOT_EQUAL_PROTOTYPE(SUFFIX),          \
+                               TDECIMAL_FUNC(SUFFIX, Equal),                   \
+                               TDECIMAL_TYPE(SUFFIX))                          \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_LESS_THAN(TYPE, TDECIMAL_LESS_THAN_PROTOTYPE(SUFFIX),          \
+                               TDECIMAL_FUNC(SUFFIX, Compare),                 \
+                               TDECIMAL_TYPE(SUFFIX))                          \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_GREATER_THAN(TYPE, TDECIMAL_GREATER_THAN_PROTOTYPE(SUFFIX),    \
+                                  TDECIMAL_FUNC(SUFFIX, Compare),              \
+                                  TDECIMAL_TYPE(SUFFIX))                       \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_LESS_OR_EQUAL(TYPE, TDECIMAL_LESS_OR_EQUAL_PROTOTYPE(SUFFIX),    \
+                                  TDECIMAL_FUNC(SUFFIX, Compare),              \
+                                  TDECIMAL_TYPE(SUFFIX))                       \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_GREATER_OR_EQUAL(TYPE,                                     \
+                                     TDECIMAL_GREATER_OR_EQUAL_PROTOTYPE(SUFFIX),    \
+                                     TDECIMAL_FUNC(SUFFIX, Compare),           \
+                                     TDECIMAL_TYPE(SUFFIX))                    \
+                                                                               \
+  DATA_TYPE_IMPLEMENT_IS_ZERO(TYPE, TDECIMAL_IS_ZERO_PROTOTYPE(SUFFIX),              \
+                             TDECIMAL_TYPE(SUFFIX)) \
+  DATA_TYPE_IMPLEMENT_TO_CSTRING_BASE(TYPE, TDECIMAL_TO_CSTRING_BASE_PROTOTYPE(SUFFIX), \
+                                       TDECIMAL_TYPE(SUFFIX),                      \
+                                       TDECIMAL_FUNC(SUFFIX, IsZero)) \
+  DATA_TYPE_IMPLEMENT_TO_CSTRING(TYPE, TDECIMAL_TO_CSTRING_PROTOTYPE(SUFFIX),          \
+                                  TDECIMAL_FUNC(SUFFIX, ToCStringBase),            \
+                                  TDECIMAL_TYPE(SUFFIX))
+/* EOF */

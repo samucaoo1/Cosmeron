@@ -1,0 +1,332 @@
+#pragma once
+
+static inline TEXT_GRID_ATTRIBUTE_TYPE(Cell)
+TEXT_INS(GridAttributeResolveInverse)(
+    TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute) {
+  if ((attribute.flags & TEXT_GRID_ATTRIBUTE_CONST(INVERSE)) != 0U) {
+    uint32_t color = attribute.foreground;
+    uint16_t foregroundDefault =
+        attribute.flags & TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_FOREGROUND);
+    uint16_t backgroundDefault =
+        attribute.flags & TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_BACKGROUND);
+    attribute.foreground = attribute.background;
+    attribute.background = color;
+    attribute.flags &= (uint16_t)~(TEXT_GRID_ATTRIBUTE_CONST(INVERSE) |
+                                   TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_FOREGROUND) |
+                                   TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_BACKGROUND));
+    if (backgroundDefault != 0U)
+      attribute.flags |= TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_FOREGROUND);
+    if (foregroundDefault != 0U)
+      attribute.flags |= TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_BACKGROUND);
+  }
+  return attribute;
+}
+
+static inline TEXT_GRID_ATTRIBUTE_TYPE(Cell)
+TEXT_INS(GridAttributeCompose)(
+    TEXT_GRID_ATTRIBUTE_TYPE(Cell) destination,
+    TEXT_GRID_ATTRIBUTE_TYPE(Cell) source) {
+  bool sourceTransparent;
+  bool destinationTransparent;
+  source = TEXT_INS(GridAttributeResolveInverse)(source);
+  destination = TEXT_INS(GridAttributeResolveInverse)(destination);
+  sourceTransparent =
+      (source.flags & TEXT_GRID_ATTRIBUTE_CONST(TRANSPARENT_BACKGROUND)) != 0U;
+  destinationTransparent =
+      (destination.flags & TEXT_GRID_ATTRIBUTE_CONST(TRANSPARENT_BACKGROUND)) !=
+      0U;
+  if (!sourceTransparent)
+    return source;
+  source.background = destination.background;
+  source.flags &=
+      (uint16_t)~(TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_BACKGROUND) |
+                  TEXT_GRID_ATTRIBUTE_CONST(TRANSPARENT_BACKGROUND));
+  source.flags |=
+      destination.flags & TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_BACKGROUND);
+  if (destinationTransparent)
+    source.flags |= TEXT_GRID_ATTRIBUTE_CONST(TRANSPARENT_BACKGROUND);
+  return source;
+}
+
+#define TEXT_GRID_IMPLEMENT_ALL(TYPE, SUFFIX)                                     \
+  TEXT_GRID_IS_EMPTY_PROTOTYPE(TYPE, SUFFIX) {                                   \
+    return grid != NULL &&                                                    \
+           TEXT_GRID_CHAR_FUNC(SUFFIX, IsEmpty)(&grid->chars) &&              \
+           TEXT_GRID_ATTRIBUTE_FUNC(IsEmpty)(&grid->attributes);              \
+  }                                                                           \
+  TEXT_GRID_IS_VALID_PROTOTYPE(TYPE, SUFFIX) {                                   \
+    return grid != NULL &&                                                    \
+           TEXT_GRID_CHAR_FUNC(SUFFIX, IsValid)(&grid->chars) &&              \
+           TEXT_GRID_ATTRIBUTE_FUNC(IsValid)(&grid->attributes) &&            \
+           grid->chars.size.col == grid->attributes.size.col &&               \
+           grid->chars.size.row == grid->attributes.size.row;                 \
+  }                                                                           \
+  TEXT_GRID_CREATE_PROTOTYPE(TYPE, SUFFIX) {                \
+    TEXT_GRID_TYPE(SUFFIX) temporary = {0};                                   \
+    OPSTATUS status;                                                          \
+    if (grid == NULL || !TEXT_GRID_FUNC(SUFFIX, IsEmpty)(grid))               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                     \
+    status = TEXT_GRID_CHAR_FUNC(SUFFIX, Create)(&temporary.chars, size);     \
+    if (status != STATUS_CONST(SUCCESS))                                         \
+      return status;                                                          \
+    status = TEXT_GRID_ATTRIBUTE_FUNC(Create)(&temporary.attributes, size);   \
+    if (status != STATUS_CONST(SUCCESS)) {                                       \
+      TEXT_GRID_CHAR_FUNC(SUFFIX, Destroy)(&temporary.chars);                 \
+      return status;                                                          \
+    }                                                                         \
+    *grid = temporary;                                                        \
+    return STATUS_CONST(SUCCESS);                                                \
+  }                                                                           \
+  TEXT_GRID_DESTROY_PROTOTYPE(TYPE, SUFFIX) {                                         \
+    if (grid == NULL)                                                         \
+      return STATUS_CONST(INVALID_ARGUMENT);                                     \
+    TEXT_GRID_CHAR_FUNC(SUFFIX, Destroy)(&grid->chars);                       \
+    TEXT_GRID_ATTRIBUTE_FUNC(Destroy)(&grid->attributes);                     \
+    return STATUS_CONST(SUCCESS);                                                \
+  }                                                                           \
+  TEXT_GRID_CLEAR_WITH_PROTOTYPE(TYPE, SUFFIX) {                             \
+    OPSTATUS status;                                                          \
+    if (!TEXT_GRID_FUNC(SUFFIX, IsValid)(grid))                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                     \
+    status = TEXT_GRID_CHAR_FUNC(SUFFIX, Clear)(&grid->chars);                \
+    return status == STATUS_CONST(SUCCESS)                                       \
+               ? TEXT_GRID_ATTRIBUTE_FUNC(ClearWith)(&grid->attributes,       \
+                                                       attribute)             \
+               : status;                                                      \
+  }                                                                           \
+  TEXT_GRID_CLEAR_PROTOTYPE(TYPE, SUFFIX) {                                         \
+    return TEXT_GRID_FUNC(SUFFIX, ClearWith)(                                 \
+        grid, TEXT_GRID_ATTRIBUTE_FUNC(Default)());                           \
+  }                                                                           \
+  TEXT_GRID_READ_CELL_PROTOTYPE(TYPE, SUFFIX) {                              \
+    TYPE temporaryCharacter;                                                  \
+    TEXT_GRID_ATTRIBUTE_TYPE(Cell) temporaryAttribute;                        \
+    OPSTATUS status;                                                          \
+    if (!TEXT_GRID_FUNC(SUFFIX, IsValid)(grid) || character == NULL ||        \
+        attribute == NULL)                                                    \
+      return STATUS_CONST(INVALID_ARGUMENT);                                  \
+    status = TEXT_GRID_CHAR_FUNC(SUFFIX, ReadCell)(                           \
+        &grid->chars, position, &temporaryCharacter);                         \
+    if (status != STATUS_CONST(SUCCESS))                                      \
+      return status;                                                          \
+    status = TEXT_GRID_ATTRIBUTE_FUNC(ReadCell)(                              \
+        &grid->attributes, position, &temporaryAttribute);                    \
+    if (status != STATUS_CONST(SUCCESS))                                      \
+      return status;                                                          \
+    *character = temporaryCharacter;                                          \
+    *attribute = temporaryAttribute;                                          \
+    return STATUS_CONST(SUCCESS);                                             \
+  }                                                                           \
+  TEXT_GRID_WRITE_CELL_PROTOTYPE(TYPE, SUFFIX) {             \
+    OPSTATUS status;                                                          \
+    if (!TEXT_GRID_FUNC(SUFFIX, IsValid)(grid))                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                     \
+    if (position.x >= grid->chars.size.col || position.y >= grid->chars.size.row)\
+      return STATUS_CONST(OUT_OF_RANGE);                                         \
+    status = TEXT_GRID_CHAR_FUNC(SUFFIX, WriteCell)(&grid->chars, position,   \
+                                                     character);              \
+    return status == STATUS_CONST(SUCCESS)                                       \
+               ? TEXT_GRID_ATTRIBUTE_FUNC(WriteCell)(&grid->attributes,       \
+                                                       position, attribute)   \
+               : status;                                                      \
+  }                                                                           \
+  TEXT_GRID_FILL_PROTOTYPE(TYPE, SUFFIX) {                             \
+    OPSTATUS status;                                                          \
+    if (!TEXT_GRID_FUNC(SUFFIX, IsValid)(grid))                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                     \
+    status = TEXT_GRID_CHAR_FUNC(SUFFIX, Fill)(&grid->chars, character);      \
+    return status == STATUS_CONST(SUCCESS)                                       \
+               ? TEXT_GRID_ATTRIBUTE_FUNC(ClearWith)(&grid->attributes,       \
+                                                       attribute)             \
+               : status;                                                      \
+  }                                                                           \
+  TEXT_GRID_FILL_REGION_PROTOTYPE(TYPE, SUFFIX) {             \
+    OPSTATUS status;                                                          \
+    if (!TEXT_GRID_FUNC(SUFFIX, IsValid)(grid))                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                     \
+    status = TEXT_GRID_CHAR_FUNC(SUFFIX, FillRegion)(&grid->chars, region,    \
+                                                      character);             \
+    return status == STATUS_CONST(SUCCESS)                                       \
+               ? TEXT_GRID_ATTRIBUTE_FUNC(FillRegion)(                        \
+                     &grid->attributes, region, attribute)                    \
+               : status;                                                      \
+  }                                                                           \
+  TEXT_GRID_READ_PROTOTYPE(TYPE, SUFFIX) {                                  \
+    TEXT_GRID_TYPE(SUFFIX) temporary = {0};                                   \
+    TDUAL_TYPE(uint16) size;                                                  \
+    uint32_t x, y;                                                            \
+    OPSTATUS status;                                                          \
+    if (!TEXT_GRID_FUNC(SUFFIX, IsValid)(source) || destination == NULL ||    \
+        !TEXT_GRID_FUNC(SUFFIX, IsValid)(destination))                        \
+      return STATUS_CONST(INVALID_ARGUMENT);                                     \
+    if (region.left > region.right || region.top > region.bottom)             \
+      return STATUS_CONST(INVALID_ARGUMENT);                                     \
+    if (region.right >= source->chars.size.col ||                             \
+        region.bottom >= source->chars.size.row)                              \
+      return STATUS_CONST(OUT_OF_RANGE);                                         \
+    size.col = (uint16_t)(region.right - region.left + 1U);                   \
+    size.row = (uint16_t)(region.bottom - region.top + 1U);                   \
+    status = TEXT_GRID_FUNC(SUFFIX, Create)(&temporary, size);                \
+    if (status != STATUS_CONST(SUCCESS))                                         \
+      return status;                                                          \
+    for (y = 0U; y < size.row; ++y)                                           \
+      for (x = 0U; x < size.col; ++x) {                                       \
+        size_t from = (size_t)(region.top + y) * source->chars.size.col +     \
+                      region.left + x;                                        \
+        size_t to = (size_t)y * size.col + x;                                 \
+        temporary.chars.data[to] = source->chars.data[from];                  \
+        temporary.attributes.data[to] = source->attributes.data[from];        \
+      }                                                                       \
+    TEXT_GRID_FUNC(SUFFIX, Destroy)(destination);                             \
+    *destination = temporary;                                                 \
+    return STATUS_CONST(SUCCESS);                                                \
+  }                                                                           \
+  TEXT_GRID_WRITE_REGION_PROTOTYPE(TYPE, SUFFIX) {                                     \
+    TEXT_GRID_TYPE(SUFFIX) temporary = {0};                                   \
+    uint32_t width, height, x, y;                                             \
+    OPSTATUS status;                                                          \
+    if (!TEXT_GRID_FUNC(SUFFIX, IsValid)(destination) ||                      \
+        !TEXT_GRID_FUNC(SUFFIX, IsValid)(source))                             \
+      return STATUS_CONST(INVALID_ARGUMENT);                                     \
+    if (sourceRegion.left > sourceRegion.right ||                           \
+        sourceRegion.top > sourceRegion.bottom)                             \
+      return STATUS_CONST(INVALID_ARGUMENT);                                     \
+    if (sourceRegion.right >= source->chars.size.col ||                      \
+        sourceRegion.bottom >= source->chars.size.row)                       \
+      return STATUS_CONST(OUT_OF_RANGE);                                         \
+    width = (uint32_t)sourceRegion.right - sourceRegion.left + 1U;          \
+    height = (uint32_t)sourceRegion.bottom - sourceRegion.top + 1U;         \
+    if ((uint32_t)destinationPosition.x + width > destination->chars.size.col ||\
+        (uint32_t)destinationPosition.y + height > destination->chars.size.row)\
+      return STATUS_CONST(OUT_OF_RANGE);                                         \
+    status = TEXT_GRID_FUNC(SUFFIX, Read)(source, sourceRegion, &temporary); \
+    if (status != STATUS_CONST(SUCCESS))                                         \
+      return status;                                                          \
+    for (y = 0U; y < height; ++y)                                             \
+      for (x = 0U; x < width; ++x) {                                          \
+        size_t from = (size_t)y * width + x;                                  \
+        size_t to = (size_t)(destinationPosition.y + y) *                    \
+                        destination->chars.size.col +                         \
+                    destinationPosition.x + x;                               \
+        destination->chars.data[to] = temporary.chars.data[from];            \
+        destination->attributes.data[to] = temporary.attributes.data[from];  \
+      }                                                                       \
+    TEXT_GRID_FUNC(SUFFIX, Destroy)(&temporary);                              \
+    return STATUS_CONST(SUCCESS);                                                \
+  }                                                                           \
+  TEXT_GRID_WRITE_PROTOTYPE(TYPE, SUFFIX) {                                 \
+    TQUAD_TYPE(uint16) region = {0};                                          \
+    if (!TEXT_GRID_FUNC(SUFFIX, IsValid)(source))                             \
+      return STATUS_CONST(INVALID_ARGUMENT);                                     \
+    if (TEXT_GRID_FUNC(SUFFIX, IsEmpty)(source))                              \
+      return STATUS_CONST(SUCCESS);                                              \
+    region.right = (uint16_t)(source->chars.size.col - 1U);                   \
+    region.bottom = (uint16_t)(source->chars.size.row - 1U);                  \
+    return TEXT_GRID_FUNC(SUFFIX, WriteRegion)(destination,                   \
+                                                destinationPosition, source, \
+                                                region);                      \
+  }                                                                           \
+  TEXT_GRID_RESIZE_PROTOTYPE(TYPE, SUFFIX) {                \
+    TEXT_GRID_TYPE(SUFFIX) temporary = {0};                                   \
+    uint32_t width, height, x, y;                                             \
+    OPSTATUS status;                                                          \
+    if (!TEXT_GRID_FUNC(SUFFIX, IsValid)(grid))                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                     \
+    status = TEXT_GRID_FUNC(SUFFIX, Create)(&temporary, size);                \
+    if (status != STATUS_CONST(SUCCESS))                                         \
+      return status == STATUS_CONST(OUT_OF_MEMORY)                          \
+                 ? STATUS_CONST(OUT_OF_MEMORY)                            \
+                 : status;                                                    \
+    width = grid->chars.size.col < size.col ? grid->chars.size.col : size.col;\
+    height = grid->chars.size.row < size.row ? grid->chars.size.row : size.row;\
+    for (y = 0U; y < height; ++y)                                             \
+      for (x = 0U; x < width; ++x) {                                          \
+        size_t from = (size_t)y * grid->chars.size.col + x;                   \
+        size_t to = (size_t)y * size.col + x;                                 \
+        temporary.chars.data[to] = grid->chars.data[from];                    \
+        temporary.attributes.data[to] = grid->attributes.data[from];          \
+      }                                                                       \
+    TEXT_GRID_FUNC(SUFFIX, Destroy)(grid);                                    \
+    *grid = temporary;                                                        \
+    return STATUS_CONST(SUCCESS);                                                \
+  }                                                                           \
+  TEXT_GRID_RECREATE_PROTOTYPE(TYPE, SUFFIX) {                \
+    TEXT_GRID_TYPE(SUFFIX) temporary = {0};                                   \
+    OPSTATUS status;                                                          \
+    if (!TEXT_GRID_FUNC(SUFFIX, IsValid)(grid))                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                     \
+    status = TEXT_GRID_FUNC(SUFFIX, Create)(&temporary, size);                \
+    if (status != STATUS_CONST(SUCCESS))                                         \
+      return status == STATUS_CONST(OUT_OF_MEMORY)                          \
+                 ? STATUS_CONST(OUT_OF_MEMORY)                            \
+                 : status;                                                    \
+    TEXT_GRID_FUNC(SUFFIX, Destroy)(grid);                                    \
+    *grid = temporary;                                                        \
+    return STATUS_CONST(SUCCESS);                                                \
+  }                                                                           \
+  TEXT_GRID_CLONE_PROTOTYPE(TYPE, SUFFIX) {                                 \
+    if (!TEXT_GRID_FUNC(SUFFIX, IsValid)(source) || destination == NULL ||    \
+        !TEXT_GRID_FUNC(SUFFIX, IsValid)(destination))                        \
+      return STATUS_CONST(INVALID_ARGUMENT);                                     \
+    if (TEXT_GRID_FUNC(SUFFIX, IsEmpty)(source)) {                            \
+      TEXT_GRID_FUNC(SUFFIX, Destroy)(destination);                           \
+      return STATUS_CONST(SUCCESS);                                              \
+    }                                                                         \
+    return TEXT_GRID_FUNC(SUFFIX, Read)(                                      \
+        source,                                                              \
+        (TQUAD_TYPE(uint16)){                                                 \
+            .left = 0U, .right = (uint16_t)(source->chars.size.col - 1U),    \
+            .top = 0U, .bottom = (uint16_t)(source->chars.size.row - 1U)},   \
+        destination);                                                        \
+  }                                                                           \
+  TEXT_GRID_BLIT_REGION_PROTOTYPE(TYPE, SUFFIX) {                                     \
+    TEXT_GRID_TYPE(SUFFIX) temporary = {0};                                   \
+    uint32_t width, height, x, y;                                             \
+    OPSTATUS status;                                                          \
+    if (!TEXT_GRID_FUNC(SUFFIX, IsValid)(destination) ||                      \
+        !TEXT_GRID_FUNC(SUFFIX, IsValid)(source))                             \
+      return STATUS_CONST(INVALID_ARGUMENT);                                     \
+    if (sourceRegion.left > sourceRegion.right ||                           \
+        sourceRegion.top > sourceRegion.bottom)                             \
+      return STATUS_CONST(INVALID_ARGUMENT);                                     \
+    if (sourceRegion.right >= source->chars.size.col ||                      \
+        sourceRegion.bottom >= source->chars.size.row)                       \
+      return STATUS_CONST(OUT_OF_RANGE);                                         \
+    width = (uint32_t)sourceRegion.right - sourceRegion.left + 1U;          \
+    height = (uint32_t)sourceRegion.bottom - sourceRegion.top + 1U;         \
+    if ((uint32_t)destinationPosition.x + width > destination->chars.size.col ||\
+        (uint32_t)destinationPosition.y + height > destination->chars.size.row)\
+      return STATUS_CONST(OUT_OF_RANGE);                                         \
+    status = TEXT_GRID_FUNC(SUFFIX, Read)(source, sourceRegion, &temporary); \
+    if (status != STATUS_CONST(SUCCESS))                                         \
+      return status;                                                          \
+    for (y = 0U; y < height; ++y)                                             \
+      for (x = 0U; x < width; ++x) {                                          \
+        size_t from = (size_t)y * width + x;                                  \
+        size_t to = (size_t)(destinationPosition.y + y) *                    \
+                        destination->chars.size.col +                         \
+                    destinationPosition.x + x;                               \
+        destination->chars.data[to] = temporary.chars.data[from];            \
+        destination->attributes.data[to] = TEXT_INS(GridAttributeCompose)(\
+            destination->attributes.data[to],                                \
+            temporary.attributes.data[from]);                                \
+      }                                                                       \
+    TEXT_GRID_FUNC(SUFFIX, Destroy)(&temporary);                              \
+    return STATUS_CONST(SUCCESS);                                                \
+  }                                                                           \
+  TEXT_GRID_BLIT_PROTOTYPE(TYPE, SUFFIX) {                                 \
+    TQUAD_TYPE(uint16) region = {0};                                          \
+    if (!TEXT_GRID_FUNC(SUFFIX, IsValid)(source))                             \
+      return STATUS_CONST(INVALID_ARGUMENT);                                     \
+    if (TEXT_GRID_FUNC(SUFFIX, IsEmpty)(source))                              \
+      return STATUS_CONST(SUCCESS);                                              \
+    region.right = (uint16_t)(source->chars.size.col - 1U);                   \
+    region.bottom = (uint16_t)(source->chars.size.row - 1U);                  \
+    return TEXT_GRID_FUNC(SUFFIX, BlitRegion)(destination,                    \
+                                               destinationPosition, source,  \
+                                               region);                       \
+  }
+
+#define X(TYPE, SUFFIX) TEXT_GRID_IMPLEMENT_ALL(TYPE, SUFFIX)
+TEXT_GRID_CHARACTER_TABLE(X)
+#undef X

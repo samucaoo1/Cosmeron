@@ -1,0 +1,16 @@
+#include "../Seed.impl"
+RANDOM_ENGINE_SEED_PROTOTYPE(Sfc) {
+  uint64_t split = seed;
+  state->a = RANDOM_ENGINE_SPLITMIX_STEP(split);
+  state->b = RANDOM_ENGINE_SPLITMIX_STEP(split);
+  state->c = RANDOM_ENGINE_SPLITMIX_STEP(split);
+  state->counter = UINT64_C(1);
+}
+RANDOM_ENGINE_NEXT_PROTOTYPE(Sfc) {
+  uint64_t result = state->a + state->b + state->counter++;
+  state->a = state->b ^ (state->b >> 11U);
+  state->b = state->c + (state->c << 3U);
+  state->c = RANDOM_ENGINE_FUNC(Common, RotateLeft)(state->c, 24U) + result;
+  return result;
+}
+

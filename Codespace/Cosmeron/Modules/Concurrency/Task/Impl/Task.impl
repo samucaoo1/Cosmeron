@@ -1,0 +1,18 @@
+#pragma once
+
+TASK_CREATE_PROTOTYPE {
+  CONCURRENCY_TYPE(TTask) task;
+  task.function = function;
+  task.argument = argument;
+  return task;
+}
+
+TASK_IS_VALID_PROTOTYPE {
+  return task != NULL && task->function != NULL;
+}
+
+TASK_RUN_PROTOTYPE {
+  if (!TASK_FUNC(IsValid)(task)) return STATUS_CONST(INVALID_ARGUMENT);
+  task->function(task->argument);
+  return STATUS_CONST(SUCCESS);
+}

@@ -1,0 +1,41 @@
+#pragma once
+
+#include "../Container.space"
+
+#include "../../../Core/Error/Status.h"
+#include "../../../Core/Memory/Alloc.h"
+#include "../../../Core/Namespace.h"
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+#define GRAPH_NS(NAME) GNS2(CONTAINER_NS(Graph), NAME)
+
+#define COSMERON_MACRO_INTERNAL_GRAPH_INITIAL_VERTEX_CAPACITY 8u
+#define COSMERON_MACRO_INTERNAL_GRAPH_INITIAL_EDGE_CAPACITY 4u
+
+#define GRAPH_SUFFIX(VERTEX_SUFFIX, WEIGHT_SUFFIX)                             \
+  GNS2(VERTEX_SUFFIX, WEIGHT_SUFFIX)
+
+#define TGRAPH_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX)                             \
+  GNS2(GRAPH_NS(TGraph), GRAPH_SUFFIX(VERTEX_SUFFIX, WEIGHT_SUFFIX))
+
+#define TGRAPH_VERTEX_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX)                      \
+  GNS2(GRAPH_NS(TGraphVertex), GRAPH_SUFFIX(VERTEX_SUFFIX, WEIGHT_SUFFIX))
+
+#define TGRAPH_EDGE_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX)                        \
+  GNS2(GRAPH_NS(TGraphEdge), GRAPH_SUFFIX(VERTEX_SUFFIX, WEIGHT_SUFFIX))
+
+#define GRAPH_OPERATION_NS(VERTEX_SUFFIX, WEIGHT_SUFFIX)                     \
+  GRAPH_NS(GRAPH_SUFFIX(VERTEX_SUFFIX, WEIGHT_SUFFIX))
+
+#define GRAPH_OPERATION(VERTEX_SUFFIX, WEIGHT_SUFFIX, FUNC)                   \
+  GNS2(GRAPH_OPERATION_NS(VERTEX_SUFFIX, WEIGHT_SUFFIX), FUNC)
+
+#define GRAPH_FUNCTION_TABLE_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX)               \
+  GNS2(GRAPH_OPERATION_NS(VERTEX_SUFFIX, WEIGHT_SUFFIX), FunctionTable)
+
+#define TGRAPH_VISITOR_TYPE(VERTEX_SUFFIX, WEIGHT_SUFFIX)                     \
+  GRAPH_OPERATION(VERTEX_SUFFIX, WEIGHT_SUFFIX, TVisitor)

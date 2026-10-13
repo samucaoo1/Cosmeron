@@ -1,0 +1,135 @@
+#pragma once
+
+#include "Linked.space"
+#include "Node.h"
+
+/* ============================================================
+ * LINKED_NS(Deque) — Double-ended queue usando encadeamento duplo
+ *
+ * O(1) em push/pop de ambas as extremidades.
+ * ============================================================ */
+
+#define LINKED_DEQUE_TYPE(SUFFIX) GNS2(LINKED_NS(TDeque), SUFFIX)
+
+#define LINKED_DEQUE_NS(SUFFIX) GNS2(LINKED_NS(Deque), SUFFIX)
+#define LINKED_DEQUE_FUNC(SUFFIX, FUNC) GNS2(LINKED_DEQUE_NS(SUFFIX), FUNC)
+#define LINKED_DEQUE_STRUCT_TAG(SUFFIX) LINKED_DEQUE_TYPE(SUFFIX)
+#define LINKED_DEQUE_FUNCTION_TABLE_TYPE(SUFFIX) \
+  GNS2(LINKED_DEQUE_NS(SUFFIX), FunctionTable)
+
+#define LINKED_DEQUE_NODE_TYPE(SUFFIX)                                         \
+  DOUBLE_LINKED_NODE_TYPE(SUFFIX, LINKED_NS(Deque))
+
+/* ============================================================
+ * Struct
+ * ============================================================ */
+
+#define LINKED_DEQUE_STRUCT(TYPE, SUFFIX)                                      \
+  CONTAINER_API_FORWARD(LINKED_DEQUE_FUNCTION_TABLE_TYPE(SUFFIX))                          \
+  typedef struct LINKED_DEQUE_STRUCT_TAG(SUFFIX) {                                   \
+    CONTAINER_API_FIELD(LINKED_DEQUE_FUNCTION_TABLE_TYPE(SUFFIX))            \
+    LINKED_DEQUE_NODE_TYPE(SUFFIX) * head;                                     \
+    LINKED_DEQUE_NODE_TYPE(SUFFIX) * tail;                                     \
+    size_t size;                                                               \
+  } LINKED_DEQUE_TYPE(SUFFIX);
+
+/* ============================================================
+ * Names and Prototypes — Lifecycle
+ * ============================================================ */
+
+#define LINKED_DEQUE_INIT_PROTOTYPE(SUFFIX)                           \
+  static inline OPSTATUS LINKED_DEQUE_FUNC(SUFFIX, Init)(                      \
+      LINKED_DEQUE_TYPE(SUFFIX) * deque)
+
+#define LINKED_DEQUE_DESTROY_PROTOTYPE(SUFFIX)                        \
+  static inline void LINKED_DEQUE_FUNC(SUFFIX, Destroy)(                       \
+      LINKED_DEQUE_TYPE(SUFFIX) * deque)
+
+/* ============================================================
+ * Names and Prototypes — Modifiers
+ * ============================================================ */
+
+#define LINKED_DEQUE_PUSH_FRONT_PROTOTYPE(TYPE, SUFFIX)               \
+  static inline OPSTATUS LINKED_DEQUE_FUNC(SUFFIX, PushFront)(                 \
+      LINKED_DEQUE_TYPE(SUFFIX) * deque, TYPE value)
+
+#define LINKED_DEQUE_PUSH_BACK_PROTOTYPE(TYPE, SUFFIX)                \
+  static inline OPSTATUS LINKED_DEQUE_FUNC(SUFFIX, PushBack)(                  \
+      LINKED_DEQUE_TYPE(SUFFIX) * deque, TYPE value)
+
+#define LINKED_DEQUE_POP_FRONT_PROTOTYPE(TYPE, SUFFIX)                \
+  static inline OPSTATUS LINKED_DEQUE_FUNC(SUFFIX, PopFront)(                  \
+      LINKED_DEQUE_TYPE(SUFFIX) * deque, TYPE * outValue)
+
+#define LINKED_DEQUE_POP_BACK_PROTOTYPE(TYPE, SUFFIX)                 \
+  static inline OPSTATUS LINKED_DEQUE_FUNC(SUFFIX, PopBack)(                   \
+      LINKED_DEQUE_TYPE(SUFFIX) * deque, TYPE * outValue)
+
+#define LINKED_DEQUE_CLEAR_PROTOTYPE(SUFFIX)                          \
+  static inline void LINKED_DEQUE_FUNC(SUFFIX, Clear)(                         \
+      LINKED_DEQUE_TYPE(SUFFIX) * deque)
+
+/* ============================================================
+ * Names and Prototypes — Element Access
+ * ============================================================ */
+
+#define LINKED_DEQUE_FRONT_PROTOTYPE(TYPE, SUFFIX)                    \
+  static inline OPSTATUS LINKED_DEQUE_FUNC(SUFFIX, Front)(                     \
+      LINKED_DEQUE_TYPE(SUFFIX) * deque, TYPE **out)
+
+#define LINKED_DEQUE_BACK_PROTOTYPE(TYPE, SUFFIX)                     \
+  static inline OPSTATUS LINKED_DEQUE_FUNC(SUFFIX, Back)(                      \
+      LINKED_DEQUE_TYPE(SUFFIX) * deque, TYPE **out)
+
+#define LINKED_DEQUE_EMPTY_PROTOTYPE(SUFFIX)                          \
+  static inline bool LINKED_DEQUE_FUNC(SUFFIX, Empty)(                         \
+      const LINKED_DEQUE_TYPE(SUFFIX) * deque)
+
+#define LINKED_DEQUE_SIZE_PROTOTYPE(SUFFIX)                           \
+  static inline size_t LINKED_DEQUE_FUNC(SUFFIX, Size)(                        \
+      const LINKED_DEQUE_TYPE(SUFFIX) * deque)
+
+#include "FunctionTable/Deque.h"
+
+/* ============================================================
+ * Complete Declaration
+ * ============================================================ */
+
+#define LINKED_DEQUE_IMPLEMENT_ALL(TYPE, SUFFIX)                                     \
+  DOUBLE_LINKED_NODE_STRUCT(TYPE, SUFFIX, LINKED_NS(Deque))                        \
+  LINKED_DEQUE_STRUCT(TYPE, SUFFIX)                                            \
+  LINKED_DEQUE_INIT_PROTOTYPE(SUFFIX);                                \
+  LINKED_DEQUE_DESTROY_PROTOTYPE(SUFFIX);                             \
+  LINKED_DEQUE_PUSH_FRONT_PROTOTYPE(TYPE, SUFFIX);                    \
+  LINKED_DEQUE_PUSH_BACK_PROTOTYPE(TYPE, SUFFIX);                     \
+  LINKED_DEQUE_POP_FRONT_PROTOTYPE(TYPE, SUFFIX);                     \
+  LINKED_DEQUE_POP_BACK_PROTOTYPE(TYPE, SUFFIX);                      \
+  LINKED_DEQUE_CLEAR_PROTOTYPE(SUFFIX);                               \
+  LINKED_DEQUE_FRONT_PROTOTYPE(TYPE, SUFFIX);                         \
+  LINKED_DEQUE_BACK_PROTOTYPE(TYPE, SUFFIX);                          \
+  LINKED_DEQUE_EMPTY_PROTOTYPE(SUFFIX);                               \
+  LINKED_DEQUE_SIZE_PROTOTYPE(SUFFIX);                                \
+  COSMERON_MACRO_INTERNAL_LINKED_DEQUE_IMPLEMENT(TYPE, SUFFIX)                                         \
+  LINKED_DEQUE_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                                  \
+  LINKED_DEQUE_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)
+
+/* ============================================================
+ * Implementation
+ * ============================================================ */
+#include "Double/Deque.impl"
+
+#define LINKED_DEQUE_INSTANCE_DECLARE(TYPE, NAME)                                               \
+  LINKED_DEQUE_TYPE(TYPE) NAME;                                                \
+  CONTAINER_API_BIND(NAME, LINKED_DEQUE_FUNC(TYPE, functions));                              \
+  LINKED_DEQUE_FUNC(TYPE, Init)(&NAME);
+/* Compatibility alias: prefer LINKED_DEQUE_INSTANCE_DECLARE. */
+#define TLinked_Deque(TYPE, NAME) LINKED_DEQUE_INSTANCE_DECLARE(TYPE, NAME)
+
+/* ============================================================
+ * Instanciações
+ * ============================================================ */
+LINKED_DEQUE_IMPLEMENT_ALL(int, int)
+LINKED_DEQUE_IMPLEMENT_ALL(float, float)
+LINKED_DEQUE_IMPLEMENT_ALL(double, double)
+LINKED_DEQUE_IMPLEMENT_ALL(char, char)
+

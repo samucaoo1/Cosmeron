@@ -1,0 +1,575 @@
+#pragma once
+
+typedef struct COMPRESSION_INS(TZipNativeReader) {
+  const unsigned char *data;
+  size_t size, count, directoryOffset;
+  size_t *entries;
+} COMPRESSION_INS(TZipNativeReader);
+
+typedef struct COMPRESSION_INS(TZipNativeWriter) {
+  unsigned char *data;
+  size_t size, capacity, count, entryCapacity;
+  size_t *entries;
+} COMPRESSION_INS(TZipNativeWriter);
+
+static inline uint16_t COMPRESSION_INS(ZipRead16)(const unsigned char *data) {
+  return (uint16_t)(data[0] | (uint16_t)(data[1] << 8));
+}
+static inline uint64_t COMPRESSION_INS(ZipRead64)(const unsigned char *data) {
+  return (uint64_t)COMPRESSION_INS(Read32)(data) |
+      ((uint64_t)COMPRESSION_INS(Read32)(data + 4) << 32);
+}
+static inline void COMPRESSION_INS(ZipWrite64)(unsigned char *data, uint64_t value) {
+  COMPRESSION_INS(Write32)(data, (uint32_t)value);
+  COMPRESSION_INS(Write32)(data + 4, (uint32_t)(value >> 32));
+}
+static inline void COMPRESSION_INS(ZipWrite16)(unsigned char *data, unsigned int value) {
+  data[0] = (unsigned char)value;
+  data[1] = (unsigned char)(value >> 8);
+}
+static inline bool COMPRESSION_INS(ZipRange)(size_t total, size_t offset, size_t count) {
+  return offset <= total && count <= total - offset;
+}
+static inline bool COMPRESSION_INS(ZipNameValid)(const char *name) {
+  const char *start = name, *p;
+  if (!name || !*name || *name == '/') return false;
+  for (p = name;; ++p) {
+    if (*p == '\\' || *p == ':') return false;
+    if (*p == '/' || !*p) {
+      size_t length = (size_t)(p - start);
+      if (!length || (length == 1 && start[0] == '.') ||
+          (length == 2 && start[0] == '.' && start[1] == '.')) return false;
+      if (!*p || !p[1]) return true;
+      start = p + 1;
+    }
+  }
+}
+
+static inline OPSTATUS COMPRESSION_INS(ZipEntryInfo)(
+    const COMPRESSION_INS(TZipNativeReader) *zip, size_t index,
+    COMPRESSION_TYPE(TZipEntry) *outEntry, uint64_t *outOffset) {
+  const unsigned char *record, *extra;
+  uint64_t uncompressed, compressed, localOffset;
+  size_t remaining;
+  unsigned int flags, method, disk;
+  bool needUncompressed, needCompressed, needOffset, needDisk, found = false;
+  if (index >= zip->count) return STATUS_CONST(OUT_OF_RANGE);
+  record = zip->data + zip->entries[index];
+  uncompressed = COMPRESSION_INS(Read32)(record + 24);
+  compressed = COMPRESSION_INS(Read32)(record + 20);
+  localOffset = COMPRESSION_INS(Read32)(record + 42);
+  disk = COMPRESSION_INS(ZipRead16)(record + 34);
+  needUncompressed = uncompressed == UINT32_MAX;
+  needCompressed = compressed == UINT32_MAX;
+  needOffset = localOffset == UINT32_MAX;
+  needDisk = disk == UINT16_MAX;
+  flags = COMPRESSION_INS(ZipRead16)(record + 8);
+  method = COMPRESSION_INS(ZipRead16)(record + 10);
+  extra = record + 46 + COMPRESSION_INS(ZipRead16)(record + 28);
+  remaining = COMPRESSION_INS(ZipRead16)(record + 30);
+  while (remaining) {
+    unsigned int kind, fieldSize;
+    const unsigned char *field;
+    if (remaining < 4) return STATUS_CONST(INVALID_SEQUENCE);
+    kind = COMPRESSION_INS(ZipRead16)(extra);
+    fieldSize = COMPRESSION_INS(ZipRead16)(extra + 2);
+    if (fieldSize > remaining - 4) return STATUS_CONST(INVALID_SEQUENCE);
+    field = extra + 4;
+    if (kind == 1 && !found) {
+      size_t available = fieldSize;
+      found = true;
+      if (needUncompressed) {
+        if (available < 8) return STATUS_CONST(INVALID_SEQUENCE);
+        uncompressed = COMPRESSION_INS(ZipRead64)(field);
+        field += 8; available -= 8;
+      }
+      if (needCompressed) {
+        if (available < 8) return STATUS_CONST(INVALID_SEQUENCE);
+        compressed = COMPRESSION_INS(ZipRead64)(field);
+        field += 8; available -= 8;
+      }
+      if (needOffset) {
+        if (available < 8) return STATUS_CONST(INVALID_SEQUENCE);
+        localOffset = COMPRESSION_INS(ZipRead64)(field);
+        field += 8; available -= 8;
+      }
+      if (needDisk) {
+        if (available < 4) return STATUS_CONST(INVALID_SEQUENCE);
+        disk = COMPRESSION_INS(Read32)(field);
+      }
+    }
+    extra += 4 + fieldSize;
+    remaining -= 4 + fieldSize;
+  }
+  if ((needUncompressed || needCompressed || needOffset || needDisk) && !found)
+    return STATUS_CONST(INVALID_SEQUENCE);
+  if (disk) return STATUS_CONST(NOT_SUPPORTED);
+  if (outEntry) {
+    size_t nameSize = COMPRESSION_INS(ZipRead16)(record + 28);
+    outEntry->compressedSize = compressed;
+    outEntry->size = uncompressed;
+    outEntry->crc32 = COMPRESSION_INS(Read32)(record + 16);
+    outEntry->directory = record[46 + nameSize - 1] == '/';
+    outEntry->supported = (flags & 1U) == 0 && (method == 0 || method == 8);
+  }
+  if (outOffset) *outOffset = localOffset;
+  return STATUS_CONST(SUCCESS);
+}
+
+COMPRESSION_ZIP_OPEN_PROTOTYPE {
+  const unsigned char *bytes = (const unsigned char *)data;
+  COMPRESSION_INS(TZipNativeReader) *zip;
+  size_t begin, pos, eocd = SIZE_MAX, offset, length, count, i;
+  if (!reader || reader->native || !data) return STATUS_CONST(INVALID_ARGUMENT);
+  if (size < 22) return STATUS_CONST(INVALID_SEQUENCE);
+  begin = size > 65557 ? size - 65557 : 0;
+  for (pos = size - 22;; --pos) {
+    if (COMPRESSION_INS(Read32)(bytes + pos) == UINT32_C(0x06054b50) &&
+        COMPRESSION_INS(ZipRange)(size, pos, 22) &&
+        (size_t)COMPRESSION_INS(ZipRead16)(bytes + pos + 20) == size - pos - 22) {
+      eocd = pos;
+      break;
+    }
+    if (pos == begin) break;
+  }
+  if (eocd == SIZE_MAX) return STATUS_CONST(INVALID_SEQUENCE);
+  if (COMPRESSION_INS(ZipRead16)(bytes + eocd + 4) ||
+      COMPRESSION_INS(ZipRead16)(bytes + eocd + 6) ||
+      COMPRESSION_INS(ZipRead16)(bytes + eocd + 8) !=
+          COMPRESSION_INS(ZipRead16)(bytes + eocd + 10))
+    return STATUS_CONST(NOT_SUPPORTED);
+  {
+    uint64_t count64 = COMPRESSION_INS(ZipRead16)(bytes + eocd + 10);
+    uint64_t length64 = COMPRESSION_INS(Read32)(bytes + eocd + 12);
+    uint64_t offset64 = COMPRESSION_INS(Read32)(bytes + eocd + 16);
+    size_t limit = eocd;
+    bool hasZip64 = false;
+    if (eocd >= 20 &&
+        COMPRESSION_INS(Read32)(bytes + eocd - 20) == UINT32_C(0x07064b50)) {
+      const unsigned char *locator = bytes + eocd - 20;
+      uint64_t zip64Offset = COMPRESSION_INS(ZipRead64)(locator + 8);
+      const unsigned char *endRecord;
+      uint64_t recordLength;
+      if (COMPRESSION_INS(Read32)(locator + 4) ||
+          COMPRESSION_INS(Read32)(locator + 16) != 1 ||
+          zip64Offset > SIZE_MAX ||
+          !COMPRESSION_INS(ZipRange)(eocd - 20, (size_t)zip64Offset, 56))
+        return STATUS_CONST(INVALID_SEQUENCE);
+      limit = (size_t)zip64Offset;
+      endRecord = bytes + limit;
+      if (COMPRESSION_INS(Read32)(endRecord) != UINT32_C(0x06064b50))
+        return STATUS_CONST(INVALID_SEQUENCE);
+      recordLength = COMPRESSION_INS(ZipRead64)(endRecord + 4);
+      if (recordLength < 44 || recordLength > SIZE_MAX - 12 ||
+          !COMPRESSION_INS(ZipRange)(eocd - 20, limit, (size_t)recordLength + 12) ||
+          limit + (size_t)recordLength + 12 != eocd - 20 ||
+          COMPRESSION_INS(Read32)(endRecord + 16) ||
+          COMPRESSION_INS(Read32)(endRecord + 20) ||
+          COMPRESSION_INS(ZipRead64)(endRecord + 24) !=
+              COMPRESSION_INS(ZipRead64)(endRecord + 32))
+        return STATUS_CONST(INVALID_SEQUENCE);
+      count64 = COMPRESSION_INS(ZipRead64)(endRecord + 32);
+      length64 = COMPRESSION_INS(ZipRead64)(endRecord + 40);
+      offset64 = COMPRESSION_INS(ZipRead64)(endRecord + 48);
+      hasZip64 = true;
+    }
+    if (!hasZip64 &&
+        (length64 == UINT32_MAX || offset64 == UINT32_MAX))
+      return STATUS_CONST(NOT_SUPPORTED);
+    if (count64 > SIZE_MAX || length64 > SIZE_MAX || offset64 > SIZE_MAX)
+      return STATUS_CONST(OUT_OF_RANGE);
+    count = (size_t)count64;
+    length = (size_t)length64;
+    offset = (size_t)offset64;
+    if (!COMPRESSION_INS(ZipRange)(limit, offset, length) ||
+        count > length / 46) return STATUS_CONST(INVALID_SEQUENCE);
+  }
+  zip = (COMPRESSION_INS(TZipNativeReader) *)calloc(1, sizeof(*zip));
+  if (!zip) return STATUS_CONST(OUT_OF_MEMORY);
+  zip->data = bytes;
+  zip->size = size;
+  zip->count = count;
+  zip->directoryOffset = offset;
+  if (count) {
+    zip->entries = (size_t *)malloc(count * sizeof(*zip->entries));
+    if (!zip->entries) { free(zip); return STATUS_CONST(OUT_OF_MEMORY); }
+  }
+  pos = offset;
+  for (i = 0; i < count; ++i) {
+    size_t recordLength;
+    unsigned int nameLength, extraLength, commentLength;
+    if (!COMPRESSION_INS(ZipRange)(offset + length, pos, 46) ||
+        COMPRESSION_INS(Read32)(bytes + pos) != UINT32_C(0x02014b50)) break;
+    nameLength = COMPRESSION_INS(ZipRead16)(bytes + pos + 28);
+    extraLength = COMPRESSION_INS(ZipRead16)(bytes + pos + 30);
+    commentLength = COMPRESSION_INS(ZipRead16)(bytes + pos + 32);
+    recordLength = (size_t)46 + nameLength + extraLength + commentLength;
+    if (!COMPRESSION_INS(ZipRange)(offset + length, pos, recordLength) ||
+        !nameLength || memchr(bytes + pos + 46, 0, nameLength)) break;
+    zip->entries[i] = pos;
+    if (COMPRESSION_INS(ZipEntryInfo)(zip, i, NULL, NULL) !=
+        STATUS_CONST(SUCCESS)) break;
+    pos += recordLength;
+  }
+  if (i != count || pos != offset + length) {
+    free(zip->entries); free(zip);
+    return STATUS_CONST(INVALID_SEQUENCE);
+  }
+  reader->native = zip;
+  return STATUS_CONST(SUCCESS);
+}
+COMPRESSION_ZIP_CLOSE_PROTOTYPE {
+  if (reader && reader->native) {
+    COMPRESSION_INS(TZipNativeReader) *zip =
+        (COMPRESSION_INS(TZipNativeReader) *)reader->native;
+    free(zip->entries);
+    free(zip);
+    reader->native = NULL;
+  }
+}
+COMPRESSION_ZIP_COUNT_PROTOTYPE {
+  const COMPRESSION_INS(TZipNativeReader) *zip;
+  if (!reader || !reader->native || !outCount) return STATUS_CONST(INVALID_ARGUMENT);
+  zip = (const COMPRESSION_INS(TZipNativeReader) *)reader->native;
+  *outCount = zip->count;
+  return STATUS_CONST(SUCCESS);
+}
+COMPRESSION_ZIP_ENTRY_PROTOTYPE {
+  const COMPRESSION_INS(TZipNativeReader) *zip;
+  if (!reader || !reader->native || !outEntry)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  zip = (const COMPRESSION_INS(TZipNativeReader) *)reader->native;
+  return COMPRESSION_INS(ZipEntryInfo)(zip, index, outEntry, NULL);
+}
+COMPRESSION_ZIP_NAME_PROTOTYPE {
+  const COMPRESSION_INS(TZipNativeReader) *zip;
+  const unsigned char *record;
+  size_t length;
+  if (!reader || !reader->native || !outSize || (!destination && capacity))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  zip = (const COMPRESSION_INS(TZipNativeReader) *)reader->native;
+  if (index >= zip->count) return STATUS_CONST(OUT_OF_RANGE);
+  record = zip->data + zip->entries[index];
+  length = COMPRESSION_INS(ZipRead16)(record + 28);
+  if (capacity <= length) return STATUS_CONST(INSUFFICIENT_SPACE);
+  memcpy(destination, record + 46, length);
+  destination[length] = 0;
+  *outSize = length;
+  return STATUS_CONST(SUCCESS);
+}
+COMPRESSION_ZIP_FIND_PROTOTYPE {
+  const COMPRESSION_INS(TZipNativeReader) *zip;
+  size_t i, length;
+  if (!reader || !reader->native || !name || !outIndex)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  zip = (const COMPRESSION_INS(TZipNativeReader) *)reader->native;
+  length = strlen(name);
+  for (i = 0; i < zip->count; ++i) {
+    const unsigned char *record = zip->data + zip->entries[i];
+    if (length == COMPRESSION_INS(ZipRead16)(record + 28) &&
+        !memcmp(record + 46, name, length)) {
+      *outIndex = i;
+      return STATUS_CONST(SUCCESS);
+    }
+  }
+  return STATUS_CONST(NOT_FOUND);
+}
+COMPRESSION_ZIP_EXTRACT_PROTOTYPE {
+  const COMPRESSION_INS(TZipNativeReader) *zip;
+  const unsigned char *record, *local;
+  COMPRESSION_TYPE(TZipEntry) entry;
+  size_t offset, start, outCount = 0;
+  uint64_t offset64;
+  unsigned int method, nameLength, extraLength;
+  OPSTATUS status;
+  if (!outSize || (!destination && capacity)) return STATUS_CONST(INVALID_ARGUMENT);
+  status = COMPRESSION_FUNC(ZipEntry)(reader, index, &entry);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  if (!entry.supported) return STATUS_CONST(NOT_SUPPORTED);
+  if (entry.size > capacity) return STATUS_CONST(INSUFFICIENT_SPACE);
+  zip = (const COMPRESSION_INS(TZipNativeReader) *)reader->native;
+  if (COMPRESSION_INS(Overlap)(zip->data, zip->size, destination, capacity))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  record = zip->data + zip->entries[index];
+  status = COMPRESSION_INS(ZipEntryInfo)(zip, index, NULL, &offset64);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  if (offset64 > SIZE_MAX || entry.compressedSize > SIZE_MAX)
+    return STATUS_CONST(OUT_OF_RANGE);
+  offset = (size_t)offset64;
+  if (!COMPRESSION_INS(ZipRange)(zip->directoryOffset, offset, 30))
+    return STATUS_CONST(INVALID_SEQUENCE);
+  local = zip->data + offset;
+  if (COMPRESSION_INS(Read32)(local) != UINT32_C(0x04034b50))
+    return STATUS_CONST(INVALID_SEQUENCE);
+  nameLength = COMPRESSION_INS(ZipRead16)(local + 26);
+  extraLength = COMPRESSION_INS(ZipRead16)(local + 28);
+  if (nameLength != COMPRESSION_INS(ZipRead16)(record + 28) ||
+      COMPRESSION_INS(ZipRead16)(local + 6) != COMPRESSION_INS(ZipRead16)(record + 8) ||
+      COMPRESSION_INS(ZipRead16)(local + 8) != COMPRESSION_INS(ZipRead16)(record + 10))
+    return STATUS_CONST(INVALID_SEQUENCE);
+  if (!COMPRESSION_INS(ZipRange)(zip->directoryOffset, offset + 30,
+      (size_t)nameLength + extraLength) ||
+      memcmp(local + 30, record + 46, nameLength))
+    return STATUS_CONST(INVALID_SEQUENCE);
+  start = offset + 30 + nameLength + extraLength;
+  if (!COMPRESSION_INS(ZipRange)(zip->directoryOffset, start, (size_t)entry.compressedSize))
+    return STATUS_CONST(INVALID_SEQUENCE);
+  method = COMPRESSION_INS(ZipRead16)(record + 10);
+  if (method == 0) {
+    if (entry.compressedSize != entry.size) return STATUS_CONST(INVALID_SEQUENCE);
+    if (entry.size) memcpy(destination, zip->data + start, (size_t)entry.size);
+    outCount = (size_t)entry.size;
+  } else {
+    status = COMPRESSION_FUNC(Decompress)(COMPRESSION_CONST(DEFLATE),
+        zip->data + start, (size_t)entry.compressedSize,
+        destination, capacity, &outCount);
+    if (status != STATUS_CONST(SUCCESS)) return status;
+  }
+  if (outCount != entry.size ||
+      COMPRESSION_FUNC(CRC32)(0, destination, outCount) != entry.crc32)
+    return STATUS_CONST(INVALID_SEQUENCE);
+  *outSize = outCount;
+  return STATUS_CONST(SUCCESS);
+}
+COMPRESSION_ZIP_EXTRACT_ALLOC_PROTOTYPE {
+  COMPRESSION_TYPE(TZipEntry) entry;
+  COMPRESSION_TYPE(TBuffer) result = {0};
+  OPSTATUS status;
+  if (!outBuffer || outBuffer->data || outBuffer->size)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  status = COMPRESSION_FUNC(ZipEntry)(reader, index, &entry);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  if (!entry.supported) return STATUS_CONST(NOT_SUPPORTED);
+  if (entry.size > maxOutput || entry.size > SIZE_MAX)
+    return STATUS_CONST(INSUFFICIENT_SPACE);
+  result.data = (unsigned char *)malloc(entry.size ? (size_t)entry.size : 1);
+  if (!result.data) return STATUS_CONST(OUT_OF_MEMORY);
+  status = COMPRESSION_FUNC(ZipExtract)(reader, index, result.data,
+      (size_t)entry.size, &result.size);
+  if (status != STATUS_CONST(SUCCESS)) { free(result.data); return status; }
+  *outBuffer = result;
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline OPSTATUS COMPRESSION_INS(ZipReserve)(
+    COMPRESSION_INS(TZipNativeWriter) *zip, size_t amount) {
+  size_t capacity;
+  unsigned char *data;
+  if (amount > SIZE_MAX - zip->size) return STATUS_CONST(OUT_OF_RANGE);
+  if (zip->size + amount <= zip->capacity) return STATUS_CONST(SUCCESS);
+  capacity = zip->capacity ? zip->capacity : 128;
+  while (capacity < zip->size + amount)
+    capacity = capacity > SIZE_MAX / 2 ? zip->size + amount : capacity * 2;
+  data = (unsigned char *)realloc(zip->data, capacity);
+  if (!data) return STATUS_CONST(OUT_OF_MEMORY);
+  zip->data = data;
+  zip->capacity = capacity;
+  return STATUS_CONST(SUCCESS);
+}
+COMPRESSION_ZIP_CREATE_PROTOTYPE {
+  COMPRESSION_INS(TZipNativeWriter) *zip;
+  if (!writer || writer->native) return STATUS_CONST(INVALID_ARGUMENT);
+  zip = (COMPRESSION_INS(TZipNativeWriter) *)calloc(1, sizeof(*zip));
+  if (!zip) return STATUS_CONST(OUT_OF_MEMORY);
+  writer->native = zip;
+  return STATUS_CONST(SUCCESS);
+}
+COMPRESSION_ZIP_ADD_PROTOTYPE {
+  COMPRESSION_INS(TZipNativeWriter) *zip;
+  COMPRESSION_TYPE(TBuffer) packed = {0};
+  const unsigned char *bytes = (const unsigned char *)data;
+  size_t nameLength, payload, offset, extraLength, headerSize;
+  uint32_t crc;
+  unsigned int method;
+  bool largeSize;
+  OPSTATUS status;
+  if (!writer || !writer->native || !COMPRESSION_INS(ZipNameValid)(name) ||
+      (!data && size) || !COMPRESSION_INS(LevelValid)(level))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  zip = (COMPRESSION_INS(TZipNativeWriter) *)writer->native;
+  nameLength = strlen(name);
+  if (nameLength > UINT16_MAX || zip->count == SIZE_MAX)
+    return STATUS_CONST(OUT_OF_RANGE);
+  if (name[nameLength - 1] == '/' && size) return STATUS_CONST(INVALID_ARGUMENT);
+  method = level == COMPRESSION_CONST(LEVEL_STORE) || !size ? 0 : 8;
+  if (method == 8) {
+    status = COMPRESSION_FUNC(CompressAlloc)(COMPRESSION_CONST(DEFLATE),
+        data, size, level, &packed);
+    if (status != STATUS_CONST(SUCCESS)) return status;
+    bytes = packed.data;
+    payload = packed.size;
+  } else payload = size;
+  largeSize = size >= UINT32_MAX || payload >= UINT32_MAX;
+  extraLength = largeSize ? 20 : 0;
+  headerSize = 30 + nameLength + extraLength;
+  if (nameLength > SIZE_MAX - 50 || payload > SIZE_MAX - headerSize) {
+    COMPRESSION_FUNC(BufferFree)(&packed);
+    return STATUS_CONST(OUT_OF_RANGE);
+  }
+  if (zip->count == zip->entryCapacity) {
+    size_t newCapacity;
+    if (zip->entryCapacity > SIZE_MAX / (2 * sizeof(*zip->entries))) {
+      COMPRESSION_FUNC(BufferFree)(&packed);
+      return STATUS_CONST(OUT_OF_RANGE);
+    }
+    newCapacity = zip->entryCapacity ? zip->entryCapacity * 2 : 8;
+    size_t *entries = (size_t *)realloc(zip->entries,
+        newCapacity * sizeof(*zip->entries));
+    if (!entries) { COMPRESSION_FUNC(BufferFree)(&packed); return STATUS_CONST(OUT_OF_MEMORY); }
+    zip->entries = entries;
+    zip->entryCapacity = newCapacity;
+  }
+  status = COMPRESSION_INS(ZipReserve)(zip, headerSize + payload);
+  if (status != STATUS_CONST(SUCCESS)) {
+    COMPRESSION_FUNC(BufferFree)(&packed);
+    return status;
+  }
+  offset = zip->size;
+  crc = COMPRESSION_FUNC(CRC32)(0, data, size);
+  memset(zip->data + offset, 0, 30);
+  COMPRESSION_INS(Write32)(zip->data + offset, UINT32_C(0x04034b50));
+  COMPRESSION_INS(ZipWrite16)(zip->data + offset + 4, largeSize ? 45 : 20);
+  COMPRESSION_INS(ZipWrite16)(zip->data + offset + 6, 0x0800);
+  COMPRESSION_INS(ZipWrite16)(zip->data + offset + 8, method);
+  COMPRESSION_INS(ZipWrite16)(zip->data + offset + 12, 0x21);
+  COMPRESSION_INS(Write32)(zip->data + offset + 14, crc);
+  COMPRESSION_INS(Write32)(zip->data + offset + 18,
+      largeSize ? UINT32_MAX : (uint32_t)payload);
+  COMPRESSION_INS(Write32)(zip->data + offset + 22,
+      largeSize ? UINT32_MAX : (uint32_t)size);
+  COMPRESSION_INS(ZipWrite16)(zip->data + offset + 26, (unsigned int)nameLength);
+  COMPRESSION_INS(ZipWrite16)(zip->data + offset + 28, (unsigned int)extraLength);
+  memcpy(zip->data + offset + 30, name, nameLength);
+  if (largeSize) {
+    unsigned char *extra = zip->data + offset + 30 + nameLength;
+    COMPRESSION_INS(ZipWrite16)(extra, 1);
+    COMPRESSION_INS(ZipWrite16)(extra + 2, 16);
+    COMPRESSION_INS(ZipWrite64)(extra + 4, (uint64_t)size);
+    COMPRESSION_INS(ZipWrite64)(extra + 12, (uint64_t)payload);
+  }
+  if (payload) memcpy(zip->data + offset + headerSize, bytes, payload);
+  zip->size += headerSize + payload;
+  zip->entries[zip->count++] = offset;
+  COMPRESSION_FUNC(BufferFree)(&packed);
+  return STATUS_CONST(SUCCESS);
+}
+COMPRESSION_ZIP_FINISH_PROTOTYPE {
+  COMPRESSION_INS(TZipNativeWriter) *zip;
+  COMPRESSION_TYPE(TBuffer) result = {0};
+  size_t i, directorySize = 0, start, needed;
+  bool zip64End = false;
+  OPSTATUS status;
+  if (!writer || !writer->native || !outBuffer || outBuffer->data || outBuffer->size)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  zip = (COMPRESSION_INS(TZipNativeWriter) *)writer->native;
+  start = zip->size;
+  for (i = 0; i < zip->count; ++i) {
+    const unsigned char *local = zip->data + zip->entries[i];
+    size_t nameLength = COMPRESSION_INS(ZipRead16)(local + 26);
+    bool size64 = COMPRESSION_INS(Read32)(local + 18) == UINT32_MAX ||
+                  COMPRESSION_INS(Read32)(local + 22) == UINT32_MAX;
+    bool offset64 = zip->entries[i] >= UINT32_MAX;
+    size_t extraSize = size64 || offset64 ?
+        4 + (size64 ? 16 : 0) + (offset64 ? 8 : 0) : 0;
+    if (nameLength > SIZE_MAX - 46 - extraSize ||
+        directorySize > SIZE_MAX - 46 - extraSize - nameLength)
+      return STATUS_CONST(OUT_OF_RANGE);
+    directorySize += 46 + nameLength + extraSize;
+    if (size64 || offset64) zip64End = true;
+  }
+  if (zip->count >= UINT16_MAX || start >= UINT32_MAX ||
+      directorySize >= UINT32_MAX)
+    zip64End = true;
+  if (directorySize > SIZE_MAX - (zip64End ? 98U : 22U))
+    return STATUS_CONST(OUT_OF_RANGE);
+  needed = directorySize + (zip64End ? 98U : 22U);
+  status = COMPRESSION_INS(ZipReserve)(zip, needed);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+
+  for (i = 0; i < zip->count; ++i) {
+    const size_t localOffset = zip->entries[i];
+    const unsigned char *local = zip->data + localOffset;
+    unsigned char *central = zip->data + zip->size, *extra;
+    size_t nameLength = COMPRESSION_INS(ZipRead16)(local + 26);
+    bool size64 = COMPRESSION_INS(Read32)(local + 18) == UINT32_MAX ||
+                  COMPRESSION_INS(Read32)(local + 22) == UINT32_MAX;
+    bool offset64 = localOffset >= UINT32_MAX;
+    size_t extraSize = size64 || offset64 ?
+        4 + (size64 ? 16 : 0) + (offset64 ? 8 : 0) : 0;
+    memset(central, 0, 46);
+    COMPRESSION_INS(Write32)(central, UINT32_C(0x02014b50));
+    COMPRESSION_INS(ZipWrite16)(central + 4, size64 || offset64 ? 45 : 20);
+    memcpy(central + 6, local + 4, 22);
+    if (size64 || offset64)
+      COMPRESSION_INS(ZipWrite16)(central + 6, 45);
+    COMPRESSION_INS(ZipWrite16)(central + 28, (unsigned int)nameLength);
+    COMPRESSION_INS(ZipWrite16)(central + 30, (unsigned int)extraSize);
+    COMPRESSION_INS(Write32)(central + 42,
+        offset64 ? UINT32_MAX : (uint32_t)localOffset);
+    memcpy(central + 46, local + 30, nameLength);
+    extra = central + 46 + nameLength;
+    if (extraSize) {
+      unsigned char *field = extra + 4;
+      COMPRESSION_INS(ZipWrite16)(extra, 1);
+      COMPRESSION_INS(ZipWrite16)(extra + 2, (unsigned int)(extraSize - 4));
+      if (size64) {
+        COMPRESSION_INS(ZipWrite64)(field,
+            COMPRESSION_INS(ZipRead64)(local + 30 +
+                COMPRESSION_INS(ZipRead16)(local + 26) + 4));
+        COMPRESSION_INS(ZipWrite64)(field + 8,
+            COMPRESSION_INS(ZipRead64)(local + 30 +
+                COMPRESSION_INS(ZipRead16)(local + 26) + 12));
+        field += 16;
+      }
+      if (offset64) COMPRESSION_INS(ZipWrite64)(field, (uint64_t)localOffset);
+    }
+    zip->size += 46 + nameLength + extraSize;
+  }
+
+  if (zip64End) {
+    unsigned char *record = zip->data + zip->size;
+    memset(record, 0, 76);
+    COMPRESSION_INS(Write32)(record, UINT32_C(0x06064b50));
+    COMPRESSION_INS(ZipWrite64)(record + 4, 44);
+    COMPRESSION_INS(ZipWrite16)(record + 12, 45);
+    COMPRESSION_INS(ZipWrite16)(record + 14, 45);
+    COMPRESSION_INS(ZipWrite64)(record + 24, (uint64_t)zip->count);
+    COMPRESSION_INS(ZipWrite64)(record + 32, (uint64_t)zip->count);
+    COMPRESSION_INS(ZipWrite64)(record + 40, (uint64_t)directorySize);
+    COMPRESSION_INS(ZipWrite64)(record + 48, (uint64_t)start);
+    zip->size += 56;
+    record = zip->data + zip->size;
+    COMPRESSION_INS(Write32)(record, UINT32_C(0x07064b50));
+    COMPRESSION_INS(ZipWrite64)(record + 8, (uint64_t)(zip->size - 56));
+    COMPRESSION_INS(Write32)(record + 16, 1);
+    zip->size += 20;
+  }
+  memset(zip->data + zip->size, 0, 22);
+  COMPRESSION_INS(Write32)(zip->data + zip->size, UINT32_C(0x06054b50));
+  COMPRESSION_INS(ZipWrite16)(zip->data + zip->size + 8,
+      zip64End ? UINT16_MAX : (unsigned int)zip->count);
+  COMPRESSION_INS(ZipWrite16)(zip->data + zip->size + 10,
+      zip64End ? UINT16_MAX : (unsigned int)zip->count);
+  COMPRESSION_INS(Write32)(zip->data + zip->size + 12,
+      zip64End ? UINT32_MAX : (uint32_t)directorySize);
+  COMPRESSION_INS(Write32)(zip->data + zip->size + 16,
+      zip64End ? UINT32_MAX : (uint32_t)start);
+  zip->size += 22;
+  result.data = zip->data;
+  result.size = zip->size;
+  free(zip->entries);
+  free(zip);
+  writer->native = NULL;
+  *outBuffer = result;
+  return STATUS_CONST(SUCCESS);
+}
+COMPRESSION_ZIP_DISCARD_PROTOTYPE {
+  if (writer && writer->native) {
+    COMPRESSION_INS(TZipNativeWriter) *zip =
+        (COMPRESSION_INS(TZipNativeWriter) *)writer->native;
+    free(zip->data);
+    free(zip->entries);
+    free(zip);
+    writer->native = NULL;
+  }
+}

@@ -1,0 +1,32 @@
+#pragma once
+/* Native C11 ASF font: include this file directly in your .c.
+ * No generator, no parser, no runtime file access. */
+#include "../Font.h"
+
+static const FONT_TYPE(TFont) Readable_Font = {
+    .height = 3,
+    .name = "Readable",
+    .author = "Cosmeron contributors",
+    .license = "EUPL-1.2-or-later",
+    /* Optional .letterSpacing and .lineSpacing default to 0. */
+    .glyphs = {
+        FONT_GLYPH(' ') = {
+            .art = "   \n"
+                   "   \n"
+                   "   "
+        },
+        FONT_GLYPH('A') = {
+            .art = "  A\n"
+                   " A A\n"
+                   "AAAAA"
+        },
+        FONT_GLYPH('B') = {
+            .art = "BBBBB\n"
+                   "B   B\n"
+                   "BBBBB",
+            /* RGB for row 0; color is separate from the drawing. */
+            .foreground = 0xFF281EU,
+            .foregroundRows = UINT32_C(1) << 0
+        }
+    }
+};

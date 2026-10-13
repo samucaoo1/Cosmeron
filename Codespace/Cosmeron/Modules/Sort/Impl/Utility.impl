@@ -1,0 +1,23 @@
+#pragma once
+SORT_IS_SORTED_PROTOTYPE {
+  OPSTATUS status = SORT_INS(Validate)(data, count, elementSize,
+                                       compare != NULL);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  if (!outSorted) return STATUS_CONST(INVALID_ARGUMENT);
+  bool sorted = true;
+  const unsigned char *bytes = data;
+  for (size_t i = 1; i < count; ++i)
+    if (compare(bytes + (i - 1) * elementSize, bytes + i * elementSize) ==
+        COMPARISON_HIGHER_CONST) { sorted = false; break; }
+  *outSorted = sorted;
+  return STATUS_CONST(SUCCESS);
+}
+SORT_REVERSE_PROTOTYPE {
+  OPSTATUS status = SORT_INS(Validate)(data, count, elementSize, true);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  unsigned char *bytes = data;
+  for (size_t i = 0; i < count / 2; ++i)
+    SORT_INS(Swap)(bytes + i * elementSize,
+                   bytes + (count - i - 1) * elementSize, elementSize);
+  return STATUS_CONST(SUCCESS);
+}

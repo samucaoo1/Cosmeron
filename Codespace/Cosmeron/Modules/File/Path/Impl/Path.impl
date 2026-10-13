@@ -1,0 +1,142 @@
+#pragma once
+static inline size_t FILE_INS(RootLength)(const char *path) {
+  if (!FILE_INS(PathValid)(path)) return 0;
+#ifdef _WIN32
+  if (((path[0] >= 'A' && path[0] <= 'Z') || (path[0] >= 'a' && path[0] <= 'z')) && path[1] == ':')
+    return FILE_INS(Separator)(path[2]) ? 3 : 2;
+  if (FILE_INS(Separator)(path[0]) && FILE_INS(Separator)(path[1])) {
+    size_t p = 2;
+    while (path[p] && !FILE_INS(Separator)(path[p])) ++p;
+    if (path[p]) ++p;
+    while (path[p] && !FILE_INS(Separator)(path[p])) ++p;
+    return p;
+  }
+#endif
+  if (FILE_INS(Separator)(path[0]))
+    return FILE_INS(Separator)(path[1]) && !FILE_INS(Separator)(path[2]) ? 2 : 1;
+  return 0;
+}
+FILE_PATH_IS_ABSOLUTE_PROTOTYPE {
+  if (!FILE_INS(PathValid)(path)) return false;
+#ifdef _WIN32
+  if (FILE_INS(Separator)(path[0]) && FILE_INS(Separator)(path[1])) return true;
+  return FILE_INS(RootLength)(path) == 3 && path[1] == ':';
+#else
+  return path[0] == '/';
+#endif
+}
+FILE_PATH_NAME_PROTOTYPE {
+  const char *name;
+  if (!path) return NULL;
+  name = path;
+  for (; *path; ++path) if (FILE_INS(Separator)(*path)) name = path + 1;
+  return name;
+}
+FILE_PATH_EXTENSION_PROTOTYPE {
+  const char *name = FILE_FUNC(Path_Name)(path), *extension = NULL, *p;
+  if (!name) return NULL;
+  for (p = name; *p; ++p) if (*p == '.' && p != name) extension = p;
+  if (!strcmp(name, "..")) extension = NULL;
+  return extension ? extension : p;
+}
+FILE_PATH_JOIN_PROTOTYPE {
+  size_t a, b; bool separator; char *joined; OPSTATUS s;
+  if (!base || !part || !outRequired || (!output && capacity)) return STATUS_CONST(INVALID_ARGUMENT);
+  if (FILE_FUNC(Path_IsAbsolute)(part)) return FILE_INS(Output)(part, strlen(part), output, capacity, outRequired);
+#ifdef _WIN32
+  /* Rooted and drive-relative RHS needs contextual Windows resolution. */
+  if (*part && (FILE_INS(Separator)(part[0]) || FILE_INS(RootLength)(part)))
+    return STATUS_CONST(INVALID_ARGUMENT);
+#endif
+  a = strlen(base); b = strlen(part);
+  separator = a && b && !FILE_INS(Separator)(base[a - 1]);
+  if (a > SIZE_MAX - b - 1 || (separator && a + b == SIZE_MAX - 1)) return STATUS_CONST(OUT_OF_RANGE);
+  joined = (char *)malloc(a + b + (separator ? 1 : 0) + 1);
+  if (!joined) return STATUS_CONST(OUT_OF_MEMORY);
+  memcpy(joined, base, a);
+  if (separator) joined[a++] = '/';
+  memcpy(joined + a, part, b + 1);
+  s = FILE_INS(Output)(joined, a + b, output, capacity, outRequired);
+  free(joined); return s;
+}
+FILE_PATH_NORMALIZE_PROTOTYPE {
+  size_t length, root, p, used; char *normal; OPSTATUS s;
+  if (!FILE_INS(PathValid)(path) || !outRequired || (!output && capacity)) return STATUS_CONST(INVALID_ARGUMENT);
+  length = strlen(path); root = FILE_INS(RootLength)(path);
+  normal = (char *)malloc(length + 2);
+  if (!normal) return STATUS_CONST(OUT_OF_MEMORY);
+  for (p = 0; p < root; ++p) normal[p] = FILE_INS(Separator)(path[p]) ? '/' : path[p];
+  used = root; p = root;
+  while (path[p]) {
+    size_t start, count;
+    while (FILE_INS(Separator)(path[p])) ++p;
+    start = p;
+    while (path[p] && !FILE_INS(Separator)(path[p])) ++p;
+    count = p - start;
+    if (!count || (count == 1 && path[start] == '.')) continue;
+    /* Preserve ..: collapsing it can change traversal through symbolic links. */
+    if (used && normal[used - 1] != '/' &&
+#ifdef _WIN32
+        !(used == 2 && normal[1] == ':') &&
+#endif
+        true) normal[used++] = '/';
+    memcpy(normal + used, path + start, count); used += count;
+  }
+  if (!used) normal[used++] = '.';
+  normal[used] = '\0';
+  s = FILE_INS(Output)(normal, used, output, capacity, outRequired);
+  free(normal); return s;
+}
+FILE_PATH_PARENT_PROTOTYPE {
+  size_t length, root;
+  if (!FILE_INS(PathValid)(path)) return STATUS_CONST(INVALID_ARGUMENT);
+  length = strlen(path); root = FILE_INS(RootLength)(path);
+  while (length > root && FILE_INS(Separator)(path[length - 1])) --length;
+  if (length <= root) return FILE_INS(Output)(path, root, output, capacity, outRequired);
+  while (length > root && !FILE_INS(Separator)(path[length - 1])) --length;
+  while (length > root && FILE_INS(Separator)(path[length - 1])) --length;
+  if (!length) return FILE_INS(Output)(".", 1, output, capacity, outRequired);
+  return FILE_INS(Output)(path, length, output, capacity, outRequired);
+}
+FILE_PATH_RESOLVE_PROTOTYPE {
+  OPSTATUS s;
+  if (!FILE_INS(PathValid)(path) || !outRequired || (!output && capacity)) return STATUS_CONST(INVALID_ARGUMENT);
+#ifdef _WIN32
+  {
+    wchar_t *wide, *resolved; char *utf8 = NULL; HANDLE handle; DWORD count;
+    typedef DWORD (WINAPI *FILE_INS(FinalPathFunction))(HANDLE, LPWSTR, DWORD, DWORD);
+    FILE_INS(FinalPathFunction) finalPath;
+    FARPROC address = GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "GetFinalPathNameByHandleW");
+    const DWORD normalizedName = 0;
+    if (!address) return STATUS_CONST(NOT_SUPPORTED);
+    _Static_assert(sizeof(finalPath) == sizeof(address), "Windows function pointer size");
+    memcpy(&finalPath, &address, sizeof(finalPath));
+    s = FILE_INS(Wide)(path, &wide);
+    if (s != STATUS_CONST(SUCCESS)) return s;
+    handle = CreateFileW(wide, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+    free(wide);
+    if (handle == INVALID_HANDLE_VALUE) return FILE_INS(WinError)(GetLastError());
+    count = finalPath(handle, NULL, 0, normalizedName);
+    if (!count) { s = FILE_INS(WinError)(GetLastError()); CloseHandle(handle); return s; }
+    resolved = (wchar_t *)malloc(((size_t)count + 1) * sizeof(*resolved));
+    if (!resolved) { CloseHandle(handle); return STATUS_CONST(OUT_OF_MEMORY); }
+    { DWORD written = finalPath(handle, resolved, count + 1, normalizedName);
+      if (!written || written > count) { s = STATUS_CONST(GENERIC_ERROR); }
+      else s = FILE_INS(Utf8)(resolved, &utf8);
+    }
+    free(resolved); CloseHandle(handle);
+    if (s != STATUS_CONST(SUCCESS)) return s;
+    s = FILE_INS(Output)(utf8, strlen(utf8), output, capacity, outRequired);
+    free(utf8);
+  }
+#else
+  {
+    char *resolved = realpath(path, NULL);
+    if (!resolved) return FILE_INS(Error)(errno);
+    s = FILE_INS(Output)(resolved, strlen(resolved), output, capacity, outRequired);
+    free(resolved);
+  }
+#endif
+  return s;
+}

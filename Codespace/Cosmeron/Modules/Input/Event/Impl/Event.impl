@@ -1,0 +1,59 @@
+#pragma once
+#include "../../../Text/Encoding/UTF8.h"
+
+INPUT_EVENT_POLL_PROTOTYPE {
+  INPUT_INS(State) *s = &INPUT_INS(state);
+  if (!event || !s->count) return false;
+  *event = s->events[s->head];
+  s->head = (s->head + 1) % INPUT_EVENT_CAPACITY; --s->count;
+  return true;
+}
+
+INPUT_EVENT_CLEAR_PROTOTYPE { INPUT_INS(state).head = INPUT_INS(state).count = 0; }
+
+INPUT_EVENT_GET_DROPPED_COUNT_PROTOTYPE { return INPUT_INS(state).dropped; }
+
+INPUT_EVENT_SUBMIT_PROTOTYPE {
+  INPUT_INS(State) *s = &INPUT_INS(state);
+  if (!event || event->source >= INPUT_DEVICE_CAPACITY) return STATUS_CONST(INVALID_ARGUMENT);
+  if (s->captureMode != INPUT_CONST(CAPTURE_APPLICATION)) return STATUS_CONST(NOT_SUPPORTED);
+  switch (event->type) {
+  case INPUT_CONST(EVENT_KEY_PRESS): case INPUT_CONST(EVENT_KEY_RELEASE): case INPUT_CONST(EVENT_KEY_REPEAT):
+    if (event->data.key < 0 || event->data.key >= LIB_PREFIX_CONST(INPUT_KEY_COUNT) || event->physicalKey < 0 || event->physicalKey >= LIB_PREFIX_CONST(INPUT_KEY_COUNT)) return STATUS_CONST(OUT_OF_RANGE);
+    break;
+  case INPUT_CONST(EVENT_MOUSE_BUTTON_PRESS): case INPUT_CONST(EVENT_MOUSE_BUTTON_RELEASE):
+    if (event->data.mouseButton < 0 || event->data.mouseButton >= INPUT_CONST(MOUSE_BUTTON_COUNT)) return STATUS_CONST(OUT_OF_RANGE);
+    break;
+  case INPUT_CONST(EVENT_MOUSE_MOVE): case INPUT_CONST(EVENT_MOUSE_POSITION): case INPUT_CONST(EVENT_MOUSE_SCROLL):
+    if (!(event->data.motion.x >= -FLT_MAX && event->data.motion.x <= FLT_MAX) || !(event->data.motion.y >= -FLT_MAX && event->data.motion.y <= FLT_MAX)) return STATUS_CONST(INVALID_ARGUMENT);
+    break;
+  case INPUT_CONST(EVENT_TEXT_INPUT): case INPUT_CONST(EVENT_TEXT_COMPOSITION): {
+    size_t offset = 0;
+    if (event->data.text.length >= sizeof(event->data.text.utf8) ||
+        event->data.text.utf8[event->data.text.length] != '\0' ||
+        event->data.text.caret > event->data.text.length ||
+        event->data.text.selection > event->data.text.length - event->data.text.caret)
+      return STATUS_CONST(INVALID_ARGUMENT);
+    while (offset < event->data.text.length) {
+      TEXT_TYPE(TChar32) cp; size_t consumed;
+      OPSTATUS status = TEXT_UTF8_FUNC(Decode)(
+          (const unsigned char *)event->data.text.utf8 + offset,
+          event->data.text.length - offset, &cp, &consumed);
+      if (status != STATUS_CONST(SUCCESS)) return status;
+      if (!cp) return STATUS_CONST(INVALID_ARGUMENT);
+      offset += consumed;
+    }
+    if ((event->data.text.caret < event->data.text.length &&
+         ((unsigned char)event->data.text.utf8[event->data.text.caret] & 0xC0U) == 0x80U) ||
+        (event->data.text.caret + event->data.text.selection < event->data.text.length &&
+         ((unsigned char)event->data.text.utf8[event->data.text.caret + event->data.text.selection] & 0xC0U) == 0x80U))
+      return STATUS_CONST(INVALID_ARGUMENT);
+    break;
+  }
+  case INPUT_CONST(EVENT_FOCUS_GAINED): case INPUT_CONST(EVENT_FOCUS_LOST): case INPUT_CONST(EVENT_SOURCE_REMOVED): break;
+  default: return STATUS_CONST(NOT_SUPPORTED);
+  }
+  if (s->pendingCount == INPUT_EVENT_CAPACITY) return STATUS_CONST(INSUFFICIENT_SPACE);
+  s->pending[s->pendingCount++] = *event;
+  return STATUS_CONST(SUCCESS);
+}

@@ -1,0 +1,173 @@
+#pragma once
+FILE_OPEN_PROTOTYPE {
+  int descriptor, mode;
+  const uint32_t known = FILE_CONST(READ) | FILE_CONST(WRITE) | FILE_CONST(OPEN_CREATE) |
+      FILE_CONST(OPEN_TRUNCATE) | FILE_CONST(APPEND) | FILE_CONST(EXCLUSIVE);
+  if (!file || !FILE_INS(PathValid)(path) || (flags & ~known) ||
+      !(flags & (FILE_CONST(READ) | FILE_CONST(WRITE))) ||
+      ((flags & (FILE_CONST(OPEN_TRUNCATE) | FILE_CONST(APPEND))) && !(flags & FILE_CONST(WRITE))) ||
+      ((flags & FILE_CONST(EXCLUSIVE)) && !(flags & FILE_CONST(OPEN_CREATE))) ||
+      ((flags & FILE_CONST(OPEN_TRUNCATE)) && (flags & FILE_CONST(APPEND))))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (file->native) return STATUS_CONST(BUSY);
+  mode = (flags & FILE_CONST(READ)) ? ((flags & FILE_CONST(WRITE)) ? O_RDWR : O_RDONLY) : O_WRONLY;
+  if (flags & FILE_CONST(OPEN_CREATE)) mode |= O_CREAT;
+  if (flags & FILE_CONST(OPEN_TRUNCATE)) mode |= O_TRUNC;
+  if (flags & FILE_CONST(APPEND)) mode |= O_APPEND;
+  if (flags & FILE_CONST(EXCLUSIVE)) mode |= O_EXCL;
+#ifdef _WIN32
+  {
+    wchar_t *wide; OPSTATUS s = FILE_INS(Wide)(path, &wide);
+    if (s != STATUS_CONST(SUCCESS)) return s;
+    descriptor = _wopen(wide, mode | _O_BINARY | _O_NOINHERIT, _S_IREAD | _S_IWRITE);
+    free(wide);
+  }
+#else
+#ifdef O_CLOEXEC
+  mode |= O_CLOEXEC;
+#endif
+  do { descriptor = open(path, mode, FILE_CINS(DEFAULT_MODE)); } while (descriptor < 0 && errno == EINTR);
+#endif
+  if (descriptor < 0) return FILE_INS(Error)(errno);
+  file->native = (intptr_t)descriptor + 1; file->flags = flags;
+  return STATUS_CONST(SUCCESS);
+}
+FILE_CLOSE_PROTOTYPE {
+  int result;
+  if (!file) return STATUS_CONST(INVALID_ARGUMENT);
+  if (!file->native) return STATUS_CONST(SUCCESS);
+#ifdef _WIN32
+  result = _close((int)(file->native - 1));
+#else
+  result = close((int)(file->native - 1));
+#endif
+  /* Do not retry close after EINTR: the descriptor may already be released. */
+  file->native = 0; file->flags = 0;
+  return result ? FILE_INS(Error)(errno) : STATUS_CONST(SUCCESS);
+}
+FILE_READ_PROTOTYPE {
+  if (!file || !file->native || !outRead || (!buffer && capacity) || !(file->flags & FILE_CONST(READ)))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (!capacity) { *outRead = 0; return STATUS_CONST(SUCCESS); }
+#ifdef _WIN32
+  {
+    int count = _read((int)(file->native - 1), buffer, (unsigned int)(capacity > INT_MAX ? INT_MAX : capacity));
+    if (count < 0) return FILE_INS(Error)(errno);
+    *outRead = (size_t)count;
+  }
+#else
+  {
+    ssize_t count;
+    size_t amount = capacity > (size_t)INT_MAX ? (size_t)INT_MAX : capacity;
+    do { count = read((int)(file->native - 1), buffer, amount); } while (count < 0 && errno == EINTR);
+    if (count < 0) return FILE_INS(Error)(errno);
+    *outRead = (size_t)count;
+  }
+#endif
+  return STATUS_CONST(SUCCESS);
+}
+FILE_WRITE_PROTOTYPE {
+  if (!file || !file->native || !outWritten || (!buffer && size) || !(file->flags & FILE_CONST(WRITE)))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (!size) { *outWritten = 0; return STATUS_CONST(SUCCESS); }
+#ifdef _WIN32
+  {
+    int count = _write((int)(file->native - 1), buffer, (unsigned int)(size > INT_MAX ? INT_MAX : size));
+    if (count < 0) return FILE_INS(Error)(errno);
+    *outWritten = (size_t)count;
+  }
+#else
+  {
+    ssize_t count;
+    size_t amount = size > (size_t)INT_MAX ? (size_t)INT_MAX : size;
+    do { count = write((int)(file->native - 1), buffer, amount); } while (count < 0 && errno == EINTR);
+    if (count < 0) return FILE_INS(Error)(errno);
+    *outWritten = (size_t)count;
+  }
+#endif
+  return STATUS_CONST(SUCCESS);
+}
+FILE_SEEK_PROTOTYPE {
+  int whence;
+  if (!file || !file->native) return STATUS_CONST(INVALID_ARGUMENT);
+  switch (origin) {
+  case FILE_CONST(SEEK_BEGIN): whence = SEEK_SET; break;
+  case FILE_CONST(SEEK_CURRENT): whence = SEEK_CUR; break;
+  case FILE_CONST(SEEK_END): whence = SEEK_END; break;
+  default: return STATUS_CONST(INVALID_ARGUMENT);
+  }
+#ifdef _WIN32
+  if (_lseeki64((int)(file->native - 1), offset, whence) < 0) return FILE_INS(Error)(errno);
+#else
+  if ((int64_t)(off_t)offset != offset) return STATUS_CONST(OUT_OF_RANGE);
+  if (lseek((int)(file->native - 1), (off_t)offset, whence) < 0) return FILE_INS(Error)(errno);
+#endif
+  return STATUS_CONST(SUCCESS);
+}
+FILE_TELL_PROTOTYPE {
+  int64_t position;
+  if (!file || !file->native || !outPosition) return STATUS_CONST(INVALID_ARGUMENT);
+#ifdef _WIN32
+  position = _lseeki64((int)(file->native - 1), 0, SEEK_CUR);
+#else
+  position = (int64_t)lseek((int)(file->native - 1), 0, SEEK_CUR);
+#endif
+  if (position < 0) return FILE_INS(Error)(errno);
+  *outPosition = (uint64_t)position; return STATUS_CONST(SUCCESS);
+}
+FILE_SIZE_PROTOTYPE {
+  if (!file || !file->native || !outSize) return STATUS_CONST(INVALID_ARGUMENT);
+#ifdef _WIN32
+  { struct _stati64 info;
+    if (_fstati64((int)(file->native - 1), &info)) return FILE_INS(Error)(errno);
+    if (info.st_size < 0) return STATUS_CONST(OUT_OF_RANGE);
+    *outSize = (uint64_t)info.st_size;
+  }
+#else
+  { struct stat info;
+    if (fstat((int)(file->native - 1), &info)) return FILE_INS(Error)(errno);
+    if (info.st_size < 0) return STATUS_CONST(OUT_OF_RANGE);
+    *outSize = (uint64_t)info.st_size;
+  }
+#endif
+  return STATUS_CONST(SUCCESS);
+}
+FILE_TRUNCATE_PROTOTYPE {
+  if (!file || !file->native || !(file->flags & FILE_CONST(WRITE))) return STATUS_CONST(INVALID_ARGUMENT);
+  if (size > INT64_MAX) return STATUS_CONST(OUT_OF_RANGE);
+#ifdef _WIN32
+  { int error = _chsize_s((int)(file->native - 1), (int64_t)size);
+    if (error) return FILE_INS(Error)(error);
+  }
+#else
+  if ((uint64_t)(off_t)size != size || (off_t)size < 0) return STATUS_CONST(OUT_OF_RANGE);
+  if (ftruncate((int)(file->native - 1), (off_t)size)) return FILE_INS(Error)(errno);
+#endif
+  return STATUS_CONST(SUCCESS);
+}
+FILE_FLUSH_PROTOTYPE {
+  /* Descriptor backend has no library-side write buffer. */
+  return file && file->native ? STATUS_CONST(SUCCESS) : STATUS_CONST(INVALID_ARGUMENT);
+}
+FILE_SYNC_PROTOTYPE {
+  if (!file || !file->native) return STATUS_CONST(INVALID_ARGUMENT);
+#ifdef _WIN32
+  if (_commit((int)(file->native - 1))) return FILE_INS(Error)(errno);
+#else
+  { int result;
+    do { result = fsync((int)(file->native - 1)); } while (result && errno == EINTR);
+    if (result) return FILE_INS(Error)(errno);
+  }
+#endif
+  return STATUS_CONST(SUCCESS);
+}
+static inline OPSTATUS FILE_INS(WriteAll)(FILE_TYPE(TFile) *file, const void *data, size_t size) {
+  size_t position = 0;
+  while (position < size) {
+    size_t count; OPSTATUS s = FILE_FUNC(Write)(file, (const unsigned char *)data + position, size - position, &count);
+    if (s != STATUS_CONST(SUCCESS)) return s;
+    if (!count) return STATUS_CONST(GENERIC_ERROR);
+    position += count;
+  }
+  return STATUS_CONST(SUCCESS);
+}

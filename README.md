@@ -2,7 +2,13 @@
   <img src="Docs/Assets/Brand/Cosmeron-Horizontal.png" alt="Cosmeron — modular C11 systems programming library" width="900">
 </p>
 
-# Cosmeron
+<p align="center">
+  <a href="Docs/Project/ENTROPY.md"><img src=".github/badges/entropy.svg" alt="Entropy"></a>
+  <a href=".github/WORKFLOWS.md"><img src=".github/badges/c11.svg" alt="C11 Standard"></a>
+  <a href=".github/WORKFLOWS.md"><img src=".github/badges/platforms.svg" alt="Platforms"></a>
+  <a href=".github/WORKFLOWS.md"><img src=".github/badges/security.svg" alt="Security"></a>
+  <a href="Docs/Governance/LICENSING.md"><img src=".github/badges/license.svg" alt="License"></a>
+</p>
 
 **Cosmeron is a modular, header-oriented C11 library for portable systems programming, experimentation, education, and reusable low-level components.** It favors readable APIs, explicit ownership, consistent naming, composable modules, and portability without hiding how the machine works.
 
@@ -37,6 +43,12 @@ The current architecture covers or is designed around:
 - **Chronometry:** calendars, clocks, dates, durations, timers, epochs, and time zones.
 - **Concurrency:** atomics, threads, synchronization, coroutines, tasks/futures, and thread pools.
 - **Container:** generic arrays, strings, vectors, queues, stacks, linked structures, trees, hashes, and graphs.
+- **CLI:** argument queries, declarative commands, subcommands and help.
+- **Parsing:** INI, JSON, CSV/TSV and documented TOML/XML/YAML profiles.
+
+- **Compression:** DEFLATE, zlib, gzip and ZIP with an embedded engine and bounded decompression.
+- **Database:** embedded SQLite, prepared statements, typed columns and transactions.
+- **Graphics:** Terminal/Canvas, TUI, pixel GUI, ARGB surfaces and explicit native/host windows.
 - **Math:** arithmetic, ranges, clamps, values, and equation helpers.
 - **Network:** addresses, sockets, listeners, datagrams, polling, and name resolution.
 - **Random:** entropy sources, deterministic engines, distributions, mixers, and shuffling.
@@ -44,7 +56,12 @@ The current architecture covers or is designed around:
 - **Text:** UTF-8/UTF-16, Unicode, text grids, and terminal-oriented text structures.
 - **Type:** fundamental typed operations and extended numeric/value types.
 
-Planned domains such as Filesystem, Input, Terminal, TUI, Graphics, Parsing, Serialization, Event Loop, Audio, and more are tracked in the [roadmap](Docs/Project/ROADMAP.md).
+The [Input module](Docs/Modules/Input.md) provides keyboard, mouse and controller state through Windows/Linux backends, macOS capture, BSD paths and a host-event adapter. Controllers use native IOHIDManager on macOS and evdev/uhid/ujoy on BSD; SDL 3 is an optional fallback on macOS and non-evdev BSD.
+
+The [GUI module](Docs/Modules/GUI.md) shares the TUI interaction model and provides
+direct and persistent widget APIs. See the [GUI Lab](Codespace/Examples/GUI/) example.
+
+Planned domains such as Filesystem, Serialization, Event Loop, Audio, and more are tracked in the [roadmap](Docs/Project/ROADMAP.md).
 
 ## Architecture
 
@@ -66,7 +83,7 @@ Cosmeron uses namespaced generated APIs while keeping direct C symbols available
 
 ```c
 BIT_FUNC(32, Popcount)(flags);
-Bit_32_Popcount(flags);
+Bit32_Popcount(flags);
 ```
 
 Fallible operations return `OPSTATUS`; primary results are written through explicit output parameters. Predicates return `bool`. Ownership and native-platform boundaries are intended to remain visible rather than implicit.
@@ -90,3 +107,10 @@ See [Why EUPL 1.2?](Docs/Governance/LICENSING.md) for the project's licensing ra
 ---
 
 > Stay curious. Break things. Learn.
+
+The [File module](Docs/Modules/File.md) provides native file I/O, UTF-8 paths on Windows, directory iteration, whole-file loading and atomic saves without additional linker flags.
+
+The [Database module](Docs/Modules/Database.md) embeds SQLite with prepared SQL,
+copied parameters and explicit transactions. Define `DATABASE_SQLITE_IMPLEMENTATION`
+before the first include in one C file; other files share that engine through the
+header API. No `-lsqlite3` is required.

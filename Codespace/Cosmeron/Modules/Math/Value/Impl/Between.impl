@@ -1,0 +1,27 @@
+#define MATH_VALUE_IS_BETWEEN_IMPLEMENT(TYPE, SUFFIX)                         \
+  MATH_VALUE_IS_BETWEEN_PROTOTYPE(TYPE, SUFFIX) {                    \
+    return value > minimum && value < maximum;                                \
+  }
+
+#define MATH_VALUE_BETWEEN_IMPLEMENT(TYPE, SUFFIX)                            \
+  MATH_VALUE_BETWEEN_PROTOTYPE(TYPE, SUFFIX) {                       \
+    if (value < minimum) {                                                    \
+      return MATH_RANGE_CONST(LOWER);                                           \
+    }                                                                         \
+                                                                              \
+    if (value > maximum) {                                                    \
+      return MATH_RANGE_CONST(HIGHER);                                          \
+    }                                                                         \
+                                                                              \
+    if (value == minimum) {                                                   \
+      return MATH_RANGE_CONST(EQUAL_MINIMUM);                                   \
+    }                                                                         \
+                                                                              \
+    if (value == maximum) {                                                   \
+      return MATH_RANGE_CONST(EQUAL_MAXIMUM);                                   \
+    }                                                                         \
+                                                                              \
+    return MATH_RANGE_CONST(BETWEEN);                                           \
+  }
+
+/* EOF */

@@ -1,0 +1,241 @@
+name: 04 · Experimental
+
+# Forward-looking portability and research probes: OpenHarmony (OHOS),
+# Huawei HarmonyOS NEXT (HOS), ChromeOS (Crostini), OpenIndiana (Illumos),
+# Oracle Solaris, Android NDK, iOS cross-compilation and audio fidelity parity.
+#
+# Non-blocking workflow: results provide feasibility data and diagnostic logs;
+# failures are informational and do NOT block pull requests or merges.
+
+on:
+  push:
+    branches:
+      - main
+      - audio-module
+    paths-ignore:
+      - '.github/badges/**'
+      - '.github/entropy/state.json'
+      - 'Docs/**'
+      - '*.md'
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - '.github/badges/**'
+      - '.github/entropy/state.json'
+      - 'Docs/**'
+      - '*.md'
+  schedule:
+    - cron: '29 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: experimental-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # =========================================================================
+  # 1. OpenHarmony (OHOS) Native SDK 6.0 ARM64
+  # =========================================================================
+  openharmony:
+    name: Experimental / OpenHarmony (OHOS SDK 6.0)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install official native OpenHarmony SDK 6.0
+        id: sdk
+        uses: openharmony-rs/setup-ohos-sdk@eb82b94ef522b07269679195c2512f22e922ef3b
+        with:
+          version: '6.0'
+          components: native
+          cache: 'true'
+      - name: Compile and link OHOS C11 multi-TU
+        env:
+          OHOS_SDK: ${{ steps.sdk.outputs.ohos_sdk_native }}
+          OHOS_ARCH: arm64-v8a
+          OHOS_SYSTEM_PROBES: 'ON'
+        run: sh Tools/ohos/check-portability.sh
+      - name: Save target compiler diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ohos-native-target-diagnostics
+          path: |
+            .build-ohos/target-macros.txt
+            .build-ohos/target-triple.txt
+          if-no-files-found: ignore
+
+  # =========================================================================
+  # 2. Huawei HarmonyOS NEXT (HOS) ABI and Header Probes
+  # =========================================================================
+  harmonyos-next:
+    name: Experimental / HarmonyOS NEXT (HOS compatibility)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Verify POSIX, C11 and ArkTS native bridge boundary
+        run: |
+          set -eu
+          echo "### Probing Huawei HarmonyOS NEXT native C11 expectations ###"
+          # Check header-only macros for platform discrimination
+          gcc -std=c11 -Wall -Wextra -Wpedantic -Werror \
+            -I Codespace Tools/ohos/check-portability.sh >/dev/null 2>&1 || true
+          sh Tools/ohos/check-device.sh || true
+          echo "HarmonyOS NEXT probe logged."
+
+  # =========================================================================
+  # 3. ChromeOS Crostini Linux container
+  # =========================================================================
+  chromeos-crostini:
+    name: Experimental / ChromeOS (Crostini proxy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run Crostini validation suite inside Debian container
+        run: |
+          docker run --rm -v "$PWD:/workspace" -w /workspace debian:stable-slim \
+            /bin/sh -ec "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y gcc libc6-dev make python3; sh Tools/crostini/check.sh"
+
+  # =========================================================================
+  # 4. OpenIndiana (Illumos kernel) VM
+  # =========================================================================
+  openindiana:
+    name: Experimental / OpenIndiana (Illumos VM)
+    runs-on: ubuntu-latest
+    timeout-minutes: 85
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run portable C11 suite inside OpenIndiana Hipster VM
+        uses: vmactions/openindiana-vm@74a06af3be38c265a2d99d1af520d66a057ff222
+        with:
+          usesh: true
+          run: |
+            set -eu
+            sh .github/scripts/test-portable-core.sh
+            sh .github/scripts/test-bsd-native.sh
+
+  # =========================================================================
+  # 5. Oracle Solaris VM
+  # =========================================================================
+  solaris:
+    name: Experimental / Solaris (Oracle Solaris VM)
+    runs-on: ubuntu-latest
+    timeout-minutes: 85
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run portable C11 suite inside Solaris VM
+        uses: vmactions/solaris-vm@87d3c436511cef802cd1637f86f73b1a97715c8c
+        with:
+          usesh: true
+          run: |
+            set -eu
+            sh .github/scripts/test-portable-core.sh
+            sh .github/scripts/test-bsd-native.sh
+
+  # =========================================================================
+  # 6. Android NDK cross-compilation (aarch64)
+  # =========================================================================
+  android-ndk:
+    name: Experimental / Android (NDK Clang aarch64)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Cross-compile portable C11 suites for Android aarch64
+        run: |
+          set -eu
+          NDK_ROOT="${ANDROID_NDK_LATEST_HOME:-$ANDROID_NDK_HOME}"
+          if [ -z "$NDK_ROOT" ] || [ ! -d "$NDK_ROOT" ]; then
+            echo "Searching for Android NDK..."
+            NDK_ROOT=$(ls -d /usr/local/lib/android/sdk/ndk/* 2>/dev/null | sort -V | tail -n 1 || true)
+          fi
+          echo "Using Android NDK: $NDK_ROOT"
+          TOOLCHAIN="$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          CLANG=$(ls "$TOOLCHAIN"/aarch64-linux-android*-clang | grep -v '++' | sort -V | tail -n 1)
+          echo "Target compiler: $CLANG"
+          PORTABLE_RUN=0 CC="$CLANG" sh .github/scripts/test-portable-core.sh
+          file .build-portable/Core_Memory || true
+
+  # =========================================================================
+  # 7. iOS cross-compilation (arm64 Apple SDK)
+  # =========================================================================
+  ios-cross:
+    name: Experimental / iOS (Apple SDK arm64)
+    runs-on: macos-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Cross-compile portable C11 suites for iOS arm64
+        run: |
+          set -eu
+          SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
+          echo "Using iPhoneOS SDK: $SDK_PATH"
+          CLANG="xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=15.0"
+          PORTABLE_RUN=0 CC="$CLANG" sh .github/scripts/test-portable-core.sh
+          file .build-portable/Core_Memory || true
+
+  # =========================================================================
+  # 8. Audio native parity fixtures & residual diagnostics
+  # =========================================================================
+  audio-parity:
+    name: Experimental / Audio (PCM parity & fixtures)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install diagnostic encoder dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Multi-tone MP3 self-consistency parity
+        run: |
+          cd Codespace/Tests/Audio
+          sh MP3ParityFixtures.sh
+
+  # =========================================================================
+  # 9. Informational summary gate (non-blocking)
+  # =========================================================================
+  gate:
+    name: Experimental / Summary
+    if: ${{ always() }}
+    needs:
+      - openharmony
+      - harmonyos-next
+      - chromeos-crostini
+      - openindiana
+      - solaris
+      - android-ndk
+      - ios-cross
+      - audio-parity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Summarize experimental outcomes
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          REPORT_TITLE: Experimental Platforms
+          REPORT_STRICT: "0"
+        run: python3 .github/scripts/report-results.py

@@ -1,0 +1,153 @@
+# Zero-link profiles — C11
+
+Cosmeron distinguishes link flags needed by the application from runtime
+capabilities. Using a dynamic library loader does not eliminate that
+library's **runtime** dependency; successful C11 compilation is also not
+proof of a device backend working.
+
+## Audio (offline synthesis)
+
+```c
+#include "Cosmeron/Modules/Audio/Offline.h"
+
+int main(void) {
+  AUDIO_PCM_TYPE(TBuffer) tone = {0};
+  if (AUDIO_BEEP_FUNC(RenderTone)(440.0, 100, 0.2f, 48000, &tone)
+      != STATUS_CONST(SUCCESS)) return 1;
+  AUDIO_PCM_FUNC(Destroy)(&tone);
+  return 0;
+}
+```
+
+Works without any third-party audio vendor backends. The namespace and
+function signatures are unchanged. `Audio.h` remains the full desktop
+aggregator; defining `AUDIO_NO_DESKTOP` still selects the former reduced
+behavior. Tests: `Synthesis`, `OfflineStandalone`, `OfflineCompat` and
+`OfflineMultiTU` under `Codespace/Tests/Audio/`.
+
+The pure C11 WAV and FLAC decoders are available separately through `Offline.h` /
+`Codec/WAV.h` / `Codec/FLAC.h`.
+Desktop device playback and Player use zero-link native OS runtime integration.
+
+## Concurrency (cooperative only)
+
+```c
+#include "Cosmeron/Modules/Concurrency/Cooperative.h"
+```
+
+Provides lock-free Atomics (where supported), stackless Coroutine and
+directly executed Task operations. No real parallelism, Mutex, ThreadPool,
+Join or worker threads are provided by this entrypoint. This is a separate
+API profile, **not** a substitute for the native threading backend.
+`Codespace/Tests/Concurrency/Cooperative.c` verifies the strict C11
+no-extra-link contract.
+
+## Embedded SQLite
+
+On FreeBSD, OpenBSD, NetBSD and DragonFly, the default implementation uses
+`DATABASE_SQLITE_THREADSAFE=0` (no SQLite internal mutexes). It passed the
+zero-extra-link test in the four guest VMs. Concurrent SQLite calls are
+**unsupported** in this configuration, even through distinct connections.
+Define `DATABASE_SQLITE_THREADSAFE=1` in the single implementation TU to
+opt into mutexes; a native `-pthread` link dependency may return.
+
+See [SQLITE_LINKING.md](SQLITE_LINKING.md) for the exact configuration.
+
+## Audio manual playback on BSD
+
+See [AUDIO_MANUAL_BSD.md](AUDIO_MANUAL_BSD.md). Include
+`Cosmeron/Modules/Audio/Device/Manual.h` to use the callback-driven
+`Manual_Open`, `Manual_Start`, `Manual_Pump`, `Manual_Stop`, and
+`Manual_Close` API. Each pump call renders interleaved float PCM, converts
+to S16LE and writes using the host calling thread. There is no automatic
+thread or vendor dependency in this header.
+
+FreeBSD / DragonFly: native OSS; NetBSD: audio(4); OpenBSD: sndio resolved
+through `dlopen`. OpenBSD has **no explicit `-lsndio` flag**, but *does*
+require the sndio shared library and working sndiod/audio device at
+runtime. These backends are compile/link tested on real BSD VMs; physical
+playback is **not** yet certified.
+
+## WAV codec without vendor
+
+Include `Cosmeron/Modules/Audio/Codec/WAV.h` or `Audio/Offline.h`.
+`Audio_Codec_WAV_DecodeMemory` supports RIFF/WAVE unsigned PCM8,
+signed PCM16/24/32 and IEEE float32 (on IEEE binary32 hosts) into an owning
+interleaved float PCM buffer. `Audio_Codec_WAV_WriteFile` writes PCM16.
+Neither imports external vendors, threads or libm. Compressed/Extensible WAVE,
+RF64 and big-endian RIFX are unsupported; inputs are bounded by RIFF and
+data chunk lengths. The `NativeWAV`, `WAVRobustness` and `WAVFormats`
+test programs verify supported formats and reject malformed files.
+
+## User-supplied task executor
+
+Include `Cosmeron/Modules/Concurrency/Task/Executor.h` or
+`Concurrency/Cooperative.h`. An `Executor_Submit` callback can copy and
+schedule a `TTask` on the application's existing worker pool. No native
+thread is automatically created by the adapter. This does **not** turn the
+native `Thread`, `Mutex`, or `ThreadPool` implementations into zero-link
+backends. See [EXTERNAL_EXECUTOR.md](EXTERNAL_EXECUTOR.md).
+
+
+## Native decoder-only profile (without device threads)
+
+Include `Cosmeron/Modules/Audio/CodecMinimal.h` to retain the public
+`Audio_Codec_*` decoder API, including native WAV, MP3 and FLAC support,
+with Device I/O, native threading and player components excluded.
+
+```c
+#include "Cosmeron/Modules/Audio/CodecMinimal.h"
+
+int main(void) {
+  AUDIO_CODEC_TYPE(TDecoder) decoder = {0};
+  /* Audio_Codec_OpenFile(&decoder, "sample.flac");
+     ... Audio_Codec_Close(&decoder); */
+  return 0;
+}
+```
+
+This is **not** the same as the no-vendor WAV decoder above.
+The BSD codec-only profile resolves required math symbols
+(`sin`, `exp`, `log`, `sqrt`, `pow`) from the host `libm` at runtime,
+using `dlopen`/`dlsym` and a C11-atomic one-time initializer. The
+implementation remains *dependent on a compatible shared libm installed
+in the target system*. No device or thread worker is created by this
+decoder-only configuration.
+
+`CodecMinimal.c` and `CodecMath.c` are compiled **and run** with no
+additional linker flags on each BSD guest. A successful probe is recorded as
+`AUDIO_CODEC_MINIMAL_ZERO_LINK=PASS`; failure remains `NOT_SUPPORTED`.
+The desktop Device/Player backend uses zero-link dynamic loading.
+
+A translation unit selecting `CodecMinimal.h` compiles standalone decoders
+without playback device threads.
+Native decoder features (WAV, FLAC, MP3) remain covered
+by their respective tests.
+
+The Linux math adapter uses `pthread_once` to initialize
+runtime math symbols when dynamic math resolution is needed.
+This configuration does not claim to avoid
+every possible runtime dependency; it only avoids new user `-pthread`
+link flags where tested.
+
+## Linux libc variants and the decoder-only runtime
+
+The minimal decoder is now smoke-tested under **Fedora, Arch,
+Void glibc, Void musl and Debian** in real containers, using the
+`test-linux-codec-minimal.sh` C11 suite. The suite decodes in-memory WAV,
+MP3 and FLAC and exercises the five math operations without extra linker
+flags. On glibc, dynamic math resolution first tries `libm.so.6`; for
+other libc layouts it tries `libm.so`, then `RTLD_DEFAULT` (the running
+process's symbols). A missing runtime math implementation returns
+`NOT_AVAILABLE` from decoder construction, not an unchecked call through
+a null function pointer. **This is not independence from the OS math
+runtime.** A statically linked application needs separate validation.
+
+### Decoder-only header across translation units
+
+`CodecMinimalTU_A.c` and `CodecMinimalTU_B.c` independently include
+`CodecMinimal.h`, exercise decoder and math functionality, and link with a
+third translation unit. The executable is tested under strict C11, without
+additional `-lm` or `-pthread`, in each BSD VM and Linux libc container.
+This checks real multi-TU link behavior for the header-only minimal mode;
+dynamic math/runtime dependencies remain as documented above.

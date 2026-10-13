@@ -1,0 +1,62 @@
+#pragma once
+
+#include "../../Concurrency.space"
+
+#if COMPILER_GCC || COMPILER_CLANG
+
+#define COSMERON_MACRO_INTERNAL_ATOMIC_IMPLEMENT_SCALAR(TYPE, SUFFIX)                                \
+  ATOMIC_LOAD_PROTOTYPE(TYPE, SUFFIX) {                                      \
+    return __atomic_load_n(&atomic->value, order);                            \
+  }                                                                           \
+  ATOMIC_STORE_PROTOTYPE(TYPE, SUFFIX) {                                     \
+    __atomic_store_n(&atomic->value, value, order);                           \
+  }                                                                           \
+  ATOMIC_EXCHANGE_PROTOTYPE(TYPE, SUFFIX) {                                  \
+    return __atomic_exchange_n(&atomic->value, value, order);                 \
+  }                                                                           \
+  ATOMIC_COMPARE_EXCHANGE_PROTOTYPE(TYPE, SUFFIX) {                          \
+    return __atomic_compare_exchange_n(&atomic->value, expected, desired,     \
+                                       false, success, failure);               \
+  }
+
+#define COSMERON_MACRO_INTERNAL_ATOMIC_IMPLEMENT_FETCH(TYPE, SUFFIX)                                 \
+  ATOMIC_FETCH_ADD_PROTOTYPE(TYPE, SUFFIX) {                                 \
+    return __atomic_fetch_add(&atomic->value, value, order);                  \
+  }                                                                           \
+  ATOMIC_FETCH_SUB_PROTOTYPE(TYPE, SUFFIX) {                                 \
+    return __atomic_fetch_sub(&atomic->value, value, order);                  \
+  }                                                                           \
+  ATOMIC_FETCH_AND_PROTOTYPE(TYPE, SUFFIX) {                                 \
+    return __atomic_fetch_and(&atomic->value, value, order);                  \
+  }                                                                           \
+  ATOMIC_FETCH_OR_PROTOTYPE(TYPE, SUFFIX) {                                  \
+    return __atomic_fetch_or(&atomic->value, value, order);                   \
+  }                                                                           \
+  ATOMIC_FETCH_XOR_PROTOTYPE(TYPE, SUFFIX) {                                 \
+    return __atomic_fetch_xor(&atomic->value, value, order);                  \
+  }
+
+COSMERON_MACRO_INTERNAL_ATOMIC_IMPLEMENT_SCALAR(uint32_t, U32)
+COSMERON_MACRO_INTERNAL_ATOMIC_IMPLEMENT_SCALAR(uintptr_t, Ptr)
+COSMERON_MACRO_INTERNAL_ATOMIC_IMPLEMENT_FETCH(uint32_t, U32)
+#if CONCURRENCY_HAS_ATOMIC_U64
+COSMERON_MACRO_INTERNAL_ATOMIC_IMPLEMENT_SCALAR(uint64_t, U64)
+COSMERON_MACRO_INTERNAL_ATOMIC_IMPLEMENT_FETCH(uint64_t, U64)
+#endif
+
+ATOMIC_BOOL_LOAD_PROTOTYPE {
+  return __atomic_load_n(&atomic->value, order) != 0;
+}
+
+ATOMIC_BOOL_STORE_PROTOTYPE {
+  __atomic_store_n(&atomic->value, (uint32_t)value, order);
+}
+
+ATOMIC_BOOL_EXCHANGE_PROTOTYPE {
+  return __atomic_exchange_n(&atomic->value, (uint32_t)value, order) != 0;
+}
+
+#undef COSMERON_MACRO_INTERNAL_ATOMIC_IMPLEMENT_FETCH
+#undef COSMERON_MACRO_INTERNAL_ATOMIC_IMPLEMENT_SCALAR
+
+#endif

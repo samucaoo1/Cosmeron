@@ -23,7 +23,7 @@ OPSTATUS
 | Element | Case | Example |
 |---|---|---|
 | Module / namespace token | `PascalCase` | `Memory`, `Comparison` |
-| Type | `PascalCase` | `TVector`, `Comparison_Result` |
+| Type | `PascalCase` | `TVector`, `ComparisonResult` |
 | Function | `PascalCase` | `Memory_Copy`, `Vector_Push` |
 | Constant / enum value | `SNAKE_CASE` | `SUCCESS`, `OUT_OF_RANGE` |
 | Preprocessor macro | `SNAKE_CASE` | `VECTOR_IMPLEMENT_ALL` |
@@ -54,7 +54,7 @@ OPSTATUS
 Internal preprocessor macros do not use namespace guards:
 
 ```c
-CONGRO_MACRO_INTERNAL_*
+COSMERON_MACRO_INTERNAL_*
 ```
 
 ## 2. Types
@@ -212,9 +212,9 @@ Output enums do not use `T`. Their descriptive type remains namespaced; only the
 
 ```c
 typedef enum COMPARISON_TYPE(Result) {
-    COMPARISON_CONST(LOWER)  = -1,
-    COMPARISON_CONST(EQUAL)  = 0,
-    COMPARISON_CONST(HIGHER) = 1
+    COMPARISON_LOWER_CONST  = -1,
+    COMPARISON_EQUAL_CONST  = 0,
+    COMPARISON_HIGHER_CONST = 1
 } COMPARISON_TYPE(Result);
 
 typedef COMPARISON_TYPE(Result) CMPOUT;
@@ -239,7 +239,7 @@ Public constants use:
 Example:
 
 ```c
-COMPARISON_CONST(LOWER)
+COMPARISON_LOWER_CONST
 STATUS_CONST(SUCCESS)
 ```
 
@@ -247,7 +247,7 @@ Magic numbers are prohibited:
 
 ```c
 return -1;                       /* wrong */
-return COMPARISON_CONST(LOWER); /* correct */
+return COMPARISON_LOWER_CONST; /* correct */
 ```
 
 Explicit numeric values are allowed only when the representation itself matters, such as bit flags, protocols, file formats, ABI values, or externally defined mappings.
@@ -317,7 +317,7 @@ STRUCT(...)
 FUNCTION_TABLE_STRUCT(...)
 FUNCTION_TABLE_INSTANCE(...)
 
-LIBRARY_MACRO_INTERNAL_*
+COSMERON_MACRO_INTERNAL_*
 ```
 
 If a new macro does not clearly belong to this grammar, reconsider whether it should exist.
@@ -327,15 +327,24 @@ If a new macro does not clearly belong to this grammar, reconsider whether it sh
 Use X-macros when one semantic table must generate multiple representations.
 
 ```c
-#define STATUS_TABLE(X) \
-    X(SUCCESS, "Success") \
-    X(INVALID_ARGUMENT, "Invalid argument")
+#define COMPARISON_TABLE(X)\
+  X(COMPARISON_LOWER_CONST,-1, "Lower")\
+  X(COMPARISON_EQUAL_CONST, 0, "Equal")\
+  X(COMPARISON_HIGHER_CONST, 1, "Higher")
 ```
+and
 
+```c
+typedef enum COMPARISON_TYPE(Result) {
+#define X(NAME, VALUE, DESC) NAME = VALUE,
+COMPARISON_TABLE(X)
+#undef X
+} COMPARISON_TYPE(Result);
+```
 Rules:
 
 - one table is the source of truth;
-- do not duplicate the same list in enums, strings, mappings, or switches;
+- do not "duplicate" the same list in enums, strings, mappings, or switches. If the table exist, use. 
 - table names and helper macros use `SNAKE_CASE`;
 - generated public constants still pass through the constant namespace;
 - X-macros are generation tools, not public runtime API.

@@ -1,0 +1,215 @@
+static inline OPSTATUS DATABASE_INS(Binding)(
+    DATABASE_TYPE(TStatement) *statement, size_t index) {
+  cosmeron_database_vendor_sqlite3_stmt *native = DATABASE_INS(Statement)(statement);
+  if (!native) return STATUS_CONST(INVALID_ARGUMENT);
+  if (statement->state != DATABASE_CINS(READY)) return STATUS_CONST(INVALID_SEQUENCE);
+  if (!index || index > (size_t)cosmeron_database_vendor_sqlite3_bind_parameter_count(native))
+    return STATUS_CONST(OUT_OF_RANGE);
+  return STATUS_CONST(SUCCESS);
+}
+static inline OPSTATUS DATABASE_INS(Column)(
+    const DATABASE_TYPE(TStatement) *statement, size_t column, bool requireRow) {
+  cosmeron_database_vendor_sqlite3_stmt *native = DATABASE_INS(Statement)(statement);
+  if (!native) return STATUS_CONST(INVALID_ARGUMENT);
+  if (requireRow && statement->state != DATABASE_CINS(ROW)) return STATUS_CONST(INVALID_SEQUENCE);
+  if (column >= (size_t)cosmeron_database_vendor_sqlite3_column_count(native))
+    return STATUS_CONST(OUT_OF_RANGE);
+  return STATUS_CONST(SUCCESS);
+}
+DATABASE_STATEMENT_BIND_NULL_PROTOTYPE {
+  OPSTATUS status = DATABASE_INS(Binding)(statement, index);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  return DATABASE_INS(Status)(cosmeron_database_vendor_sqlite3_bind_null(
+      DATABASE_INS(Statement)(statement), (int)index));
+}
+DATABASE_STATEMENT_BIND_INT64_PROTOTYPE {
+  OPSTATUS status = DATABASE_INS(Binding)(statement, index);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  return DATABASE_INS(Status)(cosmeron_database_vendor_sqlite3_bind_int64(
+      DATABASE_INS(Statement)(statement), (int)index, value));
+}
+DATABASE_STATEMENT_BIND_DOUBLE_PROTOTYPE {
+  OPSTATUS status = DATABASE_INS(Binding)(statement, index);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  /* SQLite treats NaN as SQL NULL: reject that silent type change. */
+  if (value != value) return STATUS_CONST(INVALID_ARGUMENT);
+  return DATABASE_INS(Status)(cosmeron_database_vendor_sqlite3_bind_double(
+      DATABASE_INS(Statement)(statement), (int)index, value));
+}
+DATABASE_STATEMENT_BIND_TEXT_PROTOTYPE {
+  OPSTATUS status = DATABASE_INS(Binding)(statement, index);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  if (!text && length) return STATUS_CONST(INVALID_ARGUMENT);
+  if (length > INT_MAX) return STATUS_CONST(OUT_OF_RANGE);
+  return DATABASE_INS(Status)(cosmeron_database_vendor_sqlite3_bind_text(
+      DATABASE_INS(Statement)(statement), (int)index, text ? text : "",
+      (int)length, cosmeron_database_vendor_SQLITE_TRANSIENT));
+}
+DATABASE_STATEMENT_BIND_BLOB_PROTOTYPE {
+  OPSTATUS status = DATABASE_INS(Binding)(statement, index);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  if (!data && size) return STATUS_CONST(INVALID_ARGUMENT);
+  if (size > INT_MAX) return STATUS_CONST(OUT_OF_RANGE);
+  return DATABASE_INS(Status)(cosmeron_database_vendor_sqlite3_bind_blob(
+      DATABASE_INS(Statement)(statement), (int)index, data ? data : "",
+      (int)size, cosmeron_database_vendor_SQLITE_TRANSIENT));
+}
+DATABASE_STATEMENT_NEXT_WITH_DIAGNOSTIC_PROTOTYPE {
+  cosmeron_database_vendor_sqlite3_stmt *native = DATABASE_INS(Statement)(statement);
+  int code;
+  if (!outHasRow) return STATUS_CONST(INVALID_ARGUMENT);
+  /* Explicit exception to normal out contracts: false even on failure. */
+  *outHasRow = false;
+  if (!native) return STATUS_CONST(INVALID_ARGUMENT);
+  if (statement->state == DATABASE_CINS(FAILED)) return STATUS_CONST(INVALID_SEQUENCE);
+  if (statement->state == DATABASE_CINS(DONE))
+    return DATABASE_INS(Diagnostic)(cosmeron_database_vendor_sqlite3_db_handle(native),
+        cosmeron_database_vendor_SQLITE_OK, outDiagnostic);
+  code = cosmeron_database_vendor_sqlite3_step(native);
+  if (code == cosmeron_database_vendor_SQLITE_ROW) {
+    statement->state = DATABASE_CINS(ROW);
+    *outHasRow = true;
+  } else if (code == cosmeron_database_vendor_SQLITE_DONE) {
+    statement->state = DATABASE_CINS(DONE);
+  } else {
+    statement->state = DATABASE_CINS(FAILED);
+  }
+  return DATABASE_INS(Diagnostic)(cosmeron_database_vendor_sqlite3_db_handle(native),
+      code == cosmeron_database_vendor_SQLITE_ROW || code == cosmeron_database_vendor_SQLITE_DONE
+          ? cosmeron_database_vendor_SQLITE_OK : code, outDiagnostic);
+}
+DATABASE_STATEMENT_NEXT_PROTOTYPE {
+  return DATABASE_FUNC(Statement_NextWithDiagnostic)(statement, outHasRow, NULL);
+}
+DATABASE_STATEMENT_EXECUTE_WITH_DIAGNOSTIC_PROTOTYPE {
+  bool hasRow;
+  if (!DATABASE_INS(Statement)(statement)) return STATUS_CONST(INVALID_ARGUMENT);
+  /* Reject SELECT and DML RETURNING before any execution or side effect. */
+  if (cosmeron_database_vendor_sqlite3_column_count(DATABASE_INS(Statement)(statement)))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  return DATABASE_FUNC(Statement_NextWithDiagnostic)(statement, &hasRow, outDiagnostic);
+}
+DATABASE_STATEMENT_EXECUTE_PROTOTYPE {
+  return DATABASE_FUNC(Statement_ExecuteWithDiagnostic)(statement, NULL);
+}
+DATABASE_STATEMENT_RESET_PROTOTYPE {
+  int code;
+  if (!DATABASE_INS(Statement)(statement)) return STATUS_CONST(INVALID_ARGUMENT);
+  code = cosmeron_database_vendor_sqlite3_reset(DATABASE_INS(Statement)(statement));
+  /* sqlite3_reset resets even when reporting the previous execution error. */
+  statement->state = DATABASE_CINS(READY);
+  return DATABASE_INS(Status)(code);
+}
+DATABASE_STATEMENT_CLEAR_BINDINGS_PROTOTYPE {
+  if (!DATABASE_INS(Statement)(statement)) return STATUS_CONST(INVALID_ARGUMENT);
+  if (statement->state != DATABASE_CINS(READY)) return STATUS_CONST(INVALID_SEQUENCE);
+  return DATABASE_INS(Status)(cosmeron_database_vendor_sqlite3_clear_bindings(
+      DATABASE_INS(Statement)(statement)));
+}
+DATABASE_STATEMENT_CLOSE_PROTOTYPE {
+  int code;
+  if (!statement) return STATUS_CONST(INVALID_ARGUMENT);
+  if (!statement->native) return STATUS_CONST(SUCCESS);
+  code = cosmeron_database_vendor_sqlite3_finalize(DATABASE_INS(Statement)(statement));
+  /* Finalize always destroys the statement, including on a prior step error. */
+  statement->native = NULL;
+  statement->state = DATABASE_CINS(READY);
+  return DATABASE_INS(Status)(code);
+}
+DATABASE_STATEMENT_PARAMETER_COUNT_PROTOTYPE {
+  return DATABASE_INS(Statement)(statement)
+      ? (size_t)cosmeron_database_vendor_sqlite3_bind_parameter_count(DATABASE_INS(Statement)(statement)) : 0;
+}
+DATABASE_STATEMENT_COLUMN_COUNT_PROTOTYPE {
+  return DATABASE_INS(Statement)(statement)
+      ? (size_t)cosmeron_database_vendor_sqlite3_column_count(DATABASE_INS(Statement)(statement)) : 0;
+}
+DATABASE_STATEMENT_COLUMN_NAME_PROTOTYPE {
+  const char *name;
+  OPSTATUS status;
+  if (!outName) return STATUS_CONST(INVALID_ARGUMENT);
+  status = DATABASE_INS(Column)(statement, column, false);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  name = cosmeron_database_vendor_sqlite3_column_name(DATABASE_INS(Statement)(statement), (int)column);
+  if (!name) return STATUS_CONST(OUT_OF_MEMORY);
+  *outName = name;
+  return STATUS_CONST(SUCCESS);
+}
+DATABASE_STATEMENT_COLUMN_KIND_PROTOTYPE {
+  DATABASE_TYPE(ColumnKind) kind;
+  OPSTATUS status;
+  if (!outKind) return STATUS_CONST(INVALID_ARGUMENT);
+  status = DATABASE_INS(Column)(statement, column, true);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  switch (cosmeron_database_vendor_sqlite3_column_type(DATABASE_INS(Statement)(statement), (int)column)) {
+  case cosmeron_database_vendor_SQLITE_NULL: kind = DATABASE_CONST(COLUMN_NULL); break;
+  case cosmeron_database_vendor_SQLITE_INTEGER: kind = DATABASE_CONST(COLUMN_INTEGER); break;
+  case cosmeron_database_vendor_SQLITE_FLOAT: kind = DATABASE_CONST(COLUMN_REAL); break;
+  case cosmeron_database_vendor_SQLITE_TEXT: kind = DATABASE_CONST(COLUMN_TEXT); break;
+  case cosmeron_database_vendor_SQLITE_BLOB: kind = DATABASE_CONST(COLUMN_BLOB); break;
+  default: return STATUS_CONST(GENERIC_ERROR);
+  }
+  *outKind = kind;
+  return STATUS_CONST(SUCCESS);
+}
+DATABASE_STATEMENT_COLUMN_IS_NULL_PROTOTYPE {
+  DATABASE_TYPE(ColumnKind) kind;
+  OPSTATUS status;
+  if (!outIsNull) return STATUS_CONST(INVALID_ARGUMENT);
+  status = DATABASE_FUNC(Statement_ColumnKind)(statement, column, &kind);
+  if (status == STATUS_CONST(SUCCESS)) *outIsNull = kind == DATABASE_CONST(COLUMN_NULL);
+  return status;
+}
+DATABASE_STATEMENT_COLUMN_INT64_PROTOTYPE {
+  DATABASE_TYPE(ColumnKind) kind;
+  OPSTATUS status;
+  if (!outValue) return STATUS_CONST(INVALID_ARGUMENT);
+  status = DATABASE_FUNC(Statement_ColumnKind)(statement, column, &kind);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  if (kind != DATABASE_CONST(COLUMN_INTEGER)) return STATUS_CONST(INVALID_ARGUMENT);
+  *outValue = (int64_t)cosmeron_database_vendor_sqlite3_column_int64(DATABASE_INS(Statement)(statement), (int)column);
+  return STATUS_CONST(SUCCESS);
+}
+DATABASE_STATEMENT_COLUMN_DOUBLE_PROTOTYPE {
+  DATABASE_TYPE(ColumnKind) kind;
+  OPSTATUS status;
+  if (!outValue) return STATUS_CONST(INVALID_ARGUMENT);
+  status = DATABASE_FUNC(Statement_ColumnKind)(statement, column, &kind);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  if (kind != DATABASE_CONST(COLUMN_INTEGER) && kind != DATABASE_CONST(COLUMN_REAL))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  *outValue = cosmeron_database_vendor_sqlite3_column_double(DATABASE_INS(Statement)(statement), (int)column);
+  return STATUS_CONST(SUCCESS);
+}
+DATABASE_STATEMENT_COLUMN_TEXT_PROTOTYPE {
+  DATABASE_TYPE(ColumnKind) kind;
+  const unsigned char *text;
+  OPSTATUS status;
+  if (!outText || !outLength) return STATUS_CONST(INVALID_ARGUMENT);
+  status = DATABASE_FUNC(Statement_ColumnKind)(statement, column, &kind);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  if (kind != DATABASE_CONST(COLUMN_TEXT)) return STATUS_CONST(INVALID_ARGUMENT);
+  text = cosmeron_database_vendor_sqlite3_column_text(DATABASE_INS(Statement)(statement), (int)column);
+  if (!text) return STATUS_CONST(OUT_OF_MEMORY);
+  *outLength = (size_t)cosmeron_database_vendor_sqlite3_column_bytes(DATABASE_INS(Statement)(statement), (int)column);
+  *outText = (const char *)text;
+  return STATUS_CONST(SUCCESS);
+}
+DATABASE_STATEMENT_COLUMN_BLOB_PROTOTYPE {
+  DATABASE_TYPE(ColumnKind) kind;
+  const void *data;
+  size_t size;
+  OPSTATUS status;
+  if (!outData || !outSize) return STATUS_CONST(INVALID_ARGUMENT);
+  status = DATABASE_FUNC(Statement_ColumnKind)(statement, column, &kind);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  if (kind != DATABASE_CONST(COLUMN_BLOB)) return STATUS_CONST(INVALID_ARGUMENT);
+  data = cosmeron_database_vendor_sqlite3_column_blob(DATABASE_INS(Statement)(statement), (int)column);
+  size = (size_t)cosmeron_database_vendor_sqlite3_column_bytes(DATABASE_INS(Statement)(statement), (int)column);
+  if (!data && cosmeron_database_vendor_sqlite3_errcode(
+      cosmeron_database_vendor_sqlite3_db_handle(DATABASE_INS(Statement)(statement)))
+      == cosmeron_database_vendor_SQLITE_NOMEM) return STATUS_CONST(OUT_OF_MEMORY);
+  *outData = data;
+  *outSize = size;
+  return STATUS_CONST(SUCCESS);
+}

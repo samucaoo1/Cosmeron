@@ -1,0 +1,36 @@
+#pragma once
+
+#include <stdbool.h>
+
+#include "../Math.space"
+
+
+#define MATH_VALUE_IS_BETWEEN_PROTOTYPE(TYPE, SUFFIX)               \
+  static inline bool VALUE_TYPED_FUNC(IsBetween, SUFFIX)(         \
+      TYPE value, TYPE minimum, TYPE maximum)
+
+#define MATH_VALUE_BETWEEN_PROTOTYPE(TYPE, SUFFIX)            \
+  static inline MATH_TYPE(RangeResult) VALUE_TYPED_FUNC(Between, SUFFIX)(                      \
+          TYPE value, TYPE minimum, TYPE maximum)
+
+#include "Impl/Between.impl"
+
+#define MATH_VALUE_BETWEEN_IMPLEMENT_ALL(TYPE, SUFFIX)                      \
+  MATH_VALUE_IS_BETWEEN_IMPLEMENT(TYPE, SUFFIX)                              \
+  MATH_VALUE_BETWEEN_IMPLEMENT(TYPE, SUFFIX)
+
+MATH_VALUE_BETWEEN_IMPLEMENT_ALL(int8_t, I8)
+MATH_VALUE_BETWEEN_IMPLEMENT_ALL(int16_t, I16)
+MATH_VALUE_BETWEEN_IMPLEMENT_ALL(int32_t, I32)
+MATH_VALUE_BETWEEN_IMPLEMENT_ALL(int64_t, I64)
+
+MATH_VALUE_BETWEEN_IMPLEMENT_ALL(uint8_t, U8)
+MATH_VALUE_BETWEEN_IMPLEMENT_ALL(uint16_t, U16)
+MATH_VALUE_BETWEEN_IMPLEMENT_ALL(uint32_t, U32)
+MATH_VALUE_BETWEEN_IMPLEMENT_ALL(uint64_t, U64)
+
+MATH_VALUE_BETWEEN_IMPLEMENT_ALL(float, F32)
+MATH_VALUE_BETWEEN_IMPLEMENT_ALL(double, F64)
+MATH_VALUE_BETWEEN_IMPLEMENT_ALL(long double, F128)
+
+/* EOF */

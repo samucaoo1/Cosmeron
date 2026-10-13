@@ -1,0 +1,195 @@
+#pragma once
+
+#include <intrin.h>
+#include <windows.h>
+
+typedef struct { volatile LONG value; } CONCURRENCY_TYPE(TAtomicU32);
+#if defined(_M_X64) || defined(_M_ARM64)
+#define CONCURRENCY_HAS_ATOMIC_U64 1
+typedef struct { volatile LONG64 value; } CONCURRENCY_TYPE(TAtomicU64);
+#else
+#define CONCURRENCY_HAS_ATOMIC_U64 0
+#endif
+#define CONCURRENCY_HAS_ATOMIC_PTR 1
+typedef struct { void *volatile value; } CONCURRENCY_TYPE(TAtomicPtr);
+typedef struct { volatile LONG value; } CONCURRENCY_TYPE(TAtomicBool);
+
+typedef enum CONCURRENCY_TYPE(MemoryOrder) {
+  CONCURRENCY_CONST(ATOMIC, MEMORY_ORDER_RELAXED),
+  CONCURRENCY_CONST(ATOMIC, MEMORY_ORDER_ACQUIRE),
+  CONCURRENCY_CONST(ATOMIC, MEMORY_ORDER_RELEASE),
+  CONCURRENCY_CONST(ATOMIC, MEMORY_ORDER_ACQ_REL),
+  CONCURRENCY_CONST(ATOMIC, MEMORY_ORDER_SEQ_CST)
+} CONCURRENCY_TYPE(MemoryOrder);
+
+#define ATOMIC_U32_INIT(VALUE) { (LONG)(VALUE) }
+#if CONCURRENCY_HAS_ATOMIC_U64
+#define ATOMIC_U64_INIT(VALUE) { (LONG64)(VALUE) }
+#endif
+#define ATOMIC_PTR_INIT(VALUE) { (void *)(VALUE) }
+#define ATOMIC_BOOL_INIT(VALUE) { (LONG)((VALUE) != false) }
+
+ATOMIC_LOAD_PROTOTYPE(uint32_t, U32);
+ATOMIC_STORE_PROTOTYPE(uint32_t, U32);
+ATOMIC_EXCHANGE_PROTOTYPE(uint32_t, U32);
+ATOMIC_COMPARE_EXCHANGE_PROTOTYPE(uint32_t, U32);
+ATOMIC_FETCH_ADD_PROTOTYPE(uint32_t, U32);
+ATOMIC_FETCH_SUB_PROTOTYPE(uint32_t, U32);
+ATOMIC_FETCH_AND_PROTOTYPE(uint32_t, U32);
+ATOMIC_FETCH_OR_PROTOTYPE(uint32_t, U32);
+ATOMIC_FETCH_XOR_PROTOTYPE(uint32_t, U32);
+
+#if CONCURRENCY_HAS_ATOMIC_U64
+ATOMIC_LOAD_PROTOTYPE(uint64_t, U64);
+ATOMIC_STORE_PROTOTYPE(uint64_t, U64);
+ATOMIC_EXCHANGE_PROTOTYPE(uint64_t, U64);
+ATOMIC_COMPARE_EXCHANGE_PROTOTYPE(uint64_t, U64);
+ATOMIC_FETCH_ADD_PROTOTYPE(uint64_t, U64);
+ATOMIC_FETCH_SUB_PROTOTYPE(uint64_t, U64);
+ATOMIC_FETCH_AND_PROTOTYPE(uint64_t, U64);
+ATOMIC_FETCH_OR_PROTOTYPE(uint64_t, U64);
+ATOMIC_FETCH_XOR_PROTOTYPE(uint64_t, U64);
+#endif
+
+ATOMIC_LOAD_PROTOTYPE(uintptr_t, Ptr);
+ATOMIC_STORE_PROTOTYPE(uintptr_t, Ptr);
+ATOMIC_EXCHANGE_PROTOTYPE(uintptr_t, Ptr);
+ATOMIC_COMPARE_EXCHANGE_PROTOTYPE(uintptr_t, Ptr);
+ATOMIC_BOOL_LOAD_PROTOTYPE;
+ATOMIC_BOOL_STORE_PROTOTYPE;
+ATOMIC_BOOL_EXCHANGE_PROTOTYPE;
+
+/*
+ * MSVC's Interlocked family is intentionally used instead of C11 atomics.
+ * This keeps the backend header-only and avoids an external atomic runtime.
+ * The operations provide at least the ordering requested by this portable API;
+ * on this backend some weaker orders may therefore be implemented more strongly.
+ */
+
+ATOMIC_LOAD_PROTOTYPE(uint32_t, U32) {
+  (void)order;
+  return (uint32_t)_InterlockedCompareExchange(
+      (volatile LONG *)&atomic->value, 0, 0);
+}
+ATOMIC_STORE_PROTOTYPE(uint32_t, U32) {
+  (void)order;
+  (void)_InterlockedExchange(&atomic->value, (LONG)value);
+}
+ATOMIC_EXCHANGE_PROTOTYPE(uint32_t, U32) {
+  (void)order;
+  return (uint32_t)_InterlockedExchange(&atomic->value, (LONG)value);
+}
+ATOMIC_COMPARE_EXCHANGE_PROTOTYPE(uint32_t, U32) {
+  LONG old;
+  (void)success;
+  (void)failure;
+  old = _InterlockedCompareExchange(&atomic->value, (LONG)desired,
+                                    (LONG)*expected);
+  if ((uint32_t)old == *expected)
+    return true;
+  *expected = (uint32_t)old;
+  return false;
+}
+ATOMIC_FETCH_ADD_PROTOTYPE(uint32_t, U32) {
+  (void)order;
+  return (uint32_t)_InterlockedExchangeAdd(&atomic->value, (LONG)value);
+}
+ATOMIC_FETCH_SUB_PROTOTYPE(uint32_t, U32) {
+  return ATOMIC_FUNC(U32_FetchAdd)(atomic, (uint32_t)(0u - value), order);
+}
+ATOMIC_FETCH_AND_PROTOTYPE(uint32_t, U32) {
+  (void)order;
+  return (uint32_t)_InterlockedAnd(&atomic->value, (LONG)value);
+}
+ATOMIC_FETCH_OR_PROTOTYPE(uint32_t, U32) {
+  (void)order;
+  return (uint32_t)_InterlockedOr(&atomic->value, (LONG)value);
+}
+ATOMIC_FETCH_XOR_PROTOTYPE(uint32_t, U32) {
+  (void)order;
+  return (uint32_t)_InterlockedXor(&atomic->value, (LONG)value);
+}
+
+#if CONCURRENCY_HAS_ATOMIC_U64
+ATOMIC_LOAD_PROTOTYPE(uint64_t, U64) {
+  (void)order;
+  return (uint64_t)_InterlockedCompareExchange64(
+      (volatile LONG64 *)&atomic->value, 0, 0);
+}
+ATOMIC_STORE_PROTOTYPE(uint64_t, U64) {
+  (void)order;
+  (void)_InterlockedExchange64(&atomic->value, (LONG64)value);
+}
+ATOMIC_EXCHANGE_PROTOTYPE(uint64_t, U64) {
+  (void)order;
+  return (uint64_t)_InterlockedExchange64(&atomic->value, (LONG64)value);
+}
+ATOMIC_COMPARE_EXCHANGE_PROTOTYPE(uint64_t, U64) {
+  LONG64 old;
+  (void)success;
+  (void)failure;
+  old = _InterlockedCompareExchange64(&atomic->value, (LONG64)desired,
+                                      (LONG64)*expected);
+  if ((uint64_t)old == *expected)
+    return true;
+  *expected = (uint64_t)old;
+  return false;
+}
+ATOMIC_FETCH_ADD_PROTOTYPE(uint64_t, U64) {
+  (void)order;
+  return (uint64_t)_InterlockedExchangeAdd64(&atomic->value, (LONG64)value);
+}
+ATOMIC_FETCH_SUB_PROTOTYPE(uint64_t, U64) {
+  return ATOMIC_FUNC(U64_FetchAdd)(atomic, (uint64_t)(0ull - value), order);
+}
+ATOMIC_FETCH_AND_PROTOTYPE(uint64_t, U64) {
+  (void)order;
+  return (uint64_t)_InterlockedAnd64(&atomic->value, (LONG64)value);
+}
+ATOMIC_FETCH_OR_PROTOTYPE(uint64_t, U64) {
+  (void)order;
+  return (uint64_t)_InterlockedOr64(&atomic->value, (LONG64)value);
+}
+ATOMIC_FETCH_XOR_PROTOTYPE(uint64_t, U64) {
+  (void)order;
+  return (uint64_t)_InterlockedXor64(&atomic->value, (LONG64)value);
+}
+#endif
+
+ATOMIC_LOAD_PROTOTYPE(uintptr_t, Ptr) {
+  (void)order;
+  return (uintptr_t)_InterlockedCompareExchangePointer(
+      (void *volatile *)&atomic->value, NULL, NULL);
+}
+ATOMIC_STORE_PROTOTYPE(uintptr_t, Ptr) {
+  (void)order;
+  (void)_InterlockedExchangePointer(&atomic->value, (void *)value);
+}
+ATOMIC_EXCHANGE_PROTOTYPE(uintptr_t, Ptr) {
+  (void)order;
+  return (uintptr_t)_InterlockedExchangePointer(&atomic->value, (void *)value);
+}
+ATOMIC_COMPARE_EXCHANGE_PROTOTYPE(uintptr_t, Ptr) {
+  void *old;
+  (void)success;
+  (void)failure;
+  old = _InterlockedCompareExchangePointer(&atomic->value, (void *)desired,
+                                           (void *)*expected);
+  if ((uintptr_t)old == *expected)
+    return true;
+  *expected = (uintptr_t)old;
+  return false;
+}
+
+ATOMIC_BOOL_LOAD_PROTOTYPE {
+  (void)order;
+  return _InterlockedCompareExchange((volatile LONG *)&atomic->value, 0, 0) != 0;
+}
+ATOMIC_BOOL_STORE_PROTOTYPE {
+  (void)order;
+  (void)_InterlockedExchange(&atomic->value, (LONG)value);
+}
+ATOMIC_BOOL_EXCHANGE_PROTOTYPE {
+  (void)order;
+  return _InterlockedExchange(&atomic->value, (LONG)value) != 0;
+}

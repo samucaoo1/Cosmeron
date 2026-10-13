@@ -1,0 +1,18 @@
+#pragma once
+
+#include "../../../Core/Namespace.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "../../../Core/Error/Status.h"
+#include "../../../Core/Memory/Alloc.h"
+
+#include "../Container.space"
+
+#define FLAT_NS(NAME) GNS2(CONTAINER_NS(Flat), NAME)
+
+#define COSMERON_MACRO_INTERNAL_FLAT_GROWTH_FACTOR 2u
+#define COSMERON_MACRO_INTERNAL_FLAT_INITIAL_CAPACITY 8u

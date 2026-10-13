@@ -1,0 +1,98 @@
+/* Implementation included by Device.h. */
+
+typedef struct AUDIO_INS(Device) {
+  AUDIO_INS(TNativeDevice) *nativeDevice;
+  AUDIO_INS(TCallbackGuard) callback;
+  AUDIO_DEVICE_TYPE(TConfig) config;
+} AUDIO_INS(Device);
+
+AUDIO_DEVICE_OPEN_PROTOTYPE {
+  return AUDIO_DEVICE_FUNC(OpenNamed)(device, config, NULL);
+}
+
+AUDIO_DEVICE_OPEN_NAMED_PROTOTYPE {
+  AUDIO_INS(Device) * value;
+  OPSTATUS status;
+  if (device == NULL || config == NULL || config->render == NULL ||
+      !AUDIO_INS(ValidFormat)(config->sampleRate, config->channels))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (device->internal != NULL)
+    return STATUS_CONST(BUSY);
+
+  value = (AUDIO_INS(Device) *)calloc(1, sizeof(*value));
+  if (value == NULL)
+    return STATUS_CONST(OUT_OF_MEMORY);
+  AUDIO_INS(CallbackGuardZero)(&value->callback);
+  value->config = *config;
+  status = AUDIO_INS(NativeDeviceOpen)(&value->nativeDevice, config, id);
+  if (status == STATUS_CONST(SUCCESS)) {
+    device->internal = value;
+    return status;
+  }
+  free(value);
+  return status;
+}
+
+AUDIO_DEVICE_START_PROTOTYPE {
+  if (device == NULL || device->internal == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (((AUDIO_INS(Device) *)device->internal)->nativeDevice)
+    return AUDIO_INS(NativeDeviceStart)(
+        ((AUDIO_INS(Device) *)device->internal)->nativeDevice);
+  return STATUS_CONST(NOT_AVAILABLE);
+}
+
+AUDIO_DEVICE_STOP_PROTOTYPE {
+  if (device == NULL || device->internal == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (((AUDIO_INS(Device) *)device->internal)->nativeDevice)
+    return AUDIO_INS(NativeDeviceStop)(
+        ((AUDIO_INS(Device) *)device->internal)->nativeDevice);
+  return STATUS_CONST(NOT_AVAILABLE);
+}
+
+AUDIO_DEVICE_IS_STARTED_PROTOTYPE {
+  const AUDIO_INS(Device) *s;
+  if (!device || !device->internal)
+    return false;
+  s = (const AUDIO_INS(Device) *)device->internal;
+  if (s->nativeDevice)
+    return AUDIO_DEVICE_LOAD(&s->nativeDevice->started) != 0;
+  return false;
+}
+
+AUDIO_DEVICE_GET_STATUS_PROTOTYPE {
+  const AUDIO_INS(Device) *s;
+  if (!device || !device->internal)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  s = (const AUDIO_INS(Device) *)device->internal;
+  return s->nativeDevice
+             ? (OPSTATUS)AUDIO_DEVICE_LOAD(&s->nativeDevice->status)
+             : STATUS_CONST(SUCCESS);
+}
+
+AUDIO_DEVICE_GET_FORMAT_PROTOTYPE {
+  const AUDIO_INS(Device) *s;
+  if (!device || !device->internal || !outRate || !outChannels)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  s = (const AUDIO_INS(Device) *)device->internal;
+  *outRate = s->config.sampleRate;
+  *outChannels = s->config.channels;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_DEVICE_CLOSE_PROTOTYPE {
+  if (device && device->internal) {
+    AUDIO_INS(Device) *s = (AUDIO_INS(Device) *)device->internal;
+    if (s->nativeDevice) {
+      /* A callback may request stop, but destruction must be completed by
+       * the owning thread: never join or dispose the current callback. */
+      if (AUDIO_INS(NativeDeviceStop)(s->nativeDevice) != STATUS_CONST(SUCCESS))
+        return;
+      AUDIO_INS(NativeDeviceRelease)(s->nativeDevice);
+    }
+    AUDIO_INS(CallbackGuardRelease)(&s->callback);
+    device->internal = NULL;
+    free(s);
+  }
+}

@@ -1,0 +1,103 @@
+#define MATH_EQUATION_SQUARE_ROOT_IMPLEMENT(TYPE, SUFFIX)                      \
+  static inline TYPE EQUATION_TYPED_FUNC(_SquareRoot, SUFFIX)(TYPE value) {     \
+    TYPE scaled;                                                                \
+    TYPE scale;                                                                 \
+    TYPE estimate;                                                              \
+    unsigned iteration;                                                         \
+    if (value <= (TYPE)0)                                                       \
+      return (TYPE)0;                                                           \
+    scaled = value;                                                             \
+    scale = (TYPE)1;                                                            \
+    while (scaled >= (TYPE)4) {                                                 \
+      scaled *= (TYPE)0.25;                                                     \
+      scale *= (TYPE)2;                                                         \
+    }                                                                           \
+    while (scaled < (TYPE)1) {                                                  \
+      scaled *= (TYPE)4;                                                        \
+      scale *= (TYPE)0.5;                                                       \
+    }                                                                           \
+    estimate = (scaled + (TYPE)1) * (TYPE)0.5;                                 \
+    for (iteration = 0U; iteration < 16U; ++iteration) {                       \
+      TYPE next = (estimate + scaled / estimate) * (TYPE)0.5;                  \
+      if (next == estimate)                                                     \
+        break;                                                                  \
+      estimate = next;                                                          \
+    }                                                                           \
+    return estimate * scale;                                                    \
+  }
+
+#define MATH_EQUATION_QUADRATIC_DISCRIMINANT_IMPLEMENT(TYPE, SUFFIX)           \
+  MATH_EQUATION_QUADRATIC_DISCRIMINANT_PROTOTYPE(TYPE, SUFFIX) {               \
+    return (b * b) - ((TYPE)4 * a * c);                                        \
+  }
+
+#define MATH_EQUATION_QUADRATIC_IMPLEMENT(TYPE, SUFFIX, SQRT)                  \
+  MATH_EQUATION_QUADRATIC_PROTOTYPE(TYPE, SUFFIX) {                            \
+    if (outResult1 == NULL || outResult2 == NULL || outSolution == NULL)                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (a == (TYPE)0) {                                                        \
+      if (b == (TYPE)0) {                                                      \
+        *outSolution = c == (TYPE)0 ? MATH_CONST(SOLUTION_INFINITE)              \
+                                 : MATH_CONST(SOLUTION_NONE);                  \
+        return STATUS_CONST(SUCCESS);                                          \
+      }                                                                        \
+      TYPE result = -c / b;                                                    \
+      *outResult1 = result;                                                       \
+      *outResult2 = result;                                                       \
+      *outSolution = MATH_CONST(SOLUTION_ONE);                                   \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    TYPE discriminant = EQUATION_TYPED_FUNC(QuadraticDiscriminant, SUFFIX)(a, b, c); \
+    if (discriminant < (TYPE)0) {                                              \
+      *outSolution = MATH_CONST(SOLUTION_NONE);                                  \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    TYPE denominator = (TYPE)2 * a;                                            \
+    if (discriminant == (TYPE)0) {                                             \
+      TYPE result = -b / denominator;                                          \
+      *outResult1 = result;                                                       \
+      *outResult2 = result;                                                       \
+      *outSolution = MATH_CONST(SOLUTION_ONE);                                   \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    TYPE root = SQRT(discriminant);                                            \
+    *outResult1 = (-b + root) / denominator;                                      \
+    *outResult2 = (-b - root) / denominator;                                      \
+    *outSolution = MATH_CONST(SOLUTION_MULTIPLE);                                \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define MATH_EQUATION_QUADRATIC_COMPLEX_IMPLEMENT(TYPE, COMPLEX_TYPE, SUFFIX, SQRT) \
+  MATH_EQUATION_QUADRATIC_COMPLEX_PROTOTYPE(TYPE, COMPLEX_TYPE, SUFFIX) {       \
+    if (outResult1 == NULL || outResult2 == NULL || outSolution == NULL)                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (a == (TYPE)0) {                                                        \
+      if (b == (TYPE)0) {                                                      \
+        *outSolution = c == (TYPE)0 ? MATH_CONST(SOLUTION_INFINITE)              \
+                                 : MATH_CONST(SOLUTION_NONE);                  \
+        return STATUS_CONST(SUCCESS);                                          \
+      }                                                                        \
+      COMPLEX_TYPE result = -c / b;                                            \
+      *outResult1 = result;                                                       \
+      *outResult2 = result;                                                       \
+      *outSolution = MATH_CONST(SOLUTION_ONE);                                   \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    TYPE discriminant = EQUATION_TYPED_FUNC(QuadraticDiscriminant, SUFFIX)(a, b, c); \
+    TYPE denominator = (TYPE)2 * a;                                           \
+    /* Avoid complex division: FreeBSD compiler-rt may require -lm there. */  \
+    if (discriminant < (TYPE)0) {                                              \
+      TYPE realPart = -b / denominator;                                        \
+      TYPE imaginaryPart = SQRT(-discriminant) / denominator;                  \
+      *outResult1 = __builtin_complex(realPart, imaginaryPart);               \
+      *outResult2 = __builtin_complex(realPart, -imaginaryPart);              \
+    } else {                                                                   \
+      TYPE root = SQRT(discriminant);                                          \
+      *outResult1 = __builtin_complex((-b + root) / denominator, (TYPE)0);     \
+      *outResult2 = __builtin_complex((-b - root) / denominator, (TYPE)0);     \
+    }                                      \
+    *outSolution = discriminant == (TYPE)0 ? MATH_CONST(SOLUTION_ONE)            \
+                                        : MATH_CONST(SOLUTION_MULTIPLE);       \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+/* EOF */

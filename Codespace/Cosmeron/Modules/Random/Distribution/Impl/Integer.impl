@@ -1,0 +1,63 @@
+static inline uint64_t RANDOM_DISTRIBUTION_INS(U64Unchecked)(
+    RANDOM_SOURCE_TYPE(Value) *source, uint64_t minimum, uint64_t maximum) {
+  uint64_t span;
+  uint64_t threshold;
+  uint64_t value;
+
+  if (minimum > maximum) {
+    uint64_t temporary = minimum;
+    minimum = maximum;
+    maximum = temporary;
+  }
+
+  span = maximum - minimum + UINT64_C(1);
+  if (span == 0U)
+    return RANDOM_SOURCE_INS(NextU64Unchecked)(source);
+
+  threshold = (UINT64_C(0) - span) % span;
+  do {
+    value = RANDOM_SOURCE_INS(NextU64Unchecked)(source);
+  } while (value < threshold);
+
+  return minimum + (value % span);
+}
+
+static inline int64_t RANDOM_DISTRIBUTION_INS(I64Unchecked)(
+    RANDOM_SOURCE_TYPE(Value) *source, int64_t minimum, int64_t maximum) {
+  const uint64_t sign = UINT64_C(1) << 63U;
+  uint64_t biasedMinimum;
+  uint64_t biasedMaximum;
+  uint64_t raw;
+
+  if (minimum > maximum) {
+    int64_t temporary = minimum;
+    minimum = maximum;
+    maximum = temporary;
+  }
+
+  biasedMinimum = ((uint64_t)minimum) ^ sign;
+  biasedMaximum = ((uint64_t)maximum) ^ sign;
+  raw = RANDOM_DISTRIBUTION_INS(U64Unchecked)(
+            source, biasedMinimum, biasedMaximum) ^
+        sign;
+
+  if (raw <= (uint64_t)INT64_MAX)
+    return (int64_t)raw;
+  return INT64_MIN + (int64_t)(raw - sign);
+}
+
+RANDOM_DISTRIBUTION_U64_PROTOTYPE {
+  if (!RANDOM_SOURCE_INS(Valid)(source) || outValue == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  *outValue = RANDOM_DISTRIBUTION_INS(U64Unchecked)(source, minimum, maximum);
+  return STATUS_CONST(SUCCESS);
+}
+
+RANDOM_DISTRIBUTION_I64_PROTOTYPE {
+  if (!RANDOM_SOURCE_INS(Valid)(source) || outValue == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  *outValue = RANDOM_DISTRIBUTION_INS(I64Unchecked)(source, minimum, maximum);
+  return STATUS_CONST(SUCCESS);
+}

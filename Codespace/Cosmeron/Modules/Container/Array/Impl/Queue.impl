@@ -1,0 +1,161 @@
+#include "Capacity.impl"
+#include "Internal.impl"
+#include "Lifecycle.impl"
+#include "Modifiers.impl"
+#include "Observers.impl"
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue) ((queue)->size - (queue)->head)
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_ENSURE_CAPACITY(TYPE, SUFFIX)                         \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_CONTAINER_ENSURE_CAPACITY(                                        \
+      TYPE, FLAT_QUEUE_FUNC(SUFFIX, EnsureCapacity),                           \
+      FLAT_QUEUE_FUNC(SUFFIX, Reserve), FLAT_QUEUE_TYPE(SUFFIX),       \
+      COSMERON_MACRO_INTERNAL_FLAT_INITIAL_CAPACITY, COSMERON_MACRO_INTERNAL_FLAT_GROWTH_FACTOR)
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_COMPACT(TYPE, SUFFIX)                       \
+  FLAT_QUEUE_COMPACT_PROTOTYPE(SUFFIX) {                                       \
+    if (!queue)                                                                \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
+    if (queue->head == 0)                                                      \
+      return STATUS_CONST(SUCCESS);                                               \
+    size_t logicalSize = COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue);                \
+    if (logicalSize > 0) {                                                    \
+      memmove(queue->data, &queue->data[queue->head],                          \
+              logicalSize * sizeof(TYPE));                                    \
+    }                                                                          \
+    queue->size = logicalSize;                                                \
+    queue->head = 0;                                                           \
+    return STATUS_CONST(SUCCESS);                                                 \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_INIT(TYPE, SUFFIX)                          \
+  FLAT_QUEUE_INIT_PROTOTYPE(SUFFIX) {                                       \
+    if (!queue)                                                                \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
+    queue->data = NULL;                                                        \
+    queue->size = 0;                                                           \
+    queue->capacity = 0;                                                       \
+    queue->head = 0;                                                           \
+    return STATUS_CONST(SUCCESS);                                                 \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_DESTROY(TYPE, SUFFIX)                       \
+  FLAT_QUEUE_DESTROY_PROTOTYPE(SUFFIX) {                                       \
+    if (!queue)                                                                \
+      return;                                                                  \
+    Memory_Free(queue->data);                                                 \
+    queue->data = NULL;                                                        \
+    queue->size = 0;                                                           \
+    queue->capacity = 0;                                                       \
+    queue->head = 0;                                                           \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_RESERVE(TYPE, SUFFIX)                       \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_CAPACITY_RESERVE(TYPE, FLAT_QUEUE_FUNC(SUFFIX, Reserve),  \
+                              FLAT_QUEUE_TYPE(SUFFIX))
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_SHRINK_TO_FIT(TYPE, SUFFIX)                 \
+  FLAT_QUEUE_SHRINK_TO_FIT_PROTOTYPE(SUFFIX) {                                       \
+    OPSTATUS status = FLAT_QUEUE_FUNC(SUFFIX, Compact)(queue);         \
+    if (status != STATUS_CONST(SUCCESS))                                          \
+      return status;                                                           \
+    if (queue->size == queue->capacity)                                        \
+      return STATUS_CONST(SUCCESS);                                               \
+    if (queue->size == 0) {                                                    \
+      Memory_Free(queue->data);                                               \
+      queue->capacity = 0;                                                     \
+      return STATUS_CONST(SUCCESS);                                               \
+    }                                                                          \
+    {                                                                          \
+      void *newData = queue->data;                                             \
+      status = ALLOC_FUNC(ReallocArray)(&newData, queue->size, sizeof(TYPE));  \
+      if (status != STATUS_CONST(SUCCESS))                                        \
+        return status;                                                         \
+      queue->data = (TYPE *)newData;                                           \
+    }                                                                          \
+    queue->capacity = queue->size;                                             \
+    return STATUS_CONST(SUCCESS);                                                 \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_PUSH(TYPE, SUFFIX)                          \
+  FLAT_QUEUE_PUSH_PROTOTYPE(TYPE, SUFFIX) {                           \
+    if (!queue)                                                                \
+      return STATUS_CONST(INVALID_ARGUMENT);                                      \
+    if (queue->head > 0 && queue->size == queue->capacity) {                   \
+      OPSTATUS status = FLAT_QUEUE_FUNC(SUFFIX, Compact)(queue);       \
+      if (status != STATUS_CONST(SUCCESS))                                        \
+        return status;                                                         \
+    }                                                                          \
+    OPSTATUS status = FLAT_QUEUE_FUNC(SUFFIX, EnsureCapacity)(queue);          \
+    if (status != STATUS_CONST(SUCCESS))                                          \
+      return status;                                                           \
+    queue->data[queue->size++] = value;                                        \
+    return STATUS_CONST(SUCCESS);                                                 \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_POP(TYPE, SUFFIX)                           \
+  FLAT_QUEUE_POP_PROTOTYPE(TYPE, SUFFIX) {                     \
+    if (!queue || !outValue)                                                   \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue) == 0)                             \
+      return STATUS_CONST(OUT_OF_RANGE);                                          \
+    *outValue = queue->data[queue->head];                                   \
+    queue->head++;                                                             \
+    if (COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue) == 0) {                           \
+      queue->size = 0;                                                         \
+      queue->head = 0;                                                         \
+      return STATUS_CONST(SUCCESS);                                               \
+    }                                                                          \
+    if (queue->head >= (queue->capacity / 2))                                  \
+      return FLAT_QUEUE_FUNC(SUFFIX, Compact)(queue);                  \
+    return STATUS_CONST(SUCCESS);                                                 \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_FRONT(TYPE, SUFFIX)                         \
+  FLAT_QUEUE_FRONT_PROTOTYPE(TYPE, SUFFIX) {                                   \
+    if (!queue || !out)                                                        \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue) == 0)                             \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *out = &queue->data[queue->head];                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_BACK(TYPE, SUFFIX)                          \
+  FLAT_QUEUE_BACK_PROTOTYPE(TYPE, SUFFIX) {                                    \
+    if (!queue || !out)                                                        \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue) == 0)                             \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *out = &queue->data[queue->size - 1];                                      \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_EMPTY(TYPE, SUFFIX)                         \
+  FLAT_QUEUE_EMPTY_PROTOTYPE(SUFFIX) {                              \
+    return queue != NULL && COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue) == 0;                          \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_SIZE(TYPE, SUFFIX)                          \
+  FLAT_QUEUE_SIZE_PROTOTYPE(SUFFIX) {                              \
+    return queue ? COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_LOGICAL_SIZE(queue) : 0U;                               \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_CAPACITY(TYPE, SUFFIX)                      \
+  FLAT_QUEUE_CAPACITY_PROTOTYPE(SUFFIX) {                              \
+    return queue ? queue->capacity : 0U;                                                    \
+  }
+
+#define COSMERON_MACRO_INTERNAL_FLAT_QUEUE_IMPLEMENT(TYPE, SUFFIX)                                     \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_ENSURE_CAPACITY(TYPE, SUFFIX)                               \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_COMPACT(TYPE, SUFFIX)                             \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_INIT(TYPE, SUFFIX)                                \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_DESTROY(TYPE, SUFFIX)                             \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_RESERVE(TYPE, SUFFIX)                             \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_SHRINK_TO_FIT(TYPE, SUFFIX)                       \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_PUSH(TYPE, SUFFIX)                                \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_POP(TYPE, SUFFIX)                                 \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_FRONT(TYPE, SUFFIX)                               \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_BACK(TYPE, SUFFIX)                                \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_EMPTY(TYPE, SUFFIX)                               \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_SIZE(TYPE, SUFFIX)                                \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_QUEUE_IMPLEMENT_CAPACITY(TYPE, SUFFIX)

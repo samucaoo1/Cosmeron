@@ -1,0 +1,60 @@
+#pragma once
+#include "../../Core/Namespace.h"
+#include "../Parsing/Common/Common.h"
+
+#define CLI_MOD CLI
+#define CLI_CMOD CLI
+#ifndef CLI_NS
+#define CLI_NS(NAME) GNS2(LIB_PREFIX(CLI_MOD), NAME)
+#endif
+#ifndef CLI_CNS
+#define CLI_CNS(NAME) CNS2(LIB_PREFIX_CONST(CLI_CMOD), NAME)
+#endif
+#define CLI_INS(NAME) GNS2(CLI_NS(Internal), NAME)
+#define CLI_TYPE(NAME) CLI_NS(NAME)
+#define CLI_FUNC(NAME) CLI_NS(NAME)
+#define CLI_CONST(NAME) CLI_CNS(NAME)
+
+typedef enum CLI_TYPE(OptionKind) { CLI_CONST(FLAG), CLI_CONST(VALUE) } CLI_TYPE(OptionKind);
+typedef enum CLI_TYPE(DiagnosticCode) {
+  CLI_CONST(DIAGNOSTIC_NONE), CLI_CONST(DIAGNOSTIC_SCHEMA), CLI_CONST(DIAGNOSTIC_UNKNOWN),
+  CLI_CONST(DIAGNOSTIC_MISSING_VALUE), CLI_CONST(DIAGNOSTIC_REQUIRED),
+  CLI_CONST(DIAGNOSTIC_REPEATED), CLI_CONST(DIAGNOSTIC_EXCLUSIVE),
+  CLI_CONST(DIAGNOSTIC_POSITIONAL), CLI_CONST(DIAGNOSTIC_CAPACITY)
+} CLI_TYPE(DiagnosticCode);
+typedef struct CLI_TYPE(TArguments) { int argc; char **argv; } CLI_TYPE(TArguments);
+typedef struct CLI_TYPE(TOption) {
+  char shortName; const char *longName;
+  CLI_TYPE(OptionKind) kind;
+  const char *valueName, *help;
+  bool required, repeatable;
+  unsigned exclusiveGroup;
+} CLI_TYPE(TOption);
+typedef struct CLI_TYPE(TPositional) { const char *name, *help; bool required, variadic; } CLI_TYPE(TPositional);
+typedef struct CLI_TYPE(TCommand) {
+  const char *name, *description;
+  const CLI_TYPE(TOption) *options; size_t optionCount;
+  const CLI_TYPE(TPositional) *positionals; size_t positionalCount;
+  const struct CLI_TYPE(TCommand) *commands; size_t commandCount;
+  bool requireCommand;
+} CLI_TYPE(TCommand);
+typedef struct CLI_TYPE(TMatch) {
+  const CLI_TYPE(TCommand) *command;
+  const CLI_TYPE(TOption) *option; /* NULL for positionals and command selection. */
+  const CLI_TYPE(TPositional) *positional;
+  const char *value;
+  size_t argumentIndex;
+} CLI_TYPE(TMatch);
+typedef struct CLI_TYPE(TDiagnostic) { CLI_TYPE(DiagnosticCode) code; size_t argumentIndex; const char *name; } CLI_TYPE(TDiagnostic);
+enum { CLI_CONST(MAX_COMMAND_DEPTH) = 64 };
+static inline OPSTATUS CLI_INS(Fail)(CLI_TYPE(TDiagnostic) *diagnostic,
+    CLI_TYPE(DiagnosticCode) code, size_t index, const char *name, OPSTATUS status) {
+  if (diagnostic) { diagnostic->code = code; diagnostic->argumentIndex = index; diagnostic->name = name; }
+  return status;
+}
+static inline bool CLI_INS(ArgumentsValid)(const CLI_TYPE(TArguments) *arguments) {
+  int i;
+  if (!arguments || arguments->argc < 0 || (arguments->argc && !arguments->argv)) return false;
+  for (i = 0; i < arguments->argc; ++i) if (!arguments->argv[i]) return false;
+  return true;
+}

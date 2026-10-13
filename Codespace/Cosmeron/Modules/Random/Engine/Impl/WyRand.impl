@@ -1,0 +1,26 @@
+#include "../Seed.impl"
+inline static uint64_t RANDOM_ENGINE_FUNC(WyRand, Mum)(uint64_t a, uint64_t b) {
+#if defined(_MSC_VER) && defined(_M_X64)
+  uint64_t high;
+  uint64_t low = _umul128(a, b, &high);
+  return low ^ high;
+#elif defined(__SIZEOF_INT128__)
+  __uint128_t product = (__uint128_t)a * (__uint128_t)b;
+  return (uint64_t)product ^ (uint64_t)(product >> 64U);
+#else
+  uint64_t a0 = (uint32_t)a, a1 = a >> 32U;
+  uint64_t b0 = (uint32_t)b, b1 = b >> 32U;
+  uint64_t p0 = a0 * b0, p1 = a0 * b1, p2 = a1 * b0, p3 = a1 * b1;
+  uint64_t middle = (p0 >> 32U) + (uint32_t)p1 + (uint32_t)p2;
+  uint64_t low = (p0 & UINT64_C(0xffffffff)) | (middle << 32U);
+  uint64_t high = p3 + (p1 >> 32U) + (p2 >> 32U) + (middle >> 32U);
+  return low ^ high;
+#endif
+}
+RANDOM_ENGINE_SEED_PROTOTYPE(WyRand) { state->value = seed; }
+RANDOM_ENGINE_NEXT_PROTOTYPE(WyRand) {
+  state->value += UINT64_C(0xa0761d6478bd642f);
+  return RANDOM_ENGINE_FUNC(WyRand, Mum)(
+      state->value ^ UINT64_C(0xe7037ed1a0b428db), state->value);
+}
+

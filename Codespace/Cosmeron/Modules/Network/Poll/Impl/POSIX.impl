@@ -1,0 +1,163 @@
+#pragma once
+
+#include <limits.h>
+
+static inline bool NETWORK_POLLER_INS(SetHandle)(
+    SOCKET_TYPE(Handle) handle, NETWORK_POLLER_TYPE(EventFlags) interests,
+    fd_set *readSet, fd_set *writeSet, fd_set *errorSet,
+    SOCKET_TYPE(Handle) *maximum) {
+  if (handle == TSOCKET_NATIVE_INVALID) return true;
+  if (handle < 0 || handle >= FD_SETSIZE) return false;
+  if (interests & (NETWORK_EVENT_CONST(READ) | NETWORK_EVENT_CONST(ACCEPT) |
+                   NETWORK_EVENT_CONST(CLOSE)))
+    FD_SET(handle, readSet);
+  if (interests & NETWORK_EVENT_CONST(WRITE)) FD_SET(handle, writeSet);
+  FD_SET(handle, errorSet);
+  if (handle > *maximum) *maximum = handle;
+  return true;
+}
+
+static inline NETWORK_POLLER_TYPE(EventFlags) NETWORK_POLLER_INS(Ready)(
+    SOCKET_TYPE(Handle) handle, NETWORK_POLLER_TYPE(EventFlags) interests,
+    bool detectClose, fd_set *readSet, fd_set *writeSet, fd_set *errorSet) {
+  NETWORK_POLLER_TYPE(EventFlags) flags = NETWORK_EVENT_CONST(NONE);
+  bool closed = false;
+  if (handle == TSOCKET_NATIVE_INVALID) return flags;
+  if (FD_ISSET(handle, errorSet)) flags |= NETWORK_EVENT_CONST(ERROR);
+  if (FD_ISSET(handle, writeSet) && (interests & NETWORK_EVENT_CONST(WRITE)))
+    flags |= NETWORK_EVENT_CONST(WRITE);
+  if (FD_ISSET(handle, readSet)) {
+    if (detectClose && (interests & NETWORK_EVENT_CONST(CLOSE)))
+      closed = NETWORK_POLLER_INS(StreamClosed)(handle);
+    if (interests & NETWORK_EVENT_CONST(ACCEPT)) flags |= NETWORK_EVENT_CONST(ACCEPT);
+    if ((interests & NETWORK_EVENT_CONST(READ)) && !closed)
+      flags |= NETWORK_EVENT_CONST(READ);
+    if (closed) flags |= NETWORK_EVENT_CONST(CLOSE);
+  }
+  return flags;
+}
+
+static inline OPSTATUS NETWORK_POLLER_INS(WaitNative)(
+    NETWORK_POLLER_TYPE(TPoller) *poller, NETWORK_POLLER_TYPE(TEventVector) *events,
+    struct timeval *timeout, NETWORK_TYPE(TError) *error) {
+  NETWORK_POLLER_TYPE(TEventVector) collected = {0};
+  fd_set readSet, writeSet, errorSet;
+  SOCKET_TYPE(Handle) maximum = 0;
+  size_t i;
+  int result;
+
+  if (poller == NULL || events == NULL) {
+    if (error != NULL)
+      *error = NETWORK_ERROR_CONST(NONE);
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  if (FLAT_VECTOR_FUNC(Network_Event, Init)(&collected) !=
+      STATUS_CONST(SUCCESS))
+    return NETWORK_POLLER_INS(Publish)(
+        error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
+        STATUS_CONST(OUT_OF_MEMORY));
+
+#if COSMERON_MACRO_INTERNAL_CONTAINER_FUNCTION_TABLE_ENABLED
+  collected.api = events->api;
+#endif
+
+  if (poller->registrations.size == 0) {
+    FLAT_VECTOR_FUNC(Network_Event, Destroy)(events);
+    *events = collected;
+    return NETWORK_POLLER_INS(Publish)(
+        error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+  }
+
+  FD_ZERO(&readSet); FD_ZERO(&writeSet); FD_ZERO(&errorSet);
+  for (i = 0; i < poller->registrations.size; ++i) {
+    NETWORK_POLLER_TYPE(TRegistration) *r = &poller->registrations.data[i];
+    bool valid = true;
+    if (r->sourceType == NETWORK_POLLER_SOURCE_CONST(CONNECTION)) {
+      NETWORK_CONNECTION_TYPE(TConnection) *c = (NETWORK_CONNECTION_TYPE(TConnection) *)r->object;
+      valid = NETWORK_POLLER_INS(SetHandle)(
+          c->socket.handle, r->interests, &readSet, &writeSet, &errorSet, &maximum);
+    } else if (r->sourceType == NETWORK_POLLER_SOURCE_CONST(DATAGRAM)) {
+      NETWORK_DATAGRAM_TYPE(TDatagram) *d = (NETWORK_DATAGRAM_TYPE(TDatagram) *)r->object;
+      valid = NETWORK_POLLER_INS(SetHandle)(
+          d->socket.handle, r->interests, &readSet, &writeSet, &errorSet, &maximum);
+    } else {
+      NETWORK_LISTENER_TYPE(TListener) *l = (NETWORK_LISTENER_TYPE(TListener) *)r->object;
+      valid = NETWORK_POLLER_INS(SetHandle)(
+                  l->primary.handle, r->interests, &readSet, &writeSet,
+                  &errorSet, &maximum) &&
+              NETWORK_POLLER_INS(SetHandle)(
+                  l->secondary.handle, r->interests, &readSet, &writeSet,
+                  &errorSet, &maximum);
+    }
+    if (!valid) {
+      FLAT_VECTOR_FUNC(Network_Event, Destroy)(&collected);
+      return NETWORK_POLLER_INS(Publish)(
+          error, NETWORK_ERROR_CONST(RESOURCE_EXHAUSTED),
+          STATUS_CONST(OUT_OF_RANGE));
+    }
+  }
+
+  result = select(maximum + 1, &readSet, &writeSet, &errorSet, timeout);
+  if (result == TSOCKET_NATIVE_ERROR) {
+    FLAT_VECTOR_FUNC(Network_Event, Destroy)(&collected);
+    return NETWORK_POLLER_INS(Publish)(
+        error, SOCKET_INS(MapNativeError)(TSOCKET_NATIVE_ERROR_CODE()),
+        STATUS_CONST(GENERIC_ERROR));
+  }
+
+  for (i = 0; i < poller->registrations.size; ++i) {
+    NETWORK_POLLER_TYPE(TRegistration) *r = &poller->registrations.data[i];
+    NETWORK_POLLER_TYPE(EventFlags) flags = NETWORK_EVENT_CONST(NONE);
+    if (r->sourceType == NETWORK_POLLER_SOURCE_CONST(CONNECTION)) {
+      NETWORK_CONNECTION_TYPE(TConnection) *c = (NETWORK_CONNECTION_TYPE(TConnection) *)r->object;
+      flags = NETWORK_POLLER_INS(Ready)(
+          c->socket.handle, r->interests, true, &readSet, &writeSet, &errorSet);
+    } else if (r->sourceType == NETWORK_POLLER_SOURCE_CONST(DATAGRAM)) {
+      NETWORK_DATAGRAM_TYPE(TDatagram) *d = (NETWORK_DATAGRAM_TYPE(TDatagram) *)r->object;
+      flags = NETWORK_POLLER_INS(Ready)(
+          d->socket.handle, r->interests, false, &readSet, &writeSet, &errorSet);
+    } else {
+      NETWORK_LISTENER_TYPE(TListener) *l = (NETWORK_LISTENER_TYPE(TListener) *)r->object;
+      flags = NETWORK_POLLER_INS(Ready)(
+          l->primary.handle, r->interests, false, &readSet, &writeSet, &errorSet);
+      flags |= NETWORK_POLLER_INS(Ready)(
+          l->secondary.handle, r->interests, false, &readSet, &writeSet, &errorSet);
+    }
+    if (NETWORK_POLLER_INS(PushEvent)(
+            &collected, r, flags, error) != STATUS_CONST(SUCCESS)) {
+      FLAT_VECTOR_FUNC(Network_Event, Destroy)(&collected);
+      return STATUS_CONST(OUT_OF_MEMORY);
+    }
+  }
+
+  FLAT_VECTOR_FUNC(Network_Event, Destroy)(events);
+  *events = collected;
+  return NETWORK_POLLER_INS(Publish)(
+      error, NETWORK_ERROR_CONST(NONE), STATUS_CONST(SUCCESS));
+}
+
+NETWORK_POLLER_WAIT_PROTOTYPE {
+  return NETWORK_POLLER_INS(WaitNative)(poller, events, NULL, error);
+}
+
+NETWORK_POLLER_WAIT_FOR_PROTOTYPE {
+  struct timeval nativeTimeout;
+  if (timeout.nanoseconds < 0) {
+    if (error != NULL) *error = NETWORK_ERROR_CONST(NONE);
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  {
+    int64_t seconds =
+        timeout.nanoseconds / CHRONOMETRY_DURATION_NANOSECONDS_PER_SECOND;
+    if ((uint64_t)seconds > (uint64_t)LONG_MAX)
+      nativeTimeout.tv_sec = LONG_MAX;
+    else
+      nativeTimeout.tv_sec = (long)seconds;
+  }
+  nativeTimeout.tv_usec = (long)(
+      (timeout.nanoseconds % CHRONOMETRY_DURATION_NANOSECONDS_PER_SECOND) /
+      CHRONOMETRY_DURATION_NANOSECONDS_PER_MICROSECOND);
+  return NETWORK_POLLER_INS(WaitNative)(
+      poller, events, &nativeTimeout, error);
+}

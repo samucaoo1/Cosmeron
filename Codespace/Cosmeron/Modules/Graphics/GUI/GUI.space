@@ -1,0 +1,261 @@
+#pragma once
+#include "../Surface/Surface.h"
+#include "../Font/Fonts/VGA8x8.asf"
+#include "../UI/Internal/Interaction.inc"
+#include "../../Input/Input.space"
+#include "../../Text/Encoding/UTF8.h"
+#include <float.h>
+
+#define GUI_MOD GUI
+#define GUI_CMOD GUI
+#ifndef GUI_NS
+#define GUI_NS(NAME) GNS2(LIB_PREFIX(GUI_MOD), NAME)
+#endif
+#define GUI_CNS(NAME) CNS2(LIB_PREFIX_CONST(GUI_CMOD), NAME)
+#define GUI_TYPE(NAME) GUI_NS(NAME)
+#define GUI_FUNC(NAME) GUI_NS(NAME)
+#define GUI_CONST(NAME) GUI_CNS(NAME)
+#define GUI_INS(NAME) GNS3(LIB_PREFIX(GUI_MOD), Internal, NAME)
+#ifndef GUI_MAX_WIDGETS
+#define GUI_MAX_WIDGETS 128
+#endif
+#ifndef GUI_MAX_SCOPES
+#define GUI_MAX_SCOPES 16
+#endif
+#ifndef GUI_MAX_COMMANDS
+#define GUI_MAX_COMMANDS 2048
+#endif
+#ifndef GUI_MAX_EVENTS
+#define GUI_MAX_EVENTS 128
+#endif
+#ifndef GUI_TEXT_CAPACITY
+#define GUI_TEXT_CAPACITY 16384
+#endif
+_Static_assert(GUI_MAX_WIDGETS > 0 && GUI_MAX_SCOPES > 0 && GUI_MAX_COMMANDS > 0 &&
+                   GUI_MAX_EVENTS > 0 && GUI_TEXT_CAPACITY > 0,
+               "GUI capacities must be positive");
+
+typedef uint64_t GUI_TYPE(WidgetId);
+typedef enum GUI_TYPE(Align) {
+  GUI_CONST(ALIGN_LEFT),
+  GUI_CONST(ALIGN_CENTER),
+  GUI_CONST(ALIGN_RIGHT)
+} GUI_TYPE(Align);
+typedef enum GUI_TYPE(CommandType) {
+  GUI_CONST(COMMAND_RECTANGLE),
+  GUI_CONST(COMMAND_TEXT),
+  GUI_CONST(COMMAND_IMAGE)
+} GUI_TYPE(CommandType);
+/* Glyph callback coordinates and advance are in font units. Coverage is 0..255.
+ * A callback can supply Unicode/proportional glyphs without a font-file dependency. */
+typedef struct GUI_TYPE(TFont) {
+  const FONT_TYPE(TFont) * asf;
+  void *user;
+  float height;
+  float (*advance)(void *user, uint32_t codepoint);
+  uint8_t (*coverage)(void *user, uint32_t codepoint, uint32_t x, uint32_t y);
+} GUI_TYPE(TFont);
+typedef struct GUI_TYPE(TVisual) {
+  uint32_t normal, hovered, focused, active, disabled;
+  uint32_t foreground, border, accent;
+  float borderWidth, radius, fontScale;
+  TDUAL_TYPE(float) padding;
+  GUI_TYPE(Align) align;
+  const GUI_TYPE(TFont) * font;
+} GUI_TYPE(TVisual);
+typedef struct GUI_TYPE(TTheme) {
+  GUI_TYPE(TVisual) text, button, checkbox, radio, slider, input;
+  GUI_TYPE(TVisual) panel, progress, selection;
+} GUI_TYPE(TTheme);
+typedef struct GUI_TYPE(TCommand) {
+  GUI_TYPE(CommandType) type;
+  TQUAD_TYPE(float) region, clip;
+  uint32_t color;
+  bool overlay;
+  float radius, scale;
+  const char *text;
+  size_t length;
+  GUI_TYPE(TFont) font;
+  const GRAPHICS_TYPE(TSurface) * image;
+} GUI_TYPE(TCommand);
+typedef struct GUI_TYPE(TButton) {
+  GUI_TYPE(WidgetId) id;
+  TQUAD_TYPE(float) region;
+  const char *label;
+  const GUI_TYPE(TVisual) * visual;
+  bool disabled, pressed;
+} GUI_TYPE(TButton);
+typedef struct GUI_TYPE(TCheckbox) {
+  GUI_TYPE(WidgetId) id;
+  TQUAD_TYPE(float) region;
+  const char *label;
+  const GUI_TYPE(TVisual) * visual;
+  bool disabled, checked;
+} GUI_TYPE(TCheckbox);
+typedef struct GUI_TYPE(TRadio) {
+  GUI_TYPE(WidgetId) id;
+  TQUAD_TYPE(float) region;
+  const char *label;
+  const GUI_TYPE(TVisual) * visual;
+  uint32_t option, *selected;
+  bool disabled;
+} GUI_TYPE(TRadio);
+typedef struct GUI_TYPE(TSlider) {
+  GUI_TYPE(WidgetId) id;
+  TQUAD_TYPE(float) region;
+  const GUI_TYPE(TVisual) * visual;
+  float minimum, maximum, value;
+  bool disabled;
+} GUI_TYPE(TSlider);
+typedef struct GUI_TYPE(TLabel) {
+  TQUAD_TYPE(float) region;
+  const char *text;
+  const GUI_TYPE(TVisual) * visual;
+} GUI_TYPE(TLabel);
+typedef struct GUI_TYPE(TProgressBar) {
+  TQUAD_TYPE(float) region;
+  uint64_t value, maximum;
+  const GUI_TYPE(TVisual) * visual;
+} GUI_TYPE(TProgressBar);
+typedef struct GUI_TYPE(TInputText) {
+  GUI_TYPE(WidgetId) id;
+  TQUAD_TYPE(float) region;
+  const GUI_TYPE(TVisual) * visual;
+  char *buffer;
+  size_t capacity, length, caret, selectionAnchor;
+  float scrollX, scrollY;
+  bool disabled, changed;
+} GUI_TYPE(TInputText);
+typedef GUI_TYPE(TInputText) GUI_TYPE(TTextArea);
+typedef struct GUI_TYPE(TList) {
+  GUI_TYPE(WidgetId) id;
+  TQUAD_TYPE(float) region;
+  const GUI_TYPE(TVisual) * visual;
+  const char *const *items;
+  size_t count, *selected, firstVisible;
+  bool disabled, activated, cancelled;
+} GUI_TYPE(TList);
+typedef GUI_TYPE(TList) GUI_TYPE(TMenu);
+typedef struct GUI_TYPE(TPanel) {
+  TQUAD_TYPE(float) region;
+  const char *title;
+  const GUI_TYPE(TVisual) * visual;
+} GUI_TYPE(TPanel);
+typedef struct GUI_TYPE(TDialog) {
+  GUI_TYPE(WidgetId) id;
+  TQUAD_TYPE(float) region;
+  const char *title, *message;
+  const GUI_TYPE(TVisual) * visual;
+  bool accepted, rejected;
+} GUI_TYPE(TDialog);
+typedef struct GUI_TYPE(TImage) {
+  TQUAD_TYPE(float) region;
+  const GRAPHICS_TYPE(TSurface) * surface;
+} GUI_TYPE(TImage);
+typedef struct GUI_TYPE(TContext) {
+  GRAPHICS_TYPE(TSurface) * surface;
+  GUI_TYPE(TTheme) theme;
+  bool themeSet, frame, widgetsStarted;
+  float scale;
+  GUI_TYPE(WidgetId) focus, held, idScope, modal, previousModal, savedFocus, modalFrame;
+  GUI_TYPE(WidgetId) ids[GUI_MAX_WIDGETS], previousIds[GUI_MAX_WIDGETS];
+  size_t idCount, previousCount;
+  GUI_TYPE(WidgetId) idStack[GUI_MAX_SCOPES];
+  size_t idDepth;
+  GUI_TYPE(TVisual) visuals[GUI_MAX_SCOPES];
+  size_t visualDepth;
+  TQUAD_TYPE(float) clips[GUI_MAX_SCOPES];
+  size_t clipDepth;
+  struct {
+    TQUAD_TYPE(float) region;
+    float cursor, gap;
+    bool row;
+  } layouts[GUI_MAX_SCOPES];
+  size_t layoutDepth, panelDepth;
+  size_t panelClips[GUI_MAX_SCOPES];
+  TDUAL_TYPE(float) pointer, pressAt, releaseAt;
+  bool pointerKnown, down, pressed, released;
+  float scroll;
+  INPUT_TYPE(TEvent) events[GUI_MAX_EVENTS];
+  bool consumed[GUI_MAX_EVENTS];
+  size_t eventCount;
+  GUI_TYPE(TCommand) commands[GUI_MAX_COMMANDS];
+  size_t commandCount;
+  char text[GUI_TEXT_CAPACITY];
+  size_t textCount;
+  struct {
+    GUI_TYPE(WidgetId) id;
+    size_t caret, anchor, first;
+    float scrollX, scrollY;
+  } editors[GUI_MAX_WIDGETS];
+  size_t editorCount;
+  char composition[64];
+  size_t compositionLength, compositionCaret, compositionSelection;
+  /* Optional renderer; NULL selects the software renderer at End.
+   * Commands and copied text are valid until the next Begin; images/font users are borrowed. */
+  OPSTATUS(*renderer)
+  (void *user, GRAPHICS_TYPE(TSurface) * surface, const GUI_TYPE(TCommand) * commands, size_t count,
+   float scale);
+  void *rendererUser;
+} GUI_TYPE(TContext);
+
+typedef struct GUI_TYPE(TImageButton) {
+  GUI_TYPE(WidgetId) id;
+  TQUAD_TYPE(float) region;
+  const GRAPHICS_TYPE(TSurface) * surface;
+  const GUI_TYPE(TVisual) * visual;
+  bool disabled, pressed;
+} GUI_TYPE(TImageButton);
+typedef struct GUI_TYPE(TComboBox) {
+  GUI_TYPE(WidgetId) id;
+  TQUAD_TYPE(float) region;
+  const GUI_TYPE(TVisual) * visual;
+  const char *const *items;
+  size_t count, *selected;
+  size_t firstVisible;
+  bool open, disabled;
+} GUI_TYPE(TComboBox);
+typedef struct GUI_TYPE(TTabs) {
+  GUI_TYPE(WidgetId) id;
+  TQUAD_TYPE(float) region;
+  const GUI_TYPE(TVisual) * visual;
+  const char *const *items;
+  size_t count, *selected;
+  bool disabled;
+} GUI_TYPE(TTabs);
+typedef struct GUI_TYPE(TTreeNode) {
+  GUI_TYPE(WidgetId) id;
+  TQUAD_TYPE(float) region;
+  const GUI_TYPE(TVisual) * visual;
+  const char *label;
+  bool expanded, selected, disabled;
+} GUI_TYPE(TTreeNode);
+typedef struct GUI_TYPE(TTable) {
+  GUI_TYPE(WidgetId) id;
+  TQUAD_TYPE(float) region;
+  const GUI_TYPE(TVisual) * visual;
+  const char *const *cells;
+  size_t rows, columns, *selectedRow, firstVisible;
+  bool disabled;
+} GUI_TYPE(TTable);
+typedef struct GUI_TYPE(TColorPicker) {
+  GUI_TYPE(WidgetId) id;
+  TQUAD_TYPE(float) region;
+  const GUI_TYPE(TVisual) * visual;
+  uint32_t color;
+  bool disabled;
+} GUI_TYPE(TColorPicker);
+typedef struct GUI_TYPE(TNumber) {
+  GUI_TYPE(WidgetId) id;
+  TQUAD_TYPE(float) region;
+  const GUI_TYPE(TVisual) * visual;
+  float minimum, maximum, step, value;
+  bool disabled;
+} GUI_TYPE(TNumber);
+typedef struct GUI_TYPE(TScrollbar) {
+  GUI_TYPE(WidgetId) id;
+  TQUAD_TYPE(float) region;
+  const GUI_TYPE(TVisual) * visual;
+  float maximum, visible, offset;
+  bool vertical, disabled;
+} GUI_TYPE(TScrollbar);

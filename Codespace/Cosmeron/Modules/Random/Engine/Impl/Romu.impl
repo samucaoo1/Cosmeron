@@ -1,0 +1,17 @@
+#include "../Seed.impl"
+RANDOM_ENGINE_SEED_PROTOTYPE(Romu) {
+  uint64_t split = seed;
+  state->x = RANDOM_ENGINE_SPLITMIX_STEP(split);
+  state->y = RANDOM_ENGINE_SPLITMIX_STEP(split);
+  state->z = RANDOM_ENGINE_SPLITMIX_STEP(split);
+}
+RANDOM_ENGINE_NEXT_PROTOTYPE(Romu) {
+  uint64_t xp = state->x;
+  uint64_t yp = state->y;
+  uint64_t zp = state->z;
+  state->x = UINT64_C(1524109428475902795) * zp;
+  state->y = RANDOM_ENGINE_FUNC(Common, RotateLeft)(yp - xp, 12U);
+  state->z = RANDOM_ENGINE_FUNC(Common, RotateLeft)(zp - yp, 44U);
+  return xp;
+}
+

@@ -1,0 +1,51 @@
+/* Implementation included by Beep.h. */
+
+AUDIO_BEEP_RENDER_TONE_PROTOTYPE {
+  AUDIO_PCM_TYPE(TBuffer) buffer = {0};
+  AUDIO_OSCILLATOR_TYPE(TOscillator) oscillator;
+  uint64_t frames = (uint64_t)sampleRate * durationMs / 1000;
+  size_t i, ramp;
+  OPSTATUS status;
+  if (outBuffer == NULL || outBuffer->samples != NULL || durationMs == 0 ||
+      !(volume >= 0 && volume <= 1))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (frames > SIZE_MAX)
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  status = AUDIO_OSCILLATOR_FUNC(Init)(
+      &oscillator, sampleRate, AUDIO_OSCILLATOR_CONST(SQUARE), frequency);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+  status = AUDIO_PCM_FUNC(Init)(&buffer, (size_t)frames, AUDIO_CONST(MONO),
+                                sampleRate);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+  oscillator.amplitude = volume;
+  if (frames != 0 && frequency != 0)
+    (void)AUDIO_OSCILLATOR_FUNC(Render)(&oscillator, buffer.samples,
+                                        (size_t)frames);
+  ramp = sampleRate / 200;
+  if (ramp > (size_t)frames / 2)
+    ramp = (size_t)frames / 2;
+  for (i = 0; i < ramp; ++i) {
+    float gain = (float)i / (float)ramp;
+    buffer.samples[i] *= gain;
+    buffer.samples[(size_t)frames - i - 1] *= gain;
+  }
+  *outBuffer = buffer;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_BEEP_RENDER_MML_PROTOTYPE {
+  AUDIO_SEQUENCE_TYPE(TSequence) sequence = {0};
+  OPSTATUS status;
+  if (outBuffer == NULL || outBuffer->samples != NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  status = AUDIO_SEQUENCE_FUNC(ParseMML)(text, &sequence, outErrorOffset);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+  status = AUDIO_SEQUENCE_FUNC(RenderBuffer)(
+      sequence.events, sequence.eventCount, sampleRate,
+      AUDIO_OSCILLATOR_CONST(SQUARE), outBuffer);
+  AUDIO_SEQUENCE_FUNC(Destroy)(&sequence);
+  return status;
+}

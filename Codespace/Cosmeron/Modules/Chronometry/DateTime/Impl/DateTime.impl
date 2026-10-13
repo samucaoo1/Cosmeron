@@ -1,0 +1,94 @@
+#pragma once
+
+#include <limits.h>
+
+CHRONOMETRY_DATETIME_TIME_IS_VALID_PROTOTYPE {
+  return time.hour < DURATION_CONST(HOURS_PER_DAY) &&
+         time.minute < DURATION_CONST(MINUTES_PER_HOUR) &&
+         time.second < DURATION_CONST(SECONDS_PER_MINUTE) &&
+         time.millisecond < DURATION_CONST(MILLISECONDS_PER_SECOND);
+}
+
+CHRONOMETRY_DATETIME_IS_VALID_PROTOTYPE {
+  return CALENDAR_FUNC(DateIsValid)(policy, value.date) &&
+         DATETIME_FUNC(TimeIsValid)(value.time);
+}
+
+CHRONOMETRY_DATETIME_COMPARE_PROTOTYPE {
+  CMPOUT date = CALENDAR_FUNC(DateCompare)(left.date, right.date);
+  if (date != COMPARISON_EQUAL_CONST)
+    return date;
+  if (left.time.hour < right.time.hour)
+    return COMPARISON_LOWER_CONST;
+  if (left.time.hour > right.time.hour)
+    return COMPARISON_HIGHER_CONST;
+  if (left.time.minute < right.time.minute)
+    return COMPARISON_LOWER_CONST;
+  if (left.time.minute > right.time.minute)
+    return COMPARISON_HIGHER_CONST;
+  if (left.time.second < right.time.second)
+    return COMPARISON_LOWER_CONST;
+  if (left.time.second > right.time.second)
+    return COMPARISON_HIGHER_CONST;
+  if (left.time.millisecond < right.time.millisecond)
+    return COMPARISON_LOWER_CONST;
+  if (left.time.millisecond > right.time.millisecond)
+    return COMPARISON_HIGHER_CONST;
+  return COMPARISON_EQUAL_CONST;
+}
+
+inline static int64_t DATETIME_INS(MillisecondsOfDay)(
+    CHRONOMETRY_TYPE(TimeOfDay) time) {
+  return (((int64_t)time.hour * DURATION_CONST(MINUTES_PER_HOUR) + time.minute) *
+              DURATION_CONST(SECONDS_PER_MINUTE) +
+          time.second) * DURATION_CONST(MILLISECONDS_PER_SECOND) + time.millisecond;
+}
+
+CHRONOMETRY_DATETIME_ADD_DURATION_PROTOTYPE {
+  int64_t ordinal, milliseconds, dayDelta, remainder;
+  if (outResult == NULL || !DATETIME_FUNC(IsValid)(policy, value))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (CALENDAR_FUNC(DateToOrdinal)(policy, value.date, &ordinal) !=
+      STATUS_CONST(SUCCESS))
+    return STATUS_CONST(OUT_OF_RANGE);
+  milliseconds = DATETIME_INS(MillisecondsOfDay)(value.time) +
+                 duration.nanoseconds / DURATION_CONST(NANOSECONDS_PER_MILLISECOND);
+  dayDelta = CALENDAR_INS(FloorDiv)(milliseconds,
+                                     DURATION_CONST(SECONDS_PER_DAY) * DURATION_CONST(MILLISECONDS_PER_SECOND));
+  remainder = milliseconds - dayDelta * DURATION_CONST(SECONDS_PER_DAY) * DURATION_CONST(MILLISECONDS_PER_SECOND);
+  if ((dayDelta > 0 && ordinal > INT64_MAX - dayDelta) ||
+      (dayDelta < 0 && ordinal < INT64_MIN - dayDelta))
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  if (CALENDAR_FUNC(DateFromOrdinal)(policy, ordinal + dayDelta,
+                                   &outResult->date) != STATUS_CONST(SUCCESS))
+    return STATUS_CONST(OUT_OF_RANGE);
+  outResult->time.hour = (uint8_t)(remainder / (DURATION_CONST(SECONDS_PER_HOUR) * DURATION_CONST(MILLISECONDS_PER_SECOND)));
+  remainder %= DURATION_CONST(SECONDS_PER_HOUR) * DURATION_CONST(MILLISECONDS_PER_SECOND);
+  outResult->time.minute = (uint8_t)(remainder / (DURATION_CONST(SECONDS_PER_MINUTE) * DURATION_CONST(MILLISECONDS_PER_SECOND)));
+  remainder %= DURATION_CONST(SECONDS_PER_MINUTE) * DURATION_CONST(MILLISECONDS_PER_SECOND);
+  outResult->time.second = (uint8_t)(remainder / DURATION_CONST(MILLISECONDS_PER_SECOND));
+  outResult->time.millisecond = (uint16_t)(remainder % DURATION_CONST(MILLISECONDS_PER_SECOND));
+  return STATUS_CONST(SUCCESS);
+}
+
+CHRONOMETRY_DATETIME_DIFFERENCE_PROTOTYPE {
+  int64_t days, milliseconds;
+  if (outResult == NULL || !DATETIME_FUNC(IsValid)(policy, left) ||
+      !DATETIME_FUNC(IsValid)(policy, right))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (CALENDAR_FUNC(DateDifference)(policy, left.date, right.date, &days) !=
+      STATUS_CONST(SUCCESS))
+    return STATUS_CONST(OUT_OF_RANGE);
+  if (days > INT64_MAX / (DURATION_CONST(SECONDS_PER_DAY) * DURATION_CONST(MILLISECONDS_PER_SECOND)) ||
+      days < INT64_MIN / (DURATION_CONST(SECONDS_PER_DAY) * DURATION_CONST(MILLISECONDS_PER_SECOND)))
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  milliseconds = days * DURATION_CONST(SECONDS_PER_DAY) * DURATION_CONST(MILLISECONDS_PER_SECOND) +
+      DATETIME_INS(MillisecondsOfDay)(right.time) -
+      DATETIME_INS(MillisecondsOfDay)(left.time);
+  if (milliseconds > INT64_MAX / DURATION_CONST(NANOSECONDS_PER_MILLISECOND) ||
+      milliseconds < INT64_MIN / DURATION_CONST(NANOSECONDS_PER_MILLISECOND))
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  outResult->nanoseconds = milliseconds * DURATION_CONST(NANOSECONDS_PER_MILLISECOND);
+  return STATUS_CONST(SUCCESS);
+}
+

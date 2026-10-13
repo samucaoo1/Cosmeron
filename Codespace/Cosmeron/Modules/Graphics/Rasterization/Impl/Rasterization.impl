@@ -1,0 +1,214 @@
+#pragma once
+#include "../../Internal/Primitives.inc"
+
+static inline OPSTATUS RASTER_INS(Validate)(
+    TERMINAL_TYPE(TCanvas) *canvas, uint32_t codepoint) {
+  int width;
+  OPSTATUS status;
+  if (!TERMINAL_INS(CanvasValid)(canvas)) return STATUS_CONST(INVALID_ARGUMENT);
+  status=TEXT_WIDTH_FUNC(Codepoint)(codepoint,&width);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  if (width<0) return STATUS_CONST(INVALID_SEQUENCE);
+  return width==1 ? STATUS_CONST(SUCCESS) : STATUS_CONST(NOT_SUPPORTED);
+}
+
+static inline void RASTER_INS(Plot)(TERMINAL_TYPE(TCanvas) *canvas,
+    int64_t x, int64_t y, uint32_t codepoint, TEXT_GRID_ATTRIBUTE_TYPE(Cell) style) {
+  size_t index;
+  if (x<0 || y<0 || x>=canvas->size.col || y>=canvas->size.row) return;
+  index=TERMINAL_INS(CanvasIndex)(canvas,(uint32_t)x,(uint32_t)y);
+  /* A view may split an existing wide glyph. Preserve that entire glyph,
+   * including its half outside the view, instead of damaging either half. */
+  if (x==0 && (canvas->backing->attributes.data[index].flags &
+      TEXT_GRID_ATTRIBUTE_CONST(CODE_UNIT_CONTINUATION))) return;
+  if (x+1==canvas->size.col &&
+      (uint32_t)canvas->origin.col+(uint32_t)x+1U<canvas->backing->chars.size.col &&
+      (canvas->backing->attributes.data[index+1].flags &
+       TEXT_GRID_ATTRIBUTE_CONST(CODE_UNIT_CONTINUATION))) return;
+  (void)TERMINAL_FUNC(Canvas_Set)(canvas,
+      (TDUAL_TYPE(uint16)){.x=(uint16_t)x,.y=(uint16_t)y},codepoint,style);
+}
+
+typedef struct RASTER_INS(LineTarget) {
+  TERMINAL_TYPE(TCanvas) *canvas;uint32_t codepoint;TEXT_GRID_ATTRIBUTE_TYPE(Cell) style;
+} RASTER_INS(LineTarget);
+static inline void RASTER_INS(LinePlot)(void *user,int64_t x,int64_t y) {
+  RASTER_INS(LineTarget) *target=(RASTER_INS(LineTarget) *)user;
+  RASTER_INS(Plot)(target->canvas,x,y,target->codepoint,target->style);
+}
+
+/* Evaluate the original Bresenham lattice only along the visible major axis.
+ * Canonical direction makes reversal identical, including halfway ties.
+ * Products fit uint64_t even for INT32_MIN -> INT32_MAX. */
+static inline void RASTER_INS(Line)(TERMINAL_TYPE(TCanvas) *canvas,
+    TDUAL_TYPE(int32) from, TDUAL_TYPE(int32) to,
+    uint32_t codepoint, TEXT_GRID_ATTRIBUTE_TYPE(Cell) style) {
+  RASTER_INS(LineTarget) target;
+  target.canvas=canvas;target.codepoint=codepoint;target.style=style;
+  COSMERON_MACRO_INTERNAL_GRAPHICS_SHARED(WalkLine)(canvas->size.col,canvas->size.row,from,to,RASTER_INS(LinePlot),&target);
+}
+
+RASTER_POINT_PROTOTYPE {
+  OPSTATUS status=RASTER_INS(Validate)(canvas,codepoint);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  RASTER_INS(Plot)(canvas,at.x,at.y,codepoint,style);
+  return STATUS_CONST(SUCCESS);
+}
+RASTER_LINE_PROTOTYPE {
+  OPSTATUS status=RASTER_INS(Validate)(canvas,codepoint);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  RASTER_INS(Line)(canvas,from,to,codepoint,style);
+  return STATUS_CONST(SUCCESS);
+}
+RASTER_RECTANGLE_PROTOTYPE {
+  TDUAL_TYPE(int32) a={.x=bounds.left,.y=bounds.top};
+  TDUAL_TYPE(int32) b={.x=bounds.right,.y=bounds.top};
+  TDUAL_TYPE(int32) c={.x=bounds.right,.y=bounds.bottom};
+  TDUAL_TYPE(int32) d={.x=bounds.left,.y=bounds.bottom};
+  OPSTATUS status=RASTER_INS(Validate)(canvas,codepoint);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  if (bounds.left>bounds.right || bounds.top>bounds.bottom)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  RASTER_INS(Line)(canvas,a,b,codepoint,style);
+  RASTER_INS(Line)(canvas,b,c,codepoint,style);
+  RASTER_INS(Line)(canvas,c,d,codepoint,style);
+  RASTER_INS(Line)(canvas,d,a,codepoint,style);
+  return STATUS_CONST(SUCCESS);
+}
+RASTER_FILL_RECTANGLE_PROTOTYPE {
+  int64_t x,y;
+  OPSTATUS status=RASTER_INS(Validate)(canvas,codepoint);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  if (bounds.left>bounds.right || bounds.top>bounds.bottom)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  for (y=bounds.top;y<=bounds.bottom && y<canvas->size.row;y++)
+    for (x=bounds.left;x<=bounds.right && x<canvas->size.col;x++)
+      RASTER_INS(Plot)(canvas,x,y,codepoint,style);
+  return STATUS_CONST(SUCCESS);
+}
+
+/* Integer-cell ellipse: test the normalized equation without libm or products
+ * wider than 64 bits. Binary search finds each row extent in O(log radius). */
+static inline bool RASTER_INS(InEllipse)(int64_t x,int64_t y,
+    uint32_t rx,uint32_t ry) {
+  long double nx=(long double)x/rx,ny=(long double)y/ry;
+  return nx*nx+ny*ny<=1.0L;
+}
+static inline int64_t RASTER_INS(Extent)(int64_t y,uint32_t rx,uint32_t ry) {
+  int64_t low=0,high=rx;
+  if (y<-(int64_t)ry || y>(int64_t)ry) return -1;
+  while (low<high) {
+    int64_t mid=low+(high-low+1)/2;
+    if (RASTER_INS(InEllipse)(mid,y,rx,ry)) low=mid;
+    else high=mid-1;
+  }
+  return low;
+}
+static inline OPSTATUS RASTER_INS(Ellipse)(TERMINAL_TYPE(TCanvas) *canvas,
+    TDUAL_TYPE(int32) center,TDUAL_TYPE(uint32) radii,bool fill,
+    uint32_t codepoint,TEXT_GRID_ATTRIBUTE_TYPE(Cell) style) {
+  int64_t y,first=(int64_t)center.y-radii.y,last=(int64_t)center.y+radii.y;
+  OPSTATUS status=RASTER_INS(Validate)(canvas,codepoint);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  if (first<0) first=0;
+  if (last>=canvas->size.row) last=(int64_t)canvas->size.row-1;
+  for (y=first;y<=last;y++) {
+    int64_t extent=radii.x && radii.y ? RASTER_INS(Extent)(y-center.y,radii.x,radii.y) : radii.x;
+    int64_t left=(int64_t)center.x-extent,right=(int64_t)center.x+extent,x;
+    int64_t inner=-1;
+    if (!fill && radii.x && radii.y) {
+      int64_t above=RASTER_INS(Extent)(y-center.y-1,radii.x,radii.y);
+      int64_t below=RASTER_INS(Extent)(y-center.y+1,radii.x,radii.y);
+      inner=above<below ? above : below;
+      if (inner>=extent) inner=extent-1;
+    }
+    if (left<0) left=0;
+    if (right>=canvas->size.col) right=(int64_t)canvas->size.col-1;
+    for (x=left;x<=right;x++) {
+      int64_t offset=x-center.x;
+      if (fill || offset < -inner || offset > inner)
+        RASTER_INS(Plot)(canvas,x,y,codepoint,style);
+    }
+  }
+  return STATUS_CONST(SUCCESS);
+}
+RASTER_ELLIPSE_PROTOTYPE {
+  return RASTER_INS(Ellipse)(canvas,center,radii,false,codepoint,style);
+}
+RASTER_FILL_ELLIPSE_PROTOTYPE {
+  return RASTER_INS(Ellipse)(canvas,center,radii,true,codepoint,style);
+}
+RASTER_CIRCLE_PROTOTYPE {
+  return RASTER_INS(Ellipse)(canvas,center,
+      (TDUAL_TYPE(uint32)){.x=radius,.y=radius},false,codepoint,style);
+}
+RASTER_FILL_CIRCLE_PROTOTYPE {
+  return RASTER_INS(Ellipse)(canvas,center,
+      (TDUAL_TYPE(uint32)){.x=radius,.y=radius},true,codepoint,style);
+}
+
+static inline void RASTER_INS(Edges)(TERMINAL_TYPE(TCanvas) *canvas,
+    const TDUAL_TYPE(int32) *points,size_t count,bool closed,
+    uint32_t codepoint,TEXT_GRID_ATTRIBUTE_TYPE(Cell) style) {
+  size_t i;
+  if (count==1) RASTER_INS(Plot)(canvas,points[0].x,points[0].y,codepoint,style);
+  for (i=1;i<count;i++) RASTER_INS(Line)(canvas,points[i-1],points[i],codepoint,style);
+  if (closed && count>1) RASTER_INS(Line)(canvas,points[count-1],points[0],codepoint,style);
+}
+RASTER_POLYLINE_PROTOTYPE {
+  OPSTATUS status=RASTER_INS(Validate)(canvas,codepoint);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  if (!points || !count) return STATUS_CONST(INVALID_ARGUMENT);
+  RASTER_INS(Edges)(canvas,points,count,false,codepoint,style);
+  return STATUS_CONST(SUCCESS);
+}
+RASTER_POLYGON_PROTOTYPE {
+  OPSTATUS status=RASTER_INS(Validate)(canvas,codepoint);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  if (!points || !count) return STATUS_CONST(INVALID_ARGUMENT);
+  RASTER_INS(Edges)(canvas,points,count,true,codepoint,style);
+  return STATUS_CONST(SUCCESS);
+}
+RASTER_FILL_POLYGON_PROTOTYPE {
+  int64_t left,right,top,bottom,x,y;
+  size_t i;
+  OPSTATUS status=RASTER_INS(Validate)(canvas,codepoint);
+  if (status!=STATUS_CONST(SUCCESS)) return status;
+  if (!points || !count) return STATUS_CONST(INVALID_ARGUMENT);
+  left=right=points[0].x;top=bottom=points[0].y;
+  for (i=1;i<count;i++) {
+    if (points[i].x<left) left=points[i].x;
+    if (points[i].x>right) right=points[i].x;
+    if (points[i].y<top) top=points[i].y;
+    if (points[i].y>bottom) bottom=points[i].y;
+  }
+  if (left<0) left=0;
+  if (top<0) top=0;
+  if (right>=canvas->size.col) right=(int64_t)canvas->size.col-1;
+  if (bottom>=canvas->size.row) bottom=(int64_t)canvas->size.row-1;
+  /* Even/odd crossing rule, lower endpoint included and upper excluded.
+   * No allocation; work is bounded by the visible bounding box * count. */
+  if (count>=3) for (y=top;y<=bottom;y++) for (x=left;x<=right;x++) {
+    bool inside=false;
+    size_t previous=count-1;
+    for (i=0;i<count;previous=i++) {
+      int64_t ax=points[previous].x,ay=points[previous].y;
+      int64_t bx=points[i].x,by=points[i].y;
+      if ((ay>y)!=(by>y)) {
+        long double crossing=ax+(long double)(bx-ax)*(y-ay)/(by-ay);
+        if ((long double)x<crossing) inside=!inside;
+      }
+    }
+    if (inside) RASTER_INS(Plot)(canvas,x,y,codepoint,style);
+  }
+  RASTER_INS(Edges)(canvas,points,count,true,codepoint,style);
+  return STATUS_CONST(SUCCESS);
+}
+RASTER_TRIANGLE_PROTOTYPE {
+  TDUAL_TYPE(int32) points[3]={a,b,c};
+  return RASTER_FUNC(Polygon)(canvas,points,3,codepoint,style);
+}
+RASTER_FILL_TRIANGLE_PROTOTYPE {
+  TDUAL_TYPE(int32) points[3]={a,b,c};
+  return RASTER_FUNC(FillPolygon)(canvas,points,3,codepoint,style);
+}

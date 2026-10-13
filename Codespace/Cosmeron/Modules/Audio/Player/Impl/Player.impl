@@ -1,0 +1,518 @@
+/* Implementation included by Player.h. */
+
+#if defined(_MSC_VER)
+#include <windows.h>
+typedef volatile LONG AUDIO_INS(TPlayerSpinLock);
+static inline void AUDIO_INS(PlayerLockInit)(AUDIO_INS(TPlayerSpinLock) * lock) {
+  *lock = 0;
+}
+static inline void AUDIO_INS(PlayerLockAcquire)(AUDIO_INS(TPlayerSpinLock) * lock) {
+  while (InterlockedCompareExchange(lock, 1, 0) != 0) {
+  }
+}
+static inline void AUDIO_INS(PlayerLockRelease)(AUDIO_INS(TPlayerSpinLock) * lock) {
+  InterlockedExchange(lock, 0);
+}
+#else
+#include <stdatomic.h>
+typedef atomic_int AUDIO_INS(TPlayerSpinLock);
+static inline void AUDIO_INS(PlayerLockInit)(AUDIO_INS(TPlayerSpinLock) * lock) {
+  atomic_init(lock, 0);
+}
+static inline void AUDIO_INS(PlayerLockAcquire)(AUDIO_INS(TPlayerSpinLock) * lock) {
+  while (atomic_exchange_explicit(lock, 1, memory_order_acquire) != 0) {
+  }
+}
+static inline void AUDIO_INS(PlayerLockRelease)(AUDIO_INS(TPlayerSpinLock) * lock) {
+  atomic_store_explicit(lock, 0, memory_order_release);
+}
+#endif
+
+typedef enum AUDIO_INS(VoiceType) {
+  AUDIO_INS(VOICE_TYPE_BUFFER),
+  AUDIO_INS(VOICE_TYPE_DECODER)
+} AUDIO_INS(VoiceType);
+
+typedef struct AUDIO_INS(Voice) {
+  uint64_t id;
+  AUDIO_INS(VoiceType) type;
+  bool playing;
+  bool loop;
+  bool atEnd;
+  float volume;
+  float pan;
+
+  /* Buffer voice */
+  float *bufferSamples;
+  size_t bufferFrameCount;
+  uint32_t bufferChannels;
+  uint32_t bufferSampleRate;
+  double bufferCursor;
+
+  /* Decoder (streaming file) voice */
+  AUDIO_CODEC_TYPE(TDecoder) decoder;
+  AUDIO_CODEC_TYPE(TInfo) decoderInfo;
+  float scratch[AUDIO_CONST(RENDER_BLOCK_FRAMES) * AUDIO_CONST(MAX_CHANNELS)];
+
+  struct AUDIO_INS(Voice) * next;
+} AUDIO_INS(Voice);
+
+typedef struct AUDIO_INS(Player) {
+  AUDIO_PLAYER_TYPE(TConfig) config;
+  AUDIO_DEVICE_TYPE(TDevice) device;
+  AUDIO_INS(Voice) * voices;
+  uint64_t nextId;
+  float masterVolume;
+  AUDIO_INS(TPlayerSpinLock) lock;
+} AUDIO_INS(Player);
+
+static inline void AUDIO_INS(DestroyVoice)(AUDIO_INS(Voice) * voice) {
+  if (voice == NULL)
+    return;
+  if (voice->bufferSamples != NULL) {
+    free(voice->bufferSamples);
+    voice->bufferSamples = NULL;
+  }
+  if (voice->type == AUDIO_INS(VOICE_TYPE_DECODER)) {
+    AUDIO_CODEC_FUNC(Close)(&voice->decoder);
+  }
+  free(voice);
+}
+
+static inline AUDIO_INS(Voice) *
+AUDIO_INS(FindVoice)(const AUDIO_PLAYER_TYPE(TPlayer) * player,
+                     AUDIO_PLAYER_TYPE(TVoice) token) {
+  AUDIO_INS(Voice) * voice;
+  if (player == NULL || player->internal == NULL || token.player != player ||
+      token.generation != player->generation)
+    return NULL;
+  voice = ((AUDIO_INS(Player) *)player->internal)->voices;
+  while (voice != NULL && voice->id != token.id)
+    voice = voice->next;
+  return voice;
+}
+
+static inline OPSTATUS
+AUDIO_INS(StartVoice)(AUDIO_PLAYER_TYPE(TPlayer) * player,
+                      AUDIO_INS(Voice) * voice, bool loop,
+                      AUDIO_PLAYER_TYPE(TVoice) * outVoice) {
+  AUDIO_INS(Player) *value = (AUDIO_INS(Player) *)player->internal;
+  AUDIO_PLAYER_TYPE(TVoice) token;
+
+  voice->loop = loop;
+  voice->playing = true;
+  voice->atEnd = false;
+  voice->volume = 1.0f;
+  voice->pan = 0.0f;
+
+  AUDIO_INS(PlayerLockAcquire)(&value->lock);
+  voice->id = ++value->nextId;
+  voice->next = value->voices;
+  value->voices = voice;
+  AUDIO_INS(PlayerLockRelease)(&value->lock);
+
+  token.player = player;
+  token.generation = player->generation;
+  token.id = voice->id;
+  *outVoice = token;
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline OPSTATUS
+AUDIO_INS(PlayerRenderInternal)(AUDIO_INS(Player) * player, float *outSamples,
+                                size_t frameCount, size_t *outFrames) {
+  size_t i, f;
+  uint32_t outChannels = player->config.channels;
+  size_t totalSamples = frameCount * outChannels;
+  float masterVol = player->masterVolume;
+
+  memset(outSamples, 0, totalSamples * sizeof(float));
+
+  AUDIO_INS(PlayerLockAcquire)(&player->lock);
+  AUDIO_INS(Voice) * voice = player->voices;
+  while (voice != NULL) {
+    if (voice->playing && !voice->atEnd) {
+      float vol = voice->volume * masterVol;
+      float leftGain, rightGain;
+      if (voice->pan <= 0.0f) {
+        leftGain = vol;
+        rightGain = vol * (1.0f + voice->pan);
+      } else {
+        leftGain = vol * (1.0f - voice->pan);
+        rightGain = vol;
+      }
+
+      if (voice->type == AUDIO_INS(VOICE_TYPE_BUFFER)) {
+        double step = (double)voice->bufferSampleRate /
+                      (double)player->config.sampleRate;
+        for (f = 0; f < frameCount; ++f) {
+          if (voice->bufferCursor >= (double)voice->bufferFrameCount) {
+            if (voice->loop && voice->bufferFrameCount > 0) {
+              voice->bufferCursor = 0.0;
+            } else {
+              voice->playing = false;
+              voice->atEnd = true;
+              break;
+            }
+          }
+          size_t frameIdx = (size_t)voice->bufferCursor;
+          float s0 = 0.0f, s1 = 0.0f;
+          if (voice->bufferChannels == 1) {
+            s0 = s1 = voice->bufferSamples[frameIdx];
+          } else if (voice->bufferChannels >= 2) {
+            s0 = voice->bufferSamples[frameIdx * voice->bufferChannels];
+            s1 = voice->bufferSamples[frameIdx * voice->bufferChannels + 1];
+          }
+          if (outChannels == 1) {
+            outSamples[f] += (s0 + s1) * 0.5f * vol;
+          } else {
+            outSamples[f * 2] += s0 * leftGain;
+            outSamples[f * 2 + 1] += s1 * rightGain;
+          }
+          voice->bufferCursor += step;
+        }
+      } else if (voice->type == AUDIO_INS(VOICE_TYPE_DECODER)) {
+        size_t framesRemaining = frameCount;
+        size_t outOffset = 0;
+        while (framesRemaining > 0 && voice->playing) {
+          size_t toRead = framesRemaining;
+          if (toRead > AUDIO_CONST(RENDER_BLOCK_FRAMES))
+            toRead = AUDIO_CONST(RENDER_BLOCK_FRAMES);
+          size_t framesRead = 0;
+          OPSTATUS readStatus = AUDIO_CODEC_FUNC(ReadFrames)(
+              &voice->decoder, voice->scratch, toRead, &framesRead);
+          if (readStatus != STATUS_CONST(SUCCESS) || framesRead == 0) {
+            if (voice->loop) {
+              OPSTATUS seekStatus =
+                  AUDIO_CODEC_FUNC(SeekFrame)(&voice->decoder, 0);
+              if (seekStatus == STATUS_CONST(SUCCESS)) {
+                readStatus = AUDIO_CODEC_FUNC(ReadFrames)(
+                    &voice->decoder, voice->scratch, toRead, &framesRead);
+              }
+            }
+            if (readStatus != STATUS_CONST(SUCCESS) || framesRead == 0) {
+              voice->playing = false;
+              voice->atEnd = true;
+              break;
+            }
+          }
+          for (f = 0; f < framesRead; ++f) {
+            float s0 = 0.0f, s1 = 0.0f;
+            if (voice->decoderInfo.channels == 1) {
+              s0 = s1 = voice->scratch[f];
+            } else if (voice->decoderInfo.channels >= 2) {
+              s0 = voice->scratch[f * voice->decoderInfo.channels];
+              s1 = voice->scratch[f * voice->decoderInfo.channels + 1];
+            }
+            size_t dst = outOffset + f;
+            if (outChannels == 1) {
+              outSamples[dst] += (s0 + s1) * 0.5f * vol;
+            } else {
+              outSamples[dst * 2] += s0 * leftGain;
+              outSamples[dst * 2 + 1] += s1 * rightGain;
+            }
+          }
+          outOffset += framesRead;
+          framesRemaining -= framesRead;
+        }
+      }
+    }
+    voice = voice->next;
+  }
+  AUDIO_INS(PlayerLockRelease)(&player->lock);
+
+  for (i = 0; i < totalSamples; ++i) {
+    outSamples[i] = AUDIO_INS(Clamp)(outSamples[i]);
+  }
+
+  if (outFrames != NULL) {
+    *outFrames = frameCount;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+static void AUDIO_INS(PlayerDeviceCallback)(void *userData, float *outSamples,
+                                            size_t frameCount,
+                                            uint32_t channels) {
+  AUDIO_INS(Player) *player = (AUDIO_INS(Player) *)userData;
+  (void)channels;
+  (void)AUDIO_INS(PlayerRenderInternal)(player, outSamples, frameCount, NULL);
+}
+
+AUDIO_PLAYER_CONFIG_PROTOTYPE {
+  AUDIO_PLAYER_TYPE(TConfig) config;
+  config.sampleRate = AUDIO_CONST(DEFAULT_SAMPLE_RATE);
+  config.channels = AUDIO_CONST(STEREO);
+  config.offline = false;
+  return config;
+}
+
+AUDIO_PLAYER_OPEN_PROTOTYPE {
+  AUDIO_INS(Player) * value;
+  if (player == NULL || config == NULL ||
+      !AUDIO_INS(ValidFormat)(config->sampleRate, config->channels))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (player->internal != NULL)
+    return STATUS_CONST(BUSY);
+  if (player->generation == UINT64_MAX)
+    return STATUS_CONST(OUT_OF_RANGE);
+  value = (AUDIO_INS(Player) *)calloc(1, sizeof(*value));
+  if (value == NULL)
+    return STATUS_CONST(OUT_OF_MEMORY);
+  value->config = *config;
+  value->masterVolume = 1.0f;
+  AUDIO_INS(PlayerLockInit)(&value->lock);
+
+  if (!config->offline) {
+    AUDIO_DEVICE_TYPE(TConfig) devConfig;
+    OPSTATUS devStatus;
+    devConfig.sampleRate = config->sampleRate;
+    devConfig.channels = config->channels;
+    devConfig.render = AUDIO_INS(PlayerDeviceCallback);
+    devConfig.userData = value;
+    devStatus = AUDIO_DEVICE_FUNC(Open)(&value->device, &devConfig);
+    if (devStatus != STATUS_CONST(SUCCESS)) {
+      free(value);
+      return devStatus;
+    }
+    devStatus = AUDIO_DEVICE_FUNC(Start)(&value->device);
+    if (devStatus != STATUS_CONST(SUCCESS)) {
+      AUDIO_DEVICE_FUNC(Close)(&value->device);
+      free(value);
+      return devStatus;
+    }
+  }
+
+  player->internal = value;
+  ++player->generation;
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_PLAYER_PLAY_FILE_PROTOTYPE {
+  AUDIO_INS(Player) * value;
+  AUDIO_INS(Voice) * voice;
+  OPSTATUS status;
+  if (player == NULL || player->internal == NULL || path == NULL ||
+      outVoice == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  value = (AUDIO_INS(Player) *)player->internal;
+  if (value->nextId == UINT64_MAX)
+    return STATUS_CONST(OUT_OF_RANGE);
+  voice = (AUDIO_INS(Voice) *)calloc(1, sizeof(*voice));
+  if (voice == NULL)
+    return STATUS_CONST(OUT_OF_MEMORY);
+  status = AUDIO_CODEC_FUNC(OpenFile)(&voice->decoder, path);
+  if (status != STATUS_CONST(SUCCESS)) {
+    free(voice);
+    return status;
+  }
+  status = AUDIO_CODEC_FUNC(GetInfo)(&voice->decoder, &voice->decoderInfo);
+  if (status != STATUS_CONST(SUCCESS)) {
+    AUDIO_CODEC_FUNC(Close)(&voice->decoder);
+    free(voice);
+    return status;
+  }
+  voice->type = AUDIO_INS(VOICE_TYPE_DECODER);
+  return AUDIO_INS(StartVoice)(player, voice, loop, outVoice);
+}
+
+AUDIO_PLAYER_PLAY_BUFFER_PROTOTYPE {
+  AUDIO_INS(Player) * value;
+  AUDIO_INS(Voice) * voice;
+  size_t count, i;
+  if (player == NULL || player->internal == NULL || buffer == NULL ||
+      buffer->samples == NULL || buffer->frameCount == 0 || outVoice == NULL ||
+      !AUDIO_INS(ValidFormat)(buffer->sampleRate, buffer->channels))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (buffer->frameCount > SIZE_MAX / buffer->channels / sizeof(float))
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  count = buffer->frameCount * buffer->channels;
+  for (i = 0; i < count; ++i)
+    if (!AUDIO_INS(Finite)(buffer->samples[i]))
+      return STATUS_CONST(INVALID_ARGUMENT);
+  value = (AUDIO_INS(Player) *)player->internal;
+  if (value->nextId == UINT64_MAX)
+    return STATUS_CONST(OUT_OF_RANGE);
+  voice = (AUDIO_INS(Voice) *)calloc(1, sizeof(*voice));
+  if (voice == NULL)
+    return STATUS_CONST(OUT_OF_MEMORY);
+  voice->bufferSamples = (float *)malloc(count * sizeof(float));
+  if (voice->bufferSamples == NULL) {
+    free(voice);
+    return STATUS_CONST(OUT_OF_MEMORY);
+  }
+  memcpy(voice->bufferSamples, buffer->samples, count * sizeof(float));
+  voice->bufferFrameCount = buffer->frameCount;
+  voice->bufferChannels = buffer->channels;
+  voice->bufferSampleRate = buffer->sampleRate;
+  voice->bufferCursor = 0.0;
+  voice->type = AUDIO_INS(VOICE_TYPE_BUFFER);
+  return AUDIO_INS(StartVoice)(player, voice, loop, outVoice);
+}
+
+AUDIO_PLAYER_PAUSE_PROTOTYPE {
+  AUDIO_INS(Voice) * value;
+  if (player == NULL || player->internal == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  AUDIO_INS(PlayerLockAcquire)(&((AUDIO_INS(Player) *)player->internal)->lock);
+  value = AUDIO_INS(FindVoice)(player, voice);
+  if (value == NULL) {
+    AUDIO_INS(PlayerLockRelease)(
+        &((AUDIO_INS(Player) *)player->internal)->lock);
+    return STATUS_CONST(NOT_FOUND);
+  }
+  value->playing = false;
+  AUDIO_INS(PlayerLockRelease)(&((AUDIO_INS(Player) *)player->internal)->lock);
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_PLAYER_RESUME_PROTOTYPE {
+  AUDIO_INS(Voice) * value;
+  if (player == NULL || player->internal == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  AUDIO_INS(PlayerLockAcquire)(&((AUDIO_INS(Player) *)player->internal)->lock);
+  value = AUDIO_INS(FindVoice)(player, voice);
+  if (value == NULL) {
+    AUDIO_INS(PlayerLockRelease)(
+        &((AUDIO_INS(Player) *)player->internal)->lock);
+    return STATUS_CONST(NOT_FOUND);
+  }
+  value->playing = true;
+  AUDIO_INS(PlayerLockRelease)(&((AUDIO_INS(Player) *)player->internal)->lock);
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_PLAYER_SEEK_FRAME_PROTOTYPE {
+  AUDIO_INS(Voice) * value;
+  OPSTATUS status = STATUS_CONST(SUCCESS);
+  if (player == NULL || player->internal == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  AUDIO_INS(PlayerLockAcquire)(&((AUDIO_INS(Player) *)player->internal)->lock);
+  value = AUDIO_INS(FindVoice)(player, voice);
+  if (value == NULL) {
+    AUDIO_INS(PlayerLockRelease)(
+        &((AUDIO_INS(Player) *)player->internal)->lock);
+    return STATUS_CONST(NOT_FOUND);
+  }
+  if (value->type == AUDIO_INS(VOICE_TYPE_BUFFER)) {
+    if (frameIndex > value->bufferFrameCount) {
+      status = STATUS_CONST(OUT_OF_RANGE);
+    } else {
+      value->bufferCursor = (double)frameIndex;
+      value->atEnd = (frameIndex == value->bufferFrameCount);
+    }
+  } else if (value->type == AUDIO_INS(VOICE_TYPE_DECODER)) {
+    status = AUDIO_CODEC_FUNC(SeekFrame)(&value->decoder, frameIndex);
+    if (status == STATUS_CONST(SUCCESS)) {
+      value->atEnd = false;
+    }
+  }
+  AUDIO_INS(PlayerLockRelease)(&((AUDIO_INS(Player) *)player->internal)->lock);
+  return status;
+}
+
+AUDIO_PLAYER_IS_PLAYING_PROTOTYPE {
+  AUDIO_INS(Voice) * value;
+  bool isPlaying = false;
+  if (player == NULL || player->internal == NULL)
+    return false;
+  AUDIO_INS(PlayerLockAcquire)(&((AUDIO_INS(Player) *)player->internal)->lock);
+  value = AUDIO_INS(FindVoice)(player, voice);
+  if (value != NULL && value->playing && !value->atEnd) {
+    isPlaying = true;
+  }
+  AUDIO_INS(PlayerLockRelease)(&((AUDIO_INS(Player) *)player->internal)->lock);
+  return isPlaying;
+}
+
+AUDIO_PLAYER_STOP_PROTOTYPE {
+  AUDIO_INS(Voice) * value;
+  AUDIO_INS(Player) * state;
+  AUDIO_INS(Voice) * *link;
+  if (player == NULL || player->internal == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  state = (AUDIO_INS(Player) *)player->internal;
+  AUDIO_INS(PlayerLockAcquire)(&state->lock);
+  value = AUDIO_INS(FindVoice)(player, voice);
+  if (value == NULL) {
+    AUDIO_INS(PlayerLockRelease)(&state->lock);
+    return STATUS_CONST(NOT_FOUND);
+  }
+  link = &state->voices;
+  while (*link != NULL && *link != value)
+    link = &(*link)->next;
+  if (*link == value)
+    *link = value->next;
+  AUDIO_INS(PlayerLockRelease)(&state->lock);
+  AUDIO_INS(DestroyVoice)(value);
+  return STATUS_CONST(SUCCESS);
+}
+
+AUDIO_PLAYER_COLLECT_PROTOTYPE {
+  size_t count = 0;
+  AUDIO_INS(Voice) * *link;
+  AUDIO_INS(Player) * state;
+  AUDIO_INS(Voice) * toDestroy = NULL;
+  if (player == NULL || player->internal == NULL)
+    return 0;
+  state = (AUDIO_INS(Player) *)player->internal;
+  AUDIO_INS(PlayerLockAcquire)(&state->lock);
+  link = &state->voices;
+  while (*link != NULL) {
+    AUDIO_INS(Voice) *voice = *link;
+    if (voice->atEnd || !voice->playing) {
+      *link = voice->next;
+      voice->next = toDestroy;
+      toDestroy = voice;
+      ++count;
+    } else {
+      link = &voice->next;
+    }
+  }
+  AUDIO_INS(PlayerLockRelease)(&state->lock);
+  while (toDestroy != NULL) {
+    AUDIO_INS(Voice) *next = toDestroy->next;
+    AUDIO_INS(DestroyVoice)(toDestroy);
+    toDestroy = next;
+  }
+  return count;
+}
+
+AUDIO_PLAYER_RENDER_PROTOTYPE {
+  AUDIO_INS(Player) * value;
+  if (player == NULL || player->internal == NULL || outSamples == NULL ||
+      outFrames == NULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  value = (AUDIO_INS(Player) *)player->internal;
+  if (!value->config.offline)
+    return STATUS_CONST(NOT_SUPPORTED);
+  if (frameCount > SIZE_MAX / value->config.channels / sizeof(float))
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  if (frameCount == 0) {
+    *outFrames = 0;
+    return STATUS_CONST(SUCCESS);
+  }
+  return AUDIO_INS(PlayerRenderInternal)(value, outSamples, frameCount,
+                                         outFrames);
+}
+
+AUDIO_PLAYER_CLOSE_PROTOTYPE {
+  if (player != NULL && player->internal != NULL) {
+    AUDIO_INS(Player) *value = (AUDIO_INS(Player) *)player->internal;
+    player->internal = NULL;
+    if (!value->config.offline) {
+      (void)AUDIO_DEVICE_FUNC(Stop)(&value->device);
+      AUDIO_DEVICE_FUNC(Close)(&value->device);
+    }
+    AUDIO_INS(PlayerLockAcquire)(&value->lock);
+    AUDIO_INS(Voice) *voice = value->voices;
+    value->voices = NULL;
+    AUDIO_INS(PlayerLockRelease)(&value->lock);
+    while (voice != NULL) {
+      AUDIO_INS(Voice) *next = voice->next;
+      AUDIO_INS(DestroyVoice)(voice);
+      voice = next;
+    }
+    free(value);
+  }
+}

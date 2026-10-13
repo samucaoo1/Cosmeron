@@ -1,0 +1,57 @@
+#pragma once
+
+#if OS_POSIX
+#include <errno.h>
+MUTEX_INIT_PROTOTYPE {
+  if (mutex == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  return pthread_mutex_init(&mutex->native, NULL) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR);
+}
+MUTEX_DESTROY_PROTOTYPE {
+  if (mutex == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  return pthread_mutex_destroy(&mutex->native) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(BUSY);
+}
+MUTEX_LOCK_PROTOTYPE {
+  if (mutex == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  return pthread_mutex_lock(&mutex->native) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR);
+}
+MUTEX_TRY_LOCK_PROTOTYPE {
+  int result;
+  if (mutex == NULL || outAcquired == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  result = pthread_mutex_trylock(&mutex->native);
+  if (result == 0) {
+    *outAcquired = true;
+    return STATUS_CONST(SUCCESS);
+  }
+  if (result == EBUSY) {
+    *outAcquired = false;
+    return STATUS_CONST(SUCCESS);
+  }
+  return STATUS_CONST(GENERIC_ERROR);
+}
+MUTEX_UNLOCK_PROTOTYPE {
+  if (mutex == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  return pthread_mutex_unlock(&mutex->native) == 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(GENERIC_ERROR);
+}
+#elif OS_WINDOWS
+MUTEX_INIT_PROTOTYPE {
+  if (mutex == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  InitializeSRWLock(&mutex->native);
+  return STATUS_CONST(SUCCESS);
+}
+MUTEX_DESTROY_PROTOTYPE { return mutex == NULL ? STATUS_CONST(INVALID_ARGUMENT) : STATUS_CONST(SUCCESS); }
+MUTEX_LOCK_PROTOTYPE {
+  if (mutex == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  AcquireSRWLockExclusive(&mutex->native);
+  return STATUS_CONST(SUCCESS);
+}
+MUTEX_TRY_LOCK_PROTOTYPE {
+  if (mutex == NULL || outAcquired == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  *outAcquired = TryAcquireSRWLockExclusive(&mutex->native) != 0;
+  return STATUS_CONST(SUCCESS);
+}
+MUTEX_UNLOCK_PROTOTYPE {
+  if (mutex == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  ReleaseSRWLockExclusive(&mutex->native);
+  return STATUS_CONST(SUCCESS);
+}
+#endif

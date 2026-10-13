@@ -1,0 +1,98 @@
+#pragma once
+static inline bool COMPRESSION_INS(Overlap)(const void *a, size_t aSize,
+    const void *b, size_t bSize) {
+  uintptr_t x = (uintptr_t)a, y = (uintptr_t)b;
+  return aSize && bSize && (x <= y ? y - x < aSize : x - y < bSize);
+}
+COMPRESSION_BOUND_PROTOTYPE {
+  uint64_t bound;
+  if (!outBound || !COMPRESSION_INS(FormatValid)(format)) return STATUS_CONST(INVALID_ARGUMENT);
+  if (size > UINT_MAX) return STATUS_CONST(OUT_OF_RANGE);
+  /* Conservative DEFLATE capacity limit; arithmetic uses uint64_t. */
+  bound = 256 + (uint64_t)size + (uint64_t)size / 10;
+  if (format == COMPRESSION_CONST(GZIP))
+    bound += COMPRESSION_CINS(GZIP_HEADER_SIZE) + COMPRESSION_CINS(GZIP_TRAILER_SIZE);
+  if (bound > UINT_MAX || bound > SIZE_MAX) return STATUS_CONST(OUT_OF_RANGE);
+  *outBound = (size_t)bound;
+  return STATUS_CONST(SUCCESS);
+}
+static inline OPSTATUS COMPRESSION_INS(GzipHeader)(const unsigned char *data,
+    size_t size, size_t *outOffset) {
+  size_t offset = COMPRESSION_CINS(GZIP_HEADER_SIZE), start;
+  unsigned int flags;
+  if (size < offset) return STATUS_CONST(INCOMPLETE_SEQUENCE);
+  if (data[0] != COMPRESSION_CINS(GZIP_MAGIC_1) || data[1] != COMPRESSION_CINS(GZIP_MAGIC_2) ||
+      data[2] != COMPRESSION_CINS(GZIP_METHOD) || (data[3] & COMPRESSION_CINS(GZIP_RESERVED)))
+    return STATUS_CONST(INVALID_SEQUENCE);
+  flags = data[3];
+  if (flags & COMPRESSION_CINS(GZIP_FEXTRA)) {
+    size_t extra;
+    if (size - offset < sizeof(uint16_t)) return STATUS_CONST(INCOMPLETE_SEQUENCE);
+    extra = data[offset] | ((size_t)data[offset + 1] << COMPRESSION_CINS(BYTE_BITS));
+    offset += sizeof(uint16_t);
+    if (extra > size - offset) return STATUS_CONST(INCOMPLETE_SEQUENCE);
+    offset += extra;
+  }
+  for (start = COMPRESSION_CINS(GZIP_FNAME); start <= COMPRESSION_CINS(GZIP_FCOMMENT); start <<= 1) {
+    if (flags & start) {
+      while (offset < size && data[offset]) ++offset;
+      if (offset == size) return STATUS_CONST(INCOMPLETE_SEQUENCE);
+      ++offset;
+    }
+  }
+  if (flags & COMPRESSION_CINS(GZIP_FHCRC)) {
+    uint32_t headerCRC;
+    if (size - offset < sizeof(uint16_t)) return STATUS_CONST(INCOMPLETE_SEQUENCE);
+    headerCRC = COMPRESSION_FUNC(CRC32)(0, data, offset);
+    if ((headerCRC & UINT16_MAX) != (uint32_t)(data[offset] | ((uint32_t)data[offset + 1] << COMPRESSION_CINS(BYTE_BITS))))
+      return STATUS_CONST(INVALID_SEQUENCE);
+    offset += sizeof(uint16_t);
+  }
+  *outOffset = offset; return STATUS_CONST(SUCCESS);
+}
+#include "NativeCodec.impl"
+
+COMPRESSION_COMPRESS_PROTOTYPE {
+  return COMPRESSION_INS(NativeCompress)(format, source, size,
+      destination, capacity, level, outSize);
+}
+COMPRESSION_DECOMPRESS_PROTOTYPE {
+  return COMPRESSION_INS(NativeDecompress)(format, source, size,
+      destination, capacity, outSize);
+}
+COMPRESSION_COMPRESS_ALLOC_PROTOTYPE {
+  COMPRESSION_TYPE(TBuffer) result = {0};
+  OPSTATUS status;
+  size_t capacity;
+  if (!outBuffer || outBuffer->data || outBuffer->size || (!source && size) ||
+      !COMPRESSION_INS(LevelValid)(level)) return STATUS_CONST(INVALID_ARGUMENT);
+  status = COMPRESSION_FUNC(Bound)(format, size, &capacity);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  result.data = (unsigned char *)malloc(capacity);
+  if (!result.data) return STATUS_CONST(OUT_OF_MEMORY);
+  status = COMPRESSION_FUNC(Compress)(format, source, size, result.data, capacity, level, &result.size);
+  if (status != STATUS_CONST(SUCCESS)) { free(result.data); return status; }
+  *outBuffer = result; return STATUS_CONST(SUCCESS);
+}
+COMPRESSION_DECOMPRESS_ALLOC_PROTOTYPE {
+  COMPRESSION_TYPE(TBuffer) result = {0};
+  size_t capacity;
+  OPSTATUS status;
+  if (!outBuffer || outBuffer->data || outBuffer->size || (!source && size) ||
+      !COMPRESSION_INS(FormatValid)(format)) return STATUS_CONST(INVALID_ARGUMENT);
+  if (size > UINT_MAX || maxOutput > UINT_MAX) return STATUS_CONST(OUT_OF_RANGE);
+  capacity = maxOutput < COMPRESSION_CINS(INITIAL_OUTPUT_CAPACITY) ? maxOutput : COMPRESSION_CINS(INITIAL_OUTPUT_CAPACITY);
+  for (;;) {
+    unsigned char *data = (unsigned char *)realloc(result.data, capacity ? capacity : 1);
+    if (!data) { free(result.data); return STATUS_CONST(OUT_OF_MEMORY); }
+    result.data = data;
+    status = COMPRESSION_FUNC(Decompress)(format, source, size, data, capacity, &result.size);
+    if (status != STATUS_CONST(INSUFFICIENT_SPACE) || capacity == maxOutput) break;
+    capacity = capacity > maxOutput / 2 ? maxOutput : capacity * 2;
+  }
+  if (status != STATUS_CONST(SUCCESS)) { free(result.data); return status; }
+  *outBuffer = result; return STATUS_CONST(SUCCESS);
+}
+COMPRESSION_BUFFER_FREE_PROTOTYPE {
+  if (buffer) { free(buffer->data); buffer->data = NULL; buffer->size = 0; }
+}

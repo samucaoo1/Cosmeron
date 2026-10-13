@@ -1,0 +1,57 @@
+#pragma once
+/* Read the opened file within the caller's budget; probe EOF to catch growth. */
+static inline OPSTATUS COMPRESSION_INS(LoadFile)(const char *path,
+    size_t maxInput, COMPRESSION_TYPE(TBuffer) *outBuffer) {
+  FILE_TYPE(TFile) file = {0};
+  COMPRESSION_TYPE(TBuffer) result = {0};
+  uint64_t size = 0;
+  size_t count = 0;
+  unsigned char probe;
+  OPSTATUS status = FILE_FUNC(Open)(&file, path, FILE_CONST(READ)), closed;
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  status = FILE_FUNC(Size)(&file, &size);
+  if (status == STATUS_CONST(SUCCESS) && (size > maxInput || size > UINT_MAX))
+    status = STATUS_CONST(OUT_OF_RANGE);
+  if (status == STATUS_CONST(SUCCESS)) {
+    result.data = (unsigned char *)malloc(size ? (size_t)size : 1);
+    if (!result.data) status = STATUS_CONST(OUT_OF_MEMORY);
+  }
+  if (status == STATUS_CONST(SUCCESS)) {
+    while (result.size < (size_t)size) {
+      status = FILE_FUNC(Read)(&file, result.data + result.size, (size_t)size - result.size, &count);
+      if (status != STATUS_CONST(SUCCESS) || !count) break;
+      result.size += count;
+    }
+    if (status == STATUS_CONST(SUCCESS)) {
+      status = FILE_FUNC(Read)(&file, &probe, 1, &count);
+      if (status == STATUS_CONST(SUCCESS) && count) status = STATUS_CONST(OUT_OF_RANGE);
+    }
+  }
+  closed = FILE_FUNC(Close)(&file);
+  if (status == STATUS_CONST(SUCCESS)) status = closed;
+  if (status != STATUS_CONST(SUCCESS)) { COMPRESSION_FUNC(BufferFree)(&result); return status; }
+  *outBuffer = result; return STATUS_CONST(SUCCESS);
+}
+COMPRESSION_COMPRESS_FILE_PROTOTYPE {
+  COMPRESSION_TYPE(TBuffer) input = {0}, output = {0};
+  OPSTATUS status;
+  if (!sourcePath || !*sourcePath || !destinationPath || !*destinationPath ||
+      !COMPRESSION_INS(FormatValid)(format) || !COMPRESSION_INS(LevelValid)(level)) return STATUS_CONST(INVALID_ARGUMENT);
+  status = COMPRESSION_INS(LoadFile)(sourcePath, maxInput, &input);
+  if (status == STATUS_CONST(SUCCESS)) status = COMPRESSION_FUNC(CompressAlloc)(format, input.data, input.size, level, &output);
+  if (status == STATUS_CONST(SUCCESS)) status = FILE_FUNC(SaveAtomic)(destinationPath, output.data, output.size);
+  COMPRESSION_FUNC(BufferFree)(&input); COMPRESSION_FUNC(BufferFree)(&output);
+  return status;
+}
+COMPRESSION_DECOMPRESS_FILE_PROTOTYPE {
+  COMPRESSION_TYPE(TBuffer) input = {0}, output = {0};
+  OPSTATUS status;
+  if (!sourcePath || !*sourcePath || !destinationPath || !*destinationPath ||
+      !COMPRESSION_INS(FormatValid)(format)) return STATUS_CONST(INVALID_ARGUMENT);
+  if (maxOutput > UINT_MAX) return STATUS_CONST(OUT_OF_RANGE);
+  status = COMPRESSION_INS(LoadFile)(sourcePath, maxInput, &input);
+  if (status == STATUS_CONST(SUCCESS)) status = COMPRESSION_FUNC(DecompressAlloc)(format, input.data, input.size, maxOutput, &output);
+  if (status == STATUS_CONST(SUCCESS)) status = FILE_FUNC(SaveAtomic)(destinationPath, output.data, output.size);
+  COMPRESSION_FUNC(BufferFree)(&input); COMPRESSION_FUNC(BufferFree)(&output);
+  return status;
+}

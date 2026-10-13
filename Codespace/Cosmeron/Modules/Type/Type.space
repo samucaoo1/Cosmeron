@@ -1,0 +1,25 @@
+#pragma once
+
+#include "../../Core/Namespace.h"
+#include "../../Core/Preprocessor/Compiling.inc"
+#include "../../Core/Preprocessor/Operations.h"
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
+
+#define TYPE_MOD Type
+#define TYPE_CMOD TYPE
+
+#define TYPE_NS(NAME) GNS2(LIB_PREFIX(TYPE_MOD), NAME)
+#define TYPE_CNS(NAME) CNS2(LIB_PREFIX_CONST(TYPE_CMOD), NAME)
+#define TYPE_INS(NAME) GNS3(LIB_PREFIX(TYPE_MOD), Internal, NAME)
+#define TYPE_CINS(NAME) CNS3(LIB_PREFIX_CONST(TYPE_CMOD), INTERNAL, NAME)
+
+#define TYPE_TYPE(NAME, SUFFIX) TYPE_NS(PP_OP_CAT2(NAME, SUFFIX))
+#define TYPE_FUNC(NAME, SUFFIX, FUNCTION)                                      \
+  GNS2(TYPE_TYPE(NAME, SUFFIX), FUNCTION)
+
+/* Function tables are optional. Direct functions are always available.
+ * Define TYPE_DISABLE_FUNCTION_TABLE before inclusion to omit them. */
+/* EOF */

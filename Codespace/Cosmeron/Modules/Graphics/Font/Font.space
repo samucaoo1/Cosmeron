@@ -1,0 +1,26 @@
+#pragma once
+#include "../../../Core/Namespace.h"
+#include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
+#define FONT_MOD Font
+#define FONT_NS(NAME) GNS2(LIB_PREFIX(FONT_MOD),NAME)
+#define FONT_INS(NAME) GNS3(LIB_PREFIX(FONT_MOD),Internal,NAME)
+#define FONT_TYPE(NAME) FONT_NS(NAME)
+#define FONT_FUNC(NAME) FONT_NS(NAME)
+#define FONT_MAX_HEIGHT 32
+#define FONT_GLYPH(CHARACTER) [(CHARACTER)-32]
+
+typedef struct FONT_TYPE(TGlyph) {
+  uint16_t columns; /* Optional advance width; 0 means auto-measure. */
+  const char *art;  /* Compile-time UTF-8 drawing, rows separated by '\n'. */
+  uint32_t foreground,foregroundRows;
+  uint32_t background,backgroundRows;
+} FONT_TYPE(TGlyph);
+
+typedef struct FONT_TYPE(TFont) {
+  uint16_t height;
+  const char *name,*author,*license;
+  uint16_t letterSpacing,lineSpacing;
+  FONT_TYPE(TGlyph) glyphs[95]; /* Always last: printable ASCII 32-126. */
+} FONT_TYPE(TFont);

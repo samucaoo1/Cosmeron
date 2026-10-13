@@ -1,0 +1,42 @@
+#pragma once
+
+#if COSMERON_MACRO_INTERNAL_CONTAINER_FUNCTION_TABLE_ENABLED
+
+#define LINKED_QUEUE_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                           \
+  typedef struct LINKED_QUEUE_FUNCTION_TABLE_TYPE(SUFFIX) {               \
+    /* Lifecycle */                                                            \
+    OPSTATUS (*init)(LINKED_QUEUE_TYPE(SUFFIX) *);                            \
+    void (*destroy)(LINKED_QUEUE_TYPE(SUFFIX) *);                             \
+    /* Modifiers / Container aliases */                                        \
+    OPSTATUS (*push)(LINKED_QUEUE_TYPE(SUFFIX) *, TYPE);                      \
+    OPSTATUS (*pop)(LINKED_QUEUE_TYPE(SUFFIX) *, TYPE *);                     \
+    void (*clear)(LINKED_QUEUE_TYPE(SUFFIX) *);                               \
+    /* Element access */                                                       \
+    OPSTATUS (*front)(LINKED_QUEUE_TYPE(SUFFIX) *, TYPE **);                              \
+    OPSTATUS (*back)(LINKED_QUEUE_TYPE(SUFFIX) *, TYPE **);                               \
+    /* Observers */                                                            \
+    bool (*empty)(const LINKED_QUEUE_TYPE(SUFFIX) *);                               \
+    size_t (*size)(const LINKED_QUEUE_TYPE(SUFFIX) *);                              \
+  } LINKED_QUEUE_FUNCTION_TABLE_TYPE(SUFFIX);
+
+#define LINKED_QUEUE_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)                  \
+  static const LINKED_QUEUE_FUNCTION_TABLE_TYPE(SUFFIX)                           \
+      LINKED_QUEUE_FUNC(SUFFIX, functions) = {                                \
+          /* Lifecycle */                                                       \
+          .init = LINKED_QUEUE_FUNC(SUFFIX, Init),                    \
+          .destroy = LINKED_QUEUE_FUNC(SUFFIX, Destroy),              \
+          /* Modifiers / Container aliases */                                   \
+          .push = LINKED_QUEUE_FUNC(SUFFIX, Push),                    \
+          .pop = LINKED_QUEUE_FUNC(SUFFIX, Pop),                      \
+          .clear = LINKED_QUEUE_FUNC(SUFFIX, Clear),                  \
+          /* Element access */                                                  \
+          .front = LINKED_QUEUE_FUNC(SUFFIX, Front),                  \
+          .back = LINKED_QUEUE_FUNC(SUFFIX, Back),                    \
+          /* Observers */                                                       \
+          .empty = LINKED_QUEUE_FUNC(SUFFIX, Empty),                  \
+          .size = LINKED_QUEUE_FUNC(SUFFIX, Size)};
+
+#else
+#define LINKED_QUEUE_FUNCTION_TABLE_STRUCT(...)
+#define LINKED_QUEUE_FUNCTION_TABLE_INSTANCE(...)
+#endif

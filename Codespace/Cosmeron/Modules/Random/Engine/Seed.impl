@@ -1,0 +1,12 @@
+#pragma once
+
+#define RANDOM_ENGINE_SPLITMIX_STEP(STATE)                                    \
+  ((STATE) += UINT64_C(0x9e3779b97f4a7c15),                                  \
+   (STATE) = ((STATE) ^ ((STATE) >> 30)) * UINT64_C(0xbf58476d1ce4e5b9),     \
+   (STATE) = ((STATE) ^ ((STATE) >> 27)) * UINT64_C(0x94d049bb133111eb),     \
+   (STATE) ^ ((STATE) >> 31))
+
+inline static uint64_t RANDOM_ENGINE_FUNC(Common, RotateLeft)(uint64_t value,
+                                                             unsigned shift) {
+  return (value << shift) | (value >> (64U - shift));
+}

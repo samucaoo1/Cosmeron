@@ -1,0 +1,16 @@
+#include "../Seed.impl"
+RANDOM_ENGINE_SEED_PROTOTYPE(Xoroshiro) {
+  uint64_t split = seed;
+  state->state[0] = RANDOM_ENGINE_SPLITMIX_STEP(split);
+  state->state[1] = RANDOM_ENGINE_SPLITMIX_STEP(split);
+}
+RANDOM_ENGINE_NEXT_PROTOTYPE(Xoroshiro) {
+  uint64_t s0 = state->state[0];
+  uint64_t s1 = state->state[1];
+  uint64_t result = RANDOM_ENGINE_FUNC(Common, RotateLeft)(s0 * UINT64_C(5), 7U) * UINT64_C(9);
+  s1 ^= s0;
+  state->state[0] = RANDOM_ENGINE_FUNC(Common, RotateLeft)(s0, 24U) ^ s1 ^ (s1 << 16U);
+  state->state[1] = RANDOM_ENGINE_FUNC(Common, RotateLeft)(s1, 37U);
+  return result;
+}
+

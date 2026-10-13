@@ -1,0 +1,222 @@
+#pragma once
+
+/* All internal comparisons operate on the original, correctly aligned array.
+ * The merge scratch area is written as bytes and is never compared in place. */
+#define COSMERON_MACRO_INTERNAL_SORT_THRESHOLD 24u
+
+typedef struct SORT_INS(ComparatorAdapter_InternalType_) {
+  COMPARISON_TYPE(Comparator) compare;
+} SORT_INS(ComparatorAdapter_InternalType_);
+
+static inline CMPOUT SORT_INS(CompareAdapter)(const void *left,
+                                              const void *right,
+                                              void *context) {
+  const SORT_INS(ComparatorAdapter_InternalType_) *adapter = context;
+  return adapter->compare(left, right);
+}
+
+static inline OPSTATUS SORT_INS(Validate)(const void *data, size_t count,
+                                          size_t size, bool hasComparator) {
+  if (!size || !hasComparator)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  /* Reject impossible byte extents before checking a null data pointer. */
+  if (count > SIZE_MAX / size)
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  if (count && !data)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline void SORT_INS(Swap)(unsigned char *a, unsigned char *b,
+                                  size_t size) {
+  if (a == b) return;
+  for (size_t k = 0; k < size; ++k) {
+    unsigned char t = a[k]; a[k] = b[k]; b[k] = t;
+  }
+}
+
+static inline void SORT_INS(InsertionRange)(
+    unsigned char *data, size_t lo, size_t hi, size_t size,
+    COMPARISON_TYPE(ContextComparator) compare, void *context) {
+  for (size_t i = lo + 1; i < hi; ++i) {
+    size_t j = i;
+    while (j > lo && compare(data + j * size, data + (j - 1) * size,
+                              context) == COMPARISON_LOWER_CONST) {
+      SORT_INS(Swap)(data + j * size, data + (j - 1) * size, size);
+      --j;
+    }
+  }
+}
+
+static inline void SORT_INS(SiftDown)(
+    unsigned char *data, size_t root, size_t count, size_t size,
+    COMPARISON_TYPE(ContextComparator) compare, void *context) {
+  while (count > 1 && root <= (count - 2) / 2) {
+    size_t child = root * 2 + 1;
+    if (child + 1 < count &&
+        compare(data + child * size, data + (child + 1) * size, context)
+            == COMPARISON_LOWER_CONST) ++child;
+    if (compare(data + root * size, data + child * size, context)
+            != COMPARISON_LOWER_CONST) break;
+    SORT_INS(Swap)(data + root * size, data + child * size, size);
+    root = child;
+  }
+}
+
+static inline void SORT_INS(HeapRange)(
+    unsigned char *data, size_t count, size_t size,
+    COMPARISON_TYPE(ContextComparator) compare, void *context) {
+  for (size_t i = count / 2; i > 0; --i)
+    SORT_INS(SiftDown)(data, i - 1, count, size, compare, context);
+  for (size_t end = count; end > 1; --end) {
+    SORT_INS(Swap)(data, data + (end - 1) * size, size);
+    SORT_INS(SiftDown)(data, 0, end - 1, size, compare, context);
+  }
+}
+
+static inline size_t SORT_INS(DepthLimit)(size_t count) {
+  size_t depth = 0;
+  while (count > 1) { count >>= 1; depth += 2; }
+  return depth;
+}
+
+static inline void SORT_INS(IntroRange)(
+    unsigned char *data, size_t lo, size_t hi, size_t size, size_t depth,
+    COMPARISON_TYPE(ContextComparator) compare, void *context) {
+  while (hi - lo > COSMERON_MACRO_INTERNAL_SORT_THRESHOLD) {
+    if (!depth) {
+      SORT_INS(HeapRange)(data + lo * size, hi - lo, size, compare, context);
+      return;
+    }
+    --depth;
+    size_t last = hi - 1, mid = lo + (hi - lo) / 2;
+    if (compare(data + mid * size, data + lo * size, context)
+          == COMPARISON_LOWER_CONST)
+      SORT_INS(Swap)(data + mid * size, data + lo * size, size);
+    if (compare(data + last * size, data + lo * size, context)
+          == COMPARISON_LOWER_CONST)
+      SORT_INS(Swap)(data + last * size, data + lo * size, size);
+    if (compare(data + last * size, data + mid * size, context)
+          == COMPARISON_LOWER_CONST)
+      SORT_INS(Swap)(data + last * size, data + mid * size, size);
+    /* Pivot stays at the final position until partitioning completes. */
+    size_t lt = lo, i = lo, gt = last;
+    while (i < gt) {
+      CMPOUT order = compare(data + i * size, data + last * size, context);
+      if (order == COMPARISON_LOWER_CONST) {
+        SORT_INS(Swap)(data + lt * size, data + i * size, size);
+        ++lt; ++i;
+      } else if (order == COMPARISON_HIGHER_CONST) {
+        --gt;
+        SORT_INS(Swap)(data + i * size, data + gt * size, size);
+      } else {
+        ++i;
+      }
+    }
+    SORT_INS(Swap)(data + gt * size, data + last * size, size);
+    /* Recurse into the smaller side to bound call stack to O(log n). */
+    if (lt - lo < hi - (gt + 1)) {
+      SORT_INS(IntroRange)(data, lo, lt, size, depth, compare, context);
+      lo = gt + 1;
+    } else {
+      SORT_INS(IntroRange)(data, gt + 1, hi, size, depth, compare, context);
+      hi = lt;
+    }
+  }
+  SORT_INS(InsertionRange)(data, lo, hi, size, compare, context);
+}
+
+static inline void SORT_INS(MergeRange)(
+    unsigned char *data, unsigned char *scratch, size_t lo, size_t hi,
+    size_t size, COMPARISON_TYPE(ContextComparator) compare, void *context) {
+  if (hi - lo < 2) return;
+  size_t mid = lo + (hi - lo) / 2;
+  SORT_INS(MergeRange)(data, scratch, lo, mid, size, compare, context);
+  SORT_INS(MergeRange)(data, scratch, mid, hi, size, compare, context);
+  size_t left = lo, right = mid;
+  for (size_t out = lo; out < hi; ++out) {
+    bool chooseLeft = left < mid &&
+        (right == hi ||
+         compare(data + left * size, data + right * size, context)
+                != COMPARISON_HIGHER_CONST);
+    memcpy(scratch + out * size,
+           data + (chooseLeft ? left++ : right++) * size, size);
+  }
+  memcpy(data + lo * size, scratch + lo * size, (hi - lo) * size);
+}
+
+SORT_CONTEXT_PROTOTYPE(Insertion) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  if (count > 1) SORT_INS(InsertionRange)(data, 0, count, elementSize,
+                                         compare, context);
+  return STATUS_CONST(SUCCESS);
+}
+
+SORT_CONTEXT_PROTOTYPE(Heap) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  if (count > 1) SORT_INS(HeapRange)(data, count, elementSize, compare, context);
+  return STATUS_CONST(SUCCESS);
+}
+
+SORT_CONTEXT_PROTOTYPE(Intro) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  if (count > 1) SORT_INS(IntroRange)(data, 0, count, elementSize,
+                                      SORT_INS(DepthLimit)(count), compare,
+                                      context);
+  return STATUS_CONST(SUCCESS);
+}
+
+SORT_CONTEXT_PROTOTYPE(Array) {
+  return SORT_FUNC(IntroWithContext)(data, count, elementSize, compare, context);
+}
+
+SORT_STABLE_BUFFER_CONTEXT_PROTOTYPE {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  if (count < 2) return STATUS_CONST(SUCCESS);
+  if (!buffer || bufferSize < count * elementSize)
+    return STATUS_CONST(INSUFFICIENT_SPACE);
+  /* Buffer must be disjoint from data: caller-owned precondition. */
+  SORT_INS(MergeRange)(data, buffer, 0, count, elementSize, compare, context);
+  return STATUS_CONST(SUCCESS);
+}
+
+SORT_CONTEXT_PROTOTYPE(Merge) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, compare != NULL);
+  if (s != STATUS_CONST(SUCCESS) || count < 2) return s;
+  void *buffer = NULL;
+  s = ALLOC_FUNC(AllocArray)(&buffer, count, elementSize);
+  if (s != STATUS_CONST(SUCCESS)) return s;
+  SORT_INS(MergeRange)(data, buffer, 0, count, elementSize, compare, context);
+  ALLOC_FUNC(FreePointer)(&buffer);
+  return STATUS_CONST(SUCCESS);
+}
+
+SORT_CONTEXT_PROTOTYPE(Stable) {
+  return SORT_FUNC(MergeWithContext)(data, count, elementSize, compare, context);
+}
+
+#define COSMERON_MACRO_INTERNAL_SORT_ADAPT(NAME, PROTOTYPE)                   \
+  PROTOTYPE {                                                   \
+    SORT_INS(ComparatorAdapter_InternalType_) adapter = { compare };         \
+    return SORT_FUNC(PP_OP_CAT2(NAME, WithContext))(data, count, elementSize,            \
+        compare ? SORT_INS(CompareAdapter) : NULL, &adapter);                \
+  }
+
+COSMERON_MACRO_INTERNAL_SORT_ADAPT(Array, SORT_ARRAY_PROTOTYPE)
+COSMERON_MACRO_INTERNAL_SORT_ADAPT(Stable, SORT_STABLE_PROTOTYPE)
+COSMERON_MACRO_INTERNAL_SORT_ADAPT(Insertion, SORT_INSERTION_PROTOTYPE)
+COSMERON_MACRO_INTERNAL_SORT_ADAPT(Heap, SORT_HEAP_PROTOTYPE)
+COSMERON_MACRO_INTERNAL_SORT_ADAPT(Intro, SORT_INTRO_PROTOTYPE)
+COSMERON_MACRO_INTERNAL_SORT_ADAPT(Merge, SORT_MERGE_PROTOTYPE)
+#undef COSMERON_MACRO_INTERNAL_SORT_ADAPT
+
+SORT_STABLE_BUFFER_PROTOTYPE {
+  SORT_INS(ComparatorAdapter_InternalType_) adapter = { compare };
+  return SORT_FUNC(StableWithBufferWithContext)(
+      data, count, elementSize,
+      compare ? SORT_INS(CompareAdapter) : NULL, &adapter, buffer, bufferSize);
+}

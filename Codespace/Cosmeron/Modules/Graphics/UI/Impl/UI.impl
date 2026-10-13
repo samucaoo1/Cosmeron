@@ -1,0 +1,8 @@
+#pragma once
+/* Dependency order: state -> canvas/layout -> widgets -> editors -> overlays. */
+#include "../Internal/State.inc"
+#include "../Internal/Canvas.inc"
+#include "../Internal/Widgets.inc"
+#include "../Internal/Editors.inc"
+#include "../Internal/GameWidgets.inc"
+#include "../Internal/OverlayWidgets.inc"

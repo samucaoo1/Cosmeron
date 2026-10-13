@@ -1,0 +1,181 @@
+#pragma once
+#include <string.h>
+static inline bool FONT_INS(Line)(const char *s,size_t n,size_t *pos,
+                                  size_t *start,size_t *len) {
+  size_t end;
+  if(!s||!pos||!start||!len||*pos>=n)return false;
+  *start=*pos;
+  end=*pos;
+  while(end<n && s[end]!='\n' && s[end]!='\r')++end;
+  *len=end-*start;
+  if(end<n&&s[end]=='\r')++end;
+  if(end<n&&s[end]=='\n')++end;
+  *pos=end;
+  return true;
+}
+static inline OPSTATUS FONT_INS(RowWidth)(
+    const char *text,size_t length,uint16_t *out) {
+  size_t i=0,columns=0;
+  if(!text||!out)return STATUS_CONST(INVALID_ARGUMENT);
+  while(i<length) {
+    TEXT_TYPE(TChar32) cp=0;
+    size_t read=0;
+    int width=0;
+    OPSTATUS st=TEXT_UTF8_FUNC(Decode)((const unsigned char*)text+i,
+                                       length-i,&cp,&read);
+    if(st!=STATUS_CONST(SUCCESS))return st;
+    if(cp==0||cp=='\n'||cp=='\r'||cp=='\t')
+      return STATUS_CONST(INVALID_SEQUENCE);
+    st=TEXT_WIDTH_FUNC(Codepoint)(cp,&width);
+    if(st!=STATUS_CONST(SUCCESS)||width<1||width>2)
+      return STATUS_CONST(NOT_SUPPORTED);
+    columns+=(size_t)width;
+    if(columns>UINT16_MAX)return STATUS_CONST(OUT_OF_RANGE);
+    i+=read;
+  }
+  *out=(uint16_t)columns;
+  return STATUS_CONST(SUCCESS);
+}
+static inline OPSTATUS FONT_INS(GlyphWidth)(
+    const FONT_TYPE(TFont)*font,unsigned char ch,uint16_t *out) {
+  const FONT_TYPE(TGlyph)*g;
+  size_t pos=0,start=0,len=0,total;
+  uint16_t row,largest=0;
+  if(!font||!out||ch<32||ch>126||
+     font->height==0||font->height>FONT_MAX_HEIGHT)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  g=&font->glyphs[ch-32U];
+  if(!g->art)return STATUS_CONST(NOT_FOUND);
+  total=strlen(g->art);
+  for(row=0;row<font->height;row++) {
+    uint16_t width=0;
+    OPSTATUS st;
+    if(!FONT_INS(Line)(g->art,total,&pos,&start,&len))
+      return STATUS_CONST(INVALID_SEQUENCE);
+    st=FONT_INS(RowWidth)(g->art+start,len,&width);
+    if(st!=STATUS_CONST(SUCCESS))return st;
+    if(width>largest)largest=width;
+  }
+  if(pos!=total)return STATUS_CONST(INVALID_SEQUENCE);
+  if(g->columns&&g->columns<largest)return STATUS_CONST(INVALID_ARGUMENT);
+  *out=g->columns?g->columns:largest;
+  return STATUS_CONST(SUCCESS);
+}
+static inline OPSTATUS FONT_INS(GlyphRow)(
+    const FONT_TYPE(TFont)*font,unsigned char ch,uint16_t index,
+    const char **outRow,size_t *outLength) {
+  const char *art;
+  size_t pos=0,start=0,len=0,total;
+  uint16_t row;
+  if(!font||!outRow||!outLength||index>=font->height||
+     ch<32||ch>126)return STATUS_CONST(INVALID_ARGUMENT);
+  art=font->glyphs[ch-32U].art;
+  if(!art)return STATUS_CONST(NOT_FOUND);
+  total=strlen(art);
+  for(row=0;row<=index;row++)
+    if(!FONT_INS(Line)(art,total,&pos,&start,&len))
+      return STATUS_CONST(INVALID_SEQUENCE);
+  *outRow=art+start;*outLength=len;
+  return STATUS_CONST(SUCCESS);
+}
+FONT_MEASURE_PROTOTYPE {
+  const unsigned char *p=(const unsigned char*)asciiText;
+  uint32_t line=0,largest=0,lines=1;
+  bool prior=false;
+  if(!font||!outSize||!p||!font->height||
+     font->height>FONT_MAX_HEIGHT)return STATUS_CONST(INVALID_ARGUMENT);
+  while(*p) {
+    if(*p=='\n') {
+      if(line>largest)largest=line;
+      line=0;prior=false;
+      if(lines==UINT32_MAX)return STATUS_CONST(OUT_OF_RANGE);
+      ++lines;
+    }else {
+      uint16_t width=0;
+      uint32_t advance;
+      OPSTATUS st;
+      if(*p<32U||*p>126U)return STATUS_CONST(NOT_SUPPORTED);
+      st=FONT_INS(GlyphWidth)(font,*p,&width);
+      if(st!=STATUS_CONST(SUCCESS))return st;
+      advance=(uint32_t)width+(prior?font->letterSpacing:0U);
+      if(advance>UINT16_MAX||line>UINT16_MAX-advance)
+        return STATUS_CONST(OUT_OF_RANGE);
+      line+=advance;prior=true;
+    }
+    ++p;
+  }
+  if(line>largest)largest=line;
+  {
+    uint64_t rows=(uint64_t)lines*font->height+
+                 (uint64_t)(lines-1U)*font->lineSpacing;
+    if(rows>UINT16_MAX)return STATUS_CONST(OUT_OF_RANGE);
+    *outSize=(TDUAL_TYPE(uint16)){
+      .col=(uint16_t)largest,.row=(uint16_t)rows};
+  }
+  return STATUS_CONST(SUCCESS);
+}
+static inline OPSTATUS FONT_INS(DrawRow)(
+    TERMINAL_TYPE(TCanvas)*canvas,uint32_t x,uint32_t y,
+    const char *row,size_t length,TEXT_GRID_ATTRIBUTE_TYPE(Cell)style) {
+  size_t i=0;
+  while(i<length) {
+    TEXT_TYPE(TChar32) cp=0;
+    size_t read=0;
+    int width=0;
+    OPSTATUS st=TEXT_UTF8_FUNC(Decode)((const unsigned char*)row+i,
+                                       length-i,&cp,&read);
+    if(st!=STATUS_CONST(SUCCESS))return st;
+    st=TEXT_WIDTH_FUNC(Codepoint)(cp,&width);
+    if(st!=STATUS_CONST(SUCCESS)||width<1||width>2)
+      return STATUS_CONST(NOT_SUPPORTED);
+    st=TERMINAL_FUNC(Canvas_Set)(canvas,
+       (TDUAL_TYPE(uint16)){.x=(uint16_t)x,.y=(uint16_t)y},cp,style);
+    if(st!=STATUS_CONST(SUCCESS))return st;
+    x+=(uint32_t)width;i+=read;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+FONT_DRAW_PROTOTYPE {
+  TDUAL_TYPE(uint16) size={0};
+  const unsigned char *p=(const unsigned char*)asciiText;
+  uint32_t x=position.col,y=position.row;
+  OPSTATUS st;
+  if(!canvas||!font||!p)return STATUS_CONST(INVALID_ARGUMENT);
+  st=FONT_FUNC(Measure)(font,asciiText,&size);
+  if(st!=STATUS_CONST(SUCCESS))return st;
+  if((uint32_t)position.col+size.col>canvas->size.col||
+     (uint32_t)position.row+size.row>canvas->size.row)
+    return STATUS_CONST(OUT_OF_RANGE);
+  while(*p) {
+    uint16_t row,width=0;
+    if(*p=='\n') {
+      x=position.col;y+=(uint32_t)font->height+font->lineSpacing;
+      ++p;continue;
+    }
+    for(row=0;row<font->height;row++){
+      const FONT_TYPE(TGlyph)*g=&font->glyphs[*p-32U];
+      const char *text=NULL;
+      size_t len=0;
+      TEXT_GRID_ATTRIBUTE_TYPE(Cell)attr=defaultStyle;
+      uint32_t bit=UINT32_C(1)<<row;
+      st=FONT_INS(GlyphRow)(font,*p,row,&text,&len);
+      if(st!=STATUS_CONST(SUCCESS))return st;
+      if(g->foregroundRows&bit){
+        attr.foreground=g->foreground;
+        attr.flags&=(uint16_t)~TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_FOREGROUND);
+      }
+      if(g->backgroundRows&bit){
+        attr.background=g->background;
+        attr.flags&=(uint16_t)~TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_BACKGROUND);
+      }
+      st=FONT_INS(DrawRow)(canvas,x,y+row,text,len,attr);
+      if(st!=STATUS_CONST(SUCCESS))return st;
+    }
+    st=FONT_INS(GlyphWidth)(font,*p,&width);
+    if(st!=STATUS_CONST(SUCCESS))return st;
+    x+=(uint32_t)width;
+    if(p[1]&&p[1]!='\n')x+=font->letterSpacing;
+    ++p;
+  }
+  return STATUS_CONST(SUCCESS);
+}

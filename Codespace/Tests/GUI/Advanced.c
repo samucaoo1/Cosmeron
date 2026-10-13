@@ -1,0 +1,103 @@
+#include "Test.h"
+static float advance(void *user, uint32_t cp) {
+  (void)user;
+  return cp == 'i' ? 3.0f : 7.0f;
+}
+static uint8_t coverage(void *user, uint32_t cp, uint32_t x, uint32_t y) {
+  (void)user;
+  (void)cp;
+  return x < 2 && y < 7 ? 255 : 0;
+}
+int main(void) {
+  GRAPHICS_TYPE(TSurface) s = {0}, image = {0};
+  GUI_TYPE(TContext) c = {0};
+  GUI_TYPE(TFont) font = {0};
+  TDUAL_TYPE(float) measured;
+  const char *items[] = {"First", "Second", "Third"}, *cells[] = {"A", "1", "B", "2", "C", "3"};
+  size_t selected = 0, row = 0;
+  bool expanded = false, nodeSelected = false, open = false, pressed = false;
+  uint32_t color = UINT32_C(0xFF446688);
+  float value = 3, offset = 5;
+  OK(GRAPHICS_FUNC(Surface_Create)(&s, (TDUAL_TYPE(uint32)){.x = 480, .y = 320}));
+  OK(GRAPHICS_FUNC(Surface_Create)(&image, (TDUAL_TYPE(uint32)){.x = 8, .y = 8}));
+  OK(GRAPHICS_FUNC(Surface_Clear)(&image, UINT32_C(0xFFFF0000)));
+  font.height = 8;
+  font.advance = advance;
+  font.coverage = coverage;
+  OK(GUI_FUNC(Layout_MeasureText)(&font, "iiié", 1, &measured));
+  assert(measured.x == 16);
+  OK(GUI_FUNC(Begin)(&c, &s));
+  OK(GUI_FUNC(ImageButton)(&c, rect(0, 0, 20, 20), &image, &pressed));
+  assert(!pressed);
+  OK(GUI_FUNC(Tabs)(&c, rect(30, 0, 180, 25), items, 3, &selected));
+  OK(GUI_FUNC(ComboBox)(&c, rect(240, 0, 160, 25), items, 3, &selected, &open));
+  OK(GUI_FUNC(TreeNode)(&c, rect(0, 35, 150, 25), "Root", &expanded, &nodeSelected));
+  OK(GUI_FUNC(Table)(&c, rect(0, 75, 200, 80), cells, 3, 2, &row));
+  OK(GUI_FUNC(ColorPicker)(&c, rect(220, 75, 180, 80), &color));
+  assert(color == UINT32_C(0xFF446688));
+  OK(GUI_FUNC(Number)(&c, rect(0, 180, 100, 25), 0, 10, 1, &value));
+  assert(value == 3);
+  OK(GUI_FUNC(Scrollbar)(&c, rect(420, 75, 16, 120), 100, 20, &offset, true));
+  assert(offset == 5);
+  OK(GUI_FUNC(DrawText)(&c, rect(0, 240, 100, 20), "é", UINT32_C(0xFFFFFFFF), &font, 1));
+  OK(GUI_FUNC(End)(&c));
+  OK(GUI_FUNC(Focus_Set)(&c, GUI_INS(RegionId)(&c, "tabs", rect(30, 0, 180, 25))));
+  OK(GUI_FUNC(Begin)(&c, &s));
+  key(&c, LIB_PREFIX_CONST(INPUT_KEY_RIGHT), 0);
+  OK(GUI_FUNC(Tabs)(&c, rect(30, 0, 180, 25), items, 3, &selected));
+  assert(selected == 1);
+  OK(GUI_FUNC(End)(&c));
+  OK(GUI_FUNC(Begin)(&c, &s));
+  key(&c, LIB_PREFIX_CONST(INPUT_KEY_ENTER), 0);
+  OK(GUI_FUNC(Tabs)(&c, rect(30, 0, 180, 25), items, 3, &selected));
+  assert(selected == 1);
+  OK(GUI_FUNC(End)(&c));
+  OK(GUI_FUNC(Begin)(&c, &s));
+  position(&c, 250, 10);
+  mouse(&c, true);
+  mouse(&c, false);
+  OK(GUI_FUNC(ComboBox)(&c, rect(240, 0, 160, 25), items, 3, &selected, &open));
+  assert(open);
+  OK(GUI_FUNC(End)(&c));
+  OK(GUI_FUNC(Begin)(&c, &s));
+  key(&c, LIB_PREFIX_CONST(INPUT_KEY_ESCAPE), 0);
+  OK(GUI_FUNC(ComboBox)(&c, rect(240, 0, 160, 25), items, 3, &selected, &open));
+  assert(!open);
+  OK(GUI_FUNC(End)(&c));
+  OK(GUI_FUNC(Begin)(&c, &s));
+  position(&c, 15, 45);
+  mouse(&c, true);
+  mouse(&c, false);
+  OK(GUI_FUNC(TreeNode)(&c, rect(0, 35, 150, 25), "Root", &expanded, &nodeSelected));
+  assert(expanded && nodeSelected);
+  OK(GUI_FUNC(End)(&c));
+  {
+    const char *many[] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"};
+    GUI_TYPE(TComboBox) combo = {0};
+    INPUT_TYPE(TEvent) wheel = {0};
+    size_t choice = 0;
+    combo.id = 777;
+    combo.region = rect(0, 0, 100, 25);
+    combo.items = many;
+    combo.count = 10;
+    combo.selected = &choice;
+    combo.open = true;
+    OK(GUI_FUNC(Begin)(&c, &s));
+    position(&c, 10, 50);
+    wheel.type = INPUT_CONST(EVENT_MOUSE_SCROLL);
+    wheel.data.motion.y = -2;
+    OK(GUI_FUNC(Event)(&c, &wheel));
+    OK(GUI_FUNC(ComboBoxEx)(&c, &combo));
+    assert(combo.firstVisible == 2);
+    OK(GUI_FUNC(End)(&c));
+    OK(GUI_FUNC(Begin)(&c, &s));
+    OK(GUI_FUNC(ComboBoxEx)(&c, &combo));
+    assert(combo.firstVisible == 2);
+    OK(GUI_FUNC(End)(&c));
+  }
+  assert(GUI_FUNC(functions).button == GUI_FUNC(Button));
+  GRAPHICS_FUNC(Surface_Free)(&image);
+  GRAPHICS_FUNC(Surface_Free)(&s);
+  puts("Advanced passed");
+  return 0;
+}
