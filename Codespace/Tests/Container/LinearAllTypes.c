@@ -2,7 +2,6 @@
 #include "../../Cosmeron/Modules/Container/Array/Vector.h"
 #include "../../Cosmeron/Modules/Container/Array/Queue.h"
 #include "../../Cosmeron/Modules/Container/Array/Stack.h"
-#include "../../Cosmeron/Modules/Container/Array/String.h"
 #include "../../Cosmeron/Modules/Container/Linked/Forward.h"
 #include "../../Cosmeron/Modules/Container/Linked/List.h"
 #include "../../Cosmeron/Modules/Container/Linked/Queue.h"
@@ -86,57 +85,6 @@ typedef void *TTestVoidPointer;
     TEST_ASSERT(FLAT_STACK_FUNC(SUFFIX, ShrinkToFit)(&s) == STATUS_CONST(SUCCESS)); \
     TEST_ASSERT(FLAT_STACK_FUNC(SUFFIX, Capacity)(&s) >= 1U);                  \
     FLAT_STACK_FUNC(SUFFIX, Destroy)(&s);                                      \
-  } while (0)
-
-#define TEST_STRING(TYPE, SUFFIX)                                              \
-  do {                                                                         \
-    TSTRING_TYPE(SUFFIX) s, other, slice;                                      \
-    TYPE base[] = {(TYPE)'a', (TYPE)'b', 0};                                   \
-    TYPE tail[] = {(TYPE)'c', 0};                                              \
-    TYPE otherText[] = {(TYPE)'d', (TYPE)'e', 0};                              \
-    TYPE needle[] = {(TYPE)'b', (TYPE)'c', 0};                                 \
-    TYPE out = (TYPE)0;                                                        \
-    TYPE *access = NULL;                                                       \
-    const TYPE *cstr = NULL;                                                   \
-    size_t index = 0U;                                                         \
-    CMPOUT cmp;                                                     \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, Init)(&s) == STATUS_CONST(SUCCESS));     \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, Init)(&other) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, Init)(&slice) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, Empty)(&s));                              \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, FromCStr)(&s, base) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, CStr)(&s, &cstr) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(cstr != NULL);                       \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, Length)(&s) == 2U);                       \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, Reserve)(&s, 16U) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, Capacity)(&s) >= 16U);                    \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, PushBack)(&s, (TYPE)'c') == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, Back)(&s, &access) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(*access == (TYPE)'c');                 \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, PopBack)(&s, &out) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(out == (TYPE)'c');                                             \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, InsertChar)(&s, 1U, (TYPE)'x') == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, At)(&s, 1U, &access) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(*access == (TYPE)'x');                                         \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, Front)(&s, &access) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(*access == (TYPE)'a');                \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, Append)(&s, tail) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, FromCStr)(&other, otherText) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, AppendStr)(&s, &other) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, Insert)(&s, 0U, tail) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, Erase)(&s, 0U, 1U) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, Substr)(&s, 0U, 2U, &slice) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, Compare)(&s, &other, &cmp) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, Find)(&s, (TYPE)'b', 0U, &index) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, FindStr)(&s, needle, 0U, &index) == STATUS_CONST(SUCCESS)); \
-    access = NULL;                                                            \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, Data)(&s, &access) == STATUS_CONST(SUCCESS)); \
-    TEST_ASSERT(access != NULL);                       \
-    TSTRING_FUNC(SUFFIX, Clear)(&s);                                           \
-    TEST_ASSERT(TSTRING_FUNC(SUFFIX, Empty)(&s));                              \
-    TSTRING_FUNC(SUFFIX, Destroy)(&slice);                                     \
-    TSTRING_FUNC(SUFFIX, Destroy)(&other);                                     \
-    TSTRING_FUNC(SUFFIX, Destroy)(&s);                                         \
   } while (0)
 
 #define TEST_FORWARD(TYPE, SUFFIX, A, B, C)                                   \
@@ -260,10 +208,6 @@ int main(void) {
   TEST_STACK(int, int, 1, 2);
   TEST_STACK(float, float, 1, 2);
   TEST_STACK(double, double, 1, 2);
-
-  TEST_STRING(uint8_t, 8);
-  TEST_STRING(uint16_t, 16);
-  TEST_STRING(uint32_t, 32);
 
   TEST_FORWARD(int, int, 1, 2, 3);
   TEST_FORWARD(float, float, 1, 2, 3);

@@ -1,7 +1,6 @@
 #include "../../Cosmeron/Modules/Container/Array/Vector.h"
 #include "../../Cosmeron/Modules/Container/Array/Queue.h"
 #include "../../Cosmeron/Modules/Container/Array/Stack.h"
-#include "../../Cosmeron/Modules/Container/Array/String.h"
 #include "../../Cosmeron/Modules/Container/Linked/Forward.h"
 #include "../../Cosmeron/Modules/Container/Linked/List.h"
 #include "../../Cosmeron/Modules/Container/Linked/Stack.h"

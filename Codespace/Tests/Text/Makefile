@@ -1,7 +1,7 @@
 CC ?= gcc
 CFLAGS := -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L
 BUILD := build
-TESTS := include-all text namespace unicode all-functions
+TESTS := include-all text namespace unicode all-functions format string view
 
 .PHONY: all strict gcc clang run clean
 all: strict
@@ -23,6 +23,12 @@ $(BUILD)/namespace: Namespace.c | $(BUILD)
 $(BUILD)/unicode: Unicode.c | $(BUILD)
 	$(CC) $(CFLAGS) $< -o $@
 $(BUILD)/all-functions: AllFunctions.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@
+$(BUILD)/format: Format.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@
+$(BUILD)/string: String.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@
+$(BUILD)/view: View.c | $(BUILD)
 	$(CC) $(CFLAGS) $< -o $@
 clean:
 	rm -rf build build-clang

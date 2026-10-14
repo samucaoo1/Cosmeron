@@ -8,7 +8,7 @@ Based on [Docs/Reference/PATTERN.md](Docs/Reference/PATTERN.md).
 
 ## 1. Naming & Namespaces
 
-Everything must live inside the library/module namespace whenever C allows it. Exceptions exist only for public sugar macros, `OPSTATUS`, and `*OUT` aliases.
+Everything must live inside the library/module namespace whenever C allows it. Exceptions exist only for public sugar macros (which are strictly exceptional; consult user first), `OPSTATUS`, and `*OUT` aliases.
 
 ### Case Conventions
 | Element | Case | Example |
@@ -78,6 +78,7 @@ Everything must live inside the library/module namespace whenever C allows it. E
 ## 6. Preprocessor Policy
 
 - `#define` must be rare. Avoid macros that merely replace normal C syntax.
+- **Sugar macros are an exception, not the rule:** Never proactively generate public sugar macros for functions or types. Always ask the user first if creating them is desired.
 - Preprocessor operations must use helpers from `Core/Preprocessor` (e.g. `PP_OP_CAT2`, `PP_OP_CAT3`).
 - Raw `##` operator is forbidden outside `Core/Preprocessor`.
 
