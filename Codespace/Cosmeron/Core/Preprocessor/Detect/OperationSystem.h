@@ -26,7 +26,8 @@
 
 #if OS_MAC && (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) || \
                defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) ||     \
-               defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__))
+               defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) ||  \
+               (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE))
 #define OS_IOS 1
 #else
 #define OS_IOS 0

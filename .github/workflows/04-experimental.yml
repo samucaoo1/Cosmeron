@@ -123,8 +123,12 @@ jobs:
         uses: vmactions/openindiana-vm@74a06af3be38c265a2d99d1af520d66a057ff222
         with:
           usesh: true
+          prepare: |
+            pkg install -y build-essential || pkg install -y developer/gcc-11 || true
           run: |
             set -eu
+            export PATH="/usr/gnu/bin:/usr/bin:$PATH"
+            export CC="${CC:-gcc}"
             sh .github/scripts/test-portable-core.sh
             sh .github/scripts/test-bsd-native.sh
 
@@ -143,8 +147,11 @@ jobs:
         uses: vmactions/solaris-vm@87d3c436511cef802cd1637f86f73b1a97715c8c
         with:
           usesh: true
+          release: '11.4-gcc'
           run: |
             set -eu
+            export PATH="/usr/gcc/bin:/usr/bin:$PATH"
+            export CC="${CC:-gcc}"
             sh .github/scripts/test-portable-core.sh
             sh .github/scripts/test-bsd-native.sh
 
