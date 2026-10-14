@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../Core/Namespace.h"
 #include "../../Core/Error/Status.h"
+#include "../../Core/Namespace.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -33,17 +33,17 @@ enum {
 };
 
 /* ============================================================
- * Log Levels
+ * Log Levels Transformar em Xmacros
  * ============================================================ */
 
 typedef enum LOGGING_TYPE(LogLevel) {
   LOGGING_CONST(LEVEL_TRACE) = 0,
   LOGGING_CONST(LEVEL_DEBUG) = 1,
-  LOGGING_CONST(LEVEL_INFO)  = 2,
-  LOGGING_CONST(LEVEL_WARN)  = 3,
+  LOGGING_CONST(LEVEL_INFO) = 2,
+  LOGGING_CONST(LEVEL_WARN) = 3,
   LOGGING_CONST(LEVEL_ERROR) = 4,
   LOGGING_CONST(LEVEL_FATAL) = 5,
-  LOGGING_CONST(LEVEL_OFF)   = 6
+  LOGGING_CONST(LEVEL_OFF) = 6
 } LOGGING_TYPE(LogLevel);
 
 /* ============================================================
@@ -66,15 +66,16 @@ typedef struct LOGGING_TYPE(TRecord) {
 
 typedef enum LOGGING_TYPE(SinkKind) {
   LOGGING_CONST(SINK_CONSOLE) = 0,
-  LOGGING_CONST(SINK_FILE)    = 1,
-  LOGGING_CONST(SINK_BUFFER)  = 2,
-  LOGGING_CONST(SINK_CUSTOM)  = 3
+  LOGGING_CONST(SINK_FILE) = 1,
+  LOGGING_CONST(SINK_BUFFER) = 2,
+  LOGGING_CONST(SINK_CUSTOM) = 3
 } LOGGING_TYPE(SinkKind);
 
 typedef struct LOGGING_TYPE(TSink) LOGGING_TYPE(TSink);
 
-typedef OPSTATUS (*LOGGING_TYPE(SinkWriteFn))(
-    LOGGING_TYPE(TSink) *sink, const LOGGING_TYPE(TRecord) *record);
+typedef OPSTATUS (*LOGGING_TYPE(SinkWriteFn))(LOGGING_TYPE(TSink) * sink,
+                                              const LOGGING_TYPE(TRecord) *
+                                                  record);
 
 struct LOGGING_TYPE(TSink) {
   LOGGING_TYPE(SinkKind) kind;
@@ -94,7 +95,7 @@ struct LOGGING_TYPE(TSink) {
 typedef struct LOGGING_TYPE(TLogger) {
   const char *name;
   LOGGING_TYPE(LogLevel) level;
-  LOGGING_TYPE(TSink) *sinks[LOGGING_CONST(MAX_SINKS)];
+  LOGGING_TYPE(TSink) * sinks[LOGGING_CONST(MAX_SINKS)];
   size_t sinkCount;
 } LOGGING_TYPE(TLogger);
 
