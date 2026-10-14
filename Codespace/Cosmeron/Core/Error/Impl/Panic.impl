@@ -28,4 +28,8 @@ PANIC_TRIGGER_PROTOTYPE {
   fprintf(stderr, "===================================\n");
   abort();
 }
+
+PANIC_NOW_PROTOTYPE {
+  PANIC_INTERNAL_FUNC(Trigger)(message, "unknown", 0, "unknown");
+}
 /* EOF */
