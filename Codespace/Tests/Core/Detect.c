@@ -6,7 +6,9 @@
 #error "Primary compiler-family detection must be mutually exclusive."
 #endif
 
-#if (OS_WINDOWS + OS_MAC + OS_LINUX + OS_FREEBSD + OS_OPENBSD + OS_NETBSD + OS_DRAGONFLY) > 1
+#if (OS_WINDOWS + OS_MAC + OS_LINUX + OS_FREEBSD + OS_OPENBSD + OS_NETBSD + \
+     OS_DRAGONFLY + OS_SOLARIS + OS_AIX + OS_HAIKU + OS_QNX + OS_HURD +      \
+     OS_CYGWIN + OS_WASM) > 1
 #error "Operating-system detection must identify at most one supported target."
 #endif
 
@@ -20,7 +22,10 @@
 #error "COMPILER_KNOWN must describe, not constrain, compiler detection."
 #endif
 
-#if OS_KNOWN != (OS_WINDOWS || OS_MAC || OS_LINUX || OS_BSD || OS_OHOS)
+#if OS_KNOWN !=                                                              \
+    (OS_WINDOWS || OS_MAC || OS_LINUX || OS_BSD || OS_OHOS || OS_ANDROID ||   \
+     OS_SOLARIS || OS_AIX || OS_HAIKU || OS_QNX || OS_HURD || OS_CYGWIN ||    \
+     OS_WASM)
 #error "OS_KNOWN must describe, not constrain, operating-system detection."
 #endif
 
@@ -30,11 +35,13 @@
 #error "PROCESSOR_KNOWN must describe, not constrain, processor detection."
 #endif
 
-#if OS_UNIX != (OS_LINUX || OS_MAC || OS_BSD)
+#if OS_UNIX !=                                                               \
+    (OS_LINUX || OS_MAC || OS_BSD || OS_SOLARIS || OS_AIX || OS_HAIKU ||      \
+     OS_QNX || OS_HURD || OS_CYGWIN)
 #error "OS_UNIX classification is inconsistent."
 #endif
 
-#if OS_POSIX != (OS_LINUX || OS_MAC || OS_BSD)
+#if OS_POSIX != (OS_UNIX || OS_ANDROID || OS_OHOS)
 #error "OS_POSIX classification is inconsistent."
 #endif
 
@@ -53,10 +60,16 @@ int main(void) {
     return 1;
 
   if (!DETECT_BOOLEAN_VALUE(OS_WINDOWS) || !DETECT_BOOLEAN_VALUE(OS_MAC) ||
+      !DETECT_BOOLEAN_VALUE(OS_IOS) ||
       !DETECT_BOOLEAN_VALUE(OS_LINUX) || !DETECT_BOOLEAN_VALUE(OS_FREEBSD) ||
       !DETECT_BOOLEAN_VALUE(OS_OPENBSD) || !DETECT_BOOLEAN_VALUE(OS_NETBSD) ||
       !DETECT_BOOLEAN_VALUE(OS_DRAGONFLY) || !DETECT_BOOLEAN_VALUE(OS_BSD) ||
-      !DETECT_BOOLEAN_VALUE(OS_OHOS) ||
+      !DETECT_BOOLEAN_VALUE(OS_OHOS) || !DETECT_BOOLEAN_VALUE(OS_ANDROID) ||
+      !DETECT_BOOLEAN_VALUE(OS_SOLARIS) || !DETECT_BOOLEAN_VALUE(OS_AIX) ||
+      !DETECT_BOOLEAN_VALUE(OS_HAIKU) || !DETECT_BOOLEAN_VALUE(OS_QNX) ||
+      !DETECT_BOOLEAN_VALUE(OS_HURD) || !DETECT_BOOLEAN_VALUE(OS_CYGWIN) ||
+      !DETECT_BOOLEAN_VALUE(OS_WASM) || !DETECT_BOOLEAN_VALUE(OS_EMSCRIPTEN) ||
+      !DETECT_BOOLEAN_VALUE(OS_WASI) ||
       !DETECT_BOOLEAN_VALUE(OS_UNIX) || !DETECT_BOOLEAN_VALUE(OS_POSIX) ||
       !DETECT_BOOLEAN_VALUE(OS_KNOWN))
     return 2;
