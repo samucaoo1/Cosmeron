@@ -17,5 +17,15 @@ int main(void) {
   assert(PARSING_FUNC(Slice_Bool)(SLICE("true"),&b)==STATUS_CONST(SUCCESS) && b);
   assert(PARSING_FUNC(Slice_Bool)(SLICE("false"),&b)==STATUS_CONST(SUCCESS) && !b);
   assert(PARSING_FUNC(Slice_Bool)(SLICE("yes"),&b)==STATUS_CONST(INVALID_SEQUENCE));
+
+  /* Assert interoperability with Text_TView8 */
+  Text_TView8 viewNumber = Text_View8_FromCStr("42");
+  uint64_t val = 0;
+  assert(PARSING_FUNC(Slice_U64)(viewNumber, &val) == STATUS_CONST(SUCCESS) && val == 42U);
+
+  PARSING_TYPE(TSlice) parsedSlice = SLICE("hello");
+  assert(Text_View8_EqualCStr(parsedSlice, "hello"));
+  assert(Text_View8_StartsWithCStr(parsedSlice, "he"));
+
   return 0;
 }

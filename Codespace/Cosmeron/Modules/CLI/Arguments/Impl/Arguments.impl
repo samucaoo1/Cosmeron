@@ -48,24 +48,41 @@ CLI_ARGUMENTS_STRING_AT_PROTOTYPE {
 CLI_ARGUMENTS_STRING_PROTOTYPE {
   return CLI_FUNC(Arguments_StringAt)(arguments, name, 0, outValue);
 }
+
+CLI_ARGUMENTS_VIEW_AT_PROTOTYPE {
+  const char *str = NULL;
+  OPSTATUS status;
+  if (!outValue) return STATUS_CONST(INVALID_ARGUMENT);
+  status = CLI_FUNC(Arguments_StringAt)(arguments, name, occurrence, &str);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  *outValue = TEXT_VIEW_FUNC(8, FromCStr)(str);
+  return STATUS_CONST(SUCCESS);
+}
+
+CLI_ARGUMENTS_VIEW_PROTOTYPE {
+  return CLI_FUNC(Arguments_ViewAt)(arguments, name, 0, outValue);
+}
+
 CLI_ARGUMENTS_I64_PROTOTYPE {
-  const char *text;
+  TEXT_VIEW_TYPE(8) view;
   OPSTATUS status;
   if (!outValue) return STATUS_CONST(INVALID_ARGUMENT);
-  status = CLI_FUNC(Arguments_String)(arguments, name, &text);
-  return status == STATUS_CONST(SUCCESS) ? PARSING_FUNC(Slice_I64)(PARSING_INS(Slice)(text, strlen(text)), outValue) : status;
+  status = CLI_FUNC(Arguments_View)(arguments, name, &view);
+  return status == STATUS_CONST(SUCCESS) ? PARSING_FUNC(Slice_I64)(view, outValue) : status;
 }
+
 CLI_ARGUMENTS_U64_PROTOTYPE {
-  const char *text;
+  TEXT_VIEW_TYPE(8) view;
   OPSTATUS status;
   if (!outValue) return STATUS_CONST(INVALID_ARGUMENT);
-  status = CLI_FUNC(Arguments_String)(arguments, name, &text);
-  return status == STATUS_CONST(SUCCESS) ? PARSING_FUNC(Slice_U64)(PARSING_INS(Slice)(text, strlen(text)), outValue) : status;
+  status = CLI_FUNC(Arguments_View)(arguments, name, &view);
+  return status == STATUS_CONST(SUCCESS) ? PARSING_FUNC(Slice_U64)(view, outValue) : status;
 }
+
 CLI_ARGUMENTS_F64_PROTOTYPE {
-  const char *text;
+  TEXT_VIEW_TYPE(8) view;
   OPSTATUS status;
   if (!outValue) return STATUS_CONST(INVALID_ARGUMENT);
-  status = CLI_FUNC(Arguments_String)(arguments, name, &text);
-  return status == STATUS_CONST(SUCCESS) ? PARSING_FUNC(Slice_F64)(PARSING_INS(Slice)(text, strlen(text)), outValue) : status;
+  status = CLI_FUNC(Arguments_View)(arguments, name, &view);
+  return status == STATUS_CONST(SUCCESS) ? PARSING_FUNC(Slice_F64)(view, outValue) : status;
 }
