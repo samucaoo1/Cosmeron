@@ -8,3 +8,6 @@
 #include "Grid/Attribute.h"
 #include "Grid/Char.h"
 #include "Grid/Grid.h"
+#include "Format/Format.h"
+#include "View/View.h"
+#include "String/String.h"

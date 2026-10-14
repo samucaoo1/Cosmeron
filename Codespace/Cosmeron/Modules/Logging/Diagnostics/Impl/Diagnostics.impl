@@ -1,0 +1,85 @@
+#pragma once
+
+#include <string.h>
+#include <time.h>
+
+LOGGING_RECORD_INIT_PROTOTYPE {
+  if (record == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  record->level = level;
+  record->timestamp = (int64_t)time(NULL);
+  record->tag = tag ? tag : "";
+  record->message = message ? message : "";
+  record->file = file ? file : "";
+  record->line = line;
+  record->function = function ? function : "";
+  return STATUS_CONST(SUCCESS);
+}
+
+LOGGING_LEVEL_NAME_PROTOTYPE {
+  switch (level) {
+    case LOGGING_CONST(LEVEL_TRACE): return "TRACE";
+    case LOGGING_CONST(LEVEL_DEBUG): return "DEBUG";
+    case LOGGING_CONST(LEVEL_INFO):  return "INFO";
+    case LOGGING_CONST(LEVEL_WARN):  return "WARN";
+    case LOGGING_CONST(LEVEL_ERROR): return "ERROR";
+    case LOGGING_CONST(LEVEL_FATAL): return "FATAL";
+    case LOGGING_CONST(LEVEL_OFF):   return "OFF";
+    default:                         return "UNKNOWN";
+  }
+}
+
+LOGGING_LEVEL_FROM_NAME_PROTOTYPE {
+  if (name == NULL || outLevel == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  if (strcmp(name, "TRACE") == 0 || strcmp(name, "trace") == 0) {
+    *outLevel = LOGGING_CONST(LEVEL_TRACE);
+    return STATUS_CONST(SUCCESS);
+  }
+  if (strcmp(name, "DEBUG") == 0 || strcmp(name, "debug") == 0) {
+    *outLevel = LOGGING_CONST(LEVEL_DEBUG);
+    return STATUS_CONST(SUCCESS);
+  }
+  if (strcmp(name, "INFO") == 0 || strcmp(name, "info") == 0) {
+    *outLevel = LOGGING_CONST(LEVEL_INFO);
+    return STATUS_CONST(SUCCESS);
+  }
+  if (strcmp(name, "WARN") == 0 || strcmp(name, "warn") == 0 ||
+      strcmp(name, "WARNING") == 0 || strcmp(name, "warning") == 0) {
+    *outLevel = LOGGING_CONST(LEVEL_WARN);
+    return STATUS_CONST(SUCCESS);
+  }
+  if (strcmp(name, "ERROR") == 0 || strcmp(name, "error") == 0) {
+    *outLevel = LOGGING_CONST(LEVEL_ERROR);
+    return STATUS_CONST(SUCCESS);
+  }
+  if (strcmp(name, "FATAL") == 0 || strcmp(name, "fatal") == 0) {
+    *outLevel = LOGGING_CONST(LEVEL_FATAL);
+    return STATUS_CONST(SUCCESS);
+  }
+  if (strcmp(name, "OFF") == 0 || strcmp(name, "off") == 0) {
+    *outLevel = LOGGING_CONST(LEVEL_OFF);
+    return STATUS_CONST(SUCCESS);
+  }
+  return STATUS_CONST(INVALID_ARGUMENT);
+}
+
+LOGGING_LEVEL_COLOR_PROTOTYPE {
+  switch (level) {
+    case LOGGING_CONST(LEVEL_TRACE): return "\x1b[90m";  /* Gray */
+    case LOGGING_CONST(LEVEL_DEBUG): return "\x1b[36m";  /* Cyan */
+    case LOGGING_CONST(LEVEL_INFO):  return "\x1b[32m";  /* Green */
+    case LOGGING_CONST(LEVEL_WARN):  return "\x1b[33m";  /* Yellow */
+    case LOGGING_CONST(LEVEL_ERROR): return "\x1b[31m";  /* Red */
+    case LOGGING_CONST(LEVEL_FATAL): return "\x1b[35m";  /* Magenta */
+    default:                         return "\x1b[0m";   /* Reset */
+  }
+}
+
+LOGGING_LEVEL_RESET_COLOR_PROTOTYPE {
+  return "\x1b[0m";
+}
+
+/* EOF */

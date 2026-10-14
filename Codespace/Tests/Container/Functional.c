@@ -3,7 +3,6 @@
 #include "../../Cosmeron/Modules/Container/Array/Vector.h"
 #include "../../Cosmeron/Modules/Container/Array/Queue.h"
 #include "../../Cosmeron/Modules/Container/Array/Stack.h"
-#include "../../Cosmeron/Modules/Container/Array/String.h"
 #include "../../Cosmeron/Modules/Container/Linked/List.h"
 #include "../../Cosmeron/Modules/Container/Linked/Forward.h"
 #include "../../Cosmeron/Modules/Container/Linked/Deque.h"
@@ -113,27 +112,6 @@ static int test_stack(void) {
   }
   TEST_ASSERT(Empty(stack));
   Destroy(stack);
-  return 0;
-}
-
-static int test_string(void) {
-  static const uint8_t cosmeron[] = {'C', 'o', 'n', 'g', 'r', 'o', 0};
-  static const uint8_t library[] = {' ', 'L', 'i', 'b', 'r', 'a', 'r', 'y', 0};
-  static const uint8_t expected[] = {
-      'C', 'o', 'n', 'g', 'r', 'o', ' ', 'L',
-      'i', 'b', 'r', 'a', 'r', 'y', '!', 0};
-  TString(8, string)
-  TEST_ASSERT(string.api->fromCStr(&string, cosmeron) == STATUS_CONST(SUCCESS));
-  TEST_ASSERT(string.api->pushBack(&string, (uint8_t)'!') == STATUS_CONST(SUCCESS));
-  TEST_ASSERT(string.api->length(&string) == 7);
-  TEST_ASSERT(string.api->insertStr(&string, 6, library) == STATUS_CONST(SUCCESS));
-  TEST_ASSERT(string.api->length(&string) == 15);
-  {
-    const uint8_t *cstr = NULL;
-    TEST_ASSERT(string.api->cStr(&string, &cstr) == STATUS_CONST(SUCCESS));
-    TEST_ASSERT(memcmp(cstr, expected, sizeof(expected)) == 0);
-  }
-  string.api->destroy(&string);
   return 0;
 }
 
@@ -411,65 +389,6 @@ static int test_null_contracts(void) {
 }
 
 
-static int test_string_contracts(void) {
-  TString(8, text)
-  TString(8, other)
-  TString(8, slice)
-  const uint8_t hello[] = {'h', 'e', 'l', 'l', 'o', 0};
-  const uint8_t ell[] = {'e', 'l', 'l', 0};
-  size_t index = 99U;
-  CMPOUT comparison;
-
-  TEST_ASSERT(Container_Flat_String_8_FromCStr(&text, hello) == STATUS_CONST(SUCCESS));
-  TEST_ASSERT(Container_Flat_String_8_Find(&text, (uint8_t)'l', 0U, &index) ==
-              STATUS_CONST(SUCCESS));
-  TEST_ASSERT(index == 2U);
-  TEST_ASSERT(Container_Flat_String_8_Find(&text, (uint8_t)'x', 0U, &index) ==
-              STATUS_CONST(NOT_FOUND));
-  TEST_ASSERT(Container_Flat_String_8_FindStr(&text, ell, 0U, &index) ==
-              STATUS_CONST(SUCCESS));
-  TEST_ASSERT(index == 1U);
-  TEST_ASSERT(Container_Flat_String_8_FindStr(&text, ell, 4U, &index) ==
-              STATUS_CONST(NOT_FOUND));
-
-  TEST_ASSERT(Container_Flat_String_8_FromCStr(&other, hello) == STATUS_CONST(SUCCESS));
-  TEST_ASSERT(Container_Flat_String_8_Compare(&text, &other, &comparison) ==
-              STATUS_CONST(SUCCESS));
-  TEST_ASSERT(comparison == COMPARISON_EQUAL_CONST);
-
-  TEST_ASSERT(Container_Flat_String_8_Substr(&text, 1U, 3U, &slice) ==
-              STATUS_CONST(SUCCESS));
-  TEST_ASSERT(slice.size == 3U);
-  TEST_ASSERT(slice.data[0] == (uint8_t)'e' && slice.data[2] == (uint8_t)'l');
-  TEST_ASSERT(Container_Flat_String_8_Substr(&text, 0U, 1U, &text) ==
-              STATUS_CONST(INVALID_ARGUMENT));
-
-  TEST_ASSERT(Container_Flat_String_8_PopBack(NULL, NULL) == STATUS_CONST(INVALID_ARGUMENT));
-  TEST_ASSERT(Container_Flat_String_8_InsertChar(NULL, 0U, (uint8_t)'x') ==
-              STATUS_CONST(INVALID_ARGUMENT));
-  TEST_ASSERT(Container_Flat_String_8_Append(NULL, hello) == STATUS_CONST(INVALID_ARGUMENT));
-  TEST_ASSERT(Container_Flat_String_8_Erase(NULL, 0U, 1U) ==
-              STATUS_CONST(INVALID_ARGUMENT));
-  TEST_ASSERT(Container_Flat_String_8_Compare(NULL, &other, &comparison) ==
-              STATUS_CONST(INVALID_ARGUMENT));
-  TEST_ASSERT(Container_Flat_String_8_Find(NULL, (uint8_t)'x', 0U, &index) ==
-              STATUS_CONST(INVALID_ARGUMENT));
-  {
-    uint8_t *data = (uint8_t *)(uintptr_t)1;
-    TEST_ASSERT(Container_Flat_String_8_Data(NULL, &data) ==
-                STATUS_CONST(INVALID_ARGUMENT));
-    TEST_ASSERT(data == (uint8_t *)(uintptr_t)1);
-    TEST_ASSERT(Container_Flat_String_8_Data(&text, NULL) ==
-                STATUS_CONST(INVALID_ARGUMENT));
-  }
-
-  Container_Flat_String_8_Destroy(&text);
-  Container_Flat_String_8_Destroy(&other);
-  Container_Flat_String_8_Destroy(&slice);
-  return 0;
-}
-
-
 static int test_alias_single_evaluation(void) {
   FLAT_VECTOR_TYPE(int) vectors[2];
   size_t index = 0U;
@@ -509,7 +428,6 @@ int main(void) {
   TEST_ASSERT(test_capacity_overflow() == 0);
   TEST_ASSERT(test_queue() == 0);
   TEST_ASSERT(test_stack() == 0);
-  TEST_ASSERT(test_string() == 0);
   TEST_ASSERT(test_deque() == 0);
   TEST_ASSERT(test_linked_node_ownership() == 0);
   TEST_ASSERT(test_list() == 0);
@@ -518,6 +436,5 @@ int main(void) {
   TEST_ASSERT(test_red_black() == 0);
   TEST_ASSERT(test_map() == 0);
   TEST_ASSERT(test_null_contracts() == 0);
-  TEST_ASSERT(test_string_contracts() == 0);
   return 0;
 }

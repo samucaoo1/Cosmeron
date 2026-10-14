@@ -168,5 +168,44 @@ int main(void) {
   TEST_COMPOSITE_GRID(TEXT_TYPE(TChar16), char16, 65U, 66U);
   TEST_COMPOSITE_GRID(TEXT_TYPE(TChar32), char32, 65U, 66U);
 
+  char fmtBuf[64];
+  size_t fmtWritten = 0U;
+  Struct_TDual_int32 testDual = {.x = 1, .y = 2};
+  CHECK_STATUS(Text_Format(fmtBuf, sizeof(fmtBuf), &fmtWritten, "%TDual", &testDual));
+  CHECK_STATUS(Text_Format_Unsafe(fmtBuf, &fmtWritten, "ok"));
+
+  va_list vaDummy;
+  memset(&vaDummy, 0, sizeof(vaDummy));
+  /* Ensure prototype and symbols for Variadic variants are referenced */
+  (void)&Text_Format_Variadic;
+  (void)&Text_Format_Unsafe_Variadic;
+
+  TEXT_STRING_TYPE(8) s8;
+  CHECK_STATUS(Text_String8_Init(&s8));
+  CHECK_STATUS(Text_String8_FromCStr(&s8, "test"));
+  CHECK_TRUE(Text_String8_Length(&s8) == 4U);
+  TEXT_VIEW_TYPE(8) sv8 = Text_String8_View(&s8);
+  CHECK_TRUE(Text_View8_Length(sv8) == 4U);
+  TEXT_VIEW_TYPE(8) sl8 = Text_String8_Slice(&s8, 1U, 2U);
+  CHECK_TRUE(Text_View8_EqualCStr(sl8, "es"));
+  Text_String8_Destroy(&s8);
+
+  TEXT_STRING_TYPE(16) s16;
+  CHECK_STATUS(Text_String16_Init(&s16));
+  TEXT_VIEW_TYPE(16) v16 = Text_String16_View(&s16);
+  CHECK_TRUE(Text_View16_IsEmpty(v16));
+  Text_String16_Destroy(&s16);
+
+  TEXT_STRING_TYPE(32) s32;
+  CHECK_STATUS(Text_String32_Init(&s32));
+  TEXT_VIEW_TYPE(32) v32 = Text_String32_View(&s32);
+  CHECK_TRUE(Text_View32_IsEmpty(v32));
+  Text_String32_Destroy(&s32);
+
+  TEXT_VIEW_TYPE(8) v8 = Text_View8_FromCStr("hello world");
+  CHECK_TRUE(Text_View8_Validate(v8));
+  TEXT_VIEW_TYPE(8) v8Trim = Text_View8_Trim(v8);
+  CHECK_TRUE(Text_View8_Length(v8Trim) == 11U);
+
   return 0;
 }

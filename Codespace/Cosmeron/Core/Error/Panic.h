@@ -2,6 +2,7 @@
 
 #include "../Preprocessor/Compiling.inc"
 #include "../Preprocessor/Detect/OperationSystem.h"
+#include "../Preprocessor/Detect/Library.h"
 #include "Error.space"
 #include "Status.h"
 
@@ -19,11 +20,12 @@
 #define PANIC_STACKTRACE_PROTOTYPE                                             \
   static inline void PANIC_INTERNAL_FUNC(Stacktrace)(void)
 
+#define PANIC_NOW_PROTOTYPE                                                    \
+  static inline void PANIC_FUNC(Now)(const char *message)
+
 PANIC_TRIGGER_PROTOTYPE;
 PANIC_STACKTRACE_PROTOTYPE;
-/*
-inline void 
-*/
+PANIC_NOW_PROTOTYPE;
 #define PANIC(message)                                                         \
   PANIC_INTERNAL_FUNC(Trigger)((message), __FILE__, __LINE__, __func__)
 

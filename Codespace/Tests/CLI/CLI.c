@@ -9,6 +9,9 @@ static void direct(void) {
   assert(CLI_FUNC(Arguments_Count)(&arguments, "--tag") == 2);
   assert(CLI_FUNC(Arguments_StringAt)(&arguments, "--tag", 1, &value) == STATUS_CONST(SUCCESS) && !strcmp(value, "b"));
   assert(CLI_FUNC(Arguments_String)(&arguments, "-o", &value) == STATUS_CONST(SUCCESS) && !strcmp(value, "result"));
+  Text_TView8 viewVal;
+  assert(CLI_FUNC(Arguments_View)(&arguments, "-o", &viewVal) == STATUS_CONST(SUCCESS) && Text_View8_EqualCStr(viewVal, "result"));
+  assert(CLI_FUNC(Arguments_ViewAt)(&arguments, "--tag", 0, &viewVal) == STATUS_CONST(SUCCESS) && Text_View8_EqualCStr(viewVal, "a"));
   assert(CLI_FUNC(Arguments_U64)(&arguments, "--jobs", &number) == STATUS_CONST(SUCCESS) && number == 42);
   assert(CLI_FUNC(Arguments_I64)(&arguments, "--jobs", &signedNumber) == STATUS_CONST(SUCCESS) && signedNumber == 42);
   assert(CLI_FUNC(Arguments_F64)(&arguments, "--jobs", &real) == STATUS_CONST(SUCCESS) && real == 42);

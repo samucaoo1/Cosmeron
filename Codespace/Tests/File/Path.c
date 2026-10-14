@@ -39,5 +39,27 @@ int main(void) {
   OK(File_Path_Resolve(".", output, sizeof(output), &required)); assert(File_Path_IsAbsolute(output));
   assert(File_Path_Resolve("cosmeron-file-missing-xyz", output, sizeof(output), &required) == STATUS_CONST(NOT_FOUND));
   assert(File_Path_Join(NULL, "a", output, sizeof(output), &required) == STATUS_CONST(INVALID_ARGUMENT));
+
+  /* Test View-based operations */
+  Text_TView8 pView = Text_View8_FromCStr("/usr/local/bin/script.tar.gz");
+  assert(Text_View8_EqualCStr(File_Path_ViewName(pView), "script.tar.gz"));
+  assert(Text_View8_EqualCStr(File_Path_ViewExtension(pView), ".gz"));
+  assert(Text_View8_EqualCStr(File_Path_ViewStem(pView), "script.tar"));
+  assert(Text_View8_EqualCStr(File_Path_ViewParent(pView), "/usr/local/bin"));
+#ifdef _WIN32
+  assert(!File_Path_ViewIsAbsolute(pView));
+  assert(File_Path_ViewIsAbsolute(Text_View8_FromCStr("C:\\usr\\local\\bin\\script.tar.gz")));
+  assert(File_Path_ViewIsAbsolute(Text_View8_FromCStr("\\\\server\\share\\script.tar.gz")));
+#else
+  assert(File_Path_ViewIsAbsolute(pView));
+#endif
+
+  Text_TView8 dotGit = Text_View8_FromCStr(".gitignore");
+  assert(Text_View8_EqualCStr(File_Path_ViewName(dotGit), ".gitignore"));
+  assert(Text_View8_IsEmpty(File_Path_ViewExtension(dotGit)));
+  assert(Text_View8_EqualCStr(File_Path_ViewStem(dotGit), ".gitignore"));
+  assert(Text_View8_EqualCStr(File_Path_ViewParent(dotGit), "."));
+  assert(!File_Path_ViewIsAbsolute(dotGit));
+
   return 0;
 }

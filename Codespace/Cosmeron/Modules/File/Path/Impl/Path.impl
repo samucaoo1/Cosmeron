@@ -16,14 +16,91 @@ static inline size_t FILE_INS(RootLength)(const char *path) {
     return FILE_INS(Separator)(path[1]) && !FILE_INS(Separator)(path[2]) ? 2 : 1;
   return 0;
 }
+static inline size_t FILE_INS(ViewRootLength)(TEXT_VIEW_TYPE(8) path) {
+  if (path.data == NULL || path.size == 0U) return 0U;
+#ifdef _WIN32
+  if (path.size >= 2U &&
+      ((path.data[0] >= 'A' && path.data[0] <= 'Z') || (path.data[0] >= 'a' && path.data[0] <= 'z')) &&
+      path.data[1] == ':') {
+    return (path.size >= 3U && FILE_INS(Separator)(path.data[2])) ? 3U : 2U;
+  }
+  if (path.size >= 2U && FILE_INS(Separator)(path.data[0]) && FILE_INS(Separator)(path.data[1])) {
+    size_t p = 2U;
+    while (p < path.size && !FILE_INS(Separator)(path.data[p])) ++p;
+    if (p < path.size) ++p;
+    while (p < path.size && !FILE_INS(Separator)(path.data[p])) ++p;
+    return p;
+  }
+#endif
+  if (FILE_INS(Separator)(path.data[0])) {
+    return (path.size >= 2U && FILE_INS(Separator)(path.data[1]) &&
+            (path.size < 3U || !FILE_INS(Separator)(path.data[2]))) ? 2U : 1U;
+  }
+  return 0U;
+}
+
+FILE_PATH_VIEW_IS_ABSOLUTE_PROTOTYPE {
+  if (path.data == NULL || path.size == 0U) return false;
+#ifdef _WIN32
+  if (path.size >= 2U && FILE_INS(Separator)(path.data[0]) && FILE_INS(Separator)(path.data[1])) return true;
+  return FILE_INS(ViewRootLength)(path) == 3U && path.data[1] == ':';
+#else
+  return path.data[0] == '/';
+#endif
+}
+
 FILE_PATH_IS_ABSOLUTE_PROTOTYPE {
   if (!FILE_INS(PathValid)(path)) return false;
-#ifdef _WIN32
-  if (FILE_INS(Separator)(path[0]) && FILE_INS(Separator)(path[1])) return true;
-  return FILE_INS(RootLength)(path) == 3 && path[1] == ':';
-#else
-  return path[0] == '/';
-#endif
+  return FILE_FUNC(Path_ViewIsAbsolute)(TEXT_VIEW_FUNC(8, FromCStr)(path));
+}
+
+FILE_PATH_VIEW_NAME_PROTOTYPE {
+  if (path.data == NULL || path.size == 0U) return TEXT_VIEW_FUNC(8, Empty)();
+  size_t start = 0U;
+  for (size_t i = 0U; i < path.size; ++i) {
+    if (FILE_INS(Separator)(path.data[i])) {
+      start = i + 1U;
+    }
+  }
+  return TEXT_VIEW_FUNC(8, Slice)(path, start, path.size - start);
+}
+
+FILE_PATH_VIEW_EXTENSION_PROTOTYPE {
+  TEXT_VIEW_TYPE(8) name = FILE_FUNC(Path_ViewName)(path);
+  if (name.size == 0U || TEXT_VIEW_FUNC(8, EqualCStr)(name, "..") ||
+      TEXT_VIEW_FUNC(8, EqualCStr)(name, ".")) {
+    return TEXT_VIEW_FUNC(8, Empty)();
+  }
+  for (size_t i = name.size; i > 0U; --i) {
+    if (name.data[i - 1U] == '.' && i - 1U > 0U) {
+      return TEXT_VIEW_FUNC(8, Slice)(name, i - 1U, name.size - (i - 1U));
+    }
+  }
+  return TEXT_VIEW_FUNC(8, Empty)();
+}
+
+FILE_PATH_VIEW_STEM_PROTOTYPE {
+  TEXT_VIEW_TYPE(8) name = FILE_FUNC(Path_ViewName)(path);
+  TEXT_VIEW_TYPE(8) ext = FILE_FUNC(Path_ViewExtension)(path);
+  return TEXT_VIEW_FUNC(8, Slice)(name, 0U, name.size - ext.size);
+}
+
+FILE_PATH_VIEW_PARENT_PROTOTYPE {
+  if (path.data == NULL || path.size == 0U) {
+    return TEXT_VIEW_FUNC(8, FromCStr)(".");
+  }
+  size_t length = path.size;
+  size_t root = FILE_INS(ViewRootLength)(path);
+  while (length > root && FILE_INS(Separator)(path.data[length - 1U])) --length;
+  if (length <= root) {
+    return TEXT_VIEW_FUNC(8, Slice)(path, 0U, root);
+  }
+  while (length > root && !FILE_INS(Separator)(path.data[length - 1U])) --length;
+  while (length > root && FILE_INS(Separator)(path.data[length - 1U])) --length;
+  if (length == 0U) {
+    return TEXT_VIEW_FUNC(8, FromCStr)(".");
+  }
+  return TEXT_VIEW_FUNC(8, Slice)(path, 0U, length);
 }
 FILE_PATH_NAME_PROTOTYPE {
   const char *name;
@@ -88,15 +165,11 @@ FILE_PATH_NORMALIZE_PROTOTYPE {
   free(normal); return s;
 }
 FILE_PATH_PARENT_PROTOTYPE {
-  size_t length, root;
   if (!FILE_INS(PathValid)(path)) return STATUS_CONST(INVALID_ARGUMENT);
-  length = strlen(path); root = FILE_INS(RootLength)(path);
-  while (length > root && FILE_INS(Separator)(path[length - 1])) --length;
-  if (length <= root) return FILE_INS(Output)(path, root, output, capacity, outRequired);
-  while (length > root && !FILE_INS(Separator)(path[length - 1])) --length;
-  while (length > root && FILE_INS(Separator)(path[length - 1])) --length;
-  if (!length) return FILE_INS(Output)(".", 1, output, capacity, outRequired);
-  return FILE_INS(Output)(path, length, output, capacity, outRequired);
+  TEXT_VIEW_TYPE(8) parent =
+      FILE_FUNC(Path_ViewParent)(TEXT_VIEW_FUNC(8, FromCStr)(path));
+  return FILE_INS(Output)(parent.data, parent.size, output, capacity,
+                          outRequired);
 }
 FILE_PATH_RESOLVE_PROTOTYPE {
   OPSTATUS s;

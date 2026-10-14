@@ -52,6 +52,15 @@ echo "[portable] Container/MultiTU"
 )
 run_suite Text IncludeAll Text Namespace Unicode AllFunctions
 
+run_suite Logging IncludeAll Logging Namespace FunctionTableOff
+echo "[portable] Logging/MultiTU"
+(
+  cd Codespace/Tests/Logging
+  $CC -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L \
+    MultiTU_A.c MultiTU_B.c MultiTU_Main.c -o ../../../.build-portable/Logging_MultiTU
+  execute ../../../.build-portable/Logging_MultiTU
+)
+
 run_suite GUI Surface Interaction Editor Render Containers Failure InputText Window WindowNative Advanced IncludeAll Namespace FunctionTableOff
 (
   cd Codespace/Tests/GUI
