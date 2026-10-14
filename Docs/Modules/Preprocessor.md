@@ -1569,6 +1569,70 @@ None.
 
 ---
 
+# C standard library detection
+
+Header: `Cosmeron/Core/Preprocessor/Detect/Library.h`
+
+| Flag | Target C runtime library |
+| --- | --- |
+| `LIBC_GLIBC` | GNU C Library (glibc) |
+| `LIBC_MUSL` | musl libc (standard on Alpine, Void musl) |
+| `LIBC_BIONIC` | Android Bionic libc |
+| `LIBC_MSVC` | Microsoft Universal CRT / MSVCRT |
+| `LIBC_APPLE` | Apple Libc (macOS / iOS / Darwin) |
+| `LIBC_BSD` | BSD libc (FreeBSD, OpenBSD, NetBSD, DragonFly) |
+| `LIBC_UCLIBC` | uClibc / uClibc-ng |
+| `LIBC_NEWLIB` | Red Hat Newlib (embedded / bare-metal) |
+| `LIBC_WASI` | WebAssembly System Interface libc (wasi-libc) |
+| `LIBC_EMSCRIPTEN` | Emscripten libc |
+| `LIBC_KNOWN` | Boolean aggregate indicating any recognized libc |
+
+Aliases prefixed with `LIBRARY_*` (`LIBRARY_GLIBC`, `LIBRARY_MUSL`, etc.) are also defined for convenience.
+
+### Syntax
+
+#### Macro form
+
+```c
+#if LIBC_GLIBC
+/* glibc specific routines */
+#elif LIBC_MUSL
+/* musl specific routines */
+#endif
+```
+
+#### Direct form
+
+Platform macros such as `__GLIBC__` or `__BIONIC__` may be tested manually, but `LIBC_*` provides normalized mutually exclusive flags across all supported toolchains.
+
+---
+
+### Parameters
+
+None.
+
+### Return value
+
+Numerical 0/1 flags and Boolean aggregate expressions.
+
+### Remarks
+
+- Because musl intentionally does not export a vendor macro, `LIBC_MUSL` is identified on Linux targets when glibc, uClibc, Bionic, and Newlib are absent, or when `__MUSL__` is passed.
+- Detection is mutually exclusive across standard hosted C environments.
+
+### Example
+
+```c
+#include "Cosmeron/Core/Preprocessor/Detect/Library.h"
+#if LIBC_GLIBC
+/* GNU extensions available */
+#elif LIBC_MUSL
+/* Standard musl environment */
+#endif
+```
+
+---
+
 # Inclusion diagnostics
 
 The `Compiling.inc` file can emit an inclusion-time compiler message when `SHOW_INCLUDE_BUILD_MESSAGE` is defined.

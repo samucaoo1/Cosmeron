@@ -3,7 +3,7 @@
 #if OS_WINDOWS
 #include <windows.h>
 #include "StacktraceWindows.inc"
-#elif OS_MAC || (OS_LINUX && defined(__GLIBC__))
+#elif OS_MAC || (OS_LINUX && LIBC_GLIBC)
 /* execinfo/backtrace may need a separate link library on BSD and musl.
  * Retain it only where it is known to satisfy the zero-link policy. */
 #include <execinfo.h>

@@ -9,5 +9,6 @@
 #include "../../Cosmeron/Core/Preprocessor/Detect/Compiler.h"
 #include "../../Cosmeron/Core/Preprocessor/Detect/OperationSystem.h"
 #include "../../Cosmeron/Core/Preprocessor/Detect/Processor.h"
+#include "../../Cosmeron/Core/Preprocessor/Detect/Library.h"
 
 int main(void) { return 0; }

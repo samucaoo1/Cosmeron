@@ -2,6 +2,7 @@
 
 #include "../Preprocessor/Compiling.inc"
 #include "../Preprocessor/Detect/OperationSystem.h"
+#include "../Preprocessor/Detect/Library.h"
 #include "Error.space"
 #include "Status.h"
 

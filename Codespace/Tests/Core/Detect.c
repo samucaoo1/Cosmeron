@@ -1,6 +1,7 @@
 #include "../../Cosmeron/Core/Preprocessor/Detect/Compiler.h"
 #include "../../Cosmeron/Core/Preprocessor/Detect/OperationSystem.h"
 #include "../../Cosmeron/Core/Preprocessor/Detect/Processor.h"
+#include "../../Cosmeron/Core/Preprocessor/Detect/Library.h"
 
 #if (COMPILER_CLANG + COMPILER_GCC + COMPILER_MSVC + COMPILER_INTEL) > 1
 #error "Primary compiler-family detection must be mutually exclusive."
@@ -15,6 +16,11 @@
 #if (PROCESSOR_X86 + PROCESSOR_X64 + PROCESSOR_ARM + PROCESSOR_ARM64 +        \
      PROCESSOR_RISCV) > 1
 #error "Processor detection must identify at most one architecture."
+#endif
+
+#if (LIBC_GLIBC + LIBC_MUSL + LIBC_BIONIC + LIBC_MSVC + LIBC_APPLE +          \
+     LIBC_BSD + LIBC_UCLIBC + LIBC_NEWLIB + LIBC_WASI + LIBC_EMSCRIPTEN) > 1
+#error "C library detection must identify at most one target implementation."
 #endif
 
 #if COMPILER_KNOWN !=                                                        \
@@ -33,6 +39,12 @@
     (PROCESSOR_X86 || PROCESSOR_X64 || PROCESSOR_ARM || PROCESSOR_ARM64 ||   \
      PROCESSOR_RISCV)
 #error "PROCESSOR_KNOWN must describe, not constrain, processor detection."
+#endif
+
+#if LIBC_KNOWN !=                                                            \
+    (LIBC_GLIBC || LIBC_MUSL || LIBC_BIONIC || LIBC_MSVC || LIBC_APPLE ||    \
+     LIBC_BSD || LIBC_UCLIBC || LIBC_NEWLIB || LIBC_WASI || LIBC_EMSCRIPTEN)
+#error "LIBC_KNOWN must describe, not constrain, library detection."
 #endif
 
 #if OS_UNIX !=                                                               \
@@ -81,6 +93,20 @@ int main(void) {
       !DETECT_BOOLEAN_VALUE(PROCESSOR_RISCV) ||
       !DETECT_BOOLEAN_VALUE(PROCESSOR_KNOWN))
     return 3;
+
+  if (!DETECT_BOOLEAN_VALUE(LIBC_GLIBC) ||
+      !DETECT_BOOLEAN_VALUE(LIBC_MUSL) ||
+      !DETECT_BOOLEAN_VALUE(LIBC_BIONIC) ||
+      !DETECT_BOOLEAN_VALUE(LIBC_MSVC) ||
+      !DETECT_BOOLEAN_VALUE(LIBC_APPLE) ||
+      !DETECT_BOOLEAN_VALUE(LIBC_BSD) ||
+      !DETECT_BOOLEAN_VALUE(LIBC_UCLIBC) ||
+      !DETECT_BOOLEAN_VALUE(LIBC_NEWLIB) ||
+      !DETECT_BOOLEAN_VALUE(LIBC_WASI) ||
+      !DETECT_BOOLEAN_VALUE(LIBC_EMSCRIPTEN) ||
+      !DETECT_BOOLEAN_VALUE(LIBC_KNOWN) ||
+      !DETECT_BOOLEAN_VALUE(LIBRARY_KNOWN))
+    return 4;
 
   /*
    * Deliberately no assertion that *_KNOWN must be true.
