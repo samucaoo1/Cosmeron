@@ -1458,8 +1458,9 @@ Header: `Cosmeron/Core/Preprocessor/Detect/OperationSystem.h`
 | `OS_WASM` | WebAssembly (`__wasm__`, `__wasm32__`, `__wasm64__`, or WASI/Emscripten) |
 | `OS_EMSCRIPTEN` | Emscripten SDK (`__EMSCRIPTEN__`) |
 | `OS_WASI` | WebAssembly System Interface (`__wasi__`) |
+| `OS_REDOX` | Redox OS microkernel (`__redox__`) |
 | `OS_BSD` | Any BSD family (`OS_FREEBSD`, `OS_OPENBSD`, `OS_NETBSD`, `OS_DRAGONFLY`) |
-| `OS_UNIX` | Unix-like systems (`OS_LINUX`, `OS_MAC`, `OS_BSD`, `OS_SOLARIS`, `OS_AIX`, `OS_HAIKU`, `OS_QNX`, `OS_HURD`, `OS_CYGWIN`) |
+| `OS_UNIX` | Unix-like systems (`OS_LINUX`, `OS_MAC`, `OS_BSD`, `OS_SOLARIS`, `OS_AIX`, `OS_HAIKU`, `OS_QNX`, `OS_HURD`, `OS_CYGWIN`, `OS_REDOX`) |
 | `OS_POSIX` | POSIX-compatible platforms (`OS_UNIX`, `OS_ANDROID`, `OS_OHOS`) |
 | `OS_KNOWN` | Any recognized operating system target |
 
@@ -1585,6 +1586,7 @@ Header: `Cosmeron/Core/Preprocessor/Detect/Library.h`
 | `LIBC_NEWLIB` | Red Hat Newlib (embedded / bare-metal) |
 | `LIBC_WASI` | WebAssembly System Interface libc (wasi-libc) |
 | `LIBC_EMSCRIPTEN` | Emscripten libc |
+| `LIBC_RELIBC` | relibc (Redox OS C standard library) |
 | `LIBC_KNOWN` | Boolean aggregate indicating any recognized libc |
 
 Aliases prefixed with `LIBRARY_*` (`LIBRARY_GLIBC`, `LIBRARY_MUSL`, etc.) are also defined for convenience.

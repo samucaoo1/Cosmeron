@@ -124,7 +124,7 @@ jobs:
         with:
           usesh: true
           prepare: |
-            pkg install -y build-essential || pkg install -y developer/gcc-11 || true
+            pkg install --accept build-essential || pkg install --accept developer/gcc-11 || true
           run: |
             set -eu
             export PATH="/usr/gnu/bin:/usr/bin:$PATH"
@@ -222,7 +222,28 @@ jobs:
           sh MP3ParityFixtures.sh
 
   # =========================================================================
-  # 9. Informational summary gate (non-blocking)
+  # 9. Redox OS (microkernel / relibc) compatibility probe
+  # =========================================================================
+  redox-os:
+    name: Experimental / Redox OS (relibc probe)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Verify Redox OS and relibc macro discrimination
+        run: |
+          set -eu
+          echo "### Probing Redox OS native C11 expectations ###"
+          gcc -std=c11 -Wall -Wextra -Wpedantic -Werror \
+            -U__linux__ -U__linux -U__gnu_linux__ -Ulinux -D__redox__=1 \
+            -D_POSIX_C_SOURCE=200809L \
+            Codespace/Tests/Core/Detect.c -o /dev/null
+          echo "Redox OS detection probe succeeded."
+
+  # =========================================================================
+  # 10. Informational summary gate (non-blocking)
   # =========================================================================
   gate:
     name: Experimental / Summary
@@ -236,6 +257,7 @@ jobs:
       - android-ndk
       - ios-cross
       - audio-parity
+      - redox-os
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

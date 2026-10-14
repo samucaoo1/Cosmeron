@@ -9,7 +9,7 @@
 
 #if (OS_WINDOWS + OS_MAC + OS_LINUX + OS_FREEBSD + OS_OPENBSD + OS_NETBSD + \
      OS_DRAGONFLY + OS_SOLARIS + OS_AIX + OS_HAIKU + OS_QNX + OS_HURD +      \
-     OS_CYGWIN + OS_WASM) > 1
+     OS_CYGWIN + OS_WASM + OS_REDOX) > 1
 #error "Operating-system detection must identify at most one supported target."
 #endif
 
@@ -19,7 +19,8 @@
 #endif
 
 #if (LIBC_GLIBC + LIBC_MUSL + LIBC_BIONIC + LIBC_MSVC + LIBC_APPLE +          \
-     LIBC_BSD + LIBC_UCLIBC + LIBC_NEWLIB + LIBC_WASI + LIBC_EMSCRIPTEN) > 1
+     LIBC_BSD + LIBC_UCLIBC + LIBC_NEWLIB + LIBC_WASI + LIBC_EMSCRIPTEN +     \
+     LIBC_RELIBC) > 1
 #error "C library detection must identify at most one target implementation."
 #endif
 
@@ -31,7 +32,7 @@
 #if OS_KNOWN !=                                                              \
     (OS_WINDOWS || OS_MAC || OS_LINUX || OS_BSD || OS_OHOS || OS_ANDROID ||   \
      OS_SOLARIS || OS_AIX || OS_HAIKU || OS_QNX || OS_HURD || OS_CYGWIN ||    \
-     OS_WASM)
+     OS_WASM || OS_REDOX)
 #error "OS_KNOWN must describe, not constrain, operating-system detection."
 #endif
 
@@ -43,13 +44,14 @@
 
 #if LIBC_KNOWN !=                                                            \
     (LIBC_GLIBC || LIBC_MUSL || LIBC_BIONIC || LIBC_MSVC || LIBC_APPLE ||    \
-     LIBC_BSD || LIBC_UCLIBC || LIBC_NEWLIB || LIBC_WASI || LIBC_EMSCRIPTEN)
+     LIBC_BSD || LIBC_UCLIBC || LIBC_NEWLIB || LIBC_WASI || LIBC_EMSCRIPTEN || \
+     LIBC_RELIBC)
 #error "LIBC_KNOWN must describe, not constrain, library detection."
 #endif
 
 #if OS_UNIX !=                                                               \
     (OS_LINUX || OS_MAC || OS_BSD || OS_SOLARIS || OS_AIX || OS_HAIKU ||      \
-     OS_QNX || OS_HURD || OS_CYGWIN)
+     OS_QNX || OS_HURD || OS_CYGWIN || OS_REDOX)
 #error "OS_UNIX classification is inconsistent."
 #endif
 
@@ -82,6 +84,7 @@ int main(void) {
       !DETECT_BOOLEAN_VALUE(OS_HURD) || !DETECT_BOOLEAN_VALUE(OS_CYGWIN) ||
       !DETECT_BOOLEAN_VALUE(OS_WASM) || !DETECT_BOOLEAN_VALUE(OS_EMSCRIPTEN) ||
       !DETECT_BOOLEAN_VALUE(OS_WASI) ||
+      !DETECT_BOOLEAN_VALUE(OS_REDOX) ||
       !DETECT_BOOLEAN_VALUE(OS_UNIX) || !DETECT_BOOLEAN_VALUE(OS_POSIX) ||
       !DETECT_BOOLEAN_VALUE(OS_KNOWN))
     return 2;
@@ -104,6 +107,8 @@ int main(void) {
       !DETECT_BOOLEAN_VALUE(LIBC_NEWLIB) ||
       !DETECT_BOOLEAN_VALUE(LIBC_WASI) ||
       !DETECT_BOOLEAN_VALUE(LIBC_EMSCRIPTEN) ||
+      !DETECT_BOOLEAN_VALUE(LIBC_RELIBC) ||
+      !DETECT_BOOLEAN_VALUE(LIBRARY_RELIBC) ||
       !DETECT_BOOLEAN_VALUE(LIBC_KNOWN) ||
       !DETECT_BOOLEAN_VALUE(LIBRARY_KNOWN))
     return 4;

@@ -59,8 +59,15 @@
 #define LIBC_EMSCRIPTEN 0
 #endif
 
+#if defined(__relibc__) || (OS_REDOX && !LIBC_MSVC && !LIBC_APPLE && !LIBC_BSD)
+#define LIBC_RELIBC 1
+#else
+#define LIBC_RELIBC 0
+#endif
+
 #if defined(__GLIBC__) && !LIBC_UCLIBC && !LIBC_NEWLIB && !LIBC_MSVC && \
-    !LIBC_APPLE && !LIBC_BSD && !LIBC_BIONIC && !LIBC_WASI && !LIBC_EMSCRIPTEN
+    !LIBC_APPLE && !LIBC_BSD && !LIBC_BIONIC && !LIBC_WASI && !LIBC_EMSCRIPTEN && \
+    !LIBC_RELIBC
 #define LIBC_GLIBC 1
 #else
 #define LIBC_GLIBC 0
@@ -73,7 +80,7 @@
  */
 #if ((OS_LINUX && !LIBC_GLIBC && !LIBC_UCLIBC && !LIBC_BIONIC && \
       !LIBC_NEWLIB && !LIBC_MSVC && !LIBC_APPLE && !LIBC_BSD && \
-      !LIBC_WASI && !LIBC_EMSCRIPTEN)) ||                       \
+      !LIBC_WASI && !LIBC_EMSCRIPTEN && !LIBC_RELIBC)) ||       \
     defined(__MUSL__) || defined(__musl__)
 #define LIBC_MUSL 1
 #else
@@ -82,7 +89,8 @@
 
 #define LIBC_KNOWN                                                            \
   (LIBC_GLIBC || LIBC_MUSL || LIBC_BIONIC || LIBC_MSVC || LIBC_APPLE ||       \
-   LIBC_BSD || LIBC_UCLIBC || LIBC_NEWLIB || LIBC_WASI || LIBC_EMSCRIPTEN)
+   LIBC_BSD || LIBC_UCLIBC || LIBC_NEWLIB || LIBC_WASI || LIBC_EMSCRIPTEN || \
+   LIBC_RELIBC)
 
 /* Convenience aliases matching the header name */
 #define LIBRARY_GLIBC LIBC_GLIBC
@@ -95,6 +103,7 @@
 #define LIBRARY_NEWLIB LIBC_NEWLIB
 #define LIBRARY_WASI LIBC_WASI
 #define LIBRARY_EMSCRIPTEN LIBC_EMSCRIPTEN
+#define LIBRARY_RELIBC LIBC_RELIBC
 #define LIBRARY_KNOWN LIBC_KNOWN
 
 /* EOF */

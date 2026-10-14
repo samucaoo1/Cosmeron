@@ -128,13 +128,19 @@
 #define OS_WASM 0
 #endif
 
+#if defined(__redox__)
+#define OS_REDOX 1
+#else
+#define OS_REDOX 0
+#endif
+
 #define OS_BSD (OS_FREEBSD || OS_OPENBSD || OS_NETBSD || OS_DRAGONFLY)
 #define OS_UNIX                                                               \
   (OS_LINUX || OS_MAC || OS_BSD || OS_SOLARIS || OS_AIX || OS_HAIKU ||      \
-   OS_QNX || OS_HURD || OS_CYGWIN)
+   OS_QNX || OS_HURD || OS_CYGWIN || OS_REDOX)
 #define OS_POSIX (OS_UNIX || OS_ANDROID || OS_OHOS)
 #define OS_KNOWN                                                              \
   (OS_WINDOWS || OS_MAC || OS_LINUX || OS_BSD || OS_OHOS || OS_ANDROID ||     \
    OS_SOLARIS || OS_AIX || OS_HAIKU || OS_QNX || OS_HURD || OS_CYGWIN ||      \
-   OS_WASM)
+   OS_WASM || OS_REDOX)
 /* EOF */
