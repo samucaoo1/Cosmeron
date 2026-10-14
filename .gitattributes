@@ -1,3 +1,8 @@
 # Keep Entropy and source diffs stable across platforms.
 # Line-ending normalization must not turn a checkout into thousands of changes.
 Codespace/Cosmeron/** text eol=lf
+
+# GitHub Linguist language overrides
+*.inc linguist-language=C
+*.impl linguist-language=C
+*.space linguist-language=C
