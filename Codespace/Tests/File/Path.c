@@ -46,7 +46,13 @@ int main(void) {
   assert(Text_View8_EqualCStr(File_Path_ViewExtension(pView), ".gz"));
   assert(Text_View8_EqualCStr(File_Path_ViewStem(pView), "script.tar"));
   assert(Text_View8_EqualCStr(File_Path_ViewParent(pView), "/usr/local/bin"));
+#ifdef _WIN32
+  assert(!File_Path_ViewIsAbsolute(pView));
+  assert(File_Path_ViewIsAbsolute(Text_View8_FromCStr("C:\\usr\\local\\bin\\script.tar.gz")));
+  assert(File_Path_ViewIsAbsolute(Text_View8_FromCStr("\\\\server\\share\\script.tar.gz")));
+#else
   assert(File_Path_ViewIsAbsolute(pView));
+#endif
 
   Text_TView8 dotGit = Text_View8_FromCStr(".gitignore");
   assert(Text_View8_EqualCStr(File_Path_ViewName(dotGit), ".gitignore"));

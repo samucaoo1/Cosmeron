@@ -954,7 +954,7 @@ TEXT_FORMAT_VARIADIC_PROTOTYPE {
     }
     case 'c': {
       if (lenMod == LEN_L) {
-        wint_t wc = va_arg(arguments, wint_t);
+        wint_t wc = (wint_t)va_arg(arguments, int);
         unsigned char utf8Buf[8];
         size_t utf8Units = 0U;
         if (TEXT_UTF8_FUNC(Encode)((TEXT_TYPE(TChar32))wc, utf8Buf,
