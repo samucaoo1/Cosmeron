@@ -1,0 +1,486 @@
+#pragma once
+
+PARSING_CURSOR_INIT_READ_PROTOTYPE {
+  if (!cursor || (!buffer && size > 0))
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  cursor->data = (uint8_t *)(uintptr_t)buffer;
+  cursor->capacity = size;
+  cursor->offset = 0;
+  cursor->bitOffset = 0;
+  cursor->isReadOnly = true;
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_CURSOR_INIT_WRITE_PROTOTYPE {
+  if (!cursor || (!buffer && capacity > 0))
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  cursor->data = (uint8_t *)buffer;
+  cursor->capacity = capacity;
+  cursor->offset = 0;
+  cursor->bitOffset = 0;
+  cursor->isReadOnly = false;
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_CURSOR_REMAINING_PROTOTYPE {
+  if (!cursor || cursor->offset >= cursor->capacity)
+    return 0;
+  return cursor->capacity - cursor->offset;
+}
+
+PARSING_CURSOR_REMAINING_BITS_PROTOTYPE {
+  size_t bytes;
+  if (!cursor || cursor->offset >= cursor->capacity)
+    return 0;
+  bytes = cursor->capacity - cursor->offset;
+  return (bytes * 8U) - (size_t)cursor->bitOffset;
+}
+
+PARSING_CURSOR_POSITION_PROTOTYPE {
+  return cursor ? cursor->offset : 0;
+}
+
+PARSING_CURSOR_BIT_POSITION_PROTOTYPE {
+  return cursor ? cursor->bitOffset : 0;
+}
+
+PARSING_CURSOR_CAPACITY_PROTOTYPE {
+  return cursor ? cursor->capacity : 0;
+}
+
+PARSING_CURSOR_IS_AT_END_PROTOTYPE {
+  return !cursor || (cursor->offset >= cursor->capacity && cursor->bitOffset == 0);
+}
+
+PARSING_CURSOR_IS_READ_ONLY_PROTOTYPE {
+  return !cursor || cursor->isReadOnly;
+}
+
+PARSING_CURSOR_HAS_REMAINING_PROTOTYPE {
+  return cursor && (PARSING_FUNC(Cursor_Remaining)(cursor) >= count);
+}
+
+PARSING_CURSOR_HAS_REMAINING_BITS_PROTOTYPE {
+  return cursor && (PARSING_FUNC(Cursor_RemainingBits)(cursor) >= bitCount);
+}
+
+PARSING_CURSOR_DATA_PROTOTYPE {
+  return cursor ? (const void *)cursor->data : NULL;
+}
+
+PARSING_CURSOR_CURRENT_PROTOTYPE {
+  if (!cursor || !cursor->data || cursor->offset >= cursor->capacity)
+    return NULL;
+  return (const void *)(cursor->data + cursor->offset);
+}
+
+PARSING_CURSOR_ALIGN_TO_BYTE_PROTOTYPE {
+  if (!cursor)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (cursor->bitOffset > 0) {
+    if (cursor->offset >= cursor->capacity)
+      return STATUS_CONST(OUT_OF_RANGE);
+    cursor->offset++;
+    cursor->bitOffset = 0;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_CURSOR_SEEK_PROTOTYPE {
+  if (!cursor)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  cursor->bitOffset = 0;
+
+  switch (origin) {
+  case PARSING_CONST(CURSOR_SEEK_BEGIN):
+    if (offset < 0 || (uint64_t)offset > cursor->capacity)
+      return STATUS_CONST(OUT_OF_RANGE);
+    cursor->offset = (size_t)offset;
+    return STATUS_CONST(SUCCESS);
+
+  case PARSING_CONST(CURSOR_SEEK_CURRENT):
+    if (offset < 0) {
+      size_t backward = (size_t)(-offset);
+      if (backward > cursor->offset)
+        return STATUS_CONST(OUT_OF_RANGE);
+      cursor->offset -= backward;
+    } else {
+      size_t forward = (size_t)offset;
+      if (forward > cursor->capacity - cursor->offset)
+        return STATUS_CONST(OUT_OF_RANGE);
+      cursor->offset += forward;
+    }
+    return STATUS_CONST(SUCCESS);
+
+  case PARSING_CONST(CURSOR_SEEK_END):
+    if (offset > 0)
+      return STATUS_CONST(OUT_OF_RANGE);
+    {
+      size_t backward = (size_t)(-offset);
+      if (backward > cursor->capacity)
+        return STATUS_CONST(OUT_OF_RANGE);
+      cursor->offset = cursor->capacity - backward;
+    }
+    return STATUS_CONST(SUCCESS);
+
+  default:
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+}
+
+PARSING_CURSOR_SKIP_PROTOTYPE {
+  OPSTATUS status;
+  if (!cursor)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  status = PARSING_FUNC(Cursor_AlignToByte)(cursor);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  if (count > PARSING_FUNC(Cursor_Remaining)(cursor))
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  cursor->offset += count;
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_CURSOR_REWIND_PROTOTYPE {
+  if (!cursor)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  cursor->offset = 0;
+  cursor->bitOffset = 0;
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_CURSOR_SLICE_PROTOTYPE {
+  if (!cursor || !outSubCursor)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (cursor->bitOffset != 0)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (size > PARSING_FUNC(Cursor_Remaining)(cursor))
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  outSubCursor->data = cursor->data ? (cursor->data + cursor->offset) : NULL;
+  outSubCursor->capacity = size;
+  outSubCursor->offset = 0;
+  outSubCursor->bitOffset = 0;
+  outSubCursor->isReadOnly = cursor->isReadOnly;
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_CURSOR_READ_SLICE_PROTOTYPE {
+  OPSTATUS status = PARSING_FUNC(Cursor_Slice)(cursor, size, outSubCursor);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  cursor->offset += size;
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_CURSOR_READ_BYTES_PROTOTYPE {
+  OPSTATUS status;
+  if (!cursor || (!destination && size > 0))
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  status = PARSING_FUNC(Cursor_AlignToByte)(cursor);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  if (size > PARSING_FUNC(Cursor_Remaining)(cursor))
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  if (size > 0)
+    memcpy(destination, cursor->data + cursor->offset, size);
+  cursor->offset += size;
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_CURSOR_PEEK_BYTES_PROTOTYPE {
+  if (!cursor || (!destination && size > 0))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (cursor->bitOffset != 0)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (size > PARSING_FUNC(Cursor_Remaining)(cursor))
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  if (size > 0)
+    memcpy(destination, cursor->data + cursor->offset, size);
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_CURSOR_READ_BITS_PROTOTYPE {
+  uint64_t result = 0;
+  if (!cursor || !outValue || bitCount == 0 || bitCount > 64U)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (!PARSING_FUNC(Cursor_HasRemainingBits)(cursor, bitCount))
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  for (uint8_t i = 0; i < bitCount; ++i) {
+    uint8_t byteVal = cursor->data[cursor->offset];
+    uint8_t bit = (uint8_t)((byteVal >> (7U - cursor->bitOffset)) & 1U);
+    result = (result << 1U) | (uint64_t)bit;
+
+    cursor->bitOffset++;
+    if (cursor->bitOffset == 8U) {
+      cursor->offset++;
+      cursor->bitOffset = 0;
+    }
+  }
+
+  *outValue = result;
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_CURSOR_WRITE_BITS_PROTOTYPE {
+  if (!cursor || bitCount == 0 || bitCount > 64U)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (cursor->isReadOnly)
+    return STATUS_CONST(NOT_SUPPORTED);
+
+  if (!PARSING_FUNC(Cursor_HasRemainingBits)(cursor, bitCount))
+    return STATUS_CONST(INSUFFICIENT_SPACE);
+
+  for (uint8_t i = 0; i < bitCount; ++i) {
+    uint8_t shift = (uint8_t)(bitCount - 1U - i);
+    uint8_t bit = (uint8_t)((value >> shift) & 1U);
+
+    if (cursor->bitOffset == 0)
+      cursor->data[cursor->offset] = 0;
+
+    cursor->data[cursor->offset] |= (uint8_t)(bit << (7U - cursor->bitOffset));
+
+    cursor->bitOffset++;
+    if (cursor->bitOffset == 8U) {
+      cursor->offset++;
+      cursor->bitOffset = 0;
+    }
+  }
+
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_CURSOR_WRITE_BYTES_PROTOTYPE {
+  OPSTATUS status;
+  if (!cursor || (!source && size > 0))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (cursor->isReadOnly)
+    return STATUS_CONST(NOT_SUPPORTED);
+
+  status = PARSING_FUNC(Cursor_AlignToByte)(cursor);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  if (size > PARSING_FUNC(Cursor_Remaining)(cursor))
+    return STATUS_CONST(INSUFFICIENT_SPACE);
+
+  if (size > 0)
+    memcpy(cursor->data + cursor->offset, source, size);
+  cursor->offset += size;
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_CURSOR_READ_UINT8_PROTOTYPE {
+  OPSTATUS status;
+  if (!cursor || !outValue)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  status = PARSING_FUNC(Cursor_AlignToByte)(cursor);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  if (cursor->offset >= cursor->capacity)
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  *outValue = cursor->data[cursor->offset++];
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_CURSOR_READ_INT8_PROTOTYPE {
+  uint8_t rawVal = 0;
+  OPSTATUS status;
+  if (!outValue)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  status = PARSING_FUNC(Cursor_ReadUInt8)(cursor, &rawVal);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  *outValue = (int8_t)rawVal;
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_CURSOR_PEEK_UINT8_PROTOTYPE {
+  if (!cursor || !outValue)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (cursor->bitOffset != 0)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (cursor->offset >= cursor->capacity)
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  *outValue = cursor->data[cursor->offset];
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_CURSOR_WRITE_UINT8_PROTOTYPE {
+  OPSTATUS status;
+  if (!cursor)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (cursor->isReadOnly)
+    return STATUS_CONST(NOT_SUPPORTED);
+
+  status = PARSING_FUNC(Cursor_AlignToByte)(cursor);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  if (cursor->offset >= cursor->capacity)
+    return STATUS_CONST(INSUFFICIENT_SPACE);
+
+  cursor->data[cursor->offset++] = value;
+  return STATUS_CONST(SUCCESS);
+}
+
+PARSING_CURSOR_WRITE_INT8_PROTOTYPE {
+  return PARSING_FUNC(Cursor_WriteUInt8)(cursor, (uint8_t)value);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Implementation of multi-byte scalar generative macros                      */
+/* -------------------------------------------------------------------------- */
+
+#define PARSING_CURSOR_READ_UINT_LE_IMPLEMENT(UTYPE, SUFFIX)                   \
+  PARSING_CURSOR_READ_UINT_LE_PROTOTYPE(UTYPE, SUFFIX) {                       \
+    const uint8_t *b;                                                          \
+    UTYPE val = 0;                                                             \
+    if (!cursor || !outValue)                                                  \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (PARSING_FUNC(Cursor_AlignToByte)(cursor) != STATUS_CONST(SUCCESS))      \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    if (PARSING_FUNC(Cursor_Remaining)(cursor) < sizeof(UTYPE))                \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    b = cursor->data + cursor->offset;                                         \
+    for (size_t i = 0; i < sizeof(UTYPE); ++i) {                              \
+      val |= ((UTYPE)b[i]) << (i * 8U);                                        \
+    }                                                                          \
+    *outValue = val;                                                           \
+    cursor->offset += sizeof(UTYPE);                                           \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define PARSING_CURSOR_READ_UINT_BE_IMPLEMENT(UTYPE, SUFFIX)                   \
+  PARSING_CURSOR_READ_UINT_BE_PROTOTYPE(UTYPE, SUFFIX) {                       \
+    const uint8_t *b;                                                          \
+    UTYPE val = 0;                                                             \
+    if (!cursor || !outValue)                                                  \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (PARSING_FUNC(Cursor_AlignToByte)(cursor) != STATUS_CONST(SUCCESS))      \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    if (PARSING_FUNC(Cursor_Remaining)(cursor) < sizeof(UTYPE))                \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    b = cursor->data + cursor->offset;                                         \
+    for (size_t i = 0; i < sizeof(UTYPE); ++i) {                              \
+      val = (UTYPE)((val << 8U) | (UTYPE)b[i]);                               \
+    }                                                                          \
+    *outValue = val;                                                           \
+    cursor->offset += sizeof(UTYPE);                                           \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define PARSING_CURSOR_READ_INT_LE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)             \
+  PARSING_CURSOR_READ_INT_LE_PROTOTYPE(ITYPE, SUFFIX) {                        \
+    UTYPE rawVal = 0;                                                          \
+    OPSTATUS status;                                                           \
+    if (!outValue)                                                             \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    status = PARSING_FUNC(PP_OP_CAT3(Cursor_ReadUInt, SUFFIX, LE))(            \
+        cursor, &rawVal);                                                      \
+    if (status != STATUS_CONST(SUCCESS))                                       \
+      return status;                                                           \
+    *outValue = (ITYPE)rawVal;                                                 \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define PARSING_CURSOR_READ_INT_BE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)             \
+  PARSING_CURSOR_READ_INT_BE_PROTOTYPE(ITYPE, SUFFIX) {                        \
+    UTYPE rawVal = 0;                                                          \
+    OPSTATUS status;                                                           \
+    if (!outValue)                                                             \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    status = PARSING_FUNC(PP_OP_CAT3(Cursor_ReadUInt, SUFFIX, BE))(            \
+        cursor, &rawVal);                                                      \
+    if (status != STATUS_CONST(SUCCESS))                                       \
+      return status;                                                           \
+    *outValue = (ITYPE)rawVal;                                                 \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define PARSING_CURSOR_WRITE_UINT_LE_IMPLEMENT(UTYPE, SUFFIX)                  \
+  PARSING_CURSOR_WRITE_UINT_LE_PROTOTYPE(UTYPE, SUFFIX) {                      \
+    uint8_t *b;                                                                \
+    if (!cursor)                                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (cursor->isReadOnly)                                                    \
+      return STATUS_CONST(NOT_SUPPORTED);                                      \
+    if (PARSING_FUNC(Cursor_AlignToByte)(cursor) != STATUS_CONST(SUCCESS))      \
+      return STATUS_CONST(INSUFFICIENT_SPACE);                                 \
+    if (PARSING_FUNC(Cursor_Remaining)(cursor) < sizeof(UTYPE))                \
+      return STATUS_CONST(INSUFFICIENT_SPACE);                                 \
+    b = cursor->data + cursor->offset;                                         \
+    for (size_t i = 0; i < sizeof(UTYPE); ++i) {                              \
+      b[i] = (uint8_t)((value >> (i * 8U)) & 0xFFU);                           \
+    }                                                                          \
+    cursor->offset += sizeof(UTYPE);                                           \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define PARSING_CURSOR_WRITE_UINT_BE_IMPLEMENT(UTYPE, SUFFIX)                  \
+  PARSING_CURSOR_WRITE_UINT_BE_PROTOTYPE(UTYPE, SUFFIX) {                      \
+    uint8_t *b;                                                                \
+    if (!cursor)                                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (cursor->isReadOnly)                                                    \
+      return STATUS_CONST(NOT_SUPPORTED);                                      \
+    if (PARSING_FUNC(Cursor_AlignToByte)(cursor) != STATUS_CONST(SUCCESS))      \
+      return STATUS_CONST(INSUFFICIENT_SPACE);                                 \
+    if (PARSING_FUNC(Cursor_Remaining)(cursor) < sizeof(UTYPE))                \
+      return STATUS_CONST(INSUFFICIENT_SPACE);                                 \
+    b = cursor->data + cursor->offset;                                         \
+    for (size_t i = 0; i < sizeof(UTYPE); ++i) {                              \
+      size_t shift = (sizeof(UTYPE) - 1U - i) * 8U;                            \
+      b[i] = (uint8_t)((value >> shift) & 0xFFU);                              \
+    }                                                                          \
+    cursor->offset += sizeof(UTYPE);                                           \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define PARSING_CURSOR_WRITE_INT_LE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)            \
+  PARSING_CURSOR_WRITE_INT_LE_PROTOTYPE(ITYPE, SUFFIX) {                       \
+    return PARSING_FUNC(PP_OP_CAT3(Cursor_WriteUInt, SUFFIX, LE))(             \
+        cursor, (UTYPE)value);                                                 \
+  }
+
+#define PARSING_CURSOR_WRITE_INT_BE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)            \
+  PARSING_CURSOR_WRITE_INT_BE_PROTOTYPE(ITYPE, SUFFIX) {                       \
+    return PARSING_FUNC(PP_OP_CAT3(Cursor_WriteUInt, SUFFIX, BE))(             \
+        cursor, (UTYPE)value);                                                 \
+  }
+
+#define PARSING_CURSOR_SCALAR_IMPLEMENT_ALL(UTYPE, ITYPE, SUFFIX)              \
+  PARSING_CURSOR_READ_UINT_LE_IMPLEMENT(UTYPE, SUFFIX)                         \
+  PARSING_CURSOR_READ_UINT_BE_IMPLEMENT(UTYPE, SUFFIX)                         \
+  PARSING_CURSOR_READ_INT_LE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)                    \
+  PARSING_CURSOR_READ_INT_BE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)                    \
+  PARSING_CURSOR_WRITE_UINT_LE_IMPLEMENT(UTYPE, SUFFIX)                        \
+  PARSING_CURSOR_WRITE_UINT_BE_IMPLEMENT(UTYPE, SUFFIX)                        \
+  PARSING_CURSOR_WRITE_INT_LE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)                   \
+  PARSING_CURSOR_WRITE_INT_BE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)
+
+PARSING_CURSOR_SCALAR_IMPLEMENT_ALL(uint16_t, int16_t, 16)
+PARSING_CURSOR_SCALAR_IMPLEMENT_ALL(uint32_t, int32_t, 32)
+PARSING_CURSOR_SCALAR_IMPLEMENT_ALL(uint64_t, int64_t, 64)
+/* EOF */

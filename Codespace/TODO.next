@@ -1,0 +1,3 @@
+Mudar cursor em "parsing" para "memory" sob o nome de stream. 
+cast/integral para integer, é vetado o uso de palavras em português
+-Há checksum em Compresion. Criar um modulo proprio. 

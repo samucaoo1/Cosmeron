@@ -1,7 +1,7 @@
 CC ?= gcc
 CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -Werror
 BUILD ?= build
-SOURCES := Common JSON INI CSV TOML YAML XML IncludeAll Namespace FunctionTableOff Robustness Allocation
+SOURCES := Common Cursor JSON INI CSV TOML YAML XML IncludeAll Namespace FunctionTableOff Robustness Allocation
 .PHONY: all run clean
 all: run
 run: $(addprefix $(BUILD)/,$(SOURCES)) $(BUILD)/MultiTU

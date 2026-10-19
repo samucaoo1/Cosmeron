@@ -1,5 +1,6 @@
 #pragma once
 #include "Common/Common.h"
+#include "Cursor/Cursor.h"
 #include "INI/INI.h"
 #include "JSON/JSON.h"
 #include "CSV/CSV.h"

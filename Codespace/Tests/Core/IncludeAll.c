@@ -1,4 +1,5 @@
 #include "../../Cosmeron/Core/Cast/Cast.space"
+#include "../../Cosmeron/Core/Cast/Integral.h"
 #include "../../Cosmeron/Core/Algorithm/Comparison.h"
 #include "../../Cosmeron/Core/Error/Panic.h"
 #include "../../Cosmeron/Core/Error/Status.h"
