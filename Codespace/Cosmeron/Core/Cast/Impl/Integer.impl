@@ -181,8 +181,10 @@ CAST_CONVERT_PROTOTYPE(SizetoU8, size_t, uint8_t) {
 CAST_CONVERT_PROTOTYPE(SizetoI64, size_t, int64_t) {
   if (!outValue)
     return STATUS_CONST(INVALID_ARGUMENT);
+#if SIZE_MAX > INT64_MAX
   if ((uint64_t)inValue > (uint64_t)INT64_MAX)
     return STATUS_CONST(ARITHMETIC_OVERFLOW);
+#endif
   *outValue = (int64_t)inValue;
   return STATUS_CONST(SUCCESS);
 }

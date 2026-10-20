@@ -194,7 +194,7 @@ static int TestSpanFloatAndDouble(void) {
   TEST_ASSERT(Container_Flat_Span_double_FromBuffer(&dSpan, dArr, 2U) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(Container_Flat_Span_double_Size(&dSpan) == 2U);
   double *dVal = NULL;
-  TEST_ASSERT(Container_Flat_Span_double_Back(&dSpan, &dVal) == STATUS_CONST(SUCCESS) && *dVal == 20.02);
+  TEST_ASSERT(Container_Flat_Span_double_Back(&dSpan, &dVal) == STATUS_CONST(SUCCESS) && *dVal == dArr[1]);
   return 0;
 }
 

@@ -50,13 +50,10 @@ OBJECT_HASH_PROTOTYPE;
 
 #ifndef OBJECT_DISABLE_FUNCTION_TABLE
 #include "FunctionTable/Object.h"
+OBJECT_FUNCTION_TABLE_INSTANCE
 #endif
 
 #include "Impl/Object.impl"
-
-#ifndef OBJECT_DISABLE_FUNCTION_TABLE
-OBJECT_FUNCTION_TABLE_INSTANCE
-#endif
 
 /* ============================================================
  * Object-Oriented Macros & Generators

@@ -1,7 +1,11 @@
 #pragma once
 
 #ifndef SECURITY_DISABLE_FUNCTION_TABLE
-#include <stdint.h>
+#include "../../Security.space"
+
+struct SECURITY_DIGEST_TYPE(Digest);
+typedef struct SECURITY_DIGEST_TYPE(Digest) SECURITY_DIGEST_TYPE(TDigest);
+
 typedef struct SECURITY_DIGEST_TYPE(FunctionTable) {
   OPSTATUS (*init)(SECURITY_DIGEST_TYPE(TDigest) * digest, const void *bytes,
                    size_t length);

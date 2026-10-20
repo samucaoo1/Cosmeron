@@ -11,8 +11,6 @@ typedef struct OBJECT_TYPE(TObject_FunctionTable) {
   uint64_t (*hash)(const void *self);
 } OBJECT_TYPE(TObject_FunctionTable);
 
-static const OBJECT_TYPE(TObject_FunctionTable) OBJECT_FUNC(functions);
-
 #define OBJECT_FUNCTION_TABLE_INSTANCE                                         \
   static const OBJECT_TYPE(TObject_FunctionTable) OBJECT_FUNC(functions) = {   \
       .destroy = OBJECT_FUNC(Destroy),                                         \
