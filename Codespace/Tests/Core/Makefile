@@ -2,7 +2,7 @@ CC ?= cc
 CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L
 BUILD ?= .build
 
-TESTS := Namespace Cast Preprocessor Detect Error Memory MemoryOperations MemoryUtilities Stream Algorithm Object ObjectNoFunctionTable IncludeAll
+TESTS := Namespace Cast Preprocessor Detect Error Memory MemoryOperations MemoryUtilities Stream Algorithm Object ObjectNoFunctionTable Package PackageNoFunctionTable IncludeAll
 
 all: run
 

@@ -13,5 +13,6 @@
 #include "../../Cosmeron/Core/Preprocessor/Detect/Processor.h"
 #include "../../Cosmeron/Core/Preprocessor/Detect/Library.h"
 #include "../../Cosmeron/Core/Object/Object.h"
+#include "../../Cosmeron/Core/Package/Package.h"
 
 int main(void) { return 0; }

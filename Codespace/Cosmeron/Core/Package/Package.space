@@ -1,0 +1,27 @@
+#pragma once
+
+#include "../Error/Status.h"
+#include "../Namespace.h"
+#include "../Preprocessor/Arguments.h"
+#include "../Preprocessor/Compiling.inc"
+#include "../Preprocessor/Foreach.h"
+#include "../Preprocessor/Operations.h"
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#define PACKAGE_MOD Package
+#define PACKAGE_CMOD PACKAGE
+
+#define PACKAGE_NS(NAME) GNS2(LIB_PREFIX(PACKAGE_MOD), NAME)
+#define PACKAGE_CNS(NAME) CNS2(LIB_PREFIX_CONST(PACKAGE_CMOD), NAME)
+#define PACKAGE_INS(NAME) GNS3(LIB_PREFIX(PACKAGE_MOD), Internal, NAME)
+#define PACKAGE_CINS(NAME) CNS3(LIB_PREFIX_CONST(PACKAGE_CMOD), INTERNAL, NAME)
+
+#define PACKAGE_TYPE(NAME) PACKAGE_NS(NAME)
+#define PACKAGE_FUNC(NAME) PACKAGE_NS(NAME)
+#define PACKAGE_CONST(NAME) PACKAGE_CNS(NAME)
+
+/* Function tables are optional. Define PACKAGE_DISABLE_FUNCTION_TABLE to omit. */
+/* EOF */
