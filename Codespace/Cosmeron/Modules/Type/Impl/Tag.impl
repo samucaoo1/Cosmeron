@@ -1,0 +1,157 @@
+#pragma once
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+#define TAG_IMPLEMENT(SUFFIX, UINT_TYPE, BYTE_COUNT)                           \
+  TAG_INIT_PROTOTYPE(SUFFIX) {                                                 \
+    if (!tag || !chars)                                                        \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    UINT_TYPE val = 0U;                                                        \
+    size_t inLen = strlen(chars);                                              \
+    for (size_t i = 0U; i < (BYTE_COUNT); ++i) {                               \
+      char c = (i < inLen) ? chars[i] : ' ';                                   \
+      tag->text[i] = c;                                                        \
+      size_t shift = ((BYTE_COUNT) - 1U - i) * 8U;                             \
+      val |= ((UINT_TYPE)(uint8_t)c) << shift;                                 \
+    }                                                                          \
+    tag->text[(BYTE_COUNT)] = '\0';                                            \
+    tag->value = val;                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  TAG_FROM_UINT_PROTOTYPE(SUFFIX, UINT_TYPE) {                                 \
+    if (!tag)                                                                  \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    tag->value = value;                                                        \
+    for (size_t i = 0U; i < (BYTE_COUNT); ++i) {                               \
+      size_t shift = ((BYTE_COUNT) - 1U - i) * 8U;                             \
+      tag->text[i] = (char)((value >> shift) & 0xFFU);                         \
+    }                                                                          \
+    tag->text[(BYTE_COUNT)] = '\0';                                            \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  TAG_FROM_BYTES_PROTOTYPE(SUFFIX) {                                           \
+    if (!tag || (!bytes && length > 0U))                                       \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const uint8_t *src = (const uint8_t *)bytes;                               \
+    UINT_TYPE val = 0U;                                                        \
+    for (size_t i = 0U; i < (BYTE_COUNT); ++i) {                               \
+      char c = (src && i < length) ? (char)src[i] : ' ';                       \
+      tag->text[i] = c;                                                        \
+      size_t shift = ((BYTE_COUNT) - 1U - i) * 8U;                             \
+      val |= ((UINT_TYPE)(uint8_t)c) << shift;                                 \
+    }                                                                          \
+    tag->text[(BYTE_COUNT)] = '\0';                                            \
+    tag->value = val;                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  TAG_READ_BE_PROTOTYPE(SUFFIX) {                                              \
+    if (!tag || !src)                                                          \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const uint8_t *p = (const uint8_t *)src;                                   \
+    UINT_TYPE val = 0U;                                                        \
+    for (size_t i = 0U; i < (BYTE_COUNT); ++i) {                               \
+      char c = (char)p[i];                                                     \
+      tag->text[i] = c;                                                        \
+      size_t shift = ((BYTE_COUNT) - 1U - i) * 8U;                             \
+      val |= ((UINT_TYPE)(uint8_t)c) << shift;                                 \
+    }                                                                          \
+    tag->text[(BYTE_COUNT)] = '\0';                                            \
+    tag->value = val;                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  TAG_READ_LE_PROTOTYPE(SUFFIX) {                                              \
+    if (!tag || !src)                                                          \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const uint8_t *p = (const uint8_t *)src;                                   \
+    UINT_TYPE val = 0U;                                                        \
+    for (size_t i = 0U; i < (BYTE_COUNT); ++i) {                               \
+      size_t shift = i * 8U;                                                   \
+      val |= ((UINT_TYPE)p[i]) << shift;                                       \
+    }                                                                          \
+    tag->value = val;                                                          \
+    for (size_t i = 0U; i < (BYTE_COUNT); ++i) {                               \
+      size_t shift = ((BYTE_COUNT) - 1U - i) * 8U;                             \
+      tag->text[i] = (char)((val >> shift) & 0xFFU);                           \
+    }                                                                          \
+    tag->text[(BYTE_COUNT)] = '\0';                                            \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  TAG_WRITE_BE_PROTOTYPE(SUFFIX) {                                             \
+    if (!tag || !dest)                                                         \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    uint8_t *outBytes = (uint8_t *)dest;                                       \
+    for (size_t i = 0U; i < (BYTE_COUNT); ++i) {                               \
+      size_t shift = ((BYTE_COUNT) - 1U - i) * 8U;                             \
+      outBytes[i] = (uint8_t)((tag->value >> shift) & 0xFFU);                  \
+    }                                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  TAG_WRITE_LE_PROTOTYPE(SUFFIX) {                                             \
+    if (!tag || !dest)                                                         \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    uint8_t *outBytes = (uint8_t *)dest;                                       \
+    for (size_t i = 0U; i < (BYTE_COUNT); ++i) {                               \
+      size_t shift = i * 8U;                                                   \
+      outBytes[i] = (uint8_t)((tag->value >> shift) & 0xFFU);                  \
+    }                                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  TAG_TO_STRING_PROTOTYPE(SUFFIX) {                                            \
+    if (!tag || !dest || destCapacity == 0U)                                   \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (destCapacity < ((BYTE_COUNT) + 1U))                                    \
+      return STATUS_CONST(INSUFFICIENT_SPACE);                                 \
+    for (size_t i = 0U; i < (BYTE_COUNT); ++i) {                               \
+      uint8_t c = (uint8_t)tag->text[i];                                       \
+      dest[i] = (c >= 0x20U && c <= 0x7EU) ? (char)c : '.';                    \
+    }                                                                          \
+    dest[(BYTE_COUNT)] = '\0';                                                 \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  TAG_TEXT_PROTOTYPE(SUFFIX) {                                                 \
+    return tag ? tag->text : "";                                               \
+  }                                                                            \
+                                                                               \
+  TAG_TO_UINT_PROTOTYPE(SUFFIX, UINT_TYPE) {                                   \
+    return tag ? tag->value : (UINT_TYPE)0U;                                   \
+  }                                                                            \
+                                                                               \
+  TAG_IS_PRINTABLE_PROTOTYPE(SUFFIX) {                                         \
+    if (!tag)                                                                  \
+      return false;                                                            \
+    for (size_t i = 0U; i < (BYTE_COUNT); ++i) {                               \
+      uint8_t c = (uint8_t)tag->text[i];                                       \
+      if (c < 0x20U || c > 0x7EU)                                              \
+        return false;                                                          \
+    }                                                                          \
+    return true;                                                               \
+  }                                                                            \
+                                                                               \
+  TAG_EQUAL_PROTOTYPE(SUFFIX) {                                                \
+    if (!tagA || !tagB)                                                        \
+      return tagA == tagB;                                                     \
+    return tagA->value == tagB->value;                                         \
+  }                                                                            \
+                                                                               \
+  TAG_COMPARE_PROTOTYPE(SUFFIX) {                                              \
+    if (!tagA || !tagB || !result)                                             \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (tagA->value < tagB->value)                                             \
+      *result = COMPARISON_LOWER_CONST;                                        \
+    else if (tagA->value > tagB->value)                                        \
+      *result = COMPARISON_HIGHER_CONST;                                       \
+    else                                                                       \
+      *result = COMPARISON_EQUAL_CONST;                                        \
+    return STATUS_CONST(SUCCESS);                                              \
+  }

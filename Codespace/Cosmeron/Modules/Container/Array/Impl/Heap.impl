@@ -1,0 +1,258 @@
+#pragma once
+
+#include "Capacity.impl"
+#include "Internal.impl"
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_ENSURE_CAPACITY(TYPE, SUFFIX)  \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_CONTAINER_ENSURE_CAPACITY(                \
+      TYPE, FLAT_HEAP_FUNC(SUFFIX, EnsureCapacity),                            \
+      FLAT_HEAP_FUNC(SUFFIX, Reserve), FLAT_HEAP_TYPE(SUFFIX),                 \
+      COSMERON_MACRO_INTERNAL_FLAT_INITIAL_CAPACITY,                           \
+      COSMERON_MACRO_INTERNAL_FLAT_GROWTH_FACTOR)
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_SIFT_UP(TYPE, SUFFIX)\
+  static inline void FLAT_HEAP_FUNC(SUFFIX, SiftUp)(                           \
+      FLAT_HEAP_TYPE(SUFFIX) * heap, size_t index) {                           \
+    size_t child = index;                                                      \
+    while (child > 0U) {                                                       \
+      size_t parent = (child - 1U) / 2U;                                       \
+      if (heap->compare(heap->data[parent], heap->data[child]) <= 0) {         \
+        break;                                                                 \
+      }                                                                        \
+      TYPE temp = heap->data[child];                                           \
+      heap->data[child] = heap->data[parent];                                  \
+      heap->data[parent] = temp;                                               \
+      child = parent;                                                          \
+    }                                                                          \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_SIFT_DOWN(TYPE, SUFFIX)\
+  static inline void FLAT_HEAP_FUNC(SUFFIX, SiftDown)(                         \
+      FLAT_HEAP_TYPE(SUFFIX) * heap, size_t index) {                           \
+    size_t parent = index;                                                     \
+    while (true) {                                                             \
+      size_t left = 2U * parent + 1U;                                          \
+      size_t right = 2U * parent + 2U;                                         \
+      size_t best = parent;                                                    \
+      if (left < heap->size &&                                                 \
+          heap->compare(heap->data[left], heap->data[best]) < 0) {             \
+        best = left;                                                           \
+      }                                                                        \
+      if (right < heap->size &&                                                \
+          heap->compare(heap->data[right], heap->data[best]) < 0) {            \
+        best = right;                                                          \
+      }                                                                        \
+      if (best == parent) {                                                    \
+        break;                                                                 \
+      }                                                                        \
+      TYPE temp = heap->data[parent];                                          \
+      heap->data[parent] = heap->data[best];                                   \
+      heap->data[best] = temp;                                                 \
+      parent = best;                                                           \
+    }                                                                          \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_INIT(TYPE, SUFFIX)   \
+  FLAT_HEAP_INIT_PROTOTYPE(SUFFIX) {                                           \
+    if (!heap)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    heap->data = NULL;                                                         \
+    heap->size = 0U;                                                           \
+    heap->capacity = 0U;                                                       \
+    heap->compare = FLAT_HEAP_FUNC(SUFFIX, DefaultMinCompare);                 \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_INIT_MAX(TYPE, SUFFIX)\
+  FLAT_HEAP_INIT_MAX_PROTOTYPE(SUFFIX) {                                       \
+    if (!heap)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    heap->data = NULL;                                                         \
+    heap->size = 0U;                                                           \
+    heap->capacity = 0U;                                                       \
+    heap->compare = FLAT_HEAP_FUNC(SUFFIX, DefaultMaxCompare);                 \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_INIT_WITH_COMPARATOR(TYPE, SUFFIX)\
+  FLAT_HEAP_INIT_WITH_COMPARATOR_PROTOTYPE(TYPE, SUFFIX) {                     \
+    if (!heap || !compare)                                                     \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    heap->data = NULL;                                                         \
+    heap->size = 0U;                                                           \
+    heap->capacity = 0U;                                                       \
+    heap->compare = compare;                                                   \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_DESTROY(TYPE, SUFFIX)\
+  FLAT_HEAP_DESTROY_PROTOTYPE(SUFFIX) {                                        \
+    if (!heap)                                                                 \
+      return;                                                                  \
+    Memory_Free(heap->data);                                                   \
+    heap->data = NULL;                                                         \
+    heap->size = 0U;                                                           \
+    heap->capacity = 0U;                                                       \
+    heap->compare = NULL;                                                      \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_CLEAR(TYPE, SUFFIX)  \
+  FLAT_HEAP_CLEAR_PROTOTYPE(SUFFIX) {                                          \
+    if (heap)                                                                  \
+      heap->size = 0U;                                                         \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_RESERVE(TYPE, SUFFIX)\
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_CAPACITY_RESERVE(                         \
+      TYPE, FLAT_HEAP_FUNC(SUFFIX, Reserve), FLAT_HEAP_TYPE(SUFFIX))
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_SHRINK_TO_FIT(TYPE, SUFFIX)\
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_CAPACITY_SHRINK_TO_FIT(                   \
+      TYPE, FLAT_HEAP_FUNC(SUFFIX, ShrinkToFit), FLAT_HEAP_TYPE(SUFFIX))
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_PUSH(TYPE, SUFFIX)   \
+  FLAT_HEAP_PUSH_PROTOTYPE(TYPE, SUFFIX) {                                     \
+    if (!heap || !heap->compare)                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    OPSTATUS status = FLAT_HEAP_FUNC(SUFFIX, EnsureCapacity)(heap);             \
+    if (status != STATUS_CONST(SUCCESS))                                       \
+      return status;                                                           \
+    size_t index = heap->size++;                                               \
+    heap->data[index] = value;                                                 \
+    FLAT_HEAP_FUNC(SUFFIX, SiftUp)(heap, index);                               \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_POP(TYPE, SUFFIX)    \
+  FLAT_HEAP_POP_PROTOTYPE(TYPE, SUFFIX) {                                      \
+    if (!heap || !outValue || !heap->compare)                                  \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (heap->size == 0U)                                                      \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *outValue = heap->data[0];                                                 \
+    heap->size--;                                                              \
+    if (heap->size > 0U) {                                                     \
+      heap->data[0] = heap->data[heap->size];                                  \
+      FLAT_HEAP_FUNC(SUFFIX, SiftDown)(heap, 0U);                              \
+    }                                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_PEEK(TYPE, SUFFIX)   \
+  FLAT_HEAP_PEEK_PROTOTYPE(TYPE, SUFFIX) {                                     \
+    if (!heap || !outValue)                                                    \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (heap->size == 0U)                                                      \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *outValue = heap->data[0];                                                 \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_TOP(TYPE, SUFFIX)    \
+  FLAT_HEAP_TOP_PROTOTYPE(TYPE, SUFFIX) {                                      \
+    if (!heap || !out)                                                         \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (heap->size == 0U)                                                      \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *out = &heap->data[0];                                                     \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_REPLACE(TYPE, SUFFIX)\
+  FLAT_HEAP_REPLACE_PROTOTYPE(TYPE, SUFFIX) {                                  \
+    if (!heap || !outValue || !heap->compare)                                  \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (heap->size == 0U)                                                      \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *outValue = heap->data[0];                                                 \
+    heap->data[0] = inValue;                                                   \
+    FLAT_HEAP_FUNC(SUFFIX, SiftDown)(heap, 0U);                                \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_PUSH_POP(TYPE, SUFFIX)\
+  FLAT_HEAP_PUSH_POP_PROTOTYPE(TYPE, SUFFIX) {                                 \
+    if (!heap || !outValue || !heap->compare)                                  \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (heap->size == 0U) {                                                    \
+      *outValue = inValue;                                                     \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    if (heap->compare(inValue, heap->data[0]) <= 0) {                          \
+      *outValue = inValue;                                                     \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    *outValue = heap->data[0];                                                 \
+    heap->data[0] = inValue;                                                   \
+    FLAT_HEAP_FUNC(SUFFIX, SiftDown)(heap, 0U);                                \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_HEAPIFY(TYPE, SUFFIX)\
+  FLAT_HEAP_HEAPIFY_PROTOTYPE(SUFFIX) {                                        \
+    if (!heap || !heap->compare)                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (heap->size > 1U) {                                                     \
+      for (size_t i = heap->size / 2U; i > 0U; --i) {                          \
+        FLAT_HEAP_FUNC(SUFFIX, SiftDown)(heap, i - 1U);                        \
+      }                                                                        \
+    }                                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_FROM_BUFFER(TYPE, SUFFIX)\
+  FLAT_HEAP_FROM_BUFFER_PROTOTYPE(TYPE, SUFFIX) {                              \
+    if (!heap || (count > 0U && !buffer))                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    OPSTATUS status = FLAT_HEAP_FUNC(SUFFIX, Init)(heap);                      \
+    if (status != STATUS_CONST(SUCCESS))                                       \
+      return status;                                                           \
+    if (count == 0U)                                                           \
+      return STATUS_CONST(SUCCESS);                                            \
+    status = FLAT_HEAP_FUNC(SUFFIX, Reserve)(heap, count);                     \
+    if (status != STATUS_CONST(SUCCESS)) {                                     \
+      FLAT_HEAP_FUNC(SUFFIX, Destroy)(heap);                                   \
+      return status;                                                           \
+    }                                                                          \
+    memcpy(heap->data, buffer, count * sizeof(TYPE));                          \
+    heap->size = count;                                                        \
+    return FLAT_HEAP_FUNC(SUFFIX, Heapify)(heap);                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_EMPTY(TYPE, SUFFIX)  \
+  FLAT_HEAP_EMPTY_PROTOTYPE(SUFFIX) {                                          \
+    return !heap || heap->size == 0U;                                          \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_SIZE(TYPE, SUFFIX)   \
+  FLAT_HEAP_SIZE_PROTOTYPE(SUFFIX) {                                           \
+    return heap ? heap->size : 0U;                                             \
+  }
+
+#define COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_CAPACITY(TYPE, SUFFIX)\
+  FLAT_HEAP_CAPACITY_PROTOTYPE(SUFFIX) {                                       \
+    return heap ? heap->capacity : 0U;                                         \
+  }
+
+#define COSMERON_MACRO_INTERNAL_FLAT_HEAP_IMPLEMENT(TYPE, SUFFIX)             \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_ENSURE_CAPACITY(TYPE, SUFFIX)        \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_SIFT_UP(TYPE, SUFFIX)      \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_SIFT_DOWN(TYPE, SUFFIX)    \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_INIT(TYPE, SUFFIX)         \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_INIT_MAX(TYPE, SUFFIX)     \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_INIT_WITH_COMPARATOR(TYPE, SUFFIX)\
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_DESTROY(TYPE, SUFFIX)      \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_CLEAR(TYPE, SUFFIX)        \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_RESERVE(TYPE, SUFFIX)      \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_SHRINK_TO_FIT(TYPE, SUFFIX)\
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_PUSH(TYPE, SUFFIX)         \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_POP(TYPE, SUFFIX)          \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_PEEK(TYPE, SUFFIX)         \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_TOP(TYPE, SUFFIX)          \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_REPLACE(TYPE, SUFFIX)       \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_PUSH_POP(TYPE, SUFFIX)     \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_HEAPIFY(TYPE, SUFFIX)      \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_FROM_BUFFER(TYPE, SUFFIX)  \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_EMPTY(TYPE, SUFFIX)        \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_SIZE(TYPE, SUFFIX)         \
+  COSMERON_MACRO_INTERNAL_SEQUENTIAL_HEAP_IMPLEMENT_CAPACITY(TYPE, SUFFIX)

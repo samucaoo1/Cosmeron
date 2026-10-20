@@ -1,0 +1,166 @@
+#pragma once
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+SECURITY_DIGEST_INIT_PROTOTYPE {
+  if (!digest || (!bytes && length > 0U))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (length > SECURITY_DIGEST_CONST(MAX_BYTES))
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  if (length > 0U)
+    memcpy(digest->bytes, bytes, length);
+  if (length < SECURITY_DIGEST_CONST(MAX_BYTES))
+    memset(digest->bytes + length, 0,
+           SECURITY_DIGEST_CONST(MAX_BYTES) - length);
+
+  digest->length = length;
+  return STATUS_CONST(SUCCESS);
+}
+
+SECURITY_DIGEST_CLEAR_PROTOTYPE {
+  if (!digest)
+    return;
+  volatile uint8_t *p = (volatile uint8_t *)digest->bytes;
+  for (size_t i = 0U; i < SECURITY_DIGEST_CONST(MAX_BYTES); ++i)
+    p[i] = 0U;
+  digest->length = 0U;
+}
+
+SECURITY_DIGEST_TO_HEX_PROTOTYPE {
+  if (!digest || !dest || capacity == 0U)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  size_t required = (digest->length * 2U) + 1U;
+  if (capacity < required)
+    return STATUS_CONST(INSUFFICIENT_SPACE);
+
+  static const char hexLower[] = "0123456789abcdef";
+  static const char hexUpper[] = "0123456789ABCDEF";
+  const char *digits = uppercase ? hexUpper : hexLower;
+
+  for (size_t i = 0U; i < digest->length; ++i) {
+    uint8_t byte = digest->bytes[i];
+    dest[i * 2U] = digits[(byte >> 4U) & 0x0FU];
+    dest[(i * 2U) + 1U] = digits[byte & 0x0FU];
+  }
+  dest[digest->length * 2U] = '\0';
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline int SECURITY_INS(HexDigitValue)(char c) {
+  if (c >= '0' && c <= '9')
+    return (int)(c - '0');
+  if (c >= 'a' && c <= 'f')
+    return (int)(c - 'a' + 10);
+  if (c >= 'A' && c <= 'F')
+    return (int)(c - 'A' + 10);
+  return -1;
+}
+
+SECURITY_DIGEST_FROM_HEX_PROTOTYPE {
+  if (!digest || !hex)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  size_t hexLen = strlen(hex);
+  if ((hexLen % 2U) != 0U)
+    return STATUS_CONST(INVALID_SEQUENCE);
+
+  size_t byteCount = hexLen / 2U;
+  if (byteCount > SECURITY_DIGEST_CONST(MAX_BYTES))
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  for (size_t i = 0U; i < byteCount; ++i) {
+    int hi = SECURITY_INS(HexDigitValue)(hex[i * 2U]);
+    int lo = SECURITY_INS(HexDigitValue)(hex[(i * 2U) + 1U]);
+    if (hi < 0 || lo < 0)
+      return STATUS_CONST(INVALID_SEQUENCE);
+    digest->bytes[i] = (uint8_t)(((uint8_t)hi << 4U) | (uint8_t)lo);
+  }
+
+  if (byteCount < SECURITY_DIGEST_CONST(MAX_BYTES))
+    memset(digest->bytes + byteCount, 0,
+           SECURITY_DIGEST_CONST(MAX_BYTES) - byteCount);
+
+  digest->length = byteCount;
+  return STATUS_CONST(SUCCESS);
+}
+
+SECURITY_DIGEST_TO_UINT32_PROTOTYPE {
+  if (!digest || !outValue)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (digest->length < 4U)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  *outValue = ((uint32_t)digest->bytes[0] << 24U) |
+              ((uint32_t)digest->bytes[1] << 16U) |
+              ((uint32_t)digest->bytes[2] << 8U) |
+              ((uint32_t)digest->bytes[3]);
+  return STATUS_CONST(SUCCESS);
+}
+
+SECURITY_DIGEST_TO_UINT64_PROTOTYPE {
+  if (!digest || !outValue)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (digest->length < 8U)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  *outValue = ((uint64_t)digest->bytes[0] << 56ULL) |
+              ((uint64_t)digest->bytes[1] << 48ULL) |
+              ((uint64_t)digest->bytes[2] << 40ULL) |
+              ((uint64_t)digest->bytes[3] << 32ULL) |
+              ((uint64_t)digest->bytes[4] << 24ULL) |
+              ((uint64_t)digest->bytes[5] << 16ULL) |
+              ((uint64_t)digest->bytes[6] << 8ULL) |
+              ((uint64_t)digest->bytes[7]);
+  return STATUS_CONST(SUCCESS);
+}
+
+SECURITY_DIGEST_BYTES_PROTOTYPE {
+  return digest ? digest->bytes : NULL;
+}
+
+SECURITY_DIGEST_LENGTH_PROTOTYPE {
+  return digest ? digest->length : 0U;
+}
+
+SECURITY_DIGEST_EQUAL_PROTOTYPE {
+  if (!digestA || !digestB)
+    return digestA == digestB;
+  if (digestA->length != digestB->length)
+    return false;
+
+  volatile uint8_t diff = 0U;
+  for (size_t i = 0U; i < digestA->length; ++i)
+    diff |= (uint8_t)(digestA->bytes[i] ^ digestB->bytes[i]);
+
+  return diff == 0U;
+}
+
+SECURITY_DIGEST_COMPARE_PROTOTYPE {
+  if (!digestA || !digestB || !outResult)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (digestA->length < digestB->length) {
+    *outResult = COMPARISON_LOWER_CONST;
+    return STATUS_CONST(SUCCESS);
+  }
+  if (digestA->length > digestB->length) {
+    *outResult = COMPARISON_HIGHER_CONST;
+    return STATUS_CONST(SUCCESS);
+  }
+
+  int cmp = memcmp(digestA->bytes, digestB->bytes, digestA->length);
+  if (cmp < 0)
+    *outResult = COMPARISON_LOWER_CONST;
+  else if (cmp > 0)
+    *outResult = COMPARISON_HIGHER_CONST;
+  else
+    *outResult = COMPARISON_EQUAL_CONST;
+
+  return STATUS_CONST(SUCCESS);
+}
+/* EOF */

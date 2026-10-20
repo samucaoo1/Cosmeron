@@ -1,44 +1,21 @@
 #pragma once
-#include "../Compression.space"
 
-#define COMPRESSION_CRC32_PROTOTYPE \
-  static inline uint32_t COMPRESSION_FUNC(CRC32)( \
+#include "../Compression.space"
+#include "../../Security/Checksum/Checksum.h"
+
+#define COMPRESSION_CRC32_PROTOTYPE                                            \
+  static inline uint32_t COMPRESSION_FUNC(CRC32)(                              \
       uint32_t previous, const void *data, size_t size)
-#define COMPRESSION_ADLER32_PROTOTYPE \
-  static inline uint32_t COMPRESSION_FUNC(Adler32)( \
+
+#define COMPRESSION_ADLER32_PROTOTYPE                                          \
+  static inline uint32_t COMPRESSION_FUNC(Adler32)(                            \
       uint32_t previous, const void *data, size_t size)
 
 COMPRESSION_CRC32_PROTOTYPE {
-  const unsigned char *bytes = (const unsigned char *)data;
-  uint32_t crc;
-  size_t i;
-  if (!bytes || size == 0) return previous;
-  crc = ~previous;
-  for (i = 0; i < size; ++i) {
-    unsigned int bit;
-    crc ^= bytes[i];
-    for (bit = 0; bit < 8; ++bit)
-      crc = (crc >> 1) ^ (UINT32_C(0xedb88320) & (0U - (crc & 1U)));
-  }
-  return ~crc;
+  return SECURITY_CHECKSUM_FUNC(CRC32_ComputeUInt32)(previous, data, size);
 }
 
 COMPRESSION_ADLER32_PROTOTYPE {
-  const unsigned char *bytes = (const unsigned char *)data;
-  uint32_t a, b;
-  if (!bytes || size == 0) return previous;
-  a = previous & UINT32_C(65535);
-  b = previous >> 16;
-  while (size) {
-    size_t i, count = size > 5552 ? 5552 : size;
-    for (i = 0; i < count; ++i) {
-      a += bytes[i];
-      b += a;
-    }
-    a %= UINT32_C(65521);
-    b %= UINT32_C(65521);
-    bytes += count;
-    size -= count;
-  }
-  return (b << 16) | a;
+  return SECURITY_CHECKSUM_FUNC(Adler32_ComputeUInt32)(previous, data, size);
 }
+/* EOF */

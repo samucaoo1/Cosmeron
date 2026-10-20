@@ -1,3 +1,7 @@
-Mudar cursor em "parsing" para "memory" sob o nome de stream. 
-cast/integral para integer, é vetado o uso de palavras em português
--Há checksum em Compresion. Criar um modulo proprio. 
+# Completed
+- [x] Mudar cursor em "parsing" para "memory" sob o nome de stream.
+- [x] cast/integral para integer, é vetado o uso de palavras em português.
+- [x] Checksum em Compression migrado para o novo módulo Security.
+- [x] Container Flat Heap (Priority Queue) implementado com Min/Max Heap, comparador customizado, Floyd heapify e FunctionTable.
+- [x] Utilitário Repeat para repetição de blocos de código por contagem (REPEAT e REPEAT_INDEX) em Core/Preprocessor.
+- [x] Módulo Object (POO) em Core/Object com TObject base, sintaxe unificada declarativa (Alternativa B: OBJECT com FIELDS e METHOD), geração implícita de FunctionTable/Init, herança via OBJECT_EXTENDS, suporte a métodos inline (METHOD_INLINE) e externos, e compile-time disabling.

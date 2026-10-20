@@ -29,4 +29,27 @@
 
 #define PP_OP_CAT10(a, b, c, d, e, f, g, h, i, j)                             \
   PP_OP_CAT2(PP_OP_CAT9(a, b, c, d, e, f, g, h, i), j)
+
+#define PP_OP_CAT11(a, b, c, d, e, f, g, h, i, j, k)                          \
+  PP_OP_CAT2(PP_OP_CAT10(a, b, c, d, e, f, g, h, i, j), k)
+
+#define PP_OP_CAT12(a, b, c, d, e, f, g, h, i, j, k, l)                       \
+  PP_OP_CAT2(PP_OP_CAT11(a, b, c, d, e, f, g, h, i, j, k), l)
+
+#define PP_OP_CAT13(a, b, c, d, e, f, g, h, i, j, k, l, m)                    \
+  PP_OP_CAT2(PP_OP_CAT12(a, b, c, d, e, f, g, h, i, j, k, l), m)
+
+#define PP_OP_CAT14(a, b, c, d, e, f, g, h, i, j, k, l, m, n)                 \
+  PP_OP_CAT2(PP_OP_CAT13(a, b, c, d, e, f, g, h, i, j, k, l, m), n)
+
+#define PP_OP_CAT15(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o)              \
+  PP_OP_CAT2(PP_OP_CAT14(a, b, c, d, e, f, g, h, i, j, k, l, m, n), o)
+
+#define PP_OP_CAT16(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p)           \
+  PP_OP_CAT2(PP_OP_CAT15(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o), p)
+
+#define PP_OP_EMPTY()
+#define PP_OP_COMMA() ,
+#define PP_OP_IDENTITY(x) x
+
 /* EOF */

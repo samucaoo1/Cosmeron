@@ -1,0 +1,116 @@
+#pragma once
+
+#define OBJECT_IMPLEMENT_INIT                                                  \
+  OBJECT_INIT_PROTOTYPE {                                                      \
+    if (!object)                                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    OBJECT_FUNCTION_TABLE_FORWARD                                              \
+    OBJECT_API_INIT(object, &OBJECT_FUNC(functions))                           \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define OBJECT_IMPLEMENT_DESTROY                                               \
+  OBJECT_DESTROY_PROTOTYPE {                                                   \
+    if (!object)                                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    OBJECT_FUNCTION_TABLE_FORWARD                                              \
+    (void)object;                                                              \
+    COSMERON_MACRO_INTERNAL_OBJECT_DISPATCH_DESTROY(object)                    \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#ifndef OBJECT_DISABLE_FUNCTION_TABLE
+#define COSMERON_MACRO_INTERNAL_OBJECT_DISPATCH_DESTROY(OBJ)                   \
+  {                                                                            \
+    const OBJECT_TYPE(TObject) *_o = (const OBJECT_TYPE(TObject) *)(OBJ);      \
+    if (_o->api && _o->api->destroy &&                                         \
+        _o->api->destroy != OBJECT_FUNC(Destroy)) {                            \
+      return _o->api->destroy(OBJ);                                            \
+    }                                                                          \
+  }
+#else
+#define COSMERON_MACRO_INTERNAL_OBJECT_DISPATCH_DESTROY(OBJ)
+#endif
+
+#define OBJECT_IMPLEMENT_TO_STRING                                             \
+  OBJECT_TO_STRING_PROTOTYPE {                                                 \
+    if (!object || !dest || capacity == 0U)                                    \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    OBJECT_FUNCTION_TABLE_FORWARD                                              \
+    dest[0] = '\0';                                                            \
+    (void)object;                                                              \
+    COSMERON_MACRO_INTERNAL_OBJECT_DISPATCH_TO_STRING(object, dest, capacity)  \
+    return STATUS_CONST(NOT_SUPPORTED);                                        \
+  }
+
+#ifndef OBJECT_DISABLE_FUNCTION_TABLE
+#define COSMERON_MACRO_INTERNAL_OBJECT_DISPATCH_TO_STRING(OBJ, DEST, CAP)      \
+  {                                                                            \
+    const OBJECT_TYPE(TObject) *_o = (const OBJECT_TYPE(TObject) *)(OBJ);      \
+    if (_o->api && _o->api->toString &&                                        \
+        _o->api->toString != OBJECT_FUNC(ToString)) {                          \
+      return _o->api->toString((OBJ), (DEST), (CAP));                          \
+    }                                                                          \
+  }
+#else
+#define COSMERON_MACRO_INTERNAL_OBJECT_DISPATCH_TO_STRING(OBJ, DEST, CAP)
+#endif
+
+#define OBJECT_IMPLEMENT_EQUALS                                                \
+  OBJECT_EQUALS_PROTOTYPE {                                                   \
+    if (left == right)                                                         \
+      return true;                                                             \
+    if (!left || !right)                                                       \
+      return false;                                                            \
+    OBJECT_FUNCTION_TABLE_FORWARD                                              \
+    (void)left;                                                                \
+    (void)right;                                                               \
+    COSMERON_MACRO_INTERNAL_OBJECT_DISPATCH_EQUALS(left, right)                 \
+    return false;                                                              \
+  }
+
+#ifndef OBJECT_DISABLE_FUNCTION_TABLE
+#define COSMERON_MACRO_INTERNAL_OBJECT_DISPATCH_EQUALS(LEFT, RIGHT)            \
+  {                                                                            \
+    const OBJECT_TYPE(TObject) *_a = (const OBJECT_TYPE(TObject) *)(LEFT);     \
+    const OBJECT_TYPE(TObject) *_b = (const OBJECT_TYPE(TObject) *)(RIGHT);    \
+    if (_a->api && _a->api == _b->api && _a->api->equals &&                    \
+        _a->api->equals != OBJECT_FUNC(Equals)) {                              \
+      return _a->api->equals((LEFT), (RIGHT));                                 \
+    }                                                                          \
+  }
+#else
+#define COSMERON_MACRO_INTERNAL_OBJECT_DISPATCH_EQUALS(LEFT, RIGHT)
+#endif
+
+#define OBJECT_IMPLEMENT_HASH                                                  \
+  OBJECT_HASH_PROTOTYPE {                                                     \
+    if (!object)                                                               \
+      return 0ULL;                                                             \
+    OBJECT_FUNCTION_TABLE_FORWARD                                              \
+    (void)object;                                                              \
+    COSMERON_MACRO_INTERNAL_OBJECT_DISPATCH_HASH(object)                       \
+    return (uint64_t)(uintptr_t)object;                                        \
+  }
+
+#ifndef OBJECT_DISABLE_FUNCTION_TABLE
+#define COSMERON_MACRO_INTERNAL_OBJECT_DISPATCH_HASH(OBJ)                      \
+  {                                                                            \
+    const OBJECT_TYPE(TObject) *_o = (const OBJECT_TYPE(TObject) *)(OBJ);      \
+    if (_o->api && _o->api->hash && _o->api->hash != OBJECT_FUNC(Hash)) {      \
+      return _o->api->hash(OBJ);                                               \
+    }                                                                          \
+  }
+#else
+#define COSMERON_MACRO_INTERNAL_OBJECT_DISPATCH_HASH(OBJ)
+#endif
+
+#define OBJECT_IMPLEMENT_ALL                                                   \
+  OBJECT_IMPLEMENT_INIT                                                        \
+  OBJECT_IMPLEMENT_DESTROY                                                     \
+  OBJECT_IMPLEMENT_TO_STRING                                                   \
+  OBJECT_IMPLEMENT_EQUALS                                                      \
+  OBJECT_IMPLEMENT_HASH
+
+OBJECT_IMPLEMENT_ALL
+/* EOF */

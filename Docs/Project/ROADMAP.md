@@ -16,7 +16,19 @@ The goal is not to restore historical code mechanically. Each capability must be
 ### 1. Foundation II
 
 - [ ] File / Filesystem
+  - [ ] Path manipulation, normalization, absolute check, view stems and extensions (`FileSystem / Path`)
+  - [ ] File metadata, permissions, modified/accessed timestamps (`FileSystem / Metadata`)
+  - [ ] Streaming file I/O, buffered read/write, seek and tell (`FileSystem / File`)
+  - [ ] Directory iteration, recursive traversal, creation, and removal (`FileSystem / Directory`)
+  - [ ] Cross-platform filesystem watcher and change notification (`FileSystem / Watch`: inotify, kqueue, ReadDirectoryChangesW)
+  - [ ] Memory-mapped files (POSIX mmap / Windows MapViewOfFile, msync, mlock/munlock)
+- [ ] Text & String Foundations
+  - [ ] C-string safety helpers and bounded string utilities (`Text / String / CString`)
+  - [ ] Heap-allocated dynamic string (`Text / String / TString`)
+  - [ ] Non-owning string slices and string views (`Text / String / TStringView`)
+  - [ ] String builder with amortized geometric buffer growth (`Text / String / Builder`)
 - [ ] Attributed Text
+- [ ] Human-readable byte size formatting and parsing (Format_BytesHuman, Parse_BytesHuman)
 
 ### 2. Input
 
@@ -60,6 +72,11 @@ The goal is not to restore historical code mechanically. Each capability must be
 - [ ] Palette
 - [ ] Gradients
 - [ ] Text Grid rendering target
+- [ ] Graphics Extensions
+  - [ ] Compositor: multi-layer Canvas composition, z-ordering, alpha blending and transparency (`Graphics / Extensions / Compositor`)
+  - [ ] Sprite: text/cell frames, blitting, clipping, and multi-frame animation (`Graphics / Extensions / Sprite`)
+  - [ ] Animation: chronometry-driven easing, interpolation and transitions (`Graphics / Extensions / Animation`)
+  - [ ] Pixel Canvas: true-pixel drawing target and terminal half-block / block character quantization (`Graphics / Extensions / PixelCanvas`)
 
 ### 6. Raycast
 
@@ -97,21 +114,25 @@ The GUI and TUI are separate frontends.
 
 ### 8. Parsing
 
-- [ ] Source cursor
+- [ ] Source cursor and byte navigation
+- [ ] Lexer primitives and classification helpers (`Parsing / Lexer`)
+- [ ] Tokenizer state machine and token stream emission (`Parsing / Tokenizer`)
+- [ ] Scanner helpers and span slicing (`Parsing / Scanner`)
+- [ ] Reusable recursive-descent parser engine and combinators (`Parsing / Parser`)
 - [ ] Tokens and spans
 - [ ] Line/column tracking
-- [ ] Scanner helpers
-- [ ] Token stream
 - [ ] Expect / accept helpers
 - [ ] Parse error location
-- [ ] Reusable recursive-descent helpers
+- [ ] RFC 3986 URI/URL parser (scheme, userinfo, host, port, path, query, fragment)
+- [ ] Mathematical expression parser and runtime evaluator with variable binding and standard math functions
 
 ### 9. Serialization
 
-- [ ] JSON
-- [ ] CSV
-- [ ] INI
-- [ ] Evaluate TOML
+- [ ] JSON serializer and deserializer (`Serialization / JSON`)
+- [ ] CSV table parser and emitter (`Serialization / CSV`)
+- [ ] INI configuration format parser (`Serialization / INI`)
+- [ ] TOML parser and serializer (`Serialization / TOML`)
+- [ ] Portable binary serialization / endian-neutral packing (`Serialization / Binary`)
 - [ ] Base64
 - [ ] Hex encoding
 - [ ] Structured value representation where justified
@@ -142,7 +163,13 @@ The GUI and TUI are separate frontends.
 - [ ] Exit status
 - [ ] Termination
 - [ ] Standard stream redirection
-- [ ] Pipes
+- [ ] Pipes and local IPC abstractions
+  - [ ] Named and anonymous process pipes with cross-platform nonblocking behavior (`IPC / Pipe`)
+  - [ ] Shared memory segments with lifetime, mapping, and synchronization contracts (`IPC / SharedMemory`)
+  - [ ] Structured IPC message framing and typed payload conventions (`IPC / Message`)
+- [ ] Signal handling (graceful shutdown notifications via pipe, double interrupt handling)
+- [ ] Async-signal-safe formatted printing
+- [ ] Fatal crash signal handling with instruction backtrace output
 
 ### 12. Event Loop
 
@@ -150,7 +177,10 @@ The GUI and TUI are separate frontends.
 - [ ] Register/unregister source
 - [ ] Callback dispatch
 - [ ] Timers
+  - [ ] Hashed timing wheel (O(1) cancellation and timeout wheel polling)
 - [ ] Socket readiness
+  - [ ] Modern high-performance poller backends (Linux epoll, BSD/macOS kqueue, Windows WSAPoll with edge-triggered support)
+  - [ ] Unix Domain Sockets (AF_UNIX stream and datagram)
 - [ ] Wakeup mechanism
 - [ ] Stop / drain semantics
 - [ ] User-posted events/tasks
@@ -160,6 +190,7 @@ The GUI and TUI are separate frontends.
 ### 13. Checksum and Digest
 
 - [ ] CRC32
+  - [ ] Hardware-accelerated CRC-32C (Castagnoli) using CPU instructions (SSE 4.2 / ARMv8 intrinsics)
 - [ ] Adler-32
 - [ ] FNV-1 / FNV-1a
 - [ ] Evaluate additional fast non-cryptographic hashes
@@ -186,6 +217,9 @@ The GUI and TUI are separate frontends.
 - [x] ZIP memory reader/writer (Store and Deflate)
 - [ ] Incremental compression/decompression
 - [x] Bounded buffer/file helpers
+- [ ] Large-file ZIP64 (>4 GiB) local/central size and offset verification with sparse-file testing
+- [ ] Corpus-guided fuzzing (libFuzzer/AFL++) for DEFLATE, zlib, gzip, ZIP headers, and ZIP64 extras
+- [ ] Enhanced LZ77 match search (hash-chain/window) and optimal block splitting
 
 ### 16. Logging
 
@@ -194,7 +228,9 @@ The GUI and TUI are separate frontends.
 - [ ] Message formatting
 - [ ] Timestamp integration
 - [ ] Console/File/User sinks
+  - [ ] Log file rotation (size and archive count limits)
 - [ ] Multiple sinks
+- [ ] Thread name tagging in log formatters
 - [ ] Compile-time filtering
 - [ ] Runtime filtering
 - [ ] Optional thread safety
@@ -205,8 +241,9 @@ Logging remains separate from OPSTATUS/Error semantics.
 
 - [ ] Assertion helpers
 - [ ] Equality/status helpers
-- [ ] Test runner
-- [ ] Setup/teardown
+- [ ] Test runner (registration, setup/teardown, reporting, exit status)
+- [ ] Benchmark harness (repeatable duration measurement, stats, regression comparison)
+- [ ] Profiler (scoped timing, event samples, low-overhead collection and reports)
 - [ ] Expected failure helpers
 - [ ] Reporting
 - [ ] Optional timing
@@ -217,6 +254,8 @@ Logging remains separate from OPSTATUS/Error semantics.
 - [ ] FIGlet font representation
 - [ ] FIGlet parser
 - [ ] FIGlet rendering
+  - [ ] Smushing and kerning (horizontal and vertical according to fullLayout)
+  - [ ] Additional codetags, right-to-left layout, and multibyte font support
 - [ ] ASCII image conversion
 - [ ] Luminance ramp
 - [ ] Configurable palette
@@ -230,6 +269,13 @@ Logging remains separate from OPSTATUS/Error semantics.
 - [ ] Music
 - [ ] MIDI
 - [ ] Output backends
+  - [ ] Native hardware validation across Linux (ALSA), Windows (waveOut), macOS (AudioQueue/CoreAudio), FreeBSD (OSS), OpenBSD (sndio), NetBSD (audioio)
+  - [ ] Driver validation: disconnect, underrun, format negotiation, and hotplug behavior
+  - [ ] Retirement of miniaudio device fallback after native validation coverage
+- [ ] Native Audio Codecs
+  - [x] Native C11 FLAC decoder (memory, file, and streaming reader with exact-integer STREAMINFO MD5 verification)
+  - [x] Native C11 MP3 Layer III decoder (Xing/LAME gapless, indexed seek, LSF, MS+intensity stereo)
+  - [ ] MP3/FLAC decoder parity completion on remaining rare variants (8-kHz mixed/intensity, unusual subframes, third-party encoders, SEEKTABLE ingestion)
 - [ ] Investigate a zero-link output strategy
 
 ### 20. Compatibility Archaeology
@@ -241,6 +287,84 @@ Logging remains separate from OPSTATUS/Error semantics.
 - [ ] Portable type replacements
 - [ ] Backend-only native concepts
 - [ ] Explicit Native escape hatches where useful
+
+### 21. Advanced Containers and Data Structures
+
+- [x] Flat Heap / Priority Queue (`Container/Array/Heap`) with Min-Heap, Max-Heap, custom comparators, and Floyd's heapify
+- [ ] Disjoint Set / Union-Find (`Container/Disjoint`) with path compression and rank-based union
+- [ ] Intrusive Doubly Linked List (`Container/Intrusive/List`) for zero-allocation node embedding
+- [ ] In-memory B-Tree (`Container/Tree/BTree`) cache-friendly multiway search tree for large ordered collections
+- [ ] Range Minimum Query / Order Statistics Tree (`Container/Tree/OrderTree`) augmented balanced search tree for O(log n) range minimum and rank queries
+- [ ] Unordered Hash Set (`Container/Hash`) with `HASH_SET_IMPLEMENT_ALL` for keys-only O(1) set operations without value field overhead
+- [ ] Single-pass `GetOrInsert` / Entry API (`Container/Hash`, `Container/Tree`) to eliminate duplicate hash computations, probing cycles, and redundant tree descent
+- [ ] Ordered range boundary queries (`Container/Tree`) with `LowerBound` (key >= target) and `UpperBound` (key > target) across AVL, BST, and Red-Black trees
+- [ ] Doubly linked list `Splice` (`Container/Linked/Double`) for O(1) node and sub-list relocation between list instances without heap allocation
+- [ ] Vector bulk insertions (`Container/Array/Vector`) with `PushBackN` and `InsertN` using single-pass capacity reservation and block memory transfer
+- [ ] Standardized container copy/clone operations (`Container/*`) with `*_Copy` / `*_Clone` prototypes returning `OPSTATUS` across all container families
+- [ ] Cache-conscious Hash Table layout (`Container/Hash`) with separate control/metadata array (inspired by Verstable / Swiss Table) to reduce cache misses during collision resolution
+- [ ] Optional element lifecycle cleanup hooks (`Container/*`) via `ElementDestroy` callbacks in container generation macros for managing dynamic elements and nested containers safely
+- [x] Non-owning Contiguous Span (`Container/Array/Span`) zero-allocation buffer and vector slicing, element access, and boundary checks
+- [ ] Flat Map and Flat Set (`Container/Array/FlatMap`, `Container/Array/FlatSet`) cache-friendly sorted contiguous vector-backed associative containers with binary search lookups
+- [ ] Multi-word BitSet / BitVector (`Container/BitSet`) arbitrary-size compact bit array with word-level bitwise operations, popcount, and first-set searches
+- [ ] Segmented / Chunked Deque (`Container/Array/SegmentedDeque`) two-level fixed-size chunked array providing O(1) push/pop at both ends without reallocating existing elements or chasing node pointers
+- [ ] Associative MultiMap and MultiSet (`Container/Tree`, `Container/Hash`) supporting duplicate key entries and equal-range queries
+- [ ] Safe cursor-based iterators (`Container/*`) with `IterInit` and `IterNext` for non-contiguous containers (Hash, Tree, List) without exposing private internal node or bucket layouts
+- [ ] Functional `ForEach` visitor helpers (`Container/*`) with early-exit `OPSTATUS` return across all container families
+
+### 22. Advanced Algorithms and Selection
+
+- [ ] QuickSelect / k-smallest element selection (`Sort/Selection`) in expected O(n) time and median finding without full array sorting
+- [ ] Suffix Array construction (`Text/Index/SuffixArray`) via linear-time O(n) SAIS (Suffix Array Induced Sorting) algorithm for full-text indexing
+
+### 23. Memory Management
+
+- [ ] Fixed-size chunk memory pool allocator (`Core/Memory/Pool`) for uniform object/node recycling without heap fragmentation
+
+### 24. Concurrency Pipelines
+
+- [ ] Streaming parallel pipeline (`Concurrency/Pipeline`) for multi-stage concurrent processing of data batches
+
+### 25. Numerical and Scientific Math
+
+- [ ] Matrix diagonalization, eigenvalue and eigenvector solvers (`Math/Matrix`)
+- [ ] Derivative-free nonlinear optimization (Hooke-Jeeves pattern search, Brent's 1D minimizer)
+- [ ] Special statistical distribution functions (Incomplete Gamma, Digamma, Kolmogorov-Smirnov)
+
+### 26. Database & Persistence
+
+- [ ] Embedded Key-Value Data Store (`Database/KVStore`): iteration, serialization, and persistence
+- [ ] Storage engine primitives (`Database/Storage`): pages, b-tree indices, memory durability, and encoding formats
+- [ ] Record filtering and query layer (`Database/Query`)
+- [ ] ACID Transactions and crash durability (`Database/Transactions`): atomic write-ahead/rollback log, isolation, and recovery
+
+### 27. Network & Protocols
+
+- [ ] Application-level HTTP/1.1 client (`Network/HTTP/Client`)
+- [ ] Lightweight embedded HTTP server (`Network/HTTP/Server`)
+- [ ] HTTP Headers and message parser (`Network/HTTP/Headers`)
+- [ ] RFC 3986 URL/URI builder and parser (`Network/HTTP/URL`)
+- [ ] WebSocket framing and protocol adapter (`Network/HTTP/WebSocket`)
+
+### 28. Cryptography & Security
+
+- [ ] Cryptographically secure random number generator (`Security/Crypto/SecureRandom`)
+- [ ] SHA-2 cryptographic digest family (`Security/Crypto/SHA2`: SHA-224, SHA-256, SHA-384, SHA-512)
+- [ ] HMAC (Hash-based Message Authentication Code) message integrity verification (`Security/Crypto/HMAC`)
+- [ ] Symmetric encryption primitives (`Security/Crypto/Encryption`: AES, ChaCha20-Poly1305)
+
+### 29. Text & Localization
+
+- [ ] Locale abstraction and culture tagging (`Text/Localization/Locale`)
+- [ ] Number and percentage formatting per locale (`Text/Localization/NumberFormat`)
+- [ ] Currency and monetary formatting per locale (`Text/Localization/Currency`)
+- [ ] Pluralization and parameterized message localization (`Text/Localization/MessageFormat`)
+
+### 30. Configuration Management
+
+- [ ] Multi-source configuration loader (`Configuration/Load`: files, environment variables, CLI overrides)
+- [ ] Configuration schema specification (`Configuration/Schema`)
+- [ ] Semantic validation and type checking of configuration values (`Configuration/Validate`)
+- [ ] Layered hierarchy merging with precedence rules (`Configuration/Merge`)
 
 ## Dependency direction
 

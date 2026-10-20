@@ -1,0 +1,56 @@
+#pragma once
+
+#include "../../Core/Algorithm/Comparison.h"
+#include "../../Core/Error/Status.h"
+#include "../../Core/Namespace.h"
+#include "../../Core/Preprocessor/Compiling.inc"
+#include "../../Core/Preprocessor/Operations.h"
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+#define SECURITY_MOD Security
+#define SECURITY_CMOD SECURITY
+
+#define SECURITY_NS(NAME) GNS2(LIB_PREFIX(SECURITY_MOD), NAME)
+#define SECURITY_CNS(NAME) CNS2(LIB_PREFIX_CONST(SECURITY_CMOD), NAME)
+#define SECURITY_INS(NAME) GNS3(LIB_PREFIX(SECURITY_MOD), Internal, NAME)
+#define SECURITY_CINS(NAME) CNS3(LIB_PREFIX_CONST(SECURITY_CMOD), INTERNAL, NAME)
+
+#define SECURITY_TYPE(NAME) SECURITY_NS(NAME)
+#define SECURITY_FUNC(NAME) SECURITY_NS(NAME)
+#define SECURITY_CONST(NAME) SECURITY_CNS(NAME)
+
+/* -------------------------------------------------------------------------- */
+/* Sub-package Namespaces: Digest, Checksum, Crypto                          */
+/* -------------------------------------------------------------------------- */
+
+#define SECURITY_DIGEST_NS(NAME) GNS3(LIB_PREFIX(SECURITY_MOD), Digest, NAME)
+#define SECURITY_DIGEST_CNS(NAME)                                              \
+  CNS3(LIB_PREFIX_CONST(SECURITY_CMOD), DIGEST, NAME)
+#define SECURITY_DIGEST_TYPE(NAME) SECURITY_DIGEST_NS(NAME)
+#define SECURITY_DIGEST_FUNC(NAME) SECURITY_DIGEST_NS(NAME)
+#define SECURITY_DIGEST_CONST(NAME) SECURITY_DIGEST_CNS(NAME)
+
+#define SECURITY_CHECKSUM_NS(NAME)                                             \
+  GNS3(LIB_PREFIX(SECURITY_MOD), Checksum, NAME)
+#define SECURITY_CHECKSUM_CNS(NAME)                                            \
+  CNS3(LIB_PREFIX_CONST(SECURITY_CMOD), CHECKSUM, NAME)
+#define SECURITY_CHECKSUM_TYPE(NAME) SECURITY_CHECKSUM_NS(NAME)
+#define SECURITY_CHECKSUM_FUNC(NAME) SECURITY_CHECKSUM_NS(NAME)
+#define SECURITY_CHECKSUM_CONST(NAME) SECURITY_CHECKSUM_CNS(NAME)
+
+#define SECURITY_CRYPTO_NS(NAME) GNS3(LIB_PREFIX(SECURITY_MOD), Crypto, NAME)
+#define SECURITY_CRYPTO_CNS(NAME)                                              \
+  CNS3(LIB_PREFIX_CONST(SECURITY_CMOD), CRYPTO, NAME)
+#define SECURITY_CRYPTO_TYPE(NAME) SECURITY_CRYPTO_NS(NAME)
+#define SECURITY_CRYPTO_FUNC(NAME) SECURITY_CRYPTO_NS(NAME)
+#define SECURITY_CRYPTO_CONST(NAME) SECURITY_CRYPTO_CNS(NAME)
+
+enum {
+  SECURITY_DIGEST_CONST(MAX_BYTES) = 64U,
+  SECURITY_DIGEST_CONST(MAX_HEX_LENGTH) = (64U * 2U) + 1U
+};
+/* EOF */
