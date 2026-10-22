@@ -7,13 +7,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../../Cosmeron/Modules/File/File.h"
+
 #ifdef _WIN32
 #include <windows.h>
 #else
 #include <unistd.h>
 #endif
-
-#include "../../Cosmeron/Modules/File/File.h"
 
 #define OK(x) assert((x) == STATUS_CONST(SUCCESS))
 
