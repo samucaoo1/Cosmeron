@@ -1,0 +1,165 @@
+#pragma once
+#include <stdlib.h>
+#include <string.h>
+
+OBJECT_PROTOTYPEEX(TCompositor, Create, (size_t capacity)) {
+  if (!self || capacity == 0) return STATUS_CONST(INVALID_ARGUMENT);
+  self->layers = (COMPOSITOR_TYPE(TLayer) *)malloc(capacity * sizeof(COMPOSITOR_TYPE(TLayer)));
+  if (!self->layers) return STATUS_CONST(INSUFFICIENT_SPACE);
+  self->capacity = capacity;
+  self->layerCount = 0;
+  self->owns = true;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TCompositor, Destroy, ()) {
+  if (!self) return;
+  if (self->owns && self->layers) {
+    free(self->layers);
+    self->layers = NULL;
+  }
+  self->layerCount = 0;
+  self->capacity = 0;
+  self->owns = false;
+}
+
+OBJECT_PROTOTYPEEX(TCompositor, AddLayer, (const TERMINAL_TYPE(TCanvas) *canvas, int32_t zOrder, TDUAL_TYPE(int32) offset, float opacity, size_t *outIndex)) {
+  if (!self || !self->layers || !canvas) return STATUS_CONST(INVALID_ARGUMENT);
+  if (self->layerCount >= self->capacity) return STATUS_CONST(INSUFFICIENT_SPACE);
+
+  size_t idx = self->layerCount;
+  COMPOSITOR_TYPE(TLayer) *layer = &self->layers[idx];
+  layer->canvas = canvas;
+  layer->zOrder = zOrder;
+  layer->offset = offset;
+  layer->opacity = opacity < 0.0f ? 0.0f : (opacity > 1.0f ? 1.0f : opacity);
+  layer->visible = true;
+  layer->useColorKey = false;
+  layer->colorKey = 0;
+
+  self->layerCount++;
+  if (outIndex) *outIndex = idx;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TCompositor, SetLayerZ, (size_t index, int32_t zOrder)) {
+  if (!self || !self->layers || index >= self->layerCount) return STATUS_CONST(OUT_OF_RANGE);
+  self->layers[index].zOrder = zOrder;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TCompositor, SetLayerOffset, (size_t index, TDUAL_TYPE(int32) offset)) {
+  if (!self || !self->layers || index >= self->layerCount) return STATUS_CONST(OUT_OF_RANGE);
+  self->layers[index].offset = offset;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TCompositor, SetLayerOpacity, (size_t index, float opacity)) {
+  if (!self || !self->layers || index >= self->layerCount) return STATUS_CONST(OUT_OF_RANGE);
+  self->layers[index].opacity = opacity < 0.0f ? 0.0f : (opacity > 1.0f ? 1.0f : opacity);
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TCompositor, SetLayerVisible, (size_t index, bool visible)) {
+  if (!self || !self->layers || index >= self->layerCount) return STATUS_CONST(OUT_OF_RANGE);
+  self->layers[index].visible = visible;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TCompositor, SetLayerColorKey, (size_t index, bool useColorKey, uint32_t colorKey)) {
+  if (!self || !self->layers || index >= self->layerCount) return STATUS_CONST(OUT_OF_RANGE);
+  self->layers[index].useColorKey = useColorKey;
+  self->layers[index].colorKey = colorKey;
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline uint32_t COMPOSITOR_INS(LerpRGB)(uint32_t c1, uint32_t c2, float t) {
+  if (t <= 0.0f) return c1;
+  if (t >= 1.0f) return c2;
+  float r1 = (float)((c1 >> 16) & 0xFF), g1 = (float)((c1 >> 8) & 0xFF), b1 = (float)(c1 & 0xFF);
+  float r2 = (float)((c2 >> 16) & 0xFF), g2 = (float)((c2 >> 8) & 0xFF), b2 = (float)(c2 & 0xFF);
+  uint32_t r = (uint32_t)(r1 + t * (r2 - r1) + 0.5f);
+  uint32_t g = (uint32_t)(g1 + t * (g2 - g1) + 0.5f);
+  uint32_t b = (uint32_t)(b1 + t * (b2 - b1) + 0.5f);
+  if (r > 255U) r = 255U;
+  if (g > 255U) g = 255U;
+  if (b > 255U) b = 255U;
+  return (r << 16) | (g << 8) | b;
+}
+
+OBJECT_PROTOTYPEEX(TCompositor, Compose, (TERMINAL_TYPE(TCanvas) *destination)) {
+  if (!self || !destination) return STATUS_CONST(INVALID_ARGUMENT);
+  if (self->layerCount == 0) return STATUS_CONST(SUCCESS);
+
+  /* Build indirect index array for stable sort by zOrder */
+  size_t *order = (size_t *)malloc(self->layerCount * sizeof(size_t));
+  if (!order) return STATUS_CONST(INSUFFICIENT_SPACE);
+  for (size_t i = 0; i < self->layerCount; i++) order[i] = i;
+
+  /* Insertion sort by zOrder */
+  for (size_t i = 1; i < self->layerCount; i++) {
+    size_t key = order[i];
+    int32_t keyZ = self->layers[key].zOrder;
+    size_t j = i;
+    while (j > 0 && self->layers[order[j - 1]].zOrder > keyZ) {
+      order[j] = order[j - 1];
+      j--;
+    }
+    order[j] = key;
+  }
+
+  for (size_t l = 0; l < self->layerCount; l++) {
+    const COMPOSITOR_TYPE(TLayer) *layer = &self->layers[order[l]];
+    if (!layer->visible || layer->opacity <= 0.0f || !layer->canvas) continue;
+
+    uint16_t srcCols = layer->canvas->size.col;
+    uint16_t srcRows = layer->canvas->size.row;
+
+    for (uint16_t r = 0; r < srcRows; r++) {
+      int32_t destY = (int32_t)r + layer->offset.y;
+      if (destY < 0 || destY >= (int32_t)destination->size.row) continue;
+
+      for (uint16_t c = 0; c < srcCols; c++) {
+        int32_t destX = (int32_t)c + layer->offset.x;
+        if (destX < 0 || destX >= (int32_t)destination->size.col) continue;
+
+        TDUAL_TYPE(uint16) srcPos = {.x = c, .y = r};
+        uint32_t glyph = 0;
+        TEXT_GRID_ATTRIBUTE_TYPE(Cell) style;
+        if (TERMINAL_FUNC(Canvas_Get)(layer->canvas, srcPos, &glyph, &style) != STATUS_CONST(SUCCESS))
+          continue;
+
+        if (layer->useColorKey && glyph == layer->colorKey)
+          continue;
+
+        TDUAL_TYPE(uint16) destPos = {.x = (uint16_t)destX, .y = (uint16_t)destY};
+
+        if (layer->opacity < 0.999f) {
+          uint32_t destGlyph = 0;
+          TEXT_GRID_ATTRIBUTE_TYPE(Cell) destStyle;
+          if (TERMINAL_FUNC(Canvas_Get)(destination, destPos, &destGlyph, &destStyle) == STATUS_CONST(SUCCESS)) {
+            style.background = COMPOSITOR_INS(LerpRGB)(destStyle.background, style.background, layer->opacity);
+            style.foreground = COMPOSITOR_INS(LerpRGB)(destStyle.foreground, style.foreground, layer->opacity);
+          }
+        }
+
+        (void)TERMINAL_FUNC(Canvas_Set)(destination, destPos, glyph, style);
+      }
+    }
+  }
+
+  free(order);
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TCompositor, Clear, ()) {
+  if (!self) return STATUS_CONST(INVALID_ARGUMENT);
+  self->layerCount = 0;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TCompositor, LayerCount, ()) {
+  return self ? self->layerCount : 0;
+}
+
+OBJECT_IMPLEMENT(TCompositor);

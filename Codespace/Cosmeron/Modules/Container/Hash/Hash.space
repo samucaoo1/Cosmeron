@@ -44,6 +44,24 @@ typedef enum HASH_NS(BucketState) {
 #define HASH_FUNCTION_TABLE_TYPE(KEY_SUFFIX, VALUE_SUFFIX)                    \
   GNS2(HASH_OPERATION_NS(KEY_SUFFIX, VALUE_SUFFIX), FunctionTable)
 
+#define THASH_SET_TYPE(KEY_SUFFIX)                                            \
+  GNS2(HASH_NS(THashSet), KEY_SUFFIX)
+
+#define THASH_SET_BUCKET_TYPE(KEY_SUFFIX)                                     \
+  GNS2(HASH_NS(HashSetBucket), KEY_SUFFIX)
+
+#define HASH_SET_FUNC(KEY_SUFFIX, FUNC)                                       \
+  GNS2(GNS2(HASH_NS(HASH_SET_OPERATION_NS(KEY_SUFFIX)), FUNC), Function)
+
+#define HASH_SET_OPERATION_NS(KEY_SUFFIX)                                     \
+  GNS2(HASH_NS(Set), KEY_SUFFIX)
+
+#define HASH_SET_OPERATION(KEY_SUFFIX, FUNC)                                  \
+  GNS2(HASH_SET_OPERATION_NS(KEY_SUFFIX), FUNC)
+
+#define HASH_SET_FUNCTION_TABLE_TYPE(KEY_SUFFIX)                              \
+  GNS2(HASH_SET_OPERATION_NS(KEY_SUFFIX), FunctionTable)
+
 #define COSMERON_MACRO_INTERNAL_HASH_INT_FACTOR UINT32_C(2654435761)
 #define COSMERON_MACRO_INTERNAL_HASH_FNV_OFFSET                               \
   UINT64_C(14695981039346656037)

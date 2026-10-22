@@ -11,3 +11,6 @@
 #include "Format/Format.h"
 #include "View/View.h"
 #include "String/String.h"
+#include "String/CString/CString.h"
+#include "String/Builder/Builder.h"
+#include "Attributed/Attributed.h"

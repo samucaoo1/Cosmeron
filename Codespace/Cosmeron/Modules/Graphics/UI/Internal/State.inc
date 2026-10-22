@@ -55,6 +55,7 @@ static inline UI_TYPE(TTheme) UI_INS(ThemeBase)(
   v.border=UI_CONST(BORDER_NONE);
   v.align=UI_CONST(ALIGN_LEFT);
   theme.text=v;
+  theme.scrollbar=v;
   theme.glyphs=glyphs;
   return theme;
 }
@@ -75,6 +76,14 @@ UI_THEME_MONOCHROME_PROTOTYPE {
       UINT32_C(0x555555),UINT32_C(0x777777),UI_FUNC(Glyphs_ASCII)());
 }
 UI_THEME_DEFAULT_PROTOTYPE { return UI_FUNC(Theme_Dark)(); }
+UI_INIT_PROTOTYPE {
+  if(!context) return STATUS_CONST(INVALID_ARGUMENT);
+  memset(context, 0, sizeof(*context));
+#ifndef PACKAGE_DISABLE_FUNCTION_TABLE
+  context->api = UI_GetFunctionTable();
+#endif
+  return STATUS_CONST(SUCCESS);
+}
 UI_THEME_SET_PROTOTYPE {
   if(!context || !theme || context->frame) return STATUS_CONST(INVALID_ARGUMENT);
   context->theme=*theme;
@@ -164,6 +173,11 @@ static inline OPSTATUS UI_INS(FocusStep)(UI_TYPE(TContext) *context, bool forwar
 }
 UI_FOCUS_NEXT_PROTOTYPE {return UI_INS(FocusStep)(context,true);}
 UI_FOCUS_PREVIOUS_PROTOTYPE {return UI_INS(FocusStep)(context,false);}
+UI_FOCUS_CLEAR_PROTOTYPE {
+  if(!context) return STATUS_CONST(INVALID_ARGUMENT);
+  context->focus=0U;
+  return STATUS_CONST(SUCCESS);
+}
 static inline OPSTATUS UI_INS(Register)(
     UI_TYPE(TContext) *context,UI_TYPE(WidgetId) id,bool enabled) {
   size_t i;

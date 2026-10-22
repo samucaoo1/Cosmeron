@@ -1,5 +1,5 @@
 #define OBJECT_DISABLE_FUNCTION_TABLE
-#include "../../Cosmeron/Core/Object/Object.h"
+#include "../../Cosmeron/Core/Module/Object.h"
 #include <assert.h>
 
 /* 1. Alternativa B without function table */

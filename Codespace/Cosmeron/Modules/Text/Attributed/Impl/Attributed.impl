@@ -1,0 +1,357 @@
+#pragma once
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+
+/* ============================================================
+ * Internal Helpers
+ * ============================================================ */
+
+static inline OPSTATUS TEXT_ATTRIBUTED_INS(EnsureTextCapacity)(
+    TEXT_ATTRIBUTED_TYPE(TAttributedText) * self, size_t needed) {
+  if (self->capacity >= needed)
+    return STATUS_CONST(SUCCESS);
+
+  size_t newCap = (self->capacity == 0U) ? 16U : self->capacity;
+  while (newCap < needed) {
+    if (newCap > SIZE_MAX / 2U) {
+      newCap = needed;
+      break;
+    }
+    newCap *= 2U;
+  }
+
+  void *temp = self->text;
+  OPSTATUS status = ALLOC_FUNC(ReallocBytes)(&temp, newCap + 1U);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  self->text = (char *)temp;
+  self->capacity = newCap;
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline OPSTATUS TEXT_ATTRIBUTED_INS(EnsureSpanCapacity)(
+    TEXT_ATTRIBUTED_TYPE(TAttributedText) * self, size_t needed) {
+  if (self->spanCapacity >= needed)
+    return STATUS_CONST(SUCCESS);
+
+  size_t newCap = (self->spanCapacity == 0U) ? 4U : self->spanCapacity;
+  while (newCap < needed) {
+    if (newCap > SIZE_MAX / 2U) {
+      newCap = needed;
+      break;
+    }
+    newCap *= 2U;
+  }
+
+  void *temp = self->spans;
+  OPSTATUS status = ALLOC_FUNC(ReallocArray)(
+      &temp, newCap, sizeof(TEXT_ATTRIBUTED_TYPE(Span)));
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  self->spans = (TEXT_ATTRIBUTED_TYPE(Span) *)temp;
+  self->spanCapacity = newCap;
+  return STATUS_CONST(SUCCESS);
+}
+
+/* ============================================================
+ * TAttributedText Method Implementations
+ * ============================================================ */
+
+OBJECT_PROTOTYPEEX(TEXT_ATTRIBUTED_TYPE(TAttributedText), Create,
+                   (size_t initialCapacity)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  self->text = NULL;
+  self->length = 0U;
+  self->capacity = 0U;
+  self->spans = NULL;
+  self->spanCount = 0U;
+  self->spanCapacity = 0U;
+
+  if (initialCapacity > 0U) {
+    OPSTATUS status = TEXT_ATTRIBUTED_INS(EnsureTextCapacity)(self, initialCapacity);
+    if (status != STATUS_CONST(SUCCESS))
+      return status;
+    self->text[0] = '\0';
+  }
+
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TEXT_ATTRIBUTED_TYPE(TAttributedText), Destroy) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (self->text != NULL) {
+    void *temp = self->text;
+    ALLOC_FUNC(FreePointer)(&temp);
+    self->text = NULL;
+  }
+
+  if (self->spans != NULL) {
+    void *temp = self->spans;
+    ALLOC_FUNC(FreePointer)(&temp);
+    self->spans = NULL;
+  }
+
+  self->length = 0U;
+  self->capacity = 0U;
+  self->spanCount = 0U;
+  self->spanCapacity = 0U;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TEXT_ATTRIBUTED_TYPE(TAttributedText), Clear) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  self->length = 0U;
+  if (self->text != NULL) {
+    self->text[0] = '\0';
+  }
+  self->spanCount = 0U;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TEXT_ATTRIBUTED_TYPE(TAttributedText), SetText,
+                   (const char *text, size_t length)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (!text && length > 0U)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (length == 0U) {
+    self->length = 0U;
+    if (self->text != NULL) {
+      self->text[0] = '\0';
+    }
+    return STATUS_CONST(SUCCESS);
+  }
+
+  OPSTATUS status = TEXT_ATTRIBUTED_INS(EnsureTextCapacity)(self, length);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  memcpy(self->text, text, length);
+  self->text[length] = '\0';
+  self->length = length;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TEXT_ATTRIBUTED_TYPE(TAttributedText), AppendText,
+                   (const char *text, size_t length)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (!text && length > 0U)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (length == 0U)
+    return STATUS_CONST(SUCCESS);
+
+  size_t newLen = self->length + length;
+  OPSTATUS status = TEXT_ATTRIBUTED_INS(EnsureTextCapacity)(self, newLen);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  memcpy(self->text + self->length, text, length);
+  self->text[newLen] = '\0';
+  self->length = newLen;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TEXT_ATTRIBUTED_TYPE(TAttributedText), AddSpan,
+                   (size_t start, size_t length,
+                    TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (length == 0U)
+    return STATUS_CONST(SUCCESS);
+
+  OPSTATUS status =
+      TEXT_ATTRIBUTED_INS(EnsureSpanCapacity)(self, self->spanCount + 1U);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  self->spans[self->spanCount].start = start;
+  self->spans[self->spanCount].length = length;
+  self->spans[self->spanCount].attribute = attribute;
+  self->spanCount++;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TEXT_ATTRIBUTED_TYPE(TAttributedText), ClearSpans) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  self->spanCount = 0U;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TEXT_ATTRIBUTED_TYPE(TAttributedText), GetAttributeAt,
+                   (size_t index,
+                    TEXT_GRID_ATTRIBUTE_TYPE(Cell) * outAttribute)) {
+  if (!self || !outAttribute)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (index >= self->length)
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  memset(outAttribute, 0, sizeof(*outAttribute));
+
+  for (size_t i = 0U; i < self->spanCount; ++i) {
+    const TEXT_ATTRIBUTED_TYPE(Span) *span = &self->spans[i];
+    if (index >= span->start && index < span->start + span->length) {
+      if (span->attribute.foreground != 0U) {
+        outAttribute->foreground = span->attribute.foreground;
+      }
+      if (span->attribute.background != 0U) {
+        outAttribute->background = span->attribute.background;
+      }
+      outAttribute->flags |= span->attribute.flags;
+      if (span->attribute.underline != 0U) {
+        outAttribute->underline = span->attribute.underline;
+      }
+    }
+  }
+
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TEXT_ATTRIBUTED_TYPE(TAttributedText), RenderAnsi,
+                   (char *outBuffer, size_t bufferCapacity,
+                    size_t *outWritten)) {
+  if (!self || !outBuffer || !outWritten || bufferCapacity == 0U)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  *outWritten = 0U;
+  if (self->length == 0U) {
+    outBuffer[0] = '\0';
+    return STATUS_CONST(SUCCESS);
+  }
+
+  size_t written = 0U;
+  TEXT_GRID_ATTRIBUTE_TYPE(Cell) activeAttr;
+  memset(&activeAttr, 0, sizeof(activeAttr));
+  bool hadStyle = false;
+
+  for (size_t i = 0U; i < self->length; ++i) {
+    TEXT_GRID_ATTRIBUTE_TYPE(Cell) currentAttr;
+    OPSTATUS status = OBJECT_CALL(self, GetAttributeAt, i, &currentAttr);
+    if (status != STATUS_CONST(SUCCESS))
+      return status;
+
+    bool attrChanged = (i == 0U) ||
+                       (memcmp(&currentAttr, &activeAttr, sizeof(currentAttr)) != 0);
+
+    if (attrChanged) {
+      /* Reset prior formatting if needed */
+      if (hadStyle) {
+        int n = snprintf(outBuffer + written,
+                         bufferCapacity > written ? bufferCapacity - written : 0U,
+                         "\033[0m");
+        if (n > 0)
+          written += (size_t)n;
+        hadStyle = false;
+      }
+
+      /* Check if current has styling */
+      bool hasStyle = (currentAttr.foreground != 0U) ||
+                      (currentAttr.background != 0U) ||
+                      (currentAttr.flags != 0U) ||
+                      (currentAttr.underline != 0U);
+
+      if (hasStyle) {
+        if (currentAttr.flags & TEXT_GRID_ATTRIBUTE_CONST(BOLD)) {
+          int n = snprintf(outBuffer + written,
+                           bufferCapacity > written ? bufferCapacity - written : 0U,
+                           "\033[1m");
+          if (n > 0) written += (size_t)n;
+        }
+        if (currentAttr.flags & TEXT_GRID_ATTRIBUTE_CONST(ITALIC)) {
+          int n = snprintf(outBuffer + written,
+                           bufferCapacity > written ? bufferCapacity - written : 0U,
+                           "\033[3m");
+          if (n > 0) written += (size_t)n;
+        }
+        if (currentAttr.underline != 0U) {
+          int n = snprintf(outBuffer + written,
+                           bufferCapacity > written ? bufferCapacity - written : 0U,
+                           "\033[4m");
+          if (n > 0) written += (size_t)n;
+        }
+        if (currentAttr.foreground != 0U) {
+          uint8_t r = TEXT_GRID_COLOR_RED(currentAttr.foreground);
+          uint8_t g = TEXT_GRID_COLOR_GREEN(currentAttr.foreground);
+          uint8_t b = TEXT_GRID_COLOR_BLUE(currentAttr.foreground);
+          int n = snprintf(outBuffer + written,
+                           bufferCapacity > written ? bufferCapacity - written : 0U,
+                           "\033[38;2;%u;%u;%um", r, g, b);
+          if (n > 0) written += (size_t)n;
+        }
+        if (currentAttr.background != 0U) {
+          uint8_t r = TEXT_GRID_COLOR_RED(currentAttr.background);
+          uint8_t g = TEXT_GRID_COLOR_GREEN(currentAttr.background);
+          uint8_t b = TEXT_GRID_COLOR_BLUE(currentAttr.background);
+          int n = snprintf(outBuffer + written,
+                           bufferCapacity > written ? bufferCapacity - written : 0U,
+                           "\033[48;2;%u;%u;%um", r, g, b);
+          if (n > 0) written += (size_t)n;
+        }
+        hadStyle = true;
+      }
+      activeAttr = currentAttr;
+    }
+
+    if (written + 1U < bufferCapacity) {
+      outBuffer[written++] = self->text[i];
+    } else {
+      return STATUS_CONST(INSUFFICIENT_SPACE);
+    }
+  }
+
+  if (hadStyle) {
+    int n = snprintf(outBuffer + written,
+                     bufferCapacity > written ? bufferCapacity - written : 0U,
+                     "\033[0m");
+    if (n > 0)
+      written += (size_t)n;
+  }
+
+  if (written < bufferCapacity) {
+    outBuffer[written] = '\0';
+    *outWritten = written;
+    return STATUS_CONST(SUCCESS);
+  }
+
+  return STATUS_CONST(INSUFFICIENT_SPACE);
+}
+
+OBJECT_PROTOTYPEEX(TEXT_ATTRIBUTED_TYPE(TAttributedText), Text) {
+  return (self && self->text) ? self->text : "";
+}
+
+OBJECT_PROTOTYPEEX(TEXT_ATTRIBUTED_TYPE(TAttributedText), Length) {
+  return self ? self->length : 0U;
+}
+
+OBJECT_PROTOTYPEEX(TEXT_ATTRIBUTED_TYPE(TAttributedText), SpanCount) {
+  return self ? self->spanCount : 0U;
+}
+
+OBJECT_PROTOTYPEEX(TEXT_ATTRIBUTED_TYPE(TAttributedText), Spans) {
+  return self ? self->spans : NULL;
+}
+
+OBJECT_IMPLEMENT(TEXT_ATTRIBUTED_TYPE(TAttributedText));
+
+/* EOF */

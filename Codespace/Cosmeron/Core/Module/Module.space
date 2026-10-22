@@ -1,0 +1,29 @@
+#pragma once
+
+#include "../Error/Status.h"
+#include "../Namespace.h"
+#include "../Preprocessor/Arguments.h"
+#include "../Preprocessor/Boolean.h"
+#include "../Preprocessor/Compiling.inc"
+#include "../Preprocessor/Foreach.h"
+#include "../Preprocessor/Operations.h"
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#define MODULE_MOD Module
+#define MODULE_CMOD MODULE
+
+#define MODULE_NS(NAME) GNS2(LIB_PREFIX(MODULE_MOD), NAME)
+#define MODULE_CNS(NAME) CNS2(LIB_PREFIX_CONST(MODULE_CMOD), NAME)
+#define MODULE_INS(NAME) GNS3(LIB_PREFIX(MODULE_MOD), Internal, NAME)
+#define MODULE_CINS(NAME) CNS3(LIB_PREFIX_CONST(MODULE_CMOD), INTERNAL, NAME)
+
+#define MODULE_TYPE(NAME) MODULE_NS(NAME)
+#define MODULE_FUNC(NAME) MODULE_NS(NAME)
+#define MODULE_CONST(NAME) MODULE_CNS(NAME)
+
+/* Function tables are optional. Define MODULE_DISABLE_FUNCTION_TABLE,
+ * OBJECT_DISABLE_FUNCTION_TABLE, or PACKAGE_DISABLE_FUNCTION_TABLE to omit. */
+/* EOF */

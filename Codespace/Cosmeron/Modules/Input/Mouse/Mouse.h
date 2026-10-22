@@ -1,9 +1,26 @@
 #pragma once
 
+#include "../../../Core/Module/Package.h"
 #include "../Input.space"
 #include "../Internal/Core.inc"
 
+#if defined(INPUT_DISABLE_FUNCTION_TABLE) ||                                    \
+    defined(INPUT_MOUSE_DISABLE_FUNCTION_TABLE)
+#ifndef PACKAGE_DISABLE_FUNCTION_TABLE
+#define PACKAGE_DISABLE_FUNCTION_TABLE
+#endif
+#endif
+
 /* Mouse queries read the shared snapshot. Invalid buttons return false. */
+
+PACKAGE(INPUT_NS(Mouse),
+    FUNCTION(bool, IsDown, (INPUT_TYPE(MouseButton) button)),
+    FUNCTION(bool, IsPressed, (INPUT_TYPE(MouseButton) button)),
+    FUNCTION(bool, IsReleased, (INPUT_TYPE(MouseButton) button)),
+    FUNCTION(void, GetPosition, (float *x, float *y)),
+    FUNCTION(void, GetDelta, (float *x, float *y)),
+    FUNCTION(void, GetScroll, (float *x, float *y))
+);
 
 /* Read the current held state; does not consume input. */
 #define INPUT_MOUSE_IS_DOWN_PROTOTYPE \

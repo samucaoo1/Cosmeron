@@ -1,0 +1,181 @@
+#pragma once
+#include <stdlib.h>
+#include <string.h>
+
+OBJECT_PROTOTYPEEX(TPixelCanvas, Create, (uint16_t width, uint16_t height)) {
+  if (!self || width == 0 || height == 0) return STATUS_CONST(INVALID_ARGUMENT);
+  size_t total = (size_t)width * (size_t)height;
+  self->pixels = (uint32_t *)malloc(total * sizeof(uint32_t));
+  if (!self->pixels) return STATUS_CONST(INSUFFICIENT_SPACE);
+  memset(self->pixels, 0, total * sizeof(uint32_t));
+  self->width = width;
+  self->height = height;
+  self->owns = true;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TPixelCanvas, Destroy, ()) {
+  if (!self) return;
+  if (self->owns && self->pixels) {
+    free(self->pixels);
+    self->pixels = NULL;
+  }
+  self->width = 0;
+  self->height = 0;
+  self->owns = false;
+}
+
+OBJECT_PROTOTYPEEX(TPixelCanvas, Clear, (uint32_t color)) {
+  if (!self || !self->pixels) return STATUS_CONST(INVALID_ARGUMENT);
+  size_t total = (size_t)self->width * (size_t)self->height;
+  for (size_t i = 0; i < total; i++) {
+    self->pixels[i] = color;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TPixelCanvas, SetPixel, (uint16_t x, uint16_t y, uint32_t color)) {
+  if (!self || !self->pixels || x >= self->width || y >= self->height)
+    return STATUS_CONST(OUT_OF_RANGE);
+  self->pixels[(size_t)y * self->width + (size_t)x] = color;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TPixelCanvas, GetPixel, (uint16_t x, uint16_t y, uint32_t *outColor)) {
+  if (!self || !self->pixels || x >= self->width || y >= self->height || !outColor)
+    return STATUS_CONST(OUT_OF_RANGE);
+  *outColor = self->pixels[(size_t)y * self->width + (size_t)x];
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TPixelCanvas, DrawLine, (int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint32_t color)) {
+  if (!self || !self->pixels) return STATUS_CONST(INVALID_ARGUMENT);
+  int32_t dx = abs(x1 - x0);
+  int32_t sx = x0 < x1 ? 1 : -1;
+  int32_t dy = -abs(y1 - y0);
+  int32_t sy = y0 < y1 ? 1 : -1;
+  int32_t err = dx + dy;
+
+  while (1) {
+    if (x0 >= 0 && x0 < self->width && y0 >= 0 && y0 < self->height) {
+      self->pixels[(size_t)y0 * self->width + (size_t)x0] = color;
+    }
+    if (x0 == x1 && y0 == y1) break;
+    int32_t e2 = 2 * err;
+    if (e2 >= dy) { err += dy; x0 += sx; }
+    if (e2 <= dx) { err += dx; y0 += sy; }
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TPixelCanvas, DrawRect, (int32_t x, int32_t y, int32_t w, int32_t h, uint32_t color, bool fill)) {
+  if (!self || !self->pixels || w <= 0 || h <= 0) return STATUS_CONST(INVALID_ARGUMENT);
+  int32_t xEnd = x + w - 1;
+  int32_t yEnd = y + h - 1;
+
+  if (fill) {
+    int32_t startX = x < 0 ? 0 : x;
+    int32_t endX = xEnd >= self->width ? (int32_t)self->width - 1 : xEnd;
+    int32_t startY = y < 0 ? 0 : y;
+    int32_t endY = yEnd >= self->height ? (int32_t)self->height - 1 : yEnd;
+
+    for (int32_t py = startY; py <= endY; py++) {
+      for (int32_t px = startX; px <= endX; px++) {
+        self->pixels[(size_t)py * self->width + (size_t)px] = color;
+      }
+    }
+  } else {
+    (void)TPixelCanvas_DrawLine(self, x, y, xEnd, y, color);
+    (void)TPixelCanvas_DrawLine(self, x, yEnd, xEnd, yEnd, color);
+    (void)TPixelCanvas_DrawLine(self, x, y, x, yEnd, color);
+    (void)TPixelCanvas_DrawLine(self, xEnd, y, xEnd, yEnd, color);
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TPixelCanvas, DrawCircle, (int32_t cx, int32_t cy, int32_t r, uint32_t color, bool fill)) {
+  if (!self || !self->pixels || r < 0) return STATUS_CONST(INVALID_ARGUMENT);
+  int32_t x = r;
+  int32_t y = 0;
+  int32_t err = 0;
+
+  while (x >= y) {
+    if (fill) {
+      (void)TPixelCanvas_DrawLine(self, cx - x, cy + y, cx + x, cy + y, color);
+      (void)TPixelCanvas_DrawLine(self, cx - x, cy - y, cx + x, cy - y, color);
+      (void)TPixelCanvas_DrawLine(self, cx - y, cy + x, cx + y, cy + x, color);
+      (void)TPixelCanvas_DrawLine(self, cx - y, cy - x, cx + y, cy - x, color);
+    } else {
+      if (cx + x >= 0 && cx + x < self->width && cy + y >= 0 && cy + y < self->height)
+        self->pixels[(size_t)(cy + y) * self->width + (size_t)(cx + x)] = color;
+      if (cx - x >= 0 && cx - x < self->width && cy + y >= 0 && cy + y < self->height)
+        self->pixels[(size_t)(cy + y) * self->width + (size_t)(cx - x)] = color;
+      if (cx + x >= 0 && cx + x < self->width && cy - y >= 0 && cy - y < self->height)
+        self->pixels[(size_t)(cy - y) * self->width + (size_t)(cx + x)] = color;
+      if (cx - x >= 0 && cx - x < self->width && cy - y >= 0 && cy - y < self->height)
+        self->pixels[(size_t)(cy - y) * self->width + (size_t)(cx - x)] = color;
+      if (cx + y >= 0 && cx + y < self->width && cy + x >= 0 && cy + x < self->height)
+        self->pixels[(size_t)(cy + x) * self->width + (size_t)(cx + y)] = color;
+      if (cx - y >= 0 && cx - y < self->width && cy + x >= 0 && cy + x < self->height)
+        self->pixels[(size_t)(cy + x) * self->width + (size_t)(cx - y)] = color;
+      if (cx + y >= 0 && cx + y < self->width && cy - x >= 0 && cy - x < self->height)
+        self->pixels[(size_t)(cy - x) * self->width + (size_t)(cx + y)] = color;
+      if (cx - y >= 0 && cx - y < self->width && cy - x >= 0 && cy - x < self->height)
+        self->pixels[(size_t)(cy - x) * self->width + (size_t)(cx - y)] = color;
+    }
+
+    if (err <= 0) {
+      y += 1;
+      err += 2 * y + 1;
+    }
+    if (err > 0) {
+      x -= 1;
+      err -= 2 * x + 1;
+    }
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TPixelCanvas, RenderToCanvas, (TERMINAL_TYPE(TCanvas) *destCanvas, TDUAL_TYPE(uint16) destOffset)) {
+  if (!self || !self->pixels || !destCanvas) return STATUS_CONST(INVALID_ARGUMENT);
+
+  uint16_t termRows = (self->height + 1U) / 2U;
+  uint16_t termCols = self->width;
+
+  for (uint16_t tr = 0; tr < termRows; tr++) {
+    uint16_t destY = tr + destOffset.row;
+    if (destY >= destCanvas->size.row) break;
+
+    uint16_t topY = tr * 2U;
+    uint16_t botY = topY + 1U;
+
+    for (uint16_t tc = 0; tc < termCols; tc++) {
+      uint16_t destX = tc + destOffset.col;
+      if (destX >= destCanvas->size.col) break;
+
+      uint32_t topColor = self->pixels[(size_t)topY * self->width + tc];
+      uint32_t botColor = (botY < self->height) ? self->pixels[(size_t)botY * self->width + tc] : topColor;
+
+      TEXT_GRID_ATTRIBUTE_TYPE(Cell) cell = TEXT_GRID_ATTRIBUTE_FUNC(Default)();
+      cell.foreground = topColor & 0xFFFFFF;
+      cell.background = botColor & 0xFFFFFF;
+      cell.flags &= (uint16_t)~(TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_FOREGROUND) |
+                                TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_BACKGROUND));
+
+      /* 0x2580 is upper half block '▀' */
+      (void)TERMINAL_FUNC(Canvas_Set)(destCanvas, (TDUAL_TYPE(uint16)){.x = destX, .y = destY}, 0x2580, cell);
+    }
+  }
+
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TPixelCanvas, Width, ()) {
+  return self ? self->width : 0;
+}
+
+OBJECT_PROTOTYPEEX(TPixelCanvas, Height, ()) {
+  return self ? self->height : 0;
+}
+
+OBJECT_IMPLEMENT(TPixelCanvas);

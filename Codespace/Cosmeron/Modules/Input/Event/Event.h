@@ -1,9 +1,24 @@
 #pragma once
 
+#include "../../../Core/Module/Package.h"
 #include "../Input.space"
 #include "../Internal/Core.inc"
 
+#if defined(INPUT_DISABLE_FUNCTION_TABLE) ||                                    \
+    defined(INPUT_EVENT_DISABLE_FUNCTION_TABLE)
+#ifndef PACKAGE_DISABLE_FUNCTION_TABLE
+#define PACKAGE_DISABLE_FUNCTION_TABLE
+#endif
+#endif
+
 /* Bounded event history. Events are values with no borrowed payload memory. */
+
+PACKAGE(INPUT_NS(Event),
+    FUNCTION(bool, Poll, (INPUT_TYPE(TEvent) *event)),
+    FUNCTION(void, Clear, ()),
+    FUNCTION(uint64_t, GetDroppedCount, ()),
+    FUNCTION(OPSTATUS, Submit, (const INPUT_TYPE(TEvent) *event))
+);
 
 /* Copy and remove the oldest event. False for an empty queue or NULL output.
  * False leaves output untouched. Polling does not alter device states. */

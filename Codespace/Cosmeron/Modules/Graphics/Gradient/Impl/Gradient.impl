@@ -1,0 +1,118 @@
+#pragma once
+#include <stdlib.h>
+#include <string.h>
+
+GRADIENT_LERP_COLOR_PROTOTYPE {
+  if (t <= 0.0f) return c1;
+  if (t >= 1.0f) return c2;
+
+  float a1 = (float)((c1 >> 24) & 0xFF);
+  float r1 = (float)((c1 >> 16) & 0xFF);
+  float g1 = (float)((c1 >> 8) & 0xFF);
+  float b1 = (float)(c1 & 0xFF);
+
+  float a2 = (float)((c2 >> 24) & 0xFF);
+  float r2 = (float)((c2 >> 16) & 0xFF);
+  float g2 = (float)((c2 >> 8) & 0xFF);
+  float b2 = (float)(c2 & 0xFF);
+
+  uint32_t a = (uint32_t)(a1 + t * (a2 - a1) + 0.5f);
+  uint32_t r = (uint32_t)(r1 + t * (r2 - r1) + 0.5f);
+  uint32_t g = (uint32_t)(g1 + t * (g2 - g1) + 0.5f);
+  uint32_t b = (uint32_t)(b1 + t * (b2 - b1) + 0.5f);
+
+  if (a > 255U) a = 255U;
+  if (r > 255U) r = 255U;
+  if (g > 255U) g = 255U;
+  if (b > 255U) b = 255U;
+
+  return (a << 24) | (r << 16) | (g << 8) | b;
+}
+
+OBJECT_PROTOTYPEEX(TGradient, Create, (size_t capacity)) {
+  if (!self || capacity == 0) return STATUS_CONST(INVALID_ARGUMENT);
+  self->stops = (GRADIENT_TYPE(TColorStop) *)malloc(capacity * sizeof(GRADIENT_TYPE(TColorStop)));
+  if (!self->stops) return STATUS_CONST(INSUFFICIENT_SPACE);
+  self->capacity = capacity;
+  self->count = 0;
+  self->owns = true;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TGradient, Destroy, ()) {
+  if (!self) return;
+  if (self->owns && self->stops) {
+    free(self->stops);
+    self->stops = NULL;
+  }
+  self->count = 0;
+  self->capacity = 0;
+  self->owns = false;
+}
+
+OBJECT_PROTOTYPEEX(TGradient, AddStop, (float position, uint32_t color)) {
+  if (!self || !self->stops) return STATUS_CONST(INVALID_ARGUMENT);
+  if (self->count >= self->capacity) return STATUS_CONST(INSUFFICIENT_SPACE);
+
+  float pos = position < 0.0f ? 0.0f : (position > 1.0f ? 1.0f : position);
+  size_t insertIdx = self->count;
+
+  for (size_t i = 0; i < self->count; i++) {
+    if (pos < self->stops[i].position) {
+      insertIdx = i;
+      break;
+    }
+  }
+
+  for (size_t i = self->count; i > insertIdx; i--) {
+    self->stops[i] = self->stops[i - 1];
+  }
+
+  self->stops[insertIdx].position = pos;
+  self->stops[insertIdx].color = color;
+  self->count++;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TGradient, Clear, ()) {
+  if (!self) return STATUS_CONST(INVALID_ARGUMENT);
+  self->count = 0;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TGradient, Sample, (float t)) {
+  if (!self || !self->stops || self->count == 0) return 0U;
+  if (self->count == 1) return self->stops[0].color;
+
+  float pos = t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t);
+
+  if (pos <= self->stops[0].position)
+    return self->stops[0].color;
+  if (pos >= self->stops[self->count - 1].position)
+    return self->stops[self->count - 1].color;
+
+  for (size_t i = 0; i < self->count - 1; i++) {
+    if (pos >= self->stops[i].position && pos <= self->stops[i + 1].position) {
+      float span = self->stops[i + 1].position - self->stops[i].position;
+      float localT = span > 1e-6f ? (pos - self->stops[i].position) / span : 0.0f;
+      return GRADIENT_FUNC(LerpColor)(self->stops[i].color, self->stops[i + 1].color, localT);
+    }
+  }
+
+  return self->stops[self->count - 1].color;
+}
+
+OBJECT_PROTOTYPEEX(TGradient, SampleRange, (uint32_t *outColors, size_t count)) {
+  if (!self || !outColors || count == 0) return STATUS_CONST(INVALID_ARGUMENT);
+  for (size_t i = 0; i < count; i++) {
+    float t = count > 1 ? (float)i / (float)(count - 1) : 0.0f;
+    outColors[i] = TGradient_Sample(self, t);
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TGradient, Count, ()) {
+  return self ? self->count : 0;
+}
+
+OBJECT_IMPLEMENT(TGradient);

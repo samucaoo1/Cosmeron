@@ -7,12 +7,12 @@
 #include "../../Cosmeron/Core/Memory/Operations.h"
 #include "../../Cosmeron/Core/Memory/Arena.h"
 #include "../../Cosmeron/Core/Memory/Stream.h"
+#include "../../Cosmeron/Core/Memory/Pool.h"
 #include "../../Cosmeron/Core/Memory/Swap.h"
 #include "../../Cosmeron/Core/Preprocessor/Detect/Compiler.h"
 #include "../../Cosmeron/Core/Preprocessor/Detect/OperationSystem.h"
 #include "../../Cosmeron/Core/Preprocessor/Detect/Processor.h"
 #include "../../Cosmeron/Core/Preprocessor/Detect/Library.h"
-#include "../../Cosmeron/Core/Object/Object.h"
-#include "../../Cosmeron/Core/Package/Package.h"
+#include "../../Cosmeron/Core/Module/Module.h"
 
 int main(void) { return 0; }

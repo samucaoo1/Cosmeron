@@ -3,10 +3,23 @@
 #include "Input.space"
 #include "Internal/Core.inc"
 #include "Internal/Backend.inc"
+#include "../../Core/Module/Package.h"
+
+#if defined(INPUT_DISABLE_FUNCTION_TABLE)
+#ifndef PACKAGE_DISABLE_FUNCTION_TABLE
+#define PACKAGE_DISABLE_FUNCTION_TABLE
+#endif
+#endif
 
 /* General device input; independent of Terminal and stdin.
  * One shared snapshot per linked image. All calls belong to one thread.
  * Include individual package headers when only their queries are needed. */
+
+PACKAGE(LIB_PREFIX(INPUT_MOD),
+    FUNCTION(OPSTATUS, Update, ()),
+    FUNCTION(OPSTATUS, SetCaptureMode, (INPUT_TYPE(CaptureMode) mode)),
+    FUNCTION(INPUT_TYPE(Capabilities), GetCapabilities, ())
+);
 
 /* Collect input without waiting for a new event. Renews transient flags and deltas.
  * Initializes native resources automatically; no public Init/Free is required.
@@ -35,3 +48,4 @@ INPUT_GET_CAPABILITIES_PROTOTYPE;
 #include "Controller/Controller.h"
 #include "Gamepad/Gamepad.h"
 #include "Event/Event.h"
+#include "Terminal/Terminal.h"

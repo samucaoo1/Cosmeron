@@ -139,6 +139,11 @@ UI_BEGIN_PROTOTYPE {
   if(!context || context->frame || !canvas ||
      !TEXT_GRID_FUNC(char32, IsValid)(canvas->backing))
     return STATUS_CONST(INVALID_ARGUMENT);
+#ifndef PACKAGE_DISABLE_FUNCTION_TABLE
+  if(!context->api) {
+    context->api = UI_GetFunctionTable();
+  }
+#endif
   if(!context->themeSet) {
     TERMINAL_TYPE(TCapabilities) caps={0};
     context->theme=UI_FUNC(Theme_Default)();
@@ -148,14 +153,16 @@ UI_BEGIN_PROTOTYPE {
         &context->theme.checkbox,&context->theme.radio,
         &context->theme.slider,&context->theme.input,
         &context->theme.panel,&context->theme.progress,
-        &context->theme.selection
+        &context->theme.selection,&context->theme.scrollbar
       };
       size_t visualIndex;
       if(!caps.unicode){
         context->theme.glyphs=UI_FUNC(Glyphs_ASCII)();
         for(visualIndex=0;visualIndex<sizeof(visuals)/sizeof(visuals[0]);
-            ++visualIndex)
-          visuals[visualIndex]->border=UI_CONST(BORDER_ASCII);
+            ++visualIndex) {
+          if(visuals[visualIndex]->border!=UI_CONST(BORDER_NONE))
+            visuals[visualIndex]->border=UI_CONST(BORDER_ASCII);
+        }
       }
       if(!caps.ansi) {
         TEXT_GRID_ATTRIBUTE_TYPE(Cell) fallback=TEXT_GRID_ATTRIBUTE_FUNC(Default)();
@@ -171,7 +178,7 @@ UI_BEGIN_PROTOTYPE {
     }
     context->themeSet=true;
   }
-  context->canvas=canvas;context->frame=true;
+  context->canvas=canvas;context->lastCanvas=canvas;context->frame=true;
   context->panelDepth=0;context->layoutDepth=0;context->visualDepth=0;
   context->idDepth=0;context->idScope=0;
   /* Tab moves using the focusable elements registered in the previous frame. */
@@ -326,6 +333,96 @@ UI_PANEL_END_PROTOTYPE {
   return STATUS_CONST(SUCCESS);
 }
 
+UI_DISPATCH_PROTOTYPE {
+  if(!context || !event || context->frame)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  switch(event->kind){
+    case TERMINAL_CONST(EVENT_KEY):
+      if(event->key == '\t')
+        return UI_FUNC(Focus_Next)(context);
+      return UI_FUNC(Key)(context, event->key);
+    case TERMINAL_CONST(EVENT_POINTER_MOVE):
+      return UI_FUNC(PointerMove)(context, event->position);
+    case TERMINAL_CONST(EVENT_POINTER_BUTTON): {
+      OPSTATUS st = UI_FUNC(PointerMove)(context, event->position);
+      if(st != STATUS_CONST(SUCCESS)) return st;
+      return UI_FUNC(PointerButton)(context, event->pressed);
+    }
+    case TERMINAL_CONST(EVENT_SCROLL): {
+      OPSTATUS st = UI_FUNC(PointerMove)(context, event->position);
+      if(st != STATUS_CONST(SUCCESS)) return st;
+      return UI_FUNC(Scroll)(context, event->scroll);
+    }
+    case TERMINAL_CONST(EVENT_RESIZE):
+      context->newSize = event->size;
+      context->resized = true;
+      return STATUS_CONST(SUCCESS);
+    default:
+      return STATUS_CONST(NOT_SUPPORTED);
+  }
+}
+
+UI_DISPATCH_INPUT_PROTOTYPE {
+  if(!context || !event || context->frame)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  switch(event->type){
+    case INPUT_CONST(EVENT_KEY_PRESS):
+    case INPUT_CONST(EVENT_KEY_REPEAT): {
+      if(event->data.key == INPUT_CONST(KEY_TAB)) {
+        if(event->modifiers & INPUT_CONST(MODIFIER_SHIFT))
+          return UI_FUNC(Focus_Previous)(context);
+        return UI_FUNC(Focus_Next)(context);
+      }
+      switch(event->data.key){
+        case INPUT_CONST(KEY_UP): return UI_FUNC(Key)(context, TERMINAL_CONST(KEY_UP));
+        case INPUT_CONST(KEY_DOWN): return UI_FUNC(Key)(context, TERMINAL_CONST(KEY_DOWN));
+        case INPUT_CONST(KEY_LEFT): return UI_FUNC(Key)(context, TERMINAL_CONST(KEY_LEFT));
+        case INPUT_CONST(KEY_RIGHT): return UI_FUNC(Key)(context, TERMINAL_CONST(KEY_RIGHT));
+        case INPUT_CONST(KEY_ENTER): return UI_FUNC(Key)(context, TERMINAL_CONST(KEY_ENTER));
+        case INPUT_CONST(KEY_ESCAPE): return UI_FUNC(Key)(context, TERMINAL_CONST(KEY_ESCAPE));
+        case INPUT_CONST(KEY_BACKSPACE): return UI_FUNC(Key)(context, TERMINAL_CONST(KEY_BACKSPACE));
+        case INPUT_CONST(KEY_DELETE): return UI_FUNC(Key)(context, TERMINAL_CONST(KEY_DELETE));
+        case INPUT_CONST(KEY_HOME): return UI_FUNC(Key)(context, TERMINAL_CONST(KEY_HOME));
+        case INPUT_CONST(KEY_END): return UI_FUNC(Key)(context, TERMINAL_CONST(KEY_END));
+        case INPUT_CONST(KEY_PAGE_UP): return UI_FUNC(Key)(context, TERMINAL_CONST(KEY_PAGE_UP));
+        case INPUT_CONST(KEY_PAGE_DOWN): return UI_FUNC(Key)(context, TERMINAL_CONST(KEY_PAGE_DOWN));
+        case INPUT_CONST(KEY_SPACE): return UI_FUNC(Key)(context, ' ');
+        default: break;
+      }
+      return STATUS_CONST(SUCCESS);
+    }
+    case INPUT_CONST(EVENT_TEXT_INPUT): {
+      if(event->data.text.length > 0) {
+        return UI_FUNC(Key)(context, (TERMINAL_TYPE(TKey))(unsigned char)event->data.text.utf8[0]);
+      }
+      return STATUS_CONST(SUCCESS);
+    }
+    case INPUT_CONST(EVENT_MOUSE_POSITION): {
+      TDUAL_TYPE(uint16) pos;
+      pos.x = (uint16_t)(event->data.motion.x >= 0 ? event->data.motion.x : 0);
+      pos.y = (uint16_t)(event->data.motion.y >= 0 ? event->data.motion.y : 0);
+      return UI_FUNC(PointerMove)(context, pos);
+    }
+    case INPUT_CONST(EVENT_MOUSE_BUTTON_PRESS):
+    case INPUT_CONST(EVENT_MOUSE_BUTTON_RELEASE): {
+      bool pressed = (event->type == INPUT_CONST(EVENT_MOUSE_BUTTON_PRESS));
+      if(event->data.mouseButton == INPUT_CONST(MOUSE_BUTTON_LEFT)) {
+        return UI_FUNC(PointerButton)(context, pressed);
+      }
+      return STATUS_CONST(SUCCESS);
+    }
+    case INPUT_CONST(EVENT_MOUSE_SCROLL): {
+      int32_t delta = (int32_t)event->data.motion.y;
+      if(delta != 0) {
+        return UI_FUNC(Scroll)(context, delta);
+      }
+      return STATUS_CONST(SUCCESS);
+    }
+    default:
+      return STATUS_CONST(NOT_SUPPORTED);
+  }
+}
+
 UI_POLL_EVENTS_PROTOTYPE {
   size_t handled=0;
   if(!context || !outCount || context->frame)
@@ -337,26 +434,7 @@ UI_POLL_EVENTS_PROTOTYPE {
     if(status!=STATUS_CONST(SUCCESS))return status;
     if(!available)break;
     ++handled;
-    switch(event.kind){
-      case TERMINAL_CONST(EVENT_KEY):
-        status=UI_FUNC(Key)(context,event.key);break;
-      case TERMINAL_CONST(EVENT_POINTER_MOVE):
-        status=UI_FUNC(PointerMove)(context,event.position);break;
-      case TERMINAL_CONST(EVENT_POINTER_BUTTON):
-        status=UI_FUNC(PointerMove)(context,event.position);
-        if(status==STATUS_CONST(SUCCESS))
-          status=UI_FUNC(PointerButton)(context,event.pressed);
-        break;
-      case TERMINAL_CONST(EVENT_SCROLL):
-        status=UI_FUNC(PointerMove)(context,event.position);
-        if(status==STATUS_CONST(SUCCESS))
-          status=UI_FUNC(Scroll)(context,event.scroll);
-        break;
-      case TERMINAL_CONST(EVENT_RESIZE):
-        context->newSize=event.size;context->resized=true;
-        status=STATUS_CONST(SUCCESS);break;
-      default:status=STATUS_CONST(NOT_SUPPORTED);break;
-    }
+    status=UI_FUNC(Dispatch)(context,&event);
     if(status!=STATUS_CONST(SUCCESS))return status;
   }
   *outCount=handled;
@@ -393,5 +471,131 @@ UI_LAYOUT_MEASURE_TEXT_PROTOTYPE {
   *outSize=(TDUAL_TYPE(uint16)){
     .col=(uint16_t)(columns+2U*padding.x),
     .row=(uint16_t)(1U+2U*padding.y)};
+  return STATUS_CONST(SUCCESS);
+}
+
+UI_RENDER_PROTOTYPE {
+  TERMINAL_TYPE(TCanvas) *sourceCanvas = context ? (context->canvas ? context->canvas : context->lastCanvas) : NULL;
+  if(!context || !canvas || !sourceCanvas)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  TDUAL_TYPE(uint16) destPos = {.col = 0U, .row = 0U};
+  return TERMINAL_FUNC(Canvas_Blit)(canvas, destPos, sourceCanvas);
+}
+
+UI_PRESENT_PROTOTYPE {
+  TERMINAL_TYPE(TCanvas) *sourceCanvas = context ? (context->canvas ? context->canvas : context->lastCanvas) : NULL;
+  if(!context || !screen || !sourceCanvas)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  TDUAL_TYPE(uint16) size = screen->api ? screen->api->Size(screen) : screen->size;
+  uint16_t maxCol = sourceCanvas->size.col < size.col ? sourceCanvas->size.col : size.col;
+  uint16_t maxRow = sourceCanvas->size.row < size.row ? sourceCanvas->size.row : size.row;
+  for(uint16_t r = 0U; r < maxRow; ++r) {
+    for(uint16_t c = 0U; c < maxCol; ++c) {
+      TDUAL_TYPE(uint16) pos;
+      pos.col = c;
+      pos.row = r;
+      uint32_t cp = 0;
+      TEXT_GRID_ATTRIBUTE_TYPE(Cell) attr;
+      if(TERMINAL_FUNC(Canvas_Get)(sourceCanvas, pos, &cp, &attr) == STATUS_CONST(SUCCESS)) {
+        if(screen->api && screen->api->SetCell) {
+          screen->api->SetCell(screen, c, r, cp, attr);
+        } else {
+          TERMINAL_SCREEN_FUNC(SetCell)(screen, c, r, cp, attr);
+        }
+      }
+    }
+  }
+  return screen->api && screen->api->Present ? screen->api->Present(screen) : TERMINAL_SCREEN_FUNC(Present)(screen);
+}
+
+UI_LAYOUT_PROTOTYPE {
+  if(!context || context->frame)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if(viewportSize.col == 0U || viewportSize.row == 0U)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  context->layoutDepth = 0U;
+  context->layouts[0].region.left = 0U;
+  context->layouts[0].region.top = 0U;
+  context->layouts[0].region.right = (uint16_t)(viewportSize.col - 1U);
+  context->layouts[0].region.bottom = (uint16_t)(viewportSize.row - 1U);
+  context->layouts[0].cursor = 0U;
+  context->layouts[0].gap = 0U;
+  context->layouts[0].row = false;
+  return STATUS_CONST(SUCCESS);
+}
+
+UI_LAYOUT_SPLIT_HORIZONTAL_PROTOTYPE {
+  if(!outTop || !outBottom || topRatio + bottomRatio == 0U)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if(parent.left > parent.right || parent.top > parent.bottom)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  uint16_t height = (uint16_t)(parent.bottom - parent.top + 1U);
+  if(height <= gap) return STATUS_CONST(OUT_OF_RANGE);
+  uint16_t available = (uint16_t)(height - gap);
+  uint16_t topH = (uint16_t)((uint32_t)available * topRatio / (topRatio + bottomRatio));
+  outTop->left = parent.left;
+  outTop->right = parent.right;
+  outTop->top = parent.top;
+  outTop->bottom = (uint16_t)(parent.top + (topH > 0U ? topH - 1U : 0U));
+  outBottom->left = parent.left;
+  outBottom->right = parent.right;
+  outBottom->top = (uint16_t)(outTop->bottom + 1U + gap);
+  outBottom->bottom = parent.bottom;
+  return STATUS_CONST(SUCCESS);
+}
+
+UI_LAYOUT_SPLIT_VERTICAL_PROTOTYPE {
+  if(!outLeft || !outRight || leftRatio + rightRatio == 0U)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if(parent.left > parent.right || parent.top > parent.bottom)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  uint16_t width = (uint16_t)(parent.right - parent.left + 1U);
+  if(width <= gap) return STATUS_CONST(OUT_OF_RANGE);
+  uint16_t available = (uint16_t)(width - gap);
+  uint16_t leftW = (uint16_t)((uint32_t)available * leftRatio / (leftRatio + rightRatio));
+  outLeft->top = parent.top;
+  outLeft->bottom = parent.bottom;
+  outLeft->left = parent.left;
+  outLeft->right = (uint16_t)(parent.left + (leftW > 0U ? leftW - 1U : 0U));
+  outRight->top = parent.top;
+  outRight->bottom = parent.bottom;
+  outRight->left = (uint16_t)(outLeft->right + 1U + gap);
+  outRight->right = parent.right;
+  return STATUS_CONST(SUCCESS);
+}
+
+UI_LAYOUT_GRID_PROTOTYPE {
+  if(!outRegion || cols == 0U || rows == 0U || col >= cols || row >= rows)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if(parent.left > parent.right || parent.top > parent.bottom)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  uint16_t totalW = (uint16_t)(parent.right - parent.left + 1U);
+  uint16_t totalH = (uint16_t)(parent.bottom - parent.top + 1U);
+  uint16_t totalGapX = (uint16_t)((cols - 1U) * gapX);
+  uint16_t totalGapY = (uint16_t)((rows - 1U) * gapY);
+  if(totalW <= totalGapX || totalH <= totalGapY)
+    return STATUS_CONST(OUT_OF_RANGE);
+  uint16_t cellW = (uint16_t)((totalW - totalGapX) / cols);
+  uint16_t cellH = (uint16_t)((totalH - totalGapY) / rows);
+  outRegion->left = (uint16_t)(parent.left + col * (cellW + gapX));
+  outRegion->right = (uint16_t)(col == cols - 1U ? parent.right : outRegion->left + cellW - 1U);
+  outRegion->top = (uint16_t)(parent.top + row * (cellH + gapY));
+  outRegion->bottom = (uint16_t)(row == rows - 1U ? parent.bottom : outRegion->top + cellH - 1U);
+  return STATUS_CONST(SUCCESS);
+}
+
+UI_LAYOUT_CENTER_PROTOTYPE {
+  if(!outRegion || size.col == 0U || size.row == 0U)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if(parent.left > parent.right || parent.top > parent.bottom)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  uint16_t parentW = (uint16_t)(parent.right - parent.left + 1U);
+  uint16_t parentH = (uint16_t)(parent.bottom - parent.top + 1U);
+  if(size.col > parentW || size.row > parentH)
+    return STATUS_CONST(OUT_OF_RANGE);
+  outRegion->left = (uint16_t)(parent.left + (parentW - size.col) / 2U);
+  outRegion->right = (uint16_t)(outRegion->left + size.col - 1U);
+  outRegion->top = (uint16_t)(parent.top + (parentH - size.row) / 2U);
+  outRegion->bottom = (uint16_t)(outRegion->top + size.row - 1U);
   return STATUS_CONST(SUCCESS);
 }

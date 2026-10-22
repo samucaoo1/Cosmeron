@@ -80,3 +80,5 @@ INPUT_GAMEPAD_CLEAR_MAPPING_PROTOTYPE {
   d->mapped = false; d->customMapping = true;
   return STATUS_CONST(SUCCESS);
 }
+
+PACKAGE_IMPLEMENT(INPUT_NS(Gamepad));

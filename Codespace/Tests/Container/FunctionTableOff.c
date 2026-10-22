@@ -6,6 +6,7 @@
 #include "../../Cosmeron/Modules/Container/Linked/List.h"
 #include "../../Cosmeron/Modules/Container/Tree/BST.h"
 #include "../../Cosmeron/Modules/Container/Tree/AVL.h"
+#include "../../Cosmeron/Modules/Container/Hash/Set.h"
 
 int main(void) {
   TVector(int, vector)
@@ -13,6 +14,7 @@ int main(void) {
   TLinked_List(int, list)
   TTree_AVL_Set(int, tree);
   TTree_BST_Set(int, bst);
+  THashSet_int set = {0};
   int value = 0;
   TEST_ASSERT(Container_Flat_Vector_int_PushBack(&vector, 7) == STATUS_CONST(SUCCESS));
   TEST_ASSERT(Container_Flat_Vector_int_PopBack(&vector, &value) == STATUS_CONST(SUCCESS));
@@ -43,6 +45,10 @@ int main(void) {
     int *spanItem = NULL;
     TEST_ASSERT(Container_Flat_Span_int_At(&span, 1U, &spanItem) == STATUS_CONST(SUCCESS) && *spanItem == 20);
   }
+  TEST_ASSERT(HASH_SET_OPERATION(int, Init)(&set) == STATUS_CONST(SUCCESS));
+  TEST_ASSERT(HASH_SET_OPERATION(int, Insert)(&set, 42) == STATUS_CONST(SUCCESS));
+  TEST_ASSERT(HASH_SET_OPERATION(int, Contains)(&set, 42));
+  HASH_SET_OPERATION(int, Destroy)(&set);
   Container_Flat_Heap_int_Destroy(&heap);
   Container_Flat_Vector_int_Destroy(&vector);
   Container_Linked_List_int_Destroy(&list);

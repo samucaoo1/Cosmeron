@@ -15,78 +15,79 @@ The goal is not to restore historical code mechanically. Each capability must be
 
 ### 1. Foundation II
 
-- [ ] File / Filesystem
-  - [ ] Path manipulation, normalization, absolute check, view stems and extensions (`FileSystem / Path`)
-  - [ ] File metadata, permissions, modified/accessed timestamps (`FileSystem / Metadata`)
-  - [ ] Streaming file I/O, buffered read/write, seek and tell (`FileSystem / File`)
-  - [ ] Directory iteration, recursive traversal, creation, and removal (`FileSystem / Directory`)
-  - [ ] Cross-platform filesystem watcher and change notification (`FileSystem / Watch`: inotify, kqueue, ReadDirectoryChangesW)
-  - [ ] Memory-mapped files (POSIX mmap / Windows MapViewOfFile, msync, mlock/munlock)
-- [ ] Text & String Foundations
-  - [ ] C-string safety helpers and bounded string utilities (`Text / String / CString`)
-  - [ ] Heap-allocated dynamic string (`Text / String / TString`)
-  - [ ] Non-owning string slices and string views (`Text / String / TStringView`)
-  - [ ] String builder with amortized geometric buffer growth (`Text / String / Builder`)
-- [ ] Attributed Text
-- [ ] Human-readable byte size formatting and parsing (Format_BytesHuman, Parse_BytesHuman)
+- [x] File / Filesystem
+  - [x] Path manipulation, normalization, absolute check, view stems and extensions (`FileSystem / Path`)
+  - [x] File metadata, permissions, modified/accessed timestamps (`FileSystem / Metadata`)
+  - [x] Streaming file I/O, buffered read/write, seek and tell (`FileSystem / File`)
+  - [x] Directory iteration, recursive traversal, creation, and removal (`FileSystem / Directory`)
+  - [x] Cross-platform filesystem watcher and change notification (`FileSystem / Watch`: inotify, kqueue, ReadDirectoryChangesW)
+  - [x] Memory-mapped files (POSIX mmap / Windows MapViewOfFile, msync, mlock/munlock)
+- [x] Text & String Foundations
+  - [x] C-string safety helpers and bounded string utilities (`Text / String / CString`)
+  - [x] Heap-allocated dynamic string (`Text / String / TString`)
+  - [x] Non-owning string slices and string views (`Text / String / TStringView`)
+  - [x] String builder with amortized geometric buffer growth (`Text / String / Builder`)
+- [x] Attributed Text
+- [x] Human-readable byte size formatting and parsing (Format_BytesHuman, Parse_BytesHuman)
 
 ### 2. Input
 
-- [ ] Keyboard
-- [ ] Mouse
-- [ ] Events
-- [ ] Portable key/button vocabulary
-- [ ] Terminal input backends
-- [ ] Evaluate Gamepad / Controller
+- [x] Keyboard
+- [x] Mouse
+- [x] Events
+- [x] Portable key/button vocabulary
+- [x] Terminal input backends
+- [x] Evaluate Gamepad / Controller
 
 ### 3. Terminal Foundation
 
-- [ ] Terminal lifecycle
-- [ ] Screen
-- [ ] Buffer
-- [ ] Cursor
-- [ ] Output
-- [ ] Capabilities
-- [ ] ANSI/POSIX backend
-- [ ] Windows Console / VT backend
+- [x] Terminal lifecycle
+- [x] Screen
+- [x] Buffer
+- [x] Cursor
+- [x] Output
+- [x] Capabilities
+- [x] ANSI/POSIX backend
+- [x] Windows Console / VT backend
 
 ### 4. TUI
 
-- [ ] Event
-- [ ] Render
-- [ ] Layout
-- [ ] Focus
-- [ ] Component
-- [ ] Widget set
-- [ ] SpeakBox / dialogue box
-- [ ] Overlay / HUD primitives
+- [x] Event
+- [x] Render
+- [x] Layout
+- [x] Focus
+- [x] Component
+- [x] Widget set
+- [x] SpeakBox / dialogue box
+- [x] Overlay / HUD primitives
 
 ### 5. Graphics
 
-- [ ] Geometry
-- [ ] Transform
-- [ ] Canvas
-- [ ] Raster
-- [ ] Scanline fill
-- [ ] Line styles
-- [ ] Palette
-- [ ] Gradients
-- [ ] Text Grid rendering target
-- [ ] Graphics Extensions
-  - [ ] Compositor: multi-layer Canvas composition, z-ordering, alpha blending and transparency (`Graphics / Extensions / Compositor`)
-  - [ ] Sprite: text/cell frames, blitting, clipping, and multi-frame animation (`Graphics / Extensions / Sprite`)
-  - [ ] Animation: chronometry-driven easing, interpolation and transitions (`Graphics / Extensions / Animation`)
-  - [ ] Pixel Canvas: true-pixel drawing target and terminal half-block / block character quantization (`Graphics / Extensions / PixelCanvas`)
+- [x] Geometry
+- [x] Transform
+- [x] Canvas
+- [x] Raster
+- [x] Scanline fill
+- [x] Line styles
+- [x] Palette
+- [x] Gradients
+- [x] Text Grid rendering target
+- [x] Graphics Extensions
+  - [x] Compositor: multi-layer Canvas composition, z-ordering, alpha blending and transparency (`Graphics / Extensions / Compositor`)
+  - [x] Sprite: text/cell frames, blitting, clipping, and multi-frame animation (`Graphics / Extensions / Sprite`)
+  - [x] Animation: chronometry-driven easing, interpolation and transitions (`Graphics / Extensions / Animation`)
+  - [x] Pixel Canvas: true-pixel drawing target and terminal half-block / block character quantization (`Graphics / Extensions / PixelCanvas`)
 
 ### 6. Raycast
 
-- [ ] Ray2D / Ray3D
-- [ ] Hit/intersection representation
-- [ ] Primitive intersection tests
-- [ ] Closest / first / any / all hit queries
-- [ ] Maximum-distance queries
+- [x] Ray2D
+- [ ] Ray3D
+- [x] Hit/intersection representation
+- [x] Primitive intersection tests
+- [x] Closest / first / any / all hit queries
+- [x] Maximum-distance queries
 - [ ] Optional masks/layers
-- [ ] Integration with Graphics / Geometry / Transform
+- [x] Integration with Graphics / Geometry / Transform
 - [ ] Immediate GUI picking support
 
 ### 7. Immediate GUI
@@ -94,61 +95,61 @@ The goal is not to restore historical code mechanically. Each capability must be
 A graphical immediate-mode UI layer inspired by the architectural role of Nuklear,
 but implemented in Cosmeron's own API, naming, memory and module conventions.
 
-- [ ] Immediate-mode GUI context and frame lifecycle
-- [ ] Minimal persistent state
-- [ ] Explicit Input integration
-- [ ] Renderer-independent draw-command output
-- [ ] Styling / skinning
-- [ ] Windows / panels
-- [ ] Layout
-- [ ] Widget set
-- [ ] Text editing
-- [ ] Images
+- [x] Immediate-mode GUI context and frame lifecycle
+- [x] Minimal persistent state
+- [x] Explicit Input integration
+- [x] Renderer-independent draw-command output
+- [x] Styling / skinning
+- [x] Windows / panels
+- [x] Layout
+- [x] Widget set
+- [x] Text editing
+- [x] Images
 - [ ] Custom widget hook
-- [ ] Software raster backend through Graphics
+- [x] Software raster backend through Graphics
 - [ ] Optional vertex-buffer output
 - [ ] OpenGL example/backend
-- [ ] Keep OS/window ownership outside the GUI core
+- [x] Keep OS/window ownership outside the GUI core
 
 The GUI and TUI are separate frontends.
 
 ### 8. Parsing
 
-- [ ] Source cursor and byte navigation
+- [x] Source cursor and byte navigation
 - [ ] Lexer primitives and classification helpers (`Parsing / Lexer`)
 - [ ] Tokenizer state machine and token stream emission (`Parsing / Tokenizer`)
 - [ ] Scanner helpers and span slicing (`Parsing / Scanner`)
 - [ ] Reusable recursive-descent parser engine and combinators (`Parsing / Parser`)
-- [ ] Tokens and spans
-- [ ] Line/column tracking
+- [x] Tokens and spans
+- [x] Line/column tracking
 - [ ] Expect / accept helpers
-- [ ] Parse error location
+- [x] Parse error location
 - [ ] RFC 3986 URI/URL parser (scheme, userinfo, host, port, path, query, fragment)
 - [ ] Mathematical expression parser and runtime evaluator with variable binding and standard math functions
 
 ### 9. Serialization
 
-- [ ] JSON serializer and deserializer (`Serialization / JSON`)
-- [ ] CSV table parser and emitter (`Serialization / CSV`)
-- [ ] INI configuration format parser (`Serialization / INI`)
-- [ ] TOML parser and serializer (`Serialization / TOML`)
+- [x] JSON serializer and deserializer (`Serialization / JSON`)
+- [x] CSV table parser and emitter (`Serialization / CSV`)
+- [x] INI configuration format parser (`Serialization / INI`)
+- [x] TOML parser and serializer (`Serialization / TOML`)
 - [ ] Portable binary serialization / endian-neutral packing (`Serialization / Binary`)
 - [ ] Base64
 - [ ] Hex encoding
 - [ ] Structured value representation where justified
-- [ ] Pretty / compact serialization
-- [ ] Error location reporting
+- [x] Pretty / compact serialization
+- [x] Error location reporting
 
 ### 10. CLI
 
-- [ ] Positional arguments
-- [ ] Short/long options
-- [ ] Flags
-- [ ] Option values
-- [ ] Repeated options
-- [ ] Subcommands
-- [ ] Help / usage generation
-- [ ] Validation
+- [x] Positional arguments
+- [x] Short/long options
+- [x] Flags
+- [x] Option values
+- [x] Repeated options
+- [x] Subcommands
+- [x] Help / usage generation
+- [x] Validation
 
 ### 11. Process and System
 
@@ -189,14 +190,14 @@ The GUI and TUI are separate frontends.
 
 ### 13. Checksum and Digest
 
-- [ ] CRC32
+- [x] CRC32
   - [ ] Hardware-accelerated CRC-32C (Castagnoli) using CPU instructions (SSE 4.2 / ARMv8 intrinsics)
-- [ ] Adler-32
-- [ ] FNV-1 / FNV-1a
+- [x] Adler-32
+- [x] FNV-1 / FNV-1a
 - [ ] Evaluate additional fast non-cryptographic hashes
-- [ ] Incremental API
-- [ ] One-shot API
-- [ ] File/buffer helpers
+- [x] Incremental API
+- [x] One-shot API
+- [x] File/buffer helpers
 
 ### 14. UUID and Identifier
 
@@ -217,22 +218,22 @@ The GUI and TUI are separate frontends.
 - [x] ZIP memory reader/writer (Store and Deflate)
 - [ ] Incremental compression/decompression
 - [x] Bounded buffer/file helpers
-- [ ] Large-file ZIP64 (>4 GiB) local/central size and offset verification with sparse-file testing
+- [x] Large-file ZIP64 (>4 GiB) local/central size and offset verification with sparse-file testing
 - [ ] Corpus-guided fuzzing (libFuzzer/AFL++) for DEFLATE, zlib, gzip, ZIP headers, and ZIP64 extras
 - [ ] Enhanced LZ77 match search (hash-chain/window) and optimal block splitting
 
 ### 16. Logging
 
-- [ ] Log levels
-- [ ] Logger/context
-- [ ] Message formatting
-- [ ] Timestamp integration
-- [ ] Console/File/User sinks
+- [x] Log levels
+- [x] Logger/context
+- [x] Message formatting
+- [x] Timestamp integration
+- [x] Console/File/User sinks
   - [ ] Log file rotation (size and archive count limits)
-- [ ] Multiple sinks
+- [x] Multiple sinks
 - [ ] Thread name tagging in log formatters
-- [ ] Compile-time filtering
-- [ ] Runtime filtering
+- [x] Compile-time filtering
+- [x] Runtime filtering
 - [ ] Optional thread safety
 
 Logging remains separate from OPSTATUS/Error semantics.
@@ -251,15 +252,15 @@ Logging remains separate from OPSTATUS/Error semantics.
 
 ### 18. Text Art
 
-- [ ] FIGlet font representation
-- [ ] FIGlet parser
-- [ ] FIGlet rendering
+- [x] FIGlet font representation
+- [x] FIGlet parser
+- [x] FIGlet rendering
   - [ ] Smushing and kerning (horizontal and vertical according to fullLayout)
   - [ ] Additional codetags, right-to-left layout, and multibyte font support
 - [ ] ASCII image conversion
 - [ ] Luminance ramp
 - [ ] Configurable palette
-- [ ] Styled Text Grid output
+- [x] Styled Text Grid output
 
 ### 19. Audio
 
@@ -295,7 +296,7 @@ Logging remains separate from OPSTATUS/Error semantics.
 - [ ] Intrusive Doubly Linked List (`Container/Intrusive/List`) for zero-allocation node embedding
 - [ ] In-memory B-Tree (`Container/Tree/BTree`) cache-friendly multiway search tree for large ordered collections
 - [ ] Range Minimum Query / Order Statistics Tree (`Container/Tree/OrderTree`) augmented balanced search tree for O(log n) range minimum and rank queries
-- [ ] Unordered Hash Set (`Container/Hash`) with `HASH_SET_IMPLEMENT_ALL` for keys-only O(1) set operations without value field overhead
+- [x] Unordered Hash Set (`Container/Hash`) with `HASH_SET_IMPLEMENT_ALL` for keys-only O(1) set operations without value field overhead
 - [ ] Single-pass `GetOrInsert` / Entry API (`Container/Hash`, `Container/Tree`) to eliminate duplicate hash computations, probing cycles, and redundant tree descent
 - [ ] Ordered range boundary queries (`Container/Tree`) with `LowerBound` (key >= target) and `UpperBound` (key > target) across AVL, BST, and Red-Black trees
 - [ ] Doubly linked list `Splice` (`Container/Linked/Double`) for O(1) node and sub-list relocation between list instances without heap allocation
@@ -318,7 +319,7 @@ Logging remains separate from OPSTATUS/Error semantics.
 
 ### 23. Memory Management
 
-- [ ] Fixed-size chunk memory pool allocator (`Core/Memory/Pool`) for uniform object/node recycling without heap fragmentation
+- [x] Fixed-size chunk memory pool allocator (`Core/Memory/Pool`) for uniform object/node recycling without heap fragmentation
 
 ### 24. Concurrency Pipelines
 
@@ -348,7 +349,7 @@ Logging remains separate from OPSTATUS/Error semantics.
 ### 28. Cryptography & Security
 
 - [ ] Cryptographically secure random number generator (`Security/Crypto/SecureRandom`)
-- [ ] SHA-2 cryptographic digest family (`Security/Crypto/SHA2`: SHA-224, SHA-256, SHA-384, SHA-512)
+- [x] SHA-2 cryptographic digest family (`Security/Crypto/SHA2`: SHA-224, SHA-256, SHA-384, SHA-512)
 - [ ] HMAC (Hash-based Message Authentication Code) message integrity verification (`Security/Crypto/HMAC`)
 - [ ] Symmetric encryption primitives (`Security/Crypto/Encryption`: AES, ChaCha20-Poly1305)
 

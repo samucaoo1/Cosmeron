@@ -212,3 +212,108 @@ RASTER_FILL_TRIANGLE_PROTOTYPE {
   TDUAL_TYPE(int32) points[3]={a,b,c};
   return RASTER_FUNC(FillPolygon)(canvas,points,3,codepoint,style);
 }
+
+typedef struct RASTER_INS(PatternTarget) {
+  TERMINAL_TYPE(TCanvas) *canvas;
+  uint32_t codepoint;
+  TEXT_GRID_ATTRIBUTE_TYPE(Cell) style;
+  uint16_t pattern;
+  size_t step;
+} RASTER_INS(PatternTarget);
+
+static inline void RASTER_INS(PatternPlot)(void *user, int64_t x, int64_t y) {
+  RASTER_INS(PatternTarget) *target = (RASTER_INS(PatternTarget) *)user;
+  if ((target->pattern & (1U << (15U - (target->step % 16U)))) != 0U) {
+    RASTER_INS(Plot)(target->canvas, x, y, target->codepoint, target->style);
+  }
+  target->step++;
+}
+
+RASTER_LINE_PATTERN_PROTOTYPE {
+  OPSTATUS status = RASTER_INS(Validate)(canvas, codepoint);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  RASTER_INS(PatternTarget) target;
+  target.canvas = canvas;
+  target.codepoint = codepoint;
+  target.style = style;
+  target.pattern = pattern;
+  target.step = 0;
+  COSMERON_MACRO_INTERNAL_GRAPHICS_SHARED(WalkLine)(canvas->size.col, canvas->size.row, from, to, RASTER_INS(PatternPlot), &target);
+  return STATUS_CONST(SUCCESS);
+}
+
+RASTER_LINE_STYLED_PROTOTYPE {
+  uint16_t pattern = 0xFFFFU;
+  switch (lineStyle) {
+    case RASTER_CONST(LINE_DASHED):   pattern = 0xF0F0U; break;
+    case RASTER_CONST(LINE_DOTTED):   pattern = 0xAAAAU; break;
+    case RASTER_CONST(LINE_DASH_DOT): pattern = 0xEC88U; break;
+    case RASTER_CONST(LINE_SOLID):
+    default: pattern = 0xFFFFU; break;
+  }
+  return RASTER_FUNC(LinePattern)(canvas, from, to, pattern, codepoint, style);
+}
+
+RASTER_FLOOD_FILL_PROTOTYPE {
+  OPSTATUS status = RASTER_INS(Validate)(canvas, codepoint);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  if (start.x < 0 || start.y < 0 || start.x >= canvas->size.col || start.y >= canvas->size.row)
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  TDUAL_TYPE(uint16) startPos = {.x = (uint16_t)start.x, .y = (uint16_t)start.y};
+  uint32_t targetCp = 0;
+  TEXT_GRID_ATTRIBUTE_TYPE(Cell) targetStyle;
+  status = TERMINAL_FUNC(Canvas_Get)(canvas, startPos, &targetCp, &targetStyle);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+
+  if (targetCp == codepoint &&
+      targetStyle.foreground == style.foreground &&
+      targetStyle.background == style.background &&
+      targetStyle.flags == style.flags) {
+    return STATUS_CONST(SUCCESS);
+  }
+
+  size_t totalCells = (size_t)canvas->size.col * (size_t)canvas->size.row;
+  TDUAL_TYPE(uint16) *queue = (TDUAL_TYPE(uint16) *)malloc(totalCells * sizeof(TDUAL_TYPE(uint16)));
+  if (!queue) return STATUS_CONST(INSUFFICIENT_SPACE);
+
+  bool *visited = (bool *)calloc(totalCells, sizeof(bool));
+  if (!visited) {
+    free(queue);
+    return STATUS_CONST(INSUFFICIENT_SPACE);
+  }
+
+  size_t head = 0, tail = 0;
+  queue[tail++] = startPos;
+  visited[(size_t)startPos.y * canvas->size.col + (size_t)startPos.x] = true;
+
+  while (head < tail) {
+    TDUAL_TYPE(uint16) curr = queue[head++];
+    RASTER_INS(Plot)(canvas, curr.x, curr.y, codepoint, style);
+
+    static const int dx[4] = {0, 0, -1, 1};
+    static const int dy[4] = {-1, 1, 0, 0};
+
+    for (int dir = 0; dir < 4; dir++) {
+      int nx = (int)curr.x + dx[dir];
+      int ny = (int)curr.y + dy[dir];
+      if (nx >= 0 && nx < canvas->size.col && ny >= 0 && ny < canvas->size.row) {
+        size_t vIdx = (size_t)ny * canvas->size.col + (size_t)nx;
+        if (!visited[vIdx]) {
+          visited[vIdx] = true;
+          TDUAL_TYPE(uint16) nPos = {.x = (uint16_t)nx, .y = (uint16_t)ny};
+          uint32_t currCp = 0;
+          TEXT_GRID_ATTRIBUTE_TYPE(Cell) currStyle;
+          if (TERMINAL_FUNC(Canvas_Get)(canvas, nPos, &currCp, &currStyle) == STATUS_CONST(SUCCESS) &&
+              currCp == targetCp) {
+            queue[tail++] = nPos;
+          }
+        }
+      }
+    }
+  }
+
+  free(visited);
+  free(queue);
+  return STATUS_CONST(SUCCESS);
+}

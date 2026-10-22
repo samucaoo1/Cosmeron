@@ -207,5 +207,30 @@ int main(void) {
   TEXT_VIEW_TYPE(8) v8Trim = Text_View8_Trim(v8);
   CHECK_TRUE(Text_View8_Length(v8Trim) == 11U);
 
+  char cstrBuf[32];
+  size_t cstrWritten = 0U;
+  CHECK_STATUS(Text_CString_Copy(cstrBuf, sizeof(cstrBuf), "Cosmeron", &cstrWritten));
+  CHECK_TRUE(Text_CString_Length(cstrBuf) == 8U);
+  CHECK_TRUE(Text_CString_StartsWith(cstrBuf, "Cos"));
+
+  char bytesBuf[32];
+  size_t bytesWritten = 0U;
+  CHECK_STATUS(Text_Format_BytesHuman(bytesBuf, sizeof(bytesBuf), &bytesWritten, 1024U));
+  CHECK_TRUE(Text_CString_Equal(bytesBuf, "1.00 KiB"));
+
+  uint64_t parsedBytes = 0U;
+  CHECK_STATUS(Text_Parse_BytesHuman("1.5 KiB", &parsedBytes));
+  CHECK_TRUE(parsedBytes == 1536U);
+
+  const Text_CString_FunctionTable *cstrApi = Text_CString_GetFunctionTable();
+  CHECK_TRUE(cstrApi != NULL);
+  CHECK_TRUE(cstrApi->Length("test") == 4U);
+
+  const Text_BytesHuman_FunctionTable *bytesApi = Text_BytesHuman_GetFunctionTable();
+  CHECK_TRUE(bytesApi != NULL);
+  CHECK_STATUS(bytesApi->Format(bytesBuf, sizeof(bytesBuf), &bytesWritten, 2048U));
+  CHECK_TRUE(Text_CString_Equal(bytesBuf, "2.00 KiB"));
+
   return 0;
 }
+

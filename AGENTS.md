@@ -38,6 +38,8 @@ Everything must live inside the library/module namespace whenever C allows it. E
 - `*_TYPE(SUFFIX)`: Semantic suffix (e.g., `BIT_TYPE(32)` $\to$ `TBit32`).
 - `*_TYPED(TYPE)`: Specialization by another type (e.g., `VECTOR_TYPED(uint32)` $\to$ `TVector_uint32`).
 - Output enums or internal types do **not** use `T` (e.g., `ComparisonResult`, aliased to `CMPOUT`).
+- **Unambiguous naming policy:** Avoid overly generic names (such as `TPool`, `TNode`) that collide semantically across domains (e.g. Memory vs. Random vs. Concurrency). Always qualify the domain explicitly (e.g. `TMemoryPool`).
+- **Strict alias policy:** Public aliases must be rare, deliberate, and highly specific. Do not create short ambiguous aliases.
 
 ---
 
@@ -63,6 +65,23 @@ Everything must live inside the library/module namespace whenever C allows it. E
 - Function tables: `*_FUNCTION_TABLE_STRUCT(...)`, `*_FUNCTION_TABLE_INSTANCE(...)`.
 - Use the term `FunctionTable`, never `VTable`.
 - Every Function Table family must provide compile-time disabling: `*_DISABLE_FUNCTION_TABLE`. When defined, no struct, instance, or bindings may be emitted.
+
+### Package & Object Implementation Convention
+- **Prefer non-inline methods:** Do not define methods inline within `PACKAGE(...)` or `OBJECT(...)` macro invocations unless explicitly instructed.
+- **Headers (`.h`):** Declare members using `FUNCTION(...)` for packages or `METHOD(...)` for objects. Keep the header declarative and clean.
+- **Implementations (`.impl`):** Implement each method using the prototype macro:
+  ```c
+  PACKAGE_PROTOTYPEEX(PackageName, MethodName, (parameters...)) {
+      /* implementation */
+  }
+  ```
+  or for objects:
+  ```c
+  OBJECT_PROTOTYPEEX(ObjectName, MethodName, (parameters...)) {
+      /* implementation */
+  }
+  ```
+- **Finalizer call:** Always close `.impl` files with `PACKAGE_IMPLEMENT(PackageName);` or `OBJECT_IMPLEMENT(ObjectName);` to bind function tables and singleton accessors.
 
 ---
 

@@ -40,4 +40,5 @@ TEXT_FORMAT_UNSAFE_PROTOTYPE;
 TEXT_FORMAT_UNSAFE_VARIADIC_PROTOTYPE;
 
 #include "Impl/Format.impl"
+#include "BytesHuman.h"
 /* EOF */

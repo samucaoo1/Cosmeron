@@ -14,5 +14,6 @@
 #include "../../Cosmeron/Modules/Container/Tree/AVL.h"
 #include "../../Cosmeron/Modules/Container/Tree/RedBlack.h"
 #include "../../Cosmeron/Modules/Container/Hash/Hash.h"
+#include "../../Cosmeron/Modules/Container/Hash/Set.h"
 #include "../../Cosmeron/Modules/Container/Graph/Graph.h"
 int main(void) { return 0; }

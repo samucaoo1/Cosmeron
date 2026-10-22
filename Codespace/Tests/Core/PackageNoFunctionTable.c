@@ -1,5 +1,5 @@
 #define PACKAGE_DISABLE_FUNCTION_TABLE
-#include "../../Cosmeron/Core/Package/Package.h"
+#include "../../Cosmeron/Core/Module/Package.h"
 #include <assert.h>
 
 PACKAGE(Calc,

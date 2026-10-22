@@ -1,0 +1,188 @@
+#pragma once
+
+#include <ctype.h>
+#include <inttypes.h>
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+
+enum {
+  TEXT_FORMAT_CINS(UNIT_COUNT) = 7U
+};
+
+PACKAGE_PROTOTYPEEX(Text_BytesHuman, FormatEx,
+                    (char *buffer, size_t capacity, size_t *outWritten,
+                     uint64_t bytes, unsigned unitStandard,
+                     unsigned precision)) {
+  if (buffer == NULL || capacity == 0U) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  if (unitStandard != TEXT_FORMAT_CONST(BYTE_UNIT_IEC) &&
+      unitStandard != TEXT_FORMAT_CONST(BYTE_UNIT_SI)) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  static const char *const iecUnits[TEXT_FORMAT_CINS(UNIT_COUNT)] = {
+      "B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"
+  };
+  static const char *const siUnits[TEXT_FORMAT_CINS(UNIT_COUNT)] = {
+      "B", "KB", "MB", "GB", "TB", "PB", "EB"
+  };
+
+  const char *const *units = (unitStandard == TEXT_FORMAT_CONST(BYTE_UNIT_IEC))
+                                 ? iecUnits
+                                 : siUnits;
+  const double base = (unitStandard == TEXT_FORMAT_CONST(BYTE_UNIT_IEC))
+                          ? (double)TEXT_FORMAT_CONST(BYTES_IEC_BASE)
+                          : (double)TEXT_FORMAT_CONST(BYTES_SI_BASE);
+
+  if (precision > TEXT_FORMAT_CONST(BYTES_MAX_PRECISION)) {
+    precision = TEXT_FORMAT_CONST(BYTES_MAX_PRECISION);
+  }
+
+  int written = 0;
+  if (bytes < (uint64_t)base) {
+    written = snprintf(buffer, capacity, "%" PRIu64 " %s", bytes, units[0]);
+  } else {
+    double value = (double)bytes;
+    size_t unitIndex = 0U;
+    while (value >= base && unitIndex + 1U < (size_t)TEXT_FORMAT_CINS(UNIT_COUNT)) {
+      value /= base;
+      unitIndex++;
+    }
+    written = snprintf(buffer, capacity, "%.*f %s", (int)precision, value, units[unitIndex]);
+  }
+
+  if (written < 0 || (size_t)written >= capacity) {
+    buffer[capacity - 1U] = '\0';
+    return STATUS_CONST(INSUFFICIENT_SPACE);
+  }
+
+  if (outWritten != NULL) {
+    *outWritten = (size_t)written;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_PROTOTYPEEX(Text_BytesHuman, Format,
+                    (char *buffer, size_t capacity, size_t *outWritten,
+                     uint64_t bytes)) {
+  return Text_BytesHuman_FormatEx(
+      buffer, capacity, outWritten, bytes, TEXT_FORMAT_CONST(BYTE_UNIT_IEC),
+      TEXT_FORMAT_CONST(BYTES_DEFAULT_PRECISION));
+}
+
+PACKAGE_PROTOTYPEEX(Text_BytesHuman, Parse,
+                    (const char *str, uint64_t *outBytes)) {
+  if (str == NULL || outBytes == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  const char *p = str;
+  while (*p != '\0' && isspace((unsigned char)*p)) {
+    p++;
+  }
+
+  if (*p == '\0' || !isdigit((unsigned char)*p)) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  uint64_t intPart = 0U;
+  while (*p != '\0' && isdigit((unsigned char)*p)) {
+    uint64_t digit = (uint64_t)(*p - '0');
+    if (intPart > (UINT64_MAX - digit) / 10ULL) {
+      return STATUS_CONST(ARITHMETIC_OVERFLOW);
+    }
+    intPart = intPart * 10ULL + digit;
+    p++;
+  }
+
+  uint64_t fracPart = 0U;
+  uint64_t fracScale = 1U;
+  if (*p == '.' || *p == ',') {
+    p++;
+    enum { MAX_FRAC_DIGITS = 9U };
+    size_t fracDigits = 0U;
+    while (*p != '\0' && isdigit((unsigned char)*p)) {
+      if (fracDigits < (size_t)MAX_FRAC_DIGITS) {
+        uint64_t digit = (uint64_t)(*p - '0');
+        fracPart = fracPart * 10ULL + digit;
+        fracScale *= 10ULL;
+        fracDigits++;
+      }
+      p++;
+    }
+  }
+
+  while (*p != '\0' && isspace((unsigned char)*p)) {
+    p++;
+  }
+
+  char unitBuf[8];
+  size_t unitLen = 0U;
+  while (*p != '\0' && isalpha((unsigned char)*p)) {
+    if (unitLen + 1U < sizeof(unitBuf)) {
+      unitBuf[unitLen++] = (char)tolower((unsigned char)*p);
+    } else {
+      return STATUS_CONST(INVALID_ARGUMENT);
+    }
+    p++;
+  }
+  unitBuf[unitLen] = '\0';
+
+  while (*p != '\0' && isspace((unsigned char)*p)) {
+    p++;
+  }
+  if (*p != '\0') {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  uint64_t multiplier = 1ULL;
+  if (unitLen == 0U || strcmp(unitBuf, "b") == 0) {
+    multiplier = 1ULL;
+  } else if (strcmp(unitBuf, "k") == 0 || strcmp(unitBuf, "kib") == 0) {
+    multiplier = 1024ULL;
+  } else if (strcmp(unitBuf, "kb") == 0) {
+    multiplier = 1000ULL;
+  } else if (strcmp(unitBuf, "m") == 0 || strcmp(unitBuf, "mib") == 0) {
+    multiplier = 1024ULL * 1024ULL;
+  } else if (strcmp(unitBuf, "mb") == 0) {
+    multiplier = 1000ULL * 1000ULL;
+  } else if (strcmp(unitBuf, "g") == 0 || strcmp(unitBuf, "gib") == 0) {
+    multiplier = 1024ULL * 1024ULL * 1024ULL;
+  } else if (strcmp(unitBuf, "gb") == 0) {
+    multiplier = 1000ULL * 1000ULL * 1000ULL;
+  } else if (strcmp(unitBuf, "t") == 0 || strcmp(unitBuf, "tib") == 0) {
+    multiplier = 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+  } else if (strcmp(unitBuf, "tb") == 0) {
+    multiplier = 1000ULL * 1000ULL * 1000ULL * 1000ULL;
+  } else if (strcmp(unitBuf, "p") == 0 || strcmp(unitBuf, "pib") == 0) {
+    multiplier = 1024ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+  } else if (strcmp(unitBuf, "pb") == 0) {
+    multiplier = 1000ULL * 1000ULL * 1000ULL * 1000ULL * 1000ULL;
+  } else if (strcmp(unitBuf, "e") == 0 || strcmp(unitBuf, "eib") == 0) {
+    multiplier = 1024ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+  } else if (strcmp(unitBuf, "eb") == 0) {
+    multiplier = 1000ULL * 1000ULL * 1000ULL * 1000ULL * 1000ULL * 1000ULL;
+  } else {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  if (multiplier > 0ULL && intPart > UINT64_MAX / multiplier) {
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+  }
+  uint64_t total = intPart * multiplier;
+
+  if (fracScale > 1ULL) {
+    uint64_t fracBytes = (fracPart * multiplier) / fracScale;
+    if (total > UINT64_MAX - fracBytes) {
+      return STATUS_CONST(ARITHMETIC_OVERFLOW);
+    }
+    total += fracBytes;
+  }
+
+  *outBytes = total;
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_IMPLEMENT(Text_BytesHuman);

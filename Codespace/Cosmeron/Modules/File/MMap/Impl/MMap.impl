@@ -1,0 +1,328 @@
+#pragma once
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include "../../../../Core/Preprocessor/Detect/OperationSystem.h"
+
+#if OS_WINDOWS
+#include <windows.h>
+#include <io.h>
+#else
+#include <sys/mman.h>
+#include <unistd.h>
+#endif
+
+/* ============================================================
+ * Internal Helpers
+ * ============================================================ */
+
+#if !OS_WINDOWS
+static inline size_t FILE_MMAP_INS(PageSize)(void) {
+  long sz = sysconf(_SC_PAGESIZE);
+  return (sz > 0) ? (size_t)sz : 4096U;
+}
+#endif
+
+/* ============================================================
+ * TMemoryMappedFile Method Implementations
+ * ============================================================ */
+
+OBJECT_PROTOTYPEEX(FILE_MMAP_TYPE(TMemoryMappedFile), OpenFile,
+                   (FILE_TYPE(TFile) * file, uint32_t protection,
+                    uint64_t offset, size_t length)) {
+  if (!self || !file || file->native == 0)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (self->isMapped)
+    return STATUS_CONST(BUSY);
+
+  const uint32_t validProt =
+      FILE_MMAP_CONST(READ) | FILE_MMAP_CONST(WRITE) | FILE_MMAP_CONST(READ_WRITE);
+  if ((protection & ~validProt) || (protection == 0))
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  int fd = (int)(file->native - 1);
+
+#if OS_WINDOWS
+  HANDLE hFile = (HANDLE)_get_osfhandle(fd);
+  if (hFile == INVALID_HANDLE_VALUE)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  DWORD flProtect = (protection & FILE_MMAP_CONST(WRITE)) ? PAGE_READWRITE : PAGE_READONLY;
+  DWORD mapAccess = (protection & FILE_MMAP_CONST(WRITE)) ? FILE_MAP_ALL_ACCESS : FILE_MAP_READ;
+
+  /* If length == 0, map whole file */
+  DWORD maxHigh = 0;
+  DWORD maxLow = 0;
+  if (length > 0) {
+    uint64_t endPos = offset + (uint64_t)length;
+    maxHigh = (DWORD)(endPos >> 32);
+    maxLow = (DWORD)(endPos & 0xFFFFFFFFULL);
+  }
+
+  HANDLE hMap = CreateFileMappingW(hFile, NULL, flProtect, maxHigh, maxLow, NULL);
+  if (!hMap)
+    return FILE_INS(WinError)(GetLastError());
+
+  DWORD offsetHigh = (DWORD)(offset >> 32);
+  DWORD offsetLow = (DWORD)(offset & 0xFFFFFFFFULL);
+
+  void *mappedPtr = MapViewOfFile(hMap, mapAccess, offsetHigh, offsetLow, length);
+  if (!mappedPtr) {
+    OPSTATUS err = FILE_INS(WinError)(GetLastError());
+    CloseHandle(hMap);
+    return err;
+  }
+
+  /* If length was 0, query size of mapped view */
+  size_t actualSize = length;
+  if (actualSize == 0) {
+    MEMORY_BASIC_INFORMATION mbi;
+    if (VirtualQuery(mappedPtr, &mbi, sizeof(mbi))) {
+      actualSize = mbi.RegionSize;
+    }
+  }
+
+  self->data = mappedPtr;
+  self->size = actualSize;
+  self->offset = offset;
+  self->flags = protection;
+  self->fileDescriptor = (intptr_t)fd;
+  self->mapHandle = (intptr_t)hMap;
+  self->isMapped = true;
+
+  return STATUS_CONST(SUCCESS);
+#else
+  /* POSIX mmap */
+  int prot = 0;
+  if (protection & FILE_MMAP_CONST(READ))
+    prot |= PROT_READ;
+  if (protection & FILE_MMAP_CONST(WRITE))
+    prot |= PROT_WRITE;
+
+  /* Check file size if length is 0 */
+  size_t mapLength = length;
+  if (mapLength == 0) {
+    struct stat st;
+    if (fstat(fd, &st) != 0)
+      return FILE_INS(Error)(errno);
+    if ((uint64_t)st.st_size <= offset)
+      return STATUS_CONST(OUT_OF_RANGE);
+    mapLength = (size_t)((uint64_t)st.st_size - offset);
+  }
+
+  /* Handle page alignment offset for POSIX mmap */
+  size_t pageSize = FILE_MMAP_INS(PageSize)();
+  size_t pageOffset = (size_t)(offset % pageSize);
+  uint64_t alignedOffset = offset - pageOffset;
+  size_t alignedLength = mapLength + pageOffset;
+
+  void *ptr = mmap(NULL, alignedLength, prot, MAP_SHARED, fd, (off_t)alignedOffset);
+  if (ptr == MAP_FAILED)
+    return FILE_INS(Error)(errno);
+
+  self->data = (void *)((uint8_t *)ptr + pageOffset);
+  self->size = mapLength;
+  self->offset = offset;
+  self->flags = protection;
+  self->fileDescriptor = (intptr_t)fd;
+  self->mapHandle = (intptr_t)ptr; /* Record base mmap pointer */
+  self->isMapped = true;
+
+  return STATUS_CONST(SUCCESS);
+#endif
+}
+
+OBJECT_PROTOTYPEEX(FILE_MMAP_TYPE(TMemoryMappedFile), Open,
+                   (const char *path, uint32_t protection, uint64_t offset,
+                    size_t length)) {
+  if (!self || !FILE_INS(PathValid)(path))
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  uint32_t fileFlags = 0;
+  if (protection & FILE_MMAP_CONST(WRITE)) {
+    fileFlags = FILE_CONST(READ) | FILE_CONST(WRITE);
+  } else {
+    fileFlags = FILE_CONST(READ);
+  }
+
+  FILE_TYPE(TFile) f = {0};
+  OPSTATUS status = FILE_FUNC(Open)(&f, path, fileFlags);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  status = OBJECT_CALL(self, OpenFile, &f, protection, offset, length);
+  if (status != STATUS_CONST(SUCCESS)) {
+    FILE_FUNC(Close)(&f);
+    return status;
+  }
+
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(FILE_MMAP_TYPE(TMemoryMappedFile), Close) {
+  if (!self || !self->isMapped)
+    return STATUS_CONST(SUCCESS);
+
+#if OS_WINDOWS
+  if (self->data) {
+    UnmapViewOfFile(self->data);
+  }
+  if (self->mapHandle) {
+    CloseHandle((HANDLE)self->mapHandle);
+  }
+#else
+  if (self->mapHandle) {
+    size_t pageSize = FILE_MMAP_INS(PageSize)();
+    size_t pageOffset = (size_t)(self->offset % pageSize);
+    size_t alignedLength = self->size + pageOffset;
+    munmap((void *)self->mapHandle, alignedLength);
+  }
+#endif
+
+  self->data = NULL;
+  self->size = 0;
+  self->offset = 0;
+  self->flags = 0;
+  self->fileDescriptor = 0;
+  self->mapHandle = 0;
+  self->isMapped = false;
+
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(FILE_MMAP_TYPE(TMemoryMappedFile), SyncRange,
+                   (size_t offset, size_t length, uint32_t syncMode)) {
+  if (!self || !self->isMapped || !self->data)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (offset > self->size || length > self->size - offset)
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  if (length == 0)
+    return STATUS_CONST(SUCCESS);
+
+  uint8_t *target = (uint8_t *)self->data + offset;
+
+#if OS_WINDOWS
+  (void)syncMode;
+  if (!FlushViewOfFile(target, length))
+    return FILE_INS(WinError)(GetLastError());
+  return STATUS_CONST(SUCCESS);
+#else
+  int flags = (syncMode & FILE_MMAP_CONST(SYNC_ASYNC)) ? MS_ASYNC : MS_SYNC;
+  size_t pageSize = FILE_MMAP_INS(PageSize)();
+  uintptr_t addr = (uintptr_t)target;
+  uintptr_t alignedAddr = addr & ~(pageSize - 1U);
+  size_t alignedLen = (addr + length) - alignedAddr;
+
+  if (msync((void *)alignedAddr, alignedLen, flags) != 0)
+    return FILE_INS(Error)(errno);
+
+  return STATUS_CONST(SUCCESS);
+#endif
+}
+
+OBJECT_PROTOTYPEEX(FILE_MMAP_TYPE(TMemoryMappedFile), Sync, (uint32_t syncMode)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  return OBJECT_CALL(self, SyncRange, 0, self->size, syncMode);
+}
+
+OBJECT_PROTOTYPEEX(FILE_MMAP_TYPE(TMemoryMappedFile), LockRange,
+                   (size_t offset, size_t length)) {
+  if (!self || !self->isMapped || !self->data)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (offset > self->size || length > self->size - offset)
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  if (length == 0)
+    return STATUS_CONST(SUCCESS);
+
+  uint8_t *target = (uint8_t *)self->data + offset;
+
+#if OS_WINDOWS
+  if (!VirtualLock(target, length))
+    return FILE_INS(WinError)(GetLastError());
+  return STATUS_CONST(SUCCESS);
+#else
+  size_t pageSize = FILE_MMAP_INS(PageSize)();
+  uintptr_t addr = (uintptr_t)target;
+  uintptr_t alignedAddr = addr & ~(pageSize - 1U);
+  size_t alignedLen = (addr + length) - alignedAddr;
+
+  if (mlock((const void *)alignedAddr, alignedLen) != 0)
+    return FILE_INS(Error)(errno);
+
+  return STATUS_CONST(SUCCESS);
+#endif
+}
+
+OBJECT_PROTOTYPEEX(FILE_MMAP_TYPE(TMemoryMappedFile), Lock) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  return OBJECT_CALL(self, LockRange, 0, self->size);
+}
+
+OBJECT_PROTOTYPEEX(FILE_MMAP_TYPE(TMemoryMappedFile), UnlockRange,
+                   (size_t offset, size_t length)) {
+  if (!self || !self->isMapped || !self->data)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (offset > self->size || length > self->size - offset)
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  if (length == 0)
+    return STATUS_CONST(SUCCESS);
+
+  uint8_t *target = (uint8_t *)self->data + offset;
+
+#if OS_WINDOWS
+  if (!VirtualUnlock(target, length))
+    return FILE_INS(WinError)(GetLastError());
+  return STATUS_CONST(SUCCESS);
+#else
+  size_t pageSize = FILE_MMAP_INS(PageSize)();
+  uintptr_t addr = (uintptr_t)target;
+  uintptr_t alignedAddr = addr & ~(pageSize - 1U);
+  size_t alignedLen = (addr + length) - alignedAddr;
+
+  if (munlock((const void *)alignedAddr, alignedLen) != 0)
+    return FILE_INS(Error)(errno);
+
+  return STATUS_CONST(SUCCESS);
+#endif
+}
+
+OBJECT_PROTOTYPEEX(FILE_MMAP_TYPE(TMemoryMappedFile), Unlock) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  return OBJECT_CALL(self, UnlockRange, 0, self->size);
+}
+
+OBJECT_PROTOTYPEEX(FILE_MMAP_TYPE(TMemoryMappedFile), Data) {
+  return (self && self->isMapped) ? self->data : NULL;
+}
+
+OBJECT_PROTOTYPEEX(FILE_MMAP_TYPE(TMemoryMappedFile), Size) {
+  return (self && self->isMapped) ? self->size : 0U;
+}
+
+OBJECT_PROTOTYPEEX(FILE_MMAP_TYPE(TMemoryMappedFile), Offset) {
+  return (self && self->isMapped) ? self->offset : 0U;
+}
+
+OBJECT_PROTOTYPEEX(FILE_MMAP_TYPE(TMemoryMappedFile), IsMapped) {
+  return self ? self->isMapped : false;
+}
+
+OBJECT_PROTOTYPEEX(FILE_MMAP_TYPE(TMemoryMappedFile), IsWritable) {
+  return (self && self->isMapped) ? ((self->flags & FILE_MMAP_CONST(WRITE)) != 0) : false;
+}
+
+OBJECT_IMPLEMENT(FILE_MMAP_TYPE(TMemoryMappedFile));
+
+/* EOF */

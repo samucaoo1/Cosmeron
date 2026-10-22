@@ -251,3 +251,206 @@ UI_PROGRESS_PROTOTYPE {
   progress.region=region;progress.fraction=fraction;
   return UI_FUNC(ProgressEx)(context,&progress);
 }
+
+UI_SCROLLBAR_EX_PROTOTYPE {
+  UI_TYPE(WidgetId) id;
+  const UI_TYPE(TVisual) *visual;
+  TEXT_GRID_ATTRIBUTE_TYPE(Cell) style;
+  OPSTATUS status;
+  uint32_t left, right, top, bottom;
+  int64_t totalRange, valRange;
+  size_t i;
+
+  if (!scrollbar || scrollbar->minimum >= scrollbar->maximum ||
+      scrollbar->value < scrollbar->minimum || scrollbar->value > scrollbar->maximum ||
+      scrollbar->pageSize <= 0)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (scrollbar->id) {
+    id = scrollbar->id;
+  } else {
+    id = UI_FUNC(GetId)(context, "##scrollbar") ^
+         (((uint64_t)scrollbar->region.left << 16) | (uint64_t)scrollbar->region.top);
+    if (!id) id = 1;
+  }
+  status = UI_INS(PreWidget)(context, scrollbar->region, id, !scrollbar->disabled);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  visual = UI_INS(ChooseVisual)(context, scrollbar->visual, &context->theme.scrollbar);
+  bool hasBorder = (visual->border != UI_CONST(BORDER_NONE)) &&
+                   ((uint32_t)scrollbar->region.right - scrollbar->region.left >= 2U) &&
+                   ((uint32_t)scrollbar->region.bottom - scrollbar->region.top >= 2U);
+  left = (uint32_t)scrollbar->region.left + hasBorder;
+  right = (uint32_t)scrollbar->region.right - hasBorder;
+  top = (uint32_t)scrollbar->region.top + hasBorder;
+  bottom = (uint32_t)scrollbar->region.bottom - hasBorder;
+
+  if (right < left || bottom < top)
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  totalRange = scrollbar->maximum - scrollbar->minimum + scrollbar->pageSize;
+  valRange = scrollbar->maximum - scrollbar->minimum;
+
+  if (!scrollbar->disabled) {
+    if (context->pointerPressed && UI_INS(Hovered)(context, scrollbar->region)) {
+      context->focus = id;
+      context->held = id;
+    }
+
+    if (scrollbar->vertical) {
+      uint32_t h = bottom - top + 1U;
+      uint32_t thumbSize = (uint32_t)((int64_t)h * scrollbar->pageSize / (totalRange ? totalRange : 1));
+      if (thumbSize < 1U) thumbSize = 1U;
+      if (thumbSize > h) thumbSize = h;
+      uint32_t travel = h - thumbSize;
+
+      if (context->held == id && context->pointerDown) {
+        TERMINAL_TYPE(TCanvas) *c = UI_INS(Canvas)(context);
+        uint32_t pointerY = context->pointer.y >= c->origin.y ? context->pointer.y - c->origin.y : 0;
+        if (pointerY <= top) {
+          scrollbar->value = scrollbar->minimum;
+        } else if (pointerY >= bottom) {
+          scrollbar->value = scrollbar->maximum;
+        } else if (travel > 0U) {
+          uint32_t relY = pointerY > top ? pointerY - top : 0;
+          if (relY > travel) relY = travel;
+          scrollbar->value = scrollbar->minimum + (int64_t)relY * valRange / travel;
+        }
+      }
+
+      if (UI_INS(Hovered)(context, scrollbar->region) && context->scroll != 0) {
+        scrollbar->value += context->scroll;
+        if (scrollbar->value < scrollbar->minimum) scrollbar->value = scrollbar->minimum;
+        if (scrollbar->value > scrollbar->maximum) scrollbar->value = scrollbar->maximum;
+      }
+
+      if (context->focus == id) {
+        for (i = 0; i < context->keyCount; i++) {
+          if (context->keys[i] == TERMINAL_CONST(KEY_UP) && scrollbar->value > scrollbar->minimum) {
+            scrollbar->value--;
+            context->keys[i] = 0;
+          } else if (context->keys[i] == TERMINAL_CONST(KEY_DOWN) && scrollbar->value < scrollbar->maximum) {
+            scrollbar->value++;
+            context->keys[i] = 0;
+          } else if (context->keys[i] == TERMINAL_CONST(KEY_PAGE_UP)) {
+            scrollbar->value -= scrollbar->pageSize;
+            if (scrollbar->value < scrollbar->minimum) scrollbar->value = scrollbar->minimum;
+            context->keys[i] = 0;
+          } else if (context->keys[i] == TERMINAL_CONST(KEY_PAGE_DOWN)) {
+            scrollbar->value += scrollbar->pageSize;
+            if (scrollbar->value > scrollbar->maximum) scrollbar->value = scrollbar->maximum;
+            context->keys[i] = 0;
+          }
+        }
+      }
+    } else {
+      /* Horizontal */
+      uint32_t w = right - left + 1U;
+      uint32_t thumbSize = (uint32_t)((int64_t)w * scrollbar->pageSize / (totalRange ? totalRange : 1));
+      if (thumbSize < 1U) thumbSize = 1U;
+      if (thumbSize > w) thumbSize = w;
+      uint32_t travel = w - thumbSize;
+
+      if (context->held == id && context->pointerDown) {
+        TERMINAL_TYPE(TCanvas) *c = UI_INS(Canvas)(context);
+        uint32_t pointerX = context->pointer.x >= c->origin.x ? context->pointer.x - c->origin.x : 0;
+        if (pointerX <= left) {
+          scrollbar->value = scrollbar->minimum;
+        } else if (pointerX >= right) {
+          scrollbar->value = scrollbar->maximum;
+        } else if (travel > 0U) {
+          uint32_t relX = pointerX > left ? pointerX - left : 0;
+          if (relX > travel) relX = travel;
+          scrollbar->value = scrollbar->minimum + (int64_t)relX * valRange / travel;
+        }
+      }
+
+      if (UI_INS(Hovered)(context, scrollbar->region) && context->scroll != 0) {
+        scrollbar->value += context->scroll;
+        if (scrollbar->value < scrollbar->minimum) scrollbar->value = scrollbar->minimum;
+        if (scrollbar->value > scrollbar->maximum) scrollbar->value = scrollbar->maximum;
+      }
+
+      if (context->focus == id) {
+        for (i = 0; i < context->keyCount; i++) {
+          if (context->keys[i] == TERMINAL_CONST(KEY_LEFT) && scrollbar->value > scrollbar->minimum) {
+            scrollbar->value--;
+            context->keys[i] = 0;
+          } else if (context->keys[i] == TERMINAL_CONST(KEY_RIGHT) && scrollbar->value < scrollbar->maximum) {
+            scrollbar->value++;
+            context->keys[i] = 0;
+          } else if (context->keys[i] == TERMINAL_CONST(KEY_PAGE_UP)) {
+            scrollbar->value -= scrollbar->pageSize;
+            if (scrollbar->value < scrollbar->minimum) scrollbar->value = scrollbar->minimum;
+            context->keys[i] = 0;
+          } else if (context->keys[i] == TERMINAL_CONST(KEY_PAGE_DOWN)) {
+            scrollbar->value += scrollbar->pageSize;
+            if (scrollbar->value > scrollbar->maximum) scrollbar->value = scrollbar->maximum;
+            context->keys[i] = 0;
+          }
+        }
+      }
+    }
+  }
+
+  style = UI_INS(ResolveStyle)(context, visual, id, scrollbar->region, scrollbar->disabled);
+  status = UI_INS(Frame)(context, scrollbar->region, hasBorder ? visual->border : UI_CONST(BORDER_NONE), style);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  if (scrollbar->vertical) {
+    uint32_t h = bottom - top + 1U;
+    uint32_t thumbSize = (uint32_t)((int64_t)h * scrollbar->pageSize / (totalRange ? totalRange : 1));
+    if (thumbSize < 1U) thumbSize = 1U;
+    if (thumbSize > h) thumbSize = h;
+    uint32_t travel = h - thumbSize;
+    uint32_t thumbStart = top + (travel > 0U && valRange > 0 ? (uint32_t)((scrollbar->value - scrollbar->minimum) * travel / valRange) : 0U);
+    uint32_t midX = (scrollbar->region.left + scrollbar->region.right) / 2U;
+    uint32_t trackGlyph = UI_INS(FirstGlyph)(context->theme.glyphs.sliderTrack, '|');
+    uint32_t thumbGlyph = UI_INS(FirstGlyph)(context->theme.glyphs.sliderThumb, '#');
+
+    for (uint32_t y = top; y <= bottom; ++y) {
+      bool isThumb = (y >= thumbStart && y < thumbStart + thumbSize);
+      status = UI_INS(Put)(context, midX, y, isThumb ? thumbGlyph : trackGlyph, style);
+      if (status != STATUS_CONST(SUCCESS))
+        return status;
+    }
+  } else {
+    uint32_t w = right - left + 1U;
+    uint32_t thumbSize = (uint32_t)((int64_t)w * scrollbar->pageSize / (totalRange ? totalRange : 1));
+    if (thumbSize < 1U) thumbSize = 1U;
+    if (thumbSize > w) thumbSize = w;
+    uint32_t travel = w - thumbSize;
+    uint32_t thumbStart = left + (travel > 0U && valRange > 0 ? (uint32_t)((scrollbar->value - scrollbar->minimum) * travel / valRange) : 0U);
+    uint32_t midY = (scrollbar->region.top + scrollbar->region.bottom) / 2U;
+    uint32_t trackGlyph = UI_INS(FirstGlyph)(context->theme.glyphs.sliderTrack, '-');
+    uint32_t thumbGlyph = UI_INS(FirstGlyph)(context->theme.glyphs.sliderThumb, '#');
+
+    for (uint32_t x = left; x <= right; ++x) {
+      bool isThumb = (x >= thumbStart && x < thumbStart + thumbSize);
+      status = UI_INS(Put)(context, x, midY, isThumb ? thumbGlyph : trackGlyph, style);
+      if (status != STATUS_CONST(SUCCESS))
+        return status;
+    }
+  }
+
+  return STATUS_CONST(SUCCESS);
+}
+
+UI_SCROLLBAR_PROTOTYPE {
+  UI_TYPE(TScrollbar) bar = {0};
+  OPSTATUS status;
+  if (!value)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  bar.region = region;
+  bar.minimum = minimum;
+  bar.maximum = maximum;
+  bar.pageSize = pageSize;
+  bar.vertical = vertical;
+  bar.value = *value;
+  status = UI_FUNC(ScrollbarEx)(context, &bar);
+  if (status == STATUS_CONST(SUCCESS))
+    *value = bar.value;
+  return status;
+}

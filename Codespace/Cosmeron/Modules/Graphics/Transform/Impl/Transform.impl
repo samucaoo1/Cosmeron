@@ -1,0 +1,135 @@
+#pragma once
+#include <math.h>
+
+OBJECT_PROTOTYPEEX(TTransform2D, Identity, ()) {
+  if (!self) return STATUS_CONST(INVALID_ARGUMENT);
+  self->a = 1.0f; self->b = 0.0f;
+  self->c = 0.0f; self->d = 1.0f;
+  self->tx = 0.0f; self->ty = 0.0f;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TTransform2D, Translate, (float tx, float ty)) {
+  if (!self) return STATUS_CONST(INVALID_ARGUMENT);
+  self->tx += self->a * tx + self->c * ty;
+  self->ty += self->b * tx + self->d * ty;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TTransform2D, Scale, (float sx, float sy)) {
+  if (!self) return STATUS_CONST(INVALID_ARGUMENT);
+  self->a *= sx;
+  self->b *= sx;
+  self->c *= sy;
+  self->d *= sy;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TTransform2D, Rotate, (float radians)) {
+  if (!self) return STATUS_CONST(INVALID_ARGUMENT);
+  float cosR = cosf(radians);
+  float sinR = sinf(radians);
+  float a = self->a * cosR + self->c * sinR;
+  float b = self->b * cosR + self->d * sinR;
+  float c = -self->a * sinR + self->c * cosR;
+  float d = -self->b * sinR + self->d * cosR;
+  self->a = a;
+  self->b = b;
+  self->c = c;
+  self->d = d;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TTransform2D, Shear, (float shx, float shy)) {
+  if (!self) return STATUS_CONST(INVALID_ARGUMENT);
+  float a = self->a + self->c * shy;
+  float b = self->b + self->d * shy;
+  float c = self->a * shx + self->c;
+  float d = self->b * shx + self->d;
+  self->a = a;
+  self->b = b;
+  self->c = c;
+  self->d = d;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TTransform2D, Multiply, (const struct TTransform2D *other)) {
+  if (!self || !other) return STATUS_CONST(INVALID_ARGUMENT);
+  float a  = self->a * other->a + self->c * other->b;
+  float b  = self->b * other->a + self->d * other->b;
+  float c  = self->a * other->c + self->c * other->d;
+  float d  = self->b * other->c + self->d * other->d;
+  float tx = self->a * other->tx + self->c * other->ty + self->tx;
+  float ty = self->b * other->tx + self->d * other->ty + self->ty;
+  self->a = a;
+  self->b = b;
+  self->c = c;
+  self->d = d;
+  self->tx = tx;
+  self->ty = ty;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TTransform2D, Determinant, ()) {
+  if (!self) return 0.0f;
+  return self->a * self->d - self->b * self->c;
+}
+
+OBJECT_PROTOTYPEEX(TTransform2D, Invert, (struct TTransform2D *outInverse)) {
+  if (!self || !outInverse) return STATUS_CONST(INVALID_ARGUMENT);
+  float det = self->a * self->d - self->b * self->c;
+  if (fabsf(det) < 1e-6f) return STATUS_CONST(GENERIC_ERROR);
+  float invDet = 1.0f / det;
+  outInverse->a = self->d * invDet;
+  outInverse->b = -self->b * invDet;
+  outInverse->c = -self->c * invDet;
+  outInverse->d = self->a * invDet;
+  outInverse->tx = (self->c * self->ty - self->d * self->tx) * invDet;
+  outInverse->ty = (self->b * self->tx - self->a * self->ty) * invDet;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TTransform2D, ApplyPoint, (GEOMETRY_TYPE(TPoint2D) point, GEOMETRY_TYPE(TPoint2D) *outPoint)) {
+  if (!self || !outPoint) return STATUS_CONST(INVALID_ARGUMENT);
+  outPoint->x = self->a * point.x + self->c * point.y + self->tx;
+  outPoint->y = self->b * point.x + self->d * point.y + self->ty;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TTransform2D, ApplyVector, (GEOMETRY_TYPE(TPoint2D) vector, GEOMETRY_TYPE(TPoint2D) *outVector)) {
+  if (!self || !outVector) return STATUS_CONST(INVALID_ARGUMENT);
+  outVector->x = self->a * vector.x + self->c * vector.y;
+  outVector->y = self->b * vector.x + self->d * vector.y;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TTransform2D, ApplyRect, (const GEOMETRY_TYPE(TRect2D) *rect, GEOMETRY_TYPE(TRect2D) *outBounds)) {
+  if (!self || !rect || !outBounds) return STATUS_CONST(INVALID_ARGUMENT);
+  GEOMETRY_TYPE(TPoint2D) corners[4] = {
+    {.x = rect->origin.x, .y = rect->origin.y},
+    {.x = rect->origin.x + rect->size.x, .y = rect->origin.y},
+    {.x = rect->origin.x, .y = rect->origin.y + rect->size.y},
+    {.x = rect->origin.x + rect->size.x, .y = rect->origin.y + rect->size.y}
+  };
+
+  GEOMETRY_TYPE(TPoint2D) transformed;
+  (void)TTransform2D_ApplyPoint(self, corners[0], &transformed);
+  float minX = transformed.x, maxX = transformed.x;
+  float minY = transformed.y, maxY = transformed.y;
+
+  for (size_t i = 1; i < 4; i++) {
+    (void)TTransform2D_ApplyPoint(self, corners[i], &transformed);
+    if (transformed.x < minX) minX = transformed.x;
+    if (transformed.x > maxX) maxX = transformed.x;
+    if (transformed.y < minY) minY = transformed.y;
+    if (transformed.y > maxY) maxY = transformed.y;
+  }
+
+  outBounds->origin.x = minX;
+  outBounds->origin.y = minY;
+  outBounds->size.x = maxX - minX;
+  outBounds->size.y = maxY - minY;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_IMPLEMENT(TTransform2D);
