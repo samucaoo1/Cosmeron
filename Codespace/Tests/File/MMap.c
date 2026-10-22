@@ -4,7 +4,12 @@
 
 #include <assert.h>
 #include <string.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <unistd.h>
+#endif
 
 #include "../../Cosmeron/Modules/File/File.h"
 
@@ -13,7 +18,11 @@
 int main(void) {
   char root[128], path[256];
   size_t required;
+#ifdef _WIN32
+  unsigned long pid = (unsigned long)GetCurrentProcessId();
+#else
   unsigned long pid = (unsigned long)getpid();
+#endif
   assert(snprintf(root, sizeof(root), "cosmeron-mmap-test-%lu", pid) > 0);
 
   OK(File_Directory_Create(root));
@@ -43,9 +52,14 @@ int main(void) {
     /* Verify content */
     assert(memcmp(mmap.api->Data(&mmap), "COSMERON_MMAP_TEST", 18) == 0);
 
-    /* Lock and Unlock */
-    OK(mmap.api->Lock(&mmap));
-    OK(mmap.api->Unlock(&mmap));
+    /* Lock and Unlock (may be restricted by RLIMIT_MEMLOCK in unprivileged environments) */
+    OPSTATUS lockStatus = mmap.api->Lock(&mmap);
+    assert(lockStatus == STATUS_CONST(SUCCESS) ||
+           lockStatus == STATUS_CONST(OUT_OF_MEMORY) ||
+           lockStatus == STATUS_CONST(GENERIC_ERROR));
+    if (lockStatus == STATUS_CONST(SUCCESS)) {
+      OK(mmap.api->Unlock(&mmap));
+    }
 
     OK(mmap.api->Close(&mmap));
     assert(!mmap.api->IsMapped(&mmap));

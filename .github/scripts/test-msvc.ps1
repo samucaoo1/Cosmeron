@@ -13,7 +13,7 @@ function Invoke-CosmeronTest {
   $exe = Join-Path $build "$Name.exe"
   Push-Location $root
   try {
-    $args = @("/nologo", "/std:c11", "/W4", "/WX", "/wd4127", "/D_CRT_SECURE_NO_WARNINGS")
+    $args = @("/nologo", "/std:c11", "/Zc:preprocessor", "/W4", "/WX", "/wd4127", "/D_CRT_SECURE_NO_WARNINGS")
     $args += $Sources
     $args += "/Fe:$exe"
     $args += $Libraries
@@ -124,7 +124,7 @@ foreach ($name in @("Surface", "Interaction", "Editor", "Render", "Containers", 
 }
 Invoke-CosmeronTest "Codespace/Tests/GUI" "multi-tu" @("MultiTU_A.c", "MultiTU_B.c", "MultiTU_Main.c")
 
-foreach ($name in @("IncludeAll", "Path", "File", "Namespace", "WindowsMacros")) {
+foreach ($name in @("IncludeAll", "Path", "File", "Namespace", "WindowsMacros", "MMap", "Watch")) {
   Invoke-CosmeronTest "Codespace/Tests/File" $name @("$name.c")
 }
 Invoke-CosmeronTest "Codespace/Tests/File" "multi-tu" @("MultiTU_A.c", "MultiTU_B.c", "MultiTU_Main.c")
@@ -147,7 +147,7 @@ Invoke-CosmeronTest "Codespace/Tests/Parsing" "multi-tu" @("MultiTU_A.c", "Multi
 # Compile the shared embedded engine once for the Database suite.
 $databaseBuild = "Codespace/Tests/Database/.msvc"
 New-Item -ItemType Directory -Force -Path $databaseBuild | Out-Null
-& cl /nologo /std:c11 /W4 /WX /D_CRT_SECURE_NO_WARNINGS /c Codespace/Tests/Database/Backend.c "/Fo:$databaseBuild/Backend.obj"
+& cl /nologo /std:c11 /Zc:preprocessor /W4 /WX /D_CRT_SECURE_NO_WARNINGS /c Codespace/Tests/Database/Backend.c "/Fo:$databaseBuild/Backend.obj"
 if ($LASTEXITCODE -ne 0) { throw "cl failed: Database backend" }
 foreach ($name in @("IncludeAll", "Database", "Persistence", "Namespace")) {
   Invoke-CosmeronTest "Codespace/Tests/Database" $name @("$name.c", ".msvc/Backend.obj")
@@ -158,7 +158,7 @@ foreach ($name in @("IncludeAll", "Codec", "Zip", "File", "Namespace", "Function
   Invoke-CosmeronTest "Codespace/Tests/Compression" $name @("$name.c")
 }
 Invoke-CosmeronTest "Codespace/Tests/Compression" "multi-tu" @("MultiTU_A.c", "MultiTU_B.c", "MultiTU_Main.c")
-& cl /nologo /std:c11 /W4 /WX /D_CRT_SECURE_NO_WARNINGS Codespace/Tests/Compression/Interop.c /Fe:Codespace/Tests/Compression/.msvc/Interop.exe
+& cl /nologo /std:c11 /Zc:preprocessor /W4 /WX /D_CRT_SECURE_NO_WARNINGS Codespace/Tests/Compression/Interop.c /Fe:Codespace/Tests/Compression/.msvc/Interop.exe
 if ($LASTEXITCODE -ne 0) { throw "cl failed: Compression interoperability" }
 python Codespace/Tests/Compression/interop.py Codespace/Tests/Compression/.msvc/Interop.exe
 if ($LASTEXITCODE -ne 0) { throw "Compression interoperability failed" }

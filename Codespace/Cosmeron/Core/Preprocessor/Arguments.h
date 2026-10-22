@@ -11,7 +11,8 @@
       27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10,  \
       9, 8, 7, 6, 5, 4, 3, 2, 1, 0
 
-#define PP_ARG_COUNT(...) PP_ARG_COUNT_IMPL(__VA_ARGS__, PP_ARG_RSEQ())
+#define PP_ARG_COUNT_EXPAND(args) PP_ARG_COUNT_SELECT args
+#define PP_ARG_COUNT(...) PP_ARG_COUNT_EXPAND((__VA_ARGS__, PP_ARG_RSEQ(), 0))
 
 #define PP_ARG_COUNT_IMPL(...) PP_ARG_COUNT_SELECT(__VA_ARGS__, 0)
 
@@ -33,8 +34,9 @@
                  _15, _16, ...)                                                \
   _16
 
+#define PP_ARG16_EXPAND(args) PP_ARG16 args
 #define PP_HAS_COMMA(...)                                                      \
-  PP_ARG16(__VA_ARGS__, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0)
+  PP_ARG16_EXPAND((__VA_ARGS__, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0))
 
 #define PP_TRIGGER_PAREN(...) ,
 
@@ -59,9 +61,8 @@
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,                 \
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0
 
-#define PP_HAS_MORE_THAN_2_IMPL(...) PP_ARG_COUNT_SELECT(__VA_ARGS__, 0)
 #define PP_HAS_MORE_THAN_2(...)                                                \
-  PP_HAS_MORE_THAN_2_IMPL(__VA_ARGS__, PP_HAS_MORE_THAN_2_RSEQ())
+  PP_ARG_COUNT_EXPAND((__VA_ARGS__, PP_HAS_MORE_THAN_2_RSEQ(), 0))
 
 /* Convert parameter declaration lists (e.g. (int a, void *b)) to struct fields */
 #define PP_PARAM_TO_FIELD_1(a) a;

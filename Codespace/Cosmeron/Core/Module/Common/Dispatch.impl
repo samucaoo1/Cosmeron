@@ -15,7 +15,7 @@
  * 1. Object Implementation Prototypes (Receiver 'self' bound)
  * ------------------------------------------------------------ */
 
-#define COSMERON_MACRO_INTERNAL_OBJ_PROTOEX_PARAMS_1(CLASS, METHOD, ...) \
+#define COSMERON_MACRO_INTERNAL_OBJ_PROTOEX_PARAMS_1(CLASS, METHOD, PARAMS) \
   (GNS3(CLASS, METHOD, self_t) * self)
 
 #define COSMERON_MACRO_INTERNAL_OBJ_PROTOEX_PARAMS_0(CLASS, METHOD, PARAMS) \
@@ -164,7 +164,7 @@
  * ------------------------------------------------------------ */
 #define COSMERON_MACRO_INTERNAL_PROTOEX_2(CLASS, METHOD) \
   static inline GNS3(CLASS, METHOD, ret_t) GNS2(CLASS, METHOD) \
-      COSMERON_MACRO_INTERNAL_OBJ_PROTOEX_EMIT_PARAMS(CLASS, METHOD, ())
+      COSMERON_MACRO_INTERNAL_OBJ_PROTOEX_PARAMS_1(CLASS, METHOD, ())
 
 #define COSMERON_MACRO_INTERNAL_PROTOEX_3(CLASS, METHOD, PARAMS) \
   static inline GNS3(CLASS, METHOD, ret_t) GNS2(CLASS, METHOD) \

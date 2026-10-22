@@ -5,7 +5,12 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <unistd.h>
+#endif
 
 #include "../../Cosmeron/Modules/File/File.h"
 
@@ -14,7 +19,11 @@
 int main(void) {
   char root[128], filePath[256];
   size_t required;
+#ifdef _WIN32
+  unsigned long pid = (unsigned long)GetCurrentProcessId();
+#else
   unsigned long pid = (unsigned long)getpid();
+#endif
   assert(snprintf(root, sizeof(root), "cosmeron-watch-test-%lu", pid) > 0);
 
   OK(File_Directory_Create(root));
