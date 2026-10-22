@@ -1,5 +1,6 @@
 #pragma once
 #include "../UI.space"
+#include "../UI.h"
 #include "../../../../Core/Module/Object.h"
 
 #if defined(UI_DISABLE_FUNCTION_TABLE) ||                                       \

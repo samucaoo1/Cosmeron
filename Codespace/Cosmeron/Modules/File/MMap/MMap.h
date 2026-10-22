@@ -3,6 +3,7 @@
 #include "../../../Core/Error/Status.h"
 #include "../../../Core/Module/Object.h"
 #include "../File.space"
+#include "../Stream/Stream.h"
 
 #if defined(FILE_DISABLE_FUNCTION_TABLE) ||                                    \
     defined(FILE_MMAP_DISABLE_FUNCTION_TABLE)

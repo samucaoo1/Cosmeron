@@ -3,7 +3,7 @@
 The **Object** core module provides an object-oriented foundation and declarative class definition syntax for Cosmeron, supporting dispatch tables, inheritance, and unified method declarations.
 
 ```c
-#include "Cosmeron/Core/Object/Object.h"
+#include "Cosmeron/Core/Module/Object.h"
 ```
 
 ---

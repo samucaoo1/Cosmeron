@@ -3,7 +3,7 @@
 The **Package** core module enables declarative grouping of module-level functions with optional function table dispatch.
 
 ```c
-#include "Cosmeron/Core/Package/Package.h"
+#include "Cosmeron/Core/Module/Package.h"
 ```
 
 ---
