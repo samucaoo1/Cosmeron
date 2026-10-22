@@ -12,6 +12,10 @@
 #endif
 #endif
 
+#ifdef MMAP
+#undef MMAP
+#endif
+
 #define FILE_MMAP_NS(NAME) GNS2(FILE_NS(MMap), NAME)
 #define FILE_MMAP_CNS(NAME) CNS3(LIB_PREFIX_CONST(FILE_CMOD), MMAP, NAME)
 #define FILE_MMAP_INS(NAME) GNS3(FILE_NS(MMap), Internal, NAME)

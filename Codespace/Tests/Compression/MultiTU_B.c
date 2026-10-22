@@ -1,5 +1,6 @@
 #include "../../Cosmeron/Modules/Compression/Compression.h"
 #include <assert.h>
+#include <string.h>
 void unpack(Compression_TBuffer *in) {
   Compression_TBuffer out = {0};
   assert(Compression_DecompressAlloc(COMPRESSION_ZLIB, in->data, in->size, 8, &out) == STATUS_SUCCESS);

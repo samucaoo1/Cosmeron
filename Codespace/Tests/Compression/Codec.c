@@ -1,5 +1,6 @@
 #include "../../Cosmeron/Modules/Compression/Compression.h"
 #include <assert.h>
+#include <string.h>
 int main(void) {
   unsigned char data[12000], decoded[12000], compressed[14000];
   size_t size, written, i, j, bound;

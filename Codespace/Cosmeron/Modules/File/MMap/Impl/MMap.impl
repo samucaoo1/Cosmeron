@@ -15,6 +15,10 @@
 #include <unistd.h>
 #endif
 
+#ifdef MMAP
+#undef MMAP
+#endif
+
 /* ============================================================
  * Internal Helpers
  * ============================================================ */
@@ -155,12 +159,8 @@ OBJECT_PROTOTYPEEX(FILE_MMAP_TYPE(TMemoryMappedFile), Open,
     return status;
 
   status = OBJECT_CALL(self, OpenFile, &f, protection, offset, length);
-  if (status != STATUS_CONST(SUCCESS)) {
-    FILE_FUNC(Close)(&f);
-    return status;
-  }
-
-  return STATUS_CONST(SUCCESS);
+  FILE_FUNC(Close)(&f);
+  return status;
 }
 
 OBJECT_PROTOTYPEEX(FILE_MMAP_TYPE(TMemoryMappedFile), Close) {
@@ -216,7 +216,7 @@ OBJECT_PROTOTYPEEX(FILE_MMAP_TYPE(TMemoryMappedFile), SyncRange,
   int flags = (syncMode & FILE_MMAP_CONST(SYNC_ASYNC)) ? MS_ASYNC : MS_SYNC;
   size_t pageSize = FILE_MMAP_INS(PageSize)();
   uintptr_t addr = (uintptr_t)target;
-  uintptr_t alignedAddr = addr & ~(pageSize - 1U);
+  uintptr_t alignedAddr = addr - (addr % pageSize);
   size_t alignedLen = (addr + length) - alignedAddr;
 
   if (msync((void *)alignedAddr, alignedLen, flags) != 0)
@@ -252,7 +252,7 @@ OBJECT_PROTOTYPEEX(FILE_MMAP_TYPE(TMemoryMappedFile), LockRange,
 #else
   size_t pageSize = FILE_MMAP_INS(PageSize)();
   uintptr_t addr = (uintptr_t)target;
-  uintptr_t alignedAddr = addr & ~(pageSize - 1U);
+  uintptr_t alignedAddr = addr - (addr % pageSize);
   size_t alignedLen = (addr + length) - alignedAddr;
 
   if (mlock((const void *)alignedAddr, alignedLen) != 0)
@@ -288,7 +288,7 @@ OBJECT_PROTOTYPEEX(FILE_MMAP_TYPE(TMemoryMappedFile), UnlockRange,
 #else
   size_t pageSize = FILE_MMAP_INS(PageSize)();
   uintptr_t addr = (uintptr_t)target;
-  uintptr_t alignedAddr = addr & ~(pageSize - 1U);
+  uintptr_t alignedAddr = addr - (addr % pageSize);
   size_t alignedLen = (addr + length) - alignedAddr;
 
   if (munlock((const void *)alignedAddr, alignedLen) != 0)

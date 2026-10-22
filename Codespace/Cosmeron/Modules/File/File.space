@@ -22,6 +22,10 @@
 #include <dirent.h>
 #endif
 
+#ifdef MMAP
+#undef MMAP
+#endif
+
 #define FILE_MOD File
 #define FILE_CMOD FILE
 #ifndef FILE_NS
