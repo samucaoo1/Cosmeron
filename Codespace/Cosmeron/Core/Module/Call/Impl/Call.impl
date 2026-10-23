@@ -1,0 +1,119 @@
+#pragma once
+
+/*
+ * Typed, non-owning function/context pairs.
+ *
+ * Every declaration creates a distinct function-pointer type. This preserves
+ * C's type checking: Call never casts between incompatible function pointers.
+ *
+ * CALL_DECLARE(NAME, RETURN_TYPE, PARAMETERS, ARGUMENTS)
+ *   Non-void function with one or more ordinary arguments.
+ *
+ * CALL_DECLARE_PROCEDURE(NAME, PARAMETERS, ARGUMENTS)
+ *   Void-returning function with one or more ordinary arguments.
+ *
+ * CALL_DECLARE_NULLARY(NAME, RETURN_TYPE)
+ *   Non-void function with no ordinary arguments.
+ *
+ * CALL_DECLARE_NULLARY_PROCEDURE(NAME)
+ *   Void-returning function with no ordinary arguments.
+ *
+ * PARAMETERS and ARGUMENTS are parenthesized tuples. The function pointer
+ * always receives void *context as its final parameter; Invoke hides it.
+ *
+ * Example:
+ *
+ *   CALL_DECLARE(Scale, int, (int value), (value))
+ *
+ *   typedef struct { int factor; } ScaleContext;
+ *
+ *   static int ScaleValue(int value, void *context) {
+ *     ScaleContext *state = context;
+ *     return value * state->factor;
+ *   }
+ *
+ *   ScaleContext state = { 3 };
+ *   Scale call = Scale_Bind(ScaleValue, &state);
+ *   int result = Scale_Invoke(call, 4); // 12
+ *
+ * The context is non-owning. It is neither copied nor freed by Call.
+ * The caller must keep it alive, and must not invoke an unbound callable.
+ */
+
+#define CALL_DECLARE(NAME, RETURN_TYPE, PARAMETERS, ARGUMENTS)                \
+  typedef RETURN_TYPE (*GNS2(CALL_TYPE(NAME), Function))(                      \
+      PP_UNWRAP PARAMETERS, void *context);                                    \
+  typedef struct CALL_TYPE(NAME) {                                             \
+    GNS2(CALL_TYPE(NAME), Function) function;                                  \
+    void *context;                                                             \
+  } CALL_TYPE(NAME);                                                           \
+  static inline CALL_TYPE(NAME) GNS2(CALL_TYPE(NAME), Bind)(                   \
+      GNS2(CALL_TYPE(NAME), Function) function, void *context) {               \
+    CALL_TYPE(NAME) call = { function, context };                              \
+    return call;                                                               \
+  }                                                                            \
+  static inline bool GNS2(CALL_TYPE(NAME), IsValid)(CALL_TYPE(NAME) call) {    \
+    return call.function != NULL;                                              \
+  }                                                                            \
+  static inline RETURN_TYPE GNS2(CALL_TYPE(NAME), Invoke)(                     \
+      CALL_TYPE(NAME) call, PP_UNWRAP PARAMETERS) {                            \
+    return call.function(PP_UNWRAP ARGUMENTS, call.context);                   \
+  }
+
+#define CALL_DECLARE_PROCEDURE(NAME, PARAMETERS, ARGUMENTS)                   \
+  typedef void (*GNS2(CALL_TYPE(NAME), Function))(                             \
+      PP_UNWRAP PARAMETERS, void *context);                                    \
+  typedef struct CALL_TYPE(NAME) {                                             \
+    GNS2(CALL_TYPE(NAME), Function) function;                                  \
+    void *context;                                                             \
+  } CALL_TYPE(NAME);                                                           \
+  static inline CALL_TYPE(NAME) GNS2(CALL_TYPE(NAME), Bind)(                   \
+      GNS2(CALL_TYPE(NAME), Function) function, void *context) {               \
+    CALL_TYPE(NAME) call = { function, context };                              \
+    return call;                                                               \
+  }                                                                            \
+  static inline bool GNS2(CALL_TYPE(NAME), IsValid)(CALL_TYPE(NAME) call) {    \
+    return call.function != NULL;                                              \
+  }                                                                            \
+  static inline void GNS2(CALL_TYPE(NAME), Invoke)(                            \
+      CALL_TYPE(NAME) call, PP_UNWRAP PARAMETERS) {                            \
+    call.function(PP_UNWRAP ARGUMENTS, call.context);                          \
+  }
+
+#define CALL_DECLARE_NULLARY(NAME, RETURN_TYPE)                                \
+  typedef RETURN_TYPE (*GNS2(CALL_TYPE(NAME), Function))(void *context);       \
+  typedef struct CALL_TYPE(NAME) {                                             \
+    GNS2(CALL_TYPE(NAME), Function) function;                                  \
+    void *context;                                                             \
+  } CALL_TYPE(NAME);                                                           \
+  static inline CALL_TYPE(NAME) GNS2(CALL_TYPE(NAME), Bind)(                   \
+      GNS2(CALL_TYPE(NAME), Function) function, void *context) {               \
+    CALL_TYPE(NAME) call = { function, context };                              \
+    return call;                                                               \
+  }                                                                            \
+  static inline bool GNS2(CALL_TYPE(NAME), IsValid)(CALL_TYPE(NAME) call) {    \
+    return call.function != NULL;                                              \
+  }                                                                            \
+  static inline RETURN_TYPE GNS2(CALL_TYPE(NAME), Invoke)(                     \
+      CALL_TYPE(NAME) call) {                                                  \
+    return call.function(call.context);                                        \
+  }
+
+#define CALL_DECLARE_NULLARY_PROCEDURE(NAME)                                   \
+  typedef void (*GNS2(CALL_TYPE(NAME), Function))(void *context);              \
+  typedef struct CALL_TYPE(NAME) {                                             \
+    GNS2(CALL_TYPE(NAME), Function) function;                                  \
+    void *context;                                                             \
+  } CALL_TYPE(NAME);                                                           \
+  static inline CALL_TYPE(NAME) GNS2(CALL_TYPE(NAME), Bind)(                   \
+      GNS2(CALL_TYPE(NAME), Function) function, void *context) {               \
+    CALL_TYPE(NAME) call = { function, context };                              \
+    return call;                                                               \
+  }                                                                            \
+  static inline bool GNS2(CALL_TYPE(NAME), IsValid)(CALL_TYPE(NAME) call) {    \
+    return call.function != NULL;                                              \
+  }                                                                            \
+  static inline void GNS2(CALL_TYPE(NAME), Invoke)(CALL_TYPE(NAME) call) {     \
+    call.function(call.context);                                               \
+  }
+/* EOF */
