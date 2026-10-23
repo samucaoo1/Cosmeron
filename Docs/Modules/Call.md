@@ -17,7 +17,7 @@ The context is borrowed, not owned. Call does not allocate, copy, or release it.
 ## Value-returning callable
 
 ```c
-#include "Call/Call.h"
+#include "Module/Call/Call.h"
 
 CALL_DECLARE(Scale, int, (int value), (value))
 
