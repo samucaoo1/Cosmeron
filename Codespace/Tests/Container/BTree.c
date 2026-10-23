@@ -270,6 +270,18 @@ static int Test_BTree_CustomComparator(void) {
     TEST_ASSERT(OBJECT_CALL_0(&sset, Size) == 1U);
     OBJECT_CALL_0(&sset, Destroy);
   }
+
+  /* Verify custom comparator Map */
+  {
+    TBTree_Map_custom_long_int map;
+    int *v = NULL;
+    TEST_ASSERT(TBTree_Map_custom_long_int_Init(&map) == STATUS_CONST(SUCCESS));
+    TEST_ASSERT(OBJECT_CALL_0(&map, Create) == STATUS_CONST(SUCCESS));
+    TEST_ASSERT(OBJECT_CALL(&map, Insert, 7000000000L, 77) == STATUS_CONST(SUCCESS));
+    TEST_ASSERT(OBJECT_CALL(&map, Find, 7000000000L, &v) == STATUS_CONST(SUCCESS));
+    TEST_ASSERT(v != NULL && *v == 77);
+    OBJECT_CALL_0(&map, Destroy);
+  }
   return 0;
 }
 
