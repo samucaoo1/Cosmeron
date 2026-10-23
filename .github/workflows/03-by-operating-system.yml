@@ -82,7 +82,7 @@ jobs:
             install: "true"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Run portable, codec, native and input suites inside ${{ matrix.name }}
         env:
           IMAGE: ${{ matrix.image }}
@@ -104,7 +104,7 @@ jobs:
         cc: [gcc, clang]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Run all module make suites
         env:
           CC: ${{ matrix.cc }}
@@ -122,7 +122,7 @@ jobs:
     timeout-minutes: 35
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Install 32-bit libc
         run: sudo apt-get update && sudo apt-get install -y gcc-multilib libc6-dev-i386
       - name: Run make suites with 32-bit flags
@@ -142,7 +142,7 @@ jobs:
     timeout-minutes: 35
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Install Nix
         uses: cachix/install-nix-action@b85815f71a6de0ddee80b8a80a98d43f4bcc66c7 # v31
       - name: Build locked Nix packages (strict C11)
@@ -159,7 +159,7 @@ jobs:
     timeout-minutes: 90
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Install Nix
         uses: cachix/install-nix-action@b85815f71a6de0ddee80b8a80a98d43f4bcc66c7 # v31
       - name: Boot NixOS VM and run packaged C11 test binaries
@@ -176,7 +176,7 @@ jobs:
     timeout-minutes: 85
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Run FreeBSD VM suites
         id: tests
         uses: vmactions/freebsd-vm@c46abacb49f09938ca4e1702d15d836285d694cc
@@ -203,7 +203,7 @@ jobs:
     timeout-minutes: 85
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Run OpenBSD VM suites
         uses: vmactions/openbsd-vm@5f7b2c933b8846a138361d6843c52af4bef5d945
         with:
@@ -229,7 +229,7 @@ jobs:
     timeout-minutes: 85
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Run NetBSD VM suites
         uses: vmactions/netbsd-vm@c8a0d7ddb84619a7a8cc4e652efa7950b3fd9f92
         with:
@@ -255,7 +255,7 @@ jobs:
     timeout-minutes: 85
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Run DragonFly BSD VM suites
         uses: vmactions/dragonflybsd-vm@4ab776fa9f914fbea72f13715b451e77e7ef5c41
         with:
@@ -288,7 +288,7 @@ jobs:
         toolchain: [mingw, msvc]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: MinGW GCC suites
         if: matrix.toolchain == 'mingw'
@@ -326,7 +326,7 @@ jobs:
         toolchain: [mingw, msvc]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: MinGW GCC suites
         if: matrix.toolchain == 'mingw'
@@ -363,7 +363,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Run module make suites with Clang
         env:
           CC: clang
@@ -375,7 +375,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Run module make suites with Clang
         env:
           CC: clang
@@ -404,7 +404,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Summary and required checks
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}

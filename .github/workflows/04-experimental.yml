@@ -47,7 +47,7 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Install official native OpenHarmony SDK 6.0
         id: sdk
         uses: openharmony-rs/setup-ohos-sdk@eb82b94ef522b07269679195c2512f22e922ef3b
@@ -81,7 +81,7 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Verify POSIX, C11 and ArkTS native bridge boundary
         run: |
           set -eu
@@ -102,7 +102,7 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Run Crostini validation suite inside Debian container
         run: |
           docker run --rm -v "$PWD:/workspace" -w /workspace debian:stable-slim \
@@ -118,7 +118,7 @@ jobs:
   #   continue-on-error: true
   #   steps:
   #     - name: Checkout
-  #       uses: actions/checkout@v4
+  #       uses: actions/checkout@v7
   #     - name: Run portable C11 suite inside OpenIndiana Hipster VM
   #       uses: vmactions/openindiana-vm@74a06af3be38c265a2d99d1af520d66a057ff222
   #       with:
@@ -142,7 +142,7 @@ jobs:
   #   continue-on-error: true
   #   steps:
   #     - name: Checkout
-  #       uses: actions/checkout@v4
+  #       uses: actions/checkout@v7
   #     - name: Run portable C11 suite inside Solaris VM
   #       uses: vmactions/solaris-vm@87d3c436511cef802cd1637f86f73b1a97715c8c
   #       with:
@@ -165,7 +165,7 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Cross-compile portable C11 suites for Android aarch64
         run: |
           set -eu
@@ -191,7 +191,7 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Cross-compile portable C11 suites for iOS arm64
         run: |
           set -eu
@@ -211,7 +211,7 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Install diagnostic encoder dependencies
         run: |
           sudo apt-get update -qq
@@ -231,7 +231,7 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Verify Redox OS and relibc macro discrimination
         run: |
           set -eu
@@ -259,7 +259,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Summarize experimental outcomes
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
