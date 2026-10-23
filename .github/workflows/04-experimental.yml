@@ -50,7 +50,7 @@ jobs:
         uses: actions/checkout@v7
       - name: Install official native OpenHarmony SDK 6.0
         id: sdk
-        uses: openharmony-rs/setup-ohos-sdk@eb82b94ef522b07269679195c2512f22e922ef3b
+        uses: openharmony-rs/setup-ohos-sdk@b312caf8a43bb836aa24c08f65f97e1f09a89cad
         with:
           version: '6.0'
           components: native
