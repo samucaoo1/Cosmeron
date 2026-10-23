@@ -18,3 +18,4 @@
 #include "BST.h"
 #include "AVL.h"
 #include "RedBlack.h"
+#include "BTree.h"

@@ -1,0 +1,1363 @@
+#pragma once
+
+/* =============================================================
+ * BTree — in-memory balanced multiway search tree (Set & Map).
+ * Implemented using Cosmeron Object Declarative Framework.
+ * Conforms strictly to AGENTS.md & Docs/Reference/PATTERN.md.
+ * ============================================================= */
+
+#include "../../../../Core/Algorithm/Comparison.h"
+#include "../../../../Core/Error/Status.h"
+#include "../../../../Core/Memory/Alloc.h"
+#include "../../../../Core/Module/Object.h"
+#include "../../../../Core/Namespace.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#ifndef BTREE_DEFAULT_DEGREE
+#define BTREE_DEFAULT_DEGREE 3
+#endif
+
+/* =============================================================
+ * Type generator macros
+ * ============================================================= */
+
+#define TBTREE_SET_TYPED(SUFFIX) GNS2(TBTree_Set, SUFFIX)
+#define BTREE_SET_NODE_TYPE(SUFFIX) GNS2(BTree_Set_Node, SUFFIX)
+#define BTREE_SET_CURSOR_TYPE(SUFFIX) GNS2(BTree_Set_Cursor, SUFFIX)
+
+#define TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V)                                   \
+  GNS3(TBTree_Map, SUFFIX_K, SUFFIX_V)
+#define BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V)                                \
+  GNS3(BTree_Map_Node, SUFFIX_K, SUFFIX_V)
+#define BTREE_MAP_CURSOR_TYPE(SUFFIX_K, SUFFIX_V)                              \
+  GNS3(BTree_Map_Cursor, SUFFIX_K, SUFFIX_V)
+
+/* =============================================================
+ * Template: TBTree_Set (Declaration)
+ * ============================================================= */
+
+#define TEMPLATE_TBTREE_SET_DEGREE(SUFFIX, KEY_TYPE, DEGREE)                   \
+  typedef struct BTREE_SET_NODE_TYPE(SUFFIX) {                                 \
+    size_t numKeys;                                                            \
+    bool isLeaf;                                                               \
+    struct BTREE_SET_NODE_TYPE(SUFFIX) * parent;                               \
+    KEY_TYPE keys[2 * (DEGREE) - 1];                                           \
+    struct BTREE_SET_NODE_TYPE(SUFFIX) * children[2 * (DEGREE)];               \
+  } BTREE_SET_NODE_TYPE(SUFFIX);                                               \
+                                                                               \
+  typedef struct BTREE_SET_CURSOR_TYPE(SUFFIX) {                               \
+    BTREE_SET_NODE_TYPE(SUFFIX) * node;                                        \
+    size_t index;                                                              \
+  } BTREE_SET_CURSOR_TYPE(SUFFIX);                                             \
+                                                                               \
+  OBJECT(TBTREE_SET_TYPED(SUFFIX),                                             \
+         FIELDS(BTREE_SET_NODE_TYPE(SUFFIX) * root; size_t size;               \
+                size_t degree;                                                 \
+                CMPOUT(*compare)(KEY_TYPE left, KEY_TYPE right);),             \
+         OPERATION(Create, ()),                                                \
+         OPERATION(CreateWithComparator,                                       \
+                   (CMPOUT(*compare)(KEY_TYPE left, KEY_TYPE right))),         \
+         OPERATION(Insert, (KEY_TYPE key)), OPERATION(Remove, (KEY_TYPE key)), \
+         CONST_OPERATION(Find, (KEY_TYPE key, KEY_TYPE * *out)),               \
+         CONST_OPERATION(Min, (KEY_TYPE * *out)),                              \
+         CONST_OPERATION(Max, (KEY_TYPE * *out)), OPERATION(Clear, ()),        \
+         PROCEDURE(Destroy, ()), CONST_PREDICATE(Contains, (KEY_TYPE key)),    \
+         CONST_PREDICATE(Empty, ()), CONST_FUNCTION(size_t, Size, ()),         \
+         CONST_FUNCTION(size_t, Height, ()),                                   \
+         CONST_FUNCTION(BTREE_SET_CURSOR_TYPE(SUFFIX), First, ()),             \
+         CONST_FUNCTION(BTREE_SET_CURSOR_TYPE(SUFFIX), Last, ()),              \
+         CONST_FUNCTION(bool, CursorNext,                                      \
+                        (BTREE_SET_CURSOR_TYPE(SUFFIX) * cursor)),             \
+         CONST_FUNCTION(bool, CursorPrev,                                      \
+                        (BTREE_SET_CURSOR_TYPE(SUFFIX) * cursor)),             \
+         CONST_PREDICATE(CursorValid,                                          \
+                         (const BTREE_SET_CURSOR_TYPE(SUFFIX) * cursor)),      \
+         CONST_FUNCTION(KEY_TYPE *, CursorKey,                                 \
+                        (const BTREE_SET_CURSOR_TYPE(SUFFIX) * cursor)))
+
+#define TEMPLATE_TBTREE_SET(SUFFIX, KEY_TYPE)                                  \
+  TEMPLATE_TBTREE_SET_DEGREE(SUFFIX, KEY_TYPE, BTREE_DEFAULT_DEGREE)
+
+/* =============================================================
+ * Template: TBTree_Set (Implementation)
+ * ============================================================= */
+
+#define TEMPLATE_TBTREE_SET_DEGREE_IMPLEMENT(SUFFIX, KEY_TYPE, DEGREE, CMP)    \
+  static inline BTREE_SET_NODE_TYPE(SUFFIX) *                                  \
+      GNS3(TBTREE_SET_TYPED(SUFFIX), Internal, CreateNode)(bool isLeaf) {      \
+    void *allocated = NULL;                                                    \
+    if (ALLOC_FUNC(AllocArray)(&allocated, 1U,                                 \
+                               sizeof(BTREE_SET_NODE_TYPE(SUFFIX))) !=         \
+        STATUS_CONST(SUCCESS))                                                 \
+      return NULL;                                                             \
+    BTREE_SET_NODE_TYPE(SUFFIX) *node =                                        \
+        (BTREE_SET_NODE_TYPE(SUFFIX) *)allocated;                              \
+    node->numKeys = 0;                                                         \
+    node->isLeaf = isLeaf;                                                     \
+    node->parent = NULL;                                                       \
+    for (size_t i = 0; i < 2 * (size_t)(DEGREE); i++) {                        \
+      node->children[i] = NULL;                                                \
+    }                                                                          \
+    return node;                                                               \
+  }                                                                            \
+                                                                               \
+  static inline void GNS3(TBTREE_SET_TYPED(SUFFIX), Internal,                  \
+                          DestroyNodes)(BTREE_SET_NODE_TYPE(SUFFIX) * node) {  \
+    if (!node)                                                                 \
+      return;                                                                  \
+    if (!node->isLeaf) {                                                       \
+      for (size_t i = 0; i <= node->numKeys; i++) {                            \
+        GNS3(TBTREE_SET_TYPED(SUFFIX), Internal,                               \
+             DestroyNodes)(node->children[i]);                                 \
+      }                                                                        \
+    }                                                                          \
+    Memory_Free(node);                                                         \
+  }                                                                            \
+                                                                               \
+  static inline size_t GNS3(TBTREE_SET_TYPED(SUFFIX), Internal, FindKeyIndex)( \
+      const BTREE_SET_NODE_TYPE(SUFFIX) * node, KEY_TYPE key,                  \
+      CMPOUT(*comparator)(KEY_TYPE, KEY_TYPE)) {                               \
+    size_t low = 0;                                                            \
+    size_t high = node->numKeys;                                               \
+    while (low < high) {                                                       \
+      size_t mid = low + (high - low) / 2U;                                    \
+      if (comparator(node->keys[mid], key) < COMPARISON_EQUAL_CONST) {         \
+        low = mid + 1U;                                                        \
+      } else {                                                                 \
+        high = mid;                                                            \
+      }                                                                        \
+    }                                                                          \
+    return low;                                                                \
+  }                                                                            \
+                                                                               \
+  static inline OPSTATUS GNS3(TBTREE_SET_TYPED(SUFFIX), Internal, SplitChild)( \
+      BTREE_SET_NODE_TYPE(SUFFIX) * parent, size_t i,                          \
+      BTREE_SET_NODE_TYPE(SUFFIX) * child) {                                   \
+    BTREE_SET_NODE_TYPE(SUFFIX) *sibling =                                     \
+        GNS3(TBTREE_SET_TYPED(SUFFIX), Internal, CreateNode)(child->isLeaf);   \
+    if (!sibling)                                                              \
+      return STATUS_CONST(OUT_OF_MEMORY);                                      \
+    sibling->parent = parent;                                                  \
+    sibling->numKeys = (size_t)(DEGREE) - 1U;                                  \
+    for (size_t j = 0; j < (size_t)(DEGREE) - 1U; j++) {                       \
+      sibling->keys[j] = child->keys[j + (size_t)(DEGREE)];                    \
+    }                                                                          \
+    if (!child->isLeaf) {                                                      \
+      for (size_t j = 0; j < (size_t)(DEGREE); j++) {                          \
+        sibling->children[j] = child->children[j + (size_t)(DEGREE)];          \
+        if (sibling->children[j])                                              \
+          sibling->children[j]->parent = sibling;                              \
+        child->children[j + (size_t)(DEGREE)] = NULL;                          \
+      }                                                                        \
+    }                                                                          \
+    child->numKeys = (size_t)(DEGREE) - 1U;                                    \
+    for (size_t j = parent->numKeys + 1U; j > i + 1U; j--) {                   \
+      parent->children[j] = parent->children[j - 1U];                          \
+    }                                                                          \
+    parent->children[i + 1U] = sibling;                                        \
+    for (size_t j = parent->numKeys; j > i; j--) {                             \
+      parent->keys[j] = parent->keys[j - 1U];                                  \
+    }                                                                          \
+    parent->keys[i] = child->keys[(size_t)(DEGREE) - 1U];                      \
+    parent->numKeys++;                                                         \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  static inline OPSTATUS GNS3(TBTREE_SET_TYPED(SUFFIX), Internal,              \
+                              InsertNonFull)(                                  \
+      TBTREE_SET_TYPED(SUFFIX) * self, BTREE_SET_NODE_TYPE(SUFFIX) * node,     \
+      KEY_TYPE key, CMPOUT(*comparator)(KEY_TYPE, KEY_TYPE)) {                 \
+    while (1) {                                                                \
+      if (node->isLeaf) {                                                      \
+        size_t idx = GNS3(TBTREE_SET_TYPED(SUFFIX), Internal,                  \
+                          FindKeyIndex)(node, key, comparator);                \
+        for (size_t j = node->numKeys; j > idx; j--) {                         \
+          node->keys[j] = node->keys[j - 1U];                                  \
+        }                                                                      \
+        node->keys[idx] = key;                                                 \
+        node->numKeys++;                                                       \
+        self->size++;                                                          \
+        return STATUS_CONST(SUCCESS);                                          \
+      } else {                                                                 \
+        size_t idx = GNS3(TBTREE_SET_TYPED(SUFFIX), Internal,                  \
+                          FindKeyIndex)(node, key, comparator);                \
+        BTREE_SET_NODE_TYPE(SUFFIX) *child = node->children[idx];              \
+        if (child->numKeys == 2 * (size_t)(DEGREE) - 1U) {                     \
+          OPSTATUS status = GNS3(TBTREE_SET_TYPED(SUFFIX), Internal,           \
+                                 SplitChild)(node, idx, child);                \
+          if (status != STATUS_CONST(SUCCESS))                                 \
+            return status;                                                     \
+          if (comparator(key, node->keys[idx]) > COMPARISON_EQUAL_CONST)       \
+            idx++;                                                             \
+          child = node->children[idx];                                         \
+        }                                                                      \
+        node = child;                                                          \
+      }                                                                        \
+    }                                                                          \
+  }                                                                            \
+                                                                               \
+  static inline void GNS3(TBTREE_SET_TYPED(SUFFIX), Internal, BorrowFromPrev)( \
+      BTREE_SET_NODE_TYPE(SUFFIX) * parent, size_t idx) {                      \
+    BTREE_SET_NODE_TYPE(SUFFIX) *c = parent->children[idx];                    \
+    BTREE_SET_NODE_TYPE(SUFFIX) *sibling = parent->children[idx - 1U];         \
+    for (size_t j = c->numKeys; j > 0; j--) {                                  \
+      c->keys[j] = c->keys[j - 1U];                                            \
+    }                                                                          \
+    c->keys[0] = parent->keys[idx - 1U];                                       \
+    if (!c->isLeaf) {                                                          \
+      for (size_t j = c->numKeys + 1U; j > 0; j--) {                           \
+        c->children[j] = c->children[j - 1U];                                  \
+      }                                                                        \
+      c->children[0] = sibling->children[sibling->numKeys];                    \
+      if (c->children[0])                                                      \
+        c->children[0]->parent = c;                                            \
+      sibling->children[sibling->numKeys] = NULL;                              \
+    }                                                                          \
+    parent->keys[idx - 1U] = sibling->keys[sibling->numKeys - 1U];             \
+    c->numKeys++;                                                              \
+    sibling->numKeys--;                                                        \
+  }                                                                            \
+                                                                               \
+  static inline void GNS3(TBTREE_SET_TYPED(SUFFIX), Internal, BorrowFromNext)( \
+      BTREE_SET_NODE_TYPE(SUFFIX) * parent, size_t idx) {                      \
+    BTREE_SET_NODE_TYPE(SUFFIX) *c = parent->children[idx];                    \
+    BTREE_SET_NODE_TYPE(SUFFIX) *sibling = parent->children[idx + 1U];         \
+    c->keys[c->numKeys] = parent->keys[idx];                                   \
+    if (!c->isLeaf) {                                                          \
+      c->children[c->numKeys + 1U] = sibling->children[0];                     \
+      if (c->children[c->numKeys + 1U])                                        \
+        c->children[c->numKeys + 1U]->parent = c;                              \
+    }                                                                          \
+    parent->keys[idx] = sibling->keys[0];                                      \
+    for (size_t j = 0; j + 1U < sibling->numKeys; j++) {                       \
+      sibling->keys[j] = sibling->keys[j + 1U];                                \
+    }                                                                          \
+    if (!sibling->isLeaf) {                                                    \
+      for (size_t j = 0; j < sibling->numKeys; j++) {                          \
+        sibling->children[j] = sibling->children[j + 1U];                      \
+      }                                                                        \
+      sibling->children[sibling->numKeys] = NULL;                              \
+    }                                                                          \
+    c->numKeys++;                                                              \
+    sibling->numKeys--;                                                        \
+  }                                                                            \
+                                                                               \
+  static inline void GNS3(TBTREE_SET_TYPED(SUFFIX), Internal, MergeChildren)(  \
+      TBTREE_SET_TYPED(SUFFIX) * self, BTREE_SET_NODE_TYPE(SUFFIX) * parent,   \
+      size_t idx) {                                                            \
+    (void)self;                                                                \
+    BTREE_SET_NODE_TYPE(SUFFIX) *c = parent->children[idx];                    \
+    BTREE_SET_NODE_TYPE(SUFFIX) *sibling = parent->children[idx + 1U];         \
+    c->keys[c->numKeys] = parent->keys[idx];                                   \
+    for (size_t j = 0; j < sibling->numKeys; j++) {                            \
+      c->keys[c->numKeys + 1U + j] = sibling->keys[j];                         \
+    }                                                                          \
+    if (!c->isLeaf) {                                                          \
+      for (size_t j = 0; j <= sibling->numKeys; j++) {                         \
+        c->children[c->numKeys + 1U + j] = sibling->children[j];               \
+        if (c->children[c->numKeys + 1U + j])                                  \
+          c->children[c->numKeys + 1U + j]->parent = c;                        \
+      }                                                                        \
+    }                                                                          \
+    c->numKeys += 1U + sibling->numKeys;                                       \
+    Memory_Free(sibling);                                                      \
+    for (size_t j = idx; j + 1U < parent->numKeys; j++) {                      \
+      parent->keys[j] = parent->keys[j + 1U];                                  \
+    }                                                                          \
+    for (size_t j = idx + 1U; j < parent->numKeys; j++) {                      \
+      parent->children[j] = parent->children[j + 1U];                          \
+    }                                                                          \
+    parent->children[parent->numKeys] = NULL;                                  \
+    parent->numKeys--;                                                         \
+  }                                                                            \
+                                                                               \
+  static inline void GNS3(TBTREE_SET_TYPED(SUFFIX), Internal, DeleteInternal)( \
+      TBTREE_SET_TYPED(SUFFIX) * self, BTREE_SET_NODE_TYPE(SUFFIX) * node,     \
+      KEY_TYPE key, CMPOUT(*comparator)(KEY_TYPE, KEY_TYPE)) {                 \
+    size_t idx = GNS3(TBTREE_SET_TYPED(SUFFIX), Internal,                      \
+                      FindKeyIndex)(node, key, comparator);                    \
+    if (idx < node->numKeys &&                                                 \
+        comparator(node->keys[idx], key) == COMPARISON_EQUAL_CONST) {          \
+      if (node->isLeaf) {                                                      \
+        for (size_t j = idx; j + 1U < node->numKeys; j++) {                    \
+          node->keys[j] = node->keys[j + 1U];                                  \
+        }                                                                      \
+        node->numKeys--;                                                       \
+      } else {                                                                 \
+        BTREE_SET_NODE_TYPE(SUFFIX) *predChild = node->children[idx];          \
+        BTREE_SET_NODE_TYPE(SUFFIX) *succChild = node->children[idx + 1U];     \
+        if (predChild->numKeys >= (size_t)(DEGREE)) {                          \
+          BTREE_SET_NODE_TYPE(SUFFIX) *cur = predChild;                        \
+          while (!cur->isLeaf)                                                 \
+            cur = cur->children[cur->numKeys];                                 \
+          KEY_TYPE predKey = cur->keys[cur->numKeys - 1U];                     \
+          node->keys[idx] = predKey;                                           \
+          GNS3(TBTREE_SET_TYPED(SUFFIX), Internal,                             \
+               DeleteInternal)(self, predChild, predKey, comparator);          \
+        } else if (succChild->numKeys >= (size_t)(DEGREE)) {                   \
+          BTREE_SET_NODE_TYPE(SUFFIX) *cur = succChild;                        \
+          while (!cur->isLeaf)                                                 \
+            cur = cur->children[0];                                            \
+          KEY_TYPE succKey = cur->keys[0];                                     \
+          node->keys[idx] = succKey;                                           \
+          GNS3(TBTREE_SET_TYPED(SUFFIX), Internal,                             \
+               DeleteInternal)(self, succChild, succKey, comparator);          \
+        } else {                                                               \
+          BTREE_SET_NODE_TYPE(SUFFIX) *merged = predChild;                     \
+          GNS3(TBTREE_SET_TYPED(SUFFIX), Internal, MergeChildren)(self, node,  \
+                                                                  idx);        \
+          GNS3(TBTREE_SET_TYPED(SUFFIX), Internal,                             \
+               DeleteInternal)(self, merged, key, comparator);                 \
+        }                                                                      \
+      }                                                                        \
+    } else {                                                                   \
+      if (node->isLeaf)                                                        \
+        return;                                                                \
+      BTREE_SET_NODE_TYPE(SUFFIX) *child = node->children[idx];                \
+      if (child->numKeys < (size_t)(DEGREE)) {                                 \
+        BTREE_SET_NODE_TYPE(SUFFIX) *leftSibling =                             \
+            (idx > 0) ? node->children[idx - 1U] : NULL;                       \
+        BTREE_SET_NODE_TYPE(SUFFIX) *rightSibling =                            \
+            (idx < node->numKeys) ? node->children[idx + 1U] : NULL;           \
+        if (leftSibling && leftSibling->numKeys >= (size_t)(DEGREE)) {         \
+          GNS3(TBTREE_SET_TYPED(SUFFIX), Internal, BorrowFromPrev)(node, idx); \
+        } else if (rightSibling &&                                             \
+                   rightSibling->numKeys >= (size_t)(DEGREE)) {                \
+          GNS3(TBTREE_SET_TYPED(SUFFIX), Internal, BorrowFromNext)(node, idx); \
+        } else {                                                               \
+          if (idx < node->numKeys) {                                           \
+            GNS3(TBTREE_SET_TYPED(SUFFIX), Internal,                           \
+                 MergeChildren)(self, node, idx);                              \
+            child = node->children[idx];                                       \
+          } else {                                                             \
+            GNS3(TBTREE_SET_TYPED(SUFFIX), Internal,                           \
+                 MergeChildren)(self, node, idx - 1U);                         \
+            child = node->children[idx - 1U];                                  \
+          }                                                                    \
+        }                                                                      \
+      }                                                                        \
+      GNS3(TBTREE_SET_TYPED(SUFFIX), Internal,                                 \
+           DeleteInternal)(self, child, key, comparator);                      \
+    }                                                                          \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBTREE_SET_TYPED(SUFFIX), Create, ()) {        \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    self->root = NULL;                                                         \
+    self->size = 0U;                                                           \
+    self->degree = (size_t)(DEGREE);                                           \
+    self->compare = CMP;                                                       \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(                                               \
+      TBTREE_SET_TYPED(SUFFIX), CreateWithComparator,                          \
+      (CMPOUT(*compare)(KEY_TYPE left, KEY_TYPE right))) {                     \
+    if (!self || !compare)                                                     \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    self->root = NULL;                                                         \
+    self->size = 0U;                                                           \
+    self->degree = (size_t)(DEGREE);                                           \
+    self->compare = compare;                                                   \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_PREDICATE_IMPLEMENT_EX(TBTREE_SET_TYPED(SUFFIX), Empty, ()) {         \
+    return !self || self->size == 0U;                                          \
+  }                                                                            \
+                                                                               \
+  OBJECT_FUNCTION_IMPLEMENT_EX(TBTREE_SET_TYPED(SUFFIX), size_t, Size, ()) {   \
+    return self ? self->size : 0U;                                             \
+  }                                                                            \
+                                                                               \
+  OBJECT_FUNCTION_IMPLEMENT_EX(TBTREE_SET_TYPED(SUFFIX), size_t, Height, ()) { \
+    if (!self || !self->root)                                                  \
+      return 0U;                                                               \
+    size_t h = 0U;                                                             \
+    const BTREE_SET_NODE_TYPE(SUFFIX) *cur = self->root;                       \
+    while (cur) {                                                              \
+      h++;                                                                     \
+      if (cur->isLeaf)                                                         \
+        break;                                                                 \
+      cur = cur->children[0];                                                  \
+    }                                                                          \
+    return h;                                                                  \
+  }                                                                            \
+                                                                               \
+  OBJECT_PREDICATE_IMPLEMENT_EX(TBTREE_SET_TYPED(SUFFIX), Contains,            \
+                                (KEY_TYPE key)) {                              \
+    if (!self || !self->root)                                                  \
+      return false;                                                            \
+    CMPOUT (*comparator)(KEY_TYPE, KEY_TYPE) =                                 \
+        self->compare ? self->compare : CMP;                                   \
+    const BTREE_SET_NODE_TYPE(SUFFIX) *cur = self->root;                       \
+    while (cur) {                                                              \
+      size_t idx = GNS3(TBTREE_SET_TYPED(SUFFIX), Internal,                    \
+                        FindKeyIndex)(cur, key, comparator);                   \
+      if (idx < cur->numKeys &&                                                \
+          comparator(cur->keys[idx], key) == COMPARISON_EQUAL_CONST)           \
+        return true;                                                           \
+      if (cur->isLeaf)                                                         \
+        break;                                                                 \
+      cur = cur->children[idx];                                                \
+    }                                                                          \
+    return false;                                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBTREE_SET_TYPED(SUFFIX), Find,                \
+                                (KEY_TYPE key, KEY_TYPE * *out)) {             \
+    if (!self || !out)                                                         \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (!self->root)                                                           \
+      return STATUS_CONST(NOT_FOUND);                                          \
+    CMPOUT (*comparator)(KEY_TYPE, KEY_TYPE) =                                 \
+        self->compare ? self->compare : CMP;                                   \
+    BTREE_SET_NODE_TYPE(SUFFIX) *cur = self->root;                             \
+    while (cur) {                                                              \
+      size_t idx = GNS3(TBTREE_SET_TYPED(SUFFIX), Internal,                    \
+                        FindKeyIndex)(cur, key, comparator);                   \
+      if (idx < cur->numKeys &&                                                \
+          comparator(cur->keys[idx], key) == COMPARISON_EQUAL_CONST) {         \
+        *out = &cur->keys[idx];                                                \
+        return STATUS_CONST(SUCCESS);                                          \
+      }                                                                        \
+      if (cur->isLeaf)                                                         \
+        break;                                                                 \
+      cur = cur->children[idx];                                                \
+    }                                                                          \
+    return STATUS_CONST(NOT_FOUND);                                            \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBTREE_SET_TYPED(SUFFIX), Min,                 \
+                                (KEY_TYPE * *out)) {                           \
+    if (!self || !out)                                                         \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (!self->root || self->size == 0U)                                       \
+      return STATUS_CONST(NOT_FOUND);                                          \
+    BTREE_SET_NODE_TYPE(SUFFIX) *cur = self->root;                             \
+    while (!cur->isLeaf)                                                       \
+      cur = cur->children[0];                                                  \
+    *out = &cur->keys[0];                                                      \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBTREE_SET_TYPED(SUFFIX), Max,                 \
+                                (KEY_TYPE * *out)) {                           \
+    if (!self || !out)                                                         \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (!self->root || self->size == 0U)                                       \
+      return STATUS_CONST(NOT_FOUND);                                          \
+    BTREE_SET_NODE_TYPE(SUFFIX) *cur = self->root;                             \
+    while (!cur->isLeaf)                                                       \
+      cur = cur->children[cur->numKeys];                                       \
+    *out = &cur->keys[cur->numKeys - 1U];                                      \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBTREE_SET_TYPED(SUFFIX), Insert,              \
+                                (KEY_TYPE key)) {                              \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    CMPOUT (*comparator)(KEY_TYPE, KEY_TYPE) =                                 \
+        self->compare ? self->compare : CMP;                                   \
+    if (OBJECT_CALL(self, Contains, key))                                      \
+      return STATUS_CONST(ALREADY_EXISTS);                                     \
+    if (!self->root) {                                                         \
+      BTREE_SET_NODE_TYPE(SUFFIX) *root =                                      \
+          GNS3(TBTREE_SET_TYPED(SUFFIX), Internal, CreateNode)(true);          \
+      if (!root)                                                               \
+        return STATUS_CONST(OUT_OF_MEMORY);                                    \
+      root->keys[0] = key;                                                     \
+      root->numKeys = 1U;                                                      \
+      self->root = root;                                                       \
+      self->size = 1U;                                                         \
+      self->degree = (size_t)(DEGREE);                                         \
+      self->compare = comparator;                                              \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    if (self->root->numKeys == 2 * (size_t)(DEGREE) - 1U) {                    \
+      BTREE_SET_NODE_TYPE(SUFFIX) *newRoot =                                   \
+          GNS3(TBTREE_SET_TYPED(SUFFIX), Internal, CreateNode)(false);         \
+      if (!newRoot)                                                            \
+        return STATUS_CONST(OUT_OF_MEMORY);                                    \
+      newRoot->children[0] = self->root;                                       \
+      self->root->parent = newRoot;                                            \
+      OPSTATUS status = GNS3(TBTREE_SET_TYPED(SUFFIX), Internal,               \
+                             SplitChild)(newRoot, 0U, self->root);             \
+      if (status != STATUS_CONST(SUCCESS)) {                                   \
+        self->root->parent = NULL;                                             \
+        Memory_Free(newRoot);                                                  \
+        return status;                                                         \
+      }                                                                        \
+      self->root = newRoot;                                                    \
+    }                                                                          \
+    return GNS3(TBTREE_SET_TYPED(SUFFIX), Internal,                            \
+                InsertNonFull)(self, self->root, key, comparator);             \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBTREE_SET_TYPED(SUFFIX), Remove,              \
+                                (KEY_TYPE key)) {                              \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (!self->root || self->size == 0U)                                       \
+      return STATUS_CONST(NOT_FOUND);                                          \
+    CMPOUT (*comparator)(KEY_TYPE, KEY_TYPE) =                                 \
+        self->compare ? self->compare : CMP;                                   \
+    if (!OBJECT_CALL(self, Contains, key))                                     \
+      return STATUS_CONST(NOT_FOUND);                                          \
+    GNS3(TBTREE_SET_TYPED(SUFFIX), Internal, DeleteInternal)(self, self->root, \
+                                                             key, comparator); \
+    self->size--;                                                              \
+    if (self->root && self->root->numKeys == 0U) {                             \
+      BTREE_SET_NODE_TYPE(SUFFIX) *oldRoot = self->root;                       \
+      if (oldRoot->isLeaf) {                                                   \
+        self->root = NULL;                                                     \
+      } else {                                                                 \
+        self->root = oldRoot->children[0];                                     \
+        if (self->root)                                                        \
+          self->root->parent = NULL;                                           \
+      }                                                                        \
+      Memory_Free(oldRoot);                                                    \
+    }                                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_PROCEDURE_IMPLEMENT_EX(TBTREE_SET_TYPED(SUFFIX), Destroy, ()) {       \
+    if (!self)                                                                 \
+      return;                                                                  \
+    GNS3(TBTREE_SET_TYPED(SUFFIX), Internal, DestroyNodes)(self->root);        \
+    self->root = NULL;                                                         \
+    self->size = 0U;                                                           \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBTREE_SET_TYPED(SUFFIX), Clear, ()) {         \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    OBJECT_CALL_0(self, Destroy);                                              \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_FUNCTION_IMPLEMENT_EX(TBTREE_SET_TYPED(SUFFIX),                       \
+                               BTREE_SET_CURSOR_TYPE(SUFFIX), First, ()) {     \
+    BTREE_SET_CURSOR_TYPE(SUFFIX) cur = {NULL, 0U};                            \
+    if (!self || !self->root)                                                  \
+      return cur;                                                              \
+    BTREE_SET_NODE_TYPE(SUFFIX) *node = self->root;                            \
+    while (!node->isLeaf)                                                      \
+      node = node->children[0];                                                \
+    cur.node = node;                                                           \
+    cur.index = 0U;                                                            \
+    return cur;                                                                \
+  }                                                                            \
+                                                                               \
+  OBJECT_FUNCTION_IMPLEMENT_EX(TBTREE_SET_TYPED(SUFFIX),                       \
+                               BTREE_SET_CURSOR_TYPE(SUFFIX), Last, ()) {      \
+    BTREE_SET_CURSOR_TYPE(SUFFIX) cur = {NULL, 0U};                            \
+    if (!self || !self->root)                                                  \
+      return cur;                                                              \
+    BTREE_SET_NODE_TYPE(SUFFIX) *node = self->root;                            \
+    while (!node->isLeaf)                                                      \
+      node = node->children[node->numKeys];                                    \
+    cur.node = node;                                                           \
+    cur.index = node->numKeys > 0U ? node->numKeys - 1U : 0U;                  \
+    return cur;                                                                \
+  }                                                                            \
+                                                                               \
+  OBJECT_PREDICATE_IMPLEMENT_EX(                                               \
+      TBTREE_SET_TYPED(SUFFIX), CursorValid,                                   \
+      (const BTREE_SET_CURSOR_TYPE(SUFFIX) * cursor)) {                        \
+    (void)self;                                                                \
+    return cursor && cursor->node && cursor->index < cursor->node->numKeys;    \
+  }                                                                            \
+                                                                               \
+  OBJECT_FUNCTION_IMPLEMENT_EX(                                                \
+      TBTREE_SET_TYPED(SUFFIX), KEY_TYPE *, CursorKey,                         \
+      (const BTREE_SET_CURSOR_TYPE(SUFFIX) * cursor)) {                        \
+    (void)self;                                                                \
+    if (!cursor || !cursor->node || cursor->index >= cursor->node->numKeys)    \
+      return NULL;                                                             \
+    return &cursor->node->keys[cursor->index];                                 \
+  }                                                                            \
+                                                                               \
+  OBJECT_FUNCTION_IMPLEMENT_EX(TBTREE_SET_TYPED(SUFFIX), bool, CursorNext,     \
+                               (BTREE_SET_CURSOR_TYPE(SUFFIX) * cursor)) {     \
+    (void)self;                                                                \
+    if (!cursor || !cursor->node || cursor->index >= cursor->node->numKeys)    \
+      return false;                                                            \
+    if (!cursor->node->isLeaf) {                                               \
+      BTREE_SET_NODE_TYPE(SUFFIX) *cur =                                       \
+          cursor->node->children[cursor->index + 1U];                          \
+      while (!cur->isLeaf)                                                     \
+        cur = cur->children[0];                                                \
+      cursor->node = cur;                                                      \
+      cursor->index = 0U;                                                      \
+      return true;                                                             \
+    }                                                                          \
+    if (cursor->index + 1U < cursor->node->numKeys) {                          \
+      cursor->index++;                                                         \
+      return true;                                                             \
+    }                                                                          \
+    BTREE_SET_NODE_TYPE(SUFFIX) *cur = cursor->node;                           \
+    while (cur->parent) {                                                      \
+      BTREE_SET_NODE_TYPE(SUFFIX) *par = cur->parent;                          \
+      size_t childIdx = 0U;                                                    \
+      while (childIdx <= par->numKeys && par->children[childIdx] != cur) {     \
+        childIdx++;                                                            \
+      }                                                                        \
+      if (childIdx < par->numKeys) {                                           \
+        cursor->node = par;                                                    \
+        cursor->index = childIdx;                                              \
+        return true;                                                           \
+      }                                                                        \
+      cur = par;                                                               \
+    }                                                                          \
+    cursor->node = NULL;                                                       \
+    cursor->index = 0U;                                                        \
+    return false;                                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_FUNCTION_IMPLEMENT_EX(TBTREE_SET_TYPED(SUFFIX), bool, CursorPrev,     \
+                               (BTREE_SET_CURSOR_TYPE(SUFFIX) * cursor)) {     \
+    (void)self;                                                                \
+    if (!cursor || !cursor->node || cursor->index >= cursor->node->numKeys)    \
+      return false;                                                            \
+    if (!cursor->node->isLeaf) {                                               \
+      BTREE_SET_NODE_TYPE(SUFFIX) *cur =                                       \
+          cursor->node->children[cursor->index];                               \
+      while (!cur->isLeaf)                                                     \
+        cur = cur->children[cur->numKeys];                                     \
+      cursor->node = cur;                                                      \
+      cursor->index = cur->numKeys > 0U ? cur->numKeys - 1U : 0U;              \
+      return true;                                                             \
+    }                                                                          \
+    if (cursor->index > 0U) {                                                  \
+      cursor->index--;                                                         \
+      return true;                                                             \
+    }                                                                          \
+    BTREE_SET_NODE_TYPE(SUFFIX) *cur = cursor->node;                           \
+    while (cur->parent) {                                                      \
+      BTREE_SET_NODE_TYPE(SUFFIX) *par = cur->parent;                          \
+      size_t childIdx = 0U;                                                    \
+      while (childIdx <= par->numKeys && par->children[childIdx] != cur) {     \
+        childIdx++;                                                            \
+      }                                                                        \
+      if (childIdx > 0U) {                                                     \
+        cursor->node = par;                                                    \
+        cursor->index = childIdx - 1U;                                         \
+        return true;                                                           \
+      }                                                                        \
+      cur = par;                                                               \
+    }                                                                          \
+    cursor->node = NULL;                                                       \
+    cursor->index = 0U;                                                        \
+    return false;                                                              \
+  }                                                                            \
+  OBJECT_IMPLEMENT(TBTREE_SET_TYPED(SUFFIX));
+
+#define TEMPLATE_TBTREE_SET_IMPLEMENT(SUFFIX, KEY_TYPE)                        \
+  TEMPLATE_TBTREE_SET_DEGREE_IMPLEMENT(SUFFIX, KEY_TYPE, BTREE_DEFAULT_DEGREE, \
+                                       COMPARISON_FUNC(KEY_TYPE))
+
+/* =============================================================
+ * Template: TBTree_Map (Declaration)
+ * ============================================================= */
+
+#define TEMPLATE_TBTREE_MAP_DEGREE(SUFFIX_K, SUFFIX_V, KEY_TYPE, VALUE_TYPE,   \
+                                   DEGREE)                                     \
+  typedef struct BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) {                     \
+    size_t numKeys;                                                            \
+    bool isLeaf;                                                               \
+    struct BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) * parent;                   \
+    KEY_TYPE keys[2 * (DEGREE) - 1];                                           \
+    VALUE_TYPE values[2 * (DEGREE) - 1];                                       \
+    struct BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) * children[2 * (DEGREE)];   \
+  } BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V);                                   \
+                                                                               \
+  typedef struct BTREE_MAP_CURSOR_TYPE(SUFFIX_K, SUFFIX_V) {                   \
+    BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) * node;                            \
+    size_t index;                                                              \
+  } BTREE_MAP_CURSOR_TYPE(SUFFIX_K, SUFFIX_V);                                 \
+                                                                               \
+  OBJECT(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V),                                 \
+         FIELDS(BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) * root; size_t size;   \
+                size_t degree;                                                 \
+                CMPOUT(*compare)(KEY_TYPE left, KEY_TYPE right);),             \
+         OPERATION(Create, ()),                                                \
+         OPERATION(CreateWithComparator,                                       \
+                   (CMPOUT(*compare)(KEY_TYPE left, KEY_TYPE right))),         \
+         OPERATION(Insert, (KEY_TYPE key, VALUE_TYPE value)),                  \
+         OPERATION(Remove, (KEY_TYPE key)),                                    \
+         CONST_OPERATION(Find, (KEY_TYPE key, VALUE_TYPE * *out)),             \
+         CONST_OPERATION(Min, (KEY_TYPE * *out)),                              \
+         CONST_OPERATION(Max, (KEY_TYPE * *out)), OPERATION(Clear, ()),        \
+         PROCEDURE(Destroy, ()), CONST_PREDICATE(Contains, (KEY_TYPE key)),    \
+         CONST_PREDICATE(Empty, ()), CONST_FUNCTION(size_t, Size, ()),         \
+         CONST_FUNCTION(size_t, Height, ()),                                   \
+         CONST_FUNCTION(BTREE_MAP_CURSOR_TYPE(SUFFIX_K, SUFFIX_V), First, ()), \
+         CONST_FUNCTION(BTREE_MAP_CURSOR_TYPE(SUFFIX_K, SUFFIX_V), Last, ()),  \
+         CONST_FUNCTION(bool, CursorNext,                                      \
+                        (BTREE_MAP_CURSOR_TYPE(SUFFIX_K, SUFFIX_V) * cursor)), \
+         CONST_FUNCTION(bool, CursorPrev,                                      \
+                        (BTREE_MAP_CURSOR_TYPE(SUFFIX_K, SUFFIX_V) * cursor)), \
+         CONST_PREDICATE(                                                      \
+             CursorValid,                                                      \
+             (const BTREE_MAP_CURSOR_TYPE(SUFFIX_K, SUFFIX_V) * cursor)),      \
+         CONST_FUNCTION(                                                       \
+             KEY_TYPE *, CursorKey,                                            \
+             (const BTREE_MAP_CURSOR_TYPE(SUFFIX_K, SUFFIX_V) * cursor)),      \
+         CONST_FUNCTION(                                                       \
+             VALUE_TYPE *, CursorValue,                                        \
+             (const BTREE_MAP_CURSOR_TYPE(SUFFIX_K, SUFFIX_V) * cursor)))
+
+#define TEMPLATE_TBTREE_MAP(SUFFIX_K, SUFFIX_V, KEY_TYPE, VALUE_TYPE)          \
+  TEMPLATE_TBTREE_MAP_DEGREE(SUFFIX_K, SUFFIX_V, KEY_TYPE, VALUE_TYPE,         \
+                             BTREE_DEFAULT_DEGREE)
+
+/* =============================================================
+ * Template: TBTree_Map (Implementation)
+ * ============================================================= */
+
+#define TEMPLATE_TBTREE_MAP_DEGREE_IMPLEMENT(SUFFIX_K, SUFFIX_V, KEY_TYPE,     \
+                                             VALUE_TYPE, DEGREE, CMP)          \
+  static inline BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *                      \
+      GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,                     \
+           CreateNode)(bool isLeaf) {                                          \
+    void *allocated = NULL;                                                    \
+    if (ALLOC_FUNC(AllocArray)(                                                \
+            &allocated, 1U,                                                    \
+            sizeof(BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V))) !=                \
+        STATUS_CONST(SUCCESS))                                                 \
+      return NULL;                                                             \
+    BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *node =                            \
+        (BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *)allocated;                  \
+    node->numKeys = 0;                                                         \
+    node->isLeaf = isLeaf;                                                     \
+    node->parent = NULL;                                                       \
+    for (size_t i = 0; i < 2 * (size_t)(DEGREE); i++) {                        \
+      node->children[i] = NULL;                                                \
+    }                                                                          \
+    return node;                                                               \
+  }                                                                            \
+                                                                               \
+  static inline void GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,      \
+                          DestroyNodes)(                                       \
+      BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) * node) {                        \
+    if (!node)                                                                 \
+      return;                                                                  \
+    if (!node->isLeaf) {                                                       \
+      for (size_t i = 0; i <= node->numKeys; i++) {                            \
+        GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,                   \
+             DestroyNodes)(node->children[i]);                                 \
+      }                                                                        \
+    }                                                                          \
+    Memory_Free(node);                                                         \
+  }                                                                            \
+                                                                               \
+  static inline size_t GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,    \
+                            FindKeyIndex)(                                     \
+      const BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) * node, KEY_TYPE key,      \
+      CMPOUT(*comparator)(KEY_TYPE, KEY_TYPE)) {                               \
+    size_t low = 0;                                                            \
+    size_t high = node->numKeys;                                               \
+    while (low < high) {                                                       \
+      size_t mid = low + (high - low) / 2U;                                    \
+      if (comparator(node->keys[mid], key) < COMPARISON_EQUAL_CONST) {         \
+        low = mid + 1U;                                                        \
+      } else {                                                                 \
+        high = mid;                                                            \
+      }                                                                        \
+    }                                                                          \
+    return low;                                                                \
+  }                                                                            \
+                                                                               \
+  static inline OPSTATUS GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,  \
+                              SplitChild)(                                     \
+      BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) * parent, size_t i,              \
+      BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) * child) {                       \
+    BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *sibling =                         \
+        GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,                   \
+             CreateNode)(child->isLeaf);                                       \
+    if (!sibling)                                                              \
+      return STATUS_CONST(OUT_OF_MEMORY);                                      \
+    sibling->parent = parent;                                                  \
+    sibling->numKeys = (size_t)(DEGREE) - 1U;                                  \
+    for (size_t j = 0; j < (size_t)(DEGREE) - 1U; j++) {                       \
+      sibling->keys[j] = child->keys[j + (size_t)(DEGREE)];                    \
+      sibling->values[j] = child->values[j + (size_t)(DEGREE)];                \
+    }                                                                          \
+    if (!child->isLeaf) {                                                      \
+      for (size_t j = 0; j < (size_t)(DEGREE); j++) {                          \
+        sibling->children[j] = child->children[j + (size_t)(DEGREE)];          \
+        if (sibling->children[j])                                              \
+          sibling->children[j]->parent = sibling;                              \
+        child->children[j + (size_t)(DEGREE)] = NULL;                          \
+      }                                                                        \
+    }                                                                          \
+    child->numKeys = (size_t)(DEGREE) - 1U;                                    \
+    for (size_t j = parent->numKeys + 1U; j > i + 1U; j--) {                   \
+      parent->children[j] = parent->children[j - 1U];                          \
+    }                                                                          \
+    parent->children[i + 1U] = sibling;                                        \
+    for (size_t j = parent->numKeys; j > i; j--) {                             \
+      parent->keys[j] = parent->keys[j - 1U];                                  \
+      parent->values[j] = parent->values[j - 1U];                              \
+    }                                                                          \
+    parent->keys[i] = child->keys[(size_t)(DEGREE) - 1U];                      \
+    parent->values[i] = child->values[(size_t)(DEGREE) - 1U];                  \
+    parent->numKeys++;                                                         \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  static inline OPSTATUS GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,  \
+                              InsertNonFull)(                                  \
+      TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V) * self,                             \
+      BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) * node, KEY_TYPE key,            \
+      VALUE_TYPE value, CMPOUT(*comparator)(KEY_TYPE, KEY_TYPE)) {             \
+    while (1) {                                                                \
+      if (node->isLeaf) {                                                      \
+        size_t idx = GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,      \
+                          FindKeyIndex)(node, key, comparator);                \
+        for (size_t j = node->numKeys; j > idx; j--) {                         \
+          node->keys[j] = node->keys[j - 1U];                                  \
+          node->values[j] = node->values[j - 1U];                              \
+        }                                                                      \
+        node->keys[idx] = key;                                                 \
+        node->values[idx] = value;                                             \
+        node->numKeys++;                                                       \
+        self->size++;                                                          \
+        return STATUS_CONST(SUCCESS);                                          \
+      } else {                                                                 \
+        size_t idx = GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,      \
+                          FindKeyIndex)(node, key, comparator);                \
+        BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *child = node->children[idx];  \
+        if (child->numKeys == 2 * (size_t)(DEGREE) - 1U) {                     \
+          OPSTATUS status = GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V),         \
+                                 Internal, SplitChild)(node, idx, child);      \
+          if (status != STATUS_CONST(SUCCESS))                                 \
+            return status;                                                     \
+          if (comparator(key, node->keys[idx]) > COMPARISON_EQUAL_CONST)       \
+            idx++;                                                             \
+          child = node->children[idx];                                         \
+        }                                                                      \
+        node = child;                                                          \
+      }                                                                        \
+    }                                                                          \
+  }                                                                            \
+                                                                               \
+  static inline void GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,      \
+                          BorrowFromPrev)(                                     \
+      BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) * parent, size_t idx) {          \
+    BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *c = parent->children[idx];        \
+    BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *sibling =                         \
+        parent->children[idx - 1U];                                            \
+    for (size_t j = c->numKeys; j > 0; j--) {                                  \
+      c->keys[j] = c->keys[j - 1U];                                            \
+      c->values[j] = c->values[j - 1U];                                        \
+    }                                                                          \
+    c->keys[0] = parent->keys[idx - 1U];                                       \
+    c->values[0] = parent->values[idx - 1U];                                   \
+    if (!c->isLeaf) {                                                          \
+      for (size_t j = c->numKeys + 1U; j > 0; j--) {                           \
+        c->children[j] = c->children[j - 1U];                                  \
+      }                                                                        \
+      c->children[0] = sibling->children[sibling->numKeys];                    \
+      if (c->children[0])                                                      \
+        c->children[0]->parent = c;                                            \
+      sibling->children[sibling->numKeys] = NULL;                              \
+    }                                                                          \
+    parent->keys[idx - 1U] = sibling->keys[sibling->numKeys - 1U];             \
+    parent->values[idx - 1U] = sibling->values[sibling->numKeys - 1U];         \
+    c->numKeys++;                                                              \
+    sibling->numKeys--;                                                        \
+  }                                                                            \
+                                                                               \
+  static inline void GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,      \
+                          BorrowFromNext)(                                     \
+      BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) * parent, size_t idx) {          \
+    BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *c = parent->children[idx];        \
+    BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *sibling =                         \
+        parent->children[idx + 1U];                                            \
+    c->keys[c->numKeys] = parent->keys[idx];                                   \
+    c->values[c->numKeys] = parent->values[idx];                               \
+    if (!c->isLeaf) {                                                          \
+      c->children[c->numKeys + 1U] = sibling->children[0];                     \
+      if (c->children[c->numKeys + 1U])                                        \
+        c->children[c->numKeys + 1U]->parent = c;                              \
+    }                                                                          \
+    parent->keys[idx] = sibling->keys[0];                                      \
+    parent->values[idx] = sibling->values[0];                                  \
+    for (size_t j = 0; j + 1U < sibling->numKeys; j++) {                       \
+      sibling->keys[j] = sibling->keys[j + 1U];                                \
+      sibling->values[j] = sibling->values[j + 1U];                            \
+    }                                                                          \
+    if (!sibling->isLeaf) {                                                    \
+      for (size_t j = 0; j < sibling->numKeys; j++) {                          \
+        sibling->children[j] = sibling->children[j + 1U];                      \
+      }                                                                        \
+      sibling->children[sibling->numKeys] = NULL;                              \
+    }                                                                          \
+    c->numKeys++;                                                              \
+    sibling->numKeys--;                                                        \
+  }                                                                            \
+                                                                               \
+  static inline void GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,      \
+                          MergeChildren)(                                      \
+      TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V) * self,                             \
+      BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) * parent, size_t idx) {          \
+    (void)self;                                                                \
+    BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *c = parent->children[idx];        \
+    BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *sibling =                         \
+        parent->children[idx + 1U];                                            \
+    c->keys[c->numKeys] = parent->keys[idx];                                   \
+    c->values[c->numKeys] = parent->values[idx];                               \
+    for (size_t j = 0; j < sibling->numKeys; j++) {                            \
+      c->keys[c->numKeys + 1U + j] = sibling->keys[j];                         \
+      c->values[c->numKeys + 1U + j] = sibling->values[j];                     \
+    }                                                                          \
+    if (!c->isLeaf) {                                                          \
+      for (size_t j = 0; j <= sibling->numKeys; j++) {                         \
+        c->children[c->numKeys + 1U + j] = sibling->children[j];               \
+        if (c->children[c->numKeys + 1U + j])                                  \
+          c->children[c->numKeys + 1U + j]->parent = c;                        \
+      }                                                                        \
+    }                                                                          \
+    c->numKeys += 1U + sibling->numKeys;                                       \
+    Memory_Free(sibling);                                                      \
+    for (size_t j = idx; j + 1U < parent->numKeys; j++) {                      \
+      parent->keys[j] = parent->keys[j + 1U];                                  \
+      parent->values[j] = parent->values[j + 1U];                              \
+    }                                                                          \
+    for (size_t j = idx + 1U; j < parent->numKeys; j++) {                      \
+      parent->children[j] = parent->children[j + 1U];                          \
+    }                                                                          \
+    parent->children[parent->numKeys] = NULL;                                  \
+    parent->numKeys--;                                                         \
+  }                                                                            \
+                                                                               \
+  static inline void GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,      \
+                          DeleteInternal)(                                     \
+      TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V) * self,                             \
+      BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) * node, KEY_TYPE key,            \
+      CMPOUT(*comparator)(KEY_TYPE, KEY_TYPE)) {                               \
+    size_t idx = GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,          \
+                      FindKeyIndex)(node, key, comparator);                    \
+    if (idx < node->numKeys &&                                                 \
+        comparator(node->keys[idx], key) == COMPARISON_EQUAL_CONST) {          \
+      if (node->isLeaf) {                                                      \
+        for (size_t j = idx; j + 1U < node->numKeys; j++) {                    \
+          node->keys[j] = node->keys[j + 1U];                                  \
+          node->values[j] = node->values[j + 1U];                              \
+        }                                                                      \
+        node->numKeys--;                                                       \
+      } else {                                                                 \
+        BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *predChild =                   \
+            node->children[idx];                                               \
+        BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *succChild =                   \
+            node->children[idx + 1U];                                          \
+        if (predChild->numKeys >= (size_t)(DEGREE)) {                          \
+          BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *cur = predChild;            \
+          while (!cur->isLeaf)                                                 \
+            cur = cur->children[cur->numKeys];                                 \
+          KEY_TYPE predKey = cur->keys[cur->numKeys - 1U];                     \
+          VALUE_TYPE predVal = cur->values[cur->numKeys - 1U];                 \
+          node->keys[idx] = predKey;                                           \
+          node->values[idx] = predVal;                                         \
+          GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,                 \
+               DeleteInternal)(self, predChild, predKey, comparator);          \
+        } else if (succChild->numKeys >= (size_t)(DEGREE)) {                   \
+          BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *cur = succChild;            \
+          while (!cur->isLeaf)                                                 \
+            cur = cur->children[0];                                            \
+          KEY_TYPE succKey = cur->keys[0];                                     \
+          VALUE_TYPE succVal = cur->values[0];                                 \
+          node->keys[idx] = succKey;                                           \
+          node->values[idx] = succVal;                                         \
+          GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,                 \
+               DeleteInternal)(self, succChild, succKey, comparator);          \
+        } else {                                                               \
+          BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *merged = predChild;         \
+          GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,                 \
+               MergeChildren)(self, node, idx);                                \
+          GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,                 \
+               DeleteInternal)(self, merged, key, comparator);                 \
+        }                                                                      \
+      }                                                                        \
+    } else {                                                                   \
+      if (node->isLeaf)                                                        \
+        return;                                                                \
+      BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *child = node->children[idx];    \
+      if (child->numKeys < (size_t)(DEGREE)) {                                 \
+        BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *leftSibling =                 \
+            (idx > 0) ? node->children[idx - 1U] : NULL;                       \
+        BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *rightSibling =                \
+            (idx < node->numKeys) ? node->children[idx + 1U] : NULL;           \
+        if (leftSibling && leftSibling->numKeys >= (size_t)(DEGREE)) {         \
+          GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,                 \
+               BorrowFromPrev)(node, idx);                                     \
+        } else if (rightSibling &&                                             \
+                   rightSibling->numKeys >= (size_t)(DEGREE)) {                \
+          GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,                 \
+               BorrowFromNext)(node, idx);                                     \
+        } else {                                                               \
+          if (idx < node->numKeys) {                                           \
+            GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,               \
+                 MergeChildren)(self, node, idx);                              \
+            child = node->children[idx];                                       \
+          } else {                                                             \
+            GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,               \
+                 MergeChildren)(self, node, idx - 1U);                         \
+            child = node->children[idx - 1U];                                  \
+          }                                                                    \
+        }                                                                      \
+      }                                                                        \
+      GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,                     \
+           DeleteInternal)(self, child, key, comparator);                      \
+    }                                                                          \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Create,  \
+                                ()) {                                          \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    self->root = NULL;                                                         \
+    self->size = 0U;                                                           \
+    self->degree = (size_t)(DEGREE);                                           \
+    self->compare = CMP;                                                       \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(                                               \
+      TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), CreateWithComparator,              \
+      (CMPOUT(*compare)(KEY_TYPE left, KEY_TYPE right))) {                     \
+    if (!self || !compare)                                                     \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    self->root = NULL;                                                         \
+    self->size = 0U;                                                           \
+    self->degree = (size_t)(DEGREE);                                           \
+    self->compare = compare;                                                   \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_PREDICATE_IMPLEMENT_EX(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Empty,   \
+                                ()) {                                          \
+    return !self || self->size == 0U;                                          \
+  }                                                                            \
+                                                                               \
+  OBJECT_FUNCTION_IMPLEMENT_EX(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), size_t,   \
+                               Size, ()) {                                     \
+    return self ? self->size : 0U;                                             \
+  }                                                                            \
+                                                                               \
+  OBJECT_FUNCTION_IMPLEMENT_EX(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), size_t,   \
+                               Height, ()) {                                   \
+    if (!self || !self->root)                                                  \
+      return 0U;                                                               \
+    size_t h = 0U;                                                             \
+    const BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *cur = self->root;           \
+    while (cur) {                                                              \
+      h++;                                                                     \
+      if (cur->isLeaf)                                                         \
+        break;                                                                 \
+      cur = cur->children[0];                                                  \
+    }                                                                          \
+    return h;                                                                  \
+  }                                                                            \
+                                                                               \
+  OBJECT_PREDICATE_IMPLEMENT_EX(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V),          \
+                                Contains, (KEY_TYPE key)) {                    \
+    if (!self || !self->root)                                                  \
+      return false;                                                            \
+    CMPOUT (*comparator)(KEY_TYPE, KEY_TYPE) =                                 \
+        self->compare ? self->compare : CMP;                                   \
+    const BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *cur = self->root;           \
+    while (cur) {                                                              \
+      size_t idx = GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,        \
+                        FindKeyIndex)(cur, key, comparator);                   \
+      if (idx < cur->numKeys &&                                                \
+          comparator(cur->keys[idx], key) == COMPARISON_EQUAL_CONST)           \
+        return true;                                                           \
+      if (cur->isLeaf)                                                         \
+        break;                                                                 \
+      cur = cur->children[idx];                                                \
+    }                                                                          \
+    return false;                                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Find,    \
+                                (KEY_TYPE key, VALUE_TYPE * *out)) {           \
+    if (!self || !out)                                                         \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (!self->root)                                                           \
+      return STATUS_CONST(NOT_FOUND);                                          \
+    CMPOUT (*comparator)(KEY_TYPE, KEY_TYPE) =                                 \
+        self->compare ? self->compare : CMP;                                   \
+    BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *cur = self->root;                 \
+    while (cur) {                                                              \
+      size_t idx = GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,        \
+                        FindKeyIndex)(cur, key, comparator);                   \
+      if (idx < cur->numKeys &&                                                \
+          comparator(cur->keys[idx], key) == COMPARISON_EQUAL_CONST) {         \
+        *out = &cur->values[idx];                                              \
+        return STATUS_CONST(SUCCESS);                                          \
+      }                                                                        \
+      if (cur->isLeaf)                                                         \
+        break;                                                                 \
+      cur = cur->children[idx];                                                \
+    }                                                                          \
+    return STATUS_CONST(NOT_FOUND);                                            \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Min,     \
+                                (KEY_TYPE * *out)) {                           \
+    if (!self || !out)                                                         \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (!self->root || self->size == 0U)                                       \
+      return STATUS_CONST(NOT_FOUND);                                          \
+    BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *cur = self->root;                 \
+    while (!cur->isLeaf)                                                       \
+      cur = cur->children[0];                                                  \
+    *out = &cur->keys[0];                                                      \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Max,     \
+                                (KEY_TYPE * *out)) {                           \
+    if (!self || !out)                                                         \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (!self->root || self->size == 0U)                                       \
+      return STATUS_CONST(NOT_FOUND);                                          \
+    BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *cur = self->root;                 \
+    while (!cur->isLeaf)                                                       \
+      cur = cur->children[cur->numKeys];                                       \
+    *out = &cur->keys[cur->numKeys - 1U];                                      \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Insert,  \
+                                (KEY_TYPE key, VALUE_TYPE value)) {            \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    CMPOUT (*comparator)(KEY_TYPE, KEY_TYPE) =                                 \
+        self->compare ? self->compare : CMP;                                   \
+    VALUE_TYPE *existing = NULL;                                               \
+    if (OBJECT_CALL(self, Find, key, &existing) == STATUS_CONST(SUCCESS)) {    \
+      *existing = value;                                                       \
+      return STATUS_CONST(ALREADY_EXISTS);                                     \
+    }                                                                          \
+    if (!self->root) {                                                         \
+      BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *root = GNS3(                    \
+          TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal, CreateNode)(true);   \
+      if (!root)                                                               \
+        return STATUS_CONST(OUT_OF_MEMORY);                                    \
+      root->keys[0] = key;                                                     \
+      root->values[0] = value;                                                 \
+      root->numKeys = 1U;                                                      \
+      self->root = root;                                                       \
+      self->size = 1U;                                                         \
+      self->degree = (size_t)(DEGREE);                                         \
+      self->compare = comparator;                                              \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    if (self->root->numKeys == 2 * (size_t)(DEGREE) - 1U) {                    \
+      BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *newRoot = GNS3(                 \
+          TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal, CreateNode)(false);  \
+      if (!newRoot)                                                            \
+        return STATUS_CONST(OUT_OF_MEMORY);                                    \
+      newRoot->children[0] = self->root;                                       \
+      self->root->parent = newRoot;                                            \
+      OPSTATUS status = GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,   \
+                             SplitChild)(newRoot, 0U, self->root);             \
+      if (status != STATUS_CONST(SUCCESS)) {                                   \
+        self->root->parent = NULL;                                             \
+        Memory_Free(newRoot);                                                  \
+        return status;                                                         \
+      }                                                                        \
+      self->root = newRoot;                                                    \
+    }                                                                          \
+    return GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,                \
+                InsertNonFull)(self, self->root, key, value, comparator);      \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Remove,  \
+                                (KEY_TYPE key)) {                              \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (!self->root || self->size == 0U)                                       \
+      return STATUS_CONST(NOT_FOUND);                                          \
+    CMPOUT (*comparator)(KEY_TYPE, KEY_TYPE) =                                 \
+        self->compare ? self->compare : CMP;                                   \
+    if (!OBJECT_CALL(self, Contains, key))                                     \
+      return STATUS_CONST(NOT_FOUND);                                          \
+    GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,                       \
+         DeleteInternal)(self, self->root, key, comparator);                   \
+    self->size--;                                                              \
+    if (self->root && self->root->numKeys == 0U) {                             \
+      BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *oldRoot = self->root;           \
+      if (oldRoot->isLeaf) {                                                   \
+        self->root = NULL;                                                     \
+      } else {                                                                 \
+        self->root = oldRoot->children[0];                                     \
+        if (self->root)                                                        \
+          self->root->parent = NULL;                                           \
+      }                                                                        \
+      Memory_Free(oldRoot);                                                    \
+    }                                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_PROCEDURE_IMPLEMENT_EX(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Destroy, \
+                                ()) {                                          \
+    if (!self)                                                                 \
+      return;                                                                  \
+    GNS3(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Internal,                       \
+         DestroyNodes)(self->root);                                            \
+    self->root = NULL;                                                         \
+    self->size = 0U;                                                           \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), Clear,   \
+                                ()) {                                          \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    OBJECT_CALL_0(self, Destroy);                                              \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_FUNCTION_IMPLEMENT_EX(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V),           \
+                               BTREE_MAP_CURSOR_TYPE(SUFFIX_K, SUFFIX_V),      \
+                               First, ()) {                                    \
+    BTREE_MAP_CURSOR_TYPE(SUFFIX_K, SUFFIX_V) cur = {NULL, 0U};                \
+    if (!self || !self->root)                                                  \
+      return cur;                                                              \
+    BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *node = self->root;                \
+    while (!node->isLeaf)                                                      \
+      node = node->children[0];                                                \
+    cur.node = node;                                                           \
+    cur.index = 0U;                                                            \
+    return cur;                                                                \
+  }                                                                            \
+                                                                               \
+  OBJECT_FUNCTION_IMPLEMENT_EX(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V),           \
+                               BTREE_MAP_CURSOR_TYPE(SUFFIX_K, SUFFIX_V),      \
+                               Last, ()) {                                     \
+    BTREE_MAP_CURSOR_TYPE(SUFFIX_K, SUFFIX_V) cur = {NULL, 0U};                \
+    if (!self || !self->root)                                                  \
+      return cur;                                                              \
+    BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *node = self->root;                \
+    while (!node->isLeaf)                                                      \
+      node = node->children[node->numKeys];                                    \
+    cur.node = node;                                                           \
+    cur.index = node->numKeys > 0U ? node->numKeys - 1U : 0U;                  \
+    return cur;                                                                \
+  }                                                                            \
+                                                                               \
+  OBJECT_PREDICATE_IMPLEMENT_EX(                                               \
+      TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), CursorValid,                       \
+      (const BTREE_MAP_CURSOR_TYPE(SUFFIX_K, SUFFIX_V) * cursor)) {            \
+    (void)self;                                                                \
+    return cursor && cursor->node && cursor->index < cursor->node->numKeys;    \
+  }                                                                            \
+                                                                               \
+  OBJECT_FUNCTION_IMPLEMENT_EX(                                                \
+      TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), KEY_TYPE *, CursorKey,             \
+      (const BTREE_MAP_CURSOR_TYPE(SUFFIX_K, SUFFIX_V) * cursor)) {            \
+    (void)self;                                                                \
+    if (!cursor || !cursor->node || cursor->index >= cursor->node->numKeys)    \
+      return NULL;                                                             \
+    return &cursor->node->keys[cursor->index];                                 \
+  }                                                                            \
+                                                                               \
+  OBJECT_FUNCTION_IMPLEMENT_EX(                                                \
+      TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), VALUE_TYPE *, CursorValue,         \
+      (const BTREE_MAP_CURSOR_TYPE(SUFFIX_K, SUFFIX_V) * cursor)) {            \
+    (void)self;                                                                \
+    if (!cursor || !cursor->node || cursor->index >= cursor->node->numKeys)    \
+      return NULL;                                                             \
+    return &cursor->node->values[cursor->index];                               \
+  }                                                                            \
+                                                                               \
+  OBJECT_FUNCTION_IMPLEMENT_EX(                                                \
+      TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), bool, CursorNext,                  \
+      (BTREE_MAP_CURSOR_TYPE(SUFFIX_K, SUFFIX_V) * cursor)) {                  \
+    (void)self;                                                                \
+    if (!cursor || !cursor->node || cursor->index >= cursor->node->numKeys)    \
+      return false;                                                            \
+    if (!cursor->node->isLeaf) {                                               \
+      BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *cur =                           \
+          cursor->node->children[cursor->index + 1U];                          \
+      while (!cur->isLeaf)                                                     \
+        cur = cur->children[0];                                                \
+      cursor->node = cur;                                                      \
+      cursor->index = 0U;                                                      \
+      return true;                                                             \
+    }                                                                          \
+    if (cursor->index + 1U < cursor->node->numKeys) {                          \
+      cursor->index++;                                                         \
+      return true;                                                             \
+    }                                                                          \
+    BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *cur = cursor->node;               \
+    while (cur->parent) {                                                      \
+      BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *par = cur->parent;              \
+      size_t childIdx = 0U;                                                    \
+      while (childIdx <= par->numKeys && par->children[childIdx] != cur) {     \
+        childIdx++;                                                            \
+      }                                                                        \
+      if (childIdx < par->numKeys) {                                           \
+        cursor->node = par;                                                    \
+        cursor->index = childIdx;                                              \
+        return true;                                                           \
+      }                                                                        \
+      cur = par;                                                               \
+    }                                                                          \
+    cursor->node = NULL;                                                       \
+    cursor->index = 0U;                                                        \
+    return false;                                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_FUNCTION_IMPLEMENT_EX(                                                \
+      TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V), bool, CursorPrev,                  \
+      (BTREE_MAP_CURSOR_TYPE(SUFFIX_K, SUFFIX_V) * cursor)) {                  \
+    (void)self;                                                                \
+    if (!cursor || !cursor->node || cursor->index >= cursor->node->numKeys)    \
+      return false;                                                            \
+    if (!cursor->node->isLeaf) {                                               \
+      BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *cur =                           \
+          cursor->node->children[cursor->index];                               \
+      while (!cur->isLeaf)                                                     \
+        cur = cur->children[cur->numKeys];                                     \
+      cursor->node = cur;                                                      \
+      cursor->index = cur->numKeys > 0U ? cur->numKeys - 1U : 0U;              \
+      return true;                                                             \
+    }                                                                          \
+    if (cursor->index > 0U) {                                                  \
+      cursor->index--;                                                         \
+      return true;                                                             \
+    }                                                                          \
+    BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *cur = cursor->node;               \
+    while (cur->parent) {                                                      \
+      BTREE_MAP_NODE_TYPE(SUFFIX_K, SUFFIX_V) *par = cur->parent;              \
+      size_t childIdx = 0U;                                                    \
+      while (childIdx <= par->numKeys && par->children[childIdx] != cur) {     \
+        childIdx++;                                                            \
+      }                                                                        \
+      if (childIdx > 0U) {                                                     \
+        cursor->node = par;                                                    \
+        cursor->index = childIdx - 1U;                                         \
+        return true;                                                           \
+      }                                                                        \
+      cur = par;                                                               \
+    }                                                                          \
+    cursor->node = NULL;                                                       \
+    cursor->index = 0U;                                                        \
+    return false;                                                              \
+  }                                                                            \
+  OBJECT_IMPLEMENT(TBTREE_MAP_TYPED(SUFFIX_K, SUFFIX_V));
+
+#define TEMPLATE_TBTREE_MAP_IMPLEMENT(SUFFIX_K, SUFFIX_V, KEY_TYPE,            \
+                                      VALUE_TYPE)                              \
+  TEMPLATE_TBTREE_MAP_DEGREE_IMPLEMENT(SUFFIX_K, SUFFIX_V, KEY_TYPE,           \
+                                       VALUE_TYPE, BTREE_DEFAULT_DEGREE,       \
+                                       COMPARISON_FUNC(KEY_TYPE))

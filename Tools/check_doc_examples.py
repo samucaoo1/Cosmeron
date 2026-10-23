@@ -59,7 +59,7 @@ def validate_doc_coverage(root: pathlib.Path) -> None:
     }
     module_dir = codespace / "Core" / "Module"
     if module_dir.is_dir():
-        core |= {p.stem for p in module_dir.glob("*.h") if p.stem != "Module"}
+        core |= {p.stem for p in module_dir.glob("*.h")}
     modules = {
         p.name for p in (codespace / "Modules").iterdir()
         if p.is_dir() and p.name != "Graphics"

@@ -294,7 +294,7 @@ Logging remains separate from OPSTATUS/Error semantics.
 - [x] Flat Heap / Priority Queue (`Container/Array/Heap`) with Min-Heap, Max-Heap, custom comparators, and Floyd's heapify
 - [ ] Disjoint Set / Union-Find (`Container/Disjoint`) with path compression and rank-based union
 - [ ] Intrusive Doubly Linked List (`Container/Intrusive/List`) for zero-allocation node embedding
-- [ ] In-memory B-Tree (`Container/Tree/BTree`) cache-friendly multiway search tree for large ordered collections
+- [x] In-memory B-Tree (`Container/Tree/BTree`) cache-friendly multiway search tree for large ordered collections
 - [ ] Range Minimum Query / Order Statistics Tree (`Container/Tree/OrderTree`) augmented balanced search tree for O(log n) range minimum and rank queries
 - [x] Unordered Hash Set (`Container/Hash`) with `HASH_SET_IMPLEMENT_ALL` for keys-only O(1) set operations without value field overhead
 - [ ] Single-pass `GetOrInsert` / Entry API (`Container/Hash`, `Container/Tree`) to eliminate duplicate hash computations, probing cycles, and redundant tree descent
@@ -311,6 +311,7 @@ Logging remains separate from OPSTATUS/Error semantics.
 - [ ] Associative MultiMap and MultiSet (`Container/Tree`, `Container/Hash`) supporting duplicate key entries and equal-range queries
 - [ ] Safe cursor-based iterators (`Container/*`) with `IterInit` and `IterNext` for non-contiguous containers (Hash, Tree, List) without exposing private internal node or bucket layouts
 - [ ] Functional `ForEach` visitor helpers (`Container/*`) with early-exit `OPSTATUS` return across all container families
+- [ ] Multi-parameter support for universal template engine (`Core/Module/Common/Template.impl`), expanding `TEMPLATE_IMPLEMENT(...)` and `TEMPLATE_DECLARE(...)` to support variadic argument lists for multi-parameter templates such as maps (e.g. `TEMPLATE_IMPLEMENT(TBTREE_MAP, int, int, int, int)`)
 
 ### 22. Advanced Algorithms and Selection
 
