@@ -41,7 +41,7 @@ run_suite Type Type TypeNoFunctionTable AllFunctions IncludeAll FundamentalSmall
 run_suite Math Math Arithmetic Value Equations BSDQuadraticRegression AllTypes IncludeAll
 run_suite Random Random Engines Distribution IncludeAll
 run_suite Chronometry Chronometry Duration Instant Calendar DateTime EpochTimezoneFormat ClockTimer IncludeAll
-run_suite Container Functional LinearExtra LinearAllTypes TreeAllFunctions Hash Graph \
+run_suite Container Functional LinearExtra LinearAllTypes TreeAllFunctions BTree Hash Graph \
   FunctionTableOff TreeFunctionTableOff CustomType IncludeAll IncludeAllOff
 echo "[portable] Container/MultiTU"
 (

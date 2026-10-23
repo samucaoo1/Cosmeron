@@ -47,6 +47,38 @@ Every Function Table family supports compile-time disabling to eliminate static 
 | `PACKAGE_DISABLE_FUNCTION_TABLE` | Omits function tables specifically for packages |
 | `OBJECT_DISABLE_FUNCTION_TABLE` | Omits function tables specifically for objects |
 
+### Implementation strategies: Explicit vs Unified
+
+When implementing declared non-inline operations, predicates, functions, or procedures, two complementary macro families are provided:
+
+1. **Explicit Family (Recommended - Zero Ambiguity & Zero Configuration):**
+   Explicitly declares whether the receiver `self` is bound (for objects) or omitted (for free package functions), requiring no traits or flags:
+   - For Objects: `OBJECT_OPERATION_IMPLEMENT_EX`, `OBJECT_PREDICATE_IMPLEMENT_EX`, `OBJECT_FUNCTION_IMPLEMENT_EX`, `OBJECT_PROCEDURE_IMPLEMENT_EX`
+   - For Packages: `PACKAGE_OPERATION_IMPLEMENT_EX`, `PACKAGE_PREDICATE_IMPLEMENT_EX`, `PACKAGE_FUNCTION_IMPLEMENT_EX`, `PACKAGE_PROCEDURE_IMPLEMENT_EX`
+
+2. **Unified Family with Trait Detection:**
+   Uses unified syntax (`OPERATION_IMPLEMENT_EX`, `PREDICATE_IMPLEMENT_EX`, `FUNCTION_IMPLEMENT_EX`, `PROCEDURE_IMPLEMENT_EX`) and automatically binds `self` as an Object receiver if **any** of the following three trait conditions hold:
+   - **Type Trait Tag:** `#define <TARGET>_IS_OBJECT 1` (e.g. `#define TCalculator_IS_OBJECT 1` or `#define TStack_int_IS_OBJECT 1`)
+   - **Namespaced Tag:** `#define COSMERON_TAG_OBJ_<TARGET> 1` (e.g. `#define COSMERON_TAG_OBJ_TCalculator 1`)
+   - **File-Wide Scope Override:** `#define TARGET_IS_OBJECT 1` (placed at the top of an object's `.impl` translation unit)
+
+   If none of these traits are detected, the unified macros automatically emit free functions for packages.
+
+### Backward compatibility aliases (deprecated)
+
+Macros listed under `Backward Compatibility Aliases` in `Tuple.impl` and `Dispatch.impl` exist strictly to preserve compatibility with existing legacy code. **They must not be used in new code.**
+
+| Header / Implementation | Deprecated Alias | Modern Replacement |
+| --- | --- | --- |
+| `Tuple.impl` | `METHOD(RET, NAME, PARAMS)` | `FUNCTION(RET, NAME, PARAMS)` |
+| `Tuple.impl` | `CONST_METHOD` / `METHOD_CONST` | `CONST_FUNCTION` |
+| `Tuple.impl` | `METHOD_INLINE(RET, NAME, PARAMS, BODY)` | `FUNCTION_INLINE(RET, NAME, PARAMS, BODY)` |
+| `Tuple.impl` | `CONST_METHOD_INLINE` / `METHOD_CONST_INLINE` | `CONST_FUNCTION_INLINE` |
+| `Tuple.impl` | `INLINE_FUNCTION` | `FUNCTION_INLINE` |
+| `Dispatch.impl` | `OBJECT_PROTOTYPEEX(...)` | `OBJECT_*_IMPLEMENT_EX` or unified `*_IMPLEMENT_EX` |
+| `Dispatch.impl` | `PACKAGE_PROTOTYPEEX(...)` | `PACKAGE_*_IMPLEMENT_EX` or unified `*_IMPLEMENT_EX` |
+| `Dispatch.impl` | `OBJECT_PROTOTYPE` / `PACKAGE_PROTOTYPE` | `*_IMPLEMENT_EX` (pure standard C11 without `__typeof__`) |
+
 ---
 
 # API reference
@@ -367,6 +399,86 @@ PROCEDURE_IMPLEMENT_EX(Counter, Clear, ()) {
 
 ---
 
+## OBJECT_OPERATION_IMPLEMENT_EX
+
+Explicitly defines the implementation prototype for an object member operation returning `OPSTATUS`, unconditionally binding receiver pointer `self`.
+
+### Syntax
+
+```c
+OBJECT_OPERATION_IMPLEMENT_EX(CLASS, METHOD, PARAMS)
+```
+
+### Parameters
+
+- `CLASS`: Identifier of the target object class.
+- `METHOD`: Method identifier.
+- `PARAMS`: Parameter list enclosed in parentheses `(...)`.
+
+### Return value
+
+Emits a static inline function prototype returning `OPSTATUS` with receiver `(CLASS * self, ...)` or `(CLASS * self)` if `PARAMS` is empty `()`.
+
+### Remarks
+
+Recommended for object implementations to achieve zero ambiguity and eliminate any reliance on trait tags or file-scoped defines. Corresponds to companion macros:
+- `OBJECT_PREDICATE_IMPLEMENT_EX(CLASS, METHOD, PARAMS)` (returns `bool`)
+- `OBJECT_FUNCTION_IMPLEMENT_EX(CLASS, RET, METHOD, PARAMS)` (returns `RET`)
+- `OBJECT_PROCEDURE_IMPLEMENT_EX(CLASS, METHOD, PARAMS)` (returns `void`)
+
+### Example
+
+```c
+OBJECT_OPERATION_IMPLEMENT_EX(TCalculator, Add, (int a, int b, int *out)) {
+  if (!self || !out) return STATUS_CONST(INVALID_ARGUMENT);
+  *out = a + b;
+  self->result = *out;
+  return STATUS_CONST(SUCCESS);
+}
+```
+
+---
+
+## PACKAGE_OPERATION_IMPLEMENT_EX
+
+Explicitly defines the implementation prototype for a package member operation returning `OPSTATUS` as a free function without a receiver.
+
+### Syntax
+
+```c
+PACKAGE_OPERATION_IMPLEMENT_EX(PKG, FUNC, PARAMS)
+```
+
+### Parameters
+
+- `PKG`: Identifier of the target package.
+- `FUNC`: Function identifier.
+- `PARAMS`: Parameter list enclosed in parentheses `(...)`.
+
+### Return value
+
+Emits a static inline free function prototype returning `OPSTATUS` with `PARAMS` or `(void)` if empty `()`.
+
+### Remarks
+
+Recommended for package implementations to eliminate any ambiguity. Corresponds to companion macros:
+- `PACKAGE_PREDICATE_IMPLEMENT_EX(PKG, FUNC, PARAMS)` (returns `bool`)
+- `PACKAGE_FUNCTION_IMPLEMENT_EX(PKG, RET, FUNC, PARAMS)` (returns `RET`)
+- `PACKAGE_PROCEDURE_IMPLEMENT_EX(PKG, FUNC, PARAMS)` (returns `void`)
+
+### Example
+
+```c
+PACKAGE_OPERATION_IMPLEMENT_EX(Math, SafeDivide, (int a, int b, int *out)) {
+  if (!out) return STATUS_CONST(INVALID_ARGUMENT);
+  if (b == 0) return STATUS_CONST(DIVISION_BY_ZERO);
+  *out = a / b;
+  return STATUS_CONST(SUCCESS);
+}
+```
+
+---
+
 ## TEMPLATE_DECLARE
 
 Instantiates the declarative interface of a generic template without generating method bodies.
@@ -467,7 +579,9 @@ OBJECT(Counter,
   })
 );
 
-OBJECT_PROTOTYPEEX(Counter, Increment) {
+#define Counter_IS_OBJECT 1
+
+OPERATION_IMPLEMENT_EX(Counter, Increment, ()) {
   self->value++;
   return STATUS_CONST(SUCCESS);
 }
