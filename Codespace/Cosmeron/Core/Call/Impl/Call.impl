@@ -1,0 +1,59 @@
+#pragma once
+
+/*
+ * Declare a callable with one or more ordinary arguments.
+ *
+ * PARAMETERS and ARGUMENTS must be parenthesized tuples:
+ *
+ *   CALL_DECLARE(Transform, int, (int value), (value))
+ *
+ * Generates:
+ *   <Name>_Function  - typed function pointer including void *context
+ *   <Name>           - function + non-owning context
+ *   <Name>_Bind      - construct a callable
+ *   <Name>_IsValid   - test whether a function is bound
+ *   <Name>_Invoke    - invoke with ordinary arguments
+ */
+#define CALL_DECLARE(NAME, RETURN_TYPE, PARAMETERS, ARGUMENTS)                \
+  typedef RETURN_TYPE (*GNS2(CALL_TYPE(NAME), Function))(                      \
+      PP_UNWRAP PARAMETERS, void *context);                                    \
+  typedef struct CALL_TYPE(NAME) {                                             \
+    GNS2(CALL_TYPE(NAME), Function) function;                                  \
+    void *context;                                                             \
+  } CALL_TYPE(NAME);                                                           \
+  static inline CALL_TYPE(NAME) GNS2(CALL_TYPE(NAME), Bind)(                   \
+      GNS2(CALL_TYPE(NAME), Function) function, void *context) {               \
+    CALL_TYPE(NAME) call = { function, context };                              \
+    return call;                                                               \
+  }                                                                            \
+  static inline bool GNS2(CALL_TYPE(NAME), IsValid)(CALL_TYPE(NAME) call) {    \
+    return call.function != NULL;                                              \
+  }                                                                            \
+  static inline RETURN_TYPE GNS2(CALL_TYPE(NAME), Invoke)(                     \
+      CALL_TYPE(NAME) call, PP_UNWRAP PARAMETERS) {                            \
+    return call.function(PP_UNWRAP ARGUMENTS, call.context);                   \
+  }
+
+/*
+ * Zero-argument variant. The underlying function still receives context,
+ * while Invoke exposes no ordinary arguments.
+ */
+#define CALL_DECLARE_VOID(NAME, RETURN_TYPE)                                   \
+  typedef RETURN_TYPE (*GNS2(CALL_TYPE(NAME), Function))(void *context);       \
+  typedef struct CALL_TYPE(NAME) {                                             \
+    GNS2(CALL_TYPE(NAME), Function) function;                                  \
+    void *context;                                                             \
+  } CALL_TYPE(NAME);                                                           \
+  static inline CALL_TYPE(NAME) GNS2(CALL_TYPE(NAME), Bind)(                   \
+      GNS2(CALL_TYPE(NAME), Function) function, void *context) {               \
+    CALL_TYPE(NAME) call = { function, context };                              \
+    return call;                                                               \
+  }                                                                            \
+  static inline bool GNS2(CALL_TYPE(NAME), IsValid)(CALL_TYPE(NAME) call) {    \
+    return call.function != NULL;                                              \
+  }                                                                            \
+  static inline RETURN_TYPE GNS2(CALL_TYPE(NAME), Invoke)(                     \
+      CALL_TYPE(NAME) call) {                                                  \
+    return call.function(call.context);                                        \
+  }
+/* EOF */
