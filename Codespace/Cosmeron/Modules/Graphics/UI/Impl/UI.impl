@@ -6,3 +6,7 @@
 #include "../Internal/Editors.inc"
 #include "../Internal/GameWidgets.inc"
 #include "../Internal/OverlayWidgets.inc"
+
+PACKAGE_IMPLEMENT(LIB_PREFIX(UI_MOD));
+
+/* EOF */

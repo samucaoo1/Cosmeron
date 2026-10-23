@@ -1,0 +1,26 @@
+#pragma once
+#include "../../../Core/Namespace.h"
+#include "../../../Core/Error/Status.h"
+#include "../Canvas/Canvas.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#define COMPOSITOR_MOD Compositor
+#define COMPOSITOR_CMOD COMPOSITOR
+#define COMPOSITOR_NS(NAME) GNS2(LIB_PREFIX(COMPOSITOR_MOD), NAME)
+#define COMPOSITOR_CNS(NAME) CNS2(LIB_PREFIX_CONST(COMPOSITOR_CMOD), NAME)
+#define COMPOSITOR_INS(NAME) GNS3(LIB_PREFIX(COMPOSITOR_MOD), Internal, NAME)
+#define COMPOSITOR_TYPE(NAME) COMPOSITOR_NS(NAME)
+#define COMPOSITOR_FUNC(NAME) COMPOSITOR_NS(NAME)
+#define COMPOSITOR_CONST(NAME) COMPOSITOR_CNS(NAME)
+
+typedef struct COMPOSITOR_TYPE(TLayer) {
+  const TERMINAL_TYPE(TCanvas) *canvas;
+  TDUAL_TYPE(int32) offset;
+  int32_t zOrder;
+  float opacity; /* 0.0f to 1.0f */
+  bool visible;
+  bool useColorKey;
+  uint32_t colorKey;
+} COMPOSITOR_TYPE(TLayer);

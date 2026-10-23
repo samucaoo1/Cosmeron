@@ -3,11 +3,13 @@
 #include "../../Cosmeron/Modules/Type/TBigint.h"
 #include "../../Cosmeron/Modules/Type/TBlock.h"
 #include "../../Cosmeron/Modules/Type/TDecimal.h"
+#include "../../Cosmeron/Modules/Type/Tag.h"
 
 int main(void) {
   TBigint(128, bigint);
   TBlock(128, block);
   TDecimal(128, decimal);
+  TTag(32, tag);
 
   if (TBIGINT_FUNC(128, Clear)(&bigint) != STATUS_CONST(SUCCESS))
     return 1;
@@ -15,6 +17,10 @@ int main(void) {
     return 2;
   if (TDECIMAL_FUNC(128, Clear)(&decimal) != STATUS_CONST(SUCCESS))
     return 3;
+  if (TAG_FUNC(32, Init)(&tag, "RIFF") != STATUS_CONST(SUCCESS))
+    return 9;
+  if (tag.value != TAG32_MAKE('R', 'I', 'F', 'F'))
+    return 10;
 
   if (sizeof(TBIGINT_TYPE(128)) != 16U || sizeof(TBIGINT_TYPE(1024)) != 128U)
     return 4;

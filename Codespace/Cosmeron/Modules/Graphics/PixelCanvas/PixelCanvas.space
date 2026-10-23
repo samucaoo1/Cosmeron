@@ -1,0 +1,16 @@
+#pragma once
+#include "../../../Core/Namespace.h"
+#include "../../../Core/Error/Status.h"
+#include "../Canvas/Canvas.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#define PIXEL_CANVAS_MOD PixelCanvas
+#define PIXEL_CANVAS_CMOD PIXEL_CANVAS
+#define PIXEL_CANVAS_NS(NAME) GNS2(LIB_PREFIX(PIXEL_CANVAS_MOD), NAME)
+#define PIXEL_CANVAS_CNS(NAME) CNS2(LIB_PREFIX_CONST(PIXEL_CANVAS_CMOD), NAME)
+#define PIXEL_CANVAS_INS(NAME) GNS3(LIB_PREFIX(PIXEL_CANVAS_MOD), Internal, NAME)
+#define PIXEL_CANVAS_TYPE(NAME) PIXEL_CANVAS_NS(NAME)
+#define PIXEL_CANVAS_FUNC(NAME) PIXEL_CANVAS_NS(NAME)
+#define PIXEL_CANVAS_CONST(NAME) PIXEL_CANVAS_CNS(NAME)

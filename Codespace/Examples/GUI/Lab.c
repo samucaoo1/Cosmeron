@@ -150,6 +150,11 @@ int main(int argc, char **argv) {
     return 1;
   if (!ppm) {
     status = WINDOW_FUNC(Open)(&window, "Cosmeron GUI", surface.size);
+    if (status == STATUS_CONST(NOT_SUPPORTED) || status == STATUS_CONST(NOT_AVAILABLE)) {
+      fprintf(stderr, "GUI window backend unavailable in current environment; skipping.\n");
+      status = STATUS_CONST(SUCCESS);
+      goto cleanup;
+    }
     if (status != STATUS_CONST(SUCCESS))
       goto cleanup;
   }

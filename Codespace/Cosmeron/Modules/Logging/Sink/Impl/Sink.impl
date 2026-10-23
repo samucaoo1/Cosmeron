@@ -1,0 +1,154 @@
+#pragma once
+
+#include "../../Format/Format.h"
+#include <stdio.h>
+#include <string.h>
+
+static inline OPSTATUS LOGGING_INS(ConsoleSinkWrite)(
+    LOGGING_TYPE(TSink) *sink, const LOGGING_TYPE(TRecord) *record) {
+  char buf[LOGGING_CONST(MAX_MESSAGE_BUFFER)];
+  size_t written = 0;
+  OPSTATUS status;
+  if (sink->jsonFormat) {
+    status = LOGGING_FUNC(Format_JSON)(record, buf, sizeof(buf), &written);
+  } else {
+    status = LOGGING_FUNC(Format_Text)(record, sink->useColors, buf, sizeof(buf), &written);
+  }
+  if (status != STATUS_CONST(SUCCESS) && status != STATUS_CONST(OUT_OF_RANGE)) {
+    return status;
+  }
+  FILE *stream = (record->level >= LOGGING_CONST(LEVEL_WARN)) ? stderr : stdout;
+  fprintf(stream, "%s\n", buf);
+  fflush(stream);
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline OPSTATUS LOGGING_INS(FileSinkWrite)(
+    LOGGING_TYPE(TSink) *sink, const LOGGING_TYPE(TRecord) *record) {
+  if (sink->target == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  FILE *file = (FILE *)sink->target;
+  char buf[LOGGING_CONST(MAX_MESSAGE_BUFFER)];
+  size_t written = 0;
+  OPSTATUS status;
+  if (sink->jsonFormat) {
+    status = LOGGING_FUNC(Format_JSON)(record, buf, sizeof(buf), &written);
+  } else {
+    status = LOGGING_FUNC(Format_Text)(record, false, buf, sizeof(buf), &written);
+  }
+  if (status != STATUS_CONST(SUCCESS) && status != STATUS_CONST(OUT_OF_RANGE)) {
+    return status;
+  }
+  fprintf(file, "%s\n", buf);
+  fflush(file);
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline OPSTATUS LOGGING_INS(BufferSinkWrite)(
+    LOGGING_TYPE(TSink) *sink, const LOGGING_TYPE(TRecord) *record) {
+  if (sink->target == NULL || sink->targetCapacity == 0U) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  char *dest = (char *)sink->target;
+  char buf[LOGGING_CONST(MAX_MESSAGE_BUFFER)];
+  size_t formattedLen = 0;
+  OPSTATUS status;
+  if (sink->jsonFormat) {
+    status = LOGGING_FUNC(Format_JSON)(record, buf, sizeof(buf), &formattedLen);
+  } else {
+    status = LOGGING_FUNC(Format_Text)(record, sink->useColors, buf, sizeof(buf), &formattedLen);
+  }
+  if (status != STATUS_CONST(SUCCESS) && status != STATUS_CONST(OUT_OF_RANGE)) {
+    return status;
+  }
+
+  /* Append to dest buffer */
+  size_t remaining = (sink->targetCapacity > sink->targetWritten)
+                         ? (sink->targetCapacity - sink->targetWritten)
+                         : 0U;
+  if (remaining <= 1U) {
+    return STATUS_CONST(OUT_OF_RANGE);
+  }
+
+  size_t toCopy = (formattedLen < remaining - 1U) ? formattedLen : (remaining - 2U);
+  memcpy(dest + sink->targetWritten, buf, toCopy);
+  sink->targetWritten += toCopy;
+  dest[sink->targetWritten++] = '\n';
+  dest[sink->targetWritten] = '\0';
+
+  return (formattedLen + 1U < remaining) ? STATUS_CONST(SUCCESS) : STATUS_CONST(OUT_OF_RANGE);
+}
+
+LOGGING_SINK_CONSOLE_INIT_PROTOTYPE {
+  if (sink == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  sink->kind = LOGGING_CONST(SINK_CONSOLE);
+  sink->minLevel = minLevel;
+  sink->useColors = useColors;
+  sink->jsonFormat = jsonFormat;
+  sink->target = NULL;
+  sink->targetCapacity = 0U;
+  sink->targetWritten = 0U;
+  sink->write = LOGGING_INS(ConsoleSinkWrite);
+  return STATUS_CONST(SUCCESS);
+}
+
+LOGGING_SINK_FILE_INIT_PROTOTYPE {
+  if (sink == NULL || file == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  sink->kind = LOGGING_CONST(SINK_FILE);
+  sink->minLevel = minLevel;
+  sink->useColors = false;
+  sink->jsonFormat = jsonFormat;
+  sink->target = file;
+  sink->targetCapacity = 0U;
+  sink->targetWritten = 0U;
+  sink->write = LOGGING_INS(FileSinkWrite);
+  return STATUS_CONST(SUCCESS);
+}
+
+LOGGING_SINK_BUFFER_INIT_PROTOTYPE {
+  if (sink == NULL || buffer == NULL || capacity == 0U) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  sink->kind = LOGGING_CONST(SINK_BUFFER);
+  sink->minLevel = minLevel;
+  sink->useColors = false;
+  sink->jsonFormat = jsonFormat;
+  sink->target = buffer;
+  sink->targetCapacity = capacity;
+  sink->targetWritten = 0U;
+  buffer[0] = '\0';
+  sink->write = LOGGING_INS(BufferSinkWrite);
+  return STATUS_CONST(SUCCESS);
+}
+
+LOGGING_SINK_CUSTOM_INIT_PROTOTYPE {
+  if (sink == NULL || writeFn == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  sink->kind = LOGGING_CONST(SINK_CUSTOM);
+  sink->minLevel = minLevel;
+  sink->useColors = false;
+  sink->jsonFormat = false;
+  sink->target = target;
+  sink->targetCapacity = 0U;
+  sink->targetWritten = 0U;
+  sink->write = writeFn;
+  return STATUS_CONST(SUCCESS);
+}
+
+LOGGING_SINK_WRITE_PROTOTYPE {
+  if (sink == NULL || record == NULL || sink->write == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  if (record->level < sink->minLevel) {
+    return STATUS_CONST(SUCCESS);
+  }
+  return sink->write(sink, record);
+}
+
+/* EOF */

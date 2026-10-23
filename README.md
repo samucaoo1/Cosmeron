@@ -10,6 +10,8 @@
   <a href="Docs/Governance/LICENSING.md"><img src=".github/badges/license.svg" alt="License"></a>
 </p>
 
+**Pre-Alpha Version** - *Changes may occur at any time.*
+
 **Cosmeron is a modular, header-oriented C11 library for portable systems programming, experimentation, education, and reusable low-level components.** It favors readable APIs, explicit ownership, consistent naming, composable modules, and portability without hiding how the machine works.
 
 Cosmeron continues the project previously developed as **Congro;Library**, carrying its architecture and design principles into a cleaner repository and a new public identity.

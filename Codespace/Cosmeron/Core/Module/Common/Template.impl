@@ -1,0 +1,44 @@
+#pragma once
+
+#include "Tuple.impl"
+
+/* ============================================================
+ * Universal Template Instantiation Engine
+ * Supports both Object templates and Package templates.
+ * ============================================================ */
+
+/* ------------------------------------------------------------
+ * 1. Inline-Only Trait Detection
+ * If TEMPLATE_<NAME>_INLINE_ONLY is defined as 1, GNS3 is suppressed.
+ * Otherwise, GNS3(TEMPLATE, NAME, IMPLEMENT) is expanded.
+ *
+ * For zero-boilerplate inline-only templates, authors can either:
+ * a) Define `#define TEMPLATE_<NAME>_INLINE_ONLY 1`
+ * b) Define `#define TEMPLATE_<NAME>_IMPLEMENT(SUFFIX, TYPE) // empty`
+ * ------------------------------------------------------------ */
+
+#define COSMERON_MACRO_INTERNAL_TPL_IMPL_1(NAME, SUFFIX, TYPE) /* 1 = inline-only: omit GNS3 */
+#define COSMERON_MACRO_INTERNAL_TPL_IMPL_0(NAME, SUFFIX, TYPE) GNS3(TEMPLATE, NAME, IMPLEMENT)(SUFFIX, TYPE)
+
+#define COSMERON_MACRO_INTERNAL_IS_1_CHECK(val, defaultVal) val
+#define COSMERON_MACRO_INTERNAL_IS_1_1 1
+#define COSMERON_MACRO_INTERNAL_IS_1_0 0
+
+#define COSMERON_MACRO_INTERNAL_IS_TPL_INLINE_ONLY(NAME) \
+  COSMERON_MACRO_INTERNAL_IS_1_CHECK(PP_OP_CAT2(COSMERON_MACRO_INTERNAL_IS_1_, GNS3(TEMPLATE, NAME, INLINE_ONLY)), 0)
+
+/* ------------------------------------------------------------
+ * 2. Declaration-Only Instantiation (Header / Inline-Only)
+ * ------------------------------------------------------------ */
+#define TEMPLATE_DECLARE(NAME, SUFFIX, TYPE) \
+  GNS2(TEMPLATE, NAME)(SUFFIX, TYPE)
+
+/* ------------------------------------------------------------
+ * 3. Full Instantiation (Declaration + Implementation)
+ * ------------------------------------------------------------ */
+#define TEMPLATE_IMPLEMENT(NAME, SUFFIX, TYPE) \
+  GNS2(TEMPLATE, NAME)(SUFFIX, TYPE); \
+  GNS3(TEMPLATE, NAME, IMPLEMENT)(SUFFIX, TYPE) \
+  typedef int GNS3(_cosmeron_template_semi, NAME, __LINE__)
+
+/* EOF */

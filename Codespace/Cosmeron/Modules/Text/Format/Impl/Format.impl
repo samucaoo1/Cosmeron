@@ -1,0 +1,1108 @@
+#pragma once
+
+#include <inttypes.h>
+#include <limits.h>
+#include <stdio.h>
+#include <string.h>
+#include <wchar.h>
+
+enum {
+  TEXT_FORMAT_CONST(BASE_BINARY) = 2U,
+  TEXT_FORMAT_CONST(BASE_OCTAL) = 8U,
+  TEXT_FORMAT_CONST(BASE_DECIMAL) = 10U,
+  TEXT_FORMAT_CONST(BASE_HEXADECIMAL) = 16U,
+  TEXT_FORMAT_CONST(BASE_MAX) = 36U,
+  TEXT_FORMAT_CONST(BUFFER_CAPACITY) = 512U,
+  TEXT_FORMAT_CONST(DEFAULT_FLOAT_PRECISION) = 6U
+};
+
+typedef struct {
+  char *buffer;
+  size_t capacity;
+  size_t written;
+} TEXT_FORMAT_INS(Sink);
+
+static inline void TEXT_FORMAT_INS(SinkPutChar)(TEXT_FORMAT_INS(Sink) *sink,
+                                               char ch) {
+  if (sink->buffer != NULL && sink->capacity > 0U &&
+      sink->written + 1U < sink->capacity) {
+    sink->buffer[sink->written] = ch;
+  }
+  sink->written++;
+}
+
+static inline void TEXT_FORMAT_INS(SinkPutString)(TEXT_FORMAT_INS(Sink) *sink,
+                                                 const char *str,
+                                                 size_t length) {
+  for (size_t i = 0U; i < length; ++i) {
+    TEXT_FORMAT_INS(SinkPutChar)(sink, str[i]);
+  }
+}
+
+static inline void TEXT_FORMAT_INS(SinkPutPadding)(TEXT_FORMAT_INS(Sink) *sink,
+                                                  char ch, size_t count) {
+  for (size_t i = 0U; i < count; ++i) {
+    TEXT_FORMAT_INS(SinkPutChar)(sink, ch);
+  }
+}
+
+static inline void TEXT_FORMAT_INS(SinkFinish)(TEXT_FORMAT_INS(Sink) *sink) {
+  if (sink->buffer != NULL && sink->capacity > 0U) {
+    if (sink->written < sink->capacity) {
+      sink->buffer[sink->written] = '\0';
+    } else {
+      sink->buffer[sink->capacity - 1U] = '\0';
+    }
+  }
+}
+
+static inline size_t TEXT_FORMAT_INS(StringLength)(const char *str) {
+  size_t len = 0U;
+  if (str == NULL) {
+    return 0U;
+  }
+  while (str[len] != '\0') {
+    len++;
+  }
+  return len;
+}
+
+static inline bool TEXT_FORMAT_INS(IsDigit)(char c) {
+  return c >= '0' && c <= '9';
+}
+
+static inline bool TEXT_FORMAT_INS(IsAlpha)(char c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+static inline void TEXT_FORMAT_INS(FormatInteger)(
+    TEXT_FORMAT_INS(Sink) *sink, uintmax_t value, bool isSigned,
+    bool isNegative, unsigned base, bool uppercase, bool flagMinus,
+    bool flagPlus, bool flagSpace, bool flagHash, bool flagZero, size_t width,
+    bool hasPrecision, size_t precision) {
+  char digitsBuffer[TEXT_FORMAT_CONST(BUFFER_CAPACITY)];
+  size_t digitsCount = 0U;
+  const char *digitsMap = uppercase ? "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                    : "0123456789abcdefghijklmnopqrstuvwxyz";
+
+  if (value == 0U && hasPrecision && precision == 0U) {
+    /* Explicit precision 0 produces no digits for value 0 */
+  } else if (value == 0U) {
+    digitsBuffer[digitsCount++] = '0';
+  } else {
+    uintmax_t temp = value;
+    while (temp > 0U) {
+      uintmax_t rem = temp % (uintmax_t)base;
+      digitsBuffer[digitsCount++] = digitsMap[rem];
+      temp /= (uintmax_t)base;
+    }
+  }
+
+  char prefix[4];
+  size_t prefixLen = 0U;
+
+  if (isSigned) {
+    if (isNegative) {
+      prefix[prefixLen++] = '-';
+    } else if (flagPlus) {
+      prefix[prefixLen++] = '+';
+    } else if (flagSpace) {
+      prefix[prefixLen++] = ' ';
+    }
+  } else if (flagHash && value != 0U) {
+    if (base == TEXT_FORMAT_CONST(BASE_HEXADECIMAL)) {
+      prefix[prefixLen++] = '0';
+      prefix[prefixLen++] = uppercase ? 'X' : 'x';
+    } else if (base == TEXT_FORMAT_CONST(BASE_BINARY)) {
+      prefix[prefixLen++] = '0';
+      prefix[prefixLen++] = uppercase ? 'B' : 'b';
+    } else if (base == TEXT_FORMAT_CONST(BASE_OCTAL)) {
+      if (digitsCount == 0U || digitsBuffer[digitsCount - 1U] != '0') {
+        prefix[prefixLen++] = '0';
+      }
+    }
+  }
+
+  size_t zeroPad = 0U;
+  if (hasPrecision && precision > digitsCount) {
+    zeroPad = precision - digitsCount;
+  } else if (!hasPrecision && flagZero && !flagMinus &&
+             width > (prefixLen + digitsCount)) {
+    zeroPad = width - (prefixLen + digitsCount);
+  }
+
+  size_t totalLen = prefixLen + zeroPad + digitsCount;
+  size_t spacePad = (width > totalLen) ? (width - totalLen) : 0U;
+
+  if (!flagMinus) {
+    TEXT_FORMAT_INS(SinkPutPadding)(sink, ' ', spacePad);
+  }
+
+  for (size_t i = 0U; i < prefixLen; ++i) {
+    TEXT_FORMAT_INS(SinkPutChar)(sink, prefix[i]);
+  }
+
+  TEXT_FORMAT_INS(SinkPutPadding)(sink, '0', zeroPad);
+
+  for (size_t i = digitsCount; i > 0U; --i) {
+    TEXT_FORMAT_INS(SinkPutChar)(sink, digitsBuffer[i - 1U]);
+  }
+
+  if (flagMinus) {
+    TEXT_FORMAT_INS(SinkPutPadding)(sink, ' ', spacePad);
+  }
+}
+
+static inline void TEXT_FORMAT_INS(FormatFloat)(
+    TEXT_FORMAT_INS(Sink) *sink, double value, bool isLongDouble,
+    long double ldValue, char specifier, bool flagMinus, bool flagPlus,
+    bool flagSpace, bool flagHash, bool flagZero, size_t width,
+    bool hasPrecision, size_t precision) {
+  char formatSpec[64];
+  size_t fmtLen = 0U;
+  formatSpec[fmtLen++] = '%';
+  if (flagMinus) {
+    formatSpec[fmtLen++] = '-';
+  }
+  if (flagPlus) {
+    formatSpec[fmtLen++] = '+';
+  }
+  if (flagSpace) {
+    formatSpec[fmtLen++] = ' ';
+  }
+  if (flagHash) {
+    formatSpec[fmtLen++] = '#';
+  }
+  if (flagZero) {
+    formatSpec[fmtLen++] = '0';
+  }
+  if (width > 0U) {
+    fmtLen += (size_t)snprintf(formatSpec + fmtLen,
+                              sizeof(formatSpec) - fmtLen, "%zu", width);
+  }
+  if (hasPrecision) {
+    fmtLen += (size_t)snprintf(formatSpec + fmtLen,
+                              sizeof(formatSpec) - fmtLen, ".%zu", precision);
+  }
+  if (isLongDouble) {
+    formatSpec[fmtLen++] = 'L';
+  }
+  formatSpec[fmtLen++] = specifier;
+  formatSpec[fmtLen] = '\0';
+
+  char tempBuf[TEXT_FORMAT_CONST(BUFFER_CAPACITY)];
+  int formattedLen = 0;
+  if (isLongDouble) {
+    formattedLen = snprintf(tempBuf, sizeof(tempBuf), formatSpec, ldValue);
+  } else {
+    formattedLen = snprintf(tempBuf, sizeof(tempBuf), formatSpec, value);
+  }
+
+  if (formattedLen > 0) {
+    TEXT_FORMAT_INS(SinkPutString)(sink, tempBuf, (size_t)formattedLen);
+  }
+}
+
+static inline void TEXT_FORMAT_INS(FormatString)(
+    TEXT_FORMAT_INS(Sink) *sink, const char *str, bool flagMinus, size_t width,
+    bool hasPrecision, size_t precision) {
+  if (str == NULL) {
+    str = "(null)";
+  }
+  size_t len = TEXT_FORMAT_INS(StringLength)(str);
+  if (hasPrecision && precision < len) {
+    len = precision;
+  }
+  size_t pad = (width > len) ? (width - len) : 0U;
+  if (!flagMinus) {
+    TEXT_FORMAT_INS(SinkPutPadding)(sink, ' ', pad);
+  }
+  TEXT_FORMAT_INS(SinkPutString)(sink, str, len);
+  if (flagMinus) {
+    TEXT_FORMAT_INS(SinkPutPadding)(sink, ' ', pad);
+  }
+}
+
+static inline void TEXT_FORMAT_INS(FormatChar)(TEXT_FORMAT_INS(Sink) *sink,
+                                              char ch, bool flagMinus,
+                                              size_t width) {
+  size_t pad = (width > 1U) ? (width - 1U) : 0U;
+  if (!flagMinus) {
+    TEXT_FORMAT_INS(SinkPutPadding)(sink, ' ', pad);
+  }
+  TEXT_FORMAT_INS(SinkPutChar)(sink, ch);
+  if (flagMinus) {
+    TEXT_FORMAT_INS(SinkPutPadding)(sink, ' ', pad);
+  }
+}
+
+typedef enum {
+  TEXT_FORMAT_INS(KIND_SIGNED),
+  TEXT_FORMAT_INS(KIND_UNSIGNED),
+  TEXT_FORMAT_INS(KIND_FLOAT)
+} TEXT_FORMAT_INS(ComponentKind);
+
+typedef union {
+  int64_t i64;
+  uint64_t u64;
+  double dbl;
+} TEXT_FORMAT_INS(ComponentValue);
+
+static inline void TEXT_FORMAT_INS(FormatSingleComponent)(
+    TEXT_FORMAT_INS(Sink) *sink, TEXT_FORMAT_INS(ComponentValue) val,
+    TEXT_FORMAT_INS(ComponentKind) kind, const char *spec, size_t specLen) {
+  char tempFmt[64];
+  if (spec != NULL && specLen > 0U && specLen < sizeof(tempFmt) - 1U) {
+    memcpy(tempFmt, spec, specLen);
+    tempFmt[specLen] = '\0';
+  } else {
+    tempFmt[0] = '\0';
+  }
+
+  char lastChar = specLen > 0U ? spec[specLen - 1U] : '\0';
+  bool isFloatSpec = (lastChar == 'f' || lastChar == 'F' || lastChar == 'e' ||
+                      lastChar == 'E' || lastChar == 'g' || lastChar == 'G' ||
+                      lastChar == 'a' || lastChar == 'A');
+  bool isUnsignedSpec = (lastChar == 'u' || lastChar == 'x' || lastChar == 'X' ||
+                         lastChar == 'o' || lastChar == 'b' || lastChar == 'B');
+
+  char outBuf[TEXT_FORMAT_CONST(BUFFER_CAPACITY)];
+  int written = 0;
+
+  if (isFloatSpec || kind == TEXT_FORMAT_INS(KIND_FLOAT)) {
+    double d = (kind == TEXT_FORMAT_INS(KIND_FLOAT)) ? val.dbl : (double)val.i64;
+    const char *fmt = (tempFmt[0] != '\0') ? tempFmt : "%g";
+    written = snprintf(outBuf, sizeof(outBuf), fmt, d);
+  } else if (isUnsignedSpec || kind == TEXT_FORMAT_INS(KIND_UNSIGNED)) {
+    uint64_t u = (kind == TEXT_FORMAT_INS(KIND_UNSIGNED)) ? val.u64 : (uint64_t)val.i64;
+    if (tempFmt[0] != '\0') {
+      written = snprintf(outBuf, sizeof(outBuf), tempFmt, (unsigned long long)u);
+    } else {
+      written = snprintf(outBuf, sizeof(outBuf), "%" PRIu64, u);
+    }
+  } else {
+    int64_t i = val.i64;
+    if (tempFmt[0] != '\0') {
+      written = snprintf(outBuf, sizeof(outBuf), tempFmt, (long long)i);
+    } else {
+      written = snprintf(outBuf, sizeof(outBuf), "%" PRId64, i);
+    }
+  }
+
+  if (written > 0) {
+    TEXT_FORMAT_INS(SinkPutString)(sink, outBuf, (size_t)written);
+  }
+}
+
+static inline void TEXT_FORMAT_INS(FormatStruct)(
+    TEXT_FORMAT_INS(Sink) *sink, const void *ptr, size_t compCount,
+    const char *structName, size_t structNameLen, const char *subFormat,
+    size_t subFormatLen, bool flagMinus, size_t width) {
+  if (ptr == NULL) {
+    TEXT_FORMAT_INS(FormatString)(sink, "(null)", flagMinus, width, false, 0U);
+    return;
+  }
+
+  char suffixBuf[32];
+  suffixBuf[0] = '\0';
+  for (size_t i = 0U; i < structNameLen; ++i) {
+    if (structName[i] == '_') {
+      size_t sLen = structNameLen - (i + 1U);
+      if (sLen < sizeof(suffixBuf)) {
+        memcpy(suffixBuf, structName + i + 1U, sLen);
+        suffixBuf[sLen] = '\0';
+      }
+      break;
+    }
+  }
+
+  TEXT_FORMAT_INS(ComponentKind) kind = TEXT_FORMAT_INS(KIND_SIGNED);
+  bool isFloat = false;
+  bool isUnsigned = false;
+  bool isSize = false;
+  bool is64 = false;
+  bool is16 = false;
+  bool is8 = false;
+
+  if (suffixBuf[0] != '\0') {
+    if (strcmp(suffixBuf, "double") == 0 || strcmp(suffixBuf, "float") == 0 ||
+        strcmp(suffixBuf, "longdouble") == 0) {
+      isFloat = true;
+      kind = TEXT_FORMAT_INS(KIND_FLOAT);
+    } else if (strcmp(suffixBuf, "uint8") == 0) {
+      isUnsigned = true;
+      is8 = true;
+      kind = TEXT_FORMAT_INS(KIND_UNSIGNED);
+    } else if (strcmp(suffixBuf, "uint16") == 0) {
+      isUnsigned = true;
+      is16 = true;
+      kind = TEXT_FORMAT_INS(KIND_UNSIGNED);
+    } else if (strcmp(suffixBuf, "uint32") == 0) {
+      isUnsigned = true;
+      kind = TEXT_FORMAT_INS(KIND_UNSIGNED);
+    } else if (strcmp(suffixBuf, "uint64") == 0) {
+      isUnsigned = true;
+      is64 = true;
+      kind = TEXT_FORMAT_INS(KIND_UNSIGNED);
+    } else if (strcmp(suffixBuf, "size") == 0) {
+      isUnsigned = true;
+      isSize = true;
+      kind = TEXT_FORMAT_INS(KIND_UNSIGNED);
+    } else if (strcmp(suffixBuf, "int8") == 0) {
+      is8 = true;
+    } else if (strcmp(suffixBuf, "int16") == 0) {
+      is16 = true;
+    } else if (strcmp(suffixBuf, "int64") == 0) {
+      is64 = true;
+    }
+  } else if (subFormat != NULL) {
+    for (size_t i = 0U; i < subFormatLen; ++i) {
+      if (subFormat[i] == '%') {
+        size_t j = i + 1U;
+        while (j < subFormatLen && (subFormat[j] == '-' || subFormat[j] == '+' ||
+                                    subFormat[j] == ' ' || subFormat[j] == '#' ||
+                                    subFormat[j] == '0' || TEXT_FORMAT_INS(IsDigit)(subFormat[j]) ||
+                                    subFormat[j] == '.' || subFormat[j] == 'l' ||
+                                    subFormat[j] == 'h' || subFormat[j] == 'z')) {
+          j++;
+        }
+        if (j < subFormatLen) {
+          char spec = subFormat[j];
+          if (spec == 'f' || spec == 'F' || spec == 'e' || spec == 'E' ||
+              spec == 'g' || spec == 'G' || spec == 'a' || spec == 'A') {
+            isFloat = true;
+            kind = TEXT_FORMAT_INS(KIND_FLOAT);
+            break;
+          }
+          if (spec == 'u' || spec == 'x' || spec == 'X' || spec == 'o' ||
+              spec == 'b' || spec == 'B') {
+            isUnsigned = true;
+            kind = TEXT_FORMAT_INS(KIND_UNSIGNED);
+          }
+        }
+      }
+    }
+  }
+
+  TEXT_FORMAT_INS(ComponentValue) components[5];
+  for (size_t i = 0U; i < compCount && i < 5U; ++i) {
+    if (isFloat) {
+      if (suffixBuf[0] != '\0' && strcmp(suffixBuf, "float") == 0) {
+        components[i].dbl = (double)((const float *)ptr)[i];
+      } else {
+        components[i].dbl = ((const double *)ptr)[i];
+      }
+    } else if (isUnsigned) {
+      if (is8) {
+        components[i].u64 = (uint64_t)((const uint8_t *)ptr)[i];
+      } else if (is16) {
+        components[i].u64 = (uint64_t)((const uint16_t *)ptr)[i];
+      } else if (is64) {
+        components[i].u64 = ((const uint64_t *)ptr)[i];
+      } else if (isSize) {
+        components[i].u64 = (uint64_t)((const size_t *)ptr)[i];
+      } else {
+        components[i].u64 = (uint64_t)((const uint32_t *)ptr)[i];
+      }
+    } else {
+      if (is8) {
+        components[i].i64 = (int64_t)((const int8_t *)ptr)[i];
+      } else if (is16) {
+        components[i].i64 = (int64_t)((const int16_t *)ptr)[i];
+      } else if (is64) {
+        components[i].i64 = ((const int64_t *)ptr)[i];
+      } else {
+        components[i].i64 = (int64_t)((const int32_t *)ptr)[i];
+      }
+    }
+  }
+
+  char renderBuf[TEXT_FORMAT_CONST(BUFFER_CAPACITY)];
+  TEXT_FORMAT_INS(Sink) tempSink = {renderBuf, sizeof(renderBuf), 0U};
+
+  if (subFormat == NULL || subFormatLen == 0U) {
+    TEXT_FORMAT_INS(SinkPutChar)(&tempSink, '{');
+    for (size_t i = 0U; i < compCount; ++i) {
+      if (i > 0U) {
+        TEXT_FORMAT_INS(SinkPutString)(&tempSink, ", ", 2U);
+      }
+      TEXT_FORMAT_INS(FormatSingleComponent)(&tempSink, components[i], kind,
+                                             NULL, 0U);
+    }
+    TEXT_FORMAT_INS(SinkPutChar)(&tempSink, '}');
+  } else {
+    bool hasPercent = false;
+    for (size_t i = 0U; i < subFormatLen; ++i) {
+      if (subFormat[i] == '%') {
+        hasPercent = true;
+        break;
+      }
+    }
+
+    if (hasPercent) {
+      size_t compIdx = 0U;
+      size_t i = 0U;
+      while (i < subFormatLen) {
+        if (subFormat[i] == '%') {
+          size_t specStart = i;
+          i++;
+          while (i < subFormatLen &&
+                 (subFormat[i] == '-' || subFormat[i] == '+' ||
+                  subFormat[i] == ' ' || subFormat[i] == '#' ||
+                  subFormat[i] == '0' || TEXT_FORMAT_INS(IsDigit)(subFormat[i]) ||
+                  subFormat[i] == '.' || subFormat[i] == 'l' ||
+                  subFormat[i] == 'h' || subFormat[i] == 'z' ||
+                  subFormat[i] == 'j' || subFormat[i] == 't')) {
+            i++;
+          }
+          if (i < subFormatLen) {
+            i++;
+          }
+          size_t specLen = i - specStart;
+          if (compIdx < compCount) {
+            TEXT_FORMAT_INS(FormatSingleComponent)(
+                &tempSink, components[compIdx++], kind, subFormat + specStart,
+                specLen);
+          }
+        } else {
+          TEXT_FORMAT_INS(SinkPutChar)(&tempSink, subFormat[i]);
+          i++;
+        }
+      }
+    } else {
+      for (size_t i = 0U; i < subFormatLen; ++i) {
+        char c = subFormat[i];
+        if (c == 'x' || c == 'a') {
+          if (compCount > 0U) {
+            TEXT_FORMAT_INS(FormatSingleComponent)(&tempSink, components[0],
+                                                   kind, NULL, 0U);
+          }
+        } else if (c == 'y' || c == 'b') {
+          if (compCount > 1U) {
+            TEXT_FORMAT_INS(FormatSingleComponent)(&tempSink, components[1],
+                                                   kind, NULL, 0U);
+          }
+        } else if (c == 'z' || c == 'c') {
+          if (compCount > 2U) {
+            TEXT_FORMAT_INS(FormatSingleComponent)(&tempSink, components[2],
+                                                   kind, NULL, 0U);
+          }
+        } else if (c == 'w' || c == 'd') {
+          if (compCount > 3U) {
+            TEXT_FORMAT_INS(FormatSingleComponent)(&tempSink, components[3],
+                                                   kind, NULL, 0U);
+          }
+        } else if (c == 'e') {
+          if (compCount > 4U) {
+            TEXT_FORMAT_INS(FormatSingleComponent)(&tempSink, components[4],
+                                                   kind, NULL, 0U);
+          }
+        } else {
+          TEXT_FORMAT_INS(SinkPutChar)(&tempSink, c);
+        }
+      }
+    }
+  }
+
+  TEXT_FORMAT_INS(SinkFinish)(&tempSink);
+
+  size_t resultLen = tempSink.written;
+  size_t pad = (width > resultLen) ? (width - resultLen) : 0U;
+
+  if (!flagMinus) {
+    TEXT_FORMAT_INS(SinkPutPadding)(sink, ' ', pad);
+  }
+  TEXT_FORMAT_INS(SinkPutString)(sink, renderBuf, resultLen);
+  if (flagMinus) {
+    TEXT_FORMAT_INS(SinkPutPadding)(sink, ' ', pad);
+  }
+}
+
+static inline void TEXT_FORMAT_INS(FormatCosmeronType)(
+    TEXT_FORMAT_INS(Sink) *sink, const void *ptr, bool isBigint,
+    size_t bitWidth, const char *subFormat, size_t subFormatLen, bool flagMinus,
+    bool flagHash, bool flagZero, size_t width) {
+  if (ptr == NULL) {
+    TEXT_FORMAT_INS(FormatString)(sink, "(null)", flagMinus, width, false, 0U);
+    return;
+  }
+
+  unsigned base = TEXT_FORMAT_CONST(BASE_DECIMAL);
+  bool uppercase = false;
+
+  if (subFormat != NULL && subFormatLen > 0U) {
+    if (subFormat[0] == 'x' || (subFormatLen == 2U && subFormat[0] == '1' && subFormat[1] == '6')) {
+      base = TEXT_FORMAT_CONST(BASE_HEXADECIMAL);
+      uppercase = false;
+    } else if (subFormat[0] == 'X') {
+      base = TEXT_FORMAT_CONST(BASE_HEXADECIMAL);
+      uppercase = true;
+    } else if (subFormat[0] == 'b' || (subFormatLen == 1U && subFormat[0] == '2')) {
+      base = TEXT_FORMAT_CONST(BASE_BINARY);
+      uppercase = false;
+    } else if (subFormat[0] == 'B') {
+      base = TEXT_FORMAT_CONST(BASE_BINARY);
+      uppercase = true;
+    } else if (subFormat[0] == 'o' || (subFormatLen == 1U && subFormat[0] == '8')) {
+      base = TEXT_FORMAT_CONST(BASE_OCTAL);
+    } else {
+      unsigned parsedBase = 0U;
+      for (size_t i = 0U; i < subFormatLen; ++i) {
+        if (TEXT_FORMAT_INS(IsDigit)(subFormat[i])) {
+          parsedBase = parsedBase * 10U + (unsigned)(subFormat[i] - '0');
+        }
+      }
+      if (parsedBase >= TEXT_FORMAT_CONST(BASE_BINARY) &&
+          parsedBase <= TEXT_FORMAT_CONST(BASE_MAX)) {
+        base = parsedBase;
+      }
+    }
+  }
+
+  char renderBuf[TEXT_FORMAT_CONST(BUFFER_CAPACITY)];
+  OPSTATUS status = STATUS_CONST(SUCCESS);
+
+  if (isBigint) {
+    if (bitWidth == 256U) {
+      status = TBIGINT_FUNC(256, ToCStringBase)(
+          (const TBIGINT_TYPE(256) *)ptr, renderBuf, sizeof(renderBuf), base);
+    } else if (bitWidth == 512U) {
+      status = TBIGINT_FUNC(512, ToCStringBase)(
+          (const TBIGINT_TYPE(512) *)ptr, renderBuf, sizeof(renderBuf), base);
+    } else if (bitWidth == 1024U) {
+      status = TBIGINT_FUNC(1024, ToCStringBase)(
+          (const TBIGINT_TYPE(1024) *)ptr, renderBuf, sizeof(renderBuf), base);
+    } else {
+      status = TBIGINT_FUNC(128, ToCStringBase)(
+          (const TBIGINT_TYPE(128) *)ptr, renderBuf, sizeof(renderBuf), base);
+    }
+  } else {
+    if (bitWidth == 256U) {
+      status = TDECIMAL_FUNC(256, ToCStringBase)(
+          (const TDECIMAL_TYPE(256) *)ptr, renderBuf, sizeof(renderBuf), base);
+    } else if (bitWidth == 512U) {
+      status = TDECIMAL_FUNC(512, ToCStringBase)(
+          (const TDECIMAL_TYPE(512) *)ptr, renderBuf, sizeof(renderBuf), base);
+    } else if (bitWidth == 1024U) {
+      status = TDECIMAL_FUNC(1024, ToCStringBase)(
+          (const TDECIMAL_TYPE(1024) *)ptr, renderBuf, sizeof(renderBuf), base);
+    } else {
+      status = TDECIMAL_FUNC(128, ToCStringBase)(
+          (const TDECIMAL_TYPE(128) *)ptr, renderBuf, sizeof(renderBuf), base);
+    }
+  }
+
+  if (status != STATUS_CONST(SUCCESS)) {
+    return;
+  }
+
+  size_t digitsLen = TEXT_FORMAT_INS(StringLength)(renderBuf);
+
+  if (base == TEXT_FORMAT_CONST(BASE_HEXADECIMAL) && !uppercase) {
+    for (size_t i = 0U; i < digitsLen; ++i) {
+      if (renderBuf[i] >= 'A' && renderBuf[i] <= 'F') {
+        renderBuf[i] = (char)(renderBuf[i] + ('a' - 'A'));
+      }
+    }
+  }
+
+  char prefix[4];
+  size_t prefixLen = 0U;
+
+  if (flagHash) {
+    if (base == TEXT_FORMAT_CONST(BASE_HEXADECIMAL)) {
+      prefix[prefixLen++] = '0';
+      prefix[prefixLen++] = uppercase ? 'X' : 'x';
+    } else if (base == TEXT_FORMAT_CONST(BASE_BINARY)) {
+      prefix[prefixLen++] = '0';
+      prefix[prefixLen++] = uppercase ? 'B' : 'b';
+    } else if (base == TEXT_FORMAT_CONST(BASE_OCTAL)) {
+      if (digitsLen == 0U || renderBuf[0] != '0') {
+        prefix[prefixLen++] = '0';
+      }
+    }
+  }
+
+  size_t totalLen = prefixLen + digitsLen;
+  size_t pad = (width > totalLen) ? (width - totalLen) : 0U;
+
+  if (!flagMinus && !flagZero) {
+    TEXT_FORMAT_INS(SinkPutPadding)(sink, ' ', pad);
+  }
+
+  for (size_t i = 0U; i < prefixLen; ++i) {
+    TEXT_FORMAT_INS(SinkPutChar)(sink, prefix[i]);
+  }
+
+  if (!flagMinus && flagZero) {
+    TEXT_FORMAT_INS(SinkPutPadding)(sink, '0', pad);
+  }
+
+  TEXT_FORMAT_INS(SinkPutString)(sink, renderBuf, digitsLen);
+
+  if (flagMinus) {
+    TEXT_FORMAT_INS(SinkPutPadding)(sink, ' ', pad);
+  }
+}
+
+TEXT_FORMAT_VARIADIC_PROTOTYPE {
+  if (format == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  if (buffer == NULL && capacity > 0U) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  TEXT_FORMAT_INS(Sink) sink = {buffer, capacity, 0U};
+  const char *p = format;
+
+  while (*p != '\0') {
+    if (*p != '%') {
+      TEXT_FORMAT_INS(SinkPutChar)(&sink, *p++);
+      continue;
+    }
+
+    p++;
+    if (*p == '%') {
+      TEXT_FORMAT_INS(SinkPutChar)(&sink, '%');
+      p++;
+      continue;
+    }
+
+    /* Flags */
+    bool flagMinus = false;
+    bool flagPlus = false;
+    bool flagSpace = false;
+    bool flagHash = false;
+    bool flagZero = false;
+
+    while (*p == '-' || *p == '+' || *p == ' ' || *p == '#' || *p == '0') {
+      if (*p == '-') {
+        flagMinus = true;
+      } else if (*p == '+') {
+        flagPlus = true;
+      } else if (*p == ' ') {
+        flagSpace = true;
+      } else if (*p == '#') {
+        flagHash = true;
+      } else if (*p == '0') {
+        flagZero = true;
+      }
+      p++;
+    }
+
+    /* Field width */
+    size_t width = 0U;
+    if (*p == '*') {
+      p++;
+      int w = va_arg(arguments, int);
+      if (w < 0) {
+        flagMinus = true;
+        width = (size_t)(-w);
+      } else {
+        width = (size_t)w;
+      }
+    } else {
+      while (TEXT_FORMAT_INS(IsDigit)(*p)) {
+        width = width * 10U + (size_t)(*p - '0');
+        p++;
+      }
+    }
+
+    /* Precision */
+    bool hasPrecision = false;
+    size_t precision = 0U;
+    if (*p == '.') {
+      p++;
+      hasPrecision = true;
+      if (*p == '*') {
+        p++;
+        int prec = va_arg(arguments, int);
+        if (prec >= 0) {
+          precision = (size_t)prec;
+        } else {
+          hasPrecision = false;
+        }
+      } else {
+        while (TEXT_FORMAT_INS(IsDigit)(*p)) {
+          precision = precision * 10U + (size_t)(*p - '0');
+          p++;
+        }
+      }
+    }
+
+    /* Check for parenthesized custom pattern: %(...) */
+    const char *subFormat = NULL;
+    size_t subFormatLen = 0U;
+    if (*p == '(') {
+      p++;
+      subFormat = p;
+      while (*p != '\0' && *p != ')') {
+        p++;
+      }
+      subFormatLen = (size_t)(p - subFormat);
+      if (*p == ')') {
+        p++;
+      }
+    }
+
+    /* Check for Cosmeron Custom Types */
+    if (strncmp(p, "TDual", 5) == 0 || strncmp(p, "TPair", 5) == 0 ||
+        strncmp(p, "TTriple", 7) == 0 || strncmp(p, "TQuad", 5) == 0 ||
+        strncmp(p, "TPenta", 6) == 0) {
+      size_t nameLen = 0U;
+      size_t compCount = 2U;
+      if (strncmp(p, "TTriple", 7) == 0) {
+        compCount = 3U;
+        nameLen = 7U;
+      } else if (strncmp(p, "TQuad", 5) == 0) {
+        compCount = 4U;
+        nameLen = 5U;
+      } else if (strncmp(p, "TPenta", 6) == 0) {
+        compCount = 5U;
+        nameLen = 6U;
+      } else {
+        compCount = 2U;
+        nameLen = 5U;
+      }
+
+      /* Check for type suffix e.g. _int32, _double */
+      const char *startName = p;
+      p += nameLen;
+      if (*p == '_') {
+        p++;
+        while (TEXT_FORMAT_INS(IsAlpha)(*p) || TEXT_FORMAT_INS(IsDigit)(*p)) {
+          p++;
+        }
+      }
+      size_t totalNameLen = (size_t)(p - startName);
+
+      const void *structPtr = va_arg(arguments, const void *);
+      TEXT_FORMAT_INS(FormatStruct)(&sink, structPtr, compCount, startName,
+                                    totalNameLen, subFormat, subFormatLen,
+                                    flagMinus, width);
+      continue;
+    }
+
+    if (strncmp(p, "TBigint", 7) == 0 || strncmp(p, "TDecimal", 8) == 0) {
+      bool isBigint = (strncmp(p, "TBigint", 7) == 0);
+      p += isBigint ? 7U : 8U;
+
+      size_t bitWidth = 128U;
+      if (strncmp(p, "1024", 4) == 0) {
+        bitWidth = 1024U;
+        p += 4;
+      } else if (strncmp(p, "512", 3) == 0) {
+        bitWidth = 512U;
+        p += 3;
+      } else if (strncmp(p, "256", 3) == 0) {
+        bitWidth = 256U;
+        p += 3;
+      } else if (strncmp(p, "128", 3) == 0) {
+        bitWidth = 128U;
+        p += 3;
+      }
+
+      const void *typePtr = va_arg(arguments, const void *);
+      TEXT_FORMAT_INS(FormatCosmeronType)(&sink, typePtr, isBigint, bitWidth,
+                                          subFormat, subFormatLen, flagMinus,
+                                          flagHash, flagZero, width);
+      continue;
+    }
+
+    /* Length modifiers */
+    enum {
+      LEN_NONE,
+      LEN_HH,
+      LEN_H,
+      LEN_L,
+      LEN_LL,
+      LEN_J,
+      LEN_Z,
+      LEN_T,
+      LEN_CAPITAL_L,
+      LEN_W8,
+      LEN_W16,
+      LEN_W32,
+      LEN_W64
+    } lenMod = LEN_NONE;
+
+    if (*p == 'h') {
+      p++;
+      if (*p == 'h') {
+        p++;
+        lenMod = LEN_HH;
+      } else {
+        lenMod = LEN_H;
+      }
+    } else if (*p == 'l') {
+      p++;
+      if (*p == 'l') {
+        p++;
+        lenMod = LEN_LL;
+      } else {
+        lenMod = LEN_L;
+      }
+    } else if (*p == 'j') {
+      p++;
+      lenMod = LEN_J;
+    } else if (*p == 'z') {
+      p++;
+      lenMod = LEN_Z;
+    } else if (*p == 't') {
+      p++;
+      lenMod = LEN_T;
+    } else if (*p == 'L') {
+      p++;
+      lenMod = LEN_CAPITAL_L;
+    } else if (*p == 'w') {
+      p++;
+      if (*p == 'f') {
+        p++;
+      }
+      if (strncmp(p, "64", 2) == 0) {
+        p += 2;
+        lenMod = LEN_W64;
+      } else if (strncmp(p, "32", 2) == 0) {
+        p += 2;
+        lenMod = LEN_W32;
+      } else if (strncmp(p, "16", 2) == 0) {
+        p += 2;
+        lenMod = LEN_W16;
+      } else if (strncmp(p, "8", 1) == 0) {
+        p += 1;
+        lenMod = LEN_W8;
+      }
+    }
+
+    char spec = *p++;
+
+    switch (spec) {
+    case 'd':
+    case 'i': {
+      intmax_t sval = 0;
+      if (lenMod == LEN_LL || lenMod == LEN_W64) {
+        sval = (intmax_t)va_arg(arguments, long long);
+      } else if (lenMod == LEN_L) {
+        sval = (intmax_t)va_arg(arguments, long);
+      } else if (lenMod == LEN_J) {
+        sval = va_arg(arguments, intmax_t);
+      } else if (lenMod == LEN_Z) {
+        sval = (intmax_t)va_arg(arguments, ptrdiff_t);
+      } else if (lenMod == LEN_T) {
+        sval = (intmax_t)va_arg(arguments, ptrdiff_t);
+      } else if (lenMod == LEN_H) {
+        sval = (intmax_t)(short)va_arg(arguments, int);
+      } else if (lenMod == LEN_HH) {
+        sval = (intmax_t)(signed char)va_arg(arguments, int);
+      } else {
+        sval = (intmax_t)va_arg(arguments, int);
+      }
+      bool isNeg = (sval < 0);
+      uintmax_t uval = isNeg ? (uintmax_t)(-(sval + 1)) + 1U : (uintmax_t)sval;
+      TEXT_FORMAT_INS(FormatInteger)(&sink, uval, true, isNeg,
+                                     TEXT_FORMAT_CONST(BASE_DECIMAL), false,
+                                     flagMinus, flagPlus, flagSpace, false,
+                                     flagZero, width, hasPrecision, precision);
+      break;
+    }
+    case 'u':
+    case 'o':
+    case 'x':
+    case 'X':
+    case 'b':
+    case 'B': {
+      uintmax_t uval = 0U;
+      if (lenMod == LEN_LL || lenMod == LEN_W64) {
+        uval = (uintmax_t)va_arg(arguments, unsigned long long);
+      } else if (lenMod == LEN_L) {
+        uval = (uintmax_t)va_arg(arguments, unsigned long);
+      } else if (lenMod == LEN_J) {
+        uval = va_arg(arguments, uintmax_t);
+      } else if (lenMod == LEN_Z) {
+        uval = (uintmax_t)va_arg(arguments, size_t);
+      } else if (lenMod == LEN_T) {
+        uval = (uintmax_t)va_arg(arguments, ptrdiff_t);
+      } else if (lenMod == LEN_H) {
+        uval = (uintmax_t)(unsigned short)va_arg(arguments, unsigned int);
+      } else if (lenMod == LEN_HH) {
+        uval = (uintmax_t)(unsigned char)va_arg(arguments, unsigned int);
+      } else {
+        uval = (uintmax_t)va_arg(arguments, unsigned int);
+      }
+
+      unsigned base = TEXT_FORMAT_CONST(BASE_DECIMAL);
+      bool uppercase = false;
+      if (spec == 'o') {
+        base = TEXT_FORMAT_CONST(BASE_OCTAL);
+      } else if (spec == 'x') {
+        base = TEXT_FORMAT_CONST(BASE_HEXADECIMAL);
+      } else if (spec == 'X') {
+        base = TEXT_FORMAT_CONST(BASE_HEXADECIMAL);
+        uppercase = true;
+      } else if (spec == 'b') {
+        base = TEXT_FORMAT_CONST(BASE_BINARY);
+      } else if (spec == 'B') {
+        base = TEXT_FORMAT_CONST(BASE_BINARY);
+        uppercase = true;
+      }
+
+      TEXT_FORMAT_INS(FormatInteger)(&sink, uval, false, false, base, uppercase,
+                                     flagMinus, false, false, flagHash,
+                                     flagZero, width, hasPrecision, precision);
+      break;
+    }
+    case 'c': {
+      if (lenMod == LEN_L) {
+        wint_t wc = (wint_t)va_arg(arguments, int);
+        unsigned char utf8Buf[8];
+        size_t utf8Units = 0U;
+        if (TEXT_UTF8_FUNC(Encode)((TEXT_TYPE(TChar32))wc, utf8Buf,
+                                   sizeof(utf8Buf),
+                                   &utf8Units) == STATUS_CONST(SUCCESS)) {
+          size_t pad = (width > utf8Units) ? (width - utf8Units) : 0U;
+          if (!flagMinus) {
+            TEXT_FORMAT_INS(SinkPutPadding)(&sink, ' ', pad);
+          }
+          TEXT_FORMAT_INS(SinkPutString)(&sink, (const char *)utf8Buf, utf8Units);
+          if (flagMinus) {
+            TEXT_FORMAT_INS(SinkPutPadding)(&sink, ' ', pad);
+          }
+        }
+      } else {
+        char ch = (char)va_arg(arguments, int);
+        TEXT_FORMAT_INS(FormatChar)(&sink, ch, flagMinus, width);
+      }
+      break;
+    }
+    case 's': {
+      if (lenMod == LEN_L) {
+        const wchar_t *wstr = va_arg(arguments, const wchar_t *);
+        if (wstr == NULL) {
+          TEXT_FORMAT_INS(FormatString)(&sink, "(null)", flagMinus, width,
+                                        hasPrecision, precision);
+        } else {
+          char tempBuf[TEXT_FORMAT_CONST(BUFFER_CAPACITY)];
+          size_t pos = 0U;
+          while (*wstr != L'\0' &&
+                 pos + 4U < TEXT_FORMAT_CONST(BUFFER_CAPACITY)) {
+            unsigned char u8[8];
+            size_t units = 0U;
+            if (TEXT_UTF8_FUNC(Encode)((TEXT_TYPE(TChar32))*wstr, u8,
+                                       sizeof(u8),
+                                       &units) == STATUS_CONST(SUCCESS)) {
+              for (size_t k = 0U; k < units; ++k) {
+                tempBuf[pos++] = (char)u8[k];
+              }
+            }
+            wstr++;
+          }
+          tempBuf[pos] = '\0';
+          TEXT_FORMAT_INS(FormatString)(&sink, tempBuf, flagMinus, width,
+                                        hasPrecision, precision);
+        }
+      } else {
+        const char *str = va_arg(arguments, const char *);
+        TEXT_FORMAT_INS(FormatString)(&sink, str, flagMinus, width, hasPrecision,
+                                      precision);
+      }
+      break;
+    }
+    case 'p': {
+      const void *ptr = va_arg(arguments, const void *);
+      if (ptr == NULL) {
+        TEXT_FORMAT_INS(FormatString)(&sink, "(nil)", flagMinus, width, false,
+                                      0U);
+      } else {
+        TEXT_FORMAT_INS(FormatInteger)(
+            &sink, (uintptr_t)ptr, false, false,
+            TEXT_FORMAT_CONST(BASE_HEXADECIMAL), false, flagMinus, false, false,
+            true, false, width, false, 0U);
+      }
+      break;
+    }
+    case 'n': {
+      void *ptr = va_arg(arguments, void *);
+      if (ptr != NULL) {
+        if (lenMod == LEN_LL || lenMod == LEN_W64) {
+          *(long long *)ptr = (long long)sink.written;
+        } else if (lenMod == LEN_L) {
+          *(long *)ptr = (long)sink.written;
+        } else if (lenMod == LEN_H) {
+          *(short *)ptr = (short)sink.written;
+        } else if (lenMod == LEN_HH) {
+          *(signed char *)ptr = (signed char)sink.written;
+        } else if (lenMod == LEN_Z) {
+          *(size_t *)ptr = sink.written;
+        } else if (lenMod == LEN_J) {
+          *(intmax_t *)ptr = (intmax_t)sink.written;
+        } else if (lenMod == LEN_T) {
+          *(ptrdiff_t *)ptr = (ptrdiff_t)sink.written;
+        } else {
+          *(int *)ptr = (int)sink.written;
+        }
+      }
+      break;
+    }
+    case 'f':
+    case 'F':
+    case 'e':
+    case 'E':
+    case 'g':
+    case 'G':
+    case 'a':
+    case 'A': {
+      if (lenMod == LEN_CAPITAL_L) {
+        long double ld = va_arg(arguments, long double);
+        TEXT_FORMAT_INS(FormatFloat)(&sink, 0.0, true, ld, spec, flagMinus,
+                                     flagPlus, flagSpace, flagHash, flagZero,
+                                     width, hasPrecision, precision);
+      } else {
+        double d = va_arg(arguments, double);
+        TEXT_FORMAT_INS(FormatFloat)(&sink, d, false, 0.0L, spec, flagMinus,
+                                     flagPlus, flagSpace, flagHash, flagZero,
+                                     width, hasPrecision, precision);
+      }
+      break;
+    }
+    default:
+      TEXT_FORMAT_INS(SinkPutChar)(&sink, spec);
+      break;
+    }
+  }
+
+  TEXT_FORMAT_INS(SinkFinish)(&sink);
+
+  if (outWritten != NULL) {
+    *outWritten = sink.written;
+  }
+
+  if (sink.capacity > 0U && sink.written >= sink.capacity) {
+    return STATUS_CONST(INSUFFICIENT_SPACE);
+  }
+
+  return STATUS_CONST(SUCCESS);
+}
+
+TEXT_FORMAT_PROTOTYPE {
+  OPSTATUS status;
+  va_list args;
+  va_start(args, format);
+  status = TEXT_FORMAT_FUNC(Variadic)(buffer, capacity, outWritten, format, args);
+  va_end(args);
+  return status;
+}
+
+TEXT_FORMAT_UNSAFE_PROTOTYPE {
+  OPSTATUS status;
+  va_list args;
+  va_start(args, format);
+  status = TEXT_FORMAT_FUNC(Unsafe_Variadic)(buffer, outWritten, format, args);
+  va_end(args);
+  return status;
+}
+
+TEXT_FORMAT_UNSAFE_VARIADIC_PROTOTYPE {
+  return TEXT_FORMAT_FUNC(Variadic)(buffer, SIZE_MAX, outWritten, format,
+                                    arguments);
+}

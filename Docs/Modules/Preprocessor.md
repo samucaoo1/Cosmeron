@@ -1437,15 +1437,32 @@ Numerical 0 or 1 for the family flags; a Boolean preprocessor expression for `CO
 
 Header: `Cosmeron/Core/Preprocessor/Detect/OperationSystem.h`
 
-| Flag | Condition |
+| Flag | Condition / Family |
 | --- | --- |
-| `OS_WINDOWS` | `_WIN32` or `_WIN64` |
-| `OS_MAC` | Apple and Mach macros |
-| `OS_LINUX` | Linux compiler macros |
-| `OS_FREEBSD` | FreeBSD compiler macros |
-| `OS_UNIX` | Linux, macOS, or FreeBSD |
-| `OS_POSIX` | Linux, macOS, or FreeBSD |
-| `OS_KNOWN` | Any of the four recognized OS families |
+| `OS_WINDOWS` | `_WIN32` or `_WIN64` (excluding Cygwin) |
+| `OS_CYGWIN` | Cygwin environment (`__CYGWIN__`) |
+| `OS_MAC` | Apple / Mach (`__APPLE__ && __MACH__`) |
+| `OS_IOS` | iOS / iPadOS / watchOS / tvOS |
+| `OS_LINUX` | Linux kernel (`__linux__` or `__linux`) |
+| `OS_ANDROID` | Android userland overlay (`__ANDROID__`) |
+| `OS_OHOS` | OpenHarmony userland overlay (`__OHOS__`) |
+| `OS_FREEBSD` | FreeBSD (`__FreeBSD__`) |
+| `OS_OPENBSD` | OpenBSD (`__OpenBSD__`) |
+| `OS_NETBSD` | NetBSD (`__NetBSD__`) |
+| `OS_DRAGONFLY` | DragonFly BSD (`__DragonFly__`) |
+| `OS_SOLARIS` | Solaris / SunOS / Illumos (`__sun__` or `__sun` or `sun`) |
+| `OS_AIX` | IBM AIX (`_AIX` or `__TOS_AIX__`) |
+| `OS_HAIKU` | Haiku / BeOS (`__HAIKU__` or `__BEOS__`) |
+| `OS_QNX` | QNX Neutrino (`__QNX__` or `__QNXNTO__`) |
+| `OS_HURD` | GNU Hurd (`__GNU__` or `__gnu_hurd__`) |
+| `OS_WASM` | WebAssembly (`__wasm__`, `__wasm32__`, `__wasm64__`, or WASI/Emscripten) |
+| `OS_EMSCRIPTEN` | Emscripten SDK (`__EMSCRIPTEN__`) |
+| `OS_WASI` | WebAssembly System Interface (`__wasi__`) |
+| `OS_REDOX` | Redox OS microkernel (`__redox__`) |
+| `OS_BSD` | Any BSD family (`OS_FREEBSD`, `OS_OPENBSD`, `OS_NETBSD`, `OS_DRAGONFLY`) |
+| `OS_UNIX` | Unix-like systems (`OS_LINUX`, `OS_MAC`, `OS_BSD`, `OS_SOLARIS`, `OS_AIX`, `OS_HAIKU`, `OS_QNX`, `OS_HURD`, `OS_CYGWIN`, `OS_REDOX`) |
+| `OS_POSIX` | POSIX-compatible platforms (`OS_UNIX`, `OS_ANDROID`, `OS_OHOS`) |
+| `OS_KNOWN` | Any recognized operating system target |
 
 ### Syntax
 
@@ -1471,11 +1488,12 @@ None.
 
 ### Return value
 
-Numerical 0/1 flags and a Boolean aggregate expression.
+Numerical 0/1 flags and Boolean aggregate expressions.
 
 ### Remarks
 
-- `OS_UNIX` and `OS_POSIX` currently recognize **only Linux, macOS and FreeBSD**, not every Unix-like system.
+- `OS_UNIX` and `OS_POSIX` recognize standardized Unix and POSIX-compatible platforms.
+- `OS_ANDROID` and `OS_OHOS` act as userland/ABI overlays over `OS_LINUX`.
 - On Windows the header defines `WIN32_LEAN_AND_MEAN` if it was not already defined.
 - These macros do not discover the operating system at runtime.
 
@@ -1547,6 +1565,71 @@ None.
 /* x86-64 target */
 #elif PROCESSOR_ARM64
 /* ARM64 target */
+#endif
+```
+
+---
+
+# C standard library detection
+
+Header: `Cosmeron/Core/Preprocessor/Detect/Library.h`
+
+| Flag | Target C runtime library |
+| --- | --- |
+| `LIBC_GLIBC` | GNU C Library (glibc) |
+| `LIBC_MUSL` | musl libc (standard on Alpine, Void musl) |
+| `LIBC_BIONIC` | Android Bionic libc |
+| `LIBC_MSVC` | Microsoft Universal CRT / MSVCRT |
+| `LIBC_APPLE` | Apple Libc (macOS / iOS / Darwin) |
+| `LIBC_BSD` | BSD libc (FreeBSD, OpenBSD, NetBSD, DragonFly) |
+| `LIBC_UCLIBC` | uClibc / uClibc-ng |
+| `LIBC_NEWLIB` | Red Hat Newlib (embedded / bare-metal) |
+| `LIBC_WASI` | WebAssembly System Interface libc (wasi-libc) |
+| `LIBC_EMSCRIPTEN` | Emscripten libc |
+| `LIBC_RELIBC` | relibc (Redox OS C standard library) |
+| `LIBC_KNOWN` | Boolean aggregate indicating any recognized libc |
+
+Aliases prefixed with `LIBRARY_*` (`LIBRARY_GLIBC`, `LIBRARY_MUSL`, etc.) are also defined for convenience.
+
+### Syntax
+
+#### Macro form
+
+```c
+#if LIBC_GLIBC
+/* glibc specific routines */
+#elif LIBC_MUSL
+/* musl specific routines */
+#endif
+```
+
+#### Direct form
+
+Platform macros such as `__GLIBC__` or `__BIONIC__` may be tested manually, but `LIBC_*` provides normalized mutually exclusive flags across all supported toolchains.
+
+---
+
+### Parameters
+
+None.
+
+### Return value
+
+Numerical 0/1 flags and Boolean aggregate expressions.
+
+### Remarks
+
+- Because musl intentionally does not export a vendor macro, `LIBC_MUSL` is identified on Linux targets when glibc, uClibc, Bionic, and Newlib are absent, or when `__MUSL__` is passed.
+- Detection is mutually exclusive across standard hosted C environments.
+
+### Example
+
+```c
+#include "Cosmeron/Core/Preprocessor/Detect/Library.h"
+#if LIBC_GLIBC
+/* GNU extensions available */
+#elif LIBC_MUSL
+/* Standard musl environment */
 #endif
 ```
 

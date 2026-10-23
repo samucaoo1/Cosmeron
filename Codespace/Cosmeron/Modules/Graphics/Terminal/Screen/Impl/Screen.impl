@@ -1,0 +1,297 @@
+#pragma once
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+/* ============================================================
+ * TTerminalScreen Method Implementations
+ * ============================================================ */
+
+OBJECT_PROTOTYPEEX(TERMINAL_SCREEN_TYPE(TTerminalScreen), Create,
+                   (TDUAL_TYPE(uint16) size, bool useAlternateScreen,
+                    bool useRawMode)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (self->isInitialized) {
+    OBJECT_CALL_0(self, Destroy);
+  }
+
+  if (size.col == 0U || size.row == 0U) {
+    TDUAL_TYPE(uint16) termSize;
+    if (TERMINAL_FUNC(Size_Get)(&termSize) == STATUS_CONST(SUCCESS) &&
+        termSize.col > 0U && termSize.row > 0U) {
+      size = termSize;
+    } else {
+      size.col = 80U;
+      size.row = 24U;
+    }
+  }
+
+  OPSTATUS st = TEXT_GRID_FUNC(char32, Create)(&self->front, size);
+  if (st != STATUS_CONST(SUCCESS))
+    return st;
+
+  st = TEXT_GRID_FUNC(char32, Create)(&self->back, size);
+  if (st != STATUS_CONST(SUCCESS)) {
+    TEXT_GRID_FUNC(char32, Destroy)(&self->front);
+    return st;
+  }
+
+  TEXT_GRID_FUNC(char32, Clear)(&self->front);
+  TEXT_GRID_FUNC(char32, Clear)(&self->back);
+
+  self->isAlternate = false;
+  if (useAlternateScreen) {
+    if (TERMINAL_FUNC(EnterAlternateScreen)() == STATUS_CONST(SUCCESS)) {
+      self->isAlternate = true;
+    }
+  }
+
+  self->isRaw = false;
+  if (useRawMode) {
+    if (TERMINAL_FUNC(EnterRawMode)() == STATUS_CONST(SUCCESS)) {
+      self->isRaw = true;
+    }
+  }
+
+  TERMINAL_FUNC(Cursor_Hide)();
+
+  self->size = size;
+  self->isInitialized = true;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TERMINAL_SCREEN_TYPE(TTerminalScreen), Destroy) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (!self->isInitialized)
+    return STATUS_CONST(SUCCESS);
+
+  TERMINAL_FUNC(Cursor_Show)();
+
+  if (self->isAlternate) {
+    TERMINAL_FUNC(LeaveAlternateScreen)();
+    self->isAlternate = false;
+  }
+
+  if (self->isRaw) {
+    TERMINAL_FUNC(LeaveRawMode)();
+    self->isRaw = false;
+  }
+
+  TEXT_GRID_FUNC(char32, Destroy)(&self->front);
+  TEXT_GRID_FUNC(char32, Destroy)(&self->back);
+
+  self->isInitialized = false;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TERMINAL_SCREEN_TYPE(TTerminalScreen), Resize,
+                   (TDUAL_TYPE(uint16) newSize)) {
+  if (!self || !self->isInitialized)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (newSize.col == 0U || newSize.row == 0U) {
+    TDUAL_TYPE(uint16) termSize;
+    if (TERMINAL_FUNC(Size_Get)(&termSize) == STATUS_CONST(SUCCESS) &&
+        termSize.col > 0U && termSize.row > 0U) {
+      newSize = termSize;
+    } else {
+      newSize.col = 80U;
+      newSize.row = 24U;
+    }
+  }
+
+  TEXT_GRID_FUNC(char32, Destroy)(&self->front);
+  TEXT_GRID_FUNC(char32, Destroy)(&self->back);
+
+  OPSTATUS st = TEXT_GRID_FUNC(char32, Create)(&self->front, newSize);
+  if (st != STATUS_CONST(SUCCESS))
+    return st;
+
+  st = TEXT_GRID_FUNC(char32, Create)(&self->back, newSize);
+  if (st != STATUS_CONST(SUCCESS)) {
+    TEXT_GRID_FUNC(char32, Destroy)(&self->front);
+    return st;
+  }
+
+  TEXT_GRID_FUNC(char32, Clear)(&self->front);
+  TEXT_GRID_FUNC(char32, Clear)(&self->back);
+
+  self->size = newSize;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TERMINAL_SCREEN_TYPE(TTerminalScreen), Clear) {
+  if (!self || !self->isInitialized)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  return TEXT_GRID_FUNC(char32, Clear)(&self->back);
+}
+
+OBJECT_PROTOTYPEEX(TERMINAL_SCREEN_TYPE(TTerminalScreen), ClearWith,
+                   (TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute,
+                    uint32_t codepoint)) {
+  if (!self || !self->isInitialized)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  for (uint16_t r = 0U; r < self->size.row; ++r) {
+    for (uint16_t c = 0U; c < self->size.col; ++c) {
+      TDUAL_TYPE(uint16) pos;
+      pos.col = c;
+      pos.row = r;
+      TEXT_GRID_FUNC(char32, WriteCell)(&self->back, pos,
+                                        (TEXT_TYPE(TChar32))codepoint,
+                                        attribute);
+    }
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TERMINAL_SCREEN_TYPE(TTerminalScreen), SetCell,
+                   (uint16_t col, uint16_t row, uint32_t codepoint,
+                    TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute)) {
+  if (!self || !self->isInitialized)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (col >= self->size.col || row >= self->size.row)
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  TDUAL_TYPE(uint16) pos;
+  pos.col = col;
+  pos.row = row;
+  return TEXT_GRID_FUNC(char32, WriteCell)(&self->back, pos,
+                                           (TEXT_TYPE(TChar32))codepoint,
+                                           attribute);
+}
+
+OBJECT_PROTOTYPEEX(TERMINAL_SCREEN_TYPE(TTerminalScreen), GetCell,
+                   (uint16_t col, uint16_t row, uint32_t *outCodepoint,
+                    TEXT_GRID_ATTRIBUTE_TYPE(Cell) * outAttribute)) {
+  if (!self || !self->isInitialized || !outCodepoint || !outAttribute)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (col >= self->size.col || row >= self->size.row)
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  TDUAL_TYPE(uint16) pos;
+  pos.col = col;
+  pos.row = row;
+  TEXT_TYPE(TChar32) cp = 0;
+  OPSTATUS st = TEXT_GRID_FUNC(char32, ReadCell)(&self->back, pos, &cp,
+                                                 outAttribute);
+  if (st == STATUS_CONST(SUCCESS)) {
+    *outCodepoint = (uint32_t)cp;
+  }
+  return st;
+}
+
+OBJECT_PROTOTYPEEX(TERMINAL_SCREEN_TYPE(TTerminalScreen), WriteString,
+                   (uint16_t col, uint16_t row, const char *text,
+                    TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute)) {
+  if (!self || !self->isInitialized || !text)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (row >= self->size.row)
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  size_t len = strlen(text);
+  size_t offset = 0U;
+  uint16_t c = col;
+
+  while (offset < len && c < self->size.col) {
+    TEXT_TYPE(TChar32) cp = 0;
+    size_t consumed = 0U;
+    OPSTATUS st = TEXT_UTF8_FUNC(Decode)(
+        (const unsigned char *)text + offset, len - offset, &cp, &consumed);
+    if (st != STATUS_CONST(SUCCESS) || consumed == 0U) {
+      cp = (unsigned char)text[offset];
+      consumed = 1U;
+    }
+
+    TDUAL_TYPE(uint16) pos;
+    pos.col = c;
+    pos.row = row;
+    TEXT_GRID_FUNC(char32, WriteCell)(&self->back, pos, cp, attribute);
+    c++;
+    offset += consumed;
+  }
+
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TERMINAL_SCREEN_TYPE(TTerminalScreen), Present) {
+  if (!self || !self->isInitialized)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  TEXT_GRID_ATTRIBUTE_TYPE(Cell) activeStyle;
+  memset(&activeStyle, 0, sizeof(activeStyle));
+  bool styleSet = false;
+  bool cursorPositioned = false;
+  uint16_t lastCol = 0U;
+  uint16_t lastRow = 0U;
+
+  for (uint16_t r = 0U; r < self->size.row; ++r) {
+    for (uint16_t c = 0U; c < self->size.col; ++c) {
+      TDUAL_TYPE(uint16) pos;
+      pos.col = c;
+      pos.row = r;
+
+      TEXT_TYPE(TChar32) backChar = 0;
+      TEXT_TYPE(TChar32) frontChar = 0;
+      TEXT_GRID_ATTRIBUTE_TYPE(Cell) backAttr;
+      TEXT_GRID_ATTRIBUTE_TYPE(Cell) frontAttr;
+
+      TEXT_GRID_FUNC(char32, ReadCell)(&self->back, pos, &backChar, &backAttr);
+      TEXT_GRID_FUNC(char32, ReadCell)(&self->front, pos, &frontChar, &frontAttr);
+
+      if (backChar != frontChar ||
+          memcmp(&backAttr, &frontAttr, sizeof(backAttr)) != 0) {
+        if (!cursorPositioned || lastRow != r || lastCol + 1U != c) {
+          TERMINAL_FUNC(Cursor_SetPosition)(pos);
+        }
+
+        if (!styleSet ||
+            memcmp(&activeStyle, &backAttr, sizeof(activeStyle)) != 0) {
+          TERMINAL_FUNC(Style_Set)(backAttr);
+          activeStyle = backAttr;
+          styleSet = true;
+        }
+
+        TERMINAL_FUNC(PutChar)((uint32_t)(backChar != 0 ? backChar : ' '));
+        cursorPositioned = true;
+        lastRow = r;
+        lastCol = c;
+
+        TEXT_GRID_FUNC(char32, WriteCell)(&self->front, pos, backChar, backAttr);
+      }
+    }
+  }
+
+  TERMINAL_FUNC(Flush)();
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TERMINAL_SCREEN_TYPE(TTerminalScreen), Size) {
+  return self ? self->size : (TDUAL_TYPE(uint16)){.col = 0U, .row = 0U};
+}
+
+OBJECT_PROTOTYPEEX(TERMINAL_SCREEN_TYPE(TTerminalScreen), IsAlternate) {
+  return self ? self->isAlternate : false;
+}
+
+OBJECT_PROTOTYPEEX(TERMINAL_SCREEN_TYPE(TTerminalScreen), IsRaw) {
+  return self ? self->isRaw : false;
+}
+
+OBJECT_PROTOTYPEEX(TERMINAL_SCREEN_TYPE(TTerminalScreen), IsInitialized) {
+  return self ? self->isInitialized : false;
+}
+
+OBJECT_IMPLEMENT(TERMINAL_SCREEN_TYPE(TTerminalScreen));
+
+/* EOF */

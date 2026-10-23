@@ -1,0 +1,296 @@
+#pragma once
+#include <math.h>
+
+GEOMETRY_DISTANCE_PROTOTYPE {
+  float dx = a.x - b.x;
+  float dy = a.y - b.y;
+  return sqrtf(dx * dx + dy * dy);
+}
+
+GEOMETRY_DISTANCE_SQUARED_PROTOTYPE {
+  float dx = a.x - b.x;
+  float dy = a.y - b.y;
+  return dx * dx + dy * dy;
+}
+
+GEOMETRY_POINT_IN_RECT_PROTOTYPE {
+  if (!rect) return false;
+  float minX = rect->origin.x;
+  float maxX = rect->origin.x + rect->size.x;
+  float minY = rect->origin.y;
+  float maxY = rect->origin.y + rect->size.y;
+  if (minX > maxX) { float tmp = minX; minX = maxX; maxX = tmp; }
+  if (minY > maxY) { float tmp = minY; minY = maxY; maxY = tmp; }
+  return p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY;
+}
+
+GEOMETRY_POINT_IN_CIRCLE_PROTOTYPE {
+  if (!circle || circle->radius < 0.0f) return false;
+  return GEOMETRY_FUNC(DistanceSquared)(p, circle->center) <= (circle->radius * circle->radius);
+}
+
+GEOMETRY_POINT_IN_TRIANGLE_PROTOTYPE {
+  if (!tri) return false;
+  float dX = p.x - tri->c.x;
+  float dY = p.y - tri->c.y;
+  float dX21 = tri->c.x - tri->b.x;
+  float dY12 = tri->b.y - tri->c.y;
+  float d = dY12 * (tri->a.x - tri->c.x) + dX21 * (tri->a.y - tri->c.y);
+  if (fabsf(d) < GEOMETRY_EPSILON) return false;
+  float s = dY12 * dX + dX21 * dY;
+  float t = (tri->c.y - tri->a.y) * dX + (tri->a.x - tri->c.x) * dY;
+  if (d < 0.0f) return s <= 0.0f && t <= 0.0f && s + t >= d;
+  return s >= 0.0f && t >= 0.0f && s + t <= d;
+}
+
+GEOMETRY_POINT_IN_POLYGON_PROTOTYPE {
+  if (!vertices || count < 3) return false;
+  bool inside = false;
+  size_t i, j = count - 1;
+  for (i = 0; i < count; i++) {
+    if (((vertices[i].y > p.y) != (vertices[j].y > p.y)) &&
+        (p.x < (vertices[j].x - vertices[i].x) * (p.y - vertices[i].y) /
+               (vertices[j].y - vertices[i].y) + vertices[i].x)) {
+      inside = !inside;
+    }
+    j = i;
+  }
+  return inside;
+}
+
+GEOMETRY_RECT_INTERSECTS_RECT_PROTOTYPE {
+  if (!a || !b) return false;
+  float aLeft = a->origin.x;
+  float aRight = a->origin.x + a->size.x;
+  float aTop = a->origin.y;
+  float aBottom = a->origin.y + a->size.y;
+  if (aLeft > aRight) { float tmp = aLeft; aLeft = aRight; aRight = tmp; }
+  if (aTop > aBottom) { float tmp = aTop; aTop = aBottom; aBottom = tmp; }
+
+  float bLeft = b->origin.x;
+  float bRight = b->origin.x + b->size.x;
+  float bTop = b->origin.y;
+  float bBottom = b->origin.y + b->size.y;
+  if (bLeft > bRight) { float tmp = bLeft; bLeft = bRight; bRight = tmp; }
+  if (bTop > bBottom) { float tmp = bTop; bTop = bBottom; bBottom = tmp; }
+
+  return !(aRight < bLeft || aLeft > bRight || aBottom < bTop || aTop > bBottom);
+}
+
+GEOMETRY_RECT_INTERSECTION_PROTOTYPE {
+  if (!a || !b) return false;
+  float aLeft = a->origin.x;
+  float aRight = a->origin.x + a->size.x;
+  float aTop = a->origin.y;
+  float aBottom = a->origin.y + a->size.y;
+  if (aLeft > aRight) { float tmp = aLeft; aLeft = aRight; aRight = tmp; }
+  if (aTop > aBottom) { float tmp = aTop; aTop = aBottom; aBottom = tmp; }
+
+  float bLeft = b->origin.x;
+  float bRight = b->origin.x + b->size.x;
+  float bTop = b->origin.y;
+  float bBottom = b->origin.y + b->size.y;
+  if (bLeft > bRight) { float tmp = bLeft; bLeft = bRight; bRight = tmp; }
+  if (bTop > bBottom) { float tmp = bTop; bTop = bBottom; bBottom = tmp; }
+
+  float intLeft = aLeft > bLeft ? aLeft : bLeft;
+  float intRight = aRight < bRight ? aRight : bRight;
+  float intTop = aTop > bTop ? aTop : bTop;
+  float intBottom = aBottom < bBottom ? aBottom : bBottom;
+
+  if (intRight >= intLeft && intBottom >= intTop) {
+    if (outRect) {
+      outRect->origin.x = intLeft;
+      outRect->origin.y = intTop;
+      outRect->size.x = intRight - intLeft;
+      outRect->size.y = intBottom - intTop;
+    }
+    return true;
+  }
+  return false;
+}
+
+GEOMETRY_CIRCLE_INTERSECTS_CIRCLE_PROTOTYPE {
+  if (!a || !b || a->radius < 0.0f || b->radius < 0.0f) return false;
+  float radiusSum = a->radius + b->radius;
+  return GEOMETRY_FUNC(DistanceSquared)(a->center, b->center) <= (radiusSum * radiusSum);
+}
+
+GEOMETRY_LINE_INTERSECTS_LINE_PROTOTYPE {
+  if (!a || !b) return false;
+  float s1_x = a->end.x - a->start.x;
+  float s1_y = a->end.y - a->start.y;
+  float s2_x = b->end.x - b->start.x;
+  float s2_y = b->end.y - b->start.y;
+
+  float denom = (-s2_x * s1_y + s1_x * s2_y);
+  if (fabsf(denom) < GEOMETRY_EPSILON) return false;
+
+  float s = (-s1_y * (a->start.x - b->start.x) + s1_x * (a->start.y - b->start.y)) / denom;
+  float t = ( s2_x * (a->start.y - b->start.y) - s2_y * (a->start.x - b->start.x)) / denom;
+
+  if (s >= 0.0f && s <= 1.0f && t >= 0.0f && t <= 1.0f) {
+    if (outIntersection) {
+      outIntersection->x = a->start.x + (t * s1_x);
+      outIntersection->y = a->start.y + (t * s1_y);
+    }
+    return true;
+  }
+  return false;
+}
+
+GEOMETRY_RAY_INTERSECTS_CIRCLE_PROTOTYPE {
+  if (!ray || !circle || circle->radius < 0.0f) return false;
+  float dx = ray->direction.x;
+  float dy = ray->direction.y;
+  float fx = ray->origin.x - circle->center.x;
+  float fy = ray->origin.y - circle->center.y;
+
+  float a = dx * dx + dy * dy;
+  if (a < GEOMETRY_EPSILON) return false;
+
+  float b = 2.0f * (fx * dx + fy * dy);
+  float c = (fx * fx + fy * fy) - (circle->radius * circle->radius);
+  float discriminant = b * b - 4.0f * a * c;
+
+  if (discriminant < 0.0f) return false;
+
+  discriminant = sqrtf(discriminant);
+  float t1 = (-b - discriminant) / (2.0f * a);
+  float t2 = (-b + discriminant) / (2.0f * a);
+
+  float t = -1.0f;
+  if (t1 >= 0.0f) t = t1;
+  else if (t2 >= 0.0f) t = t2;
+  else return false;
+
+  if (outHit) {
+    outHit->hit = true;
+    outHit->distance = t;
+    outHit->point.x = ray->origin.x + t * dx;
+    outHit->point.y = ray->origin.y + t * dy;
+    float nx = (outHit->point.x - circle->center.x) / (circle->radius > 0.0f ? circle->radius : 1.0f);
+    float ny = (outHit->point.y - circle->center.y) / (circle->radius > 0.0f ? circle->radius : 1.0f);
+    outHit->normal.x = nx;
+    outHit->normal.y = ny;
+  }
+  return true;
+}
+
+GEOMETRY_RAY_INTERSECTS_RECT_PROTOTYPE {
+  if (!ray || !rect) return false;
+  float minX = rect->origin.x;
+  float maxX = rect->origin.x + rect->size.x;
+  float minY = rect->origin.y;
+  float maxY = rect->origin.y + rect->size.y;
+  if (minX > maxX) { float tmp = minX; minX = maxX; maxX = tmp; }
+  if (minY > maxY) { float tmp = minY; minY = maxY; maxY = tmp; }
+
+  float tNear = -INFINITY;
+  float tFar = INFINITY;
+  GEOMETRY_TYPE(TPoint2D) nearNormal = {.x = 0.0f, .y = 0.0f};
+
+  /* X axis slab */
+  if (fabsf(ray->direction.x) < GEOMETRY_EPSILON) {
+    if (ray->origin.x < minX || ray->origin.x > maxX) return false;
+  } else {
+    float invD = 1.0f / ray->direction.x;
+    float t1 = (minX - ray->origin.x) * invD;
+    float t2 = (maxX - ray->origin.x) * invD;
+    float normalX = -1.0f;
+    if (t1 > t2) { float tmp = t1; t1 = t2; t2 = tmp; normalX = 1.0f; }
+    if (t1 > tNear) {
+      tNear = t1;
+      nearNormal.x = normalX;
+      nearNormal.y = 0.0f;
+    }
+    if (t2 < tFar) tFar = t2;
+    if (tNear > tFar || tFar < 0.0f) return false;
+  }
+
+  /* Y axis slab */
+  if (fabsf(ray->direction.y) < GEOMETRY_EPSILON) {
+    if (ray->origin.y < minY || ray->origin.y > maxY) return false;
+  } else {
+    float invD = 1.0f / ray->direction.y;
+    float t1 = (minY - ray->origin.y) * invD;
+    float t2 = (maxY - ray->origin.y) * invD;
+    float normalY = -1.0f;
+    if (t1 > t2) { float tmp = t1; t1 = t2; t2 = tmp; normalY = 1.0f; }
+    if (t1 > tNear) {
+      tNear = t1;
+      nearNormal.x = 0.0f;
+      nearNormal.y = normalY;
+    }
+    if (t2 < tFar) tFar = t2;
+    if (tNear > tFar || tFar < 0.0f) return false;
+  }
+
+  float t = tNear >= 0.0f ? tNear : tFar;
+  if (t < 0.0f) return false;
+
+  if (outHit) {
+    outHit->hit = true;
+    outHit->distance = t;
+    outHit->point.x = ray->origin.x + t * ray->direction.x;
+    outHit->point.y = ray->origin.y + t * ray->direction.y;
+    outHit->normal = nearNormal;
+  }
+  return true;
+}
+
+GEOMETRY_TRIANGLE_AREA_PROTOTYPE {
+  if (!tri) return 0.0f;
+  return 0.5f * fabsf(tri->a.x * (tri->b.y - tri->c.y) +
+                      tri->b.x * (tri->c.y - tri->a.y) +
+                      tri->c.x * (tri->a.y - tri->b.y));
+}
+
+GEOMETRY_POLYGON_AREA_PROTOTYPE {
+  if (!vertices || count < 3) return 0.0f;
+  float area = 0.0f;
+  size_t i, j = count - 1;
+  for (i = 0; i < count; i++) {
+    area += (vertices[j].x + vertices[i].x) * (vertices[j].y - vertices[i].y);
+    j = i;
+  }
+  return fabsf(area * 0.5f);
+}
+
+GEOMETRY_POLYGON_CENTROID_PROTOTYPE {
+  if (!vertices || count < 3 || !outCentroid) return STATUS_CONST(INVALID_ARGUMENT);
+  float signedArea = 0.0f;
+  float cx = 0.0f, cy = 0.0f;
+  size_t i, j = count - 1;
+  for (i = 0; i < count; i++) {
+    float cross = (vertices[j].x * vertices[i].y) - (vertices[i].x * vertices[j].y);
+    signedArea += cross;
+    cx += (vertices[j].x + vertices[i].x) * cross;
+    cy += (vertices[j].y + vertices[i].y) * cross;
+    j = i;
+  }
+  signedArea *= 0.5f;
+  if (fabsf(signedArea) < GEOMETRY_EPSILON) return STATUS_CONST(GENERIC_ERROR);
+  outCentroid->x = cx / (6.0f * signedArea);
+  outCentroid->y = cy / (6.0f * signedArea);
+  return STATUS_CONST(SUCCESS);
+}
+
+GEOMETRY_BOUNDING_BOX_PROTOTYPE {
+  if (!vertices || count == 0 || !outBox) return STATUS_CONST(INVALID_ARGUMENT);
+  float minX = vertices[0].x, maxX = vertices[0].x;
+  float minY = vertices[0].y, maxY = vertices[0].y;
+  for (size_t i = 1; i < count; i++) {
+    if (vertices[i].x < minX) minX = vertices[i].x;
+    if (vertices[i].x > maxX) maxX = vertices[i].x;
+    if (vertices[i].y < minY) minY = vertices[i].y;
+    if (vertices[i].y > maxY) maxY = vertices[i].y;
+  }
+  outBox->min.x = minX;
+  outBox->min.y = minY;
+  outBox->max.x = maxX;
+  outBox->max.y = maxY;
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_IMPLEMENT(LIB_PREFIX(GEOMETRY_MOD));

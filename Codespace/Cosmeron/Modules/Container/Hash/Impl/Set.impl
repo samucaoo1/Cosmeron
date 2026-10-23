@@ -1,0 +1,248 @@
+#pragma once
+
+#define COSMERON_MACRO_INTERNAL_HASH_SET_IMPLEMENT_INIT(KEY_SUFFIX)           \
+  HASH_SET_INIT_PROTOTYPE(KEY_SUFFIX) {                                        \
+    void *storage = NULL;                                                      \
+    OPSTATUS status;                                                           \
+    if (!set)                                                                  \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    set->buckets = NULL;                                                       \
+    set->capacity = 0;                                                         \
+    set->size = 0;                                                             \
+    set->deleted = 0;                                                          \
+    status = ALLOC_FUNC(AllocArray)(                                           \
+        &storage, COSMERON_MACRO_INTERNAL_HASH_INITIAL_CAPACITY,               \
+        sizeof(THASH_SET_BUCKET_TYPE(KEY_SUFFIX)));                            \
+    if (status != STATUS_CONST(SUCCESS))                                       \
+      return status;                                                           \
+    set->buckets =                                                             \
+        (THASH_SET_BUCKET_TYPE(KEY_SUFFIX) *)storage;                          \
+    memset(set->buckets, 0,                                                    \
+           COSMERON_MACRO_INTERNAL_HASH_INITIAL_CAPACITY *                     \
+               sizeof(THASH_SET_BUCKET_TYPE(KEY_SUFFIX)));                     \
+    set->capacity = COSMERON_MACRO_INTERNAL_HASH_INITIAL_CAPACITY;             \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_HASH_SET_IMPLEMENT_DESTROY(KEY_SUFFIX)        \
+  HASH_SET_DESTROY_PROTOTYPE(KEY_SUFFIX) {                                     \
+    if (!set)                                                                  \
+      return;                                                                  \
+    Memory_Free(set->buckets);                                                 \
+    set->capacity = 0;                                                         \
+    set->size = 0;                                                             \
+    set->deleted = 0;                                                          \
+  }
+
+#define COSMERON_MACRO_INTERNAL_HASH_SET_IMPLEMENT_REHASH(KEY_TYPE, KEY_SUFFIX, \
+                                                         HASH_FUNCTION,        \
+                                                         EQUAL_FUNCTION)       \
+  HASH_SET_REHASH_PROTOTYPE(KEY_SUFFIX) {                                      \
+    THASH_SET_BUCKET_TYPE(KEY_SUFFIX) *oldBuckets;                             \
+    size_t oldCapacity;                                                        \
+    size_t i;                                                                  \
+    void *storage = NULL;                                                      \
+    OPSTATUS status;                                                           \
+    (void)sizeof(KEY_TYPE);                                                    \
+    if (!set || newCapacity == 0)                                              \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (newCapacity < set->size)                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    status = ALLOC_FUNC(AllocArray)(                                           \
+        &storage, newCapacity,                                                 \
+        sizeof(THASH_SET_BUCKET_TYPE(KEY_SUFFIX)));                            \
+    if (status != STATUS_CONST(SUCCESS))                                       \
+      return status;                                                           \
+    memset(storage, 0,                                                         \
+           newCapacity * sizeof(THASH_SET_BUCKET_TYPE(KEY_SUFFIX)));           \
+    oldBuckets = set->buckets;                                                 \
+    oldCapacity = set->capacity;                                               \
+    set->buckets =                                                             \
+        (THASH_SET_BUCKET_TYPE(KEY_SUFFIX) *)storage;                          \
+    set->capacity = newCapacity;                                               \
+    set->size = 0;                                                             \
+    set->deleted = 0;                                                          \
+    for (i = 0; i < oldCapacity; ++i) {                                        \
+      if (oldBuckets[i].state == HASH_CONST(BUCKET_OCCUPIED)) {                 \
+        size_t start = (size_t)(HASH_FUNCTION(oldBuckets[i].key)) %            \
+                       set->capacity;                                          \
+        size_t probe;                                                          \
+        for (probe = 0; probe < set->capacity; ++probe) {                      \
+          THASH_SET_BUCKET_TYPE(KEY_SUFFIX) *bucket =                          \
+              &set->buckets[(start + probe) % set->capacity];                  \
+          if (bucket->state != HASH_CONST(BUCKET_OCCUPIED)) {                  \
+            *bucket = oldBuckets[i];                                           \
+            bucket->state = HASH_CONST(BUCKET_OCCUPIED);                       \
+            ++set->size;                                                       \
+            break;                                                             \
+          }                                                                    \
+        }                                                                      \
+      }                                                                        \
+    }                                                                          \
+    Memory_Free(oldBuckets);                                                   \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_HASH_SET_INTERNAL_FIND_BUCKET(                 \
+    KEY_TYPE, KEY_SUFFIX, HASH_FUNCTION, EQUAL_FUNCTION)                       \
+  static inline const THASH_SET_BUCKET_TYPE(KEY_SUFFIX) *                      \
+  HASH_SET_OPERATION(KEY_SUFFIX, InternalFindBucket)(                          \
+      const THASH_SET_TYPE(KEY_SUFFIX) *set, KEY_TYPE key) {                  \
+    size_t start;                                                              \
+    size_t i;                                                                  \
+    if (!set || !set->buckets || set->capacity == 0)                           \
+      return NULL;                                                             \
+    start = (size_t)(HASH_FUNCTION(key)) % set->capacity;                     \
+    for (i = 0; i < set->capacity; ++i) {                                      \
+      const THASH_SET_BUCKET_TYPE(KEY_SUFFIX) *bucket =                        \
+          &set->buckets[(start + i) % set->capacity];                          \
+      if (bucket->state == HASH_CONST(BUCKET_EMPTY))                           \
+        return NULL;                                                           \
+      if (bucket->state == HASH_CONST(BUCKET_OCCUPIED) &&                      \
+          EQUAL_FUNCTION(bucket->key, key))                                    \
+        return bucket;                                                         \
+    }                                                                          \
+    return NULL;                                                               \
+  }
+
+#define COSMERON_MACRO_INTERNAL_HASH_SET_IMPLEMENT_CONTAINS(                  \
+    KEY_TYPE, KEY_SUFFIX, HASH_FUNCTION, EQUAL_FUNCTION)                       \
+  COSMERON_MACRO_INTERNAL_HASH_SET_INTERNAL_FIND_BUCKET(                       \
+      KEY_TYPE, KEY_SUFFIX, HASH_FUNCTION, EQUAL_FUNCTION)                     \
+  HASH_SET_CONTAINS_PROTOTYPE(KEY_TYPE, KEY_SUFFIX) {                          \
+    return HASH_SET_OPERATION(KEY_SUFFIX, InternalFindBucket)(set, key) !=     \
+           NULL;                                                               \
+  }
+
+#define COSMERON_MACRO_INTERNAL_HASH_SET_IMPLEMENT_INSERT(KEY_TYPE,           \
+                                                         KEY_SUFFIX,           \
+                                                         HASH_FUNCTION,        \
+                                                         EQUAL_FUNCTION)       \
+  HASH_SET_INSERT_PROTOTYPE(KEY_TYPE, KEY_SUFFIX) {                            \
+    size_t start;                                                              \
+    size_t i;                                                                  \
+    size_t firstDeleted = SIZE_MAX;                                            \
+    OPSTATUS status;                                                           \
+    if (!set)                                                                  \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (set->capacity == 0) {                                                  \
+      status = HASH_SET_OPERATION(KEY_SUFFIX, Init)(set);                      \
+      if (status != STATUS_CONST(SUCCESS))                                     \
+        return status;                                                         \
+    }                                                                          \
+    if ((set->size + set->deleted + 1u) * 100u >                               \
+        set->capacity * COSMERON_MACRO_INTERNAL_HASH_LOAD_PERCENT) {           \
+      if (set->capacity > SIZE_MAX / 2u)                                       \
+        return STATUS_CONST(ARITHMETIC_OVERFLOW);                              \
+      status = HASH_SET_OPERATION(KEY_SUFFIX, Rehash)(set, set->capacity * 2u);\
+      if (status != STATUS_CONST(SUCCESS))                                     \
+        return status;                                                         \
+    }                                                                          \
+    start = (size_t)(HASH_FUNCTION(key)) % set->capacity;                     \
+    for (i = 0; i < set->capacity; ++i) {                                      \
+      size_t index = (start + i) % set->capacity;                              \
+      THASH_SET_BUCKET_TYPE(KEY_SUFFIX) *bucket = &set->buckets[index];        \
+      if (bucket->state == HASH_CONST(BUCKET_OCCUPIED)) {                      \
+        if (EQUAL_FUNCTION(bucket->key, key)) {                                \
+          return STATUS_CONST(SUCCESS);                                        \
+        }                                                                      \
+        continue;                                                              \
+      }                                                                        \
+      if (bucket->state == HASH_CONST(BUCKET_DELETED)) {                       \
+        if (firstDeleted == SIZE_MAX)                                          \
+          firstDeleted = index;                                                \
+        continue;                                                              \
+      }                                                                        \
+      if (firstDeleted != SIZE_MAX)                                            \
+        bucket = &set->buckets[firstDeleted];                                  \
+      bucket->key = key;                                                       \
+      if (bucket->state == HASH_CONST(BUCKET_DELETED))                         \
+        --set->deleted;                                                        \
+      bucket->state = HASH_CONST(BUCKET_OCCUPIED);                             \
+      ++set->size;                                                             \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    if (firstDeleted != SIZE_MAX) {                                            \
+      THASH_SET_BUCKET_TYPE(KEY_SUFFIX) *bucket =                              \
+          &set->buckets[firstDeleted];                                         \
+      bucket->key = key;                                                       \
+      bucket->state = HASH_CONST(BUCKET_OCCUPIED);                             \
+      --set->deleted;                                                          \
+      ++set->size;                                                             \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    return STATUS_CONST(GENERIC_ERROR);                                        \
+  }
+
+#define COSMERON_MACRO_INTERNAL_HASH_SET_IMPLEMENT_REMOVE(KEY_TYPE,           \
+                                                         KEY_SUFFIX,           \
+                                                         HASH_FUNCTION,        \
+                                                         EQUAL_FUNCTION)       \
+  HASH_SET_REMOVE_PROTOTYPE(KEY_TYPE, KEY_SUFFIX) {                            \
+    size_t start;                                                              \
+    size_t i;                                                                  \
+    if (!set || !set->buckets || set->capacity == 0)                           \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    start = (size_t)(HASH_FUNCTION(key)) % set->capacity;                     \
+    for (i = 0; i < set->capacity; ++i) {                                      \
+      THASH_SET_BUCKET_TYPE(KEY_SUFFIX) *bucket =                              \
+          &set->buckets[(start + i) % set->capacity];                          \
+      if (bucket->state == HASH_CONST(BUCKET_EMPTY))                           \
+        return STATUS_CONST(NOT_FOUND);                                        \
+      if (bucket->state == HASH_CONST(BUCKET_OCCUPIED) &&                      \
+          EQUAL_FUNCTION(bucket->key, key)) {                                  \
+        bucket->state = HASH_CONST(BUCKET_DELETED);                            \
+        --set->size;                                                           \
+        ++set->deleted;                                                        \
+        return STATUS_CONST(SUCCESS);                                          \
+      }                                                                        \
+    }                                                                          \
+    return STATUS_CONST(NOT_FOUND);                                            \
+  }
+
+#define COSMERON_MACRO_INTERNAL_HASH_SET_IMPLEMENT_CLEAR(KEY_SUFFIX)          \
+  HASH_SET_CLEAR_PROTOTYPE(KEY_SUFFIX) {                                       \
+    if (!set || !set->buckets)                                                 \
+      return;                                                                  \
+    memset(set->buckets, 0,                                                    \
+           set->capacity * sizeof(THASH_SET_BUCKET_TYPE(KEY_SUFFIX)));         \
+    set->size = 0;                                                             \
+    set->deleted = 0;                                                          \
+  }
+
+#define COSMERON_MACRO_INTERNAL_HASH_SET_IMPLEMENT_IS_EMPTY(KEY_SUFFIX)       \
+  HASH_SET_IS_EMPTY_PROTOTYPE(KEY_SUFFIX) {                                    \
+    return !set || set->size == 0;                                             \
+  }
+
+#define COSMERON_MACRO_INTERNAL_HASH_SET_IMPLEMENT_SIZE(KEY_SUFFIX)           \
+  HASH_SET_SIZE_PROTOTYPE(KEY_SUFFIX) {                                        \
+    return set ? set->size : 0;                                                \
+  }
+
+#define COSMERON_MACRO_INTERNAL_HASH_SET_IMPLEMENT_CAPACITY(KEY_SUFFIX)       \
+  HASH_SET_CAPACITY_PROTOTYPE(KEY_SUFFIX) {                                    \
+    return set ? set->capacity : 0;                                            \
+  }
+
+#define COSMERON_MACRO_INTERNAL_HASH_SET_IMPLEMENT(KEY_TYPE, KEY_SUFFIX,      \
+                                                   HASH_FUNCTION,              \
+                                                   EQUAL_FUNCTION)             \
+  COSMERON_MACRO_INTERNAL_HASH_SET_IMPLEMENT_INIT(KEY_SUFFIX)                  \
+  COSMERON_MACRO_INTERNAL_HASH_SET_IMPLEMENT_DESTROY(KEY_SUFFIX)               \
+  COSMERON_MACRO_INTERNAL_HASH_SET_IMPLEMENT_REHASH(KEY_TYPE, KEY_SUFFIX,       \
+                                                    HASH_FUNCTION,             \
+                                                    EQUAL_FUNCTION)            \
+  COSMERON_MACRO_INTERNAL_HASH_SET_IMPLEMENT_CONTAINS(KEY_TYPE, KEY_SUFFIX,    \
+                                                      HASH_FUNCTION,           \
+                                                      EQUAL_FUNCTION)          \
+  COSMERON_MACRO_INTERNAL_HASH_SET_IMPLEMENT_INSERT(KEY_TYPE, KEY_SUFFIX,      \
+                                                    HASH_FUNCTION,             \
+                                                    EQUAL_FUNCTION)            \
+  COSMERON_MACRO_INTERNAL_HASH_SET_IMPLEMENT_REMOVE(KEY_TYPE, KEY_SUFFIX,      \
+                                                    HASH_FUNCTION,             \
+                                                    EQUAL_FUNCTION)            \
+  COSMERON_MACRO_INTERNAL_HASH_SET_IMPLEMENT_CLEAR(KEY_SUFFIX)                 \
+  COSMERON_MACRO_INTERNAL_HASH_SET_IMPLEMENT_IS_EMPTY(KEY_SUFFIX)              \
+  COSMERON_MACRO_INTERNAL_HASH_SET_IMPLEMENT_SIZE(KEY_SUFFIX)                  \
+  COSMERON_MACRO_INTERNAL_HASH_SET_IMPLEMENT_CAPACITY(KEY_SUFFIX)

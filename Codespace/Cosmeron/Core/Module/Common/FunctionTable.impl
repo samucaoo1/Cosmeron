@@ -1,0 +1,42 @@
+#pragma once
+
+#include "Tuple.impl"
+
+/* ============================================================
+ * FunctionTable Generator Engine
+ * Generates FunctionTable struct, designated initializer,
+ * and singleton table accessor GetFunctionTable().
+ * ============================================================ */
+
+/* ------------------------------------------------------------
+ * 1. Object FunctionTable Generators
+ * ------------------------------------------------------------ */
+
+#define COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_I(CLASS, C, I, R, N, P, B) \
+  R (*N) COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(CLASS, C, P);
+
+#define COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD(CLASS, M) \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_I, CLASS, M)
+
+#define COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_I(CLASS, C, I, R, N, P, B) \
+  .N = GNS2(CLASS, N),
+
+#define COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY(CLASS, M) \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_I, CLASS, M)
+
+/* ------------------------------------------------------------
+ * 2. Package FunctionTable Generators
+ * ------------------------------------------------------------ */
+
+#define COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_I(PKG, C, I, R, N, P, B) \
+  R (*N) COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P);
+
+#define COSMERON_MACRO_INTERNAL_PKG_FT_FIELD(PKG, M) \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_I, PKG, M)
+
+#define COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_I(PKG, C, I, R, N, P, B) \
+  .N = GNS2(PKG, N),
+
+#define COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY(PKG, M) \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_I, PKG, M)
+/* EOF */

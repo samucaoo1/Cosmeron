@@ -151,3 +151,5 @@ HASH_MAP_IMPLEMENT_ALL(const char *, cstring, int, int, HASH_CSTRING,
                 HASH_EQUAL_CSTRING)
 HASH_MAP_IMPLEMENT_ALL(const char *, cstring, void *, ptr, HASH_CSTRING,
                 HASH_EQUAL_CSTRING)
+
+#include "Set.h"

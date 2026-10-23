@@ -1,0 +1,136 @@
+#pragma once
+#include <stdlib.h>
+#include <string.h>
+
+OBJECT_PROTOTYPEEX(TPalette, Create, (size_t capacity)) {
+  if (!self || capacity == 0) return STATUS_CONST(INVALID_ARGUMENT);
+  self->colors = (uint32_t *)malloc(capacity * sizeof(uint32_t));
+  if (!self->colors) return STATUS_CONST(INSUFFICIENT_SPACE);
+  self->capacity = capacity;
+  self->count = 0;
+  self->owns = true;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TPalette, Destroy, ()) {
+  if (!self) return;
+  if (self->owns && self->colors) {
+    free(self->colors);
+    self->colors = NULL;
+  }
+  self->count = 0;
+  self->capacity = 0;
+  self->owns = false;
+}
+
+OBJECT_PROTOTYPEEX(TPalette, SetColor, (size_t index, uint32_t color)) {
+  if (!self || !self->colors || index >= self->capacity)
+    return STATUS_CONST(OUT_OF_RANGE);
+  self->colors[index] = color;
+  if (index >= self->count)
+    self->count = index + 1;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TPalette, GetColor, (size_t index, uint32_t *outColor)) {
+  if (!self || !self->colors || index >= self->count || !outColor)
+    return STATUS_CONST(OUT_OF_RANGE);
+  *outColor = self->colors[index];
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TPalette, AddColor, (uint32_t color, size_t *outIndex)) {
+  if (!self || !self->colors) return STATUS_CONST(INVALID_ARGUMENT);
+  if (self->count >= self->capacity) return STATUS_CONST(INSUFFICIENT_SPACE);
+  size_t idx = self->count;
+  self->colors[idx] = color;
+  self->count++;
+  if (outIndex) *outIndex = idx;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TPalette, FindNearest, (uint32_t color, size_t *outIndex)) {
+  if (!self || !self->colors || self->count == 0 || !outIndex)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  int32_t r = (int32_t)((color >> 16) & 0xFF);
+  int32_t g = (int32_t)((color >> 8) & 0xFF);
+  int32_t b = (int32_t)(color & 0xFF);
+
+  int64_t bestDist = INT64_MAX;
+  size_t bestIdx = 0;
+
+  for (size_t i = 0; i < self->count; i++) {
+    uint32_t c = self->colors[i];
+    int32_t cr = (int32_t)((c >> 16) & 0xFF);
+    int32_t cg = (int32_t)((c >> 8) & 0xFF);
+    int32_t cb = (int32_t)(c & 0xFF);
+
+    int64_t dr = r - cr;
+    int64_t dg = g - cg;
+    int64_t db = b - cb;
+    int64_t dist = dr * dr + dg * dg + db * db;
+
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestIdx = i;
+      if (dist == 0) break;
+    }
+  }
+
+  *outIndex = bestIdx;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TPalette, LoadANSI16, ()) {
+  static const uint32_t ansi16[16] = {
+    0xFF000000, 0xFF800000, 0xFF008000, 0xFF808000,
+    0xFF000080, 0xFF800080, 0xFF008080, 0xFFC0C0C0,
+    0xFF808080, 0xFFFF0000, 0xFF00FF00, 0xFFFFFF00,
+    0xFF0000FF, 0xFFFF00FF, 0xFF00FFFF, 0xFFFFFFFF
+  };
+  if (!self || self->capacity < 16) return STATUS_CONST(INSUFFICIENT_SPACE);
+  memcpy(self->colors, ansi16, sizeof(ansi16));
+  if (self->count < 16) self->count = 16;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TPalette, LoadXTerm256, ()) {
+  if (!self || self->capacity < 256) return STATUS_CONST(INSUFFICIENT_SPACE);
+  (void)TPalette_LoadANSI16(self);
+
+  static const uint8_t cubeSteps[6] = {0, 95, 135, 175, 215, 255};
+  size_t idx = 16;
+
+  /* 216-color 6x6x6 color cube */
+  for (int r = 0; r < 6; r++) {
+    for (int g = 0; g < 6; g++) {
+      for (int b = 0; b < 6; b++) {
+        uint32_t color = 0xFF000000 |
+                         ((uint32_t)cubeSteps[r] << 16) |
+                         ((uint32_t)cubeSteps[g] << 8) |
+                         (uint32_t)cubeSteps[b];
+        self->colors[idx++] = color;
+      }
+    }
+  }
+
+  /* 24 grayscale shades */
+  for (int i = 0; i < 24; i++) {
+    uint8_t gray = (uint8_t)(8 + i * 10);
+    uint32_t color = 0xFF000000 |
+                     ((uint32_t)gray << 16) |
+                     ((uint32_t)gray << 8) |
+                     (uint32_t)gray;
+    self->colors[idx++] = color;
+  }
+
+  self->count = 256;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TPalette, Count, ()) {
+  return self ? self->count : 0;
+}
+
+OBJECT_IMPLEMENT(TPalette);

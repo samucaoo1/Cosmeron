@@ -1,0 +1,306 @@
+#pragma once
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <string.h>
+
+#define COSMERON_MACRO_INTERNAL_FLAT_RING_IMPLEMENT(TYPE, SUFFIX)              \
+  FLAT_RING_INIT_PROTOTYPE(TYPE, SUFFIX) {                                     \
+    if (!ring)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (capacity > 0U && !buffer)                                              \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    ring->data = buffer;                                                       \
+    ring->capacity = capacity;                                                 \
+    ring->head = 0U;                                                           \
+    ring->tail = 0U;                                                           \
+    ring->size = 0U;                                                           \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  FLAT_RING_DESTROY_PROTOTYPE(SUFFIX) {                                        \
+    if (!ring)                                                                 \
+      return;                                                                  \
+    ring->data = NULL;                                                         \
+    ring->capacity = 0U;                                                       \
+    ring->head = 0U;                                                           \
+    ring->tail = 0U;                                                           \
+    ring->size = 0U;                                                           \
+  }                                                                            \
+                                                                               \
+  FLAT_RING_CLEAR_PROTOTYPE(SUFFIX) {                                          \
+    if (!ring)                                                                 \
+      return;                                                                  \
+    ring->head = 0U;                                                           \
+    ring->tail = 0U;                                                           \
+    ring->size = 0U;                                                           \
+  }                                                                            \
+                                                                               \
+  FLAT_RING_PUSH_PROTOTYPE(TYPE, SUFFIX) {                                     \
+    if (!ring || !ring->data)                                                  \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (ring->size >= ring->capacity)                                          \
+      return STATUS_CONST(INSUFFICIENT_SPACE);                                 \
+    ring->data[ring->tail] = value;                                            \
+    ring->tail = (ring->tail + 1U < ring->capacity) ? (ring->tail + 1U) : 0U;  \
+    ring->size++;                                                              \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  FLAT_RING_POP_PROTOTYPE(TYPE, SUFFIX) {                                      \
+    if (!ring || !ring->data || !outValue)                                     \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (ring->size == 0U)                                                      \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *outValue = ring->data[ring->head];                                        \
+    ring->head = (ring->head + 1U < ring->capacity) ? (ring->head + 1U) : 0U;  \
+    ring->size--;                                                              \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  FLAT_RING_PEEK_PROTOTYPE(TYPE, SUFFIX) {                                     \
+    if (!ring || !ring->data || !outValue)                                     \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (ring->size == 0U)                                                      \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *outValue = ring->data[ring->head];                                        \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  FLAT_RING_OVERWRITE_PROTOTYPE(TYPE, SUFFIX) {                                \
+    if (!ring || !ring->data)                                                  \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (ring->capacity == 0U)                                                  \
+      return STATUS_CONST(INSUFFICIENT_SPACE);                                 \
+    if (ring->size >= ring->capacity) {                                        \
+      if (outDropped)                                                          \
+        *outDropped = ring->data[ring->head];                                  \
+      ring->head =                                                             \
+          (ring->head + 1U < ring->capacity) ? (ring->head + 1U) : 0U;         \
+      ring->data[ring->tail] = value;                                          \
+      ring->tail =                                                             \
+          (ring->tail + 1U < ring->capacity) ? (ring->tail + 1U) : 0U;         \
+    } else {                                                                   \
+      ring->data[ring->tail] = value;                                          \
+      ring->tail =                                                             \
+          (ring->tail + 1U < ring->capacity) ? (ring->tail + 1U) : 0U;         \
+      ring->size++;                                                            \
+    }                                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  FLAT_RING_FRONT_PROTOTYPE(TYPE, SUFFIX) {                                    \
+    if (!ring || !ring->data || !out)                                          \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (ring->size == 0U)                                                      \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *out = &ring->data[ring->head];                                            \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  FLAT_RING_BACK_PROTOTYPE(TYPE, SUFFIX) {                                     \
+    if (!ring || !ring->data || !out)                                          \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (ring->size == 0U)                                                      \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    size_t lastIdx =                                                           \
+        (ring->tail == 0U) ? (ring->capacity - 1U) : (ring->tail - 1U);        \
+    *out = &ring->data[lastIdx];                                               \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  FLAT_RING_AT_PROTOTYPE(TYPE, SUFFIX) {                                       \
+    if (!ring || !ring->data || !out)                                          \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (index >= ring->size)                                                   \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    size_t targetIdx = ring->head + index;                                     \
+    if (targetIdx >= ring->capacity)                                           \
+      targetIdx -= ring->capacity;                                             \
+    *out = &ring->data[targetIdx];                                             \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  FLAT_RING_EMPTY_PROTOTYPE(SUFFIX) {                                          \
+    return (!ring || ring->size == 0U);                                        \
+  }                                                                            \
+                                                                               \
+  FLAT_RING_FULL_PROTOTYPE(SUFFIX) {                                           \
+    return (ring != NULL && ring->capacity > 0U &&                             \
+            ring->size >= ring->capacity);                                     \
+  }                                                                            \
+                                                                               \
+  FLAT_RING_SIZE_PROTOTYPE(SUFFIX) {                                           \
+    return ring ? ring->size : 0U;                                             \
+  }                                                                            \
+                                                                               \
+  FLAT_RING_CAPACITY_PROTOTYPE(SUFFIX) {                                       \
+    return ring ? ring->capacity : 0U;                                         \
+  }                                                                            \
+                                                                               \
+  FLAT_RING_AVAILABLE_PROTOTYPE(SUFFIX) {                                      \
+    return (ring && ring->capacity >= ring->size)                              \
+               ? (ring->capacity - ring->size)                                 \
+               : 0U;                                                           \
+  }                                                                            \
+                                                                               \
+  FLAT_RING_WRITE_PROTOTYPE(TYPE, SUFFIX) {                                    \
+    if (!ring || !ring->data || (!items && count > 0U))                        \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    size_t available = (ring->capacity >= ring->size)                          \
+                           ? (ring->capacity - ring->size)                     \
+                           : 0U;                                               \
+    if (outWritten) {                                                          \
+      size_t toWrite = (count < available) ? count : available;                \
+      if (toWrite > 0U) {                                                      \
+        size_t firstChunk = ring->capacity - ring->tail;                       \
+        if (firstChunk > toWrite)                                              \
+          firstChunk = toWrite;                                                \
+        memcpy(&ring->data[ring->tail], items, firstChunk * sizeof(TYPE));     \
+        size_t secondChunk = toWrite - firstChunk;                             \
+        if (secondChunk > 0U) {                                                \
+          memcpy(&ring->data[0U], items + firstChunk,                          \
+                 secondChunk * sizeof(TYPE));                                  \
+          ring->tail = secondChunk;                                            \
+        } else {                                                               \
+          ring->tail = (ring->tail + firstChunk < ring->capacity)               \
+                           ? (ring->tail + firstChunk)                         \
+                           : 0U;                                               \
+        }                                                                      \
+        ring->size += toWrite;                                                 \
+      }                                                                        \
+      *outWritten = toWrite;                                                   \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    if (count > available)                                                     \
+      return STATUS_CONST(INSUFFICIENT_SPACE);                                 \
+    if (count > 0U) {                                                          \
+      size_t firstChunk = ring->capacity - ring->tail;                         \
+      if (firstChunk > count)                                                  \
+        firstChunk = count;                                                    \
+      memcpy(&ring->data[ring->tail], items, firstChunk * sizeof(TYPE));       \
+      size_t secondChunk = count - firstChunk;                                 \
+      if (secondChunk > 0U) {                                                  \
+        memcpy(&ring->data[0U], items + firstChunk,                            \
+               secondChunk * sizeof(TYPE));                                    \
+        ring->tail = secondChunk;                                              \
+      } else {                                                                 \
+        ring->tail = (ring->tail + firstChunk < ring->capacity)                 \
+                         ? (ring->tail + firstChunk)                           \
+                         : 0U;                                                 \
+      }                                                                        \
+      ring->size += count;                                                     \
+    }                                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  FLAT_RING_READ_PROTOTYPE(TYPE, SUFFIX) {                                     \
+    if (!ring || !ring->data || (!dest && count > 0U))                         \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (outRead) {                                                             \
+      size_t toRead = (count < ring->size) ? count : ring->size;               \
+      if (toRead > 0U) {                                                       \
+        size_t firstChunk = ring->capacity - ring->head;                       \
+        if (firstChunk > toRead)                                               \
+          firstChunk = toRead;                                                 \
+        memcpy(dest, &ring->data[ring->head], firstChunk * sizeof(TYPE));      \
+        size_t secondChunk = toRead - firstChunk;                              \
+        if (secondChunk > 0U) {                                                \
+          memcpy(dest + firstChunk, &ring->data[0U],                           \
+                 secondChunk * sizeof(TYPE));                                  \
+          ring->head = secondChunk;                                            \
+        } else {                                                               \
+          ring->head = (ring->head + firstChunk < ring->capacity)               \
+                           ? (ring->head + firstChunk)                         \
+                           : 0U;                                               \
+        }                                                                      \
+        ring->size -= toRead;                                                  \
+      }                                                                        \
+      *outRead = toRead;                                                       \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    if (count > ring->size)                                                    \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    if (count > 0U) {                                                          \
+      size_t firstChunk = ring->capacity - ring->head;                         \
+      if (firstChunk > count)                                                  \
+        firstChunk = count;                                                    \
+      memcpy(dest, &ring->data[ring->head], firstChunk * sizeof(TYPE));        \
+      size_t secondChunk = count - firstChunk;                                 \
+      if (secondChunk > 0U) {                                                  \
+        memcpy(dest + firstChunk, &ring->data[0U],                             \
+               secondChunk * sizeof(TYPE));                                    \
+        ring->head = secondChunk;                                              \
+      } else {                                                                 \
+        ring->head = (ring->head + firstChunk < ring->capacity)                 \
+                         ? (ring->head + firstChunk)                           \
+                         : 0U;                                                 \
+      }                                                                        \
+      ring->size -= count;                                                     \
+    }                                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  FLAT_RING_GET_READ_SPAN_PROTOTYPE(TYPE, SUFFIX) {                            \
+    if (!ring || !ring->data || !outPtr || !outCount)                          \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (ring->size == 0U) {                                                    \
+      *outPtr = NULL;                                                          \
+      *outCount = 0U;                                                          \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    size_t contiguous = ring->capacity - ring->head;                           \
+    if (contiguous > ring->size)                                               \
+      contiguous = ring->size;                                                 \
+    *outPtr = &ring->data[ring->head];                                         \
+    *outCount = contiguous;                                                    \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  FLAT_RING_ADVANCE_READ_PROTOTYPE(SUFFIX) {                                   \
+    if (!ring)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (count > ring->size)                                                    \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    size_t nextHead = ring->head + count;                                      \
+    if (nextHead >= ring->capacity && ring->capacity > 0U)                     \
+      nextHead %= ring->capacity;                                              \
+    ring->head = nextHead;                                                     \
+    ring->size -= count;                                                       \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  FLAT_RING_GET_WRITE_SPAN_PROTOTYPE(TYPE, SUFFIX) {                           \
+    if (!ring || !ring->data || !outPtr || !outCount)                          \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    size_t available = (ring->capacity >= ring->size)                          \
+                           ? (ring->capacity - ring->size)                     \
+                           : 0U;                                               \
+    if (available == 0U) {                                                     \
+      *outPtr = NULL;                                                          \
+      *outCount = 0U;                                                          \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    size_t contiguous = ring->capacity - ring->tail;                           \
+    if (contiguous > available)                                                \
+      contiguous = available;                                                  \
+    *outPtr = &ring->data[ring->tail];                                         \
+    *outCount = contiguous;                                                    \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  FLAT_RING_ADVANCE_WRITE_PROTOTYPE(SUFFIX) {                                  \
+    if (!ring)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    size_t available = (ring->capacity >= ring->size)                          \
+                           ? (ring->capacity - ring->size)                     \
+                           : 0U;                                               \
+    if (count > available)                                                     \
+      return STATUS_CONST(INSUFFICIENT_SPACE);                                 \
+    size_t nextTail = ring->tail + count;                                      \
+    if (nextTail >= ring->capacity && ring->capacity > 0U)                     \
+      nextTail %= ring->capacity;                                              \
+    ring->tail = nextTail;                                                     \
+    ring->size += count;                                                       \
+    return STATUS_CONST(SUCCESS);                                              \
+  }

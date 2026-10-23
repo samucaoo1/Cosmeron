@@ -137,4 +137,12 @@
 #define PP_INTERNAL_XOR_01 1
 #define PP_INTERNAL_XOR_10 1
 #define PP_INTERNAL_XOR_11 0
+
+/* Direct boolean branch (0 or 1) */
+#define PP_IIF(c, t, f) PP_OP_CAT2(PP_INTERNAL_IIF_, c)(t, f)
+#define PP_INTERNAL_IIF_0(t, f) f
+#define PP_INTERNAL_IIF_1(t, f) t
+
+/* Evaluated branch converting condition to 0 or 1 */
+#define PP_IF(cond, t, f) PP_IIF(PP_BOOL(cond), t, f)
 /* EOF */

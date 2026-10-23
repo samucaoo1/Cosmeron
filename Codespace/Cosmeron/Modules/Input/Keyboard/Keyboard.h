@@ -1,9 +1,28 @@
 #pragma once
 
+#include "../../../Core/Module/Package.h"
 #include "../Input.space"
 #include "../Internal/Core.inc"
 
+#if defined(INPUT_DISABLE_FUNCTION_TABLE) ||                                    \
+    defined(INPUT_KEYBOARD_DISABLE_FUNCTION_TABLE)
+#ifndef PACKAGE_DISABLE_FUNCTION_TABLE
+#define PACKAGE_DISABLE_FUNCTION_TABLE
+#endif
+#endif
+
 /* Keyboard queries read the shared snapshot. Unknown keys return false. */
+
+PACKAGE(INPUT_NS(Keyboard),
+    FUNCTION(bool, IsDown, (INPUT_TYPE(Key) key)),
+    FUNCTION(bool, IsPressed, (INPUT_TYPE(Key) key)),
+    FUNCTION(bool, IsReleased, (INPUT_TYPE(Key) key)),
+    FUNCTION(bool, IsRepeated, (INPUT_TYPE(Key) key)),
+    FUNCTION(INPUT_TYPE(Modifiers), GetModifiers, ()),
+    FUNCTION(bool, IsPhysicalDown, (INPUT_TYPE(Key) key)),
+    FUNCTION(bool, IsPhysicalPressed, (INPUT_TYPE(Key) key)),
+    FUNCTION(bool, IsPhysicalReleased, (INPUT_TYPE(Key) key))
+);
 
 /* Read the current held state; does not consume input. */
 #define INPUT_KEYBOARD_IS_DOWN_PROTOTYPE \

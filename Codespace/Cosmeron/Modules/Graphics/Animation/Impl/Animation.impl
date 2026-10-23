@@ -1,0 +1,176 @@
+#pragma once
+#include <math.h>
+
+#ifndef ANIMATION_PI
+#define ANIMATION_PI 3.14159265358979323846f
+#endif
+
+static inline float ANIMATION_INS(OutBounce)(float t) {
+  const float n1 = 7.5625f;
+  const float d1 = 2.75f;
+  if (t < 1.0f / d1) {
+    return n1 * t * t;
+  } else if (t < 2.0f / d1) {
+    t -= 1.5f / d1;
+    return n1 * t * t + 0.75f;
+  } else if (t < 2.5f / d1) {
+    t -= 2.25f / d1;
+    return n1 * t * t + 0.9375f;
+  } else {
+    t -= 2.625f / d1;
+    return n1 * t * t + 0.984375f;
+  }
+}
+
+static inline float ANIMATION_INS(OutElastic)(float t) {
+  if (t <= 0.0f) return 0.0f;
+  if (t >= 1.0f) return 1.0f;
+  const float c4 = (2.0f * ANIMATION_PI) / 3.0f;
+  return powf(2.0f, -10.0f * t) * sinf((t * 10.0f - 0.75f) * c4) + 1.0f;
+}
+
+ANIMATION_EASE_PROTOTYPE {
+  if (t <= 0.0f) return 0.0f;
+  if (t >= 1.0f) return 1.0f;
+
+  switch (easing) {
+    case ANIMATION_CONST(EASING_IN_QUAD):
+      return t * t;
+    case ANIMATION_CONST(EASING_OUT_QUAD):
+      return 1.0f - (1.0f - t) * (1.0f - t);
+    case ANIMATION_CONST(EASING_IN_OUT_QUAD):
+      return t < 0.5f ? 2.0f * t * t : 1.0f - powf(-2.0f * t + 2.0f, 2.0f) * 0.5f;
+    case ANIMATION_CONST(EASING_IN_CUBIC):
+      return t * t * t;
+    case ANIMATION_CONST(EASING_OUT_CUBIC):
+      return 1.0f - powf(1.0f - t, 3.0f);
+    case ANIMATION_CONST(EASING_IN_OUT_CUBIC):
+      return t < 0.5f ? 4.0f * t * t * t : 1.0f - powf(-2.0f * t + 2.0f, 3.0f) * 0.5f;
+    case ANIMATION_CONST(EASING_IN_SINE):
+      return 1.0f - cosf((t * ANIMATION_PI) * 0.5f);
+    case ANIMATION_CONST(EASING_OUT_SINE):
+      return sinf((t * ANIMATION_PI) * 0.5f);
+    case ANIMATION_CONST(EASING_IN_OUT_SINE):
+      return -(cosf(ANIMATION_PI * t) - 1.0f) * 0.5f;
+    case ANIMATION_CONST(EASING_OUT_BOUNCE):
+      return ANIMATION_INS(OutBounce)(t);
+    case ANIMATION_CONST(EASING_IN_BOUNCE):
+      return 1.0f - ANIMATION_INS(OutBounce)(1.0f - t);
+    case ANIMATION_CONST(EASING_IN_OUT_BOUNCE):
+      return t < 0.5f ? (1.0f - ANIMATION_INS(OutBounce)(1.0f - 2.0f * t)) * 0.5f
+                      : (1.0f + ANIMATION_INS(OutBounce)(2.0f * t - 1.0f)) * 0.5f;
+    case ANIMATION_CONST(EASING_OUT_ELASTIC):
+      return ANIMATION_INS(OutElastic)(t);
+    case ANIMATION_CONST(EASING_IN_ELASTIC):
+      return 1.0f - ANIMATION_INS(OutElastic)(1.0f - t);
+    case ANIMATION_CONST(EASING_IN_OUT_ELASTIC): {
+      const float c5 = (2.0f * ANIMATION_PI) / 4.5f;
+      return t < 0.5f ? -(powf(2.0f, 20.0f * t - 10.0f) * sinf((20.0f * t - 11.125f) * c5)) * 0.5f
+                      :  (powf(2.0f, -20.0f * t + 10.0f) * sinf((20.0f * t - 11.125f) * c5)) * 0.5f + 1.0f;
+    }
+    case ANIMATION_CONST(EASING_LINEAR):
+    default:
+      return t;
+  }
+}
+
+OBJECT_PROTOTYPEEX(TAnimationController, Configure, (float startValue, float endValue, float duration, ANIMATION_TYPE(EasingKind) easing)) {
+  if (!self || duration <= 0.0f) return STATUS_CONST(INVALID_ARGUMENT);
+  self->startValue = startValue;
+  self->endValue = endValue;
+  self->duration = duration;
+  self->elapsed = 0.0f;
+  self->easing = easing;
+  self->loop = false;
+  self->reverse = false;
+  self->running = true;
+  self->forward = true;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TAnimationController, Update, (float deltaSeconds)) {
+  if (!self) return STATUS_CONST(INVALID_ARGUMENT);
+  if (!self->running || deltaSeconds <= 0.0f) return STATUS_CONST(SUCCESS);
+
+  if (self->forward) {
+    self->elapsed += deltaSeconds;
+    if (self->elapsed >= self->duration) {
+      if (self->loop) {
+        if (self->reverse) {
+          self->forward = false;
+          self->elapsed = self->duration;
+        } else {
+          self->elapsed = fmodf(self->elapsed, self->duration);
+        }
+      } else {
+        self->elapsed = self->duration;
+        self->running = false;
+      }
+    }
+  } else {
+    self->elapsed -= deltaSeconds;
+    if (self->elapsed <= 0.0f) {
+      if (self->loop && self->reverse) {
+        self->forward = true;
+        self->elapsed = 0.0f;
+      } else {
+        self->elapsed = 0.0f;
+        self->running = false;
+      }
+    }
+  }
+
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TAnimationController, Progress, ()) {
+  if (!self || self->duration <= 0.0f) return 1.0f;
+  float p = self->elapsed / self->duration;
+  return p < 0.0f ? 0.0f : (p > 1.0f ? 1.0f : p);
+}
+
+OBJECT_PROTOTYPEEX(TAnimationController, Value, ()) {
+  if (!self) return 0.0f;
+  float p = TAnimationController_Progress(self);
+  float easedP = ANIMATION_FUNC(Ease)(p, self->easing);
+  return self->startValue + easedP * (self->endValue - self->startValue);
+}
+
+OBJECT_PROTOTYPEEX(TAnimationController, IsFinished, ()) {
+  if (!self) return true;
+  if (self->loop) return false;
+  return self->forward ? (self->elapsed >= self->duration) : (self->elapsed <= 0.0f);
+}
+
+OBJECT_PROTOTYPEEX(TAnimationController, Reset, ()) {
+  if (!self) return STATUS_CONST(INVALID_ARGUMENT);
+  self->elapsed = self->forward ? 0.0f : self->duration;
+  self->running = true;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TAnimationController, SetLoop, (bool loop)) {
+  if (!self) return STATUS_CONST(INVALID_ARGUMENT);
+  self->loop = loop;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TAnimationController, SetReverse, (bool reverse)) {
+  if (!self) return STATUS_CONST(INVALID_ARGUMENT);
+  self->reverse = reverse;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TAnimationController, Play, ()) {
+  if (!self) return STATUS_CONST(INVALID_ARGUMENT);
+  self->running = true;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TAnimationController, Pause, ()) {
+  if (!self) return STATUS_CONST(INVALID_ARGUMENT);
+  self->running = false;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_IMPLEMENT(TAnimationController);

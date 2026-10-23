@@ -57,3 +57,5 @@ INPUT_EVENT_SUBMIT_PROTOTYPE {
   s->pending[s->pendingCount++] = *event;
   return STATUS_CONST(SUCCESS);
 }
+
+PACKAGE_IMPLEMENT(INPUT_NS(Event));

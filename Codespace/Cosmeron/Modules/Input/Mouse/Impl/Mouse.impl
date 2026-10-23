@@ -26,3 +26,5 @@ INPUT_MOUSE_GET_SCROLL_PROTOTYPE {
   if (x) *x = INPUT_INS(state).sx;
   if (y) *y = INPUT_INS(state).sy;
 }
+
+PACKAGE_IMPLEMENT(INPUT_NS(Mouse));

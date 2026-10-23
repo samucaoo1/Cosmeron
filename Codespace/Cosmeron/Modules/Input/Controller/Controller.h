@@ -1,12 +1,50 @@
 #pragma once
 
+#include "../../../Core/Module/Package.h"
 #include "../Input.space"
 #include "../Internal/Core.inc"
 #include "../Internal/Backend.inc"
 
+#if defined(INPUT_DISABLE_FUNCTION_TABLE) ||                                    \
+    defined(INPUT_CONTROLLER_DISABLE_FUNCTION_TABLE)
+#ifndef PACKAGE_DISABLE_FUNCTION_TABLE
+#define PACKAGE_DISABLE_FUNCTION_TABLE
+#endif
+#endif
+
 /* Generic controller queries use connection IDs and zero-based indices.
  * Stale IDs and invalid indices yield neutral values in direct queries.
  * Fallible operations report OPSTATUS; no controller object lifecycle is exposed. */
+
+PACKAGE(INPUT_NS(Controller),
+    FUNCTION(OPSTATUS, Enumerate,
+             (INPUT_TYPE(ControllerId) * controllers, size_t capacity,
+              size_t * count)),
+    FUNCTION(bool, IsConnected, (INPUT_TYPE(ControllerId) controller)),
+    FUNCTION(OPSTATUS, GetName,
+             (INPUT_TYPE(ControllerId) controller, char *buffer,
+              size_t capacity, size_t * required)),
+    FUNCTION(uint32_t, GetButtonCount, (INPUT_TYPE(ControllerId) controller)),
+    FUNCTION(uint32_t, GetAxisCount, (INPUT_TYPE(ControllerId) controller)),
+    FUNCTION(uint32_t, GetHatCount, (INPUT_TYPE(ControllerId) controller)),
+    FUNCTION(bool, HasRumble, (INPUT_TYPE(ControllerId) controller)),
+    FUNCTION(bool, IsDown,
+             (INPUT_TYPE(ControllerId) controller, uint32_t button)),
+    FUNCTION(bool, IsPressed,
+             (INPUT_TYPE(ControllerId) controller, uint32_t button)),
+    FUNCTION(bool, IsReleased,
+             (INPUT_TYPE(ControllerId) controller, uint32_t button)),
+    FUNCTION(float, GetAxis,
+             (INPUT_TYPE(ControllerId) controller, uint32_t axis)),
+    FUNCTION(INPUT_TYPE(Hat), GetHat,
+             (INPUT_TYPE(ControllerId) controller, uint32_t hat)),
+    FUNCTION(OPSTATUS, Rumble,
+             (INPUT_TYPE(ControllerId) controller, float lowFrequency,
+              float highFrequency, uint32_t durationMs)),
+    FUNCTION(OPSTATUS, StopRumble, (INPUT_TYPE(ControllerId) controller)),
+    FUNCTION(uint16_t, GetVendor, (INPUT_TYPE(ControllerId) controller)),
+    FUNCTION(uint16_t, GetProduct, (INPUT_TYPE(ControllerId) controller))
+);
 
 /* Copy connected IDs. NULL/zero queries the required count. count is required
  * and is also produced on INSUFFICIENT_SPACE; the array then stays untouched. */

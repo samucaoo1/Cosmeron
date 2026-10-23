@@ -53,7 +53,13 @@ PUBLIC_GRAPHICS_PACKAGES = {
 def validate_doc_coverage(root: pathlib.Path) -> None:
     """Require documentation for every first-class module and graphics package."""
     codespace = root / "Codespace" / "Cosmeron"
-    core = {p.name for p in (codespace / "Core").iterdir() if p.is_dir()}
+    core = {
+        p.name for p in (codespace / "Core").iterdir()
+        if p.is_dir() and p.name != "Module"
+    }
+    module_dir = codespace / "Core" / "Module"
+    if module_dir.is_dir():
+        core |= {p.stem for p in module_dir.glob("*.h") if p.stem != "Module"}
     modules = {
         p.name for p in (codespace / "Modules").iterdir()
         if p.is_dir() and p.name != "Graphics"

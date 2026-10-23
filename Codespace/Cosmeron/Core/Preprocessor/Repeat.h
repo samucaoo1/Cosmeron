@@ -20,4 +20,20 @@
 #define PP_DEC_5 4
 
 #define PP_DEC(x) PP_OP_CAT2(PP_DEC_, x)
+
+#include <stddef.h>
+
+/* ============================================================
+ * Code Block Repetition
+ * ============================================================ */
+
+#define REPEAT_INDEX(var, count)                                               \
+  for (size_t var = 0,                                                         \
+              PP_OP_CAT2(_repeat_limit_, __LINE__) = (size_t)(count);          \
+       var < PP_OP_CAT2(_repeat_limit_, __LINE__);                             \
+       ++var)
+
+#define REPEAT(count)                                                          \
+  REPEAT_INDEX(PP_OP_CAT2(_repeat_i_, __LINE__), count)
 /* EOF */
+

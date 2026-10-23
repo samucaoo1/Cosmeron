@@ -95,3 +95,5 @@ INPUT_CONTROLLER_GET_PRODUCT_PROTOTYPE {
   INPUT_INS(Device) *d = INPUT_INS(Find)(controller);
   return d ? d->product : 0;
 }
+
+PACKAGE_IMPLEMENT(INPUT_NS(Controller));

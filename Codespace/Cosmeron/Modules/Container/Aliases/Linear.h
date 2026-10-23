@@ -3,7 +3,6 @@
 #include "../Array/Vector.h"
 #include "../Array/Queue.h"
 #include "../Array/Stack.h"
-#include "../Array/String.h"
 #include "../Linked/List.h"
 #include "../Linked/Forward.h"
 #include "../Linked/Deque.h"
@@ -27,11 +26,6 @@
   FLAT_STACK_TYPE(int) *: FLAT_STACK_FUNC(int, OP),                           \
   FLAT_STACK_TYPE(float) *: FLAT_STACK_FUNC(float, OP),                       \
   FLAT_STACK_TYPE(double) *: FLAT_STACK_FUNC(double, OP)
-
-#define CONTAINER_STRING_ASSOC(OP)                                             \
-  TSTRING_TYPE(8) *: TSTRING_FUNC(8, OP),                                     \
-  TSTRING_TYPE(16) *: TSTRING_FUNC(16, OP),                                   \
-  TSTRING_TYPE(32) *: TSTRING_FUNC(32, OP)
 
 #define CONTAINER_LIST_ASSOC(OP)                                               \
   LINKED_LIST_TYPE(int) *: LINKED_LIST_FUNC(int, OP),                         \
@@ -70,7 +64,6 @@
 
 #define PushBack(self, value)                                                  \
   _Generic(&(self), CONTAINER_VECTOR_ASSOC(PushBack),                         \
-                    CONTAINER_STRING_ASSOC(PushBack),                         \
                     CONTAINER_LIST_ASSOC(PushBack),                           \
                     CONTAINER_DEQUE_ASSOC(PushBack))(&(self), (value))
 
@@ -88,7 +81,6 @@
 
 #define PopBack(self, out)                                                    \
   _Generic(&(self), CONTAINER_VECTOR_ASSOC(PopBack),                          \
-                    CONTAINER_STRING_ASSOC(PopBack),                          \
                     CONTAINER_LIST_ASSOC(PopBack),                            \
                     CONTAINER_DEQUE_ASSOC(PopBack))(&(self), (out))
 
@@ -99,8 +91,7 @@
                     CONTAINER_DEQUE_ASSOC(PopFront))(&(self), (out))
 
 #define At(self, index, out)                                                   \
-  _Generic(&(self), CONTAINER_VECTOR_ASSOC(At), CONTAINER_STRING_ASSOC(At))   \
-      (&(self), (index), (out))
+  _Generic(&(self), CONTAINER_VECTOR_ASSOC(At))(&(self), (index), (out))
 
 #define Front(self, out)                                                       \
   _Generic(&(self), CONTAINER_VECTOR_ASSOC(Front),                            \
@@ -123,18 +114,15 @@
 #define Reserve(self, count)                                                   \
   _Generic(&(self), CONTAINER_VECTOR_ASSOC(Reserve),                          \
                     CONTAINER_FLAT_QUEUE_ASSOC(Reserve),                      \
-                    CONTAINER_FLAT_STACK_ASSOC(Reserve),                      \
-                    CONTAINER_STRING_ASSOC(Reserve))(&(self), (count))
+                    CONTAINER_FLAT_STACK_ASSOC(Reserve))(&(self), (count))
 
 #define Capacity(self)                                                         \
   _Generic(&(self), CONTAINER_VECTOR_ASSOC(Capacity),                         \
                     CONTAINER_FLAT_QUEUE_ASSOC(Capacity),                     \
-                    CONTAINER_FLAT_STACK_ASSOC(Capacity),                     \
-                    CONTAINER_STRING_ASSOC(Capacity))(&(self))
+                    CONTAINER_FLAT_STACK_ASSOC(Capacity))(&(self))
 
 #define Data(self, out)                                                        \
-  _Generic(&(self), CONTAINER_VECTOR_ASSOC(Data), CONTAINER_STRING_ASSOC(Data))\
-      (&(self), (out))
+  _Generic(&(self), CONTAINER_VECTOR_ASSOC(Data))(&(self), (out))
 
 #define CONTAINER_INSERT_3(self, position, value)                              \
   _Generic(&(self), CONTAINER_VECTOR_ASSOC(Insert))(&(self), (position),      \
@@ -149,13 +137,13 @@
 
 #define Erase(self, position, countOrOut)                                      \
   _Generic(&(self), CONTAINER_VECTOR_ASSOC(Erase),                            \
-                    CONTAINER_STRING_ASSOC(Erase),                            \
                     CONTAINER_LIST_ASSOC(Erase))(&(self), (position),         \
                                                   (countOrOut))
 
 #define Clear(self)                                                            \
   _Generic(&(self), CONTAINER_VECTOR_ASSOC(Clear),                            \
-                    CONTAINER_STRING_ASSOC(Clear),                            \
+                    CONTAINER_FLAT_QUEUE_ASSOC(Clear),                        \
+                    CONTAINER_FLAT_STACK_ASSOC(Clear),                        \
                     CONTAINER_LIST_ASSOC(Clear),                              \
                     CONTAINER_FORWARD_ASSOC(Clear),                           \
                     CONTAINER_DEQUE_ASSOC(Clear),                             \
@@ -166,7 +154,6 @@
   _Generic(&(self), CONTAINER_VECTOR_ASSOC(Empty),                            \
                     CONTAINER_FLAT_QUEUE_ASSOC(Empty),                        \
                     CONTAINER_FLAT_STACK_ASSOC(Empty),                        \
-                    CONTAINER_STRING_ASSOC(Empty),                            \
                     CONTAINER_LIST_ASSOC(Empty),                              \
                     CONTAINER_FORWARD_ASSOC(Empty),                           \
                     CONTAINER_DEQUE_ASSOC(Empty),                             \
@@ -187,7 +174,6 @@
   _Generic(&(self), CONTAINER_VECTOR_ASSOC(Destroy),                          \
                     CONTAINER_FLAT_QUEUE_ASSOC(Destroy),                      \
                     CONTAINER_FLAT_STACK_ASSOC(Destroy),                      \
-                    CONTAINER_STRING_ASSOC(Destroy),                          \
                     CONTAINER_LIST_ASSOC(Destroy),                            \
                     CONTAINER_FORWARD_ASSOC(Destroy),                         \
                     CONTAINER_DEQUE_ASSOC(Destroy),                           \

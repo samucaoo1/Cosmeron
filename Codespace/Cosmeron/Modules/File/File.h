@@ -4,3 +4,5 @@
 #include "Entry/Entry.h"
 #include "Content/Content.h"
 #include "Directory/Directory.h"
+#include "MMap/MMap.h"
+#include "Watch/Watch.h"

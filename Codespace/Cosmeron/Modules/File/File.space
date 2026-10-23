@@ -2,6 +2,7 @@
 #include "../../Core/Namespace.h"
 #include "../../Core/Error/Status.h"
 #include "../Chronometry/Instant/Instant.h"
+#include "../Text/View/View.h"
 #include <errno.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -19,6 +20,10 @@
 #else
 #include <unistd.h>
 #include <dirent.h>
+#endif
+
+#ifdef MMAP
+#undef MMAP
 #endif
 
 #define FILE_MOD File

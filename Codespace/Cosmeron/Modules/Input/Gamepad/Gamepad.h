@@ -1,11 +1,43 @@
 #pragma once
 
+#include "../../../Core/Module/Package.h"
 #include "../Input.space"
 #include "../Internal/Core.inc"
+
+#if defined(INPUT_DISABLE_FUNCTION_TABLE) ||                                    \
+    defined(INPUT_GAMEPAD_DISABLE_FUNCTION_TABLE)
+#ifndef PACKAGE_DISABLE_FUNCTION_TABLE
+#define PACKAGE_DISABLE_FUNCTION_TABLE
+#endif
+#endif
 
 /* Standardized view of the same controller ID; no additional handle.
  * Missing controls and unmapped devices yield neutral values.
  * Sticks: [-1,1], positive Y up. Triggers: [0,1]. No automatic dead zone. */
+
+PACKAGE(INPUT_NS(Gamepad),
+    FUNCTION(bool, IsMapped, (INPUT_TYPE(ControllerId) controller)),
+    FUNCTION(bool, IsDown,
+             (INPUT_TYPE(ControllerId) controller,
+              INPUT_TYPE(GamepadButton) button)),
+    FUNCTION(bool, IsPressed,
+             (INPUT_TYPE(ControllerId) controller,
+              INPUT_TYPE(GamepadButton) button)),
+    FUNCTION(bool, IsReleased,
+             (INPUT_TYPE(ControllerId) controller,
+              INPUT_TYPE(GamepadButton) button)),
+    FUNCTION(float, GetAxis,
+             (INPUT_TYPE(ControllerId) controller,
+              INPUT_TYPE(GamepadAxis) axis)),
+    FUNCTION(OPSTATUS, MapButton,
+             (INPUT_TYPE(ControllerId) controller,
+              INPUT_TYPE(GamepadButton) button, int32_t index)),
+    FUNCTION(OPSTATUS, MapAxis,
+             (INPUT_TYPE(ControllerId) controller,
+              INPUT_TYPE(GamepadAxis) axis, int32_t index, float scale,
+              float offset)),
+    FUNCTION(OPSTATUS, ClearMapping, (INPUT_TYPE(ControllerId) controller))
+);
 
 /* Test whether the controller has a recognized standard gamepad layout. */
 #define INPUT_GAMEPAD_IS_MAPPED_PROTOTYPE \

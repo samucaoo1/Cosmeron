@@ -20,36 +20,6 @@ struct CONCURRENCY_TYPE(TCoroutine) {
   CONCURRENCY_TYPE(CoroutineState) state;
 };
 
-#define COROUTINE_INIT(FUNCTION, ARGUMENT)                                      \
-  { (FUNCTION), (ARGUMENT), 0u, CONCURRENCY_CONST(COROUTINE, STATE_READY) }
-
-#define COROUTINE_BEGIN(SELF)                                              \
-  do {                                                                          \
-    CONCURRENCY_TYPE(TCoroutine) *_coroutine = (SELF);                                       \
-    if (_coroutine == NULL ||                                                   \
-        _coroutine->state == CONCURRENCY_CONST(COROUTINE, STATE_FINISHED))                          \
-      return;                                                                   \
-    _coroutine->state = CONCURRENCY_CONST(COROUTINE, STATE_RUNNING);                                \
-    switch (_coroutine->continuation) {                                         \
-    case 0u:
-
-#define COROUTINE_YIELD(SELF)                                              \
-  do {                                                                          \
-    (SELF)->continuation = (uint32_t)__LINE__;                             \
-    (SELF)->state = CONCURRENCY_CONST(COROUTINE, STATE_SUSPENDED);                             \
-    return;                                                                     \
-  case __LINE__:;                                                               \
-  } while (0)
-
-#define COROUTINE_END(SELF)                                                \
-    default:                                                                    \
-      break;                                                                    \
-    }                                                                           \
-    (SELF)->continuation = 0u;                                             \
-    (SELF)->state = CONCURRENCY_CONST(COROUTINE, STATE_FINISHED);                              \
-    return;                                                                     \
-  } while (0)
-
 #define COROUTINE_INIT_PROTOTYPE                                              \
   static inline OPSTATUS COROUTINE_FUNC(Init)(                                \
       CONCURRENCY_TYPE(TCoroutine) *coroutine,                                \
@@ -87,5 +57,39 @@ COROUTINE_IS_SUSPENDED_PROTOTYPE;
 COROUTINE_IS_FINISHED_PROTOTYPE;
 
 #include "Impl/Coroutine.impl"
+
+/* ============================================================
+ * Coroutine execution and control-flow macros
+ * ============================================================ */
+
+#define COROUTINE_INIT(FUNCTION, ARGUMENT)                                      \
+  { (FUNCTION), (ARGUMENT), 0u, CONCURRENCY_CONST(COROUTINE, STATE_READY) }
+
+#define COROUTINE_BEGIN(SELF)                                                  \
+  do {                                                                         \
+    CONCURRENCY_TYPE(TCoroutine) *_coroutine = (SELF);                         \
+    if (_coroutine == NULL ||                                                  \
+        _coroutine->state == CONCURRENCY_CONST(COROUTINE, STATE_FINISHED))     \
+      return;                                                                  \
+    _coroutine->state = CONCURRENCY_CONST(COROUTINE, STATE_RUNNING);           \
+    switch (_coroutine->continuation) {                                        \
+    case 0u:
+
+#define COROUTINE_YIELD(SELF)                                                  \
+  do {                                                                         \
+    (SELF)->continuation = (uint32_t)__LINE__;                                \
+    (SELF)->state = CONCURRENCY_CONST(COROUTINE, STATE_SUSPENDED);            \
+    return;                                                                    \
+  case __LINE__:;                                                              \
+  } while (0)
+
+#define COROUTINE_END(SELF)                                                    \
+    default:                                                                   \
+      break;                                                                   \
+    }                                                                          \
+    (SELF)->continuation = 0u;                                                \
+    (SELF)->state = CONCURRENCY_CONST(COROUTINE, STATE_FINISHED);             \
+    return;                                                                    \
+  } while (0)
 
 /* EOF */

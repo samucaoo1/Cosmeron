@@ -1,0 +1,197 @@
+#pragma once
+
+#define COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_INIT(SUFFIX)              \
+  FLAT_SPAN_INIT_PROTOTYPE(SUFFIX) {                                           \
+    if (!span) {                                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    span->data = NULL;                                                         \
+    span->size = 0U;                                                           \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_FROM_BUFFER(TYPE, SUFFIX)  \
+  FLAT_SPAN_FROM_BUFFER_PROTOTYPE(TYPE, SUFFIX) {                              \
+    if (!span) {                                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    if (!buffer && count > 0U) {                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    span->data = buffer;                                                       \
+    span->size = count;                                                        \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_CREATE(TYPE, SUFFIX)       \
+  FLAT_SPAN_CREATE_PROTOTYPE(TYPE, SUFFIX) {                                   \
+    FLAT_SPAN_TYPE(SUFFIX) span;                                               \
+    span.data = buffer;                                                        \
+    span.size = buffer == NULL ? 0U : count;                                   \
+    return span;                                                               \
+  }
+
+#define COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_EMPTY(SUFFIX)             \
+  FLAT_SPAN_EMPTY_PROTOTYPE(SUFFIX) {                                          \
+    FLAT_SPAN_TYPE(SUFFIX) span;                                               \
+    span.data = NULL;                                                          \
+    span.size = 0U;                                                            \
+    return span;                                                               \
+  }
+
+#define COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_AT(TYPE, SUFFIX)          \
+  FLAT_SPAN_AT_PROTOTYPE(TYPE, SUFFIX) {                                       \
+    if (!span || !out) {                                                       \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    if (index >= span->size) {                                                 \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    }                                                                          \
+    *out = &span->data[index];                                                 \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_CONST_AT(TYPE, SUFFIX)    \
+  FLAT_SPAN_CONST_AT_PROTOTYPE(TYPE, SUFFIX) {                                 \
+    if (!span || !out) {                                                       \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    if (index >= span->size) {                                                 \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    }                                                                          \
+    *out = &span->data[index];                                                 \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_FRONT(TYPE, SUFFIX)        \
+  FLAT_SPAN_FRONT_PROTOTYPE(TYPE, SUFFIX) {                                    \
+    if (!span || !out) {                                                       \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    if (span->size == 0U) {                                                    \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    }                                                                          \
+    *out = &span->data[0U];                                                    \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_BACK(TYPE, SUFFIX)         \
+  FLAT_SPAN_BACK_PROTOTYPE(TYPE, SUFFIX) {                                     \
+    if (!span || !out) {                                                       \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    if (span->size == 0U) {                                                    \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    }                                                                          \
+    *out = &span->data[span->size - 1U];                                       \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_DATA(TYPE, SUFFIX)         \
+  FLAT_SPAN_DATA_PROTOTYPE(TYPE, SUFFIX) {                                     \
+    if (!span || !outData) {                                                   \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    *outData = span->data;                                                     \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_CONST_DATA(TYPE, SUFFIX)   \
+  FLAT_SPAN_CONST_DATA_PROTOTYPE(TYPE, SUFFIX) {                               \
+    if (!span || !outData) {                                                   \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    *outData = span->data;                                                     \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_SIZE(SUFFIX)              \
+  FLAT_SPAN_SIZE_PROTOTYPE(SUFFIX) {                                           \
+    return span ? span->size : 0U;                                             \
+  }
+
+#define COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_SIZE_BYTES(TYPE, SUFFIX)  \
+  FLAT_SPAN_SIZE_BYTES_PROTOTYPE(TYPE, SUFFIX) {                               \
+    return span ? span->size * sizeof(TYPE) : 0U;                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_IS_EMPTY(SUFFIX)          \
+  FLAT_SPAN_IS_EMPTY_PROTOTYPE(SUFFIX) {                                       \
+    return !span || span->size == 0U;                                          \
+  }
+
+#define COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_SUBSPAN(SUFFIX)           \
+  FLAT_SPAN_SUBSPAN_PROTOTYPE(SUFFIX) {                                        \
+    if (!span || !outSpan) {                                                   \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    if (offset > span->size || count > span->size - offset) {                  \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    }                                                                          \
+    outSpan->data = span->data ? span->data + offset : NULL;                   \
+    outSpan->size = count;                                                     \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_FIRST(SUFFIX)             \
+  FLAT_SPAN_FIRST_PROTOTYPE(SUFFIX) {                                          \
+    return FLAT_SPAN_FUNC(SUFFIX, Subspan)(span, 0U, count, outSpan);          \
+  }
+
+#define COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_LAST(SUFFIX)              \
+  FLAT_SPAN_LAST_PROTOTYPE(SUFFIX) {                                           \
+    if (!span || !outSpan) {                                                   \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    if (count > span->size) {                                                  \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    }                                                                          \
+    return FLAT_SPAN_FUNC(SUFFIX, Subspan)(span, span->size - count, count,    \
+                                           outSpan);                           \
+  }
+
+#define COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_EQUAL(TYPE, SUFFIX)       \
+  FLAT_SPAN_EQUAL_PROTOTYPE(TYPE, SUFFIX) {                                    \
+    if (!left || !right) {                                                     \
+      return left == right;                                                    \
+    }                                                                          \
+    if (left->size != right->size) {                                           \
+      return false;                                                            \
+    }                                                                          \
+    for (size_t i = 0U; i < left->size; ++i) {                                 \
+      if (left->data[i] != right->data[i]) {                                   \
+        return false;                                                          \
+      }                                                                        \
+    }                                                                          \
+    return true;                                                               \
+  }
+
+#define COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_FROM_VECTOR(SUFFIX)       \
+  FLAT_SPAN_FROM_VECTOR_PROTOTYPE(SUFFIX) {                                    \
+    if (!span || !vector) {                                                    \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    span->data = vector->data;                                                 \
+    span->size = vector->size;                                                 \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT(TYPE, SUFFIX)             \
+  COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_INIT(SUFFIX)                     \
+  COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_FROM_BUFFER(TYPE, SUFFIX)        \
+  COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_CREATE(TYPE, SUFFIX)             \
+  COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_EMPTY(SUFFIX)                    \
+  COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_AT(TYPE, SUFFIX)                 \
+  COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_CONST_AT(TYPE, SUFFIX)           \
+  COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_FRONT(TYPE, SUFFIX)               \
+  COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_BACK(TYPE, SUFFIX)                \
+  COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_DATA(TYPE, SUFFIX)                \
+  COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_CONST_DATA(TYPE, SUFFIX)          \
+  COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_SIZE(SUFFIX)                     \
+  COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_SIZE_BYTES(TYPE, SUFFIX)         \
+  COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_IS_EMPTY(SUFFIX)                 \
+  COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_SUBSPAN(SUFFIX)                  \
+  COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_FIRST(SUFFIX)                    \
+  COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_LAST(SUFFIX)                     \
+  COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_EQUAL(TYPE, SUFFIX)              \
+  COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT_FROM_VECTOR(SUFFIX)

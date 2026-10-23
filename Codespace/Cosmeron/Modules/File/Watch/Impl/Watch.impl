@@ -1,0 +1,220 @@
+#pragma once
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+#include "../../../../Core/Preprocessor/Detect/OperationSystem.h"
+
+#if OS_LINUX
+#include <errno.h>
+#include <poll.h>
+#include <sys/inotify.h>
+#include <unistd.h>
+#elif OS_WINDOWS
+#include <windows.h>
+#endif
+
+/* ============================================================
+ * TFileWatcher Method Implementations
+ * ============================================================ */
+
+OBJECT_PROTOTYPEEX(FILE_WATCH_TYPE(TFileWatcher), Start) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (self->isRunning) {
+    OBJECT_CALL_0(self, Stop);
+  }
+
+#if OS_LINUX
+#if defined(IN_NONBLOCK) && defined(IN_CLOEXEC)
+  int fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
+#else
+  int fd = -1;
+#endif
+  if (fd < 0) {
+    fd = inotify_init();
+  }
+  if (fd < 0) {
+    self->handle = -1;
+    self->isRunning = false;
+    self->watchCount = 0;
+    return STATUS_CONST(GENERIC_ERROR);
+  }
+  self->handle = (intptr_t)fd;
+#else
+  self->handle = 0;
+#endif
+
+  self->isRunning = true;
+  self->watchCount = 0;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(FILE_WATCH_TYPE(TFileWatcher), Stop) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (!self->isRunning)
+    return STATUS_CONST(SUCCESS);
+
+#if OS_LINUX
+  if (self->handle >= 0) {
+    close((int)self->handle);
+  }
+  self->handle = -1;
+#else
+  self->handle = 0;
+#endif
+
+  self->isRunning = false;
+  self->watchCount = 0;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(FILE_WATCH_TYPE(TFileWatcher), Add,
+                   (const char *path, uint32_t eventMask, int32_t *outWatchId)) {
+  if (!self || !path || !outWatchId)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (!self->isRunning)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+#if OS_LINUX
+  uint32_t mask = 0;
+  if (eventMask & FILE_WATCH_CONST(EVENT_CREATED))
+    mask |= (uint32_t)IN_CREATE;
+  if (eventMask & FILE_WATCH_CONST(EVENT_MODIFIED))
+    mask |= (uint32_t)(IN_MODIFY | IN_ATTRIB);
+  if (eventMask & FILE_WATCH_CONST(EVENT_DELETED))
+    mask |= (uint32_t)(IN_DELETE | IN_DELETE_SELF);
+  if (eventMask & FILE_WATCH_CONST(EVENT_RENAMED))
+    mask |= (uint32_t)(IN_MOVE | IN_MOVE_SELF);
+
+  if (mask == 0)
+    mask = (uint32_t)IN_ALL_EVENTS;
+
+  int wd = inotify_add_watch((int)self->handle, path, mask);
+  if (wd < 0) {
+    if (errno == ENOENT)
+      return STATUS_CONST(NOT_FOUND);
+    return STATUS_CONST(GENERIC_ERROR);
+  }
+
+  *outWatchId = (int32_t)wd;
+  self->watchCount++;
+  return STATUS_CONST(SUCCESS);
+#else
+  (void)eventMask;
+  *outWatchId = (int32_t)(self->watchCount + 1U);
+  self->watchCount++;
+  return STATUS_CONST(SUCCESS);
+#endif
+}
+
+OBJECT_PROTOTYPEEX(FILE_WATCH_TYPE(TFileWatcher), Remove, (int32_t watchId)) {
+  if (!self || !self->isRunning)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+#if OS_LINUX
+  int res = inotify_rm_watch((int)self->handle, watchId);
+  if (res < 0) {
+    if (errno == EINVAL)
+      return STATUS_CONST(NOT_FOUND);
+    return STATUS_CONST(GENERIC_ERROR);
+  }
+#else
+  (void)watchId;
+#endif
+
+  if (self->watchCount > 0) {
+    self->watchCount--;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(FILE_WATCH_TYPE(TFileWatcher), Poll,
+                   (FILE_WATCH_TYPE(EventData) * outEvents, size_t maxEvents,
+                    size_t *outCount, int32_t timeoutMs)) {
+  if (!self || !outEvents || !outCount || maxEvents == 0)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (!self->isRunning)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  *outCount = 0;
+
+#if OS_LINUX
+  struct pollfd pfd;
+  pfd.fd = (int)self->handle;
+  pfd.events = POLLIN;
+  pfd.revents = 0;
+
+  int ret = poll(&pfd, 1, timeoutMs);
+  if (ret == 0)
+    return STATUS_CONST(TIMEOUT);
+  if (ret < 0) {
+    if (errno == EINTR)
+      return STATUS_CONST(CANCELLED);
+    return STATUS_CONST(GENERIC_ERROR);
+  }
+
+  if (!(pfd.revents & POLLIN))
+    return STATUS_CONST(TIMEOUT);
+
+  char buffer[4096];
+  ssize_t len = read((int)self->handle, buffer, sizeof(buffer));
+  if (len <= 0)
+    return STATUS_CONST(WOULD_BLOCK);
+
+  size_t count = 0;
+  ssize_t offset = 0;
+  while (offset < len && count < maxEvents) {
+    const struct inotify_event *ie =
+        (const struct inotify_event *)(const void *)(buffer + offset);
+    uint32_t ev = 0;
+    if (ie->mask & IN_CREATE)
+      ev |= FILE_WATCH_CONST(EVENT_CREATED);
+    if (ie->mask & (IN_MODIFY | IN_ATTRIB))
+      ev |= FILE_WATCH_CONST(EVENT_MODIFIED);
+    if (ie->mask & (IN_DELETE | IN_DELETE_SELF))
+      ev |= FILE_WATCH_CONST(EVENT_DELETED);
+    if (ie->mask & (IN_MOVED_FROM | IN_MOVED_TO | IN_MOVE_SELF))
+      ev |= FILE_WATCH_CONST(EVENT_RENAMED);
+
+    outEvents[count].events = ev;
+    outEvents[count].watchId = (int32_t)ie->wd;
+    outEvents[count].name[0] = '\0';
+    if (ie->len > 0) {
+      size_t nameLen = strlen(ie->name);
+      if (nameLen >= FILE_WATCH_MAX_PATH_LEN) {
+        nameLen = FILE_WATCH_MAX_PATH_LEN - 1U;
+      }
+      memcpy(outEvents[count].name, ie->name, nameLen);
+      outEvents[count].name[nameLen] = '\0';
+    }
+    count++;
+    offset += (ssize_t)(sizeof(struct inotify_event) + ie->len);
+  }
+
+  *outCount = count;
+  return STATUS_CONST(SUCCESS);
+#else
+  (void)timeoutMs;
+  return STATUS_CONST(SUCCESS);
+#endif
+}
+
+OBJECT_PROTOTYPEEX(FILE_WATCH_TYPE(TFileWatcher), IsRunning) {
+  return (self && self->isRunning);
+}
+
+OBJECT_PROTOTYPEEX(FILE_WATCH_TYPE(TFileWatcher), WatchCount) {
+  return self ? self->watchCount : 0U;
+}
+
+OBJECT_IMPLEMENT(FILE_WATCH_TYPE(TFileWatcher));
+
+/* EOF */

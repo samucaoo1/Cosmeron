@@ -1,5 +1,6 @@
 #include "../../Cosmeron/Modules/Compression/Compression.h"
 #include <assert.h>
+#include <string.h>
 int main(void) {
   unsigned char data[12000], decoded[12000], compressed[14000];
   size_t size, written, i, j, bound;
@@ -7,8 +8,10 @@ int main(void) {
   for (i = 0; i < sizeof(data); ++i) data[i] = (unsigned char)(i % 17);
   assert(Compression_CRC32(0, "123456789", 9) == UINT32_C(0xcbf43926));
   assert(Compression_Adler32(1, "123456789", 9) == UINT32_C(0x091e01de));
-  assert(Compression_CRC32(123, NULL, 0) == 0);
-  assert(Compression_Adler32(123, NULL, 0) == 1);
+  assert(Compression_CRC32(123, NULL, 0) == 123);
+  assert(Compression_Adler32(123, NULL, 0) == 123);
+  assert(Compression_CRC32(123, data, 0) == 123);
+  assert(Compression_Adler32(123, data, 0) == 123);
   assert(Compression_CRC32(Compression_CRC32(0, data, 500), data + 500, 700) == Compression_CRC32(0, data, 1200));
   assert(Compression_Adler32(Compression_Adler32(1, data, 500), data + 500, 700) == Compression_Adler32(1, data, 1200));
   for (format = COMPRESSION_DEFLATE; format <= COMPRESSION_GZIP; ++format) {

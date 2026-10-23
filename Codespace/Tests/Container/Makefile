@@ -7,7 +7,7 @@ ASAN_OPTIONS ?= detect_leaks=1
 
 all: strict sanitize multi-tu
 
-strict: $(BUILD)/functional $(BUILD)/linear-extra $(BUILD)/linear-all-types $(BUILD)/tree-all-functions $(BUILD)/hash $(BUILD)/graph $(BUILD)/off $(BUILD)/tree-ft-off $(BUILD)/custom-type $(BUILD)/include-all $(BUILD)/include-all-off
+strict: $(BUILD)/functional $(BUILD)/linear-extra $(BUILD)/linear-all-types $(BUILD)/tree-all-functions $(BUILD)/hash $(BUILD)/graph $(BUILD)/off $(BUILD)/tree-ft-off $(BUILD)/custom-type $(BUILD)/include-all $(BUILD)/include-all-off $(BUILD)/ring $(BUILD)/heap $(BUILD)/span
 	$(BUILD)/functional
 	$(BUILD)/linear-extra
 	$(BUILD)/linear-all-types
@@ -19,12 +19,18 @@ strict: $(BUILD)/functional $(BUILD)/linear-extra $(BUILD)/linear-all-types $(BU
 	$(BUILD)/custom-type
 	$(BUILD)/include-all
 	$(BUILD)/include-all-off
+	$(BUILD)/ring
+	$(BUILD)/heap
+	$(BUILD)/span
 
 sanitize: CFLAGS += -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer
-sanitize: $(BUILD)/functional-sanitize $(BUILD)/hash-sanitize $(BUILD)/graph-sanitize
+sanitize: $(BUILD)/functional-sanitize $(BUILD)/hash-sanitize $(BUILD)/graph-sanitize $(BUILD)/ring-sanitize $(BUILD)/heap-sanitize $(BUILD)/span-sanitize
 	ASAN_OPTIONS=$(ASAN_OPTIONS) $(BUILD)/functional-sanitize
 	ASAN_OPTIONS=$(ASAN_OPTIONS) $(BUILD)/hash-sanitize
 	ASAN_OPTIONS=$(ASAN_OPTIONS) $(BUILD)/graph-sanitize
+	ASAN_OPTIONS=$(ASAN_OPTIONS) $(BUILD)/ring-sanitize
+	ASAN_OPTIONS=$(ASAN_OPTIONS) $(BUILD)/heap-sanitize
+	ASAN_OPTIONS=$(ASAN_OPTIONS) $(BUILD)/span-sanitize
 
 multi-tu: $(BUILD)/multi-tu
 	$(BUILD)/multi-tu
@@ -59,6 +65,15 @@ $(BUILD)/tree-ft-off: TreeFunctionTableOff.c Test.h | $(BUILD)
 $(BUILD)/custom-type: CustomType.c Test.h | $(BUILD)
 	$(CC) $(CFLAGS) CustomType.c -o $@
 
+$(BUILD)/ring: Ring.c Test.h | $(BUILD)
+	$(CC) $(CFLAGS) Ring.c -o $@
+
+$(BUILD)/heap: Heap.c Test.h | $(BUILD)
+	$(CC) $(CFLAGS) Heap.c -o $@
+
+$(BUILD)/span: Span.c Test.h | $(BUILD)
+	$(CC) $(CFLAGS) Span.c -o $@
+
 $(BUILD)/include-all: IncludeAll.c | $(BUILD)
 	$(CC) $(CFLAGS) IncludeAll.c -o $@
 
@@ -73,6 +88,15 @@ $(BUILD)/hash-sanitize: Hash.c Test.h | $(BUILD)
 
 $(BUILD)/graph-sanitize: Graph.c Test.h | $(BUILD)
 	$(CC) $(CFLAGS) Graph.c -o $@
+
+$(BUILD)/ring-sanitize: Ring.c Test.h | $(BUILD)
+	$(CC) $(CFLAGS) Ring.c -o $@
+
+$(BUILD)/heap-sanitize: Heap.c Test.h | $(BUILD)
+	$(CC) $(CFLAGS) Heap.c -o $@
+
+$(BUILD)/span-sanitize: Span.c Test.h | $(BUILD)
+	$(CC) $(CFLAGS) Span.c -o $@
 
 $(BUILD)/multi-tu: MultiTU_A.c MultiTU_B.c MultiTU_Main.c | $(BUILD)
 	$(CC) $(CFLAGS) MultiTU_A.c MultiTU_B.c MultiTU_Main.c -o $@

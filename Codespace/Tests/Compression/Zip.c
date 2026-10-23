@@ -1,5 +1,6 @@
 #include "../../Cosmeron/Modules/Compression/Compression.h"
 #include <assert.h>
+#include <string.h>
 int main(void) {
   Compression_TZipWriter writer = {0};
   Compression_TZipReader reader = {0};
