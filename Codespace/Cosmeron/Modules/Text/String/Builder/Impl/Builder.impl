@@ -1,0 +1,265 @@
+#pragma once
+
+#include <stdio.h>
+
+static inline size_t TEXT_BUILDER_INS(CStrLen)(const char *str) {
+  if (str == NULL) return 0U;
+  size_t len = 0U;
+  while (str[len] != '\0') ++len;
+  return len;
+}
+
+static inline OPSTATUS TEXT_BUILDER_INS(EnsureCapacity)(
+    TEXT_BUILDER_TYPE(TStringBuilder) *self, size_t needed) {
+  if (self->capacity >= needed)
+    return STATUS_CONST(SUCCESS);
+
+  size_t newCap = self->capacity == 0U
+                      ? (size_t)TEXT_BUILDER_CNS(INITIAL_CAPACITY)
+                      : self->capacity;
+  while (newCap < needed) {
+    if (newCap > SIZE_MAX / (size_t)TEXT_BUILDER_CNS(GROWTH_FACTOR)) {
+      newCap = needed;
+      break;
+    }
+    newCap *= (size_t)TEXT_BUILDER_CNS(GROWTH_FACTOR);
+  }
+  return TEXT_BUILDER_FUNC(Reserve)(self, newCap);
+}
+
+/* ============================================================
+ * TStringBuilder Method Implementations
+ * ============================================================ */
+
+OBJECT_PROTOTYPEEX(TEXT_BUILDER_TYPE(TStringBuilder), Create, (size_t initialCapacity)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  self->buffer = NULL;
+  self->size = 0U;
+  self->capacity = 0U;
+
+  if (initialCapacity > 0U) {
+    return TEXT_BUILDER_FUNC(Reserve)(self, initialCapacity);
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TEXT_BUILDER_TYPE(TStringBuilder), Destroy) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (self->buffer != NULL) {
+    void *buf = self->buffer;
+    ALLOC_FUNC(FreePointer)(&buf);
+    self->buffer = NULL;
+  }
+  self->size = 0U;
+  self->capacity = 0U;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TEXT_BUILDER_TYPE(TStringBuilder), Clear) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  self->size = 0U;
+  if (self->buffer != NULL) {
+    self->buffer[0] = '\0';
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TEXT_BUILDER_TYPE(TStringBuilder), Reserve, (size_t newCapacity)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (newCapacity <= self->capacity)
+    return STATUS_CONST(SUCCESS);
+
+  if (newCapacity > SIZE_MAX - 1U)
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+
+  size_t allocBytes = newCapacity + 1U;
+  void *newBuf = self->buffer;
+  OPSTATUS status = ALLOC_FUNC(ReallocBytes)(&newBuf, allocBytes);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  self->buffer = (char *)newBuf;
+  self->capacity = newCapacity;
+  self->buffer[self->size] = '\0';
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TEXT_BUILDER_TYPE(TStringBuilder), ShrinkToFit) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (self->capacity == self->size)
+    return STATUS_CONST(SUCCESS);
+
+  if (self->size == 0U) {
+    return TEXT_BUILDER_FUNC(Destroy)(self);
+  }
+
+  size_t allocBytes = self->size + 1U;
+  void *newBuf = self->buffer;
+  OPSTATUS status = ALLOC_FUNC(ReallocBytes)(&newBuf, allocBytes);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  self->buffer = (char *)newBuf;
+  self->capacity = self->size;
+  self->buffer[self->size] = '\0';
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TEXT_BUILDER_TYPE(TStringBuilder), AppendChar, (char ch)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (self->size > SIZE_MAX - 1U)
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+
+  OPSTATUS status = TEXT_BUILDER_INS(EnsureCapacity)(self, self->size + 1U);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  self->buffer[self->size] = ch;
+  self->size++;
+  self->buffer[self->size] = '\0';
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TEXT_BUILDER_TYPE(TStringBuilder), AppendBuffer, (const char *buffer, size_t length)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (buffer == NULL || length == 0U)
+    return STATUS_CONST(SUCCESS);
+
+  if (self->size > SIZE_MAX - length)
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+
+  OPSTATUS status = TEXT_BUILDER_INS(EnsureCapacity)(self, self->size + length);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  memcpy(self->buffer + self->size, buffer, length);
+  self->size += length;
+  self->buffer[self->size] = '\0';
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(TEXT_BUILDER_TYPE(TStringBuilder), AppendCStr, (const char *cstr)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (cstr == NULL)
+    return STATUS_CONST(SUCCESS);
+
+  size_t len = TEXT_BUILDER_INS(CStrLen)(cstr);
+  return TEXT_BUILDER_FUNC(AppendBuffer)(self, cstr, len);
+}
+
+OBJECT_PROTOTYPEEX(TEXT_BUILDER_TYPE(TStringBuilder), AppendView, (TEXT_VIEW_TYPE(8) view)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (view.data == NULL || view.size == 0U)
+    return STATUS_CONST(SUCCESS);
+
+  return TEXT_BUILDER_FUNC(AppendBuffer)(self, view.data, view.size);
+}
+
+OBJECT_PROTOTYPEEX(TEXT_BUILDER_TYPE(TStringBuilder), AppendCodepoint, (uint32_t codepoint)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  uint8_t utf8Bytes[4];
+  size_t outSize = 0U;
+  OPSTATUS status = TEXT_UTF8_FUNC(Encode)(codepoint, utf8Bytes, sizeof(utf8Bytes), &outSize);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  return TEXT_BUILDER_FUNC(AppendBuffer)(self, (const char *)utf8Bytes, outSize);
+}
+
+OBJECT_PROTOTYPEEX(TEXT_BUILDER_TYPE(TStringBuilder), AppendFormatVariadic, (const char *format, va_list args)) {
+  if (!self || !format)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  va_list argsCopy;
+  va_copy(argsCopy, args);
+  int formattedLen = vsnprintf(NULL, 0U, format, argsCopy);
+  va_end(argsCopy);
+
+  if (formattedLen < 0)
+    return STATUS_CONST(GENERIC_ERROR);
+
+  size_t len = (size_t)formattedLen;
+  if (self->size > SIZE_MAX - len)
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+
+  OPSTATUS status = TEXT_BUILDER_INS(EnsureCapacity)(self, self->size + len);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  vsnprintf(self->buffer + self->size, len + 1U, format, args);
+  self->size += len;
+  return STATUS_CONST(SUCCESS);
+}
+
+TEXT_BUILDER_APPEND_FORMAT_PROTOTYPE {
+  if (!self || !format)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  va_list args;
+  va_start(args, format);
+  OPSTATUS status = TEXT_BUILDER_FUNC(AppendFormatVariadic)(self, format, args);
+  va_end(args);
+  return status;
+}
+
+OBJECT_PROTOTYPEEX(TEXT_BUILDER_TYPE(TStringBuilder), BuildString, (TEXT_STRING_TYPE(8) *outString)) {
+  if (!self || !outString)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  OPSTATUS status = TEXT_STRING_FUNC(8, Init)(outString);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  if (self->size == 0U)
+    return STATUS_CONST(SUCCESS);
+
+  return TEXT_STRING_FUNC(8, FromBuffer)(outString, self->buffer, self->size);
+}
+
+OBJECT_PROTOTYPEEX(TEXT_BUILDER_TYPE(TStringBuilder), Length) {
+  return self ? self->size : 0U;
+}
+
+OBJECT_PROTOTYPEEX(TEXT_BUILDER_TYPE(TStringBuilder), Capacity) {
+  return self ? self->capacity : 0U;
+}
+
+OBJECT_PROTOTYPEEX(TEXT_BUILDER_TYPE(TStringBuilder), IsEmpty) {
+  return (!self || self->size == 0U);
+}
+
+OBJECT_PROTOTYPEEX(TEXT_BUILDER_TYPE(TStringBuilder), CStr) {
+  if (!self || !self->buffer)
+    return "";
+  return self->buffer;
+}
+
+OBJECT_PROTOTYPEEX(TEXT_BUILDER_TYPE(TStringBuilder), View) {
+  if (!self || !self->buffer)
+    return TEXT_VIEW_FUNC(8, Empty)();
+  return TEXT_VIEW_FUNC(8, Create)(self->buffer, self->size);
+}
+
+OBJECT_IMPLEMENT(TEXT_BUILDER_TYPE(TStringBuilder));
+
+/* EOF */

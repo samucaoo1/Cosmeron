@@ -1,6 +1,78 @@
 #pragma once
 #include "Terminal.space"
+#include "../../../Core/Module/Package.h"
 #include <stdarg.h>
+
+#if defined(TERMINAL_DISABLE_FUNCTION_TABLE)
+#ifndef PACKAGE_DISABLE_FUNCTION_TABLE
+#define PACKAGE_DISABLE_FUNCTION_TABLE
+#endif
+#endif
+
+PACKAGE(LIB_PREFIX(TERMINAL_MOD),
+    FUNCTION(TERMINAL_TYPE(TTerminal) *, Standard, ()),
+    FUNCTION(TERMINAL_TYPE(THandle) *, StandardHandle,
+             (TERMINAL_TYPE(StandardStream) stream)),
+    FUNCTION(OPSTATUS, WriteTo,
+             (TERMINAL_TYPE(THandle) * handle, const void *data, size_t size,
+              size_t *outWritten)),
+    FUNCTION(OPSTATUS, ReadFrom,
+             (TERMINAL_TYPE(THandle) * handle, void *buffer, size_t capacity,
+              size_t *outRead)),
+    FUNCTION(OPSTATUS, FlushHandle, (TERMINAL_TYPE(THandle) * handle)),
+    FUNCTION(OPSTATUS, Write, (const void *data, size_t size)),
+    FUNCTION(OPSTATUS, Read, (void *buffer, size_t capacity, size_t *outRead)),
+    FUNCTION(OPSTATUS, WriteLine, (const char *text)),
+    FUNCTION(OPSTATUS, ReadLine,
+             (char *buffer, size_t capacity, size_t *outLength)),
+    FUNCTION(OPSTATUS, Input,
+             (const char *prompt, char *buffer, size_t capacity,
+              size_t *outLength)),
+    FUNCTION(OPSTATUS, PutChar, (uint32_t codepoint)),
+    FUNCTION(OPSTATUS, GetChar, (uint32_t *outCodepoint)),
+    FUNCTION(OPSTATUS, Flush, ()),
+    FUNCTION(OPSTATUS, Cursor_GetPosition, (TDUAL_TYPE(uint16) * outPosition)),
+    FUNCTION(OPSTATUS, Cursor_SetPosition, (TDUAL_TYPE(uint16) position)),
+    FUNCTION(OPSTATUS, Cursor_Move, (int32_t deltaX, int32_t deltaY)),
+    FUNCTION(OPSTATUS, Cursor_Show, ()),
+    FUNCTION(OPSTATUS, Cursor_Hide, ()),
+    FUNCTION(OPSTATUS, Size_Get, (TDUAL_TYPE(uint16) * outSize)),
+    FUNCTION(OPSTATUS, Clear, ()),
+    FUNCTION(OPSTATUS, ClearLine, ()),
+    FUNCTION(OPSTATUS, Title_Set, (const char *title)),
+    FUNCTION(OPSTATUS, Bell, ()),
+    FUNCTION(OPSTATUS, Style_Set, (TEXT_GRID_ATTRIBUTE_TYPE(Cell) style)),
+    FUNCTION(OPSTATUS, Style_Get,
+             (TEXT_GRID_ATTRIBUTE_TYPE(Cell) * outStyle)),
+    FUNCTION(OPSTATUS, Style_Reset, ()),
+    FUNCTION(OPSTATUS, Color_Set,
+             (TEXT_GRID_COLOR_TYPE(RGB) foreground,
+              TEXT_GRID_COLOR_TYPE(RGB) background)),
+    FUNCTION(OPSTATUS, Color_Reset, ()),
+    FUNCTION(OPSTATUS, Attribute_Set,
+             (TEXT_GRID_ATTRIBUTE_TYPE(Flags) attributes)),
+    FUNCTION(OPSTATUS, Attribute_Add,
+             (TEXT_GRID_ATTRIBUTE_TYPE(Flags) attributes)),
+    FUNCTION(OPSTATUS, Attribute_Remove,
+             (TEXT_GRID_ATTRIBUTE_TYPE(Flags) attributes)),
+    FUNCTION(OPSTATUS, Attribute_Reset, ()),
+    FUNCTION(OPSTATUS, Capabilities_Get,
+             (TERMINAL_TYPE(TCapabilities) * outCapabilities)),
+    FUNCTION(OPSTATUS, Event_Poll,
+             (TERMINAL_TYPE(TEvent) * outEvent, bool *outAvailable)),
+    FUNCTION(OPSTATUS, Mouse_Enable, (bool enabled)),
+    FUNCTION(OPSTATUS, Key_Get, (TERMINAL_TYPE(TKey) * outKey)),
+    FUNCTION(OPSTATUS, Key_GetEcho, (TERMINAL_TYPE(TKey) * outKey)),
+    FUNCTION(OPSTATUS, Key_Hit, (bool *outAvailable)),
+    FUNCTION(OPSTATUS, InputMode_Get, (TERMINAL_TYPE(InputMode) * outMode)),
+    FUNCTION(OPSTATUS, InputMode_Set, (TERMINAL_TYPE(InputMode) mode)),
+    FUNCTION(OPSTATUS, EnterAlternateScreen, ()),
+    FUNCTION(OPSTATUS, LeaveAlternateScreen, ()),
+    FUNCTION(OPSTATUS, EnterRawMode, ()),
+    FUNCTION(OPSTATUS, LeaveRawMode, ()),
+    FUNCTION(OPSTATUS, SaveState, ()),
+    FUNCTION(OPSTATUS, RestoreState, ())
+);
 
 /* Immediate I/O. No initialization required for process standard streams. */
 #define TERMINAL_STANDARD_PROTOTYPE \
@@ -124,6 +196,20 @@
 #define TERMINAL_INPUT_MODE_SET_PROTOTYPE \
   static inline OPSTATUS TERMINAL_FUNC(InputMode_Set)(TERMINAL_TYPE(InputMode) mode)
 
+/* Lifecycle operations */
+#define TERMINAL_ENTER_ALTERNATE_SCREEN_PROTOTYPE \
+  static inline OPSTATUS TERMINAL_FUNC(EnterAlternateScreen)(void)
+#define TERMINAL_LEAVE_ALTERNATE_SCREEN_PROTOTYPE \
+  static inline OPSTATUS TERMINAL_FUNC(LeaveAlternateScreen)(void)
+#define TERMINAL_ENTER_RAW_MODE_PROTOTYPE \
+  static inline OPSTATUS TERMINAL_FUNC(EnterRawMode)(void)
+#define TERMINAL_LEAVE_RAW_MODE_PROTOTYPE \
+  static inline OPSTATUS TERMINAL_FUNC(LeaveRawMode)(void)
+#define TERMINAL_SAVE_STATE_PROTOTYPE \
+  static inline OPSTATUS TERMINAL_FUNC(SaveState)(void)
+#define TERMINAL_RESTORE_STATE_PROTOTYPE \
+  static inline OPSTATUS TERMINAL_FUNC(RestoreState)(void)
+
 TERMINAL_STANDARD_PROTOTYPE;
 TERMINAL_STANDARD_HANDLE_PROTOTYPE;
 TERMINAL_WRITE_TO_PROTOTYPE;
@@ -172,5 +258,12 @@ TERMINAL_KEY_GET_ECHO_PROTOTYPE;
 TERMINAL_KEY_HIT_PROTOTYPE;
 TERMINAL_INPUT_MODE_GET_PROTOTYPE;
 TERMINAL_INPUT_MODE_SET_PROTOTYPE;
+TERMINAL_ENTER_ALTERNATE_SCREEN_PROTOTYPE;
+TERMINAL_LEAVE_ALTERNATE_SCREEN_PROTOTYPE;
+TERMINAL_ENTER_RAW_MODE_PROTOTYPE;
+TERMINAL_LEAVE_RAW_MODE_PROTOTYPE;
+TERMINAL_SAVE_STATE_PROTOTYPE;
+TERMINAL_RESTORE_STATE_PROTOTYPE;
 
 #include "Impl/Terminal.impl"
+#include "Screen/Screen.h"

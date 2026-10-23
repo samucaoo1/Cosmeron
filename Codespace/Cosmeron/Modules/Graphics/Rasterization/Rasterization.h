@@ -2,11 +2,22 @@
 #include "../Canvas/Canvas.h"
 
 #define RASTER_MOD Raster
+#define RASTER_CMOD RASTER
 #ifndef RASTER_NS
 #define RASTER_NS(NAME) GNS2(LIB_PREFIX(RASTER_MOD), NAME)
 #endif
+#define RASTER_CNS(NAME) CNS2(LIB_PREFIX_CONST(RASTER_CMOD), NAME)
 #define RASTER_INS(NAME) GNS3(LIB_PREFIX(RASTER_MOD), Internal, NAME)
+#define RASTER_TYPE(NAME) RASTER_NS(NAME)
 #define RASTER_FUNC(NAME) RASTER_NS(NAME)
+#define RASTER_CONST(NAME) RASTER_CNS(NAME)
+
+typedef enum RASTER_TYPE(LineStyle) {
+  RASTER_CONST(LINE_SOLID),
+  RASTER_CONST(LINE_DASHED),
+  RASTER_CONST(LINE_DOTTED),
+  RASTER_CONST(LINE_DASH_DOT)
+} RASTER_TYPE(LineStyle);
 
 /* Cell coordinates; clipped drawing, no terminal I/O. Brush must be width 1. */
 #define RASTER_POINT_PROTOTYPE \
@@ -17,6 +28,21 @@
 #define RASTER_LINE_PROTOTYPE \
   static inline OPSTATUS RASTER_FUNC(Line)( \
       TERMINAL_TYPE(TCanvas) *canvas, TDUAL_TYPE(int32) from, TDUAL_TYPE(int32) to, \
+      uint32_t codepoint, TEXT_GRID_ATTRIBUTE_TYPE(Cell) style)
+
+#define RASTER_LINE_STYLED_PROTOTYPE \
+  static inline OPSTATUS RASTER_FUNC(LineStyled)( \
+      TERMINAL_TYPE(TCanvas) *canvas, TDUAL_TYPE(int32) from, TDUAL_TYPE(int32) to, \
+      RASTER_TYPE(LineStyle) lineStyle, uint32_t codepoint, TEXT_GRID_ATTRIBUTE_TYPE(Cell) style)
+
+#define RASTER_LINE_PATTERN_PROTOTYPE \
+  static inline OPSTATUS RASTER_FUNC(LinePattern)( \
+      TERMINAL_TYPE(TCanvas) *canvas, TDUAL_TYPE(int32) from, TDUAL_TYPE(int32) to, \
+      uint16_t pattern, uint32_t codepoint, TEXT_GRID_ATTRIBUTE_TYPE(Cell) style)
+
+#define RASTER_FLOOD_FILL_PROTOTYPE \
+  static inline OPSTATUS RASTER_FUNC(FloodFill)( \
+      TERMINAL_TYPE(TCanvas) *canvas, TDUAL_TYPE(int32) start, \
       uint32_t codepoint, TEXT_GRID_ATTRIBUTE_TYPE(Cell) style)
 
 #define RASTER_RECTANGLE_PROTOTYPE \
@@ -76,6 +102,9 @@
 
 RASTER_POINT_PROTOTYPE;
 RASTER_LINE_PROTOTYPE;
+RASTER_LINE_STYLED_PROTOTYPE;
+RASTER_LINE_PATTERN_PROTOTYPE;
+RASTER_FLOOD_FILL_PROTOTYPE;
 RASTER_RECTANGLE_PROTOTYPE;
 RASTER_FILL_RECTANGLE_PROTOTYPE;
 RASTER_CIRCLE_PROTOTYPE;

@@ -113,5 +113,108 @@ int main(void) {
   TEST_ASSERT(hash.capacity == 0u);
   TEST_ASSERT(hash.size == 0u);
 
+  /* ============================================================
+   * Hash Set Tests
+   * ============================================================ */
+  {
+    THashSet_int set = {0};
+    THashSet_cstring strSet = {0};
+    size_t setInitialCapacity;
+    int j;
+
+    /* Verify no value overhead: set bucket is smaller than map bucket */
+    TEST_ASSERT(sizeof(THASH_SET_BUCKET_TYPE(int)) <= sizeof(THASH_BUCKET_TYPE(int, int)));
+
+    CONTAINER_API_BIND(set, HASH_SET_OPERATION(int, functions));
+    CONTAINER_API_BIND(strSet, HASH_SET_OPERATION(cstring, functions));
+
+    /* Init & Observers */
+    TEST_ASSERT(HASH_SET_OPERATION(int, Init)(&set) == STATUS_CONST(SUCCESS));
+    TEST_ASSERT(HASH_SET_OPERATION(int, IsEmpty)(&set));
+    TEST_ASSERT(HASH_SET_OPERATION(int, Size)(&set) == 0u);
+    setInitialCapacity = HASH_SET_OPERATION(int, Capacity)(&set);
+    TEST_ASSERT(setInitialCapacity > 0u);
+    TEST_ASSERT(!HASH_SET_OPERATION(int, Contains)(&set, 42));
+
+    /* Insert elements & capacity growth */
+    for (j = 0; j < 150; ++j) {
+      TEST_ASSERT(HASH_SET_OPERATION(int, Insert)(&set, j) == STATUS_CONST(SUCCESS));
+    }
+    TEST_ASSERT(HASH_SET_OPERATION(int, Size)(&set) == 150u);
+    TEST_ASSERT(!HASH_SET_OPERATION(int, IsEmpty)(&set));
+    TEST_ASSERT(HASH_SET_OPERATION(int, Capacity)(&set) > setInitialCapacity);
+
+    /* Duplicate insert does not increase size */
+    TEST_ASSERT(HASH_SET_OPERATION(int, Insert)(&set, 42) == STATUS_CONST(SUCCESS));
+    TEST_ASSERT(HASH_SET_OPERATION(int, Size)(&set) == 150u);
+
+    /* Contains checks */
+    for (j = 0; j < 150; ++j) {
+      TEST_ASSERT(HASH_SET_OPERATION(int, Contains)(&set, j));
+    }
+    TEST_ASSERT(!HASH_SET_OPERATION(int, Contains)(&set, 999));
+
+    /* Remove & re-insert */
+    TEST_ASSERT(HASH_SET_OPERATION(int, Remove)(&set, 42) == STATUS_CONST(SUCCESS));
+    TEST_ASSERT(!HASH_SET_OPERATION(int, Contains)(&set, 42));
+    TEST_ASSERT(HASH_SET_OPERATION(int, Size)(&set) == 149u);
+    TEST_ASSERT(HASH_SET_OPERATION(int, Remove)(&set, 42) == STATUS_CONST(NOT_FOUND));
+
+    TEST_ASSERT(HASH_SET_OPERATION(int, Insert)(&set, 42) == STATUS_CONST(SUCCESS));
+    TEST_ASSERT(HASH_SET_OPERATION(int, Contains)(&set, 42));
+    TEST_ASSERT(HASH_SET_OPERATION(int, Size)(&set) == 150u);
+
+#if CONTAINER_FUNCTION_TABLE_ENABLED
+    TEST_ASSERT(set.api != NULL);
+    TEST_ASSERT(set.api->contains(&set, 42));
+    TEST_ASSERT(set.api->insert(&set, 777) == STATUS_CONST(SUCCESS));
+    TEST_ASSERT(set.api->contains(&set, 777));
+    TEST_ASSERT(set.api->remove(&set, 777) == STATUS_CONST(SUCCESS));
+    TEST_ASSERT(!set.api->contains(&set, 777));
+    TEST_ASSERT(set.api->size(&set) == 150u);
+    TEST_ASSERT(!set.api->isEmpty(&set));
+    TEST_ASSERT(set.api->capacity(&set) > 0u);
+#endif
+
+    /* Clear */
+    HASH_SET_OPERATION(int, Clear)(&set);
+    TEST_ASSERT(HASH_SET_OPERATION(int, IsEmpty)(&set));
+    TEST_ASSERT(HASH_SET_OPERATION(int, Size)(&set) == 0u);
+    TEST_ASSERT(!HASH_SET_OPERATION(int, Contains)(&set, 42));
+
+    /* Destroy */
+    HASH_SET_OPERATION(int, Destroy)(&set);
+    TEST_ASSERT(set.buckets == NULL);
+    TEST_ASSERT(set.capacity == 0u);
+    TEST_ASSERT(set.size == 0u);
+
+    /* String Set */
+    TEST_ASSERT(HASH_SET_OPERATION(cstring, Init)(&strSet) == STATUS_CONST(SUCCESS));
+    TEST_ASSERT(HASH_SET_OPERATION(cstring, Insert)(&strSet, "alpha") == STATUS_CONST(SUCCESS));
+    TEST_ASSERT(HASH_SET_OPERATION(cstring, Insert)(&strSet, "beta") == STATUS_CONST(SUCCESS));
+    TEST_ASSERT(HASH_SET_OPERATION(cstring, Insert)(&strSet, "gamma") == STATUS_CONST(SUCCESS));
+    TEST_ASSERT(HASH_SET_OPERATION(cstring, Size)(&strSet) == 3u);
+    TEST_ASSERT(HASH_SET_OPERATION(cstring, Contains)(&strSet, "alpha"));
+    TEST_ASSERT(HASH_SET_OPERATION(cstring, Contains)(&strSet, "beta"));
+    TEST_ASSERT(HASH_SET_OPERATION(cstring, Contains)(&strSet, "gamma"));
+    TEST_ASSERT(!HASH_SET_OPERATION(cstring, Contains)(&strSet, "delta"));
+
+    /* Duplicate cstring insert */
+    TEST_ASSERT(HASH_SET_OPERATION(cstring, Insert)(&strSet, "alpha") == STATUS_CONST(SUCCESS));
+    TEST_ASSERT(HASH_SET_OPERATION(cstring, Size)(&strSet) == 3u);
+
+    TEST_ASSERT(HASH_SET_OPERATION(cstring, Remove)(&strSet, "beta") == STATUS_CONST(SUCCESS));
+    TEST_ASSERT(!HASH_SET_OPERATION(cstring, Contains)(&strSet, "beta"));
+    TEST_ASSERT(HASH_SET_OPERATION(cstring, Size)(&strSet) == 2u);
+
+    HASH_SET_OPERATION(cstring, Destroy)(&strSet);
+
+    /* Edge cases / Invalid arguments */
+    TEST_ASSERT(HASH_SET_OPERATION(int, Insert)(NULL, 1) == STATUS_CONST(INVALID_ARGUMENT));
+    TEST_ASSERT(!HASH_SET_OPERATION(int, Contains)(NULL, 1));
+    TEST_ASSERT(HASH_SET_OPERATION(int, Remove)(NULL, 1) == STATUS_CONST(INVALID_ARGUMENT));
+    TEST_ASSERT(HASH_SET_OPERATION(int, Rehash)(NULL, 16) == STATUS_CONST(INVALID_ARGUMENT));
+  }
+
   return 0;
 }

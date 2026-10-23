@@ -76,131 +76,168 @@ TBit32          semantic suffix
 TVector_uint32  typed specialization
 ```
 
-## 3. Functions
+## 3. Functions & Declarative Contracts
 
-Every public or normal function has a prototype macro.
+Functions and methods in Cosmeron belong to declarative blocks (`PACKAGE` or `OBJECT`) and are classified by their return contract:
 
+| Category | Specifier | Return Type | Meaning |
+|---|---|---|---|
+| Operation | `OPERATION(NAME, PARAMS)` | `OPSTATUS` | Fallible operation reporting status |
+| Predicate | `PREDICATE(NAME, PARAMS)` | `bool` | Proposition or condition query |
+| Function | `FUNCTION(RET, NAME, PARAMS)` | `RET` | Value-producing computation |
+| Procedure | `PROCEDURE(NAME, PARAMS)` | `void` | Infallible action / side-effect |
+
+Each category supports inline variants (`*_INLINE(..., BODY)`) and `const` receiver variants for objects (`CONST_*` and `CONST_*_INLINE`).
+
+### Method & Function Implementation
+
+Member prototypes and bodies are implemented in implementation files (`.impl` or `.c`) using either explicit macros (recommended) or the unified dispatcher:
+
+#### 1. Explicit Family (Recommended - Zero Ambiguity & Zero Configuration)
+Explicitly declares whether receiver pointer `self` is bound, requiring no traits or flags:
 ```c
-*_OPERATION_PROTOTYPE(...)
+/* For Objects: binds receiver (Target * self, ...) */
+OBJECT_OPERATION_IMPLEMENT_EX(Target, MethodName, (params...)) {
+    if (!self) return STATUS_CONST(INVALID_ARGUMENT);
+    return STATUS_CONST(SUCCESS);
+}
+OBJECT_PREDICATE_IMPLEMENT_EX(Target, MethodName, (params...)) { return self != NULL; }
+OBJECT_FUNCTION_IMPLEMENT_EX(Target, ReturnType, MethodName, (params...)) { return computedValue; }
+OBJECT_PROCEDURE_IMPLEMENT_EX(Target, MethodName, (params...)) { /* infallible action */ }
+
+/* For Packages: free functions without self */
+PACKAGE_OPERATION_IMPLEMENT_EX(Package, FuncName, (params...)) { return STATUS_CONST(SUCCESS); }
+PACKAGE_PREDICATE_IMPLEMENT_EX(Package, FuncName, (params...)) { return true; }
+PACKAGE_FUNCTION_IMPLEMENT_EX(Package, ReturnType, FuncName, (params...)) { return computedValue; }
+PACKAGE_PROCEDURE_IMPLEMENT_EX(Package, FuncName, (params...)) { /* infallible action */ }
 ```
 
-The prototype macro is the single source of truth for the function signature. It does **not** imply that an implementation macro must exist.
-
-For a normal one-off function, reuse the prototype directly:
-
+#### 2. Unified Family with Trait Detection
 ```c
-#define ADDRESS_EQUAL_PROTOTYPE \
-    static inline bool ADDRESS_FUNC(Equal)( \
-        const ADDRESS_TYPE(Address) *left,  \
-        const ADDRESS_TYPE(Address) *right)
+OPERATION_IMPLEMENT_EX(Target, MethodName, (params...)) {
+    if (!self) return STATUS_CONST(INVALID_ARGUMENT);
+    return STATUS_CONST(SUCCESS);
+}
 
-ADDRESS_EQUAL_PROTOTYPE;
-```
+PREDICATE_IMPLEMENT_EX(Target, MethodName, (params...)) {
+    return self != NULL;
+}
 
-And in the implementation:
+FUNCTION_IMPLEMENT_EX(Target, ReturnType, MethodName, (params...)) {
+    return computedValue;
+}
 
-```c
-ADDRESS_EQUAL_PROTOTYPE {
-    /* ... */
+PROCEDURE_IMPLEMENT_EX(Target, MethodName, (params...)) {
+    /* infallible action */
 }
 ```
 
-Use implementation-generation macros only when they actually generate or specialize code:
+The unified engine detects whether `Target` is an Object or Package using trait tags, automatically binding `self` for objects if **any** of the following conditions hold:
+1. Direct type tag: `#define <Target>_IS_OBJECT 1` (e.g. `#define TCalculator_IS_OBJECT 1` or `#define TStack_int_IS_OBJECT 1`)
+2. Namespaced tag: `#define COSMERON_TAG_OBJ_<Target> 1`
+3. File-wide override: `#define TARGET_IS_OBJECT 1` (at the top of the `.impl` translation unit)
+
+If none of these traits are detected, it automatically emits free functions for packages.
+
+### Implementation Finalizers
+
+Every implementation file must close with the designated finalizer macro to complete bindings:
 
 ```c
-*_OPERATION_IMPLEMENT(...)
-*_IMPLEMENT_ALL(...)
+PACKAGE_IMPLEMENT(PackageName);
+/* or */
+OBJECT_IMPLEMENT(ObjectName);
 ```
 
-Example:
+### Deprecated Compatibility Aliases
+
+Macros under `Backward Compatibility Aliases` in `Tuple.impl` and `Dispatch.impl` (such as `METHOD`, `CONST_METHOD`, `METHOD_INLINE`, `OBJECT_PROTOTYPEEX`, `PACKAGE_PROTOTYPEEX`, and `OBJECT_PROTOTYPE`) exist solely for backward compatibility with legacy code and **must not be used** in new code.
+
+## 4. Structs, Objects & Function Tables
+
+Structured data and modules are declared using declarative blocks:
+
+### Declarative Objects (`OBJECT` and `OBJECT_EXTENDS`)
+
+Objects define structured types with fields, receiver-bound methods, and dispatch tables:
 
 ```c
-#define VECTOR_PUSH_PROTOTYPE(TYPE) \
-    static inline OPSTATUS VECTOR_FUNC(Push)(...)
-
-#define VECTOR_PUSH_IMPLEMENT(TYPE) \
-    VECTOR_PUSH_PROTOTYPE(TYPE) {   \
-        /* ... */                   \
-    }
-
-#define VECTOR_IMPLEMENT_ALL(TYPE) \
-    VECTOR_INIT_IMPLEMENT(TYPE)    \
-    VECTOR_PUSH_IMPLEMENT(TYPE)    \
-    VECTOR_POP_IMPLEMENT(TYPE)
+OBJECT(Counter,
+    FIELDS(
+        int count;
+    ),
+    OPERATION(Increment, ()),
+    CONST_PREDICATE_INLINE(IsZero, (), { return self->count == 0; }),
+    CONST_FUNCTION_INLINE(int, Get, (), { return self->count; })
+);
 ```
 
-Do not create `*_IMPLEMENT` aliases that merely rename `*_PROTOTYPE`, and do not create `*_IMPLEMENT_ALL` when there is only one fixed implementation.
-
-### Readability
-
-Prototype macros must remain as readable as normal C declarations.
-
-- keep the signature visibly declaration-shaped;
-- break long parameter lists across lines;
-- do not collapse large prototypes into unreadable one-line macro blocks;
-- do not add macro layers that make the declaration harder to understand than native C.
-
-Internal functions do not require a separate prototype macro:
+Derived classes inherit from a base class using `OBJECT_EXTENDS`, embedding `BASE_CLASS base` as the first field:
 
 ```c
-*_IMPLEMENT_INTERNAL(...)
+OBJECT_EXTENDS(SpecialCounter, Counter,
+    FIELDS(
+        int step;
+    ),
+    OPERATION(StepIncrement, ())
+);
 ```
 
-They contain signature and body together.
+- Safe downcasting and polymorphic conversions use `OBJECT_AS(OBJ, TARGET_TYPE)`.
+- Method invocation: `OBJECT_CALL(obj, MethodName, args...)` or `OBJECT_CALL_0(obj, MethodName)`.
+- Automatic lifecycle helper: `ClassName_Init(&instance)`.
 
-Function names use:
+### Declarative Packages (`PACKAGE`)
+
+Packages group free functions under a unified namespace and function table:
 
 ```c
-*_FUNC(NAME)
-*_TYPED_FUNC(...)
+PACKAGE(MathUtils,
+    FUNCTION_INLINE(int, Clamp, (int val, int min, int max), {
+        return val < min ? min : (val > max ? max : val);
+    }),
+    PREDICATE_INLINE(IsPositive, (int val), { return val > 0; })
+);
 ```
 
-Adapters and wrappers are normal functions, not a separate category.
+- Package invocation: `PACKAGE_CALL(PackageName, FunctionName, args...)` or direct calls `PackageName_FunctionName(...)`.
 
-## 4. Structs and Function Tables
+### Compile-time Disabling of Function Tables
 
-Generated structures use:
+Function tables allow static singleton dispatch (`Package_GetFunctionTable()` or `object->api`). Every family must provide compile-time disabling:
 
-```c
-*_STRUCT(...)
-```
+- `MODULE_DISABLE_FUNCTION_TABLE`: Disables all function tables globally in the translation unit.
+- `PACKAGE_DISABLE_FUNCTION_TABLE`: Disables function tables for packages.
+- `OBJECT_DISABLE_FUNCTION_TABLE`: Disables function tables for objects.
 
-Function tables use:
+When defined, no `FunctionTable` struct or table instance is emitted, removing all dispatch table overhead.
 
-```c
-*_FUNCTION_TABLE_STRUCT(...)
-*_FUNCTION_TABLE_INSTANCE(...)
-```
-
-Every Function Table family must provide a compile-time switch:
-
-```c
-*_DISABLE_FUNCTION_TABLE
-```
-
-When defined, the Function Table struct, instance, bindings, and related generated code must not be emitted.
-
-Use `FunctionTable`, not `VTable`.
-
-Recommended filesystem form:
-
-```text
-FunctionTable/
-    Vector.inc
-    Queue.inc
-```
-
-or, when stored beside the package:
-
-```text
-Vector.FunctionTable.inc
-```
+Always use the term `FunctionTable`, never `VTable`.
 
 ## 5. Enums
 
 Enums exist primarily for named constant domains and function signatures.
 
 A raw integer must not represent a categorical state when an enum can express it.
+
+### Mandatory X-Macro / Table Pattern
+
+Every enum must be implemented via an X-Macro table (`<DOMAIN>_TABLE(X)`). Directly hardcoding raw lists inside `enum { ... }` declarations is strictly prohibited. The table macro serves as the single source of truth for generating enum values, names, string tables, and switch cases.
+
+```c
+#define COMPARISON_TABLE(X) \
+    X(LOWER,  -1, "Lower")  \
+    X(EQUAL,   0, "Equal")  \
+    X(HIGHER,  1, "Higher")
+
+typedef enum COMPARISON_TYPE(Result) {
+#define COMPARISON_ENUM_ITEM(NAME, VALUE, DESC) COMPARISON_CONST(NAME) = VALUE,
+    COMPARISON_TABLE(COMPARISON_ENUM_ITEM)
+#undef COMPARISON_ENUM_ITEM
+} COMPARISON_TYPE(Result);
+
+typedef COMPARISON_TYPE(Result) CMPOUT;
+```
 
 User-facing enums may use `T`:
 
@@ -211,12 +248,7 @@ TText_Underline_Style
 Output enums do not use `T`. Their descriptive type remains namespaced; only the short `*OUT` alias is exempt:
 
 ```c
-typedef enum COMPARISON_TYPE(Result) {
-    COMPARISON_LOWER_CONST  = -1,
-    COMPARISON_EQUAL_CONST  = 0,
-    COMPARISON_HIGHER_CONST = 1
-} COMPARISON_TYPE(Result);
-
+typedef enum COMPARISON_TYPE(Result) { ... } COMPARISON_TYPE(Result);
 typedef COMPARISON_TYPE(Result) CMPOUT;
 ```
 
@@ -308,14 +340,41 @@ MODULE_FUNC(NAME)
 MODULE_TYPED_FUNC(...)
 MODULE_CONST(NAME)
 
-OPERATION_PROTOTYPE(...)
-OPERATION_IMPLEMENT(...)
-IMPLEMENT_INTERNAL(...)
-IMPLEMENT_ALL(...)
+/* Declarative Definitions */
+PACKAGE(PKG, ...)
+OBJECT(CLASS, FIELDS(...), ...)
+OBJECT_EXTENDS(CLASS, BASE_CLASS, FIELDS(...), ...)
+FIELDS(...)
 
-STRUCT(...)
-FUNCTION_TABLE_STRUCT(...)
-FUNCTION_TABLE_INSTANCE(...)
+/* Member Specification Tuples */
+OPERATION(NAME, PARAMS) / CONST_OPERATION / *_INLINE
+PREDICATE(NAME, PARAMS) / CONST_PREDICATE / *_INLINE
+FUNCTION(RET, NAME, PARAMS) / CONST_FUNCTION / *_INLINE
+PROCEDURE(NAME, PARAMS) / CONST_PROCEDURE / *_INLINE
+
+/* Unified Implementation Prototypes */
+OPERATION_IMPLEMENT_EX(TARGET, NAME, PARAMS)
+PREDICATE_IMPLEMENT_EX(TARGET, NAME, PARAMS)
+FUNCTION_IMPLEMENT_EX(TARGET, RET, NAME, PARAMS)
+PROCEDURE_IMPLEMENT_EX(TARGET, NAME, PARAMS)
+
+/* Implementation Finalizers */
+PACKAGE_IMPLEMENT(PKG)
+OBJECT_IMPLEMENT(CLASS)
+
+/* Invocation & Dispatch */
+PACKAGE_CALL(PKG, FUNC, ...)
+OBJECT_CALL(OBJ, METHOD, ...)
+OBJECT_AS(OBJ, TARGET_TYPE)
+
+/* Generic Template Engine */
+TEMPLATE_DECLARE(NAME, SUFFIX, TYPE)
+TEMPLATE_IMPLEMENT(NAME, SUFFIX, TYPE)
+
+/* Function Table Switches */
+MODULE_DISABLE_FUNCTION_TABLE
+PACKAGE_DISABLE_FUNCTION_TABLE
+OBJECT_DISABLE_FUNCTION_TABLE
 
 COSMERON_MACRO_INTERNAL_*
 ```

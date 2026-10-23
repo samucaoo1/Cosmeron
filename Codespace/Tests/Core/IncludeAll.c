@@ -1,13 +1,18 @@
 #include "../../Cosmeron/Core/Cast/Cast.space"
+#include "../../Cosmeron/Core/Cast/Integer.h"
 #include "../../Cosmeron/Core/Algorithm/Comparison.h"
 #include "../../Cosmeron/Core/Error/Panic.h"
 #include "../../Cosmeron/Core/Error/Status.h"
 #include "../../Cosmeron/Core/Memory/Alloc.h"
 #include "../../Cosmeron/Core/Memory/Operations.h"
 #include "../../Cosmeron/Core/Memory/Arena.h"
+#include "../../Cosmeron/Core/Memory/Stream.h"
+#include "../../Cosmeron/Core/Memory/Pool.h"
 #include "../../Cosmeron/Core/Memory/Swap.h"
 #include "../../Cosmeron/Core/Preprocessor/Detect/Compiler.h"
 #include "../../Cosmeron/Core/Preprocessor/Detect/OperationSystem.h"
 #include "../../Cosmeron/Core/Preprocessor/Detect/Processor.h"
+#include "../../Cosmeron/Core/Preprocessor/Detect/Library.h"
+#include "../../Cosmeron/Core/Module/Module.h"
 
 int main(void) { return 0; }

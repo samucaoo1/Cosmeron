@@ -1,0 +1,11 @@
+{
+  "display": "359617αμ",
+  "total": 359617,
+  "symbol": "αμ",
+  "unit": "H",
+  "origin_commit": "ec09aa75034ed27793814e8f2f000c26c729138a",
+  "ref_commit": "027b386b39c570fadc92d83a4e0ebd4a0cbe931f",
+  "initial_entropy": 340703,
+  "accumulated_change": 18914,
+  "provisional": false
+}

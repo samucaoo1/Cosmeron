@@ -7701,16 +7701,17 @@ Headers:
 
 ```c
 #include "Cosmeron/Modules/Container/Tree/Tree.h"
-/* Or include BST.h, AVL.h, or RedBlack.h independently. */
+/* Or include BST.h, AVL.h, RedBlack.h, or BTree.h independently. */
 ```
 
-The tree family generates **ordered Set and Map collections**. It provides three algorithms, each with the same operation names:
+The tree family generates **ordered Set and Map collections**. It provides four algorithms:
 
 | Algorithm | Behavior | Complexity |
 | --- | --- | --- |
 | BST | Plain binary search tree, no balancing | O(h), worst case O(n) |
 | AVL | Height-balanced binary search tree | O(log n) |
 | RB | Red-black balanced search tree | O(log n) |
+| BTree | In-memory balanced multiway search tree (Set & Map) | O(log n), cache-friendly |
 
 Here `h` means actual tree height. The default set specializations are `int`, `float`, and `double`; default maps use int keys with int or float values. The default floating-point comparator is **not a total ordering for NaNs**; use a suitable custom comparator if NaNs may appear.
 
@@ -7771,8 +7772,9 @@ TREE_FUNC(TREE_SET_TYPE(AVL, int), Destroy)(&tree);
 | BST | `TREE_BST_SET_IMPLEMENT_ALL(KEY_TYPE)` | `TREE_BST_MAP_IMPLEMENT_ALL(KEY_TYPE, VALUE_TYPE)` |
 | AVL | `TREE_AVL_SET_IMPLEMENT_ALL(KEY_TYPE)` | `TREE_AVL_MAP_IMPLEMENT_ALL(KEY_TYPE, VALUE_TYPE)` |
 | RB | `TREE_RB_SET_IMPLEMENT_ALL(KEY_TYPE)` | `TREE_RB_MAP_IMPLEMENT_ALL(KEY_TYPE, VALUE_TYPE)` |
+| BTree | `BTREE_SET_IMPLEMENT_ALL(KEY_TYPE)` | `BTREE_MAP_IMPLEMENT_ALL(KEY_TYPE, VALUE_TYPE)` |
 
-`*_IMPLEMENT_ALL_CMP(...)` variants accept custom comparison functions returning `CMPOUT`. Each algorithm also exposes `*_SET_INSTANCE_DECLARE` and `*_MAP_INSTANCE_DECLARE`. Avoid re-emitting built-in specializations already declared by a header in the same translation unit.
+`*_IMPLEMENT_ALL_CMP(...)` variants accept custom comparison functions returning `CMPOUT`. BTree also provides `BTREE_SET_IMPLEMENT_ALL_DEGREE_CMP` and `BTREE_MAP_IMPLEMENT_ALL_DEGREE_CMP` allowing custom minimum degree `t` (e.g. `DEGREE = 2` for a 2-3-4 tree). BTree is built with the declarative `OBJECT` framework, offering receiver methods (`Insert`, `Remove`, `Find`, `Contains`, `Min`, `Max`, `Height`, `Clear`, `Destroy`) and bidirectional cursors (`First`, `Last`, `CursorValid`, `CursorKey`, `CursorValue`, `CursorNext`, `CursorPrev`).
 
 ---
 

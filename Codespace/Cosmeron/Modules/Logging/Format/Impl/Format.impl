@@ -1,0 +1,99 @@
+#pragma once
+
+#include "../../Diagnostics/Diagnostics.h"
+#include <stdio.h>
+#include <string.h>
+
+LOGGING_FORMAT_TEXT_PROTOTYPE {
+  if (record == NULL || (buffer == NULL && capacity > 0U)) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  const char *lvlName = LOGGING_FUNC(Level_Name)(record->level);
+  const char *color = useColors ? LOGGING_FUNC(Level_Color)(record->level) : "";
+  const char *reset = useColors ? LOGGING_FUNC(Level_ResetColor)() : "";
+  char temp[LOGGING_CONST(MAX_MESSAGE_BUFFER)];
+  int written = 0;
+
+  if (record->tag != NULL && record->tag[0] != '\0') {
+    if (record->file != NULL && record->file[0] != '\0' && record->line > 0) {
+      written = snprintf(temp, sizeof(temp), "%s[%s]%s [%s] %s (%s:%d)",
+                         color, lvlName, reset, record->tag,
+                         record->message ? record->message : "",
+                         record->file, record->line);
+    } else {
+      written = snprintf(temp, sizeof(temp), "%s[%s]%s [%s] %s",
+                         color, lvlName, reset, record->tag,
+                         record->message ? record->message : "");
+    }
+  } else {
+    if (record->file != NULL && record->file[0] != '\0' && record->line > 0) {
+      written = snprintf(temp, sizeof(temp), "%s[%s]%s %s (%s:%d)",
+                         color, lvlName, reset,
+                         record->message ? record->message : "",
+                         record->file, record->line);
+    } else {
+      written = snprintf(temp, sizeof(temp), "%s[%s]%s %s",
+                         color, lvlName, reset,
+                         record->message ? record->message : "");
+    }
+  }
+
+  if (written < 0) {
+    return STATUS_CONST(GENERIC_ERROR);
+  }
+
+  size_t required = (size_t)written;
+  if (outSize != NULL) {
+    *outSize = required;
+  }
+  if (capacity == 0U) {
+    return STATUS_CONST(SUCCESS);
+  }
+  if (capacity <= required) {
+    size_t copyLen = capacity - 1U;
+    memcpy(buffer, temp, copyLen);
+    buffer[copyLen] = '\0';
+    return STATUS_CONST(OUT_OF_RANGE);
+  }
+  memcpy(buffer, temp, required + 1U);
+  return STATUS_CONST(SUCCESS);
+}
+
+LOGGING_FORMAT_JSON_PROTOTYPE {
+  if (record == NULL || (buffer == NULL && capacity > 0U)) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  const char *lvlName = LOGGING_FUNC(Level_Name)(record->level);
+  char temp[LOGGING_CONST(MAX_MESSAGE_BUFFER)];
+  int written = snprintf(temp, sizeof(temp),
+    "{\"timestamp\":%lld,\"level\":\"%s\",\"tag\":\"%s\",\"message\":\"%s\",\"file\":\"%s\",\"line\":%d,\"function\":\"%s\"}",
+    (long long)record->timestamp,
+    lvlName,
+    record->tag ? record->tag : "",
+    record->message ? record->message : "",
+    record->file ? record->file : "",
+    record->line,
+    record->function ? record->function : "");
+
+  if (written < 0) {
+    return STATUS_CONST(GENERIC_ERROR);
+  }
+
+  size_t required = (size_t)written;
+  if (outSize != NULL) {
+    *outSize = required;
+  }
+  if (capacity == 0U) {
+    return STATUS_CONST(SUCCESS);
+  }
+  if (capacity <= required) {
+    size_t copyLen = capacity - 1U;
+    memcpy(buffer, temp, copyLen);
+    buffer[copyLen] = '\0';
+    return STATUS_CONST(OUT_OF_RANGE);
+  }
+  memcpy(buffer, temp, required + 1U);
+  return STATUS_CONST(SUCCESS);
+}
+
+/* EOF */

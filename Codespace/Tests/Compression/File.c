@@ -1,5 +1,7 @@
 #include "../../Cosmeron/Modules/Compression/Compression.h"
 #include <assert.h>
+#include <stdlib.h>
+#include <string.h>
 int main(void) {
   const char *original = "compression-original.tmp", *packed = "compression-packed.tmp", *restored = "compression-restored.tmp";
   void *data = NULL; size_t size = 0;

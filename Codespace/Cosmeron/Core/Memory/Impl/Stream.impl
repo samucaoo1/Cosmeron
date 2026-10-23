@@ -1,0 +1,486 @@
+#pragma once
+
+STREAM_INIT_READ_PROTOTYPE {
+  if (!stream || (!buffer && size > 0))
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  stream->data = (uint8_t *)(uintptr_t)buffer;
+  stream->capacity = size;
+  stream->offset = 0;
+  stream->bitOffset = 0;
+  stream->isReadOnly = true;
+  return STATUS_CONST(SUCCESS);
+}
+
+STREAM_INIT_WRITE_PROTOTYPE {
+  if (!stream || (!buffer && capacity > 0))
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  stream->data = (uint8_t *)buffer;
+  stream->capacity = capacity;
+  stream->offset = 0;
+  stream->bitOffset = 0;
+  stream->isReadOnly = false;
+  return STATUS_CONST(SUCCESS);
+}
+
+STREAM_REMAINING_PROTOTYPE {
+  if (!stream || stream->offset >= stream->capacity)
+    return 0;
+  return stream->capacity - stream->offset;
+}
+
+STREAM_REMAINING_BITS_PROTOTYPE {
+  size_t bytes;
+  if (!stream || stream->offset >= stream->capacity)
+    return 0;
+  bytes = stream->capacity - stream->offset;
+  return (bytes * 8U) - (size_t)stream->bitOffset;
+}
+
+STREAM_POSITION_PROTOTYPE {
+  return stream ? stream->offset : 0;
+}
+
+STREAM_BIT_POSITION_PROTOTYPE {
+  return stream ? stream->bitOffset : 0;
+}
+
+STREAM_CAPACITY_PROTOTYPE {
+  return stream ? stream->capacity : 0;
+}
+
+STREAM_IS_AT_END_PROTOTYPE {
+  return !stream || (stream->offset >= stream->capacity && stream->bitOffset == 0);
+}
+
+STREAM_IS_READ_ONLY_PROTOTYPE {
+  return !stream || stream->isReadOnly;
+}
+
+STREAM_HAS_REMAINING_PROTOTYPE {
+  return stream && (STREAM_FUNC(Remaining)(stream) >= count);
+}
+
+STREAM_HAS_REMAINING_BITS_PROTOTYPE {
+  return stream && (STREAM_FUNC(RemainingBits)(stream) >= bitCount);
+}
+
+STREAM_DATA_PROTOTYPE {
+  return stream ? (const void *)stream->data : NULL;
+}
+
+STREAM_CURRENT_PROTOTYPE {
+  if (!stream || !stream->data || stream->offset >= stream->capacity)
+    return NULL;
+  return (const void *)(stream->data + stream->offset);
+}
+
+STREAM_ALIGN_TO_BYTE_PROTOTYPE {
+  if (!stream)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (stream->bitOffset > 0) {
+    if (stream->offset >= stream->capacity)
+      return STATUS_CONST(OUT_OF_RANGE);
+    stream->offset++;
+    stream->bitOffset = 0;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+STREAM_SEEK_PROTOTYPE {
+  if (!stream)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  stream->bitOffset = 0;
+
+  switch (origin) {
+  case STREAM_CONST(SEEK_BEGIN):
+    if (offset < 0 || (uint64_t)offset > stream->capacity)
+      return STATUS_CONST(OUT_OF_RANGE);
+    stream->offset = (size_t)offset;
+    return STATUS_CONST(SUCCESS);
+
+  case STREAM_CONST(SEEK_CURRENT):
+    if (offset < 0) {
+      size_t backward = (size_t)(-offset);
+      if (backward > stream->offset)
+        return STATUS_CONST(OUT_OF_RANGE);
+      stream->offset -= backward;
+    } else {
+      size_t forward = (size_t)offset;
+      if (forward > stream->capacity - stream->offset)
+        return STATUS_CONST(OUT_OF_RANGE);
+      stream->offset += forward;
+    }
+    return STATUS_CONST(SUCCESS);
+
+  case STREAM_CONST(SEEK_END):
+    if (offset > 0)
+      return STATUS_CONST(OUT_OF_RANGE);
+    {
+      size_t backward = (size_t)(-offset);
+      if (backward > stream->capacity)
+        return STATUS_CONST(OUT_OF_RANGE);
+      stream->offset = stream->capacity - backward;
+    }
+    return STATUS_CONST(SUCCESS);
+
+  default:
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+}
+
+STREAM_SKIP_PROTOTYPE {
+  OPSTATUS status;
+  if (!stream)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  status = STREAM_FUNC(AlignToByte)(stream);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  if (count > STREAM_FUNC(Remaining)(stream))
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  stream->offset += count;
+  return STATUS_CONST(SUCCESS);
+}
+
+STREAM_REWIND_PROTOTYPE {
+  if (!stream)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  stream->offset = 0;
+  stream->bitOffset = 0;
+  return STATUS_CONST(SUCCESS);
+}
+
+STREAM_SLICE_PROTOTYPE {
+  if (!stream || !outSubStream)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (stream->bitOffset != 0)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (size > STREAM_FUNC(Remaining)(stream))
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  outSubStream->data = stream->data ? (stream->data + stream->offset) : NULL;
+  outSubStream->capacity = size;
+  outSubStream->offset = 0;
+  outSubStream->bitOffset = 0;
+  outSubStream->isReadOnly = stream->isReadOnly;
+  return STATUS_CONST(SUCCESS);
+}
+
+STREAM_READ_SLICE_PROTOTYPE {
+  OPSTATUS status = STREAM_FUNC(Slice)(stream, size, outSubStream);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  stream->offset += size;
+  return STATUS_CONST(SUCCESS);
+}
+
+STREAM_READ_BYTES_PROTOTYPE {
+  OPSTATUS status;
+  if (!stream || (!destination && size > 0))
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  status = STREAM_FUNC(AlignToByte)(stream);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  if (size > STREAM_FUNC(Remaining)(stream))
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  if (size > 0)
+    memcpy(destination, stream->data + stream->offset, size);
+  stream->offset += size;
+  return STATUS_CONST(SUCCESS);
+}
+
+STREAM_PEEK_BYTES_PROTOTYPE {
+  if (!stream || (!destination && size > 0))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (stream->bitOffset != 0)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (size > STREAM_FUNC(Remaining)(stream))
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  if (size > 0)
+    memcpy(destination, stream->data + stream->offset, size);
+  return STATUS_CONST(SUCCESS);
+}
+
+STREAM_READ_BITS_PROTOTYPE {
+  uint64_t result = 0;
+  if (!stream || !outValue || bitCount == 0 || bitCount > 64U)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (!STREAM_FUNC(HasRemainingBits)(stream, bitCount))
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  for (uint8_t i = 0; i < bitCount; ++i) {
+    uint8_t byteVal = stream->data[stream->offset];
+    uint8_t bit = (uint8_t)((byteVal >> (7U - stream->bitOffset)) & 1U);
+    result = (result << 1U) | (uint64_t)bit;
+
+    stream->bitOffset++;
+    if (stream->bitOffset == 8U) {
+      stream->offset++;
+      stream->bitOffset = 0;
+    }
+  }
+
+  *outValue = result;
+  return STATUS_CONST(SUCCESS);
+}
+
+STREAM_WRITE_BITS_PROTOTYPE {
+  if (!stream || bitCount == 0 || bitCount > 64U)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (stream->isReadOnly)
+    return STATUS_CONST(NOT_SUPPORTED);
+
+  if (!STREAM_FUNC(HasRemainingBits)(stream, bitCount))
+    return STATUS_CONST(INSUFFICIENT_SPACE);
+
+  for (uint8_t i = 0; i < bitCount; ++i) {
+    uint8_t shift = (uint8_t)(bitCount - 1U - i);
+    uint8_t bit = (uint8_t)((value >> shift) & 1U);
+
+    if (stream->bitOffset == 0)
+      stream->data[stream->offset] = 0;
+
+    stream->data[stream->offset] |= (uint8_t)(bit << (7U - stream->bitOffset));
+
+    stream->bitOffset++;
+    if (stream->bitOffset == 8U) {
+      stream->offset++;
+      stream->bitOffset = 0;
+    }
+  }
+
+  return STATUS_CONST(SUCCESS);
+}
+
+STREAM_WRITE_BYTES_PROTOTYPE {
+  OPSTATUS status;
+  if (!stream || (!source && size > 0))
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (stream->isReadOnly)
+    return STATUS_CONST(NOT_SUPPORTED);
+
+  status = STREAM_FUNC(AlignToByte)(stream);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  if (size > STREAM_FUNC(Remaining)(stream))
+    return STATUS_CONST(INSUFFICIENT_SPACE);
+
+  if (size > 0)
+    memcpy(stream->data + stream->offset, source, size);
+  stream->offset += size;
+  return STATUS_CONST(SUCCESS);
+}
+
+STREAM_READ_UINT8_PROTOTYPE {
+  OPSTATUS status;
+  if (!stream || !outValue)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  status = STREAM_FUNC(AlignToByte)(stream);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  if (stream->offset >= stream->capacity)
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  *outValue = stream->data[stream->offset++];
+  return STATUS_CONST(SUCCESS);
+}
+
+STREAM_READ_INT8_PROTOTYPE {
+  uint8_t rawVal = 0;
+  OPSTATUS status;
+  if (!outValue)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  status = STREAM_FUNC(ReadUInt8)(stream, &rawVal);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  *outValue = (int8_t)rawVal;
+  return STATUS_CONST(SUCCESS);
+}
+
+STREAM_PEEK_UINT8_PROTOTYPE {
+  if (!stream || !outValue)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (stream->bitOffset != 0)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (stream->offset >= stream->capacity)
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  *outValue = stream->data[stream->offset];
+  return STATUS_CONST(SUCCESS);
+}
+
+STREAM_WRITE_UINT8_PROTOTYPE {
+  OPSTATUS status;
+  if (!stream)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (stream->isReadOnly)
+    return STATUS_CONST(NOT_SUPPORTED);
+
+  status = STREAM_FUNC(AlignToByte)(stream);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  if (stream->offset >= stream->capacity)
+    return STATUS_CONST(INSUFFICIENT_SPACE);
+
+  stream->data[stream->offset++] = value;
+  return STATUS_CONST(SUCCESS);
+}
+
+STREAM_WRITE_INT8_PROTOTYPE {
+  return STREAM_FUNC(WriteUInt8)(stream, (uint8_t)value);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Implementation of multi-byte scalar generative macros                      */
+/* -------------------------------------------------------------------------- */
+
+#define STREAM_READ_UINT_LE_IMPLEMENT(UTYPE, SUFFIX)                           \
+  STREAM_READ_UINT_LE_PROTOTYPE(UTYPE, SUFFIX) {                               \
+    const uint8_t *b;                                                          \
+    UTYPE val = 0;                                                             \
+    if (!stream || !outValue)                                                  \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (STREAM_FUNC(AlignToByte)(stream) != STATUS_CONST(SUCCESS))             \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    if (STREAM_FUNC(Remaining)(stream) < sizeof(UTYPE))                        \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    b = stream->data + stream->offset;                                         \
+    for (size_t i = 0; i < sizeof(UTYPE); ++i) {                              \
+      val |= ((UTYPE)b[i]) << (i * 8U);                                        \
+    }                                                                          \
+    *outValue = val;                                                           \
+    stream->offset += sizeof(UTYPE);                                           \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define STREAM_READ_UINT_BE_IMPLEMENT(UTYPE, SUFFIX)                           \
+  STREAM_READ_UINT_BE_PROTOTYPE(UTYPE, SUFFIX) {                               \
+    const uint8_t *b;                                                          \
+    UTYPE val = 0;                                                             \
+    if (!stream || !outValue)                                                  \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (STREAM_FUNC(AlignToByte)(stream) != STATUS_CONST(SUCCESS))             \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    if (STREAM_FUNC(Remaining)(stream) < sizeof(UTYPE))                        \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    b = stream->data + stream->offset;                                         \
+    for (size_t i = 0; i < sizeof(UTYPE); ++i) {                              \
+      val = (UTYPE)((val << 8U) | (UTYPE)b[i]);                               \
+    }                                                                          \
+    *outValue = val;                                                           \
+    stream->offset += sizeof(UTYPE);                                           \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define STREAM_READ_INT_LE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)                     \
+  STREAM_READ_INT_LE_PROTOTYPE(ITYPE, SUFFIX) {                                \
+    UTYPE rawVal = 0;                                                          \
+    OPSTATUS status;                                                           \
+    if (!outValue)                                                             \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    status = STREAM_FUNC(PP_OP_CAT3(ReadUInt, SUFFIX, LE))(                    \
+        stream, &rawVal);                                                      \
+    if (status != STATUS_CONST(SUCCESS))                                       \
+      return status;                                                           \
+    *outValue = (ITYPE)rawVal;                                                 \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define STREAM_READ_INT_BE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)                     \
+  STREAM_READ_INT_BE_PROTOTYPE(ITYPE, SUFFIX) {                                \
+    UTYPE rawVal = 0;                                                          \
+    OPSTATUS status;                                                           \
+    if (!outValue)                                                             \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    status = STREAM_FUNC(PP_OP_CAT3(ReadUInt, SUFFIX, BE))(                    \
+        stream, &rawVal);                                                      \
+    if (status != STATUS_CONST(SUCCESS))                                       \
+      return status;                                                           \
+    *outValue = (ITYPE)rawVal;                                                 \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define STREAM_WRITE_UINT_LE_IMPLEMENT(UTYPE, SUFFIX)                          \
+  STREAM_WRITE_UINT_LE_PROTOTYPE(UTYPE, SUFFIX) {                              \
+    uint8_t *b;                                                                \
+    if (!stream)                                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (stream->isReadOnly)                                                    \
+      return STATUS_CONST(NOT_SUPPORTED);                                      \
+    if (STREAM_FUNC(AlignToByte)(stream) != STATUS_CONST(SUCCESS))             \
+      return STATUS_CONST(INSUFFICIENT_SPACE);                                 \
+    if (STREAM_FUNC(Remaining)(stream) < sizeof(UTYPE))                        \
+      return STATUS_CONST(INSUFFICIENT_SPACE);                                 \
+    b = stream->data + stream->offset;                                         \
+    for (size_t i = 0; i < sizeof(UTYPE); ++i) {                              \
+      b[i] = (uint8_t)((value >> (i * 8U)) & 0xFFU);                           \
+    }                                                                          \
+    stream->offset += sizeof(UTYPE);                                           \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define STREAM_WRITE_UINT_BE_IMPLEMENT(UTYPE, SUFFIX)                          \
+  STREAM_WRITE_UINT_BE_PROTOTYPE(UTYPE, SUFFIX) {                              \
+    uint8_t *b;                                                                \
+    if (!stream)                                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (stream->isReadOnly)                                                    \
+      return STATUS_CONST(NOT_SUPPORTED);                                      \
+    if (STREAM_FUNC(AlignToByte)(stream) != STATUS_CONST(SUCCESS))             \
+      return STATUS_CONST(INSUFFICIENT_SPACE);                                 \
+    if (STREAM_FUNC(Remaining)(stream) < sizeof(UTYPE))                        \
+      return STATUS_CONST(INSUFFICIENT_SPACE);                                 \
+    b = stream->data + stream->offset;                                         \
+    for (size_t i = 0; i < sizeof(UTYPE); ++i) {                              \
+      size_t shift = (sizeof(UTYPE) - 1U - i) * 8U;                            \
+      b[i] = (uint8_t)((value >> shift) & 0xFFU);                              \
+    }                                                                          \
+    stream->offset += sizeof(UTYPE);                                           \
+    return STATUS_CONST(SUCCESS);                                              \
+  }
+
+#define STREAM_WRITE_INT_LE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)                    \
+  STREAM_WRITE_INT_LE_PROTOTYPE(ITYPE, SUFFIX) {                               \
+    return STREAM_FUNC(PP_OP_CAT3(WriteUInt, SUFFIX, LE))(                     \
+        stream, (UTYPE)value);                                                 \
+  }
+
+#define STREAM_WRITE_INT_BE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)                    \
+  STREAM_WRITE_INT_BE_PROTOTYPE(ITYPE, SUFFIX) {                               \
+    return STREAM_FUNC(PP_OP_CAT3(WriteUInt, SUFFIX, BE))(                     \
+        stream, (UTYPE)value);                                                 \
+  }
+
+#define STREAM_SCALAR_IMPLEMENT_ALL(UTYPE, ITYPE, SUFFIX)                      \
+  STREAM_READ_UINT_LE_IMPLEMENT(UTYPE, SUFFIX)                                 \
+  STREAM_READ_UINT_BE_IMPLEMENT(UTYPE, SUFFIX)                                 \
+  STREAM_READ_INT_LE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)                            \
+  STREAM_READ_INT_BE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)                            \
+  STREAM_WRITE_UINT_LE_IMPLEMENT(UTYPE, SUFFIX)                                \
+  STREAM_WRITE_UINT_BE_IMPLEMENT(UTYPE, SUFFIX)                                \
+  STREAM_WRITE_INT_LE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)                           \
+  STREAM_WRITE_INT_BE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)
+
+STREAM_SCALAR_IMPLEMENT_ALL(uint16_t, int16_t, 16)
+STREAM_SCALAR_IMPLEMENT_ALL(uint32_t, int32_t, 32)
+STREAM_SCALAR_IMPLEMENT_ALL(uint64_t, int64_t, 64)
+/* EOF */

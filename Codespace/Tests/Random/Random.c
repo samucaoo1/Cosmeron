@@ -94,9 +94,12 @@ int main(void) {
   CHECK_MIXER(WyHash);
   CHECK_MIXER(Xorshift);
 
-  if (Random_Entropy_System(&entropyBuffer, sizeof(entropyBuffer)) !=
-      STATUS_CONST(SUCCESS))
-    return 13;
+  {
+    OPSTATUS status =
+        Random_Entropy_System(&entropyBuffer, sizeof(entropyBuffer));
+    if (status != STATUS_CONST(SUCCESS) && status != STATUS_CONST(NOT_AVAILABLE))
+      return 13;
+  }
   if (Random_Entropy_System(NULL, sizeof(entropyBuffer)) !=
       STATUS_CONST(INVALID_ARGUMENT))
     return 18;

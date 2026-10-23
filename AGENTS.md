@@ -8,7 +8,7 @@ Based on [Docs/Reference/PATTERN.md](Docs/Reference/PATTERN.md).
 
 ## 1. Naming & Namespaces
 
-Everything must live inside the library/module namespace whenever C allows it. Exceptions exist only for public sugar macros, `OPSTATUS`, and `*OUT` aliases.
+Everything must live inside the library/module namespace whenever C allows it. Exceptions exist only for public sugar macros (which are strictly exceptional; consult user first), `OPSTATUS`, and `*OUT` aliases.
 
 ### Case Conventions
 | Element | Case | Example |
@@ -38,36 +38,67 @@ Everything must live inside the library/module namespace whenever C allows it. E
 - `*_TYPE(SUFFIX)`: Semantic suffix (e.g., `BIT_TYPE(32)` $\to$ `TBit32`).
 - `*_TYPED(TYPE)`: Specialization by another type (e.g., `VECTOR_TYPED(uint32)` $\to$ `TVector_uint32`).
 - Output enums or internal types do **not** use `T` (e.g., `ComparisonResult`, aliased to `CMPOUT`).
+- **Unambiguous naming policy:** Avoid overly generic names (such as `TPool`, `TNode`) that collide semantically across domains (e.g. Memory vs. Random vs. Concurrency). Always qualify the domain explicitly (e.g. `TMemoryPool`).
+- **Strict alias policy:** Public aliases must be rare, deliberate, and highly specific. Do not create short ambiguous aliases.
 
 ---
 
-## 3. Functions & Prototype Macros
+## 3. Functions & Declarative Contracts
 
-- Every public or normal function has a prototype macro: `*_OPERATION_PROTOTYPE(...)`.
-- The prototype macro is the **single source of truth** for the function signature.
-- Re-use the prototype macro directly for definition and implementation:
-  ```c
-  ADDRESS_EQUAL_PROTOTYPE;
-  ADDRESS_EQUAL_PROTOTYPE { /* ... */ }
-  ```
-- Use implementation macros (`*_OPERATION_IMPLEMENT`, `*_IMPLEMENT_ALL`) **only** when generating or specializing generic code across types. Never create trivial alias macros.
-- Prototypes must remain readable: keep declaration shape, break long parameter lists, never collapse into unreadable one-line macros.
-- Internal functions do not need separate prototype macros (`*_IMPLEMENT_INTERNAL(...)`).
-- Function names: `*_FUNC(NAME)` or `*_TYPED_FUNC(...)`.
+- Functions and methods belong to declarative modules (`PACKAGE` or `OBJECT`) and follow strict return contracts:
+  - `OPERATION(NAME, PARAMS)`: Fallible operation returning `OPSTATUS`.
+  - `PREDICATE(NAME, PARAMS)`: Proposition returning `bool`.
+  - `FUNCTION(RET, NAME, PARAMS)`: Value-producing function returning `RET`.
+  - `PROCEDURE(NAME, PARAMS)`: Infallible action returning `void`.
+  - Use `CONST_*` for const receiver methods (`const CLASS * self`).
+  - Use `*_INLINE` when providing the implementation directly in the declaration block.
+- **Implementations (`.impl` / `.c`):** Implement non-inline members using either the explicit or unified prototype macros:
+  - **Explicit Family (Recommended - Zero Ambiguity & Zero Configuration):**
+    ```c
+    OBJECT_OPERATION_IMPLEMENT_EX(Target, MethodName, (parameters...)) { /* binds (Target *self, ...) */ }
+    OBJECT_PREDICATE_IMPLEMENT_EX(Target, MethodName, (parameters...)) { /* ... */ }
+    OBJECT_FUNCTION_IMPLEMENT_EX(Target, ReturnType, MethodName, (parameters...)) { /* ... */ }
+    OBJECT_PROCEDURE_IMPLEMENT_EX(Target, MethodName, (parameters...)) { /* ... */ }
+
+    PACKAGE_OPERATION_IMPLEMENT_EX(Package, FuncName, (parameters...)) { /* free function */ }
+    PACKAGE_PREDICATE_IMPLEMENT_EX(Package, FuncName, (parameters...)) { /* ... */ }
+    PACKAGE_FUNCTION_IMPLEMENT_EX(Package, ReturnType, FuncName, (parameters...)) { /* ... */ }
+    PACKAGE_PROCEDURE_IMPLEMENT_EX(Package, FuncName, (parameters...)) { /* ... */ }
+    ```
+  - **Unified Family (`*_IMPLEMENT_EX`):**
+    ```c
+    OPERATION_IMPLEMENT_EX(Target, MethodName, (parameters...)) { /* ... */ }
+    PREDICATE_IMPLEMENT_EX(Target, MethodName, (parameters...)) { /* ... */ }
+    FUNCTION_IMPLEMENT_EX(Target, ReturnType, MethodName, (parameters...)) { /* ... */ }
+    PROCEDURE_IMPLEMENT_EX(Target, MethodName, (parameters...)) { /* ... */ }
+    ```
+    The dispatcher binds receiver `self` for objects if **any** of these traits hold:
+    1. Direct type tag: `#define <Target>_IS_OBJECT 1` (e.g. `#define TCalculator_IS_OBJECT 1`)
+    2. Namespaced tag: `#define COSMERON_TAG_OBJ_<Target> 1`
+    3. File-wide override: `#define TARGET_IS_OBJECT 1`
+    Otherwise, it automatically emits free functions for packages.
+- **Deprecated aliases:** Never use legacy aliases (`METHOD`, `CONST_METHOD`, `OBJECT_PROTOTYPEEX`, `PACKAGE_PROTOTYPEEX`, `OBJECT_PROTOTYPE`) in new code; they exist solely for backward compatibility.
+- **Finalizer call:** Always close `.impl` files with `PACKAGE_IMPLEMENT(PackageName);` or `OBJECT_IMPLEMENT(ObjectName);`.
 
 ---
 
-## 4. Structs & Function Tables
+## 4. Structs, Objects & Function Tables
 
-- Generated structures: `*_STRUCT(...)`.
-- Function tables: `*_FUNCTION_TABLE_STRUCT(...)`, `*_FUNCTION_TABLE_INSTANCE(...)`.
-- Use the term `FunctionTable`, never `VTable`.
-- Every Function Table family must provide compile-time disabling: `*_DISABLE_FUNCTION_TABLE`. When defined, no struct, instance, or bindings may be emitted.
+- **Declarative Objects:** Use `OBJECT(CLASS, FIELDS(...), ...)` and `OBJECT_EXTENDS(CLASS, BASE_CLASS, FIELDS(...), ...)`.
+  - Members are declared with `OPERATION`, `PREDICATE`, `FUNCTION`, `PROCEDURE`.
+  - Member fields are declared cleanly within `FIELDS(...)`.
+  - Casting: `OBJECT_AS(OBJ, TARGET_TYPE)`.
+  - Invocation: `OBJECT_CALL(obj, MethodName, args...)` or `OBJECT_CALL_0(obj, MethodName)`.
+- **Declarative Packages:** Use `PACKAGE(PKG, ...)`.
+  - Invocation: `PACKAGE_CALL(PKG, FuncName, args...)` or direct calls `PKG_FuncName(...)`.
+- **Compile-time disabling:** Every Function Table family provides compile-time disabling via `MODULE_DISABLE_FUNCTION_TABLE`, `PACKAGE_DISABLE_FUNCTION_TABLE`, or `OBJECT_DISABLE_FUNCTION_TABLE`. When defined, no struct, instance, or table is emitted.
+- **Naming:** Always use the term `FunctionTable`, never `VTable`.
 
 ---
 
 ## 5. Enums & Constants
 
+- **Mandatory X-Macro / Table Pattern:** Every enum must be implemented via an X-Macro table (`<DOMAIN>_TABLE(X)`). Directly hardcoding raw lists inside `enum { ... }` is strictly prohibited. The table macro is the single source of truth for generating enum values, constants, descriptions, and string tables.
 - Enums exist for named constant domains and function signatures. Never use raw integers for categorical states.
 - Output enums: use short `*OUT` alias in signatures (e.g., `CMPOUT`).
 - Public constants: `*_CONST(NAME)` (e.g., `STATUS_CONST(SUCCESS)`).
@@ -78,6 +109,7 @@ Everything must live inside the library/module namespace whenever C allows it. E
 ## 6. Preprocessor Policy
 
 - `#define` must be rare. Avoid macros that merely replace normal C syntax.
+- **Sugar macros are an exception, not the rule:** Never proactively generate public sugar macros for functions or types. Always ask the user first if creating them is desired.
 - Preprocessor operations must use helpers from `Core/Preprocessor` (e.g. `PP_OP_CAT2`, `PP_OP_CAT3`).
 - Raw `##` operator is forbidden outside `Core/Preprocessor`.
 

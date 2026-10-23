@@ -1,0 +1,60 @@
+#pragma once
+#include "../../../Core/Namespace.h"
+#include "../../../Core/Error/Status.h"
+#include "../../Struct/TDual.h"
+#include "../../Struct/TQuad.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <math.h>
+
+#define GEOMETRY_MOD Geometry
+#define GEOMETRY_CMOD GEOMETRY
+#define GEOMETRY_NS(NAME) GNS2(LIB_PREFIX(GEOMETRY_MOD), NAME)
+#define GEOMETRY_CNS(NAME) CNS2(LIB_PREFIX_CONST(GEOMETRY_CMOD), NAME)
+#define GEOMETRY_INS(NAME) GNS3(LIB_PREFIX(GEOMETRY_MOD), Internal, NAME)
+#define GEOMETRY_TYPE(NAME) GEOMETRY_NS(NAME)
+#define GEOMETRY_FUNC(NAME) GEOMETRY_NS(NAME)
+#define GEOMETRY_CONST(NAME) GEOMETRY_CNS(NAME)
+
+#define GEOMETRY_EPSILON 1e-6f
+
+typedef TDUAL_TYPE(float) GEOMETRY_TYPE(TPoint2D);
+
+typedef struct GEOMETRY_TYPE(TLine2D) {
+  GEOMETRY_TYPE(TPoint2D) start;
+  GEOMETRY_TYPE(TPoint2D) end;
+} GEOMETRY_TYPE(TLine2D);
+
+typedef struct GEOMETRY_TYPE(TRect2D) {
+  GEOMETRY_TYPE(TPoint2D) origin;
+  GEOMETRY_TYPE(TPoint2D) size;
+} GEOMETRY_TYPE(TRect2D);
+
+typedef struct GEOMETRY_TYPE(TCircle2D) {
+  GEOMETRY_TYPE(TPoint2D) center;
+  float radius;
+} GEOMETRY_TYPE(TCircle2D);
+
+typedef struct GEOMETRY_TYPE(TTriangle2D) {
+  GEOMETRY_TYPE(TPoint2D) a;
+  GEOMETRY_TYPE(TPoint2D) b;
+  GEOMETRY_TYPE(TPoint2D) c;
+} GEOMETRY_TYPE(TTriangle2D);
+
+typedef struct GEOMETRY_TYPE(TBoundingBox2D) {
+  GEOMETRY_TYPE(TPoint2D) min;
+  GEOMETRY_TYPE(TPoint2D) max;
+} GEOMETRY_TYPE(TBoundingBox2D);
+
+typedef struct GEOMETRY_TYPE(TRay2D) {
+  GEOMETRY_TYPE(TPoint2D) origin;
+  GEOMETRY_TYPE(TPoint2D) direction;
+} GEOMETRY_TYPE(TRay2D);
+
+typedef struct GEOMETRY_TYPE(THit2D) {
+  bool hit;
+  float distance;
+  GEOMETRY_TYPE(TPoint2D) point;
+  GEOMETRY_TYPE(TPoint2D) normal;
+} GEOMETRY_TYPE(THit2D);

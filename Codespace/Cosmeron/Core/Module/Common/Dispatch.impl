@@ -1,0 +1,187 @@
+#pragma once
+
+#include "Tuple.impl"
+
+/* ============================================================
+ * Unified Implementation Dispatch Engine (*_IMPLEMENT_EX)
+ * Provides unified prototypes for:
+ * 1. OPERATION (returns OPSTATUS)
+ * 2. PREDICATE (returns bool)
+ * 3. FUNCTION  (returns RET)
+ * 4. PROCEDURE (returns void)
+ * ============================================================ */
+
+/* ------------------------------------------------------------
+ * 1. Object Implementation Prototypes (Receiver 'self' bound)
+ * ------------------------------------------------------------ */
+
+#define COSMERON_MACRO_INTERNAL_OBJ_PROTOEX_PARAMS_1(CLASS, METHOD, PARAMS) \
+  (GNS3(CLASS, METHOD, self_t) * self)
+
+#define COSMERON_MACRO_INTERNAL_OBJ_PROTOEX_PARAMS_0(CLASS, METHOD, PARAMS) \
+  (GNS3(CLASS, METHOD, self_t) * self, PP_UNWRAP PARAMS)
+
+#define COSMERON_MACRO_INTERNAL_OBJ_PROTOEX_EMIT_PARAMS(CLASS, METHOD, PARAMS) \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJ_PROTOEX_PARAMS_, \
+             PP_IS_EMPTY_PARAMS(PARAMS))(CLASS, METHOD, PARAMS)
+
+#define OBJECT_OPERATION_IMPLEMENT_EX(CLASS, METHOD, PARAMS) \
+  static inline OPSTATUS GNS2(CLASS, METHOD) \
+      COSMERON_MACRO_INTERNAL_OBJ_PROTOEX_EMIT_PARAMS(CLASS, METHOD, PARAMS)
+
+#define OBJECT_PREDICATE_IMPLEMENT_EX(CLASS, METHOD, PARAMS) \
+  static inline bool GNS2(CLASS, METHOD) \
+      COSMERON_MACRO_INTERNAL_OBJ_PROTOEX_EMIT_PARAMS(CLASS, METHOD, PARAMS)
+
+#define OBJECT_FUNCTION_IMPLEMENT_EX(CLASS, RET, METHOD, PARAMS) \
+  static inline RET GNS2(CLASS, METHOD) \
+      COSMERON_MACRO_INTERNAL_OBJ_PROTOEX_EMIT_PARAMS(CLASS, METHOD, PARAMS)
+
+#define OBJECT_PROCEDURE_IMPLEMENT_EX(CLASS, METHOD, PARAMS) \
+  static inline void GNS2(CLASS, METHOD) \
+      COSMERON_MACRO_INTERNAL_OBJ_PROTOEX_EMIT_PARAMS(CLASS, METHOD, PARAMS)
+
+/* ------------------------------------------------------------
+ * 2. Package Implementation Prototypes (Free functions, no receiver)
+ * ------------------------------------------------------------ */
+
+#define PACKAGE_OPERATION_IMPLEMENT_EX(PKG, FUNC, PARAMS) \
+  static inline OPSTATUS GNS2(PKG, FUNC) \
+      COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(PARAMS)
+
+#define PACKAGE_PREDICATE_IMPLEMENT_EX(PKG, FUNC, PARAMS) \
+  static inline bool GNS2(PKG, FUNC) \
+      COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(PARAMS)
+
+#define PACKAGE_FUNCTION_IMPLEMENT_EX(PKG, RET, FUNC, PARAMS) \
+  static inline RET GNS2(PKG, FUNC) \
+      COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(PARAMS)
+
+#define PACKAGE_PROCEDURE_IMPLEMENT_EX(PKG, FUNC, PARAMS) \
+  static inline void GNS2(PKG, FUNC) \
+      COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(PARAMS)
+
+/* ------------------------------------------------------------
+ * 3. Unified Dispatcher Selection
+ *
+ * Dispatches to OBJECT implementation if any of these traits hold:
+ * 1. Global file override: TARGET_IS_OBJECT is defined as 1
+ * 2. Target trait tag:     <TARGET>_IS_OBJECT is defined as 1 (e.g. #define TArray_IS_OBJECT 1)
+ * 3. Namespaced tag:       COSMERON_TAG_OBJ_<TARGET> is defined as 1
+ *
+ * For zero-ambiguity in implementation files, prefer using:
+ * - OBJECT_OPERATION_IMPLEMENT_EX(CLASS, METHOD, PARAMS)
+ * - PACKAGE_OPERATION_IMPLEMENT_EX(PKG, FUNC, PARAMS)
+ * ------------------------------------------------------------ */
+
+#define COSMERON_INTERNAL_OBJ_PROBE_VAL_1 ,
+
+#define COSMERON_INTERNAL_DETECT_TAG_NAMESPACED(TARGET) \
+  PP_HAS_COMMA(PP_OP_CAT2(COSMERON_INTERNAL_OBJ_PROBE_VAL_, \
+                          PP_OP_CAT2(COSMERON_TAG_OBJ_, TARGET)))
+
+#define COSMERON_INTERNAL_DETECT_TAG_SUFFIXED(TARGET) \
+  PP_HAS_COMMA(PP_OP_CAT2(COSMERON_INTERNAL_OBJ_PROBE_VAL_, \
+                          PP_OP_CAT2(TARGET, _IS_OBJECT)))
+
+#define COSMERON_INTERNAL_DETECT_OR_00 0
+#define COSMERON_INTERNAL_DETECT_OR_01 1
+#define COSMERON_INTERNAL_DETECT_OR_10 1
+#define COSMERON_INTERNAL_DETECT_OR_11 1
+
+#define COSMERON_INTERNAL_DETECT_COMBINE_I(a, b) \
+  PP_OP_CAT2(COSMERON_INTERNAL_DETECT_OR_, PP_OP_CAT2(a, b))
+#define COSMERON_INTERNAL_DETECT_COMBINE(a, b) \
+  COSMERON_INTERNAL_DETECT_COMBINE_I(a, b)
+
+#if defined(TARGET_IS_OBJECT) && (TARGET_IS_OBJECT == 1)
+#define COSMERON_IS_TARGET_OBJECT(TARGET) 1
+#else
+#define COSMERON_IS_TARGET_OBJECT(TARGET) \
+  COSMERON_INTERNAL_DETECT_COMBINE( \
+      COSMERON_INTERNAL_DETECT_TAG_NAMESPACED(TARGET), \
+      COSMERON_INTERNAL_DETECT_TAG_SUFFIXED(TARGET))
+#endif
+
+#define OPERATION_IMPLEMENT_EX(TARGET, NAME, PARAMS) \
+  PP_IIF(COSMERON_IS_TARGET_OBJECT(TARGET), \
+         OBJECT_OPERATION_IMPLEMENT_EX, \
+         PACKAGE_OPERATION_IMPLEMENT_EX)(TARGET, NAME, PARAMS)
+
+#define PREDICATE_IMPLEMENT_EX(TARGET, NAME, PARAMS) \
+  PP_IIF(COSMERON_IS_TARGET_OBJECT(TARGET), \
+         OBJECT_PREDICATE_IMPLEMENT_EX, \
+         PACKAGE_PREDICATE_IMPLEMENT_EX)(TARGET, NAME, PARAMS)
+
+#define FUNCTION_IMPLEMENT_EX(TARGET, RET, NAME, PARAMS) \
+  PP_IIF(COSMERON_IS_TARGET_OBJECT(TARGET), \
+         OBJECT_FUNCTION_IMPLEMENT_EX, \
+         PACKAGE_FUNCTION_IMPLEMENT_EX)(TARGET, RET, NAME, PARAMS)
+
+#define PROCEDURE_IMPLEMENT_EX(TARGET, NAME, PARAMS) \
+  PP_IIF(COSMERON_IS_TARGET_OBJECT(TARGET), \
+         OBJECT_PROCEDURE_IMPLEMENT_EX, \
+         PACKAGE_PROCEDURE_IMPLEMENT_EX)(TARGET, NAME, PARAMS)
+
+/* ------------------------------------------------------------
+ * 4. Introspection Prototypes (Introspection with __typeof__)
+ * ------------------------------------------------------------ */
+
+#define COSMERON_MACRO_INTERNAL_PROTO_ARG(CLASS_METHOD, ARG) \
+  , __typeof__(((struct GNS2(CLASS_METHOD, sig) *)0)->ARG) ARG
+
+#define COSMERON_MACRO_INTERNAL_PROTO_DISPATCH_0(CLASS, METHOD) \
+  GNS3(CLASS, METHOD, ret_t) \
+  GNS2(CLASS, METHOD)(GNS3(CLASS, METHOD, self_t) * self)
+
+#define COSMERON_MACRO_INTERNAL_PROTO_DISPATCH_1(CLASS, METHOD, ...) \
+  GNS3(CLASS, METHOD, ret_t) \
+  GNS2(CLASS, METHOD)(GNS3(CLASS, METHOD, self_t) * self \
+                      PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_PROTO_ARG, \
+                                     GNS2(CLASS, METHOD), __VA_ARGS__))
+
+#define OBJECT_PROTOTYPE(...) \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PROTO_DISPATCH_, \
+             PP_HAS_MORE_THAN_2(__VA_ARGS__))(__VA_ARGS__)
+
+#define COSMERON_MACRO_INTERNAL_PKG_PROTO_ARG(PKG_FUNC, ARG) \
+  __typeof__(((struct GNS2(PKG_FUNC, sig) *)0)->ARG) ARG
+
+#define COSMERON_MACRO_INTERNAL_PKG_PROTO_DISPATCH_0(PKG, FUNC) \
+  static inline GNS3(PKG, FUNC, ret_t) GNS2(PKG, FUNC)(void)
+
+#define COSMERON_MACRO_INTERNAL_PKG_PROTO_DISPATCH_1(PKG, FUNC, ...) \
+  static inline GNS3(PKG, FUNC, ret_t) GNS2(PKG, FUNC)( \
+      PP_FOREACH_COMMA_CTX(COSMERON_MACRO_INTERNAL_PKG_PROTO_ARG, \
+                           GNS2(PKG, FUNC), __VA_ARGS__))
+
+#define PACKAGE_PROTOTYPE(...) \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PKG_PROTO_DISPATCH_, \
+             PP_HAS_MORE_THAN_2(__VA_ARGS__))(__VA_ARGS__)
+
+/* ------------------------------------------------------------
+ * 5. Backward Compatibility Aliases
+ * ------------------------------------------------------------ */
+#define COSMERON_MACRO_INTERNAL_PROTOEX_2(CLASS, METHOD) \
+  static inline GNS3(CLASS, METHOD, ret_t) GNS2(CLASS, METHOD) \
+      COSMERON_MACRO_INTERNAL_OBJ_PROTOEX_PARAMS_1(CLASS, METHOD, ())
+
+#define COSMERON_MACRO_INTERNAL_PROTOEX_3(CLASS, METHOD, PARAMS) \
+  static inline GNS3(CLASS, METHOD, ret_t) GNS2(CLASS, METHOD) \
+      COSMERON_MACRO_INTERNAL_OBJ_PROTOEX_EMIT_PARAMS(CLASS, METHOD, PARAMS)
+
+#define OBJECT_PROTOTYPEEX(...) \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PROTOEX_, \
+             PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+
+#define COSMERON_MACRO_INTERNAL_PKG_PROTOEX_2(PKG, FUNC) \
+  static inline GNS3(PKG, FUNC, ret_t) GNS2(PKG, FUNC)(void)
+
+#define COSMERON_MACRO_INTERNAL_PKG_PROTOEX_3(PKG, FUNC, PARAMS) \
+  static inline GNS3(PKG, FUNC, ret_t) GNS2(PKG, FUNC) \
+      COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(PARAMS)
+
+#define PACKAGE_PROTOTYPEEX(...) \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PKG_PROTOEX_, \
+             PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+/* EOF */

@@ -1,0 +1,194 @@
+#pragma once
+
+#include <stdbool.h>
+#include <stddef.h>
+
+#define COSMERON_MACRO_INTERNAL_LINKED_RING_IMPLEMENT(TYPE, SUFFIX)            \
+  LINKED_RING_INIT_PROTOTYPE(SUFFIX) {                                         \
+    if (!ring || capacity == 0U)                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    LINKED_RING_NODE_TYPE(SUFFIX) *first = NULL;                               \
+    LINKED_RING_NODE_TYPE(SUFFIX) *prev = NULL;                                \
+    for (size_t i = 0U; i < capacity; ++i) {                                   \
+      void *allocated = NULL;                                                  \
+      OPSTATUS status = ALLOC_FUNC(AllocArray)(                                \
+          &allocated, 1U, sizeof(LINKED_RING_NODE_TYPE(SUFFIX)));              \
+      if (status != STATUS_CONST(SUCCESS)) {                                   \
+        LINKED_RING_NODE_TYPE(SUFFIX) *curr = first;                           \
+        for (size_t j = 0U; j < i; ++j) {                                      \
+          LINKED_RING_NODE_TYPE(SUFFIX) *next = curr->next;                    \
+          Memory_Free(curr);                                                   \
+          curr = next;                                                         \
+        }                                                                      \
+        return status;                                                         \
+      }                                                                        \
+      LINKED_RING_NODE_TYPE(SUFFIX) *node =                                    \
+          (LINKED_RING_NODE_TYPE(SUFFIX) *)allocated;                          \
+      node->next = NULL;                                                       \
+      if (!first)                                                              \
+        first = node;                                                          \
+      if (prev)                                                                \
+        prev->next = node;                                                     \
+      prev = node;                                                             \
+    }                                                                          \
+    prev->next = first;                                                        \
+    ring->head = first;                                                        \
+    ring->tail = first;                                                        \
+    ring->back = NULL;                                                         \
+    ring->size = 0U;                                                           \
+    ring->capacity = capacity;                                                 \
+    ring->isOwned = true;                                                      \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  LINKED_RING_INIT_STATIC_PROTOTYPE(SUFFIX) {                                  \
+    if (!ring || !nodes || capacity == 0U)                                     \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    for (size_t i = 0U; i + 1U < capacity; ++i) {                              \
+      nodes[i].next = &nodes[i + 1U];                                          \
+    }                                                                          \
+    nodes[capacity - 1U].next = &nodes[0U];                                    \
+    ring->head = &nodes[0U];                                                   \
+    ring->tail = &nodes[0U];                                                   \
+    ring->back = NULL;                                                         \
+    ring->size = 0U;                                                           \
+    ring->capacity = capacity;                                                 \
+    ring->isOwned = false;                                                     \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  LINKED_RING_DESTROY_PROTOTYPE(SUFFIX) {                                      \
+    if (!ring)                                                                 \
+      return;                                                                  \
+    if (ring->isOwned && ring->capacity > 0U && ring->head) {                  \
+      LINKED_RING_NODE_TYPE(SUFFIX) *curr = ring->head;                        \
+      for (size_t i = 0U; i < ring->capacity; ++i) {                           \
+        LINKED_RING_NODE_TYPE(SUFFIX) *next = curr->next;                      \
+        Memory_Free(curr);                                                     \
+        curr = next;                                                           \
+      }                                                                        \
+    }                                                                          \
+    ring->head = NULL;                                                         \
+    ring->tail = NULL;                                                         \
+    ring->back = NULL;                                                         \
+    ring->size = 0U;                                                           \
+    ring->capacity = 0U;                                                       \
+    ring->isOwned = false;                                                     \
+  }                                                                            \
+                                                                               \
+  LINKED_RING_CLEAR_PROTOTYPE(SUFFIX) {                                        \
+    if (!ring)                                                                 \
+      return;                                                                  \
+    ring->head = ring->tail;                                                   \
+    ring->back = NULL;                                                         \
+    ring->size = 0U;                                                           \
+  }                                                                            \
+                                                                               \
+  LINKED_RING_PUSH_PROTOTYPE(TYPE, SUFFIX) {                                   \
+    if (!ring || !ring->tail)                                                  \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (ring->size >= ring->capacity)                                          \
+      return STATUS_CONST(INSUFFICIENT_SPACE);                                 \
+    ring->tail->value = value;                                                 \
+    ring->back = ring->tail;                                                   \
+    ring->tail = ring->tail->next;                                             \
+    ring->size++;                                                              \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  LINKED_RING_POP_PROTOTYPE(TYPE, SUFFIX) {                                    \
+    if (!ring || !ring->head || !outValue)                                     \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (ring->size == 0U)                                                      \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *outValue = ring->head->value;                                             \
+    ring->head = ring->head->next;                                             \
+    ring->size--;                                                              \
+    if (ring->size == 0U)                                                      \
+      ring->back = NULL;                                                       \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  LINKED_RING_PEEK_PROTOTYPE(TYPE, SUFFIX) {                                   \
+    if (!ring || !ring->head || !outValue)                                     \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (ring->size == 0U)                                                      \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *outValue = ring->head->value;                                             \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  LINKED_RING_OVERWRITE_PROTOTYPE(TYPE, SUFFIX) {                              \
+    if (!ring || !ring->tail)                                                  \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (ring->capacity == 0U)                                                  \
+      return STATUS_CONST(INSUFFICIENT_SPACE);                                 \
+    if (ring->size >= ring->capacity) {                                        \
+      if (outDropped)                                                          \
+        *outDropped = ring->head->value;                                       \
+      ring->head = ring->head->next;                                           \
+      ring->tail->value = value;                                               \
+      ring->back = ring->tail;                                                 \
+      ring->tail = ring->tail->next;                                           \
+    } else {                                                                   \
+      ring->tail->value = value;                                               \
+      ring->back = ring->tail;                                                 \
+      ring->tail = ring->tail->next;                                           \
+      ring->size++;                                                            \
+    }                                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  LINKED_RING_FRONT_PROTOTYPE(TYPE, SUFFIX) {                                  \
+    if (!ring || !ring->head || !out)                                          \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (ring->size == 0U)                                                      \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *out = &ring->head->value;                                                 \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  LINKED_RING_BACK_PROTOTYPE(TYPE, SUFFIX) {                                   \
+    if (!ring || !out)                                                         \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (ring->size == 0U || !ring->back)                                       \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *out = &ring->back->value;                                                 \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  LINKED_RING_AT_PROTOTYPE(TYPE, SUFFIX) {                                     \
+    if (!ring || !ring->head || !out)                                          \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (index >= ring->size)                                                   \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    LINKED_RING_NODE_TYPE(SUFFIX) *curr = ring->head;                          \
+    for (size_t i = 0U; i < index; ++i) {                                      \
+      curr = curr->next;                                                       \
+    }                                                                          \
+    *out = &curr->value;                                                       \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  LINKED_RING_EMPTY_PROTOTYPE(SUFFIX) {                                        \
+    return (!ring || ring->size == 0U);                                        \
+  }                                                                            \
+                                                                               \
+  LINKED_RING_FULL_PROTOTYPE(SUFFIX) {                                         \
+    return (ring != NULL && ring->capacity > 0U &&                             \
+            ring->size >= ring->capacity);                                     \
+  }                                                                            \
+                                                                               \
+  LINKED_RING_SIZE_PROTOTYPE(SUFFIX) {                                         \
+    return ring ? ring->size : 0U;                                             \
+  }                                                                            \
+                                                                               \
+  LINKED_RING_CAPACITY_PROTOTYPE(SUFFIX) {                                     \
+    return ring ? ring->capacity : 0U;                                         \
+  }                                                                            \
+                                                                               \
+  LINKED_RING_AVAILABLE_PROTOTYPE(SUFFIX) {                                    \
+    return (ring && ring->capacity >= ring->size)                              \
+               ? (ring->capacity - ring->size)                                 \
+               : 0U;                                                           \
+  }

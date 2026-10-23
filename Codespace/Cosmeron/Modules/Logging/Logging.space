@@ -1,0 +1,102 @@
+#pragma once
+
+#include "../../Core/Error/Status.h"
+#include "../../Core/Namespace.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+
+#define LOGGING_MOD Logging
+#define LOGGING_CMOD LOGGING
+
+#ifndef LOGGING_NS
+#define LOGGING_NS(NAME) GNS2(LIB_PREFIX(LOGGING_MOD), NAME)
+#endif
+
+#ifndef LOGGING_CNS
+#define LOGGING_CNS(NAME) CNS2(LIB_PREFIX_CONST(LOGGING_CMOD), NAME)
+#endif
+
+#define LOGGING_INS(NAME) GNS2(LOGGING_NS(Internal), NAME)
+#define LOGGING_TYPE(NAME) LOGGING_NS(NAME)
+#define LOGGING_FUNC(NAME) LOGGING_NS(NAME)
+#define LOGGING_CONST(NAME) LOGGING_CNS(NAME)
+
+/* ============================================================
+ * Constants & Limits
+ * ============================================================ */
+
+enum {
+  LOGGING_CONST(MAX_SINKS) = 16,
+  LOGGING_CONST(MAX_MESSAGE_BUFFER) = 2048
+};
+
+/* ============================================================
+ * Log Levels Transformar em Xmacros
+ * ============================================================ */
+
+typedef enum LOGGING_TYPE(LogLevel) {
+  LOGGING_CONST(LEVEL_TRACE) = 0,
+  LOGGING_CONST(LEVEL_DEBUG) = 1,
+  LOGGING_CONST(LEVEL_INFO) = 2,
+  LOGGING_CONST(LEVEL_WARN) = 3,
+  LOGGING_CONST(LEVEL_ERROR) = 4,
+  LOGGING_CONST(LEVEL_FATAL) = 5,
+  LOGGING_CONST(LEVEL_OFF) = 6
+} LOGGING_TYPE(LogLevel);
+
+/* ============================================================
+ * Log Record (Diagnostics)
+ * ============================================================ */
+
+typedef struct LOGGING_TYPE(TRecord) {
+  LOGGING_TYPE(LogLevel) level;
+  int64_t timestamp;
+  const char *tag;
+  const char *message;
+  const char *file;
+  int line;
+  const char *function;
+} LOGGING_TYPE(TRecord);
+
+/* ============================================================
+ * Sink Types & Sinks
+ * ============================================================ */
+
+typedef enum LOGGING_TYPE(SinkKind) {
+  LOGGING_CONST(SINK_CONSOLE) = 0,
+  LOGGING_CONST(SINK_FILE) = 1,
+  LOGGING_CONST(SINK_BUFFER) = 2,
+  LOGGING_CONST(SINK_CUSTOM) = 3
+} LOGGING_TYPE(SinkKind);
+
+typedef struct LOGGING_TYPE(TSink) LOGGING_TYPE(TSink);
+
+typedef OPSTATUS (*LOGGING_TYPE(SinkWriteFn))(LOGGING_TYPE(TSink) * sink,
+                                              const LOGGING_TYPE(TRecord) *
+                                                  record);
+
+struct LOGGING_TYPE(TSink) {
+  LOGGING_TYPE(SinkKind) kind;
+  LOGGING_TYPE(LogLevel) minLevel;
+  bool useColors;
+  bool jsonFormat;
+  void *target;
+  size_t targetCapacity;
+  size_t targetWritten;
+  LOGGING_TYPE(SinkWriteFn) write;
+};
+
+/* ============================================================
+ * Logger
+ * ============================================================ */
+
+typedef struct LOGGING_TYPE(TLogger) {
+  const char *name;
+  LOGGING_TYPE(LogLevel) level;
+  LOGGING_TYPE(TSink) * sinks[LOGGING_CONST(MAX_SINKS)];
+  size_t sinkCount;
+} LOGGING_TYPE(TLogger);
+
+/* EOF */

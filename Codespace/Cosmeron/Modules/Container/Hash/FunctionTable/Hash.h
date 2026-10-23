@@ -39,9 +39,49 @@
           .capacity = HASH_OPERATION(KEY_SUFFIX, VALUE_SUFFIX, Capacity),     \
       };
 
+#if !defined(HASH_SET_DISABLE_FUNCTION_TABLE)
+
+#define HASH_SET_FUNCTION_TABLE_STRUCT(KEY_TYPE, KEY_SUFFIX)                  \
+  typedef struct HASH_SET_FUNCTION_TABLE_TYPE(KEY_SUFFIX) {                   \
+    OPSTATUS (*init)(THASH_SET_TYPE(KEY_SUFFIX) *);                           \
+    void (*destroy)(THASH_SET_TYPE(KEY_SUFFIX) *);                            \
+    OPSTATUS (*rehash)(THASH_SET_TYPE(KEY_SUFFIX) *, size_t);                 \
+    bool (*contains)(const THASH_SET_TYPE(KEY_SUFFIX) *, KEY_TYPE);           \
+    OPSTATUS (*insert)(THASH_SET_TYPE(KEY_SUFFIX) *, KEY_TYPE);               \
+    OPSTATUS (*remove)(THASH_SET_TYPE(KEY_SUFFIX) *, KEY_TYPE);               \
+    void (*clear)(THASH_SET_TYPE(KEY_SUFFIX) *);                              \
+    bool (*isEmpty)(const THASH_SET_TYPE(KEY_SUFFIX) *);                      \
+    size_t (*size)(const THASH_SET_TYPE(KEY_SUFFIX) *);                       \
+    size_t (*capacity)(const THASH_SET_TYPE(KEY_SUFFIX) *);                   \
+  } HASH_SET_FUNCTION_TABLE_TYPE(KEY_SUFFIX);
+
+#define HASH_SET_FUNCTION_TABLE_INSTANCE(KEY_TYPE, KEY_SUFFIX)                 \
+  static const HASH_SET_FUNCTION_TABLE_TYPE(KEY_SUFFIX)                        \
+      HASH_SET_OPERATION(KEY_SUFFIX, functions) = {                           \
+          .init = HASH_SET_OPERATION(KEY_SUFFIX, Init),                       \
+          .destroy = HASH_SET_OPERATION(KEY_SUFFIX, Destroy),                 \
+          .rehash = HASH_SET_OPERATION(KEY_SUFFIX, Rehash),                   \
+          .contains = HASH_SET_OPERATION(KEY_SUFFIX, Contains),               \
+          .insert = HASH_SET_OPERATION(KEY_SUFFIX, Insert),                   \
+          .remove = HASH_SET_OPERATION(KEY_SUFFIX, Remove),                   \
+          .clear = HASH_SET_OPERATION(KEY_SUFFIX, Clear),                     \
+          .isEmpty = HASH_SET_OPERATION(KEY_SUFFIX, IsEmpty),                 \
+          .size = HASH_SET_OPERATION(KEY_SUFFIX, Size),                       \
+          .capacity = HASH_SET_OPERATION(KEY_SUFFIX, Capacity),               \
+      };
+
+#else
+
+#define HASH_SET_FUNCTION_TABLE_STRUCT(...)
+#define HASH_SET_FUNCTION_TABLE_INSTANCE(...)
+
+#endif
+
 #else
 
 #define HASH_FUNCTION_TABLE_STRUCT(...)
 #define HASH_FUNCTION_TABLE_INSTANCE(...)
+#define HASH_SET_FUNCTION_TABLE_STRUCT(...)
+#define HASH_SET_FUNCTION_TABLE_INSTANCE(...)
 
 #endif

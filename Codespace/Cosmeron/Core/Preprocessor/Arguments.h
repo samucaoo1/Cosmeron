@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Compiling.inc"
+#include "Operations.h"
 
 #define PP_ARG_RSEQ()                                                         \
   100, 99, 98, 97, 96, 95, 94, 93, 92, 91, 90, 89, 88, 87, 86, 85, 84, 83, 82, \
@@ -10,7 +11,8 @@
       27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10,  \
       9, 8, 7, 6, 5, 4, 3, 2, 1, 0
 
-#define PP_ARG_COUNT(...) PP_ARG_COUNT_IMPL(__VA_ARGS__, PP_ARG_RSEQ())
+#define PP_ARG_COUNT_EXPAND(args) PP_ARG_COUNT_SELECT args
+#define PP_ARG_COUNT(...) PP_ARG_COUNT_EXPAND((__VA_ARGS__, PP_ARG_RSEQ(), 0))
 
 #define PP_ARG_COUNT_IMPL(...) PP_ARG_COUNT_SELECT(__VA_ARGS__, 0)
 
@@ -24,4 +26,67 @@
     _77, _78, _79, _80, _81, _82, _83, _84, _85, _86, _87, _88, _89, _90, _91, \
     _92, _93, _94, _95, _96, _97, _98, _99, N, ...)                            \
   N
+
+#define PP_UNWRAP(...) __VA_ARGS__
+#define PP_ARG_UNWRAP(...) __VA_ARGS__
+
+#define PP_ARG16(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, \
+                 _15, _16, ...)                                                \
+  _16
+
+#define PP_ARG16_EXPAND(args) PP_ARG16 args
+#define PP_HAS_COMMA(...)                                                      \
+  PP_ARG16_EXPAND((__VA_ARGS__, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0))
+
+#define PP_TRIGGER_PAREN(...) ,
+
+#define PP_CASE_0001 , 1
+
+#define PP_IS_EMPTY_IMPL(_0, _1, _2, _3)                                       \
+  PP_HAS_COMMA(PP_OP_CAT2(PP_CASE_, PP_OP_CAT4(_0, _1, _2, _3)))
+
+#define PP_IS_EMPTY(...)                                                       \
+  PP_IS_EMPTY_IMPL(                                                            \
+      PP_HAS_COMMA(__VA_ARGS__),                                               \
+      PP_HAS_COMMA(PP_TRIGGER_PAREN __VA_ARGS__),                              \
+      PP_HAS_COMMA(__VA_ARGS__(~)),                                            \
+      PP_HAS_COMMA(PP_TRIGGER_PAREN __VA_ARGS__(~)))
+
+#define PP_IS_EMPTY_PARAMS(PARAMS) PP_IS_EMPTY(PP_UNWRAP PARAMS)
+
+#define PP_HAS_MORE_THAN_2_RSEQ()                                              \
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,                 \
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,                 \
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,                 \
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,                 \
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0
+
+#define PP_HAS_MORE_THAN_2(...)                                                \
+  PP_ARG_COUNT_EXPAND((__VA_ARGS__, PP_HAS_MORE_THAN_2_RSEQ(), 0))
+
+/* Convert parameter declaration lists (e.g. (int a, void *b)) to struct fields */
+#define PP_PARAM_TO_FIELD_1(a) a;
+#define PP_PARAM_TO_FIELD_2(a, b) a; b;
+#define PP_PARAM_TO_FIELD_3(a, b, c) a; b; c;
+#define PP_PARAM_TO_FIELD_4(a, b, c, d) a; b; c; d;
+#define PP_PARAM_TO_FIELD_5(a, b, c, d, e) a; b; c; d; e;
+#define PP_PARAM_TO_FIELD_6(a, b, c, d, e, f) a; b; c; d; e; f;
+#define PP_PARAM_TO_FIELD_7(a, b, c, d, e, f, g) a; b; c; d; e; f; g;
+#define PP_PARAM_TO_FIELD_8(a, b, c, d, e, f, g, h) a; b; c; d; e; f; g; h;
+#define PP_PARAM_TO_FIELD_9(a, b, c, d, e, f, g, h, i) a; b; c; d; e; f; g; h; i;
+#define PP_PARAM_TO_FIELD_10(a, b, c, d, e, f, g, h, i, j)                    \
+  a; b; c; d; e; f; g; h; i; j;
+#define PP_PARAM_TO_FIELD_11(a, b, c, d, e, f, g, h, i, j, k)                 \
+  a; b; c; d; e; f; g; h; i; j; k;
+#define PP_PARAM_TO_FIELD_12(a, b, c, d, e, f, g, h, i, j, k, l)              \
+  a; b; c; d; e; f; g; h; i; j; k; l;
+#define PP_PARAM_TO_FIELD_13(a, b, c, d, e, f, g, h, i, j, k, l, m)           \
+  a; b; c; d; e; f; g; h; i; j; k; l; m;
+#define PP_PARAM_TO_FIELD_14(a, b, c, d, e, f, g, h, i, j, k, l, m, n)        \
+  a; b; c; d; e; f; g; h; i; j; k; l; m; n;
+#define PP_PARAM_TO_FIELD_15(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o)     \
+  a; b; c; d; e; f; g; h; i; j; k; l; m; n; o;
+#define PP_PARAM_TO_FIELD_16(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p)  \
+  a; b; c; d; e; f; g; h; i; j; k; l; m; n; o; p;
+
 /* EOF */

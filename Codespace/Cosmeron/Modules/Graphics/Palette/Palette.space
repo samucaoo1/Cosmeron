@@ -1,0 +1,15 @@
+#pragma once
+#include "../../../Core/Namespace.h"
+#include "../../../Core/Error/Status.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#define PALETTE_MOD Palette
+#define PALETTE_CMOD PALETTE
+#define PALETTE_NS(NAME) GNS2(LIB_PREFIX(PALETTE_MOD), NAME)
+#define PALETTE_CNS(NAME) CNS2(LIB_PREFIX_CONST(PALETTE_CMOD), NAME)
+#define PALETTE_INS(NAME) GNS3(LIB_PREFIX(PALETTE_MOD), Internal, NAME)
+#define PALETTE_TYPE(NAME) PALETTE_NS(NAME)
+#define PALETTE_FUNC(NAME) PALETTE_NS(NAME)
+#define PALETTE_CONST(NAME) PALETTE_CNS(NAME)

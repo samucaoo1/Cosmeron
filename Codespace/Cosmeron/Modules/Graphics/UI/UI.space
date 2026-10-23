@@ -1,5 +1,6 @@
 #pragma once
 #include "../Canvas/Canvas.h"
+#include "../../Input/Input.space"
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -52,7 +53,7 @@ typedef struct UI_TYPE(TGlyphs) {
 
 typedef struct UI_TYPE(TTheme) {
   UI_TYPE(TVisual) text, button, checkbox, radio, slider, input;
-  UI_TYPE(TVisual) panel, progress, selection;
+  UI_TYPE(TVisual) panel, progress, selection, scrollbar;
   UI_TYPE(TGlyphs) glyphs;
 } UI_TYPE(TTheme);
 
@@ -90,6 +91,13 @@ typedef struct UI_TYPE(TSlider) {
   int32_t minimum, maximum, value;
   bool disabled;
 } UI_TYPE(TSlider);
+typedef struct UI_TYPE(TScrollbar) {
+  UI_TYPE(WidgetId) id;
+  TQUAD_TYPE(uint16) region;
+  const UI_TYPE(TVisual) *visual;
+  int64_t minimum, maximum, value, pageSize;
+  bool vertical, disabled;
+} UI_TYPE(TScrollbar);
 typedef struct UI_TYPE(TProgress) {
   TQUAD_TYPE(uint16) region;
   const UI_TYPE(TVisual) *visual;
@@ -183,8 +191,12 @@ typedef struct UI_TYPE(TPanel) {
   const UI_TYPE(TVisual) *visual;
 } UI_TYPE(TPanel);
 
+struct UI_FunctionTable;
+
 typedef struct UI_TYPE(TContext) {
+  const struct UI_FunctionTable *api;
   TERMINAL_TYPE(TCanvas) *canvas;
+  TERMINAL_TYPE(TCanvas) *lastCanvas;
   UI_TYPE(TTheme) theme;
   bool themeSet, frame, pointerKnown, pointerDown, pointerPressed, pointerReleased;
   TDUAL_TYPE(uint16) pointer;
@@ -212,3 +224,5 @@ typedef struct UI_TYPE(TContext) {
   bool resized;
   TDUAL_TYPE(uint16) newSize;
 } UI_TYPE(TContext);
+
+typedef UI_TYPE(TContext) TUIContext;

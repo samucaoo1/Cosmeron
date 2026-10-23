@@ -1,0 +1,558 @@
+#pragma once
+
+#define COSMERON_MACRO_INTERNAL_TEXT_STRING_IMPLEMENT(CHAR_TYPE, SUFFIX)      \
+  static inline size_t TEXT_STRING_INS(SUFFIX, CStrLen)(                      \
+      const CHAR_TYPE *cstr) {                                                 \
+    if (cstr == NULL) return 0U;                                               \
+    size_t len = 0U;                                                           \
+    while (cstr[len] != (CHAR_TYPE)0) ++len;                                   \
+    return len;                                                                \
+  }                                                                            \
+                                                                               \
+  static inline OPSTATUS TEXT_STRING_INS(SUFFIX, EnsureCapacity)(              \
+      TEXT_STRING_TYPE(SUFFIX) *str, size_t needed) {                          \
+    if (str->capacity >= needed) return STATUS_CONST(SUCCESS);                 \
+    size_t newCap = str->capacity == 0U                                        \
+                        ? (size_t)TEXT_STRING_CINS(INITIAL_CAPACITY)           \
+                        : str->capacity;                                       \
+    while (newCap < needed) {                                                  \
+      if (newCap > SIZE_MAX / (size_t)TEXT_STRING_CINS(GROWTH_FACTOR)) {       \
+        newCap = needed;                                                       \
+        break;                                                                 \
+      }                                                                        \
+      newCap *= (size_t)TEXT_STRING_CINS(GROWTH_FACTOR);                       \
+    }                                                                          \
+    return TEXT_STRING_FUNC(SUFFIX, Reserve)(str, newCap);                     \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_INIT_PROTOTYPE(SUFFIX) {                                         \
+    if (str == NULL) return STATUS_CONST(INVALID_ARGUMENT);                    \
+    str->data = NULL;                                                          \
+    str->size = 0U;                                                            \
+    str->capacity = 0U;                                                        \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_DESTROY_PROTOTYPE(SUFFIX) {                                      \
+    if (str == NULL) return;                                                   \
+    if (str->data != NULL) {                                                   \
+      MEMORY_FUNC(FreePointer)((void **)&str->data);                           \
+    }                                                                          \
+    str->data = NULL;                                                          \
+    str->size = 0U;                                                            \
+    str->capacity = 0U;                                                        \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_CLEAR_PROTOTYPE(SUFFIX) {                                        \
+    if (str == NULL) return;                                                   \
+    str->size = 0U;                                                            \
+    if (str->data != NULL) {                                                   \
+      str->data[0] = (CHAR_TYPE)0;                                            \
+    }                                                                          \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_RESERVE_PROTOTYPE(SUFFIX) {                                      \
+    if (str == NULL) return STATUS_CONST(INVALID_ARGUMENT);                    \
+    if (newCapacity <= str->capacity) return STATUS_CONST(SUCCESS);            \
+    size_t allocUnits = newCapacity + 1U;                                      \
+    if (allocUnits <= newCapacity ||                                           \
+        allocUnits > SIZE_MAX / sizeof(CHAR_TYPE)) {                           \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    }                                                                          \
+    void *ptr = str->data;                                                     \
+    OPSTATUS status =                                                          \
+        MEMORY_FUNC(ReallocBytes)(&ptr, allocUnits * sizeof(CHAR_TYPE));       \
+    if (status != STATUS_CONST(SUCCESS)) return status;                        \
+    str->data = (CHAR_TYPE *)ptr;                                              \
+    str->capacity = newCapacity;                                               \
+    str->data[str->size] = (CHAR_TYPE)0;                                       \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_SHRINK_TO_FIT_PROTOTYPE(SUFFIX) {                                \
+    if (str == NULL) return STATUS_CONST(INVALID_ARGUMENT);                    \
+    if (str->capacity == str->size) return STATUS_CONST(SUCCESS);              \
+    if (str->size == 0U) {                                                     \
+      if (str->data != NULL) {                                                 \
+        MEMORY_FUNC(FreePointer)((void **)&str->data);                         \
+      }                                                                        \
+      str->data = NULL;                                                        \
+      str->capacity = 0U;                                                      \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    size_t allocUnits = str->size + 1U;                                        \
+    void *ptr = str->data;                                                     \
+    OPSTATUS status =                                                          \
+        MEMORY_FUNC(ReallocBytes)(&ptr, allocUnits * sizeof(CHAR_TYPE));       \
+    if (status != STATUS_CONST(SUCCESS)) return status;                        \
+    str->data = (CHAR_TYPE *)ptr;                                              \
+    str->capacity = str->size;                                                 \
+    str->data[str->size] = (CHAR_TYPE)0;                                       \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_LENGTH_PROTOTYPE(SUFFIX) {                                       \
+    return str != NULL ? str->size : 0U;                                       \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_CAPACITY_PROTOTYPE(SUFFIX) {                                     \
+    return str != NULL ? str->capacity : 0U;                                   \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_IS_EMPTY_PROTOTYPE(SUFFIX) {                                     \
+    return str == NULL || str->size == 0U;                                     \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_CSTR_PROTOTYPE(CHAR_TYPE, SUFFIX) {                              \
+    if (str == NULL || outCStr == NULL) {                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    if (str->data == NULL || str->size == 0U) {                                \
+      static const CHAR_TYPE emptyLiteral[1] = {(CHAR_TYPE)0};                 \
+      *outCStr = emptyLiteral;                                                 \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    str->data[str->size] = (CHAR_TYPE)0;                                       \
+    *outCStr = str->data;                                                      \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_DATA_PROTOTYPE(CHAR_TYPE, SUFFIX) {                              \
+    if (str == NULL || outData == NULL) {                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    *outData = str->data;                                                      \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_AT_PROTOTYPE(CHAR_TYPE, SUFFIX) {                                \
+    if (str == NULL || outChar == NULL) {                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    if (index >= str->size) return STATUS_CONST(OUT_OF_RANGE);                 \
+    *outChar = &str->data[index];                                              \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_FROM_BUFFER_PROTOTYPE(CHAR_TYPE, SUFFIX) {                       \
+    if (str == NULL || (buffer == NULL && count > 0U)) {                       \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    OPSTATUS status = TEXT_STRING_FUNC(SUFFIX, Reserve)(str, count);           \
+    if (status != STATUS_CONST(SUCCESS)) return status;                        \
+    if (count > 0U) {                                                          \
+      memcpy(str->data, buffer, count * sizeof(CHAR_TYPE));                    \
+    }                                                                          \
+    str->size = count;                                                         \
+    str->data[count] = (CHAR_TYPE)0;                                           \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_FROM_CSTR_PROTOTYPE(CHAR_TYPE, SUFFIX) {                         \
+    if (str == NULL) return STATUS_CONST(INVALID_ARGUMENT);                    \
+    if (cstr == NULL) {                                                        \
+      TEXT_STRING_FUNC(SUFFIX, Clear)(str);                                    \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    size_t len = TEXT_STRING_INS(SUFFIX, CStrLen)(cstr);                       \
+    return TEXT_STRING_FUNC(SUFFIX, FromBuffer)(str, cstr, len);               \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_COPY_PROTOTYPE(SUFFIX) {                                         \
+    if (destination == NULL || source == NULL) {                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    if (destination == source) return STATUS_CONST(SUCCESS);                   \
+    return TEXT_STRING_FUNC(SUFFIX, FromBuffer)(                               \
+        destination, source->data, source->size);                              \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_PUSH_BACK_PROTOTYPE(CHAR_TYPE, SUFFIX) {                         \
+    if (str == NULL) return STATUS_CONST(INVALID_ARGUMENT);                    \
+    if (str->size == SIZE_MAX) return STATUS_CONST(OUT_OF_RANGE);              \
+    OPSTATUS status =                                                          \
+        TEXT_STRING_INS(SUFFIX, EnsureCapacity)(str, str->size + 1U);          \
+    if (status != STATUS_CONST(SUCCESS)) return status;                        \
+    str->data[str->size] = ch;                                                 \
+    str->size++;                                                               \
+    str->data[str->size] = (CHAR_TYPE)0;                                       \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_POP_BACK_PROTOTYPE(CHAR_TYPE, SUFFIX) {                          \
+    if (str == NULL || outChar == NULL) {                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    if (str->size == 0U) return STATUS_CONST(OUT_OF_RANGE);                    \
+    str->size--;                                                               \
+    *outChar = str->data[str->size];                                           \
+    str->data[str->size] = (CHAR_TYPE)0;                                       \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_APPEND_BUFFER_PROTOTYPE(CHAR_TYPE, SUFFIX) {                     \
+    if (str == NULL || (buffer == NULL && count > 0U)) {                       \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    if (count == 0U) return STATUS_CONST(SUCCESS);                             \
+    if (str->size > SIZE_MAX - count) return STATUS_CONST(OUT_OF_RANGE);       \
+    size_t total = str->size + count;                                          \
+    OPSTATUS status = TEXT_STRING_INS(SUFFIX, EnsureCapacity)(str, total);     \
+    if (status != STATUS_CONST(SUCCESS)) return status;                        \
+    memcpy(str->data + str->size, buffer, count * sizeof(CHAR_TYPE));          \
+    str->size = total;                                                         \
+    str->data[total] = (CHAR_TYPE)0;                                           \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_APPEND_PROTOTYPE(CHAR_TYPE, SUFFIX) {                            \
+    if (str == NULL || cstr == NULL) {                                         \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    size_t len = TEXT_STRING_INS(SUFFIX, CStrLen)(cstr);                       \
+    return TEXT_STRING_FUNC(SUFFIX, AppendBuffer)(str, cstr, len);              \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_APPEND_STRING_PROTOTYPE(SUFFIX) {                                \
+    if (str == NULL || other == NULL) {                                        \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    return TEXT_STRING_FUNC(SUFFIX, AppendBuffer)(str, other->data,            \
+                                                 other->size);                 \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_INSERT_PROTOTYPE(CHAR_TYPE, SUFFIX) {                            \
+    if (str == NULL || cstr == NULL || pos > str->size) {                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    size_t count = TEXT_STRING_INS(SUFFIX, CStrLen)(cstr);                     \
+    if (count == 0U) return STATUS_CONST(SUCCESS);                             \
+    if (str->size > SIZE_MAX - count) return STATUS_CONST(OUT_OF_RANGE);       \
+    size_t total = str->size + count;                                          \
+    OPSTATUS status = TEXT_STRING_INS(SUFFIX, EnsureCapacity)(str, total);     \
+    if (status != STATUS_CONST(SUCCESS)) return status;                        \
+    memmove(str->data + pos + count, str->data + pos,                          \
+            (str->size - pos) * sizeof(CHAR_TYPE));                            \
+    memcpy(str->data + pos, cstr, count * sizeof(CHAR_TYPE));                  \
+    str->size = total;                                                         \
+    str->data[total] = (CHAR_TYPE)0;                                           \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_INSERT_CHAR_PROTOTYPE(CHAR_TYPE, SUFFIX) {                       \
+    if (str == NULL || pos > str->size) {                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    if (str->size == SIZE_MAX) return STATUS_CONST(OUT_OF_RANGE);              \
+    OPSTATUS status =                                                          \
+        TEXT_STRING_INS(SUFFIX, EnsureCapacity)(str, str->size + 1U);          \
+    if (status != STATUS_CONST(SUCCESS)) return status;                        \
+    memmove(str->data + pos + 1U, str->data + pos,                             \
+            (str->size - pos) * sizeof(CHAR_TYPE));                            \
+    str->data[pos] = ch;                                                       \
+    str->size++;                                                               \
+    str->data[str->size] = (CHAR_TYPE)0;                                       \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_ERASE_PROTOTYPE(SUFFIX) {                                        \
+    if (str == NULL || pos > str->size) {                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    if (count == 0U) return STATUS_CONST(SUCCESS);                             \
+    if (pos + count > str->size) {                                             \
+      count = str->size - pos;                                                 \
+    }                                                                          \
+    memmove(str->data + pos, str->data + pos + count,                          \
+            (str->size - pos - count) * sizeof(CHAR_TYPE));                    \
+    str->size -= count;                                                        \
+    str->data[str->size] = (CHAR_TYPE)0;                                       \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_COMPARE_PROTOTYPE(SUFFIX) {                                      \
+    if (left == NULL || right == NULL || outResult == NULL) {                  \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    size_t minLen = left->size < right->size ? left->size : right->size;       \
+    for (size_t i = 0U; i < minLen; ++i) {                                     \
+      if (left->data[i] < right->data[i]) {                                    \
+        *outResult = COMPARISON_LOWER_CONST;                                   \
+        return STATUS_CONST(SUCCESS);                                          \
+      }                                                                        \
+      if (left->data[i] > right->data[i]) {                                    \
+        *outResult = COMPARISON_HIGHER_CONST;                                  \
+        return STATUS_CONST(SUCCESS);                                          \
+      }                                                                        \
+    }                                                                          \
+    if (left->size < right->size) {                                            \
+      *outResult = COMPARISON_LOWER_CONST;                                     \
+    } else if (left->size > right->size) {                                     \
+      *outResult = COMPARISON_HIGHER_CONST;                                    \
+    } else {                                                                   \
+      *outResult = COMPARISON_EQUAL_CONST;                                     \
+    }                                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_EQUAL_PROTOTYPE(SUFFIX) {                                        \
+    if (left == NULL || right == NULL) return left == right;                   \
+    if (left->size != right->size) return false;                               \
+    if (left->size == 0U) return true;                                         \
+    return memcmp(left->data, right->data, left->size * sizeof(CHAR_TYPE)) ==  \
+           0;                                                                  \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_EQUAL_CSTR_PROTOTYPE(CHAR_TYPE, SUFFIX) {                       \
+    if (str == NULL && cstr == NULL) return true;                              \
+    if (str == NULL || cstr == NULL) return false;                             \
+    size_t len = TEXT_STRING_INS(SUFFIX, CStrLen)(cstr);                       \
+    if (str->size != len) return false;                                        \
+    if (len == 0U) return true;                                                \
+    return memcmp(str->data, cstr, len * sizeof(CHAR_TYPE)) == 0;              \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_SUBSTR_PROTOTYPE(SUFFIX) {                                       \
+    if (str == NULL || outStr == NULL || pos > str->size) {                    \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    size_t avail = str->size - pos;                                            \
+    size_t actual = count < avail ? count : avail;                             \
+    return TEXT_STRING_FUNC(SUFFIX, FromBuffer)(outStr, str->data + pos,       \
+                                                actual);                       \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_FIND_PROTOTYPE(CHAR_TYPE, SUFFIX) {                              \
+    if (str == NULL || outIndex == NULL) {                                     \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    if (start >= str->size) return STATUS_CONST(OUT_OF_RANGE);                 \
+    for (size_t i = start; i < str->size; ++i) {                               \
+      if (str->data[i] == ch) {                                                \
+        *outIndex = i;                                                         \
+        return STATUS_CONST(SUCCESS);                                          \
+      }                                                                        \
+    }                                                                          \
+    return STATUS_CONST(NOT_FOUND);                                            \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_FIND_STR_PROTOTYPE(CHAR_TYPE, SUFFIX) {                          \
+    if (str == NULL || needle == NULL || outIndex == NULL) {                   \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    size_t nLen = TEXT_STRING_INS(SUFFIX, CStrLen)(needle);                    \
+    if (nLen == 0U) {                                                          \
+      if (start <= str->size) {                                                \
+        *outIndex = start;                                                     \
+        return STATUS_CONST(SUCCESS);                                          \
+      }                                                                        \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    }                                                                          \
+    if (start > str->size || nLen > str->size - start) {                       \
+      return STATUS_CONST(NOT_FOUND);                                          \
+    }                                                                          \
+    size_t maxStart = str->size - nLen;                                        \
+    for (size_t i = start; i <= maxStart; ++i) {                               \
+      if (memcmp(str->data + i, needle, nLen * sizeof(CHAR_TYPE)) == 0) {      \
+        *outIndex = i;                                                         \
+        return STATUS_CONST(SUCCESS);                                          \
+      }                                                                        \
+    }                                                                          \
+    return STATUS_CONST(NOT_FOUND);                                            \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_STARTS_WITH_PROTOTYPE(CHAR_TYPE, SUFFIX) {                       \
+    if (str == NULL || prefix == NULL) return false;                           \
+    size_t pLen = TEXT_STRING_INS(SUFFIX, CStrLen)(prefix);                    \
+    if (str->size < pLen) return false;                                        \
+    if (pLen == 0U) return true;                                               \
+    return memcmp(str->data, prefix, pLen * sizeof(CHAR_TYPE)) == 0;           \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_ENDS_WITH_PROTOTYPE(CHAR_TYPE, SUFFIX) {                         \
+    if (str == NULL || suffix == NULL) return false;                           \
+    size_t sLen = TEXT_STRING_INS(SUFFIX, CStrLen)(suffix);                    \
+    if (str->size < sLen) return false;                                        \
+    if (sLen == 0U) return true;                                               \
+    return memcmp(str->data + (str->size - sLen), suffix,                      \
+                  sLen * sizeof(CHAR_TYPE)) == 0;                              \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_VIEW_PROTOTYPE(SUFFIX) {                                         \
+    if (str == NULL || str->data == NULL) {                                    \
+      return TEXT_VIEW_FUNC(SUFFIX, Empty)();                                  \
+    }                                                                          \
+    return TEXT_VIEW_FUNC(SUFFIX, Create)(str->data, str->size);              \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_SLICE_PROTOTYPE(SUFFIX) {                                        \
+    if (str == NULL || str->data == NULL || pos >= str->size) {                \
+      return TEXT_VIEW_FUNC(SUFFIX, Empty)();                                  \
+    }                                                                          \
+    size_t available = str->size - pos;                                        \
+    size_t actual = count < available ? count : available;                     \
+    return TEXT_VIEW_FUNC(SUFFIX, Create)(str->data + pos, actual);            \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_FROM_VIEW_PROTOTYPE(SUFFIX) {                                    \
+    if (str == NULL) return STATUS_CONST(INVALID_ARGUMENT);                    \
+    return TEXT_STRING_FUNC(SUFFIX, FromBuffer)(str, view.data, view.size);    \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_APPEND_VIEW_PROTOTYPE(SUFFIX) {                                  \
+    if (str == NULL) return STATUS_CONST(INVALID_ARGUMENT);                    \
+    return TEXT_STRING_FUNC(SUFFIX, AppendBuffer)(str, view.data, view.size);  \
+  }                                                                            \
+                                                                               \
+  TEXT_STRING_EQUAL_VIEW_PROTOTYPE(SUFFIX) {                                   \
+    if (str == NULL) return view.data == NULL || view.size == 0U;             \
+    TEXT_VIEW_TYPE(SUFFIX) selfView = TEXT_STRING_FUNC(SUFFIX, View)(str);     \
+    return TEXT_VIEW_FUNC(SUFFIX, Equal)(selfView, view);                      \
+  }
+
+#define TEXT_STRING_IMPLEMENT_ALL(CHAR_TYPE, SUFFIX)                          \
+  COSMERON_MACRO_INTERNAL_TEXT_STRING_IMPLEMENT(CHAR_TYPE, SUFFIX)
+
+TEXT_STRING_IMPLEMENT_ALL(char, 8)
+TEXT_STRING_IMPLEMENT_ALL(TEXT_TYPE(TChar16), 16)
+TEXT_STRING_IMPLEMENT_ALL(TEXT_TYPE(TChar32), 32)
+
+/* UTF-8 specialized implementations for Text_TString8 */
+TEXT_STRING8_APPEND_CODEPOINT_PROTOTYPE {
+  if (str == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  unsigned char encoded[4];
+  size_t units = 0U;
+  OPSTATUS status =
+      TEXT_UTF8_FUNC(Encode)(codepoint, encoded, sizeof(encoded), &units);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  return TEXT_STRING_FUNC(8, AppendBuffer)(str, (const char *)encoded, units);
+}
+
+TEXT_STRING8_COUNT_CODEPOINTS_PROTOTYPE {
+  if (str == NULL || outCount == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  if (str->size == 0U) {
+    *outCount = 0U;
+    return STATUS_CONST(SUCCESS);
+  }
+  size_t units = 0U;
+  return TEXT_UTF8_FUNC(Count)((const unsigned char *)str->data, str->size,
+                               outCount, &units);
+}
+
+TEXT_STRING8_VALIDATE_PROTOTYPE {
+  if (str == NULL) return false;
+  if (str->size == 0U) return true;
+  return TEXT_UTF8_FUNC(Validate)((const unsigned char *)str->data, str->size);
+}
+
+static inline bool TEXT_STRING_INS(8, IsSpace)(char c) {
+  return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\v' ||
+         c == '\f';
+}
+
+TEXT_STRING8_TRIM_LEFT_PROTOTYPE {
+  if (str == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  size_t start = 0U;
+  while (start < str->size && TEXT_STRING_INS(8, IsSpace)(str->data[start])) {
+    ++start;
+  }
+  if (start > 0U) {
+    return TEXT_STRING_FUNC(8, Erase)(str, 0U, start);
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+TEXT_STRING8_TRIM_RIGHT_PROTOTYPE {
+  if (str == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  size_t end = str->size;
+  while (end > 0U && TEXT_STRING_INS(8, IsSpace)(str->data[end - 1U])) {
+    --end;
+  }
+  str->size = end;
+  if (str->data != NULL) {
+    str->data[end] = '\0';
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+TEXT_STRING8_TRIM_PROTOTYPE {
+  if (str == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  OPSTATUS status = TEXT_STRING_FUNC(8, TrimRight)(str);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+  return TEXT_STRING_FUNC(8, TrimLeft)(str);
+}
+
+TEXT_STRING8_FORMAT_VARIADIC_PROTOTYPE {
+  if (str == NULL || format == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  va_list argsCopy;
+  va_copy(argsCopy, arguments);
+  size_t needed = 0U;
+  OPSTATUS status =
+      TEXT_FORMAT_FUNC(Variadic)(NULL, 0U, &needed, format, argsCopy);
+  va_end(argsCopy);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+
+  status = TEXT_STRING_FUNC(8, Reserve)(str, needed);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+
+  size_t written = 0U;
+  status = TEXT_FORMAT_FUNC(Variadic)(str->data, str->capacity + 1U, &written,
+                                     format, arguments);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+
+  str->size = written;
+  str->data[written] = '\0';
+  return STATUS_CONST(SUCCESS);
+}
+
+TEXT_STRING8_FORMAT_PROTOTYPE {
+  OPSTATUS status;
+  va_list args;
+  va_start(args, format);
+  status = TEXT_STRING_FUNC(8, Format_Variadic)(str, format, args);
+  va_end(args);
+  return status;
+}
+
+TEXT_STRING8_APPEND_FORMAT_VARIADIC_PROTOTYPE {
+  if (str == NULL || format == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  va_list argsCopy;
+  va_copy(argsCopy, arguments);
+  size_t needed = 0U;
+  OPSTATUS status =
+      TEXT_FORMAT_FUNC(Variadic)(NULL, 0U, &needed, format, argsCopy);
+  va_end(argsCopy);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+
+  if (str->size > SIZE_MAX - needed) return STATUS_CONST(OUT_OF_RANGE);
+  size_t total = str->size + needed;
+
+  status = TEXT_STRING_INS(8, EnsureCapacity)(str, total);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+
+  size_t written = 0U;
+  status = TEXT_FORMAT_FUNC(Variadic)(str->data + str->size,
+                                     (str->capacity + 1U) - str->size, &written,
+                                     format, arguments);
+  if (status != STATUS_CONST(SUCCESS)) return status;
+
+  str->size += written;
+  str->data[str->size] = '\0';
+  return STATUS_CONST(SUCCESS);
+}
+
+TEXT_STRING8_APPEND_FORMAT_PROTOTYPE {
+  OPSTATUS status;
+  va_list args;
+  va_start(args, format);
+  status = TEXT_STRING_FUNC(8, AppendFormat_Variadic)(str, format, args);
+  va_end(args);
+  return status;
+}
+
+TEXT_STRING8_SLICE_CODEPOINTS_PROTOTYPE {
+  if (str == NULL) return STATUS_CONST(INVALID_ARGUMENT);
+  TEXT_VIEW_TYPE(8) view = TEXT_STRING_FUNC(8, View)(str);
+  return TEXT_VIEW_FUNC(8, SliceCodepoints)(view, codepointStart,
+                                           codepointCount, outView);
+}

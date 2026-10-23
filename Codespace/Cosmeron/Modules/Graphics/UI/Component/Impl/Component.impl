@@ -1,0 +1,112 @@
+#pragma once
+
+#include "../Component.h"
+#include <string.h>
+
+OBJECT_PROTOTYPEEX(UI_COMPONENT_TYPE(TComponent), Create,
+                   (TQUAD_TYPE(uint16) region, const char *label)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  memset(self, 0, sizeof(*self));
+#ifndef OBJECT_DISABLE_FUNCTION_TABLE
+  self->api = UI_COMPONENT_FUNC(GetFunctionTable)();
+#endif
+  self->region = region;
+  self->id = UI_INS(HashText)(UINT64_C(14695981039346656037), label ? label : "component");
+  self->visual = UI_FUNC(Visual_Default)();
+  self->visible = true;
+  self->disabled = false;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(UI_COMPONENT_TYPE(TComponent), Destroy) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  memset(self, 0, sizeof(*self));
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(UI_COMPONENT_TYPE(TComponent), Draw,
+                   (UI_TYPE(TContext) *context)) {
+  if (!self || !context)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (!self->visible)
+    return STATUS_CONST(SUCCESS);
+  if (self->drawCallback) {
+    return self->drawCallback(self, context);
+  }
+  return UI_INS(Frame)(context, self->region, self->visual.border, self->visual.normal);
+}
+
+OBJECT_PROTOTYPEEX(UI_COMPONENT_TYPE(TComponent), HandleEvent,
+                   (UI_TYPE(TContext) *context, const TERMINAL_TYPE(TEvent) *event,
+                    bool *outHandled)) {
+  if (!self || !context || !event || !outHandled)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  *outHandled = false;
+  if (!self->visible || self->disabled)
+    return STATUS_CONST(SUCCESS);
+  if (self->eventCallback) {
+    return self->eventCallback(self, context, event, outHandled);
+  }
+  if (event->kind == TERMINAL_CONST(EVENT_POINTER_BUTTON) && event->pressed) {
+    if (event->position.x >= self->region.left &&
+        event->position.x <= self->region.right &&
+        event->position.y >= self->region.top &&
+        event->position.y <= self->region.bottom) {
+      *outHandled = true;
+      context->focus = self->id;
+    }
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(UI_COMPONENT_TYPE(TComponent), SetRegion,
+                   (TQUAD_TYPE(uint16) region)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  self->region = region;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(UI_COMPONENT_TYPE(TComponent), SetDisabled,
+                   (bool disabled)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  self->disabled = disabled;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(UI_COMPONENT_TYPE(TComponent), SetVisible,
+                   (bool visible)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  self->visible = visible;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(UI_COMPONENT_TYPE(TComponent), SetCallbacks,
+                   (OPSTATUS (*drawCallback)(struct UI_COMPONENT_TYPE(TComponent) *self, UI_TYPE(TContext) *context),
+                    OPSTATUS (*eventCallback)(struct UI_COMPONENT_TYPE(TComponent) *self, UI_TYPE(TContext) *context, const TERMINAL_TYPE(TEvent) *event, bool *outHandled))) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  self->drawCallback = drawCallback;
+  self->eventCallback = eventCallback;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(UI_COMPONENT_TYPE(TComponent), Region) {
+  return self ? self->region : (TQUAD_TYPE(uint16)){.left = 0, .top = 0, .right = 0, .bottom = 0};
+}
+
+OBJECT_PROTOTYPEEX(UI_COMPONENT_TYPE(TComponent), IsDisabled) {
+  return self ? self->disabled : false;
+}
+
+OBJECT_PROTOTYPEEX(UI_COMPONENT_TYPE(TComponent), IsVisible) {
+  return self ? self->visible : false;
+}
+
+OBJECT_IMPLEMENT(UI_COMPONENT_TYPE(TComponent));
+
+/* EOF */

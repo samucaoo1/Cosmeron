@@ -25,6 +25,11 @@ set -eu
 bin=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 for test in "$bin"/*; do
   [ "$test" = "$bin/cosmeron-tests" ] && continue
+  [ ! -x "$test" ] && continue
+  if [ "$(basename "$test")" = "GUI_Lab" ]; then
+    "$test" --ppm /tmp/lab.ppm
+    continue
+  fi
   "$test"
 done
 EOF

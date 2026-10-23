@@ -1,0 +1,138 @@
+#pragma once
+
+#include "../../Diagnostics/Diagnostics.h"
+#include "../../Sink/Sink.h"
+#include <stdio.h>
+#include <stdarg.h>
+
+static LOGGING_TYPE(TLogger) *LOGGING_INS(DefaultLoggerInstance) = NULL;
+
+LOGGING_LOGGER_INIT_PROTOTYPE {
+  if (logger == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  logger->name = name ? name : "App";
+  logger->level = level;
+  logger->sinkCount = 0U;
+  for (size_t i = 0U; i < LOGGING_CONST(MAX_SINKS); ++i) {
+    logger->sinks[i] = NULL;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+LOGGING_LOGGER_DESTROY_PROTOTYPE {
+  if (logger == NULL) {
+    return;
+  }
+  logger->sinkCount = 0U;
+  for (size_t i = 0U; i < LOGGING_CONST(MAX_SINKS); ++i) {
+    logger->sinks[i] = NULL;
+  }
+}
+
+LOGGING_LOGGER_ADD_SINK_PROTOTYPE {
+  if (logger == NULL || sink == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  if (logger->sinkCount >= LOGGING_CONST(MAX_SINKS)) {
+    return STATUS_CONST(OUT_OF_RANGE);
+  }
+  logger->sinks[logger->sinkCount++] = sink;
+  return STATUS_CONST(SUCCESS);
+}
+
+LOGGING_LOGGER_CLEAR_SINKS_PROTOTYPE {
+  if (logger == NULL) {
+    return;
+  }
+  logger->sinkCount = 0U;
+  for (size_t i = 0U; i < LOGGING_CONST(MAX_SINKS); ++i) {
+    logger->sinks[i] = NULL;
+  }
+}
+
+LOGGING_LOGGER_SET_LEVEL_PROTOTYPE {
+  if (logger == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  logger->level = level;
+  return STATUS_CONST(SUCCESS);
+}
+
+LOGGING_LOGGER_GET_LEVEL_PROTOTYPE {
+  if (logger == NULL || outLevel == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  *outLevel = logger->level;
+  return STATUS_CONST(SUCCESS);
+}
+
+LOGGING_LOGGER_LOG_RECORD_PROTOTYPE {
+  if (logger == NULL || record == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  if (record->level < logger->level || logger->level == LOGGING_CONST(LEVEL_OFF)) {
+    return STATUS_CONST(SUCCESS);
+  }
+  OPSTATUS lastStatus = STATUS_CONST(SUCCESS);
+  for (size_t i = 0U; i < logger->sinkCount; ++i) {
+    if (logger->sinks[i] != NULL) {
+      OPSTATUS s = LOGGING_FUNC(Sink_Write)(logger->sinks[i], record);
+      if (s != STATUS_CONST(SUCCESS)) {
+        lastStatus = s;
+      }
+    }
+  }
+  return lastStatus;
+}
+
+LOGGING_LOGGER_LOG_PROTOTYPE {
+  if (logger == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  if (level < logger->level || logger->level == LOGGING_CONST(LEVEL_OFF)) {
+    return STATUS_CONST(SUCCESS);
+  }
+  LOGGING_TYPE(TRecord) record;
+  OPSTATUS status = LOGGING_FUNC(Record_Init)(
+      &record, level, logger->name, message, file, line, function);
+  if (status != STATUS_CONST(SUCCESS)) {
+    return status;
+  }
+  return LOGGING_FUNC(Logger_LogRecord)(logger, &record);
+}
+
+LOGGING_LOGGER_LOG_FORMAT_PROTOTYPE {
+  if (logger == NULL || format == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  if (level < logger->level || logger->level == LOGGING_CONST(LEVEL_OFF)) {
+    return STATUS_CONST(SUCCESS);
+  }
+  char messageBuf[LOGGING_CONST(MAX_MESSAGE_BUFFER)];
+  va_list args;
+  va_start(args, format);
+  int written = vsnprintf(messageBuf, sizeof(messageBuf), format, args);
+  va_end(args);
+  if (written < 0) {
+    return STATUS_CONST(GENERIC_ERROR);
+  }
+
+  LOGGING_TYPE(TRecord) record;
+  OPSTATUS status = LOGGING_FUNC(Record_Init)(
+      &record, level, logger->name, messageBuf, file, line, function);
+  if (status != STATUS_CONST(SUCCESS)) {
+    return status;
+  }
+  return LOGGING_FUNC(Logger_LogRecord)(logger, &record);
+}
+
+LOGGING_GET_DEFAULT_PROTOTYPE {
+  return LOGGING_INS(DefaultLoggerInstance);
+}
+
+LOGGING_SET_DEFAULT_PROTOTYPE {
+  LOGGING_INS(DefaultLoggerInstance) = logger;
+}
+
+/* EOF */

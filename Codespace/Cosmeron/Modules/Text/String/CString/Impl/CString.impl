@@ -1,0 +1,750 @@
+#pragma once
+
+#include <ctype.h>
+#include <string.h>
+
+static inline bool TEXT_CSTRING_INS(IsDefaultSpace)(char c) {
+  return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\v' ||
+         c == '\f';
+}
+
+static inline bool TEXT_CSTRING_INS(CharInSet)(char c, const char *set) {
+  if (set == NULL) {
+    return TEXT_CSTRING_INS(IsDefaultSpace)(c);
+  }
+  for (size_t i = 0U; set[i] != '\0'; ++i) {
+    if (set[i] == c) {
+      return true;
+    }
+  }
+  return false;
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, Length, (const char *str)) {
+  if (str == NULL) {
+    return 0U;
+  }
+  size_t len = 0U;
+  while (str[len] != '\0') {
+    len++;
+  }
+  return len;
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, LengthBounded,
+                    (const char *str, size_t maxLen)) {
+  if (str == NULL) {
+    return 0U;
+  }
+  size_t len = 0U;
+  while (len < maxLen && str[len] != '\0') {
+    len++;
+  }
+  return len;
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, IsEmpty, (const char *str)) {
+  return (str == NULL || str[0] == '\0');
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, IsAscii, (const char *str)) {
+  if (str == NULL) {
+    return false;
+  }
+  for (size_t i = 0U; str[i] != '\0'; ++i) {
+    if ((unsigned char)str[i] > 127U) {
+      return false;
+    }
+  }
+  return true;
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, IsAsciiBounded,
+                    (const char *str, size_t maxLen)) {
+  if (str == NULL) {
+    return false;
+  }
+  for (size_t i = 0U; i < maxLen && str[i] != '\0'; ++i) {
+    if ((unsigned char)str[i] > 127U) {
+      return false;
+    }
+  }
+  return true;
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, Copy,
+                    (char *dest, size_t destCapacity, const char *src,
+                     size_t *outLength)) {
+  if (dest == NULL || destCapacity == 0U || src == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  size_t i = 0U;
+  while (src[i] != '\0') {
+    if (i + 1U < destCapacity) {
+      dest[i] = src[i];
+    } else {
+      dest[destCapacity - 1U] = '\0';
+      return STATUS_CONST(INSUFFICIENT_SPACE);
+    }
+    i++;
+  }
+  dest[i] = '\0';
+  if (outLength != NULL) {
+    *outLength = i;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, CopyBounded,
+                    (char *dest, size_t destCapacity, const char *src,
+                     size_t maxSourceChars, size_t *outLength)) {
+  if (dest == NULL || destCapacity == 0U || src == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  size_t i = 0U;
+  while (i < maxSourceChars && src[i] != '\0') {
+    if (i + 1U < destCapacity) {
+      dest[i] = src[i];
+    } else {
+      dest[destCapacity - 1U] = '\0';
+      return STATUS_CONST(INSUFFICIENT_SPACE);
+    }
+    i++;
+  }
+  dest[i] = '\0';
+  if (outLength != NULL) {
+    *outLength = i;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, Concat,
+                    (char *dest, size_t destCapacity, const char *src,
+                     size_t *outLength)) {
+  if (dest == NULL || destCapacity == 0U || src == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  size_t destLen = 0U;
+  while (destLen < destCapacity && dest[destLen] != '\0') {
+    destLen++;
+  }
+  if (destLen >= destCapacity) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  size_t j = 0U;
+  while (src[j] != '\0') {
+    if (destLen + j + 1U < destCapacity) {
+      dest[destLen + j] = src[j];
+    } else {
+      dest[destCapacity - 1U] = '\0';
+      return STATUS_CONST(INSUFFICIENT_SPACE);
+    }
+    j++;
+  }
+  dest[destLen + j] = '\0';
+  if (outLength != NULL) {
+    *outLength = destLen + j;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, ConcatBounded,
+                    (char *dest, size_t destCapacity, const char *src,
+                     size_t maxSourceChars, size_t *outLength)) {
+  if (dest == NULL || destCapacity == 0U || src == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  size_t destLen = 0U;
+  while (destLen < destCapacity && dest[destLen] != '\0') {
+    destLen++;
+  }
+  if (destLen >= destCapacity) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  size_t j = 0U;
+  while (j < maxSourceChars && src[j] != '\0') {
+    if (destLen + j + 1U < destCapacity) {
+      dest[destLen + j] = src[j];
+    } else {
+      dest[destCapacity - 1U] = '\0';
+      return STATUS_CONST(INSUFFICIENT_SPACE);
+    }
+    j++;
+  }
+  dest[destLen + j] = '\0';
+  if (outLength != NULL) {
+    *outLength = destLen + j;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, Compare,
+                    (const char *left, const char *right)) {
+  if (left == NULL && right == NULL) {
+    return COMPARISON_EQUAL_CONST;
+  }
+  if (left == NULL) {
+    return COMPARISON_LOWER_CONST;
+  }
+  if (right == NULL) {
+    return COMPARISON_HIGHER_CONST;
+  }
+  size_t i = 0U;
+  while (left[i] != '\0' && right[i] != '\0') {
+    unsigned char lc = (unsigned char)left[i];
+    unsigned char rc = (unsigned char)right[i];
+    if (lc < rc) {
+      return COMPARISON_LOWER_CONST;
+    }
+    if (lc > rc) {
+      return COMPARISON_HIGHER_CONST;
+    }
+    i++;
+  }
+  unsigned char lc = (unsigned char)left[i];
+  unsigned char rc = (unsigned char)right[i];
+  if (lc < rc) {
+    return COMPARISON_LOWER_CONST;
+  }
+  if (lc > rc) {
+    return COMPARISON_HIGHER_CONST;
+  }
+  return COMPARISON_EQUAL_CONST;
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, CompareBounded,
+                    (const char *left, const char *right, size_t maxLen)) {
+  if (maxLen == 0U) {
+    return COMPARISON_EQUAL_CONST;
+  }
+  if (left == NULL && right == NULL) {
+    return COMPARISON_EQUAL_CONST;
+  }
+  if (left == NULL) {
+    return COMPARISON_LOWER_CONST;
+  }
+  if (right == NULL) {
+    return COMPARISON_HIGHER_CONST;
+  }
+  size_t i = 0U;
+  while (i < maxLen && left[i] != '\0' && right[i] != '\0') {
+    unsigned char lc = (unsigned char)left[i];
+    unsigned char rc = (unsigned char)right[i];
+    if (lc < rc) {
+      return COMPARISON_LOWER_CONST;
+    }
+    if (lc > rc) {
+      return COMPARISON_HIGHER_CONST;
+    }
+    i++;
+  }
+  if (i == maxLen) {
+    return COMPARISON_EQUAL_CONST;
+  }
+  unsigned char lc = (unsigned char)left[i];
+  unsigned char rc = (unsigned char)right[i];
+  if (lc < rc) {
+    return COMPARISON_LOWER_CONST;
+  }
+  if (lc > rc) {
+    return COMPARISON_HIGHER_CONST;
+  }
+  return COMPARISON_EQUAL_CONST;
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, CompareIgnoreCase,
+                    (const char *left, const char *right)) {
+  if (left == NULL && right == NULL) {
+    return COMPARISON_EQUAL_CONST;
+  }
+  if (left == NULL) {
+    return COMPARISON_LOWER_CONST;
+  }
+  if (right == NULL) {
+    return COMPARISON_HIGHER_CONST;
+  }
+  size_t i = 0U;
+  while (left[i] != '\0' && right[i] != '\0') {
+    int lc = tolower((unsigned char)left[i]);
+    int rc = tolower((unsigned char)right[i]);
+    if (lc < rc) {
+      return COMPARISON_LOWER_CONST;
+    }
+    if (lc > rc) {
+      return COMPARISON_HIGHER_CONST;
+    }
+    i++;
+  }
+  int lc = tolower((unsigned char)left[i]);
+  int rc = tolower((unsigned char)right[i]);
+  if (lc < rc) {
+    return COMPARISON_LOWER_CONST;
+  }
+  if (lc > rc) {
+    return COMPARISON_HIGHER_CONST;
+  }
+  return COMPARISON_EQUAL_CONST;
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, CompareIgnoreCaseBounded,
+                    (const char *left, const char *right, size_t maxLen)) {
+  if (maxLen == 0U) {
+    return COMPARISON_EQUAL_CONST;
+  }
+  if (left == NULL && right == NULL) {
+    return COMPARISON_EQUAL_CONST;
+  }
+  if (left == NULL) {
+    return COMPARISON_LOWER_CONST;
+  }
+  if (right == NULL) {
+    return COMPARISON_HIGHER_CONST;
+  }
+  size_t i = 0U;
+  while (i < maxLen && left[i] != '\0' && right[i] != '\0') {
+    int lc = tolower((unsigned char)left[i]);
+    int rc = tolower((unsigned char)right[i]);
+    if (lc < rc) {
+      return COMPARISON_LOWER_CONST;
+    }
+    if (lc > rc) {
+      return COMPARISON_HIGHER_CONST;
+    }
+    i++;
+  }
+  if (i == maxLen) {
+    return COMPARISON_EQUAL_CONST;
+  }
+  int lc = tolower((unsigned char)left[i]);
+  int rc = tolower((unsigned char)right[i]);
+  if (lc < rc) {
+    return COMPARISON_LOWER_CONST;
+  }
+  if (lc > rc) {
+    return COMPARISON_HIGHER_CONST;
+  }
+  return COMPARISON_EQUAL_CONST;
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, Equal,
+                    (const char *left, const char *right)) {
+  return Text_CString_Compare(left, right) == COMPARISON_EQUAL_CONST;
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, EqualBounded,
+                    (const char *left, const char *right, size_t maxLen)) {
+  return Text_CString_CompareBounded(left, right, maxLen) ==
+         COMPARISON_EQUAL_CONST;
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, EqualIgnoreCase,
+                    (const char *left, const char *right)) {
+  return Text_CString_CompareIgnoreCase(left, right) ==
+         COMPARISON_EQUAL_CONST;
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, EqualIgnoreCaseBounded,
+                    (const char *left, const char *right, size_t maxLen)) {
+  return Text_CString_CompareIgnoreCaseBounded(left, right, maxLen) ==
+         COMPARISON_EQUAL_CONST;
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, StartsWith,
+                    (const char *str, const char *prefix)) {
+  if (str == NULL || prefix == NULL) {
+    return false;
+  }
+  size_t i = 0U;
+  while (prefix[i] != '\0') {
+    if (str[i] != prefix[i]) {
+      return false;
+    }
+    i++;
+  }
+  return true;
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, StartsWithBounded,
+                    (const char *str, size_t strLen, const char *prefix)) {
+  if (str == NULL || prefix == NULL) {
+    return false;
+  }
+  size_t i = 0U;
+  while (prefix[i] != '\0') {
+    if (i >= strLen || str[i] != prefix[i]) {
+      return false;
+    }
+    i++;
+  }
+  return true;
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, StartsWithIgnoreCase,
+                    (const char *str, const char *prefix)) {
+  if (str == NULL || prefix == NULL) {
+    return false;
+  }
+  size_t i = 0U;
+  while (prefix[i] != '\0') {
+    if (tolower((unsigned char)str[i]) != tolower((unsigned char)prefix[i])) {
+      return false;
+    }
+    i++;
+  }
+  return true;
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, EndsWith,
+                    (const char *str, const char *suffix)) {
+  if (str == NULL || suffix == NULL) {
+    return false;
+  }
+  size_t strLen = Text_CString_Length(str);
+  size_t sufLen = Text_CString_Length(suffix);
+  if (sufLen > strLen) {
+    return false;
+  }
+  return memcmp(str + (strLen - sufLen), suffix, sufLen) == 0;
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, EndsWithBounded,
+                    (const char *str, size_t strLen, const char *suffix)) {
+  if (str == NULL || suffix == NULL) {
+    return false;
+  }
+  size_t actualLen = Text_CString_LengthBounded(str, strLen);
+  size_t sufLen = Text_CString_Length(suffix);
+  if (sufLen > actualLen) {
+    return false;
+  }
+  return memcmp(str + (actualLen - sufLen), suffix, sufLen) == 0;
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, EndsWithIgnoreCase,
+                    (const char *str, const char *suffix)) {
+  if (str == NULL || suffix == NULL) {
+    return false;
+  }
+  size_t strLen = Text_CString_Length(str);
+  size_t sufLen = Text_CString_Length(suffix);
+  if (sufLen > strLen) {
+    return false;
+  }
+  const char *sub = str + (strLen - sufLen);
+  for (size_t i = 0U; i < sufLen; ++i) {
+    if (tolower((unsigned char)sub[i]) != tolower((unsigned char)suffix[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, FindChar,
+                    (const char *str, char ch, size_t *outIndex)) {
+  if (str == NULL || outIndex == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  for (size_t i = 0U; str[i] != '\0'; ++i) {
+    if (str[i] == ch) {
+      *outIndex = i;
+      return STATUS_CONST(SUCCESS);
+    }
+  }
+  if (ch == '\0') {
+    *outIndex = Text_CString_Length(str);
+    return STATUS_CONST(SUCCESS);
+  }
+  return STATUS_CONST(NOT_FOUND);
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, FindCharBounded,
+                    (const char *str, size_t maxLen, char ch,
+                     size_t *outIndex)) {
+  if (str == NULL || outIndex == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  for (size_t i = 0U; i < maxLen && str[i] != '\0'; ++i) {
+    if (str[i] == ch) {
+      *outIndex = i;
+      return STATUS_CONST(SUCCESS);
+    }
+  }
+  return STATUS_CONST(NOT_FOUND);
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, FindLastChar,
+                    (const char *str, char ch, size_t *outIndex)) {
+  if (str == NULL || outIndex == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  size_t len = Text_CString_Length(str);
+  if (ch == '\0') {
+    *outIndex = len;
+    return STATUS_CONST(SUCCESS);
+  }
+  while (len > 0U) {
+    len--;
+    if (str[len] == ch) {
+      *outIndex = len;
+      return STATUS_CONST(SUCCESS);
+    }
+  }
+  return STATUS_CONST(NOT_FOUND);
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, FindLastCharBounded,
+                    (const char *str, size_t maxLen, char ch,
+                     size_t *outIndex)) {
+  if (str == NULL || outIndex == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  size_t len = Text_CString_LengthBounded(str, maxLen);
+  while (len > 0U) {
+    len--;
+    if (str[len] == ch) {
+      *outIndex = len;
+      return STATUS_CONST(SUCCESS);
+    }
+  }
+  return STATUS_CONST(NOT_FOUND);
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, FindSubstring,
+                    (const char *haystack, const char *needle,
+                     size_t *outIndex)) {
+  if (haystack == NULL || needle == NULL || outIndex == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  size_t needleLen = Text_CString_Length(needle);
+  if (needleLen == 0U) {
+    *outIndex = 0U;
+    return STATUS_CONST(SUCCESS);
+  }
+  size_t hayLen = Text_CString_Length(haystack);
+  if (needleLen > hayLen) {
+    return STATUS_CONST(NOT_FOUND);
+  }
+  for (size_t i = 0U; i <= hayLen - needleLen; ++i) {
+    if (memcmp(haystack + i, needle, needleLen) == 0) {
+      *outIndex = i;
+      return STATUS_CONST(SUCCESS);
+    }
+  }
+  return STATUS_CONST(NOT_FOUND);
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, FindSubstringBounded,
+                    (const char *haystack, size_t maxHaystackLen,
+                     const char *needle, size_t *outIndex)) {
+  if (haystack == NULL || needle == NULL || outIndex == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  size_t needleLen = Text_CString_Length(needle);
+  if (needleLen == 0U) {
+    *outIndex = 0U;
+    return STATUS_CONST(SUCCESS);
+  }
+  size_t hayLen = Text_CString_LengthBounded(haystack, maxHaystackLen);
+  if (needleLen > hayLen) {
+    return STATUS_CONST(NOT_FOUND);
+  }
+  for (size_t i = 0U; i <= hayLen - needleLen; ++i) {
+    if (memcmp(haystack + i, needle, needleLen) == 0) {
+      *outIndex = i;
+      return STATUS_CONST(SUCCESS);
+    }
+  }
+  return STATUS_CONST(NOT_FOUND);
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, Span,
+                    (const char *str, const char *accept, size_t *outLength)) {
+  if (str == NULL || accept == NULL || outLength == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  size_t count = 0U;
+  while (str[count] != '\0') {
+    if (!TEXT_CSTRING_INS(CharInSet)(str[count], accept)) {
+      break;
+    }
+    count++;
+  }
+  *outLength = count;
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, ComplementSpan,
+                    (const char *str, const char *reject, size_t *outLength)) {
+  if (str == NULL || reject == NULL || outLength == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  size_t count = 0U;
+  while (str[count] != '\0') {
+    if (TEXT_CSTRING_INS(CharInSet)(str[count], reject)) {
+      break;
+    }
+    count++;
+  }
+  *outLength = count;
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, TrimStart,
+                    (const char *str, const char *charsToTrim, char *output,
+                     size_t capacity, size_t *outLength)) {
+  if (str == NULL || output == NULL || capacity == 0U || outLength == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  size_t start = 0U;
+  while (str[start] != '\0' &&
+         TEXT_CSTRING_INS(CharInSet)(str[start], charsToTrim)) {
+    start++;
+  }
+  return Text_CString_Copy(output, capacity, str + start, outLength);
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, TrimEnd,
+                    (const char *str, const char *charsToTrim, char *output,
+                     size_t capacity, size_t *outLength)) {
+  if (str == NULL || output == NULL || capacity == 0U || outLength == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  size_t len = Text_CString_Length(str);
+  while (len > 0U && TEXT_CSTRING_INS(CharInSet)(str[len - 1U], charsToTrim)) {
+    len--;
+  }
+  return Text_CString_CopyBounded(output, capacity, str, len, outLength);
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, Trim,
+                    (const char *str, const char *charsToTrim, char *output,
+                     size_t capacity, size_t *outLength)) {
+  if (str == NULL || output == NULL || capacity == 0U || outLength == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  size_t start = 0U;
+  while (str[start] != '\0' &&
+         TEXT_CSTRING_INS(CharInSet)(str[start], charsToTrim)) {
+    start++;
+  }
+  size_t len = Text_CString_Length(str);
+  while (len > start &&
+         TEXT_CSTRING_INS(CharInSet)(str[len - 1U], charsToTrim)) {
+    len--;
+  }
+  size_t trimmedLen = len - start;
+  return Text_CString_CopyBounded(output, capacity, str + start, trimmedLen,
+                                  outLength);
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, CountChar,
+                    (const char *str, char ch, size_t *outCount)) {
+  if (str == NULL || outCount == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  size_t count = 0U;
+  for (size_t i = 0U; str[i] != '\0'; ++i) {
+    if (str[i] == ch) {
+      count++;
+    }
+  }
+  *outCount = count;
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, CountCharBounded,
+                    (const char *str, size_t maxLen, char ch,
+                     size_t *outCount)) {
+  if (str == NULL || outCount == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  size_t count = 0U;
+  for (size_t i = 0U; i < maxLen && str[i] != '\0'; ++i) {
+    if (str[i] == ch) {
+      count++;
+    }
+  }
+  *outCount = count;
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, ReplaceChar,
+                    (char *str, char from, char to, size_t *outCount)) {
+  if (str == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  size_t count = 0U;
+  for (size_t i = 0U; str[i] != '\0'; ++i) {
+    if (str[i] == from) {
+      str[i] = to;
+      count++;
+    }
+  }
+  if (outCount != NULL) {
+    *outCount = count;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, ReplaceCharBounded,
+                    (char *str, size_t maxLen, char from, char to,
+                     size_t *outCount)) {
+  if (str == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  size_t count = 0U;
+  for (size_t i = 0U; i < maxLen && str[i] != '\0'; ++i) {
+    if (str[i] == from) {
+      str[i] = to;
+      count++;
+    }
+  }
+  if (outCount != NULL) {
+    *outCount = count;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, Duplicate, (const char *src, char **outDest)) {
+  if (src == NULL || outDest == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  size_t len = Text_CString_Length(src);
+  void *allocated = NULL;
+  OPSTATUS status = ALLOC_FUNC(AllocBytes)(&allocated, len + 1U);
+  if (status != STATUS_CONST(SUCCESS)) {
+    return status;
+  }
+  char *buf = (char *)allocated;
+  memcpy(buf, src, len);
+  buf[len] = '\0';
+  *outDest = buf;
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, DuplicateBounded,
+                    (const char *src, size_t maxLen, char **outDest)) {
+  if (src == NULL || outDest == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  size_t len = Text_CString_LengthBounded(src, maxLen);
+  void *allocated = NULL;
+  OPSTATUS status = ALLOC_FUNC(AllocBytes)(&allocated, len + 1U);
+  if (status != STATUS_CONST(SUCCESS)) {
+    return status;
+  }
+  char *buf = (char *)allocated;
+  memcpy(buf, src, len);
+  buf[len] = '\0';
+  *outDest = buf;
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_PROTOTYPEEX(Text_CString, Free, (char *str)) {
+  if (str != NULL) {
+    void *ptr = str;
+    ALLOC_FUNC(FreePointer)(&ptr);
+  }
+}
+
+PACKAGE_IMPLEMENT(Text_CString);

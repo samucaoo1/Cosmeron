@@ -31,6 +31,19 @@
       const char *name, \
       const char **outValue)
 
+#define CLI_ARGUMENTS_VIEW_AT_PROTOTYPE \
+  static inline OPSTATUS CLI_FUNC(Arguments_ViewAt)( \
+      const CLI_TYPE(TArguments) *arguments, \
+      const char *name, \
+      size_t occurrence, \
+      TEXT_VIEW_TYPE(8) *outValue)
+
+#define CLI_ARGUMENTS_VIEW_PROTOTYPE \
+  static inline OPSTATUS CLI_FUNC(Arguments_View)( \
+      const CLI_TYPE(TArguments) *arguments, \
+      const char *name, \
+      TEXT_VIEW_TYPE(8) *outValue)
+
 #define CLI_ARGUMENTS_I64_PROTOTYPE \
   static inline OPSTATUS CLI_FUNC(Arguments_I64)( \
       const CLI_TYPE(TArguments) *arguments, \
@@ -54,6 +67,8 @@ CLI_ARGUMENTS_COUNT_PROTOTYPE;
 CLI_ARGUMENTS_HAS_PROTOTYPE;
 CLI_ARGUMENTS_STRING_AT_PROTOTYPE;
 CLI_ARGUMENTS_STRING_PROTOTYPE;
+CLI_ARGUMENTS_VIEW_AT_PROTOTYPE;
+CLI_ARGUMENTS_VIEW_PROTOTYPE;
 CLI_ARGUMENTS_I64_PROTOTYPE;
 CLI_ARGUMENTS_U64_PROTOTYPE;
 CLI_ARGUMENTS_F64_PROTOTYPE;

@@ -96,10 +96,12 @@ static inline int TERMINAL_INS(EventEscape)(
     case 'Z':return '\t';
     default:break;
   }
-  if(code=='1'||code=='3'||code=='4'||code=='7'||code=='8'){
+  if(code=='1'||code=='3'||code=='4'||code=='5'||code=='6'||code=='7'||code=='8'){
     int terminator=TERMINAL_INS(EventExtraByte)();
     if(terminator=='~') {
       if(code=='3')return (int)TERMINAL_CONST(KEY_DELETE);
+      if(code=='5')return (int)TERMINAL_CONST(KEY_PAGE_UP);
+      if(code=='6')return (int)TERMINAL_CONST(KEY_PAGE_DOWN);
       if(code=='1'||code=='7')return (int)TERMINAL_CONST(KEY_HOME);
       return (int)TERMINAL_CONST(KEY_END);
     }

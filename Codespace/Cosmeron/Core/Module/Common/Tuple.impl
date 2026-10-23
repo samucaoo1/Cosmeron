@@ -1,0 +1,123 @@
+#pragma once
+
+#include "../Module.space"
+
+/* ============================================================
+ * Declarative Member Tuple Definition
+ * Tuple representation: (IS_CONST, IS_INLINE, RET, NAME, PARAMS, BODY)
+ * ============================================================ */
+
+#define FIELDS(...) __VA_ARGS__
+
+/* ------------------------------------------------------------
+ * 1. Operations (Fallible operation returning OPSTATUS)
+ * ------------------------------------------------------------ */
+#define OPERATION(NAME, PARAMS) \
+  (0, 0, OPSTATUS, NAME, PARAMS, { return STATUS_CONST(SUCCESS); })
+
+#define CONST_OPERATION(NAME, PARAMS) \
+  (1, 0, OPSTATUS, NAME, PARAMS, { return STATUS_CONST(SUCCESS); })
+
+#define OPERATION_INLINE(NAME, PARAMS, BODY) \
+  (0, 1, OPSTATUS, NAME, PARAMS, BODY)
+
+#define CONST_OPERATION_INLINE(NAME, PARAMS, BODY) \
+  (1, 1, OPSTATUS, NAME, PARAMS, BODY)
+
+/* ------------------------------------------------------------
+ * 2. Predicates (Proposition returning bool)
+ * ------------------------------------------------------------ */
+#define PREDICATE(NAME, PARAMS) \
+  (0, 0, bool, NAME, PARAMS, { return false; })
+
+#define CONST_PREDICATE(NAME, PARAMS) \
+  (1, 0, bool, NAME, PARAMS, { return false; })
+
+#define PREDICATE_INLINE(NAME, PARAMS, BODY) \
+  (0, 1, bool, NAME, PARAMS, BODY)
+
+#define CONST_PREDICATE_INLINE(NAME, PARAMS, BODY) \
+  (1, 1, bool, NAME, PARAMS, BODY)
+
+/* ------------------------------------------------------------
+ * 3. Functions (Fallible or infallible returning computed RET)
+ * ------------------------------------------------------------ */
+#define FUNCTION(RET, NAME, PARAMS) \
+  (0, 0, RET, NAME, PARAMS, { (void)0; })
+
+#define CONST_FUNCTION(RET, NAME, PARAMS) \
+  (1, 0, RET, NAME, PARAMS, { (void)0; })
+
+#define FUNCTION_INLINE(RET, NAME, PARAMS, BODY) \
+  (0, 1, RET, NAME, PARAMS, BODY)
+
+#define CONST_FUNCTION_INLINE(RET, NAME, PARAMS, BODY) \
+  (1, 1, RET, NAME, PARAMS, BODY)
+
+/* ------------------------------------------------------------
+ * 4. Procedures (Infallible action returning void)
+ * ------------------------------------------------------------ */
+#define PROCEDURE(NAME, PARAMS) \
+  (0, 0, void, NAME, PARAMS, { (void)0; })
+
+#define CONST_PROCEDURE(NAME, PARAMS) \
+  (1, 0, void, NAME, PARAMS, { (void)0; })
+
+#define PROCEDURE_INLINE(NAME, PARAMS, BODY) \
+  (0, 1, void, NAME, PARAMS, BODY)
+
+#define CONST_PROCEDURE_INLINE(NAME, PARAMS, BODY) \
+  (1, 1, void, NAME, PARAMS, BODY)
+
+/* ------------------------------------------------------------
+ * 5. Backward Compatibility Aliases
+ * ------------------------------------------------------------ */
+#define METHOD(RET, NAME, PARAMS) FUNCTION(RET, NAME, PARAMS)
+#define CONST_METHOD(RET, NAME, PARAMS) CONST_FUNCTION(RET, NAME, PARAMS)
+#define METHOD_CONST(RET, NAME, PARAMS) CONST_FUNCTION(RET, NAME, PARAMS)
+
+#define METHOD_INLINE(RET, NAME, PARAMS, BODY) FUNCTION_INLINE(RET, NAME, PARAMS, BODY)
+#define CONST_METHOD_INLINE(RET, NAME, PARAMS, BODY) CONST_FUNCTION_INLINE(RET, NAME, PARAMS, BODY)
+#define METHOD_CONST_INLINE(RET, NAME, PARAMS, BODY) CONST_FUNCTION_INLINE(RET, NAME, PARAMS, BODY)
+#define INLINE_FUNCTION(RET, NAME, PARAMS, BODY) FUNCTION_INLINE(RET, NAME, PARAMS, BODY)
+
+/* ------------------------------------------------------------
+ * 6. Tuple Unwrapping Helpers
+ * ------------------------------------------------------------ */
+#define COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(GEN_MACRO, CTX, M) \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER_E(GEN_MACRO, CTX, PP_UNWRAP M)
+
+#define COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER_E(GEN_MACRO, CTX, ...) \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER_I(GEN_MACRO, CTX, __VA_ARGS__)
+
+#define COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER_I(GEN_MACRO, CTX, C, I, R, N, P, B) \
+  GEN_MACRO(CTX, C, I, R, N, P, B)
+
+/* ------------------------------------------------------------
+ * 7. Parameter Emission Helpers
+ * ------------------------------------------------------------ */
+
+/* Object self type dispatch */
+#define COSMERON_MACRO_INTERNAL_PARAM_SELF_TYPE_0(CLASS) CLASS
+#define COSMERON_MACRO_INTERNAL_PARAM_SELF_TYPE_1(CLASS) const CLASS
+
+/* Object receiver parameter emission */
+#define COSMERON_MACRO_INTERNAL_OBJ_PARAM_EMIT_EMPTY_1(CLASS, IS_CONST, PARAMS) \
+  (PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PARAM_SELF_TYPE_, IS_CONST)(CLASS) * self)
+
+#define COSMERON_MACRO_INTERNAL_OBJ_PARAM_EMIT_EMPTY_0(CLASS, IS_CONST, PARAMS) \
+  (PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PARAM_SELF_TYPE_, IS_CONST)(CLASS) * self, \
+   PP_UNWRAP PARAMS)
+
+#define COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(CLASS, IS_CONST, PARAMS) \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJ_PARAM_EMIT_EMPTY_, \
+             PP_IS_EMPTY_PARAMS(PARAMS))(CLASS, IS_CONST, PARAMS)
+
+/* Package (free function) parameter emission */
+#define COSMERON_MACRO_INTERNAL_PKG_PARAMS_EMPTY_1(PARAMS) (void)
+#define COSMERON_MACRO_INTERNAL_PKG_PARAMS_EMPTY_0(PARAMS) PARAMS
+
+#define COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(PARAMS) \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PKG_PARAMS_EMPTY_, \
+             PP_IS_EMPTY_PARAMS(PARAMS))(PARAMS)
+/* EOF */

@@ -1,0 +1,433 @@
+#pragma once
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "../../Event/Event.h"
+
+/* ============================================================
+ * Internal Helpers
+ * ============================================================ */
+
+static inline void INPUT_TERMINAL_INS(PushEvent)(
+    INPUT_TERMINAL_TYPE(TTerminalInput) * self, INPUT_TYPE(TEvent) event) {
+  if (self->autoSubmit) {
+    INPUT_EVENT_FUNC(Submit)(&event);
+  }
+
+  if (self->queueCount < (size_t)INPUT_TERMINAL_CONST(QUEUE_CAPACITY)) {
+    size_t idx = (self->queueHead + self->queueCount) %
+                 (size_t)INPUT_TERMINAL_CONST(QUEUE_CAPACITY);
+    self->eventQueue[idx] = event;
+    self->queueCount++;
+  }
+}
+
+static inline void INPUT_TERMINAL_INS(EmitKey)(
+    INPUT_TERMINAL_TYPE(TTerminalInput) * self, INPUT_TYPE(Key) key,
+    bool down, uint32_t modifiers) {
+  INPUT_TYPE(TEvent) e;
+  memset(&e, 0, sizeof(e));
+  e.type = down ? INPUT_CONST(EVENT_KEY_PRESS) : INPUT_CONST(EVENT_KEY_RELEASE);
+  e.modifiers = modifiers;
+  e.data.key = key;
+  e.physicalKey = key;
+  INPUT_TERMINAL_INS(PushEvent)(self, e);
+}
+
+static inline void INPUT_TERMINAL_INS(EmitKeyStroke)(
+    INPUT_TERMINAL_TYPE(TTerminalInput) * self, INPUT_TYPE(Key) key,
+    uint32_t modifiers) {
+  INPUT_TERMINAL_INS(EmitKey)(self, key, true, modifiers);
+  INPUT_TERMINAL_INS(EmitKey)(self, key, false, modifiers);
+}
+
+static inline void INPUT_TERMINAL_INS(EmitMouseButton)(
+    INPUT_TERMINAL_TYPE(TTerminalInput) * self, unsigned button, bool down,
+    uint32_t modifiers, float x, float y) {
+  /* First update pointer position */
+  INPUT_TYPE(TEvent) em;
+  memset(&em, 0, sizeof(em));
+  em.type = INPUT_CONST(EVENT_MOUSE_POSITION);
+  em.modifiers = modifiers;
+  em.data.motion.x = x;
+  em.data.motion.y = y;
+  INPUT_TERMINAL_INS(PushEvent)(self, em);
+
+  /* Then button transition */
+  INPUT_TYPE(TEvent) eb;
+  memset(&eb, 0, sizeof(eb));
+  eb.type = down ? INPUT_CONST(EVENT_MOUSE_BUTTON_PRESS)
+                 : INPUT_CONST(EVENT_MOUSE_BUTTON_RELEASE);
+  eb.modifiers = modifiers;
+  eb.data.mouseButton = (INPUT_TYPE(MouseButton))button;
+  INPUT_TERMINAL_INS(PushEvent)(self, eb);
+}
+
+static inline void INPUT_TERMINAL_INS(EmitMouseMove)(
+    INPUT_TERMINAL_TYPE(TTerminalInput) * self, float x, float y,
+    uint32_t modifiers) {
+  INPUT_TYPE(TEvent) e;
+  memset(&e, 0, sizeof(e));
+  e.type = INPUT_CONST(EVENT_MOUSE_POSITION);
+  e.modifiers = modifiers;
+  e.data.motion.x = x;
+  e.data.motion.y = y;
+  INPUT_TERMINAL_INS(PushEvent)(self, e);
+}
+
+static inline void INPUT_TERMINAL_INS(EmitMouseScroll)(
+    INPUT_TERMINAL_TYPE(TTerminalInput) * self, float dx, float dy,
+    uint32_t modifiers) {
+  INPUT_TYPE(TEvent) e;
+  memset(&e, 0, sizeof(e));
+  e.type = INPUT_CONST(EVENT_MOUSE_SCROLL);
+  e.modifiers = modifiers;
+  e.data.motion.x = dx;
+  e.data.motion.y = dy;
+  INPUT_TERMINAL_INS(PushEvent)(self, e);
+}
+
+static inline uint32_t INPUT_TERMINAL_INS(ParseCsiModifiers)(const char *str) {
+  const char *semicolon = strchr(str, ';');
+  if (!semicolon)
+    return 0U;
+
+  int modCode = 1;
+  if (sscanf(semicolon + 1, "%d", &modCode) < 1)
+    return 0U;
+
+  uint32_t mods = 0U;
+  int m = modCode - 1;
+  if (m & 1) mods |= INPUT_CONST(MODIFIER_SHIFT);
+  if (m & 2) mods |= INPUT_CONST(MODIFIER_ALT);
+  if (m & 4) mods |= INPUT_CONST(MODIFIER_CONTROL);
+  return mods;
+}
+
+/* ============================================================
+ * TTerminalInput Method Implementations
+ * ============================================================ */
+
+OBJECT_PROTOTYPEEX(INPUT_TERMINAL_TYPE(TTerminalInput), Create,
+                   (bool autoSubmit)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  memset(self->escapeBuffer, 0, sizeof(self->escapeBuffer));
+  self->escapeLength = 0U;
+  self->inEscape = false;
+  self->inCsi = false;
+  self->inSgrMouse = false;
+  memset(self->eventQueue, 0, sizeof(self->eventQueue));
+  self->queueHead = 0U;
+  self->queueCount = 0U;
+  self->autoSubmit = autoSubmit;
+  self->currentModifiers = 0U;
+
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(INPUT_TERMINAL_TYPE(TTerminalInput), Destroy) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  self->escapeLength = 0U;
+  self->inEscape = false;
+  self->inCsi = false;
+  self->inSgrMouse = false;
+  self->queueHead = 0U;
+  self->queueCount = 0U;
+  self->autoSubmit = false;
+  self->currentModifiers = 0U;
+
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(INPUT_TERMINAL_TYPE(TTerminalInput), Reset) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  self->escapeLength = 0U;
+  self->inEscape = false;
+  self->inCsi = false;
+  self->inSgrMouse = false;
+  self->queueHead = 0U;
+  self->queueCount = 0U;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(INPUT_TERMINAL_TYPE(TTerminalInput), FeedByte,
+                   (uint8_t byte)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  /* ------------------------------------------------------------
+   * 1. Not in escape sequence: process normal characters / ESC
+   * ------------------------------------------------------------ */
+  if (!self->inEscape) {
+    if (byte == 0x1BU) {
+      self->inEscape = true;
+      self->inCsi = false;
+      self->inSgrMouse = false;
+      self->escapeLength = 0U;
+      self->escapeBuffer[0] = '\0';
+      return STATUS_CONST(SUCCESS);
+    }
+
+    if (byte == '\r' || byte == '\n') {
+      INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_ENTER, 0U);
+      return STATUS_CONST(SUCCESS);
+    }
+
+    if (byte == '\t') {
+      INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_TAB, 0U);
+      return STATUS_CONST(SUCCESS);
+    }
+
+    if (byte == '\b' || byte == 127U) {
+      INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_BACKSPACE, 0U);
+      return STATUS_CONST(SUCCESS);
+    }
+
+    if (byte == ' ') {
+      INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_SPACE, 0U);
+      return STATUS_CONST(SUCCESS);
+    }
+
+    if (byte >= 1U && byte <= 26U) {
+      INPUT_TYPE(Key) k = (INPUT_TYPE(Key))(INPUT_KEY_A + (byte - 1U));
+      INPUT_TERMINAL_INS(EmitKeyStroke)(self, k, INPUT_CONST(MODIFIER_CONTROL));
+      return STATUS_CONST(SUCCESS);
+    }
+
+    if (byte >= 'a' && byte <= 'z') {
+      INPUT_TYPE(Key) k = (INPUT_TYPE(Key))(INPUT_KEY_A + (byte - 'a'));
+      INPUT_TERMINAL_INS(EmitKeyStroke)(self, k, 0U);
+      return STATUS_CONST(SUCCESS);
+    }
+
+    if (byte >= 'A' && byte <= 'Z') {
+      INPUT_TYPE(Key) k = (INPUT_TYPE(Key))(INPUT_KEY_A + (byte - 'A'));
+      INPUT_TERMINAL_INS(EmitKeyStroke)(self, k, INPUT_CONST(MODIFIER_SHIFT));
+      return STATUS_CONST(SUCCESS);
+    }
+
+    if (byte >= '0' && byte <= '9') {
+      INPUT_TYPE(Key) k = (INPUT_TYPE(Key))(INPUT_KEY_DIGIT_0 + (byte - '0'));
+      INPUT_TERMINAL_INS(EmitKeyStroke)(self, k, 0U);
+      return STATUS_CONST(SUCCESS);
+    }
+
+    return STATUS_CONST(SUCCESS);
+  }
+
+  /* ------------------------------------------------------------
+   * 2. In escape sequence: parse CSI / SS3 / SGR mouse
+   * ------------------------------------------------------------ */
+  if (self->escapeLength == 0U) {
+    if (byte == '[') {
+      self->inCsi = true;
+      self->escapeBuffer[self->escapeLength++] = '[';
+      self->escapeBuffer[self->escapeLength] = '\0';
+      return STATUS_CONST(SUCCESS);
+    }
+
+    if (byte == 'O') {
+      self->escapeBuffer[self->escapeLength++] = 'O';
+      self->escapeBuffer[self->escapeLength] = '\0';
+      return STATUS_CONST(SUCCESS);
+    }
+
+    if (byte >= 'a' && byte <= 'z') {
+      /* Alt + key */
+      INPUT_TYPE(Key) k = (INPUT_TYPE(Key))(INPUT_KEY_A + (byte - 'a'));
+      INPUT_TERMINAL_INS(EmitKeyStroke)(self, k, INPUT_CONST(MODIFIER_ALT));
+      self->inEscape = false;
+      return STATUS_CONST(SUCCESS);
+    }
+
+    if (byte == 0x1BU) {
+      /* Double ESC -> ESC key stroke */
+      INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_ESCAPE, 0U);
+      return STATUS_CONST(SUCCESS);
+    }
+
+    /* Fallback: emit ESC and restart for byte */
+    INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_ESCAPE, 0U);
+    self->inEscape = false;
+    return OBJECT_CALL(self, FeedByte, byte);
+  }
+
+  /* Append byte to escape buffer */
+  if (self->escapeLength + 1U < sizeof(self->escapeBuffer)) {
+    self->escapeBuffer[self->escapeLength++] = (char)byte;
+    self->escapeBuffer[self->escapeLength] = '\0';
+  } else {
+    self->inEscape = false;
+    return STATUS_CONST(INVALID_SEQUENCE);
+  }
+
+  /* Check SS3 sequence ('O' followed by key identifier) */
+  if (self->escapeBuffer[0] == 'O') {
+    self->inEscape = false;
+    switch (byte) {
+      case 'P': INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_F1, 0U); break;
+      case 'Q': INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_F2, 0U); break;
+      case 'R': INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_F3, 0U); break;
+      case 'S': INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_F4, 0U); break;
+      default: break;
+    }
+    return STATUS_CONST(SUCCESS);
+  }
+
+  /* Check SGR mouse detection prefix ('[<') */
+  if (self->escapeLength == 2U && self->escapeBuffer[1] == '<') {
+    self->inSgrMouse = true;
+    return STATUS_CONST(SUCCESS);
+  }
+
+  /* SGR Mouse sequence completion ('M' or 'm') */
+  if (self->inSgrMouse) {
+    if (byte == 'M' || byte == 'm') {
+      int btn = 0, col = 0, row = 0;
+      if (sscanf(self->escapeBuffer + 2, "%d;%d;%d", &btn, &col, &row) >= 3) {
+        uint32_t mods = 0U;
+        if (btn & 4) mods |= INPUT_CONST(MODIFIER_SHIFT);
+        if (btn & 8) mods |= INPUT_CONST(MODIFIER_ALT);
+        if (btn & 16) mods |= INPUT_CONST(MODIFIER_CONTROL);
+
+        if (btn & 64) {
+          float dy = (btn & 1) ? -1.0f : 1.0f;
+          INPUT_TERMINAL_INS(EmitMouseScroll)(self, 0.0f, dy, mods);
+        } else if (btn & 32) {
+          INPUT_TERMINAL_INS(EmitMouseMove)(self, (float)col, (float)row, mods);
+        } else {
+          unsigned b = INPUT_CONST(MOUSE_BUTTON_LEFT);
+          int bcode = btn & 3;
+          if (bcode == 1) b = INPUT_CONST(MOUSE_BUTTON_MIDDLE);
+          else if (bcode == 2) b = INPUT_CONST(MOUSE_BUTTON_RIGHT);
+
+          bool isDown = (byte == 'M');
+          INPUT_TERMINAL_INS(EmitMouseButton)(self, b, isDown, mods, (float)col, (float)row);
+        }
+      }
+      self->inEscape = false;
+      return STATUS_CONST(SUCCESS);
+    }
+    return STATUS_CONST(SUCCESS);
+  }
+
+  /* Check CSI terminating character (ASCII 0x40 to 0x7E) */
+  if (byte >= 0x40U && byte <= 0x7EU) {
+    self->inEscape = false;
+    uint32_t mods = INPUT_TERMINAL_INS(ParseCsiModifiers)(self->escapeBuffer);
+
+    switch (byte) {
+      case 'A': INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_UP, mods); break;
+      case 'B': INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_DOWN, mods); break;
+      case 'C': INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_RIGHT, mods); break;
+      case 'D': INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_LEFT, mods); break;
+      case 'H': INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_HOME, mods); break;
+      case 'F': INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_END, mods); break;
+      case 'Z':
+        INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_TAB,
+                                           mods | INPUT_CONST(MODIFIER_SHIFT));
+        break;
+      case '~': {
+        int code = 0;
+        if (sscanf(self->escapeBuffer + 1, "%d", &code) >= 1) {
+          switch (code) {
+            case 1: case 7:
+              INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_HOME, mods);
+              break;
+            case 2:
+              INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_INSERT, mods);
+              break;
+            case 3:
+              INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_DELETE, mods);
+              break;
+            case 4: case 8:
+              INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_END, mods);
+              break;
+            case 5:
+              INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_PAGE_UP, mods);
+              break;
+            case 6:
+              INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_PAGE_DOWN, mods);
+              break;
+            case 11: INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_F1, mods); break;
+            case 12: INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_F2, mods); break;
+            case 13: INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_F3, mods); break;
+            case 14: INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_F4, mods); break;
+            case 15: INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_F5, mods); break;
+            case 17: INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_F6, mods); break;
+            case 18: INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_F7, mods); break;
+            case 19: INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_F8, mods); break;
+            case 20: INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_F9, mods); break;
+            case 21: INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_F10, mods); break;
+            case 23: INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_F11, mods); break;
+            case 24: INPUT_TERMINAL_INS(EmitKeyStroke)(self, INPUT_KEY_F12, mods); break;
+            default: break;
+          }
+        }
+        break;
+      }
+      default: break;
+    }
+    return STATUS_CONST(SUCCESS);
+  }
+
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(INPUT_TERMINAL_TYPE(TTerminalInput), Feed,
+                   (const void *bytes, size_t size, size_t *outConsumed)) {
+  if (!self || (!bytes && size > 0U) || !outConsumed)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  const uint8_t *p = (const uint8_t *)bytes;
+  for (size_t i = 0U; i < size; ++i) {
+    OPSTATUS s = OBJECT_CALL(self, FeedByte, p[i]);
+    if (s != STATUS_CONST(SUCCESS)) {
+      *outConsumed = i;
+      return s;
+    }
+  }
+
+  *outConsumed = size;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(INPUT_TERMINAL_TYPE(TTerminalInput), PollEvent,
+                   (INPUT_TYPE(TEvent) * outEvent, bool *outFound)) {
+  if (!self || !outEvent || !outFound)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (self->queueCount == 0U) {
+    *outFound = false;
+    return STATUS_CONST(SUCCESS);
+  }
+
+  *outEvent = self->eventQueue[self->queueHead];
+  self->queueHead = (self->queueHead + 1U) %
+                    (size_t)INPUT_TERMINAL_CONST(QUEUE_CAPACITY);
+  self->queueCount--;
+  *outFound = true;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROTOTYPEEX(INPUT_TERMINAL_TYPE(TTerminalInput), PendingEvents) {
+  return self ? self->queueCount : 0U;
+}
+
+OBJECT_PROTOTYPEEX(INPUT_TERMINAL_TYPE(TTerminalInput), InEscapeSequence) {
+  return self ? self->inEscape : false;
+}
+
+OBJECT_IMPLEMENT(INPUT_TERMINAL_TYPE(TTerminalInput));
+
+/* EOF */

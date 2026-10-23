@@ -41,7 +41,7 @@ run_suite Type Type TypeNoFunctionTable AllFunctions IncludeAll FundamentalSmall
 run_suite Math Math Arithmetic Value Equations BSDQuadraticRegression AllTypes IncludeAll
 run_suite Random Random Engines Distribution IncludeAll
 run_suite Chronometry Chronometry Duration Instant Calendar DateTime EpochTimezoneFormat ClockTimer IncludeAll
-run_suite Container Functional LinearExtra LinearAllTypes TreeAllFunctions Hash Graph \
+run_suite Container Functional LinearExtra LinearAllTypes TreeAllFunctions BTree Hash Graph \
   FunctionTableOff TreeFunctionTableOff CustomType IncludeAll IncludeAllOff
 echo "[portable] Container/MultiTU"
 (
@@ -51,6 +51,15 @@ echo "[portable] Container/MultiTU"
   execute ../../../.build-portable/Container_MultiTU
 )
 run_suite Text IncludeAll Text Namespace Unicode AllFunctions
+
+run_suite Logging IncludeAll Logging Namespace FunctionTableOff
+echo "[portable] Logging/MultiTU"
+(
+  cd Codespace/Tests/Logging
+  $CC -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L \
+    MultiTU_A.c MultiTU_B.c MultiTU_Main.c -o ../../../.build-portable/Logging_MultiTU
+  execute ../../../.build-portable/Logging_MultiTU
+)
 
 run_suite GUI Surface Interaction Editor Render Containers Failure InputText Window WindowNative Advanced IncludeAll Namespace FunctionTableOff
 (

@@ -1,6 +1,8 @@
 #include "../../Cosmeron/Modules/Compression/Compression.h"
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 static unsigned char *load(const char *path, size_t *size) {
   FILE *file = fopen(path, "rb"); long length; unsigned char *data;
   assert(file && !fseek(file, 0, SEEK_END)); length = ftell(file); assert(length >= 0);

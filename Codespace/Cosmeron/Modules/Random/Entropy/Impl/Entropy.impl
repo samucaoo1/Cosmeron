@@ -28,7 +28,7 @@ RANDOM_ENTROPY_SYSTEM_PROTOTYPE {
     size -= (size_t)read_size;
   }
   return STATUS_CONST(SUCCESS);
-#elif OS_MAC || OS_BSD
+#elif OS_MAC || OS_BSD || OS_SOLARIS || OS_UNIX
   unsigned char *output = destination;
   int descriptor = open("/dev/urandom", O_RDONLY);
   if (descriptor < 0)

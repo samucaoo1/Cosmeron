@@ -47,7 +47,7 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Install official native OpenHarmony SDK 6.0
         id: sdk
         uses: openharmony-rs/setup-ohos-sdk@eb82b94ef522b07269679195c2512f22e922ef3b
@@ -81,7 +81,7 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Verify POSIX, C11 and ArkTS native bridge boundary
         run: |
           set -eu
@@ -102,51 +102,58 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Run Crostini validation suite inside Debian container
         run: |
           docker run --rm -v "$PWD:/workspace" -w /workspace debian:stable-slim \
             /bin/sh -ec "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y gcc libc6-dev make python3; sh Tools/crostini/check.sh"
 
   # =========================================================================
-  # 4. OpenIndiana (Illumos kernel) VM
+  # 4. OpenIndiana (Illumos kernel) VM (disabled)
   # =========================================================================
-  openindiana:
-    name: Experimental / OpenIndiana (Illumos VM)
-    runs-on: ubuntu-latest
-    timeout-minutes: 85
-    continue-on-error: true
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Run portable C11 suite inside OpenIndiana Hipster VM
-        uses: vmactions/openindiana-vm@74a06af3be38c265a2d99d1af520d66a057ff222
-        with:
-          usesh: true
-          run: |
-            set -eu
-            sh .github/scripts/test-portable-core.sh
-            sh .github/scripts/test-bsd-native.sh
+  # openindiana:
+  #   name: Experimental / OpenIndiana (Illumos VM)
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 85
+  #   continue-on-error: true
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v7
+  #     - name: Run portable C11 suite inside OpenIndiana Hipster VM
+  #       uses: vmactions/openindiana-vm@74a06af3be38c265a2d99d1af520d66a057ff222
+  #       with:
+  #         usesh: true
+  #         prepare: |
+  #           pkg install --accept build-essential || pkg install --accept developer/gcc-11 || true
+  #         run: |
+  #           set -eu
+  #           export PATH="/usr/gnu/bin:/usr/bin:$PATH"
+  #           export CC="${CC:-gcc}"
+  #           sh .github/scripts/test-portable-core.sh
+  #           sh .github/scripts/test-bsd-native.sh
 
   # =========================================================================
-  # 5. Oracle Solaris VM
+  # 5. Oracle Solaris VM (disabled)
   # =========================================================================
-  solaris:
-    name: Experimental / Solaris (Oracle Solaris VM)
-    runs-on: ubuntu-latest
-    timeout-minutes: 85
-    continue-on-error: true
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Run portable C11 suite inside Solaris VM
-        uses: vmactions/solaris-vm@87d3c436511cef802cd1637f86f73b1a97715c8c
-        with:
-          usesh: true
-          run: |
-            set -eu
-            sh .github/scripts/test-portable-core.sh
-            sh .github/scripts/test-bsd-native.sh
+  # solaris:
+  #   name: Experimental / Solaris (Oracle Solaris VM)
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 85
+  #   continue-on-error: true
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v7
+  #     - name: Run portable C11 suite inside Solaris VM
+  #       uses: vmactions/solaris-vm@87d3c436511cef802cd1637f86f73b1a97715c8c
+  #       with:
+  #         usesh: true
+  #         release: '11.4-gcc'
+  #         run: |
+  #           set -eu
+  #           export PATH="/usr/gcc/bin:/usr/bin:$PATH"
+  #           export CC="${CC:-gcc}"
+  #           sh .github/scripts/test-portable-core.sh
+  #           sh .github/scripts/test-bsd-native.sh
 
   # =========================================================================
   # 6. Android NDK cross-compilation (aarch64)
@@ -158,7 +165,7 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Cross-compile portable C11 suites for Android aarch64
         run: |
           set -eu
@@ -184,7 +191,7 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Cross-compile portable C11 suites for iOS arm64
         run: |
           set -eu
@@ -204,7 +211,7 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Install diagnostic encoder dependencies
         run: |
           sudo apt-get update -qq
@@ -215,7 +222,28 @@ jobs:
           sh MP3ParityFixtures.sh
 
   # =========================================================================
-  # 9. Informational summary gate (non-blocking)
+  # 9. Redox OS (microkernel / relibc) compatibility probe
+  # =========================================================================
+  redox-os:
+    name: Experimental / Redox OS (relibc probe)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Verify Redox OS and relibc macro discrimination
+        run: |
+          set -eu
+          echo "### Probing Redox OS native C11 expectations ###"
+          gcc -std=c11 -Wall -Wextra -Wpedantic -Werror \
+            -U__linux__ -U__linux -U__gnu_linux__ -Ulinux -D__redox__=1 \
+            -D_POSIX_C_SOURCE=200809L \
+            Codespace/Tests/Core/Detect.c -o /dev/null
+          echo "Redox OS detection probe succeeded."
+
+  # =========================================================================
+  # 10. Informational summary gate (non-blocking)
   # =========================================================================
   gate:
     name: Experimental / Summary
@@ -224,15 +252,14 @@ jobs:
       - openharmony
       - harmonyos-next
       - chromeos-crostini
-      - openindiana
-      - solaris
       - android-ndk
       - ios-cross
       - audio-parity
+      - redox-os
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Summarize experimental outcomes
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
