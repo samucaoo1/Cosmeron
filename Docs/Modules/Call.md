@@ -34,12 +34,12 @@ static int ScaleValue(int value, void *context) {
 
 int main(void) {
     ScaleContext state = { 3 };
-    Scale call = COSMERON_Call_Scale_Bind(ScaleValue, &state);
+    CALL_TYPE(Scale) call = CALL_FUNC(Scale_Bind)(ScaleValue, &state);
 
-    if (!COSMERON_Call_Scale_IsValid(call))
+    if (!CALL_FUNC(Scale_IsValid)(call))
         return 1;
 
-    return COSMERON_Call_Scale_Invoke(call, 4) == 12 ? 0 : 1;
+    return CALL_FUNC(Scale_Invoke)(call, 4) == 12 ? 0 : 1;
 }
 ```
 
