@@ -94,10 +94,19 @@ static inline OPSTATUS OBJECT_FUNC(Init)(OBJECT_TYPE(TObject) * object) {
 
 #define OBJECT_AS(OBJ, TARGET_TYPE) ((TARGET_TYPE *)(OBJ))
 
-#define OBJECT_CALL_0(OBJ, METHOD_NAME) ((OBJ)->api->METHOD_NAME(OBJ))
+#define COSMERON_MACRO_INTERNAL_OBJECT_API_0(OBJ, METHOD_NAME) \
+  ((OBJ)->api->METHOD_NAME(OBJ))
 
-#define OBJECT_CALL(OBJ, METHOD_NAME, ...) \
+#define COSMERON_MACRO_INTERNAL_OBJECT_API_1(OBJ, METHOD_NAME, ...) \
   ((OBJ)->api->METHOD_NAME((OBJ), __VA_ARGS__))
+
+#define API(...) \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJECT_API_, \
+             PP_HAS_MORE_THAN_2(__VA_ARGS__))(__VA_ARGS__)
+
+/* Backwards-compatible object invocation aliases. */
+#define OBJECT_CALL_0(OBJ, METHOD_NAME) API(OBJ, METHOD_NAME)
+#define OBJECT_CALL(...) API(__VA_ARGS__)
 
 /* ------------------------------------------------------------
  * 2. Internal Method Generators (Prototypes & Inlines)
