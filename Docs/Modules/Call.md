@@ -1,23 +1,25 @@
 # Call
 
-Call represents a typed function together with a non-owning context. It provides a small C99 building block for callbacks and closure-like values without allocating memory or converting incompatible function-pointer types.
+Call represents a typed function together with a borrowed context. It uses the declarative package system from `Core/Module/Package.h` to generate the callable operations.
 
 ## Contract
 
-Each callable type has:
+Each declaration creates a distinct callback type containing:
 
 - A signature-specific function pointer.
-- A `void *context` associated with that function.
-- A `Bind` function that packages function and context.
-- An `IsValid` predicate that checks whether a function is bound.
-- An `Invoke` function generated with the exact signature.
+- A non-owning `void *context`.
+- `Bind`, to package a function and its context.
+- `IsValid`, to check whether a function is bound.
+- `Invoke`, to call the function with the stored context.
 
-The context is borrowed, not owned. Call does not allocate, copy, or release it. The caller must keep the pointed-to object alive for every invocation.
+These operations are declared through `PACKAGE` and the matching `FUNCTION_INLINE`, `PREDICATE_INLINE`, or `PROCEDURE_INLINE` descriptors. The normal Cosmeron package function-table behavior and its compile-time disable switch therefore apply.
+
+The context is borrowed. Call does not allocate, copy, or release it. The caller must keep the pointed-to object alive for every invocation.
 
 ## Value-returning callable
 
 ```c
-#include "Module/Call/Call.h"
+#include "Cosmeron/Core/Module/Call/Call.h"
 
 CALL_DECLARE(Scale, int, (int value), (value))
 
@@ -32,26 +34,22 @@ static int ScaleValue(int value, void *context) {
 
 int main(void) {
     ScaleContext state = { 3 };
-    Scale call = Scale_Bind(ScaleValue, &state);
+    Scale call = COSMERON_Call_Scale_Bind(ScaleValue, &state);
 
-    if (!Scale_IsValid(call))
+    if (!COSMERON_Call_Scale_IsValid(call))
         return 1;
 
-    return Scale_Invoke(call, 4) == 12 ? 0 : 1;
+    return COSMERON_Call_Scale_Invoke(call, 4) == 12 ? 0 : 1;
 }
 ```
 
-The generated callback signature is `int (*)(int value, void *context)`. The caller of `Scale_Invoke` supplies only the ordinary argument; the stored context is forwarded automatically.
+The generated callback signature is `int (*)(int value, void *context)`. The caller of `Invoke` supplies only the ordinary argument; the stored context is forwarded automatically.
 
 ## Multiple arguments
 
 ```c
 CALL_DECLARE(AddTo, int, (int left, int right), (left, right))
-```
 
-Implement the callback with the declared arguments followed by `void *context`:
-
-```c
 static int AddToContext(int left, int right, void *context) {
     int offset = *(int *)context;
     return left + right + offset;
@@ -60,7 +58,7 @@ static int AddToContext(int left, int right, void *context) {
 
 ## Procedures
 
-Use `CALL_DECLARE_PROCEDURE` for functions returning `void`:
+Use `CALL_DECLARE_PROCEDURE` for callbacks returning `void`:
 
 ```c
 CALL_DECLARE_PROCEDURE(Notify, (int code), (code))
@@ -82,10 +80,10 @@ CALL_DECLARE_NULLARY_PROCEDURE(ResetSetting)
 
 ## Validity and lifetime
 
-`IsValid` checks only whether the function pointer is non-null. It does not validate the context or guarantee the function's preconditions. Calling `Invoke` on an invalid callable is a caller error; check `IsValid` first when the binding may be empty.
+`IsValid` checks only whether the function pointer is non-null. It does not validate the context or guarantee the callback's preconditions. Calling `Invoke` on an invalid callable is a caller error; check `IsValid` first when a binding may be empty.
 
-Callables can be copied by value. Copies share the same context pointer; they do not duplicate the context data. A context may be `NULL` when the callback does not need extra state.
+Callables can be copied by value. Copies share the same context pointer and do not duplicate the context data. The context may be `NULL` when the callback does not need extra state.
 
 ## Scope
 
-Call does not provide automatic variable capture, closure allocation, context ownership, destruction, or type erasure across arbitrary function signatures. Each declared callable preserves a concrete function-pointer type, so invocation remains type-checked by C.
+Call does not provide automatic variable capture, context ownership, destruction, or type erasure across arbitrary function signatures. Each declared callable preserves a concrete function-pointer type, so invocation remains type-checked by C.
