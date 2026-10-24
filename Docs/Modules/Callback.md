@@ -77,6 +77,35 @@ CALLBACK_DECLARE_NULLARY(ReadSetting, int)
 CALLBACK_DECLARE_NULLARY_PROCEDURE(ResetSetting)
 ```
 
+
+## Operations
+
+Use `CALLBACK_DECLARE_OPERATION` when invocation returns `OPSTATUS`, allowing the callback to report success or a recoverable failure. Use `CALLBACK_DECLARE_NULLARY_OPERATION` when it takes no ordinary arguments.
+
+```c
+CALLBACK_DECLARE_OPERATION(Commit, (int value), (value))
+
+static OPSTATUS CommitValue(int value, void *context) {
+    *(int *)context += value;
+    return value >= 0 ? STATUS_CONST(SUCCESS)
+                      : STATUS_CONST(INVALID_ARGUMENT);
+}
+```
+
+## Predicates
+
+Use `CALLBACK_DECLARE_PREDICATE` for a callback returning `bool`, or `CALLBACK_DECLARE_NULLARY_PREDICATE` when it takes no ordinary arguments.
+
+```c
+CALLBACK_DECLARE_PREDICATE(IsPositive, (int value), (value))
+
+static bool IsPositiveValue(int value, void *context) {
+    return value > *(int *)context;
+}
+```
+
+Both kinds keep the same borrowed-context contract and generate `Bind`, `IsValid`, and `Invoke`. Their `Invoke` return type follows the category: `OPSTATUS` for operations and `bool` for predicates.
+
 ## Validity and lifetime
 
 `IsValid` checks only whether the function pointer is non-null. It does not validate the context or guarantee the callback's preconditions. Calling `Invoke` on an invalid callback is a caller error; check `IsValid` first when a binding may be empty.
