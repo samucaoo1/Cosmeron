@@ -381,6 +381,37 @@ COSMERON_MACRO_INTERNAL_*
 
 If a new macro does not clearly belong to this grammar, reconsider whether it should exist.
 
+## 8.1 Universal Template Engine
+
+The template engine (`Core/Module/Common/Template.impl`) provides generic type parameterization for `OBJECT` and `PACKAGE` declarations without monolithic instantiation macros:
+
+```c
+/* 1. Define declaration block */
+#define TEMPLATE_TSTACK(SUFFIX, TYPE)                                          \
+  OBJECT(                                                                      \
+      GNS2(TStack, SUFFIX),                                                    \
+      FIELDS(                                                                  \
+          TYPE items[16];                                                      \
+          size_t count;                                                        \
+      ),                                                                       \
+      OPERATION(Create, ()),                                                   \
+      OPERATION(Push, (TYPE value)),                                           \
+      OPERATION(Pop, (TYPE *outValue))                                         \
+  )
+
+/* 2. Define implementation block (via explicit *_IMPLEMENT_EX) */
+#define TEMPLATE_TSTACK_IMPLEMENT(SUFFIX, TYPE)                                \
+  OBJECT_OPERATION_IMPLEMENT_EX(GNS2(TStack, SUFFIX), Create, ()) { ... }     \
+  OBJECT_OPERATION_IMPLEMENT_EX(GNS2(TStack, SUFFIX), Push, (TYPE value)) { ... }\
+  OBJECT_OPERATION_IMPLEMENT_EX(GNS2(TStack, SUFFIX), Pop, (TYPE *outValue)) { ... }
+```
+
+### Instantiation
+- **`TEMPLATE_DECLARE(NAME, SUFFIX, TYPE)`**: Instantiates types and prototypes only (in header `.h` files).
+- **`TEMPLATE_IMPLEMENT(NAME, SUFFIX, TYPE)`**: Fully instantiates declaration and implementation bodies (in `.impl` / `.c` files).
+- **Inline-Only Templates**: If a template has only inline methods, define `#define TEMPLATE_<NAME>_INLINE_ONLY 1` or `#define TEMPLATE_<NAME>_IMPLEMENT(SUFFIX, TYPE) /* empty */`.
+- **Naming Rule**: Instantiated user types must strictly follow `T<Name>_<suffix>` (e.g. `TStack_int`, `TVector_uint32`).
+
 ## 9. X-Macros
 
 Use X-macros when one semantic table must generate multiple representations.

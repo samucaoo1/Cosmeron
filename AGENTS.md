@@ -93,6 +93,14 @@ Everything must live inside the library/module namespace whenever C allows it. E
   - Invocation: `PACKAGE_CALL(PKG, FuncName, args...)` or direct calls `PKG_FuncName(...)`.
 - **Compile-time disabling:** Every Function Table family provides compile-time disabling via `MODULE_DISABLE_FUNCTION_TABLE`, `PACKAGE_DISABLE_FUNCTION_TABLE`, or `OBJECT_DISABLE_FUNCTION_TABLE`. When defined, no struct, instance, or table is emitted.
 - **Naming:** Always use the term `FunctionTable`, never `VTable`.
+- **Universal Template Engine (`TEMPLATE_DECLARE` / `TEMPLATE_IMPLEMENT`):**
+  - Use `TEMPLATE_<NAME>(SUFFIX, TYPE)` to declare parameterized `OBJECT` or `PACKAGE` modules.
+  - Use `TEMPLATE_<NAME>_IMPLEMENT(SUFFIX, TYPE)` to implement their methods via `*_IMPLEMENT_EX`.
+  - Instantiate in headers with `TEMPLATE_DECLARE(NAME, SUFFIX, TYPE)` (types and prototypes).
+  - Instantiate in implementations with `TEMPLATE_IMPLEMENT(NAME, SUFFIX, TYPE)` (full declaration + body).
+  - For inline-only templates, define `#define TEMPLATE_<NAME>_INLINE_ONLY 1` or define an empty `TEMPLATE_<NAME>_IMPLEMENT`.
+  - Type naming convention for user types: `T<Name>_<suffix>` (e.g. `TStack_int`, `TVector_uint32`).
+  - Prohibit ad-hoc monolithic instantiation macros (e.g., `VECTOR_IMPLEMENT_ALL`).
 
 ---
 

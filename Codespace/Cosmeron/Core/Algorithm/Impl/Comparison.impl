@@ -42,11 +42,5 @@ PACKAGE_FUNCTION_IMPLEMENT_EX(ALGORITHM_NS(COMPARISON_MOD), CMPOUT, Bytes,
   return COMPARISON_CONST(EQUAL);
 }
 
-PACKAGE_FUNCTION_IMPLEMENT_EX(ALGORITHM_NS(COMPARISON_MOD), CMPOUT, Invoke,
-                              (const void *left, const void *right,
-                               COMPARISON_TYPE(Comparator) comparator)) {
-  return comparator(left, right);
-}
-
 PACKAGE_IMPLEMENT(ALGORITHM_NS(COMPARISON_MOD));
 /* EOF */

@@ -32,12 +32,11 @@ typedef enum COMPARISON_TYPE(Result) {
 
 typedef COMPARISON_TYPE(Result) CMPOUT;
 
-typedef CMPOUT (*COMPARISON_TYPE(Comparator))(const void *left,
-                                              const void *right);
+#include "../Module/Callback/Callback.h"
 
-typedef CMPOUT (*COMPARISON_TYPE(ContextComparator))(const void *left,
-                                                     const void *right,
-                                                     void *context);
+CALLBACK_DECLARE(Comparison, CMPOUT,
+                 (const void *left, const void *right),
+                 (left, right));
 
 #include "../Module/Package.h"
 #include "../Primitive/Types.h"
@@ -51,10 +50,7 @@ PACKAGE(ALGORITHM_NS(COMPARISON_MOD),
             FUNCTION(CMPOUT, CString, (const char *left, const char *right)),
         FUNCTION(CMPOUT, Bytes,
                  (const void *left, size_t leftSize, const void *right,
-                  size_t rightSize)),
-        FUNCTION(CMPOUT, Invoke,
-                 (const void *left, const void *right,
-                  COMPARISON_TYPE(Comparator) comparator)));
+                  size_t rightSize)));
 
 #undef COMPARISON_PRIMITIVE_FUNCTION_DECL
 

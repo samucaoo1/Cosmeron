@@ -33,6 +33,12 @@ static int Test_MacrosAndLegacy(void) {
   CAST_TYPE(Value) value = CAST_TYPE_TO_STRUCT(int, Value)(7);
   CHECK_TRUE(CAST_FUNC(Identity)(value.value) == 7);
   CHECK_TRUE(CAST_STRUCT_TO_TYPE(Value, int)(value) == 7);
+
+  /* FunctionTable call test */
+  uint32_t outVal = 0;
+  CHECK_STATUS(PACKAGE_CALL(LIB_PREFIX(CAST_MOD), Uint64to32, &outVal, 0x1234U),
+               STATUS_CONST(SUCCESS));
+  CHECK_TRUE(outVal == 0x1234U);
   return 0;
 }
 

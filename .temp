@@ -1,0 +1,99 @@
+# Cosmeron - Status e Fila de Pacotes/Módulos para Refatoração
+Data de Criação: 2026-10-24
+Diretriz Inviolável: Refatorações NÃO mantêm retrocompatibilidade. Não crie aliases/shims de compatibilidade antiga.
+
+---
+
+## 1. Núcleo (Core)
+
+| Módulo / Pacote | Arquivo Principal | Status | Ações Necessárias |
+|---|---|---|---|
+| **Core/Algorithm/Comparison** | `Codespace/Cosmeron/Core/Algorithm/Comparison.h` | Concluído (Padrão) | Migrado para Callback DSL (`TCALLBACK(Comparison)`). Tipos manuais (`Comparator`/`ContextComparator`) e `Invoke` redundante removidos. |
+| **Core/Cast** | `Codespace/Cosmeron/Core/Cast/Integer.h` | Concluído | Migrado de `*_PROTOTYPE` soltos para `PACKAGE(Cast)` com `OPERATION(...)` e implementado via `PACKAGE_OPERATION_IMPLEMENT_EX`. |
+| **Core/Memory/Alloc** | `Codespace/Cosmeron/Core/Memory/Alloc.h` | Pendente | Migrar macros de protótipo (`*_PROTOTYPE`) e convenções para `PACKAGE(Alloc)`. Eliminar compatibilidade obsoleta. |
+| **Core/Memory/Operations** | `Codespace/Cosmeron/Core/Memory/Operations.h` | Pendente | Declarar via `PACKAGE(Memory)`. Usar `PROCEDURE` / `FUNCTION` / `PREDICATE` / `OPERATION`. |
+| **Core/Memory/Swap** | `Codespace/Cosmeron/Core/Memory/Swap.h` | Pendente | Migrar para `PACKAGE(Swap)`. |
+| **Core/Memory/Pool** | `Codespace/Cosmeron/Core/Memory/Pool.h` | Pendente | Usar `OBJECT(TMemoryPool, ...)`. Substituir macros legadas (`METHOD`) pela família explícita `OPERATION(...)`. |
+| **Core/Memory/Arena** | `Codespace/Cosmeron/Core/Memory/Arena.h` | Pendente | Migrar de protótipos manuais soltos para `OBJECT(TArena, ...)`. |
+| **Core/Memory/Stream** | `Codespace/Cosmeron/Core/Memory/Stream.h` | Pendente | Migrar de protótipos manuais para `OBJECT(TMemoryStream, ...)`. |
+| **Core/Module/Callback** | `Codespace/Cosmeron/Core/Module/Callback/Callback.h` | Concluído | DSL de Callback tipado de primeira classe. |
+
+---
+
+## 2. Módulos Gerais (Modules)
+
+### Sort
+- `Codespace/Cosmeron/Modules/Sort/Array.h`
+- `Codespace/Cosmeron/Modules/Sort/Classical.h`
+- `Codespace/Cosmeron/Modules/Sort/Esoteric.h`
+- `Codespace/Cosmeron/Modules/Sort/Utility.h`
+- `Codespace/Cosmeron/Modules/Sort/Integer.h`
+- `Codespace/Cosmeron/Modules/Sort/Typed.h`
+> **Ações:** 
+> - Substituir o sistema duplo de comparação (`Comparator` e `ContextComparator` com `WithContext`) unicamente por `TCALLBACK(Comparison)`.
+> - Eliminar funções duplicadas `*WithContext`. Um único ponto de entrada recebe `TCALLBACK(Comparison)` (que já encapsula contexto).
+> - Migrar declarações de `*_PROTOTYPE` manuais para `PACKAGE(Sort)`.
+> - Atualizar FunctionTable para remover `VTable` e adotar padrão `Sort_FunctionTable`.
+
+### Container
+- `Codespace/Cosmeron/Modules/Container/Array/Heap.h`
+- `Codespace/Cosmeron/Modules/Container/Array/Vector.h`
+- `Codespace/Cosmeron/Modules/Container/Array/Deque.h`
+- `Codespace/Cosmeron/Modules/Container/Array/Stack.h`
+- `Codespace/Cosmeron/Modules/Container/Array/Queue.h`
+- `Codespace/Cosmeron/Modules/Container/Tree/Tree.space` / `Impl/BTree.impl`
+- `Codespace/Cosmeron/Modules/Container/Table/` (HashTable / HashSet)
+- `Codespace/Cosmeron/Modules/Container/List/` (LinkedList / DoublyLinkedList)
+> **Ações:**
+> - Migrar comparadores brutos para `TCALLBACK(Comparison)`.
+> - Declarar containers via `OBJECT(...)` ou `PACKAGE(...)` conforme aplicável.
+> - Eliminar prefixos ambíguos (`TPool`, `TNode`) e macros de protótipo legadas.
+
+### Text
+- `Codespace/Cosmeron/Modules/Text/String/CString/CString.h` (Já em `PACKAGE`, revisar contratos)
+- `Codespace/Cosmeron/Modules/Text/String/Builder/Builder.h` (Substituir `METHOD` legado por `OPERATION`/`PROCEDURE` explícitos)
+- `Codespace/Cosmeron/Modules/Text/Attributed/Attributed.h` (Substituir `METHOD` legado)
+- `Codespace/Cosmeron/Modules/Text/Format/`
+- `Codespace/Cosmeron/Modules/Text/View/`
+
+### Security
+- `Codespace/Cosmeron/Modules/Security/Digest/Digest.h`
+- `Codespace/Cosmeron/Modules/Security/Checksum/` (CRC32, Adler32)
+- `Codespace/Cosmeron/Modules/Security/Crypto/` (SHA256, MD5)
+> **Ações:** Converter protótipos manuais para `PACKAGE(Security_Digest)` / `OBJECT(...)`.
+
+### Input
+- `Codespace/Cosmeron/Modules/Input/Terminal/Terminal.h` (Trocar `METHOD` por `OPERATION`/`PROCEDURE`)
+- `Codespace/Cosmeron/Modules/Input/Mouse/Mouse.h`
+- `Codespace/Cosmeron/Modules/Input/Keyboard/Keyboard.h`
+- `Codespace/Cosmeron/Modules/Input/Gamepad/Gamepad.h`
+- `Codespace/Cosmeron/Modules/Input/Controller/Controller.h`
+- `Codespace/Cosmeron/Modules/Input/Event/Event.h`
+
+### File
+- `Codespace/Cosmeron/Modules/File/Watch/Watch.h` (Trocar `METHOD` por `OPERATION`/`PROCEDURE`, unificar callbacks de watch com `TCALLBACK`)
+- `Codespace/Cosmeron/Modules/File/MMap/MMap.h` (Trocar `METHOD` por `OPERATION`/`PROCEDURE`)
+- `Codespace/Cosmeron/Modules/File/Stream/Stream.h`
+- `Codespace/Cosmeron/Modules/File/Path/Path.h`
+- `Codespace/Cosmeron/Modules/File/Directory/Directory.h`
+- `Codespace/Cosmeron/Modules/File/Content/Content.h`
+- `Codespace/Cosmeron/Modules/File/Entry/Entry.h`
+
+### Graphics
+- `Codespace/Cosmeron/Modules/Graphics/Animation/Animation.h`
+- `Codespace/Cosmeron/Modules/Graphics/Compositor/Compositor.h`
+- `Codespace/Cosmeron/Modules/Graphics/Gradient/Gradient.h`
+- `Codespace/Cosmeron/Modules/Graphics/Palette/Palette.h`
+- `Codespace/Cosmeron/Modules/Graphics/PixelCanvas/PixelCanvas.h`
+- `Codespace/Cosmeron/Modules/Graphics/Terminal/Screen/Screen.h`
+- `Codespace/Cosmeron/Modules/Graphics/Transform/Transform.h`
+- `Codespace/Cosmeron/Modules/Graphics/UI/Component/Component.h`
+> **Ações:** Todos usam macro obsoleta `METHOD(...)`; converter para contratos canônicos `OPERATION`, `PREDICATE`, `FUNCTION`, `PROCEDURE`.
+
+### Database
+- `Codespace/Cosmeron/Modules/Database/Connection/Connection.h`
+- `Codespace/Cosmeron/Modules/Database/Statement/Statement.h`
+- `Codespace/Cosmeron/Modules/Database/Transaction/Transaction.h`
+
+### Demais Módulos (Audio, Bit, CLI, Chronometry, Compression, Concurrency, Logging, Math, Network, Parsing, Struct, Type)
+- Conforme varredura, remover macros manuais `*_PROTOTYPE`, adotar X-macros obrigatórios para enums e declarar via `PACKAGE`/`OBJECT`.

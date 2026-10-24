@@ -1,7 +1,8 @@
 #pragma once
 
 #define CAST_UNSIGNED_DOWNCAST_IMPLEMENT(NAME, FROM_TYPE, TO_TYPE, TO_MAX)     \
-  CAST_CONVERT_PROTOTYPE(NAME, FROM_TYPE, TO_TYPE) {                          \
+  PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), NAME,                   \
+                                (TO_TYPE * outValue, FROM_TYPE inValue)) {     \
     if (!outValue)                                                             \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (inValue > (FROM_TYPE)(TO_MAX))                                         \
@@ -12,7 +13,8 @@
 
 #define CAST_SIGNED_DOWNCAST_IMPLEMENT(NAME, FROM_TYPE, TO_TYPE, TO_MIN,      \
                                        TO_MAX)                                 \
-  CAST_CONVERT_PROTOTYPE(NAME, FROM_TYPE, TO_TYPE) {                          \
+  PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), NAME,                   \
+                                (TO_TYPE * outValue, FROM_TYPE inValue)) {     \
     if (!outValue)                                                             \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (inValue < (FROM_TYPE)(TO_MIN) || inValue > (FROM_TYPE)(TO_MAX))       \
@@ -23,7 +25,8 @@
 
 #define CAST_SIGNED_TO_SAME_OR_WIDER_UNSIGNED_IMPLEMENT(NAME, FROM_TYPE,       \
                                                         TO_TYPE)               \
-  CAST_CONVERT_PROTOTYPE(NAME, FROM_TYPE, TO_TYPE) {                          \
+  PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), NAME,                   \
+                                (TO_TYPE * outValue, FROM_TYPE inValue)) {     \
     if (!outValue)                                                             \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (inValue < 0)                                                           \
@@ -34,7 +37,8 @@
 
 #define CAST_SIGNED_TO_NARROWER_UNSIGNED_IMPLEMENT(NAME, FROM_TYPE, TO_TYPE,   \
                                                    TO_MAX)                     \
-  CAST_CONVERT_PROTOTYPE(NAME, FROM_TYPE, TO_TYPE) {                          \
+  PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), NAME,                   \
+                                (TO_TYPE * outValue, FROM_TYPE inValue)) {     \
     if (!outValue)                                                             \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (inValue < 0 || (uint64_t)inValue > (uint64_t)(TO_MAX))                 \
@@ -44,7 +48,8 @@
   }
 
 #define CAST_UNSIGNED_TO_WIDER_SIGNED_IMPLEMENT(NAME, FROM_TYPE, TO_TYPE)     \
-  CAST_CONVERT_PROTOTYPE(NAME, FROM_TYPE, TO_TYPE) {                          \
+  PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), NAME,                   \
+                                (TO_TYPE * outValue, FROM_TYPE inValue)) {     \
     if (!outValue)                                                             \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     *outValue = (TO_TYPE)inValue;                                              \
@@ -53,7 +58,8 @@
 
 #define CAST_UNSIGNED_TO_SAME_OR_NARROWER_SIGNED_IMPLEMENT(NAME, FROM_TYPE,    \
                                                            TO_TYPE, TO_MAX)    \
-  CAST_CONVERT_PROTOTYPE(NAME, FROM_TYPE, TO_TYPE) {                          \
+  PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), NAME,                   \
+                                (TO_TYPE * outValue, FROM_TYPE inValue)) {     \
     if (!outValue)                                                             \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if ((uint64_t)inValue > (uint64_t)(TO_MAX))                                \
@@ -140,7 +146,8 @@ CAST_UNSIGNED_TO_SAME_OR_NARROWER_SIGNED_IMPLEMENT(Uint8toI8, uint8_t, int8_t,
                                                    INT8_MAX)
 
 /* Size conversions */
-CAST_CONVERT_PROTOTYPE(SizetoU64, size_t, uint64_t) {
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), SizetoU64,
+                              (uint64_t * outValue, size_t inValue)) {
   if (!outValue)
     return STATUS_CONST(INVALID_ARGUMENT);
 #if SIZE_MAX > UINT64_MAX
@@ -151,7 +158,8 @@ CAST_CONVERT_PROTOTYPE(SizetoU64, size_t, uint64_t) {
   return STATUS_CONST(SUCCESS);
 }
 
-CAST_CONVERT_PROTOTYPE(SizetoU32, size_t, uint32_t) {
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), SizetoU32,
+                              (uint32_t * outValue, size_t inValue)) {
   if (!outValue)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (inValue > (size_t)UINT32_MAX)
@@ -160,7 +168,8 @@ CAST_CONVERT_PROTOTYPE(SizetoU32, size_t, uint32_t) {
   return STATUS_CONST(SUCCESS);
 }
 
-CAST_CONVERT_PROTOTYPE(SizetoU16, size_t, uint16_t) {
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), SizetoU16,
+                              (uint16_t * outValue, size_t inValue)) {
   if (!outValue)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (inValue > (size_t)UINT16_MAX)
@@ -169,7 +178,8 @@ CAST_CONVERT_PROTOTYPE(SizetoU16, size_t, uint16_t) {
   return STATUS_CONST(SUCCESS);
 }
 
-CAST_CONVERT_PROTOTYPE(SizetoU8, size_t, uint8_t) {
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), SizetoU8,
+                              (uint8_t * outValue, size_t inValue)) {
   if (!outValue)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (inValue > (size_t)UINT8_MAX)
@@ -178,7 +188,8 @@ CAST_CONVERT_PROTOTYPE(SizetoU8, size_t, uint8_t) {
   return STATUS_CONST(SUCCESS);
 }
 
-CAST_CONVERT_PROTOTYPE(SizetoI64, size_t, int64_t) {
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), SizetoI64,
+                              (int64_t * outValue, size_t inValue)) {
   if (!outValue)
     return STATUS_CONST(INVALID_ARGUMENT);
 #if SIZE_MAX > INT64_MAX
@@ -189,7 +200,8 @@ CAST_CONVERT_PROTOTYPE(SizetoI64, size_t, int64_t) {
   return STATUS_CONST(SUCCESS);
 }
 
-CAST_CONVERT_PROTOTYPE(SizetoI32, size_t, int32_t) {
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), SizetoI32,
+                              (int32_t * outValue, size_t inValue)) {
   if (!outValue)
     return STATUS_CONST(INVALID_ARGUMENT);
   if ((uint64_t)inValue > (uint64_t)INT32_MAX)
@@ -198,7 +210,8 @@ CAST_CONVERT_PROTOTYPE(SizetoI32, size_t, int32_t) {
   return STATUS_CONST(SUCCESS);
 }
 
-CAST_CONVERT_PROTOTYPE(Uint64toSize, uint64_t, size_t) {
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), Uint64toSize,
+                              (size_t * outValue, uint64_t inValue)) {
   if (!outValue)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (inValue > (uint64_t)SIZE_MAX)
@@ -207,7 +220,8 @@ CAST_CONVERT_PROTOTYPE(Uint64toSize, uint64_t, size_t) {
   return STATUS_CONST(SUCCESS);
 }
 
-CAST_CONVERT_PROTOTYPE(Int64toSize, int64_t, size_t) {
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), Int64toSize,
+                              (size_t * outValue, int64_t inValue)) {
   if (!outValue)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (inValue < 0)
@@ -218,7 +232,8 @@ CAST_CONVERT_PROTOTYPE(Int64toSize, int64_t, size_t) {
   return STATUS_CONST(SUCCESS);
 }
 
-CAST_CONVERT_PROTOTYPE(Int32toSize, int32_t, size_t) {
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), Int32toSize,
+                              (size_t * outValue, int32_t inValue)) {
   if (!outValue)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (inValue < 0)
@@ -228,4 +243,6 @@ CAST_CONVERT_PROTOTYPE(Int32toSize, int32_t, size_t) {
   *outValue = (size_t)inValue;
   return STATUS_CONST(SUCCESS);
 }
+
+PACKAGE_IMPLEMENT(LIB_PREFIX(CAST_MOD));
 /* EOF */

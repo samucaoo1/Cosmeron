@@ -1,6 +1,7 @@
 #include "../../Cosmeron/Core/Algorithm/Comparison.h"
 
-static CMPOUT compare_int_pointer(const void *left, const void *right) {
+static CMPOUT compare_int_pointer(const void *left, const void *right, void *context) {
+  (void)context;
   const int leftValue = *(const int *)left;
   const int rightValue = *(const int *)right;
   return COMPARISON_FUNC(Int)(leftValue, rightValue);
@@ -28,7 +29,9 @@ int main(void) {
       COMPARISON_CONST(LOWER))
     return 6;
 
-  if (COMPARISON_FUNC(Invoke)(&left, &right, compare_int_pointer) !=
+  TCALLBACK(Comparison) comparison =
+      CALLBACK_FUNC(Comparison_Bind)(compare_int_pointer, NULL);
+  if (CALLBACK_FUNC(Comparison_Invoke)(comparison, &left, &right) !=
       COMPARISON_CONST(LOWER))
     return 7;
 
