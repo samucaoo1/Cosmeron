@@ -104,4 +104,97 @@
         callback.function(callback.context);                                    \
       })                                                                        \
   )
+
+#define CALLBACK_DECLARE_OPERATION(NAME, PARAMETERS, ARGUMENTS)               \
+  typedef OPSTATUS (*GNS2(CALLBACK_TYPE(NAME), Function))(                      \
+      PP_UNWRAP PARAMETERS, void *context);                                     \
+  typedef struct CALLBACK_TYPE(NAME) {                                          \
+    GNS2(CALLBACK_TYPE(NAME), Function) function;                               \
+    void *context;                                                              \
+  } CALLBACK_TYPE(NAME);                                                        \
+  PACKAGE(CALLBACK_TYPE(NAME),                                                  \
+      FUNCTION_INLINE(CALLBACK_TYPE(NAME), Bind,                                \
+          (GNS2(CALLBACK_TYPE(NAME), Function) function, void *context), {      \
+            CALLBACK_TYPE(NAME) callback;                                       \
+            callback.function = function;                                       \
+            callback.context = context;                                         \
+            return callback;                                                    \
+          }),                                                                   \
+      PREDICATE_INLINE(IsValid, (CALLBACK_TYPE(NAME) callback), {               \
+        return callback.function != NULL;                                       \
+      }),                                                                       \
+      OPERATION_INLINE(Invoke, (CALLBACK_TYPE(NAME) callback,                   \
+                                PP_UNWRAP PARAMETERS), {                        \
+        return callback.function(PP_UNWRAP ARGUMENTS, callback.context);        \
+      })                                                                        \
+  )
+
+#define CALLBACK_DECLARE_PREDICATE(NAME, PARAMETERS, ARGUMENTS)                \
+  typedef bool (*GNS2(CALLBACK_TYPE(NAME), Function))(                          \
+      PP_UNWRAP PARAMETERS, void *context);                                     \
+  typedef struct CALLBACK_TYPE(NAME) {                                          \
+    GNS2(CALLBACK_TYPE(NAME), Function) function;                               \
+    void *context;                                                              \
+  } CALLBACK_TYPE(NAME);                                                        \
+  PACKAGE(CALLBACK_TYPE(NAME),                                                  \
+      FUNCTION_INLINE(CALLBACK_TYPE(NAME), Bind,                                \
+          (GNS2(CALLBACK_TYPE(NAME), Function) function, void *context), {      \
+            CALLBACK_TYPE(NAME) callback;                                       \
+            callback.function = function;                                       \
+            callback.context = context;                                         \
+            return callback;                                                    \
+          }),                                                                   \
+      PREDICATE_INLINE(IsValid, (CALLBACK_TYPE(NAME) callback), {               \
+        return callback.function != NULL;                                       \
+      }),                                                                       \
+      PREDICATE_INLINE(Invoke, (CALLBACK_TYPE(NAME) callback,                   \
+                                PP_UNWRAP PARAMETERS), {                        \
+        return callback.function(PP_UNWRAP ARGUMENTS, callback.context);        \
+      })                                                                        \
+  )
+
+#define CALLBACK_DECLARE_NULLARY_OPERATION(NAME)                               \
+  typedef OPSTATUS (*GNS2(CALLBACK_TYPE(NAME), Function))(void *context);       \
+  typedef struct CALLBACK_TYPE(NAME) {                                          \
+    GNS2(CALLBACK_TYPE(NAME), Function) function;                               \
+    void *context;                                                              \
+  } CALLBACK_TYPE(NAME);                                                        \
+  PACKAGE(CALLBACK_TYPE(NAME),                                                  \
+      FUNCTION_INLINE(CALLBACK_TYPE(NAME), Bind,                                \
+          (GNS2(CALLBACK_TYPE(NAME), Function) function, void *context), {      \
+            CALLBACK_TYPE(NAME) callback;                                       \
+            callback.function = function;                                       \
+            callback.context = context;                                         \
+            return callback;                                                    \
+          }),                                                                   \
+      PREDICATE_INLINE(IsValid, (CALLBACK_TYPE(NAME) callback), {               \
+        return callback.function != NULL;                                       \
+      }),                                                                       \
+      OPERATION_INLINE(Invoke, (CALLBACK_TYPE(NAME) callback), {                \
+        return callback.function(callback.context);                             \
+      })                                                                        \
+  )
+
+#define CALLBACK_DECLARE_NULLARY_PREDICATE(NAME)                               \
+  typedef bool (*GNS2(CALLBACK_TYPE(NAME), Function))(void *context);           \
+  typedef struct CALLBACK_TYPE(NAME) {                                          \
+    GNS2(CALLBACK_TYPE(NAME), Function) function;                               \
+    void *context;                                                              \
+  } CALLBACK_TYPE(NAME);                                                        \
+  PACKAGE(CALLBACK_TYPE(NAME),                                                  \
+      FUNCTION_INLINE(CALLBACK_TYPE(NAME), Bind,                                \
+          (GNS2(CALLBACK_TYPE(NAME), Function) function, void *context), {      \
+            CALLBACK_TYPE(NAME) callback;                                       \
+            callback.function = function;                                       \
+            callback.context = context;                                         \
+            return callback;                                                    \
+          }),                                                                   \
+      PREDICATE_INLINE(IsValid, (CALLBACK_TYPE(NAME) callback), {               \
+        return callback.function != NULL;                                       \
+      }),                                                                       \
+      PREDICATE_INLINE(Invoke, (CALLBACK_TYPE(NAME) callback), {                \
+        return callback.function(callback.context);                             \
+      })                                                                        \
+  )
+
 /* EOF */
