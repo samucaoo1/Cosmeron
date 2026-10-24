@@ -34,9 +34,12 @@
 #define COSMERON_MACRO_INTERNAL_PKG_CALL_1(PKG, FUNC_NAME, ...) \
   (GNS2(PKG, GetFunctionTable)()->FUNC_NAME(__VA_ARGS__))
 
-#define PACKAGE_CALL(...) \
+#define PACKAGE_API(...) \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PKG_CALL_, \
              PP_HAS_MORE_THAN_2(__VA_ARGS__))(__VA_ARGS__)
+
+/* Backwards-compatible package invocation aliases. */
+#define PACKAGE_CALL(...) PACKAGE_API(__VA_ARGS__)
 
 #define PACKAGE_CALL_0(PKG, FUNC_NAME) \
   (GNS2(PKG, GetFunctionTable)()->FUNC_NAME())
