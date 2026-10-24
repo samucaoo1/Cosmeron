@@ -9,6 +9,29 @@ CALLBACK_DECLARE_PROCEDURE(Notify, (int code), (code))
 CALLBACK_DECLARE_NULLARY(ReadValue, int)
 CALLBACK_DECLARE_NULLARY_PROCEDURE(ResetValue)
 
+CALLBACK_DECLARE_OPERATION(Commit, (int value), (value))
+CALLBACK_DECLARE_PREDICATE(IsPositive, (int value), (value))
+CALLBACK_DECLARE_NULLARY_OPERATION(Flush)
+CALLBACK_DECLARE_NULLARY_PREDICATE(IsEnabled)
+
+static OPSTATUS CommitValue(int value, void *context) {
+  *(int *)context += value;
+  return value >= 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(INVALID_ARGUMENT);
+}
+
+static bool PositiveValue(int value, void *context) {
+  return value > *(int *)context;
+}
+
+static OPSTATUS FlushContext(void *context) {
+  *(int *)context = 0;
+  return STATUS_CONST(SUCCESS);
+}
+
+static bool EnabledContext(void *context) {
+  return *(bool *)context;
+}
+
 static int ScaleValue(int value, void *context) {
   return value * *(int *)context;
 }
@@ -61,5 +84,29 @@ int main(void) {
   CALLBACK_TYPE(Scale) invalid =
       CALLBACK_FUNC(Scale_Bind)(NULL, NULL);
   assert(!CALLBACK_FUNC(Scale_IsValid)(invalid));
+
+  int committed = 10;
+  CALLBACK_TYPE(Commit) commit = CALLBACK_FUNC(Commit_Bind)(CommitValue, &committed);
+  assert(CALLBACK_FUNC(Commit_IsValid)(commit));
+  assert(CALLBACK_FUNC(Commit_Invoke)(commit, 7) == STATUS_CONST(SUCCESS));
+  assert(committed == 17);
+  assert(CALLBACK_FUNC(Commit_Invoke)(commit, -1) == STATUS_CONST(INVALID_ARGUMENT));
+
+  int threshold = 4;
+  CALLBACK_TYPE(IsPositive) positive =
+      CALLBACK_FUNC(IsPositive_Bind)(PositiveValue, &threshold);
+  assert(CALLBACK_FUNC(IsPositive_Invoke)(positive, 5));
+  assert(!CALLBACK_FUNC(IsPositive_Invoke)(positive, 4));
+
+  CALLBACK_TYPE(Flush) flush = CALLBACK_FUNC(Flush_Bind)(FlushContext, &committed);
+  assert(CALLBACK_FUNC(Flush_Invoke)(flush) == STATUS_CONST(SUCCESS));
+  assert(committed == 0);
+
+  bool enabledValue = true;
+  CALLBACK_TYPE(IsEnabled) enabled =
+      CALLBACK_FUNC(IsEnabled_Bind)(EnabledContext, &enabledValue);
+  assert(CALLBACK_FUNC(IsEnabled_Invoke)(enabled));
+  enabledValue = false;
+  assert(!CALLBACK_FUNC(IsEnabled_Invoke)(enabled));
   return 0;
 }
