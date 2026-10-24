@@ -1,0 +1,107 @@
+#pragma once
+
+/*
+ * Typed, non-owning function/context pairs.
+ *
+ * Each declaration creates a distinct callback signature and uses the
+ * Core/Module PACKAGE DSL to declare Bind, IsValid, and Invoke.
+ *
+ * PARAMETERS and ARGUMENTS are parenthesized tuples. The callback receives
+ * void *context as its final parameter; Invoke forwards the stored context.
+ *
+ * The context is borrowed. Callback never allocates, copies, or releases it.
+ * The caller must keep it alive and must not invoke an unbound callback.
+ */
+
+#define CALLBACK_DECLARE(NAME, RETURN_TYPE, PARAMETERS, ARGUMENTS)             \
+  typedef RETURN_TYPE (*GNS2(CALLBACK_TYPE(NAME), Function))(                   \
+      PP_UNWRAP PARAMETERS, void *context);                                     \
+  typedef struct CALLBACK_TYPE(NAME) {                                          \
+    GNS2(CALLBACK_TYPE(NAME), Function) function;                               \
+    void *context;                                                              \
+  } CALLBACK_TYPE(NAME);                                                        \
+  PACKAGE(CALLBACK_TYPE(NAME),                                                  \
+      FUNCTION_INLINE(CALLBACK_TYPE(NAME), Bind,                                \
+          (GNS2(CALLBACK_TYPE(NAME), Function) function, void *context), {      \
+            CALLBACK_TYPE(NAME) callback;                                       \
+            callback.function = function;                                       \
+            callback.context = context;                                         \
+            return callback;                                                    \
+          }),                                                                   \
+      PREDICATE_INLINE(IsValid, (CALLBACK_TYPE(NAME) callback), {               \
+        return callback.function != NULL;                                       \
+      }),                                                                       \
+      FUNCTION_INLINE(RETURN_TYPE, Invoke,                                      \
+          (CALLBACK_TYPE(NAME) callback, PP_UNWRAP PARAMETERS), {               \
+            return callback.function(PP_UNWRAP ARGUMENTS, callback.context);   \
+          })                                                                    \
+  )
+
+#define CALLBACK_DECLARE_PROCEDURE(NAME, PARAMETERS, ARGUMENTS)                \
+  typedef void (*GNS2(CALLBACK_TYPE(NAME), Function))(                          \
+      PP_UNWRAP PARAMETERS, void *context);                                     \
+  typedef struct CALLBACK_TYPE(NAME) {                                          \
+    GNS2(CALLBACK_TYPE(NAME), Function) function;                               \
+    void *context;                                                              \
+  } CALLBACK_TYPE(NAME);                                                        \
+  PACKAGE(CALLBACK_TYPE(NAME),                                                  \
+      FUNCTION_INLINE(CALLBACK_TYPE(NAME), Bind,                                \
+          (GNS2(CALLBACK_TYPE(NAME), Function) function, void *context), {      \
+            CALLBACK_TYPE(NAME) callback;                                       \
+            callback.function = function;                                       \
+            callback.context = context;                                         \
+            return callback;                                                    \
+          }),                                                                   \
+      PREDICATE_INLINE(IsValid, (CALLBACK_TYPE(NAME) callback), {               \
+        return callback.function != NULL;                                       \
+      }),                                                                       \
+      PROCEDURE_INLINE(Invoke, (CALLBACK_TYPE(NAME) callback,                   \
+                                PP_UNWRAP PARAMETERS), {                        \
+        callback.function(PP_UNWRAP ARGUMENTS, callback.context);               \
+      })                                                                        \
+  )
+
+#define CALLBACK_DECLARE_NULLARY(NAME, RETURN_TYPE)                            \
+  typedef RETURN_TYPE (*GNS2(CALLBACK_TYPE(NAME), Function))(void *context);    \
+  typedef struct CALLBACK_TYPE(NAME) {                                          \
+    GNS2(CALLBACK_TYPE(NAME), Function) function;                               \
+    void *context;                                                              \
+  } CALLBACK_TYPE(NAME);                                                        \
+  PACKAGE(CALLBACK_TYPE(NAME),                                                  \
+      FUNCTION_INLINE(CALLBACK_TYPE(NAME), Bind,                                \
+          (GNS2(CALLBACK_TYPE(NAME), Function) function, void *context), {      \
+            CALLBACK_TYPE(NAME) callback;                                       \
+            callback.function = function;                                       \
+            callback.context = context;                                         \
+            return callback;                                                    \
+          }),                                                                   \
+      PREDICATE_INLINE(IsValid, (CALLBACK_TYPE(NAME) callback), {               \
+        return callback.function != NULL;                                       \
+      }),                                                                       \
+      FUNCTION_INLINE(RETURN_TYPE, Invoke, (CALLBACK_TYPE(NAME) callback), {    \
+        return callback.function(callback.context);                             \
+      })                                                                        \
+  )
+
+#define CALLBACK_DECLARE_NULLARY_PROCEDURE(NAME)                               \
+  typedef void (*GNS2(CALLBACK_TYPE(NAME), Function))(void *context);           \
+  typedef struct CALLBACK_TYPE(NAME) {                                          \
+    GNS2(CALLBACK_TYPE(NAME), Function) function;                               \
+    void *context;                                                              \
+  } CALLBACK_TYPE(NAME);                                                        \
+  PACKAGE(CALLBACK_TYPE(NAME),                                                  \
+      FUNCTION_INLINE(CALLBACK_TYPE(NAME), Bind,                                \
+          (GNS2(CALLBACK_TYPE(NAME), Function) function, void *context), {      \
+            CALLBACK_TYPE(NAME) callback;                                       \
+            callback.function = function;                                       \
+            callback.context = context;                                         \
+            return callback;                                                    \
+          }),                                                                   \
+      PREDICATE_INLINE(IsValid, (CALLBACK_TYPE(NAME) callback), {               \
+        return callback.function != NULL;                                       \
+      }),                                                                       \
+      PROCEDURE_INLINE(Invoke, (CALLBACK_TYPE(NAME) callback), {                \
+        callback.function(callback.context);                                    \
+      })                                                                        \
+  )
+/* EOF */
