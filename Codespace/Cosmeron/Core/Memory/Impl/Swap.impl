@@ -2,12 +2,12 @@
 
 #include <stdint.h>
 
-SWAP_BYTES_PROTOTYPE {
-  unsigned char temporary[COSMERON_MACRO_INTERNAL_SWAP_BLOCK_SIZE];
-  unsigned char *leftBytes = left;
-  unsigned char *rightBytes = right;
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(SWAP_MOD), Bytes, (void *left, void *right, size_t size)) {
+  unsigned char temporary[SWAP_CONST(BLOCK_SIZE)];
+  unsigned char *leftBytes = (unsigned char *)left;
+  unsigned char *rightBytes = (unsigned char *)right;
 
-  if (size == 0)
+  if (size == 0U)
     return STATUS_CONST(SUCCESS);
   if (!left || !right)
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -25,9 +25,8 @@ SWAP_BYTES_PROTOTYPE {
       return STATUS_CONST(INVALID_ARGUMENT);
   }
 
-  while (size != 0) {
-    size_t blockSize =
-        size > COSMERON_MACRO_INTERNAL_SWAP_BLOCK_SIZE ? COSMERON_MACRO_INTERNAL_SWAP_BLOCK_SIZE : size;
+  while (size != 0U) {
+    size_t blockSize = size > SWAP_CONST(BLOCK_SIZE) ? SWAP_CONST(BLOCK_SIZE) : size;
 
     memcpy(temporary, leftBytes, blockSize);
     memcpy(leftBytes, rightBytes, blockSize);
@@ -40,4 +39,16 @@ SWAP_BYTES_PROTOTYPE {
 
   return STATUS_CONST(SUCCESS);
 }
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(SWAP_MOD), Array, (void *left, void *right, size_t count, size_t elementSize)) {
+  size_t size = 0U;
+  OPSTATUS status = MEMORY_INS(CheckedMultiplySize)(count, elementSize, &size);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  return SWAP_FUNC(Bytes)(left, right, size);
+}
+
+PACKAGE_IMPLEMENT(LIB_PREFIX(SWAP_MOD));
+
 /* EOF */

@@ -1,0 +1,149 @@
+#pragma once
+
+#include "FormatWriter.inc"
+
+static inline void ERROR_INS(Format_WriteContext)(
+    ERROR_INS(FormatWriter) *w, const ERROR_TYPE(TErrorContext) *context) {
+  if (context == NULL || !GNS2(ERROR_TYPE(TErrorContext), HasOrigin)(context)) {
+    ERROR_INS(FormatWriter_AppendStr)(w, "<no origin>");
+    return;
+  }
+
+  ERROR_INS(FormatWriter_AppendStr)(w, "at ");
+  ERROR_INS(FormatWriter_AppendStr)(
+      w, context->file ? context->file : "<unknown-file>");
+  ERROR_INS(FormatWriter_AppendChar)(w, ':');
+  ERROR_INS(FormatWriter_AppendUint)(w, context->line);
+  ERROR_INS(FormatWriter_AppendStr)(w, " in ");
+  ERROR_INS(FormatWriter_AppendStr)(
+      w, context->function ? context->function : "<unknown-func>");
+  ERROR_INS(FormatWriter_AppendStr)(w, "()");
+
+  if (context->description != NULL && context->description[0] != '\0') {
+    ERROR_INS(FormatWriter_AppendStr)(w, " - ");
+    ERROR_INS(FormatWriter_AppendStr)(w, context->description);
+  }
+}
+
+static inline void ERROR_INS(Format_WriteErrorSingle)(
+    ERROR_INS(FormatWriter) *w, const ERROR_TYPE(TError) *error, bool detailed) {
+  OPSTATUS code = GNS2(ERROR_TYPE(TError), Code)(error);
+  const char *msg = GNS2(ERROR_TYPE(TError), Message)(error);
+  const char *name = STATUS_FUNC(Name)(code);
+
+  ERROR_INS(FormatWriter_AppendChar)(w, '[');
+  ERROR_INS(FormatWriter_AppendStr)(w, name);
+  ERROR_INS(FormatWriter_AppendStr)(w, "] ");
+  ERROR_INS(FormatWriter_AppendStr)(w, msg);
+
+  if (detailed && GNS2(ERROR_TYPE(TError), HasContext)(error)) {
+    ERROR_INS(FormatWriter_AppendStr)(w, " (");
+    ERROR_INS(Format_WriteContext)(w, GNS2(ERROR_TYPE(TError), Context)(error));
+    ERROR_INS(FormatWriter_AppendChar)(w, ')');
+  }
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(
+    ERROR_NS(Format), Simple,
+    (const ERROR_TYPE(TError) *error, char *outBuffer, size_t capacity,
+     size_t *outWritten)) {
+  if (outWritten != NULL) {
+    *outWritten = 0;
+  }
+  if (error == NULL || outBuffer == NULL || capacity == 0) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  ERROR_INS(FormatWriter) w;
+  ERROR_INS(FormatWriter_Init)(&w, outBuffer, capacity);
+  ERROR_INS(Format_WriteErrorSingle)(&w, error, false);
+
+  if (outWritten != NULL) {
+    *outWritten = w.written;
+  }
+  return w.overflow ? STATUS_CONST(INSUFFICIENT_SPACE) : STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(
+    ERROR_NS(Format), Context,
+    (const ERROR_TYPE(TErrorContext) *context, char *outBuffer, size_t capacity,
+     size_t *outWritten)) {
+  if (outWritten != NULL) {
+    *outWritten = 0;
+  }
+  if (context == NULL || outBuffer == NULL || capacity == 0) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  ERROR_INS(FormatWriter) w;
+  ERROR_INS(FormatWriter_Init)(&w, outBuffer, capacity);
+  ERROR_INS(Format_WriteContext)(&w, context);
+
+  if (outWritten != NULL) {
+    *outWritten = w.written;
+  }
+  return w.overflow ? STATUS_CONST(INSUFFICIENT_SPACE) : STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(
+    ERROR_NS(Format), Detailed,
+    (const ERROR_TYPE(TError) *error, char *outBuffer, size_t capacity,
+     size_t *outWritten)) {
+  if (outWritten != NULL) {
+    *outWritten = 0;
+  }
+  if (error == NULL || outBuffer == NULL || capacity == 0) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  ERROR_INS(FormatWriter) w;
+  ERROR_INS(FormatWriter_Init)(&w, outBuffer, capacity);
+  ERROR_INS(Format_WriteErrorSingle)(&w, error, true);
+
+  if (outWritten != NULL) {
+    *outWritten = w.written;
+  }
+  return w.overflow ? STATUS_CONST(INSUFFICIENT_SPACE) : STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(
+    ERROR_NS(Format), Chain,
+    (const ERROR_TYPE(TError) *error, char *outBuffer, size_t capacity,
+     size_t *outWritten)) {
+  if (outWritten != NULL) {
+    *outWritten = 0;
+  }
+  if (error == NULL || outBuffer == NULL || capacity == 0) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  ERROR_INS(FormatWriter) w;
+  ERROR_INS(FormatWriter_Init)(&w, outBuffer, capacity);
+
+  const ERROR_TYPE(TError) *current = error;
+  size_t index = 0;
+  size_t maxDepth = ERROR_CONST(MAX_CHAIN_DEPTH);
+
+  while (current != NULL && index < maxDepth) {
+    if (index > 0) {
+      ERROR_INS(FormatWriter_AppendStr)(&w, "\n  caused by: ");
+    }
+    ERROR_INS(FormatWriter_AppendChar)(&w, '[');
+    ERROR_INS(FormatWriter_AppendChar)(&w, '#');
+    ERROR_INS(FormatWriter_AppendUint)(&w, index);
+    ERROR_INS(FormatWriter_AppendStr)(&w, "] ");
+    ERROR_INS(Format_WriteErrorSingle)(&w, current, true);
+
+    current = current->cause;
+    index++;
+  }
+
+  if (outWritten != NULL) {
+    *outWritten = w.written;
+  }
+  return w.overflow ? STATUS_CONST(INSUFFICIENT_SPACE) : STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_IMPLEMENT(ERROR_NS(Format));
+
+/* EOF */

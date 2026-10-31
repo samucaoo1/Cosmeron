@@ -1,0 +1,56 @@
+#pragma once
+
+PACKAGE_FUNCTION_IMPLEMENT_EX(LIB_PREFIX(STATUS_MOD), STATUS_TYPE(Category),
+                              CategoryOf, (OPSTATUS status)) {
+  switch (status) {
+#define STATUS_CATEGORY_CASE(ROW)                                              \
+  case STATUS_CONST(STATUS_GET(NAME, ROW)):                                    \
+    return STATUS_CATEGORY_CONST(STATUS_GET(CATEGORY, ROW));
+    STATUS_TABLE(STATUS_CATEGORY_CASE)
+#undef STATUS_CATEGORY_CASE
+    default:
+      return STATUS_CATEGORY_CONST(GENERIC);
+  }
+}
+
+PACKAGE_FUNCTION_IMPLEMENT_EX(LIB_PREFIX(STATUS_MOD), const char *,
+                              CategoryName, (STATUS_TYPE(Category) category)) {
+  switch (category) {
+#define STATUS_CAT_NAME_CASE(ROW)                                              \
+  case STATUS_CATEGORY_CONST(STATUS_CATEGORY_GET(NAME, ROW)):                  \
+    return STATUS_CATEGORY_GET(MESSAGE, ROW);
+    STATUS_CATEGORY_TABLE(STATUS_CAT_NAME_CASE)
+#undef STATUS_CAT_NAME_CASE
+    default:
+      return "Unknown";
+  }
+}
+
+PACKAGE_FUNCTION_IMPLEMENT_EX(LIB_PREFIX(STATUS_MOD), const char *, Name,
+                              (OPSTATUS status)) {
+  switch (status) {
+#define STATUS_NAME_CASE(ROW)                                                  \
+  case STATUS_CONST(STATUS_GET(NAME, ROW)):                                    \
+    return PP_OP_STRING(STATUS_GET(NAME, ROW));
+    STATUS_TABLE(STATUS_NAME_CASE)
+#undef STATUS_NAME_CASE
+    default:
+      return "UNKNOWN";
+  }
+}
+
+PACKAGE_FUNCTION_IMPLEMENT_EX(LIB_PREFIX(STATUS_MOD), const char *, Message,
+                              (OPSTATUS status)) {
+  switch (status) {
+#define STATUS_MESSAGE_CASE(ROW)                                               \
+  case STATUS_CONST(STATUS_GET(NAME, ROW)):                                    \
+    return STATUS_GET(MESSAGE, ROW);
+    STATUS_TABLE(STATUS_MESSAGE_CASE)
+#undef STATUS_MESSAGE_CASE
+    default:
+      return "Unknown status";
+  }
+}
+
+PACKAGE_IMPLEMENT(LIB_PREFIX(STATUS_MOD));
+/* EOF */

@@ -1,112 +1,136 @@
 #pragma once
 
-ARENA_CREATE_PROTOTYPE {
-  OPSTATUS status;
-
-  if (!arena)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  {
-    void *allocated = NULL;
-    status = ALLOC_FUNC(AllocBytes)(&allocated, capacity);
-    if (status != STATUS_CONST(SUCCESS))
-      return status;
-    arena->buffer = (unsigned char *)allocated;
-  }
-
-  arena->capacity = capacity;
-  arena->offset = 0;
-  return STATUS_CONST(SUCCESS);
-}
-
-ARENA_ALLOC_ALIGNED_PROTOTYPE {
-  size_t padding;
-  size_t alignedOffset;
-
-  if (!arena || !out || alignment == 0 || alignment > COSMERON_MACRO_INTERNAL_ARENA_ALIGNMENT)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  if (size == 0) {
-    *out = NULL;
-    return STATUS_CONST(SUCCESS);
-  }
-
-  padding = (alignment - (arena->offset % alignment)) % alignment;
-
-  if (arena->offset > SIZE_MAX - padding)
-    return STATUS_CONST(ARITHMETIC_OVERFLOW);
-
-  alignedOffset = arena->offset + padding;
-
-  if (alignedOffset > arena->capacity ||
-      size > arena->capacity - alignedOffset)
-    return STATUS_CONST(OUT_OF_RANGE);
-
-  *out = arena->buffer + alignedOffset;
-  arena->offset = alignedOffset + size;
-  return STATUS_CONST(SUCCESS);
-}
-
-ARENA_ALLOC_BYTES_PROTOTYPE {
-  return ARENA_FUNC(AllocAligned)(arena, out, size, COSMERON_MACRO_INTERNAL_ARENA_ALIGNMENT);
-}
-
-ARENA_ALLOC_ARRAY_ALIGNED_PROTOTYPE {
-  size_t size = 0;
-  OPSTATUS status;
-
-  if (!out)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  status = MEMORY_INS(AllocArraySize)(count, elementSize, &size);
-  if (status != STATUS_CONST(SUCCESS))
-    return status;
-
-  return ARENA_FUNC(AllocAligned)(arena, out, size, alignment);
-}
-
-ARENA_ALLOC_ARRAY_PROTOTYPE {
-  return ARENA_FUNC(AllocArrayAligned)(arena, out, count, elementSize,
-                                        COSMERON_MACRO_INTERNAL_ARENA_ALIGNMENT);
-}
-
-ARENA_ALLOC_TYPED_PROTOTYPE {
+OBJECT_OPERATION_IMPLEMENT_EX(ARENA_TYPE(TArena), Create, (size_t capacity)) {
   void *allocated = NULL;
   OPSTATUS status;
 
-  if (!outPointerObject)
+  if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  status = ARENA_FUNC(AllocArrayAligned)(
-      arena, &allocated, count, elementSize, alignment);
+  status = ALLOC_FUNC(Bytes)(&allocated, capacity);
   if (status != STATUS_CONST(SUCCESS))
     return status;
 
-  memcpy(outPointerObject, &allocated, sizeof(allocated));
+  self->buffer = (uint8_t *)allocated;
+  self->capacity = capacity;
+  self->offset = 0U;
+  self->isOwned = true;
   return STATUS_CONST(SUCCESS);
 }
 
-ARENA_RESET_PROTOTYPE {
-  if (!arena)
+OBJECT_OPERATION_IMPLEMENT_EX(ARENA_TYPE(TArena), CreateBuffer, (void *buffer, size_t capacity)) {
+  if (!self || (!buffer && capacity > 0U))
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  arena->offset = 0;
+  self->buffer = (uint8_t *)buffer;
+  self->capacity = capacity;
+  self->offset = 0U;
+  self->isOwned = false;
   return STATUS_CONST(SUCCESS);
 }
 
-ARENA_DESTROY_PROTOTYPE {
+OBJECT_OPERATION_IMPLEMENT_EX(ARENA_TYPE(TArena), AllocAligned, (void *outPointerObject, size_t size, size_t alignment)) {
+  size_t padding;
+  size_t alignedOffset;
+  size_t maxAlign = MEMORY_INS(MaxAlignment)();
+
+  if (!self || !outPointerObject || alignment == 0U || alignment > maxAlign)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (size == 0U) {
+    MEMORY_INS(WritePointer)(outPointerObject, NULL);
+    return STATUS_CONST(SUCCESS);
+  }
+
+  padding = (alignment - (self->offset % alignment)) % alignment;
+  if (self->offset > SIZE_MAX - padding)
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+
+  alignedOffset = self->offset + padding;
+  if (alignedOffset > self->capacity || size > self->capacity - alignedOffset)
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  MEMORY_INS(WritePointer)(outPointerObject, self->buffer + alignedOffset);
+  self->offset = alignedOffset + size;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(ARENA_TYPE(TArena), AllocBytes, (void *outPointerObject, size_t size)) {
+  return ARENA_FUNC(AllocAligned)(self, outPointerObject, size, MEMORY_INS(MaxAlignment)());
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(ARENA_TYPE(TArena), AllocArrayAligned, (void *outPointerObject, size_t count, size_t elementSize, size_t alignment)) {
+  size_t size = 0U;
   OPSTATUS status;
 
-  if (!arena)
+  if (!self || !outPointerObject)
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  {
-    void *buffer = arena->buffer;
-    status = ALLOC_FUNC(FreePointer)(&buffer);
-    arena->buffer = NULL;
+  status = MEMORY_INS(CheckedMultiplySize)(count, elementSize, &size);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  return ARENA_FUNC(AllocAligned)(self, outPointerObject, size, alignment);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(ARENA_TYPE(TArena), AllocArray, (void *outPointerObject, size_t count, size_t elementSize)) {
+  return ARENA_FUNC(AllocArrayAligned)(self, outPointerObject, count, elementSize, MEMORY_INS(MaxAlignment)());
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(ARENA_TYPE(TArena), Save, (size_t *outMark)) {
+  if (!self || !outMark)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  *outMark = self->offset;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(ARENA_TYPE(TArena), Restore, (size_t mark)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (mark > self->capacity)
+    return STATUS_CONST(OUT_OF_RANGE);
+
+  self->offset = mark;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(ARENA_TYPE(TArena), Reset, ()) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  self->offset = 0U;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(ARENA_TYPE(TArena), Destroy, ()) {
+  OPSTATUS status = STATUS_CONST(SUCCESS);
+
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (self->buffer && self->isOwned) {
+    void *buf = self->buffer;
+    status = ALLOC_FUNC(Free)(&buf);
+    self->buffer = NULL;
   }
-  arena->capacity = 0;
-  arena->offset = 0;
+
+  self->buffer = NULL;
+  self->capacity = 0U;
+  self->offset = 0U;
+  self->isOwned = false;
   return status;
 }
+
+OBJECT_PREDICATE_IMPLEMENT_EX(ARENA_TYPE(TArena), Contains, (const void *ptr)) {
+  if (!self || !ptr || !self->buffer)
+    return false;
+
+  const uint8_t *bytePtr = (const uint8_t *)ptr;
+  return (bytePtr >= self->buffer && bytePtr < self->buffer + self->offset);
+}
+
+OBJECT_IMPLEMENT(ARENA_TYPE(TArena));
+
 /* EOF */

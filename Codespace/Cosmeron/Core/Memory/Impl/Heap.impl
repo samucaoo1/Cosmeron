@@ -1,0 +1,603 @@
+#pragma once
+
+#include <stdint.h>
+
+static const size_t HEAP_INS(SizeClassTable)[HEAP_CONST(SIZE_CLASS_COUNT)] = {
+    16U,   32U,   48U,   64U,   80U,   96U,   112U,  128U,
+    160U,  192U,  224U,  256U,  320U,  384U,  448U,  512U,
+    640U,  768U,  896U,  1024U, 1280U, 1536U, 1792U, 2048U
+};
+
+static inline OPSTATUS HEAP_INS(SizeToClassIndex)(size_t size, size_t *outIndex) {
+  if (!outIndex)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  for (size_t i = 0U; i < HEAP_CONST(SIZE_CLASS_COUNT); ++i) {
+    if (size <= HEAP_INS(SizeClassTable)[i]) {
+      *outIndex = i;
+      return STATUS_CONST(SUCCESS);
+    }
+  }
+  return STATUS_CONST(OUT_OF_RANGE);
+}
+
+static inline uintptr_t HEAP_INS(RadixHash)(uintptr_t key) {
+  key = (key ^ (key >> 16U)) * 0x45d9f3bU;
+  key = (key ^ (key >> 16U)) * 0x45d9f3bU;
+  key = key ^ (key >> 16U);
+  return key % HEAP_CONST(RADIX_BUCKETS_COUNT);
+}
+
+static inline HEAP_INS(RadixLevel2) *HEAP_INS(GetOrCreateRadixL2)(
+    HEAP_TYPE(TMemoryHeap) *self, uintptr_t l1Key) {
+  uintptr_t bucket = HEAP_INS(RadixHash)(l1Key);
+  HEAP_INS(RadixLevel2) *node = self->radixBuckets[bucket];
+
+  while (node) {
+    if (node->l1Key == l1Key)
+      return node;
+    node = node->next;
+  }
+
+  void *raw = NULL;
+  if (ALLOC_FUNC(Bytes)(&raw, sizeof(HEAP_INS(RadixLevel2))) != STATUS_CONST(SUCCESS) || !raw)
+    return NULL;
+
+  node = (HEAP_INS(RadixLevel2) *)raw;
+  node->l1Key = l1Key;
+  memset(node->pages, 0, sizeof(node->pages));
+  node->next = self->radixBuckets[bucket];
+  self->radixBuckets[bucket] = node;
+  return node;
+}
+
+static inline OPSTATUS HEAP_INS(RadixMapPage)(
+    HEAP_TYPE(TMemoryHeap) *self, uintptr_t pageIndex, void *entry) {
+  uintptr_t l1Key = pageIndex >> HEAP_CONST(RADIX_LEVEL2_BITS);
+  uintptr_t l2Index = pageIndex & ((1U << HEAP_CONST(RADIX_LEVEL2_BITS)) - 1U);
+  HEAP_INS(RadixLevel2) *l2 = HEAP_INS(GetOrCreateRadixL2)(self, l1Key);
+  if (!l2)
+    return STATUS_CONST(OUT_OF_MEMORY);
+
+  l2->pages[l2Index] = entry;
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline void *HEAP_INS(RadixLookupPage)(
+    const HEAP_TYPE(TMemoryHeap) *self, uintptr_t pageIndex) {
+  uintptr_t l1Key = pageIndex >> HEAP_CONST(RADIX_LEVEL2_BITS);
+  uintptr_t l2Index = pageIndex & ((1U << HEAP_CONST(RADIX_LEVEL2_BITS)) - 1U);
+  uintptr_t bucket = HEAP_INS(RadixHash)(l1Key);
+  HEAP_INS(RadixLevel2) *node = self->radixBuckets[bucket];
+
+  while (node) {
+    if (node->l1Key == l1Key)
+      return node->pages[l2Index];
+    node = node->next;
+  }
+  return NULL;
+}
+
+static inline OPSTATUS HEAP_INS(AllocAlignedPage)(
+    void **outAligned, void **outRaw, size_t numPages) {
+  size_t totalBytes = numPages * HEAP_CONST(PAGE_SIZE);
+  size_t allocSize = totalBytes + HEAP_CONST(PAGE_SIZE);
+  void *raw = NULL;
+  OPSTATUS status = ALLOC_FUNC(Bytes)(&raw, allocSize);
+  if (status != STATUS_CONST(SUCCESS) || !raw)
+    return STATUS_CONST(OUT_OF_MEMORY);
+
+  uintptr_t rawAddr = (uintptr_t)raw;
+  uintptr_t alignedAddr = (rawAddr + (HEAP_CONST(PAGE_SIZE) - 1U)) & ~(uintptr_t)(HEAP_CONST(PAGE_SIZE) - 1U);
+
+  *outAligned = (void *)alignedAddr;
+  *outRaw = raw;
+  return STATUS_CONST(SUCCESS);
+}
+
+/* ============================================================
+ * TMemoryHeap Method Implementations
+ * ============================================================ */
+
+OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), Create, (size_t initialPages)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  memset(self, 0, sizeof(*self));
+  self->minAddress = UINTPTR_MAX;
+  self->maxAddress = 0U;
+
+  for (size_t i = 0U; i < HEAP_CONST(SIZE_CLASS_COUNT); ++i) {
+    self->classes[i].elementSize = HEAP_INS(SizeClassTable)[i];
+    self->classes[i].activePages = NULL;
+    self->classes[i].fullPages = NULL;
+  }
+
+  (void)initialPages;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), Destroy, ()) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  for (size_t i = 0U; i < HEAP_CONST(SIZE_CLASS_COUNT); ++i) {
+    HEAP_INS(PageHeader) *page = self->classes[i].activePages;
+    while (page) {
+      HEAP_INS(PageHeader) *next = page->next;
+      void *raw = page->rawBlock;
+      ALLOC_FUNC(Free)(&raw);
+      page = next;
+    }
+    page = self->classes[i].fullPages;
+    while (page) {
+      HEAP_INS(PageHeader) *next = page->next;
+      void *raw = page->rawBlock;
+      ALLOC_FUNC(Free)(&raw);
+      page = next;
+    }
+    self->classes[i].activePages = NULL;
+    self->classes[i].fullPages = NULL;
+  }
+
+  HEAP_INS(PageHeader) *freePage = self->freePages;
+  while (freePage) {
+    HEAP_INS(PageHeader) *next = freePage->next;
+    void *raw = freePage->rawBlock;
+    ALLOC_FUNC(Free)(&raw);
+    freePage = next;
+  }
+  self->freePages = NULL;
+
+  HEAP_INS(Span) *span = self->largeObjects;
+  while (span) {
+    HEAP_INS(Span) *next = span->next;
+    void *raw = span->rawBlock;
+    ALLOC_FUNC(Free)(&raw);
+    span = next;
+  }
+  self->largeObjects = NULL;
+
+  for (size_t i = 0U; i < HEAP_CONST(RADIX_BUCKETS_COUNT); ++i) {
+    HEAP_INS(RadixLevel2) *node = self->radixBuckets[i];
+    while (node) {
+      HEAP_INS(RadixLevel2) *next = node->next;
+      void *raw = (void *)node;
+      ALLOC_FUNC(Free)(&raw);
+      node = next;
+    }
+    self->radixBuckets[i] = NULL;
+  }
+
+  self->minAddress = UINTPTR_MAX;
+  self->maxAddress = 0U;
+  self->totalAllocatedBytes = 0U;
+  self->liveBytes = 0U;
+  self->pageCount = 0U;
+  self->blacklistedCount = 0U;
+
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), AllocSmall,
+    (void *outPointerObject, size_t sizeClassIndex, uint8_t policy, const void *descriptor)) {
+  if (!self || !outPointerObject || sizeClassIndex >= HEAP_CONST(SIZE_CLASS_COUNT))
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  HEAP_INS(SizeClass) *sc = &self->classes[sizeClassIndex];
+  HEAP_INS(PageHeader) *page = sc->activePages;
+
+  /* Check if current page matches policy/descriptor; find one that does or has capacity */
+  while (page) {
+    if (page->freeCellCount > 0U && page->policy == policy && page->descriptor == descriptor)
+      break;
+    page = page->next;
+  }
+
+  if (!page) {
+    /* Allocate a new page */
+    void *pageMem = NULL;
+    void *rawMem = NULL;
+    OPSTATUS status = HEAP_INS(AllocAlignedPage)(&pageMem, &rawMem, 1U);
+    if (status != STATUS_CONST(SUCCESS))
+      return status;
+
+    page = (HEAP_INS(PageHeader) *)pageMem;
+    memset(page, 0, HEAP_CONST(PAGE_HEADER_SIZE));
+    page->isLargeSpan = 0U;
+    page->policy = policy;
+    page->state = HEAP_CONST(PAGE_STATE_ACTIVE);
+    page->sizeClassIndex = (uint16_t)sizeClassIndex;
+    page->elementSize = (uint16_t)sc->elementSize;
+    page->rawBlock = rawMem;
+    page->descriptor = descriptor;
+
+    size_t availableBytes = HEAP_CONST(PAGE_SIZE) - HEAP_CONST(PAGE_HEADER_SIZE);
+    size_t cells = availableBytes / sc->elementSize;
+    if (cells > 256U)
+      cells = 256U;
+
+    page->cellCount = (uint16_t)cells;
+    page->freeCellCount = (uint16_t)cells;
+    page->firstFreeCell = 0U;
+
+    uintptr_t pageIndex = ((uintptr_t)pageMem) >> HEAP_CONST(PAGE_SHIFT);
+    status = HEAP_INS(RadixMapPage)(self, pageIndex, page);
+    if (status != STATUS_CONST(SUCCESS)) {
+      ALLOC_FUNC(Free)(&rawMem);
+      return status;
+    }
+
+    uintptr_t startAddr = (uintptr_t)page->payload;
+    uintptr_t endAddr = startAddr + (cells * sc->elementSize);
+    if (startAddr < self->minAddress)
+      self->minAddress = startAddr;
+    if (endAddr > self->maxAddress)
+      self->maxAddress = endAddr;
+
+    page->next = sc->activePages;
+    if (page->next)
+      page->next->prev = page;
+    page->prev = NULL;
+    sc->activePages = page;
+    self->pageCount++;
+  }
+
+  /* Find first free bit in allocBitmap */
+  uint16_t cellIndex = 0U;
+  bool found = false;
+  for (size_t w = 0U; w < HEAP_CONST(BITMAP_WORDS); ++w) {
+    if (page->allocBitmap[w] != UINT64_MAX) {
+      for (uint8_t b = 0U; b < 64U; ++b) {
+        uint16_t idx = (uint16_t)((w * 64U) + b);
+        if (idx >= page->cellCount)
+          break;
+        if ((page->allocBitmap[w] & (1ULL << b)) == 0ULL) {
+          page->allocBitmap[w] |= (1ULL << b);
+          cellIndex = idx;
+          found = true;
+          break;
+        }
+      }
+      if (found)
+        break;
+    }
+  }
+
+  if (!found)
+    return STATUS_CONST(OUT_OF_MEMORY);
+
+  page->freeCellCount--;
+  if (page->freeCellCount == 0U) {
+    page->state = HEAP_CONST(PAGE_STATE_FULL);
+    /* Move to fullPages */
+    if (page->prev)
+      page->prev->next = page->next;
+    else
+      sc->activePages = page->next;
+    if (page->next)
+      page->next->prev = page->prev;
+
+    page->next = sc->fullPages;
+    if (page->next)
+      page->next->prev = page;
+    page->prev = NULL;
+    sc->fullPages = page;
+  }
+
+  void *cellPtr = page->payload + ((size_t)cellIndex * sc->elementSize);
+  memset(cellPtr, 0, sc->elementSize);
+
+  self->totalAllocatedBytes += sc->elementSize;
+  self->liveBytes += sc->elementSize;
+
+  MEMORY_INS(WritePointer)(outPointerObject, cellPtr);
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), AllocLarge,
+    (void *outPointerObject, size_t size, uint8_t policy, const void *descriptor)) {
+  if (!self || !outPointerObject || size == 0U)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  size_t headerSize = sizeof(HEAP_INS(Span));
+  size_t totalBytes = headerSize + size;
+  size_t numPages = (totalBytes + HEAP_CONST(PAGE_SIZE) - 1U) >> HEAP_CONST(PAGE_SHIFT);
+
+  void *alignedMem = NULL;
+  void *rawMem = NULL;
+  OPSTATUS status = HEAP_INS(AllocAlignedPage)(&alignedMem, &rawMem, numPages);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  HEAP_INS(Span) *span = (HEAP_INS(Span) *)alignedMem;
+  span->isLargeSpan = 1U;
+  span->policy = policy;
+  span->isMarked = 0U;
+  span->_reserved = 0U;
+  span->pageCount = numPages;
+  span->size = size;
+  span->descriptor = descriptor;
+  span->rawBlock = rawMem;
+
+  uintptr_t basePageIndex = ((uintptr_t)alignedMem) >> HEAP_CONST(PAGE_SHIFT);
+  for (size_t p = 0U; p < numPages; ++p) {
+    status = HEAP_INS(RadixMapPage)(self, basePageIndex + p, span);
+    if (status != STATUS_CONST(SUCCESS)) {
+      ALLOC_FUNC(Free)(&rawMem);
+      return status;
+    }
+  }
+
+  uintptr_t startAddr = (uintptr_t)span->data;
+  uintptr_t endAddr = startAddr + size;
+  if (startAddr < self->minAddress)
+    self->minAddress = startAddr;
+  if (endAddr > self->maxAddress)
+    self->maxAddress = endAddr;
+
+  span->next = self->largeObjects;
+  if (span->next)
+    span->next->prev = span;
+  span->prev = NULL;
+  self->largeObjects = span;
+
+  self->pageCount += numPages;
+  self->totalAllocatedBytes += size;
+  self->liveBytes += size;
+
+  memset(span->data, 0, size);
+  MEMORY_INS(WritePointer)(outPointerObject, span->data);
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), Alloc,
+    (void *outPointerObject, size_t size, uint8_t policy, const void *descriptor)) {
+  if (!self || !outPointerObject || size == 0U)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (size <= HEAP_CONST(MAX_SMALL_SIZE)) {
+    size_t classIdx = 0U;
+    OPSTATUS status = HEAP_INS(SizeToClassIndex)(size, &classIdx);
+    if (status != STATUS_CONST(SUCCESS))
+      return status;
+    return HEAP_FUNC(AllocSmall)(self, outPointerObject, classIdx, policy, descriptor);
+  }
+
+  return HEAP_FUNC(AllocLarge)(self, outPointerObject, size, policy, descriptor);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), FreeCell, (void *ptr)) {
+  if (!self || !ptr)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  uintptr_t pageIndex = ((uintptr_t)ptr) >> HEAP_CONST(PAGE_SHIFT);
+  void *entry = HEAP_INS(RadixLookupPage)(self, pageIndex);
+  if (!entry)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  uint8_t isLarge = *(uint8_t *)entry;
+  if (isLarge) {
+    HEAP_INS(Span) *span = (HEAP_INS(Span) *)entry;
+    if (ptr != (void *)span->data)
+      return STATUS_CONST(INVALID_ARGUMENT);
+
+    /* Unlink span */
+    if (span->prev)
+      span->prev->next = span->next;
+    else
+      self->largeObjects = span->next;
+    if (span->next)
+      span->next->prev = span->prev;
+
+    self->liveBytes = (self->liveBytes >= span->size) ? (self->liveBytes - span->size) : 0U;
+    self->pageCount = (self->pageCount >= span->pageCount) ? (self->pageCount - span->pageCount) : 0U;
+
+    for (size_t p = 0U; p < span->pageCount; ++p) {
+      HEAP_INS(RadixMapPage)(self, pageIndex + p, NULL);
+    }
+
+    void *raw = span->rawBlock;
+    ALLOC_FUNC(Free)(&raw);
+    return STATUS_CONST(SUCCESS);
+  }
+
+  HEAP_INS(PageHeader) *page = (HEAP_INS(PageHeader) *)entry;
+  uintptr_t offset = (uintptr_t)ptr - (uintptr_t)page->payload;
+  if (offset >= (size_t)page->cellCount * page->elementSize)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  uint16_t cellIndex = (uint16_t)(offset / page->elementSize);
+  size_t w = cellIndex / 64U;
+  uint64_t mask = 1ULL << (cellIndex % 64U);
+
+  if ((page->allocBitmap[w] & mask) == 0ULL)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  page->allocBitmap[w] &= ~mask;
+  page->markBitmap[w] &= ~mask;
+  page->freeCellCount++;
+  self->liveBytes = (self->liveBytes >= page->elementSize) ? (self->liveBytes - page->elementSize) : 0U;
+
+  if (page->state == HEAP_CONST(PAGE_STATE_FULL)) {
+    /* Move back from fullPages to activePages */
+    HEAP_INS(SizeClass) *sc = &self->classes[page->sizeClassIndex];
+    if (page->prev)
+      page->prev->next = page->next;
+    else
+      sc->fullPages = page->next;
+    if (page->next)
+      page->next->prev = page->prev;
+
+    page->next = sc->activePages;
+    if (page->next)
+      page->next->prev = page;
+    page->prev = NULL;
+    sc->activePages = page;
+    page->state = HEAP_CONST(PAGE_STATE_ACTIVE);
+  }
+
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), BlacklistPage, (uintptr_t pageIndex)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  for (size_t i = 0U; i < self->blacklistedCount; ++i) {
+    if (self->blacklistedPages[i] == pageIndex)
+      return STATUS_CONST(SUCCESS);
+  }
+
+  if (self->blacklistedCount < HEAP_CONST(MAX_BLACKLISTED)) {
+    self->blacklistedPages[self->blacklistedCount++] = pageIndex;
+    return STATUS_CONST(SUCCESS);
+  }
+  return STATUS_CONST(OUT_OF_RANGE);
+}
+
+OBJECT_PREDICATE_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), IsBlacklisted, (uintptr_t pageIndex)) {
+  if (!self)
+    return false;
+
+  for (size_t i = 0U; i < self->blacklistedCount; ++i) {
+    if (self->blacklistedPages[i] == pageIndex)
+      return true;
+  }
+  return false;
+}
+
+OBJECT_FUNCTION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), void *, LookupEntry, (const void *ptr)) {
+  if (!self || !ptr)
+    return NULL;
+
+  uintptr_t pageIndex = ((uintptr_t)ptr) >> HEAP_CONST(PAGE_SHIFT);
+  return HEAP_INS(RadixLookupPage)(self, pageIndex);
+}
+
+OBJECT_PREDICATE_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), ResolvePointer,
+    (const void *interiorPtr, void **outBasePtr, size_t *outSize, uint8_t *outPolicy)) {
+  if (!self || !interiorPtr || !outBasePtr)
+    return false;
+
+  uintptr_t addr = (uintptr_t)interiorPtr;
+  if (addr < self->minAddress || addr >= self->maxAddress)
+    return false;
+
+  void *entry = HEAP_FUNC(LookupEntry)(self, interiorPtr);
+  if (!entry)
+    return false;
+
+  uint8_t isLarge = *(uint8_t *)entry;
+  if (isLarge) {
+    HEAP_INS(Span) *span = (HEAP_INS(Span) *)entry;
+    uintptr_t start = (uintptr_t)span->data;
+    if (addr >= start && addr < start + span->size) {
+      *outBasePtr = (void *)start;
+      if (outSize)
+        *outSize = span->size;
+      if (outPolicy)
+        *outPolicy = span->policy;
+      return true;
+    }
+    return false;
+  }
+
+  HEAP_INS(PageHeader) *page = (HEAP_INS(PageHeader) *)entry;
+  uintptr_t payloadStart = (uintptr_t)page->payload;
+  uintptr_t payloadEnd = payloadStart + ((size_t)page->cellCount * page->elementSize);
+
+  if (addr >= payloadStart && addr < payloadEnd) {
+    uint16_t cellIndex = (uint16_t)((addr - payloadStart) / page->elementSize);
+    size_t w = cellIndex / 64U;
+    uint64_t mask = 1ULL << (cellIndex % 64U);
+
+    if ((page->allocBitmap[w] & mask) != 0ULL) {
+      *outBasePtr = page->payload + ((size_t)cellIndex * page->elementSize);
+      if (outSize)
+        *outSize = page->elementSize;
+      if (outPolicy)
+        *outPolicy = page->policy;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), SweepPage,
+    (HEAP_INS(PageHeader) *page, bool *outIsPageEmpty)) {
+  if (!self || !page || !outIsPageEmpty)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  uint16_t reclaimed = 0U;
+  uint16_t totalActive = 0U;
+
+  for (size_t w = 0U; w < HEAP_CONST(BITMAP_WORDS); ++w) {
+    uint64_t dead = page->allocBitmap[w] & ~page->markBitmap[w];
+    if (dead != 0ULL) {
+      for (uint8_t b = 0U; b < 64U; ++b) {
+        if ((dead & (1ULL << b)) != 0ULL)
+          reclaimed++;
+      }
+      page->allocBitmap[w] &= page->markBitmap[w];
+    }
+    for (uint8_t b = 0U; b < 64U; ++b) {
+      if ((page->allocBitmap[w] & (1ULL << b)) != 0ULL)
+        totalActive++;
+    }
+  }
+
+  page->freeCellCount = page->cellCount - totalActive;
+  self->liveBytes = (self->liveBytes >= (size_t)reclaimed * page->elementSize)
+                        ? (self->liveBytes - (size_t)reclaimed * page->elementSize)
+                        : 0U;
+
+  *outIsPageEmpty = (totalActive == 0U);
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), LazySweepClass, (size_t sizeClassIndex)) {
+  if (!self || sizeClassIndex >= HEAP_CONST(SIZE_CLASS_COUNT))
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  HEAP_INS(SizeClass) *sc = &self->classes[sizeClassIndex];
+  HEAP_INS(PageHeader) *page = sc->fullPages;
+
+  while (page) {
+    HEAP_INS(PageHeader) *next = page->next;
+    bool isEmpty = false;
+    HEAP_FUNC(SweepPage)(self, page, &isEmpty);
+
+    if (page->freeCellCount > 0U) {
+      /* Unlink from fullPages */
+      if (page->prev)
+        page->prev->next = page->next;
+      else
+        sc->fullPages = page->next;
+      if (page->next)
+        page->next->prev = page->prev;
+
+      /* Link into activePages */
+      page->next = sc->activePages;
+      if (page->next)
+        page->next->prev = page;
+      page->prev = NULL;
+      sc->activePages = page;
+      page->state = HEAP_CONST(PAGE_STATE_ACTIVE);
+    }
+    page = next;
+  }
+
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PREDICATE_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), Contains, (const void *ptr)) {
+  void *basePtr = NULL;
+  return HEAP_FUNC(ResolvePointer)(self, ptr, &basePtr, NULL, NULL);
+}
+
+OBJECT_IMPLEMENT(HEAP_TYPE(TMemoryHeap));
+
+/* EOF */
+

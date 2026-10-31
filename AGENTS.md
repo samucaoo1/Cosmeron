@@ -29,6 +29,10 @@ Everything must live inside the library/module namespace whenever C allows it. E
 - `*_INS(NAME)`: Internal C identifiers.
 - `*_CINS(NAME)`: Internal constants.
 - Internal preprocessor macros: `COSMERON_MACRO_INTERNAL_*` (no namespace guards).
+- **Strict Prohibition of Unnamespaced Internals:**
+  - Absolutely no C identifier (structs, unions, typedefs, static inline helpers, internal functions, internal enums) may ever exist in the raw global namespace without namespace macros.
+  - All internal structs, helpers, static inline functions, and private types **MUST** be wrapped with `*_INS(NAME)` (e.g. `ERROR_INS(FormatWriter)`, `ERROR_INS(Format_WriteContext)`).
+  - Callbacks and internal types must also live within the module namespace (`ERROR_INS(...)` or `ERROR_NS(...)`).
 
 ---
 
@@ -40,6 +44,10 @@ Everything must live inside the library/module namespace whenever C allows it. E
 - Output enums or internal types do **not** use `T` (e.g., `ComparisonResult`, aliased to `CMPOUT`).
 - **Unambiguous naming policy:** Avoid overly generic names (such as `TPool`, `TNode`) that collide semantically across domains (e.g. Memory vs. Random vs. Concurrency). Always qualify the domain explicitly (e.g. `TMemoryPool`).
 - **Strict alias policy:** Public aliases must be rare, deliberate, and highly specific. Do not create short ambiguous aliases.
+- **Prohibition of Global Unnamespaced Typedefs and Forwarding Wrappers:**
+  - Never emit global unnamespaced typedef shortcuts for types declared with `*_TYPE` (e.g. `typedef ERROR_TYPE(TError) TError;` is strictly prohibited).
+  - Never generate unnamespaced inline forwarding wrappers (e.g. `static inline ... TError_Init(...) { return Error_TError_Init(...); }`).
+  - Consumers must directly use the canonical namespaced types (`ERROR_TYPE(TError)` / `Error_TError`) and their emitted functions (`Error_TError_Init`) or declarative macros (`OBJECT_CALL`). Any exceptions require explicit user approval first.
 
 ---
 
@@ -125,9 +133,17 @@ Everything must live inside the library/module namespace whenever C allows it. E
 
 ## 7. X-Macros
 
-- Use when one semantic table generates multiple representations (enum, string tables, switch cases).
+- Use when one semantic table generates multiple representations (enum, string tables, switch cases, mappings).
 - The table macro (`SNAKE_CASE`) is the single source of truth; never duplicate lists.
 - X-macros are code generation tools, not public runtime API.
+- **Decoupled Column Selectors (Row-Tuple Pattern):**
+  - Always pack rows as parenthesized tuples: `X((COL1, COL2, ...))`.
+  - Define column selectors at the table definition: `#define DOMAIN_COL_<FIELD>(PARAMS...) <FIELD>`.
+  - Unpack fields in consumers using `DOMAIN_GET(FIELD, ROW)` via `PP_OP_CAT2(DOMAIN_COL_, FIELD) ROW`.
+  - Adding or rearranging columns must never break existing consumer macros.
+- **Categorical Modular Aggregation:**
+  - Multi-category tables are split into `.impl` files (e.g. `DomainTable/Generic.impl`, `DomainTable/Arithmetic.impl`) defining `DOMAIN_TABLE_<CATEGORY>(X)`.
+  - A master aggregator header `DomainTable/DomainTable.h` unifies them into `DOMAIN_TABLE(X)`.
 
 ---
 

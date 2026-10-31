@@ -1,0 +1,9 @@
+#pragma once
+
+#define PRIMITIVE_TYPE_TABLE_SIGNED(X)                                         \
+  X((int8_t, Int8, I8, TInt8, INT, 8))                                         \
+  X((int16_t, Int16, I16, TInt16, INT, 16))                                    \
+  X((int32_t, Int32, I32, TInt32, INT, 32))                                    \
+  X((int64_t, Int64, I64, TInt64, INT, 64))
+/* EOF */
+

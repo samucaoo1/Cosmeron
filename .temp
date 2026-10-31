@@ -10,13 +10,133 @@ Diretriz Inviolável: Refatorações NÃO mantêm retrocompatibilidade. Não cri
 |---|---|---|---|
 | **Core/Algorithm/Comparison** | `Codespace/Cosmeron/Core/Algorithm/Comparison.h` | Concluído (Padrão) | Migrado para Callback DSL (`TCALLBACK(Comparison)`). Tipos manuais (`Comparator`/`ContextComparator`) e `Invoke` redundante removidos. |
 | **Core/Cast** | `Codespace/Cosmeron/Core/Cast/Integer.h` | Concluído | Migrado de `*_PROTOTYPE` soltos para `PACKAGE(Cast)` com `OPERATION(...)` e implementado via `PACKAGE_OPERATION_IMPLEMENT_EX`. |
-| **Core/Memory/Alloc** | `Codespace/Cosmeron/Core/Memory/Alloc.h` | Pendente | Migrar macros de protótipo (`*_PROTOTYPE`) e convenções para `PACKAGE(Alloc)`. Eliminar compatibilidade obsoleta. |
-| **Core/Memory/Operations** | `Codespace/Cosmeron/Core/Memory/Operations.h` | Pendente | Declarar via `PACKAGE(Memory)`. Usar `PROCEDURE` / `FUNCTION` / `PREDICATE` / `OPERATION`. |
-| **Core/Memory/Swap** | `Codespace/Cosmeron/Core/Memory/Swap.h` | Pendente | Migrar para `PACKAGE(Swap)`. |
-| **Core/Memory/Pool** | `Codespace/Cosmeron/Core/Memory/Pool.h` | Pendente | Usar `OBJECT(TMemoryPool, ...)`. Substituir macros legadas (`METHOD`) pela família explícita `OPERATION(...)`. |
-| **Core/Memory/Arena** | `Codespace/Cosmeron/Core/Memory/Arena.h` | Pendente | Migrar de protótipos manuais soltos para `OBJECT(TArena, ...)`. |
-| **Core/Memory/Stream** | `Codespace/Cosmeron/Core/Memory/Stream.h` | Pendente | Migrar de protótipos manuais para `OBJECT(TMemoryStream, ...)`. |
+| **Core/Memory/Memory.space** | `Codespace/Cosmeron/Core/Memory/Memory.space` | Concluído | Centralizado alinhamento máximo (`MEMORY_INS(MaxAlignment)`), verificação de overflow (`MEMORY_INS(CheckedMultiplySize)`) e leitura/escrita segura de ponteiros (`WritePointer`/`ReadPointer`). |
+| **Core/Memory/Alloc** | `Codespace/Cosmeron/Core/Memory/Alloc.h` | Concluído | Declarado via `PACKAGE(LIB_PREFIX(ALLOC_MOD))`. Métodos operam sobre `void *outPointerObject` eliminando strict-aliasing UB. Suporte a `Bytes`, `ZeroBytes`, `Array`, `ZeroArray`, `ReallocBytes`, `ReallocArray` e `Free`. |
+| **Core/Memory/Operations** | `Codespace/Cosmeron/Core/Memory/Operations.h` | Concluído | Declarado via `PACKAGE(LIB_PREFIX(MEMORY_MOD))` com contratos canônicos (`Copy`, `Move`, `Set`, `Zero`, `CopyArray`, `MoveArray`, `ZeroArray`, `Equals`). Proteção estrita contra overlap em `Copy`. |
+| **Core/Memory/Swap** | `Codespace/Cosmeron/Core/Memory/Swap.h` | Concluído | Declarado via `PACKAGE(LIB_PREFIX(SWAP_MOD))` com `SWAP_CONFIG_TABLE(X)` para `BLOCK_SIZE` e template `TEMPLATE_SWAP(SUFFIX, TYPE)`. |
+| **Core/Memory/Pool** | `Codespace/Cosmeron/Core/Memory/Pool.h` | Concluído | Migrado para `OBJECT(POOL_TYPE(TMemoryPool))` com contratos canônicos `OPERATION` / `CONST_FUNCTION_INLINE` / `CONST_PREDICATE` implementados via `OBJECT_*_IMPLEMENT_EX`. Suporte a `FreePointer`. |
+| **Core/Memory/Arena** | `Codespace/Cosmeron/Core/Memory/Arena.h` | Concluído | Migrado para `OBJECT(ARENA_TYPE(TArena))` com `CreateBuffer`, `AllocBytes`, `AllocAligned`, `AllocArray`, `AllocArrayAligned`, `Save`/`Restore`, `Reset` e `Destroy`. |
+| **Core/Memory/Stream** | `Codespace/Cosmeron/Core/Memory/Stream.h` | Concluído | Migrado para `OBJECT(STREAM_TYPE(TStream))` e aliases canônicos `TMemoryStream`. Adotada X-Macro `STREAM_SEEK_ORIGIN_TABLE(X)`. |
+| **Core/Memory/Heap** | `Codespace/Cosmeron/Core/Memory/Heap.h` | Concluído | Gerenciador BiBOP de páginas (4 KB), 24 classes de tamanho segregadas (16B a 2048B), Radix Tree de 2 níveis para busca $O(1)$ e ponteiros interiores, Alloc/Mark Bitmaps out-of-band, Lazy Sweep e Blacklisting de páginas. Implementado como `OBJECT(HEAP_TYPE(TMemoryHeap))`. |
+| **Core/Memory/GarbageCollector** | `Codespace/Cosmeron/Core/Memory/GarbageCollector.h` | Concluído | Coletor Non-Moving Mark & Sweep tri-político (Conservative, Typed e Atomic) operando sobre `TMemoryHeap`. Rastreamento iterativo por Worklist com proteção contra overflow, varredura conservadora de registradores/stack, finalizadores seguros via `TCALLBACK` com preservação de dependências em duas fases e Adaptive Pacing. Implementado como `OBJECT(TGarbageCollector)` + `PACKAGE(GarbageCollector)`. |
 | **Core/Module/Callback** | `Codespace/Cosmeron/Core/Module/Callback/Callback.h` | Concluído | DSL de Callback tipado de primeira classe. |
+| **Core/Primitive/Types** | `Codespace/Cosmeron/Core/Primitive/Types.h` | Concluído (Padrão) | Migrado para X-Macro Row-Tuple desacoplado (`PRIMITIVE_TYPE_TABLE(X)` com seletores `PRIMITIVE_TYPE_COL_*` e `PRIMITIVE_TYPE_GET`). Modularização categórica em `TypeTable/` (`Category.impl`, `Boolean.impl`, `Signed.impl`, `Unsigned.impl`, `Character.impl`, `Float.impl`, `Architecture.impl`). Enum e conversão `PRIMITIVE_TYPE(Category)` gerados via X-Macro, typedefs canônicos namespaced e views de iteração. Zero retrocompatibilidade. |
+
+---
+
+## 1.1 Especificação Arquitetural: Refatoração de `Core/Memory` e Novo Pacote `Core/Memory/GC`
+
+### A. `Core/Memory/Memory.space`
+- Manter macros de namespace `MEMORY_MOD`, `MEMORY_CMOD`, `MEMORY_NS`, `MEMORY_CNS`, `MEMORY_INS`, `MEMORY_CINS`, `MEMORY_TYPE`, `MEMORY_FUNC`, `MEMORY_CONST`.
+- Centralizar `MEMORY_INS(MaxAlignment_InternalType)` e constante interna de alinhamento máximo.
+- Centralizar helper inline `MEMORY_INS(CheckedMultiplySize)(size_t count, size_t elementSize, size_t *outSize)` retornando `STATUS_CONST(ARITHMETIC_OVERFLOW)` em caso de estouro de `SIZE_MAX`.
+
+### B. `Core/Memory/Alloc.h` & `Impl/Alloc.impl`
+- Namespace próprio de subpacote: `ALLOC_MOD` (`Memory_Alloc`), `ALLOC_NS`, `ALLOC_CNS`, `ALLOC_INS`, `ALLOC_CINS`, `ALLOC_TYPE`, `ALLOC_FUNC`, `ALLOC_CONST`.
+- Declarar `PACKAGE(LIB_PREFIX(ALLOC_MOD), ...)`:
+  - `OPERATION(Bytes, (void *outPointerObject, size_t size))`
+  - `OPERATION(ZeroBytes, (void *outPointerObject, size_t size))`
+  - `OPERATION(Array, (void *outPointerObject, size_t count, size_t elementSize))`
+  - `OPERATION(ZeroArray, (void *outPointerObject, size_t count, size_t elementSize))`
+  - `OPERATION(ReallocBytes, (void *inoutPointerObject, size_t newSize))`
+  - `OPERATION(ReallocArray, (void *inoutPointerObject, size_t count, size_t elementSize))`
+  - `OPERATION(Free, (void *inoutPointerObject))`
+- **Solução de Ergonomia e Strict Aliasing (`void *outPointerObject`)**:
+  - Recebe o endereço de qualquer variável ponteiro (`&myTypedPtr` como `void *`) sem exigir variável temporária `void *` nem cast ilegal `(void **)&myTypedPtr`.
+  - Escreve o endereço alocado na variável de saída via `memcpy(outPointerObject, &allocated, sizeof(void *))` exclusivamente quando `STATUS_CONST(SUCCESS)`.
+  - `ALLOC_FUNC(Free)(&myTypedPtr)` lê o ponteiro via `memcpy`, chama `free()` e zera `myTypedPtr = NULL` via `memset`.
+- Remover todos os `*_PROTOTYPE` legados e a macro `Memory_Free`.
+
+### C. `Core/Memory/Operations.h` & `Impl/Operations.impl`
+- Declarar `PACKAGE(LIB_PREFIX(MEMORY_MOD), ...)`:
+  - `OPERATION(Copy, (void *destination, const void *source, size_t size))` — valida ausência de sobreposição de intervalos (retorna `STATUS_CONST(INVALID_ARGUMENT)` se houver overlap).
+  - `OPERATION(Move, (void *destination, const void *source, size_t size))`
+  - `OPERATION(Set, (void *destination, int value, size_t size))`
+  - `OPERATION(Zero, (void *destination, size_t size))`
+  - `OPERATION(CopyArray, (void *destination, const void *source, size_t count, size_t elementSize))`
+  - `OPERATION(MoveArray, (void *destination, const void *source, size_t count, size_t elementSize))`
+  - `OPERATION(ZeroArray, (void *destination, size_t count, size_t elementSize))`
+  - `PREDICATE(Equals, (const void *left, const void *right, size_t size))`
+- Remover `MEMORY_*_PROTOTYPE` e macros de açúcar não aprovadas (`Memory_CopyTyped`, `Memory_MoveTyped`, `Memory_ZeroTyped`).
+
+### D. `Core/Memory/Swap.h` & `Impl/Swap.impl`
+- Namespace `SWAP_MOD` (`Memory_Swap`), `SWAP_NS`, `SWAP_CNS`, `SWAP_INS`, `SWAP_CINS`, `SWAP_TYPE`, `SWAP_FUNC`, `SWAP_CONST`.
+- X-Macro `SWAP_CONFIG_TABLE(X)` definindo `SWAP_CONST(BLOCK_SIZE) = 64`.
+- Declarar `PACKAGE(LIB_PREFIX(SWAP_MOD), ...)`:
+  - `OPERATION(Bytes, (void *left, void *right, size_t size))`
+  - `OPERATION(Array, (void *left, void *right, size_t count, size_t elementSize))`
+- Substituir `SWAP_PROTOTYPE`/`SWAP_IMPLEMENT` manuais pelo motor `TEMPLATE_SWAP(SUFFIX, TYPE)` (`Core/Module/Common/Template.impl`).
+- Remover macro `Memory_Swap`.
+
+### E. `Core/Memory/Pool.h` & `Impl/Pool.impl`
+- Namespace `POOL_MOD` (`Memory_Pool`), `POOL_NS`, `POOL_CNS`, `POOL_INS`, `POOL_CINS`, `POOL_TYPE`, `POOL_FUNC`, `POOL_CONST`.
+- Nó interno `POOL_INS(Node)`.
+- Declarar `OBJECT(POOL_TYPE(TMemoryPool), FIELDS(...), ...)`:
+  - `OPERATION(Create, (size_t elementSize, size_t elementCount))`
+  - `OPERATION(CreateBuffer, (void *buffer, size_t bufferSize, size_t elementSize))`
+  - `OPERATION(Alloc, (void *outPointerObject))`
+  - `OPERATION(Free, (void *ptr))`
+  - `OPERATION(FreePointer, (void *inoutPointerObject))`
+  - `OPERATION(Reset, ())`
+  - `OPERATION(Destroy, ())`
+  - `CONST_FUNCTION_INLINE(size_t, Capacity, (), ...)`
+  - `CONST_FUNCTION_INLINE(size_t, Available, (), ...)`
+  - `CONST_FUNCTION_INLINE(size_t, Allocated, (), ...)`
+  - `CONST_FUNCTION_INLINE(size_t, ElementSize, (), ...)`
+  - `CONST_PREDICATE(Contains, (const void *ptr))`
+- Remover `typedef POOL_TYPE(TMemoryPool) TMemoryPool;` global sem namespace.
+- Implementar com `OBJECT_*_IMPLEMENT_EX` e finalizar com `OBJECT_IMPLEMENT(POOL_TYPE(TMemoryPool));`.
+
+### F. `Core/Memory/Arena.h` & `Impl/Arena.impl`
+- Namespace `ARENA_MOD` (`Memory_Arena`), `ARENA_NS`, `ARENA_CNS`, `ARENA_INS`, `ARENA_CINS`, `ARENA_TYPE`, `ARENA_FUNC`, `ARENA_CONST`.
+- Declarar `OBJECT(ARENA_TYPE(TArena), FIELDS(uint8_t *buffer; size_t capacity; size_t offset; bool isOwned;), ...)`:
+  - `OPERATION(Create, (size_t capacity))`
+  - `OPERATION(CreateBuffer, (void *buffer, size_t capacity))`
+  - `OPERATION(AllocBytes, (void *outPointerObject, size_t size))`
+  - `OPERATION(AllocAligned, (void *outPointerObject, size_t size, size_t alignment))`
+  - `OPERATION(AllocArray, (void *outPointerObject, size_t count, size_t elementSize))`
+  - `OPERATION(AllocArrayAligned, (void *outPointerObject, size_t count, size_t elementSize, size_t alignment))`
+  - `OPERATION(Save, (size_t *outMark))`
+  - `OPERATION(Restore, (size_t mark))`
+  - `OPERATION(Reset, ())`
+  - `OPERATION(Destroy, ())`
+  - `CONST_FUNCTION_INLINE(size_t, Capacity, (), ...)`
+  - `CONST_FUNCTION_INLINE(size_t, Used, (), ...)`
+  - `CONST_FUNCTION_INLINE(size_t, Remaining, (), ...)`
+  - `CONST_PREDICATE(Contains, (const void *ptr))`
+- Remover `ARENA_*_PROTOTYPE` e macro `Memory_Arena_Alloc`.
+
+### G. `Core/Memory/Stream.h` & `Impl/Stream.impl`
+- Namespace `STREAM_MOD` (`Memory_Stream`), `STREAM_NS`, `STREAM_CNS`, `STREAM_INS`, `STREAM_CINS`, `STREAM_TYPE`, `STREAM_FUNC`, `STREAM_CONST`.
+- Tabela X-Macro `STREAM_SEEK_ORIGIN_TABLE(X)` gerando `enum STREAM_TYPE(SeekOrigin)`.
+- Renomear `TStream` para `STREAM_TYPE(TMemoryStream)` e declarar via `OBJECT(STREAM_TYPE(TMemoryStream), FIELDS(...), ...)`.
+- Implementar métodos com `OBJECT_*_IMPLEMENT_EX` e finalizar com `OBJECT_IMPLEMENT(STREAM_TYPE(TMemoryStream));`.
+
+### H. Novo Pacote: `Core/Memory/Heap.h` & `Impl/Heap.impl`
+- **Nomenclatura**: `HEAP_MOD` (`Memory_Heap`), `HEAP_CMOD` (`MEMORY_HEAP`), `HEAP_TYPE(TMemoryHeap)`, `HEAP_FUNC(...)`.
+- **Arquitetura BiBOP**: Páginas de 4 KB com `PageHeader` (128B), 24 classes de tamanho segregadas (16B a 2048B) e Large Object Spans.
+- **Radix Tree**: Árvore prefixada de 2 níveis para tradução $O(1)$ de qualquer endereço para `PageHeader *` e resolução de ponteiros interiores.
+- **Bitmaps Out-of-Band**: `allocBitmap` (256 bits) e `markBitmap` (256 bits) no cabeçalho da página — zero overhead por objeto e zero cache-pollution durante a marcação.
+- **Otimizações**: Blacklisting de páginas para evitar retenção acidental por inteiros falsos e Lazy Sweeping por classe de tamanho.
+
+### I. Novo Pacote: `Core/Memory/GarbageCollector.h` & `Impl/GarbageCollector.impl`
+- **Nomenclatura**: Adotar estritamente `GARBAGE_COLLECTOR` (`GARBAGE_COLLECTOR_MOD`, `GARBAGE_COLLECTOR_CMOD`, `GARBAGE_COLLECTOR_TYPE(TGarbageCollector)`, `GARBAGE_COLLECTOR_FUNC(...)`).
+- **Arquitetura Totalmente Integrada a Namespace, OBJECT e PACKAGE**:
+  - `OBJECT(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), ...)`: Instância isolada acoplada a um `TMemoryHeap` (`Create`, `Destroy`, `Alloc`, `AllocTyped`, `AllocAtomic`, `SetFinalizer`, `PinRoot`, `Collect`, `Pause`/`Resume`).
+  - `PACKAGE(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), ...)`: Fachada estática por thread (`Startup`, `Shutdown`, `DefaultCollector`, `Alloc`, `Collect`, etc.).
+  - `TCALLBACK(GARBAGE_COLLECTOR_INS(FinalizerFunction))`: Callbacks tipados de primeira classe para finalização segura.
+- **Modelo Tri-Político**:
+  1. *Conservative*: Range Check + Radix Lookup + Alloc Bitmap Check para palavras alinhadas.
+  2. *Typed*: Guiado por mapa de bits em tempo de compilação (`GC_FIELD_BIT`, `GC_DESCRIPTOR_BITMAP`) e busca rápida com `__builtin_ctzll`.
+  3. *Atomic*: Células folha (strings, buffers brutos) marcadas sem inserção na Worklist.
+- **Ciclo de Coleta em 5 Fases**:
+  1. *Preparação*: `setjmp` para despejo de registradores + limites de stack.
+  2. *Mark Roots*: Varredura da stack + raízes pinadas (`GC_PIN_ROOT`).
+  3. *Trace Iterativo*: Worklist em blocos com flag de overflow e recuo linear seguro.
+  4. *Finalization Enqueue*: Fila de finalização pré-sweep com preservação preventiva de dependências via `TCALLBACK`.
+  5. *Sweep & Execute Finalizers*: Lazy Sweep + recálculo elástico via Adaptive Pacing:
+     $$\text{NextThreshold} = \text{LiveBytesAfterGC} \times \left(1 + \frac{\text{GrowthFactor}}{\text{SurvivalRate}}\right)$$
+- **Ergonomia Sintática**: `GC_NEW(heap, T)`, `GC_NEW_TYPED(heap, T)`, `GC_NEW_ATOMIC(heap, T)`, `GC_ALLOC`, `GC_ALLOC_ATOMIC`, `GC_SET_FINALIZER`, `GC_PIN_ROOT`.
 
 ---
 

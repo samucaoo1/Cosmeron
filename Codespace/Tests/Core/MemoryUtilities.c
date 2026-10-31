@@ -4,6 +4,8 @@
 
 #include <stdint.h>
 
+TEMPLATE_DECLARE(SWAP, int, int);
+
 typedef struct MemoryUtilities_Aligned {
   long double value;
   void *pointer;
@@ -24,6 +26,8 @@ int main(void) {
   int *typedDirect = NULL;
   unsigned char overlap[4] = {1U, 2U, 3U, 4U};
 
+  if (ARENA_FUNC(Init)(&arena) != STATUS_CONST(SUCCESS))
+    return 100;
   if (ARENA_FUNC(Create)(&arena, 256) != STATUS_CONST(SUCCESS))
     return 1;
   if (ARENA_FUNC(AllocBytes)(&arena, &raw, sizeof(int)) != STATUS_CONST(SUCCESS) ||
@@ -42,31 +46,43 @@ int main(void) {
           STATUS_CONST(SUCCESS) ||
       rawArrayAligned == NULL)
     return 17;
-  if (ARENA_FUNC(AllocTyped)(&arena, &typedDirect, 1U, sizeof(int),
-                             _Alignof(int)) != STATUS_CONST(SUCCESS) ||
+  if (ARENA_FUNC(AllocArrayAligned)(&arena, &typedDirect, 1U, sizeof(int),
+                                    _Alignof(int)) != STATUS_CONST(SUCCESS) ||
       typedDirect == NULL)
     return 18;
 
-  if (Memory_Arena_Alloc(&arena, int, &values, 4) != STATUS_CONST(SUCCESS))
+  if (ARENA_FUNC(AllocArray)(&arena, &values, 4, sizeof(*values)) != STATUS_CONST(SUCCESS))
     return 2;
   if (!values)
     return 3;
 
-  if (Memory_Arena_Alloc(&arena, unsigned char, &byte, 1) !=
+  if (ARENA_FUNC(AllocArray)(&arena, &byte, 1, sizeof(*byte)) !=
       STATUS_CONST(SUCCESS))
     return 4;
-  if (Memory_Arena_Alloc(&arena, MemoryUtilities_Aligned, &aligned, 1) !=
+  if (ARENA_FUNC(AllocArrayAligned)(&arena, &aligned, 1, sizeof(*aligned), _Alignof(MemoryUtilities_Aligned)) !=
       STATUS_CONST(SUCCESS))
     return 5;
   if (((uintptr_t)aligned % _Alignof(MemoryUtilities_Aligned)) != 0)
     return 6;
 
-  savedOffset = arena.offset;
+  savedOffset = ARENA_FUNC(Used)(&arena);
   values = (int *)(uintptr_t)1;
-  if (Memory_Arena_Alloc(&arena, int, &values, SIZE_MAX) !=
+  if (ARENA_FUNC(AllocArray)(&arena, &values, SIZE_MAX, sizeof(*values)) !=
           STATUS_CONST(ARITHMETIC_OVERFLOW) ||
-      values != (int *)(uintptr_t)1 || arena.offset != savedOffset)
+      values != (int *)(uintptr_t)1 || ARENA_FUNC(Used)(&arena) != savedOffset)
     return 7;
+
+  /* Save and restore */
+  size_t mark = 0;
+  if (ARENA_FUNC(Save)(&arena, &mark) != STATUS_CONST(SUCCESS))
+    return 22;
+  void *extra = NULL;
+  if (ARENA_FUNC(AllocBytes)(&arena, &extra, 32) != STATUS_CONST(SUCCESS))
+    return 23;
+  if (ARENA_FUNC(Restore)(&arena, mark) != STATUS_CONST(SUCCESS))
+    return 24;
+  if (ARENA_FUNC(Used)(&arena) != mark)
+    return 25;
 
   if (ARENA_FUNC(Reset)(&arena) != STATUS_CONST(SUCCESS))
     return 8;
@@ -89,6 +105,6 @@ int main(void) {
       STATUS_CONST(INVALID_ARGUMENT))
     return 21;
 
-  Memory_Swap(int, left, right);
+  SWAP_FUNC(int_Values)(&left, &right);
   return left == 1 && right == 2 ? 0 : 15;
 }

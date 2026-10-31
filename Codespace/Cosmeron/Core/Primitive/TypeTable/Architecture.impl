@@ -1,0 +1,11 @@
+#pragma once
+
+#define PRIMITIVE_TYPE_TABLE_ARCHITECTURE(X)                                   \
+  X((int, Int, Int, TInt, INT, 0))                                             \
+  X((unsigned int, UInt, UInt, TUInt, UINT, 0))                                \
+  X((size_t, Size, Size, TSize, UINT, 0))                                      \
+  X((ptrdiff_t, PtrDiff, Diff, TPtrDiff, INT, 0))                              \
+  X((intptr_t, IntPtr, IPtr, TIntPtr, INT, 0))                                 \
+  X((uintptr_t, UIntPtr, UPtr, TUIntPtr, UINT, 0))
+/* EOF */
+

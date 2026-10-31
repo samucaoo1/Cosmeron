@@ -414,30 +414,107 @@ The template engine (`Core/Module/Common/Template.impl`) provides generic type p
 
 ## 9. X-Macros
 
-Use X-macros when one semantic table must generate multiple representations.
+Use X-macros when one semantic table must generate multiple representations (enums, string tables, switch cases, lookup arrays, diagnostics).
 
-```c
-#define COMPARISON_TABLE(X)\
-  X(COMPARISON_LOWER_CONST,-1, "Lower")\
-  X(COMPARISON_EQUAL_CONST, 0, "Equal")\
-  X(COMPARISON_HIGHER_CONST, 1, "Higher")
-```
-and
-
-```c
-typedef enum COMPARISON_TYPE(Result) {
-#define X(NAME, VALUE, DESC) NAME = VALUE,
-COMPARISON_TABLE(X)
-#undef X
-} COMPARISON_TYPE(Result);
-```
 Rules:
 
-- one table is the source of truth;
-- do not "duplicate" the same list in enums, strings, mappings, or switches. If the table exist, use. 
-- table names and helper macros use `SNAKE_CASE`;
-- generated public constants still pass through the constant namespace;
+- One table is the single source of truth;
+- Never duplicate the same list in enums, strings, mappings, or switches;
+- Table names and helper macros use `SNAKE_CASE`;
+- Generated public constants must pass through the constant namespace;
 - X-macros are generation tools, not public runtime API.
+
+### 9.1 Decoupled Column Selectors (Row-Tuple Pattern)
+
+To ensure consumers remain completely decoupled from column position and column count (Single Source of Truth for both table data and schema), pack each row as a tuple and provide column selectors:
+
+#### 1. Schema Selectors (Single Source of Truth for Column Layout)
+```c
+#define STATUS_COL_NAME(NAME, MESSAGE)    NAME
+#define STATUS_COL_MESSAGE(NAME, MESSAGE) MESSAGE
+```
+
+#### 2. Row Tuples
+Each row is passed to macro `X` as a single parenthesized tuple:
+```c
+#define STATUS_TABLE(X)                             \
+  X((SUCCESS, "Success"))                           \
+  X((GENERIC_ERROR, "Generic error"))               \
+  X((INVALID_ARGUMENT, "Invalid argument"))
+```
+
+#### 3. Unpacking Helper (Selector Dispatch)
+Use the preprocessor concatenation helper `PP_OP_CAT2`:
+```c
+#define STATUS_GET(FIELD, ROW) PP_OP_CAT2(STATUS_COL_, FIELD) ROW
+```
+
+#### 4. Decoupled Consumers
+Consumers take `(ROW)` and unpack only the fields they require. Adding new columns never breaks existing consumers:
+```c
+/* Enum generation */
+typedef enum STATUS_TYPE(Status) {
+#define STATUS_ENUM_ITEM(ROW) STATUS_CONST(STATUS_GET(NAME, ROW)),
+  STATUS_TABLE(STATUS_ENUM_ITEM)
+#undef STATUS_ENUM_ITEM
+} OPSTATUS;
+
+/* String table generation */
+static const char *const status_messages[] = {
+#define STATUS_MSG_ITEM(ROW) [STATUS_CONST(STATUS_GET(NAME, ROW))] = STATUS_GET(MESSAGE, ROW),
+  STATUS_TABLE(STATUS_MSG_ITEM)
+#undef STATUS_MSG_ITEM
+};
+
+/* Switch case generation */
+static const char *Status_ToString(OPSTATUS status) {
+  switch (status) {
+#define STATUS_CASE_ITEM(ROW) \
+    case STATUS_CONST(STATUS_GET(NAME, ROW)): return STATUS_GET(MESSAGE, ROW);
+    STATUS_TABLE(STATUS_CASE_ITEM)
+#undef STATUS_CASE_ITEM
+    default: return "Unknown";
+  }
+}
+```
+
+#### 5. Schema Extension (Zero Consumer Breakage)
+When a new column (e.g. `SEVERITY`) is added, only the selectors and rows are updated:
+```c
+#define STATUS_COL_NAME(NAME, MESSAGE, SEVERITY)     NAME
+#define STATUS_COL_MESSAGE(NAME, MESSAGE, SEVERITY)  MESSAGE
+#define STATUS_COL_SEVERITY(NAME, MESSAGE, SEVERITY) SEVERITY
+```
+Existing consumers (`STATUS_ENUM_ITEM`, `STATUS_MSG_ITEM`, `STATUS_CASE_ITEM`) require zero modifications and continue compiling cleanly.
+
+### 9.2 Categorical Modular Aggregation
+
+Large multi-domain tables (such as status codes, tokens, or system errors) must be organized into category-specific `.impl` files inside a dedicated subfolder (e.g. `StatusTable/`):
+
+- `StatusTable/Generic.impl`: defines `STATUS_TABLE_GENERIC(X)`
+- `StatusTable/Memory.impl`: defines `STATUS_TABLE_MEMORY(X)`
+- `StatusTable/Concurrency.impl`: defines `STATUS_TABLE_CONCURRENCY(X)`
+- `StatusTable/Arithmetic.impl`: defines `STATUS_TABLE_ARITHMETIC(X)`
+- `StatusTable/Sequence.impl`: defines `STATUS_TABLE_SEQUENCE(X)`
+
+The master aggregator header (`StatusTable/StatusTable.h`) includes these `.impl` files and unifies them into the master table:
+
+```c
+#include "Generic.impl"
+#include "Memory.impl"
+#include "Concurrency.impl"
+#include "Arithmetic.impl"
+#include "Sequence.impl"
+
+#define STATUS_TABLE(X)         \
+  STATUS_TABLE_GENERIC(X)       \
+  STATUS_TABLE_MEMORY(X)        \
+  STATUS_TABLE_CONCURRENCY(X)   \
+  STATUS_TABLE_ARITHMETIC(X)    \
+  STATUS_TABLE_SEQUENCE(X)
+```
+
+The public header (`Status.h`) then includes `StatusTable/StatusTable.h` to declare types and constants.
 
 ## 10. Functions Work
 

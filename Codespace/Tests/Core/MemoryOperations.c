@@ -27,20 +27,20 @@ int main(void) {
   if (destination[0] != 0)
     return 5;
 
-  if (Memory_CopyTyped(int, typedDestination, typedSource, 4) !=
+  if (MEMORY_FUNC(CopyArray)(typedDestination, typedSource, 4, sizeof(int)) !=
       STATUS_CONST(SUCCESS))
     return 6;
   if (memcmp(typedDestination, typedSource, sizeof(typedSource)) != 0)
     return 7;
 
-  if (Memory_MoveTyped(int, typedDestination + 1, typedDestination, 3) !=
+  if (MEMORY_FUNC(MoveArray)(typedDestination + 1, typedDestination, 3, sizeof(int)) !=
       STATUS_CONST(SUCCESS))
     return 8;
   if (typedDestination[1] != 1 || typedDestination[2] != 2 ||
       typedDestination[3] != 3)
     return 9;
 
-  if (Memory_ZeroTyped(int, typedDestination, 4) != STATUS_CONST(SUCCESS))
+  if (MEMORY_FUNC(ZeroArray)(typedDestination, 4, sizeof(int)) != STATUS_CONST(SUCCESS))
     return 10;
   if (typedDestination[0] != 0 || typedDestination[1] != 0 ||
       typedDestination[2] != 0 || typedDestination[3] != 0)
@@ -71,6 +71,28 @@ int main(void) {
       return 18;
     if (direct[0] != 0 || direct[1] != 0 || direct[2] != 0 || direct[3] != 0)
       return 19;
+  }
+
+  /* Test overlap protection in Copy */
+  {
+    char buf[] = "12345678";
+    if (MEMORY_FUNC(Copy)(buf + 1, buf, 4) != STATUS_CONST(INVALID_ARGUMENT))
+      return 21;
+    if (MEMORY_FUNC(Copy)(buf, buf + 1, 4) != STATUS_CONST(INVALID_ARGUMENT))
+      return 22;
+  }
+
+  /* Test Equals predicate */
+  {
+    int a[] = {1, 2, 3};
+    int b[] = {1, 2, 3};
+    int c[] = {1, 2, 4};
+    if (!MEMORY_FUNC(Equals)(a, b, sizeof(a)))
+      return 23;
+    if (MEMORY_FUNC(Equals)(a, c, sizeof(a)))
+      return 24;
+    if (!MEMORY_FUNC(Equals)(NULL, NULL, 0))
+      return 25;
   }
 
   return 0;

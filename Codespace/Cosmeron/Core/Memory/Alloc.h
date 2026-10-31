@@ -1,56 +1,44 @@
 #pragma once
 
+#include "../Module/Package.h"
 #include "../Preprocessor/Compiling.inc"
 #include "Memory.space"
 
-#define ALLOC_FUNC(NAME) MEMORY_FUNC(NAME)
+#define ALLOC_MOD GNS2(MEMORY_MOD, Alloc)
+#define ALLOC_CMOD PP_OP_CAT3(MEMORY_CMOD, _, ALLOC)
 
-typedef union MEMORY_INS(MaxAlignment_InternalType_) {
-  long double longDoubleValue;
-  double doubleValue;
-  long long integerValue;
-  void *pointerValue;
-} MEMORY_INS(MaxAlignment_InternalType_);
+#define ALLOC_NS(NAME) GNS3(LIB_PREFIX(MEMORY_MOD), Alloc, NAME)
+#define ALLOC_CNS(NAME) CNS3(LIB_PREFIX_CONST(MEMORY_CMOD), ALLOC, NAME)
+#define ALLOC_INS(NAME) GNS4(LIB_PREFIX(MEMORY_MOD), Alloc, Internal, NAME)
+#define ALLOC_CINS(NAME) CNS4(LIB_PREFIX_CONST(MEMORY_CMOD), ALLOC, INTERNAL, NAME)
 
-#define COSMERON_MACRO_INTERNAL_MEMORY_MAX_ALIGNMENT                          \
-  _Alignof(MEMORY_INS(MaxAlignment_InternalType_))
+#define ALLOC_TYPE(NAME) ALLOC_NS(NAME)
+#define ALLOC_FUNC(NAME) ALLOC_NS(NAME)
+#define ALLOC_CONST(NAME) ALLOC_CNS(NAME)
 
-#define ALLOC_BYTES_PROTOTYPE                                                  \
-  static inline OPSTATUS ALLOC_FUNC(AllocBytes)(void **out, size_t size)
+PACKAGE(LIB_PREFIX(ALLOC_MOD),
+    OPERATION(Bytes, (void *outPointerObject, size_t size)),
+    OPERATION(ZeroBytes, (void *outPointerObject, size_t size)),
+    OPERATION(Array, (void *outPointerObject, size_t count, size_t elementSize)),
+    OPERATION(ZeroArray, (void *outPointerObject, size_t count, size_t elementSize)),
+    OPERATION(ReallocBytes, (void *inoutPointerObject, size_t newSize)),
+    OPERATION(ReallocArray, (void *inoutPointerObject, size_t count, size_t elementSize)),
+    OPERATION(Free, (void *inoutPointerObject))
+);
 
-#define ALLOC_ARRAY_PROTOTYPE                                                  \
-  static inline OPSTATUS ALLOC_FUNC(AllocArray)(void **out, size_t count,      \
-                                                 size_t elementSize)
+static inline OPSTATUS ALLOC_FUNC(AllocBytes)(void *outPointerObject, size_t size) {
+  return ALLOC_FUNC(Bytes)(outPointerObject, size);
+}
 
-#define REALLOC_BYTES_PROTOTYPE                                                \
-  static inline OPSTATUS ALLOC_FUNC(ReallocBytes)(void **ptr, size_t size)
+static inline OPSTATUS ALLOC_FUNC(AllocArray)(void *outPointerObject, size_t count, size_t elementSize) {
+  return ALLOC_FUNC(Array)(outPointerObject, count, elementSize);
+}
 
-#define REALLOC_ARRAY_PROTOTYPE                                                \
-  static inline OPSTATUS ALLOC_FUNC(ReallocArray)(void **ptr, size_t count,    \
-                                                   size_t elementSize)
+static inline OPSTATUS ALLOC_FUNC(FreePointer)(void *inoutPointerObject) {
+  return ALLOC_FUNC(Free)(inoutPointerObject);
+}
 
-#define FREE_POINTER_PROTOTYPE                                                 \
-  static inline OPSTATUS ALLOC_FUNC(FreePointer)(void **ptr)
-
-ALLOC_BYTES_PROTOTYPE;
-ALLOC_ARRAY_PROTOTYPE;
-REALLOC_BYTES_PROTOTYPE;
-REALLOC_ARRAY_PROTOTYPE;
-FREE_POINTER_PROTOTYPE;
-
-/*
- * Public free operation: the argument is the pointer lvalue itself, not its
- * address. This keeps the ergonomic contract explicit and clears the lvalue.
- *
- * Allocation/reallocation deliberately use the raw void* APIs above. Typed
- * callers allocate through a local void* temporary and publish the converted
- * pointer only after SUCCESS, avoiding invalid T** -> void** aliasing.
- */
-#define Memory_Free(pointerLvalue)                                             \
-  do {                                                                         \
-    free((void *)(pointerLvalue));                                             \
-    (pointerLvalue) = NULL;                                                    \
-  } while (0)
+#define Memory_Free(pointerLvalue) ALLOC_FUNC(Free)(&(pointerLvalue))
 
 #include "Impl/Alloc.impl"
 /* EOF */

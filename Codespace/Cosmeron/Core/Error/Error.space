@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Namespace.h"
+#include "../Preprocessor/Operations.h"
 
 #define ERROR_MOD Error
 #define ERROR_CMOD ERROR
@@ -13,4 +14,19 @@
 #define ERROR_TYPE(NAME) ERROR_NS(NAME)
 #define ERROR_FUNC(NAME) ERROR_NS(NAME)
 #define ERROR_CONST(NAME) ERROR_CNS(NAME)
+
+#define ERROR_CONFIG_COL_NAME(NAME, VALUE) NAME
+#define ERROR_CONFIG_COL_VALUE(NAME, VALUE) VALUE
+#define ERROR_CONFIG_GET(FIELD, ROW)                                           \
+  PP_OP_CAT2(ERROR_CONFIG_COL_, FIELD) ROW
+
+#define ERROR_CONFIG_TABLE(X)                                                  \
+  X((MAX_CHAIN_DEPTH, 16))
+
+enum ERROR_TYPE(Config) {
+#define ERROR_CONFIG_ENUM_ITEM(ROW)                                            \
+  ERROR_CONST(ERROR_CONFIG_GET(NAME, ROW)) = ERROR_CONFIG_GET(VALUE, ROW),
+  ERROR_CONFIG_TABLE(ERROR_CONFIG_ENUM_ITEM)
+#undef ERROR_CONFIG_ENUM_ITEM
+};
 /* EOF */

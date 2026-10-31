@@ -1,0 +1,9 @@
+#pragma once
+
+#define PRIMITIVE_TYPE_TABLE_CHARACTER(X)                                      \
+  X((char, Char, Ch, TChar, CHAR, 8))                                          \
+  X((uint8_t, Char8, Ch8, TChar8, CHAR, 8))                                    \
+  X((uint16_t, Char16, Ch16, TChar16, CHAR, 16))                              \
+  X((uint32_t, Char32, Ch32, TChar32, CHAR, 32))
+/* EOF */
+

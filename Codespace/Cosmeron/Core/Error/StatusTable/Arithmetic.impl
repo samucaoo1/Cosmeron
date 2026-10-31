@@ -1,0 +1,6 @@
+#pragma once
+
+#define STATUS_TABLE_ARITHMETIC(X)                                             \
+  X((ARITHMETIC_OVERFLOW, ARITHMETIC, "Arithmetic overflow"))                   \
+  X((DIVISION_BY_ZERO, ARITHMETIC, "Division by zero"))
+/* EOF */

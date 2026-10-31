@@ -1,35 +1,92 @@
 #pragma once
 
-#if OS_WINDOWS
-#include <windows.h>
-#include "StacktraceWindows.inc"
-#elif OS_MAC || (OS_LINUX && LIBC_GLIBC)
-/* execinfo/backtrace may need a separate link library on BSD and musl.
- * Retain it only where it is known to satisfy the zero-link policy. */
-#include <execinfo.h>
-#include "StacktraceUnix.inc"
-#else
-PANIC_STACKTRACE_PROTOTYPE {
-  fprintf(stderr, "stacktrace unavailable (no zero-link platform backend)\n");
-}
-#endif
+#include <stdio.h>
+#include <stdlib.h>
 
-PANIC_TRIGGER_PROTOTYPE {
+static PANIC_HANDLER_CALLBACK PANIC_INS(ActiveHandler) = {NULL, NULL};
+
+PACKAGE_PROCEDURE_IMPLEMENT_EX(LIB_PREFIX(PANIC_MOD), SetHandler,
+                               (PANIC_HANDLER_CALLBACK handler)) {
+  PANIC_INS(ActiveHandler) = handler;
+}
+
+PACKAGE_FUNCTION_IMPLEMENT_EX(LIB_PREFIX(PANIC_MOD), PANIC_HANDLER_CALLBACK,
+                              GetHandler, ()) {
+  return PANIC_INS(ActiveHandler);
+}
+
+PACKAGE_PROCEDURE_IMPLEMENT_EX(LIB_PREFIX(PANIC_MOD), ResetHandler, ()) {
+  PANIC_INS(ActiveHandler).function = NULL;
+  PANIC_INS(ActiveHandler).context = NULL;
+}
+
+PACKAGE_FUNCTION_IMPLEMENT_EX(LIB_PREFIX(PANIC_MOD), const char *, KindName,
+                              (PANIC_TYPE(Kind) kind)) {
+  switch (kind) {
+#define PANIC_KIND_CASE(ROW)                                                   \
+  case PANIC_CONST(PP_OP_CAT2(KIND_, PANIC_KIND_GET(NAME, ROW))):              \
+    return PP_OP_STRING(PANIC_KIND_GET(NAME, ROW));
+    PANIC_KIND_TABLE(PANIC_KIND_CASE)
+#undef PANIC_KIND_CASE
+    default:
+      return "UNKNOWN";
+  }
+}
+
+PACKAGE_PROCEDURE_IMPLEMENT_EX(
+    LIB_PREFIX(PANIC_MOD), Trigger,
+    (PANIC_TYPE(Kind) kind, const char *message, const char *expression,
+     const char *file, uint32_t line, const char *function)) {
+  PANIC_TYPE(Info) info;
+  info.kind = kind;
+  info.message = message ? message : "unknown";
+  info.expression = expression;
+  info.file = file ? file : "unknown";
+  info.line = line;
+  info.function = function ? function : "unknown";
+
+  if (GNS2(CALLBACK_FUNC(PANIC_INS(PanicHandler_Function)),
+           IsValid)(PANIC_INS(ActiveHandler))) {
+    GNS2(CALLBACK_FUNC(PANIC_INS(PanicHandler_Function)),
+         Invoke)(PANIC_INS(ActiveHandler), &info);
+    return;
+  }
+
   fprintf(stderr, "\n");
-  fprintf(stderr, "============== PANIC ==============\n");
-  fprintf(stderr, "message : %s\n", message ? message : "unknown");
-  fprintf(stderr, "file    : %s\n", file);
-  fprintf(stderr, "line    : %d\n", line);
-  fprintf(stderr, "function: %s\n", function);
+  fprintf(stderr, "============== PANIC [%s] ==============\n",
+          PANIC_FUNC(KindName)(kind));
+  fprintf(stderr, "message   : %s\n", info.message);
+  if (info.expression != NULL) {
+    fprintf(stderr, "expression: %s\n", info.expression);
+  }
+  fprintf(stderr, "file      : %s\n", info.file);
+  fprintf(stderr, "line      : %u\n", (unsigned)info.line);
+  fprintf(stderr, "function  : %s\n", info.function);
   fprintf(stderr, "\nStacktrace:\n");
 
-  PANIC_INTERNAL_FUNC(Stacktrace)();
+  ERROR_TYPE(TStacktrace) trace = {0};
+  GNS2(ERROR_TYPE(TStacktrace), Init)(&trace);
+  if (GNS2(ERROR_TYPE(TStacktrace), Capture)(&trace, 1,
+                                            STACKTRACE_CONST(MAX_FRAMES)) ==
+      STATUS_CONST(SUCCESS)) {
+    char traceBuf[1024];
+    size_t written = 0;
+    if (GNS2(ERROR_TYPE(TStacktrace), Format)(
+            &trace, traceBuf, sizeof(traceBuf), &written) ==
+        STATUS_CONST(SUCCESS)) {
+      fprintf(stderr, "%s\n", traceBuf);
+    }
+  }
 
-  fprintf(stderr, "===================================\n");
+  fprintf(stderr, "========================================\n");
   abort();
 }
 
-PANIC_NOW_PROTOTYPE {
-  PANIC_INTERNAL_FUNC(Trigger)(message, "unknown", 0, "unknown");
+PACKAGE_PROCEDURE_IMPLEMENT_EX(LIB_PREFIX(PANIC_MOD), Now,
+                               (const char *message)) {
+  PANIC_FUNC(Trigger)(PANIC_CONST(KIND_PANIC), message, NULL, "unknown", 0U,
+                      "unknown");
 }
+
+PACKAGE_IMPLEMENT(LIB_PREFIX(PANIC_MOD));
 /* EOF */

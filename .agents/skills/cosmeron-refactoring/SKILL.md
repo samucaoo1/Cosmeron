@@ -67,6 +67,14 @@ Baseie toda refatoração nas regras de [AGENTS.md](file:///run/media/okarin/HD/
 ### D. Enums e Tabelas X-Macro
 - **Proibido:** Enums literais manuais `enum { FOO, BAR }`.
 - **Obrigatório:** Toda enumeração deve possuir sua tabela X-Macro (`<DOMAIN>_TABLE(X)`).
+- **Padrão de Tupla e Seletores Desacoplados:**
+  - Linhas empacotadas em tuplas: `X((COL1, COL2, ...))`.
+  - Seletores de coluna: `#define DOMAIN_COL_<FIELD>(...) <FIELD>`.
+  - Desempacotamento de campos: `#define DOMAIN_GET(FIELD, ROW) PP_OP_CAT2(DOMAIN_COL_, FIELD) ROW`.
+  - Consumidores dependem apenas do `ROW` e do `DOMAIN_GET`, garantindo que adições de colunas não quebrem o código consumidor.
+- **Divisão Modular Categórica:**
+  - Tabelas ricas ou com múltiplos domínios são divididas em arquivos `.impl` dentro de uma pasta `<Domain>Table/` (ex: `Generic.impl`, `Arithmetic.impl`, `Memory.impl`).
+  - O cabeçalho agregador `<Domain>Table.h` unifica as tabelas parciais em `<DOMAIN>_TABLE(X)`.
 - Prefixos de constante pública: `*_CONST(NAME)`.
 
 ### E. Convenção de Tipos e Nomes

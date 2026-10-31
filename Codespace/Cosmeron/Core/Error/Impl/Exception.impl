@@ -1,0 +1,85 @@
+#pragma once
+
+static EXCEPTION_TYPE(TExceptionFrame) * EXCEPTION_INS(ActiveFrame) = NULL;
+
+OBJECT_IMPLEMENT(EXCEPTION_TYPE(TExceptionFrame));
+
+PACKAGE_PROCEDURE_IMPLEMENT_EX(LIB_PREFIX(EXCEPTION_MOD), PushFrame,
+                               (EXCEPTION_TYPE(TExceptionFrame) * frame)) {
+  if (frame == NULL) {
+    return;
+  }
+  frame->previous = EXCEPTION_INS(ActiveFrame);
+  EXCEPTION_INS(ActiveFrame) = frame;
+}
+
+PACKAGE_PROCEDURE_IMPLEMENT_EX(LIB_PREFIX(EXCEPTION_MOD), PopFrame, ()) {
+  if (EXCEPTION_INS(ActiveFrame) != NULL) {
+    EXCEPTION_INS(ActiveFrame) = EXCEPTION_INS(ActiveFrame)->previous;
+  }
+}
+
+PACKAGE_PROCEDURE_IMPLEMENT_EX(LIB_PREFIX(EXCEPTION_MOD), RegisterCleanup,
+                               (EXCEPTION_CLEANUP_CALLBACK cleanup)) {
+  if (EXCEPTION_INS(ActiveFrame) != NULL) {
+    EXCEPTION_INS(ActiveFrame)->cleanup = cleanup;
+  }
+}
+
+PACKAGE_PROCEDURE_IMPLEMENT_EX(LIB_PREFIX(EXCEPTION_MOD), Throw,
+                               (const ERROR_TYPE(TError) * error)) {
+  EXCEPTION_TYPE(TExceptionFrame) *frame = EXCEPTION_INS(ActiveFrame);
+  if (frame == NULL) {
+    PANIC("Unhandled exception thrown without active TRY block");
+  }
+
+  if (error != NULL) {
+    frame->error = *error;
+  } else {
+    GNS2(ERROR_TYPE(TError), FromStatus)(&frame->error,
+                                         STATUS_CONST(GENERIC_ERROR));
+  }
+
+  if (GNS2(CALLBACK_FUNC(EXCEPTION_INS(CleanupFunction)),
+           IsValid)(frame->cleanup)) {
+    GNS2(CALLBACK_FUNC(EXCEPTION_INS(CleanupFunction)),
+         Invoke)(frame->cleanup);
+    frame->cleanup.function = NULL;
+    frame->cleanup.context = NULL;
+  }
+
+  longjmp(frame->env, 1);
+}
+
+PACKAGE_PROCEDURE_IMPLEMENT_EX(
+    LIB_PREFIX(EXCEPTION_MOD), ThrowStatus,
+    (OPSTATUS status, const char *message, const char *file, uint32_t line,
+     const char *function)) {
+  ERROR_TYPE(TError) err;
+  GNS2(ERROR_TYPE(TError), Create)(&err, status, message);
+  GNS2(ERROR_TYPE(TError), SetOrigin)(&err, file, line, function, NULL, NULL);
+  EXCEPTION_FUNC(Throw)(&err);
+}
+
+PACKAGE_PROCEDURE_IMPLEMENT_EX(LIB_PREFIX(EXCEPTION_MOD), Rethrow, ()) {
+  if (EXCEPTION_INS(ActiveFrame) == NULL) {
+    PANIC("Cannot rethrow: no active exception frame");
+  }
+  EXCEPTION_INS(ActiveFrame)->rethrow = true;
+}
+
+PACKAGE_FUNCTION_IMPLEMENT_EX(LIB_PREFIX(EXCEPTION_MOD),
+                              const ERROR_TYPE(TError) *, CurrentError, ()) {
+  if (EXCEPTION_INS(ActiveFrame) == NULL) {
+    return NULL;
+  }
+  return &EXCEPTION_INS(ActiveFrame)->error;
+}
+
+PACKAGE_PREDICATE_IMPLEMENT_EX(LIB_PREFIX(EXCEPTION_MOD), HasActiveFrame, ()) {
+  return EXCEPTION_INS(ActiveFrame) != NULL;
+}
+
+PACKAGE_IMPLEMENT(LIB_PREFIX(EXCEPTION_MOD));
+/* EOF */
+

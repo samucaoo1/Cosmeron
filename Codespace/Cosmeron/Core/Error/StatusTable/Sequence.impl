@@ -1,0 +1,6 @@
+#pragma once
+
+#define STATUS_TABLE_SEQUENCE(X)                                               \
+  X((INVALID_SEQUENCE, SEQUENCE, "Invalid sequence"))                           \
+  X((INCOMPLETE_SEQUENCE, SEQUENCE, "Incomplete sequence"))
+/* EOF */

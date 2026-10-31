@@ -1,0 +1,30 @@
+#pragma once
+
+OBJECT_OPERATION_IMPLEMENT_EX(ERROR_TYPE(TErrorContext), Create,
+                             (const char *file, uint32_t line,
+                              const char *function, const char *description,
+                              const void *userData)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  GNS2(ERROR_TYPE(TErrorContext), Init)(self);
+  self->file = file;
+  self->line = line;
+  self->function = function;
+  self->description = description;
+  self->userData = userData;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROCEDURE_IMPLEMENT_EX(ERROR_TYPE(TErrorContext), Clear, ()) {
+  if (!self)
+    return;
+  self->file = NULL;
+  self->line = 0U;
+  self->function = NULL;
+  self->description = NULL;
+  self->userData = NULL;
+}
+
+OBJECT_IMPLEMENT(ERROR_TYPE(TErrorContext));
+/* EOF */
+

@@ -1,0 +1,8 @@
+#pragma once
+
+#define STATUS_TABLE_CONCURRENCY(X)                                            \
+  X((BUSY, CONCURRENCY, "Busy"))                                               \
+  X((WOULD_BLOCK, CONCURRENCY, "Would block"))                                 \
+  X((TIMEOUT, CONCURRENCY, "Timeout"))                                         \
+  X((CANCELLED, CONCURRENCY, "Cancelled"))
+/* EOF */

@@ -1,0 +1,128 @@
+#pragma once
+
+OBJECT_OPERATION_IMPLEMENT_EX(ERROR_TYPE(TError), Create,
+                             (OPSTATUS code, const char *message)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  GNS2(ERROR_TYPE(TError), Init)(self);
+  self->code = code;
+  self->message = message;
+  GNS2(ERROR_TYPE(TErrorContext), Clear)(&self->context);
+  self->cause = NULL;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(ERROR_TYPE(TError), FromStatus, (OPSTATUS code)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  GNS2(ERROR_TYPE(TError), Init)(self);
+  self->code = code;
+  self->message = NULL;
+  GNS2(ERROR_TYPE(TErrorContext), Clear)(&self->context);
+  self->cause = NULL;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROCEDURE_IMPLEMENT_EX(ERROR_TYPE(TError), Clear, ()) {
+  if (!self)
+    return;
+  self->code = STATUS_CONST(SUCCESS);
+  self->message = NULL;
+  GNS2(ERROR_TYPE(TErrorContext), Clear)(&self->context);
+  self->cause = NULL;
+}
+
+OBJECT_FUNCTION_IMPLEMENT_EX(ERROR_TYPE(TError), const char *, Message, ()) {
+  if (!self)
+    return "Unknown error (null pointer)";
+  if (self->message)
+    return self->message;
+  return STATUS_FUNC(Message)(self->code);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(ERROR_TYPE(TError), SetContext,
+                             (const ERROR_TYPE(TErrorContext) *context)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (context) {
+    self->context = *context;
+  } else {
+    GNS2(ERROR_TYPE(TErrorContext), Clear)(&self->context);
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(ERROR_TYPE(TError), SetOrigin,
+                             (const char *file, uint32_t line,
+                              const char *function, const char *description,
+                              const void *userData)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  return GNS2(ERROR_TYPE(TErrorContext), Create)(&self->context, file, line,
+                                                 function, description,
+                                                 userData);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(ERROR_TYPE(TError), SetCause,
+                             (const struct ERROR_TYPE(TError) *cause)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (cause == NULL) {
+    self->cause = NULL;
+    return STATUS_CONST(SUCCESS);
+  }
+
+  /* Prevent immediate self-cycle */
+  if (cause == self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  /* Traverse cause chain to detect cycle or depth overflow */
+  const struct ERROR_TYPE(TError) *curr = cause;
+  size_t count = 0U;
+  while (curr != NULL) {
+    if (curr == self)
+      return STATUS_CONST(INVALID_ARGUMENT);
+
+    count++;
+    if (count > ERROR_CONST(MAX_CHAIN_DEPTH))
+      return STATUS_CONST(OUT_OF_RANGE);
+
+    curr = curr->cause;
+  }
+
+  self->cause = cause;
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_FUNCTION_IMPLEMENT_EX(ERROR_TYPE(TError),
+                             const struct ERROR_TYPE(TError) *, RootCause, ()) {
+  if (!self)
+    return NULL;
+  const struct ERROR_TYPE(TError) *curr = self;
+  size_t count = 0U;
+  while (curr->cause != NULL && count < ERROR_CONST(MAX_CHAIN_DEPTH)) {
+    if (curr->cause == self)
+      break;
+    curr = curr->cause;
+    count++;
+  }
+  return curr;
+}
+
+OBJECT_FUNCTION_IMPLEMENT_EX(ERROR_TYPE(TError), size_t, Depth, ()) {
+  if (!self)
+    return 0U;
+  size_t depth = 1U;
+  const struct ERROR_TYPE(TError) *curr = self->cause;
+  while (curr != NULL && depth <= ERROR_CONST(MAX_CHAIN_DEPTH)) {
+    if (curr == self)
+      break;
+    depth++;
+    curr = curr->cause;
+  }
+  return depth;
+}
+
+OBJECT_IMPLEMENT(ERROR_TYPE(TError));
+/* EOF */

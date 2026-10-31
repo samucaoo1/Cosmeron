@@ -1,0 +1,12 @@
+#pragma once
+
+#define STATUS_TABLE_GENERIC(X)                                                \
+  X((SUCCESS, SUCCESS, "Success"))                                             \
+  X((GENERIC_ERROR, GENERIC, "Generic error"))                                 \
+  X((INVALID_ARGUMENT, GENERIC, "Invalid argument"))                           \
+  X((OUT_OF_RANGE, GENERIC, "Out of range"))                                   \
+  X((NOT_FOUND, GENERIC, "Not found"))                                         \
+  X((ALREADY_EXISTS, GENERIC, "Already exists"))                               \
+  X((NOT_SUPPORTED, GENERIC, "Not supported"))                                 \
+  X((NOT_AVAILABLE, GENERIC, "Not available"))
+/* EOF */

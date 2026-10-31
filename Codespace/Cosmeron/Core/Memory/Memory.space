@@ -3,6 +3,7 @@
 #include "../Error/Status.h"
 #include "../Namespace.h"
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -19,5 +20,42 @@
 #define MEMORY_TYPE(NAME) MEMORY_NS(NAME)
 #define MEMORY_FUNC(NAME) MEMORY_NS(NAME)
 #define MEMORY_CONST(NAME) MEMORY_CNS(NAME)
+
+typedef union MEMORY_INS(MaxAlignment_InternalType_) {
+  long double longDoubleValue;
+  double doubleValue;
+  long long integerValue;
+  void *pointerValue;
+} MEMORY_INS(MaxAlignment_InternalType_);
+
+#define COSMERON_MACRO_INTERNAL_MEMORY_MAX_ALIGNMENT                          \
+  _Alignof(MEMORY_INS(MaxAlignment_InternalType_))
+
+static inline size_t MEMORY_INS(MaxAlignment)(void) {
+  return _Alignof(MEMORY_INS(MaxAlignment_InternalType_));
+}
+
+static inline OPSTATUS MEMORY_INS(CheckedMultiplySize)(size_t count,
+                                                      size_t elementSize,
+                                                      size_t *outSize) {
+  if (!outSize)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (elementSize != 0U && count > SIZE_MAX / elementSize)
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+
+  *outSize = count * elementSize;
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline void MEMORY_INS(WritePointer)(void *outPointerObject, void *value) {
+  memcpy(outPointerObject, &value, sizeof(void *));
+}
+
+static inline void *MEMORY_INS(ReadPointer)(const void *pointerObject) {
+  void *value = NULL;
+  memcpy(&value, pointerObject, sizeof(void *));
+  return value;
+}
 
 /* EOF */

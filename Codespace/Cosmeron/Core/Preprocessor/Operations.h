@@ -52,4 +52,18 @@
 #define PP_OP_COMMA() ,
 #define PP_OP_IDENTITY(x) x
 
+/* ============================================================
+ * PREPROCESSOR - CALL INVOCATION HELPERS
+ * ============================================================ */
+
+#define PP_CALL_1(m, ctx, x) m(x)
+#define PP_CALL_2(m, ctx, x) m(ctx, x)
+
+/* Dedicated caller tokens to avoid blue-paint recursion suppression during nesting */
+#define PP_CALL_FOR_1(m, ctx, x) m(x)
+#define PP_CALL_FOR_2(m, ctx, x) m(ctx, x)
+
+#define PP_CALL_MAP_1(m, ctx, x) m(x)
+#define PP_CALL_MAP_2(m, ctx, x) m(ctx, x)
+
 /* EOF */

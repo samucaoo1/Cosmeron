@@ -1,118 +1,66 @@
 #pragma once
 
-STREAM_INIT_READ_PROTOTYPE {
-  if (!stream || (!buffer && size > 0))
+OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), InitRead, (const void *buffer, size_t size)) {
+  if (!self || (!buffer && size > 0U))
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  stream->data = (uint8_t *)(uintptr_t)buffer;
-  stream->capacity = size;
-  stream->offset = 0;
-  stream->bitOffset = 0;
-  stream->isReadOnly = true;
+  self->data = (uint8_t *)(uintptr_t)buffer;
+  self->capacity = size;
+  self->offset = 0U;
+  self->bitOffset = 0U;
+  self->isReadOnly = true;
   return STATUS_CONST(SUCCESS);
 }
 
-STREAM_INIT_WRITE_PROTOTYPE {
-  if (!stream || (!buffer && capacity > 0))
+OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), InitWrite, (void *buffer, size_t capacity)) {
+  if (!self || (!buffer && capacity > 0U))
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  stream->data = (uint8_t *)buffer;
-  stream->capacity = capacity;
-  stream->offset = 0;
-  stream->bitOffset = 0;
-  stream->isReadOnly = false;
+  self->data = (uint8_t *)buffer;
+  self->capacity = capacity;
+  self->offset = 0U;
+  self->bitOffset = 0U;
+  self->isReadOnly = false;
   return STATUS_CONST(SUCCESS);
 }
 
-STREAM_REMAINING_PROTOTYPE {
-  if (!stream || stream->offset >= stream->capacity)
-    return 0;
-  return stream->capacity - stream->offset;
-}
-
-STREAM_REMAINING_BITS_PROTOTYPE {
-  size_t bytes;
-  if (!stream || stream->offset >= stream->capacity)
-    return 0;
-  bytes = stream->capacity - stream->offset;
-  return (bytes * 8U) - (size_t)stream->bitOffset;
-}
-
-STREAM_POSITION_PROTOTYPE {
-  return stream ? stream->offset : 0;
-}
-
-STREAM_BIT_POSITION_PROTOTYPE {
-  return stream ? stream->bitOffset : 0;
-}
-
-STREAM_CAPACITY_PROTOTYPE {
-  return stream ? stream->capacity : 0;
-}
-
-STREAM_IS_AT_END_PROTOTYPE {
-  return !stream || (stream->offset >= stream->capacity && stream->bitOffset == 0);
-}
-
-STREAM_IS_READ_ONLY_PROTOTYPE {
-  return !stream || stream->isReadOnly;
-}
-
-STREAM_HAS_REMAINING_PROTOTYPE {
-  return stream && (STREAM_FUNC(Remaining)(stream) >= count);
-}
-
-STREAM_HAS_REMAINING_BITS_PROTOTYPE {
-  return stream && (STREAM_FUNC(RemainingBits)(stream) >= bitCount);
-}
-
-STREAM_DATA_PROTOTYPE {
-  return stream ? (const void *)stream->data : NULL;
-}
-
-STREAM_CURRENT_PROTOTYPE {
-  if (!stream || !stream->data || stream->offset >= stream->capacity)
-    return NULL;
-  return (const void *)(stream->data + stream->offset);
-}
-
-STREAM_ALIGN_TO_BYTE_PROTOTYPE {
-  if (!stream)
+OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), AlignToByte, ()) {
+  if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  if (stream->bitOffset > 0) {
-    if (stream->offset >= stream->capacity)
+  if (self->bitOffset > 0U) {
+    if (self->offset >= self->capacity)
       return STATUS_CONST(OUT_OF_RANGE);
-    stream->offset++;
-    stream->bitOffset = 0;
+    self->offset++;
+    self->bitOffset = 0U;
   }
   return STATUS_CONST(SUCCESS);
 }
 
-STREAM_SEEK_PROTOTYPE {
-  if (!stream)
+OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), Seek, (int64_t offset, STREAM_TYPE(SeekOrigin) origin)) {
+  if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  stream->bitOffset = 0;
+  self->bitOffset = 0U;
 
   switch (origin) {
   case STREAM_CONST(SEEK_BEGIN):
-    if (offset < 0 || (uint64_t)offset > stream->capacity)
+    if (offset < 0 || (uint64_t)offset > self->capacity)
       return STATUS_CONST(OUT_OF_RANGE);
-    stream->offset = (size_t)offset;
+    self->offset = (size_t)offset;
     return STATUS_CONST(SUCCESS);
 
   case STREAM_CONST(SEEK_CURRENT):
     if (offset < 0) {
       size_t backward = (size_t)(-offset);
-      if (backward > stream->offset)
+      if (backward > self->offset)
         return STATUS_CONST(OUT_OF_RANGE);
-      stream->offset -= backward;
+      self->offset -= backward;
     } else {
       size_t forward = (size_t)offset;
-      if (forward > stream->capacity - stream->offset)
+      if (forward > self->capacity - self->offset)
         return STATUS_CONST(OUT_OF_RANGE);
-      stream->offset += forward;
+      self->offset += forward;
     }
     return STATUS_CONST(SUCCESS);
 
@@ -121,9 +69,9 @@ STREAM_SEEK_PROTOTYPE {
       return STATUS_CONST(OUT_OF_RANGE);
     {
       size_t backward = (size_t)(-offset);
-      if (backward > stream->capacity)
+      if (backward > self->capacity)
         return STATUS_CONST(OUT_OF_RANGE);
-      stream->offset = stream->capacity - backward;
+      self->offset = self->capacity - backward;
     }
     return STATUS_CONST(SUCCESS);
 
@@ -132,104 +80,105 @@ STREAM_SEEK_PROTOTYPE {
   }
 }
 
-STREAM_SKIP_PROTOTYPE {
+OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), Skip, (size_t count)) {
   OPSTATUS status;
-  if (!stream)
+  if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  status = STREAM_FUNC(AlignToByte)(stream);
+  status = STREAM_FUNC(AlignToByte)(self);
   if (status != STATUS_CONST(SUCCESS))
     return status;
 
-  if (count > STREAM_FUNC(Remaining)(stream))
+  if (count > STREAM_FUNC(Remaining)(self))
     return STATUS_CONST(OUT_OF_RANGE);
 
-  stream->offset += count;
+  self->offset += count;
   return STATUS_CONST(SUCCESS);
 }
 
-STREAM_REWIND_PROTOTYPE {
-  if (!stream)
+OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), Rewind, ()) {
+  if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  stream->offset = 0;
-  stream->bitOffset = 0;
+  self->offset = 0U;
+  self->bitOffset = 0U;
   return STATUS_CONST(SUCCESS);
 }
 
-STREAM_SLICE_PROTOTYPE {
-  if (!stream || !outSubStream)
+OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), Slice, (size_t size, STREAM_TYPE(TStream) *outSubStream)) {
+  if (!self || !outSubStream)
     return STATUS_CONST(INVALID_ARGUMENT);
-  if (stream->bitOffset != 0)
+  if (self->bitOffset != 0U)
     return STATUS_CONST(INVALID_ARGUMENT);
-  if (size > STREAM_FUNC(Remaining)(stream))
+  if (size > STREAM_FUNC(Remaining)(self))
     return STATUS_CONST(OUT_OF_RANGE);
 
-  outSubStream->data = stream->data ? (stream->data + stream->offset) : NULL;
+  STREAM_FUNC(Init)(outSubStream);
+  outSubStream->data = self->data ? (self->data + self->offset) : NULL;
   outSubStream->capacity = size;
-  outSubStream->offset = 0;
-  outSubStream->bitOffset = 0;
-  outSubStream->isReadOnly = stream->isReadOnly;
+  outSubStream->offset = 0U;
+  outSubStream->bitOffset = 0U;
+  outSubStream->isReadOnly = self->isReadOnly;
   return STATUS_CONST(SUCCESS);
 }
 
-STREAM_READ_SLICE_PROTOTYPE {
-  OPSTATUS status = STREAM_FUNC(Slice)(stream, size, outSubStream);
+OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), ReadSlice, (size_t size, STREAM_TYPE(TStream) *outSubStream)) {
+  OPSTATUS status = STREAM_FUNC(Slice)(self, size, outSubStream);
   if (status != STATUS_CONST(SUCCESS))
     return status;
 
-  stream->offset += size;
+  self->offset += size;
   return STATUS_CONST(SUCCESS);
 }
 
-STREAM_READ_BYTES_PROTOTYPE {
+OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), ReadBytes, (void *destination, size_t size)) {
   OPSTATUS status;
-  if (!stream || (!destination && size > 0))
+  if (!self || (!destination && size > 0U))
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  status = STREAM_FUNC(AlignToByte)(stream);
+  status = STREAM_FUNC(AlignToByte)(self);
   if (status != STATUS_CONST(SUCCESS))
     return status;
 
-  if (size > STREAM_FUNC(Remaining)(stream))
+  if (size > STREAM_FUNC(Remaining)(self))
     return STATUS_CONST(OUT_OF_RANGE);
 
-  if (size > 0)
-    memcpy(destination, stream->data + stream->offset, size);
-  stream->offset += size;
+  if (size > 0U)
+    memcpy(destination, self->data + self->offset, size);
+  self->offset += size;
   return STATUS_CONST(SUCCESS);
 }
 
-STREAM_PEEK_BYTES_PROTOTYPE {
-  if (!stream || (!destination && size > 0))
+OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), PeekBytes, (void *destination, size_t size)) {
+  if (!self || (!destination && size > 0U))
     return STATUS_CONST(INVALID_ARGUMENT);
-  if (stream->bitOffset != 0)
+  if (self->bitOffset != 0U)
     return STATUS_CONST(INVALID_ARGUMENT);
-  if (size > STREAM_FUNC(Remaining)(stream))
+  if (size > STREAM_FUNC(Remaining)(self))
     return STATUS_CONST(OUT_OF_RANGE);
 
-  if (size > 0)
-    memcpy(destination, stream->data + stream->offset, size);
+  if (size > 0U)
+    memcpy(destination, self->data + self->offset, size);
   return STATUS_CONST(SUCCESS);
 }
 
-STREAM_READ_BITS_PROTOTYPE {
-  uint64_t result = 0;
-  if (!stream || !outValue || bitCount == 0 || bitCount > 64U)
+OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), ReadBits, (uint8_t bitCount, uint64_t *outValue)) {
+  uint64_t result = 0U;
+  if (!self || !outValue || bitCount == 0U || bitCount > 64U)
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  if (!STREAM_FUNC(HasRemainingBits)(stream, bitCount))
+  if (!STREAM_FUNC(HasRemainingBits)(self, bitCount))
     return STATUS_CONST(OUT_OF_RANGE);
 
-  for (uint8_t i = 0; i < bitCount; ++i) {
-    uint8_t byteVal = stream->data[stream->offset];
-    uint8_t bit = (uint8_t)((byteVal >> (7U - stream->bitOffset)) & 1U);
+  for (uint8_t i = 0U; i < bitCount; ++i) {
+    uint8_t byteVal = self->data[self->offset];
+    uint8_t bit = (uint8_t)((byteVal >> (7U - self->bitOffset)) & 1U);
     result = (result << 1U) | (uint64_t)bit;
 
-    stream->bitOffset++;
-    if (stream->bitOffset == 8U) {
-      stream->offset++;
-      stream->bitOffset = 0;
+    self->bitOffset++;
+    if (self->bitOffset == 8U) {
+      self->offset++;
+      self->bitOffset = 0U;
     }
   }
 
@@ -237,77 +186,77 @@ STREAM_READ_BITS_PROTOTYPE {
   return STATUS_CONST(SUCCESS);
 }
 
-STREAM_WRITE_BITS_PROTOTYPE {
-  if (!stream || bitCount == 0 || bitCount > 64U)
+OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), WriteBits, (uint64_t value, uint8_t bitCount)) {
+  if (!self || bitCount == 0U || bitCount > 64U)
     return STATUS_CONST(INVALID_ARGUMENT);
-  if (stream->isReadOnly)
+  if (self->isReadOnly)
     return STATUS_CONST(NOT_SUPPORTED);
 
-  if (!STREAM_FUNC(HasRemainingBits)(stream, bitCount))
+  if (!STREAM_FUNC(HasRemainingBits)(self, bitCount))
     return STATUS_CONST(INSUFFICIENT_SPACE);
 
-  for (uint8_t i = 0; i < bitCount; ++i) {
+  for (uint8_t i = 0U; i < bitCount; ++i) {
     uint8_t shift = (uint8_t)(bitCount - 1U - i);
     uint8_t bit = (uint8_t)((value >> shift) & 1U);
 
-    if (stream->bitOffset == 0)
-      stream->data[stream->offset] = 0;
+    if (self->bitOffset == 0U)
+      self->data[self->offset] = 0U;
 
-    stream->data[stream->offset] |= (uint8_t)(bit << (7U - stream->bitOffset));
+    self->data[self->offset] |= (uint8_t)(bit << (7U - self->bitOffset));
 
-    stream->bitOffset++;
-    if (stream->bitOffset == 8U) {
-      stream->offset++;
-      stream->bitOffset = 0;
+    self->bitOffset++;
+    if (self->bitOffset == 8U) {
+      self->offset++;
+      self->bitOffset = 0U;
     }
   }
 
   return STATUS_CONST(SUCCESS);
 }
 
-STREAM_WRITE_BYTES_PROTOTYPE {
+OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), WriteBytes, (const void *source, size_t size)) {
   OPSTATUS status;
-  if (!stream || (!source && size > 0))
+  if (!self || (!source && size > 0U))
     return STATUS_CONST(INVALID_ARGUMENT);
-  if (stream->isReadOnly)
+  if (self->isReadOnly)
     return STATUS_CONST(NOT_SUPPORTED);
 
-  status = STREAM_FUNC(AlignToByte)(stream);
+  status = STREAM_FUNC(AlignToByte)(self);
   if (status != STATUS_CONST(SUCCESS))
     return status;
 
-  if (size > STREAM_FUNC(Remaining)(stream))
+  if (size > STREAM_FUNC(Remaining)(self))
     return STATUS_CONST(INSUFFICIENT_SPACE);
 
-  if (size > 0)
-    memcpy(stream->data + stream->offset, source, size);
-  stream->offset += size;
+  if (size > 0U)
+    memcpy(self->data + self->offset, source, size);
+  self->offset += size;
   return STATUS_CONST(SUCCESS);
 }
 
-STREAM_READ_UINT8_PROTOTYPE {
+OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), ReadUInt8, (uint8_t *outValue)) {
   OPSTATUS status;
-  if (!stream || !outValue)
+  if (!self || !outValue)
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  status = STREAM_FUNC(AlignToByte)(stream);
+  status = STREAM_FUNC(AlignToByte)(self);
   if (status != STATUS_CONST(SUCCESS))
     return status;
 
-  if (stream->offset >= stream->capacity)
+  if (self->offset >= self->capacity)
     return STATUS_CONST(OUT_OF_RANGE);
 
-  *outValue = stream->data[stream->offset++];
+  *outValue = self->data[self->offset++];
   return STATUS_CONST(SUCCESS);
 }
 
-STREAM_READ_INT8_PROTOTYPE {
-  uint8_t rawVal = 0;
+OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), ReadInt8, (int8_t *outValue)) {
+  uint8_t rawVal = 0U;
   OPSTATUS status;
   if (!outValue)
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  status = STREAM_FUNC(ReadUInt8)(stream, &rawVal);
+  status = STREAM_FUNC(ReadUInt8)(self, &rawVal);
   if (status != STATUS_CONST(SUCCESS))
     return status;
 
@@ -315,172 +264,126 @@ STREAM_READ_INT8_PROTOTYPE {
   return STATUS_CONST(SUCCESS);
 }
 
-STREAM_PEEK_UINT8_PROTOTYPE {
-  if (!stream || !outValue)
+OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), PeekUInt8, (uint8_t *outValue)) {
+  if (!self || !outValue)
     return STATUS_CONST(INVALID_ARGUMENT);
-  if (stream->bitOffset != 0)
+  if (self->bitOffset != 0U)
     return STATUS_CONST(INVALID_ARGUMENT);
-  if (stream->offset >= stream->capacity)
+  if (self->offset >= self->capacity)
     return STATUS_CONST(OUT_OF_RANGE);
 
-  *outValue = stream->data[stream->offset];
+  *outValue = self->data[self->offset];
   return STATUS_CONST(SUCCESS);
 }
 
-STREAM_WRITE_UINT8_PROTOTYPE {
+OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), WriteUInt8, (uint8_t value)) {
   OPSTATUS status;
-  if (!stream)
+  if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
-  if (stream->isReadOnly)
+  if (self->isReadOnly)
     return STATUS_CONST(NOT_SUPPORTED);
 
-  status = STREAM_FUNC(AlignToByte)(stream);
+  status = STREAM_FUNC(AlignToByte)(self);
   if (status != STATUS_CONST(SUCCESS))
     return status;
 
-  if (stream->offset >= stream->capacity)
+  if (self->offset >= self->capacity)
     return STATUS_CONST(INSUFFICIENT_SPACE);
 
-  stream->data[stream->offset++] = value;
+  self->data[self->offset++] = value;
   return STATUS_CONST(SUCCESS);
 }
 
-STREAM_WRITE_INT8_PROTOTYPE {
-  return STREAM_FUNC(WriteUInt8)(stream, (uint8_t)value);
+OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), WriteInt8, (int8_t value)) {
+  return STREAM_FUNC(WriteUInt8)(self, (uint8_t)value);
 }
 
-/* -------------------------------------------------------------------------- */
-/* Implementation of multi-byte scalar generative macros                      */
-/* -------------------------------------------------------------------------- */
-
-#define STREAM_READ_UINT_LE_IMPLEMENT(UTYPE, SUFFIX)                           \
-  STREAM_READ_UINT_LE_PROTOTYPE(UTYPE, SUFFIX) {                               \
+/* Multi-byte scalar implementation */
+#define STREAM_IMPL_SCALAR_LE_BE(UTYPE, ITYPE, SUFFIX)                         \
+  OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), PP_OP_CAT3(ReadUInt, SUFFIX, LE), (UTYPE *outValue)) { \
     const uint8_t *b;                                                          \
-    UTYPE val = 0;                                                             \
-    if (!stream || !outValue)                                                  \
-      return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    if (STREAM_FUNC(AlignToByte)(stream) != STATUS_CONST(SUCCESS))             \
-      return STATUS_CONST(OUT_OF_RANGE);                                       \
-    if (STREAM_FUNC(Remaining)(stream) < sizeof(UTYPE))                        \
-      return STATUS_CONST(OUT_OF_RANGE);                                       \
-    b = stream->data + stream->offset;                                         \
-    for (size_t i = 0; i < sizeof(UTYPE); ++i) {                              \
+    UTYPE val = 0U;                                                            \
+    if (!self || !outValue) return STATUS_CONST(INVALID_ARGUMENT);             \
+    if (STREAM_FUNC(AlignToByte)(self) != STATUS_CONST(SUCCESS)) return STATUS_CONST(OUT_OF_RANGE); \
+    if (STREAM_FUNC(Remaining)(self) < sizeof(UTYPE)) return STATUS_CONST(OUT_OF_RANGE); \
+    b = self->data + self->offset;                                             \
+    for (size_t i = 0U; i < sizeof(UTYPE); ++i) {                              \
       val |= ((UTYPE)b[i]) << (i * 8U);                                        \
     }                                                                          \
     *outValue = val;                                                           \
-    stream->offset += sizeof(UTYPE);                                           \
+    self->offset += sizeof(UTYPE);                                             \
     return STATUS_CONST(SUCCESS);                                              \
-  }
-
-#define STREAM_READ_UINT_BE_IMPLEMENT(UTYPE, SUFFIX)                           \
-  STREAM_READ_UINT_BE_PROTOTYPE(UTYPE, SUFFIX) {                               \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), PP_OP_CAT3(ReadUInt, SUFFIX, BE), (UTYPE *outValue)) { \
     const uint8_t *b;                                                          \
-    UTYPE val = 0;                                                             \
-    if (!stream || !outValue)                                                  \
-      return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    if (STREAM_FUNC(AlignToByte)(stream) != STATUS_CONST(SUCCESS))             \
-      return STATUS_CONST(OUT_OF_RANGE);                                       \
-    if (STREAM_FUNC(Remaining)(stream) < sizeof(UTYPE))                        \
-      return STATUS_CONST(OUT_OF_RANGE);                                       \
-    b = stream->data + stream->offset;                                         \
-    for (size_t i = 0; i < sizeof(UTYPE); ++i) {                              \
+    UTYPE val = 0U;                                                            \
+    if (!self || !outValue) return STATUS_CONST(INVALID_ARGUMENT);             \
+    if (STREAM_FUNC(AlignToByte)(self) != STATUS_CONST(SUCCESS)) return STATUS_CONST(OUT_OF_RANGE); \
+    if (STREAM_FUNC(Remaining)(self) < sizeof(UTYPE)) return STATUS_CONST(OUT_OF_RANGE); \
+    b = self->data + self->offset;                                             \
+    for (size_t i = 0U; i < sizeof(UTYPE); ++i) {                              \
       val = (UTYPE)((val << 8U) | (UTYPE)b[i]);                               \
     }                                                                          \
     *outValue = val;                                                           \
-    stream->offset += sizeof(UTYPE);                                           \
+    self->offset += sizeof(UTYPE);                                             \
     return STATUS_CONST(SUCCESS);                                              \
-  }
-
-#define STREAM_READ_INT_LE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)                     \
-  STREAM_READ_INT_LE_PROTOTYPE(ITYPE, SUFFIX) {                                \
-    UTYPE rawVal = 0;                                                          \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), PP_OP_CAT3(ReadInt, SUFFIX, LE), (ITYPE *outValue)) { \
+    UTYPE rawVal = 0U;                                                         \
     OPSTATUS status;                                                           \
-    if (!outValue)                                                             \
-      return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    status = STREAM_FUNC(PP_OP_CAT3(ReadUInt, SUFFIX, LE))(                    \
-        stream, &rawVal);                                                      \
-    if (status != STATUS_CONST(SUCCESS))                                       \
-      return status;                                                           \
+    if (!outValue) return STATUS_CONST(INVALID_ARGUMENT);                      \
+    status = STREAM_FUNC(PP_OP_CAT3(ReadUInt, SUFFIX, LE))(self, &rawVal);     \
+    if (status != STATUS_CONST(SUCCESS)) return status;                        \
     *outValue = (ITYPE)rawVal;                                                 \
     return STATUS_CONST(SUCCESS);                                              \
-  }
-
-#define STREAM_READ_INT_BE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)                     \
-  STREAM_READ_INT_BE_PROTOTYPE(ITYPE, SUFFIX) {                                \
-    UTYPE rawVal = 0;                                                          \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), PP_OP_CAT3(ReadInt, SUFFIX, BE), (ITYPE *outValue)) { \
+    UTYPE rawVal = 0U;                                                         \
     OPSTATUS status;                                                           \
-    if (!outValue)                                                             \
-      return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    status = STREAM_FUNC(PP_OP_CAT3(ReadUInt, SUFFIX, BE))(                    \
-        stream, &rawVal);                                                      \
-    if (status != STATUS_CONST(SUCCESS))                                       \
-      return status;                                                           \
+    if (!outValue) return STATUS_CONST(INVALID_ARGUMENT);                      \
+    status = STREAM_FUNC(PP_OP_CAT3(ReadUInt, SUFFIX, BE))(self, &rawVal);     \
+    if (status != STATUS_CONST(SUCCESS)) return status;                        \
     *outValue = (ITYPE)rawVal;                                                 \
     return STATUS_CONST(SUCCESS);                                              \
-  }
-
-#define STREAM_WRITE_UINT_LE_IMPLEMENT(UTYPE, SUFFIX)                          \
-  STREAM_WRITE_UINT_LE_PROTOTYPE(UTYPE, SUFFIX) {                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), PP_OP_CAT3(WriteUInt, SUFFIX, LE), (UTYPE value)) { \
     uint8_t *b;                                                                \
-    if (!stream)                                                               \
-      return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    if (stream->isReadOnly)                                                    \
-      return STATUS_CONST(NOT_SUPPORTED);                                      \
-    if (STREAM_FUNC(AlignToByte)(stream) != STATUS_CONST(SUCCESS))             \
-      return STATUS_CONST(INSUFFICIENT_SPACE);                                 \
-    if (STREAM_FUNC(Remaining)(stream) < sizeof(UTYPE))                        \
-      return STATUS_CONST(INSUFFICIENT_SPACE);                                 \
-    b = stream->data + stream->offset;                                         \
-    for (size_t i = 0; i < sizeof(UTYPE); ++i) {                              \
+    if (!self) return STATUS_CONST(INVALID_ARGUMENT);                          \
+    if (self->isReadOnly) return STATUS_CONST(NOT_SUPPORTED);                  \
+    if (STREAM_FUNC(AlignToByte)(self) != STATUS_CONST(SUCCESS)) return STATUS_CONST(INSUFFICIENT_SPACE); \
+    if (STREAM_FUNC(Remaining)(self) < sizeof(UTYPE)) return STATUS_CONST(INSUFFICIENT_SPACE); \
+    b = self->data + self->offset;                                             \
+    for (size_t i = 0U; i < sizeof(UTYPE); ++i) {                              \
       b[i] = (uint8_t)((value >> (i * 8U)) & 0xFFU);                           \
     }                                                                          \
-    stream->offset += sizeof(UTYPE);                                           \
+    self->offset += sizeof(UTYPE);                                             \
     return STATUS_CONST(SUCCESS);                                              \
-  }
-
-#define STREAM_WRITE_UINT_BE_IMPLEMENT(UTYPE, SUFFIX)                          \
-  STREAM_WRITE_UINT_BE_PROTOTYPE(UTYPE, SUFFIX) {                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), PP_OP_CAT3(WriteUInt, SUFFIX, BE), (UTYPE value)) { \
     uint8_t *b;                                                                \
-    if (!stream)                                                               \
-      return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    if (stream->isReadOnly)                                                    \
-      return STATUS_CONST(NOT_SUPPORTED);                                      \
-    if (STREAM_FUNC(AlignToByte)(stream) != STATUS_CONST(SUCCESS))             \
-      return STATUS_CONST(INSUFFICIENT_SPACE);                                 \
-    if (STREAM_FUNC(Remaining)(stream) < sizeof(UTYPE))                        \
-      return STATUS_CONST(INSUFFICIENT_SPACE);                                 \
-    b = stream->data + stream->offset;                                         \
-    for (size_t i = 0; i < sizeof(UTYPE); ++i) {                              \
+    if (!self) return STATUS_CONST(INVALID_ARGUMENT);                          \
+    if (self->isReadOnly) return STATUS_CONST(NOT_SUPPORTED);                  \
+    if (STREAM_FUNC(AlignToByte)(self) != STATUS_CONST(SUCCESS)) return STATUS_CONST(INSUFFICIENT_SPACE); \
+    if (STREAM_FUNC(Remaining)(self) < sizeof(UTYPE)) return STATUS_CONST(INSUFFICIENT_SPACE); \
+    b = self->data + self->offset;                                             \
+    for (size_t i = 0U; i < sizeof(UTYPE); ++i) {                              \
       size_t shift = (sizeof(UTYPE) - 1U - i) * 8U;                            \
       b[i] = (uint8_t)((value >> shift) & 0xFFU);                              \
     }                                                                          \
-    stream->offset += sizeof(UTYPE);                                           \
+    self->offset += sizeof(UTYPE);                                             \
     return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), PP_OP_CAT3(WriteInt, SUFFIX, LE), (ITYPE value)) { \
+    return STREAM_FUNC(PP_OP_CAT3(WriteUInt, SUFFIX, LE))(self, (UTYPE)value); \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), PP_OP_CAT3(WriteInt, SUFFIX, BE), (ITYPE value)) { \
+    return STREAM_FUNC(PP_OP_CAT3(WriteUInt, SUFFIX, BE))(self, (UTYPE)value); \
   }
 
-#define STREAM_WRITE_INT_LE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)                    \
-  STREAM_WRITE_INT_LE_PROTOTYPE(ITYPE, SUFFIX) {                               \
-    return STREAM_FUNC(PP_OP_CAT3(WriteUInt, SUFFIX, LE))(                     \
-        stream, (UTYPE)value);                                                 \
-  }
+STREAM_IMPL_SCALAR_LE_BE(uint16_t, int16_t, 16)
+STREAM_IMPL_SCALAR_LE_BE(uint32_t, int32_t, 32)
+STREAM_IMPL_SCALAR_LE_BE(uint64_t, int64_t, 64)
 
-#define STREAM_WRITE_INT_BE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)                    \
-  STREAM_WRITE_INT_BE_PROTOTYPE(ITYPE, SUFFIX) {                               \
-    return STREAM_FUNC(PP_OP_CAT3(WriteUInt, SUFFIX, BE))(                     \
-        stream, (UTYPE)value);                                                 \
-  }
+OBJECT_IMPLEMENT(STREAM_TYPE(TStream));
 
-#define STREAM_SCALAR_IMPLEMENT_ALL(UTYPE, ITYPE, SUFFIX)                      \
-  STREAM_READ_UINT_LE_IMPLEMENT(UTYPE, SUFFIX)                                 \
-  STREAM_READ_UINT_BE_IMPLEMENT(UTYPE, SUFFIX)                                 \
-  STREAM_READ_INT_LE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)                            \
-  STREAM_READ_INT_BE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)                            \
-  STREAM_WRITE_UINT_LE_IMPLEMENT(UTYPE, SUFFIX)                                \
-  STREAM_WRITE_UINT_BE_IMPLEMENT(UTYPE, SUFFIX)                                \
-  STREAM_WRITE_INT_LE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)                           \
-  STREAM_WRITE_INT_BE_IMPLEMENT(UTYPE, ITYPE, SUFFIX)
-
-STREAM_SCALAR_IMPLEMENT_ALL(uint16_t, int16_t, 16)
-STREAM_SCALAR_IMPLEMENT_ALL(uint32_t, int32_t, 32)
-STREAM_SCALAR_IMPLEMENT_ALL(uint64_t, int64_t, 64)
 /* EOF */

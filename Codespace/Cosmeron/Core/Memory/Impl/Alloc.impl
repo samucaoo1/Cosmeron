@@ -2,27 +2,14 @@
 
 #include <stdint.h>
 
-static inline OPSTATUS MEMORY_INS(AllocArraySize)(size_t count,
-                                                 size_t elementSize,
-                                                 size_t *outSize) {
-  if (!outSize)
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(ALLOC_MOD), Bytes, (void *outPointerObject, size_t size)) {
+  void *allocated = NULL;
+
+  if (!outPointerObject)
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  if (elementSize != 0 && count > SIZE_MAX / elementSize)
-    return STATUS_CONST(ARITHMETIC_OVERFLOW);
-
-  *outSize = count * elementSize;
-  return STATUS_CONST(SUCCESS);
-}
-
-ALLOC_BYTES_PROTOTYPE {
-  void *allocated;
-
-  if (!out)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  if (size == 0) {
-    *out = NULL;
+  if (size == 0U) {
+    MEMORY_INS(WritePointer)(outPointerObject, NULL);
     return STATUS_CONST(SUCCESS);
   }
 
@@ -30,64 +17,114 @@ ALLOC_BYTES_PROTOTYPE {
   if (!allocated)
     return STATUS_CONST(OUT_OF_MEMORY);
 
-  *out = allocated;
+  MEMORY_INS(WritePointer)(outPointerObject, allocated);
   return STATUS_CONST(SUCCESS);
 }
 
-ALLOC_ARRAY_PROTOTYPE {
-  size_t size = 0;
-  OPSTATUS status;
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(ALLOC_MOD), ZeroBytes, (void *outPointerObject, size_t size)) {
+  void *allocated = NULL;
 
-  if (!out)
+  if (!outPointerObject)
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  status = MEMORY_INS(AllocArraySize)(count, elementSize, &size);
-  if (status != STATUS_CONST(SUCCESS))
-    return status;
-
-  return ALLOC_FUNC(AllocBytes)(out, size);
-}
-
-REALLOC_BYTES_PROTOTYPE {
-  void *newPtr;
-
-  if (!ptr)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  if (size == 0) {
-    free(*ptr);
-    *ptr = NULL;
+  if (size == 0U) {
+    MEMORY_INS(WritePointer)(outPointerObject, NULL);
     return STATUS_CONST(SUCCESS);
   }
 
-  newPtr = realloc(*ptr, size);
-  if (!newPtr)
+  allocated = calloc(1U, size);
+  if (!allocated)
     return STATUS_CONST(OUT_OF_MEMORY);
 
-  *ptr = newPtr;
+  MEMORY_INS(WritePointer)(outPointerObject, allocated);
   return STATUS_CONST(SUCCESS);
 }
 
-REALLOC_ARRAY_PROTOTYPE {
-  size_t size = 0;
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(ALLOC_MOD), Array, (void *outPointerObject, size_t count, size_t elementSize)) {
+  size_t size = 0U;
   OPSTATUS status;
 
-  if (!ptr)
+  if (!outPointerObject)
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  status = MEMORY_INS(AllocArraySize)(count, elementSize, &size);
+  status = MEMORY_INS(CheckedMultiplySize)(count, elementSize, &size);
   if (status != STATUS_CONST(SUCCESS))
     return status;
 
-  return ALLOC_FUNC(ReallocBytes)(ptr, size);
+  return ALLOC_FUNC(Bytes)(outPointerObject, size);
 }
 
-FREE_POINTER_PROTOTYPE {
-  if (!ptr)
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(ALLOC_MOD), ZeroArray, (void *outPointerObject, size_t count, size_t elementSize)) {
+  void *allocated = NULL;
+
+  if (!outPointerObject)
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  free(*ptr);
-  *ptr = NULL;
+  if (count == 0U || elementSize == 0U) {
+    MEMORY_INS(WritePointer)(outPointerObject, NULL);
+    return STATUS_CONST(SUCCESS);
+  }
+
+  if (count > SIZE_MAX / elementSize)
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+
+  allocated = calloc(count, elementSize);
+  if (!allocated)
+    return STATUS_CONST(OUT_OF_MEMORY);
+
+  MEMORY_INS(WritePointer)(outPointerObject, allocated);
   return STATUS_CONST(SUCCESS);
 }
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(ALLOC_MOD), ReallocBytes, (void *inoutPointerObject, size_t newSize)) {
+  void *current = NULL;
+  void *reallocated = NULL;
+
+  if (!inoutPointerObject)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  current = MEMORY_INS(ReadPointer)(inoutPointerObject);
+
+  if (newSize == 0U) {
+    free(current);
+    MEMORY_INS(WritePointer)(inoutPointerObject, NULL);
+    return STATUS_CONST(SUCCESS);
+  }
+
+  reallocated = realloc(current, newSize);
+  if (!reallocated)
+    return STATUS_CONST(OUT_OF_MEMORY);
+
+  MEMORY_INS(WritePointer)(inoutPointerObject, reallocated);
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(ALLOC_MOD), ReallocArray, (void *inoutPointerObject, size_t count, size_t elementSize)) {
+  size_t size = 0U;
+  OPSTATUS status;
+
+  if (!inoutPointerObject)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  status = MEMORY_INS(CheckedMultiplySize)(count, elementSize, &size);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  return ALLOC_FUNC(ReallocBytes)(inoutPointerObject, size);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(ALLOC_MOD), Free, (void *inoutPointerObject)) {
+  void *current = NULL;
+
+  if (!inoutPointerObject)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  current = MEMORY_INS(ReadPointer)(inoutPointerObject);
+  free(current);
+  MEMORY_INS(WritePointer)(inoutPointerObject, NULL);
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_IMPLEMENT(LIB_PREFIX(ALLOC_MOD));
+
 /* EOF */

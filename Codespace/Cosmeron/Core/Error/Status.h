@@ -1,44 +1,29 @@
 #pragma once
 
-#include "../Preprocessor/Compiling.inc"
-#include "Error.space"
+#include "Status.space"
+#include "../Module/Package.h"
 
-#define STATUS_MOD Status
-#define STATUS_CMOD STATUS
+PACKAGE(LIB_PREFIX(STATUS_MOD),
+    PREDICATE_INLINE(IsSuccess, (OPSTATUS status), {
+      return status == STATUS_CONST(SUCCESS);
+    }),
+    PREDICATE_INLINE(IsFailure, (OPSTATUS status), {
+      return status != STATUS_CONST(SUCCESS);
+    }),
+    PREDICATE_INLINE(IsSpecial, (OPSTATUS status), {
+      return status == STATUS_CONST(WOULD_BLOCK) ||
+             status == STATUS_CONST(INCOMPLETE_SEQUENCE);
+    }),
+    FUNCTION(STATUS_TYPE(Category), CategoryOf, (OPSTATUS status)),
+    PREDICATE_INLINE(IsCategory,
+                     (OPSTATUS status, STATUS_TYPE(Category) category), {
+                       return GNS2(LIB_PREFIX(STATUS_MOD), CategoryOf)(status) ==
+                              category;
+                     }),
+    FUNCTION(const char *, CategoryName, (STATUS_TYPE(Category) category)),
+    FUNCTION(const char *, Name, (OPSTATUS status)),
+    FUNCTION(const char *, Message, (OPSTATUS status))
+);
 
-#define STATUS_NS(NAME) GNS2(LIB_PREFIX(STATUS_MOD), NAME)
-#define STATUS_CNS(NAME) CNS2(LIB_PREFIX_CONST(STATUS_CMOD), NAME)
-#define STATUS_INS(NAME) GNS3(LIB_PREFIX(STATUS_MOD), Internal, NAME)
-#define STATUS_CINS(NAME) CNS3(LIB_PREFIX_CONST(STATUS_CMOD), INTERNAL, NAME)
-
-#define STATUS_TYPE(NAME) STATUS_NS(NAME)
-#define STATUS_CONST(NAME) STATUS_CNS(NAME)
-
-#define OPSTATUS STATUS_TYPE(Status)
-
-#define STATUS_TABLE(X)                                                        \
-  X(SUCCESS, "Success")                                                       \
-  X(GENERIC_ERROR, "Generic error")                                           \
-  X(INVALID_ARGUMENT, "Invalid argument")                                     \
-  X(OUT_OF_RANGE, "Out of range")                                             \
-  X(OUT_OF_MEMORY, "Out of memory")                                           \
-  X(NOT_FOUND, "Not found")                                                   \
-  X(ALREADY_EXISTS, "Already exists")                                         \
-  X(NOT_SUPPORTED, "Not supported")                                           \
-  X(NOT_AVAILABLE, "Not available")                                           \
-  X(BUSY, "Busy")                                                             \
-  X(WOULD_BLOCK, "Would block")                                               \
-  X(TIMEOUT, "Timeout")                                                       \
-  X(CANCELLED, "Cancelled")                                                   \
-  X(ARITHMETIC_OVERFLOW, "Arithmetic overflow")                               \
-  X(DIVISION_BY_ZERO, "Division by zero")                                      \
-  X(INVALID_SEQUENCE, "Invalid sequence")                                      \
-  X(INCOMPLETE_SEQUENCE, "Incomplete sequence")                                \
-  X(INSUFFICIENT_SPACE, "Insufficient space")
-
-typedef enum STATUS_TYPE(Status) {
-#define STATUS_ENUM_ITEM(NAME, MESSAGE) STATUS_CONST(NAME),
-  STATUS_TABLE(STATUS_ENUM_ITEM)
-#undef STATUS_ENUM_ITEM
-} OPSTATUS;
+#include "Impl/Status.impl"
 /* EOF */

@@ -1,0 +1,6 @@
+#pragma once
+
+#define PRIMITIVE_TYPE_TABLE_BOOLEAN(X)                                        \
+  X((bool, Boolean, Bool, TBoolean, BOOL, 1))
+/* EOF */
+

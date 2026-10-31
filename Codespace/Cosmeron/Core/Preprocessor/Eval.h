@@ -13,8 +13,11 @@
 
 /* === EVAL EXPANSION === */
 
+/* 3^5 = 243 evaluation passes */
 #define PP_EVAL(...) PP_EVAL1(PP_EVAL1(PP_EVAL1(__VA_ARGS__)))
 #define PP_EVAL1(...) PP_EVAL2(PP_EVAL2(PP_EVAL2(__VA_ARGS__)))
 #define PP_EVAL2(...) PP_EVAL3(PP_EVAL3(PP_EVAL3(__VA_ARGS__)))
-#define PP_EVAL3(...) __VA_ARGS__
+#define PP_EVAL3(...) PP_EVAL4(PP_EVAL4(PP_EVAL4(__VA_ARGS__)))
+#define PP_EVAL4(...) PP_EVAL5(PP_EVAL5(PP_EVAL5(__VA_ARGS__)))
+#define PP_EVAL5(...) __VA_ARGS__
 /* EOF */

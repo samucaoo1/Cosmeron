@@ -65,7 +65,7 @@ enum {
   Preprocessor_Test_ForeachCtx =
       0 PP_FOREACH_CTX(PREPROCESSOR_TEST_CTX_ITEM, 10, 1, 2, 3),
   Preprocessor_Test_Map =
-      0 PP_MAP(PREPROCESSOR_TEST_COUNT_ITEM, a, b, c),
+      0 PP_MAP_NONE(PREPROCESSOR_TEST_COUNT_ITEM, a, b, c),
   Preprocessor_Test_Repeat =
       0 PP_REPEAT(3, PREPROCESSOR_TEST_REPEAT_ITEM),
   Preprocessor_Test_IfElseTrue = PP_BOOL_IF_ELSE(7)(11)(22),
@@ -73,6 +73,10 @@ enum {
   Preprocessor_Test_While =
       PP_WHILE(PREPROCESSOR_TEST_WHILE_PRED, PREPROCESSOR_TEST_WHILE_OP, 3)
 };
+
+#define PREPROCESSOR_TEST_NESTED_INNER(x) +(x)
+#define PREPROCESSOR_TEST_NESTED_OUTER(row)                                    \
+  +(0 PP_MAP_NONE(PREPROCESSOR_TEST_NESTED_INNER, PP_UNWRAP row))
 
 int main(void) {
   int repeatCount = 0;
@@ -85,6 +89,14 @@ int main(void) {
     sumIndex += (int)idx;
   }
 
+  /* Test functional comma-separated PP_MAP */
+  int mapArray[] = {PP_MAP(PREPROCESSOR_TEST_REPEAT_ITEM, 10, 20, 30)};
+  int mapCtxArray[] = {
+      PP_MAP_CTX(PREPROCESSOR_TEST_CTX_ITEM, 100, 1, 2, 3)};
+
+  /* Test Motor 2 (PP_MAP) nested inside Motor 1 (PP_FOREACH) */
+  int nestedSum = 0 PP_FOREACH(PREPROCESSOR_TEST_NESTED_OUTER, (1, 2), (3, 4));
+
   return Preprocessor_Test_Cat == 1 && Preprocessor_Test_Cat4 == 1234 &&
                  Preprocessor_Test_Seq == 2 &&
                  Preprocessor_Test_Foreach == 4 &&
@@ -95,7 +107,10 @@ int main(void) {
                  Preprocessor_Test_IfElseFalse == 22 &&
                  Preprocessor_Test_While == 0 &&
                  repeatCount == 5 &&
-                 sumIndex == 6
+                 sumIndex == 6 &&
+                 mapArray[0] == 10 && mapArray[1] == 20 && mapArray[2] == 30 &&
+                 mapCtxArray[0] == 101 && mapCtxArray[1] == 102 && mapCtxArray[2] == 103 &&
+                 nestedSum == 10
              ? 0
              : 1;
 }

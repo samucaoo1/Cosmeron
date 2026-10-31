@@ -1,0 +1,17 @@
+#pragma once
+
+#define PRIMITIVE_CATEGORY_COL_NAME(NAME, DESC) NAME
+#define PRIMITIVE_CATEGORY_COL_DESC(NAME, DESC) DESC
+
+#define PRIMITIVE_CATEGORY_GET(FIELD, ROW)                                     \
+  PP_OP_CAT2(PRIMITIVE_CATEGORY_COL_, FIELD) ROW
+
+#define PRIMITIVE_CATEGORY_TABLE(X)                                            \
+  X((BOOL, "Boolean"))                                                         \
+  X((INT, "Signed integer"))                                                   \
+  X((UINT, "Unsigned integer"))                                                 \
+  X((CHAR, "Character"))                                                       \
+  X((FLOAT, "Floating-point"))                                                 \
+  X((PTR, "Architecture pointer or integer"))
+/* EOF */
+

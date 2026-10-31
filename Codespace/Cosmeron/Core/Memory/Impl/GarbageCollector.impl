@@ -1,0 +1,648 @@
+#pragma once
+
+#include <stdint.h>
+
+static _Thread_local GARBAGE_COLLECTOR_TYPE(TGarbageCollector)
+    GARBAGE_COLLECTOR_INS(ThreadDefaultCollector);
+static _Thread_local bool
+    GARBAGE_COLLECTOR_INS(ThreadDefaultInitialized) = false;
+
+/* Worklist internal routines */
+static inline void GARBAGE_COLLECTOR_INS(WorklistInit)(
+    GARBAGE_COLLECTOR_INS(Worklist) *wl) {
+  wl->head = NULL;
+  wl->freeChunks = NULL;
+  wl->totalPushed = 0U;
+  wl->overflow = false;
+}
+
+static inline void GARBAGE_COLLECTOR_INS(WorklistDestroy)(
+    GARBAGE_COLLECTOR_INS(Worklist) *wl) {
+  GARBAGE_COLLECTOR_INS(WorklistChunk) *c = wl->head;
+  while (c) {
+    GARBAGE_COLLECTOR_INS(WorklistChunk) *next = c->next;
+    void *raw = (void *)c;
+    ALLOC_FUNC(Free)(&raw);
+    c = next;
+  }
+  c = wl->freeChunks;
+  while (c) {
+    GARBAGE_COLLECTOR_INS(WorklistChunk) *next = c->next;
+    void *raw = (void *)c;
+    ALLOC_FUNC(Free)(&raw);
+    c = next;
+  }
+  wl->head = NULL;
+  wl->freeChunks = NULL;
+}
+
+static inline OPSTATUS GARBAGE_COLLECTOR_INS(WorklistPush)(
+    GARBAGE_COLLECTOR_INS(Worklist) *wl, void *ptr) {
+  if (!ptr)
+    return STATUS_CONST(SUCCESS);
+
+  GARBAGE_COLLECTOR_INS(WorklistChunk) *chunk = wl->head;
+  if (!chunk || chunk->count == GARBAGE_COLLECTOR_CONST(WORKLIST_CHUNK_CAPACITY)) {
+    if (wl->freeChunks) {
+      chunk = wl->freeChunks;
+      wl->freeChunks = chunk->next;
+    } else {
+      void *raw = NULL;
+      OPSTATUS status = ALLOC_FUNC(Bytes)(&raw, sizeof(GARBAGE_COLLECTOR_INS(WorklistChunk)));
+      if (status != STATUS_CONST(SUCCESS) || !raw) {
+        wl->overflow = true;
+        return STATUS_CONST(OUT_OF_MEMORY);
+      }
+      chunk = (GARBAGE_COLLECTOR_INS(WorklistChunk) *)raw;
+    }
+    chunk->count = 0U;
+    chunk->next = wl->head;
+    wl->head = chunk;
+  }
+
+  chunk->items[chunk->count++] = ptr;
+  wl->totalPushed++;
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline void *GARBAGE_COLLECTOR_INS(WorklistPop)(
+    GARBAGE_COLLECTOR_INS(Worklist) *wl) {
+  GARBAGE_COLLECTOR_INS(WorklistChunk) *chunk = wl->head;
+  if (!chunk)
+    return NULL;
+
+  void *item = chunk->items[--chunk->count];
+  if (chunk->count == 0U) {
+    wl->head = chunk->next;
+    chunk->next = wl->freeChunks;
+    wl->freeChunks = chunk;
+  }
+  return item;
+}
+
+/* Mark helper */
+static inline void GARBAGE_COLLECTOR_INS(MarkCell)(
+    GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *self, void *ptr) {
+  if (!ptr)
+    return;
+
+  void *basePtr = NULL;
+  size_t cellSize = 0U;
+  uint8_t policy = 0U;
+
+  if (!HEAP_FUNC(ResolvePointer)(&self->heap, ptr, &basePtr, &cellSize, &policy))
+    return;
+
+  void *entry = HEAP_FUNC(LookupEntry)(&self->heap, basePtr);
+  if (!entry)
+    return;
+
+  uint8_t isLarge = *(uint8_t *)entry;
+  if (isLarge) {
+    HEAP_INS(Span) *span = (HEAP_INS(Span) *)entry;
+    if (!span->isMarked) {
+      span->isMarked = 1U;
+      if (span->policy != HEAP_CONST(POLICY_ATOMIC)) {
+        GARBAGE_COLLECTOR_INS(WorklistPush)(&self->worklist, span->data);
+      }
+    }
+    return;
+  }
+
+  HEAP_INS(PageHeader) *page = (HEAP_INS(PageHeader) *)entry;
+  uintptr_t offset = (uintptr_t)basePtr - (uintptr_t)page->payload;
+  uint16_t cellIndex = (uint16_t)(offset / page->elementSize);
+  size_t w = cellIndex / 64U;
+  uint64_t mask = 1ULL << (cellIndex % 64U);
+
+  if ((page->markBitmap[w] & mask) == 0ULL) {
+    page->markBitmap[w] |= mask;
+    if (page->policy != HEAP_CONST(POLICY_ATOMIC)) {
+      GARBAGE_COLLECTOR_INS(WorklistPush)(&self->worklist, basePtr);
+    }
+  }
+}
+
+static inline void GARBAGE_COLLECTOR_INS(ScanMemoryRange)(
+    GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *self, const void *start, const void *end) {
+  uintptr_t low = (uintptr_t)start;
+  uintptr_t high = (uintptr_t)end;
+
+  if (low > high) {
+    uintptr_t tmp = low;
+    low = high;
+    high = tmp;
+  }
+
+  /* Align to void* boundary */
+  low = (low + sizeof(void *) - 1U) & ~(uintptr_t)(sizeof(void *) - 1U);
+
+  for (uintptr_t addr = low; addr + sizeof(void *) <= high; addr += sizeof(void *)) {
+    void *val = *(void **)addr;
+    if (val) {
+      uintptr_t v = (uintptr_t)val;
+      if (v >= self->heap.minAddress && v < self->heap.maxAddress) {
+        void *base = NULL;
+        if (HEAP_FUNC(ResolvePointer)(&self->heap, val, &base, NULL, NULL)) {
+          GARBAGE_COLLECTOR_INS(MarkCell)(self, base);
+        } else {
+          /* Address is within heap range but page is not allocated: blacklist it */
+          uintptr_t pageIdx = v >> HEAP_CONST(PAGE_SHIFT);
+          HEAP_FUNC(BlacklistPage)(&self->heap, pageIdx);
+        }
+      }
+    }
+  }
+}
+
+/* ============================================================
+ * TGarbageCollector Method Implementations
+ * ============================================================ */
+
+OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), Create,
+    (size_t initialHeapPages, const void *stackBottom)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  memset(self, 0, sizeof(*self));
+  OPSTATUS status = HEAP_FUNC(Create)(&self->heap, initialHeapPages);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  GARBAGE_COLLECTOR_INS(WorklistInit)(&self->worklist);
+  self->finalizers = NULL;
+  self->pendingFinalizers = NULL;
+  self->stackBottom = stackBottom;
+  self->nextThreshold = GARBAGE_COLLECTOR_CONST(DEFAULT_INITIAL_THRESHOLD);
+  self->liveBytesAfterGC = 0U;
+  self->totalAllocatedSinceGC = 0U;
+  self->growthPercent = GARBAGE_COLLECTOR_CONST(DEFAULT_GROWTH_PERCENT);
+  self->pauseDepth = 0U;
+  self->isInitialized = true;
+
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), Destroy, ()) {
+  if (!self || !self->isInitialized)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  GARBAGE_COLLECTOR_INS(FinalizerEntry) *f = self->finalizers;
+  while (f) {
+    GARBAGE_COLLECTOR_INS(FinalizerEntry) *next = f->next;
+    void *raw = (void *)f;
+    ALLOC_FUNC(Free)(&raw);
+    f = next;
+  }
+  self->finalizers = NULL;
+
+  f = self->pendingFinalizers;
+  while (f) {
+    GARBAGE_COLLECTOR_INS(FinalizerEntry) *next = f->next;
+    void *raw = (void *)f;
+    ALLOC_FUNC(Free)(&raw);
+    f = next;
+  }
+  self->pendingFinalizers = NULL;
+
+  GARBAGE_COLLECTOR_INS(WorklistDestroy)(&self->worklist);
+  HEAP_FUNC(Destroy)(&self->heap);
+  self->isInitialized = false;
+
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), Alloc,
+    (void *outPointerObject, size_t size, uint8_t policy, const void *descriptor)) {
+  if (!self || !outPointerObject || size == 0U)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (!self->isInitialized) {
+    OPSTATUS initStat = GARBAGE_COLLECTOR_FUNC(Create)(self, 4U, NULL);
+    if (initStat != STATUS_CONST(SUCCESS))
+      return initStat;
+  }
+
+  if (self->pauseDepth == 0U && self->totalAllocatedSinceGC + size >= self->nextThreshold) {
+    GARBAGE_COLLECTOR_FUNC(Collect)(self);
+  }
+
+  OPSTATUS status = HEAP_FUNC(Alloc)(&self->heap, outPointerObject, size, policy, descriptor);
+  if (status == STATUS_CONST(SUCCESS)) {
+    self->totalAllocatedSinceGC += size;
+  }
+  return status;
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), AllocTyped,
+    (void *outPointerObject, const GARBAGE_COLLECTOR_TYPE(Descriptor) *descriptor)) {
+  if (!descriptor || descriptor->size == 0U)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  return GARBAGE_COLLECTOR_FUNC(Alloc)(
+      self, outPointerObject, descriptor->size, HEAP_CONST(POLICY_TYPED), descriptor);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), AllocAtomic,
+    (void *outPointerObject, size_t size)) {
+  return GARBAGE_COLLECTOR_FUNC(Alloc)(
+      self, outPointerObject, size, HEAP_CONST(POLICY_ATOMIC), NULL);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), SetFinalizer,
+    (const void *ptr, GARBAGE_COLLECTOR_FINALIZER_CALLBACK finalizer)) {
+  if (!self || !ptr || !GNS2(CALLBACK_FUNC(GARBAGE_COLLECTOR_INS(FinalizerFunction)), IsValid)(finalizer))
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  void *raw = NULL;
+  OPSTATUS status = ALLOC_FUNC(Bytes)(&raw, sizeof(GARBAGE_COLLECTOR_INS(FinalizerEntry)));
+  if (status != STATUS_CONST(SUCCESS) || !raw)
+    return STATUS_CONST(OUT_OF_MEMORY);
+
+  GARBAGE_COLLECTOR_INS(FinalizerEntry) *entry = (GARBAGE_COLLECTOR_INS(FinalizerEntry) *)raw;
+  entry->object = (void *)(uintptr_t)ptr;
+  entry->callback = finalizer;
+  entry->next = self->finalizers;
+  self->finalizers = entry;
+
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), PinRoot,
+    (const void *rootPointerAddress)) {
+  if (!self || !rootPointerAddress)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  for (size_t i = 0U; i < GARBAGE_COLLECTOR_CONST(MAX_ROOTS); ++i) {
+    if (self->roots[i].active && self->roots[i].pointerAddress == rootPointerAddress)
+      return STATUS_CONST(SUCCESS);
+  }
+
+  for (size_t i = 0U; i < GARBAGE_COLLECTOR_CONST(MAX_ROOTS); ++i) {
+    if (!self->roots[i].active) {
+      self->roots[i].pointerAddress = rootPointerAddress;
+      self->roots[i].active = true;
+      return STATUS_CONST(SUCCESS);
+    }
+  }
+
+  return STATUS_CONST(OUT_OF_RANGE);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), UnpinRoot,
+    (const void *rootPointerAddress)) {
+  if (!self || !rootPointerAddress)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  for (size_t i = 0U; i < GARBAGE_COLLECTOR_CONST(MAX_ROOTS); ++i) {
+    if (self->roots[i].active && self->roots[i].pointerAddress == rootPointerAddress) {
+      self->roots[i].active = false;
+      self->roots[i].pointerAddress = NULL;
+      return STATUS_CONST(SUCCESS);
+    }
+  }
+
+  return STATUS_CONST(INVALID_ARGUMENT);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), Collect, ()) {
+  if (!self || !self->isInitialized || self->pauseDepth > 0U)
+    return STATUS_CONST(SUCCESS);
+
+  /* Phase 1: Preparation (Sync & Flip) */
+  jmp_buf calleeRegisters;
+  setjmp(calleeRegisters);
+
+  /* Clear Mark Bitmaps in all pages */
+  for (size_t i = 0U; i < HEAP_CONST(SIZE_CLASS_COUNT); ++i) {
+    HEAP_INS(PageHeader) *p = self->heap.classes[i].activePages;
+    while (p) {
+      memset(p->markBitmap, 0, sizeof(p->markBitmap));
+      p = p->next;
+    }
+    p = self->heap.classes[i].fullPages;
+    while (p) {
+      memset(p->markBitmap, 0, sizeof(p->markBitmap));
+      p = p->next;
+    }
+  }
+  HEAP_INS(Span) *span = self->heap.largeObjects;
+  while (span) {
+    span->isMarked = 0U;
+    span = span->next;
+  }
+
+  self->worklist.overflow = false;
+
+  /* Phase 2: Mark Roots */
+  /* Stack scanning */
+  volatile int stackAnchor = 0;
+  const void *stackTop = (const void *)&stackAnchor;
+  if (self->stackBottom) {
+    GARBAGE_COLLECTOR_INS(ScanMemoryRange)(self, stackTop, self->stackBottom);
+  }
+  /* Registers flushed to stack via calleeRegisters */
+  GARBAGE_COLLECTOR_INS(ScanMemoryRange)(
+      self, (const void *)&calleeRegisters,
+      (const void *)((uintptr_t)&calleeRegisters + sizeof(calleeRegisters)));
+
+  /* Registered / pinned roots */
+  for (size_t i = 0U; i < GARBAGE_COLLECTOR_CONST(MAX_ROOTS); ++i) {
+    if (self->roots[i].active && self->roots[i].pointerAddress) {
+      void *rootVal = *(void **)self->roots[i].pointerAddress;
+      if (rootVal) {
+        GARBAGE_COLLECTOR_INS(MarkCell)(self, rootVal);
+      }
+    }
+  }
+
+  /* Phase 3: Iterative Tracing */
+  while (true) {
+    void *item = GARBAGE_COLLECTOR_INS(WorklistPop)(&self->worklist);
+    if (!item) {
+      if (self->worklist.overflow) {
+        /* Fallback linear page scan when overflow occurred */
+        self->worklist.overflow = false;
+        for (size_t i = 0U; i < HEAP_CONST(SIZE_CLASS_COUNT); ++i) {
+          HEAP_INS(PageHeader) *p = self->heap.classes[i].activePages;
+          while (p) {
+            if (p->policy != HEAP_CONST(POLICY_ATOMIC)) {
+              for (size_t w = 0U; w < HEAP_CONST(BITMAP_WORDS); ++w) {
+                if (p->markBitmap[w] != 0ULL) {
+                  for (uint8_t b = 0U; b < 64U; ++b) {
+                    if ((p->markBitmap[w] & (1ULL << b)) != 0ULL) {
+                      void *cell = p->payload + (((w * 64U) + b) * p->elementSize);
+                      GARBAGE_COLLECTOR_INS(ScanMemoryRange)(
+                          self, cell, (const void *)((uintptr_t)cell + p->elementSize));
+                    }
+                  }
+                }
+              }
+            }
+            p = p->next;
+          }
+        }
+        if (self->worklist.head != NULL)
+          continue;
+      }
+      break;
+    }
+
+    void *base = NULL;
+    size_t sz = 0U;
+    uint8_t pol = 0U;
+    if (HEAP_FUNC(ResolvePointer)(&self->heap, item, &base, &sz, &pol)) {
+      if (pol == HEAP_CONST(POLICY_TYPED)) {
+        void *ent = HEAP_FUNC(LookupEntry)(&self->heap, base);
+        const GARBAGE_COLLECTOR_TYPE(Descriptor) *desc = NULL;
+        if (ent) {
+          uint8_t isL = *(uint8_t *)ent;
+          desc = isL ? (const GARBAGE_COLLECTOR_TYPE(Descriptor) *)((HEAP_INS(Span) *)ent)->descriptor
+                     : (const GARBAGE_COLLECTOR_TYPE(Descriptor) *)((HEAP_INS(PageHeader) *)ent)->descriptor;
+        }
+        if (desc && desc->bitmap != 0ULL) {
+          uint64_t bm = desc->bitmap;
+          while (bm != 0ULL) {
+            uint8_t bit = (uint8_t)__builtin_ctzll(bm);
+            size_t off = (size_t)bit * sizeof(void *);
+            if (off + sizeof(void *) <= sz) {
+              void *child = *(void **)((uintptr_t)base + off);
+              if (child)
+                GARBAGE_COLLECTOR_INS(MarkCell)(self, child);
+            }
+            bm &= (bm - 1ULL);
+          }
+        }
+      } else if (pol == HEAP_CONST(POLICY_CONSERVATIVE)) {
+        GARBAGE_COLLECTOR_INS(ScanMemoryRange)(self, base, (const void *)((uintptr_t)base + sz));
+      }
+    }
+  }
+
+  /* Phase 4: Finalization Enqueue (Pre-Sweep) */
+  GARBAGE_COLLECTOR_INS(FinalizerEntry) **curr = &self->finalizers;
+  while (*curr) {
+    GARBAGE_COLLECTOR_INS(FinalizerEntry) *entry = *curr;
+    void *obj = entry->object;
+    void *base = NULL;
+    size_t sz = 0U;
+    uint8_t pol = 0U;
+    bool isAlive = false;
+
+    if (HEAP_FUNC(ResolvePointer)(&self->heap, obj, &base, &sz, &pol)) {
+      void *ent = HEAP_FUNC(LookupEntry)(&self->heap, base);
+      if (ent) {
+        uint8_t isL = *(uint8_t *)ent;
+        if (isL) {
+          isAlive = ((HEAP_INS(Span) *)ent)->isMarked != 0U;
+        } else {
+          HEAP_INS(PageHeader) *pg = (HEAP_INS(PageHeader) *)ent;
+          uint16_t cIdx = (uint16_t)(((uintptr_t)base - (uintptr_t)pg->payload) / pg->elementSize);
+          isAlive = (pg->markBitmap[cIdx / 64U] & (1ULL << (cIdx % 64U))) != 0ULL;
+        }
+      }
+    }
+
+    if (!isAlive) {
+      /* Unlink from active finalizers and move to pendingFinalizers */
+      *curr = entry->next;
+      entry->next = self->pendingFinalizers;
+      self->pendingFinalizers = entry;
+
+      /* Resurrect object and its sub-graph for safe finalizer execution */
+      GARBAGE_COLLECTOR_INS(MarkCell)(self, obj);
+      while (self->worklist.head) {
+        void *it = GARBAGE_COLLECTOR_INS(WorklistPop)(&self->worklist);
+        if (it) {
+          void *b = NULL;
+          size_t s = 0U;
+          uint8_t p = 0U;
+          if (HEAP_FUNC(ResolvePointer)(&self->heap, it, &b, &s, &p) &&
+              p == HEAP_CONST(POLICY_CONSERVATIVE)) {
+            GARBAGE_COLLECTOR_INS(ScanMemoryRange)(self, b, (const void *)((uintptr_t)b + s));
+          }
+        }
+      }
+    } else {
+      curr = &entry->next;
+    }
+  }
+
+  /* Phase 5: Sweep & Execute Finalizers */
+  for (size_t i = 0U; i < HEAP_CONST(SIZE_CLASS_COUNT); ++i) {
+    HEAP_FUNC(LazySweepClass)(&self->heap, i);
+  }
+
+  /* Sweep large objects */
+  HEAP_INS(Span) **spanPtr = &self->heap.largeObjects;
+  while (*spanPtr) {
+    HEAP_INS(Span) *s = *spanPtr;
+    if (!s->isMarked) {
+      *spanPtr = s->next;
+      if (s->next)
+        s->next->prev = s->prev;
+      self->heap.liveBytes = (self->heap.liveBytes >= s->size) ? (self->heap.liveBytes - s->size) : 0U;
+      void *raw = s->rawBlock;
+      ALLOC_FUNC(Free)(&raw);
+    } else {
+      spanPtr = &s->next;
+    }
+  }
+
+  self->liveBytesAfterGC = self->heap.liveBytes;
+
+  /* Adaptive Pacing formula: NextThreshold = LiveBytes * (1 + GrowthFactor / SurvivalRate) */
+  size_t allocated = self->totalAllocatedSinceGC;
+  self->totalAllocatedSinceGC = 0U;
+
+  double survivalRate = allocated > 0U ? ((double)self->liveBytesAfterGC / (double)allocated) : 1.0;
+  if (survivalRate < 0.1)
+    survivalRate = 0.1;
+
+  double factor = (double)self->growthPercent / (survivalRate * 100.0);
+  if (factor < ((double)GARBAGE_COLLECTOR_CONST(MIN_PACING_PERCENT) / 100.0))
+    factor = (double)GARBAGE_COLLECTOR_CONST(MIN_PACING_PERCENT) / 100.0;
+  if (factor > ((double)GARBAGE_COLLECTOR_CONST(MAX_PACING_PERCENT) / 100.0))
+    factor = (double)GARBAGE_COLLECTOR_CONST(MAX_PACING_PERCENT) / 100.0;
+
+  self->nextThreshold = (size_t)((double)self->liveBytesAfterGC * (1.0 + factor));
+  if (self->nextThreshold < GARBAGE_COLLECTOR_CONST(DEFAULT_INITIAL_THRESHOLD))
+    self->nextThreshold = GARBAGE_COLLECTOR_CONST(DEFAULT_INITIAL_THRESHOLD);
+
+  /* Drain pending finalizers */
+  while (self->pendingFinalizers) {
+    GARBAGE_COLLECTOR_INS(FinalizerEntry) *f = self->pendingFinalizers;
+    self->pendingFinalizers = f->next;
+    GNS2(CALLBACK_FUNC(GARBAGE_COLLECTOR_INS(FinalizerFunction)), Invoke)(f->callback, f->object);
+    void *raw = (void *)f;
+    ALLOC_FUNC(Free)(&raw);
+  }
+
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_PROCEDURE_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), Pause, ()) {
+  if (self)
+    self->pauseDepth++;
+}
+
+OBJECT_PROCEDURE_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), Resume, ()) {
+  if (self && self->pauseDepth > 0U)
+    self->pauseDepth--;
+}
+
+OBJECT_PREDICATE_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), Contains, (const void *ptr)) {
+  return self ? HEAP_FUNC(Contains)(&self->heap, ptr) : false;
+}
+
+OBJECT_IMPLEMENT(GARBAGE_COLLECTOR_TYPE(TGarbageCollector));
+
+/* ============================================================
+ * Package GarbageCollector (Thread Default Facade)
+ * ============================================================ */
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), Startup, (const void *stackBottom)) {
+  if (GARBAGE_COLLECTOR_INS(ThreadDefaultInitialized))
+    return STATUS_CONST(SUCCESS);
+
+  OPSTATUS status = GARBAGE_COLLECTOR_FUNC(Create)(
+      &GARBAGE_COLLECTOR_INS(ThreadDefaultCollector), 4U, stackBottom);
+  if (status == STATUS_CONST(SUCCESS)) {
+    GARBAGE_COLLECTOR_INS(ThreadDefaultInitialized) = true;
+  }
+  return status;
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), Shutdown, ()) {
+  if (!GARBAGE_COLLECTOR_INS(ThreadDefaultInitialized))
+    return STATUS_CONST(SUCCESS);
+
+  OPSTATUS status = GARBAGE_COLLECTOR_FUNC(Destroy)(&GARBAGE_COLLECTOR_INS(ThreadDefaultCollector));
+  GARBAGE_COLLECTOR_INS(ThreadDefaultInitialized) = false;
+  return status;
+}
+
+PACKAGE_FUNCTION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD),
+    GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *, DefaultCollector, ()) {
+  if (!GARBAGE_COLLECTOR_INS(ThreadDefaultInitialized)) {
+    volatile int anchor = 0;
+    GARBAGE_COLLECTOR_FUNC(Create)(
+        &GARBAGE_COLLECTOR_INS(ThreadDefaultCollector), 4U, (const void *)&anchor);
+    GARBAGE_COLLECTOR_INS(ThreadDefaultInitialized) = true;
+  }
+  return &GARBAGE_COLLECTOR_INS(ThreadDefaultCollector);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), Alloc, (void *outPointerObject, size_t size)) {
+  GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *collector =
+      GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
+  return GARBAGE_COLLECTOR_FUNC(Alloc)(
+      collector, outPointerObject, size, HEAP_CONST(POLICY_CONSERVATIVE), NULL);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), AllocTyped,
+    (void *outPointerObject, const GARBAGE_COLLECTOR_TYPE(Descriptor) *descriptor)) {
+  GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *collector =
+      GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
+  return GARBAGE_COLLECTOR_FUNC(AllocTyped)(collector, outPointerObject, descriptor);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), AllocAtomic, (void *outPointerObject, size_t size)) {
+  GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *collector =
+      GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
+  return GARBAGE_COLLECTOR_FUNC(AllocAtomic)(collector, outPointerObject, size);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), SetFinalizer,
+    (const void *ptr, GARBAGE_COLLECTOR_FINALIZER_CALLBACK finalizer)) {
+  GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *collector =
+      GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
+  return GARBAGE_COLLECTOR_FUNC(SetFinalizer)(collector, ptr, finalizer);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), PinRoot, (const void *rootPointerAddress)) {
+  GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *collector =
+      GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
+  return GARBAGE_COLLECTOR_FUNC(PinRoot)(collector, rootPointerAddress);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), UnpinRoot, (const void *rootPointerAddress)) {
+  GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *collector =
+      GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
+  return GARBAGE_COLLECTOR_FUNC(UnpinRoot)(collector, rootPointerAddress);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), Collect, ()) {
+  GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *collector =
+      GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
+  return GARBAGE_COLLECTOR_FUNC(Collect)(collector);
+}
+
+PACKAGE_PROCEDURE_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), Pause, ()) {
+  GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *collector =
+      GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
+  GARBAGE_COLLECTOR_FUNC(Pause)(collector);
+}
+
+PACKAGE_PROCEDURE_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), Resume, ()) {
+  GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *collector =
+      GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
+  GARBAGE_COLLECTOR_FUNC(Resume)(collector);
+}
+
+PACKAGE_FUNCTION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), size_t, LiveBytes, ()) {
+  GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *collector =
+      GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
+  return GARBAGE_COLLECTOR_FUNC(LiveBytes)(collector);
+}
+
+PACKAGE_PREDICATE_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), Contains, (const void *ptr)) {
+  GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *collector =
+      GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
+  return GARBAGE_COLLECTOR_FUNC(Contains)(collector, ptr);
+}
+
+PACKAGE_IMPLEMENT(LIB_PREFIX(GARBAGE_COLLECTOR_MOD));
+
+/* EOF */
+

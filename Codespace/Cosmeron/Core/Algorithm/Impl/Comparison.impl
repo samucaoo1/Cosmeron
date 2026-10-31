@@ -2,17 +2,18 @@
 
 #include <string.h>
 
-#define COMPARISON_PRIMITIVE_IMPLEMENT(TYPE, LONG_NAME, SHORT_NAME,          \
-                                       T_PATTERN, CATEGORY, BITS)              \
-  PACKAGE_FUNCTION_IMPLEMENT_EX(ALGORITHM_NS(COMPARISON_MOD), CMPOUT,         \
-                                LONG_NAME, (TYPE left, TYPE right)) {          \
+#define COMPARISON_PRIMITIVE_IMPLEMENT(ROW)                                    \
+  PACKAGE_FUNCTION_IMPLEMENT_EX(                                               \
+      ALGORITHM_NS(COMPARISON_MOD), CMPOUT, PRIMITIVE_TYPE_GET(NAME, ROW),     \
+      (PRIMITIVE_TYPE_GET(TYPE, ROW) left,                                     \
+       PRIMITIVE_TYPE_GET(TYPE, ROW) right)) {                                 \
     return left < right                                                        \
                ? COMPARISON_CONST(LOWER)                                       \
                : (left > right ? COMPARISON_CONST(HIGHER)                      \
                                : COMPARISON_CONST(EQUAL));                     \
   }
 
-PRIMITIVE_TYPES_TABLE(COMPARISON_PRIMITIVE_IMPLEMENT)
+PRIMITIVE_TYPE_TABLE(COMPARISON_PRIMITIVE_IMPLEMENT)
 #undef COMPARISON_PRIMITIVE_IMPLEMENT
 
 PACKAGE_FUNCTION_IMPLEMENT_EX(ALGORITHM_NS(COMPARISON_MOD), CMPOUT, CString,

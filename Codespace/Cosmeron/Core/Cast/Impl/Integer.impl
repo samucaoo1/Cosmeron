@@ -1,248 +1,102 @@
 #pragma once
 
-#define CAST_UNSIGNED_DOWNCAST_IMPLEMENT(NAME, FROM_TYPE, TO_TYPE, TO_MAX)     \
-  PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), NAME,                   \
-                                (TO_TYPE * outValue, FROM_TYPE inValue)) {     \
-    if (!outValue)                                                             \
-      return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    if (inValue > (FROM_TYPE)(TO_MAX))                                         \
-      return STATUS_CONST(ARITHMETIC_OVERFLOW);                                \
-    *outValue = (TO_TYPE)inValue;                                              \
-    return STATUS_CONST(SUCCESS);                                              \
-  }
+/* 1. Unsigned 64-bit conversions */
+CONVERTING(
+    Uint64,
+    TO_EX(32, uint32_t, UNSIGNED, UINT32_MAX),
+    TO_EX(16, uint16_t, UNSIGNED, UINT16_MAX),
+    TO_EX(8, uint8_t, UNSIGNED, UINT8_MAX),
+    TO_EX(I64, int64_t, UNSIGNED, INT64_MAX),
+    TO_EX(I32, int32_t, UNSIGNED, INT32_MAX),
+    TO_EX(I16, int16_t, UNSIGNED, INT16_MAX),
+    TO_EX(I8, int8_t, UNSIGNED, INT8_MAX),
+    TO_EX(Size, size_t, UNSIGNED, SIZE_MAX)
+)
 
-#define CAST_SIGNED_DOWNCAST_IMPLEMENT(NAME, FROM_TYPE, TO_TYPE, TO_MIN,      \
-                                       TO_MAX)                                 \
-  PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), NAME,                   \
-                                (TO_TYPE * outValue, FROM_TYPE inValue)) {     \
-    if (!outValue)                                                             \
-      return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    if (inValue < (FROM_TYPE)(TO_MIN) || inValue > (FROM_TYPE)(TO_MAX))       \
-      return STATUS_CONST(ARITHMETIC_OVERFLOW);                                \
-    *outValue = (TO_TYPE)inValue;                                              \
-    return STATUS_CONST(SUCCESS);                                              \
-  }
+/* 2. Unsigned 32-bit conversions */
+CONVERTING(
+    Uint32,
+    TO_EX(16, uint16_t, UNSIGNED, UINT16_MAX),
+    TO_EX(8, uint8_t, UNSIGNED, UINT8_MAX),
+    TO(I64, int64_t, SIGNED),
+    TO_EX(I32, int32_t, UNSIGNED, INT32_MAX),
+    TO_EX(I16, int16_t, UNSIGNED, INT16_MAX),
+    TO_EX(I8, int8_t, UNSIGNED, INT8_MAX)
+)
 
-#define CAST_SIGNED_TO_SAME_OR_WIDER_UNSIGNED_IMPLEMENT(NAME, FROM_TYPE,       \
-                                                        TO_TYPE)               \
-  PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), NAME,                   \
-                                (TO_TYPE * outValue, FROM_TYPE inValue)) {     \
-    if (!outValue)                                                             \
-      return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    if (inValue < 0)                                                           \
-      return STATUS_CONST(ARITHMETIC_OVERFLOW);                                \
-    *outValue = (TO_TYPE)inValue;                                              \
-    return STATUS_CONST(SUCCESS);                                              \
-  }
+/* 3. Unsigned 16-bit conversions */
+CONVERTING(
+    Uint16,
+    TO_EX(8, uint8_t, UNSIGNED, UINT8_MAX),
+    TO(I64, int64_t, SIGNED),
+    TO(I32, int32_t, SIGNED),
+    TO_EX(I16, int16_t, UNSIGNED, INT16_MAX),
+    TO_EX(I8, int8_t, UNSIGNED, INT8_MAX)
+)
 
-#define CAST_SIGNED_TO_NARROWER_UNSIGNED_IMPLEMENT(NAME, FROM_TYPE, TO_TYPE,   \
-                                                   TO_MAX)                     \
-  PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), NAME,                   \
-                                (TO_TYPE * outValue, FROM_TYPE inValue)) {     \
-    if (!outValue)                                                             \
-      return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    if (inValue < 0 || (uint64_t)inValue > (uint64_t)(TO_MAX))                 \
-      return STATUS_CONST(ARITHMETIC_OVERFLOW);                                \
-    *outValue = (TO_TYPE)inValue;                                              \
-    return STATUS_CONST(SUCCESS);                                              \
-  }
+/* 4. Unsigned 8-bit conversions */
+CONVERTING(
+    Uint8,
+    TO(I64, int64_t, SIGNED),
+    TO(I32, int32_t, SIGNED),
+    TO(I16, int16_t, SIGNED),
+    TO_EX(I8, int8_t, UNSIGNED, INT8_MAX)
+)
 
-#define CAST_UNSIGNED_TO_WIDER_SIGNED_IMPLEMENT(NAME, FROM_TYPE, TO_TYPE)     \
-  PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), NAME,                   \
-                                (TO_TYPE * outValue, FROM_TYPE inValue)) {     \
-    if (!outValue)                                                             \
-      return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    *outValue = (TO_TYPE)inValue;                                              \
-    return STATUS_CONST(SUCCESS);                                              \
-  }
+/* 5. Signed 64-bit conversions */
+CONVERTING(
+    Int64,
+    TO_EX(32, int32_t, SIGNED, INT32_MIN, INT32_MAX),
+    TO_EX(16, int16_t, SIGNED, INT16_MIN, INT16_MAX),
+    TO_EX(8, int8_t, SIGNED, INT8_MIN, INT8_MAX),
+    TO(U64, uint64_t, UNSIGNED),
+    TO_EX(U32, uint32_t, UNSIGNED, UINT32_MAX),
+    TO_EX(U16, uint16_t, UNSIGNED, UINT16_MAX),
+    TO_EX(U8, uint8_t, UNSIGNED, UINT8_MAX),
+    TO_EX(Size, size_t, UNSIGNED, SIZE_MAX)
+)
 
-#define CAST_UNSIGNED_TO_SAME_OR_NARROWER_SIGNED_IMPLEMENT(NAME, FROM_TYPE,    \
-                                                           TO_TYPE, TO_MAX)    \
-  PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), NAME,                   \
-                                (TO_TYPE * outValue, FROM_TYPE inValue)) {     \
-    if (!outValue)                                                             \
-      return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    if ((uint64_t)inValue > (uint64_t)(TO_MAX))                                \
-      return STATUS_CONST(ARITHMETIC_OVERFLOW);                                \
-    *outValue = (TO_TYPE)inValue;                                              \
-    return STATUS_CONST(SUCCESS);                                              \
-  }
+/* 6. Signed 32-bit conversions */
+CONVERTING(
+    Int32,
+    TO_EX(16, int16_t, SIGNED, INT16_MIN, INT16_MAX),
+    TO_EX(8, int8_t, SIGNED, INT8_MIN, INT8_MAX),
+    TO(U64, uint64_t, UNSIGNED),
+    TO(U32, uint32_t, UNSIGNED),
+    TO_EX(U16, uint16_t, UNSIGNED, UINT16_MAX),
+    TO_EX(U8, uint8_t, UNSIGNED, UINT8_MAX),
+    TO_EX(Size, size_t, UNSIGNED, SIZE_MAX)
+)
 
-/* Unsigned downcasts */
-CAST_UNSIGNED_DOWNCAST_IMPLEMENT(Uint64to32, uint64_t, uint32_t, UINT32_MAX)
-CAST_UNSIGNED_DOWNCAST_IMPLEMENT(Uint64to16, uint64_t, uint16_t, UINT16_MAX)
-CAST_UNSIGNED_DOWNCAST_IMPLEMENT(Uint64to8, uint64_t, uint8_t, UINT8_MAX)
-CAST_UNSIGNED_DOWNCAST_IMPLEMENT(Uint32to16, uint32_t, uint16_t, UINT16_MAX)
-CAST_UNSIGNED_DOWNCAST_IMPLEMENT(Uint32to8, uint32_t, uint8_t, UINT8_MAX)
-CAST_UNSIGNED_DOWNCAST_IMPLEMENT(Uint16to8, uint16_t, uint8_t, UINT8_MAX)
+/* 7. Signed 16-bit conversions */
+CONVERTING(
+    Int16,
+    TO_EX(8, int8_t, SIGNED, INT8_MIN, INT8_MAX),
+    TO(U64, uint64_t, UNSIGNED),
+    TO(U32, uint32_t, UNSIGNED),
+    TO(U16, uint16_t, UNSIGNED),
+    TO_EX(U8, uint8_t, UNSIGNED, UINT8_MAX)
+)
 
-/* Signed downcasts */
-CAST_SIGNED_DOWNCAST_IMPLEMENT(Int64to32, int64_t, int32_t, INT32_MIN,
-                               INT32_MAX)
-CAST_SIGNED_DOWNCAST_IMPLEMENT(Int64to16, int64_t, int16_t, INT16_MIN,
-                               INT16_MAX)
-CAST_SIGNED_DOWNCAST_IMPLEMENT(Int64to8, int64_t, int8_t, INT8_MIN, INT8_MAX)
-CAST_SIGNED_DOWNCAST_IMPLEMENT(Int32to16, int32_t, int16_t, INT16_MIN,
-                               INT16_MAX)
-CAST_SIGNED_DOWNCAST_IMPLEMENT(Int32to8, int32_t, int8_t, INT8_MIN, INT8_MAX)
-CAST_SIGNED_DOWNCAST_IMPLEMENT(Int16to8, int16_t, int8_t, INT8_MIN, INT8_MAX)
+/* 8. Signed 8-bit conversions */
+CONVERTING(
+    Int8,
+    TO(U64, uint64_t, UNSIGNED),
+    TO(U32, uint32_t, UNSIGNED),
+    TO(U16, uint16_t, UNSIGNED),
+    TO(U8, uint8_t, UNSIGNED)
+)
 
-/* Signed to unsigned conversions */
-CAST_SIGNED_TO_SAME_OR_WIDER_UNSIGNED_IMPLEMENT(Int64toU64, int64_t, uint64_t)
-CAST_SIGNED_TO_NARROWER_UNSIGNED_IMPLEMENT(Int64toU32, int64_t, uint32_t,
-                                           UINT32_MAX)
-CAST_SIGNED_TO_NARROWER_UNSIGNED_IMPLEMENT(Int64toU16, int64_t, uint16_t,
-                                           UINT16_MAX)
-CAST_SIGNED_TO_NARROWER_UNSIGNED_IMPLEMENT(Int64toU8, int64_t, uint8_t,
-                                           UINT8_MAX)
-
-CAST_SIGNED_TO_SAME_OR_WIDER_UNSIGNED_IMPLEMENT(Int32toU64, int32_t, uint64_t)
-CAST_SIGNED_TO_SAME_OR_WIDER_UNSIGNED_IMPLEMENT(Int32toU32, int32_t, uint32_t)
-CAST_SIGNED_TO_NARROWER_UNSIGNED_IMPLEMENT(Int32toU16, int32_t, uint16_t,
-                                           UINT16_MAX)
-CAST_SIGNED_TO_NARROWER_UNSIGNED_IMPLEMENT(Int32toU8, int32_t, uint8_t,
-                                           UINT8_MAX)
-
-CAST_SIGNED_TO_SAME_OR_WIDER_UNSIGNED_IMPLEMENT(Int16toU64, int16_t, uint64_t)
-CAST_SIGNED_TO_SAME_OR_WIDER_UNSIGNED_IMPLEMENT(Int16toU32, int16_t, uint32_t)
-CAST_SIGNED_TO_SAME_OR_WIDER_UNSIGNED_IMPLEMENT(Int16toU16, int16_t, uint16_t)
-CAST_SIGNED_TO_NARROWER_UNSIGNED_IMPLEMENT(Int16toU8, int16_t, uint8_t,
-                                           UINT8_MAX)
-
-CAST_SIGNED_TO_SAME_OR_WIDER_UNSIGNED_IMPLEMENT(Int8toU64, int8_t, uint64_t)
-CAST_SIGNED_TO_SAME_OR_WIDER_UNSIGNED_IMPLEMENT(Int8toU32, int8_t, uint32_t)
-CAST_SIGNED_TO_SAME_OR_WIDER_UNSIGNED_IMPLEMENT(Int8toU16, int8_t, uint16_t)
-CAST_SIGNED_TO_SAME_OR_WIDER_UNSIGNED_IMPLEMENT(Int8toU8, int8_t, uint8_t)
-
-/* Unsigned to signed conversions */
-CAST_UNSIGNED_TO_SAME_OR_NARROWER_SIGNED_IMPLEMENT(Uint64toI64, uint64_t,
-                                                   int64_t, INT64_MAX)
-CAST_UNSIGNED_TO_SAME_OR_NARROWER_SIGNED_IMPLEMENT(Uint64toI32, uint64_t,
-                                                   int32_t, INT32_MAX)
-CAST_UNSIGNED_TO_SAME_OR_NARROWER_SIGNED_IMPLEMENT(Uint64toI16, uint64_t,
-                                                   int16_t, INT16_MAX)
-CAST_UNSIGNED_TO_SAME_OR_NARROWER_SIGNED_IMPLEMENT(Uint64toI8, uint64_t, int8_t,
-                                                   INT8_MAX)
-
-CAST_UNSIGNED_TO_WIDER_SIGNED_IMPLEMENT(Uint32toI64, uint32_t, int64_t)
-CAST_UNSIGNED_TO_SAME_OR_NARROWER_SIGNED_IMPLEMENT(Uint32toI32, uint32_t,
-                                                   int32_t, INT32_MAX)
-CAST_UNSIGNED_TO_SAME_OR_NARROWER_SIGNED_IMPLEMENT(Uint32toI16, uint32_t,
-                                                   int16_t, INT16_MAX)
-CAST_UNSIGNED_TO_SAME_OR_NARROWER_SIGNED_IMPLEMENT(Uint32toI8, uint32_t, int8_t,
-                                                   INT8_MAX)
-
-CAST_UNSIGNED_TO_WIDER_SIGNED_IMPLEMENT(Uint16toI64, uint16_t, int64_t)
-CAST_UNSIGNED_TO_WIDER_SIGNED_IMPLEMENT(Uint16toI32, uint16_t, int32_t)
-CAST_UNSIGNED_TO_SAME_OR_NARROWER_SIGNED_IMPLEMENT(Uint16toI16, uint16_t,
-                                                   int16_t, INT16_MAX)
-CAST_UNSIGNED_TO_SAME_OR_NARROWER_SIGNED_IMPLEMENT(Uint16toI8, uint16_t, int8_t,
-                                                   INT8_MAX)
-
-CAST_UNSIGNED_TO_WIDER_SIGNED_IMPLEMENT(Uint8toI64, uint8_t, int64_t)
-CAST_UNSIGNED_TO_WIDER_SIGNED_IMPLEMENT(Uint8toI32, uint8_t, int32_t)
-CAST_UNSIGNED_TO_WIDER_SIGNED_IMPLEMENT(Uint8toI16, uint8_t, int16_t)
-CAST_UNSIGNED_TO_SAME_OR_NARROWER_SIGNED_IMPLEMENT(Uint8toI8, uint8_t, int8_t,
-                                                   INT8_MAX)
-
-/* Size conversions */
-PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), SizetoU64,
-                              (uint64_t * outValue, size_t inValue)) {
-  if (!outValue)
-    return STATUS_CONST(INVALID_ARGUMENT);
-#if SIZE_MAX > UINT64_MAX
-  if (inValue > UINT64_MAX)
-    return STATUS_CONST(ARITHMETIC_OVERFLOW);
-#endif
-  *outValue = (uint64_t)inValue;
-  return STATUS_CONST(SUCCESS);
-}
-
-PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), SizetoU32,
-                              (uint32_t * outValue, size_t inValue)) {
-  if (!outValue)
-    return STATUS_CONST(INVALID_ARGUMENT);
-  if (inValue > (size_t)UINT32_MAX)
-    return STATUS_CONST(ARITHMETIC_OVERFLOW);
-  *outValue = (uint32_t)inValue;
-  return STATUS_CONST(SUCCESS);
-}
-
-PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), SizetoU16,
-                              (uint16_t * outValue, size_t inValue)) {
-  if (!outValue)
-    return STATUS_CONST(INVALID_ARGUMENT);
-  if (inValue > (size_t)UINT16_MAX)
-    return STATUS_CONST(ARITHMETIC_OVERFLOW);
-  *outValue = (uint16_t)inValue;
-  return STATUS_CONST(SUCCESS);
-}
-
-PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), SizetoU8,
-                              (uint8_t * outValue, size_t inValue)) {
-  if (!outValue)
-    return STATUS_CONST(INVALID_ARGUMENT);
-  if (inValue > (size_t)UINT8_MAX)
-    return STATUS_CONST(ARITHMETIC_OVERFLOW);
-  *outValue = (uint8_t)inValue;
-  return STATUS_CONST(SUCCESS);
-}
-
-PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), SizetoI64,
-                              (int64_t * outValue, size_t inValue)) {
-  if (!outValue)
-    return STATUS_CONST(INVALID_ARGUMENT);
-#if SIZE_MAX > INT64_MAX
-  if ((uint64_t)inValue > (uint64_t)INT64_MAX)
-    return STATUS_CONST(ARITHMETIC_OVERFLOW);
-#endif
-  *outValue = (int64_t)inValue;
-  return STATUS_CONST(SUCCESS);
-}
-
-PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), SizetoI32,
-                              (int32_t * outValue, size_t inValue)) {
-  if (!outValue)
-    return STATUS_CONST(INVALID_ARGUMENT);
-  if ((uint64_t)inValue > (uint64_t)INT32_MAX)
-    return STATUS_CONST(ARITHMETIC_OVERFLOW);
-  *outValue = (int32_t)inValue;
-  return STATUS_CONST(SUCCESS);
-}
-
-PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), Uint64toSize,
-                              (size_t * outValue, uint64_t inValue)) {
-  if (!outValue)
-    return STATUS_CONST(INVALID_ARGUMENT);
-  if (inValue > (uint64_t)SIZE_MAX)
-    return STATUS_CONST(ARITHMETIC_OVERFLOW);
-  *outValue = (size_t)inValue;
-  return STATUS_CONST(SUCCESS);
-}
-
-PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), Int64toSize,
-                              (size_t * outValue, int64_t inValue)) {
-  if (!outValue)
-    return STATUS_CONST(INVALID_ARGUMENT);
-  if (inValue < 0)
-    return STATUS_CONST(ARITHMETIC_OVERFLOW);
-  if ((uint64_t)inValue > (uint64_t)SIZE_MAX)
-    return STATUS_CONST(ARITHMETIC_OVERFLOW);
-  *outValue = (size_t)inValue;
-  return STATUS_CONST(SUCCESS);
-}
-
-PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(CAST_MOD), Int32toSize,
-                              (size_t * outValue, int32_t inValue)) {
-  if (!outValue)
-    return STATUS_CONST(INVALID_ARGUMENT);
-  if (inValue < 0)
-    return STATUS_CONST(ARITHMETIC_OVERFLOW);
-  if ((uint64_t)inValue > (uint64_t)SIZE_MAX)
-    return STATUS_CONST(ARITHMETIC_OVERFLOW);
-  *outValue = (size_t)inValue;
-  return STATUS_CONST(SUCCESS);
-}
+/* 9. Size (size_t) conversions */
+CONVERTING(
+    Size,
+    TO_EX(U64, uint64_t, UNSIGNED, UINT64_MAX),
+    TO_EX(U32, uint32_t, UNSIGNED, UINT32_MAX),
+    TO_EX(U16, uint16_t, UNSIGNED, UINT16_MAX),
+    TO_EX(U8, uint8_t, UNSIGNED, UINT8_MAX),
+    TO_EX(I64, int64_t, UNSIGNED, INT64_MAX),
+    TO_EX(I32, int32_t, UNSIGNED, INT32_MAX)
+)
 
 PACKAGE_IMPLEMENT(LIB_PREFIX(CAST_MOD));
 /* EOF */

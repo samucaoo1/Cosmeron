@@ -2,9 +2,9 @@
 
 #include <stdint.h>
 
-static inline size_t MEMORY_INS(PoolAlignedChunkSize)(size_t elementSize) {
-  size_t nodeSize = sizeof(MEMORY_INS(PoolNode));
-  size_t maxAlign = COSMERON_MACRO_INTERNAL_MEMORY_MAX_ALIGNMENT;
+static inline size_t POOL_INS(AlignedChunkSize)(size_t elementSize) {
+  size_t nodeSize = sizeof(POOL_INS(Node));
+  size_t maxAlign = MEMORY_INS(MaxAlignment)();
   size_t size = elementSize > nodeSize ? elementSize : nodeSize;
   size_t rem = size % maxAlign;
   if (rem != 0U) {
@@ -17,17 +17,17 @@ static inline size_t MEMORY_INS(PoolAlignedChunkSize)(size_t elementSize) {
  * TMemoryPool Method Implementations
  * ============================================================ */
 
-OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Create, (size_t elementSize, size_t elementCount)) {
+OBJECT_OPERATION_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), Create, (size_t elementSize, size_t elementCount)) {
   if (!self || elementSize == 0U || elementCount == 0U)
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  size_t chunkSize = MEMORY_INS(PoolAlignedChunkSize)(elementSize);
+  size_t chunkSize = POOL_INS(AlignedChunkSize)(elementSize);
   if (elementCount > SIZE_MAX / chunkSize)
     return STATUS_CONST(ARITHMETIC_OVERFLOW);
 
   size_t totalBytes = chunkSize * elementCount;
   void *buf = NULL;
-  OPSTATUS status = ALLOC_FUNC(AllocBytes)(&buf, totalBytes);
+  OPSTATUS status = ALLOC_FUNC(Bytes)(&buf, totalBytes);
   if (status != STATUS_CONST(SUCCESS))
     return status;
 
@@ -41,7 +41,7 @@ OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Create, (size_t elementSize, size_t e
 
   uint8_t *ptr = (uint8_t *)self->buffer;
   for (size_t i = 0U; i < elementCount; ++i) {
-    MEMORY_INS(PoolNode) *node = (MEMORY_INS(PoolNode) *)(ptr + (i * chunkSize));
+    POOL_INS(Node) *node = (POOL_INS(Node) *)(ptr + (i * chunkSize));
     node->next = self->freeList;
     self->freeList = node;
   }
@@ -49,11 +49,11 @@ OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Create, (size_t elementSize, size_t e
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), CreateBuffer, (void *buffer, size_t bufferSize, size_t elementSize)) {
+OBJECT_OPERATION_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), CreateBuffer, (void *buffer, size_t bufferSize, size_t elementSize)) {
   if (!self || !buffer || elementSize == 0U)
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  size_t chunkSize = MEMORY_INS(PoolAlignedChunkSize)(elementSize);
+  size_t chunkSize = POOL_INS(AlignedChunkSize)(elementSize);
   size_t count = bufferSize / chunkSize;
   if (count == 0U)
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -68,7 +68,7 @@ OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), CreateBuffer, (void *buffer, size_t b
 
   uint8_t *ptr = (uint8_t *)self->buffer;
   for (size_t i = 0U; i < count; ++i) {
-    MEMORY_INS(PoolNode) *node = (MEMORY_INS(PoolNode) *)(ptr + (i * chunkSize));
+    POOL_INS(Node) *node = (POOL_INS(Node) *)(ptr + (i * chunkSize));
     node->next = self->freeList;
     self->freeList = node;
   }
@@ -76,24 +76,24 @@ OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), CreateBuffer, (void *buffer, size_t b
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Alloc, (void **out)) {
-  if (!self || !out)
+OBJECT_OPERATION_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), Alloc, (void *outPointerObject)) {
+  if (!self || !outPointerObject)
     return STATUS_CONST(INVALID_ARGUMENT);
 
   if (self->freeList == NULL) {
-    *out = NULL;
+    MEMORY_INS(WritePointer)(outPointerObject, NULL);
     return STATUS_CONST(OUT_OF_MEMORY);
   }
 
-  MEMORY_INS(PoolNode) *node = self->freeList;
+  POOL_INS(Node) *node = self->freeList;
   self->freeList = node->next;
   self->allocatedCount++;
 
-  *out = (void *)node;
+  MEMORY_INS(WritePointer)(outPointerObject, node);
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Free, (void *ptr)) {
+OBJECT_OPERATION_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), Free, (void *ptr)) {
   if (!self || !ptr)
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -106,7 +106,7 @@ OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Free, (void *ptr)) {
   if (offset % self->elementSize != 0U)
     return STATUS_CONST(INVALID_ARGUMENT);
 
-  MEMORY_INS(PoolNode) *node = (MEMORY_INS(PoolNode) *)ptr;
+  POOL_INS(Node) *node = (POOL_INS(Node) *)ptr;
   node->next = self->freeList;
   self->freeList = node;
   if (self->allocatedCount > 0U)
@@ -115,7 +115,22 @@ OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Free, (void *ptr)) {
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Reset) {
+OBJECT_OPERATION_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), FreePointer, (void *inoutPointerObject)) {
+  void *ptr = NULL;
+  OPSTATUS status;
+
+  if (!self || !inoutPointerObject)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  ptr = MEMORY_INS(ReadPointer)(inoutPointerObject);
+  status = POOL_FUNC(Free)(self, ptr);
+  if (status == STATUS_CONST(SUCCESS)) {
+    MEMORY_INS(WritePointer)(inoutPointerObject, NULL);
+  }
+  return status;
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), Reset, ()) {
   if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -125,7 +140,7 @@ OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Reset) {
   if (self->buffer && self->elementSize > 0U) {
     uint8_t *ptr = (uint8_t *)self->buffer;
     for (size_t i = 0U; i < self->elementCount; ++i) {
-      MEMORY_INS(PoolNode) *node = (MEMORY_INS(PoolNode) *)(ptr + (i * self->elementSize));
+      POOL_INS(Node) *node = (POOL_INS(Node) *)(ptr + (i * self->elementSize));
       node->next = self->freeList;
       self->freeList = node;
     }
@@ -134,13 +149,13 @@ OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Reset) {
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Destroy) {
+OBJECT_OPERATION_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), Destroy, ()) {
   if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
 
   if (self->buffer && self->isOwned) {
     void *buf = self->buffer;
-    ALLOC_FUNC(FreePointer)(&buf);
+    ALLOC_FUNC(Free)(&buf);
   }
   self->buffer = NULL;
 
@@ -154,23 +169,7 @@ OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Destroy) {
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Capacity) {
-  return self ? self->elementCount : 0U;
-}
-
-OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Available) {
-  return self ? (self->elementCount - self->allocatedCount) : 0U;
-}
-
-OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Allocated) {
-  return self ? self->allocatedCount : 0U;
-}
-
-OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), ElementSize) {
-  return self ? self->elementSize : 0U;
-}
-
-OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Contains, (const void *ptr)) {
+OBJECT_PREDICATE_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), Contains, (const void *ptr)) {
   if (!self || !ptr || !self->buffer)
     return false;
 
@@ -184,7 +183,5 @@ OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Contains, (const void *ptr)) {
 }
 
 OBJECT_IMPLEMENT(POOL_TYPE(TMemoryPool));
-
-/* EOF */
 
 /* EOF */

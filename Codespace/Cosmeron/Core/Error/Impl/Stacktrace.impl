@@ -1,0 +1,129 @@
+#pragma once
+
+#include "FormatWriter.inc"
+#include "../../Preprocessor/Detect/OperationSystem.h"
+#include "../../Preprocessor/Detect/Library.h"
+
+#if defined(OS_WINDOWS) && OS_WINDOWS
+  #define WIN32_LEAN_AND_MEAN
+  #include <windows.h>
+#elif (defined(OS_LINUX) && OS_LINUX && defined(LIBC_GLIBC) && LIBC_GLIBC) || \
+      (defined(OS_MAC) && OS_MAC) || (defined(OS_BSD) && OS_BSD)
+  #include <execinfo.h>
+#endif
+
+OBJECT_OPERATION_IMPLEMENT_EX(
+    ERROR_TYPE(TStacktrace), Capture,
+    (size_t skipFrames, size_t maxFrames)) {
+  if (self == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  self->frameCount = 0;
+  size_t limit = STACKTRACE_CONST(MAX_FRAMES);
+  if (maxFrames > 0 && maxFrames < limit) {
+    limit = maxFrames;
+  }
+
+  for (size_t i = 0; i < STACKTRACE_CONST(MAX_FRAMES); ++i) {
+    self->frames[i] = NULL;
+  }
+
+#if defined(OS_WINDOWS) && OS_WINDOWS
+  void *tempFrames[STACKTRACE_CONST(MAX_FRAMES) + 16];
+  DWORD toCapture = (DWORD)(limit + skipFrames + 1);
+  if (toCapture > (DWORD)(sizeof(tempFrames) / sizeof(tempFrames[0]))) {
+    toCapture = (DWORD)(sizeof(tempFrames) / sizeof(tempFrames[0]));
+  }
+  USHORT captured = CaptureStackBackTrace(
+      (DWORD)(skipFrames + 1), (DWORD)limit, self->frames, NULL);
+  self->frameCount = (size_t)captured;
+  return STATUS_CONST(SUCCESS);
+#elif (defined(OS_LINUX) && OS_LINUX && defined(LIBC_GLIBC) && LIBC_GLIBC) || \
+      (defined(OS_MAC) && OS_MAC) || (defined(OS_BSD) && OS_BSD)
+  void *tempFrames[STACKTRACE_CONST(MAX_FRAMES) + 16];
+  size_t totalToCapture = limit + skipFrames + 1;
+  if (totalToCapture > sizeof(tempFrames) / sizeof(tempFrames[0])) {
+    totalToCapture = sizeof(tempFrames) / sizeof(tempFrames[0]);
+  }
+  int captured = backtrace(tempFrames, (int)totalToCapture);
+  if (captured <= 0) {
+    return STATUS_CONST(SUCCESS);
+  }
+
+  size_t startIndex = skipFrames + 1;
+  size_t outIdx = 0;
+  for (size_t i = startIndex; i < (size_t)captured && outIdx < limit; ++i) {
+    self->frames[outIdx++] = tempFrames[i];
+  }
+  self->frameCount = outIdx;
+  return STATUS_CONST(SUCCESS);
+#else
+  (void)skipFrames;
+  (void)maxFrames;
+  return STATUS_CONST(SUCCESS);
+#endif
+}
+
+OBJECT_PROCEDURE_IMPLEMENT_EX(ERROR_TYPE(TStacktrace), Clear, ()) {
+  if (self == NULL) {
+    return;
+  }
+  self->frameCount = 0;
+  for (size_t i = 0; i < STACKTRACE_CONST(MAX_FRAMES); ++i) {
+    self->frames[i] = NULL;
+  }
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(
+    ERROR_TYPE(TStacktrace), FrameAt,
+    (size_t index, void **outAddress)) {
+  if (self == NULL || outAddress == NULL) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+  if (index >= self->frameCount) {
+    return STATUS_CONST(OUT_OF_RANGE);
+  }
+  *outAddress = self->frames[index];
+  return STATUS_CONST(SUCCESS);
+}
+
+OBJECT_OPERATION_IMPLEMENT_EX(
+    ERROR_TYPE(TStacktrace), Format,
+    (char *outBuffer, size_t capacity, size_t *outWritten)) {
+  if (outWritten != NULL) {
+    *outWritten = 0;
+  }
+  if (self == NULL || outBuffer == NULL || capacity == 0) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  ERROR_INS(FormatWriter) w;
+  ERROR_INS(FormatWriter_Init)(&w, outBuffer, capacity);
+
+  if (self->frameCount == 0) {
+    ERROR_INS(FormatWriter_AppendStr)(&w, "<empty stacktrace>");
+  } else {
+    for (size_t i = 0; i < self->frameCount; ++i) {
+      if (i > 0) {
+        ERROR_INS(FormatWriter_AppendChar)(&w, '\n');
+      }
+      ERROR_INS(FormatWriter_AppendChar)(&w, '#');
+      if (i < 10) {
+        ERROR_INS(FormatWriter_AppendChar)(&w, '0');
+      }
+      ERROR_INS(FormatWriter_AppendUint)(&w, i);
+      ERROR_INS(FormatWriter_AppendStr)(&w, "  ");
+      ERROR_INS(FormatWriter_AppendHex)(&w, (uintptr_t)self->frames[i]);
+    }
+  }
+
+  if (outWritten != NULL) {
+    *outWritten = w.written;
+  }
+  return w.overflow ? STATUS_CONST(INSUFFICIENT_SPACE) : STATUS_CONST(SUCCESS);
+}
+
+OBJECT_IMPLEMENT(ERROR_TYPE(TStacktrace));
+
+/* EOF */
