@@ -2,6 +2,8 @@
 
 #include "Module.space"
 #include "Common/Tuple.impl"
+#include "Common/ComparisonEx.impl"
+#include "Callback/Callback.h"
 #include "Common/FunctionTable.impl"
 #include "Common/Dispatch.impl"
 #include "Common/Template.impl"
@@ -48,13 +50,22 @@
  * 2. Internal Function Generators (Prototypes & Inlines)
  * ------------------------------------------------------------ */
 
-#define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_I(PKG, C, I, R, N, P, B) \
-  typedef R GNS3(PKG, N, ret_t);                                            \
-  struct GNS3(PKG, N, sig) {                                                \
-    PP_PARAMS_TO_FIELDS(P)                                                  \
-  };                                                                        \
-  static inline R GNS2(PKG, N)                                              \
+#define COSMERON_MACRO_INTERNAL_PACKAGE_PROTO_C_0(PKG, R, N, P)                \
+  typedef R GNS3(PKG, N, ret_t);                                               \
+  struct GNS3(PKG, N, sig) {                                                   \
+    PP_PARAMS_TO_FIELDS(P)                                                     \
+  };                                                                           \
+  static inline R GNS2(PKG, N)                                                 \
       COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P);
+
+#define COSMERON_MACRO_INTERNAL_PACKAGE_PROTO_C_1(PKG, R, N, P)                \
+  COSMERON_MACRO_INTERNAL_PACKAGE_PROTO_C_0(PKG, R, N, P)
+
+#define COSMERON_MACRO_INTERNAL_PACKAGE_PROTO_C_2(PKG, R, N, P)                \
+  CALLBACK_FUNCTION(R, GNS2(PKG, N), P);
+
+#define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_I(PKG, C, I, R, N, P, B)    \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PACKAGE_PROTO_C_, C)(PKG, R, N, P)
 
 #define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO(PKG, M) \
   COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_I, PKG, M)
@@ -79,6 +90,7 @@
 #define PACKAGE(PKG, ...)                                                       \
   PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO, PKG, __VA_ARGS__)   \
   struct GNS2(PKG, FunctionTable) {                                             \
+    int _reserved;                                                              \
     PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_PKG_FT_FIELD, PKG, __VA_ARGS__)      \
   };                                                                            \
   typedef struct GNS2(PKG, FunctionTable) GNS2(PKG, FunctionTable);             \
@@ -86,6 +98,7 @@
   static inline const struct GNS2(PKG, FunctionTable) *GNS2(                    \
       PKG, GetFunctionTable)(void) {                                            \
     static const struct GNS2(PKG, FunctionTable) table = {                      \
+        ._reserved = 0,                                                         \
         PP_FOREACH_CTX(                                                         \
             COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY, PKG, __VA_ARGS__)};          \
     return &table;                                                              \

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Outcome/Status.space"
+#include "../Algorithm/Comparison.space"
 #include "../Namespace.h"
 #include "../Preprocessor/Arguments.h"
 #include "../Preprocessor/Boolean.h"

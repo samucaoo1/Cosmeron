@@ -5,22 +5,22 @@
 PACKAGE_PROCEDURE_IMPLEMENT_EX(ALGORITHM_NS(REPEAT_MOD), Procedure,
                                (size_t count,
                                 TCALLBACK(RepeatProcedure) action)) {
-  if (count == 0U || !CALLBACK_FUNC(RepeatProcedure_IsValid)(action))
+  if (count == 0U || !CALLBACK_IS_VALID(action))
     return;
 
   for (size_t i = 0U; i < count; ++i) {
-    CALLBACK_FUNC(RepeatProcedure_Invoke)(action);
+    CALLBACK_CALL(action);
   }
 }
 
 PACKAGE_PROCEDURE_IMPLEMENT_EX(ALGORITHM_NS(REPEAT_MOD), IndexedProcedure,
                                (size_t count,
                                 TCALLBACK(RepeatIndexedProcedure) action)) {
-  if (count == 0U || !CALLBACK_FUNC(RepeatIndexedProcedure_IsValid)(action))
+  if (count == 0U || !CALLBACK_IS_VALID(action))
     return;
 
   for (size_t i = 0U; i < count; ++i) {
-    CALLBACK_FUNC(RepeatIndexedProcedure_Invoke)(action, i);
+    CALLBACK_CALL(action, i);
   }
 }
 
@@ -29,11 +29,11 @@ PACKAGE_OPERATION_IMPLEMENT_EX(ALGORITHM_NS(REPEAT_MOD), Operation,
                                 TCALLBACK(RepeatOperation) operation)) {
   if (count == 0U)
     return STATUS_CONST(SUCCESS);
-  if (!CALLBACK_FUNC(RepeatOperation_IsValid)(operation))
+  if (!CALLBACK_IS_VALID(operation))
     return STATUS_CONST(INVALID_ARGUMENT);
 
   for (size_t i = 0U; i < count; ++i) {
-    OPSTATUS status = CALLBACK_FUNC(RepeatOperation_Invoke)(operation);
+    OPSTATUS status = CALLBACK_CALL(operation);
     if (status != STATUS_CONST(SUCCESS))
       return status;
   }
@@ -46,12 +46,11 @@ PACKAGE_OPERATION_IMPLEMENT_EX(ALGORITHM_NS(REPEAT_MOD), IndexedOperation,
                                 TCALLBACK(RepeatIndexedOperation) operation)) {
   if (count == 0U)
     return STATUS_CONST(SUCCESS);
-  if (!CALLBACK_FUNC(RepeatIndexedOperation_IsValid)(operation))
+  if (!CALLBACK_IS_VALID(operation))
     return STATUS_CONST(INVALID_ARGUMENT);
 
   for (size_t i = 0U; i < count; ++i) {
-    OPSTATUS status =
-        CALLBACK_FUNC(RepeatIndexedOperation_Invoke)(operation, i);
+    OPSTATUS status = CALLBACK_CALL(operation, i);
     if (status != STATUS_CONST(SUCCESS))
       return status;
   }
@@ -64,11 +63,11 @@ PACKAGE_PREDICATE_IMPLEMENT_EX(ALGORITHM_NS(REPEAT_MOD), Predicate,
                                 TCALLBACK(RepeatPredicate) predicate)) {
   if (count == 0U)
     return true;
-  if (!CALLBACK_FUNC(RepeatPredicate_IsValid)(predicate))
+  if (!CALLBACK_IS_VALID(predicate))
     return false;
 
   for (size_t i = 0U; i < count; ++i) {
-    if (!CALLBACK_FUNC(RepeatPredicate_Invoke)(predicate))
+    if (!CALLBACK_CALL(predicate))
       return false;
   }
 
@@ -80,11 +79,11 @@ PACKAGE_PREDICATE_IMPLEMENT_EX(ALGORITHM_NS(REPEAT_MOD), IndexedPredicate,
                                 TCALLBACK(RepeatIndexedPredicate) predicate)) {
   if (count == 0U)
     return true;
-  if (!CALLBACK_FUNC(RepeatIndexedPredicate_IsValid)(predicate))
+  if (!CALLBACK_IS_VALID(predicate))
     return false;
 
   for (size_t i = 0U; i < count; ++i) {
-    if (!CALLBACK_FUNC(RepeatIndexedPredicate_Invoke)(predicate, i))
+    if (!CALLBACK_CALL(predicate, i))
       return false;
   }
 

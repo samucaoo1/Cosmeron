@@ -90,7 +90,7 @@ int main(void) {
 
   TCALLBACK(Comparison) comparison =
       CALLBACK_FUNC(Comparison_Bind)(compare_int_pointer, NULL);
-  if (CALLBACK_FUNC(Comparison_Invoke)(comparison, &left, &right) !=
+  if (CALLBACK_INVOKE(comparison, &left, &right) !=
       COMPARISON_CONST(LOWER))
     return 7;
 

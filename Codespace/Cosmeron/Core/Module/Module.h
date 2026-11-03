@@ -2,6 +2,7 @@
 
 #include "Module.space"
 #include "Common/Tuple.impl"
+#include "Common/ComparisonEx.impl"
 #include "Common/FunctionTable.impl"
 #include "Common/Dispatch.impl"
 #include "Common/Template.impl"

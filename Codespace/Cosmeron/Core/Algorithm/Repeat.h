@@ -29,14 +29,14 @@
 /* 1. Callback Declarations                                                   */
 /* ========================================================================== */
 
-CALLBACK_DECLARE_NULLARY_PROCEDURE(RepeatProcedure);
-CALLBACK_DECLARE_PROCEDURE(RepeatIndexedProcedure, (size_t index), (index));
+CALLBACK_PROCEDURE(RepeatProcedure, ());
+CALLBACK_PROCEDURE(RepeatIndexedProcedure, (size_t index));
 
-CALLBACK_DECLARE_NULLARY_OPERATION(RepeatOperation);
-CALLBACK_DECLARE_OPERATION(RepeatIndexedOperation, (size_t index), (index));
+CALLBACK_OPERATION(RepeatOperation, ());
+CALLBACK_OPERATION(RepeatIndexedOperation, (size_t index));
 
-CALLBACK_DECLARE_NULLARY_PREDICATE(RepeatPredicate);
-CALLBACK_DECLARE_PREDICATE(RepeatIndexedPredicate, (size_t index), (index));
+CALLBACK_PREDICATE(RepeatPredicate, ());
+CALLBACK_PREDICATE(RepeatIndexedPredicate, (size_t index));
 
 /* ========================================================================== */
 /* 2. Package Declaration: Algorithm_Repeat                                   */
@@ -71,9 +71,9 @@ PACKAGE(
 /* ========================================================================== */
 
 #define TEMPLATE_REPEAT(SUFFIX, TYPE)                                          \
-  CALLBACK_DECLARE_NULLARY(REPEAT_INS(PP_OP_CAT2(Generator_, SUFFIX)), TYPE);  \
-  CALLBACK_DECLARE(REPEAT_INS(PP_OP_CAT2(IndexedGenerator_, SUFFIX)), TYPE,    \
-                   (size_t index), (index));                                   \
+  CALLBACK_FUNCTION(TYPE, REPEAT_INS(PP_OP_CAT2(Generator_, SUFFIX)), ());     \
+  CALLBACK_FUNCTION(TYPE, REPEAT_INS(PP_OP_CAT2(IndexedGenerator_, SUFFIX)),   \
+                    (size_t index));                                           \
   PACKAGE(                                                                     \
       GNS2(ALGORITHM_NS(REPEAT_MOD), SUFFIX),                                  \
       OPERATION_INLINE(Fill, (TYPE * destination, TYPE value, size_t count),   \
@@ -97,16 +97,12 @@ PACKAGE(
           {                                                                    \
             if (count == 0U)                                                   \
               return STATUS_CONST(SUCCESS);                                    \
-            if (!destination || !GNS2(CALLBACK_FUNC(REPEAT_INS(                \
-                                          PP_OP_CAT2(Generator_, SUFFIX))),    \
-                                      IsValid)(generator))                     \
+            if (!destination || !CALLBACK_IS_VALID(generator))                 \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             if (sizeof(TYPE) != 0U && count > SIZE_MAX / sizeof(TYPE))         \
               return STATUS_CONST(ARITHMETIC_OVERFLOW);                        \
             for (size_t i = 0U; i < count; ++i) {                              \
-              destination[i] = GNS2(                                           \
-                  CALLBACK_FUNC(REPEAT_INS(PP_OP_CAT2(Generator_, SUFFIX))),   \
-                  Invoke)(generator);                                          \
+              destination[i] = CALLBACK_CALL(generator);                       \
             }                                                                  \
             return STATUS_CONST(SUCCESS);                                      \
           }),                                                                  \
@@ -118,17 +114,12 @@ PACKAGE(
           {                                                                    \
             if (count == 0U)                                                   \
               return STATUS_CONST(SUCCESS);                                    \
-            if (!destination || !GNS2(CALLBACK_FUNC(REPEAT_INS(PP_OP_CAT2(     \
-                                          IndexedGenerator_, SUFFIX))),        \
-                                      IsValid)(generator))                     \
+            if (!destination || !CALLBACK_IS_VALID(generator))                 \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             if (sizeof(TYPE) != 0U && count > SIZE_MAX / sizeof(TYPE))         \
               return STATUS_CONST(ARITHMETIC_OVERFLOW);                        \
             for (size_t i = 0U; i < count; ++i) {                              \
-              destination[i] =                                                 \
-                  GNS2(CALLBACK_FUNC(                                          \
-                           REPEAT_INS(PP_OP_CAT2(IndexedGenerator_, SUFFIX))), \
-                       Invoke)(generator, i);                                  \
+              destination[i] = CALLBACK_CALL(generator, i);                    \
             }                                                                  \
             return STATUS_CONST(SUCCESS);                                      \
           }))

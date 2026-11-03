@@ -58,6 +58,7 @@ Everything must live inside the library/module namespace whenever C allows it. E
   - `PREDICATE(NAME, PARAMS)`: Proposition returning `bool`.
   - `FUNCTION(RET, NAME, PARAMS)`: Value-producing function returning `RET`.
   - `PROCEDURE(NAME, PARAMS)`: Infallible action returning `void`.
+  - `COMPARISON(NAME, PARAMS)`: Three-way comparison returning `CMPOUT`.
   - Use `CONST_*` for const receiver methods (`const CLASS * self`).
   - Use `*_INLINE` when providing the implementation directly in the declaration block.
 - **Implementations (`.impl` / `.c`):** Implement non-inline members using either the explicit or unified prototype macros:
@@ -67,11 +68,13 @@ Everything must live inside the library/module namespace whenever C allows it. E
     OBJECT_PREDICATE_IMPLEMENT_EX(Target, MethodName, (parameters...)) { /* ... */ }
     OBJECT_FUNCTION_IMPLEMENT_EX(Target, ReturnType, MethodName, (parameters...)) { /* ... */ }
     OBJECT_PROCEDURE_IMPLEMENT_EX(Target, MethodName, (parameters...)) { /* ... */ }
+    OBJECT_COMPARISON_IMPLEMENT_EX(Target, MethodName, (parameters...)) { /* binds (const Target *self, const Target *other) */ }
 
     PACKAGE_OPERATION_IMPLEMENT_EX(Package, FuncName, (parameters...)) { /* free function */ }
     PACKAGE_PREDICATE_IMPLEMENT_EX(Package, FuncName, (parameters...)) { /* ... */ }
     PACKAGE_FUNCTION_IMPLEMENT_EX(Package, ReturnType, FuncName, (parameters...)) { /* ... */ }
     PACKAGE_PROCEDURE_IMPLEMENT_EX(Package, FuncName, (parameters...)) { /* ... */ }
+    PACKAGE_COMPARISON_IMPLEMENT_EX(Package, FuncName, (parameters...)) { /* ... */ }
     ```
   - **Unified Family (`*_IMPLEMENT_EX`):**
     ```c
@@ -79,6 +82,7 @@ Everything must live inside the library/module namespace whenever C allows it. E
     PREDICATE_IMPLEMENT_EX(Target, MethodName, (parameters...)) { /* ... */ }
     FUNCTION_IMPLEMENT_EX(Target, ReturnType, MethodName, (parameters...)) { /* ... */ }
     PROCEDURE_IMPLEMENT_EX(Target, MethodName, (parameters...)) { /* ... */ }
+    COMPARISON_IMPLEMENT_EX(Target, MethodName, (parameters...)) { /* ... */ }
     ```
     The dispatcher binds receiver `self` for objects if **any** of these traits hold:
     1. Direct type tag: `#define <Target>_IS_OBJECT 1` (e.g. `#define TCalculator_IS_OBJECT 1`)
@@ -93,10 +97,27 @@ Everything must live inside the library/module namespace whenever C allows it. E
 ## 4. Structs, Objects & Function Tables
 
 - **Declarative Objects:** Use `OBJECT(CLASS, FIELDS(...), ...)` and `OBJECT_EXTENDS(CLASS, BASE_CLASS, FIELDS(...), ...)`.
-  - Members are declared with `OPERATION`, `PREDICATE`, `FUNCTION`, `PROCEDURE`.
+  - Members are declared with `OPERATION`, `PREDICATE`, `FUNCTION`, `PROCEDURE`, `COMPARISON`.
+  - Comparison extensions generate specialized comparisons directly inside objects:
+    - `COMPARISON_EX(TYPE, NAME, FIELD)`
+    - Shortcuts: `COMPARISON_NUMERIC(NAME, FIELD)`, `COMPARISON_STRING(NAME, FIELD)`, `COMPARISON_BYTES(NAME, FIELD)`.
+  - Declarative callbacks can be declared inside `OBJECT` or `PACKAGE` via the `CALLBACK(...)` capsule:
+    - `CALLBACK(OPERATION(Name, (params)))`, `CALLBACK(PREDICATE(Name, (params)))`, etc.
+  - Automatic `TCALLBACK(Comparison)` adapter generation for object methods returning `CMPOUT`:
+    - Generates `<CLASS>_<Method>_ComparatorAdapter(const void *left, const void *right, void *context)` and `<CLASS>_<Method>_AsComparator()` which produces a ready-to-use `TCALLBACK(Comparison)`.
   - Member fields are declared cleanly within `FIELDS(...)`.
   - Casting: `OBJECT_AS(OBJ, TARGET_TYPE)`.
   - Invocation: `OBJECT_CALL(obj, MethodName, args...)` or `OBJECT_CALL_0(obj, MethodName)`.
+- **Declarative Callbacks System:**
+  - Standalone declarations use category descriptors:
+    - `CALLBACK_FUNCTION(RET, NAME, (params))`
+    - `CALLBACK_PROCEDURE(NAME, (params))`
+    - `CALLBACK_OPERATION(NAME, (params))`
+    - `CALLBACK_PREDICATE(NAME, (params))`
+    - `CALLBACK_COMPARISON(NAME, (params))`
+  - Universal invocation: `CALLBACK_CALL(callback, args...)` or `CALLBACK_INVOKE(callback, args...)` (supports arbitrary arity).
+  - Validity checking: `CALLBACK_IS_VALID(callback)` or `callback.IsValid(&callback)`.
+  - Binding: `callback.Bind(&callback, func, ctx)` or `CALLBACK_FUNC(NAME, Bind)(func, ctx)`.
 - **Declarative Packages:** Use `PACKAGE(PKG, ...)`.
   - Invocation: `PACKAGE_CALL(PKG, FuncName, args...)` or direct calls `PKG_FuncName(...)`.
 - **Compile-time disabling:** Every Function Table family provides compile-time disabling via `MODULE_DISABLE_FUNCTION_TABLE`, `PACKAGE_DISABLE_FUNCTION_TABLE`, or `OBJECT_DISABLE_FUNCTION_TABLE`. When defined, no struct, instance, or table is emitted.

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../Outcome/Status.h"
-#include "../Package.h"
+#include "../Module.space"
+#include "../Common/Tuple.impl"
 
 #include <stdbool.h>
 #include <stddef.h>

@@ -49,10 +49,8 @@ PACKAGE_PROCEDURE_IMPLEMENT_EX(
   info.line = line;
   info.function = function;
 
-  if (GNS2(CALLBACK_FUNC(PANIC_INS(PanicHandler_Function)),
-           IsValid)(PANIC_INS(CustomHandler))) {
-    GNS2(CALLBACK_FUNC(PANIC_INS(PanicHandler_Function)),
-         Invoke)(PANIC_INS(CustomHandler), &info);
+  if (CALLBACK_IS_VALID(PANIC_INS(CustomHandler))) {
+    CALLBACK_INVOKE(PANIC_INS(CustomHandler), &info);
     return;
   }
 

@@ -1,27 +1,41 @@
 # Callback
 
-Callback represents a typed function together with a borrowed context. It uses the declarative package system from `Core/Module/Package.h` to generate the callable operations.
+Callback represents a typed function pointer together with an optional borrowed context. It provides a type-safe, declarative abstraction for callbacks across Cosmeron modules.
 
 ## Contract
 
-Each declaration creates a distinct callback type containing:
+Each declaration generates a specialized callback type `TCALLBACK(NAME)` containing:
 
-- A signature-specific function pointer.
+- A concrete function pointer with the exact signature specified plus `void *context`.
 - A non-owning `void *context`.
-- `Bind`, to package a function and its context.
-- `IsValid`, to check whether a function is bound.
-- `Invoke`, to call the function with the stored context.
+- `Bind(&cb, function, context)` to package a function pointer and its context.
+- `IsValid(&cb)` or `CALLBACK_IS_VALID(cb)` to check whether a function is bound.
+- `CALLBACK_INVOKE(cb, args...)` to invoke the callback with stored context.
 
-These operations are declared through `PACKAGE` and the matching `FUNCTION_INLINE`, `PREDICATE_INLINE`, or `PROCEDURE_INLINE` descriptors. The normal Cosmeron package function-table behavior and its compile-time disable switch therefore apply.
+The context is borrowed. Callback does not allocate, copy, or release it. The caller must keep the pointed-to context alive for every invocation.
 
-The context is borrowed. Callback does not allocate, copy, or release it. The caller must keep the pointed-to object alive for every invocation.
+## Descriptors
 
-## Value-returning callback
+Callbacks correspond directly to Cosmeron function categories:
+
+| Descriptor | Return Type | Arguments Specification |
+|---|---|---|
+| `CALLBACK_FUNCTION(RET, NAME, PARAMS)` | `RET` | Conventional C parameters `(Type1 a, Type2 b)` |
+| `CALLBACK_PROCEDURE(NAME, PARAMS)` | `void` | Conventional C parameters `(Type1 a)` |
+| `CALLBACK_OPERATION(NAME, PARAMS)` | `OPSTATUS` | Conventional C parameters `(Type1 a)` |
+| `CALLBACK_PREDICATE(NAME, PARAMS)` | `bool` | Conventional C parameters `(Type1 a)` |
+| `CALLBACK_COMPARISON(NAME, PARAMS)` | `CMPOUT` | Conventional C parameters `(Type1 a, Type2 b)` |
+
+Nullary callbacks use standard empty parentheses `()` without requiring special macro variants.
+
+## Usage Examples
+
+### 1. Value-Returning Callback
 
 ```c
 #include "Cosmeron/Core/Module/Callback/Callback.h"
 
-CALLBACK_DECLARE(Scale, int, (int value), (value))
+CALLBACK_FUNCTION(int, Scale, (int value));
 
 typedef struct {
     int factor;
@@ -34,84 +48,83 @@ static int ScaleValue(int value, void *context) {
 
 int main(void) {
     ScaleContext state = { 3 };
-    CALLBACK_TYPE(Scale) callback =
+    TCALLBACK(Scale) callback =
         CALLBACK_FUNC(Scale_Bind)(ScaleValue, &state);
 
-    if (!CALLBACK_FUNC(Scale_IsValid)(callback))
+    if (!CALLBACK_IS_VALID(callback))
         return 1;
 
-    return CALLBACK_FUNC(Scale_Invoke)(callback, 4) == 12 ? 0 : 1;
+    return CALLBACK_INVOKE(callback, 4) == 12 ? 0 : 1;
 }
 ```
 
-The generated callback signature is `int (*)(int value, void *context)`. The caller of `Invoke` supplies only the ordinary argument; the stored context is forwarded automatically.
-
-## Multiple arguments
+### 2. Procedures, Operations and Predicates
 
 ```c
-CALLBACK_DECLARE(AddOffset, int, (int left, int right), (left, right))
+/* Infallible procedure returning void */
+CALLBACK_PROCEDURE(Notify, (int code));
 
-static int AddOffsetValue(int left, int right, void *context) {
-    return left + right + *(int *)context;
-}
+/* Fallible operation returning OPSTATUS */
+CALLBACK_OPERATION(Commit, (int value));
+
+/* Predicate proposition returning bool */
+CALLBACK_PREDICATE(IsPositive, (int value));
+
+/* Three-way comparison returning CMPOUT */
+CALLBACK_COMPARISON(CompareKeys, (int left, int right));
 ```
 
-## Procedures
+### 3. Nullary Callbacks
 
-Use `CALLBACK_DECLARE_PROCEDURE` for callbacks returning `void`:
+Callbacks without ordinary parameters use standard empty parentheses `()`:
 
 ```c
-CALLBACK_DECLARE_PROCEDURE(Notify, (int code), (code))
-
-static void NotifyHandler(int code, void *context) {
-    *(int *)context = code;
-}
+CALLBACK_FUNCTION(int, ReadSetting, ());
+CALLBACK_PROCEDURE(ResetSetting, ());
+CALLBACK_OPERATION(Flush, ());
+CALLBACK_PREDICATE(IsEnabled, ());
 ```
 
-## Callbacks without ordinary arguments
+### 4. Inlining Callbacks in Modules (`PACKAGE` and `OBJECT`)
 
-Use `CALLBACK_DECLARE_NULLARY` for a value-returning callback that only receives its context, or `CALLBACK_DECLARE_NULLARY_PROCEDURE` for a void callback.
+Callbacks can be integrated directly inside `PACKAGE` and `OBJECT` declarations using the `CALLBACK(...)` capsule:
 
 ```c
-CALLBACK_DECLARE_NULLARY(ReadSetting, int)
-CALLBACK_DECLARE_NULLARY_PROCEDURE(ResetSetting)
+PACKAGE(EventBus,
+    CALLBACK(
+        OPERATION(OnEvent, (int code))
+    )
+);
+
+OBJECT(Widget,
+    FIELDS(
+        int id;
+    ),
+    CALLBACK(
+        PREDICATE(Filter, (int value))
+    )
+);
 ```
 
+### 5. Automatic Comparator Adapters
 
-## Operations
-
-Use `CALLBACK_DECLARE_OPERATION` when invocation returns `OPSTATUS`, allowing the callback to report success or a recoverable failure. Use `CALLBACK_DECLARE_NULLARY_OPERATION` when it takes no ordinary arguments.
+Any object comparison returning `CMPOUT` automatically generates a type-erased bridge to `TCALLBACK(Comparison)`:
 
 ```c
-CALLBACK_DECLARE_OPERATION(Commit, (int value), (value))
+OBJECT(Person,
+    FIELDS(
+        int age;
+    ),
+    COMPARISON_NUMERIC(CompareAge, age)
+);
 
-static OPSTATUS CommitValue(int value, void *context) {
-    *(int *)context += value;
-    return value >= 0 ? STATUS_CONST(SUCCESS)
-                      : STATUS_CONST(INVALID_ARGUMENT);
-}
+/* Automatically generated: */
+TCALLBACK(Comparison) cb = Person_CompareAge_AsComparator();
+CALLBACK_INVOKE(cb, &person1, &person2);
 ```
 
-## Predicates
+## Invocation and Validity
 
-Use `CALLBACK_DECLARE_PREDICATE` for a callback returning `bool`, or `CALLBACK_DECLARE_NULLARY_PREDICATE` when it takes no ordinary arguments.
-
-```c
-CALLBACK_DECLARE_PREDICATE(IsPositive, (int value), (value))
-
-static bool IsPositiveValue(int value, void *context) {
-    return value > *(int *)context;
-}
-```
-
-Both kinds keep the same borrowed-context contract and generate `Bind`, `IsValid`, and `Invoke`. Their `Invoke` return type follows the category: `OPSTATUS` for operations and `bool` for predicates.
-
-## Validity and lifetime
-
-`IsValid` checks only whether the function pointer is non-null. It does not validate the context or guarantee the callback's preconditions. Calling `Invoke` on an invalid callback is a caller error; check `IsValid` first when a binding may be empty.
-
-Callbacks can be copied by value. Copies share the same context pointer and do not duplicate the context data. The context may be `NULL` when the callback does not need extra state.
-
-## Scope
-
-Callback does not provide automatic variable capture, context ownership, destruction, or type erasure across arbitrary function signatures. Each declared callback preserves a concrete function-pointer type, so invocation remains type-checked by C.
+- **Universal invocation:** `CALLBACK_CALL(callback, ...)` or `CALLBACK_INVOKE(callback, ...)` accepts an arbitrary number of arguments and automatically forwards the stored context as the final parameter.
+- **Validity checking:** Check via `CALLBACK_IS_VALID(callback)` or `callback.IsValid(&callback)`.
+- **Value semantics:** Callbacks are small value types (two pointers plus member function pointers) and can be passed and copied by value.

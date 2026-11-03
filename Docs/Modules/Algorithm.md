@@ -433,13 +433,7 @@ Invokes a comparator callback over two object pointers.
 #### Macro form
 
 ```c
-TComparisonResult result = CALLBACK_FUNC(Comparison_Invoke)(comparator, left, right);
-```
-
-#### Direct form
-
-```c
-TComparisonResult result = Callback_Comparison_Invoke(comparator, left, right);
+TComparisonResult result = CALLBACK_INVOKE(comparator, left, right);
 ```
 
 ---
@@ -476,7 +470,7 @@ static CMPOUT CompareInt(const void *l, const void *r, void *ctx) {
 
 int x = 4, y = 9;
 TCALLBACK(Comparison) cmp = CALLBACK_FUNC(Comparison_Bind)(CompareInt, NULL);
-TComparisonResult res = CALLBACK_FUNC(Comparison_Invoke)(cmp, &x, &y);
+TComparisonResult res = CALLBACK_INVOKE(cmp, &x, &y);
 ```
 
 ---

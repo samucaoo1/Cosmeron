@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Condition.space"
 #include "../Diagnostic/Stacktrace.h"
-#include "../Outcome/Status.h"
 #include "../Module/Callback/Callback.h"
 #include "../Module/Package.h"
+#include "../Outcome/Status.h"
+#include "Condition.space"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -16,7 +16,8 @@
 #define PANIC_NS(NAME) GNS3(LIB_PREFIX(CONDITION_MOD), Panic, NAME)
 #define PANIC_CNS(NAME) CNS3(LIB_PREFIX_CONST(CONDITION_CMOD), PANIC, NAME)
 #define PANIC_INS(NAME) GNS4(LIB_PREFIX(CONDITION_MOD), Panic, Internal, NAME)
-#define PANIC_CINS(NAME) CNS4(LIB_PREFIX_CONST(CONDITION_CMOD), PANIC, INTERNAL, NAME)
+#define PANIC_CINS(NAME)                                                       \
+  CNS4(LIB_PREFIX_CONST(CONDITION_CMOD), PANIC, INTERNAL, NAME)
 
 #define PANIC_TYPE(NAME) PANIC_NS(NAME)
 #define PANIC_FUNC(NAME) PANIC_NS(NAME)
@@ -49,24 +50,22 @@ typedef struct PANIC_TYPE(Info) {
   const char *function;
 } PANIC_TYPE(Info);
 
-CALLBACK_DECLARE_PROCEDURE(PANIC_INS(PanicHandler_Function),
-                           (const PANIC_TYPE(Info) * info), (info));
-
-#define PANIC_HANDLER_CALLBACK TCALLBACK(PANIC_INS(PanicHandler_Function))
+#define PANIC_HANDLER_CALLBACK TCALLBACK(GNS2(LIB_PREFIX(PANIC_MOD), Handler))
 #define PANIC_HANDLER_BIND(FN, CTX)                                            \
-  GNS2(CALLBACK_FUNC(PANIC_INS(PanicHandler_Function)), Bind)((FN), (CTX))
+  CALLBACK_FUNC(GNS2(LIB_PREFIX(PANIC_MOD), Handler_Bind))((FN), (CTX))
 
 PACKAGE(LIB_PREFIX(PANIC_MOD),
-    PROCEDURE(SetHandler, (PANIC_HANDLER_CALLBACK handler)),
-    FUNCTION(PANIC_HANDLER_CALLBACK, GetHandler, ()),
-    PROCEDURE(ResetHandler, ()),
-    FUNCTION(const char *, KindName, (PANIC_TYPE(Kind) kind)),
-    PROCEDURE(Trigger,
-              (PANIC_TYPE(Kind) kind, const char *message,
-               const char *expression, const char *file, uint32_t line,
-               const char *function)),
-    PROCEDURE(Now, (const char *message))
-);
+        CALLBACK(
+            PROCEDURE(Handler, (const PANIC_TYPE(Info) * info))
+        ),
+        PROCEDURE(SetHandler, (PANIC_HANDLER_CALLBACK handler)),
+        FUNCTION(PANIC_HANDLER_CALLBACK, GetHandler, ()),
+        PROCEDURE(ResetHandler, ()),
+        FUNCTION(const char *, KindName, (PANIC_TYPE(Kind) kind)),
+        PROCEDURE(Trigger, (PANIC_TYPE(Kind) kind, const char *message,
+                            const char *expression, const char *file,
+                            uint32_t line, const char *function)),
+        PROCEDURE(Now, (const char *message)));
 
 /* Public contract macros */
 #define PANIC(message)                                                         \
@@ -115,4 +114,3 @@ PACKAGE(LIB_PREFIX(PANIC_MOD),
 
 #include "Impl/Panic.impl"
 /* EOF */
-

@@ -35,9 +35,8 @@ PACKAGE_PROCEDURE_IMPLEMENT_EX(LIB_PREFIX(EXCEPTION_MOD), Throw,
     return;
   }
 
-  if (GNS2(CALLBACK_FUNC(EXCEPTION_INS(CleanupFunction)),
-           IsValid)(frame->cleanup)) {
-    GNS2(CALLBACK_FUNC(EXCEPTION_INS(CleanupFunction)), Invoke)(frame->cleanup);
+  if (CALLBACK_IS_VALID(frame->cleanup)) {
+    CALLBACK_INVOKE(frame->cleanup);
     frame->cleanup.function = NULL;
     frame->cleanup.context = NULL;
   }

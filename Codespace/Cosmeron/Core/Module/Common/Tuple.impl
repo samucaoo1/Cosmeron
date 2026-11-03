@@ -70,7 +70,42 @@
   (1, 1, void, NAME, PARAMS, BODY)
 
 /* ------------------------------------------------------------
- * 5. Backward Compatibility Aliases
+ * 5. Comparisons (Three-way comparison returning CMPOUT)
+ * ------------------------------------------------------------ */
+#define COMPARISON(NAME, PARAMS) \
+  (1, 0, CMPOUT, NAME, PARAMS, { return COMPARISON_CONST(EQUAL); })
+
+#define CONST_COMPARISON(NAME, PARAMS) \
+  COMPARISON(NAME, PARAMS)
+
+#define COMPARISON_INLINE(NAME, PARAMS, BODY) \
+  (1, 1, CMPOUT, NAME, PARAMS, BODY)
+
+#define CONST_COMPARISON_INLINE(NAME, PARAMS, BODY) \
+  COMPARISON_INLINE(NAME, PARAMS, BODY)
+
+#define MUTABLE_COMPARISON(NAME, PARAMS) \
+  (0, 0, CMPOUT, NAME, PARAMS, { return COMPARISON_CONST(EQUAL); })
+
+#define MUTABLE_COMPARISON_INLINE(NAME, PARAMS, BODY) \
+  (0, 1, CMPOUT, NAME, PARAMS, BODY)
+
+/* ------------------------------------------------------------
+ * 6. Declarative Callbacks in Modules
+ * ------------------------------------------------------------ */
+#define COSMERON_MACRO_INTERNAL_CALLBACK_UNWRAP_I(C, I, R, N, P, B)            \
+  (2, 0, R, N, P, { (void)0; })
+
+#define COSMERON_MACRO_INTERNAL_CALLBACK_UNWRAP_E(...)                         \
+  COSMERON_MACRO_INTERNAL_CALLBACK_UNWRAP_I(__VA_ARGS__)
+
+#define COSMERON_MACRO_INTERNAL_CALLBACK_UNWRAP(M)                             \
+  COSMERON_MACRO_INTERNAL_CALLBACK_UNWRAP_E(PP_UNWRAP M)
+
+#define CALLBACK(M) COSMERON_MACRO_INTERNAL_CALLBACK_UNWRAP(M)
+
+/* ------------------------------------------------------------
+ * 7. Backward Compatibility Aliases
  * ------------------------------------------------------------ */
 #define METHOD(RET, NAME, PARAMS) FUNCTION(RET, NAME, PARAMS)
 #define CONST_METHOD(RET, NAME, PARAMS) CONST_FUNCTION(RET, NAME, PARAMS)
@@ -82,7 +117,7 @@
 #define INLINE_FUNCTION(RET, NAME, PARAMS, BODY) FUNCTION_INLINE(RET, NAME, PARAMS, BODY)
 
 /* ------------------------------------------------------------
- * 6. Tuple Unwrapping Helpers
+ * 8. Tuple Unwrapping Helpers
  * ------------------------------------------------------------ */
 #define COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(GEN_MACRO, CTX, M) \
   COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER_E(GEN_MACRO, CTX, PP_UNWRAP M)
@@ -94,7 +129,7 @@
   GEN_MACRO(CTX, C, I, R, N, P, B)
 
 /* ------------------------------------------------------------
- * 7. Parameter Emission Helpers
+ * 9. Parameter Emission Helpers
  * ------------------------------------------------------------ */
 
 /* Object self type dispatch */

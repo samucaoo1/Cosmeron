@@ -1,200 +1,146 @@
 #pragma once
 
-/*
- * Typed, non-owning function/context pairs.
- *
- * Each declaration creates a distinct callback signature and uses the
- * Core/Module PACKAGE DSL to declare Bind, IsValid, and Invoke.
- *
- * PARAMETERS and ARGUMENTS are parenthesized tuples. The callback receives
- * void *context as its final parameter; Invoke forwards the stored context.
- *
- * The context is borrowed. Callback never allocates, copies, or releases it.
- * The caller must keep it alive and must not invoke an unbound callback.
- */
+#include "../../../Outcome/Status.space"
+#include "../../../Algorithm/Comparison.space"
+#include "../../Common/Tuple.impl"
 
-#define CALLBACK_DECLARE(NAME, RETURN_TYPE, PARAMETERS, ARGUMENTS)             \
-  typedef RETURN_TYPE (*GNS2(TCALLBACK(NAME), Function))(                      \
-      PP_UNWRAP PARAMETERS, void *context);                                     \
-  typedef struct TCALLBACK(NAME) {                                             \
+#include <stdbool.h>
+#include <stddef.h>
+
+/* ========================================================================== */
+/* Universal Callback Invocation Engine                                       */
+/* ========================================================================== */
+
+#define COSMERON_MACRO_INTERNAL_CB_INVOKE_0(cb)                                \
+  ((cb).function((cb).context))
+
+#define COSMERON_MACRO_INTERNAL_CB_INVOKE_1(cb, ...)                           \
+  ((cb).function(__VA_ARGS__, (cb).context))
+
+#define CALLBACK_INVOKE(...)                                                   \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CB_INVOKE_,                               \
+             PP_HAS_COMMA(__VA_ARGS__))(__VA_ARGS__)
+
+#define CALLBACK_CALL(...) CALLBACK_INVOKE(__VA_ARGS__)
+
+#define CALLBACK_IS_VALID(CB) ((CB).function != NULL)
+
+/* ========================================================================== */
+/* Parameter Emission Helpers for Callbacks                                   */
+/* ========================================================================== */
+
+#define COSMERON_MACRO_INTERNAL_CB_PARAM_1(PARAMS) (void *context)
+#define COSMERON_MACRO_INTERNAL_CB_PARAM_0(PARAMS) (PP_UNWRAP PARAMS, void *context)
+
+#define COSMERON_MACRO_INTERNAL_CB_PARAMS(PARAMS)                              \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CB_PARAM_,                                \
+             PP_IS_EMPTY_PARAMS(PARAMS))(PARAMS)
+
+/* ========================================================================== */
+/* Core Callback Generation Templates                                         */
+/* ========================================================================== */
+
+#define COSMERON_MACRO_INTERNAL_CB_BASE(NAME, RET, PARAMS)                     \
+  typedef struct TCALLBACK(NAME) TCALLBACK(NAME);                              \
+  typedef RET (*GNS2(TCALLBACK(NAME), Function))                               \
+      COSMERON_MACRO_INTERNAL_CB_PARAMS(PARAMS);                               \
+  static inline void GNS3(TCALLBACK(NAME), Internal, BindMethod)(              \
+      TCALLBACK(NAME) * self, GNS2(TCALLBACK(NAME), Function) function,        \
+      void *context);                                                          \
+  static inline bool GNS3(TCALLBACK(NAME), Internal, IsValidMethod)(           \
+      const TCALLBACK(NAME) * self);                                           \
+  struct TCALLBACK(NAME) {                                                     \
     GNS2(TCALLBACK(NAME), Function) function;                                  \
     void *context;                                                             \
-  } TCALLBACK(NAME);                                                           \
-  PACKAGE(CALLBACK_FUNC(NAME),                                                 \
-      FUNCTION_INLINE(TCALLBACK(NAME), Bind,                                   \
-          (GNS2(TCALLBACK(NAME), Function) function, void *context), {         \
-            TCALLBACK(NAME) callback;                                          \
-            callback.function = function;                                      \
-            callback.context = context;                                        \
-            return callback;                                                   \
-          }),                                                                  \
-      PREDICATE_INLINE(IsValid, (TCALLBACK(NAME) callback), {                  \
-        return callback.function != NULL;                                      \
-      }),                                                                      \
-      FUNCTION_INLINE(RETURN_TYPE, Invoke,                                     \
-          (TCALLBACK(NAME) callback, PP_UNWRAP PARAMETERS), {                  \
-            return callback.function(PP_UNWRAP ARGUMENTS, callback.context);  \
-          })                                                                   \
-  )
+    void (*Bind)(TCALLBACK(NAME) * self,                                       \
+                 GNS2(TCALLBACK(NAME), Function) function, void *context);     \
+    bool (*IsValid)(const TCALLBACK(NAME) * self);                             \
+  };                                                                           \
+  static inline void GNS3(TCALLBACK(NAME), Internal, BindMethod)(              \
+      TCALLBACK(NAME) * self, GNS2(TCALLBACK(NAME), Function) function,        \
+      void *context) {                                                         \
+    if (self) {                                                                \
+      self->function = function;                                               \
+      self->context = context;                                                 \
+      self->Bind = GNS3(TCALLBACK(NAME), Internal, BindMethod);                \
+      self->IsValid = GNS3(TCALLBACK(NAME), Internal, IsValidMethod);          \
+    }                                                                          \
+  }                                                                            \
+  static inline bool GNS3(TCALLBACK(NAME), Internal, IsValidMethod)(           \
+      const TCALLBACK(NAME) * self) {                                          \
+    return self != NULL && self->function != NULL;                            \
+  }                                                                            \
+  static inline TCALLBACK(NAME) GNS2(CALLBACK_FUNC(NAME), Bind)(               \
+      GNS2(TCALLBACK(NAME), Function) function, void *context) {               \
+    TCALLBACK(NAME) cb;                                                        \
+    cb.function = function;                                                    \
+    cb.context = context;                                                      \
+    cb.Bind = GNS3(TCALLBACK(NAME), Internal, BindMethod);                     \
+    cb.IsValid = GNS3(TCALLBACK(NAME), Internal, IsValidMethod);               \
+    return cb;                                                                 \
+  }                                                                            \
+  static inline bool GNS2(CALLBACK_FUNC(NAME), IsValid)(                       \
+      TCALLBACK(NAME) callback) {                                              \
+    return callback.function != NULL;                                          \
+  }
 
-#define CALLBACK_DECLARE_PROCEDURE(NAME, PARAMETERS, ARGUMENTS)                \
-  typedef void (*GNS2(TCALLBACK(NAME), Function))(                             \
-      PP_UNWRAP PARAMETERS, void *context);                                     \
-  typedef struct TCALLBACK(NAME) {                                             \
-    GNS2(TCALLBACK(NAME), Function) function;                                  \
-    void *context;                                                             \
-  } TCALLBACK(NAME);                                                           \
-  PACKAGE(CALLBACK_FUNC(NAME),                                                 \
-      FUNCTION_INLINE(TCALLBACK(NAME), Bind,                                   \
-          (GNS2(TCALLBACK(NAME), Function) function, void *context), {         \
-            TCALLBACK(NAME) callback;                                          \
-            callback.function = function;                                      \
-            callback.context = context;                                        \
-            return callback;                                                   \
-          }),                                                                  \
-      PREDICATE_INLINE(IsValid, (TCALLBACK(NAME) callback), {                  \
-        return callback.function != NULL;                                      \
-      }),                                                                      \
-      PROCEDURE_INLINE(Invoke, (TCALLBACK(NAME) callback,                      \
-                                PP_UNWRAP PARAMETERS), {                       \
-        callback.function(PP_UNWRAP ARGUMENTS, callback.context);              \
-      })                                                                       \
-  )
+#define COSMERON_MACRO_INTERNAL_CB_NULLARY_VAL_0(NAME, RET)
+#define COSMERON_MACRO_INTERNAL_CB_NULLARY_VAL_1(NAME, RET)                   \
+  static inline RET GNS2(CALLBACK_FUNC(NAME), Invoke)(                         \
+      TCALLBACK(NAME) callback) {                                              \
+    return callback.function(callback.context);                                \
+  }
 
-#define CALLBACK_DECLARE_NULLARY(NAME, RETURN_TYPE)                            \
-  typedef RETURN_TYPE (*GNS2(TCALLBACK(NAME), Function))(void *context);       \
-  typedef struct TCALLBACK(NAME) {                                             \
-    GNS2(TCALLBACK(NAME), Function) function;                                  \
-    void *context;                                                             \
-  } TCALLBACK(NAME);                                                           \
-  PACKAGE(CALLBACK_FUNC(NAME),                                                 \
-      FUNCTION_INLINE(TCALLBACK(NAME), Bind,                                   \
-          (GNS2(TCALLBACK(NAME), Function) function, void *context), {         \
-            TCALLBACK(NAME) callback;                                          \
-            callback.function = function;                                      \
-            callback.context = context;                                        \
-            return callback;                                                   \
-          }),                                                                  \
-      PREDICATE_INLINE(IsValid, (TCALLBACK(NAME) callback), {                  \
-        return callback.function != NULL;                                      \
-      }),                                                                      \
-      FUNCTION_INLINE(RETURN_TYPE, Invoke, (TCALLBACK(NAME) callback), {       \
-        return callback.function(callback.context);                            \
-      })                                                                       \
-  )
+#define COSMERON_MACRO_INTERNAL_CB_NULLARY_VOID_0(NAME)
+#define COSMERON_MACRO_INTERNAL_CB_NULLARY_VOID_1(NAME)                         \
+  static inline void GNS2(CALLBACK_FUNC(NAME), Invoke)(                        \
+      TCALLBACK(NAME) callback) {                                              \
+    callback.function(callback.context);                                       \
+  }
 
-#define CALLBACK_DECLARE_NULLARY_PROCEDURE(NAME)                               \
-  typedef void (*GNS2(TCALLBACK(NAME), Function))(void *context);              \
-  typedef struct TCALLBACK(NAME) {                                             \
-    GNS2(TCALLBACK(NAME), Function) function;                                  \
-    void *context;                                                             \
-  } TCALLBACK(NAME);                                                           \
-  PACKAGE(CALLBACK_FUNC(NAME),                                                 \
-      FUNCTION_INLINE(TCALLBACK(NAME), Bind,                                   \
-          (GNS2(TCALLBACK(NAME), Function) function, void *context), {         \
-            TCALLBACK(NAME) callback;                                          \
-            callback.function = function;                                      \
-            callback.context = context;                                        \
-            return callback;                                                   \
-          }),                                                                  \
-      PREDICATE_INLINE(IsValid, (TCALLBACK(NAME) callback), {                  \
-        return callback.function != NULL;                                      \
-      }),                                                                      \
-      PROCEDURE_INLINE(Invoke, (TCALLBACK(NAME) callback), {                   \
-        callback.function(callback.context);                                   \
-      })                                                                       \
-  )
+#define COSMERON_MACRO_INTERNAL_CB_GEN_VALUE(NAME, RET, PARAMS)                \
+  COSMERON_MACRO_INTERNAL_CB_BASE(NAME, RET, PARAMS)                           \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CB_NULLARY_VAL_,                          \
+             PP_IS_EMPTY_PARAMS(PARAMS))(NAME, RET)                            \
+  typedef int GNS3(_cosmeron_callback_semi, NAME, __LINE__)
 
-#define CALLBACK_DECLARE_OPERATION(NAME, PARAMETERS, ARGUMENTS)                \
-  typedef OPSTATUS (*GNS2(TCALLBACK(NAME), Function))(                         \
-      PP_UNWRAP PARAMETERS, void *context);                                     \
-  typedef struct TCALLBACK(NAME) {                                             \
-    GNS2(TCALLBACK(NAME), Function) function;                                  \
-    void *context;                                                             \
-  } TCALLBACK(NAME);                                                           \
-  PACKAGE(CALLBACK_FUNC(NAME),                                                 \
-      FUNCTION_INLINE(TCALLBACK(NAME), Bind,                                   \
-          (GNS2(TCALLBACK(NAME), Function) function, void *context), {         \
-            TCALLBACK(NAME) callback;                                          \
-            callback.function = function;                                      \
-            callback.context = context;                                        \
-            return callback;                                                   \
-          }),                                                                  \
-      PREDICATE_INLINE(IsValid, (TCALLBACK(NAME) callback), {                  \
-        return callback.function != NULL;                                      \
-      }),                                                                      \
-      OPERATION_INLINE(Invoke, (TCALLBACK(NAME) callback,                      \
-                                PP_UNWRAP PARAMETERS), {                       \
-        return callback.function(PP_UNWRAP ARGUMENTS, callback.context);       \
-      })                                                                       \
-  )
+#define COSMERON_MACRO_INTERNAL_CB_GEN_VOID(NAME, PARAMS)                      \
+  COSMERON_MACRO_INTERNAL_CB_BASE(NAME, void, PARAMS)                          \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CB_NULLARY_VOID_,                         \
+             PP_IS_EMPTY_PARAMS(PARAMS))(NAME)                                 \
+  typedef int GNS3(_cosmeron_callback_semi, NAME, __LINE__)
 
-#define CALLBACK_DECLARE_PREDICATE(NAME, PARAMETERS, ARGUMENTS)                 \
-  typedef bool (*GNS2(TCALLBACK(NAME), Function))(                             \
-      PP_UNWRAP PARAMETERS, void *context);                                     \
-  typedef struct TCALLBACK(NAME) {                                             \
-    GNS2(TCALLBACK(NAME), Function) function;                                  \
-    void *context;                                                             \
-  } TCALLBACK(NAME);                                                           \
-  PACKAGE(CALLBACK_FUNC(NAME),                                                 \
-      FUNCTION_INLINE(TCALLBACK(NAME), Bind,                                   \
-          (GNS2(TCALLBACK(NAME), Function) function, void *context), {         \
-            TCALLBACK(NAME) callback;                                          \
-            callback.function = function;                                      \
-            callback.context = context;                                        \
-            return callback;                                                   \
-          }),                                                                  \
-      PREDICATE_INLINE(IsValid, (TCALLBACK(NAME) callback), {                  \
-        return callback.function != NULL;                                      \
-      }),                                                                      \
-      PREDICATE_INLINE(Invoke, (TCALLBACK(NAME) callback,                      \
-                                PP_UNWRAP PARAMETERS), {                       \
-        return callback.function(PP_UNWRAP ARGUMENTS, callback.context);       \
-      })                                                                       \
-  )
+#define COSMERON_MACRO_INTERNAL_PROBE_VOID_void ,
+#define COSMERON_MACRO_INTERNAL_CB_IS_VOID(r)                                 \
+  PP_HAS_COMMA(PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PROBE_VOID_, r))
 
-#define CALLBACK_DECLARE_NULLARY_OPERATION(NAME)                                \
-  typedef OPSTATUS (*GNS2(TCALLBACK(NAME), Function))(void *context);          \
-  typedef struct TCALLBACK(NAME) {                                             \
-    GNS2(TCALLBACK(NAME), Function) function;                                  \
-    void *context;                                                             \
-  } TCALLBACK(NAME);                                                           \
-  PACKAGE(CALLBACK_FUNC(NAME),                                                 \
-      FUNCTION_INLINE(TCALLBACK(NAME), Bind,                                   \
-          (GNS2(TCALLBACK(NAME), Function) function, void *context), {         \
-            TCALLBACK(NAME) callback;                                          \
-            callback.function = function;                                      \
-            callback.context = context;                                        \
-            return callback;                                                   \
-          }),                                                                  \
-      PREDICATE_INLINE(IsValid, (TCALLBACK(NAME) callback), {                  \
-        return callback.function != NULL;                                      \
-      }),                                                                      \
-      OPERATION_INLINE(Invoke, (TCALLBACK(NAME) callback), {                   \
-        return callback.function(callback.context);                            \
-      })                                                                       \
-  )
+#define COSMERON_MACRO_INTERNAL_CB_GEN_DISPATCH_0(NAME, RET, PARAMS)          \
+  COSMERON_MACRO_INTERNAL_CB_GEN_VALUE(NAME, RET, PARAMS)
 
-#define CALLBACK_DECLARE_NULLARY_PREDICATE(NAME)                                \
-  typedef bool (*GNS2(TCALLBACK(NAME), Function))(void *context);              \
-  typedef struct TCALLBACK(NAME) {                                             \
-    GNS2(TCALLBACK(NAME), Function) function;                                  \
-    void *context;                                                             \
-  } TCALLBACK(NAME);                                                           \
-  PACKAGE(CALLBACK_FUNC(NAME),                                                 \
-      FUNCTION_INLINE(TCALLBACK(NAME), Bind,                                   \
-          (GNS2(TCALLBACK(NAME), Function) function, void *context), {         \
-            TCALLBACK(NAME) callback;                                          \
-            callback.function = function;                                      \
-            callback.context = context;                                        \
-            return callback;                                                   \
-          }),                                                                  \
-      PREDICATE_INLINE(IsValid, (TCALLBACK(NAME) callback), {                  \
-        return callback.function != NULL;                                      \
-      }),                                                                      \
-      PREDICATE_INLINE(Invoke, (TCALLBACK(NAME) callback), {                   \
-        return callback.function(callback.context);                            \
-      })                                                                       \
-  )
+#define COSMERON_MACRO_INTERNAL_CB_GEN_DISPATCH_1(NAME, RET, PARAMS)          \
+  COSMERON_MACRO_INTERNAL_CB_GEN_VOID(NAME, PARAMS)
+
+#define COSMERON_MACRO_INTERNAL_CB_GEN(NAME, RET, PARAMS)                     \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CB_GEN_DISPATCH_,                        \
+             COSMERON_MACRO_INTERNAL_CB_IS_VOID(RET))(NAME, RET, PARAMS)
+
+/* ========================================================================== */
+/* Public Callback Descriptors                                                */
+/* ========================================================================== */
+
+#define CALLBACK_FUNCTION(RET, NAME, PARAMS)                                   \
+  COSMERON_MACRO_INTERNAL_CB_GEN(NAME, RET, PARAMS)
+
+#define CALLBACK_PROCEDURE(NAME, PARAMS)                                      \
+  COSMERON_MACRO_INTERNAL_CB_GEN_VOID(NAME, PARAMS)
+
+#define CALLBACK_OPERATION(NAME, PARAMS)                                      \
+  COSMERON_MACRO_INTERNAL_CB_GEN_VALUE(NAME, OPSTATUS, PARAMS)
+
+#define CALLBACK_PREDICATE(NAME, PARAMS)                                      \
+  COSMERON_MACRO_INTERNAL_CB_GEN_VALUE(NAME, bool, PARAMS)
+
+#define CALLBACK_COMPARISON(NAME, PARAMS)                                     \
+  COSMERON_MACRO_INTERNAL_CB_GEN_VALUE(NAME, CMPOUT, PARAMS)
 
 /* EOF */

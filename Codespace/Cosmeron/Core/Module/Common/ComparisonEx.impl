@@ -1,0 +1,84 @@
+#pragma once
+
+#include "Tuple.impl"
+#include <string.h>
+
+/* ============================================================
+ * Comparison Extensions (COMPARISON_EX)
+ * Provides declarative comparison specializations for OBJECT members.
+ * ============================================================ */
+
+#define COSMERON_MACRO_INTERNAL_COMPARISON_EX_NUMERIC(NAME, FIELD)             \
+  COMPARISON_INLINE(NAME, (const void *other), {                               \
+    if (self == other)                                                         \
+      return COMPARISON_CONST(EQUAL);                                          \
+    if (!self)                                                                 \
+      return COMPARISON_CONST(LOWER);                                          \
+    if (!other)                                                                \
+      return COMPARISON_CONST(HIGHER);                                         \
+    const __typeof__(*self) *otherCast = (const __typeof__(*self) *)other;     \
+    bool leftNan = (self->FIELD != self->FIELD);                               \
+    bool rightNan = (otherCast->FIELD != otherCast->FIELD);                    \
+    if (leftNan || rightNan) {                                                 \
+      if (leftNan && rightNan)                                                 \
+        return COMPARISON_CONST(EQUAL);                                        \
+      return leftNan ? COMPARISON_CONST(HIGHER) : COMPARISON_CONST(LOWER);     \
+    }                                                                          \
+    return self->FIELD < otherCast->FIELD                                      \
+               ? COMPARISON_CONST(LOWER)                                       \
+               : (self->FIELD > otherCast->FIELD ? COMPARISON_CONST(HIGHER)    \
+                                                 : COMPARISON_CONST(EQUAL));   \
+  })
+
+#define COSMERON_MACRO_INTERNAL_COMPARISON_EX_STRING(NAME, FIELD)              \
+  COMPARISON_INLINE(NAME, (const void *other), {                               \
+    if (self == other)                                                         \
+      return COMPARISON_CONST(EQUAL);                                          \
+    if (!self)                                                                 \
+      return COMPARISON_CONST(LOWER);                                          \
+    if (!other)                                                                \
+      return COMPARISON_CONST(HIGHER);                                         \
+    const __typeof__(*self) *otherCast = (const __typeof__(*self) *)other;     \
+    const char *leftStr = (const char *)self->FIELD;                           \
+    const char *rightStr = (const char *)otherCast->FIELD;                     \
+    if (leftStr == rightStr)                                                   \
+      return COMPARISON_CONST(EQUAL);                                          \
+    if (!leftStr)                                                              \
+      return COMPARISON_CONST(LOWER);                                          \
+    if (!rightStr)                                                             \
+      return COMPARISON_CONST(HIGHER);                                         \
+    int cmpRes = strcmp(leftStr, rightStr);                                    \
+    return cmpRes < 0                                                          \
+               ? COMPARISON_CONST(LOWER)                                       \
+               : (cmpRes > 0 ? COMPARISON_CONST(HIGHER)                        \
+                             : COMPARISON_CONST(EQUAL));                       \
+  })
+
+#define COSMERON_MACRO_INTERNAL_COMPARISON_EX_BYTES(NAME, FIELD)               \
+  COMPARISON_INLINE(NAME, (const void *other), {                               \
+    if (self == other)                                                         \
+      return COMPARISON_CONST(EQUAL);                                          \
+    if (!self)                                                                 \
+      return COMPARISON_CONST(LOWER);                                          \
+    if (!other)                                                                \
+      return COMPARISON_CONST(HIGHER);                                         \
+    const __typeof__(*self) *otherCast = (const __typeof__(*self) *)other;     \
+    const void *leftBytes = (const void *)&self->FIELD;                        \
+    const void *rightBytes = (const void *)&otherCast->FIELD;                  \
+    size_t bytesSize = sizeof(self->FIELD);                                    \
+    int cmpRes = bytesSize > 0U ? memcmp(leftBytes, rightBytes, bytesSize) : 0;\
+    return cmpRes < 0                                                          \
+               ? COMPARISON_CONST(LOWER)                                       \
+               : (cmpRes > 0 ? COMPARISON_CONST(HIGHER)                        \
+                             : COMPARISON_CONST(EQUAL));                       \
+  })
+
+#define COMPARISON_EX(STRATEGY, NAME, FIELD)                                   \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_COMPARISON_EX_, STRATEGY)(NAME, FIELD)
+
+#define COMPARISON_BYTES(NAME, FIELD) COMPARISON_EX(BYTES, NAME, FIELD)
+#define COMPARISON_NUMERIC(NAME, FIELD) COMPARISON_EX(NUMERIC, NAME, FIELD)
+#define COMPARISON_STRING(NAME, FIELD) COMPARISON_EX(STRING, NAME, FIELD)
+
+/* EOF */
+

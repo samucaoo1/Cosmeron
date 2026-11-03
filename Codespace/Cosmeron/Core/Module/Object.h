@@ -2,6 +2,8 @@
 
 #include "Module.space"
 #include "Common/Tuple.impl"
+#include "Common/ComparisonEx.impl"
+#include "Callback/Callback.h"
 #include "Common/FunctionTable.impl"
 #include "Common/Dispatch.impl"
 #include "Common/Template.impl"
@@ -112,23 +114,62 @@ static inline OPSTATUS OBJECT_FUNC(Init)(OBJECT_TYPE(TObject) * object) {
  * 2. Internal Method Generators (Prototypes & Inlines)
  * ------------------------------------------------------------ */
 
-#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_I(CLASS, C, I, R, N, P, B) \
-  typedef R GNS3(CLASS, N, ret_t);                                           \
-  typedef PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PARAM_SELF_TYPE_, C)(CLASS)     \
-      GNS3(CLASS, N, self_t);                                                \
-  struct GNS3(CLASS, N, sig) {                                               \
-    PP_PARAMS_TO_FIELDS(P)                                                   \
-  };                                                                         \
-  static inline R GNS2(CLASS, N)                                             \
-      COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(CLASS, C, P);
+#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_C_0(CLASS, R, N, P)           \
+  typedef R GNS3(CLASS, N, ret_t);                                             \
+  typedef CLASS GNS3(CLASS, N, self_t);                                        \
+  struct GNS3(CLASS, N, sig) {                                                 \
+    PP_PARAMS_TO_FIELDS(P)                                                     \
+  };                                                                           \
+  static inline R GNS2(CLASS, N)                                               \
+      COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(CLASS, 0, P);
+
+#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_C_1(CLASS, R, N, P)           \
+  typedef R GNS3(CLASS, N, ret_t);                                             \
+  typedef const CLASS GNS3(CLASS, N, self_t);                                  \
+  struct GNS3(CLASS, N, sig) {                                                 \
+    PP_PARAMS_TO_FIELDS(P)                                                     \
+  };                                                                           \
+  static inline R GNS2(CLASS, N)                                               \
+      COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(CLASS, 1, P);
+
+#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_C_2(CLASS, R, N, P)           \
+  CALLBACK_FUNCTION(R, GNS2(CLASS, N), P);
+
+#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_I(CLASS, C, I, R, N, P, B)   \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_C_, C)(CLASS, R, N, P)
 
 #define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO(CLASS, M) \
   COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_I, CLASS, M)
 
+#define COSMERON_MACRO_INTERNAL_PROBE_CMP_CMPOUT ,
+#define COSMERON_MACRO_INTERNAL_IS_CMP_TYPE(r)                                 \
+  PP_HAS_COMMA(PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PROBE_CMP_, r))
+
+#define COSMERON_MACRO_INTERNAL_OBJ_CMP_ADAPTER_1(CLASS, N)                   \
+  static inline CMPOUT GNS3(CLASS, N, ComparatorAdapter)(                      \
+      const void *left, const void *right, void *context) {                    \
+    (void)context;                                                             \
+    if (left == right)                                                         \
+      return COMPARISON_CONST(EQUAL);                                          \
+    if (!left)                                                                 \
+      return COMPARISON_CONST(LOWER);                                          \
+    if (!right)                                                                \
+      return COMPARISON_CONST(HIGHER);                                         \
+    return GNS2(CLASS, N)((const CLASS *)left, (const CLASS *)right);         \
+  }                                                                            \
+  static inline TCALLBACK(Comparison) GNS3(CLASS, N, AsComparator)(void) {     \
+    return GNS2(CALLBACK_FUNC(Comparison), Bind)(                              \
+        GNS3(CLASS, N, ComparatorAdapter), NULL);                              \
+  }
+
+#define COSMERON_MACRO_INTERNAL_OBJ_CMP_ADAPTER_0(CLASS, N)
+
 #define COSMERON_MACRO_INTERNAL_OBJECT_INLINE_DEF_0(CLASS, C, R, N, P, B)
-#define COSMERON_MACRO_INTERNAL_OBJECT_INLINE_DEF_1(CLASS, C, R, N, P, B) \
-  static inline R GNS2(CLASS, N)                                           \
-      COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(CLASS, C, P) B
+#define COSMERON_MACRO_INTERNAL_OBJECT_INLINE_DEF_1(CLASS, C, R, N, P, B)     \
+  static inline R GNS2(CLASS, N)                                               \
+      COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(CLASS, C, P) B                  \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJ_CMP_ADAPTER_,                        \
+             COSMERON_MACRO_INTERNAL_IS_CMP_TYPE(R))(CLASS, N)
 
 #define COSMERON_MACRO_INTERNAL_OBJECT_GEN_INLINE_I(CLASS, C, I, R, N, P, B) \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJECT_INLINE_DEF_, I)(CLASS, C, R, N, P, B)
@@ -147,6 +188,7 @@ static inline OPSTATUS OBJECT_FUNC(Init)(OBJECT_TYPE(TObject) * object) {
   typedef struct GNS2(CLASS, FunctionTable) GNS2(CLASS, FunctionTable);        \
   PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO, CLASS, __VA_ARGS__) \
   struct GNS2(CLASS, FunctionTable) {                                          \
+    int _reserved;                                                             \
     PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD, CLASS, __VA_ARGS__)   \
   };                                                                           \
   struct CLASS {                                                               \
@@ -158,6 +200,7 @@ static inline OPSTATUS OBJECT_FUNC(Init)(OBJECT_TYPE(TObject) * object) {
   static inline const struct GNS2(CLASS, FunctionTable) *GNS2(                 \
       CLASS, GetFunctionTable)(void) {                                         \
     static const struct GNS2(CLASS, FunctionTable) table = {                   \
+        ._reserved = 0,                                                        \
         PP_FOREACH_CTX(                                                        \
             COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY, CLASS, __VA_ARGS__)};        \
     return &table;                                                             \
@@ -175,6 +218,7 @@ static inline OPSTATUS OBJECT_FUNC(Init)(OBJECT_TYPE(TObject) * object) {
   typedef struct GNS2(CLASS, FunctionTable) GNS2(CLASS, FunctionTable);        \
   PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO, CLASS, __VA_ARGS__) \
   struct GNS2(CLASS, FunctionTable) {                                          \
+    int _reserved;                                                             \
     PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD, CLASS, __VA_ARGS__)   \
   };                                                                           \
   struct CLASS {                                                               \
@@ -187,6 +231,7 @@ static inline OPSTATUS OBJECT_FUNC(Init)(OBJECT_TYPE(TObject) * object) {
   static inline const struct GNS2(CLASS, FunctionTable) *GNS2(                 \
       CLASS, GetFunctionTable)(void) {                                         \
     static const struct GNS2(CLASS, FunctionTable) table = {                   \
+        ._reserved = 0,                                                        \
         PP_FOREACH_CTX(                                                        \
             COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY, CLASS, __VA_ARGS__)};        \
     return &table;                                                             \

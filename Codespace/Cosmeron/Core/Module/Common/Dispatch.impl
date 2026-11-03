@@ -41,6 +41,10 @@
   static inline void GNS2(CLASS, METHOD) \
       COSMERON_MACRO_INTERNAL_OBJ_PROTOEX_EMIT_PARAMS(CLASS, METHOD, PARAMS)
 
+#define OBJECT_COMPARISON_IMPLEMENT_EX(CLASS, METHOD, PARAMS) \
+  static inline CMPOUT GNS2(CLASS, METHOD) \
+      COSMERON_MACRO_INTERNAL_OBJ_PROTOEX_EMIT_PARAMS(CLASS, METHOD, PARAMS)
+
 /* ------------------------------------------------------------
  * 2. Package Implementation Prototypes (Free functions, no receiver)
  * ------------------------------------------------------------ */
@@ -59,6 +63,10 @@
 
 #define PACKAGE_PROCEDURE_IMPLEMENT_EX(PKG, FUNC, PARAMS) \
   static inline void GNS2(PKG, FUNC) \
+      COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(PARAMS)
+
+#define PACKAGE_COMPARISON_IMPLEMENT_EX(PKG, FUNC, PARAMS) \
+  static inline CMPOUT GNS2(PKG, FUNC) \
       COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(PARAMS)
 
 /* ------------------------------------------------------------
@@ -122,6 +130,11 @@
   PP_IIF(COSMERON_IS_TARGET_OBJECT(TARGET), \
          OBJECT_PROCEDURE_IMPLEMENT_EX, \
          PACKAGE_PROCEDURE_IMPLEMENT_EX)(TARGET, NAME, PARAMS)
+
+#define COMPARISON_IMPLEMENT_EX(TARGET, NAME, PARAMS) \
+  PP_IIF(COSMERON_IS_TARGET_OBJECT(TARGET), \
+         OBJECT_COMPARISON_IMPLEMENT_EX, \
+         PACKAGE_COMPARISON_IMPLEMENT_EX)(TARGET, NAME, PARAMS)
 
 /* ------------------------------------------------------------
  * 4. Introspection Prototypes (Introspection with __typeof__)

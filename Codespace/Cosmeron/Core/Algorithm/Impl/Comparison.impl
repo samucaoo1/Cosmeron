@@ -7,6 +7,13 @@
       ALGORITHM_NS(COMPARISON_MOD), CMPOUT, PRIMITIVE_TYPE_GET(NAME, ROW),     \
       (PRIMITIVE_TYPE_GET(TYPE, ROW) left,                                     \
        PRIMITIVE_TYPE_GET(TYPE, ROW) right)) {                                 \
+    bool leftNan = (left != left);                                             \
+    bool rightNan = (right != right);                                          \
+    if (leftNan || rightNan) {                                                 \
+      if (leftNan && rightNan)                                                 \
+        return COMPARISON_CONST(EQUAL);                                        \
+      return leftNan ? COMPARISON_CONST(HIGHER) : COMPARISON_CONST(LOWER);     \
+    }                                                                          \
     return left < right                                                        \
                ? COMPARISON_CONST(LOWER)                                       \
                : (left > right ? COMPARISON_CONST(HIGHER)                      \
@@ -18,6 +25,12 @@ PRIMITIVE_TYPE_TABLE(COMPARISON_PRIMITIVE_IMPLEMENT)
 
 PACKAGE_FUNCTION_IMPLEMENT_EX(ALGORITHM_NS(COMPARISON_MOD), CMPOUT, CString,
                               (const char *left, const char *right)) {
+  if (left == right)
+    return COMPARISON_CONST(EQUAL);
+  if (!left)
+    return COMPARISON_CONST(LOWER);
+  if (!right)
+    return COMPARISON_CONST(HIGHER);
   int result = strcmp(left, right);
   return result < 0                                                            \
              ? COMPARISON_CONST(LOWER)                                         \
@@ -28,8 +41,20 @@ PACKAGE_FUNCTION_IMPLEMENT_EX(ALGORITHM_NS(COMPARISON_MOD), CMPOUT, CString,
 PACKAGE_FUNCTION_IMPLEMENT_EX(ALGORITHM_NS(COMPARISON_MOD), CMPOUT, Bytes,
                               (const void *left, size_t leftSize,
                                const void *right, size_t rightSize)) {
+  if (left == right && leftSize == rightSize)
+    return COMPARISON_CONST(EQUAL);
+  if (!left && !right)
+    return leftSize < rightSize ? COMPARISON_CONST(LOWER)                      \
+                                : (leftSize > rightSize                        \
+                                       ? COMPARISON_CONST(HIGHER)              \
+                                       : COMPARISON_CONST(EQUAL));             \
+  if (!left)
+    return COMPARISON_CONST(LOWER);
+  if (!right)
+    return COMPARISON_CONST(HIGHER);
+
   size_t minimumSize = leftSize < rightSize ? leftSize : rightSize;
-  int result = memcmp(left, right, minimumSize);
+  int result = minimumSize > 0U ? memcmp(left, right, minimumSize) : 0;
 
   if (result < 0)
     return COMPARISON_CONST(LOWER);

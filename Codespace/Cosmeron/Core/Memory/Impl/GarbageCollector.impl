@@ -251,7 +251,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(GarbageCollector), AllocAto
 
 OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(GarbageCollector), SetFinalizer,
     (const void *ptr, GARBAGE_COLLECTOR_FINALIZER_CALLBACK finalizer)) {
-  if (!self || !ptr || !GNS2(CALLBACK_FUNC(GARBAGE_COLLECTOR_INS(FinalizerFunction)), IsValid)(finalizer))
+  if (!self || !ptr || !CALLBACK_IS_VALID(finalizer))
     return STATUS_CONST(INVALID_ARGUMENT);
 
   void *raw = NULL;
@@ -513,7 +513,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(GarbageCollector), Collect,
   while (self->pendingFinalizers) {
     GARBAGE_COLLECTOR_INS(FinalizerEntry) *f = self->pendingFinalizers;
     self->pendingFinalizers = f->next;
-    GNS2(CALLBACK_FUNC(GARBAGE_COLLECTOR_INS(FinalizerFunction)), Invoke)(f->callback, f->object);
+    CALLBACK_INVOKE(f->callback, f->object);
     void *raw = (void *)f;
     ALLOC_FUNC(Free)(&raw);
   }

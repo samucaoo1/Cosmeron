@@ -16,18 +16,16 @@
 #define RESULT_TYPE(SUFFIX) GNS2(TResult, SUFFIX)
 
 #define RESULT_MAP_CALLBACK(SUFFIX)                                            \
-  TCALLBACK(OUTCOME_INS(PP_OP_CAT3(ResultMap_, SUFFIX, _Function)))
+  TCALLBACK(GNS2(RESULT_TYPE(SUFFIX), MapFunction))
 
 #define RESULT_BIND_CALLBACK(SUFFIX)                                           \
-  TCALLBACK(OUTCOME_INS(PP_OP_CAT3(ResultBind_, SUFFIX, _Function)))
+  TCALLBACK(GNS2(RESULT_TYPE(SUFFIX), BindFunction))
 
 #define RESULT_MAP_BIND(SUFFIX, FN, CTX)                                       \
-  GNS2(CALLBACK_FUNC(OUTCOME_INS(PP_OP_CAT3(ResultMap_, SUFFIX, _Function))),   \
-       Bind)((FN), (CTX))
+  CALLBACK_FUNC(GNS2(RESULT_TYPE(SUFFIX), MapFunction_Bind))((FN), (CTX))
 
 #define RESULT_BIND_BIND(SUFFIX, FN, CTX)                                      \
-  GNS2(CALLBACK_FUNC(OUTCOME_INS(PP_OP_CAT3(ResultBind_, SUFFIX, _Function))),  \
-       Bind)((FN), (CTX))
+  CALLBACK_FUNC(GNS2(RESULT_TYPE(SUFFIX), BindFunction_Bind))((FN), (CTX))
 
 /* ============================================================
  * Universal Template Definition: TRESULT
@@ -35,11 +33,6 @@
 
 #define TEMPLATE_TRESULT(SUFFIX, TYPE)                                         \
   typedef struct RESULT_TYPE(SUFFIX) RESULT_TYPE(SUFFIX);                      \
-  CALLBACK_DECLARE(OUTCOME_INS(PP_OP_CAT3(ResultMap_, SUFFIX, _Function)),     \
-                   TYPE, (TYPE value), (value));                               \
-  CALLBACK_DECLARE_OPERATION(                                                  \
-      OUTCOME_INS(PP_OP_CAT3(ResultBind_, SUFFIX, _Function)),                 \
-      (TYPE value, RESULT_TYPE(SUFFIX) * outResult), (value, outResult));      \
   OBJECT(                                                                      \
       RESULT_TYPE(SUFFIX),                                                     \
       FIELDS(                                                                  \
@@ -48,6 +41,13 @@
             TYPE value;                                                        \
             ERROR_TYPE(Error) error;                                           \
           } storage;                                                           \
+      ),                                                                       \
+      CALLBACK(                                                                \
+          FUNCTION(TYPE, MapFunction, (TYPE value))                            \
+      ),                                                                       \
+      CALLBACK(                                                                \
+          OPERATION(BindFunction,                                              \
+                    (TYPE value, struct RESULT_TYPE(SUFFIX) * outResult))       \
       ),                                                                       \
       OPERATION_INLINE(Ok, (TYPE value), {                                     \
         if (!self)                                                             \
@@ -105,19 +105,13 @@
           (RESULT_MAP_CALLBACK(SUFFIX) mapper,                                 \
            struct RESULT_TYPE(SUFFIX) * outResult),                            \
           {                                                                    \
-            if (!self || !outResult ||                                         \
-                !GNS2(CALLBACK_FUNC(OUTCOME_INS(                               \
-                          PP_OP_CAT3(ResultMap_, SUFFIX, _Function))),         \
-                      IsValid)(mapper))                                        \
+            if (!self || !outResult || !CALLBACK_IS_VALID(mapper))                \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             if (!self->isOk) {                                                 \
               return GNS2(RESULT_TYPE(SUFFIX), Err)(outResult,                 \
                                                     &self->storage.error);     \
             }                                                                  \
-            TYPE mapped =                                                      \
-                GNS2(CALLBACK_FUNC(OUTCOME_INS(                                \
-                         PP_OP_CAT3(ResultMap_, SUFFIX, _Function))),          \
-                     Invoke)(mapper, self->storage.value);                     \
+            TYPE mapped = CALLBACK_INVOKE(mapper, self->storage.value);        \
             return GNS2(RESULT_TYPE(SUFFIX), Ok)(outResult, mapped);           \
           }),                                                                  \
       CONST_OPERATION_INLINE(                                                  \
@@ -125,18 +119,13 @@
           (RESULT_BIND_CALLBACK(SUFFIX) binder,                                \
            struct RESULT_TYPE(SUFFIX) * outResult),                            \
           {                                                                    \
-            if (!self || !outResult ||                                         \
-                !GNS2(CALLBACK_FUNC(OUTCOME_INS(                               \
-                          PP_OP_CAT3(ResultBind_, SUFFIX, _Function))),        \
-                      IsValid)(binder))                                        \
+            if (!self || !outResult || !CALLBACK_IS_VALID(binder))                \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             if (!self->isOk) {                                                 \
               return GNS2(RESULT_TYPE(SUFFIX), Err)(outResult,                 \
                                                     &self->storage.error);     \
             }                                                                  \
-            return GNS2(CALLBACK_FUNC(OUTCOME_INS(                             \
-                            PP_OP_CAT3(ResultBind_, SUFFIX, _Function))),      \
-                        Invoke)(binder, self->storage.value, outResult);       \
+            return CALLBACK_INVOKE(binder, self->storage.value, outResult);    \
           })                                                                   \
   )
 

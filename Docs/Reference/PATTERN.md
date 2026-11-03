@@ -86,6 +86,7 @@ Functions and methods in Cosmeron belong to declarative blocks (`PACKAGE` or `OB
 | Predicate | `PREDICATE(NAME, PARAMS)` | `bool` | Proposition or condition query |
 | Function | `FUNCTION(RET, NAME, PARAMS)` | `RET` | Value-producing computation |
 | Procedure | `PROCEDURE(NAME, PARAMS)` | `void` | Infallible action / side-effect |
+| Comparison | `COMPARISON(NAME, PARAMS)` | `CMPOUT` | Three-way comparison (LOWER, EQUAL, HIGHER) |
 
 Each category supports inline variants (`*_INLINE(..., BODY)`) and `const` receiver variants for objects (`CONST_*` and `CONST_*_INLINE`).
 
@@ -104,12 +105,22 @@ OBJECT_OPERATION_IMPLEMENT_EX(Target, MethodName, (params...)) {
 OBJECT_PREDICATE_IMPLEMENT_EX(Target, MethodName, (params...)) { return self != NULL; }
 OBJECT_FUNCTION_IMPLEMENT_EX(Target, ReturnType, MethodName, (params...)) { return computedValue; }
 OBJECT_PROCEDURE_IMPLEMENT_EX(Target, MethodName, (params...)) { /* infallible action */ }
+OBJECT_COMPARISON_IMPLEMENT_EX(Target, MethodName, (const Target * other)) {
+    if (self->val < other->val) return COMPARISON_CONST(LOWER);
+    if (self->val > other->val) return COMPARISON_CONST(HIGHER);
+    return COMPARISON_CONST(EQUAL);
+}
 
 /* For Packages: free functions without self */
 PACKAGE_OPERATION_IMPLEMENT_EX(Package, FuncName, (params...)) { return STATUS_CONST(SUCCESS); }
 PACKAGE_PREDICATE_IMPLEMENT_EX(Package, FuncName, (params...)) { return true; }
 PACKAGE_FUNCTION_IMPLEMENT_EX(Package, ReturnType, FuncName, (params...)) { return computedValue; }
 PACKAGE_PROCEDURE_IMPLEMENT_EX(Package, FuncName, (params...)) { /* infallible action */ }
+PACKAGE_COMPARISON_IMPLEMENT_EX(Package, FuncName, (Type a, Type b)) {
+    if (a < b) return COMPARISON_CONST(LOWER);
+    if (a > b) return COMPARISON_CONST(HIGHER);
+    return COMPARISON_CONST(EQUAL);
+}
 ```
 
 #### 2. Unified Family with Trait Detection
@@ -129,6 +140,10 @@ FUNCTION_IMPLEMENT_EX(Target, ReturnType, MethodName, (params...)) {
 
 PROCEDURE_IMPLEMENT_EX(Target, MethodName, (params...)) {
     /* infallible action */
+}
+
+COMPARISON_IMPLEMENT_EX(Target, MethodName, (params...)) {
+    /* three-way comparison */
 }
 ```
 
@@ -186,6 +201,61 @@ OBJECT_EXTENDS(SpecialCounter, Counter,
 - Safe downcasting and polymorphic conversions use `OBJECT_AS(OBJ, TARGET_TYPE)`.
 - Method invocation: `OBJECT_CALL(obj, MethodName, args...)` or `OBJECT_CALL_0(obj, MethodName)`.
 - Automatic lifecycle helper: `ClassName_Init(&instance)`.
+
+### Comparison Extensions (`COMPARISON_EX`)
+
+Objects can declaratively declare specialized comparison methods without manual boilerplate:
+
+```c
+OBJECT(Person,
+    FIELDS(
+        int age;
+        double score;
+        const char *name;
+        unsigned char hash[16];
+    ),
+    COMPARISON_NUMERIC(CompareAge, age),
+    COMPARISON_NUMERIC(CompareScore, score),
+    COMPARISON_STRING(CompareName, name),
+    COMPARISON_BYTES(CompareHash, hash)
+);
+```
+
+- `COMPARISON_NUMERIC`: Relational comparisons with IEEE-754 NaN total ordering (`NaN == NaN`, `NaN > number`).
+- `COMPARISON_STRING`: Lexicographical C-string comparisons with `NULL` safety (`NULL == NULL`, `NULL < non-NULL`).
+- `COMPARISON_BYTES`: Binary memory comparisons with bounds checking.
+- Extensible base: `COMPARISON_EX(STRATEGY, NAME, FIELD)`.
+
+#### Automatic Comparator Adapter for Objects
+Any object method returning `CMPOUT` automatically generates a type-erased bridge to `TCALLBACK(Comparison)`:
+- `<CLASS>_<Method>_ComparatorAdapter(const void *left, const void *right, void *context)`
+- `<CLASS>_<Method>_AsComparator()` returning a bound `TCALLBACK(Comparison)`.
+
+### Declarative Callbacks (`CALLBACK`)
+
+Callbacks can be declared standalone or directly inside `OBJECT` and `PACKAGE` using the `CALLBACK(...)` capsule:
+
+```c
+PACKAGE(EventBus,
+    CALLBACK(
+        OPERATION(OnEvent, (int code))
+    )
+);
+```
+
+Standalone callbacks use category-matched descriptors:
+```c
+CALLBACK_FUNCTION(int, Scale, (int value));
+CALLBACK_PROCEDURE(Notify, (int code));
+CALLBACK_OPERATION(Commit, (int value));
+CALLBACK_PREDICATE(Filter, (int value));
+CALLBACK_COMPARISON(CompareItems, (int a, int b));
+```
+
+- Unified invocation: `CALLBACK_CALL(cb, args...)` or `CALLBACK_INVOKE(cb, args...)` (supports arbitrary arity).
+- Validity checking: `CALLBACK_IS_VALID(cb)` or `cb.IsValid(&cb)`.
+- Binding: `cb.Bind(&cb, func, context)` or `CALLBACK_FUNC(Name_Bind)(func, context)`.
+- Nullary callbacks use standard empty parentheses `()` without needing redundant macro variants.
 
 ### Declarative Packages (`PACKAGE`)
 
