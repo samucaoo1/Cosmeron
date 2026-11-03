@@ -1,12 +1,12 @@
 #pragma once
 
-OBJECT_OPERATION_IMPLEMENT_EX(ERROR_TYPE(TErrorContext), Create,
+OBJECT_OPERATION_IMPLEMENT_EX(DIAGNOSTIC_TYPE(Context), Create,
                              (const char *file, uint32_t line,
                               const char *function, const char *description,
                               const void *userData)) {
   if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
-  GNS2(ERROR_TYPE(TErrorContext), Init)(self);
+  GNS2(DIAGNOSTIC_TYPE(Context), Init)(self);
   self->file = file;
   self->line = line;
   self->function = function;
@@ -15,7 +15,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(ERROR_TYPE(TErrorContext), Create,
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_PROCEDURE_IMPLEMENT_EX(ERROR_TYPE(TErrorContext), Clear, ()) {
+OBJECT_PROCEDURE_IMPLEMENT_EX(DIAGNOSTIC_TYPE(Context), Clear, ()) {
   if (!self)
     return;
   self->file = NULL;
@@ -25,6 +25,6 @@ OBJECT_PROCEDURE_IMPLEMENT_EX(ERROR_TYPE(TErrorContext), Clear, ()) {
   self->userData = NULL;
 }
 
-OBJECT_IMPLEMENT(ERROR_TYPE(TErrorContext));
+OBJECT_IMPLEMENT(DIAGNOSTIC_TYPE(Context));
 /* EOF */
 

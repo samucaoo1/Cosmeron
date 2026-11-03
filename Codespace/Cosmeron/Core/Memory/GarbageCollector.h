@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Error/Status.h"
+#include "../Outcome/Status.h"
 #include "../Module/Callback/Callback.h"
 #include "../Module/Object.h"
 #include "../Module/Package.h"
@@ -24,8 +24,8 @@
 #define GARBAGE_COLLECTOR_INS(NAME) GNS4(LIB_PREFIX(MEMORY_MOD), GarbageCollector, Internal, NAME)
 #define GARBAGE_COLLECTOR_CINS(NAME) CNS4(LIB_PREFIX_CONST(MEMORY_CMOD), GARBAGE_COLLECTOR, INTERNAL, NAME)
 
-#define GARBAGE_COLLECTOR_TYPE(NAME) GARBAGE_COLLECTOR_NS(NAME)
-#define GARBAGE_COLLECTOR_FUNC(NAME) GNS2(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), NAME)
+#define GARBAGE_COLLECTOR_TYPE(NAME) PP_OP_CAT2(T, NAME)
+#define GARBAGE_COLLECTOR_FUNC(NAME) GNS2(GARBAGE_COLLECTOR_TYPE(GarbageCollector), NAME)
 #define GARBAGE_COLLECTOR_CONST(NAME) GARBAGE_COLLECTOR_CNS(NAME)
 
 /* ============================================================
@@ -44,7 +44,7 @@
   X((MAX_ROOTS,                 128U))    \
   X((WORKLIST_CHUNK_CAPACITY,   512U))
 
-enum GARBAGE_COLLECTOR_TYPE(Config) {
+enum GARBAGE_COLLECTOR_NS(Config) {
 #define GARBAGE_COLLECTOR_CONFIG_ENUM_ITEM(ROW) \
   GARBAGE_COLLECTOR_CONST(GARBAGE_COLLECTOR_CONFIG_GET(NAME, ROW)) = \
       GARBAGE_COLLECTOR_CONFIG_GET(VALUE, ROW),
@@ -65,16 +65,16 @@ CALLBACK_DECLARE_PROCEDURE(
   GNS2(CALLBACK_FUNC(GARBAGE_COLLECTOR_INS(FinalizerFunction)), Bind)((FN), (CTX))
 
 /* Typed struct descriptor */
-typedef struct GARBAGE_COLLECTOR_TYPE(Descriptor) {
+typedef struct GARBAGE_COLLECTOR_NS(Descriptor) {
   size_t size;
   uint64_t bitmap;
-} GARBAGE_COLLECTOR_TYPE(Descriptor);
+} GARBAGE_COLLECTOR_NS(Descriptor);
 
 #define GARBAGE_COLLECTOR_FIELD_BIT(TYPE, FIELD) \
   (1ULL << (offsetof(TYPE, FIELD) / sizeof(void *)))
 
 #define GARBAGE_COLLECTOR_DESCRIPTOR_DEF(NAME, TYPE, ...) \
-  static const GARBAGE_COLLECTOR_TYPE(Descriptor) NAME = { \
+  static const GARBAGE_COLLECTOR_NS(Descriptor) NAME = { \
       .size = sizeof(TYPE), \
       .bitmap = (0ULL | __VA_ARGS__) \
   }
@@ -111,9 +111,9 @@ typedef struct GARBAGE_COLLECTOR_INS(RootEntry) {
  * 3. Declarative TGarbageCollector Object
  * ============================================================ */
 
-OBJECT(GARBAGE_COLLECTOR_TYPE(TGarbageCollector),
+OBJECT(GARBAGE_COLLECTOR_TYPE(GarbageCollector),
     FIELDS(
-        HEAP_TYPE(TMemoryHeap) heap;
+        MEMORY_TYPE(Heap) heap;
         GARBAGE_COLLECTOR_INS(Worklist) worklist;
         GARBAGE_COLLECTOR_INS(FinalizerEntry) *finalizers;
         GARBAGE_COLLECTOR_INS(FinalizerEntry) *pendingFinalizers;
@@ -129,7 +129,7 @@ OBJECT(GARBAGE_COLLECTOR_TYPE(TGarbageCollector),
     OPERATION(Create, (size_t initialHeapPages, const void *stackBottom)),
     OPERATION(Destroy, ()),
     OPERATION(Alloc, (void *outPointerObject, size_t size, uint8_t policy, const void *descriptor)),
-    OPERATION(AllocTyped, (void *outPointerObject, const GARBAGE_COLLECTOR_TYPE(Descriptor) *descriptor)),
+    OPERATION(AllocTyped, (void *outPointerObject, const GARBAGE_COLLECTOR_NS(Descriptor) *descriptor)),
     OPERATION(AllocAtomic, (void *outPointerObject, size_t size)),
     OPERATION(SetFinalizer, (const void *ptr, GARBAGE_COLLECTOR_FINALIZER_CALLBACK finalizer)),
     OPERATION(PinRoot, (const void *rootPointerAddress)),
@@ -143,8 +143,6 @@ OBJECT(GARBAGE_COLLECTOR_TYPE(TGarbageCollector),
     CONST_PREDICATE(Contains, (const void *ptr))
 );
 
-typedef GARBAGE_COLLECTOR_TYPE(TGarbageCollector) TGarbageCollector;
-
 /* ============================================================
  * 4. Declarative Package GarbageCollector (Thread Default Facade)
  * ============================================================ */
@@ -152,9 +150,9 @@ typedef GARBAGE_COLLECTOR_TYPE(TGarbageCollector) TGarbageCollector;
 PACKAGE(LIB_PREFIX(GARBAGE_COLLECTOR_MOD),
     OPERATION(Startup, (const void *stackBottom)),
     OPERATION(Shutdown, ()),
-    FUNCTION(GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *, DefaultCollector, ()),
+    FUNCTION(GARBAGE_COLLECTOR_TYPE(GarbageCollector) *, DefaultCollector, ()),
     OPERATION(Alloc, (void *outPointerObject, size_t size)),
-    OPERATION(AllocTyped, (void *outPointerObject, const GARBAGE_COLLECTOR_TYPE(Descriptor) *descriptor)),
+    OPERATION(AllocTyped, (void *outPointerObject, const GARBAGE_COLLECTOR_NS(Descriptor) *descriptor)),
     OPERATION(AllocAtomic, (void *outPointerObject, size_t size)),
     OPERATION(SetFinalizer, (const void *ptr, GARBAGE_COLLECTOR_FINALIZER_CALLBACK finalizer)),
     OPERATION(PinRoot, (const void *rootPointerAddress)),

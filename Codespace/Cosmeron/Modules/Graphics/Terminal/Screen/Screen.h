@@ -2,7 +2,7 @@
 
 #include "../Terminal.space"
 #include "../Terminal.h"
-#include "../../../../Core/Error/Status.h"
+#include "../../../../Core/Outcome/Status.h"
 #include "../../../../Core/Module/Object.h"
 #include "../../../Text/Grid/Grid.h"
 #include "../../../Text/Encoding/UTF8.h"

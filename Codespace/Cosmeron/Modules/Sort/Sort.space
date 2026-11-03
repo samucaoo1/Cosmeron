@@ -2,7 +2,7 @@
 
 #include "../../Core/Namespace.h"
 #include "../../Core/Preprocessor/Compiling.inc"
-#include "../../Core/Error/Status.h"
+#include "../../Core/Outcome/Status.h"
 
 #include <stdbool.h>
 #include <stddef.h>

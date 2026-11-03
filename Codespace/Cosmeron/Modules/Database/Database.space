@@ -2,7 +2,7 @@
 
 #include "SQLite/SQLite.h"
 #include "../../Core/Namespace.h"
-#include "../../Core/Error/Status.h"
+#include "../../Core/Outcome/Status.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>

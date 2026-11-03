@@ -6,7 +6,7 @@
 #include "../Socket/Socket.h"
 #include "../../Chronometry/Duration/Duration.h"
 #include "../../Chronometry/Clock/Clock.h"
-#include "../../../Core/Error/Status.h"
+#include "../../../Core/Outcome/Status.h"
 #include "../../../Core/Memory/Alloc.h"
 #include <string.h>
 

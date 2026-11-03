@@ -1,15 +1,16 @@
 #pragma once
 
-#include "Context.h"
-#include "Status.h"
+#include "Condition.space"
+#include "../Diagnostic/Context.h"
+#include "../Outcome/Status.h"
 #include "../Module/Object.h"
 
-OBJECT(ERROR_TYPE(TError),
+OBJECT(ERROR_TYPE(Error),
     FIELDS(
         OPSTATUS code;
         const char *message;
-        ERROR_TYPE(TErrorContext) context;
-        const struct ERROR_TYPE(TError) *cause;
+        DIAGNOSTIC_TYPE(Context) context;
+        const struct ERROR_TYPE(Error) *cause;
     ),
     OPERATION(Create, (OPSTATUS code, const char *message)),
     OPERATION(FromStatus, (OPSTATUS code)),
@@ -34,27 +35,28 @@ OBJECT(ERROR_TYPE(TError),
     CONST_PREDICATE_INLINE(IsCategory, (STATUS_TYPE(Category) category), {
       return self ? STATUS_FUNC(IsCategory)(self->code, category) : false;
     }),
-    OPERATION(SetContext, (const ERROR_TYPE(TErrorContext) *context)),
+    OPERATION(SetContext, (const DIAGNOSTIC_TYPE(Context) *context)),
     OPERATION(SetOrigin, (const char *file, uint32_t line,
                           const char *function, const char *description,
                           const void *userData)),
-    CONST_FUNCTION_INLINE(const ERROR_TYPE(TErrorContext) *, Context, (), {
+    CONST_FUNCTION_INLINE(const DIAGNOSTIC_TYPE(Context) *, Context, (), {
       return self ? &self->context : NULL;
     }),
     CONST_PREDICATE_INLINE(HasContext, (), {
-      return self ? GNS2(ERROR_TYPE(TErrorContext), HasOrigin)(&self->context)
+      return self ? GNS2(DIAGNOSTIC_TYPE(Context), HasOrigin)(&self->context)
                   : false;
     }),
-    OPERATION(SetCause, (const struct ERROR_TYPE(TError) *cause)),
+    OPERATION(SetCause, (const struct ERROR_TYPE(Error) *cause)),
     CONST_PREDICATE_INLINE(HasCause, (), {
       return self && self->cause != NULL;
     }),
-    CONST_FUNCTION_INLINE(const struct ERROR_TYPE(TError) *, Cause, (), {
+    CONST_FUNCTION_INLINE(const struct ERROR_TYPE(Error) *, Cause, (), {
       return self ? self->cause : NULL;
     }),
-    CONST_FUNCTION(const struct ERROR_TYPE(TError) *, RootCause, ()),
+    CONST_FUNCTION(const struct ERROR_TYPE(Error) *, RootCause, ()),
     CONST_FUNCTION(size_t, Depth, ())
 );
 
 #include "Impl/Error.impl"
 /* EOF */
+

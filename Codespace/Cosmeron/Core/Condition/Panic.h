@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Error.space"
-#include "Stacktrace.h"
-#include "Status.h"
+#include "Condition.space"
+#include "../Diagnostic/Stacktrace.h"
+#include "../Outcome/Status.h"
 #include "../Module/Callback/Callback.h"
 #include "../Module/Package.h"
 
@@ -10,13 +10,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define PANIC_MOD GNS2(ERROR_MOD, Panic)
-#define PANIC_CMOD PP_OP_CAT3(ERROR_CMOD, _, PANIC)
+#define PANIC_MOD GNS2(CONDITION_MOD, Panic)
+#define PANIC_CMOD PP_OP_CAT3(CONDITION_CMOD, _, PANIC)
 
-#define PANIC_NS(NAME) GNS3(LIB_PREFIX(ERROR_MOD), Panic, NAME)
-#define PANIC_CNS(NAME) CNS3(LIB_PREFIX_CONST(ERROR_CMOD), PANIC, NAME)
-#define PANIC_INS(NAME) GNS4(LIB_PREFIX(ERROR_MOD), Panic, Internal, NAME)
-#define PANIC_CINS(NAME) CNS4(LIB_PREFIX_CONST(ERROR_CMOD), PANIC, INTERNAL, NAME)
+#define PANIC_NS(NAME) GNS3(LIB_PREFIX(CONDITION_MOD), Panic, NAME)
+#define PANIC_CNS(NAME) CNS3(LIB_PREFIX_CONST(CONDITION_CMOD), PANIC, NAME)
+#define PANIC_INS(NAME) GNS4(LIB_PREFIX(CONDITION_MOD), Panic, Internal, NAME)
+#define PANIC_CINS(NAME) CNS4(LIB_PREFIX_CONST(CONDITION_CMOD), PANIC, INTERNAL, NAME)
 
 #define PANIC_TYPE(NAME) PANIC_NS(NAME)
 #define PANIC_FUNC(NAME) PANIC_NS(NAME)
@@ -115,3 +115,4 @@ PACKAGE(LIB_PREFIX(PANIC_MOD),
 
 #include "Impl/Panic.impl"
 /* EOF */
+

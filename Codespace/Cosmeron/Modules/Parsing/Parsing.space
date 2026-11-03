@@ -1,6 +1,6 @@
 #pragma once
 #include "../../Core/Namespace.h"
-#include "../../Core/Error/Status.h"
+#include "../../Core/Outcome/Status.h"
 #include "../../Core/Memory/Alloc.h"
 #include "../Text/Encoding/UTF8.h"
 #include "../Text/View/View.h"

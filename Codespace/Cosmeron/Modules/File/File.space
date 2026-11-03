@@ -1,6 +1,6 @@
 #pragma once
 #include "../../Core/Namespace.h"
-#include "../../Core/Error/Status.h"
+#include "../../Core/Outcome/Status.h"
 #include "../Chronometry/Instant/Instant.h"
 #include "../Text/View/View.h"
 #include <errno.h>

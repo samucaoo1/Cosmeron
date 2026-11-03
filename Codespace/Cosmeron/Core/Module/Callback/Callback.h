@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../Error/Status.h"
+#include "../../Outcome/Status.h"
 #include "../Package.h"
 
 #include <stdbool.h>

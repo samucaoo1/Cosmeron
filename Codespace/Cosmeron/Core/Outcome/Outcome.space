@@ -1,0 +1,19 @@
+#pragma once
+
+#include "../Namespace.h"
+#include "../Preprocessor/Compiling.inc"
+#include "../Preprocessor/Operations.h"
+
+#define OUTCOME_MOD Outcome
+#define OUTCOME_CMOD OUTCOME
+
+#define OUTCOME_NS(NAME) GNS2(LIB_PREFIX(OUTCOME_MOD), NAME)
+#define OUTCOME_CNS(NAME) CNS2(LIB_PREFIX_CONST(OUTCOME_CMOD), NAME)
+#define OUTCOME_INS(NAME) GNS3(LIB_PREFIX(OUTCOME_MOD), Internal, NAME)
+#define OUTCOME_CINS(NAME) CNS3(LIB_PREFIX_CONST(OUTCOME_CMOD), INTERNAL, NAME)
+
+#define OUTCOME_TYPE(SUFFIX) PP_OP_CAT3(T, OUTCOME_MOD, SUFFIX)
+#define OUTCOME_FUNC(NAME) OUTCOME_NS(NAME)
+#define OUTCOME_CONST(NAME) OUTCOME_CNS(NAME)
+/* EOF */
+

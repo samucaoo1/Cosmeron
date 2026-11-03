@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../../Core/Error/Status.h"
+#include "../../../Core/Outcome/Status.h"
 #include "../Chronometry.space"
 #include <stddef.h>
 

@@ -2,7 +2,7 @@
 
 #include "../Concurrency.space"
 #include "../Internal/AutoLink.inc"
-#include "../../../Core/Error/Status.h"
+#include "../../../Core/Outcome/Status.h"
 
 typedef void (*CONCURRENCY_TYPE(OnceFunction))(void);
 

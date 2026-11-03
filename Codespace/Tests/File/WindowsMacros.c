@@ -1,5 +1,5 @@
 /* Match File.space: Core status declarations precede Windows headers. */
-#include "../../Cosmeron/Core/Error/Status.h"
+#include "../../Cosmeron/Core/Outcome/Status.h"
 #include <stddef.h>
 #include <stdio.h>
 #ifdef _WIN32

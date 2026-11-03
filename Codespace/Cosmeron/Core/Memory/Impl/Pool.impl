@@ -17,7 +17,7 @@ static inline size_t POOL_INS(AlignedChunkSize)(size_t elementSize) {
  * TMemoryPool Method Implementations
  * ============================================================ */
 
-OBJECT_OPERATION_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), Create, (size_t elementSize, size_t elementCount)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Pool), Create, (size_t elementSize, size_t elementCount)) {
   if (!self || elementSize == 0U || elementCount == 0U)
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -49,7 +49,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), Create, (size_t elementSiz
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), CreateBuffer, (void *buffer, size_t bufferSize, size_t elementSize)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Pool), CreateBuffer, (void *buffer, size_t bufferSize, size_t elementSize)) {
   if (!self || !buffer || elementSize == 0U)
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -76,7 +76,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), CreateBuffer, (void *buffe
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), Alloc, (void *outPointerObject)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Pool), Alloc, (void *outPointerObject)) {
   if (!self || !outPointerObject)
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -93,7 +93,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), Alloc, (void *outPointerOb
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), Free, (void *ptr)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Pool), Free, (void *ptr)) {
   if (!self || !ptr)
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -115,7 +115,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), Free, (void *ptr)) {
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), FreePointer, (void *inoutPointerObject)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Pool), FreePointer, (void *inoutPointerObject)) {
   void *ptr = NULL;
   OPSTATUS status;
 
@@ -130,7 +130,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), FreePointer, (void *inoutP
   return status;
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), Reset, ()) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Pool), Reset, ()) {
   if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -149,7 +149,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), Reset, ()) {
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), Destroy, ()) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Pool), Destroy, ()) {
   if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -169,7 +169,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), Destroy, ()) {
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_PREDICATE_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), Contains, (const void *ptr)) {
+OBJECT_PREDICATE_IMPLEMENT_EX(MEMORY_TYPE(Pool), Contains, (const void *ptr)) {
   if (!self || !ptr || !self->buffer)
     return false;
 
@@ -182,6 +182,6 @@ OBJECT_PREDICATE_IMPLEMENT_EX(POOL_TYPE(TMemoryPool), Contains, (const void *ptr
   return (offset % self->elementSize == 0U);
 }
 
-OBJECT_IMPLEMENT(POOL_TYPE(TMemoryPool));
+OBJECT_IMPLEMENT(MEMORY_TYPE(Pool));
 
 /* EOF */

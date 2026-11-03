@@ -3,7 +3,7 @@
 #include "../Container.space"
 
 #include "../../../Core/Algorithm/Comparison.h"
-#include "../../../Core/Error/Status.h"
+#include "../../../Core/Outcome/Status.h"
 #include "../../../Core/Memory/Alloc.h"
 #include "../../../Core/Memory/Swap.h"
 #include "../../../Core/Namespace.h"

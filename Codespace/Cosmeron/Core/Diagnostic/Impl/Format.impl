@@ -1,0 +1,149 @@
+#pragma once
+
+#include "FormatWriter.inc"
+
+static inline void DIAGNOSTIC_INS(Format_WriteContext)(
+    DIAGNOSTIC_INS(FormatWriter) *w, const DIAGNOSTIC_TYPE(Context) *context) {
+  if (context == NULL || !GNS2(DIAGNOSTIC_TYPE(Context), HasOrigin)(context)) {
+    DIAGNOSTIC_INS(FormatWriter_AppendStr)(w, "<no origin>");
+    return;
+  }
+
+  DIAGNOSTIC_INS(FormatWriter_AppendStr)(w, "at ");
+  DIAGNOSTIC_INS(FormatWriter_AppendStr)(
+      w, context->file ? context->file : "<unknown-file>");
+  DIAGNOSTIC_INS(FormatWriter_AppendChar)(w, ':');
+  DIAGNOSTIC_INS(FormatWriter_AppendUint)(w, context->line);
+  DIAGNOSTIC_INS(FormatWriter_AppendStr)(w, " in ");
+  DIAGNOSTIC_INS(FormatWriter_AppendStr)(
+      w, context->function ? context->function : "<unknown-func>");
+  DIAGNOSTIC_INS(FormatWriter_AppendStr)(w, "()");
+
+  if (context->description != NULL && context->description[0] != '\0') {
+    DIAGNOSTIC_INS(FormatWriter_AppendStr)(w, " - ");
+    DIAGNOSTIC_INS(FormatWriter_AppendStr)(w, context->description);
+  }
+}
+
+static inline void DIAGNOSTIC_INS(Format_WriteErrorSingle)(
+    DIAGNOSTIC_INS(FormatWriter) *w, const ERROR_TYPE(Error) *error, bool detailed) {
+  OPSTATUS code = GNS2(ERROR_TYPE(Error), Code)(error);
+  const char *msg = GNS2(ERROR_TYPE(Error), Message)(error);
+  const char *name = STATUS_FUNC(Name)(code);
+
+  DIAGNOSTIC_INS(FormatWriter_AppendChar)(w, '[');
+  DIAGNOSTIC_INS(FormatWriter_AppendStr)(w, name);
+  DIAGNOSTIC_INS(FormatWriter_AppendStr)(w, "] ");
+  DIAGNOSTIC_INS(FormatWriter_AppendStr)(w, msg);
+
+  if (detailed && GNS2(ERROR_TYPE(Error), HasContext)(error)) {
+    DIAGNOSTIC_INS(FormatWriter_AppendStr)(w, " (");
+    DIAGNOSTIC_INS(Format_WriteContext)(w, GNS2(ERROR_TYPE(Error), Context)(error));
+    DIAGNOSTIC_INS(FormatWriter_AppendChar)(w, ')');
+  }
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(
+    DIAGNOSTIC_NS(Format), Simple,
+    (const ERROR_TYPE(Error) *error, char *outBuffer, size_t capacity,
+     size_t *outWritten)) {
+  if (outWritten != NULL) {
+    *outWritten = 0;
+  }
+  if (error == NULL || outBuffer == NULL || capacity == 0) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  DIAGNOSTIC_INS(FormatWriter) w;
+  DIAGNOSTIC_INS(FormatWriter_Init)(&w, outBuffer, capacity);
+  DIAGNOSTIC_INS(Format_WriteErrorSingle)(&w, error, false);
+
+  if (outWritten != NULL) {
+    *outWritten = w.written;
+  }
+  return w.overflow ? STATUS_CONST(INSUFFICIENT_SPACE) : STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(
+    DIAGNOSTIC_NS(Format), Detailed,
+    (const ERROR_TYPE(Error) *error, char *outBuffer, size_t capacity,
+     size_t *outWritten)) {
+  if (outWritten != NULL) {
+    *outWritten = 0;
+  }
+  if (error == NULL || outBuffer == NULL || capacity == 0) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  DIAGNOSTIC_INS(FormatWriter) w;
+  DIAGNOSTIC_INS(FormatWriter_Init)(&w, outBuffer, capacity);
+  DIAGNOSTIC_INS(Format_WriteErrorSingle)(&w, error, true);
+
+  if (outWritten != NULL) {
+    *outWritten = w.written;
+  }
+  return w.overflow ? STATUS_CONST(INSUFFICIENT_SPACE) : STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(
+    DIAGNOSTIC_NS(Format), Context,
+    (const DIAGNOSTIC_TYPE(Context) *context, char *outBuffer, size_t capacity,
+     size_t *outWritten)) {
+  if (outWritten != NULL) {
+    *outWritten = 0;
+  }
+  if (context == NULL || outBuffer == NULL || capacity == 0) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  DIAGNOSTIC_INS(FormatWriter) w;
+  DIAGNOSTIC_INS(FormatWriter_Init)(&w, outBuffer, capacity);
+  DIAGNOSTIC_INS(Format_WriteContext)(&w, context);
+
+  if (outWritten != NULL) {
+    *outWritten = w.written;
+  }
+  return w.overflow ? STATUS_CONST(INSUFFICIENT_SPACE) : STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(
+    DIAGNOSTIC_NS(Format), Chain,
+    (const ERROR_TYPE(Error) *error, char *outBuffer, size_t capacity,
+     size_t *outWritten)) {
+  if (outWritten != NULL) {
+    *outWritten = 0;
+  }
+  if (error == NULL || outBuffer == NULL || capacity == 0) {
+    return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  DIAGNOSTIC_INS(FormatWriter) w;
+  DIAGNOSTIC_INS(FormatWriter_Init)(&w, outBuffer, capacity);
+
+  const ERROR_TYPE(Error) *current = error;
+  size_t index = 0;
+  size_t maxDepth = ERROR_CONST(MAX_CHAIN_DEPTH);
+
+  while (current != NULL && index < maxDepth) {
+    if (index > 0) {
+      DIAGNOSTIC_INS(FormatWriter_AppendStr)(&w, "\n  caused by: ");
+    }
+    DIAGNOSTIC_INS(FormatWriter_AppendChar)(&w, '[');
+    DIAGNOSTIC_INS(FormatWriter_AppendChar)(&w, '#');
+    DIAGNOSTIC_INS(FormatWriter_AppendUint)(&w, index);
+    DIAGNOSTIC_INS(FormatWriter_AppendStr)(&w, "] ");
+    DIAGNOSTIC_INS(Format_WriteErrorSingle)(&w, current, true);
+
+    current = current->cause;
+    index++;
+  }
+
+  if (outWritten != NULL) {
+    *outWritten = w.written;
+  }
+  return w.overflow ? STATUS_CONST(INSUFFICIENT_SPACE) : STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_IMPLEMENT(DIAGNOSTIC_NS(Format));
+/* EOF */
+

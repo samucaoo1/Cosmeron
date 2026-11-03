@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../../../Core/Algorithm/Comparison.h"
-#include "../../../../Core/Error/Status.h"
+#include "../../../../Core/Outcome/Status.h"
 #include "../../../../Core/Memory/Alloc.h"
 #include "../../../../Core/Module/Package.h"
 #include "../../Text.space"

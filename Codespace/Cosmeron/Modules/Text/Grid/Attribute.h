@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../../Core/Error/Status.h"
+#include "../../../Core/Outcome/Status.h"
 #include "../../../Core/Memory/Alloc.h"
 #include "../../Struct/TDual.h"
 #include "../../Struct/TQuad.h"

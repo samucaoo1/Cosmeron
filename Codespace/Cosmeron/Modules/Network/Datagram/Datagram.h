@@ -3,7 +3,7 @@
 #include "../Address/Address.h"
 #include "../Error/Error.h"
 #include "../Socket/Socket.h"
-#include "../../../Core/Error/Status.h"
+#include "../../../Core/Outcome/Status.h"
 
 typedef struct NETWORK_DATAGRAM_TYPE(TDatagram) {
   NETWORK_ADDRESS_TYPE(TEndpoint) localEndpoint;

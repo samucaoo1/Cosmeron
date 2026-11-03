@@ -29,7 +29,7 @@ static inline uintptr_t HEAP_INS(RadixHash)(uintptr_t key) {
 }
 
 static inline HEAP_INS(RadixLevel2) *HEAP_INS(GetOrCreateRadixL2)(
-    HEAP_TYPE(TMemoryHeap) *self, uintptr_t l1Key) {
+    MEMORY_TYPE(Heap) *self, uintptr_t l1Key) {
   uintptr_t bucket = HEAP_INS(RadixHash)(l1Key);
   HEAP_INS(RadixLevel2) *node = self->radixBuckets[bucket];
 
@@ -52,7 +52,7 @@ static inline HEAP_INS(RadixLevel2) *HEAP_INS(GetOrCreateRadixL2)(
 }
 
 static inline OPSTATUS HEAP_INS(RadixMapPage)(
-    HEAP_TYPE(TMemoryHeap) *self, uintptr_t pageIndex, void *entry) {
+    MEMORY_TYPE(Heap) *self, uintptr_t pageIndex, void *entry) {
   uintptr_t l1Key = pageIndex >> HEAP_CONST(RADIX_LEVEL2_BITS);
   uintptr_t l2Index = pageIndex & ((1U << HEAP_CONST(RADIX_LEVEL2_BITS)) - 1U);
   HEAP_INS(RadixLevel2) *l2 = HEAP_INS(GetOrCreateRadixL2)(self, l1Key);
@@ -64,7 +64,7 @@ static inline OPSTATUS HEAP_INS(RadixMapPage)(
 }
 
 static inline void *HEAP_INS(RadixLookupPage)(
-    const HEAP_TYPE(TMemoryHeap) *self, uintptr_t pageIndex) {
+    const MEMORY_TYPE(Heap) *self, uintptr_t pageIndex) {
   uintptr_t l1Key = pageIndex >> HEAP_CONST(RADIX_LEVEL2_BITS);
   uintptr_t l2Index = pageIndex & ((1U << HEAP_CONST(RADIX_LEVEL2_BITS)) - 1U);
   uintptr_t bucket = HEAP_INS(RadixHash)(l1Key);
@@ -99,7 +99,7 @@ static inline OPSTATUS HEAP_INS(AllocAlignedPage)(
  * TMemoryHeap Method Implementations
  * ============================================================ */
 
-OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), Create, (size_t initialPages)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Heap), Create, (size_t initialPages)) {
   if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -117,7 +117,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), Create, (size_t initialPag
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), Destroy, ()) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Heap), Destroy, ()) {
   if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -179,7 +179,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), Destroy, ()) {
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), AllocSmall,
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Heap), AllocSmall,
     (void *outPointerObject, size_t sizeClassIndex, uint8_t policy, const void *descriptor)) {
   if (!self || !outPointerObject || sizeClassIndex >= HEAP_CONST(SIZE_CLASS_COUNT))
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -295,7 +295,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), AllocSmall,
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), AllocLarge,
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Heap), AllocLarge,
     (void *outPointerObject, size_t size, uint8_t policy, const void *descriptor)) {
   if (!self || !outPointerObject || size == 0U)
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -351,7 +351,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), AllocLarge,
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), Alloc,
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Heap), Alloc,
     (void *outPointerObject, size_t size, uint8_t policy, const void *descriptor)) {
   if (!self || !outPointerObject || size == 0U)
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -367,7 +367,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), Alloc,
   return HEAP_FUNC(AllocLarge)(self, outPointerObject, size, policy, descriptor);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), FreeCell, (void *ptr)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Heap), FreeCell, (void *ptr)) {
   if (!self || !ptr)
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -440,7 +440,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), FreeCell, (void *ptr)) {
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), BlacklistPage, (uintptr_t pageIndex)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Heap), BlacklistPage, (uintptr_t pageIndex)) {
   if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -456,7 +456,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), BlacklistPage, (uintptr_t 
   return STATUS_CONST(OUT_OF_RANGE);
 }
 
-OBJECT_PREDICATE_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), IsBlacklisted, (uintptr_t pageIndex)) {
+OBJECT_PREDICATE_IMPLEMENT_EX(MEMORY_TYPE(Heap), IsBlacklisted, (uintptr_t pageIndex)) {
   if (!self)
     return false;
 
@@ -467,7 +467,7 @@ OBJECT_PREDICATE_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), IsBlacklisted, (uintptr_t 
   return false;
 }
 
-OBJECT_FUNCTION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), void *, LookupEntry, (const void *ptr)) {
+OBJECT_FUNCTION_IMPLEMENT_EX(MEMORY_TYPE(Heap), void *, LookupEntry, (const void *ptr)) {
   if (!self || !ptr)
     return NULL;
 
@@ -475,7 +475,7 @@ OBJECT_FUNCTION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), void *, LookupEntry, (const
   return HEAP_INS(RadixLookupPage)(self, pageIndex);
 }
 
-OBJECT_PREDICATE_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), ResolvePointer,
+OBJECT_PREDICATE_IMPLEMENT_EX(MEMORY_TYPE(Heap), ResolvePointer,
     (const void *interiorPtr, void **outBasePtr, size_t *outSize, uint8_t *outPolicy)) {
   if (!self || !interiorPtr || !outBasePtr)
     return false;
@@ -525,7 +525,7 @@ OBJECT_PREDICATE_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), ResolvePointer,
   return false;
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), SweepPage,
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Heap), SweepPage,
     (HEAP_INS(PageHeader) *page, bool *outIsPageEmpty)) {
   if (!self || !page || !outIsPageEmpty)
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -557,7 +557,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), SweepPage,
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), LazySweepClass, (size_t sizeClassIndex)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Heap), LazySweepClass, (size_t sizeClassIndex)) {
   if (!self || sizeClassIndex >= HEAP_CONST(SIZE_CLASS_COUNT))
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -592,12 +592,12 @@ OBJECT_OPERATION_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), LazySweepClass, (size_t si
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_PREDICATE_IMPLEMENT_EX(HEAP_TYPE(TMemoryHeap), Contains, (const void *ptr)) {
+OBJECT_PREDICATE_IMPLEMENT_EX(MEMORY_TYPE(Heap), Contains, (const void *ptr)) {
   void *basePtr = NULL;
   return HEAP_FUNC(ResolvePointer)(self, ptr, &basePtr, NULL, NULL);
 }
 
-OBJECT_IMPLEMENT(HEAP_TYPE(TMemoryHeap));
+OBJECT_IMPLEMENT(MEMORY_TYPE(Heap));
 
 /* EOF */
 

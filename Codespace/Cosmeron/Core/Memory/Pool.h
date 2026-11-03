@@ -13,8 +13,8 @@
 #define POOL_INS(NAME) GNS4(LIB_PREFIX(MEMORY_MOD), Pool, Internal, NAME)
 #define POOL_CINS(NAME) CNS4(LIB_PREFIX_CONST(MEMORY_CMOD), POOL, INTERNAL, NAME)
 
-#define POOL_TYPE(NAME) POOL_NS(NAME)
-#define POOL_FUNC(NAME) GNS2(POOL_TYPE(TMemoryPool), NAME)
+#define POOL_TYPE(NAME) MEMORY_TYPE(NAME)
+#define POOL_FUNC(NAME) GNS2(MEMORY_TYPE(Pool), NAME)
 #define POOL_CONST(NAME) POOL_CNS(NAME)
 
 /* Forward declaration for typed node */
@@ -23,7 +23,7 @@ typedef struct POOL_INS(Node) {
 } POOL_INS(Node);
 
 /* Object-oriented Memory Pool structure definition with canonical namespace */
-OBJECT(POOL_TYPE(TMemoryPool),
+OBJECT(MEMORY_TYPE(Pool),
     FIELDS(
         void *buffer;
         size_t capacity;
@@ -46,8 +46,6 @@ OBJECT(POOL_TYPE(TMemoryPool),
     CONST_FUNCTION_INLINE(size_t, ElementSize, (), { return self ? self->elementSize : 0U; }),
     CONST_PREDICATE(Contains, (const void *ptr))
 );
-
-typedef POOL_TYPE(TMemoryPool) TMemoryPool;
 
 #include "Impl/Pool.impl"
 

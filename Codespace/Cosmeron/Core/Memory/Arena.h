@@ -13,11 +13,11 @@
 #define ARENA_INS(NAME) GNS4(LIB_PREFIX(MEMORY_MOD), Arena, Internal, NAME)
 #define ARENA_CINS(NAME) CNS4(LIB_PREFIX_CONST(MEMORY_CMOD), ARENA, INTERNAL, NAME)
 
-#define ARENA_TYPE(NAME) ARENA_NS(NAME)
-#define ARENA_FUNC(NAME) GNS2(ARENA_TYPE(TArena), NAME)
+#define ARENA_TYPE(NAME) MEMORY_TYPE(NAME)
+#define ARENA_FUNC(NAME) GNS2(MEMORY_TYPE(Arena), NAME)
 #define ARENA_CONST(NAME) ARENA_CNS(NAME)
 
-OBJECT(ARENA_TYPE(TArena),
+OBJECT(MEMORY_TYPE(Arena),
     FIELDS(
         uint8_t *buffer;
         size_t capacity;
@@ -41,8 +41,6 @@ OBJECT(ARENA_TYPE(TArena),
     }),
     CONST_PREDICATE(Contains, (const void *ptr))
 );
-
-typedef ARENA_TYPE(TArena) TArena;
 
 #include "Impl/Arena.impl"
 /* EOF */

@@ -19,23 +19,28 @@
 #define COMPARISON_FUNC(NAME) COMPARISON_NS(NAME)
 #define COMPARISON_CONST(NAME) COMPARISON_CNS(NAME)
 
+#define COMPARISON_COL_NAME(NAME, VALUE, DESC) NAME
+#define COMPARISON_COL_VALUE(NAME, VALUE, DESC) VALUE
+#define COMPARISON_COL_DESC(NAME, VALUE, DESC) DESC
+#define COMPARISON_GET(FIELD, ROW) PP_OP_CAT2(COMPARISON_COL_, FIELD) ROW
+
 #define COMPARISON_TABLE(X)                                                    \
-  X(LOWER, -1, "Lower")                                                        \
-  X(EQUAL, 0, "Equal")                                                         \
-  X(HIGHER, 1, "Higher")
+  X((LOWER, -1, "Lower"))                                                      \
+  X((EQUAL, 0, "Equal"))                                                       \
+  X((HIGHER, 1, "Higher"))
 
 typedef enum COMPARISON_TYPE(Result) {
-#define X(NAME, VALUE, DESC) COMPARISON_CONST(NAME) = VALUE,
-  COMPARISON_TABLE(X)
-#undef X
+#define COMPARISON_ENUM_ITEM(ROW)                                              \
+  COMPARISON_CONST(COMPARISON_GET(NAME, ROW)) = COMPARISON_GET(VALUE, ROW),
+  COMPARISON_TABLE(COMPARISON_ENUM_ITEM)
+#undef COMPARISON_ENUM_ITEM
 } COMPARISON_TYPE(Result);
 
 typedef COMPARISON_TYPE(Result) CMPOUT;
 
 #include "../Module/Callback/Callback.h"
 
-CALLBACK_DECLARE(Comparison, CMPOUT,
-                 (const void *left, const void *right),
+CALLBACK_DECLARE(Comparison, CMPOUT, (const void *left, const void *right),
                  (left, right));
 
 #include "../Module/Package.h"

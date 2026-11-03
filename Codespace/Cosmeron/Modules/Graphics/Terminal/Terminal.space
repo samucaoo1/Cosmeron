@@ -1,6 +1,6 @@
 #pragma once
 #include "../../../Core/Namespace.h"
-#include "../../../Core/Error/Status.h"
+#include "../../../Core/Outcome/Status.h"
 #include "../../../Core/Preprocessor/Detect/OperationSystem.h"
 #include "../../Struct/TDual.h"
 #include "../../Text/Grid/Attribute.h"

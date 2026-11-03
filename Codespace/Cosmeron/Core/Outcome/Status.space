@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../Preprocessor/Compiling.inc"
-#include "Error.space"
+#include "Outcome.space"
 #include "StatusTable/StatusTable.h"
 
 #define STATUS_MOD Status

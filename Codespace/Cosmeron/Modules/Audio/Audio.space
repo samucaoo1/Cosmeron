@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../Core/Error/Status.h"
+#include "../../Core/Outcome/Status.h"
 #include "../../Core/Namespace.h"
 #include <float.h>
 #include <stdbool.h>

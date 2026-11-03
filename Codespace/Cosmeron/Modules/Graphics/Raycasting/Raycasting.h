@@ -1,5 +1,5 @@
 #pragma once
-#include "../../../Core/Error/Status.h"
+#include "../../../Core/Outcome/Status.h"
 #include "../../Struct/TDual.h"
 #include <float.h>
 #include <stdbool.h>

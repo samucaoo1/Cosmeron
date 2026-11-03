@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-static _Thread_local GARBAGE_COLLECTOR_TYPE(TGarbageCollector)
+static _Thread_local GARBAGE_COLLECTOR_TYPE(GarbageCollector)
     GARBAGE_COLLECTOR_INS(ThreadDefaultCollector);
 static _Thread_local bool
     GARBAGE_COLLECTOR_INS(ThreadDefaultInitialized) = false;
@@ -82,7 +82,7 @@ static inline void *GARBAGE_COLLECTOR_INS(WorklistPop)(
 
 /* Mark helper */
 static inline void GARBAGE_COLLECTOR_INS(MarkCell)(
-    GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *self, void *ptr) {
+    GARBAGE_COLLECTOR_TYPE(GarbageCollector) *self, void *ptr) {
   if (!ptr)
     return;
 
@@ -124,7 +124,7 @@ static inline void GARBAGE_COLLECTOR_INS(MarkCell)(
 }
 
 static inline void GARBAGE_COLLECTOR_INS(ScanMemoryRange)(
-    GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *self, const void *start, const void *end) {
+    GARBAGE_COLLECTOR_TYPE(GarbageCollector) *self, const void *start, const void *end) {
   uintptr_t low = (uintptr_t)start;
   uintptr_t high = (uintptr_t)end;
 
@@ -159,7 +159,7 @@ static inline void GARBAGE_COLLECTOR_INS(ScanMemoryRange)(
  * TGarbageCollector Method Implementations
  * ============================================================ */
 
-OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), Create,
+OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(GarbageCollector), Create,
     (size_t initialHeapPages, const void *stackBottom)) {
   if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -183,7 +183,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), Create,
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), Destroy, ()) {
+OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(GarbageCollector), Destroy, ()) {
   if (!self || !self->isInitialized)
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -212,7 +212,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), Destroy
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), Alloc,
+OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(GarbageCollector), Alloc,
     (void *outPointerObject, size_t size, uint8_t policy, const void *descriptor)) {
   if (!self || !outPointerObject || size == 0U)
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -234,8 +234,8 @@ OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), Alloc,
   return status;
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), AllocTyped,
-    (void *outPointerObject, const GARBAGE_COLLECTOR_TYPE(Descriptor) *descriptor)) {
+OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(GarbageCollector), AllocTyped,
+    (void *outPointerObject, const GARBAGE_COLLECTOR_NS(Descriptor) *descriptor)) {
   if (!descriptor || descriptor->size == 0U)
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -243,13 +243,13 @@ OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), AllocTy
       self, outPointerObject, descriptor->size, HEAP_CONST(POLICY_TYPED), descriptor);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), AllocAtomic,
+OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(GarbageCollector), AllocAtomic,
     (void *outPointerObject, size_t size)) {
   return GARBAGE_COLLECTOR_FUNC(Alloc)(
       self, outPointerObject, size, HEAP_CONST(POLICY_ATOMIC), NULL);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), SetFinalizer,
+OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(GarbageCollector), SetFinalizer,
     (const void *ptr, GARBAGE_COLLECTOR_FINALIZER_CALLBACK finalizer)) {
   if (!self || !ptr || !GNS2(CALLBACK_FUNC(GARBAGE_COLLECTOR_INS(FinalizerFunction)), IsValid)(finalizer))
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -268,7 +268,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), SetFina
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), PinRoot,
+OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(GarbageCollector), PinRoot,
     (const void *rootPointerAddress)) {
   if (!self || !rootPointerAddress)
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -289,7 +289,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), PinRoot
   return STATUS_CONST(OUT_OF_RANGE);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), UnpinRoot,
+OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(GarbageCollector), UnpinRoot,
     (const void *rootPointerAddress)) {
   if (!self || !rootPointerAddress)
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -305,7 +305,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), UnpinRo
   return STATUS_CONST(INVALID_ARGUMENT);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), Collect, ()) {
+OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(GarbageCollector), Collect, ()) {
   if (!self || !self->isInitialized || self->pauseDepth > 0U)
     return STATUS_CONST(SUCCESS);
 
@@ -394,11 +394,11 @@ OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), Collect
     if (HEAP_FUNC(ResolvePointer)(&self->heap, item, &base, &sz, &pol)) {
       if (pol == HEAP_CONST(POLICY_TYPED)) {
         void *ent = HEAP_FUNC(LookupEntry)(&self->heap, base);
-        const GARBAGE_COLLECTOR_TYPE(Descriptor) *desc = NULL;
+        const GARBAGE_COLLECTOR_NS(Descriptor) *desc = NULL;
         if (ent) {
           uint8_t isL = *(uint8_t *)ent;
-          desc = isL ? (const GARBAGE_COLLECTOR_TYPE(Descriptor) *)((HEAP_INS(Span) *)ent)->descriptor
-                     : (const GARBAGE_COLLECTOR_TYPE(Descriptor) *)((HEAP_INS(PageHeader) *)ent)->descriptor;
+          desc = isL ? (const GARBAGE_COLLECTOR_NS(Descriptor) *)((HEAP_INS(Span) *)ent)->descriptor
+                     : (const GARBAGE_COLLECTOR_NS(Descriptor) *)((HEAP_INS(PageHeader) *)ent)->descriptor;
         }
         if (desc && desc->bitmap != 0ULL) {
           uint64_t bm = desc->bitmap;
@@ -521,21 +521,21 @@ OBJECT_OPERATION_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), Collect
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_PROCEDURE_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), Pause, ()) {
+OBJECT_PROCEDURE_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(GarbageCollector), Pause, ()) {
   if (self)
     self->pauseDepth++;
 }
 
-OBJECT_PROCEDURE_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), Resume, ()) {
+OBJECT_PROCEDURE_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(GarbageCollector), Resume, ()) {
   if (self && self->pauseDepth > 0U)
     self->pauseDepth--;
 }
 
-OBJECT_PREDICATE_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(TGarbageCollector), Contains, (const void *ptr)) {
+OBJECT_PREDICATE_IMPLEMENT_EX(GARBAGE_COLLECTOR_TYPE(GarbageCollector), Contains, (const void *ptr)) {
   return self ? HEAP_FUNC(Contains)(&self->heap, ptr) : false;
 }
 
-OBJECT_IMPLEMENT(GARBAGE_COLLECTOR_TYPE(TGarbageCollector));
+OBJECT_IMPLEMENT(GARBAGE_COLLECTOR_TYPE(GarbageCollector));
 
 /* ============================================================
  * Package GarbageCollector (Thread Default Facade)
@@ -563,7 +563,7 @@ PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), Shutdown, ()) 
 }
 
 PACKAGE_FUNCTION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD),
-    GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *, DefaultCollector, ()) {
+    GARBAGE_COLLECTOR_TYPE(GarbageCollector) *, DefaultCollector, ()) {
   if (!GARBAGE_COLLECTOR_INS(ThreadDefaultInitialized)) {
     volatile int anchor = 0;
     GARBAGE_COLLECTOR_FUNC(Create)(
@@ -574,70 +574,70 @@ PACKAGE_FUNCTION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD),
 }
 
 PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), Alloc, (void *outPointerObject, size_t size)) {
-  GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *collector =
+  GARBAGE_COLLECTOR_TYPE(GarbageCollector) *collector =
       GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
   return GARBAGE_COLLECTOR_FUNC(Alloc)(
       collector, outPointerObject, size, HEAP_CONST(POLICY_CONSERVATIVE), NULL);
 }
 
 PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), AllocTyped,
-    (void *outPointerObject, const GARBAGE_COLLECTOR_TYPE(Descriptor) *descriptor)) {
-  GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *collector =
+    (void *outPointerObject, const GARBAGE_COLLECTOR_NS(Descriptor) *descriptor)) {
+  GARBAGE_COLLECTOR_TYPE(GarbageCollector) *collector =
       GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
   return GARBAGE_COLLECTOR_FUNC(AllocTyped)(collector, outPointerObject, descriptor);
 }
 
 PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), AllocAtomic, (void *outPointerObject, size_t size)) {
-  GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *collector =
+  GARBAGE_COLLECTOR_TYPE(GarbageCollector) *collector =
       GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
   return GARBAGE_COLLECTOR_FUNC(AllocAtomic)(collector, outPointerObject, size);
 }
 
 PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), SetFinalizer,
     (const void *ptr, GARBAGE_COLLECTOR_FINALIZER_CALLBACK finalizer)) {
-  GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *collector =
+  GARBAGE_COLLECTOR_TYPE(GarbageCollector) *collector =
       GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
   return GARBAGE_COLLECTOR_FUNC(SetFinalizer)(collector, ptr, finalizer);
 }
 
 PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), PinRoot, (const void *rootPointerAddress)) {
-  GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *collector =
+  GARBAGE_COLLECTOR_TYPE(GarbageCollector) *collector =
       GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
   return GARBAGE_COLLECTOR_FUNC(PinRoot)(collector, rootPointerAddress);
 }
 
 PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), UnpinRoot, (const void *rootPointerAddress)) {
-  GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *collector =
+  GARBAGE_COLLECTOR_TYPE(GarbageCollector) *collector =
       GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
   return GARBAGE_COLLECTOR_FUNC(UnpinRoot)(collector, rootPointerAddress);
 }
 
 PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), Collect, ()) {
-  GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *collector =
+  GARBAGE_COLLECTOR_TYPE(GarbageCollector) *collector =
       GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
   return GARBAGE_COLLECTOR_FUNC(Collect)(collector);
 }
 
 PACKAGE_PROCEDURE_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), Pause, ()) {
-  GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *collector =
+  GARBAGE_COLLECTOR_TYPE(GarbageCollector) *collector =
       GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
   GARBAGE_COLLECTOR_FUNC(Pause)(collector);
 }
 
 PACKAGE_PROCEDURE_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), Resume, ()) {
-  GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *collector =
+  GARBAGE_COLLECTOR_TYPE(GarbageCollector) *collector =
       GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
   GARBAGE_COLLECTOR_FUNC(Resume)(collector);
 }
 
 PACKAGE_FUNCTION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), size_t, LiveBytes, ()) {
-  GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *collector =
+  GARBAGE_COLLECTOR_TYPE(GarbageCollector) *collector =
       GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
   return GARBAGE_COLLECTOR_FUNC(LiveBytes)(collector);
 }
 
 PACKAGE_PREDICATE_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), Contains, (const void *ptr)) {
-  GARBAGE_COLLECTOR_TYPE(TGarbageCollector) *collector =
+  GARBAGE_COLLECTOR_TYPE(GarbageCollector) *collector =
       GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
   return GARBAGE_COLLECTOR_FUNC(Contains)(collector, ptr);
 }

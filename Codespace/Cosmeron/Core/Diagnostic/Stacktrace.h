@@ -1,18 +1,19 @@
 #pragma once
 
-#include "Error.space"
-#include "Status.h"
+#include "../Outcome/Status.h"
 #include "../Module/Object.h"
+#include "Diagnostic.space"
 
 #include <stddef.h>
 #include <stdint.h>
 
-#define STACKTRACE_MOD GNS2(ERROR_MOD, Stacktrace)
-#define STACKTRACE_CMOD PP_OP_CAT3(ERROR_CMOD, _, STACKTRACE)
+#define STACKTRACE_MOD GNS2(DIAGNOSTIC_MOD, Stacktrace)
+#define STACKTRACE_CMOD PP_OP_CAT3(DIAGNOSTIC_CMOD, _, STACKTRACE)
 
-#define STACKTRACE_NS(NAME) GNS3(LIB_PREFIX(ERROR_MOD), Stacktrace, NAME)
-#define STACKTRACE_CNS(NAME) CNS3(LIB_PREFIX_CONST(ERROR_CMOD), STACKTRACE, NAME)
-#define STACKTRACE_TYPE(NAME) STACKTRACE_NS(NAME)
+#define STACKTRACE_NS(NAME) GNS3(LIB_PREFIX(DIAGNOSTIC_MOD), Stacktrace, NAME)
+#define STACKTRACE_CNS(NAME) CNS3(LIB_PREFIX_CONST(DIAGNOSTIC_CMOD), STACKTRACE, NAME)
+#define STACKTRACE_TYPE(NAME) DIAGNOSTIC_TYPE(NAME)
+#define STACKTRACE_FUNC(NAME) GNS2(DIAGNOSTIC_TYPE(Stacktrace), NAME)
 #define STACKTRACE_CONST(NAME) STACKTRACE_CNS(NAME)
 
 #define STACKTRACE_CONFIG_COL_NAME(NAME, VALUE) NAME
@@ -23,7 +24,7 @@
 #define STACKTRACE_CONFIG_TABLE(X)                                             \
   X((MAX_FRAMES, 32))
 
-enum STACKTRACE_TYPE(Config) {
+enum STACKTRACE_CNS(Config) {
 #define STACKTRACE_CONFIG_ENUM_ITEM(ROW)                                       \
   STACKTRACE_CONST(STACKTRACE_CONFIG_GET(NAME, ROW)) =                         \
       STACKTRACE_CONFIG_GET(VALUE, ROW),
@@ -31,7 +32,7 @@ enum STACKTRACE_TYPE(Config) {
 #undef STACKTRACE_CONFIG_ENUM_ITEM
 };
 
-OBJECT(ERROR_TYPE(TStacktrace),
+OBJECT(DIAGNOSTIC_TYPE(Stacktrace),
     FIELDS(
         void *frames[STACKTRACE_CONST(MAX_FRAMES)];
         size_t frameCount;

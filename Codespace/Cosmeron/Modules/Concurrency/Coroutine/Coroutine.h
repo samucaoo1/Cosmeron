@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../Concurrency.space"
-#include "../../../Core/Error/Status.h"
+#include "../../../Core/Outcome/Status.h"
 
 typedef enum CONCURRENCY_TYPE(CoroutineState) {
   CONCURRENCY_CONST(COROUTINE, STATE_READY) = 0,

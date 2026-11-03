@@ -1,9 +1,13 @@
 #pragma once
 
-#include "Status.h"
+#include "../Outcome/Status.h"
 #include "../Module/Object.h"
+#include "Diagnostic.space"
 
-OBJECT(ERROR_TYPE(TErrorContext),
+#define CONTEXT_TYPE(NAME) DIAGNOSTIC_TYPE(NAME)
+#define CONTEXT_FUNC(NAME) GNS2(DIAGNOSTIC_TYPE(Context), NAME)
+
+OBJECT(DIAGNOSTIC_TYPE(Context),
     FIELDS(
         const char *file;
         uint32_t line;
@@ -36,3 +40,4 @@ OBJECT(ERROR_TYPE(TErrorContext),
 
 #include "Impl/Context.impl"
 /* EOF */
+

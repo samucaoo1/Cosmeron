@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../Core/Preprocessor/Compiling.inc"
-#include "../../Core/Error/Status.h"
+#include "../../Core/Outcome/Status.h"
 
 #include "../Bit/Bit.h"
 #include "Type.space"

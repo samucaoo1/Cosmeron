@@ -1,9 +1,9 @@
 #pragma once
 
+#include "Condition.space"
 #include "Error.h"
-#include "Error.space"
 #include "Panic.h"
-#include "Status.h"
+#include "../Outcome/Status.h"
 #include "../Module/Callback/Callback.h"
 #include "../Module/Object.h"
 #include "../Module/Package.h"
@@ -13,13 +13,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define EXCEPTION_MOD GNS2(ERROR_MOD, Exception)
-#define EXCEPTION_CMOD PP_OP_CAT3(ERROR_CMOD, _, EXCEPTION)
+#define EXCEPTION_MOD GNS2(CONDITION_MOD, Exception)
+#define EXCEPTION_CMOD PP_OP_CAT3(CONDITION_CMOD, _, EXCEPTION)
 
-#define EXCEPTION_NS(NAME) GNS3(LIB_PREFIX(ERROR_MOD), Exception, NAME)
-#define EXCEPTION_CNS(NAME) CNS3(LIB_PREFIX_CONST(ERROR_CMOD), EXCEPTION, NAME)
-#define EXCEPTION_INS(NAME) GNS4(LIB_PREFIX(ERROR_MOD), Exception, Internal, NAME)
-#define EXCEPTION_CINS(NAME) CNS4(LIB_PREFIX_CONST(ERROR_CMOD), EXCEPTION, INTERNAL, NAME)
+#define EXCEPTION_NS(NAME) GNS3(LIB_PREFIX(CONDITION_MOD), Exception, NAME)
+#define EXCEPTION_CNS(NAME) CNS3(LIB_PREFIX_CONST(CONDITION_CMOD), EXCEPTION, NAME)
+#define EXCEPTION_INS(NAME) GNS4(LIB_PREFIX(CONDITION_MOD), Exception, Internal, NAME)
+#define EXCEPTION_CINS(NAME) CNS4(LIB_PREFIX_CONST(CONDITION_CMOD), EXCEPTION, INTERNAL, NAME)
 
 #define EXCEPTION_TYPE(NAME) EXCEPTION_NS(NAME)
 #define EXCEPTION_FUNC(NAME) EXCEPTION_NS(NAME)
@@ -34,14 +34,14 @@ OBJECT(EXCEPTION_TYPE(TExceptionFrame),
     FIELDS(
         jmp_buf env;
         struct EXCEPTION_TYPE(TExceptionFrame) *previous;
-        ERROR_TYPE(TError) error;
+        ERROR_TYPE(Error) error;
         int step;
         bool threw;
         bool caught;
         bool rethrow;
         EXCEPTION_CLEANUP_CALLBACK cleanup;
     ),
-    CONST_FUNCTION_INLINE(const ERROR_TYPE(TError) *, Error, (), {
+    CONST_FUNCTION_INLINE(const ERROR_TYPE(Error) *, Error, (), {
       return self ? &self->error : NULL;
     }),
     CONST_PREDICATE_INLINE(Threw, (), {
@@ -49,6 +49,9 @@ OBJECT(EXCEPTION_TYPE(TExceptionFrame),
     }),
     CONST_PREDICATE_INLINE(Caught, (), {
       return self ? self->caught : false;
+    }),
+    PROCEDURE_INLINE(SetCleanup, (EXCEPTION_CLEANUP_CALLBACK cleanup), {
+      if (self) self->cleanup = cleanup;
     })
 );
 
@@ -56,23 +59,24 @@ PACKAGE(LIB_PREFIX(EXCEPTION_MOD),
     PROCEDURE(PushFrame, (EXCEPTION_TYPE(TExceptionFrame) *frame)),
     PROCEDURE(PopFrame, ()),
     PROCEDURE(RegisterCleanup, (EXCEPTION_CLEANUP_CALLBACK cleanup)),
-    PROCEDURE(Throw, (const ERROR_TYPE(TError) *error)),
+    PROCEDURE(Throw, (const ERROR_TYPE(Error) *error)),
     PROCEDURE(ThrowStatus,
               (OPSTATUS status, const char *message, const char *file,
                uint32_t line, const char *function)),
     PROCEDURE(Rethrow, ()),
-    FUNCTION(const ERROR_TYPE(TError) *, CurrentError, ()),
+    FUNCTION(const ERROR_TYPE(Error) *, CurrentError, ()),
     PREDICATE(HasActiveFrame, ())
 );
 
-/* Internal flow-control hooks */
 static inline int EXCEPTION_INS(Begin)(
-    EXCEPTION_TYPE(TExceptionFrame) *frame, int jumpVal) {
-  if (jumpVal == 0) {
+    EXCEPTION_TYPE(TExceptionFrame) *frame, int jumpResult) {
+  if (jumpResult == 0) {
     frame->step = 0;
     frame->threw = false;
     frame->caught = false;
     frame->rethrow = false;
+    frame->cleanup.function = NULL;
+    frame->cleanup.context = NULL;
     EXCEPTION_FUNC(PushFrame)(frame);
     return 0;
   } else {
@@ -95,7 +99,7 @@ static inline void EXCEPTION_INS(Finish)(
   frame->step = 1;
   EXCEPTION_FUNC(PopFrame)();
   if (frame->threw && (!frame->caught || frame->rethrow)) {
-    ERROR_TYPE(TError) err = frame->error;
+    ERROR_TYPE(Error) err = frame->error;
     EXCEPTION_FUNC(Throw)(&err);
   }
 }
@@ -106,7 +110,7 @@ static inline void EXCEPTION_INS(Finish)(
        _cosm_frame.step == 0;                                                  \
        EXCEPTION_INS(Finish)(&_cosm_frame))                                    \
     for (int _cosm_step = EXCEPTION_INS(Begin)(&_cosm_frame,                  \
-                                               setjmp(_cosm_frame.env));       \
+                                                setjmp(_cosm_frame.env));       \
          _cosm_step < 3;                                                       \
          _cosm_step = EXCEPTION_INS(NextStep)(&_cosm_frame, _cosm_step))       \
       if (_cosm_step == 0)

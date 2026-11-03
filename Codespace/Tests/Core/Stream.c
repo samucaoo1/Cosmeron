@@ -18,7 +18,7 @@
 static int Test_InitAndProperties(void) {
   const uint8_t sample[8] = {1, 2, 3, 4, 5, 6, 7, 8};
   uint8_t buffer[16] = {0};
-  STREAM_TYPE(TStream) stream;
+  TMemoryStream stream;
 
   CHECK_STATUS(STREAM_FUNC(InitRead)(NULL, sample, sizeof(sample)),
                STATUS_CONST(INVALID_ARGUMENT));
@@ -62,7 +62,7 @@ static int Test_InitAndProperties(void) {
 
 static int Test_SeekAndNavigation(void) {
   const uint8_t sample[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  STREAM_TYPE(TStream) stream;
+  TMemoryStream stream;
 
   CHECK_STATUS(STREAM_FUNC(InitRead)(&stream, sample, sizeof(sample)),
                STATUS_CONST(SUCCESS));
@@ -133,8 +133,8 @@ static int Test_SeekAndNavigation(void) {
 
 static int Test_Slicing(void) {
   const uint8_t sample[10] = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100};
-  STREAM_TYPE(TStream) stream;
-  STREAM_TYPE(TStream) sub;
+  TMemoryStream stream;
+  TMemoryStream sub;
 
   CHECK_STATUS(STREAM_FUNC(InitRead)(&stream, sample, sizeof(sample)),
                STATUS_CONST(SUCCESS));
@@ -182,7 +182,7 @@ static int Test_ReadingScalars(void) {
       0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08
   };
 
-  STREAM_TYPE(TStream) stream;
+  TMemoryStream stream;
   uint8_t u8Val = 0;
   int8_t i8Val = 0;
   uint16_t u16Val = 0;
@@ -244,7 +244,7 @@ static int Test_ReadingScalars(void) {
 static int Test_WritingAndRoundtrip(void) {
   uint8_t buffer[64] = {0};
   const uint8_t roBuffer[8] = {0};
-  STREAM_TYPE(TStream) stream;
+  TMemoryStream stream;
 
   /* Writing to read-only stream fails */
   CHECK_STATUS(STREAM_FUNC(InitRead)(&stream, roBuffer, sizeof(roBuffer)),
@@ -283,7 +283,7 @@ static int Test_WritingAndRoundtrip(void) {
   CHECK_TRUE(writtenBytes == (1 + 1 + 2 + 2 + 4 + 4 + 8 + 8 + 8));
 
   /* Read-back verification */
-  STREAM_TYPE(TStream) reader;
+  TMemoryStream reader;
   CHECK_STATUS(STREAM_FUNC(InitRead)(&reader, buffer, writtenBytes),
                STATUS_CONST(SUCCESS));
 
@@ -336,7 +336,7 @@ static int Test_WritingAndRoundtrip(void) {
 
 static int Test_BitLevelOperations(void) {
   uint8_t buffer[8] = {0};
-  STREAM_TYPE(TStream) stream;
+  TMemoryStream stream;
 
   CHECK_STATUS(STREAM_FUNC(InitWrite)(&stream, buffer, sizeof(buffer)),
                STATUS_CONST(SUCCESS));
@@ -366,7 +366,7 @@ static int Test_BitLevelOperations(void) {
   CHECK_TRUE(STREAM_FUNC(BitPosition)(&stream) == 0);
 
   /* Read-back bit-level verification */
-  STREAM_TYPE(TStream) reader;
+  TMemoryStream reader;
   CHECK_STATUS(STREAM_FUNC(InitRead)(&reader, buffer, 3),
                STATUS_CONST(SUCCESS));
 

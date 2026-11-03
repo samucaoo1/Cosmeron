@@ -18,8 +18,8 @@
 #define STREAM_INS(NAME) GNS4(LIB_PREFIX(MEMORY_MOD), Stream, Internal, NAME)
 #define STREAM_CINS(NAME) CNS4(LIB_PREFIX_CONST(MEMORY_CMOD), STREAM, INTERNAL, NAME)
 
-#define STREAM_TYPE(NAME) STREAM_NS(NAME)
-#define STREAM_FUNC(NAME) GNS2(STREAM_TYPE(TStream), NAME)
+#define STREAM_TYPE(NAME) MEMORY_TYPE(NAME)
+#define STREAM_FUNC(NAME) GNS2(MEMORY_TYPE(Stream), NAME)
 #define STREAM_CONST(NAME) STREAM_CNS(NAME)
 
 #define STREAM_SEEK_ORIGIN_COL_NAME(NAME, VALUE, DESC) NAME
@@ -32,16 +32,14 @@
   X((SEEK_CURRENT, 1, "Current stream position")) \
   X((SEEK_END,     2, "End of stream"))
 
-typedef enum STREAM_TYPE(SeekOrigin) {
+typedef enum STREAM_NS(SeekOrigin) {
 #define STREAM_SEEK_ORIGIN_ENUM_ITEM(ROW) \
   STREAM_CONST(STREAM_SEEK_ORIGIN_GET(NAME, ROW)) = STREAM_SEEK_ORIGIN_GET(VALUE, ROW),
   STREAM_SEEK_ORIGIN_TABLE(STREAM_SEEK_ORIGIN_ENUM_ITEM)
 #undef STREAM_SEEK_ORIGIN_ENUM_ITEM
-} STREAM_TYPE(SeekOrigin);
+} STREAM_NS(SeekOrigin);
 
-typedef STREAM_TYPE(SeekOrigin) MEMORY_TYPE(StreamSeekOrigin);
-
-OBJECT(STREAM_TYPE(TStream),
+OBJECT(MEMORY_TYPE(Stream),
     FIELDS(
         uint8_t *data;
         size_t capacity;
@@ -90,12 +88,12 @@ OBJECT(STREAM_TYPE(TStream),
       if (!self || !self->data || self->offset >= self->capacity) return NULL;
       return (const void *)(self->data + self->offset);
     }),
-    OPERATION(Seek, (int64_t offset, STREAM_TYPE(SeekOrigin) origin)),
+    OPERATION(Seek, (int64_t offset, STREAM_NS(SeekOrigin) origin)),
     OPERATION(Skip, (size_t count)),
     OPERATION(Rewind, ()),
     OPERATION(AlignToByte, ()),
-    CONST_OPERATION(Slice, (size_t size, STREAM_TYPE(TStream) *outSubStream)),
-    OPERATION(ReadSlice, (size_t size, STREAM_TYPE(TStream) *outSubStream)),
+    CONST_OPERATION(Slice, (size_t size, MEMORY_TYPE(Stream) *outSubStream)),
+    OPERATION(ReadSlice, (size_t size, MEMORY_TYPE(Stream) *outSubStream)),
     OPERATION(ReadBytes, (void *destination, size_t size)),
     CONST_OPERATION(PeekBytes, (void *destination, size_t size)),
     OPERATION(ReadBits, (uint8_t bitCount, uint64_t *outValue)),
@@ -131,10 +129,6 @@ OBJECT(STREAM_TYPE(TStream),
     OPERATION(WriteInt64LE, (int64_t value)),
     OPERATION(WriteInt64BE, (int64_t value))
 );
-
-typedef STREAM_TYPE(TStream) MEMORY_TYPE(TStream);
-typedef STREAM_TYPE(TStream) STREAM_TYPE(TMemoryStream);
-typedef STREAM_TYPE(TStream) MEMORY_TYPE(TMemoryStream);
 
 #include "Impl/Stream.impl"
 /* EOF */

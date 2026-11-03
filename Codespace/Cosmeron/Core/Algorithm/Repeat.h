@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Error/Status.h"
+#include "../Outcome/Status.h"
 #include "../Module/Callback/Callback.h"
 #include "../Module/Common/Template.impl"
 #include "../Module/Package.h"
@@ -61,8 +61,8 @@ PACKAGE(
     OPERATION(Bytes, (void *destination, const void *pattern,
                       size_t patternSize, size_t count)),
     PRIMITIVE_TYPE_TABLE(REPEAT_PRIMITIVE_DECL)
-        OPERATION(CString, (const char **destination, const char *value,
-                            size_t count)));
+        OPERATION(CString,
+                  (const char **destination, const char *value, size_t count)));
 
 #undef REPEAT_PRIMITIVE_DECL
 
@@ -76,18 +76,20 @@ PACKAGE(
                    (size_t index), (index));                                   \
   PACKAGE(                                                                     \
       GNS2(ALGORITHM_NS(REPEAT_MOD), SUFFIX),                                  \
-      OPERATION_INLINE(Fill, (TYPE * destination, TYPE value, size_t count), { \
-        if (count == 0U)                                                       \
-          return STATUS_CONST(SUCCESS);                                        \
-        if (!destination)                                                      \
-          return STATUS_CONST(INVALID_ARGUMENT);                               \
-        if (sizeof(TYPE) != 0U && count > SIZE_MAX / sizeof(TYPE))             \
-          return STATUS_CONST(ARITHMETIC_OVERFLOW);                            \
-        for (size_t i = 0U; i < count; ++i) {                                  \
-          destination[i] = value;                                              \
-        }                                                                      \
-        return STATUS_CONST(SUCCESS);                                          \
-      }),                                                                      \
+      OPERATION_INLINE(Fill, (TYPE * destination, TYPE value, size_t count),   \
+                       {                                                       \
+                         if (count == 0U)                                      \
+                           return STATUS_CONST(SUCCESS);                       \
+                         if (!destination)                                     \
+                           return STATUS_CONST(INVALID_ARGUMENT);              \
+                         if (sizeof(TYPE) != 0U &&                             \
+                             count > SIZE_MAX / sizeof(TYPE))                  \
+                           return STATUS_CONST(ARITHMETIC_OVERFLOW);           \
+                         for (size_t i = 0U; i < count; ++i) {                 \
+                           destination[i] = value;                             \
+                         }                                                     \
+                         return STATUS_CONST(SUCCESS);                         \
+                       }),                                                     \
       OPERATION_INLINE(                                                        \
           Generate,                                                            \
           (TYPE * destination, size_t count,                                   \
@@ -95,18 +97,16 @@ PACKAGE(
           {                                                                    \
             if (count == 0U)                                                   \
               return STATUS_CONST(SUCCESS);                                    \
-            if (!destination ||                                                \
-                !GNS2(CALLBACK_FUNC(                                           \
-                          REPEAT_INS(PP_OP_CAT2(Generator_, SUFFIX))),         \
-                      IsValid)(generator))                                     \
+            if (!destination || !GNS2(CALLBACK_FUNC(REPEAT_INS(                \
+                                          PP_OP_CAT2(Generator_, SUFFIX))),    \
+                                      IsValid)(generator))                     \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             if (sizeof(TYPE) != 0U && count > SIZE_MAX / sizeof(TYPE))         \
               return STATUS_CONST(ARITHMETIC_OVERFLOW);                        \
             for (size_t i = 0U; i < count; ++i) {                              \
-              destination[i] =                                                 \
-                  GNS2(CALLBACK_FUNC(                                          \
-                           REPEAT_INS(PP_OP_CAT2(Generator_, SUFFIX))),        \
-                       Invoke)(generator);                                     \
+              destination[i] = GNS2(                                           \
+                  CALLBACK_FUNC(REPEAT_INS(PP_OP_CAT2(Generator_, SUFFIX))),   \
+                  Invoke)(generator);                                          \
             }                                                                  \
             return STATUS_CONST(SUCCESS);                                      \
           }),                                                                  \
@@ -118,10 +118,9 @@ PACKAGE(
           {                                                                    \
             if (count == 0U)                                                   \
               return STATUS_CONST(SUCCESS);                                    \
-            if (!destination ||                                                \
-                !GNS2(CALLBACK_FUNC(                                           \
-                          REPEAT_INS(PP_OP_CAT2(IndexedGenerator_, SUFFIX))),  \
-                      IsValid)(generator))                                     \
+            if (!destination || !GNS2(CALLBACK_FUNC(REPEAT_INS(PP_OP_CAT2(     \
+                                          IndexedGenerator_, SUFFIX))),        \
+                                      IsValid)(generator))                     \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             if (sizeof(TYPE) != 0U && count > SIZE_MAX / sizeof(TYPE))         \
               return STATUS_CONST(ARITHMETIC_OVERFLOW);                        \
@@ -139,4 +138,3 @@ PACKAGE(
 
 #include "Impl/Repeat.impl"
 /* EOF */
-

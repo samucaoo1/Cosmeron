@@ -1,6 +1,6 @@
 #pragma once
 
-OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), InitRead, (const void *buffer, size_t size)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), InitRead, (const void *buffer, size_t size)) {
   if (!self || (!buffer && size > 0U))
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -12,7 +12,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), InitRead, (const void *buffe
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), InitWrite, (void *buffer, size_t capacity)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), InitWrite, (void *buffer, size_t capacity)) {
   if (!self || (!buffer && capacity > 0U))
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -24,7 +24,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), InitWrite, (void *buffer, si
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), AlignToByte, ()) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), AlignToByte, ()) {
   if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -37,7 +37,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), AlignToByte, ()) {
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), Seek, (int64_t offset, STREAM_TYPE(SeekOrigin) origin)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), Seek, (int64_t offset, STREAM_NS(SeekOrigin) origin)) {
   if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -80,7 +80,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), Seek, (int64_t offset, STREA
   }
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), Skip, (size_t count)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), Skip, (size_t count)) {
   OPSTATUS status;
   if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -96,7 +96,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), Skip, (size_t count)) {
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), Rewind, ()) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), Rewind, ()) {
   if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -105,7 +105,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), Rewind, ()) {
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), Slice, (size_t size, STREAM_TYPE(TStream) *outSubStream)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), Slice, (size_t size, MEMORY_TYPE(Stream) *outSubStream)) {
   if (!self || !outSubStream)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (self->bitOffset != 0U)
@@ -122,7 +122,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), Slice, (size_t size, STREAM_
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), ReadSlice, (size_t size, STREAM_TYPE(TStream) *outSubStream)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), ReadSlice, (size_t size, MEMORY_TYPE(Stream) *outSubStream)) {
   OPSTATUS status = STREAM_FUNC(Slice)(self, size, outSubStream);
   if (status != STATUS_CONST(SUCCESS))
     return status;
@@ -131,7 +131,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), ReadSlice, (size_t size, STR
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), ReadBytes, (void *destination, size_t size)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), ReadBytes, (void *destination, size_t size)) {
   OPSTATUS status;
   if (!self || (!destination && size > 0U))
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -149,7 +149,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), ReadBytes, (void *destinatio
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), PeekBytes, (void *destination, size_t size)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), PeekBytes, (void *destination, size_t size)) {
   if (!self || (!destination && size > 0U))
     return STATUS_CONST(INVALID_ARGUMENT);
   if (self->bitOffset != 0U)
@@ -162,7 +162,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), PeekBytes, (void *destinatio
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), ReadBits, (uint8_t bitCount, uint64_t *outValue)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), ReadBits, (uint8_t bitCount, uint64_t *outValue)) {
   uint64_t result = 0U;
   if (!self || !outValue || bitCount == 0U || bitCount > 64U)
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -186,7 +186,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), ReadBits, (uint8_t bitCount,
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), WriteBits, (uint64_t value, uint8_t bitCount)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), WriteBits, (uint64_t value, uint8_t bitCount)) {
   if (!self || bitCount == 0U || bitCount > 64U)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (self->isReadOnly)
@@ -214,7 +214,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), WriteBits, (uint64_t value, 
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), WriteBytes, (const void *source, size_t size)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), WriteBytes, (const void *source, size_t size)) {
   OPSTATUS status;
   if (!self || (!source && size > 0U))
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -234,7 +234,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), WriteBytes, (const void *sou
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), ReadUInt8, (uint8_t *outValue)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), ReadUInt8, (uint8_t *outValue)) {
   OPSTATUS status;
   if (!self || !outValue)
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -250,7 +250,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), ReadUInt8, (uint8_t *outValu
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), ReadInt8, (int8_t *outValue)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), ReadInt8, (int8_t *outValue)) {
   uint8_t rawVal = 0U;
   OPSTATUS status;
   if (!outValue)
@@ -264,7 +264,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), ReadInt8, (int8_t *outValue)
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), PeekUInt8, (uint8_t *outValue)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), PeekUInt8, (uint8_t *outValue)) {
   if (!self || !outValue)
     return STATUS_CONST(INVALID_ARGUMENT);
   if (self->bitOffset != 0U)
@@ -276,7 +276,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), PeekUInt8, (uint8_t *outValu
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), WriteUInt8, (uint8_t value)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), WriteUInt8, (uint8_t value)) {
   OPSTATUS status;
   if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
@@ -294,13 +294,13 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), WriteUInt8, (uint8_t value))
   return STATUS_CONST(SUCCESS);
 }
 
-OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), WriteInt8, (int8_t value)) {
+OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), WriteInt8, (int8_t value)) {
   return STREAM_FUNC(WriteUInt8)(self, (uint8_t)value);
 }
 
 /* Multi-byte scalar implementation */
 #define STREAM_IMPL_SCALAR_LE_BE(UTYPE, ITYPE, SUFFIX)                         \
-  OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), PP_OP_CAT3(ReadUInt, SUFFIX, LE), (UTYPE *outValue)) { \
+  OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), PP_OP_CAT3(ReadUInt, SUFFIX, LE), (UTYPE *outValue)) { \
     const uint8_t *b;                                                          \
     UTYPE val = 0U;                                                            \
     if (!self || !outValue) return STATUS_CONST(INVALID_ARGUMENT);             \
@@ -314,7 +314,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), WriteInt8, (int8_t value)) {
     self->offset += sizeof(UTYPE);                                             \
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
-  OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), PP_OP_CAT3(ReadUInt, SUFFIX, BE), (UTYPE *outValue)) { \
+  OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), PP_OP_CAT3(ReadUInt, SUFFIX, BE), (UTYPE *outValue)) { \
     const uint8_t *b;                                                          \
     UTYPE val = 0U;                                                            \
     if (!self || !outValue) return STATUS_CONST(INVALID_ARGUMENT);             \
@@ -328,7 +328,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), WriteInt8, (int8_t value)) {
     self->offset += sizeof(UTYPE);                                             \
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
-  OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), PP_OP_CAT3(ReadInt, SUFFIX, LE), (ITYPE *outValue)) { \
+  OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), PP_OP_CAT3(ReadInt, SUFFIX, LE), (ITYPE *outValue)) { \
     UTYPE rawVal = 0U;                                                         \
     OPSTATUS status;                                                           \
     if (!outValue) return STATUS_CONST(INVALID_ARGUMENT);                      \
@@ -337,7 +337,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), WriteInt8, (int8_t value)) {
     *outValue = (ITYPE)rawVal;                                                 \
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
-  OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), PP_OP_CAT3(ReadInt, SUFFIX, BE), (ITYPE *outValue)) { \
+  OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), PP_OP_CAT3(ReadInt, SUFFIX, BE), (ITYPE *outValue)) { \
     UTYPE rawVal = 0U;                                                         \
     OPSTATUS status;                                                           \
     if (!outValue) return STATUS_CONST(INVALID_ARGUMENT);                      \
@@ -346,7 +346,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), WriteInt8, (int8_t value)) {
     *outValue = (ITYPE)rawVal;                                                 \
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
-  OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), PP_OP_CAT3(WriteUInt, SUFFIX, LE), (UTYPE value)) { \
+  OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), PP_OP_CAT3(WriteUInt, SUFFIX, LE), (UTYPE value)) { \
     uint8_t *b;                                                                \
     if (!self) return STATUS_CONST(INVALID_ARGUMENT);                          \
     if (self->isReadOnly) return STATUS_CONST(NOT_SUPPORTED);                  \
@@ -359,7 +359,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), WriteInt8, (int8_t value)) {
     self->offset += sizeof(UTYPE);                                             \
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
-  OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), PP_OP_CAT3(WriteUInt, SUFFIX, BE), (UTYPE value)) { \
+  OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), PP_OP_CAT3(WriteUInt, SUFFIX, BE), (UTYPE value)) { \
     uint8_t *b;                                                                \
     if (!self) return STATUS_CONST(INVALID_ARGUMENT);                          \
     if (self->isReadOnly) return STATUS_CONST(NOT_SUPPORTED);                  \
@@ -373,10 +373,10 @@ OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), WriteInt8, (int8_t value)) {
     self->offset += sizeof(UTYPE);                                             \
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
-  OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), PP_OP_CAT3(WriteInt, SUFFIX, LE), (ITYPE value)) { \
+  OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), PP_OP_CAT3(WriteInt, SUFFIX, LE), (ITYPE value)) { \
     return STREAM_FUNC(PP_OP_CAT3(WriteUInt, SUFFIX, LE))(self, (UTYPE)value); \
   }                                                                            \
-  OBJECT_OPERATION_IMPLEMENT_EX(STREAM_TYPE(TStream), PP_OP_CAT3(WriteInt, SUFFIX, BE), (ITYPE value)) { \
+  OBJECT_OPERATION_IMPLEMENT_EX(MEMORY_TYPE(Stream), PP_OP_CAT3(WriteInt, SUFFIX, BE), (ITYPE value)) { \
     return STREAM_FUNC(PP_OP_CAT3(WriteUInt, SUFFIX, BE))(self, (UTYPE)value); \
   }
 
@@ -384,6 +384,6 @@ STREAM_IMPL_SCALAR_LE_BE(uint16_t, int16_t, 16)
 STREAM_IMPL_SCALAR_LE_BE(uint32_t, int32_t, 32)
 STREAM_IMPL_SCALAR_LE_BE(uint64_t, int64_t, 64)
 
-OBJECT_IMPLEMENT(STREAM_TYPE(TStream));
+OBJECT_IMPLEMENT(MEMORY_TYPE(Stream));
 
 /* EOF */

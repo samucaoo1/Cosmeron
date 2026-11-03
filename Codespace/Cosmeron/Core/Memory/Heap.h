@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Error/Status.h"
+#include "../Outcome/Status.h"
 #include "../Module/Object.h"
 #include "../Preprocessor/Compiling.inc"
 #include "Alloc.h"
@@ -19,8 +19,8 @@
 #define HEAP_INS(NAME) GNS4(LIB_PREFIX(MEMORY_MOD), Heap, Internal, NAME)
 #define HEAP_CINS(NAME) CNS4(LIB_PREFIX_CONST(MEMORY_CMOD), HEAP, INTERNAL, NAME)
 
-#define HEAP_TYPE(NAME) HEAP_NS(NAME)
-#define HEAP_FUNC(NAME) GNS2(HEAP_TYPE(TMemoryHeap), NAME)
+#define HEAP_TYPE(NAME) MEMORY_TYPE(NAME)
+#define HEAP_FUNC(NAME) GNS2(MEMORY_TYPE(Heap), NAME)
 #define HEAP_CONST(NAME) HEAP_CNS(NAME)
 
 /* ============================================================
@@ -37,12 +37,12 @@
   X((TYPED,        1U, "Precise scanning guided by descriptor bitmap")) \
   X((ATOMIC,       2U, "Leaf object without internal pointers"))
 
-typedef enum HEAP_TYPE(Policy) {
+typedef enum HEAP_NS(Policy) {
 #define HEAP_POLICY_ENUM_ITEM(ROW) \
   HEAP_CONST(PP_OP_CAT2(POLICY_, HEAP_POLICY_GET(NAME, ROW))) = HEAP_POLICY_GET(VALUE, ROW),
   HEAP_POLICY_TABLE(HEAP_POLICY_ENUM_ITEM)
 #undef HEAP_POLICY_ENUM_ITEM
-} HEAP_TYPE(Policy);
+} HEAP_NS(Policy);
 
 #define HEAP_PAGE_STATE_COL_NAME(NAME, VALUE, DESC) NAME
 #define HEAP_PAGE_STATE_COL_VALUE(NAME, VALUE, DESC) VALUE
@@ -55,12 +55,12 @@ typedef enum HEAP_TYPE(Policy) {
   X((NEEDS_SWEEP, 2U, "Page pending lazy sweep")) \
   X((FREE,        3U, "Page completely reclaimed and free"))
 
-typedef enum HEAP_TYPE(PageState) {
+typedef enum HEAP_NS(PageState) {
 #define HEAP_PAGE_STATE_ENUM_ITEM(ROW) \
   HEAP_CONST(PP_OP_CAT2(PAGE_STATE_, HEAP_PAGE_STATE_GET(NAME, ROW))) = HEAP_PAGE_STATE_GET(VALUE, ROW),
   HEAP_PAGE_STATE_TABLE(HEAP_PAGE_STATE_ENUM_ITEM)
 #undef HEAP_PAGE_STATE_ENUM_ITEM
-} HEAP_TYPE(PageState);
+} HEAP_NS(PageState);
 
 #define HEAP_CONFIG_COL_NAME(NAME, VALUE) NAME
 #define HEAP_CONFIG_COL_VALUE(NAME, VALUE) VALUE
@@ -77,7 +77,7 @@ typedef enum HEAP_TYPE(PageState) {
   X((PAGE_HEADER_SIZE,    128U))  \
   X((MAX_BLACKLISTED,     256U))
 
-enum HEAP_TYPE(Config) {
+enum HEAP_NS(Config) {
 #define HEAP_CONFIG_ENUM_ITEM(ROW) \
   HEAP_CONST(HEAP_CONFIG_GET(NAME, ROW)) = HEAP_CONFIG_GET(VALUE, ROW),
   HEAP_CONFIG_TABLE(HEAP_CONFIG_ENUM_ITEM)
@@ -138,7 +138,7 @@ typedef struct HEAP_INS(SizeClass) {
  * 3. Declarative TMemoryHeap Object
  * ============================================================ */
 
-OBJECT(HEAP_TYPE(TMemoryHeap),
+OBJECT(MEMORY_TYPE(Heap),
     FIELDS(
         HEAP_INS(RadixLevel2) *radixBuckets[HEAP_CONST(RADIX_BUCKETS_COUNT)];
         HEAP_INS(SizeClass) classes[HEAP_CONST(SIZE_CLASS_COUNT)];
@@ -169,8 +169,6 @@ OBJECT(HEAP_TYPE(TMemoryHeap),
     CONST_FUNCTION_INLINE(size_t, PageCount, (), { return self ? self->pageCount : 0U; }),
     CONST_PREDICATE(Contains, (const void *ptr))
 );
-
-typedef HEAP_TYPE(TMemoryHeap) TMemoryHeap;
 
 #include "Impl/Heap.impl"
 /* EOF */

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../../Core/Error/Status.h"
+#include "../../../Core/Outcome/Status.h"
 #include "../Encoding/UTF8.h"
 
 #define TEXT_WIDTH_CODEPOINT_PROTOTYPE                                        \
