@@ -1,15 +1,52 @@
-#define TTRIPLE_CAST_IMPLEMENT_ALL(TYPE, SUFFIX)                                        \
-  TTRIPLE_CAST_TO_TYPE_PROTOTYPE(TYPE, SUFFIX) {                       \
+#pragma once
+
+#include "../Struct.space"
+
+#define TEMPLATE_TTRIPLE_IMPLEMENT(SUFFIX, TYPE)                               \
+  PACKAGE_FUNCTION_IMPLEMENT_EX(                                               \
+      TTRIPLE_PKG(SUFFIX), TTRIPLE_TYPE(SUFFIX), Create,                       \
+      (TYPE value1, TYPE value2, TYPE value3)) {                               \
     TTRIPLE_TYPE(SUFFIX) triple;                                               \
-    triple.value1 = value1;                                                   \
-    triple.value2 = value2;                                                   \
-    triple.value3 = value3;                                                   \
+    triple.value1 = value1;                                                    \
+    triple.value2 = value2;                                                    \
+    triple.value3 = value3;                                                    \
     return triple;                                                             \
   }                                                                            \
                                                                                \
-  TTRIPLE_CAST_FROM_TYPE_PROTOTYPE(TYPE, SUFFIX) {                     \
-    *var1 = triple.value1;                                                     \
-    *var2 = triple.value2;                                                     \
-    *var3 = triple.value3;                                                     \
-  }
+  PACKAGE_OPERATION_IMPLEMENT_EX(                                              \
+      TTRIPLE_PKG(SUFFIX), Extract,                                            \
+      (TTRIPLE_TYPE(SUFFIX) triple, TYPE *outValue1, TYPE *outValue2,          \
+       TYPE *outValue3)) {                                                     \
+    if (outValue1 == NULL || outValue2 == NULL || outValue3 == NULL)           \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    *outValue1 = triple.value1;                                                \
+    *outValue2 = triple.value2;                                                \
+    *outValue3 = triple.value3;                                                \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  PACKAGE_PROCEDURE_IMPLEMENT_EX(                                              \
+      TTRIPLE_PKG(SUFFIX), Unpack,                                             \
+      (TTRIPLE_TYPE(SUFFIX) triple, TYPE *outValue1, TYPE *outValue2,          \
+       TYPE *outValue3)) {                                                     \
+    if (outValue1 != NULL)                                                     \
+      *outValue1 = triple.value1;                                              \
+    if (outValue2 != NULL)                                                     \
+      *outValue2 = triple.value2;                                              \
+    if (outValue3 != NULL)                                                     \
+      *outValue3 = triple.value3;                                              \
+  }                                                                            \
+                                                                               \
+  static inline TTRIPLE_TYPE(SUFFIX)                                           \
+      CAST_TYPE_TO_STRUCT(SUFFIX, TTriple)(TYPE value1, TYPE value2,           \
+                                           TYPE value3) {                      \
+    return GNS2(TTRIPLE_PKG(SUFFIX), Create)(value1, value2, value3);          \
+  }                                                                            \
+                                                                               \
+  static inline void CAST_STRUCT_TO_TYPE(TTriple, SUFFIX)(                     \
+      TTRIPLE_TYPE(SUFFIX) triple, TYPE *var1, TYPE *var2, TYPE *var3) {       \
+    GNS2(TTRIPLE_PKG(SUFFIX), Unpack)(triple, var1, var2, var3);               \
+  }                                                                            \
+  PACKAGE_IMPLEMENT(TTRIPLE_PKG(SUFFIX));
+
 /* EOF */

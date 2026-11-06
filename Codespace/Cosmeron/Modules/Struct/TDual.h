@@ -1,78 +1,75 @@
 #pragma once
 
-#include "../../Core/Preprocessor/Compiling.inc"
-#include "../../Core/Preprocessor/Detect/Compiler.h"
-
 #include "Struct.space"
 
-#define TDUAL_TYPE(SUFFIX) STRUCT_TYPE(TDual, SUFFIX)
-#define TDUAL_FUNC(SUFFIX, FUNC) STRUCT_FUNC(TDual, SUFFIX, FUNC)
+#define TDUAL_MOD TDual
+#define TDUAL_CMOD TDUAL
 
-#define TDUAL_STRUCT(TYPE, SUFFIX)                                      \
-  typedef union {                                                             \
-    struct {                                                                  \
-      union {                                                                 \
-        TYPE value1;                                                          \
-        TYPE a;                                                               \
-        TYPE x1;                                                              \
-        TYPE x;                                                               \
-        TYPE col;                                                             \
-        TYPE length;                                                          \
-        TYPE real;                                                            \
-        TYPE state1;                                                          \
-        TYPE begin;                                                           \
-        TYPE first;                                                           \
-        TYPE start;                                                           \
-      };                                                                      \
-      union {                                                                 \
-        TYPE value2;                                                          \
-        TYPE b;                                                               \
-        TYPE x2;                                                              \
-        TYPE y;                                                               \
-        TYPE row;                                                             \
-        TYPE width;                                                           \
-        TYPE imaginary;                                                       \
-        TYPE state2;                                                          \
-        TYPE end;                                                             \
-        TYPE second;                                                          \
-        TYPE last;                                                            \
-      };                                                                      \
-    };                                                                        \
-    TYPE value[2];                                                            \
+#define TDUAL_PKG(SUFFIX) STRUCT_PKG(TDUAL_MOD, SUFFIX)
+#define TDUAL_TYPE(SUFFIX) STRUCT_TYPE(TDUAL_MOD, SUFFIX)
+#define TDUAL_FUNC(SUFFIX, FUNC) STRUCT_FUNC(TDUAL_MOD, SUFFIX, FUNC)
+
+#define TDUAL_STRUCT(SUFFIX, TYPE)                                             \
+  typedef union STRUCT_TYPE(TDUAL_MOD, SUFFIX) {                               \
+    struct {                                                                   \
+      union {                                                                  \
+        TYPE value1;                                                           \
+        TYPE a;                                                                \
+        TYPE x1;                                                               \
+        TYPE x;                                                                \
+        TYPE col;                                                              \
+        TYPE length;                                                           \
+        TYPE real;                                                             \
+        TYPE state1;                                                           \
+        TYPE begin;                                                            \
+        TYPE first;                                                            \
+        TYPE start;                                                            \
+      };                                                                       \
+      union {                                                                  \
+        TYPE value2;                                                           \
+        TYPE b;                                                                \
+        TYPE x2;                                                               \
+        TYPE y;                                                                \
+        TYPE row;                                                              \
+        TYPE width;                                                            \
+        TYPE imaginary;                                                        \
+        TYPE state2;                                                           \
+        TYPE end;                                                              \
+        TYPE second;                                                           \
+        TYPE last;                                                             \
+      };                                                                       \
+    };                                                                         \
+    union {                                                                    \
+      TYPE value[2];                                                           \
+      TYPE values[2];                                                          \
+    };                                                                         \
   } TDUAL_TYPE(SUFFIX);
 
-#define TDUAL_CAST_TO_TYPE_PROTOTYPE(TYPE, SUFFIX)                     \
-  static inline TDUAL_TYPE(SUFFIX)                                             \
-      CAST_TYPE_TO_STRUCT(SUFFIX, TDual)(TYPE value1, TYPE value2)
+/* ==========================================================================
+ * Universal Template Declaration: TDUAL
+ * ========================================================================== */
 
-#define TDUAL_CAST_FROM_TYPE_PROTOTYPE(TYPE, SUFFIX)                   \
-  static inline void CAST_STRUCT_TO_TYPE(TDual, SUFFIX)(                       \
-      TDUAL_TYPE(SUFFIX) dual, TYPE *var1, TYPE *var2)
+#define TEMPLATE_TDUAL(SUFFIX, TYPE)                                           \
+  TDUAL_STRUCT(SUFFIX, TYPE)                                                   \
+  PACKAGE(TDUAL_PKG(SUFFIX),                                                   \
+      FUNCTION(TDUAL_TYPE(SUFFIX), Create, (TYPE value1, TYPE value2)),        \
+      OPERATION(Extract,                                                       \
+                (TDUAL_TYPE(SUFFIX) dual, TYPE *outValue1, TYPE *outValue2)),   \
+      PROCEDURE(Unpack,                                                        \
+                (TDUAL_TYPE(SUFFIX) dual, TYPE *outValue1, TYPE *outValue2))    \
+  )
 
 #include "Impl/TDual.impl"
 
-#define TDUAL_IMPLEMENT_ALL(TYPE, SUFFIX)                                            \
-  TDUAL_STRUCT(TYPE, SUFFIX)                                             \
-  TDUAL_CAST_TO_TYPE_PROTOTYPE(TYPE, SUFFIX);                          \
-  TDUAL_CAST_FROM_TYPE_PROTOTYPE(TYPE, SUFFIX);                        \
-  TDUAL_CAST_IMPLEMENT_ALL(TYPE, SUFFIX)
+/* ==========================================================================
+ * Standard Type Instantiations
+ * ========================================================================== */
 
-TDUAL_IMPLEMENT_ALL(uint8_t, uint8)
-TDUAL_IMPLEMENT_ALL(uint16_t, uint16)
-TDUAL_IMPLEMENT_ALL(uint32_t, uint32)
-TDUAL_IMPLEMENT_ALL(uint64_t, uint64)
-TDUAL_IMPLEMENT_ALL(size_t, size)
-TDUAL_IMPLEMENT_ALL(int8_t, int8)
-TDUAL_IMPLEMENT_ALL(int16_t, int16)
-TDUAL_IMPLEMENT_ALL(int32_t, int32)
-TDUAL_IMPLEMENT_ALL(int64_t, int64)
-TDUAL_IMPLEMENT_ALL(float, float)
-TDUAL_IMPLEMENT_ALL(double, double)
-TDUAL_IMPLEMENT_ALL(long double, longdouble)
+#define TDUAL_INTERNAL_INSTANTIATE(ROW)                                        \
+  TEMPLATE_IMPLEMENT(TDUAL, STRUCT_TYPE_GET(SUFFIX, ROW),                      \
+                     STRUCT_TYPE_GET(TYPE, ROW));
 
-#if !COMPILER_MSVC
-TDUAL_IMPLEMENT_ALL(float _Complex, float_complex)
-TDUAL_IMPLEMENT_ALL(double _Complex, double_complex)
-TDUAL_IMPLEMENT_ALL(long double _Complex, longdouble_complex)
-#endif
+STRUCT_TYPE_TABLE(TDUAL_INTERNAL_INSTANTIATE)
+#undef TDUAL_INTERNAL_INSTANTIATE
+
 /* EOF */

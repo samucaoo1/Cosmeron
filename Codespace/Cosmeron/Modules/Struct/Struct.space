@@ -2,11 +2,16 @@
 
 #include "../../Core/Cast/Cast.space"
 #include "../../Core/Namespace.h"
+#include "../../Core/Outcome/Status.h"
+#include "../../Core/Module/Package.h"
 #include "../../Core/Preprocessor/Compiling.inc"
+#include "../../Core/Preprocessor/Detect/Compiler.h"
 
 #include <complex.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #define STRUCT_MOD Struct
 #define STRUCT_CMOD STRUCT
@@ -17,6 +22,43 @@
 #define STRUCT_CINS(NAME) CNS3(LIB_PREFIX_CONST(STRUCT_CMOD), INTERNAL, NAME)
 
 #define STRUCT_TYPE(NAME, SUFFIX) GNS2(GNS2(LIB_PREFIX(STRUCT_MOD), NAME), SUFFIX)
-#define STRUCT_FUNC(NAME, SUFFIX, FUNC)                                        \
-  GNS2(STRUCT_TYPE(NAME, SUFFIX), FUNC)
+#define STRUCT_PKG(NAME, SUFFIX) GNS2(GNS2(LIB_PREFIX(STRUCT_MOD), NAME), SUFFIX)
+#define STRUCT_FUNC(NAME, SUFFIX, FUNC) GNS2(STRUCT_PKG(NAME, SUFFIX), FUNC)
+#define STRUCT_CONST(NAME) STRUCT_CNS(NAME)
+
+/* ==========================================================================
+ * Standard Struct Types Table (Row-Tuple Pattern)
+ * ========================================================================== */
+
+#define STRUCT_TYPE_COL_SUFFIX(SUFFIX, TYPE) SUFFIX
+#define STRUCT_TYPE_COL_TYPE(SUFFIX, TYPE)   TYPE
+#define STRUCT_TYPE_GET(FIELD, ROW) PP_OP_CAT2(STRUCT_TYPE_COL_, FIELD) ROW
+
+#define STRUCT_STANDARD_TYPE_TABLE(X)                                          \
+  X((uint8, uint8_t))                                                          \
+  X((uint16, uint16_t))                                                        \
+  X((uint32, uint32_t))                                                        \
+  X((uint64, uint64_t))                                                        \
+  X((size, size_t))                                                            \
+  X((int8, int8_t))                                                            \
+  X((int16, int16_t))                                                          \
+  X((int32, int32_t))                                                          \
+  X((int64, int64_t))                                                          \
+  X((float, float))                                                            \
+  X((double, double))                                                          \
+  X((longdouble, long double))
+
+#if !COMPILER_MSVC
+#define STRUCT_COMPLEX_TYPE_TABLE(X)                                           \
+  X((float_complex, float _Complex))                                           \
+  X((double_complex, double _Complex))                                         \
+  X((longdouble_complex, long double _Complex))
+#else
+#define STRUCT_COMPLEX_TYPE_TABLE(X)
+#endif
+
+#define STRUCT_TYPE_TABLE(X)                                                   \
+  STRUCT_STANDARD_TYPE_TABLE(X)                                                \
+  STRUCT_COMPLEX_TYPE_TABLE(X)
+
 /* EOF */

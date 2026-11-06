@@ -1,12 +1,20 @@
 #pragma once
 
-#include "../../Core/Namespace.h"
+#if defined(TYPE_DISABLE_FUNCTION_TABLE) && !defined(OBJECT_DISABLE_FUNCTION_TABLE)
+#define OBJECT_DISABLE_FUNCTION_TABLE 1
+#endif
+
+#include "../../Core/Algorithm/Comparison.h"
+#include "../../Core/Outcome/Status.h"
+#include "../../Core/Module/Object.h"
 #include "../../Core/Preprocessor/Compiling.inc"
 #include "../../Core/Preprocessor/Operations.h"
 
+#include <limits.h>
 #include <stdbool.h>
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 
 #define TYPE_MOD Type
 #define TYPE_CMOD TYPE
@@ -19,7 +27,73 @@
 #define TYPE_TYPE(NAME, SUFFIX) TYPE_NS(PP_OP_CAT2(NAME, SUFFIX))
 #define TYPE_FUNC(NAME, SUFFIX, FUNCTION)                                      \
   GNS2(TYPE_TYPE(NAME, SUFFIX), FUNCTION)
+#define TYPE_CONST(NAME) TYPE_CNS(NAME)
 
-/* Function tables are optional. Direct functions are always available.
- * Define TYPE_DISABLE_FUNCTION_TABLE before inclusion to omit them. */
+/* ==========================================================================
+ * Tag Width Table (Row-Tuple Pattern)
+ * ========================================================================== */
+
+#define TAG_WIDTH_COL_SUFFIX(SUFFIX, TYPE, BYTES) SUFFIX
+#define TAG_WIDTH_COL_TYPE(SUFFIX, TYPE, BYTES)   TYPE
+#define TAG_WIDTH_COL_BYTES(SUFFIX, TYPE, BYTES)  BYTES
+#define TAG_WIDTH_GET(FIELD, ROW) PP_OP_CAT2(TAG_WIDTH_COL_, FIELD) ROW
+
+#define TAG_WIDTH_TABLE(X)                                                     \
+  X((16, uint16_t, 2))                                                         \
+  X((32, uint32_t, 4))                                                         \
+  X((64, uint64_t, 8))
+
+#define TAG_INSTANTIATE_WIDTHS(TEMPLATE_NAME)                                  \
+  TEMPLATE_IMPLEMENT(TEMPLATE_NAME, 16, uint16_t);                            \
+  TEMPLATE_IMPLEMENT(TEMPLATE_NAME, 32, uint32_t);                            \
+  TEMPLATE_IMPLEMENT(TEMPLATE_NAME, 64, uint64_t);
+
+/* ==========================================================================
+ * Type Width Table (Row-Tuple Pattern: TBlock, TBigint, TDecimal)
+ * ========================================================================== */
+
+#define TYPE_WIDTH_COL_SUFFIX(SUFFIX, TYPE, WORDS, BYTES) SUFFIX
+#define TYPE_WIDTH_COL_TYPE(SUFFIX, TYPE, WORDS, BYTES)   TYPE
+#define TYPE_WIDTH_COL_WORDS(SUFFIX, TYPE, WORDS, BYTES)  WORDS
+#define TYPE_WIDTH_COL_BYTES(SUFFIX, TYPE, WORDS, BYTES)  BYTES
+#define TYPE_WIDTH_GET(FIELD, ROW) PP_OP_CAT2(TYPE_WIDTH_COL_, FIELD) ROW
+
+#define TYPE_WIDTH_TABLE(X)                                                    \
+  X((128, uint64_t, 2, 16))                                                    \
+  X((256, uint64_t, 4, 32))                                                    \
+  X((512, uint64_t, 8, 64))                                                    \
+  X((1024, uint64_t, 16, 128))
+
+#define TYPE_INSTANTIATE_WIDTHS(TEMPLATE_NAME)                                 \
+  TEMPLATE_IMPLEMENT(TEMPLATE_NAME, 128, uint64_t);                           \
+  TEMPLATE_IMPLEMENT(TEMPLATE_NAME, 256, uint64_t);                           \
+  TEMPLATE_IMPLEMENT(TEMPLATE_NAME, 512, uint64_t);                           \
+  TEMPLATE_IMPLEMENT(TEMPLATE_NAME, 1024, uint64_t);
+
+/* ==========================================================================
+ * Fundamental Type Table (Row-Tuple Pattern)
+ * ========================================================================== */
+
+#define FUNDAMENTAL_TYPE_COL_TYPE(TYPE, SMALL, COMPLETE)     TYPE
+#define FUNDAMENTAL_TYPE_COL_SMALL(TYPE, SMALL, COMPLETE)    SMALL
+#define FUNDAMENTAL_TYPE_COL_COMPLETE(TYPE, SMALL, COMPLETE) COMPLETE
+#define FUNDAMENTAL_TYPE_GET(FIELD, ROW)                                       \
+  PP_OP_CAT2(FUNDAMENTAL_TYPE_COL_, FIELD) ROW
+
+#define FUNDAMENTAL_TYPE_TABLE(X)                                              \
+  X((int8_t, TI8, TInt8))                                                      \
+  X((int16_t, TI16, TInt16))                                                   \
+  X((int32_t, TI32, TInt32))                                                   \
+  X((int64_t, TI64, TInt64))                                                   \
+  X((uint8_t, TU8, TUInt8))                                                    \
+  X((uint16_t, TU16, TUInt16))                                                 \
+  X((uint32_t, TU32, TUInt32))                                                 \
+  X((uint64_t, TU64, TUInt64))                                                 \
+  X((float, TF32, TFloat32))                                                   \
+  X((double, TF64, TFloat64))                                                  \
+  X((long double, TLD, TLongDouble))                                           \
+  X((uint8_t, TCh8, TChar8))                                                   \
+  X((uint16_t, TCh16, TChar16))                                                \
+  X((uint32_t, TCh32, TChar32))
+
 /* EOF */

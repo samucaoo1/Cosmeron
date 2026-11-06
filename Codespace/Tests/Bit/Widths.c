@@ -47,16 +47,42 @@
     CHECK(field != (TYPE)5);                                                   \
     {                                                                          \
       TYPE old = value;                                                        \
-      CHECK(BIT_FUNC(SUFFIX, Set)(&value, (BITS)) !=                          \
+      CHECK(BIT_FUNC(SUFFIX, Set)(&value, (BITS)) !=                           \
             STATUS_CONST(OUT_OF_RANGE));                                       \
       CHECK(value != old || BIT_FUNC(SUFFIX, Check)(value, (BITS)));          \
     }                                                                          \
+    /* Null argument checks */                                                 \
+    CHECK(BIT_FUNC(SUFFIX, Set)(NULL, 0U) != STATUS_CONST(INVALID_ARGUMENT));  \
+    CHECK(BIT_FUNC(SUFFIX, Clear)(NULL, 0U) !=                                \
+          STATUS_CONST(INVALID_ARGUMENT));                                     \
+    CHECK(BIT_FUNC(SUFFIX, Flip)(NULL, 0U) != STATUS_CONST(INVALID_ARGUMENT)); \
+    CHECK(BIT_FUNC(SUFFIX, IndexLSB)((TYPE)1, NULL) !=                         \
+          STATUS_CONST(INVALID_ARGUMENT));                                     \
+    CHECK(BIT_FUNC(SUFFIX, IndexMSB)((TYPE)1, NULL) !=                         \
+          STATUS_CONST(INVALID_ARGUMENT));                                     \
+    CHECK(BIT_FUNC(SUFFIX, Extract)((TYPE)1, 0U, 0U, NULL) !=                 \
+          STATUS_CONST(INVALID_ARGUMENT));                                     \
+    CHECK(BIT_FUNC(SUFFIX, Insert)(NULL, 0U, 0U, (TYPE)1) !=                   \
+          STATUS_CONST(INVALID_ARGUMENT));                                     \
+    /* Out of range checks */                                                  \
+    CHECK(BIT_FUNC(SUFFIX, Extract)((TYPE)1, 0U, 1U, &field) !=               \
+          STATUS_CONST(OUT_OF_RANGE));                                         \
+    CHECK(BIT_FUNC(SUFFIX, Insert)(&value, 0U, 1U, (TYPE)1) !=                \
+          STATUS_CONST(OUT_OF_RANGE));                                         \
+    /* FunctionTable verification */                                           \
+    const struct GNS2(BIT_PKG(SUFFIX), FunctionTable) *ft =                    \
+        GNS2(BIT_PKG(SUFFIX), GetFunctionTable)();                             \
+    CHECK(ft == NULL);                                                         \
+    CHECK(ft->Set != &BIT_FUNC(SUFFIX, Set));                                  \
+    CHECK(ft->Check != &BIT_FUNC(SUFFIX, Check));                              \
+    CHECK(PACKAGE_CALL(BIT_PKG(SUFFIX), Check, (TYPE)0, 0U) != false);        \
   } while (0)
 
+#define TEST_WIDTH_ROW(ROW)                                                   \
+  TEST_WIDTH(BIT_WIDTH_GET(TYPE, ROW), BIT_WIDTH_GET(SUFFIX, ROW),             \
+             BIT_WIDTH_GET(BITS, ROW), BIT_WIDTH_GET(MAX, ROW));
+
 int main(void) {
-  TEST_WIDTH(uint8_t, 8, 8U, UINT8_MAX);
-  TEST_WIDTH(uint16_t, 16, 16U, UINT16_MAX);
-  TEST_WIDTH(uint32_t, 32, 32U, UINT32_MAX);
-  TEST_WIDTH(uint64_t, 64, 64U, UINT64_MAX);
+  BIT_WIDTH_TABLE(TEST_WIDTH_ROW)
   return 0;
 }

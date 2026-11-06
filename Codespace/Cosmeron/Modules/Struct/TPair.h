@@ -1,58 +1,63 @@
 #pragma once
 
-#include "../../Core/Preprocessor/Compiling.inc"
-
 #include "Struct.space"
 
-#define TPAIR_TYPE(SUFFIX) STRUCT_TYPE(TPair, SUFFIX)
-#define TPAIR_FUNC(SUFFIX, FUNC) STRUCT_FUNC(TPair, SUFFIX, FUNC)
+#define TPAIR_MOD TPair
+#define TPAIR_CMOD TPAIR
 
-#define TPAIR_STRUCT(TYPE, SUFFIX)                                      \
-  typedef union {                                                             \
-    struct {                                                                  \
-      union {                                                                 \
-        TYPE value1;                                                          \
-        TYPE first;                                                           \
-        TYPE a;                                                               \
-        TYPE x1;                                                              \
-        TYPE x;                                                               \
-      };                                                                      \
-      union {                                                                 \
-        TYPE value2;                                                          \
-        TYPE second;                                                          \
-        TYPE b;                                                               \
-        TYPE x2;                                                              \
-        TYPE y;                                                               \
-      };                                                                      \
-    };                                                                        \
-    TYPE values[2];                                                           \
+#define TPAIR_PKG(SUFFIX) STRUCT_PKG(TPAIR_MOD, SUFFIX)
+#define TPAIR_TYPE(SUFFIX) STRUCT_TYPE(TPAIR_MOD, SUFFIX)
+#define TPAIR_FUNC(SUFFIX, FUNC) STRUCT_FUNC(TPAIR_MOD, SUFFIX, FUNC)
+
+#define TPAIR_STRUCT(SUFFIX, TYPE)                                             \
+  typedef union STRUCT_TYPE(TPAIR_MOD, SUFFIX) {                               \
+    struct {                                                                   \
+      union {                                                                  \
+        TYPE value1;                                                           \
+        TYPE first;                                                            \
+        TYPE a;                                                                \
+        TYPE x1;                                                               \
+        TYPE x;                                                                \
+      };                                                                       \
+      union {                                                                  \
+        TYPE value2;                                                           \
+        TYPE second;                                                           \
+        TYPE b;                                                                \
+        TYPE x2;                                                               \
+        TYPE y;                                                                \
+      };                                                                       \
+    };                                                                         \
+    union {                                                                    \
+      TYPE value[2];                                                           \
+      TYPE values[2];                                                          \
+    };                                                                         \
   } TPAIR_TYPE(SUFFIX);
 
-#define TPAIR_CAST_TO_TYPE_PROTOTYPE(TYPE, SUFFIX)                     \
-  static inline TPAIR_TYPE(SUFFIX)                                             \
-      CAST_TYPE_TO_STRUCT(SUFFIX, TPair)(TYPE value1, TYPE value2)
+/* ==========================================================================
+ * Universal Template Declaration: TPAIR
+ * ========================================================================== */
 
-#define TPAIR_CAST_FROM_TYPE_PROTOTYPE(TYPE, SUFFIX)                   \
-  static inline void CAST_STRUCT_TO_TYPE(TPair, SUFFIX)(                       \
-      TPAIR_TYPE(SUFFIX) pair, TYPE *var1, TYPE *var2)
+#define TEMPLATE_TPAIR(SUFFIX, TYPE)                                           \
+  TPAIR_STRUCT(SUFFIX, TYPE)                                                   \
+  PACKAGE(TPAIR_PKG(SUFFIX),                                                   \
+      FUNCTION(TPAIR_TYPE(SUFFIX), Create, (TYPE value1, TYPE value2)),        \
+      OPERATION(Extract,                                                       \
+                (TPAIR_TYPE(SUFFIX) pair, TYPE *outValue1, TYPE *outValue2)),   \
+      PROCEDURE(Unpack,                                                        \
+                (TPAIR_TYPE(SUFFIX) pair, TYPE *outValue1, TYPE *outValue2))    \
+  )
 
 #include "Impl/TPair.impl"
 
-#define TPAIR_IMPLEMENT_ALL(TYPE, SUFFIX)                                            \
-  TPAIR_STRUCT(TYPE, SUFFIX)                                             \
-  TPAIR_CAST_TO_TYPE_PROTOTYPE(TYPE, SUFFIX);                          \
-  TPAIR_CAST_FROM_TYPE_PROTOTYPE(TYPE, SUFFIX);                        \
-  TPAIR_CAST_IMPLEMENT_ALL(TYPE, SUFFIX)
+/* ==========================================================================
+ * Standard Type Instantiations
+ * ========================================================================== */
 
-TPAIR_IMPLEMENT_ALL(uint8_t, uint8)
-TPAIR_IMPLEMENT_ALL(uint16_t, uint16)
-TPAIR_IMPLEMENT_ALL(uint32_t, uint32)
-TPAIR_IMPLEMENT_ALL(uint64_t, uint64)
-TPAIR_IMPLEMENT_ALL(int8_t, int8)
-TPAIR_IMPLEMENT_ALL(int16_t, int16)
-TPAIR_IMPLEMENT_ALL(int32_t, int32)
-TPAIR_IMPLEMENT_ALL(int64_t, int64)
-TPAIR_IMPLEMENT_ALL(float, float)
-TPAIR_IMPLEMENT_ALL(double, double)
-TPAIR_IMPLEMENT_ALL(long double, longdouble)
+#define TPAIR_INTERNAL_INSTANTIATE(ROW)                                        \
+  TEMPLATE_IMPLEMENT(TPAIR, STRUCT_TYPE_GET(SUFFIX, ROW),                      \
+                     STRUCT_TYPE_GET(TYPE, ROW));
+
+STRUCT_TYPE_TABLE(TPAIR_INTERNAL_INSTANTIATE)
+#undef TPAIR_INTERNAL_INSTANTIATE
+
 /* EOF */

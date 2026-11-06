@@ -2,12 +2,16 @@
 
 #include <stdint.h>
 
+/* Custom template instantiation */
+TEMPLATE_IMPLEMENT(BIT, custom16, uint16_t);
+
 int main(void) {
   uint32_t value = 0;
   uint32_t index = 0;
   uint32_t field = 0;
   uint8_t index8 = 0;
 
+  /* Direct call */
   if (Bit32_Set(&value, 5) != STATUS_CONST(SUCCESS))
     return 1;
   if (value != UINT32_C(32) || !Bit32_Check(value, 5))
@@ -73,6 +77,30 @@ int main(void) {
       Bit32_IndexLSB(0, &index) != STATUS_CONST(NOT_FOUND) ||
       Bit32_IndexMSB(0, &index) != STATUS_CONST(NOT_FOUND))
     return 18;
+
+  /* PACKAGE_CALL verification */
+  value = 0;
+  if (PACKAGE_CALL(Bit32, Set, &value, 3) != STATUS_CONST(SUCCESS) ||
+      !PACKAGE_CALL(Bit32, Check, value, 3))
+    return 19;
+
+  if (PACKAGE_CALL(BIT_PKG(32), Clear, &value, 3) != STATUS_CONST(SUCCESS) ||
+      value != 0)
+    return 20;
+
+  /* FunctionTable verification */
+  const Bit32_FunctionTable *table = Bit32_GetFunctionTable();
+  if (table == NULL || table->Popcount == NULL)
+    return 21;
+  if (table->Popcount(UINT32_C(0xFF)) != 8)
+    return 22;
+
+  /* Custom template instantiation verification */
+  uint16_t customVal = 0;
+  if (Bitcustom16_Set(&customVal, 4) != STATUS_CONST(SUCCESS) ||
+      !Bitcustom16_Check(customVal, 4) ||
+      customVal != 16U)
+    return 23;
 
   return 0;
 }

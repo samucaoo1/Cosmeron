@@ -5,153 +5,164 @@
 #include <stdint.h>
 #include <string.h>
 
-#define TAG_IMPLEMENT(SUFFIX, UINT_TYPE, BYTE_COUNT)                           \
-  TAG_INIT_PROTOTYPE(SUFFIX) {                                                 \
-    if (!tag || !chars)                                                        \
+#define TEMPLATE_TTAG_IMPLEMENT(SUFFIX, UINT_TYPE)                             \
+  OBJECT_OPERATION_IMPLEMENT_EX(TAG_TYPE(SUFFIX), FromString,                  \
+                                (const char *chars)) {                         \
+    if (!self || !chars)                                                       \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     UINT_TYPE val = 0U;                                                        \
     size_t inLen = strlen(chars);                                              \
-    for (size_t i = 0U; i < (BYTE_COUNT); ++i) {                               \
+    for (size_t i = 0U; i < ((SUFFIX) / 8U); ++i) {                            \
       char c = (i < inLen) ? chars[i] : ' ';                                   \
-      tag->text[i] = c;                                                        \
-      size_t shift = ((BYTE_COUNT) - 1U - i) * 8U;                             \
+      self->text[i] = c;                                                       \
+      size_t shift = (((SUFFIX) / 8U) - 1U - i) * 8U;                          \
       val |= ((UINT_TYPE)(uint8_t)c) << shift;                                 \
     }                                                                          \
-    tag->text[(BYTE_COUNT)] = '\0';                                            \
-    tag->value = val;                                                          \
+    self->text[((SUFFIX) / 8U)] = '\0';                                        \
+    self->value = val;                                                         \
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
                                                                                \
-  TAG_FROM_UINT_PROTOTYPE(SUFFIX, UINT_TYPE) {                                 \
-    if (!tag)                                                                  \
+  OBJECT_OPERATION_IMPLEMENT_EX(TAG_TYPE(SUFFIX), FromUInt,                    \
+                                (UINT_TYPE value)) {                           \
+    if (!self)                                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    tag->value = value;                                                        \
-    for (size_t i = 0U; i < (BYTE_COUNT); ++i) {                               \
-      size_t shift = ((BYTE_COUNT) - 1U - i) * 8U;                             \
-      tag->text[i] = (char)((value >> shift) & 0xFFU);                         \
+    self->value = value;                                                       \
+    for (size_t i = 0U; i < ((SUFFIX) / 8U); ++i) {                            \
+      size_t shift = (((SUFFIX) / 8U) - 1U - i) * 8U;                          \
+      self->text[i] = (char)((value >> shift) & 0xFFU);                        \
     }                                                                          \
-    tag->text[(BYTE_COUNT)] = '\0';                                            \
+    self->text[((SUFFIX) / 8U)] = '\0';                                        \
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
                                                                                \
-  TAG_FROM_BYTES_PROTOTYPE(SUFFIX) {                                           \
-    if (!tag || (!bytes && length > 0U))                                       \
+  OBJECT_OPERATION_IMPLEMENT_EX(TAG_TYPE(SUFFIX), FromBytes,                   \
+                                (const void *bytes, size_t length)) {          \
+    if (!self || (!bytes && length > 0U))                                      \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     const uint8_t *src = (const uint8_t *)bytes;                               \
     UINT_TYPE val = 0U;                                                        \
-    for (size_t i = 0U; i < (BYTE_COUNT); ++i) {                               \
+    for (size_t i = 0U; i < ((SUFFIX) / 8U); ++i) {                            \
       char c = (src && i < length) ? (char)src[i] : ' ';                       \
-      tag->text[i] = c;                                                        \
-      size_t shift = ((BYTE_COUNT) - 1U - i) * 8U;                             \
+      self->text[i] = c;                                                       \
+      size_t shift = (((SUFFIX) / 8U) - 1U - i) * 8U;                          \
       val |= ((UINT_TYPE)(uint8_t)c) << shift;                                 \
     }                                                                          \
-    tag->text[(BYTE_COUNT)] = '\0';                                            \
-    tag->value = val;                                                          \
+    self->text[((SUFFIX) / 8U)] = '\0';                                        \
+    self->value = val;                                                         \
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
                                                                                \
-  TAG_READ_BE_PROTOTYPE(SUFFIX) {                                              \
-    if (!tag || !src)                                                          \
+  OBJECT_OPERATION_IMPLEMENT_EX(TAG_TYPE(SUFFIX), ReadBE,                      \
+                                (const void *src)) {                           \
+    if (!self || !src)                                                         \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     const uint8_t *p = (const uint8_t *)src;                                   \
     UINT_TYPE val = 0U;                                                        \
-    for (size_t i = 0U; i < (BYTE_COUNT); ++i) {                               \
+    for (size_t i = 0U; i < ((SUFFIX) / 8U); ++i) {                            \
       char c = (char)p[i];                                                     \
-      tag->text[i] = c;                                                        \
-      size_t shift = ((BYTE_COUNT) - 1U - i) * 8U;                             \
+      self->text[i] = c;                                                       \
+      size_t shift = (((SUFFIX) / 8U) - 1U - i) * 8U;                          \
       val |= ((UINT_TYPE)(uint8_t)c) << shift;                                 \
     }                                                                          \
-    tag->text[(BYTE_COUNT)] = '\0';                                            \
-    tag->value = val;                                                          \
+    self->text[((SUFFIX) / 8U)] = '\0';                                        \
+    self->value = val;                                                         \
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
                                                                                \
-  TAG_READ_LE_PROTOTYPE(SUFFIX) {                                              \
-    if (!tag || !src)                                                          \
+  OBJECT_OPERATION_IMPLEMENT_EX(TAG_TYPE(SUFFIX), ReadLE,                      \
+                                (const void *src)) {                           \
+    if (!self || !src)                                                         \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     const uint8_t *p = (const uint8_t *)src;                                   \
     UINT_TYPE val = 0U;                                                        \
-    for (size_t i = 0U; i < (BYTE_COUNT); ++i) {                               \
+    for (size_t i = 0U; i < ((SUFFIX) / 8U); ++i) {                            \
       size_t shift = i * 8U;                                                   \
       val |= ((UINT_TYPE)p[i]) << shift;                                       \
     }                                                                          \
-    tag->value = val;                                                          \
-    for (size_t i = 0U; i < (BYTE_COUNT); ++i) {                               \
-      size_t shift = ((BYTE_COUNT) - 1U - i) * 8U;                             \
-      tag->text[i] = (char)((val >> shift) & 0xFFU);                           \
+    self->value = val;                                                         \
+    for (size_t i = 0U; i < ((SUFFIX) / 8U); ++i) {                            \
+      size_t shift = (((SUFFIX) / 8U) - 1U - i) * 8U;                          \
+      self->text[i] = (char)((val >> shift) & 0xFFU);                          \
     }                                                                          \
-    tag->text[(BYTE_COUNT)] = '\0';                                            \
+    self->text[((SUFFIX) / 8U)] = '\0';                                        \
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
                                                                                \
-  TAG_WRITE_BE_PROTOTYPE(SUFFIX) {                                             \
-    if (!tag || !dest)                                                         \
+  OBJECT_OPERATION_IMPLEMENT_EX(TAG_TYPE(SUFFIX), WriteBE, (void *dest)) {     \
+    if (!self || !dest)                                                        \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     uint8_t *outBytes = (uint8_t *)dest;                                       \
-    for (size_t i = 0U; i < (BYTE_COUNT); ++i) {                               \
-      size_t shift = ((BYTE_COUNT) - 1U - i) * 8U;                             \
-      outBytes[i] = (uint8_t)((tag->value >> shift) & 0xFFU);                  \
+    for (size_t i = 0U; i < ((SUFFIX) / 8U); ++i) {                            \
+      size_t shift = (((SUFFIX) / 8U) - 1U - i) * 8U;                          \
+      outBytes[i] = (uint8_t)((self->value >> shift) & 0xFFU);                 \
     }                                                                          \
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
                                                                                \
-  TAG_WRITE_LE_PROTOTYPE(SUFFIX) {                                             \
-    if (!tag || !dest)                                                         \
+  OBJECT_OPERATION_IMPLEMENT_EX(TAG_TYPE(SUFFIX), WriteLE, (void *dest)) {     \
+    if (!self || !dest)                                                        \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     uint8_t *outBytes = (uint8_t *)dest;                                       \
-    for (size_t i = 0U; i < (BYTE_COUNT); ++i) {                               \
+    for (size_t i = 0U; i < ((SUFFIX) / 8U); ++i) {                            \
       size_t shift = i * 8U;                                                   \
-      outBytes[i] = (uint8_t)((tag->value >> shift) & 0xFFU);                  \
+      outBytes[i] = (uint8_t)((self->value >> shift) & 0xFFU);                 \
     }                                                                          \
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
                                                                                \
-  TAG_TO_STRING_PROTOTYPE(SUFFIX) {                                            \
-    if (!tag || !dest || destCapacity == 0U)                                   \
+  OBJECT_OPERATION_IMPLEMENT_EX(TAG_TYPE(SUFFIX), ToString,                    \
+                                (char *dest, size_t destCapacity)) {           \
+    if (!self || !dest || destCapacity == 0U)                                  \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    if (destCapacity < ((BYTE_COUNT) + 1U))                                    \
+    if (destCapacity < (((SUFFIX) / 8U) + 1U))                                 \
       return STATUS_CONST(INSUFFICIENT_SPACE);                                 \
-    for (size_t i = 0U; i < (BYTE_COUNT); ++i) {                               \
-      uint8_t c = (uint8_t)tag->text[i];                                       \
+    for (size_t i = 0U; i < ((SUFFIX) / 8U); ++i) {                            \
+      uint8_t c = (uint8_t)self->text[i];                                      \
       dest[i] = (c >= 0x20U && c <= 0x7EU) ? (char)c : '.';                    \
     }                                                                          \
-    dest[(BYTE_COUNT)] = '\0';                                                 \
+    dest[((SUFFIX) / 8U)] = '\0';                                              \
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
                                                                                \
-  TAG_TEXT_PROTOTYPE(SUFFIX) {                                                 \
-    return tag ? tag->text : "";                                               \
+  OBJECT_FUNCTION_IMPLEMENT_EX(TAG_TYPE(SUFFIX), const char *, Text, ()) {     \
+    return self ? self->text : "";                                             \
   }                                                                            \
                                                                                \
-  TAG_TO_UINT_PROTOTYPE(SUFFIX, UINT_TYPE) {                                   \
-    return tag ? tag->value : (UINT_TYPE)0U;                                   \
+  OBJECT_FUNCTION_IMPLEMENT_EX(TAG_TYPE(SUFFIX), UINT_TYPE, ToUInt, ()) {      \
+    return self ? self->value : (UINT_TYPE)0U;                                 \
   }                                                                            \
                                                                                \
-  TAG_IS_PRINTABLE_PROTOTYPE(SUFFIX) {                                         \
-    if (!tag)                                                                  \
+  OBJECT_PREDICATE_IMPLEMENT_EX(TAG_TYPE(SUFFIX), IsPrintable, ()) {           \
+    if (!self)                                                                 \
       return false;                                                            \
-    for (size_t i = 0U; i < (BYTE_COUNT); ++i) {                               \
-      uint8_t c = (uint8_t)tag->text[i];                                       \
+    for (size_t i = 0U; i < ((SUFFIX) / 8U); ++i) {                            \
+      uint8_t c = (uint8_t)self->text[i];                                      \
       if (c < 0x20U || c > 0x7EU)                                              \
         return false;                                                          \
     }                                                                          \
     return true;                                                               \
   }                                                                            \
                                                                                \
-  TAG_EQUAL_PROTOTYPE(SUFFIX) {                                                \
-    if (!tagA || !tagB)                                                        \
-      return tagA == tagB;                                                     \
-    return tagA->value == tagB->value;                                         \
+  OBJECT_PREDICATE_IMPLEMENT_EX(TAG_TYPE(SUFFIX), Equal,                       \
+                                (const TAG_TYPE(SUFFIX) *other)) {             \
+    if (!self || !other)                                                       \
+      return self == other;                                                    \
+    return self->value == other->value;                                        \
   }                                                                            \
                                                                                \
-  TAG_COMPARE_PROTOTYPE(SUFFIX) {                                              \
-    if (!tagA || !tagB || !result)                                             \
+  OBJECT_OPERATION_IMPLEMENT_EX(TAG_TYPE(SUFFIX), Compare,                     \
+                                (const TAG_TYPE(SUFFIX) *other,                \
+                                 CMPOUT *result)) {                            \
+    if (!self || !other || !result)                                            \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    if (tagA->value < tagB->value)                                             \
-      *result = COMPARISON_LOWER_CONST;                                        \
-    else if (tagA->value > tagB->value)                                        \
-      *result = COMPARISON_HIGHER_CONST;                                       \
+    if (self->value < other->value)                                            \
+      *result = COMPARISON_CONST(LOWER);                                       \
+    else if (self->value > other->value)                                       \
+      *result = COMPARISON_CONST(HIGHER);                                      \
     else                                                                       \
-      *result = COMPARISON_EQUAL_CONST;                                        \
+      *result = COMPARISON_CONST(EQUAL);                                       \
     return STATUS_CONST(SUCCESS);                                              \
-  }
+  }                                                                            \
+  OBJECT_IMPLEMENT(TAG_TYPE(SUFFIX));
+/* EOF */

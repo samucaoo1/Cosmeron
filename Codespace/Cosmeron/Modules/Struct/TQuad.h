@@ -1,86 +1,86 @@
 #pragma once
 
-#include "../../Core/Preprocessor/Compiling.inc"
-#include "../../Core/Preprocessor/Detect/Compiler.h"
-
 #include "Struct.space"
 
-#define TQUAD_TYPE(SUFFIX) STRUCT_TYPE(TQuad, SUFFIX)
-#define TQUAD_FUNC(SUFFIX, FUNC) STRUCT_FUNC(TQuad, SUFFIX, FUNC)
+#define TQUAD_MOD TQuad
+#define TQUAD_CMOD TQUAD
 
-#define TQUAD_STRUCT(TYPE, SUFFIX)                                      \
-  typedef union {                                                             \
-    struct {                                                                  \
-      union {                                                                 \
-        TYPE value1;                                                          \
-        TYPE a;                                                               \
-        TYPE x1;                                                              \
-        TYPE x;                                                               \
-        TYPE left;                                                            \
-        TYPE state1;                                                          \
-      };                                                                      \
-      union {                                                                 \
-        TYPE value2;                                                          \
-        TYPE b;                                                               \
-        TYPE x2;                                                              \
-        TYPE y;                                                               \
-        TYPE right;                                                           \
-        TYPE state2;                                                          \
-      };                                                                      \
-      union {                                                                 \
-        TYPE value3;                                                          \
-        TYPE c;                                                               \
-        TYPE x3;                                                              \
-        TYPE z;                                                               \
-        TYPE top;                                                             \
-        TYPE y1;                                                              \
-        TYPE state3;                                                          \
-      };                                                                      \
-      union {                                                                 \
-        TYPE value4;                                                          \
-        TYPE d;                                                               \
-        TYPE x4;                                                              \
-        TYPE w;                                                               \
-        TYPE bottom;                                                          \
-        TYPE y2;                                                              \
-        TYPE state4;                                                          \
-      };                                                                      \
-    };                                                                        \
-    TYPE values[4];                                                           \
+#define TQUAD_PKG(SUFFIX) STRUCT_PKG(TQUAD_MOD, SUFFIX)
+#define TQUAD_TYPE(SUFFIX) STRUCT_TYPE(TQUAD_MOD, SUFFIX)
+#define TQUAD_FUNC(SUFFIX, FUNC) STRUCT_FUNC(TQUAD_MOD, SUFFIX, FUNC)
+
+#define TQUAD_STRUCT(SUFFIX, TYPE)                                             \
+  typedef union STRUCT_TYPE(TQUAD_MOD, SUFFIX) {                               \
+    struct {                                                                   \
+      union {                                                                  \
+        TYPE value1;                                                           \
+        TYPE a;                                                                \
+        TYPE x1;                                                               \
+        TYPE x;                                                                \
+        TYPE left;                                                             \
+        TYPE state1;                                                           \
+      };                                                                       \
+      union {                                                                  \
+        TYPE value2;                                                           \
+        TYPE b;                                                                \
+        TYPE x2;                                                               \
+        TYPE y;                                                                \
+        TYPE right;                                                            \
+        TYPE state2;                                                           \
+      };                                                                       \
+      union {                                                                  \
+        TYPE value3;                                                           \
+        TYPE c;                                                                \
+        TYPE x3;                                                               \
+        TYPE z;                                                                \
+        TYPE top;                                                              \
+        TYPE y1;                                                               \
+        TYPE state3;                                                           \
+      };                                                                       \
+      union {                                                                  \
+        TYPE value4;                                                           \
+        TYPE d;                                                                \
+        TYPE x4;                                                               \
+        TYPE w;                                                                \
+        TYPE bottom;                                                           \
+        TYPE y2;                                                               \
+        TYPE state4;                                                           \
+      };                                                                       \
+    };                                                                         \
+    union {                                                                    \
+      TYPE value[4];                                                           \
+      TYPE values[4];                                                          \
+    };                                                                         \
   } TQUAD_TYPE(SUFFIX);
 
-#define TQUAD_CAST_TO_TYPE_PROTOTYPE(TYPE, SUFFIX)                     \
-  static inline TQUAD_TYPE(SUFFIX) CAST_TYPE_TO_STRUCT(SUFFIX, TQuad)(         \
-      TYPE value1, TYPE value2, TYPE value3, TYPE value4)
+/* ==========================================================================
+ * Universal Template Declaration: TQUAD
+ * ========================================================================== */
 
-#define TQUAD_CAST_FROM_TYPE_PROTOTYPE(TYPE, SUFFIX)                   \
-  static inline void CAST_STRUCT_TO_TYPE(TQuad, SUFFIX)(                       \
-      TQUAD_TYPE(SUFFIX) quad, TYPE *var1, TYPE *var2, TYPE *var3,          \
-      TYPE *var4)
+#define TEMPLATE_TQUAD(SUFFIX, TYPE)                                           \
+  TQUAD_STRUCT(SUFFIX, TYPE)                                                   \
+  PACKAGE(TQUAD_PKG(SUFFIX),                                                   \
+      FUNCTION(TQUAD_TYPE(SUFFIX), Create,                                     \
+               (TYPE value1, TYPE value2, TYPE value3, TYPE value4)),          \
+      OPERATION(Extract,                                                       \
+                (TQUAD_TYPE(SUFFIX) quad, TYPE *outValue1, TYPE *outValue2,    \
+                 TYPE *outValue3, TYPE *outValue4)),                           \
+      PROCEDURE(Unpack,                                                        \
+                (TQUAD_TYPE(SUFFIX) quad, TYPE *outValue1, TYPE *outValue2,    \
+                 TYPE *outValue3, TYPE *outValue4))                            \
+  )
 
 #include "Impl/TQuad.impl"
 
-#define TQUAD_IMPLEMENT_ALL(TYPE, SUFFIX)                                            \
-  TQUAD_STRUCT(TYPE, SUFFIX)                                             \
-  TQUAD_CAST_TO_TYPE_PROTOTYPE(TYPE, SUFFIX);                          \
-  TQUAD_CAST_FROM_TYPE_PROTOTYPE(TYPE, SUFFIX);                        \
-  TQUAD_CAST_IMPLEMENT_ALL(TYPE, SUFFIX)
+/* ==========================================================================
+ * Standard Type Instantiations
+ * ========================================================================== */
 
-TQUAD_IMPLEMENT_ALL(uint8_t, uint8)
-TQUAD_IMPLEMENT_ALL(uint16_t, uint16)
-TQUAD_IMPLEMENT_ALL(uint32_t, uint32)
-TQUAD_IMPLEMENT_ALL(uint64_t, uint64)
-TQUAD_IMPLEMENT_ALL(int8_t, int8)
-TQUAD_IMPLEMENT_ALL(int16_t, int16)
-TQUAD_IMPLEMENT_ALL(int32_t, int32)
-TQUAD_IMPLEMENT_ALL(int64_t, int64)
-TQUAD_IMPLEMENT_ALL(float, float)
-TQUAD_IMPLEMENT_ALL(double, double)
-TQUAD_IMPLEMENT_ALL(long double, longdouble)
+#define TQUAD_INTERNAL_INSTANTIATE(ROW)                                        \
+  TEMPLATE_IMPLEMENT(TQUAD, STRUCT_TYPE_GET(SUFFIX, ROW),                      \
+                     STRUCT_TYPE_GET(TYPE, ROW));
 
-#if !COMPILER_MSVC
-TQUAD_IMPLEMENT_ALL(float _Complex, float_complex)
-TQUAD_IMPLEMENT_ALL(double _Complex, double_complex)
-TQUAD_IMPLEMENT_ALL(long double _Complex, longdouble_complex)
-#endif
+STRUCT_TYPE_TABLE(TQUAD_INTERNAL_INSTANTIATE)
+#undef TQUAD_INTERNAL_INSTANTIATE
+
 /* EOF */

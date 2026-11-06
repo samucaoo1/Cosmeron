@@ -52,10 +52,11 @@ static int TestTagLiterals(void) {
 }
 
 static int TestTag16(void) {
-  TTag16(tag);
+  TAG_TYPE(16) tag = {0};
+  CHECK_STATUS(TAG_FUNC(16, Init)(&tag));
   CHECK_TRUE(tag.api != NULL);
 
-  CHECK_STATUS(TAG_FUNC(16, Init)(&tag, "MZ"));
+  CHECK_STATUS(TAG_FUNC(16, FromString)(&tag, "MZ"));
   CHECK_TRUE(tag.value == TAG16_MAKE('M', 'Z'));
   CHECK_TRUE(strcmp(tag.text, "MZ") == 0);
   CHECK_TRUE(TAG_FUNC(16, ToUInt)(&tag) == TAG16_MAKE('M', 'Z'));
@@ -63,7 +64,7 @@ static int TestTag16(void) {
   CHECK_TRUE(TAG_FUNC(16, IsPrintable)(&tag));
 
   /* Padding when string is shorter than 2 bytes */
-  CHECK_STATUS(TAG_FUNC(16, Init)(&tag, "M"));
+  CHECK_STATUS(TAG_FUNC(16, FromString)(&tag, "M"));
   CHECK_TRUE(tag.value == TAG16_MAKE('M', ' '));
   CHECK_TRUE(strcmp(tag.text, "M ") == 0);
 
@@ -106,40 +107,42 @@ static int TestTag16(void) {
   CHECK_TRUE(strBuf[0] == '.' && strBuf[1] == '4' && strBuf[2] == '\0');
 
   /* Equal & Compare */
-  TTag16(other);
+  TAG_TYPE(16) other = {0};
+  CHECK_STATUS(TAG_FUNC(16, Init)(&other));
   CHECK_STATUS(TAG_FUNC(16, FromUInt)(&other, 0x1234U));
   CHECK_TRUE(TAG_FUNC(16, Equal)(&tag, &other));
 
-  CMPOUT cmp = COMPARISON_EQUAL_CONST;
+  CMPOUT cmp = COMPARISON_CONST(EQUAL);
   CHECK_STATUS(TAG_FUNC(16, Compare)(&tag, &other, &cmp));
-  CHECK_TRUE(cmp == COMPARISON_EQUAL_CONST);
+  CHECK_TRUE(cmp == COMPARISON_CONST(EQUAL));
 
   CHECK_STATUS(TAG_FUNC(16, FromUInt)(&other, 0x1235U));
   CHECK_TRUE(!TAG_FUNC(16, Equal)(&tag, &other));
   CHECK_STATUS(TAG_FUNC(16, Compare)(&tag, &other, &cmp));
-  CHECK_TRUE(cmp == COMPARISON_LOWER_CONST);
+  CHECK_TRUE(cmp == COMPARISON_CONST(LOWER));
 
   /* FunctionTable dispatch */
-  CHECK_STATUS(tag.api->init(&tag, "MZ"));
+  CHECK_STATUS(tag.api->FromString(&tag, "MZ"));
   CHECK_TRUE(tag.value == TAG16_MAKE('M', 'Z'));
-  CHECK_TRUE(tag.api->isPrintable(&tag));
-  CHECK_TRUE(tag.api->toUInt(&tag) == TAG16_MAKE('M', 'Z'));
+  CHECK_TRUE(tag.api->IsPrintable(&tag));
+  CHECK_TRUE(tag.api->ToUInt(&tag) == TAG16_MAKE('M', 'Z'));
 
   return 0;
 }
 
 static int TestTag32(void) {
-  TTag32(tag);
+  TAG_TYPE(32) tag = {0};
+  CHECK_STATUS(TAG_FUNC(32, Init)(&tag));
   CHECK_TRUE(tag.api != NULL);
 
-  CHECK_STATUS(TAG_FUNC(32, Init)(&tag, "RIFF"));
+  CHECK_STATUS(TAG_FUNC(32, FromString)(&tag, "RIFF"));
   CHECK_TRUE(tag.value == TAG32_MAKE('R', 'I', 'F', 'F'));
   CHECK_TRUE(strcmp(tag.text, "RIFF") == 0);
   CHECK_TRUE(TAG_FUNC(32, IsPrintable)(&tag));
   CHECK_TRUE(strcmp(TAG_FUNC(32, Text)(&tag), "RIFF") == 0);
 
-  /* Short input space padded */
-  CHECK_STATUS(TAG_FUNC(32, Init)(&tag, "PNG"));
+  /* Padding when string is shorter than 4 bytes */
+  CHECK_STATUS(TAG_FUNC(32, FromString)(&tag, "PNG"));
   CHECK_TRUE(tag.value == TAG32_MAKE('P', 'N', 'G', ' '));
   CHECK_TRUE(strcmp(tag.text, "PNG ") == 0);
 
@@ -148,23 +151,21 @@ static int TestTag32(void) {
   CHECK_TRUE(strcmp(tag.text, "WAVE") == 0);
 
   /* ReadBE & ReadLE */
-  const uint8_t raw[4] = {0x11, 0x22, 0x33, 0x44};
+  const uint8_t raw[4] = {0x01, 0x02, 0x03, 0x04};
   CHECK_STATUS(TAG_FUNC(32, ReadBE)(&tag, raw));
-  CHECK_TRUE(tag.value == 0x11223344U);
+  CHECK_TRUE(tag.value == 0x01020304U);
 
   CHECK_STATUS(TAG_FUNC(32, ReadLE)(&tag, raw));
-  CHECK_TRUE(tag.value == 0x44332211U);
+  CHECK_TRUE(tag.value == 0x04030201U);
 
   /* WriteBE & WriteLE */
   uint8_t outBE[4] = {0};
   CHECK_STATUS(TAG_FUNC(32, WriteBE)(&tag, outBE));
-  CHECK_TRUE(outBE[0] == 0x44 && outBE[1] == 0x33 && outBE[2] == 0x22 &&
-             outBE[3] == 0x11);
+  CHECK_TRUE(outBE[0] == 4 && outBE[1] == 3 && outBE[2] == 2 && outBE[3] == 1);
 
   uint8_t outLE[4] = {0};
   CHECK_STATUS(TAG_FUNC(32, WriteLE)(&tag, outLE));
-  CHECK_TRUE(outLE[0] == 0x11 && outLE[1] == 0x22 && outLE[2] == 0x33 &&
-             outLE[3] == 0x44);
+  CHECK_TRUE(outLE[0] == 1 && outLE[1] == 2 && outLE[2] == 3 && outLE[3] == 4);
 
   /* ToString */
   char bufSmall[4];
@@ -172,49 +173,52 @@ static int TestTag32(void) {
              STATUS_CONST(INSUFFICIENT_SPACE));
 
   char strBuf[16];
-  CHECK_STATUS(TAG_FUNC(32, Init)(&tag, "JPEG"));
+  CHECK_STATUS(TAG_FUNC(32, FromString)(&tag, "JPEG"));
   CHECK_STATUS(TAG_FUNC(32, ToString)(&tag, strBuf, sizeof(strBuf)));
   CHECK_TRUE(strcmp(strBuf, "JPEG") == 0);
 
-  /* Equal and Compare */
-  TTag32(riff);
-  TTag32(wave);
-  CHECK_STATUS(TAG_FUNC(32, Init)(&riff, "RIFF"));
-  CHECK_STATUS(TAG_FUNC(32, Init)(&wave, "WAVE"));
+  /* Equal & Compare */
+  TAG_TYPE(32) riff = {0};
+  CHECK_STATUS(TAG_FUNC(32, Init)(&riff));
+  TAG_TYPE(32) wave = {0};
+  CHECK_STATUS(TAG_FUNC(32, Init)(&wave));
+  CHECK_STATUS(TAG_FUNC(32, FromString)(&riff, "RIFF"));
+  CHECK_STATUS(TAG_FUNC(32, FromString)(&wave, "WAVE"));
 
   CHECK_TRUE(!TAG_FUNC(32, Equal)(&riff, &wave));
   CHECK_TRUE(TAG_FUNC(32, Equal)(&riff, &riff));
 
-  CMPOUT cmp = COMPARISON_EQUAL_CONST;
+  CMPOUT cmp = COMPARISON_CONST(EQUAL);
   CHECK_STATUS(TAG_FUNC(32, Compare)(&riff, &wave, &cmp));
-  CHECK_TRUE(cmp == COMPARISON_LOWER_CONST);
+  CHECK_TRUE(cmp == COMPARISON_CONST(LOWER));
 
   CHECK_STATUS(TAG_FUNC(32, Compare)(&wave, &riff, &cmp));
-  CHECK_TRUE(cmp == COMPARISON_HIGHER_CONST);
+  CHECK_TRUE(cmp == COMPARISON_CONST(HIGHER));
 
   CHECK_STATUS(TAG_FUNC(32, Compare)(&riff, &riff, &cmp));
-  CHECK_TRUE(cmp == COMPARISON_EQUAL_CONST);
+  CHECK_TRUE(cmp == COMPARISON_CONST(EQUAL));
 
   /* Canonical TTag alias */
   TYPE_NS(TTag) canonicalTag = {0};
-  canonicalTag.api = &TAG_FUNC(32, functions);
-  CHECK_STATUS(canonicalTag.api->init(&canonicalTag, "OGG "));
+  CHECK_STATUS(TAG_FUNC(32, Init)(&canonicalTag));
+  CHECK_STATUS(canonicalTag.api->FromString(&canonicalTag, "OGG "));
   CHECK_TRUE(canonicalTag.value == TAG32_MAKE('O', 'G', 'G', ' '));
 
   return 0;
 }
 
 static int TestTag64(void) {
-  TTag64(tag);
+  TAG_TYPE(64) tag = {0};
+  CHECK_STATUS(TAG_FUNC(64, Init)(&tag));
   CHECK_TRUE(tag.api != NULL);
 
-  CHECK_STATUS(TAG_FUNC(64, Init)(&tag, "SQLite 3"));
+  CHECK_STATUS(TAG_FUNC(64, FromString)(&tag, "SQLite 3"));
   CHECK_TRUE(tag.value == TAG64_MAKE('S', 'Q', 'L', 'i', 't', 'e', ' ', '3'));
   CHECK_TRUE(strcmp(tag.text, "SQLite 3") == 0);
   CHECK_TRUE(TAG_FUNC(64, IsPrintable)(&tag));
 
   /* Short input */
-  CHECK_STATUS(TAG_FUNC(64, Init)(&tag, "Cosm"));
+  CHECK_STATUS(TAG_FUNC(64, FromString)(&tag, "Cosm"));
   CHECK_TRUE(strcmp(tag.text, "Cosm    ") == 0);
 
   /* ReadBE & ReadLE */
@@ -235,20 +239,21 @@ static int TestTag64(void) {
   CHECK_TRUE(outLE[0] == 1 && outLE[7] == 8);
 
   /* FunctionTable dispatch */
-  CHECK_STATUS(tag.api->init(&tag, "SQLITE3!"));
-  CHECK_TRUE(tag.api->isPrintable(&tag));
-  CHECK_TRUE(strcmp(tag.api->text(&tag), "SQLITE3!") == 0);
+  CHECK_STATUS(tag.api->FromString(&tag, "SQLITE3!"));
+  CHECK_TRUE(tag.api->IsPrintable(&tag));
+  CHECK_TRUE(strcmp(tag.api->Text(&tag), "SQLITE3!") == 0);
 
   return 0;
 }
 
 static int TestErrorHandling(void) {
-  TTag32(tag);
-  CMPOUT cmp = COMPARISON_EQUAL_CONST;
+  TAG_TYPE(32) tag = {0};
+  CHECK_STATUS(TAG_FUNC(32, Init)(&tag));
+  CMPOUT cmp = COMPARISON_CONST(EQUAL);
 
-  CHECK_TRUE(TAG_FUNC(32, Init)(NULL, "RIFF") ==
+  CHECK_TRUE(TAG_FUNC(32, FromString)(NULL, "RIFF") ==
              STATUS_CONST(INVALID_ARGUMENT));
-  CHECK_TRUE(TAG_FUNC(32, Init)(&tag, NULL) == STATUS_CONST(INVALID_ARGUMENT));
+  CHECK_TRUE(TAG_FUNC(32, FromString)(&tag, NULL) == STATUS_CONST(INVALID_ARGUMENT));
   CHECK_TRUE(TAG_FUNC(32, FromUInt)(NULL, 0U) ==
              STATUS_CONST(INVALID_ARGUMENT));
   CHECK_TRUE(TAG_FUNC(32, FromBytes)(NULL, "RIFF", 4U) ==

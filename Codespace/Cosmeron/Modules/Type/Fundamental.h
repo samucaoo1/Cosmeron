@@ -1,11 +1,9 @@
 #pragma once
 
-#include "../../Core/Preprocessor/Compiling.inc"
-
 #include "Type.space"
 
 /* -------------------------------------------------------------------------- */
-/* Naming                                                                     */
+/* Naming Styles                                                              */
 /* -------------------------------------------------------------------------- */
 
 #if defined(TYPE_ALIAS_SMALL) && defined(TYPE_ALIAS_COMPLETE)
@@ -25,21 +23,16 @@
 #define TYPE_ALIAS(SMALL, COMPLETE)                                           \
   TYPE_NS(TYPE_ALIAS_SELECT(SMALL, COMPLETE))
 
-typedef int8_t TYPE_ALIAS(TI8, TInt8);
-typedef int16_t TYPE_ALIAS(TI16, TInt16);
-typedef int32_t TYPE_ALIAS(TI32, TInt32);
-typedef int64_t TYPE_ALIAS(TI64, TInt64);
+/* -------------------------------------------------------------------------- */
+/* Type Aliases Emitted via X-Macro Row-Tuple Pattern                         */
+/* -------------------------------------------------------------------------- */
 
-typedef uint8_t TYPE_ALIAS(TU8, TUInt8);
-typedef uint16_t TYPE_ALIAS(TU16, TUInt16);
-typedef uint32_t TYPE_ALIAS(TU32, TUInt32);
-typedef uint64_t TYPE_ALIAS(TU64, TUInt64);
+#define FUNDAMENTAL_TYPEDEF_EMIT(ROW)                                          \
+  typedef FUNDAMENTAL_TYPE_GET(TYPE, ROW)                                      \
+      TYPE_ALIAS(FUNDAMENTAL_TYPE_GET(SMALL, ROW),                             \
+                 FUNDAMENTAL_TYPE_GET(COMPLETE, ROW));
 
-typedef float TYPE_ALIAS(TF32, TFloat32);
-typedef double TYPE_ALIAS(TF64, TFloat64);
-typedef long double TYPE_ALIAS(TLD, TLongDouble);
+FUNDAMENTAL_TYPE_TABLE(FUNDAMENTAL_TYPEDEF_EMIT)
 
-typedef uint8_t TYPE_ALIAS(TCh8, TChar8);
-typedef uint16_t TYPE_ALIAS(TCh16, TChar16);
-typedef uint32_t TYPE_ALIAS(TCh32, TChar32);
+#undef FUNDAMENTAL_TYPEDEF_EMIT
 /* EOF */

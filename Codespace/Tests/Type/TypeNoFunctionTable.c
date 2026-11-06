@@ -6,10 +6,10 @@
 #include "../../Cosmeron/Modules/Type/Tag.h"
 
 int main(void) {
-  TBigint(128, bigint);
-  TBlock(128, block);
-  TDecimal(128, decimal);
-  TTag(32, tag);
+  TBIGINT_TYPE(128) bigint = {0};
+  TBLOCK_TYPE(128) block = {0};
+  TDECIMAL_TYPE(128) decimal = {0};
+  TAG_TYPE(32) tag = {0};
 
   if (TBIGINT_FUNC(128, Clear)(&bigint) != STATUS_CONST(SUCCESS))
     return 1;
@@ -17,7 +17,7 @@ int main(void) {
     return 2;
   if (TDECIMAL_FUNC(128, Clear)(&decimal) != STATUS_CONST(SUCCESS))
     return 3;
-  if (TAG_FUNC(32, Init)(&tag, "RIFF") != STATUS_CONST(SUCCESS))
+  if (TAG_FUNC(32, FromString)(&tag, "RIFF") != STATUS_CONST(SUCCESS))
     return 9;
   if (tag.value != TAG32_MAKE('R', 'I', 'F', 'F'))
     return 10;

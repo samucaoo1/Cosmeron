@@ -250,7 +250,6 @@ static inline OPSTATUS OBJECT_FUNC(Init)(OBJECT_TYPE(TObject) * object) {
   typedef struct CLASS CLASS;                                                  \
   PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO, CLASS, __VA_ARGS__) \
   struct CLASS {                                                               \
-    char _unused;                                                              \
     FIELDS_BLOCK                                                               \
   };                                                                           \
   PP_FOREACH_CTX(                                                              \
@@ -267,7 +266,6 @@ static inline OPSTATUS OBJECT_FUNC(Init)(OBJECT_TYPE(TObject) * object) {
   PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO, CLASS, __VA_ARGS__) \
   struct CLASS {                                                               \
     BASE_CLASS base;                                                           \
-    char _unused;                                                              \
     FIELDS_BLOCK                                                               \
   };                                                                           \
   PP_FOREACH_CTX(                                                              \

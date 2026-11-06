@@ -1,86 +1,63 @@
 #pragma once
 
 #include "../../Core/Outcome/Status.h"
+#include "../../Core/Module/Package.h"
+#include "../../Core/Preprocessor/Compiling.inc"
 #include "Bit.space"
 
-#define BIT_SET_PROTOTYPE(TYPE, SUFFIX)                                        \
-  static inline OPSTATUS BIT_FUNC(SUFFIX, Set)(TYPE *value, uint8_t bit)
+/* ==========================================================================
+ * Standard Widths Table (Row-Tuple Pattern)
+ * ========================================================================== */
 
-#define BIT_CLEAR_PROTOTYPE(TYPE, SUFFIX)                                      \
-  static inline OPSTATUS BIT_FUNC(SUFFIX, Clear)(TYPE *value, uint8_t bit)
+#define BIT_WIDTH_COL_SUFFIX(SUFFIX, TYPE, BITS, MAX) SUFFIX
+#define BIT_WIDTH_COL_TYPE(SUFFIX, TYPE, BITS, MAX) TYPE
+#define BIT_WIDTH_COL_BITS(SUFFIX, TYPE, BITS, MAX) BITS
+#define BIT_WIDTH_COL_MAX(SUFFIX, TYPE, BITS, MAX) MAX
+#define BIT_WIDTH_GET(FIELD, ROW) PP_OP_CAT2(BIT_WIDTH_COL_, FIELD) ROW
 
-#define BIT_FLIP_PROTOTYPE(TYPE, SUFFIX)                                       \
-  static inline OPSTATUS BIT_FUNC(SUFFIX, Flip)(TYPE *value, uint8_t bit)
+#define BIT_WIDTH_TABLE(X)                                                     \
+  X((8, uint8_t, 8U, UINT8_MAX))                                               \
+  X((16, uint16_t, 16U, UINT16_MAX))                                           \
+  X((32, uint32_t, 32U, UINT32_MAX))                                           \
+  X((64, uint64_t, 64U, UINT64_MAX))
 
-#define BIT_CHECK_PROTOTYPE(TYPE, SUFFIX)                                      \
-  static inline bool BIT_FUNC(SUFFIX, Check)(TYPE value, uint8_t bit)
+/* ==========================================================================
+ * Universal Template Declaration: BIT
+ * Parameterized package for bit manipulation of integer types.
+ * ========================================================================== */
 
-#define BIT_MASK_SET_PROTOTYPE(TYPE, SUFFIX)                                   \
-  static inline void BIT_FUNC(SUFFIX, MaskSet)(TYPE *value, TYPE mask)
+#define TEMPLATE_BIT(SUFFIX, TYPE)                                             \
+  PACKAGE(BIT_PKG(SUFFIX),                                                     \
+      OPERATION(Set, (TYPE *value, uint8_t bit)),                              \
+      OPERATION(Clear, (TYPE *value, uint8_t bit)),                            \
+      OPERATION(Flip, (TYPE *value, uint8_t bit)),                             \
+      PREDICATE(Check, (TYPE value, uint8_t bit)),                             \
+      PROCEDURE(MaskSet, (TYPE *value, TYPE mask)),                            \
+      PROCEDURE(MaskClear, (TYPE *value, TYPE mask)),                          \
+      PROCEDURE(MaskFlip, (TYPE *value, TYPE mask)),                           \
+      PREDICATE(MaskCheckAll, (TYPE value, TYPE mask)),                        \
+      PREDICATE(MaskCheckAny, (TYPE value, TYPE mask)),                        \
+      FUNCTION(uint64_t, Popcount, (TYPE value)),                              \
+      PREDICATE(IsPowerOfTwo, (TYPE value)),                                   \
+      OPERATION(IndexLSB, (TYPE value, TYPE *outIndex)),                       \
+      OPERATION(IndexMSB, (TYPE value, TYPE *outIndex)),                       \
+      FUNCTION(TYPE, RotateLeft, (TYPE value, TYPE shift)),                    \
+      FUNCTION(TYPE, RotateRight, (TYPE value, TYPE shift)),                   \
+      OPERATION(Extract, (TYPE value, uint8_t high, uint8_t low, TYPE *outField)), \
+      OPERATION(Insert, (TYPE *value, uint8_t high, uint8_t low, TYPE fieldValue)) \
+  )
 
-#define BIT_MASK_CLEAR_PROTOTYPE(TYPE, SUFFIX)                                 \
-  static inline void BIT_FUNC(SUFFIX, MaskClear)(TYPE *value, TYPE mask)
+#include "Impl/Bit.impl"
 
-#define BIT_MASK_FLIP_PROTOTYPE(TYPE, SUFFIX)                                  \
-  static inline void BIT_FUNC(SUFFIX, MaskFlip)(TYPE *value, TYPE mask)
+/* ==========================================================================
+ * Standard Width Instantiations
+ * ========================================================================== */
 
-#define BIT_MASK_CHECK_ALL_PROTOTYPE(TYPE, SUFFIX)                             \
-  static inline bool BIT_FUNC(SUFFIX, MaskCheckAll)(TYPE value, TYPE mask)
+#define BIT_INTERNAL_INSTANTIATE(ROW)                                          \
+  TEMPLATE_IMPLEMENT(BIT, BIT_WIDTH_GET(SUFFIX, ROW),                          \
+                     BIT_WIDTH_GET(TYPE, ROW));
 
-#define BIT_MASK_CHECK_ANY_PROTOTYPE(TYPE, SUFFIX)                             \
-  static inline bool BIT_FUNC(SUFFIX, MaskCheckAny)(TYPE value, TYPE mask)
+BIT_WIDTH_TABLE(BIT_INTERNAL_INSTANTIATE)
+#undef BIT_INTERNAL_INSTANTIATE
 
-#define BIT_POPCOUNT_PROTOTYPE(TYPE, SUFFIX)                                   \
-  static inline uint64_t BIT_FUNC(SUFFIX, Popcount)(TYPE value)
-
-#define BIT_IS_POWER_OF_TWO_PROTOTYPE(TYPE, SUFFIX)                            \
-  static inline bool BIT_FUNC(SUFFIX, IsPowerOfTwo)(TYPE value)
-
-#define BIT_INDEX_LSB_PROTOTYPE(TYPE, SUFFIX)                                  \
-  static inline OPSTATUS BIT_FUNC(SUFFIX, IndexLSB)(TYPE value, TYPE *outIndex)
-
-#define BIT_INDEX_MSB_PROTOTYPE(TYPE, SUFFIX)                                  \
-  static inline OPSTATUS BIT_FUNC(SUFFIX, IndexMSB)(TYPE value, TYPE *outIndex)
-
-#define BIT_ROTATE_LEFT_PROTOTYPE(TYPE, SUFFIX)                                \
-  static inline TYPE BIT_FUNC(SUFFIX, RotateLeft)(TYPE value, TYPE shift)
-
-#define BIT_ROTATE_RIGHT_PROTOTYPE(TYPE, SUFFIX)                               \
-  static inline TYPE BIT_FUNC(SUFFIX, RotateRight)(TYPE value, TYPE shift)
-
-#define BIT_EXTRACT_PROTOTYPE(TYPE, SUFFIX)                                    \
-  static inline OPSTATUS BIT_FUNC(SUFFIX, Extract)(                            \
-      TYPE value, uint8_t high, uint8_t low, TYPE *outField)
-
-#define BIT_INSERT_PROTOTYPE(TYPE, SUFFIX)                                     \
-  static inline OPSTATUS BIT_FUNC(SUFFIX, Insert)(                             \
-      TYPE *value, uint8_t high, uint8_t low, TYPE fieldValue)
-
-#include "Impl/Common.impl"
-#include "Impl/Extra.impl"
-#include "Impl/Field.impl"
-
-#define BIT_IMPLEMENT_ALL(TYPE, SUFFIX, LITERAL)                               \
-  BIT_SET_IMPLEMENT(TYPE, SUFFIX, LITERAL)                                     \
-  BIT_CLEAR_IMPLEMENT(TYPE, SUFFIX, LITERAL)                                   \
-  BIT_FLIP_IMPLEMENT(TYPE, SUFFIX, LITERAL)                                    \
-  BIT_CHECK_IMPLEMENT(TYPE, SUFFIX, LITERAL)                                   \
-  BIT_MASK_SET_IMPLEMENT(TYPE, SUFFIX)                                         \
-  BIT_MASK_CLEAR_IMPLEMENT(TYPE, SUFFIX)                                       \
-  BIT_MASK_FLIP_IMPLEMENT(TYPE, SUFFIX)                                        \
-  BIT_MASK_CHECK_ALL_IMPLEMENT(TYPE, SUFFIX)                                   \
-  BIT_MASK_CHECK_ANY_IMPLEMENT(TYPE, SUFFIX)                                   \
-  BIT_POPCOUNT_IMPLEMENT(TYPE, SUFFIX)                                         \
-  BIT_IS_POWER_OF_TWO_IMPLEMENT(TYPE, SUFFIX)                                  \
-  BIT_INDEX_LSB_IMPLEMENT(TYPE, SUFFIX)                                        \
-  BIT_INDEX_MSB_IMPLEMENT(TYPE, SUFFIX)                                        \
-  BIT_ROTATE_LEFT_IMPLEMENT(TYPE, SUFFIX)                                      \
-  BIT_ROTATE_RIGHT_IMPLEMENT(TYPE, SUFFIX)                                     \
-  BIT_EXTRACT_IMPLEMENT(TYPE, SUFFIX, LITERAL)                                 \
-  BIT_INSERT_IMPLEMENT(TYPE, SUFFIX, LITERAL)
-
-BIT_IMPLEMENT_ALL(uint8_t, 8, 1U)
-BIT_IMPLEMENT_ALL(uint16_t, 16, 1U)
-BIT_IMPLEMENT_ALL(uint32_t, 32, 1UL)
-BIT_IMPLEMENT_ALL(uint64_t, 64, 1ULL)
 /* EOF */

@@ -3,13 +3,16 @@
 The **Type** module provides fundamental C type aliases, fixed-width bit blocks, unsigned multiprecision integers, and a separate `TDecimal` type family. The package is implemented using C11 headers and generated `static inline` functions.
 
 ```c
+#include "Cosmeron/Modules/Type/Type.h"
+/* Or include individual headers: */
 #include "Cosmeron/Modules/Type/Fundamental.h"
+#include "Cosmeron/Modules/Type/Tag.h"
 #include "Cosmeron/Modules/Type/TBlock.h"
 #include "Cosmeron/Modules/Type/TBigint.h"
 #include "Cosmeron/Modules/Type/TDecimal.h"
 ```
 
-There is no single `Type.h` aggregator in the current branch.
+The master aggregator header is `Codespace/Cosmeron/Modules/Type/Type.h`.
 
 ---
 
@@ -18,32 +21,37 @@ There is no single `Type.h` aggregator in the current branch.
 | Package | Header | Function templates | Built-in widths |
 | --- | --- | ---: | --- |
 | Fundamental aliases | `Fundamental.h` | 0 | Standard signed/unsigned, floating and character aliases |
+| Tag | `Tag.h` | 13 | 16, 32, 64 bits |
 | TBlock | `TBlock.h` | 12 | 128, 256, 512, 1024 bits |
 | TBigint | `TBigint.h` | 31 | 128, 256, 512, 1024 bits |
 | TDecimal | `TDecimal.h` | 31 | 128, 256, 512, 1024 bits |
-| **Total** | | **74** | **296 concrete generated functions** |
+| **Total** | | **87** | **335 concrete generated functions** |
 
-### Macro form
-
-```c
-TBigint(128, first)
-TBigint(128, second)
-first.limb[0] = 7;
-second.limb[0] = 3;
-OPSTATUS status = TBIGINT_FUNC(128, Add)(&first, &second);
-```
-
-### Direct form
+### Variable declaration and initialization
 
 ```c
 Type_TBigint128 first = {0};
 Type_TBigint128 second = {0};
+Type_TBigint128_Init(&first);
+Type_TBigint128_Init(&second);
 first.limb[0] = 7;
 second.limb[0] = 3;
 OPSTATUS status = Type_TBigint128_Add(&first, &second);
 ```
 
-Both forms call the same function in the default namespace. If `COSMERON_NAMESPACE` changes, the macro form adapts automatically and the direct C identifier changes accordingly.
+Or using the parameterized type and function macros:
+
+```c
+TBIGINT_TYPE(128) first = {0};
+TBIGINT_TYPE(128) second = {0};
+TBIGINT_FUNC(128, Init)(&first);
+TBIGINT_FUNC(128, Init)(&second);
+first.limb[0] = 7;
+second.limb[0] = 3;
+OPSTATUS status = TBIGINT_FUNC(128, Add)(&first, &second);
+```
+
+Both forms call the canonical namespaced functions. If `COSMERON_NAMESPACE` changes, the macro form adapts automatically. Calling `*_Init(&var)` sets `var.api` to the generated function table (or returns SUCCESS when tables are disabled).
 
 ---
 
@@ -91,17 +99,21 @@ The three data families store their numeric content in a union of `uint64_t limb
 
 `byte[]` follows the **native host endianness**, not a guaranteed network or disk byte order. With optional function tables enabled, the C structure also has an `api` pointer and `sizeof(struct)` is larger than the numeric byte count.
 
-### Declaration macros and optional tables
+### Variable initialization and optional tables
 
 ```c
-TBlock(128, flags)
-TBigint(256, number)
-TDecimal(512, decimal)
+Type_TBlock128 flags = {0};
+Type_TBigint256 number = {0};
+Type_TDecimal512 decimal = {0};
+
+Type_TBlock128_Init(&flags);
+Type_TBigint256_Init(&number);
+Type_TDecimal512_Init(&decimal);
 ```
 
-These macros declare zero-initialized values and, when function tables are enabled, bind their `api` pointers. To omit function tables, define `TYPE_DISABLE_FUNCTION_TABLE` before all Type headers. This changes the structure layout, but the direct functions remain usable.
+Variables are standard C structs. Calling `*_Init(&var)` binds the `api` function table pointer when function tables are enabled. To omit function tables entirely across the module, define `TYPE_DISABLE_FUNCTION_TABLE` before including Type headers. This removes the `api` pointer from the structure layout while direct C functions remain fully usable.
 
-`Clear` and `Init` only reset **numeric storage**; they do not bind `api` to a plain `{0}` declaration.
+`Clear` resets the numeric limb and byte storage to zero. `Init` initializes the struct and binds `api`.
 
 ---
 

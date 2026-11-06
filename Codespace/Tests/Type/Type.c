@@ -6,7 +6,8 @@
 
 #define TEST_TBLOCK_BOUNDARIES(SUFFIX, WIDTH, ERROR_BASE)                      \
   do {                                                                          \
-    TBlock(SUFFIX, bits);                                                       \
+    TBLOCK_TYPE(SUFFIX) bits = {0};                                             \
+    TBLOCK_FUNC(SUFFIX, Init)(&bits);                                           \
     const void *api = (const void *)bits.api;                                   \
     bool value = false;                                                         \
     if (TBLOCK_FUNC(SUFFIX, BitSet)(&bits, (WIDTH) - 1U) !=                     \
@@ -75,7 +76,8 @@
 
 #define TEST_TBIGINT_SHIFT_BOUNDARIES(SUFFIX, WIDTH, ERROR_BASE)               \
   do {                                                                          \
-    TBigint(SUFFIX, value);                                                      \
+    TBIGINT_TYPE(SUFFIX) value = {0};                                           \
+    TBIGINT_FUNC(SUFFIX, Init)(&value);                                         \
     const void *api = (const void *)value.api;                                  \
     value.limb[0] = 1U;                                                         \
     if (TBIGINT_FUNC(SUFFIX, ShiftLeft)(&value, 0U) != STATUS_CONST(SUCCESS) || \
@@ -114,9 +116,12 @@ int main(void) {
   TYPE_ALIAS(TCh8, TChar8) c8 = 0;
   TYPE_ALIAS(TCh16, TChar16) c16 = 0;
   TYPE_ALIAS(TCh32, TChar32) c32 = 0;
-  TBigint(128, bigint);
-  TBlock(128, block);
-  TDecimal(128, decimal);
+  TBIGINT_TYPE(128) bigint = {0};
+  TBIGINT_FUNC(128, Init)(&bigint);
+  TBLOCK_TYPE(128) block = {0};
+  TBLOCK_FUNC(128, Init)(&block);
+  TDECIMAL_TYPE(128) decimal = {0};
+  TDECIMAL_FUNC(128, Init)(&decimal);
 
   if (sizeof(c8) != 1U || sizeof(c16) != 2U || sizeof(c32) != 4U)
     return 1;
@@ -276,36 +281,39 @@ int main(void) {
     left.limb[0] = 1U;
     right.limb[0] = 2U;
     if (TBIGINT_FUNC(128, Compare)(&left, &right, &comparison) != STATUS_CONST(SUCCESS) ||
-        comparison != COMPARISON_LOWER_CONST)
+        comparison != COMPARISON_CONST(LOWER))
       return 43;
     if (TBIGINT_FUNC(128, Compare)(&right, &left, &comparison) != STATUS_CONST(SUCCESS) ||
-        comparison != COMPARISON_HIGHER_CONST)
+        comparison != COMPARISON_CONST(HIGHER))
       return 44;
     right = left;
     if (TBIGINT_FUNC(128, Compare)(&left, &right, &comparison) != STATUS_CONST(SUCCESS) ||
-        comparison != COMPARISON_EQUAL_CONST)
+        comparison != COMPARISON_CONST(EQUAL))
       return 45;
     if (TBIGINT_FUNC(128, Compare)(NULL, &right, &comparison) != STATUS_CONST(INVALID_ARGUMENT))
       return 46;
   }
 
   {
-    TBigint(128, viaApi);
-    if (!viaApi.api || viaApi.api->clear(&viaApi) != STATUS_CONST(SUCCESS))
+    TBIGINT_TYPE(128) viaApi = {0};
+    TBIGINT_FUNC(128, Init)(&viaApi);
+    if (!viaApi.api || viaApi.api->Clear(&viaApi) != STATUS_CONST(SUCCESS))
       return 47;
     viaApi.limb[0] = 255U;
     char buffer[8];
-    if (viaApi.api->toCStringBase(&viaApi, buffer, sizeof(buffer), 16U) !=
+    if (viaApi.api->ToCStringBase(&viaApi, buffer, sizeof(buffer), 16U) !=
             STATUS_CONST(SUCCESS) ||
         strcmp(buffer, "FF") != 0)
       return 48;
 
     TBIGINT_TYPE(128) divisor = {0};
-    TBigint(128, quotient);
-    TBigint(128, remainder);
+    TBIGINT_TYPE(128) quotient = {0};
+    TBIGINT_FUNC(128, Init)(&quotient);
+    TBIGINT_TYPE(128) remainder = {0};
+    TBIGINT_FUNC(128, Init)(&remainder);
     viaApi.limb[0] = 100U;
     divisor.limb[0] = 9U;
-    if (viaApi.api->divMod(&viaApi, &divisor, &quotient, &remainder) !=
+    if (viaApi.api->DivMod(&viaApi, &divisor, &quotient, &remainder) !=
             STATUS_CONST(SUCCESS) ||
         quotient.limb[0] != 11U || remainder.limb[0] != 1U)
       return 49;
@@ -314,8 +322,10 @@ int main(void) {
   {
     TBIGINT_TYPE(128) dividend = {0};
     TBIGINT_TYPE(128) divisor = {0};
-    TBigint(128, quotient);
-    TBigint(128, remainder);
+    TBIGINT_TYPE(128) quotient = {0};
+    TBIGINT_FUNC(128, Init)(&quotient);
+    TBIGINT_TYPE(128) remainder = {0};
+    TBIGINT_FUNC(128, Init)(&remainder);
     const void *quotientApi = (const void *)quotient.api;
     const void *remainderApi = (const void *)remainder.api;
     dividend.limb[0] = UINT64_MAX;
@@ -363,15 +373,18 @@ int main(void) {
   }
 
   {
-    TDecimal(128, dividend);
+    TDECIMAL_TYPE(128) dividend = {0};
+    TDECIMAL_FUNC(128, Init)(&dividend);
     TDECIMAL_TYPE(128) divisor = {0};
-    TDecimal(128, quotient);
-    TDecimal(128, remainder);
+    TDECIMAL_TYPE(128) quotient = {0};
+    TDECIMAL_FUNC(128, Init)(&quotient);
+    TDECIMAL_TYPE(128) remainder = {0};
+    TDECIMAL_FUNC(128, Init)(&remainder);
     const void *quotientApi = (const void *)quotient.api;
     const void *remainderApi = (const void *)remainder.api;
     dividend.limb[0] = 100U;
     divisor.limb[0] = 9U;
-    if (dividend.api->divMod(&dividend, &divisor, &quotient, &remainder) !=
+    if (dividend.api->DivMod(&dividend, &divisor, &quotient, &remainder) !=
             STATUS_CONST(SUCCESS) ||
         quotient.limb[0] != 11U || remainder.limb[0] != 1U)
       return 51;

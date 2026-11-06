@@ -215,5 +215,95 @@ Diretriz Inviolável: Refatorações NÃO mantêm retrocompatibilidade. Não cri
 - `Codespace/Cosmeron/Modules/Database/Statement/Statement.h`
 - `Codespace/Cosmeron/Modules/Database/Transaction/Transaction.h`
 
-### Demais Módulos (Audio, Bit, CLI, Chronometry, Compression, Concurrency, Logging, Math, Network, Parsing, Struct, Type)
+### Bit
+- `Codespace/Cosmeron/Modules/Bit/Bit.h`
+- `Codespace/Cosmeron/Modules/Bit/Bit.space`
+- `Codespace/Cosmeron/Modules/Bit/Impl/Bit.impl`
+> **Status:** Concluído  
+> **Ações realizadas:**  
+> - Migrado de macros manuais soltas (`BIT_*_PROTOTYPE`, `BIT_*_IMPLEMENT`, `BIT_IMPLEMENT_ALL`) para `PACKAGE(BIT_PKG(SUFFIX), ...)` e `TEMPLATE_BIT(SUFFIX, TYPE)`.  
+> - Adotados contratos canônicos explícitos: `OPERATION` (`Set`, `Clear`, `Flip`, `IndexLSB`, `IndexMSB`, `Extract`, `Insert`), `PREDICATE` (`Check`, `MaskCheckAll`, `MaskCheckAny`, `IsPowerOfTwo`), `PROCEDURE` (`MaskSet`, `MaskClear`, `MaskFlip`), `FUNCTION` (`Popcount`, `RotateLeft`, `RotateRight`).  
+> - Implementação unificada em `Impl/Bit.impl` via `PACKAGE_*_IMPLEMENT_EX` e `TEMPLATE_BIT_IMPLEMENT(SUFFIX, TYPE)`, finalizada com `PACKAGE_IMPLEMENT`.  
+> - Adotada tabela X-Macro desacoplada `BIT_WIDTH_TABLE(X)` com seletores `BIT_WIDTH_COL_*` e desempacotador `BIT_WIDTH_GET(FIELD, ROW)` para instanciação canônica de larguras padrão (`8`, `16`, `32`, `64`) via `TEMPLATE_IMPLEMENT`.  
+> - Removidos arquivos legados redundantes `Impl/Common.impl`, `Impl/Extra.impl`, `Impl/Field.impl`.  
+> - Testes atualizados em `Codespace/Tests/Bit/` cobrindo chamadas diretas, `PACKAGE_CALL`, `GetFunctionTable`, instanciação customizada de templates e compilação com `PACKAGE_DISABLE_FUNCTION_TABLE`.  
+> - Documentação atualizada em `Docs/Modules/Bit.md`.
+
+### Struct
+- `Codespace/Cosmeron/Modules/Struct/Struct.h`
+- `Codespace/Cosmeron/Modules/Struct/Struct.space`
+- `Codespace/Cosmeron/Modules/Struct/TPair.h`
+- `Codespace/Cosmeron/Modules/Struct/TDual.h`
+- `Codespace/Cosmeron/Modules/Struct/TTriple.h`
+- `Codespace/Cosmeron/Modules/Struct/TQuad.h`
+- `Codespace/Cosmeron/Modules/Struct/TPenta.h`
+- `Codespace/Cosmeron/Modules/Struct/Impl/TPair.impl`
+- `Codespace/Cosmeron/Modules/Struct/Impl/TDual.impl`
+- `Codespace/Cosmeron/Modules/Struct/Impl/TTriple.impl`
+- `Codespace/Cosmeron/Modules/Struct/Impl/TQuad.impl`
+- `Codespace/Cosmeron/Modules/Struct/Impl/TPenta.impl`
+> **Status:** Concluído  
+> **Ações realizadas:**  
+> - Migrado de macros manuais soltas (`*_PROTOTYPE`, `*_IMPLEMENT_ALL`, `*_CAST_IMPLEMENT_ALL`) para `PACKAGE(STRUCT_PKG(NAME, SUFFIX), ...)` e templates universais `TEMPLATE_TPAIR`, `TEMPLATE_TDUAL`, `TEMPLATE_TTRIPLE`, `TEMPLATE_TQUAD`, `TEMPLATE_TPENTA`.  
+> - Adotados contratos canônicos explícitos: `FUNCTION` (`Create`), `OPERATION` (`Extract`), `PROCEDURE` (`Unpack`).  
+> - Implementação unificada em arquivos `.impl` via `PACKAGE_*_IMPLEMENT_EX` e templates `TEMPLATE_<FAMILY>_IMPLEMENT(SUFFIX, TYPE)`, finalizados com `PACKAGE_IMPLEMENT`.  
+> - Adotada tabela X-Macro desacoplada `STRUCT_TYPE_TABLE(X)` com seletores `STRUCT_TYPE_COL_*` e desempacotador `STRUCT_TYPE_GET(FIELD, ROW)` para instanciação canônica de tipos padrão e complexos via `TEMPLATE_IMPLEMENT`.  
+> - Criado cabeçalho agregador canônico `Codespace/Cosmeron/Modules/Struct/Struct.h`.  
+> - Suporte a views duplas de arrays indexados (`values[N]` e `value[N]`).  
+> - Testes atualizados em `Codespace/Tests/Struct/` cobrindo chamadas diretas, `PACKAGE_CALL`, `GetFunctionTable`, instanciação customizada de templates e compilação com `PACKAGE_DISABLE_FUNCTION_TABLE` (`NoFunctionTable.c`).  
+> - Documentação atualizada em `Docs/Modules/Struct.md`.
+
+### Type
+- `Codespace/Cosmeron/Modules/Type/Type.h`
+- `Codespace/Cosmeron/Modules/Type/Type.space`
+- `Codespace/Cosmeron/Modules/Type/Fundamental.h`
+- `Codespace/Cosmeron/Modules/Type/Tag.h`
+- `Codespace/Cosmeron/Modules/Type/TBlock.h`
+- `Codespace/Cosmeron/Modules/Type/TBigint.h`
+- `Codespace/Cosmeron/Modules/Type/TDecimal.h`
+- `Codespace/Cosmeron/Modules/Type/Impl/Tag.impl`
+- `Codespace/Cosmeron/Modules/Type/Impl/TBlock.impl`
+- `Codespace/Cosmeron/Modules/Type/Impl/TBigint.impl`
+- `Codespace/Cosmeron/Modules/Type/Impl/TDecimal.impl`
+> **Status:** Concluído  
+> **Ações realizadas:**  
+> - Migrado de structs com function tables manuais e macros soltas para objetos declarativos `OBJECT(CLASS, FIELDS(...), ...)` integrados ao Universal Template Engine (`TEMPLATE_<NAME>` / `TEMPLATE_<NAME>_IMPLEMENT`).  
+> - Removido diretório manual legado `FunctionTable/` (`TBigint.h`, `TBlock.h`, `TDecimal.h`, `Tag.h`), aproveitando a geração canônica de `FunctionTable`, `GetFunctionTable()` e inicializador `Init()` do framework `OBJECT`.  
+> - Eliminada camada intermediária fragmentada de macros em `Impl/`: removidos `Arithmetic.impl`, `Bit.impl`, `Bitwise.impl`, `Common.impl`, `Comparison.impl`, `Format.impl` e `Shift.impl`. Implementações escritas diretamente em `TBlock.impl`, `TBigint.impl`, `TDecimal.impl` e `Tag.impl` via `OBJECT_*_IMPLEMENT_EX`.  
+> - Eliminadas macros legadas de pseudodeclaração de variáveis (`TBlock`, `TBigint`, `TDecimal`, `TTag`, `TTag16`, `TTag32`, `TTag64`). Código cliente e testes utilizam declaração padrão de C (`Type_TBlock128 a = {0}; Type_TBlock128_Init(&a);`).  
+> - Instanciação unificada e limpa via macros diretas `TYPE_INSTANTIATE_WIDTHS(NAME)` e `TAG_INSTANTIATE_WIDTHS(NAME)` em `Type.space`, eliminando blocos repetitivos `#define *_INSTANTIATE ... #undef` nos cabeçalhos.  
+> - Adotados contratos canônicos explícitos: `OPERATION`, `CONST_OPERATION`, `PREDICATE`, `CONST_PREDICATE`, `CONST_FUNCTION` em todos os métodos de `Tag` (13 métodos), `TBlock` (12 métodos), `TBigint` (31 métodos) e `TDecimal` (31 métodos).  
+> - Atualizadas constantes de comparação para o padrão namespaced canônico `COMPARISON_CONST(LOWER)`, `COMPARISON_CONST(EQUAL)`, `COMPARISON_CONST(HIGHER)`.  
+> - Criado cabeçalho agregador canônico `Codespace/Cosmeron/Modules/Type/Type.h`.  
+> - Mapeamento estrito de `TYPE_DISABLE_FUNCTION_TABLE` para `OBJECT_DISABLE_FUNCTION_TABLE` garantindo `sizeof(struct)` exato igual à capacidade de bytes numéricos.  
+> - Testes atualizados em `Codespace/Tests/Type/` (`Type.c`, `TypeNoFunctionTable.c`, `AllFunctions.c`, `IncludeAll.c`, `FundamentalSmall.c`, `Tag.c`) cobrindo chamadas diretas, dispatch por FunctionTable, `TAG_MAKE`, constantes de comparação e compilação sem tabela de funções.  
+> - Documentação atualizada em `Docs/Modules/Type.md`.
+
+### Sort
+- `Codespace/Cosmeron/Modules/Sort/Sort.h`
+- `Codespace/Cosmeron/Modules/Sort/Sort.space`
+- `Codespace/Cosmeron/Modules/Sort/Array.h`
+- `Codespace/Cosmeron/Modules/Sort/Classical.h`
+- `Codespace/Cosmeron/Modules/Sort/Esoteric.h`
+- `Codespace/Cosmeron/Modules/Sort/Utility.h`
+- `Codespace/Cosmeron/Modules/Sort/Integer.h`
+- `Codespace/Cosmeron/Modules/Sort/Typed.h`
+- `Codespace/Cosmeron/Modules/Sort/Impl/Array.impl`
+- `Codespace/Cosmeron/Modules/Sort/Impl/Classical.impl`
+- `Codespace/Cosmeron/Modules/Sort/Impl/Esoteric.impl`
+- `Codespace/Cosmeron/Modules/Sort/Impl/Utility.impl`
+- `Codespace/Cosmeron/Modules/Sort/Impl/Integer.impl`
+> **Status:** Concluído  
+> **Ações realizadas:**  
+> - Substituído o sistema legado de comparação duplicada (`Comparator` e `ContextComparator` com mais de 20 funções `*WithContext`) pelo sistema de primeira classe `TCALLBACK(Comparison)`. Todas as rotinas genéricas recebem exclusivamente `TCALLBACK(Comparison)` e desempacotam chamadas via `CALLBACK_INVOKE(compare, ...)`. Zero duplicação de APIs e zero trampolines/adaptadores.  
+> - Declarado como pacote canônico `PACKAGE(LIB_PREFIX(SORT_MOD), ...)` agregando todas as operações de `Array`, `Classical`, `Esoteric`, `Utility` e `Integer`, gerando `Sort_FunctionTable` e `Sort_GetFunctionTable()` automaticamente com suporte a `SORT_DISABLE_FUNCTION_TABLE`.  
+> - Removida function table manual legada em `FunctionTable/Sort.inc`.  
+> - Implementados todos os membros via `PACKAGE_OPERATION_IMPLEMENT_EX` nos arquivos `.impl`, finalizados com `PACKAGE_IMPLEMENT(LIB_PREFIX(SORT_MOD));`.  
+> - Migrado enum `Order` para tabela X-Macro desacoplada `SORT_ORDER_TABLE(X)` com seletores `SORT_ORDER_COL_*` e desempacotador `SORT_ORDER_GET`, gerando enum canônico `SORT_TYPE(Order)` e constantes `SORT_CONST(ASCENDING)`, `SORT_CONST(DESCENDING)`.  
+> - Unificada ordenação por Radix de inteiros (`Integer.h` e `Impl/Integer.impl`) com tabela X-Macro `SORT_RADIX_TABLE(X)` para larguras `U32`, `I32`, `U64`, `I64`, eliminando código duplicado.  
+> - Modernizado template universal `TEMPLATE_SORT(SUFFIX, TYPE, COMPARE)` em `Typed.h`, delegando diretamente aos algoritmos canônicos sem duplicação de código.  
+> - Testes migrados para diretório dedicado `Codespace/Tests/Sort/` (`Sort.c`, `SortCatalog.c`, `NoFunctionTable.c`, `IncludeAll.c`, `Makefile`), eliminando arquivos legados da raiz de testes (`Sort.c` e `SortCatalog.c`).  
+> - Documentação integralmente reescrita em inglês em `Docs/Modules/Sort.md`.
+
+### Demais Módulos (Audio, CLI, Chronometry, Compression, Concurrency, Logging, Math, Network, Parsing)
 - Conforme varredura, remover macros manuais `*_PROTOTYPE`, adotar X-macros obrigatórios para enums e declarar via `PACKAGE`/`OBJECT`.

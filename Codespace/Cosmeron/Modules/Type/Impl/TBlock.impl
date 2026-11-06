@@ -1,32 +1,184 @@
 #pragma once
 
-#define TBLOCK_IMPLEMENT(SUFFIX, TYPE, BIT_SUFFIX)                             \
-  DATA_TYPE_IMPLEMENT_CLEAR(TYPE, TBLOCK_CLEAR_PROTOTYPE(SUFFIX),                  \
-                            TBLOCK_TYPE(SUFFIX))                               \
-  DATA_TYPE_IMPLEMENT_AND(TYPE, TBLOCK_AND_PROTOTYPE(SUFFIX),                      \
-                           TBLOCK_TYPE(SUFFIX))                                \
-  DATA_TYPE_IMPLEMENT_OR(TYPE, TBLOCK_OR_PROTOTYPE(SUFFIX),                        \
-                          TBLOCK_TYPE(SUFFIX))                                 \
-  DATA_TYPE_IMPLEMENT_XOR(TYPE, TBLOCK_XOR_PROTOTYPE(SUFFIX),                      \
-                           TBLOCK_TYPE(SUFFIX))                                \
-  DATA_TYPE_IMPLEMENT_NOT(TYPE, TBLOCK_NOT_PROTOTYPE(SUFFIX),                      \
-                           TBLOCK_TYPE(SUFFIX))                                \
-  DATA_TYPE_IMPLEMENT_SHIFT_LEFT(TYPE, TBLOCK_SHIFT_LEFT_PROTOTYPE(SUFFIX),         \
-                                  TBLOCK_TYPE(SUFFIX))                         \
-  DATA_TYPE_IMPLEMENT_SHIFT_RIGHT(TYPE, TBLOCK_SHIFT_RIGHT_PROTOTYPE(SUFFIX),        \
-                                   TBLOCK_TYPE(SUFFIX))                        \
-  DATA_TYPE_IMPLEMENT_ROTATE_LEFT(TYPE, TBLOCK_ROTATE_LEFT_PROTOTYPE(SUFFIX),       \
-                                  TBLOCK_TYPE(SUFFIX),                         \
-                                  TBLOCK_FUNC(SUFFIX, ShiftLeft),              \
-                                  TBLOCK_FUNC(SUFFIX, ShiftRight))             \
-  DATA_TYPE_IMPLEMENT_ROTATE_RIGHT(TYPE, TBLOCK_ROTATE_RIGHT_PROTOTYPE(SUFFIX),     \
-                                   TBLOCK_TYPE(SUFFIX),                        \
-                                   TBLOCK_FUNC(SUFFIX, ShiftLeft),             \
-                                   TBLOCK_FUNC(SUFFIX, ShiftRight))            \
-  DATA_TYPE_IMPLEMENT_BIT_SET(TYPE, TBLOCK_BIT_SET_PROTOTYPE(SUFFIX),               \
-                              TBLOCK_TYPE(SUFFIX), BIT_SUFFIX)                 \
-  DATA_TYPE_IMPLEMENT_BIT_CLEAR(TYPE, TBLOCK_BIT_CLEAR_PROTOTYPE(SUFFIX),           \
-                                TBLOCK_TYPE(SUFFIX), BIT_SUFFIX)               \
-  DATA_TYPE_IMPLEMENT_BIT_CHECK(TYPE, TBLOCK_BIT_CHECK_PROTOTYPE(SUFFIX),           \
-                                TBLOCK_TYPE(SUFFIX), BIT_SUFFIX)
+#include <limits.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+#define TEMPLATE_TBLOCK_IMPLEMENT(SUFFIX, TYPE)                                \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBLOCK_TYPE(SUFFIX), Clear, ()) {              \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    memset(self->byte, 0, sizeof(self->byte));                                 \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBLOCK_TYPE(SUFFIX), And,                      \
+                                (const TBLOCK_TYPE(SUFFIX) *source)) {         \
+    if (!self || !source)                                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    for (size_t i = 0; i < limbCount; ++i)                                     \
+      self->limb[i] &= source->limb[i];                                        \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBLOCK_TYPE(SUFFIX), Or,                       \
+                                (const TBLOCK_TYPE(SUFFIX) *source)) {         \
+    if (!self || !source)                                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    for (size_t i = 0; i < limbCount; ++i)                                     \
+      self->limb[i] |= source->limb[i];                                        \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBLOCK_TYPE(SUFFIX), Xor,                      \
+                                (const TBLOCK_TYPE(SUFFIX) *source)) {         \
+    if (!self || !source)                                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    for (size_t i = 0; i < limbCount; ++i)                                     \
+      self->limb[i] ^= source->limb[i];                                        \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBLOCK_TYPE(SUFFIX), Not, ()) {                \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    for (size_t i = 0; i < limbCount; ++i)                                     \
+      self->limb[i] = ~self->limb[i];                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBLOCK_TYPE(SUFFIX), ShiftLeft,                 \
+                                (unsigned bitCount)) {                         \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    const size_t bitsPerLimb = sizeof(self->limb[0]) * 8U;                     \
+    const size_t totalBitCapacity = limbCount * bitsPerLimb;                   \
+    if (bitCount >= totalBitCapacity) {                                        \
+      memset(self->byte, 0, sizeof(self->byte));                               \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    const size_t wholeLimbShift = bitCount / bitsPerLimb;                      \
+    const size_t intraLimbShift = bitCount % bitsPerLimb;                      \
+    if (wholeLimbShift > 0U) {                                                 \
+      for (size_t i = limbCount; i-- > wholeLimbShift;)                        \
+        self->limb[i] = self->limb[i - wholeLimbShift];                        \
+      memset(self->limb, 0, wholeLimbShift * sizeof(self->limb[0]));           \
+    }                                                                          \
+    if (intraLimbShift > 0U) {                                                 \
+      for (size_t i = limbCount; i-- > 1U;)                                    \
+        self->limb[i] = (self->limb[i] << intraLimbShift) |                    \
+                        (self->limb[i - 1U] >>                                 \
+                         (bitsPerLimb - intraLimbShift));                      \
+      self->limb[0] <<= intraLimbShift;                                        \
+    }                                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBLOCK_TYPE(SUFFIX), ShiftRight,                \
+                                (unsigned bitCount)) {                         \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    const size_t bitsPerLimb = sizeof(self->limb[0]) * 8U;                     \
+    const size_t totalBitCapacity = limbCount * bitsPerLimb;                   \
+    if (bitCount >= totalBitCapacity) {                                        \
+      memset(self->byte, 0, sizeof(self->byte));                               \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    const size_t wholeLimbShift = bitCount / bitsPerLimb;                      \
+    const size_t intraLimbShift = bitCount % bitsPerLimb;                      \
+    if (wholeLimbShift > 0U) {                                                 \
+      for (size_t i = 0; i < limbCount - wholeLimbShift; ++i)                  \
+        self->limb[i] = self->limb[i + wholeLimbShift];                        \
+      memset(&self->limb[limbCount - wholeLimbShift], 0,                       \
+             wholeLimbShift * sizeof(self->limb[0]));                          \
+    }                                                                          \
+    if (intraLimbShift > 0U) {                                                 \
+      for (size_t i = 0; i < limbCount - 1U; ++i)                              \
+        self->limb[i] = (self->limb[i] >> intraLimbShift) |                    \
+                        (self->limb[i + 1U]                                    \
+                         << (bitsPerLimb - intraLimbShift));                   \
+      self->limb[limbCount - 1U] >>= intraLimbShift;                           \
+    }                                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBLOCK_TYPE(SUFFIX), RotateLeft,                \
+                                (unsigned shift)) {                            \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t totalBits =                                                   \
+        (sizeof(self->limb) / sizeof(self->limb[0])) *                         \
+        sizeof(self->limb[0]) * 8U;                                            \
+    if (totalBits > (size_t)UINT_MAX)                                          \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    const unsigned totalBitsValue = (unsigned)totalBits;                       \
+    if (shift == 0U || shift % totalBitsValue == 0U)                           \
+      return STATUS_CONST(SUCCESS);                                            \
+    shift %= totalBitsValue;                                                   \
+    TBLOCK_TYPE(SUFFIX) temp = *self;                                          \
+    TBLOCK_FUNC(SUFFIX, ShiftLeft)(self, shift);                               \
+    TBLOCK_FUNC(SUFFIX, ShiftRight)(&temp, totalBitsValue - shift);            \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    for (size_t i = 0; i < limbCount; ++i)                                     \
+      self->limb[i] |= temp.limb[i];                                           \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBLOCK_TYPE(SUFFIX), RotateRight,               \
+                                (unsigned shift)) {                            \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t totalBits =                                                   \
+        (sizeof(self->limb) / sizeof(self->limb[0])) *                         \
+        sizeof(self->limb[0]) * 8U;                                            \
+    if (totalBits > (size_t)UINT_MAX)                                          \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    const unsigned totalBitsValue = (unsigned)totalBits;                       \
+    if (shift == 0U || shift % totalBitsValue == 0U)                           \
+      return STATUS_CONST(SUCCESS);                                            \
+    shift %= totalBitsValue;                                                   \
+    TBLOCK_TYPE(SUFFIX) temp = *self;                                          \
+    TBLOCK_FUNC(SUFFIX, ShiftRight)(self, shift);                              \
+    TBLOCK_FUNC(SUFFIX, ShiftLeft)(&temp, totalBitsValue - shift);             \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    for (size_t i = 0; i < limbCount; ++i)                                     \
+      self->limb[i] |= temp.limb[i];                                           \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBLOCK_TYPE(SUFFIX), BitSet,                   \
+                                (uint32_t bit)) {                              \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t bitsPerLimb = sizeof(self->limb[0]) * 8U;                     \
+    const size_t limbIndex = bit / bitsPerLimb;                                \
+    const uint8_t intraBit = (uint8_t)(bit % bitsPerLimb);                     \
+    if (limbIndex >= sizeof(self->limb) / sizeof(self->limb[0]))               \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    BIT_FUNC(64, Set)(&self->limb[limbIndex], intraBit);                       \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBLOCK_TYPE(SUFFIX), BitClear,                 \
+                                (uint32_t bit)) {                              \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t bitsPerLimb = sizeof(self->limb[0]) * 8U;                     \
+    const size_t limbIndex = bit / bitsPerLimb;                                \
+    const uint8_t intraBit = (uint8_t)(bit % bitsPerLimb);                     \
+    if (limbIndex >= sizeof(self->limb) / sizeof(self->limb[0]))               \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    BIT_FUNC(64, Clear)(&self->limb[limbIndex], intraBit);                     \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(TBLOCK_TYPE(SUFFIX), BitCheck,                 \
+                                (uint32_t bit, bool *outResult)) {             \
+    if (!self || !outResult)                                                   \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t bitsPerLimb = sizeof(self->limb[0]) * 8U;                     \
+    const size_t limbIndex = bit / bitsPerLimb;                                \
+    const uint8_t intraBit = (uint8_t)(bit % bitsPerLimb);                     \
+    if (limbIndex >= sizeof(self->limb) / sizeof(self->limb[0]))               \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *outResult = BIT_FUNC(64, Check)(self->limb[limbIndex], intraBit);         \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_IMPLEMENT(TBLOCK_TYPE(SUFFIX));
 /* EOF */

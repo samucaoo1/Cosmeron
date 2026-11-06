@@ -9,8 +9,10 @@
 
 #define TEST_TBLOCK(SUFFIX)                                                    \
   do {                                                                         \
-    TBlock(SUFFIX, a)                                                          \
-    TBlock(SUFFIX, b)                                                          \
+    TBLOCK_TYPE(SUFFIX) a = {0};                                               \
+    TBLOCK_TYPE(SUFFIX) b = {0};                                               \
+    CHECK_STATUS(TBLOCK_FUNC(SUFFIX, Init)(&a));                               \
+    CHECK_STATUS(TBLOCK_FUNC(SUFFIX, Init)(&b));                               \
     bool bit = false;                                                          \
     CHECK_STATUS(TBLOCK_FUNC(SUFFIX, Clear)(&a));                              \
     CHECK_STATUS(TBLOCK_FUNC(SUFFIX, Clear)(&b));                              \
@@ -43,16 +45,19 @@
     CHECK_TRUE(!bit);                                                          \
   } while (0)
 
-#define TEST_BIGLIKE(PREFIX, TYPEMACRO, DECLMACRO, SUFFIX)                    \
+#define TEST_BIGLIKE(PREFIX, TYPEMACRO, SUFFIX)                                \
   do {                                                                         \
-    DECLMACRO(SUFFIX, a)                                                       \
-    DECLMACRO(SUFFIX, b)                                                       \
-    DECLMACRO(SUFFIX, q)                                                       \
-    DECLMACRO(SUFFIX, r)                                                       \
-    CMPOUT cmp = COMPARISON_EQUAL_CONST;                           \
+    TYPEMACRO(SUFFIX) a = {0};                                                 \
+    TYPEMACRO(SUFFIX) b = {0};                                                 \
+    TYPEMACRO(SUFFIX) q = {0};                                                 \
+    TYPEMACRO(SUFFIX) r = {0};                                                 \
+    CMPOUT cmp = COMPARISON_CONST(EQUAL);                                      \
     bool bit = false;                                                          \
     char buffer[400];                                                          \
     CHECK_STATUS(PREFIX##_FUNC(SUFFIX, Init)(&a));                             \
+    CHECK_STATUS(PREFIX##_FUNC(SUFFIX, Init)(&b));                             \
+    CHECK_STATUS(PREFIX##_FUNC(SUFFIX, Init)(&q));                             \
+    CHECK_STATUS(PREFIX##_FUNC(SUFFIX, Init)(&r));                             \
     CHECK_STATUS(PREFIX##_FUNC(SUFFIX, Clear)(&b));                            \
     a.limb[0] = 5U; b.limb[0] = 3U;                                           \
     CHECK_STATUS(PREFIX##_FUNC(SUFFIX, Add)(&a, &b));                          \
@@ -102,7 +107,7 @@
     CHECK_TRUE(!bit);                                                          \
     a.limb[0] = 1U; b.limb[0] = 2U;                                           \
     CHECK_STATUS(PREFIX##_FUNC(SUFFIX, Compare)(&a, &b, &cmp));                \
-    CHECK_TRUE(cmp == COMPARISON_LOWER_CONST);                                \
+    CHECK_TRUE(cmp == COMPARISON_CONST(LOWER));                                \
     CHECK_TRUE(!PREFIX##_FUNC(SUFFIX, Equal)(&a, &b));                         \
     CHECK_TRUE(PREFIX##_FUNC(SUFFIX, NotEqual)(&a, &b));                       \
     CHECK_TRUE(PREFIX##_FUNC(SUFFIX, LessThan)(&a, &b));                       \
@@ -123,15 +128,15 @@ int main(void) {
   TEST_TBLOCK(512);
   TEST_TBLOCK(1024);
 
-  TEST_BIGLIKE(TBIGINT, TBIGINT_TYPE, TBigint, 128);
-  TEST_BIGLIKE(TBIGINT, TBIGINT_TYPE, TBigint, 256);
-  TEST_BIGLIKE(TBIGINT, TBIGINT_TYPE, TBigint, 512);
-  TEST_BIGLIKE(TBIGINT, TBIGINT_TYPE, TBigint, 1024);
+  TEST_BIGLIKE(TBIGINT, TBIGINT_TYPE, 128);
+  TEST_BIGLIKE(TBIGINT, TBIGINT_TYPE, 256);
+  TEST_BIGLIKE(TBIGINT, TBIGINT_TYPE, 512);
+  TEST_BIGLIKE(TBIGINT, TBIGINT_TYPE, 1024);
 
-  TEST_BIGLIKE(TDECIMAL, TDECIMAL_TYPE, TDecimal, 128);
-  TEST_BIGLIKE(TDECIMAL, TDECIMAL_TYPE, TDecimal, 256);
-  TEST_BIGLIKE(TDECIMAL, TDECIMAL_TYPE, TDecimal, 512);
-  TEST_BIGLIKE(TDECIMAL, TDECIMAL_TYPE, TDecimal, 1024);
+  TEST_BIGLIKE(TDECIMAL, TDECIMAL_TYPE, 128);
+  TEST_BIGLIKE(TDECIMAL, TDECIMAL_TYPE, 256);
+  TEST_BIGLIKE(TDECIMAL, TDECIMAL_TYPE, 512);
+  TEST_BIGLIKE(TDECIMAL, TDECIMAL_TYPE, 1024);
 
   return 0;
 }

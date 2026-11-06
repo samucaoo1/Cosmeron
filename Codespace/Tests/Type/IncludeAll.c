@@ -1,8 +1,4 @@
-#include "../../Cosmeron/Modules/Type/Fundamental.h"
-#include "../../Cosmeron/Modules/Type/TBigint.h"
-#include "../../Cosmeron/Modules/Type/TBlock.h"
-#include "../../Cosmeron/Modules/Type/TDecimal.h"
-#include "../../Cosmeron/Modules/Type/Tag.h"
+#include "../../Cosmeron/Modules/Type/Type.h"
 
 int main(void) {
   TYPE_NS(TInt8) signedValue = 0;
