@@ -35,13 +35,6 @@ The Repeat package provides counted repetition over typed callbacks (`TCALLBACK`
 
 Two equivalent call forms are supported:
 
-### Macro form
-
-```c
-REPEAT_FUNC(Procedure)(5, action);
-REPEAT_FUNC(Int)(array, 42, 10);
-```
-
 ### Direct form
 
 ```c
@@ -49,7 +42,12 @@ Algorithm_Repeat_Procedure(5, action);
 Algorithm_Repeat_Int(array, 42, 10);
 ```
 
-The macro form automatically respects the configured library namespace. Direct names shown here assume the default namespace.
+### Declarative form
+
+```c
+MODULE_CALL(Algorithm, Repeat, Procedure, (5, action));
+MODULE_CALL(Algorithm, Repeat, Int, (array, 42, 10));
+```
 
 ---
 
@@ -483,12 +481,12 @@ The Repeat package provides counted loop execution over typed callbacks.
 
 | Callback Type | Invocation Signature | Purpose |
 | --- | --- | --- |
-| `TCALLBACK(RepeatProcedure)` | `void (*)(void *context)` | Action executed without index |
-| `TCALLBACK(RepeatIndexedProcedure)` | `void (*)(size_t index, void *context)` | Action executed with index `0 .. count - 1` |
-| `TCALLBACK(RepeatOperation)` | `OPSTATUS (*)(void *context)` | Fallible operation; halts on first failure |
-| `TCALLBACK(RepeatIndexedOperation)` | `OPSTATUS (*)(size_t index, void *context)` | Fallible indexed operation; halts on first failure |
-| `TCALLBACK(RepeatPredicate)` | `bool (*)(void *context)` | Evaluated while returning `true` |
-| `TCALLBACK(RepeatIndexedPredicate)` | `bool (*)(size_t index, void *context)` | Evaluated with index while returning `true` |
+| `TCALLBACK(NS(Algorithm_Repeat, Procedure))` | `void (*)(void *context)` | Action executed without index |
+| `TCALLBACK(NS(Algorithm_Repeat, IndexedProcedure))` | `void (*)(size_t index, void *context)` | Action executed with index `0 .. count - 1` |
+| `TCALLBACK(NS(Algorithm_Repeat, Operation))` | `OPSTATUS (*)(void *context)` | Fallible operation; halts on first failure |
+| `TCALLBACK(NS(Algorithm_Repeat, IndexedOperation))` | `OPSTATUS (*)(size_t index, void *context)` | Fallible indexed operation; halts on first failure |
+| `TCALLBACK(NS(Algorithm_Repeat, Predicate))` | `bool (*)(void *context)` | Evaluated while returning `true` |
+| `TCALLBACK(NS(Algorithm_Repeat, IndexedPredicate))` | `bool (*)(size_t index, void *context)` | Evaluated with index while returning `true` |
 
 ---
 
@@ -498,16 +496,16 @@ Repeats an infallible action `count` times.
 
 ### Syntax
 
-#### Macro form
-
-```c
-REPEAT_FUNC(Procedure)(count, action);
-```
-
 #### Direct form
 
 ```c
 Algorithm_Repeat_Procedure(count, action);
+```
+
+#### Declarative form
+
+```c
+MODULE_CALL(Algorithm, Repeat, Procedure, (count, action));
 ```
 
 ---
@@ -517,7 +515,7 @@ Algorithm_Repeat_Procedure(count, action);
 | Parameter | Explanation |
 | --- | --- |
 | `count` | Number of times to execute the action |
-| `action` | `TCALLBACK(RepeatProcedure)` action callback |
+| `action` | `TCALLBACK(NS(Algorithm_Repeat, Procedure))` action callback |
 
 ---
 
@@ -542,8 +540,9 @@ static void DoWork(void *ctx) {
 }
 
 int count = 0;
-TCALLBACK(RepeatProcedure) cb = CALLBACK_FUNC(RepeatProcedure_Bind)(DoWork, &count);
-REPEAT_FUNC(Procedure)(5, cb);
+TCALLBACK(NS(Algorithm_Repeat, Procedure)) cb =
+    CALLBACK_FUNC(NS(Algorithm_Repeat, Procedure_Bind))(DoWork, &count);
+Algorithm_Repeat_Procedure(5, cb);
 /* count == 5 */
 ```
 
@@ -555,16 +554,16 @@ Repeats an action `count` times, passing current iteration index `0 .. count - 1
 
 ### Syntax
 
-#### Macro form
-
-```c
-REPEAT_FUNC(IndexedProcedure)(count, action);
-```
-
 #### Direct form
 
 ```c
 Algorithm_Repeat_IndexedProcedure(count, action);
+```
+
+#### Declarative form
+
+```c
+MODULE_CALL(Algorithm, Repeat, IndexedProcedure, (count, action));
 ```
 
 ---
@@ -574,7 +573,7 @@ Algorithm_Repeat_IndexedProcedure(count, action);
 | Parameter | Explanation |
 | --- | --- |
 | `count` | Number of times to execute the action |
-| `action` | `TCALLBACK(RepeatIndexedProcedure)` indexed callback |
+| `action` | `TCALLBACK(NS(Algorithm_Repeat, IndexedProcedure))` indexed callback |
 
 ---
 
@@ -598,9 +597,9 @@ static void Accumulate(size_t index, void *ctx) {
 }
 
 size_t sum = 0;
-TCALLBACK(RepeatIndexedProcedure) cb =
-    CALLBACK_FUNC(RepeatIndexedProcedure_Bind)(Accumulate, &sum);
-REPEAT_FUNC(IndexedProcedure)(4, cb);
+TCALLBACK(NS(Algorithm_Repeat, IndexedProcedure)) cb =
+    CALLBACK_FUNC(NS(Algorithm_Repeat, IndexedProcedure_Bind))(Accumulate, &sum);
+Algorithm_Repeat_IndexedProcedure(4, cb);
 /* sum == 0 + 1 + 2 + 3 = 6 */
 ```
 
@@ -612,16 +611,16 @@ Repeats a fallible operation `count` times with short-circuit on failure.
 
 ### Syntax
 
-#### Macro form
-
-```c
-OPSTATUS status = REPEAT_FUNC(Operation)(count, operation);
-```
-
 #### Direct form
 
 ```c
 OPSTATUS status = Algorithm_Repeat_Operation(count, operation);
+```
+
+#### Declarative form
+
+```c
+OPSTATUS status = MODULE_CALL(Algorithm, Repeat, Operation, (count, operation));
 ```
 
 ---
@@ -631,7 +630,7 @@ OPSTATUS status = Algorithm_Repeat_Operation(count, operation);
 | Parameter | Explanation |
 | --- | --- |
 | `count` | Number of times to invoke the operation |
-| `operation` | `TCALLBACK(RepeatOperation)` operation callback |
+| `operation` | `TCALLBACK(NS(Algorithm_Repeat, Operation))` operation callback |
 
 ---
 
@@ -658,8 +657,9 @@ static OPSTATUS Step(void *ctx) {
 }
 
 int left = 2;
-TCALLBACK(RepeatOperation) cb = CALLBACK_FUNC(RepeatOperation_Bind)(Step, &left);
-OPSTATUS s = REPEAT_FUNC(Operation)(2, cb);
+TCALLBACK(NS(Algorithm_Repeat, Operation)) cb =
+    CALLBACK_FUNC(NS(Algorithm_Repeat, Operation_Bind))(Step, &left);
+OPSTATUS s = Algorithm_Repeat_Operation(2, cb);
 /* s == STATUS_CONST(SUCCESS), left == 0 */
 ```
 
@@ -671,16 +671,16 @@ Repeats an indexed fallible operation `count` times with short-circuit on failur
 
 ### Syntax
 
-#### Macro form
-
-```c
-OPSTATUS status = REPEAT_FUNC(IndexedOperation)(count, operation);
-```
-
 #### Direct form
 
 ```c
 OPSTATUS status = Algorithm_Repeat_IndexedOperation(count, operation);
+```
+
+#### Declarative form
+
+```c
+OPSTATUS status = MODULE_CALL(Algorithm, Repeat, IndexedOperation, (count, operation));
 ```
 
 ---
@@ -690,7 +690,7 @@ OPSTATUS status = Algorithm_Repeat_IndexedOperation(count, operation);
 | Parameter | Explanation |
 | --- | --- |
 | `count` | Number of times to invoke the operation |
-| `operation` | `TCALLBACK(RepeatIndexedOperation)` indexed operation callback |
+| `operation` | `TCALLBACK(NS(Algorithm_Repeat, IndexedOperation))` indexed operation callback |
 
 ---
 
@@ -715,9 +715,9 @@ static OPSTATUS LimitAt(size_t index, void *ctx) {
 }
 
 size_t max = 3;
-TCALLBACK(RepeatIndexedOperation) cb =
-    CALLBACK_FUNC(RepeatIndexedOperation_Bind)(LimitAt, &max);
-OPSTATUS s = REPEAT_FUNC(IndexedOperation)(5, cb);
+TCALLBACK(NS(Algorithm_Repeat, IndexedOperation)) cb =
+    CALLBACK_FUNC(NS(Algorithm_Repeat, IndexedOperation_Bind))(LimitAt, &max);
+OPSTATUS s = Algorithm_Repeat_IndexedOperation(5, cb);
 /* s == STATUS_CONST(OUT_OF_RANGE) */
 ```
 
@@ -729,16 +729,16 @@ Repeats a predicate `count` times, stopping if it returns `false`.
 
 ### Syntax
 
-#### Macro form
-
-```c
-bool allTrue = REPEAT_FUNC(Predicate)(count, predicate);
-```
-
 #### Direct form
 
 ```c
 bool allTrue = Algorithm_Repeat_Predicate(count, predicate);
+```
+
+#### Declarative form
+
+```c
+bool allTrue = MODULE_CALL(Algorithm, Repeat, Predicate, (count, predicate));
 ```
 
 ---
@@ -748,7 +748,7 @@ bool allTrue = Algorithm_Repeat_Predicate(count, predicate);
 | Parameter | Explanation |
 | --- | --- |
 | `count` | Number of times to evaluate the predicate |
-| `predicate` | `TCALLBACK(RepeatPredicate)` predicate callback |
+| `predicate` | `TCALLBACK(NS(Algorithm_Repeat, Predicate))` predicate callback |
 
 ---
 
@@ -773,8 +773,9 @@ static bool CheckItem(void *ctx) {
 }
 
 int left = 3;
-TCALLBACK(RepeatPredicate) cb = CALLBACK_FUNC(RepeatPredicate_Bind)(CheckItem, &left);
-bool ok = REPEAT_FUNC(Predicate)(3, cb);
+TCALLBACK(NS(Algorithm_Repeat, Predicate)) cb =
+    CALLBACK_FUNC(NS(Algorithm_Repeat, Predicate_Bind))(CheckItem, &left);
+bool ok = Algorithm_Repeat_Predicate(3, cb);
 /* ok == true */
 ```
 
@@ -786,16 +787,16 @@ Repeats an indexed predicate `count` times, stopping if it returns `false`.
 
 ### Syntax
 
-#### Macro form
-
-```c
-bool allTrue = REPEAT_FUNC(IndexedPredicate)(count, predicate);
-```
-
 #### Direct form
 
 ```c
 bool allTrue = Algorithm_Repeat_IndexedPredicate(count, predicate);
+```
+
+#### Declarative form
+
+```c
+bool allTrue = MODULE_CALL(Algorithm, Repeat, IndexedPredicate, (count, predicate));
 ```
 
 ---
@@ -805,7 +806,7 @@ bool allTrue = Algorithm_Repeat_IndexedPredicate(count, predicate);
 | Parameter | Explanation |
 | --- | --- |
 | `count` | Number of times to evaluate the predicate |
-| `predicate` | `TCALLBACK(RepeatIndexedPredicate)` indexed predicate callback |
+| `predicate` | `TCALLBACK(NS(Algorithm_Repeat, IndexedPredicate))` indexed predicate callback |
 
 ---
 
@@ -829,9 +830,9 @@ static bool BelowThreshold(size_t index, void *ctx) {
 }
 
 size_t limit = 10;
-TCALLBACK(RepeatIndexedPredicate) cb =
-    CALLBACK_FUNC(RepeatIndexedPredicate_Bind)(BelowThreshold, &limit);
-bool ok = REPEAT_FUNC(IndexedPredicate)(5, cb);
+TCALLBACK(NS(Algorithm_Repeat, IndexedPredicate)) cb =
+    CALLBACK_FUNC(NS(Algorithm_Repeat, IndexedPredicate_Bind))(BelowThreshold, &limit);
+bool ok = Algorithm_Repeat_IndexedPredicate(5, cb);
 /* ok == true */
 ```
 
@@ -847,16 +848,16 @@ Repeats a byte pattern `count` times into a destination memory buffer.
 
 ### Syntax
 
-#### Macro form
-
-```c
-OPSTATUS status = REPEAT_FUNC(Bytes)(destination, pattern, patternSize, count);
-```
-
 #### Direct form
 
 ```c
 OPSTATUS status = Algorithm_Repeat_Bytes(destination, pattern, patternSize, count);
+```
+
+#### Declarative form
+
+```c
+OPSTATUS status = MODULE_CALL(Algorithm, Repeat, Bytes, (destination, pattern, patternSize, count));
 ```
 
 ---
@@ -889,7 +890,7 @@ Performs checked arithmetic and overlap verification before copying.
 ```c
 const unsigned char pat[2] = {0xAA, 0x55};
 unsigned char dest[6];
-OPSTATUS s = REPEAT_FUNC(Bytes)(dest, pat, sizeof(pat), 3);
+OPSTATUS s = Algorithm_Repeat_Bytes(dest, pat, sizeof(pat), 3);
 /* dest == {0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55} */
 ```
 
@@ -904,16 +905,16 @@ The following primitive operations are generated from `PRIMITIVE_TYPE_TABLE`:
 
 ### Syntax
 
-#### Macro form
-
-```c
-OPSTATUS status = REPEAT_FUNC(Int)(destination, value, count);
-```
-
 #### Direct form
 
 ```c
 OPSTATUS status = Algorithm_Repeat_Int(destination, value, count);
+```
+
+#### Declarative form
+
+```c
+OPSTATUS status = MODULE_CALL(Algorithm, Repeat, Int, (destination, value, count));
 ```
 
 ---
@@ -944,7 +945,7 @@ Provides type-safe array filling for all native C and fixed-width integer/float 
 
 ```c
 int array[5];
-OPSTATUS s = REPEAT_FUNC(Int)(array, 42, 5);
+OPSTATUS s = Algorithm_Repeat_Int(array, 42, 5);
 /* array[0..4] == 42 */
 ```
 
@@ -956,16 +957,16 @@ Repeats a `const char *` pointer `count` times into an array of string pointers.
 
 ### Syntax
 
-#### Macro form
-
-```c
-OPSTATUS status = REPEAT_FUNC(CString)(destination, value, count);
-```
-
 #### Direct form
 
 ```c
 OPSTATUS status = Algorithm_Repeat_CString(destination, value, count);
+```
+
+#### Declarative form
+
+```c
+OPSTATUS status = MODULE_CALL(Algorithm, Repeat, CString, (destination, value, count));
 ```
 
 ---
@@ -996,7 +997,7 @@ Copies the pointer reference, not string content.
 
 ```c
 const char *names[3];
-OPSTATUS s = REPEAT_FUNC(CString)(names, "cosmeron", 3);
+OPSTATUS s = Algorithm_Repeat_CString(names, "cosmeron", 3);
 /* names[0..2] == "cosmeron" */
 ```
 
@@ -1050,7 +1051,7 @@ TEMPLATE_DECLARE(REPEAT, Point, Point);
 
 Point pts[3];
 Point def = { 10, 20 };
-REPEAT_FUNC(Point_Fill)(pts, def, 3);
+Algorithm_Repeat_Point_Fill(pts, def, 3);
 ```
 
 ---
@@ -1077,20 +1078,20 @@ int main(void) {
 
     /* 2. Repeat Procedure */
     size_t sum = 0;
-    TCALLBACK(RepeatIndexedProcedure) cb =
-        CALLBACK_FUNC(RepeatIndexedProcedure_Bind)(AddIndex, &sum);
-    REPEAT_FUNC(IndexedProcedure)(4, cb);
+    TCALLBACK(NS(Algorithm_Repeat, IndexedProcedure)) cb =
+        CALLBACK_FUNC(NS(Algorithm_Repeat, IndexedProcedure_Bind))(AddIndex, &sum);
+    Algorithm_Repeat_IndexedProcedure(4, cb);
     assert(sum == 6); /* 0 + 1 + 2 + 3 */
 
     /* 3. Repeat Primitive */
     int numbers[4] = {0};
-    assert(REPEAT_FUNC(Int)(numbers, 77, 4) == STATUS_CONST(SUCCESS));
+    assert(Algorithm_Repeat_Int(numbers, 77, 4) == STATUS_CONST(SUCCESS));
     assert(numbers[0] == 77 && numbers[3] == 77);
 
     /* 4. Repeat Bytes */
     const unsigned char pat[2] = {0xAA, 0x55};
     unsigned char dest[4] = {0};
-    assert(REPEAT_FUNC(Bytes)(dest, pat, sizeof(pat), 2) == STATUS_CONST(SUCCESS));
+    assert(Algorithm_Repeat_Bytes(dest, pat, sizeof(pat), 2) == STATUS_CONST(SUCCESS));
     assert(dest[0] == 0xAA && dest[1] == 0x55 && dest[2] == 0xAA && dest[3] == 0x55);
 
     return 0;

@@ -1,6 +1,9 @@
 #pragma once
 
-#include "../Module.space"
+#include "../Namespace.h"
+#include "../../Preprocessor/Foreach.h"
+#include "../../Preprocessor/Repeat.h"
+#include "../../Preprocessor/Sequence.h"
 
 /* ============================================================
  * Declarative Member Tuple Definition

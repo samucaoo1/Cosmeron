@@ -1,0 +1,170 @@
+#pragma once
+
+#include <string.h>
+
+PACKAGE_SCOPE(Algorithm, Repeat)
+
+PACKAGE_PROCEDURE_IMPLEMENT_EX(Algorithm_Repeat, Procedure,
+                               (size_t count,
+                                TCALLBACK(NS(Algorithm_Repeat, Procedure)) action)) {
+  if (count == 0U || !CALLBACK_IS_VALID(action))
+    return;
+
+  for (size_t i = 0U; i < count; ++i) {
+    CALLBACK_CALL(action);
+  }
+}
+
+PACKAGE_PROCEDURE_IMPLEMENT_EX(Algorithm_Repeat, IndexedProcedure,
+                               (size_t count,
+                                TCALLBACK(NS(Algorithm_Repeat, IndexedProcedure)) action)) {
+  if (count == 0U || !CALLBACK_IS_VALID(action))
+    return;
+
+  for (size_t i = 0U; i < count; ++i) {
+    CALLBACK_CALL(action, i);
+  }
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(Algorithm_Repeat, Operation,
+                               (size_t count,
+                                TCALLBACK(NS(Algorithm_Repeat, Operation)) operation)) {
+  if (count == 0U)
+    return STATUS(SUCCESS);
+  if (!CALLBACK_IS_VALID(operation))
+    return STATUS(INVALID_ARGUMENT);
+
+  for (size_t i = 0U; i < count; ++i) {
+    OPSTATUS status = CALLBACK_CALL(operation);
+    if (status != STATUS(SUCCESS))
+      return status;
+  }
+
+  return STATUS(SUCCESS);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(Algorithm_Repeat, IndexedOperation,
+                               (size_t count,
+                                TCALLBACK(NS(Algorithm_Repeat, IndexedOperation)) operation)) {
+  if (count == 0U)
+    return STATUS(SUCCESS);
+  if (!CALLBACK_IS_VALID(operation))
+    return STATUS(INVALID_ARGUMENT);
+
+  for (size_t i = 0U; i < count; ++i) {
+    OPSTATUS status = CALLBACK_CALL(operation, i);
+    if (status != STATUS(SUCCESS))
+      return status;
+  }
+
+  return STATUS(SUCCESS);
+}
+
+PACKAGE_PREDICATE_IMPLEMENT_EX(Algorithm_Repeat, Predicate,
+                               (size_t count,
+                                TCALLBACK(NS(Algorithm_Repeat, Predicate)) predicate)) {
+  if (count == 0U)
+    return true;
+  if (!CALLBACK_IS_VALID(predicate))
+    return false;
+
+  for (size_t i = 0U; i < count; ++i) {
+    if (!CALLBACK_CALL(predicate))
+      return false;
+  }
+
+  return true;
+}
+
+PACKAGE_PREDICATE_IMPLEMENT_EX(Algorithm_Repeat, IndexedPredicate,
+                               (size_t count,
+                                TCALLBACK(NS(Algorithm_Repeat, IndexedPredicate)) predicate)) {
+  if (count == 0U)
+    return true;
+  if (!CALLBACK_IS_VALID(predicate))
+    return false;
+
+  for (size_t i = 0U; i < count; ++i) {
+    if (!CALLBACK_CALL(predicate, i))
+      return false;
+  }
+
+  return true;
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(Algorithm_Repeat, Bytes,
+                               (void *destination, const void *pattern,
+                                size_t patternSize, size_t count)) {
+  if (count == 0U || patternSize == 0U)
+    return STATUS(SUCCESS);
+  if (!destination || !pattern)
+    return STATUS(INVALID_ARGUMENT);
+  if (count > SIZE_MAX / patternSize)
+    return STATUS(ARITHMETIC_OVERFLOW);
+
+  {
+    size_t totalSize = count * patternSize;
+    uintptr_t destAddress = (uintptr_t)destination;
+    uintptr_t patternAddress = (uintptr_t)pattern;
+
+    if (totalSize > (size_t)(UINTPTR_MAX - destAddress) ||
+        patternSize > (size_t)(UINTPTR_MAX - patternAddress))
+      return STATUS(OUT_OF_RANGE);
+
+    if ((destAddress < patternAddress &&
+         destAddress + totalSize > patternAddress) ||
+        (patternAddress < destAddress &&
+         patternAddress + patternSize > destAddress))
+      return STATUS(INVALID_ARGUMENT);
+  }
+
+  {
+    unsigned char *destBytes = (unsigned char *)destination;
+    for (size_t i = 0U; i < count; ++i) {
+      memcpy(destBytes + (i * patternSize), pattern, patternSize);
+    }
+  }
+
+  return STATUS(SUCCESS);
+}
+
+#define REPEAT_PRIMITIVE_IMPLEMENT(ROW)                                        \
+  PACKAGE_OPERATION_IMPLEMENT_EX(                                              \
+      Algorithm_Repeat, PRIMITIVE_TYPE_GET(NAME, ROW),                         \
+      (PRIMITIVE_TYPE_GET(TYPE, ROW) * destination,                            \
+       PRIMITIVE_TYPE_GET(TYPE, ROW) value, size_t count)) {                   \
+    if (count == 0U)                                                           \
+      return STATUS(SUCCESS);                                                  \
+    if (!destination)                                                          \
+      return STATUS(INVALID_ARGUMENT);                                         \
+    if (count > SIZE_MAX / sizeof(PRIMITIVE_TYPE_GET(TYPE, ROW)))              \
+      return STATUS(ARITHMETIC_OVERFLOW);                                      \
+    for (size_t i = 0U; i < count; ++i) {                                      \
+      destination[i] = value;                                                  \
+    }                                                                          \
+    return STATUS(SUCCESS);                                                    \
+  }
+
+PRIMITIVE_TYPE_TABLE(REPEAT_PRIMITIVE_IMPLEMENT)
+#undef REPEAT_PRIMITIVE_IMPLEMENT
+
+PACKAGE_OPERATION_IMPLEMENT_EX(Algorithm_Repeat, CString,
+                               (const char **destination, const char *value,
+                                size_t count)) {
+  if (count == 0U)
+    return STATUS(SUCCESS);
+  if (!destination)
+    return STATUS(INVALID_ARGUMENT);
+  if (count > SIZE_MAX / sizeof(const char *))
+    return STATUS(ARITHMETIC_OVERFLOW);
+
+  for (size_t i = 0U; i < count; ++i) {
+    destination[i] = value;
+  }
+
+  return STATUS(SUCCESS);
+}
+
+PACKAGE_SCOPE_END()
+
+/* EOF */

@@ -1,0 +1,85 @@
+#pragma once
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(Memory), Copy, (void *destination, const void *source, size_t size)) {
+  if (size == 0U)
+    return STATUS_CONST(SUCCESS);
+  if (!destination || !source)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  {
+    uintptr_t destAddr = (uintptr_t)destination;
+    uintptr_t srcAddr = (uintptr_t)source;
+    if ((destAddr < srcAddr && destAddr + size > srcAddr) ||
+        (srcAddr < destAddr && srcAddr + size > destAddr))
+      return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  memcpy(destination, source, size);
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(Memory), Move, (void *destination, const void *source, size_t size)) {
+  if (size == 0U)
+    return STATUS_CONST(SUCCESS);
+  if (!destination || !source)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  memmove(destination, source, size);
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(Memory), Set, (void *destination, int value, size_t size)) {
+  if (size == 0U)
+    return STATUS_CONST(SUCCESS);
+  if (!destination)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  memset(destination, value, size);
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(Memory), Zero, (void *destination, size_t size)) {
+  return MEMORY_FUNC(Set)(destination, 0, size);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(Memory), CopyArray, (void *destination, const void *source, size_t count, size_t elementSize)) {
+  size_t size = 0U;
+  OPSTATUS status = MEMORY_INS(CheckedMultiplySize)(count, elementSize, &size);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  return MEMORY_FUNC(Copy)(destination, source, size);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(Memory), MoveArray, (void *destination, const void *source, size_t count, size_t elementSize)) {
+  size_t size = 0U;
+  OPSTATUS status = MEMORY_INS(CheckedMultiplySize)(count, elementSize, &size);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  return MEMORY_FUNC(Move)(destination, source, size);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(Memory), ZeroArray, (void *destination, size_t count, size_t elementSize)) {
+  size_t size = 0U;
+  OPSTATUS status = MEMORY_INS(CheckedMultiplySize)(count, elementSize, &size);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  return MEMORY_FUNC(Zero)(destination, size);
+}
+
+PACKAGE_PREDICATE_IMPLEMENT_EX(LIB_PREFIX(Memory), Equals, (const void *left, const void *right, size_t size)) {
+  if (size == 0U)
+    return true;
+  if (!left || !right)
+    return false;
+  if (left == right)
+    return true;
+
+  return memcmp(left, right, size) == 0;
+}
+
+PACKAGE_IMPLEMENT(LIB_PREFIX(Memory));
+
+/* EOF */

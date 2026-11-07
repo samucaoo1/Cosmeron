@@ -91,6 +91,13 @@
 #define PACKAGE_SCOPE_END() COSMERON_INTERNAL_PACKAGE_SCOPE_1(END)
 
 /* ============================================================
+ * 2.5 MODULE_SCOPE: Unified module scope dispatcher
+ * ============================================================ */
+
+#define MODULE_SCOPE(...) OBJECT_SCOPE(__VA_ARGS__)
+#define MODULE_SCOPE_END() OBJECT_SCOPE_END()
+
+/* ============================================================
  * 3. SPACE_SCOPE & VARIANT_SCOPE: Sub-namespace markers
  * ============================================================ */
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Module.space"
+#include "../Namespace.h"
 #include "../Common/Tuple.impl"
 
 #include <stdbool.h>

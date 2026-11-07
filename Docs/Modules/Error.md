@@ -67,7 +67,7 @@ Unlike Status constants, **`PANIC` and `PANIC_ASSERT` are themselves public macr
 | [`OPSTATUS`](#opstatus) | Public status-result type | No |
 | [`STATUS_CONST`](#status_const) | Accesses a status constant using the configured namespace | No |
 | [`Status_Category`](#status_category) | Enumeration of status categories | No |
-| [`STATUS_CATEGORY_CONST`](#status_category_const) | Accesses a category constant | No |
+| [`MODULE_CONST`](#module_const) | Accesses a status or category constant | No |
 | [`STATUS_TABLE`](#status_table) | X-macro listing all predefined status codes and messages | No |
 | [`Status Package Functions`](#status-package-functions) | Classification, naming, and diagnostic inspection functions | No |
 | [`TErrorContext`](#terrorcontext) | Source location and context metadata object | No |
@@ -315,7 +315,7 @@ Defined via `STATUS_CATEGORY_TABLE`:
 | `ARITHMETIC` | Arithmetic overflows and division by zero |
 | `SEQUENCE` | Invalid or incomplete input sequences |
 
-Each constant is accessed via `STATUS_CATEGORY_CONST(NAME)` (e.g. `STATUS_CATEGORY_CONST(MEMORY)`).
+Each constant is accessed via `MODULE_CONST(Status, CATEGORY_NAME)` (e.g. `MODULE_CONST(Status, CATEGORY_MEMORY)`).
 
 ---
 
@@ -340,7 +340,7 @@ Declared declaratively via `PACKAGE(Status)` in `Status.h`. Can be invoked eithe
 OPSTATUS status = DoOperation();
 
 if (Status_IsFailure(status)) {
-    if (Status_IsCategory(status, STATUS_CATEGORY_CONST(MEMORY))) {
+    if (Status_IsCategory(status, MODULE_CONST(Status, CATEGORY_MEMORY))) {
         /* Handle out-of-memory or buffer space error */
     }
     printf("Failed: %s (%s)\n", Status_Name(status), Status_Message(status));

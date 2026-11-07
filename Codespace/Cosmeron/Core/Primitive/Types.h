@@ -1,13 +1,23 @@
 #pragma once
 
+#include "../Module/Namespace.h"
 #include "../Preprocessor/Compiling.inc"
 #include "../Preprocessor/Operations.h"
-#include "Primitive.space"
 #include "TypeTable/TypeTable.h"
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+#ifndef PRIMITIVE_TYPE
+#define PRIMITIVE_TYPE(NAME) NS(LIB_PREFIX(Primitive), NAME)
+#endif
+#ifndef PRIMITIVE_FUNC
+#define PRIMITIVE_FUNC(NAME) NS(LIB_PREFIX(Primitive), NAME)
+#endif
+#ifndef PRIMITIVE_CONST
+#define PRIMITIVE_CONST(NAME) CNS(LIB_PREFIX_CONST(PRIMITIVE), NAME)
+#endif
 
 /* ========================================================================== */
 /* Category Enumeration & Conversion                                          */

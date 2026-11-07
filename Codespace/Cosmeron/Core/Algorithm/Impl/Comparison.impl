@@ -2,9 +2,15 @@
 
 #include <string.h>
 
+PACKAGE_SCOPE(Algorithm, Comparison)
+
+/* ========================================================================== */
+/* 1. Primitive Comparisons (Numeric Total Ordering with IEEE-754 NaN Safety)  */
+/* ========================================================================== */
+
 #define COMPARISON_PRIMITIVE_IMPLEMENT(ROW)                                    \
   PACKAGE_FUNCTION_IMPLEMENT_EX(                                               \
-      ALGORITHM_NS(COMPARISON_MOD), CMPOUT, PRIMITIVE_TYPE_GET(NAME, ROW),     \
+      MODULE_NS(Algorithm, Comparison), CMPOUT, PRIMITIVE_TYPE_GET(NAME, ROW), \
       (PRIMITIVE_TYPE_GET(TYPE, ROW) left,                                     \
        PRIMITIVE_TYPE_GET(TYPE, ROW) right)) {                                 \
     bool leftNan = (left != left);                                             \
@@ -23,7 +29,11 @@
 PRIMITIVE_TYPE_TABLE(COMPARISON_PRIMITIVE_IMPLEMENT)
 #undef COMPARISON_PRIMITIVE_IMPLEMENT
 
-PACKAGE_FUNCTION_IMPLEMENT_EX(ALGORITHM_NS(COMPARISON_MOD), CMPOUT, CString,
+/* ========================================================================== */
+/* 2. CString Comparison (Lexicographical NULL-Safe)                          */
+/* ========================================================================== */
+
+PACKAGE_FUNCTION_IMPLEMENT_EX(MODULE_NS(Algorithm, Comparison), CMPOUT, CString,
                               (const char *left, const char *right)) {
   if (left == right)
     return COMPARISON_CONST(EQUAL);
@@ -38,7 +48,11 @@ PACKAGE_FUNCTION_IMPLEMENT_EX(ALGORITHM_NS(COMPARISON_MOD), CMPOUT, CString,
                            : COMPARISON_CONST(EQUAL));                         \
 }
 
-PACKAGE_FUNCTION_IMPLEMENT_EX(ALGORITHM_NS(COMPARISON_MOD), CMPOUT, Bytes,
+/* ========================================================================== */
+/* 3. Bytes Memory Comparison                                                 */
+/* ========================================================================== */
+
+PACKAGE_FUNCTION_IMPLEMENT_EX(MODULE_NS(Algorithm, Comparison), CMPOUT, Bytes,
                               (const void *left, size_t leftSize,
                                const void *right, size_t rightSize)) {
   if (left == right && leftSize == rightSize)
@@ -68,5 +82,6 @@ PACKAGE_FUNCTION_IMPLEMENT_EX(ALGORITHM_NS(COMPARISON_MOD), CMPOUT, Bytes,
   return COMPARISON_CONST(EQUAL);
 }
 
-PACKAGE_IMPLEMENT(ALGORITHM_NS(COMPARISON_MOD));
+PACKAGE_SCOPE_END()
 /* EOF */
+

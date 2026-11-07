@@ -1,670 +1,371 @@
-# Cosmeron Pattern
+# Cosmeron Architectural & Coding Pattern
 
-This document defines the naming and generation grammar used across Cosmeron.
+This document is the **single canonical specification** for the architecture, naming, declarations, and implementation patterns across the entire Cosmeron ecosystem.
 
-> Prefer native C constructs over preprocessor macros. Use macros only for naming, code generation, internal preprocessing, or useful syntactic sugar.
+> **Core Philosophy:** Prefer native C constructs over preprocessor macros. Use macros only for namespace binding, declarative code generation, and internal preprocessing. Magic numbers and obsolete compatibility layers are strictly prohibited.
 
-Magic numbers are prohibited.
+---
 
-## 1. Naming
+## 1. Architectural Tiers & Hierarchy
 
-Everything must live inside the library/module namespace whenever C allows it.
+Cosmeron organizes code into four declarative tiers:
 
-Exceptions exist only where namespacing is not practical or would defeat the purpose, notably:
-
-```text
-public sugar macros
-OPSTATUS
-*OUT aliases
+```
+DOMAIN (Architectural / Filesystem Grouping: Core, Container, Text, Security, IO)
+  └── MODULE (Fundamental Unit of Compilation & Semantics: Memory, File, Bit, Text)
+        ├── PACKAGE (Static Collections of Free Functions: Alloc, Operations, Swap)
+        └── OBJECT (Stateful Instances with Receiver 'self' and FunctionTable: Stream, Pool)
+              ├── SPACE (Nested Sub-Namespaces / Sub-Tables: Transform, Codec)
+              └── VARIANT (Flat Overload Families: Alloc, AllocAndFill, AllocZeroed)
 ```
 
-### Case table
+### 1.1 The Semantic Role of `MODULE`
+- `MODULE` is the fundamental semantic and compilation unit of the library (`Memory`, `Text`, `Algorithm`, `Sort`).
+- A module does not require a domain to possess complete semantic identity. `DOMAIN` exists purely as an organizational grouping (drawer).
+- Both forms are first-class:
+  - With organizational domain: `MODULE(DOMAIN(DomainName), ModuleName, ...)`
+  - Standalone without domain: `MODULE(ModuleName, ...)`
+- In both cases, the emitted canonical C symbols use `[Library_]ModuleName_Entity` format.
 
+### 1.2 Packages vs. Objects
+- **`PACKAGE`**: A stateless, cohesive collection of free functions, events, callbacks, and sub-namespaces. It does **not** bind a receiver `self` and does **not** emit an instance struct or a `T`-prefixed type.
+- **`OBJECT`**: A stateful type with structured fields, lifecycle helpers (`Init`), receiver-bound methods (`self`), and automatic user type generation with the `T` prefix (`ModuleName_TObjectName`).
+
+### 1.3 Sub-Namespaces (`SPACE`) & Overload Families (`VARIANT`)
+- **`SPACE(SubName, ...)`**: Declares a nested sub-namespace inside a `PACKAGE` or `OBJECT`. Emits nested symbols (`Module_Package_SubName_Func`) and nested sub-tables in the `FunctionTable`.
+- **`VARIANT(FamilyName, ...)`**: Declares a flat overload family sharing a common name prefix without raw empty tokens. The base function omits the sub-name (`FUNCTION(RET, PARAMS)`), while variants append a suffix (`FUNCTION(RET, Suffix, PARAMS)`).
+
+---
+
+## 2. Naming & Case Conventions
+
+Everything in Cosmeron must reside inside the module/package namespace whenever C allows it. Exceptions exist only for public sugar macros (which require prior approval), `OPSTATUS`, and short `*OUT` comparison aliases.
+
+### 2.1 Case Table
 | Element | Case | Example |
 |---|---|---|
-| Module / namespace token | `PascalCase` | `Memory`, `Comparison` |
-| Type | `PascalCase` | `TVector`, `ComparisonResult` |
-| Function | `PascalCase` | `Memory_Copy`, `Vector_Push` |
-| Constant / enum value | `SNAKE_CASE` | `SUCCESS`, `OUT_OF_RANGE` |
-| Preprocessor macro | `SNAKE_CASE` | `VECTOR_IMPLEMENT_ALL` |
-| Internal namespace token | `PascalCase` / `SNAKE_CASE` | `Internal` / `INTERNAL` |
-| Parameter / local / field | `camelCase` | `outValue`, `leftSize`, `bufferCapacity` |
+| Domain / Module / Package / Object token | `PascalCase` | `Core`, `Memory`, `Algorithm`, `Repeat` |
+| User-facing data type | `PascalCase` with `T` | `TVector_uint32`, `TMemoryPool`, `TString` |
+| Output enum / Internal type | `PascalCase` without `T` | `ComparisonResult` (`CMPOUT`), `SeekOrigin` |
+| Function / Method | `PascalCase` | `Memory_Copy`, `Vector_Push`, `Repeat_Procedure` |
+| Constant / enum item | `SNAKE_CASE` | `SUCCESS`, `OUT_OF_RANGE`, `LOWER` |
+| Preprocessor macro | `SNAKE_CASE` | `MODULE`, `PACKAGE_CALL`, `MODULE_SCOPE` |
+| Internal preprocessor macro | `COSMERON_MACRO_INTERNAL_*` | `COSMERON_MACRO_INTERNAL_PKG_CALL_0` |
+| Parameter / local variable / field | `camelCase` | `destination`, `count`, `bufferCapacity` |
 
-```c
-#define MEMORY_MOD  Memory
-#define MEMORY_CMOD MEMORY
-```
+### 2.2 The `T` Prefix Rule
+- Use `T` prefix **only** for types intended to be directly handled by the user (e.g. `TMemoryPool`, `TVector_uint32`).
+- Generated object types automatically acquire the `T` prefix (`OBJECT(String)` emits `Text_TString`).
+- Output enums and internal types do **not** use `T` (e.g. `SeekOrigin`, `ComparisonResult`).
+- Unambiguous naming: never use generic colliding names like `TPool` or `TNode`. Explicitly qualify domain semantics (`TMemoryPool`, `TGraphNode`).
 
-`*_MOD` names the normal module namespace.  
-`*_CMOD` names the constant namespace.
+### 2.3 Strict Prohibition of Local Header Namespace Boilerplate & O(1) Semantic Macros
+- **Prefer `MODULE_*` over raw `NS`**: Always prefer semantic macros (`MODULE_TYPE`, `MODULE_TYPED`, `MODULE_ENUM`, `MODULE_CONST`, `MODULE_FUNC`, `MODULE_NS`, `DOMAIN_NS`) over bare `NS(...)` for all public and consumer-facing module interactions.
+- **O(1) Flat Joiner (`NS_JOIN`)**: Fast, non-recursive single-substitution concatenation with underscore separator (`_`) in $O(1)$ preprocessor steps.
+  - `MODULE_NS(Modulo, Pacote)`: Emits `[LIB_]Modulo_Pacote` in $O(1)$.
+  - `MODULE_FUNC(Modulo, Pacote, Func)`: Emits `[LIB_]Modulo_Pacote_Func` in $O(1)$.
+  - `DOMAIN_NS(Domain, ...)`: Emits `Domain_...` in $O(1)$.
+- **No `.space` files**: All legacy `.space` files are permanently deleted.
+- **No manual header-level namespace macros**: Never define:
+  ```c
+  /* FORBIDDEN: */
+  #define FOO_NS(NAME)     ...
+  #define FOO_CNS(NAME)    ...
+  #define FOO_INS(NAME)    ...
+  #define FOO_CINS(NAME)   ...
+  #define FOO_TYPE(NAME)   ...
+  #define FOO_FUNC(NAME)   ...
+  #define FOO_CONST(NAME)  ...
+  #define FOO_MOD / FOO_CMOD
+  #define GNS2..GNS5 / CNS2..CNS5
+  ```
+- Use canonical `MODULE_*` macros or `NS(...)` / `CNS(...)` from `Core/Module/Namespace.h`.
 
-```c
-#define MEMORY_NS(NAME)   NS(LIB_PREFIX(MEMORY_MOD), NAME)
-#define MEMORY_CNS(NAME)  CNS(LIB_PREFIX_CONST(MEMORY_CMOD), NAME)
+### 2.4 File Organization & `Common.inc`
+- **No synthetic `Types.h` files**: Types and enums live in the header of their corresponding feature.
+- **`Common.inc`**: Reserved **strictly** for internal shared infrastructure of a module (inline helpers, calculations, internal shared types like `Memory/Common.inc`) to prevent duplicate code across packages within the same module folder. The `.inc` extension makes it explicit that it is an internal include, never to be included directly by users.
 
-#define MEMORY_INS(NAME)  NS(LIB_PREFIX(MEMORY_MOD), Internal, NAME)
-#define MEMORY_CINS(NAME) CNS(LIB_PREFIX_CONST(MEMORY_CMOD), INTERNAL, NAME)
-```
+### 2.5 Library Namespace Configuration (`LIBRARY_NAMESPACE_CONFIG`)
+Cosmeron symbols can be branded or configured globally via `LIBRARY_NAMESPACE_CONFIG` or compiler flags (`-DCOSMERON_NAMESPACE=...`, `-DCOSMERON_NAMESPACE_MODE=...`):
+- `BARE`: `Text_TString`, `Text_String_Init`, `Status_SUCCESS` (zero library prefix).
+- `SHORT`: `Cos_Text_TString`, `Cos_Text_String_Init`.
+- `STANDARD`: `Cosmeron_Text_TString`, `Cosmeron_Text_String_Init` (default).
+- `FULL`: `Cosmeron_Core_Text_TString` (includes domain in symbol).
+When unconfigured, `LIB_PREFIX(...)` resolves cleanly via `NS(...)`.
 
-- `*_NS` — public C identifiers
-- `*_CNS` — public constants
-- `*_INS` — internal C identifiers
-- `*_CINS` — internal constants
+---
 
-Internal preprocessor macros do not use namespace guards:
+## 3. Function & Method Contracts
 
-```c
-COSMERON_MACRO_INTERNAL_*
-```
+Functions and methods belong to declarative blocks (`MODULE`, `PACKAGE`, or `OBJECT`) and must follow strict return contracts:
 
-## 2. Types
-
-Use `T` only for types intended to be directly handled by the user.
-
-```c
-BIT_TYPE(32)          /* TBit32 */
-VECTOR_TYPED(uint32)  /* TVector_uint32 */
-```
-
-`*_TYPE(SUFFIX)` uses a semantic suffix.  
-`*_TYPED(TYPE)` represents specialization by another type.
-
-The underscore is meaningful:
-
-```text
-TBit32          semantic suffix
-TVector_uint32  typed specialization
-```
-
-## 3. Functions & Declarative Contracts
-
-Functions and methods in Cosmeron belong to declarative blocks (`PACKAGE` or `OBJECT`) and are classified by their return contract:
-
-| Category | Specifier | Return Type | Meaning |
+| Contract | Macro | Return Type | Meaning |
 |---|---|---|---|
-| Operation | `OPERATION(NAME, PARAMS)` | `OPSTATUS` | Fallible operation reporting status |
-| Predicate | `PREDICATE(NAME, PARAMS)` | `bool` | Proposition or condition query |
-| Function | `FUNCTION(RET, NAME, PARAMS)` | `RET` | Value-producing computation |
-| Procedure | `PROCEDURE(NAME, PARAMS)` | `void` | Infallible action / side-effect |
-| Comparison | `COMPARISON(NAME, PARAMS)` | `CMPOUT` | Three-way comparison (LOWER, EQUAL, HIGHER) |
+| Fallible Operation | `OPERATION(Name, Params)` | `OPSTATUS` | Fallible action reporting status |
+| Predicate / Condition | `PREDICATE(Name, Params)` | `bool` | Proposition or condition query |
+| Value Function | `FUNCTION(Ret, Name, Params)` | `Ret` | Value-producing computation |
+| Infallible Procedure | `PROCEDURE(Name, Params)` | `void` | Infallible action / side-effect |
+| Three-Way Comparison | `COMPARISON(Name, Params)` | `CMPOUT` | Compares items: `LOWER`, `EQUAL`, `HIGHER` |
 
-Each category supports inline variants (`*_INLINE(..., BODY)`) and `const` receiver variants for objects (`CONST_*` and `CONST_*_INLINE`).
+### 3.1 Receiver & Inline Variants
+- In `OBJECT`: methods bind `self` (`ClassName *self`). Use `CONST_*` for read-only methods (`const ClassName *self`).
+- Inline definitions use the `*_INLINE` suffix and embed the body directly:
+  ```c
+  OPERATION_INLINE(Clear, (), { self->count = 0; return STATUS(SUCCESS); })
+  PREDICATE_INLINE(IsEmpty, (size_t size), { return size == 0U; })
+  ```
 
-### Method & Function Implementation
+### 3.2 Error Handling & Parameter Contracts
+- **`out` parameters**:
+  - Required `out == NULL` $\implies$ return `STATUS(INVALID_ARGUMENT)`.
+  - An `out` parameter is modified **only** on `STATUS(SUCCESS)`.
+- **Borrowed pointers**: Default to borrowed semantics; always mark input pointers with `const`.
+- **Zero magic numbers**: Return status codes via named constants (`STATUS(SUCCESS)`, `STATUS(OUT_OF_RANGE)`). Never return raw integers as status.
 
-Member prototypes and bodies are implemented in implementation files (`.impl` or `.c`) using either explicit macros (recommended) or the unified dispatcher:
+---
 
-#### 1. Explicit Family (Recommended - Zero Ambiguity & Zero Configuration)
-Explicitly declares whether receiver pointer `self` is bound, requiring no traits or flags:
-```c
-/* For Objects: binds receiver (Target * self, ...) */
-OBJECT_OPERATION_IMPLEMENT_EX(Target, MethodName, (params...)) {
-    if (!self) return STATUS_CONST(INVALID_ARGUMENT);
-    return STATUS_CONST(SUCCESS);
-}
-OBJECT_PREDICATE_IMPLEMENT_EX(Target, MethodName, (params...)) { return self != NULL; }
-OBJECT_FUNCTION_IMPLEMENT_EX(Target, ReturnType, MethodName, (params...)) { return computedValue; }
-OBJECT_PROCEDURE_IMPLEMENT_EX(Target, MethodName, (params...)) { /* infallible action */ }
-OBJECT_COMPARISON_IMPLEMENT_EX(Target, MethodName, (const Target * other)) {
-    if (self->val < other->val) return COMPARISON_CONST(LOWER);
-    if (self->val > other->val) return COMPARISON_CONST(HIGHER);
-    return COMPARISON_CONST(EQUAL);
-}
+## 4. Header Declarations (`.h`)
 
-/* For Packages: free functions without self */
-PACKAGE_OPERATION_IMPLEMENT_EX(Package, FuncName, (params...)) { return STATUS_CONST(SUCCESS); }
-PACKAGE_PREDICATE_IMPLEMENT_EX(Package, FuncName, (params...)) { return true; }
-PACKAGE_FUNCTION_IMPLEMENT_EX(Package, ReturnType, FuncName, (params...)) { return computedValue; }
-PACKAGE_PROCEDURE_IMPLEMENT_EX(Package, FuncName, (params...)) { /* infallible action */ }
-PACKAGE_COMPARISON_IMPLEMENT_EX(Package, FuncName, (Type a, Type b)) {
-    if (a < b) return COMPARISON_CONST(LOWER);
-    if (a > b) return COMPARISON_CONST(HIGHER);
-    return COMPARISON_CONST(EQUAL);
-}
-```
-
-#### 2. Unified Family with Trait Detection
-```c
-OPERATION_IMPLEMENT_EX(Target, MethodName, (params...)) {
-    if (!self) return STATUS_CONST(INVALID_ARGUMENT);
-    return STATUS_CONST(SUCCESS);
-}
-
-PREDICATE_IMPLEMENT_EX(Target, MethodName, (params...)) {
-    return self != NULL;
-}
-
-FUNCTION_IMPLEMENT_EX(Target, ReturnType, MethodName, (params...)) {
-    return computedValue;
-}
-
-PROCEDURE_IMPLEMENT_EX(Target, MethodName, (params...)) {
-    /* infallible action */
-}
-
-COMPARISON_IMPLEMENT_EX(Target, MethodName, (params...)) {
-    /* three-way comparison */
-}
-```
-
-The unified engine detects whether `Target` is an Object or Package using trait tags, automatically binding `self` for objects if **any** of the following conditions hold:
-1. Direct type tag: `#define <Target>_IS_OBJECT 1` (e.g. `#define TCalculator_IS_OBJECT 1` or `#define TStack_int_IS_OBJECT 1`)
-2. Namespaced tag: `#define COSMERON_TAG_OBJ_<Target> 1`
-3. File-wide override: `#define TARGET_IS_OBJECT 1` (at the top of the `.impl` translation unit)
-
-If none of these traits are detected, it automatically emits free functions for packages.
-
-### Implementation Finalizers
-
-Every implementation file must close with the designated finalizer macro to complete bindings:
+Headers declare features using `MODULE(...)` wrapping `PACKAGE`, `OBJECT`, `ENUM`, `SPACE`, `VARIANT`, or templates.
 
 ```c
-PACKAGE_IMPLEMENT(PackageName);
-/* or */
-OBJECT_IMPLEMENT(ObjectName);
-```
+#pragma once
 
-### Deprecated Compatibility Aliases
+#include "Core/Module/Module.h"
+#include "Core/Outcome/Status.h"
+#include "Core/Algorithm/Comparison.h"
 
-Macros under `Backward Compatibility Aliases` in `Tuple.impl` and `Dispatch.impl` (such as `METHOD`, `CONST_METHOD`, `METHOD_INLINE`, `OBJECT_PROTOTYPEEX`, `PACKAGE_PROTOTYPEEX`, and `OBJECT_PROTOTYPE`) exist solely for backward compatibility with legacy code and **must not be used** in new code.
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
-## 4. Structs, Objects & Function Tables
+/* Top-level module declaration (DOMAIN is optional) */
+MODULE(DOMAIN(Core), StreamBuffer,
 
-Structured data and modules are declared using declarative blocks:
+    /* 1. Enum via X-Macro table */
+    ENUM(SeekOrigin, SEEK_TABLE),
 
-### Declarative Objects (`OBJECT` and `OBJECT_EXTENDS`)
-
-Objects define structured types with fields, receiver-bound methods, and dispatch tables:
-
-```c
-OBJECT(Counter,
-    FIELDS(
-        int count;
+    /* 2. Stateful Object */
+    OBJECT(Buffer,
+        FIELDS(
+            char data[64];
+            size_t size;
+        ),
+        OPERATION(Clear, ()),
+        OPERATION(Write, (const char *src, size_t count)),
+        CONST_FUNCTION(size_t, Length, ()),
+        CONST_PREDICATE(IsEmpty, ()),
+        CONST_COMPARISON(Compare, (const StreamBuffer_TBuffer *other))
     ),
-    OPERATION(Increment, ()),
-    CONST_PREDICATE_INLINE(IsZero, (), { return self->count == 0; }),
-    CONST_FUNCTION_INLINE(int, Get, (), { return self->count; })
-);
-```
 
-Derived classes inherit from a base class using `OBJECT_EXTENDS`, embedding `BASE_CLASS base` as the first field:
+    /* 3. Static Package */
+    PACKAGE(Utils,
+        FUNCTION(size_t, StrLen, (const char *str)),
+        PREDICATE(IsStrEmpty, (const char *str)),
 
-```c
-OBJECT_EXTENDS(SpecialCounter, Counter,
-    FIELDS(
-        int step;
+        /* Sub-Namespace */
+        SPACE(Transform,
+            PROCEDURE(ToUpper, (char *dest, const char *src))
+        ),
+
+        /* Overload Family */
+        VARIANT(Alloc,
+            FUNCTION(void *, (size_t size)),
+            FUNCTION(void *, AndFill, (size_t size, char fillChar))
+        )
     ),
-    OPERATION(StepIncrement, ())
-);
-```
 
-- Safe downcasting and polymorphic conversions use `OBJECT_AS(OBJ, TARGET_TYPE)`.
-- Method invocation: `OBJECT_CALL(obj, MethodName, args...)` or `OBJECT_CALL_0(obj, MethodName)`.
-- Automatic lifecycle helper: `ClassName_Init(&instance)`.
-
-### Comparison Extensions (`COMPARISON_EX`)
-
-Objects can declaratively declare specialized comparison methods without manual boilerplate:
-
-```c
-OBJECT(Person,
-    FIELDS(
-        int age;
-        double score;
-        const char *name;
-        unsigned char hash[16];
-    ),
-    COMPARISON_NUMERIC(CompareAge, age),
-    COMPARISON_NUMERIC(CompareScore, score),
-    COMPARISON_STRING(CompareName, name),
-    COMPARISON_BYTES(CompareHash, hash)
-);
-```
-
-- `COMPARISON_NUMERIC`: Relational comparisons with IEEE-754 NaN total ordering (`NaN == NaN`, `NaN > number`).
-- `COMPARISON_STRING`: Lexicographical C-string comparisons with `NULL` safety (`NULL == NULL`, `NULL < non-NULL`).
-- `COMPARISON_BYTES`: Binary memory comparisons with bounds checking.
-- Extensible base: `COMPARISON_EX(STRATEGY, NAME, FIELD)`.
-
-#### Automatic Comparator Adapter for Objects
-Any object method returning `CMPOUT` automatically generates a type-erased bridge to `TCALLBACK(Comparison)`:
-- `<CLASS>_<Method>_ComparatorAdapter(const void *left, const void *right, void *context)`
-- `<CLASS>_<Method>_AsComparator()` returning a bound `TCALLBACK(Comparison)`.
-
-### Declarative Callbacks (`CALLBACK`)
-
-Callbacks can be declared standalone or directly inside `OBJECT` and `PACKAGE` using the `CALLBACK(...)` capsule:
-
-```c
-PACKAGE(EventBus,
-    CALLBACK(
-        OPERATION(OnEvent, (int code))
+    /* 4. Parameterized Package Template (Direct in MODULE, zero blueprints) */
+    TEMPLATE_PACKAGE(BitOps, (SUFFIX, TYPE),
+        OPERATION(Set, (TYPE *value, uint8_t bit)),
+        PREDICATE(Check, (TYPE value, uint8_t bit))
     )
 );
+
+#include "Impl/StreamBuffer.impl"
 ```
 
-Standalone callbacks use category-matched descriptors:
+---
+
+## 5. Templates (`TEMPLATE_OBJECT` & `TEMPLATE_PACKAGE`)
+
+Cosmeron uses a **zero-blueprint, single-source-of-truth** template engine.
+
+### 5.1 Rules for Templates
+1. **Zero Blueprint Macros**: Never define separate `#define TEMPLATE_<Name>(...)` macros duplicating member lists. The template is declared **once**, directly inside `MODULE(...)`.
+2. **Inline vs Non-Inline**:
+   - Templates with inline methods use `OPERATION_INLINE(...)`, `FUNCTION_INLINE(...)`.
+   - Non-inline template methods are implemented in the implementation file via explicit prototype macros.
+3. **Instantiation**:
+   - On-demand instantiation: `TEMPLATE_INSTANTIATE(Name, Suffix, Type)`.
+   - Table-driven batch instantiation: `TEMPLATE_INSTANTIATE_TABLE(Name, TYPE_TABLE)`.
+   - Type naming for user types: `T<Name>_<suffix>` (e.g. `TVector_uint32`).
+
+---
+
+## 6. Implementation Scoping (`.impl` / `.c`)
+
+Implementation files use **lexical scoping** via `*_SCOPE` and `*_SCOPE_END()`. No finalizer macros (`PACKAGE_IMPLEMENT` / `OBJECT_IMPLEMENT`) are used.
+
+### 6.1 Package Implementations
 ```c
-CALLBACK_FUNCTION(int, Scale, (int value));
-CALLBACK_PROCEDURE(Notify, (int code));
-CALLBACK_OPERATION(Commit, (int value));
-CALLBACK_PREDICATE(Filter, (int value));
-CALLBACK_COMPARISON(CompareItems, (int a, int b));
-```
+#pragma once
 
-- Unified invocation: `CALLBACK_CALL(cb, args...)` or `CALLBACK_INVOKE(cb, args...)` (supports arbitrary arity).
-- Validity checking: `CALLBACK_IS_VALID(cb)` or `cb.IsValid(&cb)`.
-- Binding: `cb.Bind(&cb, func, context)` or `CALLBACK_FUNC(Name_Bind)(func, context)`.
-- Nullary callbacks use standard empty parentheses `()` without needing redundant macro variants.
+PACKAGE_SCOPE(StreamBuffer, Utils)
 
-### Declarative Events (`EVENT_PROCEDURE`, `EVENT_OPERATION`)
-
-Events provide zero-allocation 1-to-N Observer notification directly in `OBJECT` and `PACKAGE`:
-- **Static embedded slots**: Slots are embedded in the object struct or package file scope with a compact `uint8_t count` (zero heap allocation, cache-aligned).
-- **Cache-line bucket decay**: Capacity requested is automatically rounded up to the nearest cache-line bucket:
-  - $\le 4 \implies 4$ slots (default, 64 bytes)
-  - $\le 8 \implies 8$ slots (128 bytes)
-  - $\le 12 \implies 12$ slots (192 bytes)
-  - $\le 16 \implies 16$ slots (256 bytes)
-  - $> 16 \implies$ Compile-time assertion error (`_Static_assert`).
-- **FIFO order on unsubscription**: Unsubscribing shifts elements left, strictly preserving subscription order.
-- **Re-entrancy safe emission**: `Emit` snapshots active callbacks to the stack before invoking, ensuring listeners can safely subscribe/unsubscribe during emission without corrupting the loop.
-- **Zero parameter duplication**: Declaring parameters with tuple pairs `((type, name), ...)` eliminates repeating parameter names:
-
-```c
-OBJECT(Button,
-    FIELDS(int id;),
-    EVENT_PROCEDURE(Click, ((int, mouseButton), (int, x), (int, y))), /* 4 slots, zero duplication */
-    EVENT_PROCEDURE(Hover, ((int, x), (int, y)), 6),                   /* decays to 8 slots */
-    EVENT_PROCEDURE(Reset, ()),                                       /* nullary, 4 slots */
-    EVENT_OPERATION(Validate, ((int, code)), 4)                       /* short-circuits on failure */
-);
-
-PACKAGE(Bus,
-    EVENT_PROCEDURE(OnMessage, ((int, topic), (int, payload)), 4),
-    EVENT_OPERATION(OnFilter, ((int, value)), 4)
-);
-```
-
-#### Reactive Field Mutation (`OBJECT_MUTATE`)
-Objects can automatically emit an event when a state field changes value:
-```c
-OBJECT_MUTATE(self, ClassName, fieldName, newValue, EventName);
-```
-- Checks `self->fieldName != newValue`.
-- Captures `oldValue`, assigns `self->fieldName = newValue`.
-- Automatically calls `<ClassName>_<EventName>_Emit(self, oldValue, newValue)`.
-
-#### Generated Event API
-- `Subscribe`: `OBJECT_CALL(obj, Event_Subscribe, callback)` / `PACKAGE_CALL(Pkg, Event_Subscribe, callback)` $\to$ `OPSTATUS` (`SUCCESS`, `OUT_OF_RANGE`, `INVALID_ARGUMENT`).
-- `Unsubscribe`: `OBJECT_CALL(obj, Event_Unsubscribe, callback)` / `PACKAGE_CALL(Pkg, Event_Unsubscribe, callback)` $\to$ `OPSTATUS` (`SUCCESS`, `NOT_FOUND`).
-- `Emit`: `OBJECT_CALL(obj, Event_Emit, args...)` / `PACKAGE_CALL(Pkg, Event_Emit, args...)` $\to$ `void` (`EVENT_PROCEDURE`) or `OPSTATUS` (`EVENT_OPERATION`).
-- `Clear`: `OBJECT_CALL(obj, Event_Clear)` / `PACKAGE_CALL(Pkg, Event_Clear)` $\to$ `OPSTATUS`.
-- `Count`: `OBJECT_CALL(obj, Event_Count)` / `PACKAGE_CALL(Pkg, Event_Count)` $\to$ `uint8_t`.
-- `Capacity`: `OBJECT_CALL(obj, Event_Capacity)` / `PACKAGE_CALL(Pkg, Event_Capacity)` $\to$ `uint8_t`.
-
-### Declarative Packages (`PACKAGE`)
-
-Packages group free functions under a unified namespace and function table:
-
-```c
-PACKAGE(MathUtils,
-    FUNCTION_INLINE(int, Clamp, (int val, int min, int max), {
-        return val < min ? min : (val > max ? max : val);
-    }),
-    PREDICATE_INLINE(IsPositive, (int val), { return val > 0; })
-);
-```
-
-- Package invocation: `PACKAGE_CALL(PackageName, FunctionName, args...)` or direct calls `PackageName_FunctionName(...)`.
-
-### Compile-time Disabling of Function Tables
-
-Function tables allow static singleton dispatch (`Package_GetFunctionTable()` or `object->api`). Every family must provide compile-time disabling:
-
-- `MODULE_DISABLE_FUNCTION_TABLE`: Disables all function tables globally in the translation unit.
-- `PACKAGE_DISABLE_FUNCTION_TABLE`: Disables function tables for packages.
-- `OBJECT_DISABLE_FUNCTION_TABLE`: Disables function tables for objects.
-
-When defined, no `FunctionTable` struct or table instance is emitted, removing all dispatch table overhead.
-
-Always use the term `FunctionTable`, never `VTable`.
-
-## 5. Enums
-
-Enums exist primarily for named constant domains and function signatures.
-
-A raw integer must not represent a categorical state when an enum can express it.
-
-### Mandatory X-Macro / Table Pattern
-
-Every enum must be implemented via an X-Macro table (`<DOMAIN>_TABLE(X)`). Directly hardcoding raw lists inside `enum { ... }` declarations is strictly prohibited. The table macro serves as the single source of truth for generating enum values, names, string tables, and switch cases.
-
-```c
-#define COMPARISON_TABLE(X) \
-    X(LOWER,  -1, "Lower")  \
-    X(EQUAL,   0, "Equal")  \
-    X(HIGHER,  1, "Higher")
-
-typedef enum COMPARISON_TYPE(Result) {
-#define COMPARISON_ENUM_ITEM(NAME, VALUE, DESC) COMPARISON_CONST(NAME) = VALUE,
-    COMPARISON_TABLE(COMPARISON_ENUM_ITEM)
-#undef COMPARISON_ENUM_ITEM
-} COMPARISON_TYPE(Result);
-
-typedef COMPARISON_TYPE(Result) CMPOUT;
-```
-
-User-facing enums may use `T`:
-
-```c
-TText_Underline_Style
-```
-
-Output enums do not use `T`. Their descriptive type remains namespaced; only the short `*OUT` alias is exempt:
-
-```c
-typedef enum COMPARISON_TYPE(Result) { ... } COMPARISON_TYPE(Result);
-typedef COMPARISON_TYPE(Result) CMPOUT;
-```
-
-Prefer the output alias in function signatures:
-
-```c
-CMPOUT COMPARISON_FUNC(Int)(int left, int right);
-```
-
-`TComparisonResult` is invalid because this enum is not intended as a first-class user-facing type.
-
-## 6. Constants
-
-Public constants use:
-
-```c
-*_CONST(NAME)
-```
-
-Example:
-
-```c
-COMPARISON_LOWER_CONST
-STATUS_CONST(SUCCESS)
-```
-
-Magic numbers are prohibited:
-
-```c
-return -1;                       /* wrong */
-return COMPARISON_LOWER_CONST; /* correct */
-```
-
-Explicit numeric values are allowed only when the representation itself matters, such as bit flags, protocols, file formats, ABI values, or externally defined mappings.
-
-Outside that definition, code must use the named constant.
-
-## 7. Macro Policy
-
-`#define` should be rare.
-
-Expected uses:
-
-- namespace and naming;
-- generic/type generation;
-- implementation generation;
-- internal preprocessing;
-- public syntactic sugar when C cannot express the same interface cleanly.
-
-Avoid macros that merely replace ordinary C syntax.
-
-Public sugar should delegate to a real C function whenever practical.
-
-### Preprocessor operations
-
-Preprocessor code must use the helpers from `Core/Preprocessor` instead of spelling preprocessor operators directly.
-
-Normal token composition uses the expanding helper:
-
-```c
-PP_OP_CAT2(SUFFIX, _Store)
-PP_OP_CAT3(PREFIX, _, NAME)
-```
-
-Use the primitive `PP_OP_CAT` only when argument expansion must intentionally be suppressed, such as protecting a generated identifier from a conflicting external macro:
-
-```c
-PP_OP_CAT(NETWORK_ERROR_, NAME)
-```
-
-Module/package code must not use raw `##` directly. The raw operator belongs inside the preprocessor utility layer. If a required preprocessing operation does not exist yet, add the reusable helper to `Core/Preprocessor` first, then use that helper from the module.
-
-
-## 8. Core Grammar
-
-```text
-MODULE_MOD
-MODULE_CMOD
-
-MODULE_NS(NAME)
-MODULE_CNS(NAME)
-MODULE_INS(NAME)
-MODULE_CINS(NAME)
-
-MODULE_TYPE(SUFFIX)
-MODULE_TYPED(TYPE)
-
-MODULE_FUNC(NAME)
-MODULE_TYPED_FUNC(...)
-MODULE_CONST(NAME)
-
-/* Declarative Definitions */
-PACKAGE(PKG, ...)
-OBJECT(CLASS, FIELDS(...), ...)
-OBJECT_EXTENDS(CLASS, BASE_CLASS, FIELDS(...), ...)
-FIELDS(...)
-
-/* Member Specification Tuples */
-OPERATION(NAME, PARAMS) / CONST_OPERATION / *_INLINE
-PREDICATE(NAME, PARAMS) / CONST_PREDICATE / *_INLINE
-FUNCTION(RET, NAME, PARAMS) / CONST_FUNCTION / *_INLINE
-PROCEDURE(NAME, PARAMS) / CONST_PROCEDURE / *_INLINE
-
-/* Unified Implementation Prototypes */
-OPERATION_IMPLEMENT_EX(TARGET, NAME, PARAMS)
-PREDICATE_IMPLEMENT_EX(TARGET, NAME, PARAMS)
-FUNCTION_IMPLEMENT_EX(TARGET, RET, NAME, PARAMS)
-PROCEDURE_IMPLEMENT_EX(TARGET, NAME, PARAMS)
-
-/* Implementation Finalizers */
-PACKAGE_IMPLEMENT(PKG)
-OBJECT_IMPLEMENT(CLASS)
-
-/* Invocation & Dispatch */
-PACKAGE_CALL(PKG, FUNC, ...)
-OBJECT_CALL(OBJ, METHOD, ...)
-OBJECT_AS(OBJ, TARGET_TYPE)
-
-/* Generic Template Engine */
-TEMPLATE_DECLARE(NAME, SUFFIX, TYPE)
-TEMPLATE_IMPLEMENT(NAME, SUFFIX, TYPE)
-
-/* Function Table Switches */
-MODULE_DISABLE_FUNCTION_TABLE
-PACKAGE_DISABLE_FUNCTION_TABLE
-OBJECT_DISABLE_FUNCTION_TABLE
-
-COSMERON_MACRO_INTERNAL_*
-```
-
-If a new macro does not clearly belong to this grammar, reconsider whether it should exist.
-
-## 8.1 Universal Template Engine
-
-The template engine (`Core/Module/Common/Template.impl`) provides generic type parameterization for `OBJECT` and `PACKAGE` declarations without monolithic instantiation macros:
-
-```c
-/* 1. Define declaration block */
-#define TEMPLATE_TSTACK(SUFFIX, TYPE)                                          \
-  OBJECT(                                                                      \
-      NS(TStack, SUFFIX),                                                    \
-      FIELDS(                                                                  \
-          TYPE items[16];                                                      \
-          size_t count;                                                        \
-      ),                                                                       \
-      OPERATION(Create, ()),                                                   \
-      OPERATION(Push, (TYPE value)),                                           \
-      OPERATION(Pop, (TYPE *outValue))                                         \
-  )
-
-/* 2. Define implementation block (via explicit *_IMPLEMENT_EX) */
-#define TEMPLATE_TSTACK_IMPLEMENT(SUFFIX, TYPE)                                \
-  OBJECT_OPERATION_IMPLEMENT_EX(NS(TStack, SUFFIX), Create, ()) { ... }     \
-  OBJECT_OPERATION_IMPLEMENT_EX(NS(TStack, SUFFIX), Push, (TYPE value)) { ... }\
-  OBJECT_OPERATION_IMPLEMENT_EX(NS(TStack, SUFFIX), Pop, (TYPE *outValue)) { ... }
-```
-
-### Instantiation
-- **`TEMPLATE_DECLARE(NAME, SUFFIX, TYPE)`**: Instantiates types and prototypes only (in header `.h` files).
-- **`TEMPLATE_IMPLEMENT(NAME, SUFFIX, TYPE)`**: Fully instantiates declaration and implementation bodies (in `.impl` / `.c` files).
-- **Inline-Only Templates**: If a template has only inline methods, define `#define TEMPLATE_<NAME>_INLINE_ONLY 1` or `#define TEMPLATE_<NAME>_IMPLEMENT(SUFFIX, TYPE) /* empty */`.
-- **Naming Rule**: Instantiated user types must strictly follow `T<Name>_<suffix>` (e.g. `TStack_int`, `TVector_uint32`).
-
-## 9. X-Macros
-
-Use X-macros when one semantic table must generate multiple representations (enums, string tables, switch cases, lookup arrays, diagnostics).
-
-Rules:
-
-- One table is the single source of truth;
-- Never duplicate the same list in enums, strings, mappings, or switches;
-- Table names and helper macros use `SNAKE_CASE`;
-- Generated public constants must pass through the constant namespace;
-- X-macros are generation tools, not public runtime API.
-
-### 9.1 Decoupled Column Selectors (Row-Tuple Pattern)
-
-To ensure consumers remain completely decoupled from column position and column count (Single Source of Truth for both table data and schema), pack each row as a tuple and provide column selectors:
-
-#### 1. Schema Selectors (Single Source of Truth for Column Layout)
-```c
-#define STATUS_COL_NAME(NAME, MESSAGE)    NAME
-#define STATUS_COL_MESSAGE(NAME, MESSAGE) MESSAGE
-```
-
-#### 2. Row Tuples
-Each row is passed to macro `X` as a single parenthesized tuple:
-```c
-#define STATUS_TABLE(X)                             \
-  X((SUCCESS, "Success"))                           \
-  X((GENERIC_ERROR, "Generic error"))               \
-  X((INVALID_ARGUMENT, "Invalid argument"))
-```
-
-#### 3. Unpacking Helper (Selector Dispatch)
-Use the preprocessor concatenation helper `PP_OP_CAT2`:
-```c
-#define STATUS_GET(FIELD, ROW) PP_OP_CAT2(STATUS_COL_, FIELD) ROW
-```
-
-#### 4. Decoupled Consumers
-Consumers take `(ROW)` and unpack only the fields they require. Adding new columns never breaks existing consumers:
-```c
-/* Enum generation */
-typedef enum STATUS_TYPE(Status) {
-#define STATUS_ENUM_ITEM(ROW) STATUS_CONST(STATUS_GET(NAME, ROW)),
-  STATUS_TABLE(STATUS_ENUM_ITEM)
-#undef STATUS_ENUM_ITEM
-} OPSTATUS;
-
-/* String table generation */
-static const char *const status_messages[] = {
-#define STATUS_MSG_ITEM(ROW) [STATUS_CONST(STATUS_GET(NAME, ROW))] = STATUS_GET(MESSAGE, ROW),
-  STATUS_TABLE(STATUS_MSG_ITEM)
-#undef STATUS_MSG_ITEM
-};
-
-/* Switch case generation */
-static const char *Status_ToString(OPSTATUS status) {
-  switch (status) {
-#define STATUS_CASE_ITEM(ROW) \
-    case STATUS_CONST(STATUS_GET(NAME, ROW)): return STATUS_GET(MESSAGE, ROW);
-    STATUS_TABLE(STATUS_CASE_ITEM)
-#undef STATUS_CASE_ITEM
-    default: return "Unknown";
-  }
+PACKAGE_FUNCTION_IMPLEMENT_EX(StreamBuffer_Utils, size_t, StrLen, (const char *str)) {
+    if (!str) return 0U;
+    return strlen(str);
 }
+
+PACKAGE_PREDICATE_IMPLEMENT_EX(StreamBuffer_Utils, IsStrEmpty, (const char *str)) {
+    return !str || str[0] == '\0';
+}
+
+SPACE_SCOPE(Transform)
+PACKAGE_PROCEDURE_IMPLEMENT_EX(StreamBuffer_Utils_Transform, ToUpper,
+                               (char *dest, const char *src)) {
+    if (!dest || !src) return;
+    for (size_t i = 0; src[i] != '\0'; ++i) {
+        char c = src[i];
+        if (c >= 'a' && c <= 'z') c = (char)(c - ('a' - 'A'));
+        dest[i] = c;
+    }
+}
+SPACE_SCOPE_END()
+
+PACKAGE_SCOPE_END()
 ```
 
-#### 5. Schema Extension (Zero Consumer Breakage)
-When a new column (e.g. `SEVERITY`) is added, only the selectors and rows are updated:
+### 6.2 Object Implementations
 ```c
-#define STATUS_COL_NAME(NAME, MESSAGE, SEVERITY)     NAME
-#define STATUS_COL_MESSAGE(NAME, MESSAGE, SEVERITY)  MESSAGE
-#define STATUS_COL_SEVERITY(NAME, MESSAGE, SEVERITY) SEVERITY
+#pragma once
+
+OBJECT_SCOPE(StreamBuffer, Buffer)
+
+OBJECT_OPERATION_IMPLEMENT_EX(StreamBuffer_Buffer, Clear, ()) {
+    if (!self) return STATUS(INVALID_ARGUMENT);
+    self->size = 0U;
+    self->data[0] = '\0';
+    return STATUS(SUCCESS);
+}
+
+OBJECT_FUNCTION_IMPLEMENT_EX(StreamBuffer_Buffer, size_t, Length, ()) {
+    if (!self) return 0U;
+    return self->size;
+}
+
+OBJECT_PREDICATE_IMPLEMENT_EX(StreamBuffer_Buffer, IsEmpty, ()) {
+    return !self || self->size == 0U;
+}
+
+OBJECT_SCOPE_END()
 ```
-Existing consumers (`STATUS_ENUM_ITEM`, `STATUS_MSG_ITEM`, `STATUS_CASE_ITEM`) require zero modifications and continue compiling cleanly.
 
-### 9.2 Categorical Modular Aggregation
+---
 
-Large multi-domain tables (such as status codes, tokens, or system errors) must be organized into category-specific `.impl` files inside a dedicated subfolder (e.g. `StatusTable/`):
+## 7. Declarative Callbacks & Events
 
-- `StatusTable/Generic.impl`: defines `STATUS_TABLE_GENERIC(X)`
-- `StatusTable/Memory.impl`: defines `STATUS_TABLE_MEMORY(X)`
-- `StatusTable/Concurrency.impl`: defines `STATUS_TABLE_CONCURRENCY(X)`
-- `StatusTable/Arithmetic.impl`: defines `STATUS_TABLE_ARITHMETIC(X)`
-- `StatusTable/Sequence.impl`: defines `STATUS_TABLE_SEQUENCE(X)`
+### 7.1 First-Class Callbacks (`TCALLBACK`)
+Callbacks can be declared inside `PACKAGE`, `OBJECT`, or standalone using category descriptors:
+- `CALLBACK_OPERATION(Name, (params))`
+- `CALLBACK_PREDICATE(Name, (params))`
+- `CALLBACK_FUNCTION(Ret, Name, (params))`
+- `CALLBACK_PROCEDURE(Name, (params))`
+- `CALLBACK_COMPARISON(Name, (params))`
 
-The master aggregator header (`StatusTable/StatusTable.h`) includes these `.impl` files and unifies them into the master table:
+Universal invocation & validation:
+- Invocation: `CALLBACK_CALL(cb, args...)`
+- Validation: `CALLBACK_IS_VALID(cb)`
+- Canonical comparator: `TCALLBACK(Comparison)`
+
+### 7.2 Declarative Events (`EVENT_PROCEDURE` & `EVENT_OPERATION`)
+- Zero-allocation 1-to-N observer notification.
+- Static slots embedded in struct or package scope with automatic cache-line decay (4, 8, 12, or 16 slots).
+- Re-entrancy safe: `Emit` takes a stack snapshot of active listeners before dispatching.
+- Reactive field mutation: `OBJECT_MUTATE(self, ClassName, fieldName, newValue, EventName)` updates state and emits on change.
+
+---
+
+## 8. Function Tables & Compile-Time Disabling
+
+Every package and object supports dispatch via `FunctionTable`:
+- Packages: singleton table `Package_GetFunctionTable()` invoked via `PACKAGE_CALL(Package, Func, ...)`.
+- Objects: instance pointer `obj->api` invoked via `OBJECT_CALL(obj, Method, ...)`.
+
+### Zero-Cost Disabling
+In resource-constrained or embedded environments, dispatch tables can be eliminated at compile time without changing code:
+- `-DMODULE_DISABLE_FUNCTION_TABLE`: Disables all tables globally.
+- `-DPACKAGE_DISABLE_FUNCTION_TABLE`: Disables tables for static packages.
+- `-DOBJECT_DISABLE_FUNCTION_TABLE`: Disables tables for objects.
+
+When disabled, no `FunctionTable` struct or table instance is emitted in memory.
+
+---
+
+## 9. Enums & X-Macro Table Pattern
+
+Every enum must be implemented via a decoupled X-Macro table using the **Row-Tuple Pattern**:
 
 ```c
-#include "Generic.impl"
-#include "Memory.impl"
-#include "Concurrency.impl"
-#include "Arithmetic.impl"
-#include "Sequence.impl"
+#define SEEK_COL_NAME(NAME, VALUE, DESC)  NAME
+#define SEEK_COL_VALUE(NAME, VALUE, DESC) VALUE
+#define SEEK_COL_DESC(NAME, VALUE, DESC)  DESC
+#define SEEK_GET(FIELD, ROW) PP_OP_CAT2(SEEK_COL_, FIELD) ROW
 
-#define STATUS_TABLE(X)         \
-  STATUS_TABLE_GENERIC(X)       \
-  STATUS_TABLE_MEMORY(X)        \
-  STATUS_TABLE_CONCURRENCY(X)   \
-  STATUS_TABLE_ARITHMETIC(X)    \
-  STATUS_TABLE_SEQUENCE(X)
+#define SEEK_TABLE(X) \
+  X((SET, 0, "Seek from beginning")) \
+  X((CUR, 1, "Seek from current position")) \
+  X((END, 2, "Seek from end"))
+
+typedef enum MODULE_ENUM(File, SeekOrigin) {
+#define SEEK_ENUM_ITEM(ROW) \
+  MODULE_CONST(File, SEEK_GET(NAME, ROW)) = SEEK_GET(VALUE, ROW),
+  SEEK_TABLE(SEEK_ENUM_ITEM)
+#undef SEEK_ENUM_ITEM
+} MODULE_ENUM(File, SeekOrigin);
 ```
 
-The public header (`Status.h`) then includes `StatusTable/StatusTable.h` to declare types and constants.
+---
 
-## 10. Functions Work
+## 10. Canonical Consumption Grammar
 
-Function contracts follow the result they produce.
-
-| Function kind | Return | Output |
-|---|---|---|
-| Infallible natural result | value directly | — |
-| Predicate / proposition | `bool` | — |
-| Fallible operation without primary result | `OPSTATUS` | — |
-| Fallible operation with primary result | `OPSTATUS` | `out` parameter |
-| Infallible mutation with no result | `void` | mutates target |
-
-Examples:
+External consumers interact with modules using the unified grammar of `Namespace.h`:
 
 ```c
-size_t Vector_Size(...);
-bool Vector_Contains(...);
+/* 1. Object Types (automatic 'T' prefix) */
+MODULE_TYPE(StreamBuffer, Buffer) buf; /* Expands to: StreamBuffer_TBuffer */
 
-OPSTATUS Vector_Push(...);
-OPSTATUS Vector_At(..., TYPE *out);
+/* 2. Enums and Constants */
+MODULE_ENUM(File, SeekOrigin) origin = MODULE_CONST(File, CUR);
 
-void Vector_Clear(...);
+/* 3. Semantic Namespace & Function Symbols in O(1) */
+MODULE_NS(StreamBuffer, Utils) /* Expands to: StreamBuffer_Utils */
+MODULE_FUNC(StreamBuffer, Utils, StrLen)("test") /* Expands to: StreamBuffer_Utils_StrLen("test") */
+DOMAIN_NS(Core, Algorithm, Repeat) /* Expands to: Core_Algorithm_Repeat */
+
+/* 4. Status Output */
+OPSTATUS status = STATUS(SUCCESS);
+
+/* 5. Unified Invocation (MODULE_CALL in O(1)) */
+MODULE_CALL(StreamBuffer, Buffer, Init, (&buf));
+MODULE_CALL(StreamBuffer, Buffer, Clear, (&buf));
+size_t len = MODULE_CALL(StreamBuffer, Utils, StrLen, ("test"));
+MODULE_CALL(StreamBuffer, Utils, Transform, ToUpper, (dest, src));
+
+/* 6. Direct C Invocation */
+StreamBuffer_Buffer_Clear(&buf);
+StreamBuffer_Utils_StrLen("test");
 ```
 
-`bool` answers a proposition; `OPSTATUS` reports an operational outcome.
+---
 
-An `out` parameter is a produced result, not merely any mutable pointer.
+## 11. Strict Refactoring Rules (Zero Retrocompatibilidade)
 
-- required `out == NULL` → `INVALID_ARGUMENT`;
-- `out` is modified only on `SUCCESS`, unless explicitly documented otherwise.
-
-Recoverable failures return `OPSTATUS`. Contract violations or impossible invariants may `PANIC`.
-
-Pointers are borrowed by default. Use `const` whenever the pointed data is not logically modified.
-
-Do not hide failures in sentinel values or implicit `LastError` state.
+1. **Delete all `.space` files**: Never create, maintain, or `#include` `.space` files.
+2. **Zero header boilerplate macros**: Remove all `#define FOO_NS`, `FOO_CNS`, `FOO_FUNC`, etc.
+3. **Zero synthetic `Types.h` files**: Keep types with their features; reserve `Common.inc` strictly for internal shared utilities.
+4. **Zero blueprint macros**: Never create `#define TEMPLATE_<Name>(...)` macros duplicating declarations.
+5. **Zero backward compatibility layers**: Never emit wrappers or legacy typedefs (`typedef ERROR_TYPE(TError) TError;` is strictly forbidden).
+6. **Zero magic numbers**: Use named status constants (`STATUS(...)`) and X-Macro enums.
+7. **English only**: All code identifiers, comments, commit messages, and documentation must be written in English.

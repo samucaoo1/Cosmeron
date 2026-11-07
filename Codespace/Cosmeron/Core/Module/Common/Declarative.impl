@@ -163,6 +163,9 @@
 #define COSMERON_INTERNAL_SELF_TYPE(C, T)                                      \
   PP_OP_CAT2(COSMERON_INTERNAL_SELF_TYPE_, C)(T)
 
+#define COSMERON_INTERNAL_OBJ_BODY_0(B) ;
+#define COSMERON_INTERNAL_OBJ_BODY_1(B) B
+
 #define COSMERON_INTERNAL_OBJ_MEMBER_I(CTX, C, I, R, N, P, B)                  \
   typedef R NS(PP_SEQ_GET_1 CTX, N, ret_t);                                  \
   typedef COSMERON_INTERNAL_SELF_TYPE(C, PP_SEQ_GET_2 CTX)                     \
@@ -171,7 +174,8 @@
     int _unused;                                                               \
   };                                                                           \
   static inline COSMERON_MAYBE_UNUSED R NS(PP_SEQ_GET_1 CTX, N)              \
-      COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(PP_SEQ_GET_2 CTX, C, P);
+      COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(PP_SEQ_GET_2 CTX, C, P)         \
+      PP_OP_CAT2(COSMERON_INTERNAL_OBJ_BODY_, I)(B)
 
 #define COSMERON_EXPAND_OBJ_MEMBERS(m, ctx, ...)                              \
   PP_FOREACH_D2_CTX(m, ctx, __VA_ARGS__)
@@ -279,13 +283,18 @@
       PP_OP_CAT2(COSMERON_INTERNAL_PKG_MEMBER_TAG_, PP_SEQ_GET_1 M),            \
       CLASS, M)
 
+#define COSMERON_INTERNAL_PKG_BODY_0(B) ;
+#define COSMERON_INTERNAL_PKG_BODY_1(B) B
+
 #define COSMERON_INTERNAL_PKG_MEMBER_TAG_0(CLASS, C, I, R, N, P, B)            \
   static inline COSMERON_MAYBE_UNUSED R NS(CLASS, N)                         \
-      COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P);
+      COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P)                              \
+      PP_OP_CAT2(COSMERON_INTERNAL_PKG_BODY_, I)(B)
 
 #define COSMERON_INTERNAL_PKG_MEMBER_TAG_1(CLASS, C, I, R, N, P, B)            \
   static inline COSMERON_MAYBE_UNUSED R NS(CLASS, N)                         \
-      COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P);
+      COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P)                              \
+      PP_OP_CAT2(COSMERON_INTERNAL_PKG_BODY_, I)(B)
 
 #define COSMERON_INTERNAL_PKG_MEMBER_TAG_2(CLASS, C, I, R, N, P, B)            \
   CALLBACK_FUNCTION(R, NS(CLASS, N), P);
@@ -378,6 +387,116 @@
 /* ============================================================
  * 4. TEMPLATE Emitters
  * ============================================================ */
+
+#if !defined(OBJECT_DISABLE_FUNCTION_TABLE) && !defined(MODULE_DISABLE_FUNCTION_TABLE)
+
+#define TEMPLATE_OBJECT_DEF(MOD, NAME, SUFFIX, FIELDS_DECL, ...)               \
+  typedef struct MODULE_TYPED(MOD, NAME, SUFFIX)                              \
+      MODULE_TYPED(MOD, NAME, SUFFIX);                                         \
+  typedef struct NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable)             \
+      NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable);                      \
+  COSMERON_INTERNAL_OBJ_GEN_MEMBERS(                                           \
+      (NS(LIB_PREFIX(MOD), NAME, SUFFIX), MODULE_TYPED(MOD, NAME, SUFFIX)),   \
+      (__VA_ARGS__))                                                           \
+  struct NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable) {                   \
+    int _reserved;                                                             \
+  };                                                                           \
+  struct MODULE_TYPED(MOD, NAME, SUFFIX) {                                     \
+    const struct NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable) * api;      \
+    COSMERON_INTERNAL_UNWRAP_FIELDS(FIELDS_DECL)                               \
+  };                                                                           \
+  static inline COSMERON_MAYBE_UNUSED                                          \
+  const struct NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable) *             \
+  NS(LIB_PREFIX(MOD), NAME, SUFFIX, GetFunctionTable)(void) {                 \
+    static const COSMERON_MAYBE_UNUSED                                         \
+    struct NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable) table = {         \
+        ._reserved = 0,                                                        \
+    };                                                                         \
+    return &table;                                                             \
+  }                                                                            \
+  static inline COSMERON_MAYBE_UNUSED OPSTATUS NS(LIB_PREFIX(MOD), NAME,       \
+                                                  SUFFIX, Init)(               \
+      MODULE_TYPED(MOD, NAME, SUFFIX) * self) {                                \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    self->api = NS(LIB_PREFIX(MOD), NAME, SUFFIX, GetFunctionTable)();        \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  typedef int NS(_cosmeron_tpl_obj_semi, MOD, NAME, SUFFIX, __LINE__)
+
+#else
+
+#define TEMPLATE_OBJECT_DEF(MOD, NAME, SUFFIX, FIELDS_DECL, ...)               \
+  typedef struct MODULE_TYPED(MOD, NAME, SUFFIX)                              \
+      MODULE_TYPED(MOD, NAME, SUFFIX);                                         \
+  COSMERON_INTERNAL_OBJ_GEN_MEMBERS(                                           \
+      (NS(LIB_PREFIX(MOD), NAME, SUFFIX), MODULE_TYPED(MOD, NAME, SUFFIX)),   \
+      (__VA_ARGS__))                                                           \
+  struct MODULE_TYPED(MOD, NAME, SUFFIX) {                                     \
+    COSMERON_INTERNAL_UNWRAP_FIELDS(FIELDS_DECL)                               \
+  };                                                                           \
+  static inline COSMERON_MAYBE_UNUSED OPSTATUS NS(LIB_PREFIX(MOD), NAME,       \
+                                                  SUFFIX, Init)(               \
+      MODULE_TYPED(MOD, NAME, SUFFIX) * self) {                                \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  typedef int NS(_cosmeron_tpl_obj_semi, MOD, NAME, SUFFIX, __LINE__)
+
+#endif
+
+#if !defined(PACKAGE_DISABLE_FUNCTION_TABLE) && !defined(MODULE_DISABLE_FUNCTION_TABLE)
+
+#define TEMPLATE_PACKAGE_DEF(MOD, NAME, SUFFIX, ...)                           \
+  typedef struct NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable)             \
+      NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable);                      \
+  struct NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable) {                   \
+    int _reserved;                                                             \
+  };                                                                           \
+  COSMERON_INTERNAL_PKG_GEN_MEMBERS(                                           \
+      NS(LIB_PREFIX(MOD), NAME, SUFFIX), (__VA_ARGS__))                        \
+  static inline COSMERON_MAYBE_UNUSED                                          \
+  const struct NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable) *             \
+  NS(LIB_PREFIX(MOD), NAME, SUFFIX, GetFunctionTable)(void) {                 \
+    static const COSMERON_MAYBE_UNUSED                                         \
+    struct NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable) table = {         \
+        ._reserved = 0,                                                        \
+    };                                                                         \
+    return &table;                                                             \
+  }                                                                            \
+  typedef int NS(_cosmeron_tpl_pkg_semi, MOD, NAME, SUFFIX, __LINE__)
+
+#else
+
+#define TEMPLATE_PACKAGE_DEF(MOD, NAME, SUFFIX, ...)                           \
+  COSMERON_INTERNAL_PKG_GEN_MEMBERS(                                           \
+      NS(LIB_PREFIX(MOD), NAME, SUFFIX), (__VA_ARGS__))                        \
+  typedef int NS(_cosmeron_tpl_pkg_semi, MOD, NAME, SUFFIX, __LINE__)
+
+#endif
+
+#define COSMERON_INTERNAL_TPL_OBJ_DISPATCH_1(NAME, ARGS, ...)                 \
+  (COSMERON_DECL_TAG_TPL_OBJECT, NAME, ARGS, (~), (__VA_ARGS__))
+
+#define COSMERON_INTERNAL_TPL_OBJ_DISPATCH_0(MOD, NAME, SUFFIX, ...)          \
+  TEMPLATE_OBJECT_DEF(MOD, NAME, SUFFIX, __VA_ARGS__)
+
+#undef TEMPLATE_OBJECT
+#define TEMPLATE_OBJECT(A, B, ...)                                             \
+  PP_OP_CAT2(COSMERON_INTERNAL_TPL_OBJ_DISPATCH_,                             \
+             PP_IS_PAREN(B))(A, B, __VA_ARGS__)
+
+#define COSMERON_INTERNAL_TPL_PKG_DISPATCH_1(NAME, ARGS, ...)                 \
+  (COSMERON_DECL_TAG_TPL_PACKAGE, NAME, ARGS, (~), (__VA_ARGS__))
+
+#define COSMERON_INTERNAL_TPL_PKG_DISPATCH_0(MOD, NAME, SUFFIX, ...)          \
+  TEMPLATE_PACKAGE_DEF(MOD, NAME, SUFFIX, __VA_ARGS__)
+
+#undef TEMPLATE_PACKAGE
+#define TEMPLATE_PACKAGE(A, B, ...)                                            \
+  PP_OP_CAT2(COSMERON_INTERNAL_TPL_PKG_DISPATCH_,                             \
+             PP_IS_PAREN(B))(A, B, __VA_ARGS__)
 
 #define COSMERON_EMIT_DECL_104(MOD, TAG, NAME, ARGS, FIELDS_DECL, METHODS)    \
   typedef int NS(_cosmeron_decl_tpl_obj_semi, MOD, NAME, __LINE__);

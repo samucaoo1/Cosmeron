@@ -16,101 +16,240 @@ Esta skill rege a refatoração total da base de código do **Cosmeron**.
 
 ---
 
-## 1. Padrões Canônicos a Adotar
+## 1. Níveis Declarativos e Arquitetura de Namespace
 
-Baseie toda refatoração nas regras de [AGENTS.md](file:///run/media/okarin/HD/Programação/Cosmeron/AGENTS.md) e [PATTERN.md](file:///run/media/okarin/HD/Programação/Cosmeron/Docs/Reference/PATTERN.md).
+O ecossistema é organizado em quatro níveis hierárquicos:
 
-### A. Callbacks de Primeira Classe (`Core/Module/Callback/Callback.h`)
-- **Proibido:** Ponteiros de função brutos para callbacks e separação entre versão comum e `*WithContext`.
-- **Obrigatório:** Declarar tipos de callback usando `CALLBACK_DECLARE*`:
-  - `CALLBACK_DECLARE(Name, ReturnType, Parameters, Arguments)`
-  - `CALLBACK_DECLARE_PROCEDURE(Name, Parameters, Arguments)`
-  - `CALLBACK_DECLARE_OPERATION(Name, Parameters, Arguments)`
-  - `CALLBACK_DECLARE_PREDICATE(Name, Parameters, Arguments)`
-  - Ou suas variantes `NULLARY`.
-- **Tipo de uso:** `TCALLBACK(Name)`.
-- **Invocação:** `CALLBACK_FUNC(Name_Invoke)(callback, args...)`.
-- **Exemplo Comparador:** `TCALLBACK(Comparison)`. Funções de ordenação ou busca recebem unicamente `TCALLBACK(Comparison)`, eliminando duplicatas `WithContext`.
+```
+DOMAIN (Agrupamento Arquitetural/Pasta: Core, Container, Text, IO, Graphics)
+  └── MODULE (Unidade Fundamental de Compilação e Semântica: Memory, File, Bit, Text)
+        ├── PACKAGE (Conjuntos Estáticos de Funções Livres: Alloc, Operations)
+        └── OBJECT (Instâncias com Estado, Receptor 'self' e FunctionTable: Stream, Pool)
+              ├── SPACE (Sub-Namespaces Aninhados / Sub-Tabelas: Transform, Codec)
+              └── VARIANT (Famílias de Sobrecargas Planas: Alloc, AllocAndFill)
+```
 
-### B. Módulos Declarativos: `PACKAGE` vs `OBJECT`
-- **Módulos estáticos / funções livres:** Use `PACKAGE(Namespace, ...)`.
-- **Estruturas com estado / instâncias:** Use `OBJECT(Type, FIELDS(...), ...)`.
-- **Contratos explícitos de retorno (Substitutos de `METHOD`):**
-  - `OPERATION(Name, (params))` $\to$ retorna `OPSTATUS`.
-  - `PREDICATE(Name, (params))` $\to$ retorna `bool`.
-  - `FUNCTION(ReturnType, Name, (params))` $\to$ retorna valor do tipo `ReturnType`.
-  - `PROCEDURE(Name, (params))` $\to$ ação infalível retornando `void`.
-  - Para métodos em objetos que não modificam estado: use prefixo `CONST_*`.
-- **Proibido em código novo/refatorado:**
-  - Macros obsoletas: `METHOD`, `CONST_METHOD`, `OBJECT_PROTOTYPE`, `PACKAGE_PROTOTYPE`, `OBJECT_PROTOTYPEEX`, `PACKAGE_PROTOTYPEEX`.
-  - Termos como `VTable` (sempre use `FunctionTable`).
-
-### C. Implementações em `.impl`
-- Prefira a família explícita de macros de implementação:
+### A. Eliminação Total de Arquivos `.space` e Boilerplate Local
+- **Proibido:** Criar, manter ou incluir arquivos `.space`. Todos os arquivos `.space` foram eliminados.
+- **Proibido:** Criar blocos manuais de macros locais de conveniência em cabeçalhos:
   ```c
-  /* Para Objetos (amarra Target *self como primeiro parâmetro) */
-  OBJECT_OPERATION_IMPLEMENT_EX(Target, MethodName, (params...)) { ... }
-  OBJECT_PREDICATE_IMPLEMENT_EX(Target, MethodName, (params...)) { ... }
-  OBJECT_FUNCTION_IMPLEMENT_EX(Target, ReturnType, MethodName, (params...)) { ... }
-  OBJECT_PROCEDURE_IMPLEMENT_EX(Target, MethodName, (params...)) { ... }
-
-  /* Para Pacotes (funções livres) */
-  PACKAGE_OPERATION_IMPLEMENT_EX(Package, FuncName, (params...)) { ... }
-  PACKAGE_PREDICATE_IMPLEMENT_EX(Package, FuncName, (params...)) { ... }
-  PACKAGE_FUNCTION_IMPLEMENT_EX(Package, ReturnType, FuncName, (params...)) { ... }
-  PACKAGE_PROCEDURE_IMPLEMENT_EX(Package, FuncName, (params...)) { ... }
+  /* TOTALMENTE PROIBIDO: */
+  #define FOO_NS(NAME)     ...
+  #define FOO_CNS(NAME)    ...
+  #define FOO_INS(NAME)    ...
+  #define FOO_CINS(NAME)   ...
+  #define FOO_TYPE(NAME)   ...
+  #define FOO_FUNC(NAME)   ...
+  #define FOO_CONST(NAME)  ...
+  #define FOO_MOD / FOO_CMOD
+  #define GNS2..GNS5 / CNS2..CNS5
   ```
-- Finalize sempre o arquivo `.impl` com:
-  - `PACKAGE_IMPLEMENT(PackageName);` ou
-  - `OBJECT_IMPLEMENT(ObjectName);`
+- **Obrigatório:** Preferir semânticos `MODULE_*` (`MODULE_TYPE`, `MODULE_TYPED`, `MODULE_ENUM`, `MODULE_CONST`, `MODULE_FUNC`, `MODULE_NS`, `DOMAIN_NS`) no lugar de `NS(...)` bruto. Usar `NS_JOIN(...)` em $O(1)$ para concatenação plana de tokens.
 
-### D. Enums e Tabelas X-Macro
-- **Proibido:** Enums literais manuais `enum { FOO, BAR }`.
-- **Obrigatório:** Toda enumeração deve possuir sua tabela X-Macro (`<DOMAIN>_TABLE(X)`).
-- **Padrão de Tupla e Seletores Desacoplados:**
-  - Linhas empacotadas em tuplas: `X((COL1, COL2, ...))`.
-  - Seletores de coluna: `#define DOMAIN_COL_<FIELD>(...) <FIELD>`.
-  - Desempacotamento de campos: `#define DOMAIN_GET(FIELD, ROW) PP_OP_CAT2(DOMAIN_COL_, FIELD) ROW`.
-  - Consumidores dependem apenas do `ROW` e do `DOMAIN_GET`, garantindo que adições de colunas não quebrem o código consumidor.
-- **Divisão Modular Categórica:**
-  - Tabelas ricas ou com múltiplos domínios são divididas em arquivos `.impl` dentro de uma pasta `<Domain>Table/` (ex: `Generic.impl`, `Arithmetic.impl`, `Memory.impl`).
-  - O cabeçalho agregador `<Domain>Table.h` unifica as tabelas parciais em `<DOMAIN>_TABLE(X)`.
-- Prefixos de constante pública: `*_CONST(NAME)`.
-
-### E. Convenção de Tipos e Nomes
-- Prefixo `T` **apenas** para tipos diretamente manipulados pelo usuário (`TMemoryPool`, `TVector_uint32`, `TCALLBACK(...)`).
-- Enums de saída não levam `T` (ex: `ComparisonResult`, aliased para `CMPOUT`).
-- Nomes qualificados evitam colisões (`TMemoryPool` em vez de `TPool`).
-
-### F. Motor Genérico de Templates (`Core/Module/Common/Template.impl`)
-- **Proibido:** Criar macros monolíticas ad-hoc de instanciação (ex: `VECTOR_IMPLEMENT_ALL`, `*_IMPLEMENT_ALL_DEGREE_CMP`).
-- **Obrigatório:** Seguir o padrão de templates do Cosmeron:
-  1. `TEMPLATE_<NAME>(SUFFIX, TYPE)`: declaração do `OBJECT` ou `PACKAGE`.
-  2. `TEMPLATE_<NAME>_IMPLEMENT(SUFFIX, TYPE)`: implementação dos métodos via `*_IMPLEMENT_EX`.
-  3. Para templates puramente inline: definir `#define TEMPLATE_<NAME>_INLINE_ONLY 1` ou `#define TEMPLATE_<NAME>_IMPLEMENT(SUFFIX, TYPE) /* vazio */`.
-- **Instanciação Padronizada:**
-  - `TEMPLATE_DECLARE(NAME, SUFFIX, TYPE)`: instanciação somente de tipos e protótipos em headers (`.h`).
-  - `TEMPLATE_IMPLEMENT(NAME, SUFFIX, TYPE)`: instanciação completa (declaração + corpos) em arquivos de implementação (`.impl` / `.c`).
-- **Nomenclatura gerada:** Sempre usar `T<Name>_<suffix>` para tipos de usuário (ex: `TStack_int`, `TVector_uint32`).
+### B. Distribuição Canônica de Arquivos e Infraestrutura Comum (`Common.inc`)
+- **Sem Padrão Artificial de `Types.h`:** Tipos e enums não devem ser segregados artificialmente em arquivos `Types.h`.
+- **`Common.inc`:** É destinado **estritamente a infraestrutura interna compartilhada** do próprio módulo (helpers inline, cálculos de alinhamento, funções utilitárias internas como `Memory/Common.inc`), evitando que pacotes do mesmo módulo reimplementem código. A extensão `.inc` sinaliza explicitamente que é um arquivo de inclusão interna, nunca público para o consumidor.
+- **Tipos Específicos:** Ficam diretamente no cabeçalho do recurso correspondente (`Outcome/Status.h` define `OPSTATUS` e enums de status; `Algorithm/Comparison.h` define `CMPOUT` e enums de comparação).
 
 ---
 
-## 2. Checklist do Procedimento de Refatoração
+## 2. Declaração Declarativa no Cabeçalho (`.h`)
 
-Ao refatorar um módulo listado em `.temp`:
+Os cabeçalhos declaram o módulo via `MODULE(...)`:
 
-1. **Inspecione o cabeçalho (`.h`) e a implementação (`.impl`)**:
-   - Identifique assinaturas antigas (`*_PROTOTYPE`, `METHOD`, ponteiros brutos de callback, etc.).
-2. **Elimine duplicações de contexto**:
-   - Onde houver `Func` e `FuncWithContext`, unifique em uma única função recebendo o respectivo `TCALLBACK(...)`.
-3. **Substitua por `PACKAGE` ou `OBJECT`**:
-   - Reescreva os membros usando `OPERATION`, `PREDICATE`, `FUNCTION` e `PROCEDURE`.
-4. **Remova shims e compatibilidade**:
-   - Delete os `#define` de compatibilidade legada.
-   - Delete typedefs obsoletos.
-5. **Atualize o arquivo de implementação (`.impl`)**:
-   - Converta para `PACKAGE_*_IMPLEMENT_EX` ou `OBJECT_*_IMPLEMENT_EX`.
-   - Remova wrappers intermediários de chamada.
-6. **Atualize os testes correspondentes**:
-   - Adapte as chamadas no diretório `Codespace/Tests/` para o novo padrão.
-7. **Marque o item como concluído no `.temp`**.
+```c
+#pragma once
+#include "Core/Module/Module.h"
+
+MODULE(DOMAIN(Core), Text,
+    /* 1. Enum com tabela X-Macro desacoplada */
+    ENUM(SeekOrigin, SEEK_TABLE),
+
+    /* 2. Objeto com estado (Gera automaticamente o tipo Text_TString) */
+    OBJECT(String,
+        FIELDS(
+            char *data;
+            size_t size;
+            size_t capacity;
+        ),
+        OPERATION(Clear, ()),
+        OPERATION(Reserve, (size_t newCapacity)),
+        CONST_FUNCTION(size_t, Length, ()),
+        CONST_PREDICATE(IsEmpty, ()),
+        CONST_COMPARISON(Compare, (const MODULE_TYPE(Text, String) *other))
+    ),
+
+    /* 3. Pacote de funções livres */
+    PACKAGE(CString,
+        FUNCTION(size_t, Length, (const char *str)),
+        PREDICATE(IsEmpty, (const char *str)),
+
+        /* Sub-Namespace com sub-tabela no FunctionTable */
+        SPACE(Transform,
+            PROCEDURE(ToUpper, (char *dest, const char *src)),
+            PROCEDURE(ToLower, (char *dest, const char *src))
+        ),
+
+        /* Família plana de sobrecarga */
+        VARIANT(Alloc,
+            FUNCTION(void *, (size_t size)),
+            FUNCTION(void *, AndFill, (size_t size, char fillChar))
+        )
+    )
+);
+```
+
+### Contratos de Retorno de Membros
+- `OPERATION(Name, (params))` $\to$ `OPSTATUS`.
+- `PREDICATE(Name, (params))` $\to$ `bool`.
+- `FUNCTION(Ret, Name, (params))` $\to$ `Ret`.
+- `PROCEDURE(Name, (params))` $\to$ `void`.
+- `COMPARISON(Name, (params))` $\to$ `CMPOUT` (`ComparisonResult`: `LOWER`, `EQUAL`, `HIGHER`).
+- Use prefixo `CONST_*` para leitores em `OBJECT`.
+- Use sufixo `*_INLINE(..., { corpo })` quando a implementação estiver no cabeçalho.
+
+---
+
+## 3. Templates Declarativos (`TEMPLATE_OBJECT` e `TEMPLATE_PACKAGE`)
+
+Templates são declarados dentro de `MODULE(...)`:
+
+```c
+MODULE(DOMAIN(Container), Container,
+    TEMPLATE_OBJECT(Vector, (SUFFIX, TYPE),
+        FIELDS(
+            TYPE *items;
+            size_t count;
+            size_t capacity;
+        ),
+        OPERATION(Push, (TYPE item)),
+        OPERATION(Pop, (TYPE *outItem)),
+        CONST_FUNCTION(size_t, Count, ()),
+        CONST_PREDICATE(IsEmpty, ())
+    ),
+
+    TEMPLATE_PACKAGE(BitOps, (SUFFIX, TYPE),
+        OPERATION(Set, (TYPE *value, uint8_t bit)),
+        PREDICATE(Check, (TYPE value, uint8_t bit))
+    )
+);
+```
+
+### Regras de Templates:
+- **Zero Macros de Blueprint**: Proibido definir macros `#define TEMPLATE_<Name>(...)` duplicando listas de membros. A declaração vive exclusivamente dentro de `MODULE(...)`.
+- **Modos de Instanciação:**
+  1. **Instanciação Direta:** `TEMPLATE_INSTANTIATE(Vector, uint32, uint32_t);`
+  2. **Instanciação em Lote (X-Macro):** `TEMPLATE_INSTANTIATE_TABLE(BitOps, BIT_WIDTH_TABLE);`
+
+---
+
+## 4. Implementação no `.impl` / `.c` (Lexical Scope)
+
+O arquivo `.impl` utiliza o modelo de escopo léxico, **sem macros finalizadoras obrigatórias** (`PACKAGE_IMPLEMENT` / `OBJECT_IMPLEMENT`):
+
+```c
+#pragma once
+#include "String.h"
+
+MODULE_SCOPE(Text, String)
+
+OPERATION(Clear, ()) {
+    if (!self) return STATUS(INVALID_ARGUMENT);
+    self->size = 0U;
+    return STATUS(SUCCESS);
+}
+
+CONST_FUNCTION(size_t, Length, ()) {
+    return self ? self->size : 0U;
+}
+
+MODULE_SCOPE_END()
+
+PACKAGE_SCOPE(Text, CString)
+
+FUNCTION(size_t, Length, (const char *str)) {
+    if (!str) return 0U;
+    return strlen(str);
+}
+
+SPACE_SCOPE(Transform)
+PROCEDURE(ToUpper, (char *dest, const char *src)) {
+    /* ... */
+}
+SPACE_SCOPE_END()
+
+PACKAGE_SCOPE_END()
+```
+
+---
+
+## 5. Gramática Canônica de Consumo Cross-Module
+
+Todo consumo externo utiliza a gramática unificada de `Namespace.h`, imune a prefixos:
+
+```c
+/* 1. Tipos de Objeto (Regra do 'T' automático): */
+MODULE_TYPE(Text, String) str; /* Expande para: Text_TString */
+
+/* 2. Tipos de Template: */
+MODULE_TYPED(Container, Vector, uint32) vec; /* Expande para: Container_TVector_uint32 */
+
+/* 3. Forward Declarations: */
+FORWARD_OBJECT(Text, String);
+FORWARD_TEMPLATE_OBJECT(Container, Vector, uint32);
+FORWARD_ENUM(Text, SeekOrigin);
+
+/* 4. Enums e Constantes: */
+MODULE_ENUM(Text, SeekOrigin) origin = MODULE_CONST(Text, CUR);
+
+/* 5. Identificadores Semânticos em O(1): */
+MODULE_NS(Text, CString);               /* Expande para: Text_CString */
+MODULE_FUNC(Text, CString, Length);     /* Expande para: Text_CString_Length */
+DOMAIN_NS(Core, Algorithm, Repeat);     /* Expande para: Core_Algorithm_Repeat */
+
+/* 6. Status Universal: */
+OPSTATUS status = STATUS(SUCCESS);
+
+/* 7. Invocação Despachada (MODULE_CALL em O(1)): */
+MODULE_CALL(Text, String, Init, (&str));
+MODULE_CALL(Text, String, Clear, (&str));
+size_t len = MODULE_CALL(Text, CString, Length, ("abc"));
+MODULE_CALL(Text, CString, Transform, ToUpper, (dest, src));
+```
+
+---
+
+## 6. Sistema Declarativo de Eventos & Mutação Reativa
+
+- Slots estáticos embutidos com zero alocação dinâmica (capacidade com decay para 4, 8, 12, 16 slots).
+- Declaração por pares de tupla sem duplicação:
+  ```c
+  EVENT_PROCEDURE(Click, ((int, button), (int, x), (int, y)))
+  EVENT_OPERATION(Process, ((int, code)))
+  EVENT_PROCEDURE(Reset, ())
+  ```
+- Mutação Reativa: `OBJECT_MUTATE(self, ClassName, fieldName, newValue, EventName);`.
+
+---
+
+## 7. Callbacks de Primeira Classe (`TCALLBACK`)
+
+- Callbacks tipados via `CALLBACK_OPERATION`, `CALLBACK_PREDICATE`, `CALLBACK_FUNCTION`, `CALLBACK_PROCEDURE`, `CALLBACK_COMPARISON`.
+- Sem variantes `WithContext`. Unicamente `TCALLBACK(Name)`.
+- Invocação: `CALLBACK_CALL(cb, args...)` ou `CALLBACK_INVOKE(cb, args...)`.
+- Validação: `CALLBACK_IS_VALID(cb)`.
+- Comparador Canônico: `TCALLBACK(Comparison)`.
+
+---
+
+## 8. Checklist de Refatoração Passo-a-Passo
+
+Ao refatorar qualquer módulo:
+
+1. **Exclua o arquivo `.space` e remova seus `#include`**.
+2. **Remova qualquer macro boilerplate local (`FOO_NS`, `FOO_CNS`, etc.)**.
+3. **Crie `Common.inc` apenas se houver infraestrutura interna comum a ser compartilhada** entre os pacotes do módulo (não crie `Types.h`).
+4. **Declare o módulo com `MODULE(...)`** agrupando seus `OBJECT`, `PACKAGE`, `ENUM`, `SPACE`, `VARIANT` ou `TEMPLATE_*`.
+5. **Implemente no `.impl` usando `MODULE_SCOPE`**, sem adicionar finalizadores `PACKAGE_IMPLEMENT`/`OBJECT_IMPLEMENT`.
+6. **Substitua comparadores e callbacks brutos por `TCALLBACK(...)`**.
+7. **Atualize e valide os testes correspondentes em `Codespace/Tests/`** (`-Wall -Wextra -Wpedantic -Werror`).

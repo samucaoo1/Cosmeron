@@ -21,18 +21,35 @@ Everything must live inside the library/module namespace whenever C allows it. E
 | Internal namespace token | `PascalCase` / `SNAKE_CASE` | `Internal` / `INTERNAL` |
 | Parameter / local / field | `camelCase` | `outValue`, `leftSize`, `bufferCapacity` |
 
-### Namespace Macro Conventions
-- `*_MOD` (`PascalCase`) names the module namespace.
-- `*_CMOD` (`SNAKE_CASE`) names the constant namespace.
-- `*_NS(NAME)`: Public C identifiers.
-- `*_CNS(NAME)`: Public constants.
-- `*_INS(NAME)`: Internal C identifiers.
-- `*_CINS(NAME)`: Internal constants.
+### Namespace Architecture & Conventions
+- **Complete Elimination of `.space` Files:** All legacy `.space` files are permanently deleted. Modules, packages, and objects must never include or define `.space` files.
+- **Unified Namespaces (`NS_JOIN`, `MODULE_NS`, `MODULE_FUNC` in O(1)):**
+  - **Prefer `MODULE_*` over `NS`**: Always prefer semantic macros (`MODULE_TYPE`, `MODULE_TYPED`, `MODULE_ENUM`, `MODULE_CONST`, `MODULE_FUNC`, `MODULE_NS`, `DOMAIN_NS`) over raw `NS(...)` for all public and consumer-facing code.
+  - `NS_JOIN(...)` provides fast, flat, $O(1)$ single-substitution concatenation with `_`.
+  - `MODULE_NS(Modulo, Pacote)` and `MODULE_FUNC(Modulo, Pacote, Func)` expand semantically in $O(1)$.
+  - `DOMAIN_NS(Domain, ...)` expands domain-qualified namespaces in $O(1)$.
+  - Numbered namespace macros (`GNS2`..`GNS5`, `CNS2`..`CNS5`) are obsolete and strictly forbidden.
+- **Prohibition of Local Header Namespace Boilerplate:**
+  - Never define manual header-level namespace macros such as:
+    ```c
+    #define FOO_NS(NAME)     ...
+    #define FOO_CNS(NAME)    ...
+    #define FOO_INS(NAME)    ...
+    #define FOO_CINS(NAME)   ...
+    #define FOO_TYPE(NAME)   ...
+    #define FOO_FUNC(NAME)   ...
+    #define FOO_CONST(NAME)  ...
+    ```
+  - Intermediate token macros (`*_MOD`, `*_CMOD`) are obsolete.
+  - Use `NS(...)` and `CNS(...)` directly, or the canonical declarative `MODULE`, `MODULE_SCOPE`, `MODULE_CALL`, and `MODULE_TYPE` macros.
+- **Canonical File Organization & Infrastructure Header (`Common.inc`):**
+  - No synthetic `Types.h` files: types, enums, and tables belong directly in the header of their corresponding feature (e.g., `OPSTATUS` in `Outcome/Status.h`, `CMPOUT` in `Algorithm/Comparison.h`).
+  - `Common.inc` is reserved strictly for internal shared infrastructure of a module (inline helpers, calculations, internal shared types like in `Memory/Common.inc`) to prevent duplicate implementations across packages. The `.inc` extension explicitly indicates it is an internal non-public include.
 - Internal preprocessor macros: `COSMERON_MACRO_INTERNAL_*` (no namespace guards).
 - **Strict Prohibition of Unnamespaced Internals:**
   - Absolutely no C identifier (structs, unions, typedefs, static inline helpers, internal functions, internal enums) may ever exist in the raw global namespace without namespace macros.
-  - All internal structs, helpers, static inline functions, and private types **MUST** be wrapped with `*_INS(NAME)` (e.g. `ERROR_INS(FormatWriter)`, `ERROR_INS(Format_WriteContext)`).
-  - Callbacks and internal types must also live within the module namespace (`ERROR_INS(...)` or `ERROR_NS(...)`).
+  - All internal structs, helpers, static inline functions, and private types **MUST** be wrapped with `NS(...)` or `MODULE_SCOPE`.
+  - Callbacks and internal types must also live within the module namespace.
 
 ---
 
@@ -90,7 +107,7 @@ Everything must live inside the library/module namespace whenever C allows it. E
     3. File-wide override: `#define TARGET_IS_OBJECT 1`
     Otherwise, it automatically emits free functions for packages.
 - **Deprecated aliases:** Never use legacy aliases (`METHOD`, `CONST_METHOD`, `OBJECT_PROTOTYPEEX`, `PACKAGE_PROTOTYPEEX`, `OBJECT_PROTOTYPE`) in new code; they exist solely for backward compatibility.
-- **Finalizer call:** Always close `.impl` files with `PACKAGE_IMPLEMENT(PackageName);` or `OBJECT_IMPLEMENT(ObjectName);`.
+- **Implementation Scope:** Use `MODULE_SCOPE(MOD, Target)` and `MODULE_SCOPE_END()` to scope implementations cleanly without needing dummy finalizer calls.
 
 ---
 
@@ -120,14 +137,21 @@ Everything must live inside the library/module namespace whenever C allows it. E
   - Binding: `callback.Bind(&callback, func, ctx)` or `CALLBACK_FUNC(NAME, Bind)(func, ctx)`.
 - **Declarative Packages:** Use `PACKAGE(PKG, ...)`.
   - Invocation: `PACKAGE_CALL(PKG, FuncName, args...)` or direct calls `PKG_FuncName(...)`.
+- **Declarative Events & Reactive Mutation:**
+  - Events are declared natively inside `OBJECT` or `PACKAGE` with zero heap allocation:
+    - `EVENT_PROCEDURE(Name, ((Type, argName), ...))` (infallible, `void`)
+    - `EVENT_OPERATION(Name, ((Type, argName), ...))` (fallible, `OPSTATUS`, short-circuits on first error)
+    - Optional explicit capacity: `EVENT_PROCEDURE(Name, ((Type, argName)), 8)` (decays to 4, 8, 12, or 16 slots aligned with L1 cache line).
+    - Nullary events: `EVENT_PROCEDURE(Reset, ())`.
+  - API automatically emitted per event: `Subscribe`, `Unsubscribe` (FIFO shift removal by `function` + `context`), `Emit` (re-entrancy safe via stack snapshot), `Clear`, `Count`, `Capacity`.
+  - Reactive mutation helper: `OBJECT_MUTATE(self, ClassName, fieldName, newValue, EventName)` evaluates `self->fieldName != (newValue)`, updates the field, and emits the event.
 - **Compile-time disabling:** Every Function Table family provides compile-time disabling via `MODULE_DISABLE_FUNCTION_TABLE`, `PACKAGE_DISABLE_FUNCTION_TABLE`, or `OBJECT_DISABLE_FUNCTION_TABLE`. When defined, no struct, instance, or table is emitted.
 - **Naming:** Always use the term `FunctionTable`, never `VTable`.
-- **Universal Template Engine (`TEMPLATE_DECLARE` / `TEMPLATE_IMPLEMENT`):**
-  - Use `TEMPLATE_<NAME>(SUFFIX, TYPE)` to declare parameterized `OBJECT` or `PACKAGE` modules.
-  - Use `TEMPLATE_<NAME>_IMPLEMENT(SUFFIX, TYPE)` to implement their methods via `*_IMPLEMENT_EX`.
-  - Instantiate in headers with `TEMPLATE_DECLARE(NAME, SUFFIX, TYPE)` (types and prototypes).
-  - Instantiate in implementations with `TEMPLATE_IMPLEMENT(NAME, SUFFIX, TYPE)` (full declaration + body).
-  - For inline-only templates, define `#define TEMPLATE_<NAME>_INLINE_ONLY 1` or define an empty `TEMPLATE_<NAME>_IMPLEMENT`.
+- **Universal Template Engine (`TEMPLATE_OBJECT` / `TEMPLATE_PACKAGE`):**
+  - Declare parameterized templates directly inside `MODULE(...)` via `TEMPLATE_OBJECT(Name, (SUFFIX, TYPE), ...)` or `TEMPLATE_PACKAGE(Name, (SUFFIX, TYPE), ...)`.
+  - **Zero Blueprint Macros**: Never create `#define TEMPLATE_<Name>(...)` macros duplicating member lists. The template is declared once, directly inside `MODULE(...)`.
+  - Instantiate on-demand with `TEMPLATE_INSTANTIATE(Name, Suffix, Type)`.
+  - Batch instantiate with X-Macros via `TEMPLATE_INSTANTIATE_TABLE(Name, TYPE_TABLE)`.
   - Type naming convention for user types: `T<Name>_<suffix>` (e.g. `TStack_int`, `TVector_uint32`).
   - Prohibit ad-hoc monolithic instantiation macros (e.g., `VECTOR_IMPLEMENT_ALL`).
 

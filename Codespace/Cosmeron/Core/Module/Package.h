@@ -1,30 +1,19 @@
 #pragma once
 
-#include "Module.space"
+#include "Namespace.h"
 #include "Common/Tuple.impl"
 #include "Common/ComparisonEx.impl"
 #include "Callback/Callback.h"
 #include "Common/FunctionTable.impl"
 #include "Common/Dispatch.impl"
 #include "Common/Template.impl"
+#include "Common/Scope.impl"
 
 /* ============================================================
  * Package Declarative Framework (Core/Module/Package.h)
  * Handles collections of free functions (pure procedures,
  * operations, predicates, and functions) with optional FunctionTable.
  * ============================================================ */
-
-#define PACKAGE_MOD Package
-#define PACKAGE_CMOD PACKAGE
-
-#define PACKAGE_NS(NAME) NS(LIB_PREFIX(PACKAGE_MOD), NAME)
-#define PACKAGE_CNS(NAME) CNS(LIB_PREFIX_CONST(PACKAGE_CMOD), NAME)
-#define PACKAGE_INS(NAME) NS(LIB_PREFIX(PACKAGE_MOD), Internal, NAME)
-#define PACKAGE_CINS(NAME) CNS(LIB_PREFIX_CONST(PACKAGE_CMOD), INTERNAL, NAME)
-
-#define PACKAGE_TYPE(NAME) PACKAGE_NS(NAME)
-#define PACKAGE_FUNC(NAME) PACKAGE_NS(NAME)
-#define PACKAGE_CONST(NAME) PACKAGE_CNS(NAME)
 
 /* ------------------------------------------------------------
  * 1. Invocation Helpers

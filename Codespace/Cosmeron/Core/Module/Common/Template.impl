@@ -4,7 +4,8 @@
 
 /* ============================================================
  * Universal Template Instantiation Engine
- * Supports both Object templates and Package templates.
+ * Supports both Object templates and Package templates,
+ * with multi-parameter variadic argument lists.
  * ============================================================ */
 
 /* ------------------------------------------------------------
@@ -14,11 +15,11 @@
  *
  * For zero-boilerplate inline-only templates, authors can either:
  * a) Define `#define TEMPLATE_<NAME>_INLINE_ONLY 1`
- * b) Define `#define TEMPLATE_<NAME>_IMPLEMENT(SUFFIX, TYPE) // empty`
+ * b) Define `#define TEMPLATE_<NAME>_IMPLEMENT(...) // empty`
  * ------------------------------------------------------------ */
 
-#define COSMERON_MACRO_INTERNAL_TPL_IMPL_1(NAME, SUFFIX, TYPE) /* 1 = inline-only: omit NS */
-#define COSMERON_MACRO_INTERNAL_TPL_IMPL_0(NAME, SUFFIX, TYPE) NS(TEMPLATE, NAME, IMPLEMENT)(SUFFIX, TYPE)
+#define COSMERON_MACRO_INTERNAL_TPL_IMPL_1(NAME, ...) /* 1 = inline-only: omit NS */
+#define COSMERON_MACRO_INTERNAL_TPL_IMPL_0(NAME, ...) NS(TEMPLATE, NAME, IMPLEMENT)(__VA_ARGS__)
 
 #define COSMERON_MACRO_INTERNAL_IS_1_CHECK(val, defaultVal) val
 #define COSMERON_MACRO_INTERNAL_IS_1_1 1
@@ -30,15 +31,41 @@
 /* ------------------------------------------------------------
  * 2. Declaration-Only Instantiation (Header / Inline-Only)
  * ------------------------------------------------------------ */
-#define TEMPLATE_DECLARE(NAME, SUFFIX, TYPE) \
-  NS(TEMPLATE, NAME)(SUFFIX, TYPE)
+#define TEMPLATE_DECLARE(NAME, ...) \
+  NS(TEMPLATE, NAME)(__VA_ARGS__)
 
 /* ------------------------------------------------------------
  * 3. Full Instantiation (Declaration + Implementation)
  * ------------------------------------------------------------ */
-#define TEMPLATE_IMPLEMENT(NAME, SUFFIX, TYPE) \
-  NS(TEMPLATE, NAME)(SUFFIX, TYPE); \
-  NS(TEMPLATE, NAME, IMPLEMENT)(SUFFIX, TYPE) \
-  typedef int NS(_cosmeron_template_semi, NAME, __LINE__)
+#define TEMPLATE_IMPLEMENT(NAME, ...) \
+  NS(TEMPLATE, NAME)(__VA_ARGS__); \
+  NS(TEMPLATE, NAME, IMPLEMENT)(__VA_ARGS__) \
+  typedef int NS(_cosmeron_tpl_impl_semi, NAME, __LINE__)
+
+/* ------------------------------------------------------------
+ * 4. Unified Instantiation Alias & Table-Driven Batch
+ * ------------------------------------------------------------ */
+#define TEMPLATE_INSTANTIATE(NAME, ...) \
+  TEMPLATE_IMPLEMENT(NAME, __VA_ARGS__)
+
+#ifndef COSMERON_COMMA_ROW
+#define COSMERON_COMMA_ROW(ROW) ROW,
+#endif
+
+#define COSMERON_INTERNAL_TPL_ROW_DISPATCH(NAME, ROW)                         \
+  PP_OP_CAT2(COSMERON_TPL_ROW_CASE_, PP_IS_PAREN(ROW))(NAME, ROW)
+
+#define COSMERON_TPL_ROW_CASE_1(NAME, ROW)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);
+
+#define COSMERON_TPL_ROW_CASE_0(NAME, ROW) /* Sentinel ~ ignored */
+
+#define COSMERON_EXPAND_TPL_TABLE_INVOKE(m, ctx, ...) m(ctx, __VA_ARGS__)
+
+#define TEMPLATE_INSTANTIATE_TABLE(NAME, TABLE)                                \
+  COSMERON_EXPAND_TPL_TABLE_INVOKE(                                            \
+      PP_MAP_NONE_CTX, COSMERON_INTERNAL_TPL_ROW_DISPATCH, NAME,               \
+      TABLE(COSMERON_COMMA_ROW) ~)                                             \
+  typedef int NS(_cosmeron_tpl_table_semi, NAME, __LINE__)
 
 /* EOF */
