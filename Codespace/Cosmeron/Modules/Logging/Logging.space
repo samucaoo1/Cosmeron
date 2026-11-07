@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../Core/Outcome/Status.h"
-#include "../../Core/Namespace.h"
+#include "../../Core/Module/Namespace.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -11,14 +11,14 @@
 #define LOGGING_CMOD LOGGING
 
 #ifndef LOGGING_NS
-#define LOGGING_NS(NAME) GNS2(LIB_PREFIX(LOGGING_MOD), NAME)
+#define LOGGING_NS(NAME) NS(LIB_PREFIX(LOGGING_MOD), NAME)
 #endif
 
 #ifndef LOGGING_CNS
-#define LOGGING_CNS(NAME) CNS2(LIB_PREFIX_CONST(LOGGING_CMOD), NAME)
+#define LOGGING_CNS(NAME) CNS(LIB_PREFIX_CONST(LOGGING_CMOD), NAME)
 #endif
 
-#define LOGGING_INS(NAME) GNS2(LOGGING_NS(Internal), NAME)
+#define LOGGING_INS(NAME) NS(LOGGING_NS(Internal), NAME)
 #define LOGGING_TYPE(NAME) LOGGING_NS(NAME)
 #define LOGGING_FUNC(NAME) LOGGING_NS(NAME)
 #define LOGGING_CONST(NAME) LOGGING_CNS(NAME)

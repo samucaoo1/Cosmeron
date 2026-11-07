@@ -17,6 +17,20 @@
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_C_1(CLASS, R, N, P)               \
   R (*N) COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(CLASS, 1, P);
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_C_2(CLASS, R, N, P)
+#define COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_C_3(CLASS, R, N, P)               \
+  OPSTATUS (*NS(N, Subscribe))(CLASS * self, TCALLBACK(NS(CLASS, N)) listener); \
+  OPSTATUS (*NS(N, Unsubscribe))(CLASS * self, TCALLBACK(NS(CLASS, N)) listener);\
+  void (*NS(N, Emit)) COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(CLASS, 0, P);    \
+  OPSTATUS (*NS(N, Clear))(CLASS * self);                                      \
+  uint8_t (*NS(N, Count))(const CLASS * self);                                 \
+  uint8_t (*NS(N, Capacity))(const CLASS * self);
+#define COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_C_4(CLASS, R, N, P)               \
+  OPSTATUS (*NS(N, Subscribe))(CLASS * self, TCALLBACK(NS(CLASS, N)) listener); \
+  OPSTATUS (*NS(N, Unsubscribe))(CLASS * self, TCALLBACK(NS(CLASS, N)) listener);\
+  OPSTATUS (*NS(N, Emit)) COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(CLASS, 0, P);\
+  OPSTATUS (*NS(N, Clear))(CLASS * self);                                      \
+  uint8_t (*NS(N, Count))(const CLASS * self);                                 \
+  uint8_t (*NS(N, Capacity))(const CLASS * self);
 
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_I(CLASS, C, I, R, N, P, B)        \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_C_, C)(CLASS, R, N, P)
@@ -24,9 +38,18 @@
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD(CLASS, M) \
   COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_I, CLASS, M)
 
-#define COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_C_0(CLASS, N) .N = GNS2(CLASS, N),
-#define COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_C_1(CLASS, N) .N = GNS2(CLASS, N),
+#define COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_C_0(CLASS, N) .N = NS(CLASS, N),
+#define COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_C_1(CLASS, N) .N = NS(CLASS, N),
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_C_2(CLASS, N)
+#define COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_C_3(CLASS, N)                     \
+  .NS(N, Subscribe) = NS(CLASS, N, Subscribe),                                 \
+  .NS(N, Unsubscribe) = NS(CLASS, N, Unsubscribe),                             \
+  .NS(N, Emit) = NS(CLASS, N, Emit),                                           \
+  .NS(N, Clear) = NS(CLASS, N, Clear),                                         \
+  .NS(N, Count) = NS(CLASS, N, Count),                                         \
+  .NS(N, Capacity) = NS(CLASS, N, Capacity),
+#define COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_C_4(CLASS, N)                     \
+  COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_C_3(CLASS, N)
 
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_I(CLASS, C, I, R, N, P, B)        \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_C_, C)(CLASS, N)
@@ -43,6 +66,20 @@
 #define COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_C_1(PKG, R, N, P)                 \
   R (*N) COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P);
 #define COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_C_2(PKG, R, N, P)
+#define COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_C_3(PKG, R, N, P)                 \
+  OPSTATUS (*NS(N, Subscribe))(TCALLBACK(NS(PKG, N)) listener);                \
+  OPSTATUS (*NS(N, Unsubscribe))(TCALLBACK(NS(PKG, N)) listener);              \
+  void (*NS(N, Emit)) COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P);              \
+  OPSTATUS (*NS(N, Clear))(void);                                              \
+  uint8_t (*NS(N, Count))(void);                                               \
+  uint8_t (*NS(N, Capacity))(void);
+#define COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_C_4(PKG, R, N, P)                 \
+  OPSTATUS (*NS(N, Subscribe))(TCALLBACK(NS(PKG, N)) listener);                \
+  OPSTATUS (*NS(N, Unsubscribe))(TCALLBACK(NS(PKG, N)) listener);              \
+  OPSTATUS (*NS(N, Emit)) COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P);          \
+  OPSTATUS (*NS(N, Clear))(void);                                              \
+  uint8_t (*NS(N, Count))(void);                                               \
+  uint8_t (*NS(N, Capacity))(void);
 
 #define COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_I(PKG, C, I, R, N, P, B)          \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_C_, C)(PKG, R, N, P)
@@ -50,9 +87,18 @@
 #define COSMERON_MACRO_INTERNAL_PKG_FT_FIELD(PKG, M) \
   COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_I, PKG, M)
 
-#define COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_C_0(PKG, N) .N = GNS2(PKG, N),
-#define COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_C_1(PKG, N) .N = GNS2(PKG, N),
+#define COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_C_0(PKG, N) .N = NS(PKG, N),
+#define COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_C_1(PKG, N) .N = NS(PKG, N),
 #define COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_C_2(PKG, N)
+#define COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_C_3(PKG, N)                       \
+  .NS(N, Subscribe) = NS(PKG, N, Subscribe),                                   \
+  .NS(N, Unsubscribe) = NS(PKG, N, Unsubscribe),                               \
+  .NS(N, Emit) = NS(PKG, N, Emit),                                             \
+  .NS(N, Clear) = NS(PKG, N, Clear),                                           \
+  .NS(N, Count) = NS(PKG, N, Count),                                           \
+  .NS(N, Capacity) = NS(PKG, N, Capacity),
+#define COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_C_4(PKG, N)                       \
+  COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_C_3(PKG, N)
 
 #define COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_I(PKG, C, I, R, N, P, B)          \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_C_, C)(PKG, N)

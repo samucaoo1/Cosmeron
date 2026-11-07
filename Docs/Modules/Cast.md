@@ -174,7 +174,7 @@ The `LIB_PREFIX(CAST_MOD)` package provides 43 built-in checked conversion funct
 
 # Standard Floating-Point Conversions (`Float.h`)
 
-The `GNS2(LIB_PREFIX(CAST_MOD), Float)` package and `Cast` namespace provide built-in checked conversions between floating-point types (`float`, `double`, `long double`) and integers:
+The `NS(LIB_PREFIX(CAST_MOD), Float)` package and `Cast` namespace provide built-in checked conversions between floating-point types (`float`, `double`, `long double`) and integers:
 
 - **From `Float` (`float`):**
   - `FloattoDouble`, `FloattoLongDouble`: Widening conversions (infallible).

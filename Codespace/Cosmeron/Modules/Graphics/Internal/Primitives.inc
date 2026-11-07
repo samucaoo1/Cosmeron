@@ -1,8 +1,8 @@
 #pragma once
-#include "../../../Core/Namespace.h"
+#include "../../../Core/Module/Namespace.h"
 #include "../../Struct/TDual.h"
 #include <stdbool.h>
-#define COSMERON_MACRO_INTERNAL_GRAPHICS_SHARED(NAME) GNS3(LIB_PREFIX(Graphics), Shared, NAME)
+#define COSMERON_MACRO_INTERNAL_GRAPHICS_SHARED(NAME) NS(LIB_PREFIX(Graphics), Shared, NAME)
 /* Canonical Bresenham walk, clipped by major axis; reversal preserves ties. */
 static inline void COSMERON_MACRO_INTERNAL_GRAPHICS_SHARED(WalkLine)(
     uint32_t width, uint32_t height, TDUAL_TYPE(int32) from, TDUAL_TYPE(int32) to,

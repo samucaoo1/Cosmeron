@@ -4,10 +4,10 @@ OBJECT_OPERATION_IMPLEMENT_EX(ERROR_TYPE(Error), Create,
                              (OPSTATUS code, const char *message)) {
   if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
-  GNS2(ERROR_TYPE(Error), Init)(self);
+  NS(ERROR_TYPE(Error), Init)(self);
   self->code = code;
   self->message = message;
-  GNS2(DIAGNOSTIC_TYPE(Context), Clear)(&self->context);
+  NS(DIAGNOSTIC_TYPE(Context), Clear)(&self->context);
   self->cause = NULL;
   return STATUS_CONST(SUCCESS);
 }
@@ -15,10 +15,10 @@ OBJECT_OPERATION_IMPLEMENT_EX(ERROR_TYPE(Error), Create,
 OBJECT_OPERATION_IMPLEMENT_EX(ERROR_TYPE(Error), FromStatus, (OPSTATUS code)) {
   if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
-  GNS2(ERROR_TYPE(Error), Init)(self);
+  NS(ERROR_TYPE(Error), Init)(self);
   self->code = code;
   self->message = NULL;
-  GNS2(DIAGNOSTIC_TYPE(Context), Clear)(&self->context);
+  NS(DIAGNOSTIC_TYPE(Context), Clear)(&self->context);
   self->cause = NULL;
   return STATUS_CONST(SUCCESS);
 }
@@ -28,7 +28,7 @@ OBJECT_PROCEDURE_IMPLEMENT_EX(ERROR_TYPE(Error), Clear, ()) {
     return;
   self->code = STATUS_CONST(SUCCESS);
   self->message = NULL;
-  GNS2(DIAGNOSTIC_TYPE(Context), Clear)(&self->context);
+  NS(DIAGNOSTIC_TYPE(Context), Clear)(&self->context);
   self->cause = NULL;
 }
 
@@ -47,7 +47,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(ERROR_TYPE(Error), SetContext,
   if (context) {
     self->context = *context;
   } else {
-    GNS2(DIAGNOSTIC_TYPE(Context), Clear)(&self->context);
+    NS(DIAGNOSTIC_TYPE(Context), Clear)(&self->context);
   }
   return STATUS_CONST(SUCCESS);
 }
@@ -58,7 +58,7 @@ OBJECT_OPERATION_IMPLEMENT_EX(ERROR_TYPE(Error), SetOrigin,
                               const void *userData)) {
   if (!self)
     return STATUS_CONST(INVALID_ARGUMENT);
-  return GNS2(DIAGNOSTIC_TYPE(Context), Create)(&self->context, file, line,
+  return NS(DIAGNOSTIC_TYPE(Context), Create)(&self->context, file, line,
                                                 function, description,
                                                 userData);
 }

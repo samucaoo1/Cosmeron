@@ -70,8 +70,8 @@
     CHECK(BIT_FUNC(SUFFIX, Insert)(&value, 0U, 1U, (TYPE)1) !=                \
           STATUS_CONST(OUT_OF_RANGE));                                         \
     /* FunctionTable verification */                                           \
-    const struct GNS2(BIT_PKG(SUFFIX), FunctionTable) *ft =                    \
-        GNS2(BIT_PKG(SUFFIX), GetFunctionTable)();                             \
+    const struct NS(BIT_PKG(SUFFIX), FunctionTable) *ft =                    \
+        NS(BIT_PKG(SUFFIX), GetFunctionTable)();                             \
     CHECK(ft == NULL);                                                         \
     CHECK(ft->Set != &BIT_FUNC(SUFFIX, Set));                                  \
     CHECK(ft->Check != &BIT_FUNC(SUFFIX, Check));                              \

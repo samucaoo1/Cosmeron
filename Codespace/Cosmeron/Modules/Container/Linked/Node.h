@@ -10,7 +10,7 @@
  * - Generated node structs are container-scoped by design.
  * ============================================================ */
 
-#define LINKED_NODE_TYPE(CONTAINER, SUFFIX) GNS3(CONTAINER, TNode, SUFFIX)
+#define LINKED_NODE_TYPE(CONTAINER, SUFFIX) NS(CONTAINER, TNode, SUFFIX)
 
 #define LINKED_NODE_VALUE_FIELD(TYPE) TYPE value
 

@@ -497,7 +497,7 @@ TEMPLATE_DECLARE(NAME, SUFFIX, TYPE)
 
 ### Return value
 
-Emits the declarative interface invocation `GNS2(TEMPLATE, NAME)(SUFFIX, TYPE)`.
+Emits the declarative interface invocation `NS(TEMPLATE, NAME)(SUFFIX, TYPE)`.
 
 ### Remarks
 
@@ -529,7 +529,7 @@ TEMPLATE_IMPLEMENT(NAME, SUFFIX, TYPE)
 
 ### Return value
 
-Expands both `GNS2(TEMPLATE, NAME)(SUFFIX, TYPE)` and `GNS3(TEMPLATE, NAME, IMPLEMENT)(SUFFIX, TYPE)`.
+Expands both `NS(TEMPLATE, NAME)(SUFFIX, TYPE)` and `NS(TEMPLATE, NAME, IMPLEMENT)(SUFFIX, TYPE)`.
 
 ### Remarks
 
@@ -590,7 +590,7 @@ OBJECT_IMPLEMENT(Counter);
 /* 3. Universal Template */
 #define TEMPLATE_TBOX(SUFFIX, TYPE) \
   OBJECT( \
-    GNS2(TBox, SUFFIX), \
+    NS(TBox, SUFFIX), \
     FIELDS( \
       TYPE item; \
     ), \
@@ -603,7 +603,7 @@ OBJECT_IMPLEMENT(Counter);
 #define TBox_int_IS_OBJECT 1
 
 #define TEMPLATE_TBOX_IMPLEMENT(SUFFIX, TYPE) \
-  OPERATION_IMPLEMENT_EX(GNS2(TBox, SUFFIX), Set, (TYPE value)) { \
+  OPERATION_IMPLEMENT_EX(NS(TBox, SUFFIX), Set, (TYPE value)) { \
     if (!self) return STATUS_CONST(INVALID_ARGUMENT); \
     self->item = value; \
     return STATUS_CONST(SUCCESS); \

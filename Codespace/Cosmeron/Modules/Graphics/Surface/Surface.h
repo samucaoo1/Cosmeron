@@ -1,7 +1,7 @@
 #pragma once
 #include <stdbool.h>
 #include <string.h>
-#include "../../../Core/Namespace.h"
+#include "../../../Core/Module/Namespace.h"
 #include "../../../Core/Memory/Alloc.h"
 #include "../../Struct/TDual.h"
 #include "../../Struct/TQuad.h"
@@ -9,11 +9,11 @@
 
 #define GRAPHICS_MOD Graphics
 #ifndef GRAPHICS_NS
-#define GRAPHICS_NS(NAME) GNS2(LIB_PREFIX(GRAPHICS_MOD), NAME)
+#define GRAPHICS_NS(NAME) NS(LIB_PREFIX(GRAPHICS_MOD), NAME)
 #endif
 #define GRAPHICS_TYPE(NAME) GRAPHICS_NS(NAME)
 #define GRAPHICS_FUNC(NAME) GRAPHICS_NS(NAME)
-#define GRAPHICS_INS(NAME) GNS3(LIB_PREFIX(GRAPHICS_MOD), Internal, NAME)
+#define GRAPHICS_INS(NAME) NS(LIB_PREFIX(GRAPHICS_MOD), Internal, NAME)
 
 /* Numeric 0xAARRGGBB pixels; stride and capacity are in pixels, not bytes.
  * Views borrow storage. Resizing/freeing the owner invalidates all views.

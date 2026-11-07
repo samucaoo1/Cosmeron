@@ -4,7 +4,7 @@
 
 static inline void DIAGNOSTIC_INS(Format_WriteContext)(
     DIAGNOSTIC_INS(FormatWriter) *w, const DIAGNOSTIC_TYPE(Context) *context) {
-  if (context == NULL || !GNS2(DIAGNOSTIC_TYPE(Context), HasOrigin)(context)) {
+  if (context == NULL || !NS(DIAGNOSTIC_TYPE(Context), HasOrigin)(context)) {
     DIAGNOSTIC_INS(FormatWriter_AppendStr)(w, "<no origin>");
     return;
   }
@@ -27,8 +27,8 @@ static inline void DIAGNOSTIC_INS(Format_WriteContext)(
 
 static inline void DIAGNOSTIC_INS(Format_WriteErrorSingle)(
     DIAGNOSTIC_INS(FormatWriter) *w, const ERROR_TYPE(Error) *error, bool detailed) {
-  OPSTATUS code = GNS2(ERROR_TYPE(Error), Code)(error);
-  const char *msg = GNS2(ERROR_TYPE(Error), Message)(error);
+  OPSTATUS code = NS(ERROR_TYPE(Error), Code)(error);
+  const char *msg = NS(ERROR_TYPE(Error), Message)(error);
   const char *name = STATUS_FUNC(Name)(code);
 
   DIAGNOSTIC_INS(FormatWriter_AppendChar)(w, '[');
@@ -36,9 +36,9 @@ static inline void DIAGNOSTIC_INS(Format_WriteErrorSingle)(
   DIAGNOSTIC_INS(FormatWriter_AppendStr)(w, "] ");
   DIAGNOSTIC_INS(FormatWriter_AppendStr)(w, msg);
 
-  if (detailed && GNS2(ERROR_TYPE(Error), HasContext)(error)) {
+  if (detailed && NS(ERROR_TYPE(Error), HasContext)(error)) {
     DIAGNOSTIC_INS(FormatWriter_AppendStr)(w, " (");
-    DIAGNOSTIC_INS(Format_WriteContext)(w, GNS2(ERROR_TYPE(Error), Context)(error));
+    DIAGNOSTIC_INS(Format_WriteContext)(w, NS(ERROR_TYPE(Error), Context)(error));
     DIAGNOSTIC_INS(FormatWriter_AppendChar)(w, ')');
   }
 }

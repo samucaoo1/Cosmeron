@@ -39,11 +39,11 @@ OPSTATUS
 `*_CMOD` names the constant namespace.
 
 ```c
-#define MEMORY_NS(NAME)   GNS2(LIB_PREFIX(MEMORY_MOD), NAME)
-#define MEMORY_CNS(NAME)  CNS2(LIB_PREFIX_CONST(MEMORY_CMOD), NAME)
+#define MEMORY_NS(NAME)   NS(LIB_PREFIX(MEMORY_MOD), NAME)
+#define MEMORY_CNS(NAME)  CNS(LIB_PREFIX_CONST(MEMORY_CMOD), NAME)
 
-#define MEMORY_INS(NAME)  GNS3(LIB_PREFIX(MEMORY_MOD), Internal, NAME)
-#define MEMORY_CINS(NAME) CNS3(LIB_PREFIX_CONST(MEMORY_CMOD), INTERNAL, NAME)
+#define MEMORY_INS(NAME)  NS(LIB_PREFIX(MEMORY_MOD), Internal, NAME)
+#define MEMORY_CINS(NAME) CNS(LIB_PREFIX_CONST(MEMORY_CMOD), INTERNAL, NAME)
 ```
 
 - `*_NS` — public C identifiers
@@ -257,6 +257,52 @@ CALLBACK_COMPARISON(CompareItems, (int a, int b));
 - Binding: `cb.Bind(&cb, func, context)` or `CALLBACK_FUNC(Name_Bind)(func, context)`.
 - Nullary callbacks use standard empty parentheses `()` without needing redundant macro variants.
 
+### Declarative Events (`EVENT_PROCEDURE`, `EVENT_OPERATION`)
+
+Events provide zero-allocation 1-to-N Observer notification directly in `OBJECT` and `PACKAGE`:
+- **Static embedded slots**: Slots are embedded in the object struct or package file scope with a compact `uint8_t count` (zero heap allocation, cache-aligned).
+- **Cache-line bucket decay**: Capacity requested is automatically rounded up to the nearest cache-line bucket:
+  - $\le 4 \implies 4$ slots (default, 64 bytes)
+  - $\le 8 \implies 8$ slots (128 bytes)
+  - $\le 12 \implies 12$ slots (192 bytes)
+  - $\le 16 \implies 16$ slots (256 bytes)
+  - $> 16 \implies$ Compile-time assertion error (`_Static_assert`).
+- **FIFO order on unsubscription**: Unsubscribing shifts elements left, strictly preserving subscription order.
+- **Re-entrancy safe emission**: `Emit` snapshots active callbacks to the stack before invoking, ensuring listeners can safely subscribe/unsubscribe during emission without corrupting the loop.
+- **Zero parameter duplication**: Declaring parameters with tuple pairs `((type, name), ...)` eliminates repeating parameter names:
+
+```c
+OBJECT(Button,
+    FIELDS(int id;),
+    EVENT_PROCEDURE(Click, ((int, mouseButton), (int, x), (int, y))), /* 4 slots, zero duplication */
+    EVENT_PROCEDURE(Hover, ((int, x), (int, y)), 6),                   /* decays to 8 slots */
+    EVENT_PROCEDURE(Reset, ()),                                       /* nullary, 4 slots */
+    EVENT_OPERATION(Validate, ((int, code)), 4)                       /* short-circuits on failure */
+);
+
+PACKAGE(Bus,
+    EVENT_PROCEDURE(OnMessage, ((int, topic), (int, payload)), 4),
+    EVENT_OPERATION(OnFilter, ((int, value)), 4)
+);
+```
+
+#### Reactive Field Mutation (`OBJECT_MUTATE`)
+Objects can automatically emit an event when a state field changes value:
+```c
+OBJECT_MUTATE(self, ClassName, fieldName, newValue, EventName);
+```
+- Checks `self->fieldName != newValue`.
+- Captures `oldValue`, assigns `self->fieldName = newValue`.
+- Automatically calls `<ClassName>_<EventName>_Emit(self, oldValue, newValue)`.
+
+#### Generated Event API
+- `Subscribe`: `OBJECT_CALL(obj, Event_Subscribe, callback)` / `PACKAGE_CALL(Pkg, Event_Subscribe, callback)` $\to$ `OPSTATUS` (`SUCCESS`, `OUT_OF_RANGE`, `INVALID_ARGUMENT`).
+- `Unsubscribe`: `OBJECT_CALL(obj, Event_Unsubscribe, callback)` / `PACKAGE_CALL(Pkg, Event_Unsubscribe, callback)` $\to$ `OPSTATUS` (`SUCCESS`, `NOT_FOUND`).
+- `Emit`: `OBJECT_CALL(obj, Event_Emit, args...)` / `PACKAGE_CALL(Pkg, Event_Emit, args...)` $\to$ `void` (`EVENT_PROCEDURE`) or `OPSTATUS` (`EVENT_OPERATION`).
+- `Clear`: `OBJECT_CALL(obj, Event_Clear)` / `PACKAGE_CALL(Pkg, Event_Clear)` $\to$ `OPSTATUS`.
+- `Count`: `OBJECT_CALL(obj, Event_Count)` / `PACKAGE_CALL(Pkg, Event_Count)` $\to$ `uint8_t`.
+- `Capacity`: `OBJECT_CALL(obj, Event_Capacity)` / `PACKAGE_CALL(Pkg, Event_Capacity)` $\to$ `uint8_t`.
+
 ### Declarative Packages (`PACKAGE`)
 
 Packages group free functions under a unified namespace and function table:
@@ -459,7 +505,7 @@ The template engine (`Core/Module/Common/Template.impl`) provides generic type p
 /* 1. Define declaration block */
 #define TEMPLATE_TSTACK(SUFFIX, TYPE)                                          \
   OBJECT(                                                                      \
-      GNS2(TStack, SUFFIX),                                                    \
+      NS(TStack, SUFFIX),                                                    \
       FIELDS(                                                                  \
           TYPE items[16];                                                      \
           size_t count;                                                        \
@@ -471,9 +517,9 @@ The template engine (`Core/Module/Common/Template.impl`) provides generic type p
 
 /* 2. Define implementation block (via explicit *_IMPLEMENT_EX) */
 #define TEMPLATE_TSTACK_IMPLEMENT(SUFFIX, TYPE)                                \
-  OBJECT_OPERATION_IMPLEMENT_EX(GNS2(TStack, SUFFIX), Create, ()) { ... }     \
-  OBJECT_OPERATION_IMPLEMENT_EX(GNS2(TStack, SUFFIX), Push, (TYPE value)) { ... }\
-  OBJECT_OPERATION_IMPLEMENT_EX(GNS2(TStack, SUFFIX), Pop, (TYPE *outValue)) { ... }
+  OBJECT_OPERATION_IMPLEMENT_EX(NS(TStack, SUFFIX), Create, ()) { ... }     \
+  OBJECT_OPERATION_IMPLEMENT_EX(NS(TStack, SUFFIX), Push, (TYPE value)) { ... }\
+  OBJECT_OPERATION_IMPLEMENT_EX(NS(TStack, SUFFIX), Pop, (TYPE *outValue)) { ... }
 ```
 
 ### Instantiation

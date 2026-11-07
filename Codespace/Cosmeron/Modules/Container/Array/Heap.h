@@ -7,12 +7,12 @@
  * Flat_Heap (Binary Min/Max Heap Priority Queue)
  * ============================================================ */
 
-#define FLAT_HEAP_TYPE(SUFFIX) GNS2(FLAT_NS(THeap), SUFFIX)
-#define FLAT_HEAP_NS(SUFFIX) GNS2(FLAT_NS(Heap), SUFFIX)
-#define FLAT_HEAP_FUNC(SUFFIX, FUNC) GNS2(FLAT_HEAP_NS(SUFFIX), FUNC)
-#define FLAT_HEAP_STRUCT_TAG(SUFFIX) GNS2(FLAT_HEAP_NS(SUFFIX), str)
+#define FLAT_HEAP_TYPE(SUFFIX) NS(FLAT_NS(THeap), SUFFIX)
+#define FLAT_HEAP_NS(SUFFIX) NS(FLAT_NS(Heap), SUFFIX)
+#define FLAT_HEAP_FUNC(SUFFIX, FUNC) NS(FLAT_HEAP_NS(SUFFIX), FUNC)
+#define FLAT_HEAP_STRUCT_TAG(SUFFIX) NS(FLAT_HEAP_NS(SUFFIX), str)
 #define FLAT_HEAP_FUNCTION_TABLE_TYPE(SUFFIX)                                  \
-  GNS2(FLAT_HEAP_NS(SUFFIX), FunctionTable)
+  NS(FLAT_HEAP_NS(SUFFIX), FunctionTable)
 
 #define FLAT_HEAP_STRUCT(TYPE, SUFFIX)                                         \
   CONTAINER_API_FORWARD(FLAT_HEAP_FUNCTION_TABLE_TYPE(SUFFIX))                 \

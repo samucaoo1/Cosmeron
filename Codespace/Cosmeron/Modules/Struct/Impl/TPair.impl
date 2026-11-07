@@ -33,12 +33,12 @@
                                                                                \
   static inline TPAIR_TYPE(SUFFIX)                                             \
       CAST_TYPE_TO_STRUCT(SUFFIX, TPair)(TYPE value1, TYPE value2) {           \
-    return GNS2(TPAIR_PKG(SUFFIX), Create)(value1, value2);                    \
+    return NS(TPAIR_PKG(SUFFIX), Create)(value1, value2);                    \
   }                                                                            \
                                                                                \
   static inline void CAST_STRUCT_TO_TYPE(TPair, SUFFIX)(                       \
       TPAIR_TYPE(SUFFIX) pair, TYPE *var1, TYPE *var2) {                       \
-    GNS2(TPAIR_PKG(SUFFIX), Unpack)(pair, var1, var2);                         \
+    NS(TPAIR_PKG(SUFFIX), Unpack)(pair, var1, var2);                         \
   }                                                                            \
   PACKAGE_IMPLEMENT(TPAIR_PKG(SUFFIX));
 

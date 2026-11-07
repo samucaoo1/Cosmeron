@@ -1,5 +1,5 @@
 #pragma once
-#include "../../../Core/Namespace.h"
+#include "../../../Core/Module/Namespace.h"
 #include "../../../Core/Outcome/Status.h"
 #include "../Geometry/Geometry.h"
 #include <stdbool.h>
@@ -9,9 +9,9 @@
 
 #define TRANSFORM_MOD Transform
 #define TRANSFORM_CMOD TRANSFORM
-#define TRANSFORM_NS(NAME) GNS2(LIB_PREFIX(TRANSFORM_MOD), NAME)
-#define TRANSFORM_CNS(NAME) CNS2(LIB_PREFIX_CONST(TRANSFORM_CMOD), NAME)
-#define TRANSFORM_INS(NAME) GNS3(LIB_PREFIX(TRANSFORM_MOD), Internal, NAME)
+#define TRANSFORM_NS(NAME) NS(LIB_PREFIX(TRANSFORM_MOD), NAME)
+#define TRANSFORM_CNS(NAME) CNS(LIB_PREFIX_CONST(TRANSFORM_CMOD), NAME)
+#define TRANSFORM_INS(NAME) NS(LIB_PREFIX(TRANSFORM_MOD), Internal, NAME)
 #define TRANSFORM_TYPE(NAME) TRANSFORM_NS(NAME)
 #define TRANSFORM_FUNC(NAME) TRANSFORM_NS(NAME)
 #define TRANSFORM_CONST(NAME) TRANSFORM_CNS(NAME)

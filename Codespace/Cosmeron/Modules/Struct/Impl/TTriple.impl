@@ -40,12 +40,12 @@
   static inline TTRIPLE_TYPE(SUFFIX)                                           \
       CAST_TYPE_TO_STRUCT(SUFFIX, TTriple)(TYPE value1, TYPE value2,           \
                                            TYPE value3) {                      \
-    return GNS2(TTRIPLE_PKG(SUFFIX), Create)(value1, value2, value3);          \
+    return NS(TTRIPLE_PKG(SUFFIX), Create)(value1, value2, value3);          \
   }                                                                            \
                                                                                \
   static inline void CAST_STRUCT_TO_TYPE(TTriple, SUFFIX)(                     \
       TTRIPLE_TYPE(SUFFIX) triple, TYPE *var1, TYPE *var2, TYPE *var3) {       \
-    GNS2(TTRIPLE_PKG(SUFFIX), Unpack)(triple, var1, var2, var3);               \
+    NS(TTRIPLE_PKG(SUFFIX), Unpack)(triple, var1, var2, var3);               \
   }                                                                            \
   PACKAGE_IMPLEMENT(TTRIPLE_PKG(SUFFIX));
 

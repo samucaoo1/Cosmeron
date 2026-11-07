@@ -6,12 +6,12 @@
  * Flat_Ring (Bounded Circular Ring FIFO Buffer)
  * ============================================================ */
 
-#define FLAT_RING_TYPE(SUFFIX) GNS2(FLAT_NS(TRing), SUFFIX)
-#define FLAT_RING_NS(SUFFIX) GNS2(FLAT_NS(Ring), SUFFIX)
-#define FLAT_RING_FUNC(SUFFIX, FUNC) GNS2(FLAT_RING_NS(SUFFIX), FUNC)
-#define FLAT_RING_STRUCT_TAG(SUFFIX) GNS2(FLAT_RING_NS(SUFFIX), str)
+#define FLAT_RING_TYPE(SUFFIX) NS(FLAT_NS(TRing), SUFFIX)
+#define FLAT_RING_NS(SUFFIX) NS(FLAT_NS(Ring), SUFFIX)
+#define FLAT_RING_FUNC(SUFFIX, FUNC) NS(FLAT_RING_NS(SUFFIX), FUNC)
+#define FLAT_RING_STRUCT_TAG(SUFFIX) NS(FLAT_RING_NS(SUFFIX), str)
 #define FLAT_RING_FUNCTION_TABLE_TYPE(SUFFIX)                                  \
-  GNS2(FLAT_RING_NS(SUFFIX), FunctionTable)
+  NS(FLAT_RING_NS(SUFFIX), FunctionTable)
 
 #define FLAT_RING_STRUCT(TYPE, SUFFIX)                                         \
   CONTAINER_API_FORWARD(FLAT_RING_FUNCTION_TABLE_TYPE(SUFFIX))                 \

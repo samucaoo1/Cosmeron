@@ -15,11 +15,11 @@
 #define REPEAT_MOD Repeat
 #define REPEAT_CMOD REPEAT
 
-#define REPEAT_NS(NAME) GNS2(ALGORITHM_NS(REPEAT_MOD), NAME)
+#define REPEAT_NS(NAME) NS(ALGORITHM_NS(REPEAT_MOD), NAME)
 #define REPEAT_CNS(NAME)                                                       \
-  CNS3(LIB_PREFIX_CONST(ALGORITHM_CMOD), REPEAT_CMOD, NAME)
-#define REPEAT_INS(NAME) GNS3(ALGORITHM_NS(REPEAT_MOD), Internal, NAME)
-#define REPEAT_CINS(NAME) CNS3(ALGORITHM_CNS(REPEAT_CMOD), INTERNAL, NAME)
+  CNS(LIB_PREFIX_CONST(ALGORITHM_CMOD), REPEAT_CMOD, NAME)
+#define REPEAT_INS(NAME) NS(ALGORITHM_NS(REPEAT_MOD), Internal, NAME)
+#define REPEAT_CINS(NAME) CNS(ALGORITHM_CNS(REPEAT_CMOD), INTERNAL, NAME)
 
 #define REPEAT_TYPE(NAME) REPEAT_NS(NAME)
 #define REPEAT_FUNC(NAME) REPEAT_NS(NAME)
@@ -75,7 +75,7 @@ PACKAGE(
   CALLBACK_FUNCTION(TYPE, REPEAT_INS(PP_OP_CAT2(IndexedGenerator_, SUFFIX)),   \
                     (size_t index));                                           \
   PACKAGE(                                                                     \
-      GNS2(ALGORITHM_NS(REPEAT_MOD), SUFFIX),                                  \
+      NS(ALGORITHM_NS(REPEAT_MOD), SUFFIX),                                  \
       OPERATION_INLINE(Fill, (TYPE * destination, TYPE value, size_t count),   \
                        {                                                       \
                          if (count == 0U)                                      \

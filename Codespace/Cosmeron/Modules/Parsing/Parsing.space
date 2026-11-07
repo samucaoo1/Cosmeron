@@ -1,5 +1,5 @@
 #pragma once
-#include "../../Core/Namespace.h"
+#include "../../Core/Module/Namespace.h"
 #include "../../Core/Outcome/Status.h"
 #include "../../Core/Memory/Alloc.h"
 #include "../Text/Encoding/UTF8.h"
@@ -13,12 +13,12 @@
 #define PARSING_MOD Parsing
 #define PARSING_CMOD PARSING
 #ifndef PARSING_NS
-#define PARSING_NS(NAME) GNS2(LIB_PREFIX(PARSING_MOD), NAME)
+#define PARSING_NS(NAME) NS(LIB_PREFIX(PARSING_MOD), NAME)
 #endif
 #ifndef PARSING_CNS
-#define PARSING_CNS(NAME) CNS2(LIB_PREFIX_CONST(PARSING_CMOD), NAME)
+#define PARSING_CNS(NAME) CNS(LIB_PREFIX_CONST(PARSING_CMOD), NAME)
 #endif
-#define PARSING_INS(NAME) GNS2(PARSING_NS(Internal), NAME)
+#define PARSING_INS(NAME) NS(PARSING_NS(Internal), NAME)
 #define PARSING_TYPE(NAME) PARSING_NS(NAME)
 #define PARSING_FUNC(NAME) PARSING_NS(NAME)
 #define PARSING_CONST(NAME) PARSING_CNS(NAME)

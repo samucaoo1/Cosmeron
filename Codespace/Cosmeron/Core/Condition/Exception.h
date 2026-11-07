@@ -13,25 +13,25 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define EXCEPTION_MOD GNS2(CONDITION_MOD, Exception)
+#define EXCEPTION_MOD NS(CONDITION_MOD, Exception)
 #define EXCEPTION_CMOD PP_OP_CAT3(CONDITION_CMOD, _, EXCEPTION)
 
-#define EXCEPTION_NS(NAME) GNS3(LIB_PREFIX(CONDITION_MOD), Exception, NAME)
+#define EXCEPTION_NS(NAME) NS(LIB_PREFIX(CONDITION_MOD), Exception, NAME)
 #define EXCEPTION_CNS(NAME)                                                    \
-  CNS3(LIB_PREFIX_CONST(CONDITION_CMOD), EXCEPTION, NAME)
+  CNS(LIB_PREFIX_CONST(CONDITION_CMOD), EXCEPTION, NAME)
 #define EXCEPTION_INS(NAME)                                                    \
-  GNS4(LIB_PREFIX(CONDITION_MOD), Exception, Internal, NAME)
+  NS(LIB_PREFIX(CONDITION_MOD), Exception, Internal, NAME)
 #define EXCEPTION_CINS(NAME)                                                   \
-  CNS4(LIB_PREFIX_CONST(CONDITION_CMOD), EXCEPTION, INTERNAL, NAME)
+  CNS(LIB_PREFIX_CONST(CONDITION_CMOD), EXCEPTION, INTERNAL, NAME)
 
 #define EXCEPTION_TYPE(NAME) EXCEPTION_NS(NAME)
 #define EXCEPTION_FUNC(NAME) EXCEPTION_NS(NAME)
 #define EXCEPTION_CONST(NAME) EXCEPTION_CNS(NAME)
 
 #define EXCEPTION_CLEANUP_CALLBACK                                             \
-  TCALLBACK(GNS2(EXCEPTION_TYPE(TExceptionFrame), Cleanup))
+  TCALLBACK(NS(EXCEPTION_TYPE(TExceptionFrame), Cleanup))
 #define EXCEPTION_CLEANUP_BIND(FN, CTX)                                        \
-  CALLBACK_FUNC(GNS2(EXCEPTION_TYPE(TExceptionFrame), Cleanup_Bind))((FN), (CTX))
+  CALLBACK_FUNC(NS(EXCEPTION_TYPE(TExceptionFrame), Cleanup_Bind))((FN), (CTX))
 
 OBJECT(EXCEPTION_TYPE(TExceptionFrame),
        FIELDS(jmp_buf env; struct EXCEPTION_TYPE(TExceptionFrame) * previous;

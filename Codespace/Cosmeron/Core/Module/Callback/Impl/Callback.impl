@@ -42,58 +42,58 @@
 
 #define COSMERON_MACRO_INTERNAL_CB_BASE(NAME, RET, PARAMS)                     \
   typedef struct TCALLBACK(NAME) TCALLBACK(NAME);                              \
-  typedef RET (*GNS2(TCALLBACK(NAME), Function))                               \
+  typedef RET (*NS(TCALLBACK(NAME), Function))                               \
       COSMERON_MACRO_INTERNAL_CB_PARAMS(PARAMS);                               \
-  static inline void GNS3(TCALLBACK(NAME), Internal, BindMethod)(              \
-      TCALLBACK(NAME) * self, GNS2(TCALLBACK(NAME), Function) function,        \
+  static inline void NS(TCALLBACK(NAME), Internal, BindMethod)(              \
+      TCALLBACK(NAME) * self, NS(TCALLBACK(NAME), Function) function,        \
       void *context);                                                          \
-  static inline bool GNS3(TCALLBACK(NAME), Internal, IsValidMethod)(           \
+  static inline bool NS(TCALLBACK(NAME), Internal, IsValidMethod)(           \
       const TCALLBACK(NAME) * self);                                           \
   struct TCALLBACK(NAME) {                                                     \
-    GNS2(TCALLBACK(NAME), Function) function;                                  \
+    NS(TCALLBACK(NAME), Function) function;                                  \
     void *context;                                                             \
     void (*Bind)(TCALLBACK(NAME) * self,                                       \
-                 GNS2(TCALLBACK(NAME), Function) function, void *context);     \
+                 NS(TCALLBACK(NAME), Function) function, void *context);     \
     bool (*IsValid)(const TCALLBACK(NAME) * self);                             \
   };                                                                           \
-  static inline void GNS3(TCALLBACK(NAME), Internal, BindMethod)(              \
-      TCALLBACK(NAME) * self, GNS2(TCALLBACK(NAME), Function) function,        \
+  static inline void NS(TCALLBACK(NAME), Internal, BindMethod)(              \
+      TCALLBACK(NAME) * self, NS(TCALLBACK(NAME), Function) function,        \
       void *context) {                                                         \
     if (self) {                                                                \
       self->function = function;                                               \
       self->context = context;                                                 \
-      self->Bind = GNS3(TCALLBACK(NAME), Internal, BindMethod);                \
-      self->IsValid = GNS3(TCALLBACK(NAME), Internal, IsValidMethod);          \
+      self->Bind = NS(TCALLBACK(NAME), Internal, BindMethod);                \
+      self->IsValid = NS(TCALLBACK(NAME), Internal, IsValidMethod);          \
     }                                                                          \
   }                                                                            \
-  static inline bool GNS3(TCALLBACK(NAME), Internal, IsValidMethod)(           \
+  static inline bool NS(TCALLBACK(NAME), Internal, IsValidMethod)(           \
       const TCALLBACK(NAME) * self) {                                          \
     return self != NULL && self->function != NULL;                            \
   }                                                                            \
-  static inline TCALLBACK(NAME) GNS2(CALLBACK_FUNC(NAME), Bind)(               \
-      GNS2(TCALLBACK(NAME), Function) function, void *context) {               \
+  static inline TCALLBACK(NAME) NS(CALLBACK_FUNC(NAME), Bind)(               \
+      NS(TCALLBACK(NAME), Function) function, void *context) {               \
     TCALLBACK(NAME) cb;                                                        \
     cb.function = function;                                                    \
     cb.context = context;                                                      \
-    cb.Bind = GNS3(TCALLBACK(NAME), Internal, BindMethod);                     \
-    cb.IsValid = GNS3(TCALLBACK(NAME), Internal, IsValidMethod);               \
+    cb.Bind = NS(TCALLBACK(NAME), Internal, BindMethod);                     \
+    cb.IsValid = NS(TCALLBACK(NAME), Internal, IsValidMethod);               \
     return cb;                                                                 \
   }                                                                            \
-  static inline bool GNS2(CALLBACK_FUNC(NAME), IsValid)(                       \
+  static inline bool NS(CALLBACK_FUNC(NAME), IsValid)(                       \
       TCALLBACK(NAME) callback) {                                              \
     return callback.function != NULL;                                          \
   }
 
 #define COSMERON_MACRO_INTERNAL_CB_NULLARY_VAL_0(NAME, RET)
 #define COSMERON_MACRO_INTERNAL_CB_NULLARY_VAL_1(NAME, RET)                   \
-  static inline RET GNS2(CALLBACK_FUNC(NAME), Invoke)(                         \
+  static inline RET NS(CALLBACK_FUNC(NAME), Invoke)(                         \
       TCALLBACK(NAME) callback) {                                              \
     return callback.function(callback.context);                                \
   }
 
 #define COSMERON_MACRO_INTERNAL_CB_NULLARY_VOID_0(NAME)
 #define COSMERON_MACRO_INTERNAL_CB_NULLARY_VOID_1(NAME)                         \
-  static inline void GNS2(CALLBACK_FUNC(NAME), Invoke)(                        \
+  static inline void NS(CALLBACK_FUNC(NAME), Invoke)(                        \
       TCALLBACK(NAME) callback) {                                              \
     callback.function(callback.context);                                       \
   }
@@ -102,13 +102,13 @@
   COSMERON_MACRO_INTERNAL_CB_BASE(NAME, RET, PARAMS)                           \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CB_NULLARY_VAL_,                          \
              PP_IS_EMPTY_PARAMS(PARAMS))(NAME, RET)                            \
-  typedef int GNS3(_cosmeron_callback_semi, NAME, __LINE__)
+  typedef int NS(_cosmeron_callback_semi, NAME, __LINE__)
 
 #define COSMERON_MACRO_INTERNAL_CB_GEN_VOID(NAME, PARAMS)                      \
   COSMERON_MACRO_INTERNAL_CB_BASE(NAME, void, PARAMS)                          \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CB_NULLARY_VOID_,                         \
              PP_IS_EMPTY_PARAMS(PARAMS))(NAME)                                 \
-  typedef int GNS3(_cosmeron_callback_semi, NAME, __LINE__)
+  typedef int NS(_cosmeron_callback_semi, NAME, __LINE__)
 
 #define COSMERON_MACRO_INTERNAL_PROBE_VOID_void ,
 #define COSMERON_MACRO_INTERNAL_CB_IS_VOID(r)                                 \

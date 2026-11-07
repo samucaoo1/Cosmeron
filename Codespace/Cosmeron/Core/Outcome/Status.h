@@ -17,7 +17,7 @@ PACKAGE(LIB_PREFIX(STATUS_MOD),
     FUNCTION(STATUS_TYPE(Category), CategoryOf, (OPSTATUS status)),
     PREDICATE_INLINE(IsCategory,
                      (OPSTATUS status, STATUS_TYPE(Category) category), {
-                       return GNS2(LIB_PREFIX(STATUS_MOD), CategoryOf)(status) ==
+                       return NS(LIB_PREFIX(STATUS_MOD), CategoryOf)(status) ==
                               category;
                      }),
     FUNCTION(const char *, CategoryName, (STATUS_TYPE(Category) category)),

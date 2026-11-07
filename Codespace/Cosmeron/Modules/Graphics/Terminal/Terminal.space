@@ -1,5 +1,5 @@
 #pragma once
-#include "../../../Core/Namespace.h"
+#include "../../../Core/Module/Namespace.h"
 #include "../../../Core/Outcome/Status.h"
 #include "../../../Core/Preprocessor/Detect/OperationSystem.h"
 #include "../../Struct/TDual.h"
@@ -12,9 +12,9 @@
 
 #define TERMINAL_MOD Terminal
 #define TERMINAL_CMOD TERMINAL
-#define TERMINAL_NS(NAME) GNS2(LIB_PREFIX(TERMINAL_MOD), NAME)
-#define TERMINAL_CNS(NAME) CNS2(LIB_PREFIX_CONST(TERMINAL_CMOD), NAME)
-#define TERMINAL_INS(NAME) GNS3(LIB_PREFIX(TERMINAL_MOD), Internal, NAME)
+#define TERMINAL_NS(NAME) NS(LIB_PREFIX(TERMINAL_MOD), NAME)
+#define TERMINAL_CNS(NAME) CNS(LIB_PREFIX_CONST(TERMINAL_CMOD), NAME)
+#define TERMINAL_INS(NAME) NS(LIB_PREFIX(TERMINAL_MOD), Internal, NAME)
 #define TERMINAL_TYPE(NAME) TERMINAL_NS(NAME)
 #define TERMINAL_FUNC(NAME) TERMINAL_NS(NAME)
 #define TERMINAL_CONST(NAME) TERMINAL_CNS(NAME)

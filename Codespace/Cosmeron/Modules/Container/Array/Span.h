@@ -7,12 +7,12 @@
  * Flat_Span (Non-owning contiguous buffer / slice)
  * ============================================================ */
 
-#define FLAT_SPAN_TYPE(SUFFIX) GNS2(FLAT_NS(TSpan), SUFFIX)
-#define FLAT_SPAN_NS(SUFFIX) GNS2(FLAT_NS(Span), SUFFIX)
-#define FLAT_SPAN_FUNC(SUFFIX, FUNC) GNS2(FLAT_SPAN_NS(SUFFIX), FUNC)
-#define FLAT_SPAN_STRUCT_TAG(SUFFIX) GNS2(FLAT_SPAN_NS(SUFFIX), str)
+#define FLAT_SPAN_TYPE(SUFFIX) NS(FLAT_NS(TSpan), SUFFIX)
+#define FLAT_SPAN_NS(SUFFIX) NS(FLAT_NS(Span), SUFFIX)
+#define FLAT_SPAN_FUNC(SUFFIX, FUNC) NS(FLAT_SPAN_NS(SUFFIX), FUNC)
+#define FLAT_SPAN_STRUCT_TAG(SUFFIX) NS(FLAT_SPAN_NS(SUFFIX), str)
 #define FLAT_SPAN_FUNCTION_TABLE_TYPE(SUFFIX)                                  \
-  GNS2(FLAT_SPAN_NS(SUFFIX), FunctionTable)
+  NS(FLAT_SPAN_NS(SUFFIX), FunctionTable)
 
 /* ============================================================
  * Struct
@@ -154,7 +154,7 @@
   FLAT_SPAN_EQUAL_PROTOTYPE(TYPE, SUFFIX);                                     \
   FLAT_SPAN_FROM_VECTOR_PROTOTYPE(SUFFIX);                                     \
   COSMERON_MACRO_INTERNAL_FLAT_SPAN_IMPLEMENT(TYPE, SUFFIX)                     \
-  typedef FLAT_SPAN_TYPE(SUFFIX) GNS2(TSpan, SUFFIX);                          \
+  typedef FLAT_SPAN_TYPE(SUFFIX) NS(TSpan, SUFFIX);                          \
   FLAT_SPAN_FUNCTION_TABLE_STRUCT(TYPE, SUFFIX)                                \
   FLAT_SPAN_FUNCTION_TABLE_INSTANCE(TYPE, SUFFIX)
 

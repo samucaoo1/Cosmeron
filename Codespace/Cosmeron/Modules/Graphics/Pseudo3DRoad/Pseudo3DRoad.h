@@ -7,9 +7,9 @@
 
 #define ROAD_MOD Road
 #ifndef ROAD_NS
-#define ROAD_NS(NAME) GNS2(LIB_PREFIX(ROAD_MOD), NAME)
+#define ROAD_NS(NAME) NS(LIB_PREFIX(ROAD_MOD), NAME)
 #endif
-#define ROAD_INS(NAME) GNS3(LIB_PREFIX(ROAD_MOD), Internal, NAME)
+#define ROAD_INS(NAME) NS(LIB_PREFIX(ROAD_MOD), Internal, NAME)
 #define ROAD_TYPE(NAME) ROAD_NS(NAME)
 #define ROAD_FUNC(NAME) ROAD_NS(NAME)
 /* Each adjacent pair of nodes defines one trapezoidal road segment.

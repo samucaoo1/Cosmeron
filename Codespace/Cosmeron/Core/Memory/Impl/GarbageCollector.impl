@@ -575,7 +575,7 @@ PACKAGE_FUNCTION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD),
 
 PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), Alloc, (void *outPointerObject, size_t size)) {
   GARBAGE_COLLECTOR_TYPE(GarbageCollector) *collector =
-      GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
+      NS(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
   return GARBAGE_COLLECTOR_FUNC(Alloc)(
       collector, outPointerObject, size, HEAP_CONST(POLICY_CONSERVATIVE), NULL);
 }
@@ -583,62 +583,62 @@ PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), Alloc, (void *
 PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), AllocTyped,
     (void *outPointerObject, const GARBAGE_COLLECTOR_NS(Descriptor) *descriptor)) {
   GARBAGE_COLLECTOR_TYPE(GarbageCollector) *collector =
-      GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
+      NS(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
   return GARBAGE_COLLECTOR_FUNC(AllocTyped)(collector, outPointerObject, descriptor);
 }
 
 PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), AllocAtomic, (void *outPointerObject, size_t size)) {
   GARBAGE_COLLECTOR_TYPE(GarbageCollector) *collector =
-      GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
+      NS(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
   return GARBAGE_COLLECTOR_FUNC(AllocAtomic)(collector, outPointerObject, size);
 }
 
 PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), SetFinalizer,
     (const void *ptr, GARBAGE_COLLECTOR_FINALIZER_CALLBACK finalizer)) {
   GARBAGE_COLLECTOR_TYPE(GarbageCollector) *collector =
-      GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
+      NS(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
   return GARBAGE_COLLECTOR_FUNC(SetFinalizer)(collector, ptr, finalizer);
 }
 
 PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), PinRoot, (const void *rootPointerAddress)) {
   GARBAGE_COLLECTOR_TYPE(GarbageCollector) *collector =
-      GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
+      NS(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
   return GARBAGE_COLLECTOR_FUNC(PinRoot)(collector, rootPointerAddress);
 }
 
 PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), UnpinRoot, (const void *rootPointerAddress)) {
   GARBAGE_COLLECTOR_TYPE(GarbageCollector) *collector =
-      GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
+      NS(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
   return GARBAGE_COLLECTOR_FUNC(UnpinRoot)(collector, rootPointerAddress);
 }
 
 PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), Collect, ()) {
   GARBAGE_COLLECTOR_TYPE(GarbageCollector) *collector =
-      GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
+      NS(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
   return GARBAGE_COLLECTOR_FUNC(Collect)(collector);
 }
 
 PACKAGE_PROCEDURE_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), Pause, ()) {
   GARBAGE_COLLECTOR_TYPE(GarbageCollector) *collector =
-      GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
+      NS(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
   GARBAGE_COLLECTOR_FUNC(Pause)(collector);
 }
 
 PACKAGE_PROCEDURE_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), Resume, ()) {
   GARBAGE_COLLECTOR_TYPE(GarbageCollector) *collector =
-      GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
+      NS(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
   GARBAGE_COLLECTOR_FUNC(Resume)(collector);
 }
 
 PACKAGE_FUNCTION_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), size_t, LiveBytes, ()) {
   GARBAGE_COLLECTOR_TYPE(GarbageCollector) *collector =
-      GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
+      NS(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
   return GARBAGE_COLLECTOR_FUNC(LiveBytes)(collector);
 }
 
 PACKAGE_PREDICATE_IMPLEMENT_EX(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), Contains, (const void *ptr)) {
   GARBAGE_COLLECTOR_TYPE(GarbageCollector) *collector =
-      GNS2(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
+      NS(LIB_PREFIX(GARBAGE_COLLECTOR_MOD), DefaultCollector)();
   return GARBAGE_COLLECTOR_FUNC(Contains)(collector, ptr);
 }
 

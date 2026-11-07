@@ -1,12 +1,12 @@
 #pragma once
-#include "../../../../Core/Namespace.h"
+#include "../../../../Core/Module/Namespace.h"
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
 #include <string.h>
 
 /* Renderer-independent primitives used by both cell UI and pixel GUI. */
-#define COSMERON_MACRO_INTERNAL_UI_SHARED(NAME) GNS3(LIB_PREFIX(UI), Shared, NAME)
+#define COSMERON_MACRO_INTERNAL_UI_SHARED(NAME) NS(LIB_PREFIX(UI), Shared, NAME)
 static inline uint64_t COSMERON_MACRO_INTERNAL_UI_SHARED(HashText)(uint64_t hash,
                                                                    const char *text) {
   const unsigned char *p = (const unsigned char *)text;

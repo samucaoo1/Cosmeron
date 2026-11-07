@@ -1,11 +1,11 @@
 #pragma once
-#include "../../../Core/Namespace.h"
+#include "../../../Core/Module/Namespace.h"
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
 #define FONT_MOD Font
-#define FONT_NS(NAME) GNS2(LIB_PREFIX(FONT_MOD),NAME)
-#define FONT_INS(NAME) GNS3(LIB_PREFIX(FONT_MOD),Internal,NAME)
+#define FONT_NS(NAME) NS(LIB_PREFIX(FONT_MOD),NAME)
+#define FONT_INS(NAME) NS(LIB_PREFIX(FONT_MOD),Internal,NAME)
 #define FONT_TYPE(NAME) FONT_NS(NAME)
 #define FONT_FUNC(NAME) FONT_NS(NAME)
 #define FONT_MAX_HEIGHT 32

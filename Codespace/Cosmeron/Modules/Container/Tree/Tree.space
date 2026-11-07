@@ -6,7 +6,7 @@
 #include "../../../Core/Outcome/Status.h"
 #include "../../../Core/Memory/Alloc.h"
 #include "../../../Core/Memory/Swap.h"
-#include "../../../Core/Namespace.h"
+#include "../../../Core/Module/Namespace.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -19,10 +19,10 @@
 #define TREE_MOD Tree
 #define TREE_CMOD TREE
 
-#define TREE_NS(NAME) GNS2(CONTAINER_NS(Tree), NAME)
-#define TREE_CNS(NAME) CNS3(LIB_PREFIX_CONST(CONTAINER_CMOD), TREE_CMOD, NAME)
-#define TREE_INS(NAME) GNS3(CONTAINER_NS(Tree), Internal, NAME)
-#define TREE_CINS(NAME) CNS3(LIB_PREFIX_CONST(CONTAINER_CMOD), TREE_CMOD, INTERNAL, NAME)
+#define TREE_NS(NAME) NS(CONTAINER_NS(Tree), NAME)
+#define TREE_CNS(NAME) CNS(LIB_PREFIX_CONST(CONTAINER_CMOD), TREE_CMOD, NAME)
+#define TREE_INS(NAME) NS(CONTAINER_NS(Tree), Internal, NAME)
+#define TREE_CINS(NAME) CNS(LIB_PREFIX_CONST(CONTAINER_CMOD), TREE_CMOD, INTERNAL, NAME)
 #define TREE_CONST(NAME) TREE_CNS(NAME)
 
 /* =============================================================
@@ -53,21 +53,21 @@
  * ============================================================= */
 
 #define TREE_SET_TYPE(ALG, KEY) \
-  GNS2(GNS2(TREE_NS(ALG), Set), KEY)
+  NS(NS(TREE_NS(ALG), Set), KEY)
 
 #define TREE_MAP_TYPE(ALG, KEY, VAL) \
-  GNS2(GNS2(GNS2(TREE_NS(ALG), Map), KEY), VAL)
+  NS(NS(NS(TREE_NS(ALG), Map), KEY), VAL)
 
 #define TREE_PUBLIC_SET_TYPE(ALG, KEY) \
-  GNS2(GNS2(TREE_NS(ALG), TSet), KEY)
+  NS(NS(TREE_NS(ALG), TSet), KEY)
 
 #define TREE_PUBLIC_MAP_TYPE(ALG, KEY, VAL) \
-  GNS2(GNS2(GNS2(TREE_NS(ALG), TMap), KEY), VAL)
+  NS(NS(NS(TREE_NS(ALG), TMap), KEY), VAL)
 
-#define TREE_NODE(T) GNS2(T, Node)
-#define TREE_FUNC(T, FUNC) GNS2(T, FUNC)
+#define TREE_NODE(T) NS(T, Node)
+#define TREE_FUNC(T, FUNC) NS(T, FUNC)
 #define TREE_FN(T, FUNC) TREE_FUNC(T, FUNC)
-#define TREE_FUNCTION_TABLE_TYPE(T) GNS2(T, FunctionTable)
+#define TREE_FUNCTION_TABLE_TYPE(T) NS(T, FunctionTable)
 
 /* Compatibility aliases for older TTREE_* generator forms */
 #define TTREE_SET_TYPE(ALG, KEY) TREE_SET_TYPE(ALG, KEY)

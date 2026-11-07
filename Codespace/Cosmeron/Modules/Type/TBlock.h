@@ -4,7 +4,7 @@
 #include "../Bit/Bit.h"
 
 #define TBLOCK_TYPE(SUFFIX) TYPE_TYPE(TBlock, SUFFIX)
-#define TBLOCK_FUNC(SUFFIX, FUNCTION) GNS2(TBLOCK_TYPE(SUFFIX), FUNCTION)
+#define TBLOCK_FUNC(SUFFIX, FUNCTION) NS(TBLOCK_TYPE(SUFFIX), FUNCTION)
 
 #define TEMPLATE_TBLOCK(SUFFIX, TYPE)                                          \
   OBJECT(TBLOCK_TYPE(SUFFIX),                                                  \

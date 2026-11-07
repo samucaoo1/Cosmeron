@@ -43,7 +43,7 @@ OBJECT(ERROR_TYPE(Error),
       return self ? &self->context : NULL;
     }),
     CONST_PREDICATE_INLINE(HasContext, (), {
-      return self ? GNS2(DIAGNOSTIC_TYPE(Context), HasOrigin)(&self->context)
+      return self ? NS(DIAGNOSTIC_TYPE(Context), HasOrigin)(&self->context)
                   : false;
     }),
     OPERATION(SetCause, (const struct ERROR_TYPE(Error) *cause)),

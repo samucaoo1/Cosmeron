@@ -1,5 +1,5 @@
 #pragma once
-#include "../../Core/Namespace.h"
+#include "../../Core/Module/Namespace.h"
 #include "../../Core/Outcome/Status.h"
 #include "../Chronometry/Instant/Instant.h"
 #include "../Text/View/View.h"
@@ -29,13 +29,13 @@
 #define FILE_MOD File
 #define FILE_CMOD FILE
 #ifndef FILE_NS
-#define FILE_NS(NAME) GNS2(LIB_PREFIX(FILE_MOD), NAME)
+#define FILE_NS(NAME) NS(LIB_PREFIX(FILE_MOD), NAME)
 #endif
 #ifndef FILE_CNS
-#define FILE_CNS(NAME) CNS2(LIB_PREFIX_CONST(FILE_CMOD), NAME)
+#define FILE_CNS(NAME) CNS(LIB_PREFIX_CONST(FILE_CMOD), NAME)
 #endif
-#define FILE_INS(NAME) GNS3(LIB_PREFIX(FILE_MOD), Internal, NAME)
-#define FILE_CINS(NAME) CNS3(LIB_PREFIX_CONST(FILE_CMOD), INTERNAL, NAME)
+#define FILE_INS(NAME) NS(LIB_PREFIX(FILE_MOD), Internal, NAME)
+#define FILE_CINS(NAME) CNS(LIB_PREFIX_CONST(FILE_CMOD), INTERNAL, NAME)
 #define FILE_TYPE(NAME) FILE_NS(NAME)
 #define FILE_FUNC(NAME) FILE_NS(NAME)
 #define FILE_CONST(NAME) FILE_CNS(NAME)

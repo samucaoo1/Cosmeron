@@ -2,7 +2,7 @@
 
 /* 1. Float (32-bit) conversions */
 CONVERTING_TARGET(
-    GNS2(LIB_PREFIX(CAST_MOD), Float),
+    NS(LIB_PREFIX(CAST_MOD), Float),
     Float,
     TO(Double, double, FLOAT),
     TO(LongDouble, long double, FLOAT),
@@ -34,7 +34,7 @@ CONVERTING(
 
 /* 2. Double (64-bit) conversions */
 CONVERTING_TARGET(
-    GNS2(LIB_PREFIX(CAST_MOD), Float),
+    NS(LIB_PREFIX(CAST_MOD), Float),
     Double,
     TO_EX(Float, float, FLOAT, FLT_MAX),
     TO(LongDouble, long double, FLOAT),
@@ -66,7 +66,7 @@ CONVERTING(
 
 /* 3. LongDouble (extended precision) conversions */
 CONVERTING_TARGET(
-    GNS2(LIB_PREFIX(CAST_MOD), Float),
+    NS(LIB_PREFIX(CAST_MOD), Float),
     LongDouble,
     TO_EX(Float, float, FLOAT, FLT_MAX),
     TO_EX(Double, double, FLOAT, DBL_MAX),
@@ -98,7 +98,7 @@ CONVERTING(
 
 /* 4. Integer to Float / Double / LongDouble conversions */
 CONVERTING_TARGET(
-    GNS2(LIB_PREFIX(CAST_MOD), Float),
+    NS(LIB_PREFIX(CAST_MOD), Float),
     Int64,
     TO(Float, float, FLOAT),
     TO(Double, double, FLOAT),
@@ -113,7 +113,7 @@ CONVERTING(
 )
 
 CONVERTING_TARGET(
-    GNS2(LIB_PREFIX(CAST_MOD), Float),
+    NS(LIB_PREFIX(CAST_MOD), Float),
     Int32,
     TO(Float, float, FLOAT),
     TO(Double, double, FLOAT),
@@ -128,7 +128,7 @@ CONVERTING(
 )
 
 CONVERTING_TARGET(
-    GNS2(LIB_PREFIX(CAST_MOD), Float),
+    NS(LIB_PREFIX(CAST_MOD), Float),
     Uint64,
     TO(Float, float, FLOAT),
     TO(Double, double, FLOAT),
@@ -143,7 +143,7 @@ CONVERTING(
 )
 
 CONVERTING_TARGET(
-    GNS2(LIB_PREFIX(CAST_MOD), Float),
+    NS(LIB_PREFIX(CAST_MOD), Float),
     Uint32,
     TO(Float, float, FLOAT),
     TO(Double, double, FLOAT),
@@ -158,7 +158,7 @@ CONVERTING(
 )
 
 CONVERTING_TARGET(
-    GNS2(LIB_PREFIX(CAST_MOD), Float),
+    NS(LIB_PREFIX(CAST_MOD), Float),
     Size,
     TO(Float, float, FLOAT),
     TO(Double, double, FLOAT),
@@ -172,6 +172,6 @@ CONVERTING(
     TO(LongDouble, long double, FLOAT)
 )
 
-PACKAGE_IMPLEMENT(GNS2(LIB_PREFIX(CAST_MOD), Float));
+PACKAGE_IMPLEMENT(NS(LIB_PREFIX(CAST_MOD), Float));
 /* EOF */
 

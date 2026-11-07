@@ -45,13 +45,13 @@
   static inline TQUAD_TYPE(SUFFIX)                                             \
       CAST_TYPE_TO_STRUCT(SUFFIX, TQuad)(TYPE value1, TYPE value2,             \
                                          TYPE value3, TYPE value4) {           \
-    return GNS2(TQUAD_PKG(SUFFIX), Create)(value1, value2, value3, value4);    \
+    return NS(TQUAD_PKG(SUFFIX), Create)(value1, value2, value3, value4);    \
   }                                                                            \
                                                                                \
   static inline void CAST_STRUCT_TO_TYPE(                                      \
       TQuad, SUFFIX)(TQUAD_TYPE(SUFFIX) quad, TYPE *var1, TYPE *var2,          \
                      TYPE *var3, TYPE *var4) {                                 \
-    GNS2(TQUAD_PKG(SUFFIX), Unpack)(quad, var1, var2, var3, var4);             \
+    NS(TQUAD_PKG(SUFFIX), Unpack)(quad, var1, var2, var3, var4);             \
   }                                                                            \
   PACKAGE_IMPLEMENT(TQUAD_PKG(SUFFIX));
 

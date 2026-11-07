@@ -446,10 +446,10 @@ static int Test_CustomAndIntegration(void) {
                STATUS_CONST(INVALID_ARGUMENT));
 
   /* Standalone CONVERTING call */
-  CHECK_STATUS(Cast_StandaloneInttoI8(42, &i8), STATUS_CONST(SUCCESS));
+  CHECK_STATUS(CAST_FUNC(StandaloneInttoI8)(42, &i8), STATUS_CONST(SUCCESS));
   CHECK_TRUE(i8 == 42);
-  CHECK_STATUS(Cast_StandaloneInttoI8(42, NULL), STATUS_CONST(INVALID_ARGUMENT));
-  CHECK_STATUS(Cast_StandaloneInttoI8(500, &i8), STATUS_CONST(ARITHMETIC_OVERFLOW));
+  CHECK_STATUS(CAST_FUNC(StandaloneInttoI8)(42, NULL), STATUS_CONST(INVALID_ARGUMENT));
+  CHECK_STATUS(CAST_FUNC(StandaloneInttoI8)(500, &i8), STATUS_CONST(ARITHMETIC_OVERFLOW));
 
   return 0;
 }
@@ -622,11 +622,11 @@ static int Test_FloatConversions(void) {
   CHECK_TRUE(fabsf(f - 500.0f) < 1e-6f);
 
   /* 7. Package Call on Float conversions */
-  CHECK_STATUS(PACKAGE_CALL(GNS2(LIB_PREFIX(CAST_MOD), Float), FloattoI32, 77.0f, &i32),
+  CHECK_STATUS(PACKAGE_CALL(NS(LIB_PREFIX(CAST_MOD), Float), FloattoI32, 77.0f, &i32),
                STATUS_CONST(SUCCESS));
   CHECK_TRUE(i32 == 77);
 
-  CHECK_STATUS(PACKAGE_CALL(GNS2(LIB_PREFIX(CAST_MOD), Float), DoubletoFloat, 1.25, &f),
+  CHECK_STATUS(PACKAGE_CALL(NS(LIB_PREFIX(CAST_MOD), Float), DoubletoFloat, 1.25, &f),
                STATUS_CONST(SUCCESS));
   CHECK_TRUE(fabsf(f - 1.25f) < 1e-6f);
 

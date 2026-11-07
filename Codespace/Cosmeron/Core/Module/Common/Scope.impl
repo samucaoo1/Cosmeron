@@ -1,0 +1,160 @@
+#pragma once
+
+#include "../Namespace.h"
+#include "../../Preprocessor/Arguments.h"
+#include "../../Preprocessor/Operations.h"
+#include "Dispatch.impl"
+
+/* ============================================================
+ * Scoped Implementation Framework (Core/Module/Common/Scope.impl)
+ * Provides lexical scoping and prototype dispatch for .impl files.
+ * ============================================================ */
+
+/* --- Diagnostic Scoping Pragmas --- */
+#if defined(__clang__)
+#define COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS()                             \
+  _Pragma("clang diagnostic push")                                             \
+  _Pragma("clang diagnostic ignored \"-Wunused-function\"")                    \
+  _Pragma("clang diagnostic ignored \"-Wunused-parameter\"")                   \
+  _Pragma("clang diagnostic ignored \"-Wunused-variable\"")
+
+#define COSMERON_INTERNAL_SCOPE_POP_DIAGNOSTICS()                              \
+  _Pragma("clang diagnostic pop")
+#elif defined(__GNUC__)
+#define COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS()                             \
+  _Pragma("GCC diagnostic push")                                               \
+  _Pragma("GCC diagnostic ignored \"-Wunused-function\"")                      \
+  _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")                     \
+  _Pragma("GCC diagnostic ignored \"-Wunused-variable\"")
+
+#define COSMERON_INTERNAL_SCOPE_POP_DIAGNOSTICS()                              \
+  _Pragma("GCC diagnostic pop")
+#else
+#define COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS()
+#define COSMERON_INTERNAL_SCOPE_POP_DIAGNOSTICS()
+#endif
+
+/* --- Parameter Emission Helpers --- */
+#define COSMERON_INTERNAL_SCOPE_PARAMS_1(TYPE, PARAMS) (TYPE *self)
+#define COSMERON_INTERNAL_SCOPE_PARAMS_0(TYPE, PARAMS)                         \
+  (TYPE *self, PP_UNWRAP PARAMS)
+#define COSMERON_INTERNAL_SCOPE_PARAMS(TYPE, PARAMS)                           \
+  PP_OP_CAT2(COSMERON_INTERNAL_SCOPE_PARAMS_, PP_IS_EMPTY_PARAMS(PARAMS))(     \
+      TYPE, PARAMS)
+
+#define COSMERON_INTERNAL_SCOPE_CONST_PARAMS_1(TYPE, PARAMS) (const TYPE *self)
+#define COSMERON_INTERNAL_SCOPE_CONST_PARAMS_0(TYPE, PARAMS)                   \
+  (const TYPE *self, PP_UNWRAP PARAMS)
+#define COSMERON_INTERNAL_SCOPE_CONST_PARAMS(TYPE, PARAMS)                     \
+  PP_OP_CAT2(COSMERON_INTERNAL_SCOPE_CONST_PARAMS_,                            \
+             PP_IS_EMPTY_PARAMS(PARAMS))(TYPE, PARAMS)
+
+#define COSMERON_INTERNAL_SCOPE_PKG_PARAMS_1(PARAMS) (void)
+#define COSMERON_INTERNAL_SCOPE_PKG_PARAMS_0(PARAMS) (PP_UNWRAP PARAMS)
+#define COSMERON_INTERNAL_SCOPE_PKG_PARAMS(PARAMS)                             \
+  PP_OP_CAT2(COSMERON_INTERNAL_SCOPE_PKG_PARAMS_,                             \
+             PP_IS_EMPTY_PARAMS(PARAMS))(PARAMS)
+
+/* ============================================================
+ * 1. OBJECT_SCOPE: Begins object implementation block
+ * ============================================================ */
+
+#define COSMERON_INTERNAL_OBJECT_SCOPE_2(MOD, OBJ)                             \
+  COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS()                                   \
+  typedef MODULE_TYPE(MOD, OBJ)                                                \
+      NS(_cosmeron_scope_obj_self_t, MOD, OBJ, __LINE__);
+
+#define COSMERON_INTERNAL_OBJECT_SCOPE_1(END_TOKEN)                            \
+  COSMERON_INTERNAL_SCOPE_POP_DIAGNOSTICS()
+
+#define OBJECT_SCOPE(...)                                                      \
+  PP_OP_CAT2(COSMERON_INTERNAL_OBJECT_SCOPE_,                                  \
+             PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+
+#define OBJECT_SCOPE_END() COSMERON_INTERNAL_OBJECT_SCOPE_1(END)
+
+/* ============================================================
+ * 2. PACKAGE_SCOPE: Begins package implementation block
+ * ============================================================ */
+
+#define COSMERON_INTERNAL_PACKAGE_SCOPE_2(MOD, PKG)                            \
+  COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS()                                   \
+  typedef int NS(_cosmeron_pkg_scope_semi, MOD, PKG, __LINE__);
+
+#define COSMERON_INTERNAL_PACKAGE_SCOPE_1(END_TOKEN)                           \
+  COSMERON_INTERNAL_SCOPE_POP_DIAGNOSTICS()
+
+#define PACKAGE_SCOPE(...)                                                     \
+  PP_OP_CAT2(COSMERON_INTERNAL_PACKAGE_SCOPE_,                                 \
+             PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+
+#define PACKAGE_SCOPE_END() COSMERON_INTERNAL_PACKAGE_SCOPE_1(END)
+
+/* ============================================================
+ * 3. SPACE_SCOPE & VARIANT_SCOPE: Sub-namespace markers
+ * ============================================================ */
+
+#define SPACE_SCOPE(SUBSPACE)                                                  \
+  typedef int NS(_cosmeron_space_scope_semi, SUBSPACE, __LINE__);
+
+#define SPACE_SCOPE_END()                                                      \
+  typedef int NS(_cosmeron_space_scope_end_semi, __LINE__);
+
+#define VARIANT_SCOPE(FAMILY)                                                  \
+  typedef int NS(_cosmeron_var_scope_semi, FAMILY, __LINE__);
+
+#define VARIANT_SCOPE_END()                                                    \
+  typedef int NS(_cosmeron_var_scope_end_semi, __LINE__);
+
+/* ============================================================
+ * 4. Scoped Implementation Sugar (when SCOPE_TARGET is defined)
+ * ============================================================ */
+
+#define SCOPE_OPERATION(NAME, PARAMS)                                          \
+  OBJECT_OPERATION_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+
+#define SCOPE_FUNCTION(RET, NAME, PARAMS)                                      \
+  OBJECT_FUNCTION_IMPLEMENT_EX(SCOPE_TARGET, RET, NAME, PARAMS)
+
+#define SCOPE_PREDICATE(NAME, PARAMS)                                          \
+  OBJECT_PREDICATE_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+
+#define SCOPE_PROCEDURE(NAME, PARAMS)                                          \
+  OBJECT_PROCEDURE_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+
+#define SCOPE_COMPARISON(NAME, PARAMS)                                         \
+  OBJECT_COMPARISON_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+
+#define SCOPE_PKG_OPERATION(NAME, PARAMS)                                      \
+  PACKAGE_OPERATION_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+
+#define SCOPE_PKG_FUNCTION(RET, NAME, PARAMS)                                  \
+  PACKAGE_FUNCTION_IMPLEMENT_EX(SCOPE_TARGET, RET, NAME, PARAMS)
+
+#define SCOPE_PKG_PREDICATE(NAME, PARAMS)                                      \
+  PACKAGE_PREDICATE_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+
+#define SCOPE_PKG_PROCEDURE(NAME, PARAMS)                                      \
+  PACKAGE_PROCEDURE_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+
+#define SCOPE_PKG_COMPARISON(NAME, PARAMS)                                     \
+  PACKAGE_COMPARISON_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+
+#define SCOPE_COMPARISON(NAME, PARAMS)                                         \
+  OBJECT_COMPARISON_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+
+#define SCOPE_PKG_OPERATION(NAME, PARAMS)                                      \
+  PACKAGE_OPERATION_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+#define SCOPE_PKG_FUNCTION(RET, NAME, PARAMS)                                  \
+  PACKAGE_FUNCTION_IMPLEMENT_EX(SCOPE_TARGET, RET, NAME, PARAMS)
+
+#define SCOPE_PKG_PREDICATE(NAME, PARAMS)                                      \
+  PACKAGE_PREDICATE_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+
+#define SCOPE_PKG_PROCEDURE(NAME, PARAMS)                                      \
+  PACKAGE_PROCEDURE_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+
+#define SCOPE_PKG_COMPARISON(NAME, PARAMS)                                     \
+  PACKAGE_COMPARISON_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+
+/* EOF */

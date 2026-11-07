@@ -239,7 +239,7 @@ int main(void) {
 
   int baseVal = 5;
   TCALLBACK(REPEAT_INS(Generator_Point)) gen =
-      GNS2(CALLBACK_FUNC(REPEAT_INS(Generator_Point)), Bind)(
+      NS(CALLBACK_FUNC(REPEAT_INS(Generator_Point)), Bind)(
           generate_constant_point, &baseVal);
   if (REPEAT_FUNC(Point_Generate)(points, 3U, gen) != STATUS_CONST(SUCCESS))
     return 38;
@@ -250,7 +250,7 @@ int main(void) {
 
   int offsetVal = 100;
   TCALLBACK(REPEAT_INS(IndexedGenerator_Point)) indexedGen =
-      GNS2(CALLBACK_FUNC(REPEAT_INS(IndexedGenerator_Point)), Bind)(
+      NS(CALLBACK_FUNC(REPEAT_INS(IndexedGenerator_Point)), Bind)(
           generate_indexed_point, &offsetVal);
   if (REPEAT_FUNC(Point_GenerateIndexed)(points, 3U, indexedGen) !=
       STATUS_CONST(SUCCESS))

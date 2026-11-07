@@ -1,5 +1,5 @@
 #pragma once
-#include "../../../Core/Namespace.h"
+#include "../../../Core/Module/Namespace.h"
 #include "../../../Core/Outcome/Status.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -7,9 +7,9 @@
 
 #define GRADIENT_MOD Gradient
 #define GRADIENT_CMOD GRADIENT
-#define GRADIENT_NS(NAME) GNS2(LIB_PREFIX(GRADIENT_MOD), NAME)
-#define GRADIENT_CNS(NAME) CNS2(LIB_PREFIX_CONST(GRADIENT_CMOD), NAME)
-#define GRADIENT_INS(NAME) GNS3(LIB_PREFIX(GRADIENT_MOD), Internal, NAME)
+#define GRADIENT_NS(NAME) NS(LIB_PREFIX(GRADIENT_MOD), NAME)
+#define GRADIENT_CNS(NAME) CNS(LIB_PREFIX_CONST(GRADIENT_CMOD), NAME)
+#define GRADIENT_INS(NAME) NS(LIB_PREFIX(GRADIENT_MOD), Internal, NAME)
 #define GRADIENT_TYPE(NAME) GRADIENT_NS(NAME)
 #define GRADIENT_FUNC(NAME) GRADIENT_NS(NAME)
 #define GRADIENT_CONST(NAME) GRADIENT_CNS(NAME)

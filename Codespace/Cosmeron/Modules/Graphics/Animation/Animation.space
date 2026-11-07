@@ -1,5 +1,5 @@
 #pragma once
-#include "../../../Core/Namespace.h"
+#include "../../../Core/Module/Namespace.h"
 #include "../../../Core/Outcome/Status.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -7,9 +7,9 @@
 
 #define ANIMATION_MOD Animation
 #define ANIMATION_CMOD ANIMATION
-#define ANIMATION_NS(NAME) GNS2(LIB_PREFIX(ANIMATION_MOD), NAME)
-#define ANIMATION_CNS(NAME) CNS2(LIB_PREFIX_CONST(ANIMATION_CMOD), NAME)
-#define ANIMATION_INS(NAME) GNS3(LIB_PREFIX(ANIMATION_MOD), Internal, NAME)
+#define ANIMATION_NS(NAME) NS(LIB_PREFIX(ANIMATION_MOD), NAME)
+#define ANIMATION_CNS(NAME) CNS(LIB_PREFIX_CONST(ANIMATION_CMOD), NAME)
+#define ANIMATION_INS(NAME) NS(LIB_PREFIX(ANIMATION_MOD), Internal, NAME)
 #define ANIMATION_TYPE(NAME) ANIMATION_NS(NAME)
 #define ANIMATION_FUNC(NAME) ANIMATION_NS(NAME)
 #define ANIMATION_CONST(NAME) ANIMATION_CNS(NAME)

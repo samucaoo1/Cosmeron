@@ -21,13 +21,14 @@ It is **compile-time-only**. Unlike ordinary Cosmeron modules, these APIs have n
 | [Arguments](#argument-counting) | `Arguments.h` | Variadic argument counts |
 | [Boolean](#boolean-operations) | `Boolean.h` | Conditional token selection |
 | [Eval](#expansion-control) | `Eval.h` | Deferred recursive expansions |
-| [Foreach](#foreach-and-map) | `Foreach.h` | Apply a macro to each argument |
-| [Map](#pp_map) | `Map.h` | Foreach alias |
-| [Repeat](#repetition) | `Repeat.h` | Index-based repetition and decrement |
-| [Sequence](#sequence-selection) | `Sequence.h` | Select comma-separated arguments |
+| [Foreach](#foreach-and-map) | `Foreach.h` | Multi-dimensional iterative macro application |
+| [Map](#pp_map) | `Map.h` | Nestable evaluation engine (Motor 2) |
+| [Repeat](#repetition) | `Repeat.h` | Index-based repetition and increment/decrement |
+| [Sequence](#sequence-selection) | `Sequence.h` | Comma tuples and parenthesized sequence (SEQ) functional folding |
+| [Tree](#tree-reduction) | `Tree.h` | Binary tree reduction and token concatenation in $O(\log_2 N)$ |
 | [Tokens](#token-helpers) | `Tokens.h` | Emit punctuation tokens |
 | [While](#conditional-repetition) | `While.h` | Repeated state transformation |
-| [Detect](#platform-detection) | `Detect/*.h` | Compiler, OS and processor flags |
+| [Detect](#platform-detection) | `Detect/*.h` | Compiler, OS, C library and processor flags |
 | [Compiling](#inclusion-diagnostics) | `Compiling.inc` | Optional include diagnostic messages |
 
 ### Macro form
@@ -49,13 +50,17 @@ These are equivalent **as tokens**. They do not represent two public runtime fun
 
 | Family | Supported range |
 | --- | --- |
-| `PP_ARG_COUNT` | 1–100 nonempty arguments |
-| `PP_FOREACH` / `PP_MAP` | 1–100 nonempty arguments |
-| `PP_BOOL` | Literal integer tokens 0–100 |
-| `PP_OP_CAT` and `PP_OP_CAT2`–`PP_OP_CAT10` | 2–10 pasted operands |
-| `PP_REPEAT` | Counts 0–5 |
-| `PP_DEC` | Integer inputs 0–5 |
-| `PP_SEQ_GET_1`–`PP_SEQ_GET_10` | Indexes 1–10 |
+| `PP_ARG_COUNT` | 1–256 nonempty arguments |
+| `PP_FOREACH` (Dimensions 1–5) | 1–256 nonempty arguments per dimension |
+| `PP_FOREACH_CHUNKS` (2D, 3D, 4D) | Up to $256 \times 256 = 65,536$ (2D), $256^3 \approx 1.67 \times 10^7$ (3D), $256^4 \approx 4.29 \times 10^9$ (4D) |
+| `PP_MAP` | Unbounded recursive mapping over `PP_EVAL` |
+| `PP_BOOL` | Literal integer tokens 0–256 |
+| `PP_OP_CAT` (variadic via Tree) and `PP_OP_CAT2`–`PP_OP_CAT32` | 1–32 pasted operands |
+| `PP_REPEAT` | Counts 0–256 |
+| `PP_DEC` and `PP_INC` | Integer inputs 0–256 |
+| `PP_SEQ_GET_1`–`PP_SEQ_GET_256` | Indexes 1–256 |
+| `PP_SEQ_*` (Parenthesized sequences) | 1–256 elements for Size, Fold, Enum, Foreach |
+| `PP_TREE_REDUCE` / `PP_TREE_JOIN` | 1–32 direct operands ($O(\log_2 N)$, depth $\le 5$); up to $32^4 = 1,048,576$ via 4D Tree Chunks |
 | `PP_WHILE` | Constrained by fixed expansion depth and compiler limits |
 
 ---
@@ -255,9 +260,9 @@ int PP_OP_CAT2(PART, _Count) = 10;
 
 ---
 
-# PP_OP_CAT3 to PP_OP_CAT10
+# PP_OP_CAT3 to PP_OP_CAT16
 
-Concatenates between three and ten operands by composing the expanding concatenation primitives.
+Concatenates between three and sixteen operands by composing the expanding concatenation primitives.
 
 ### Syntax
 
@@ -272,6 +277,12 @@ PP_OP_CAT7(a, b, c, d, e, f, g)
 PP_OP_CAT8(a, b, c, d, e, f, g, h)
 PP_OP_CAT9(a, b, c, d, e, f, g, h, i)
 PP_OP_CAT10(a, b, c, d, e, f, g, h, i, j)
+PP_OP_CAT11(a, b, c, d, e, f, g, h, i, j, k)
+PP_OP_CAT12(a, b, c, d, e, f, g, h, i, j, k, l)
+PP_OP_CAT13(a, b, c, d, e, f, g, h, i, j, k, l, m)
+PP_OP_CAT14(a, b, c, d, e, f, g, h, i, j, k, l, m, n)
+PP_OP_CAT15(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o)
+PP_OP_CAT16(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p)
 ```
 
 #### Direct form
@@ -294,7 +305,7 @@ One concatenated preprocessing token, possibly subsequently expanded.
 
 ### Remarks
 
-- The implementation defines forms for exactly 3, 4, 5, 6, 7, 8, 9, and 10 operands.
+- The implementation defines forms for up to 16 operands.
 - Module code should use these utilities rather than applying raw `##` outside the preprocessing layer.
 
 ---
@@ -901,13 +912,13 @@ int result = PP_EVAL(NUMBER); /* 42 */
 
 # Foreach and Map
 
-`Foreach.h` generates a call to a unary macro for every argument. Its helpers cover `PP_FOREACH_1` through `PP_FOREACH_100`; they should usually be invoked via `PP_FOREACH` rather than directly.
+`Foreach.h` provides a high-performance multi-dimensional macro iteration engine (`D1` through `D5`) supporting up to 256 arguments per dimension, along with a chunk engine (`PP_FOREACH_CHUNKS`) for processing massive datasets up to $256 \times 256 = 65,536$ elements.
 
 ---
 
 # PP_FOREACH
 
-Applies a unary macro once to each supplied item in order.
+Applies a macro once to each supplied item in order, operating in Dimension 1 (default outer loop).
 
 ### Syntax
 
@@ -915,11 +926,43 @@ Applies a unary macro once to each supplied item in order.
 
 ```c
 PP_FOREACH(macro, a, b, c, ...)
+PP_FOREACH_CTX(macro, context, a, b, c, ...)
+PP_FOREACH_COMMA(macro, a, b, c, ...)
+PP_FOREACH_COMMA_CTX(macro, context, a, b, c, ...)
+PP_FOREACH_SEMI(macro, a, b, c, ...)
+PP_FOREACH_SEMI_CTX(macro, context, a, b, c, ...)
+```
+
+#### Multi-Dimensional Iteration (D1 through D5)
+
+To nest loops up to 5 levels deep without preprocessor blue-painting (recursion suppression), use the dimensional variants:
+```c
+PP_FOREACH_D(dimension, macro, ...)
+PP_FOREACH_CTX_D(dimension, macro, context, ...)
+PP_FOREACH_COMMA_D(dimension, macro, ...)
+PP_FOREACH_SEMI_D(dimension, macro, ...)
+
+/* Or direct dimension macros: */
+PP_FOREACH_D2(macro, ...)       /* Dimension 2 */
+PP_FOREACH_D2_CTX(macro, ctx, ...)
+PP_FOREACH_D3_CTX(macro, ctx, ...) /* Dimension 3 */
+PP_FOREACH_D4_CTX(macro, ctx, ...) /* Dimension 4 */
+PP_FOREACH_D5_CTX(macro, ctx, ...) /* Dimension 5 */
+```
+
+#### Chunk Engine (Multiplicative Capacity)
+
+To iterate over tuples of items (chunks) and scale capacity up to 65,536 items:
+```c
+PP_FOREACH_CHUNKS(macro, (chunk1), (chunk2), ...)
+PP_FOREACH_CHUNKS_CTX(macro, context, (chunk1), (chunk2), ...)
+PP_FOREACH_CHUNKS_COMMA(macro, (chunk1), (chunk2), ...)
+PP_FOREACH_CHUNKS_SEMI(macro, context, (chunk1), (chunk2), ...)
 ```
 
 #### Direct form
 
-The juxtaposed expansions `macro(a) macro(b) macro(c) ...`.
+The juxtaposed expansions `macro(a) macro(b) macro(c) ...` (or separated by comma/semicolon).
 
 ---
 
@@ -927,8 +970,9 @@ The juxtaposed expansions `macro(a) macro(b) macro(c) ...`.
 
 | Parameter | Explanation |
 | --- | --- |
-| `macro` | A unary function-like macro. |
-| `...` | A list of 1–100 items. |
+| `macro` | A unary `macro(x)` or binary `macro(context, x)` function-like macro. |
+| `context` | Context argument passed as the first parameter to binary invocations. |
+| `...` | A list of 1–256 items (or chunks of items for `PP_FOREACH_CHUNKS`). |
 
 ---
 
@@ -940,9 +984,9 @@ Not a C runtime value. The macro expands to preprocessing tokens.
 
 ### Remarks
 
-- No commas or separators are inserted automatically; the item macro must emit its own syntactic punctuation.
-- Empty lists are not supported.
-- Can generate declarations, expressions, or entries in X-macro-like code.
+- Separator variants insert nothing (`PP_FOREACH`), commas (`PP_FOREACH_COMMA`), or semicolons (`PP_FOREACH_SEMI`).
+- Dimensions `D1` through `D5` use disjoint internal caller and dispatch tokens, guaranteeing zero expansion suppression when nesting.
+- Can generate declarations, expressions, function tables, or entries in X-macro-like code.
 
 ---
 
@@ -958,7 +1002,7 @@ struct Sample { PP_FOREACH(DECL_FIELD, width, height, depth) };
 
 # PP_MAP
 
-Alias to `PP_FOREACH`, providing identical argument mapping.
+Independent nestable evaluation engine (Motor 2) based on `PP_EVAL`. Unlike `PP_FOREACH` (which is space-concatenated by default), `PP_MAP` is comma-separated by default and fully disjoint from `PP_FOREACH`, allowing seamless nesting of `PP_MAP` inside `PP_FOREACH` without expansion suppression.
 
 ### Syntax
 
@@ -966,11 +1010,16 @@ Alias to `PP_FOREACH`, providing identical argument mapping.
 
 ```c
 PP_MAP(macro, a, b, ...)
+PP_MAP_CTX(macro, context, a, b, ...)
+PP_MAP_SEMI(macro, a, b, ...)
+PP_MAP_SEMI_CTX(macro, context, a, b, ...)
+PP_MAP_NONE(macro, a, b, ...)
+PP_MAP_NONE_CTX(macro, context, a, b, ...)
 ```
 
 #### Direct form
 
-Exactly the tokens emitted by `PP_FOREACH(macro, a, b, ...)`.
+The emitted tokens separated by commas, semicolons, or empty token sequence.
 
 ---
 
@@ -978,14 +1027,22 @@ Exactly the tokens emitted by `PP_FOREACH(macro, a, b, ...)`.
 
 | Parameter | Explanation |
 | --- | --- |
-| `macro` | Unary macro applied to each item. |
-| `...` | 1–100 list items. |
+| `macro` | Macro applied to each item (unary `macro(x)` or binary with context `macro(ctx, x)`). |
+| `context` | Context argument passed to binary invocations. |
+| `...` | Nonempty argument list. |
 
 ---
 
 ### Return value
 
 Not a C runtime value. The macro expands to preprocessing tokens.
+
+---
+
+### Remarks
+
+- Separated by comma (`PP_MAP`), semicolon (`PP_MAP_SEMI`), or empty (`PP_MAP_NONE`).
+- Can be nested inside `PP_FOREACH` without colliding on recursion locks.
 
 ---
 
@@ -1113,7 +1170,7 @@ enum { n = PP_DEC(3), z = PP_DEC(0) }; /* n == 2; z == 0 */
 
 # Sequence selection
 
-`Sequence.h` handles ordinary **comma-separated preprocessor arguments**, not parenthesized Boost-style sequences.
+`Sequence.h` handles both ordinary **comma-separated arguments (tuples)** and **parenthesized sequences (`(a)(b)(c)...`)** with full functional fold and enumeration capabilities.
 
 ---
 
@@ -1248,7 +1305,7 @@ Emits the token sequence at the selected position.
 
 ### Remarks
 
-- Supports selectors 1 through 10 only.
+- Supports selectors 1 through 256.
 - Does not dynamically index a runtime array.
 - A required missing argument is not handled by a runtime status check.
 
@@ -1260,6 +1317,74 @@ Emits the token sequence at the selected position.
 enum { second = PP_SEQ_GET_2(10, 20, 30) };
 enum { fourth = PP_SEQ_GET_4(10, 20, 30, 40) };
 /* second == 20; fourth == 40 */
+```
+
+---
+
+# Parenthesized Sequences (PP_SEQ)
+
+Parenthesized sequences represent collections in the format `(a)(b)(c)...`, providing total immunity against internal commas in C types or expressions (such as `void (*)(int, int)` or struct initializers).
+
+### Core Operations
+
+| Macro | Description |
+| --- | --- |
+| `PP_SEQ_HEAD(seq)` | Extracts the first parenthesized element `a`. |
+| `PP_SEQ_TAIL(seq)` | Discards the first element and returns the remaining sequence `(b)(c)...`. |
+| `PP_SEQ_SIZE(seq)` | Computes the exact element count (1–256) in a single expansion pass without `PP_EVAL`. |
+| `PP_SEQ_FOLD_LEFT(op, state, seq)` | Folds left: `op(op(op(state, a), b), c)`. |
+| `PP_SEQ_FOLD_RIGHT(op, state, seq)` | Folds right: `op(a, op(b, op(c, state)))`. |
+| `PP_SEQ_ENUM(seq)` | Converts `(a)(b)(c)` into comma-separated items: `a, b, c`. |
+| `PP_SEQ_TO_TUPLE(seq)` | Converts `(a)(b)(c)` into a parenthesized tuple: `(a, b, c)`. |
+| `PP_SEQ_FOREACH(macro, seq)` | Emits `macro(a) macro(b) macro(c)`. |
+| `PP_SEQ_FOREACH_CTX(macro, ctx, seq)` | Emits `macro(ctx, a) macro(ctx, b) macro(ctx, c)`. |
+
+### Example
+
+```c
+#define BIT_OR(acc, elem) ((acc) | (elem))
+enum { flags = PP_SEQ_FOLD_LEFT(BIT_OR, 0, (1)(2)(4)) }; /* flags == 7 */
+
+int values[] = { PP_SEQ_ENUM((10)(20)(30)) };
+```
+
+---
+
+# Tree reduction
+
+`Tree.h` implements a **Binary Tree / Divide & Conquer Reduction Engine** ($O(\log_2 N)$ expansion depth).
+
+Instead of linear recursion ($A \to AB \to ABC \dots$), the engine partitions operations into balanced halves. It operates without `PP_EVAL`, providing reentrant, nested reductions immune to recursion locks.
+
+### Core Tree Reducers
+
+| Macro | Description |
+| --- | --- |
+| `PP_TREE_REDUCE(op, ...)` | Reduces 1–32 arguments using binary operator `op(left, right)` in $O(\log_2 N)$ depth ($\le 5$). |
+| `PP_TREE_REDUCE_CTX(op, ctx, ...)` | Reduces 1–32 arguments passing context `op(ctx, left, right)`. |
+| `PP_TREE_CAT(...)` | Glues tokens directly into one symbol: `PP_TREE_CAT(A, B, C, D)` $\to$ `ABCD`. |
+| `PP_TREE_JOIN(sep, ...)` | Joins tokens with a custom separator: `PP_TREE_JOIN(_, A, B, C)` $\to$ `A_B_C`. |
+| `PP_TREE_JOIN_UNDERSCORE(...)` | Specialized joiner with underscore: `PP_TREE_JOIN_UNDERSCORE(Cos, Core, Mem)` $\to$ `Cos_Core_Mem`. |
+| `PP_TREE_REDUCE_CHUNKS_2D(op, ...)` | 2D Tree Chunks ($32 \times 32 = 1,024$ elements). |
+| `PP_TREE_REDUCE_CHUNKS_3D(op, ...)` | 3D Tree Chunks ($32^3 = 32,768$ elements). |
+| `PP_TREE_REDUCE_CHUNKS_4D(op, ...)` | 4D Tree Chunks ($32^4 = 1,048,576$ elements). |
+| `PP_TREE_CAT_CHUNKS_2D/3D/4D(...)` | Multidimensional token paste via Chunks. |
+| `PP_TREE_JOIN_UNDERSCORE_CHUNKS_2D/3D/4D(...)` | Multidimensional underscore joiner via Chunks. |
+
+### Example
+
+```c
+#define ADD(a, b) (a + b)
+enum { sum = PP_TREE_REDUCE(ADD, 1, 2, 3, 4, 5, 6, 7, 8) }; /* sum == 36, depth == 3 */
+
+int PP_TREE_JOIN_UNDERSCORE(Cosmeron, Core, Memory, Alloc) = 42;
+/* Cosmeron_Core_Memory_Alloc == 42 */
+
+/* 3D Tree Chunks */
+int sum3D = PP_TREE_REDUCE_CHUNKS_3D(ADD,
+    ((1, 2), (3, 4)),
+    ((5, 6), (7, 8))
+); /* sum3D == 36 */
 ```
 
 ---

@@ -12,20 +12,20 @@
 #include <stdint.h>
 #include <string.h>
 
-#define RESULT_MOD GNS2(OUTCOME_MOD, Result)
-#define RESULT_TYPE(SUFFIX) GNS2(TResult, SUFFIX)
+#define RESULT_MOD NS(OUTCOME_MOD, Result)
+#define RESULT_TYPE(SUFFIX) NS(TResult, SUFFIX)
 
 #define RESULT_MAP_CALLBACK(SUFFIX)                                            \
-  TCALLBACK(GNS2(RESULT_TYPE(SUFFIX), MapFunction))
+  TCALLBACK(NS(RESULT_TYPE(SUFFIX), MapFunction))
 
 #define RESULT_BIND_CALLBACK(SUFFIX)                                           \
-  TCALLBACK(GNS2(RESULT_TYPE(SUFFIX), BindFunction))
+  TCALLBACK(NS(RESULT_TYPE(SUFFIX), BindFunction))
 
 #define RESULT_MAP_BIND(SUFFIX, FN, CTX)                                       \
-  CALLBACK_FUNC(GNS2(RESULT_TYPE(SUFFIX), MapFunction_Bind))((FN), (CTX))
+  CALLBACK_FUNC(NS(RESULT_TYPE(SUFFIX), MapFunction_Bind))((FN), (CTX))
 
 #define RESULT_BIND_BIND(SUFFIX, FN, CTX)                                      \
-  CALLBACK_FUNC(GNS2(RESULT_TYPE(SUFFIX), BindFunction_Bind))((FN), (CTX))
+  CALLBACK_FUNC(NS(RESULT_TYPE(SUFFIX), BindFunction_Bind))((FN), (CTX))
 
 /* ============================================================
  * Universal Template Definition: TRESULT
@@ -71,7 +71,7 @@
           memset(&self->storage, 0, sizeof(self->storage));                   \
         } else {                                                               \
           self->isOk = false;                                                  \
-          GNS2(ERROR_TYPE(Error), FromStatus)(&self->storage.error, status);   \
+          NS(ERROR_TYPE(Error), FromStatus)(&self->storage.error, status);   \
         }                                                                      \
         return STATUS_CONST(SUCCESS);                                          \
       }),                                                                      \
@@ -108,11 +108,11 @@
             if (!self || !outResult || !CALLBACK_IS_VALID(mapper))                \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             if (!self->isOk) {                                                 \
-              return GNS2(RESULT_TYPE(SUFFIX), Err)(outResult,                 \
+              return NS(RESULT_TYPE(SUFFIX), Err)(outResult,                 \
                                                     &self->storage.error);     \
             }                                                                  \
             TYPE mapped = CALLBACK_INVOKE(mapper, self->storage.value);        \
-            return GNS2(RESULT_TYPE(SUFFIX), Ok)(outResult, mapped);           \
+            return NS(RESULT_TYPE(SUFFIX), Ok)(outResult, mapped);           \
           }),                                                                  \
       CONST_OPERATION_INLINE(                                                  \
           AndThen,                                                             \
@@ -122,7 +122,7 @@
             if (!self || !outResult || !CALLBACK_IS_VALID(binder))                \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             if (!self->isOk) {                                                 \
-              return GNS2(RESULT_TYPE(SUFFIX), Err)(outResult,                 \
+              return NS(RESULT_TYPE(SUFFIX), Err)(outResult,                 \
                                                     &self->storage.error);     \
             }                                                                  \
             return CALLBACK_INVOKE(binder, self->storage.value, outResult);    \

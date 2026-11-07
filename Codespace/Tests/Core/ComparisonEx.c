@@ -29,7 +29,7 @@ OBJECT_COMPARISON_IMPLEMENT_EX(Person, CompareManual, (const Person *other)) {
   if (self->age != other->age) {
     return self->age < other->age ? COMPARISON_CONST(LOWER) : COMPARISON_CONST(HIGHER);
   }
-  return GNS2(Person, CompareName)(self, other);
+  return NS(Person, CompareName)(self, other);
 }
 
 OBJECT_IMPLEMENT(Person);
@@ -58,8 +58,8 @@ PACKAGE_IMPLEMENT(MathCmp);
 int main(void) {
   Person p1;
   Person p2;
-  GNS2(Person, Init)(&p1);
-  GNS2(Person, Init)(&p2);
+  NS(Person, Init)(&p1);
+  NS(Person, Init)(&p2);
 
   p1.age = 20;
   p1.score = 85.5;
@@ -72,9 +72,9 @@ int main(void) {
   p2.data[0] = 1; p2.data[1] = 2; p2.data[2] = 3; p2.data[3] = 5;
 
   /* 1. Direct function calls */
-  assert(GNS2(Person, CompareAge)(&p1, &p2) == COMPARISON_CONST(LOWER));
-  assert(GNS2(Person, CompareAge)(&p2, &p1) == COMPARISON_CONST(HIGHER));
-  assert(GNS2(Person, CompareAge)(&p1, &p1) == COMPARISON_CONST(EQUAL));
+  assert(NS(Person, CompareAge)(&p1, &p2) == COMPARISON_CONST(LOWER));
+  assert(NS(Person, CompareAge)(&p2, &p1) == COMPARISON_CONST(HIGHER));
+  assert(NS(Person, CompareAge)(&p1, &p1) == COMPARISON_CONST(EQUAL));
 
   /* 2. OBJECT_CALL dispatch */
   assert(OBJECT_CALL(&p1, CompareAge, &p2) == COMPARISON_CONST(LOWER));

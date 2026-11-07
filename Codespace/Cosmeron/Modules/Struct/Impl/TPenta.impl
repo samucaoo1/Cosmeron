@@ -50,14 +50,14 @@
       CAST_TYPE_TO_STRUCT(SUFFIX, TPenta)(TYPE value1, TYPE value2,            \
                                           TYPE value3, TYPE value4,            \
                                           TYPE value5) {                       \
-    return GNS2(TPENTA_PKG(SUFFIX), Create)(value1, value2, value3, value4,    \
+    return NS(TPENTA_PKG(SUFFIX), Create)(value1, value2, value3, value4,    \
                                             value5);                           \
   }                                                                            \
                                                                                \
   static inline void CAST_STRUCT_TO_TYPE(                                      \
       TPenta, SUFFIX)(TPENTA_TYPE(SUFFIX) penta, TYPE *var1, TYPE *var2,       \
                       TYPE *var3, TYPE *var4, TYPE *var5) {                    \
-    GNS2(TPENTA_PKG(SUFFIX), Unpack)(penta, var1, var2, var3, var4, var5);     \
+    NS(TPENTA_PKG(SUFFIX), Unpack)(penta, var1, var2, var3, var4, var5);     \
   }                                                                            \
   PACKAGE_IMPLEMENT(TPENTA_PKG(SUFFIX));
 

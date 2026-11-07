@@ -33,12 +33,12 @@
                                                                                \
   static inline TDUAL_TYPE(SUFFIX)                                             \
       CAST_TYPE_TO_STRUCT(SUFFIX, TDual)(TYPE value1, TYPE value2) {           \
-    return GNS2(TDUAL_PKG(SUFFIX), Create)(value1, value2);                    \
+    return NS(TDUAL_PKG(SUFFIX), Create)(value1, value2);                    \
   }                                                                            \
                                                                                \
   static inline void CAST_STRUCT_TO_TYPE(TDual, SUFFIX)(                       \
       TDUAL_TYPE(SUFFIX) dual, TYPE *var1, TYPE *var2) {                       \
-    GNS2(TDUAL_PKG(SUFFIX), Unpack)(dual, var1, var2);                         \
+    NS(TDUAL_PKG(SUFFIX), Unpack)(dual, var1, var2);                         \
   }                                                                            \
   PACKAGE_IMPLEMENT(TDUAL_PKG(SUFFIX));
 

@@ -4,13 +4,13 @@
 #include "../Preprocessor/Compiling.inc"
 #include "Memory.space"
 
-#define SWAP_MOD GNS2(MEMORY_MOD, Swap)
+#define SWAP_MOD NS(MEMORY_MOD, Swap)
 #define SWAP_CMOD PP_OP_CAT3(MEMORY_CMOD, _, SWAP)
 
-#define SWAP_NS(NAME) GNS3(LIB_PREFIX(MEMORY_MOD), Swap, NAME)
-#define SWAP_CNS(NAME) CNS3(LIB_PREFIX_CONST(MEMORY_CMOD), SWAP, NAME)
-#define SWAP_INS(NAME) GNS4(LIB_PREFIX(MEMORY_MOD), Swap, Internal, NAME)
-#define SWAP_CINS(NAME) CNS4(LIB_PREFIX_CONST(MEMORY_CMOD), SWAP, INTERNAL, NAME)
+#define SWAP_NS(NAME) NS(LIB_PREFIX(MEMORY_MOD), Swap, NAME)
+#define SWAP_CNS(NAME) CNS(LIB_PREFIX_CONST(MEMORY_CMOD), SWAP, NAME)
+#define SWAP_INS(NAME) NS(LIB_PREFIX(MEMORY_MOD), Swap, Internal, NAME)
+#define SWAP_CINS(NAME) CNS(LIB_PREFIX_CONST(MEMORY_CMOD), SWAP, INTERNAL, NAME)
 
 #define SWAP_TYPE(NAME) SWAP_NS(NAME)
 #define SWAP_FUNC(NAME) SWAP_NS(NAME)
@@ -36,7 +36,7 @@ PACKAGE(LIB_PREFIX(SWAP_MOD),
 );
 
 #define TEMPLATE_SWAP(SUFFIX, TYPE)                                            \
-  PACKAGE(GNS2(LIB_PREFIX(SWAP_MOD), SUFFIX),                                  \
+  PACKAGE(NS(LIB_PREFIX(SWAP_MOD), SUFFIX),                                  \
       PROCEDURE_INLINE(Values, (TYPE *left, TYPE *right), {                    \
         if (!left || !right || left == right) return;                          \
         TYPE temporary = *left;                                                \

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../Core/Cast/Cast.space"
-#include "../../Core/Namespace.h"
+#include "../../Core/Module/Namespace.h"
 #include "../../Core/Outcome/Status.h"
 #include "../../Core/Module/Package.h"
 #include "../../Core/Preprocessor/Compiling.inc"
@@ -16,14 +16,14 @@
 #define STRUCT_MOD Struct
 #define STRUCT_CMOD STRUCT
 
-#define STRUCT_NS(NAME) GNS2(LIB_PREFIX(STRUCT_MOD), NAME)
-#define STRUCT_CNS(NAME) CNS2(LIB_PREFIX_CONST(STRUCT_CMOD), NAME)
-#define STRUCT_INS(NAME) GNS3(LIB_PREFIX(STRUCT_MOD), Internal, NAME)
-#define STRUCT_CINS(NAME) CNS3(LIB_PREFIX_CONST(STRUCT_CMOD), INTERNAL, NAME)
+#define STRUCT_NS(NAME) NS(LIB_PREFIX(STRUCT_MOD), NAME)
+#define STRUCT_CNS(NAME) CNS(LIB_PREFIX_CONST(STRUCT_CMOD), NAME)
+#define STRUCT_INS(NAME) NS(LIB_PREFIX(STRUCT_MOD), Internal, NAME)
+#define STRUCT_CINS(NAME) CNS(LIB_PREFIX_CONST(STRUCT_CMOD), INTERNAL, NAME)
 
-#define STRUCT_TYPE(NAME, SUFFIX) GNS2(GNS2(LIB_PREFIX(STRUCT_MOD), NAME), SUFFIX)
-#define STRUCT_PKG(NAME, SUFFIX) GNS2(GNS2(LIB_PREFIX(STRUCT_MOD), NAME), SUFFIX)
-#define STRUCT_FUNC(NAME, SUFFIX, FUNC) GNS2(STRUCT_PKG(NAME, SUFFIX), FUNC)
+#define STRUCT_TYPE(NAME, SUFFIX) NS(NS(LIB_PREFIX(STRUCT_MOD), NAME), SUFFIX)
+#define STRUCT_PKG(NAME, SUFFIX) NS(NS(LIB_PREFIX(STRUCT_MOD), NAME), SUFFIX)
+#define STRUCT_FUNC(NAME, SUFFIX, FUNC) NS(STRUCT_PKG(NAME, SUFFIX), FUNC)
 #define STRUCT_CONST(NAME) STRUCT_CNS(NAME)
 
 /* ==========================================================================

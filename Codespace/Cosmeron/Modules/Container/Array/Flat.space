@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../../Core/Namespace.h"
+#include "../../../Core/Module/Namespace.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -12,7 +12,7 @@
 
 #include "../Container.space"
 
-#define FLAT_NS(NAME) GNS2(CONTAINER_NS(Flat), NAME)
+#define FLAT_NS(NAME) NS(CONTAINER_NS(Flat), NAME)
 
 #define COSMERON_MACRO_INTERNAL_FLAT_GROWTH_FACTOR 2u
 #define COSMERON_MACRO_INTERNAL_FLAT_INITIAL_CAPACITY 8u

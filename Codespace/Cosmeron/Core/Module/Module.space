@@ -2,7 +2,7 @@
 
 #include "../Outcome/Status.space"
 #include "../Algorithm/Comparison.space"
-#include "../Namespace.h"
+#include "Namespace.h"
 #include "../Preprocessor/Arguments.h"
 #include "../Preprocessor/Boolean.h"
 #include "../Preprocessor/Compiling.inc"
@@ -16,14 +16,20 @@
 #define MODULE_MOD Module
 #define MODULE_CMOD MODULE
 
-#define MODULE_NS(NAME) GNS2(LIB_PREFIX(MODULE_MOD), NAME)
-#define MODULE_CNS(NAME) CNS2(LIB_PREFIX_CONST(MODULE_CMOD), NAME)
-#define MODULE_INS(NAME) GNS3(LIB_PREFIX(MODULE_MOD), Internal, NAME)
-#define MODULE_CINS(NAME) CNS3(LIB_PREFIX_CONST(MODULE_CMOD), INTERNAL, NAME)
+#define MODULE_NS(NAME) NS(LIB_PREFIX(MODULE_MOD), NAME)
+#define MODULE_CNS(NAME) CNS(LIB_PREFIX_CONST(MODULE_CMOD), NAME)
+#define MODULE_INS(NAME) NS(LIB_PREFIX(MODULE_MOD), Internal, NAME)
+#define MODULE_CINS(NAME) CNS(LIB_PREFIX_CONST(MODULE_CMOD), INTERNAL, NAME)
 
+#ifndef MODULE_TYPE
 #define MODULE_TYPE(NAME) MODULE_NS(NAME)
+#endif
+#ifndef MODULE_FUNC
 #define MODULE_FUNC(NAME) MODULE_NS(NAME)
+#endif
+#ifndef MODULE_CONST
 #define MODULE_CONST(NAME) MODULE_CNS(NAME)
+#endif
 
 /* Function tables are optional. Define MODULE_DISABLE_FUNCTION_TABLE,
  * OBJECT_DISABLE_FUNCTION_TABLE, or PACKAGE_DISABLE_FUNCTION_TABLE to omit. */

@@ -4,8 +4,8 @@
 #include "../Bit/Bit.h"
 
 #define TBIGINT_TYPE(SUFFIX) TYPE_TYPE(TBigint, SUFFIX)
-#define TBIGINT_FUNC(SUFFIX, FUNCTION) GNS2(TBIGINT_TYPE(SUFFIX), FUNCTION)
-#define TBIGINT_INS(SUFFIX, NAME) GNS2(TYPE_INS(PP_OP_CAT2(TBigint, SUFFIX)), NAME)
+#define TBIGINT_FUNC(SUFFIX, FUNCTION) NS(TBIGINT_TYPE(SUFFIX), FUNCTION)
+#define TBIGINT_INS(SUFFIX, NAME) NS(TYPE_INS(PP_OP_CAT2(TBigint, SUFFIX)), NAME)
 
 #define TEMPLATE_TBIGINT(SUFFIX, TYPE)                                         \
   OBJECT(TBIGINT_TYPE(SUFFIX),                                                 \

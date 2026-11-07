@@ -55,7 +55,7 @@ PACKAGE_PROCEDURE_IMPLEMENT_EX(
   }
 
   fprintf(stderr, "\n*** PANIC [%s] ***\n",
-          GNS2(LIB_PREFIX(PANIC_MOD), KindName)(kind));
+          NS(LIB_PREFIX(PANIC_MOD), KindName)(kind));
   fprintf(stderr, "Message:  %s\n", info.message);
   if (info.expression != NULL) {
     fprintf(stderr, "Expr:     %s\n", info.expression);
@@ -64,7 +64,7 @@ PACKAGE_PROCEDURE_IMPLEMENT_EX(
           info.function);
 
   DIAGNOSTIC_TYPE(Stacktrace) st;
-  GNS2(DIAGNOSTIC_TYPE(Stacktrace), Init)(&st);
+  NS(DIAGNOSTIC_TYPE(Stacktrace), Init)(&st);
   if (OBJECT_CALL(&st, Capture, 1, 16) == STATUS_CONST(SUCCESS) &&
       OBJECT_CALL_0(&st, FrameCount) > 0) {
     char stBuffer[1024];

@@ -3,7 +3,7 @@
 #include "Type.space"
 
 #define TAG_TYPE(SUFFIX) TYPE_TYPE(TTag, SUFFIX)
-#define TAG_FUNC(SUFFIX, FUNCTION) GNS2(TAG_TYPE(SUFFIX), FUNCTION)
+#define TAG_FUNC(SUFFIX, FUNCTION) NS(TAG_TYPE(SUFFIX), FUNCTION)
 
 #define TEMPLATE_TTAG(SUFFIX, UINT_TYPE)                                       \
   OBJECT(TAG_TYPE(SUFFIX),                                                     \

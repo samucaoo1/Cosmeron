@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Module.space"
+#include "Namespace.h"
 #include "Common/Tuple.impl"
 #include "Common/ComparisonEx.impl"
 #include "Common/FunctionTable.impl"

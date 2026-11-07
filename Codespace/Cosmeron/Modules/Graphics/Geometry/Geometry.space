@@ -1,5 +1,5 @@
 #pragma once
-#include "../../../Core/Namespace.h"
+#include "../../../Core/Module/Namespace.h"
 #include "../../../Core/Outcome/Status.h"
 #include "../../Struct/TDual.h"
 #include "../../Struct/TQuad.h"
@@ -10,9 +10,9 @@
 
 #define GEOMETRY_MOD Geometry
 #define GEOMETRY_CMOD GEOMETRY
-#define GEOMETRY_NS(NAME) GNS2(LIB_PREFIX(GEOMETRY_MOD), NAME)
-#define GEOMETRY_CNS(NAME) CNS2(LIB_PREFIX_CONST(GEOMETRY_CMOD), NAME)
-#define GEOMETRY_INS(NAME) GNS3(LIB_PREFIX(GEOMETRY_MOD), Internal, NAME)
+#define GEOMETRY_NS(NAME) NS(LIB_PREFIX(GEOMETRY_MOD), NAME)
+#define GEOMETRY_CNS(NAME) CNS(LIB_PREFIX_CONST(GEOMETRY_CMOD), NAME)
+#define GEOMETRY_INS(NAME) NS(LIB_PREFIX(GEOMETRY_MOD), Internal, NAME)
 #define GEOMETRY_TYPE(NAME) GEOMETRY_NS(NAME)
 #define GEOMETRY_FUNC(NAME) GEOMETRY_NS(NAME)
 #define GEOMETRY_CONST(NAME) GEOMETRY_CNS(NAME)

@@ -1,5 +1,5 @@
 #pragma once
-#include "../../Core/Namespace.h"
+#include "../../Core/Module/Namespace.h"
 #include "../../Core/Outcome/Status.h"
 #include "../../Core/Preprocessor/Detect/OperationSystem.h"
 #include "../Struct/TPair.h"
@@ -13,23 +13,23 @@
 #define INPUT_MOD Input
 #define INPUT_CMOD INPUT
 #ifndef INPUT_NS
-#define INPUT_NS(NAME) GNS2(LIB_PREFIX(INPUT_MOD), NAME)
+#define INPUT_NS(NAME) NS(LIB_PREFIX(INPUT_MOD), NAME)
 #endif
-#define INPUT_CNS(NAME) CNS2(LIB_PREFIX_CONST(INPUT_CMOD), NAME)
-#define INPUT_INS(NAME) GNS3(LIB_PREFIX(INPUT_MOD), Internal, NAME)
+#define INPUT_CNS(NAME) CNS(LIB_PREFIX_CONST(INPUT_CMOD), NAME)
+#define INPUT_INS(NAME) NS(LIB_PREFIX(INPUT_MOD), Internal, NAME)
 #define INPUT_TYPE(NAME) INPUT_NS(NAME)
 #define INPUT_FUNC(NAME) INPUT_NS(NAME)
 #define INPUT_CONST(NAME) INPUT_CNS(NAME)
 
-#define INPUT_KEYBOARD_FUNC(NAME) GNS2(INPUT_NS(Keyboard), NAME)
+#define INPUT_KEYBOARD_FUNC(NAME) NS(INPUT_NS(Keyboard), NAME)
 
-#define INPUT_MOUSE_FUNC(NAME) GNS2(INPUT_NS(Mouse), NAME)
+#define INPUT_MOUSE_FUNC(NAME) NS(INPUT_NS(Mouse), NAME)
 
-#define INPUT_CONTROLLER_FUNC(NAME) GNS2(INPUT_NS(Controller), NAME)
+#define INPUT_CONTROLLER_FUNC(NAME) NS(INPUT_NS(Controller), NAME)
 
-#define INPUT_GAMEPAD_FUNC(NAME) GNS2(INPUT_NS(Gamepad), NAME)
+#define INPUT_GAMEPAD_FUNC(NAME) NS(INPUT_NS(Gamepad), NAME)
 
-#define INPUT_EVENT_FUNC(NAME) GNS2(INPUT_NS(Event), NAME)
+#define INPUT_EVENT_FUNC(NAME) NS(INPUT_NS(Event), NAME)
 
 #ifndef INPUT_EVENT_CAPACITY
 #define INPUT_EVENT_CAPACITY 256

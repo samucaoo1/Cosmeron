@@ -8,7 +8,7 @@
 
 #define TEMPLATE_TSTACK(SUFFIX, TYPE)                                          \
   OBJECT(                                                                      \
-      GNS2(TStack, SUFFIX),                                                    \
+      NS(TStack, SUFFIX),                                                    \
       FIELDS(                                                                  \
           TYPE items[16];                                                      \
           size_t count;                                                        \
@@ -27,19 +27,19 @@
 #define TStack_int_IS_OBJECT 1
 
 #define TEMPLATE_TSTACK_IMPLEMENT(SUFFIX, TYPE)                                \
-  OPERATION_IMPLEMENT_EX(GNS2(TStack, SUFFIX), Create, ()) {                   \
+  OPERATION_IMPLEMENT_EX(NS(TStack, SUFFIX), Create, ()) {                   \
     if (!self)                                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     self->count = 0U;                                                          \
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
-  OPERATION_IMPLEMENT_EX(GNS2(TStack, SUFFIX), Push, (TYPE value)) {           \
+  OPERATION_IMPLEMENT_EX(NS(TStack, SUFFIX), Push, (TYPE value)) {           \
     if (!self || self->count >= 16U)                                           \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     self->items[self->count++] = value;                                        \
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
-  OPERATION_IMPLEMENT_EX(GNS2(TStack, SUFFIX), Pop, (TYPE *outValue)) {        \
+  OPERATION_IMPLEMENT_EX(NS(TStack, SUFFIX), Pop, (TYPE *outValue)) {        \
     if (!self || !outValue || self->count == 0U)                               \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     *outValue = self->items[--self->count];                                    \

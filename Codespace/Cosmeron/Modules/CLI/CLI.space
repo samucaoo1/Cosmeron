@@ -1,16 +1,16 @@
 #pragma once
-#include "../../Core/Namespace.h"
+#include "../../Core/Module/Namespace.h"
 #include "../Parsing/Common/Common.h"
 
 #define CLI_MOD CLI
 #define CLI_CMOD CLI
 #ifndef CLI_NS
-#define CLI_NS(NAME) GNS2(LIB_PREFIX(CLI_MOD), NAME)
+#define CLI_NS(NAME) NS(LIB_PREFIX(CLI_MOD), NAME)
 #endif
 #ifndef CLI_CNS
-#define CLI_CNS(NAME) CNS2(LIB_PREFIX_CONST(CLI_CMOD), NAME)
+#define CLI_CNS(NAME) CNS(LIB_PREFIX_CONST(CLI_CMOD), NAME)
 #endif
-#define CLI_INS(NAME) GNS2(CLI_NS(Internal), NAME)
+#define CLI_INS(NAME) NS(CLI_NS(Internal), NAME)
 #define CLI_TYPE(NAME) CLI_NS(NAME)
 #define CLI_FUNC(NAME) CLI_NS(NAME)
 #define CLI_CONST(NAME) CLI_CNS(NAME)

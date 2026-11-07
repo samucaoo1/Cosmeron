@@ -10,12 +10,12 @@
  * Fixed node cycle: zero dynamic allocation during operation.
  * ============================================================ */
 
-#define LINKED_RING_TYPE(SUFFIX) GNS2(LINKED_NS(TRing), SUFFIX)
-#define LINKED_RING_NS(SUFFIX) GNS2(LINKED_NS(Ring), SUFFIX)
-#define LINKED_RING_FUNC(SUFFIX, FUNC) GNS2(LINKED_RING_NS(SUFFIX), FUNC)
-#define LINKED_RING_STRUCT_TAG(SUFFIX) GNS2(LINKED_RING_NS(SUFFIX), str)
+#define LINKED_RING_TYPE(SUFFIX) NS(LINKED_NS(TRing), SUFFIX)
+#define LINKED_RING_NS(SUFFIX) NS(LINKED_NS(Ring), SUFFIX)
+#define LINKED_RING_FUNC(SUFFIX, FUNC) NS(LINKED_RING_NS(SUFFIX), FUNC)
+#define LINKED_RING_STRUCT_TAG(SUFFIX) NS(LINKED_RING_NS(SUFFIX), str)
 #define LINKED_RING_FUNCTION_TABLE_TYPE(SUFFIX)                                \
-  GNS2(LINKED_RING_NS(SUFFIX), FunctionTable)
+  NS(LINKED_RING_NS(SUFFIX), FunctionTable)
 
 #define LINKED_RING_NODE_TYPE(SUFFIX)                                          \
   SINGLE_LINKED_NODE_TYPE(SUFFIX, LINKED_NS(Ring))

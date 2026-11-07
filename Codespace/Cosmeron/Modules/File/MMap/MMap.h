@@ -16,12 +16,12 @@
 #undef MMAP
 #endif
 
-#define FILE_MMAP_NS(NAME) GNS2(FILE_NS(MMap), NAME)
+#define FILE_MMAP_NS(NAME) NS(FILE_NS(MMap), NAME)
 #define FILE_MMAP_CNS(NAME) PP_OP_CAT(FILE_MMAP_, NAME)
-#define FILE_MMAP_INS(NAME) GNS3(FILE_NS(MMap), Internal, NAME)
+#define FILE_MMAP_INS(NAME) NS(FILE_NS(MMap), Internal, NAME)
 
 #define FILE_MMAP_TYPE(NAME) FILE_MMAP_NS(NAME)
-#define FILE_MMAP_FUNC(NAME) GNS2(FILE_MMAP_TYPE(TMemoryMappedFile), NAME)
+#define FILE_MMAP_FUNC(NAME) NS(FILE_MMAP_TYPE(TMemoryMappedFile), NAME)
 #define FILE_MMAP_CONST(NAME) FILE_MMAP_CNS(NAME)
 
 /* Protection and mapping access flags */
