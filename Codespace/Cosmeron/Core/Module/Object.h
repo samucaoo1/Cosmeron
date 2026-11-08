@@ -306,7 +306,7 @@
 #if !defined(OBJECT_DISABLE_FUNCTION_TABLE) &&                                 \
     !defined(MODULE_DISABLE_FUNCTION_TABLE)
 
-#define OBJECT(CLASS, FIELDS_BLOCK, ...)                                       \
+#define OBJECT_DEF(CLASS, FIELDS_BLOCK, ...)                                   \
   typedef struct CLASS CLASS;                                                  \
   typedef struct NS(CLASS, FunctionTable) NS(CLASS, FunctionTable);            \
   PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO, CLASS, __VA_ARGS__) \
@@ -339,6 +339,9 @@
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
   typedef int NS(_cosmeron_object_semi, CLASS, __LINE__)
+
+#define OBJECT(CLASS, FIELDS_BLOCK, ...)                                       \
+  OBJECT_DEF(CLASS, FIELDS_BLOCK, __VA_ARGS__)
 
 #define OBJECT_EXTENDS(CLASS, BASE_CLASS, FIELDS_BLOCK, ...)                   \
   typedef struct CLASS CLASS;                                                  \
@@ -377,7 +380,7 @@
 
 #else
 
-#define OBJECT(CLASS, FIELDS_BLOCK, ...)                                       \
+#define OBJECT_DEF(CLASS, FIELDS_BLOCK, ...)                                   \
   typedef struct CLASS CLASS;                                                  \
   PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO, CLASS, __VA_ARGS__) \
   struct CLASS {                                                               \
@@ -395,6 +398,9 @@
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
   typedef int NS(_cosmeron_object_semi, CLASS, __LINE__)
+
+#define OBJECT(CLASS, FIELDS_BLOCK, ...)                                       \
+  OBJECT_DEF(CLASS, FIELDS_BLOCK, __VA_ARGS__)
 
 #define OBJECT_EXTENDS(CLASS, BASE_CLASS, FIELDS_BLOCK, ...)                   \
   typedef struct CLASS CLASS;                                                  \

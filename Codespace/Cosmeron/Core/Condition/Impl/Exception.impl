@@ -1,0 +1,83 @@
+#pragma once
+
+static _Thread_local MODULE_TYPE(Condition, ExceptionFrame) *
+    MODULE_IFUNC(Condition, Exception_CurrentFrame) = NULL;
+
+MODULE_IMPLEMENT(DOMAIN(Core), Condition,
+  PACKAGE(Exception,
+    PROCEDURE(PushFrame, (MODULE_TYPE(Condition, ExceptionFrame) *frame), {
+      if (!frame)
+        return;
+      frame->previous = MODULE_IFUNC(Condition, Exception_CurrentFrame);
+      MODULE_IFUNC(Condition, Exception_CurrentFrame) = frame;
+    }),
+
+    PROCEDURE(PopFrame, (), {
+      if (MODULE_IFUNC(Condition, Exception_CurrentFrame) != NULL) {
+        MODULE_IFUNC(Condition, Exception_CurrentFrame) =
+            MODULE_IFUNC(Condition, Exception_CurrentFrame)->previous;
+      }
+    }),
+
+    PROCEDURE(RegisterCleanup,
+              (TCALLBACK(MODULE_NS(Condition, ExceptionFrame, Cleanup)) cleanup), {
+      if (MODULE_IFUNC(Condition, Exception_CurrentFrame) != NULL) {
+        MODULE_IFUNC(Condition, Exception_CurrentFrame)->cleanup = cleanup;
+      }
+    }),
+
+    PROCEDURE(Throw, (const MODULE_TYPE(Condition, Error) *error), {
+      MODULE_TYPE(Condition, ExceptionFrame) *frame =
+          MODULE_IFUNC(Condition, Exception_CurrentFrame);
+      if (frame == NULL) {
+        PANIC(error ? MODULE_FUNC(Condition, Error, Message)(error) : "Unhandled exception");
+        return;
+      }
+
+      if (CALLBACK_IS_VALID(frame->cleanup)) {
+        CALLBACK_INVOKE(frame->cleanup);
+        frame->cleanup.function = NULL;
+        frame->cleanup.context = NULL;
+      }
+
+      if (error != NULL) {
+        frame->error = *error;
+      } else {
+        MODULE_FUNC(Condition, Error, Create)(
+            &frame->error, STATUS_CONST(GENERIC_ERROR), "Unknown exception");
+      }
+
+      longjmp(frame->env, 1);
+    }),
+
+    PROCEDURE(ThrowStatus,
+              (OPSTATUS status, const char *message, const char *file,
+               uint32_t line, const char *function), {
+      MODULE_TYPE(Condition, Error) err;
+      MODULE_FUNC(Condition, Error, Create)(&err, status, message);
+      MODULE_FUNC(Condition, Error, SetOrigin)(&err, file, line, function, NULL, NULL);
+      MODULE_FUNC(Condition, Exception, Throw)(&err);
+    }),
+
+    PROCEDURE(Rethrow, (), {
+      if (MODULE_IFUNC(Condition, Exception_CurrentFrame) == NULL) {
+        PANIC("Cannot rethrow: no active exception frame");
+        return;
+      }
+      MODULE_IFUNC(Condition, Exception_CurrentFrame)->rethrow = true;
+    }),
+
+    FUNCTION(const MODULE_TYPE(Condition, Error) *, CurrentError, (), {
+      if (MODULE_IFUNC(Condition, Exception_CurrentFrame) == NULL) {
+        return NULL;
+      }
+      return &MODULE_IFUNC(Condition, Exception_CurrentFrame)->error;
+    }),
+
+    PREDICATE(HasActiveFrame, (), {
+      return MODULE_IFUNC(Condition, Exception_CurrentFrame) != NULL;
+    })
+  )
+);
+
+/* EOF */

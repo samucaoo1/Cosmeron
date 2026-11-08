@@ -17,19 +17,13 @@
 #define SWAP_CONFIG_TABLE(X) \
   X((BLOCK_SIZE, 64U))
 
-typedef enum MODULE_ENUM(Memory, Swap, Config) {
-#define SWAP_CONFIG_ENUM_ITEM(ROW) \
-  MODULE_CONST(Memory, Swap, SWAP_CONFIG_GET(NAME, ROW)) = SWAP_CONFIG_GET(VALUE, ROW),
-  SWAP_CONFIG_TABLE(SWAP_CONFIG_ENUM_ITEM)
-#undef SWAP_CONFIG_ENUM_ITEM
-} MODULE_ENUM(Memory, Swap, Config);
-
 /* ========================================================================== */
 /* 2. Package & Template Declaration: Memory_Swap                             */
 /* ========================================================================== */
 
 MODULE(DOMAIN(Core), Memory,
     PACKAGE(Swap,
+        ENUM(Config, SWAP_CONFIG_TABLE),
         OPERATION(Bytes, (void *left, void *right, size_t size)),
         OPERATION(Array, (void *left, void *right, size_t count, size_t elementSize))
     ),
@@ -46,4 +40,3 @@ MODULE(DOMAIN(Core), Memory,
 #include "Impl/Swap.impl"
 
 /* EOF */
-

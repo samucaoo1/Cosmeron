@@ -1,4 +1,4 @@
-#include "../../Cosmeron/Core/Primitive/Types.h"
+#include "../../../Cosmeron/Core/Primitive/Types.h"
 
 #include <assert.h>
 #include <string.h>
@@ -7,46 +7,46 @@
 
 int main(void) {
   /* 1. Verify Category Enum and ToString */
-  PRIMITIVE_TYPE(Category) catBool = PRIMITIVE_CONST(BOOL);
-  PRIMITIVE_TYPE(Category) catInt = PRIMITIVE_CONST(INT);
-  PRIMITIVE_TYPE(Category) catUInt = PRIMITIVE_CONST(UINT);
-  PRIMITIVE_TYPE(Category) catChar = PRIMITIVE_CONST(CHAR);
-  PRIMITIVE_TYPE(Category) catFloat = PRIMITIVE_CONST(FLOAT);
-  PRIMITIVE_TYPE(Category) catPtr = PRIMITIVE_CONST(PTR);
+  MODULE_ENUM(Primitive, Category) catBool = MODULE_CONST(Primitive, BOOL);
+  MODULE_ENUM(Primitive, Category) catInt = MODULE_CONST(Primitive, INT);
+  MODULE_ENUM(Primitive, Category) catUInt = MODULE_CONST(Primitive, UINT);
+  MODULE_ENUM(Primitive, Category) catChar = MODULE_CONST(Primitive, CHAR);
+  MODULE_ENUM(Primitive, Category) catFloat = MODULE_CONST(Primitive, FLOAT);
+  MODULE_ENUM(Primitive, Category) catPtr = MODULE_CONST(Primitive, PTR);
 
-  if (strcmp(PRIMITIVE_FUNC(CategoryToString)(catBool), "Boolean") != 0) return 1;
-  if (strcmp(PRIMITIVE_FUNC(CategoryToString)(catInt), "Signed integer") != 0) return 2;
-  if (strcmp(PRIMITIVE_FUNC(CategoryToString)(catUInt), "Unsigned integer") != 0) return 3;
-  if (strcmp(PRIMITIVE_FUNC(CategoryToString)(catChar), "Character") != 0) return 4;
-  if (strcmp(PRIMITIVE_FUNC(CategoryToString)(catFloat), "Floating-point") != 0) return 5;
-  if (strcmp(PRIMITIVE_FUNC(CategoryToString)(catPtr), "Architecture pointer or integer") != 0) return 6;
-  if (strcmp(PRIMITIVE_FUNC(CategoryToString)((PRIMITIVE_TYPE(Category))999), "Unknown") != 0) return 7;
+  if (strcmp(MODULE_FUNC(Primitive, Category, ToString)(catBool), "Boolean") != 0) return 1;
+  if (strcmp(MODULE_FUNC(Primitive, Category, ToString)(catInt), "Signed integer") != 0) return 2;
+  if (strcmp(MODULE_FUNC(Primitive, Category, ToString)(catUInt), "Unsigned integer") != 0) return 3;
+  if (strcmp(MODULE_FUNC(Primitive, Category, ToString)(catChar), "Character") != 0) return 4;
+  if (strcmp(MODULE_FUNC(Primitive, Category, ToString)(catFloat), "Floating-point") != 0) return 5;
+  if (strcmp(MODULE_FUNC(Primitive, Category, ToString)(catPtr), "Architecture pointer or integer") != 0) return 6;
+  if (strcmp(MODULE_FUNC(Primitive, Category, ToString)((MODULE_ENUM(Primitive, Category))999), "Unknown") != 0) return 7;
 
   /* 2. Verify Canonical Type Declarations */
-  PRIMITIVE_TYPE(TBoolean) b = true;
-  PRIMITIVE_TYPE(TInt8) i8 = -8;
-  PRIMITIVE_TYPE(TInt16) i16 = -16;
-  PRIMITIVE_TYPE(TInt32) i32 = -32;
-  PRIMITIVE_TYPE(TInt64) i64 = -64;
-  PRIMITIVE_TYPE(TUInt8) u8 = 8;
-  PRIMITIVE_TYPE(TUInt16) u16 = 16;
-  PRIMITIVE_TYPE(TUInt32) u32 = 32;
-  PRIMITIVE_TYPE(TUInt64) u64 = 64;
-  PRIMITIVE_TYPE(TChar) ch = 'A';
-  PRIMITIVE_TYPE(TChar8) ch8 = 65;
-  PRIMITIVE_TYPE(TChar16) ch16 = 65;
-  PRIMITIVE_TYPE(TChar32) ch32 = 65;
-  PRIMITIVE_TYPE(TFloat32) f32 = 1.0f;
-  PRIMITIVE_TYPE(TFloat64) f64 = 2.0;
-  PRIMITIVE_TYPE(TFloat) flt = 3.0f;
-  PRIMITIVE_TYPE(TDouble) dbl = 4.0;
-  PRIMITIVE_TYPE(TLongDouble) ld = 5.0L;
-  PRIMITIVE_TYPE(TInt) nativeInt = -1;
-  PRIMITIVE_TYPE(TUInt) nativeUInt = 1;
-  PRIMITIVE_TYPE(TSize) sz = sizeof(size_t);
-  PRIMITIVE_TYPE(TPtrDiff) diff = 10;
-  PRIMITIVE_TYPE(TIntPtr) iptr = (intptr_t)&sz;
-  PRIMITIVE_TYPE(TUIntPtr) uptr = (uintptr_t)&sz;
+  MODULE_TYPE(Primitive, Boolean) b = true;
+  MODULE_TYPE(Primitive, Int8) i8 = -8;
+  MODULE_TYPE(Primitive, Int16) i16 = -16;
+  MODULE_TYPE(Primitive, Int32) i32 = -32;
+  MODULE_TYPE(Primitive, Int64) i64 = -64;
+  MODULE_TYPE(Primitive, UInt8) u8 = 8;
+  MODULE_TYPE(Primitive, UInt16) u16 = 16;
+  MODULE_TYPE(Primitive, UInt32) u32 = 32;
+  MODULE_TYPE(Primitive, UInt64) u64 = 64;
+  MODULE_TYPE(Primitive, Char) ch = 'A';
+  MODULE_TYPE(Primitive, Char8) ch8 = 65;
+  MODULE_TYPE(Primitive, Char16) ch16 = 65;
+  MODULE_TYPE(Primitive, Char32) ch32 = 65;
+  MODULE_TYPE(Primitive, Float32) f32 = 1.0f;
+  MODULE_TYPE(Primitive, Float64) f64 = 2.0;
+  MODULE_TYPE(Primitive, Float) flt = 3.0f;
+  MODULE_TYPE(Primitive, Double) dbl = 4.0;
+  MODULE_TYPE(Primitive, LongDouble) ld = 5.0L;
+  MODULE_TYPE(Primitive, Int) nativeInt = -1;
+  MODULE_TYPE(Primitive, UInt) nativeUInt = 1;
+  MODULE_TYPE(Primitive, Size) sz = sizeof(size_t);
+  MODULE_TYPE(Primitive, PtrDiff) diff = 10;
+  MODULE_TYPE(Primitive, IntPtr) iptr = (intptr_t)&sz;
+  MODULE_TYPE(Primitive, UIntPtr) uptr = (uintptr_t)&sz;
 
   (void)b; (void)i8; (void)i16; (void)i32; (void)i64;
   (void)u8; (void)u16; (void)u32; (void)u64;
@@ -80,4 +80,3 @@ int main(void) {
 
   return 0;
 }
-

@@ -2,17 +2,10 @@
 
 #include <string.h>
 
-PACKAGE_SCOPE(Algorithm, Comparison)
-
-/* ========================================================================== */
-/* 1. Primitive Comparisons (Numeric Total Ordering with IEEE-754 NaN Safety)  */
-/* ========================================================================== */
-
 #define COMPARISON_PRIMITIVE_IMPLEMENT(ROW)                                    \
-  PACKAGE_FUNCTION_IMPLEMENT_EX(                                               \
-      MODULE_NS(Algorithm, Comparison), CMPOUT, PRIMITIVE_TYPE_GET(NAME, ROW), \
-      (PRIMITIVE_TYPE_GET(TYPE, ROW) left,                                     \
-       PRIMITIVE_TYPE_GET(TYPE, ROW) right)) {                                 \
+  FUNCTION(CMPOUT, PRIMITIVE_TYPE_GET(NAME, ROW),                              \
+           (PRIMITIVE_TYPE_GET(TYPE, ROW) left,                                \
+            PRIMITIVE_TYPE_GET(TYPE, ROW) right), {                            \
     bool leftNan = (left != left);                                             \
     bool rightNan = (right != right);                                          \
     if (leftNan || rightNan) {                                                 \
@@ -24,64 +17,57 @@ PACKAGE_SCOPE(Algorithm, Comparison)
                ? COMPARISON_CONST(LOWER)                                       \
                : (left > right ? COMPARISON_CONST(HIGHER)                      \
                                : COMPARISON_CONST(EQUAL));                     \
-  }
+  }),
 
-PRIMITIVE_TYPE_TABLE(COMPARISON_PRIMITIVE_IMPLEMENT)
+MODULE_IMPLEMENT(DOMAIN(Core), Algorithm,
+  PACKAGE(Comparison,
+    PRIMITIVE_TYPE_TABLE(COMPARISON_PRIMITIVE_IMPLEMENT)
+    FUNCTION(CMPOUT, CString, (const char *left, const char *right), {
+      if (left == right)
+        return COMPARISON_CONST(EQUAL);
+      if (!left)
+        return COMPARISON_CONST(LOWER);
+      if (!right)
+        return COMPARISON_CONST(HIGHER);
+      int result = strcmp(left, right);
+      return result < 0                                                        \
+                 ? COMPARISON_CONST(LOWER)                                     \
+                 : (result > 0 ? COMPARISON_CONST(HIGHER)                      \
+                               : COMPARISON_CONST(EQUAL));                     \
+    }),
+
+    FUNCTION(CMPOUT, Bytes,
+             (const void *left, size_t leftSize,
+              const void *right, size_t rightSize), {
+      if (left == right && leftSize == rightSize)
+        return COMPARISON_CONST(EQUAL);
+      if (!left && !right)
+        return leftSize < rightSize ? COMPARISON_CONST(LOWER)                  \
+                                    : (leftSize > rightSize                    \
+                                           ? COMPARISON_CONST(HIGHER)          \
+                                           : COMPARISON_CONST(EQUAL));         \
+      if (!left)
+        return COMPARISON_CONST(LOWER);
+      if (!right)
+        return COMPARISON_CONST(HIGHER);
+
+      size_t minimumSize = leftSize < rightSize ? leftSize : rightSize;
+      int result = minimumSize > 0U ? memcmp(left, right, minimumSize) : 0;
+
+      if (result < 0)
+        return COMPARISON_CONST(LOWER);
+      if (result > 0)
+        return COMPARISON_CONST(HIGHER);
+      if (leftSize < rightSize)
+        return COMPARISON_CONST(LOWER);
+      if (leftSize > rightSize)
+        return COMPARISON_CONST(HIGHER);
+
+      return COMPARISON_CONST(EQUAL);
+    })
+  )
+);
+
 #undef COMPARISON_PRIMITIVE_IMPLEMENT
 
-/* ========================================================================== */
-/* 2. CString Comparison (Lexicographical NULL-Safe)                          */
-/* ========================================================================== */
-
-PACKAGE_FUNCTION_IMPLEMENT_EX(MODULE_NS(Algorithm, Comparison), CMPOUT, CString,
-                              (const char *left, const char *right)) {
-  if (left == right)
-    return COMPARISON_CONST(EQUAL);
-  if (!left)
-    return COMPARISON_CONST(LOWER);
-  if (!right)
-    return COMPARISON_CONST(HIGHER);
-  int result = strcmp(left, right);
-  return result < 0                                                            \
-             ? COMPARISON_CONST(LOWER)                                         \
-             : (result > 0 ? COMPARISON_CONST(HIGHER)                          \
-                           : COMPARISON_CONST(EQUAL));                         \
-}
-
-/* ========================================================================== */
-/* 3. Bytes Memory Comparison                                                 */
-/* ========================================================================== */
-
-PACKAGE_FUNCTION_IMPLEMENT_EX(MODULE_NS(Algorithm, Comparison), CMPOUT, Bytes,
-                              (const void *left, size_t leftSize,
-                               const void *right, size_t rightSize)) {
-  if (left == right && leftSize == rightSize)
-    return COMPARISON_CONST(EQUAL);
-  if (!left && !right)
-    return leftSize < rightSize ? COMPARISON_CONST(LOWER)                      \
-                                : (leftSize > rightSize                        \
-                                       ? COMPARISON_CONST(HIGHER)              \
-                                       : COMPARISON_CONST(EQUAL));             \
-  if (!left)
-    return COMPARISON_CONST(LOWER);
-  if (!right)
-    return COMPARISON_CONST(HIGHER);
-
-  size_t minimumSize = leftSize < rightSize ? leftSize : rightSize;
-  int result = minimumSize > 0U ? memcmp(left, right, minimumSize) : 0;
-
-  if (result < 0)
-    return COMPARISON_CONST(LOWER);
-  if (result > 0)
-    return COMPARISON_CONST(HIGHER);
-  if (leftSize < rightSize)
-    return COMPARISON_CONST(LOWER);
-  if (leftSize > rightSize)
-    return COMPARISON_CONST(HIGHER);
-
-  return COMPARISON_CONST(EQUAL);
-}
-
-PACKAGE_SCOPE_END()
 /* EOF */
-

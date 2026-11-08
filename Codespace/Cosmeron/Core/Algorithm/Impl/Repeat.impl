@@ -2,174 +2,15 @@
 
 #include <string.h>
 
-PACKAGE_SCOPE(Algorithm, Repeat)
-
-#define SCOPE_TARGET MODULE_NS(Algorithm, Repeat)
-
 /* ========================================================================== */
-/* 1. Procedural Callback Repetition                                          */
-/* ========================================================================== */
-
-SCOPE_PKG_PROCEDURE(Procedure,
-                    (size_t count,
-                     TCALLBACK(MODULE_NS(Algorithm, Repeat, Procedure)) action)) {
-  if (count == 0U || !CALLBACK_IS_VALID(action))
-    return;
-
-  for (size_t i = 0U; i < count; ++i) {
-    CALLBACK_CALL(action);
-  }
-}
-
-SCOPE_PKG_PROCEDURE(ProcedureIndexed,
-                    (size_t count,
-                     TCALLBACK(MODULE_NS(Algorithm, Repeat, ProcedureIndexed)) action)) {
-  if (count == 0U || !CALLBACK_IS_VALID(action))
-    return;
-
-  for (size_t i = 0U; i < count; ++i) {
-    CALLBACK_CALL(action, i);
-  }
-}
-
-static inline COSMERON_MAYBE_UNUSED void MODULE_FUNC(Algorithm, Repeat, IndexedProcedure)(
-    size_t count, TCALLBACK(MODULE_NS(Algorithm, Repeat, ProcedureIndexed)) action) {
-  MODULE_FUNC(Algorithm, Repeat, ProcedureIndexed)(count, action);
-}
-
-/* ========================================================================== */
-/* 2. Fallible Operation Callback Repetition (Short-Circuiting)               */
-/* ========================================================================== */
-
-SCOPE_PKG_OPERATION(Operation,
-                    (size_t count,
-                     TCALLBACK(MODULE_NS(Algorithm, Repeat, Operation)) operation)) {
-  if (count == 0U)
-    return STATUS_CONST(SUCCESS);
-  if (!CALLBACK_IS_VALID(operation))
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  for (size_t i = 0U; i < count; ++i) {
-    OPSTATUS status = CALLBACK_CALL(operation);
-    if (status != STATUS_CONST(SUCCESS))
-      return status;
-  }
-
-  return STATUS_CONST(SUCCESS);
-}
-
-SCOPE_PKG_OPERATION(OperationIndexed,
-                    (size_t count,
-                     TCALLBACK(MODULE_NS(Algorithm, Repeat, OperationIndexed)) operation)) {
-  if (count == 0U)
-    return STATUS_CONST(SUCCESS);
-  if (!CALLBACK_IS_VALID(operation))
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  for (size_t i = 0U; i < count; ++i) {
-    OPSTATUS status = CALLBACK_CALL(operation, i);
-    if (status != STATUS_CONST(SUCCESS))
-      return status;
-  }
-
-  return STATUS_CONST(SUCCESS);
-}
-
-static inline COSMERON_MAYBE_UNUSED OPSTATUS MODULE_FUNC(Algorithm, Repeat, IndexedOperation)(
-    size_t count, TCALLBACK(MODULE_NS(Algorithm, Repeat, OperationIndexed)) operation) {
-  return MODULE_FUNC(Algorithm, Repeat, OperationIndexed)(count, operation);
-}
-
-/* ========================================================================== */
-/* 3. Predicate Callback Repetition (Short-Circuiting)                        */
-/* ========================================================================== */
-
-SCOPE_PKG_PREDICATE(Predicate,
-                    (size_t count,
-                     TCALLBACK(MODULE_NS(Algorithm, Repeat, Predicate)) predicate)) {
-  if (count == 0U)
-    return true;
-  if (!CALLBACK_IS_VALID(predicate))
-    return false;
-
-  for (size_t i = 0U; i < count; ++i) {
-    if (!CALLBACK_CALL(predicate))
-      return false;
-  }
-
-  return true;
-}
-
-SCOPE_PKG_PREDICATE(PredicateIndexed,
-                    (size_t count,
-                     TCALLBACK(MODULE_NS(Algorithm, Repeat, PredicateIndexed)) predicate)) {
-  if (count == 0U)
-    return true;
-  if (!CALLBACK_IS_VALID(predicate))
-    return false;
-
-  for (size_t i = 0U; i < count; ++i) {
-    if (!CALLBACK_CALL(predicate, i))
-      return false;
-  }
-
-  return true;
-}
-
-static inline COSMERON_MAYBE_UNUSED bool MODULE_FUNC(Algorithm, Repeat, IndexedPredicate)(
-    size_t count, TCALLBACK(MODULE_NS(Algorithm, Repeat, PredicateIndexed)) predicate) {
-  return MODULE_FUNC(Algorithm, Repeat, PredicateIndexed)(count, predicate);
-}
-
-/* ========================================================================== */
-/* 4. Memory Pattern Repetition (Bytes)                                       */
-/* ========================================================================== */
-
-SCOPE_PKG_OPERATION(Bytes,
-                    (void *destination, const void *pattern,
-                     size_t patternSize, size_t count)) {
-  if (count == 0U || patternSize == 0U)
-    return STATUS_CONST(SUCCESS);
-  if (!destination || !pattern)
-    return STATUS_CONST(INVALID_ARGUMENT);
-  if (count > SIZE_MAX / patternSize)
-    return STATUS_CONST(ARITHMETIC_OVERFLOW);
-
-  {
-    size_t totalSize = count * patternSize;
-    uintptr_t destAddress = (uintptr_t)destination;
-    uintptr_t patternAddress = (uintptr_t)pattern;
-
-    if (totalSize > (size_t)(UINTPTR_MAX - destAddress) ||
-        patternSize > (size_t)(UINTPTR_MAX - patternAddress))
-      return STATUS_CONST(OUT_OF_RANGE);
-
-    if ((destAddress < patternAddress &&
-         destAddress + totalSize > patternAddress) ||
-        (patternAddress < destAddress &&
-         patternAddress + patternSize > destAddress))
-      return STATUS_CONST(INVALID_ARGUMENT);
-  }
-
-  {
-    unsigned char *destBytes = (unsigned char *)destination;
-    for (size_t i = 0U; i < count; ++i) {
-      memcpy(destBytes + (i * patternSize), pattern, patternSize);
-    }
-  }
-
-  return STATUS_CONST(SUCCESS);
-}
-
-/* ========================================================================== */
-/* 5. Primitive Value Repetition                                              */
+/* 1. Primitive Value Repetition Macro                                        */
 /* ========================================================================== */
 
 #define REPEAT_PRIMITIVE_IMPLEMENT(ROW)                                        \
-  SCOPE_PKG_OPERATION(                                                         \
+  OPERATION(                                                                   \
       PRIMITIVE_TYPE_GET(NAME, ROW),                                           \
       (PRIMITIVE_TYPE_GET(TYPE, ROW) * destination,                            \
-       PRIMITIVE_TYPE_GET(TYPE, ROW) value, size_t count)) {                   \
+       PRIMITIVE_TYPE_GET(TYPE, ROW) value, size_t count), {                  \
     if (count == 0U)                                                           \
       return STATUS_CONST(SUCCESS);                                            \
     if (!destination)                                                          \
@@ -180,34 +21,178 @@ SCOPE_PKG_OPERATION(Bytes,
       destination[i] = value;                                                  \
     }                                                                          \
     return STATUS_CONST(SUCCESS);                                              \
-  }
+  }),
 
-PRIMITIVE_TYPE_TABLE(REPEAT_PRIMITIVE_IMPLEMENT)
+/* ========================================================================== */
+/* 2. Declarative Implementation: Algorithm_Repeat                            */
+/* ========================================================================== */
+
+MODULE_IMPLEMENT(DOMAIN(Core), Algorithm,
+  PACKAGE(Repeat,
+    VARIANT(Procedure,
+      PROCEDURE((size_t count,
+                 TCALLBACK(MODULE_NS(Algorithm, Repeat, Procedure)) action), {
+        if (count == 0U || !CALLBACK_IS_VALID(action))
+          return;
+
+        for (size_t i = 0U; i < count; ++i) {
+          CALLBACK_CALL(action);
+        }
+      }),
+      PROCEDURE(Indexed,
+                (size_t count,
+                 TCALLBACK(MODULE_NS(Algorithm, Repeat, ProcedureIndexed)) action), {
+        if (count == 0U || !CALLBACK_IS_VALID(action))
+          return;
+
+        for (size_t i = 0U; i < count; ++i) {
+          CALLBACK_CALL(action, i);
+        }
+      })
+    ),
+
+    VARIANT(Operation,
+      OPERATION((size_t count,
+                 TCALLBACK(MODULE_NS(Algorithm, Repeat, Operation)) operation), {
+        if (count == 0U)
+          return STATUS_CONST(SUCCESS);
+        if (!CALLBACK_IS_VALID(operation))
+          return STATUS_CONST(INVALID_ARGUMENT);
+
+        for (size_t i = 0U; i < count; ++i) {
+          OPSTATUS status = CALLBACK_CALL(operation);
+          if (status != STATUS_CONST(SUCCESS))
+            return status;
+        }
+
+        return STATUS_CONST(SUCCESS);
+      }),
+      OPERATION(Indexed,
+                (size_t count,
+                 TCALLBACK(MODULE_NS(Algorithm, Repeat, OperationIndexed)) operation), {
+        if (count == 0U)
+          return STATUS_CONST(SUCCESS);
+        if (!CALLBACK_IS_VALID(operation))
+          return STATUS_CONST(INVALID_ARGUMENT);
+
+        for (size_t i = 0U; i < count; ++i) {
+          OPSTATUS status = CALLBACK_CALL(operation, i);
+          if (status != STATUS_CONST(SUCCESS))
+            return status;
+        }
+
+        return STATUS_CONST(SUCCESS);
+      })
+    ),
+
+    VARIANT(Predicate,
+      PREDICATE((size_t count,
+                 TCALLBACK(MODULE_NS(Algorithm, Repeat, Predicate)) predicate), {
+        if (count == 0U)
+          return true;
+        if (!CALLBACK_IS_VALID(predicate))
+          return false;
+
+        for (size_t i = 0U; i < count; ++i) {
+          if (!CALLBACK_CALL(predicate))
+            return false;
+        }
+
+        return true;
+      }),
+      PREDICATE(Indexed,
+                (size_t count,
+                 TCALLBACK(MODULE_NS(Algorithm, Repeat, PredicateIndexed)) predicate), {
+        if (count == 0U)
+          return true;
+        if (!CALLBACK_IS_VALID(predicate))
+          return false;
+
+        for (size_t i = 0U; i < count; ++i) {
+          if (!CALLBACK_CALL(predicate, i))
+            return false;
+        }
+
+        return true;
+      })
+    ),
+
+    OPERATION(Bytes,
+              (void *destination, const void *pattern,
+               size_t patternSize, size_t count), {
+      if (count == 0U || patternSize == 0U)
+        return STATUS_CONST(SUCCESS);
+      if (!destination || !pattern)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      if (count > SIZE_MAX / patternSize)
+        return STATUS_CONST(ARITHMETIC_OVERFLOW);
+
+      {
+        size_t totalSize = count * patternSize;
+        uintptr_t destAddress = (uintptr_t)destination;
+        uintptr_t patternAddress = (uintptr_t)pattern;
+
+        if (totalSize > (size_t)(UINTPTR_MAX - destAddress) ||
+            patternSize > (size_t)(UINTPTR_MAX - patternAddress))
+          return STATUS_CONST(OUT_OF_RANGE);
+
+        if ((destAddress < patternAddress &&
+             destAddress + totalSize > patternAddress) ||
+            (patternAddress < destAddress &&
+             patternAddress + patternSize > destAddress))
+          return STATUS_CONST(INVALID_ARGUMENT);
+      }
+
+      {
+        unsigned char *destBytes = (unsigned char *)destination;
+        for (size_t i = 0U; i < count; ++i) {
+          memcpy(destBytes + (i * patternSize), pattern, patternSize);
+        }
+      }
+
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    PRIMITIVE_TYPE_TABLE(REPEAT_PRIMITIVE_IMPLEMENT)
+
+    OPERATION(CString,
+              (const char **destination, const char *value,
+               size_t count), {
+      if (count == 0U)
+        return STATUS_CONST(SUCCESS);
+      if (!destination)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      if (count > SIZE_MAX / sizeof(const char *))
+        return STATUS_CONST(ARITHMETIC_OVERFLOW);
+
+      for (size_t i = 0U; i < count; ++i) {
+        destination[i] = value;
+      }
+
+      return STATUS_CONST(SUCCESS);
+    })
+  )
+);
+
 #undef REPEAT_PRIMITIVE_IMPLEMENT
 
 /* ========================================================================== */
-/* 6. CString Repetition                                                      */
+/* 3. Aliasing Forwarding Helpers                                             */
 /* ========================================================================== */
 
-SCOPE_PKG_OPERATION(CString,
-                    (const char **destination, const char *value,
-                     size_t count)) {
-  if (count == 0U)
-    return STATUS_CONST(SUCCESS);
-  if (!destination)
-    return STATUS_CONST(INVALID_ARGUMENT);
-  if (count > SIZE_MAX / sizeof(const char *))
-    return STATUS_CONST(ARITHMETIC_OVERFLOW);
-
-  for (size_t i = 0U; i < count; ++i) {
-    destination[i] = value;
-  }
-
-  return STATUS_CONST(SUCCESS);
+static inline COSMERON_MAYBE_UNUSED void MODULE_FUNC(Algorithm, Repeat, IndexedProcedure)(
+    size_t count, TCALLBACK(MODULE_NS(Algorithm, Repeat, ProcedureIndexed)) action) {
+  MODULE_FUNC(Algorithm, Repeat, ProcedureIndexed)(count, action);
 }
 
-#undef SCOPE_TARGET
+static inline COSMERON_MAYBE_UNUSED OPSTATUS MODULE_FUNC(Algorithm, Repeat, IndexedOperation)(
+    size_t count, TCALLBACK(MODULE_NS(Algorithm, Repeat, OperationIndexed)) operation) {
+  return MODULE_FUNC(Algorithm, Repeat, OperationIndexed)(count, operation);
+}
 
-PACKAGE_SCOPE_END()
+static inline COSMERON_MAYBE_UNUSED bool MODULE_FUNC(Algorithm, Repeat, IndexedPredicate)(
+    size_t count, TCALLBACK(MODULE_NS(Algorithm, Repeat, PredicateIndexed)) predicate) {
+  return MODULE_FUNC(Algorithm, Repeat, PredicateIndexed)(count, predicate);
+}
 
 /* EOF */

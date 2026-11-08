@@ -1,91 +1,90 @@
 #pragma once
 
-PACKAGE_SCOPE(Memory, Operations)
+MODULE_IMPLEMENT(DOMAIN(Core), Memory,
+  PACKAGE(Operations,
+    VARIANT(Copy,
+      OPERATION((void *destination, const void *source, size_t size), {
+        if (size == 0U)
+          return STATUS_CONST(SUCCESS);
+        if (!destination || !source)
+          return STATUS_CONST(INVALID_ARGUMENT);
 
-#define SCOPE_TARGET MODULE_NS(Memory, Operations)
+        {
+          uintptr_t destAddr = (uintptr_t)destination;
+          uintptr_t srcAddr = (uintptr_t)source;
+          if ((destAddr < srcAddr && destAddr + size > srcAddr) ||
+              (srcAddr < destAddr && srcAddr + size > destAddr))
+            return STATUS_CONST(INVALID_ARGUMENT);
+        }
 
-SCOPE_PKG_OPERATION(Copy, (void *destination, const void *source, size_t size)) {
-  if (size == 0U)
-    return STATUS_CONST(SUCCESS);
-  if (!destination || !source)
-    return STATUS_CONST(INVALID_ARGUMENT);
+        memcpy(destination, source, size);
+        return STATUS_CONST(SUCCESS);
+      }),
+      OPERATION(Array, (void *destination, const void *source, size_t count, size_t elementSize), {
+        size_t size = 0U;
+        OPSTATUS status = MODULE_IFUNC(Memory, CheckedMultiplySize)(count, elementSize, &size);
+        if (status != STATUS_CONST(SUCCESS))
+          return status;
 
-  {
-    uintptr_t destAddr = (uintptr_t)destination;
-    uintptr_t srcAddr = (uintptr_t)source;
-    if ((destAddr < srcAddr && destAddr + size > srcAddr) ||
-        (srcAddr < destAddr && srcAddr + size > destAddr))
-      return STATUS_CONST(INVALID_ARGUMENT);
-  }
+        return MODULE_FUNC(Memory, Operations, Copy)(destination, source, size);
+      })
+    ),
 
-  memcpy(destination, source, size);
-  return STATUS_CONST(SUCCESS);
-}
+    VARIANT(Move,
+      OPERATION((void *destination, const void *source, size_t size), {
+        if (size == 0U)
+          return STATUS_CONST(SUCCESS);
+        if (!destination || !source)
+          return STATUS_CONST(INVALID_ARGUMENT);
 
-SCOPE_PKG_OPERATION(Move, (void *destination, const void *source, size_t size)) {
-  if (size == 0U)
-    return STATUS_CONST(SUCCESS);
-  if (!destination || !source)
-    return STATUS_CONST(INVALID_ARGUMENT);
+        memmove(destination, source, size);
+        return STATUS_CONST(SUCCESS);
+      }),
+      OPERATION(Array, (void *destination, const void *source, size_t count, size_t elementSize), {
+        size_t size = 0U;
+        OPSTATUS status = MODULE_IFUNC(Memory, CheckedMultiplySize)(count, elementSize, &size);
+        if (status != STATUS_CONST(SUCCESS))
+          return status;
 
-  memmove(destination, source, size);
-  return STATUS_CONST(SUCCESS);
-}
+        return MODULE_FUNC(Memory, Operations, Move)(destination, source, size);
+      })
+    ),
 
-SCOPE_PKG_OPERATION(Set, (void *destination, int value, size_t size)) {
-  if (size == 0U)
-    return STATUS_CONST(SUCCESS);
-  if (!destination)
-    return STATUS_CONST(INVALID_ARGUMENT);
+    OPERATION(Set, (void *destination, int value, size_t size), {
+      if (size == 0U)
+        return STATUS_CONST(SUCCESS);
+      if (!destination)
+        return STATUS_CONST(INVALID_ARGUMENT);
 
-  memset(destination, value, size);
-  return STATUS_CONST(SUCCESS);
-}
+      memset(destination, value, size);
+      return STATUS_CONST(SUCCESS);
+    }),
 
-SCOPE_PKG_OPERATION(Zero, (void *destination, size_t size)) {
-  return MODULE_FUNC(Memory, Operations, Set)(destination, 0, size);
-}
+    VARIANT(Zero,
+      OPERATION((void *destination, size_t size), {
+        return MODULE_FUNC(Memory, Operations, Set)(destination, 0, size);
+      }),
+      OPERATION(Array, (void *destination, size_t count, size_t elementSize), {
+        size_t size = 0U;
+        OPSTATUS status = MODULE_IFUNC(Memory, CheckedMultiplySize)(count, elementSize, &size);
+        if (status != STATUS_CONST(SUCCESS))
+          return status;
 
-SCOPE_PKG_OPERATION(CopyArray, (void *destination, const void *source, size_t count, size_t elementSize)) {
-  size_t size = 0U;
-  OPSTATUS status = MODULE_IFUNC(Memory, CheckedMultiplySize)(count, elementSize, &size);
-  if (status != STATUS_CONST(SUCCESS))
-    return status;
+        return MODULE_FUNC(Memory, Operations, Zero)(destination, size);
+      })
+    ),
 
-  return MODULE_FUNC(Memory, Operations, Copy)(destination, source, size);
-}
+    PREDICATE(Equals, (const void *left, const void *right, size_t size), {
+      if (size == 0U)
+        return true;
+      if (!left || !right)
+        return false;
+      if (left == right)
+        return true;
 
-SCOPE_PKG_OPERATION(MoveArray, (void *destination, const void *source, size_t count, size_t elementSize)) {
-  size_t size = 0U;
-  OPSTATUS status = MODULE_IFUNC(Memory, CheckedMultiplySize)(count, elementSize, &size);
-  if (status != STATUS_CONST(SUCCESS))
-    return status;
-
-  return MODULE_FUNC(Memory, Operations, Move)(destination, source, size);
-}
-
-SCOPE_PKG_OPERATION(ZeroArray, (void *destination, size_t count, size_t elementSize)) {
-  size_t size = 0U;
-  OPSTATUS status = MODULE_IFUNC(Memory, CheckedMultiplySize)(count, elementSize, &size);
-  if (status != STATUS_CONST(SUCCESS))
-    return status;
-
-  return MODULE_FUNC(Memory, Operations, Zero)(destination, size);
-}
-
-SCOPE_PKG_PREDICATE(Equals, (const void *left, const void *right, size_t size)) {
-  if (size == 0U)
-    return true;
-  if (!left || !right)
-    return false;
-  if (left == right)
-    return true;
-
-  return memcmp(left, right, size) == 0;
-}
-
-#undef SCOPE_TARGET
-
-PACKAGE_SCOPE_END()
+      return memcmp(left, right, size) == 0;
+    })
+  )
+);
 
 /* EOF */

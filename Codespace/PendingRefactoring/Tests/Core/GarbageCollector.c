@@ -1,4 +1,4 @@
-#include "../../Cosmeron/Core/Memory/GarbageCollector.h"
+#include "../../../Cosmeron/Core/Memory/GarbageCollector.h"
 
 #include <assert.h>
 #include <stdint.h>

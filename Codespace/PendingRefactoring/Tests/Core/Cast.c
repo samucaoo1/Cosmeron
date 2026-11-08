@@ -1,6 +1,6 @@
-#include "../../Cosmeron/Core/Cast/Cast.h"
-#include "../../Cosmeron/Core/Module/Object.h"
-#include "../../Cosmeron/Core/Module/Package.h"
+#include "../../../Cosmeron/Core/Cast/Cast.h"
+#include "../../../Cosmeron/Core/Module/Object.h"
+#include "../../../Cosmeron/Core/Module/Package.h"
 
 #include <float.h>
 #include <math.h>
@@ -18,18 +18,18 @@
       return __LINE__;                                                         \
   } while (0)
 
-typedef struct CAST_TYPE(Value) {
+typedef struct MODULE_TYPE(Cast, Value) {
   int value;
-} CAST_TYPE(Value);
+} MODULE_TYPE(Cast, Value);
 
-static int CAST_FUNC(Identity)(int value) { return value; }
+static int MODULE_FUNC(Cast, Identity)(int value) { return value; }
 
-static CAST_TYPE(Value) CAST_TYPE_TO_STRUCT(int, Value)(int value) {
-  CAST_TYPE(Value) result = {value};
+static MODULE_TYPE(Cast, Value) CAST_TYPE_TO_STRUCT(int, Value)(int value) {
+  MODULE_TYPE(Cast, Value) result = {value};
   return result;
 }
 
-static int CAST_STRUCT_TO_TYPE(Value, int)(CAST_TYPE(Value) value) {
+static int CAST_STRUCT_TO_TYPE(Value, int)(MODULE_TYPE(Cast, Value) value) {
   return value.value;
 }
 
@@ -37,7 +37,7 @@ static int CAST_STRUCT_TO_TYPE(Value, int)(CAST_TYPE(Value) value) {
 /* Custom Package with CONVERTING_OPERATIONS & CONVERTING_TARGET              */
 /* -------------------------------------------------------------------------- */
 
-PACKAGE(
+PACKAGE_DEF(
     CustomConvertPkg,
     CONVERTING_OPERATIONS(
         Uint64,
@@ -67,7 +67,7 @@ PACKAGE_IMPLEMENT(CustomConvertPkg);
 /* Custom Package with CONVERTING_INLINE                                      */
 /* -------------------------------------------------------------------------- */
 
-PACKAGE(
+PACKAGE_DEF(
     CustomInlinePkg,
     CONVERTING_INLINE(
         Uint32,
@@ -81,7 +81,7 @@ PACKAGE_IMPLEMENT(CustomInlinePkg);
 /* Custom Object with OBJECT_CONVERTING_INLINE                                */
 /* -------------------------------------------------------------------------- */
 
-OBJECT(
+OBJECT_DEF(
     TConvertObject,
     FIELDS(int dummy;),
     OBJECT_CONVERTING_INLINE(
@@ -96,7 +96,7 @@ OBJECT_IMPLEMENT(TConvertObject);
 /* Custom Object with CONVERTING_OPERATIONS and CONVERTING_TARGET             */
 /* -------------------------------------------------------------------------- */
 
-OBJECT(
+OBJECT_DEF(
     TConvertOutLineObject,
     FIELDS(int dummy;),
     CONVERTING_OPERATIONS(

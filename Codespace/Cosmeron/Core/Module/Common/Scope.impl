@@ -11,6 +11,7 @@
  * ============================================================ */
 
 /* --- Diagnostic Scoping Pragmas --- */
+#ifndef COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS
 #if defined(__clang__)
 #define COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS()                             \
   _Pragma("clang diagnostic push")                                             \
@@ -32,6 +33,7 @@
 #else
 #define COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS()
 #define COSMERON_INTERNAL_SCOPE_POP_DIAGNOSTICS()
+#endif
 #endif
 
 /* --- Parameter Emission Helpers --- */
@@ -114,50 +116,96 @@
  * ============================================================ */
 
 /* Object Scope Family */
-#define SCOPE_OPERATION(NAME, PARAMS)                                          \
+#define COSMERON_INTERNAL_SCOPE_OP_2(NAME, PARAMS)                            \
   OBJECT_OPERATION_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+#define COSMERON_INTERNAL_SCOPE_OP_3(NAME, PARAMS, ...)                        \
+  OPERATION(NAME, PARAMS, __VA_ARGS__)
 
-#define SCOPE_FUNCTION(RET, NAME, PARAMS)                                      \
+#define SCOPE_OPERATION(...)                                                   \
+  PP_OP_CAT2(COSMERON_INTERNAL_SCOPE_OP_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_SCOPE_FN_3(RET, NAME, PARAMS)                        \
   OBJECT_FUNCTION_IMPLEMENT_EX(SCOPE_TARGET, RET, NAME, PARAMS)
+#define COSMERON_INTERNAL_SCOPE_FN_4(RET, NAME, PARAMS, ...)                  \
+  FUNCTION(RET, NAME, PARAMS, __VA_ARGS__)
 
-#define SCOPE_PREDICATE(NAME, PARAMS)                                          \
+#define SCOPE_FUNCTION(...)                                                    \
+  PP_OP_CAT2(COSMERON_INTERNAL_SCOPE_FN_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_SCOPE_PRED_2(NAME, PARAMS)                          \
   OBJECT_PREDICATE_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+#define COSMERON_INTERNAL_SCOPE_PRED_3(NAME, PARAMS, ...)                      \
+  PREDICATE(NAME, PARAMS, __VA_ARGS__)
 
-#define SCOPE_PROCEDURE(NAME, PARAMS)                                          \
+#define SCOPE_PREDICATE(...)                                                   \
+  PP_OP_CAT2(COSMERON_INTERNAL_SCOPE_PRED_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_SCOPE_PROC_2(NAME, PARAMS)                          \
   OBJECT_PROCEDURE_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+#define COSMERON_INTERNAL_SCOPE_PROC_3(NAME, PARAMS, ...)                      \
+  PROCEDURE(NAME, PARAMS, __VA_ARGS__)
 
-#define SCOPE_COMPARISON(NAME, PARAMS)                                         \
+#define SCOPE_PROCEDURE(...)                                                   \
+  PP_OP_CAT2(COSMERON_INTERNAL_SCOPE_PROC_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_SCOPE_CMP_2(NAME, PARAMS)                           \
   OBJECT_COMPARISON_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+#define COSMERON_INTERNAL_SCOPE_CMP_3(NAME, PARAMS, ...)                       \
+  COMPARISON(NAME, PARAMS, __VA_ARGS__)
 
-#define SCOPE_OBJ_OPERATION(NAME, PARAMS)                                      \
-  OBJECT_OPERATION_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+#define SCOPE_COMPARISON(...)                                                  \
+  PP_OP_CAT2(COSMERON_INTERNAL_SCOPE_CMP_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
 
-#define SCOPE_OBJ_FUNCTION(RET, NAME, PARAMS)                                  \
-  OBJECT_FUNCTION_IMPLEMENT_EX(SCOPE_TARGET, RET, NAME, PARAMS)
-
-#define SCOPE_OBJ_PREDICATE(NAME, PARAMS)                                      \
-  OBJECT_PREDICATE_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
-
-#define SCOPE_OBJ_PROCEDURE(NAME, PARAMS)                                      \
-  OBJECT_PROCEDURE_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
-
-#define SCOPE_OBJ_COMPARISON(NAME, PARAMS)                                     \
-  OBJECT_COMPARISON_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+#define SCOPE_OBJ_OPERATION(...) SCOPE_OPERATION(__VA_ARGS__)
+#define SCOPE_OBJ_FUNCTION(...) SCOPE_FUNCTION(__VA_ARGS__)
+#define SCOPE_OBJ_PREDICATE(...) SCOPE_PREDICATE(__VA_ARGS__)
+#define SCOPE_OBJ_PROCEDURE(...) SCOPE_PROCEDURE(__VA_ARGS__)
+#define SCOPE_OBJ_COMPARISON(...) SCOPE_COMPARISON(__VA_ARGS__)
 
 /* Package Scope Family */
-#define SCOPE_PKG_OPERATION(NAME, PARAMS)                                      \
+#define COSMERON_INTERNAL_SCOPE_PKG_OP_2(NAME, PARAMS)                        \
   PACKAGE_OPERATION_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+#define COSMERON_INTERNAL_SCOPE_PKG_OP_3(NAME, PARAMS, ...)                    \
+  OPERATION(NAME, PARAMS, __VA_ARGS__)
 
-#define SCOPE_PKG_FUNCTION(RET, NAME, PARAMS)                                  \
+#define SCOPE_PKG_OPERATION(...)                                               \
+  PP_OP_CAT2(COSMERON_INTERNAL_SCOPE_PKG_OP_,                                  \
+             PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_SCOPE_PKG_FN_3(RET, NAME, PARAMS)                    \
   PACKAGE_FUNCTION_IMPLEMENT_EX(SCOPE_TARGET, RET, NAME, PARAMS)
+#define COSMERON_INTERNAL_SCOPE_PKG_FN_4(RET, NAME, PARAMS, ...)              \
+  FUNCTION(RET, NAME, PARAMS, __VA_ARGS__)
 
-#define SCOPE_PKG_PREDICATE(NAME, PARAMS)                                      \
+#define SCOPE_PKG_FUNCTION(...)                                                \
+  PP_OP_CAT2(COSMERON_INTERNAL_SCOPE_PKG_FN_,                                  \
+             PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_SCOPE_PKG_PRED_2(NAME, PARAMS)                      \
   PACKAGE_PREDICATE_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+#define COSMERON_INTERNAL_SCOPE_PKG_PRED_3(NAME, PARAMS, ...)                  \
+  PREDICATE(NAME, PARAMS, __VA_ARGS__)
 
-#define SCOPE_PKG_PROCEDURE(NAME, PARAMS)                                      \
+#define SCOPE_PKG_PREDICATE(...)                                               \
+  PP_OP_CAT2(COSMERON_INTERNAL_SCOPE_PKG_PRED_,                                \
+             PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_SCOPE_PKG_PROC_2(NAME, PARAMS)                      \
   PACKAGE_PROCEDURE_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+#define COSMERON_INTERNAL_SCOPE_PKG_PROC_3(NAME, PARAMS, ...)                  \
+  PROCEDURE(NAME, PARAMS, __VA_ARGS__)
 
-#define SCOPE_PKG_COMPARISON(NAME, PARAMS)                                     \
+#define SCOPE_PKG_PROCEDURE(...)                                               \
+  PP_OP_CAT2(COSMERON_INTERNAL_SCOPE_PKG_PROC_,                                \
+             PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_SCOPE_PKG_CMP_2(NAME, PARAMS)                       \
   PACKAGE_COMPARISON_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+#define COSMERON_INTERNAL_SCOPE_PKG_CMP_3(NAME, PARAMS, ...)                   \
+  COMPARISON(NAME, PARAMS, __VA_ARGS__)
+
+#define SCOPE_PKG_COMPARISON(...)                                              \
+  PP_OP_CAT2(COSMERON_INTERNAL_SCOPE_PKG_CMP_,                                 \
+             PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
 
 /* EOF */

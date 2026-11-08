@@ -22,13 +22,102 @@
 #define PROBE_801 ,
 #define DOMAIN(D) (COSMERON_DOMAIN_TAG, D)
 
+#ifndef COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS
+#if defined(__clang__)
+#define COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS()                             \
+  _Pragma("clang diagnostic push")                                             \
+  _Pragma("clang diagnostic ignored \"-Wunused-function\"")                    \
+  _Pragma("clang diagnostic ignored \"-Wunused-parameter\"")                   \
+  _Pragma("clang diagnostic ignored \"-Wunused-variable\"")
+
+#define COSMERON_INTERNAL_SCOPE_POP_DIAGNOSTICS()                              \
+  _Pragma("clang diagnostic pop")
+#elif defined(__GNUC__)
+#define COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS()                             \
+  _Pragma("GCC diagnostic push")                                               \
+  _Pragma("GCC diagnostic ignored \"-Wunused-function\"")                      \
+  _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"")                     \
+  _Pragma("GCC diagnostic ignored \"-Wunused-variable\"")
+
+#define COSMERON_INTERNAL_SCOPE_POP_DIAGNOSTICS()                              \
+  _Pragma("GCC diagnostic pop")
+#else
+#define COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS()
+#define COSMERON_INTERNAL_SCOPE_POP_DIAGNOSTICS()
+#endif
+
+/* ============================================================
+ * 2.5 INTERNAL Emitter
+ * ============================================================ */
+
+#define COSMERON_INTERNAL_TARGET_0(MOD, NAME) NS(LIB_PREFIX(MOD), Internal)
+#define COSMERON_INTERNAL_TARGET_1(MOD, NAME) NS(LIB_PREFIX(MOD), NAME, Internal)
+#define COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME)                          \
+  PP_OP_CAT2(COSMERON_INTERNAL_TARGET_, HAS_NAME)(MOD, NAME)
+
+#define COSMERON_EMIT_DECL_114(MOD, TAG, HAS_NAME, NAME, METHODS)             \
+  COSMERON_INTERNAL_PKG_GEN_ENUMS(                                             \
+      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
+  COSMERON_INTERNAL_PKG_GEN_MEMBERS(                                           \
+      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
+  typedef int NS(_cosmeron_decl_internal_semi, MOD, HAS_NAME, NAME, __LINE__);
+#endif
+
+/* ============================================================
+ * 2.5 INTERNAL Emitter
+ * ============================================================ */
+
+#define COSMERON_INTERNAL_TARGET_0(MOD, NAME) NS(LIB_PREFIX(MOD), Internal)
+#define COSMERON_INTERNAL_TARGET_1(MOD, NAME) NS(LIB_PREFIX(MOD), NAME, Internal)
+#define COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME)                          \
+  PP_OP_CAT2(COSMERON_INTERNAL_TARGET_, HAS_NAME)(MOD, NAME)
+
+#define COSMERON_EMIT_DECL_114(MOD, TAG, HAS_NAME, NAME, METHODS)             \
+  COSMERON_INTERNAL_PKG_GEN_ENUMS(                                             \
+      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
+  COSMERON_INTERNAL_PKG_GEN_MEMBERS(                                           \
+      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
+  typedef int NS(_cosmeron_decl_internal_semi, MOD, HAS_NAME, NAME, __LINE__);
+
 #ifndef COSMERON_MAYBE_UNUSED
 #if defined(__GNUC__) || defined(__clang__)
 #define COSMERON_MAYBE_UNUSED __attribute__((unused))
 #else
 #define COSMERON_MAYBE_UNUSED
 #endif
+
+/* ============================================================
+ * 2.5 INTERNAL Emitter
+ * ============================================================ */
+
+#define COSMERON_INTERNAL_TARGET_0(MOD, NAME) NS(LIB_PREFIX(MOD), Internal)
+#define COSMERON_INTERNAL_TARGET_1(MOD, NAME) NS(LIB_PREFIX(MOD), NAME, Internal)
+#define COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME)                          \
+  PP_OP_CAT2(COSMERON_INTERNAL_TARGET_, HAS_NAME)(MOD, NAME)
+
+#define COSMERON_EMIT_DECL_114(MOD, TAG, HAS_NAME, NAME, METHODS)             \
+  COSMERON_INTERNAL_PKG_GEN_ENUMS(                                             \
+      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
+  COSMERON_INTERNAL_PKG_GEN_MEMBERS(                                           \
+      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
+  typedef int NS(_cosmeron_decl_internal_semi, MOD, HAS_NAME, NAME, __LINE__);
 #endif
+
+/* ============================================================
+ * 2.5 INTERNAL Emitter
+ * ============================================================ */
+
+#define COSMERON_INTERNAL_TARGET_0(MOD, NAME) NS(LIB_PREFIX(MOD), Internal)
+#define COSMERON_INTERNAL_TARGET_1(MOD, NAME) NS(LIB_PREFIX(MOD), NAME, Internal)
+#define COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME)                          \
+  PP_OP_CAT2(COSMERON_INTERNAL_TARGET_, HAS_NAME)(MOD, NAME)
+
+#define COSMERON_EMIT_DECL_114(MOD, TAG, HAS_NAME, NAME, METHODS)             \
+  COSMERON_INTERNAL_PKG_GEN_ENUMS(                                             \
+      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
+  COSMERON_INTERNAL_PKG_GEN_MEMBERS(                                           \
+      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
+  typedef int NS(_cosmeron_decl_internal_semi, MOD, HAS_NAME, NAME, __LINE__);
 
 /* --- Declarative Tag Constants --- */
 #define COSMERON_DECL_TAG_OBJECT 101
@@ -43,39 +132,87 @@
 #define COSMERON_DECL_TAG_TPL_STRUCT 111
 #define COSMERON_DECL_TAG_ISTRUCT 112
 #define COSMERON_DECL_TAG_TPL_ISTRUCT 113
+#define COSMERON_DECL_TAG_INTERNAL 114
 
 /* --- Inheritance and Fields Descriptors --- */
 #define COSMERON_EXTENDS_TAG 901
 #define COSMERON_FIELDS_TAG 902
 
-#define PROBE_901 ,
-#define PROBE_902
+#define PROBE_EXT_901 ,
+#define PROBE_FLD_902 ,
 
 #define EXTENDS(BASE) (COSMERON_EXTENDS_TAG, BASE)
 
 #undef FIELDS
 #define FIELDS(...) (COSMERON_FIELDS_TAG, (__VA_ARGS__))
 
-#define COSMERON_IS_EXTENDS(first_item)                                        \
-  PP_ARG_COUNT(PP_OP_CAT2(PROBE_, PP_SEQ_GET_1 first_item))
+#define COSMERON_IS_OBJ_EXT(item)                                              \
+  PP_HAS_COMMA(PP_OP_CAT2(PROBE_EXT_, PP_SEQ_GET_1 item))
+#define COSMERON_IS_OBJ_FLD(item)                                              \
+  PP_HAS_COMMA(PP_OP_CAT2(PROBE_FLD_, PP_SEQ_GET_1 item))
 
 /* --- Object Descriptor Generator --- */
-#define COSMERON_INTERNAL_OBJ_EXT_2(NAME, EXT, FIELDS_DECL, ...)               \
-  (COSMERON_DECL_TAG_OBJECT, NAME, (1, PP_SEQ_GET_2 EXT), FIELDS_DECL,         \
+#define COSMERON_INTERNAL_OBJ_EXT_FLD(NAME, EXT, FLD, ...)                    \
+  (COSMERON_DECL_TAG_OBJECT, NAME, (1, PP_SEQ_GET_2 EXT), FLD, (__VA_ARGS__))
+
+#define COSMERON_INTERNAL_OBJ_EXT_NOFLD(NAME, EXT, ...)                        \
+  (COSMERON_DECL_TAG_OBJECT, NAME, (1, PP_SEQ_GET_2 EXT),                      \
+   (COSMERON_FIELDS_TAG, ()), (__VA_ARGS__))
+
+#define COSMERON_INTERNAL_OBJ_NOEXT_FLD(NAME, FLD, ...)                        \
+  (COSMERON_DECL_TAG_OBJECT, NAME, (0, ~), FLD, (__VA_ARGS__))
+
+#define COSMERON_INTERNAL_OBJ_NOEXT_NOFLD(NAME, ...)                           \
+  (COSMERON_DECL_TAG_OBJECT, NAME, (0, ~), (COSMERON_FIELDS_TAG, ()),          \
    (__VA_ARGS__))
 
-#define COSMERON_INTERNAL_OBJ_EXT_1(NAME, FIELDS_DECL, ...)                    \
-  (COSMERON_DECL_TAG_OBJECT, NAME, (0, ~), FIELDS_DECL, (__VA_ARGS__))
+#define COSMERON_INTERNAL_OBJ_DISPATCH_EXT_1(NAME, EXT, FIRST_AFTER, ...)     \
+  PP_IIF(COSMERON_IS_OBJ_FLD(FIRST_AFTER),                                     \
+         COSMERON_INTERNAL_OBJ_EXT_FLD,                                        \
+         COSMERON_INTERNAL_OBJ_EXT_NOFLD)(NAME, EXT, FIRST_AFTER, __VA_ARGS__)
+
+#define COSMERON_INTERNAL_OBJ_DISPATCH_EXT_0(NAME, FIRST_ITEM, ...)            \
+  PP_IIF(COSMERON_IS_OBJ_FLD(FIRST_ITEM),                                      \
+         COSMERON_INTERNAL_OBJ_NOEXT_FLD,                                       \
+         COSMERON_INTERNAL_OBJ_NOEXT_NOFLD)(NAME, FIRST_ITEM, __VA_ARGS__)
 
 #undef OBJECT
 #define OBJECT(NAME, ...)                                                      \
-  PP_OP_CAT2(COSMERON_INTERNAL_OBJ_EXT_,                                       \
-             COSMERON_IS_EXTENDS(PP_SEQ_FIRST(__VA_ARGS__)))(NAME, __VA_ARGS__)
+  PP_IIF(COSMERON_IS_OBJ_EXT(PP_SEQ_FIRST(__VA_ARGS__)),                       \
+         COSMERON_INTERNAL_OBJ_DISPATCH_EXT_1,                                 \
+         COSMERON_INTERNAL_OBJ_DISPATCH_EXT_0)(NAME, __VA_ARGS__)
 
 /* --- Package Descriptor Generator --- */
 #undef PACKAGE
 #define PACKAGE(NAME, ...)                                                     \
   (COSMERON_DECL_TAG_PACKAGE, NAME, (0, ~), (~), (__VA_ARGS__))
+
+/* --- Internal Scope Descriptor Generator --- */
+#define COSMERON_INTERNAL_SCOPE_DISPATCH_1(...)                                  (COSMERON_DECL_TAG_INTERNAL, 0, _cosmeron_root, (__VA_ARGS__))
+
+#define COSMERON_INTERNAL_SCOPE_DISPATCH_0(NAME, ...)                            (COSMERON_DECL_TAG_INTERNAL, 1, NAME, (__VA_ARGS__))
+
+#undef INTERNAL
+#define INTERNAL(...)                                                            PP_OP_CAT2(COSMERON_INTERNAL_SCOPE_DISPATCH_,                                             PP_IS_PAREN(PP_SEQ_FIRST(__VA_ARGS__)))(__VA_ARGS__)
+
+#undef INTERNAL_EX
+#define INTERNAL_EX(NAME, ...)                                                   (COSMERON_DECL_TAG_INTERNAL, 1, NAME, (__VA_ARGS__))
+
+/* --- Internal Scope Descriptor Generator --- */
+#define COSMERON_INTERNAL_SCOPE_DISPATCH_1(...)                                \
+  (COSMERON_DECL_TAG_INTERNAL, 0, _cosmeron_root, (__VA_ARGS__))
+
+#define COSMERON_INTERNAL_SCOPE_DISPATCH_0(NAME, ...)                          \
+  (COSMERON_DECL_TAG_INTERNAL, 1, NAME, (__VA_ARGS__))
+
+#undef INTERNAL
+#define INTERNAL(...)                                                          \
+  PP_OP_CAT2(COSMERON_INTERNAL_SCOPE_DISPATCH_,                                \
+             PP_IS_PAREN(PP_SEQ_FIRST(__VA_ARGS__)))(__VA_ARGS__)
+
+#undef INTERNAL_EX
+#define INTERNAL_EX(NAME, ...)                                                 \
+  (COSMERON_DECL_TAG_INTERNAL, 1, NAME, (__VA_ARGS__))
 
 /* --- Space & Variant Descriptors --- */
 #define SPACE(NAME, ...)                                                       \
@@ -147,38 +284,231 @@
   PP_OP_CAT2(COSMERON_INTERNAL_TPL_ISTRUCT_DISPATCH_,                         \
              PP_IS_PAREN(B))(A, B, __VA_ARGS__)
 
-/* --- Overloaded Method Descriptors (Supporting VARIANT Arities) --- */
+/* --- Overloaded Method Descriptors (Supporting VARIANT Arities & Implementations) --- */
+
+/* 1. Functions */
+#define COSMERON_INTERNAL_FN_DECL_0(RET, PARAMS)                              \
+  (0, 0, RET, _COSMERON_BASE_, PARAMS, { (void)0; })
+#define COSMERON_INTERNAL_FN_IMPL_0(RET, PARAMS, ...)                         \
+  (0, 1, RET, _COSMERON_BASE_, PARAMS, __VA_ARGS__)
+#define COSMERON_INTERNAL_FN_DISP_0(RET, ...)                                 \
+  PP_IIF(PP_HAS_COMMA(__VA_ARGS__),                                           \
+         COSMERON_INTERNAL_FN_IMPL_0,                                          \
+         COSMERON_INTERNAL_FN_DECL_0)(RET, __VA_ARGS__)
+
+#define COSMERON_INTERNAL_FN_DECL_1(RET, NAME, PARAMS)                        \
+  (0, 0, RET, NAME, PARAMS, { (void)0; })
+#define COSMERON_INTERNAL_FN_IMPL_1(RET, NAME, PARAMS, ...)                   \
+  (0, 1, RET, NAME, PARAMS, __VA_ARGS__)
+#define COSMERON_INTERNAL_FN_DISP_1(RET, ...)                                 \
+  PP_IIF(PP_HAS_COMMA(PP_SEQ_REST(__VA_ARGS__)),                              \
+         COSMERON_INTERNAL_FN_IMPL_1,                                          \
+         COSMERON_INTERNAL_FN_DECL_1)(RET, __VA_ARGS__)
+
 #undef FUNCTION
 #define FUNCTION(...)                                                          \
-  PP_OP_CAT2(COSMERON_INTERNAL_FN_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
-#define COSMERON_INTERNAL_FN_2(RET, PARAMS)                                    \
-  (0, 0, RET, _COSMERON_BASE_, PARAMS, { (void)0; })
-#define COSMERON_INTERNAL_FN_3(RET, NAME, PARAMS)                              \
-  (0, 0, RET, NAME, PARAMS, { (void)0; })
+  PP_IIF(PP_IS_PAREN(PP_SEQ_GET_2(__VA_ARGS__)),                               \
+         COSMERON_INTERNAL_FN_DISP_0,                                          \
+         COSMERON_INTERNAL_FN_DISP_1)(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_CONST_FN_DECL_0(RET, PARAMS)                        \
+  (1, 0, RET, _COSMERON_BASE_, PARAMS, { (void)0; })
+#define COSMERON_INTERNAL_CONST_FN_IMPL_0(RET, PARAMS, ...)                   \
+  (1, 1, RET, _COSMERON_BASE_, PARAMS, __VA_ARGS__)
+#define COSMERON_INTERNAL_CONST_FN_DISP_0(RET, ...)                           \
+  PP_IIF(PP_HAS_COMMA(__VA_ARGS__),                                           \
+         COSMERON_INTERNAL_CONST_FN_IMPL_0,                                    \
+         COSMERON_INTERNAL_CONST_FN_DECL_0)(RET, __VA_ARGS__)
+
+#define COSMERON_INTERNAL_CONST_FN_DECL_1(RET, NAME, PARAMS)                  \
+  (1, 0, RET, NAME, PARAMS, { (void)0; })
+#define COSMERON_INTERNAL_CONST_FN_IMPL_1(RET, NAME, PARAMS, ...)             \
+  (1, 1, RET, NAME, PARAMS, __VA_ARGS__)
+#define COSMERON_INTERNAL_CONST_FN_DISP_1(RET, ...)                           \
+  PP_IIF(PP_HAS_COMMA(PP_SEQ_REST(__VA_ARGS__)),                              \
+         COSMERON_INTERNAL_CONST_FN_IMPL_1,                                    \
+         COSMERON_INTERNAL_CONST_FN_DECL_1)(RET, __VA_ARGS__)
+
+#undef CONST_FUNCTION
+#define CONST_FUNCTION(...)                                                    \
+  PP_IIF(PP_IS_PAREN(PP_SEQ_GET_2(__VA_ARGS__)),                               \
+         COSMERON_INTERNAL_CONST_FN_DISP_0,                                    \
+         COSMERON_INTERNAL_CONST_FN_DISP_1)(__VA_ARGS__)
+
+/* 2. Operations */
+#define COSMERON_INTERNAL_OP_DECL_0(PARAMS)                                   \
+  (0, 0, OPSTATUS, _COSMERON_BASE_, PARAMS, { return STATUS_CONST(SUCCESS); })
+#define COSMERON_INTERNAL_OP_IMPL_0(PARAMS, ...)                               \
+  (0, 1, OPSTATUS, _COSMERON_BASE_, PARAMS, __VA_ARGS__)
+#define COSMERON_INTERNAL_OP_DISP_0(...)                                       \
+  PP_IIF(PP_HAS_COMMA(__VA_ARGS__),                                           \
+         COSMERON_INTERNAL_OP_IMPL_0,                                          \
+         COSMERON_INTERNAL_OP_DECL_0)(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_OP_DECL_1(NAME, PARAMS)                             \
+  (0, 0, OPSTATUS, NAME, PARAMS, { return STATUS_CONST(SUCCESS); })
+#define COSMERON_INTERNAL_OP_IMPL_1(NAME, PARAMS, ...)                         \
+  (0, 1, OPSTATUS, NAME, PARAMS, __VA_ARGS__)
+#define COSMERON_INTERNAL_OP_DISP_1(...)                                       \
+  PP_IIF(PP_HAS_COMMA(PP_SEQ_REST(__VA_ARGS__)),                              \
+         COSMERON_INTERNAL_OP_IMPL_1,                                          \
+         COSMERON_INTERNAL_OP_DECL_1)(__VA_ARGS__)
 
 #undef OPERATION
 #define OPERATION(...)                                                         \
-  PP_OP_CAT2(COSMERON_INTERNAL_OP_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
-#define COSMERON_INTERNAL_OP_1(PARAMS)                                         \
-  (0, 0, OPSTATUS, _COSMERON_BASE_, PARAMS, { return STATUS_CONST(SUCCESS); })
-#define COSMERON_INTERNAL_OP_2(NAME, PARAMS)                                   \
-  (0, 0, OPSTATUS, NAME, PARAMS, { return STATUS_CONST(SUCCESS); })
+  PP_IIF(PP_IS_PAREN(PP_SEQ_FIRST(__VA_ARGS__)),                               \
+         COSMERON_INTERNAL_OP_DISP_0,                                          \
+         COSMERON_INTERNAL_OP_DISP_1)(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_CONST_OP_DECL_0(PARAMS)                             \
+  (1, 0, OPSTATUS, _COSMERON_BASE_, PARAMS, { return STATUS_CONST(SUCCESS); })
+#define COSMERON_INTERNAL_CONST_OP_IMPL_0(PARAMS, ...)                         \
+  (1, 1, OPSTATUS, _COSMERON_BASE_, PARAMS, __VA_ARGS__)
+#define COSMERON_INTERNAL_CONST_OP_DISP_0(...)                                 \
+  PP_IIF(PP_HAS_COMMA(__VA_ARGS__),                                           \
+         COSMERON_INTERNAL_CONST_OP_IMPL_0,                                    \
+         COSMERON_INTERNAL_CONST_OP_DECL_0)(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_CONST_OP_DECL_1(NAME, PARAMS)                       \
+  (1, 0, OPSTATUS, NAME, PARAMS, { return STATUS_CONST(SUCCESS); })
+#define COSMERON_INTERNAL_CONST_OP_IMPL_1(NAME, PARAMS, ...)                   \
+  (1, 1, OPSTATUS, NAME, PARAMS, __VA_ARGS__)
+#define COSMERON_INTERNAL_CONST_OP_DISP_1(...)                                 \
+  PP_IIF(PP_HAS_COMMA(PP_SEQ_REST(__VA_ARGS__)),                              \
+         COSMERON_INTERNAL_CONST_OP_IMPL_1,                                    \
+         COSMERON_INTERNAL_CONST_OP_DECL_1)(__VA_ARGS__)
+
+#undef CONST_OPERATION
+#define CONST_OPERATION(...)                                                   \
+  PP_IIF(PP_IS_PAREN(PP_SEQ_FIRST(__VA_ARGS__)),                               \
+         COSMERON_INTERNAL_CONST_OP_DISP_0,                                    \
+         COSMERON_INTERNAL_CONST_OP_DISP_1)(__VA_ARGS__)
+
+/* 3. Predicates */
+#define COSMERON_INTERNAL_PRED_DECL_0(PARAMS)                                 \
+  (0, 0, bool, _COSMERON_BASE_, PARAMS, { return false; })
+#define COSMERON_INTERNAL_PRED_IMPL_0(PARAMS, ...)                             \
+  (0, 1, bool, _COSMERON_BASE_, PARAMS, __VA_ARGS__)
+#define COSMERON_INTERNAL_PRED_DISP_0(...)                                     \
+  PP_IIF(PP_HAS_COMMA(__VA_ARGS__),                                           \
+         COSMERON_INTERNAL_PRED_IMPL_0,                                        \
+         COSMERON_INTERNAL_PRED_DECL_0)(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_PRED_DECL_1(NAME, PARAMS)                           \
+  (0, 0, bool, NAME, PARAMS, { return false; })
+#define COSMERON_INTERNAL_PRED_IMPL_1(NAME, PARAMS, ...)                       \
+  (0, 1, bool, NAME, PARAMS, __VA_ARGS__)
+#define COSMERON_INTERNAL_PRED_DISP_1(...)                                     \
+  PP_IIF(PP_HAS_COMMA(PP_SEQ_REST(__VA_ARGS__)),                              \
+         COSMERON_INTERNAL_PRED_IMPL_1,                                        \
+         COSMERON_INTERNAL_PRED_DECL_1)(__VA_ARGS__)
 
 #undef PREDICATE
 #define PREDICATE(...)                                                         \
-  PP_OP_CAT2(COSMERON_INTERNAL_PRED_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
-#define COSMERON_INTERNAL_PRED_1(PARAMS)                                       \
-  (0, 0, bool, _COSMERON_BASE_, PARAMS, { return false; })
-#define COSMERON_INTERNAL_PRED_2(NAME, PARAMS)                                 \
-  (0, 0, bool, NAME, PARAMS, { return false; })
+  PP_IIF(PP_IS_PAREN(PP_SEQ_FIRST(__VA_ARGS__)),                               \
+         COSMERON_INTERNAL_PRED_DISP_0,                                        \
+         COSMERON_INTERNAL_PRED_DISP_1)(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_CONST_PRED_DECL_0(PARAMS)                           \
+  (1, 0, bool, _COSMERON_BASE_, PARAMS, { return false; })
+#define COSMERON_INTERNAL_CONST_PRED_IMPL_0(PARAMS, ...)                       \
+  (1, 1, bool, _COSMERON_BASE_, PARAMS, __VA_ARGS__)
+#define COSMERON_INTERNAL_CONST_PRED_DISP_0(...)                               \
+  PP_IIF(PP_HAS_COMMA(__VA_ARGS__),                                           \
+         COSMERON_INTERNAL_CONST_PRED_IMPL_0,                                  \
+         COSMERON_INTERNAL_CONST_PRED_DECL_0)(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_CONST_PRED_DECL_1(NAME, PARAMS)                     \
+  (1, 0, bool, NAME, PARAMS, { return false; })
+#define COSMERON_INTERNAL_CONST_PRED_IMPL_1(NAME, PARAMS, ...)                 \
+  (1, 1, bool, NAME, PARAMS, __VA_ARGS__)
+#define COSMERON_INTERNAL_CONST_PRED_DISP_1(...)                               \
+  PP_IIF(PP_HAS_COMMA(PP_SEQ_REST(__VA_ARGS__)),                              \
+         COSMERON_INTERNAL_CONST_PRED_IMPL_1,                                  \
+         COSMERON_INTERNAL_CONST_PRED_DECL_1)(__VA_ARGS__)
+
+#undef CONST_PREDICATE
+#define CONST_PREDICATE(...)                                                   \
+  PP_IIF(PP_IS_PAREN(PP_SEQ_FIRST(__VA_ARGS__)),                               \
+         COSMERON_INTERNAL_CONST_PRED_DISP_0,                                  \
+         COSMERON_INTERNAL_CONST_PRED_DISP_1)(__VA_ARGS__)
+
+/* 4. Procedures */
+#define COSMERON_INTERNAL_PROC_DECL_0(PARAMS)                                 \
+  (0, 0, void, _COSMERON_BASE_, PARAMS, { (void)0; })
+#define COSMERON_INTERNAL_PROC_IMPL_0(PARAMS, ...)                             \
+  (0, 1, void, _COSMERON_BASE_, PARAMS, __VA_ARGS__)
+#define COSMERON_INTERNAL_PROC_DISP_0(...)                                     \
+  PP_IIF(PP_HAS_COMMA(__VA_ARGS__),                                           \
+         COSMERON_INTERNAL_PROC_IMPL_0,                                        \
+         COSMERON_INTERNAL_PROC_DECL_0)(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_PROC_DECL_1(NAME, PARAMS)                           \
+  (0, 0, void, NAME, PARAMS, { (void)0; })
+#define COSMERON_INTERNAL_PROC_IMPL_1(NAME, PARAMS, ...)                       \
+  (0, 1, void, NAME, PARAMS, __VA_ARGS__)
+#define COSMERON_INTERNAL_PROC_DISP_1(...)                                     \
+  PP_IIF(PP_HAS_COMMA(PP_SEQ_REST(__VA_ARGS__)),                              \
+         COSMERON_INTERNAL_PROC_IMPL_1,                                        \
+         COSMERON_INTERNAL_PROC_DECL_1)(__VA_ARGS__)
 
 #undef PROCEDURE
 #define PROCEDURE(...)                                                         \
-  PP_OP_CAT2(COSMERON_INTERNAL_PROC_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
-#define COSMERON_INTERNAL_PROC_1(PARAMS)                                       \
-  (0, 0, void, _COSMERON_BASE_, PARAMS, { (void)0; })
-#define COSMERON_INTERNAL_PROC_2(NAME, PARAMS)                                 \
-  (0, 0, void, NAME, PARAMS, { (void)0; })
+  PP_IIF(PP_IS_PAREN(PP_SEQ_FIRST(__VA_ARGS__)),                               \
+         COSMERON_INTERNAL_PROC_DISP_0,                                        \
+         COSMERON_INTERNAL_PROC_DISP_1)(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_CONST_PROC_DECL_0(PARAMS)                           \
+  (1, 0, void, _COSMERON_BASE_, PARAMS, { (void)0; })
+#define COSMERON_INTERNAL_CONST_PROC_IMPL_0(PARAMS, ...)                       \
+  (1, 1, void, _COSMERON_BASE_, PARAMS, __VA_ARGS__)
+#define COSMERON_INTERNAL_CONST_PROC_DISP_0(...)                               \
+  PP_IIF(PP_HAS_COMMA(__VA_ARGS__),                                           \
+         COSMERON_INTERNAL_CONST_PROC_IMPL_0,                                  \
+         COSMERON_INTERNAL_CONST_PROC_DECL_0)(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_CONST_PROC_DECL_1(NAME, PARAMS)                     \
+  (1, 0, void, NAME, PARAMS, { (void)0; })
+#define COSMERON_INTERNAL_CONST_PROC_IMPL_1(NAME, PARAMS, ...)                 \
+  (1, 1, void, NAME, PARAMS, __VA_ARGS__)
+#define COSMERON_INTERNAL_CONST_PROC_DISP_1(...)                               \
+  PP_IIF(PP_HAS_COMMA(PP_SEQ_REST(__VA_ARGS__)),                              \
+         COSMERON_INTERNAL_CONST_PROC_IMPL_1,                                  \
+         COSMERON_INTERNAL_CONST_PROC_DECL_1)(__VA_ARGS__)
+
+#undef CONST_PROCEDURE
+#define CONST_PROCEDURE(...)                                                   \
+  PP_IIF(PP_IS_PAREN(PP_SEQ_FIRST(__VA_ARGS__)),                               \
+         COSMERON_INTERNAL_CONST_PROC_DISP_0,                                  \
+         COSMERON_INTERNAL_CONST_PROC_DISP_1)(__VA_ARGS__)
+
+/* 5. Comparisons */
+#define COSMERON_INTERNAL_CMP_DECL_0(PARAMS)                                  \
+  (1, 0, CMPOUT, _COSMERON_BASE_, PARAMS, { return COMPARISON_CONST(EQUAL); })
+#define COSMERON_INTERNAL_CMP_IMPL_0(PARAMS, ...)                             \
+  (1, 1, CMPOUT, _COSMERON_BASE_, PARAMS, __VA_ARGS__)
+#define COSMERON_INTERNAL_CMP_DISP_0(...)                                     \
+  PP_IIF(PP_HAS_COMMA(__VA_ARGS__),                                           \
+         COSMERON_INTERNAL_CMP_IMPL_0,                                         \
+         COSMERON_INTERNAL_CMP_DECL_0)(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_CMP_DECL_1(NAME, PARAMS)                            \
+  (1, 0, CMPOUT, NAME, PARAMS, { return COMPARISON_CONST(EQUAL); })
+#define COSMERON_INTERNAL_CMP_IMPL_1(NAME, PARAMS, ...)                        \
+  (1, 1, CMPOUT, NAME, PARAMS, __VA_ARGS__)
+#define COSMERON_INTERNAL_CMP_DISP_1(...)                                     \
+  PP_IIF(PP_HAS_COMMA(PP_SEQ_REST(__VA_ARGS__)),                              \
+         COSMERON_INTERNAL_CMP_IMPL_1,                                         \
+         COSMERON_INTERNAL_CMP_DECL_1)(__VA_ARGS__)
+
+#undef COMPARISON
+#define COMPARISON(...)                                                        \
+  PP_IIF(PP_IS_PAREN(PP_SEQ_FIRST(__VA_ARGS__)),                               \
+         COSMERON_INTERNAL_CMP_DISP_0,                                         \
+         COSMERON_INTERNAL_CMP_DISP_1)(__VA_ARGS__)
+
+#undef CONST_COMPARISON
+#define CONST_COMPARISON(...) COMPARISON(__VA_ARGS__)
 
 #undef FUNCTION_INLINE
 #define FUNCTION_INLINE(...)                                                   \
@@ -373,7 +703,7 @@
 #define COSMERON_INTERNAL_OBJ_BODY_0(B) ;
 #define COSMERON_INTERNAL_OBJ_BODY_1(B) B
 
-#define COSMERON_INTERNAL_OBJ_MEMBER_I(CTX, C, I, R, N, P, B)                  \
+#define COSMERON_INTERNAL_OBJ_MEMBER_I(CTX, C, I, R, N, P, ...)                \
   typedef R NS(PP_SEQ_GET_1 CTX, N, ret_t);                                  \
   typedef COSMERON_INTERNAL_SELF_TYPE(C, PP_SEQ_GET_2 CTX)                     \
       NS(PP_SEQ_GET_1 CTX, N, self_t);                                      \
@@ -382,13 +712,13 @@
   };                                                                           \
   static inline COSMERON_MAYBE_UNUSED R NS(PP_SEQ_GET_1 CTX, N)              \
       COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(PP_SEQ_GET_2 CTX, C, P)         \
-      PP_OP_CAT2(COSMERON_INTERNAL_OBJ_BODY_, I)(B)
+      PP_OP_CAT2(COSMERON_INTERNAL_OBJ_BODY_, I)(__VA_ARGS__)
 
 #define COSMERON_INTERNAL_OBJ_VAR_PROTO(CTX, M)                                \
   COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
       COSMERON_INTERNAL_OBJ_VAR_PROTO_I, CTX, M)
 
-#define COSMERON_INTERNAL_OBJ_VAR_PROTO_I(CTX, C, I, R, N, P, B)               \
+#define COSMERON_INTERNAL_OBJ_VAR_PROTO_I(CTX, C, I, R, N, P, ...)             \
   typedef R NS(PP_SEQ_GET_1 CTX, COSMERON_VAR_RESOLVE_NAME(PP_SEQ_GET_3 CTX, N), ret_t); \
   typedef COSMERON_INTERNAL_SELF_TYPE(C, PP_SEQ_GET_2 CTX)                     \
       NS(PP_SEQ_GET_1 CTX, COSMERON_VAR_RESOLVE_NAME(PP_SEQ_GET_3 CTX, N), self_t); \
@@ -398,7 +728,7 @@
   static inline COSMERON_MAYBE_UNUSED R                                        \
       NS(PP_SEQ_GET_1 CTX, COSMERON_VAR_RESOLVE_NAME(PP_SEQ_GET_3 CTX, N))     \
       COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(PP_SEQ_GET_2 CTX, C, P)         \
-      PP_OP_CAT2(COSMERON_INTERNAL_OBJ_BODY_, I)(B)
+      PP_OP_CAT2(COSMERON_INTERNAL_OBJ_BODY_, I)(__VA_ARGS__)
 
 #define COSMERON_INTERNAL_OBJ_MEMBER_EXPAND(MACRO, CTX, ...)                   \
   MACRO(CTX, __VA_ARGS__)
@@ -406,10 +736,10 @@
 #define COSMERON_INTERNAL_OBJ_MEMBER_INVOKE(MACRO, CTX, TUPLE)                 \
   COSMERON_INTERNAL_OBJ_MEMBER_EXPAND(MACRO, CTX, PP_UNWRAP TUPLE)
 
-#define COSMERON_INTERNAL_OBJ_MEMBER_TAG_0(CTX, C, I, R, N, P, B)              \
-  COSMERON_INTERNAL_OBJ_MEMBER_I(CTX, C, I, R, N, P, B)
-#define COSMERON_INTERNAL_OBJ_MEMBER_TAG_1(CTX, C, I, R, N, P, B)              \
-  COSMERON_INTERNAL_OBJ_MEMBER_I(CTX, C, I, R, N, P, B)
+#define COSMERON_INTERNAL_OBJ_MEMBER_TAG_0(CTX, C, I, R, N, P, ...)            \
+  COSMERON_INTERNAL_OBJ_MEMBER_I(CTX, C, I, R, N, P, __VA_ARGS__)
+#define COSMERON_INTERNAL_OBJ_MEMBER_TAG_1(CTX, C, I, R, N, P, ...)            \
+  COSMERON_INTERNAL_OBJ_MEMBER_I(CTX, C, I, R, N, P, __VA_ARGS__)
 #define COSMERON_INTERNAL_OBJ_MEMBER_TAG_2(CTX, C, I, R, N, P, B)              \
   CALLBACK_FUNCTION(R, NS(PP_SEQ_GET_1 CTX, N), P);
 #define COSMERON_INTERNAL_OBJ_MEMBER_TAG_103(CTX, TAG, NAME, TABLE, DISP)
@@ -423,6 +753,7 @@
 #define COSMERON_INTERNAL_OBJ_MEMBER_TAG_111(CTX, ...)
 #define COSMERON_INTERNAL_OBJ_MEMBER_TAG_112(CTX, ...)
 #define COSMERON_INTERNAL_OBJ_MEMBER_TAG_113(CTX, ...)
+#define COSMERON_INTERNAL_OBJ_MEMBER_TAG_114(CTX, ...)
 
 #define COSMERON_INTERNAL_OBJ_ENUM_MEMBER_EXPAND(MACRO, CTX, ...)              \
   MACRO(CTX, __VA_ARGS__)
@@ -443,6 +774,7 @@
 #define COSMERON_INTERNAL_OBJ_ENUM_TAG_111(CTX, ...)
 #define COSMERON_INTERNAL_OBJ_ENUM_TAG_112(CTX, ...)
 #define COSMERON_INTERNAL_OBJ_ENUM_TAG_113(CTX, ...)
+#define COSMERON_INTERNAL_OBJ_ENUM_TAG_114(CTX, ...)
 #define COSMERON_INTERNAL_OBJ_ENUM_TAG_103(CTX, TAG, NAME, TABLE, DISP)        \
   COSMERON_INTERNAL_EMIT_ENUM_DEF(PP_SEQ_GET_1 CTX, NAME, TABLE, DISP)
 
@@ -529,6 +861,22 @@
 #endif
 
 /* ============================================================
+ * 2.5 INTERNAL Emitter
+ * ============================================================ */
+
+#define COSMERON_INTERNAL_TARGET_0(MOD, NAME) NS(LIB_PREFIX(MOD), Internal)
+#define COSMERON_INTERNAL_TARGET_1(MOD, NAME) NS(LIB_PREFIX(MOD), NAME, Internal)
+#define COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME)                          \
+  PP_OP_CAT2(COSMERON_INTERNAL_TARGET_, HAS_NAME)(MOD, NAME)
+
+#define COSMERON_EMIT_DECL_114(MOD, TAG, HAS_NAME, NAME, METHODS)             \
+  COSMERON_INTERNAL_PKG_GEN_ENUMS(                                             \
+      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
+  COSMERON_INTERNAL_PKG_GEN_MEMBERS(                                           \
+      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
+  typedef int NS(_cosmeron_decl_internal_semi, MOD, HAS_NAME, NAME, __LINE__);
+
+/* ============================================================
  * 2. PACKAGE Emitter
  * ============================================================ */
 
@@ -540,9 +888,9 @@
   COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
       COSMERON_INTERNAL_VAR_PROTO_I, CTX, M)
 
-#define COSMERON_INTERNAL_VAR_PROTO_I(CTX, C, I, R, N, P, B)                   \
+#define COSMERON_INTERNAL_VAR_PROTO_I(CTX, C, I, R, N, P, ...)                 \
   PP_OP_CAT2(COSMERON_INTERNAL_VAR_FN_, COSMERON_IS_VAR_BASE(N))(               \
-      PP_SEQ_GET_1 CTX, PP_SEQ_GET_2 CTX, I, B, R, N, P)
+      PP_SEQ_GET_1 CTX, PP_SEQ_GET_2 CTX, I, __VA_ARGS__, R, N, P)
 
 #define COSMERON_INTERNAL_VAR_FN_2(CLASS, FAMILY, I, B, R, N, P)               \
   static inline COSMERON_MAYBE_UNUSED R NS(CLASS, FAMILY)                    \
@@ -559,7 +907,7 @@
   COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
       COSMERON_INTERNAL_SPACE_PROTO_I, SPACE_CLASS, M)
 
-#define COSMERON_INTERNAL_SPACE_PROTO_I(SPACE_CLASS, C, I, R, N, P, B)         \
+#define COSMERON_INTERNAL_SPACE_PROTO_I(SPACE_CLASS, C, I, R, N, P, ...)       \
   static inline COSMERON_MAYBE_UNUSED R NS(SPACE_CLASS, N)                   \
       COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P);
 
@@ -576,17 +924,17 @@
       CLASS, M)
 
 #define COSMERON_INTERNAL_PKG_BODY_0(B) ;
-#define COSMERON_INTERNAL_PKG_BODY_1(B) B
+#define COSMERON_INTERNAL_PKG_BODY_1(...) __VA_ARGS__
 
-#define COSMERON_INTERNAL_PKG_MEMBER_TAG_0(CLASS, C, I, R, N, P, B)            \
+#define COSMERON_INTERNAL_PKG_MEMBER_TAG_0(CLASS, C, I, R, N, P, ...)          \
   static inline COSMERON_MAYBE_UNUSED R NS(CLASS, N)                         \
       COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P)                              \
-      PP_OP_CAT2(COSMERON_INTERNAL_PKG_BODY_, I)(B)
+      PP_OP_CAT2(COSMERON_INTERNAL_PKG_BODY_, I)(__VA_ARGS__)
 
-#define COSMERON_INTERNAL_PKG_MEMBER_TAG_1(CLASS, C, I, R, N, P, B)            \
+#define COSMERON_INTERNAL_PKG_MEMBER_TAG_1(CLASS, C, I, R, N, P, ...)          \
   static inline COSMERON_MAYBE_UNUSED R NS(CLASS, N)                         \
       COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P)                              \
-      PP_OP_CAT2(COSMERON_INTERNAL_PKG_BODY_, I)(B)
+      PP_OP_CAT2(COSMERON_INTERNAL_PKG_BODY_, I)(__VA_ARGS__)
 
 #define COSMERON_INTERNAL_PKG_MEMBER_TAG_2(CLASS, C, I, R, N, P, B)            \
   CALLBACK_FUNCTION(R, NS(CLASS, N), P);
@@ -607,6 +955,7 @@
 #define COSMERON_INTERNAL_PKG_MEMBER_TAG_111(CLASS, ...)
 #define COSMERON_INTERNAL_PKG_MEMBER_TAG_112(CLASS, ...)
 #define COSMERON_INTERNAL_PKG_MEMBER_TAG_113(CLASS, ...)
+#define COSMERON_INTERNAL_PKG_MEMBER_TAG_114(CLASS, ...)
 
 #define COSMERON_INTERNAL_PKG_ENUM_MEMBER_EXPAND(MACRO, CLASS, ...)            \
   MACRO(CLASS, __VA_ARGS__)
@@ -627,6 +976,7 @@
 #define COSMERON_INTERNAL_PKG_ENUM_TAG_111(CLASS, ...)
 #define COSMERON_INTERNAL_PKG_ENUM_TAG_112(CLASS, ...)
 #define COSMERON_INTERNAL_PKG_ENUM_TAG_113(CLASS, ...)
+#define COSMERON_INTERNAL_PKG_ENUM_TAG_114(CLASS, ...)
 #define COSMERON_INTERNAL_PKG_ENUM_TAG_103(CLASS, TAG, NAME, TABLE, DISP)      \
   COSMERON_INTERNAL_EMIT_ENUM_DEF(CLASS, NAME, TABLE, DISP)
 
@@ -678,6 +1028,32 @@
   typedef int NS(_cosmeron_decl_pkg_semi, MOD, NAME, __LINE__);
 
 #endif
+
+/* ============================================================
+ * 2.5 INTERNAL Emitter
+ * ============================================================ */
+
+#define COSMERON_INTERNAL_TARGET_0(MOD, NAME) NS(LIB_PREFIX(MOD), Internal)
+#define COSMERON_INTERNAL_TARGET_1(MOD, NAME) NS(LIB_PREFIX(MOD), NAME, Internal)
+#define COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME)                            PP_OP_CAT2(COSMERON_INTERNAL_TARGET_, HAS_NAME)(MOD, NAME)
+
+#define COSMERON_EMIT_DECL_114(MOD, TAG, HAS_NAME, NAME, METHODS)               COSMERON_INTERNAL_PKG_GEN_ENUMS(                                                   COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                   COSMERON_INTERNAL_PKG_GEN_MEMBERS(                                                 COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                   typedef int NS(_cosmeron_decl_internal_semi, MOD, HAS_NAME, NAME, __LINE__);
+
+/* ============================================================
+ * 2.5 INTERNAL Emitter
+ * ============================================================ */
+
+#define COSMERON_INTERNAL_TARGET_0(MOD, NAME) NS(LIB_PREFIX(MOD), Internal)
+#define COSMERON_INTERNAL_TARGET_1(MOD, NAME) NS(LIB_PREFIX(MOD), NAME, Internal)
+#define COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME)                          \
+  PP_OP_CAT2(COSMERON_INTERNAL_TARGET_, HAS_NAME)(MOD, NAME)
+
+#define COSMERON_EMIT_DECL_114(MOD, TAG, HAS_NAME, NAME, METHODS)             \
+  COSMERON_INTERNAL_PKG_GEN_ENUMS(                                             \
+      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
+  COSMERON_INTERNAL_PKG_GEN_MEMBERS(                                           \
+      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
+  typedef int NS(_cosmeron_decl_internal_semi, MOD, HAS_NAME, NAME, __LINE__);
 
 /* ============================================================
  * 3. ENUM Emitter (Top-Level MODULE)
@@ -789,6 +1165,22 @@
 
 #endif
 
+/* ============================================================
+ * 2.5 INTERNAL Emitter
+ * ============================================================ */
+
+#define COSMERON_INTERNAL_TARGET_0(MOD, NAME) NS(LIB_PREFIX(MOD), Internal)
+#define COSMERON_INTERNAL_TARGET_1(MOD, NAME) NS(LIB_PREFIX(MOD), NAME, Internal)
+#define COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME)                          \
+  PP_OP_CAT2(COSMERON_INTERNAL_TARGET_, HAS_NAME)(MOD, NAME)
+
+#define COSMERON_EMIT_DECL_114(MOD, TAG, HAS_NAME, NAME, METHODS)             \
+  COSMERON_INTERNAL_PKG_GEN_ENUMS(                                             \
+      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
+  COSMERON_INTERNAL_PKG_GEN_MEMBERS(                                           \
+      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
+  typedef int NS(_cosmeron_decl_internal_semi, MOD, HAS_NAME, NAME, __LINE__);
+
 #if !defined(PACKAGE_DISABLE_FUNCTION_TABLE) && !defined(MODULE_DISABLE_FUNCTION_TABLE)
 
 #define TEMPLATE_PACKAGE_DEF(MOD, NAME, SUFFIX, ...)                           \
@@ -826,6 +1218,22 @@
   typedef int NS(_cosmeron_tpl_pkg_semi, MOD, NAME, SUFFIX, __LINE__)
 
 #endif
+
+/* ============================================================
+ * 2.5 INTERNAL Emitter
+ * ============================================================ */
+
+#define COSMERON_INTERNAL_TARGET_0(MOD, NAME) NS(LIB_PREFIX(MOD), Internal)
+#define COSMERON_INTERNAL_TARGET_1(MOD, NAME) NS(LIB_PREFIX(MOD), NAME, Internal)
+#define COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME)                          \
+  PP_OP_CAT2(COSMERON_INTERNAL_TARGET_, HAS_NAME)(MOD, NAME)
+
+#define COSMERON_EMIT_DECL_114(MOD, TAG, HAS_NAME, NAME, METHODS)             \
+  COSMERON_INTERNAL_PKG_GEN_ENUMS(                                             \
+      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
+  COSMERON_INTERNAL_PKG_GEN_MEMBERS(                                           \
+      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
+  typedef int NS(_cosmeron_decl_internal_semi, MOD, HAS_NAME, NAME, __LINE__);
 
 #define COSMERON_INTERNAL_TPL_OBJ_DISPATCH_1(NAME, ARGS, ...)                 \
   (COSMERON_DECL_TAG_TPL_OBJECT, NAME, ARGS, (~), (__VA_ARGS__))
@@ -922,5 +1330,188 @@
 #define MODULE(...)                                                            \
   PP_OP_CAT2(COSMERON_INTERNAL_MODULE_,                                        \
              COSMERON_IS_DOMAIN(PP_SEQ_FIRST(__VA_ARGS__)))(__VA_ARGS__)
+
+/* ============================================================
+ * 8. Implementation Dispatch Engine (MODULE_IMPLEMENT)
+ * ============================================================ */
+
+/* Object Implementation */
+#define COSMERON_INTERNAL_OBJ_IMPL_BODY_0(CTX, R, N, P, ...)
+#define COSMERON_INTERNAL_OBJ_IMPL_BODY_1(CTX, R, N, P, ...)                   \
+  static inline COSMERON_MAYBE_UNUSED R NS(PP_SEQ_GET_1 CTX, N)               \
+      COSMERON_MACRO_INTERNAL_OBJ_PROTOEX_EMIT_PARAMS(PP_SEQ_GET_1 CTX, N, P) \
+      __VA_ARGS__
+
+#define COSMERON_INTERNAL_OBJ_IMPL_MEMBER_I(CTX, C, I, R, N, P, ...)           \
+  PP_OP_CAT2(COSMERON_INTERNAL_OBJ_IMPL_BODY_, I)(CTX, R, N, P, __VA_ARGS__)
+
+#define COSMERON_INTERNAL_OBJ_IMPL_MEMBER_EXPAND(MACRO, CTX, ...)              \
+  MACRO(CTX, __VA_ARGS__)
+#define COSMERON_INTERNAL_OBJ_IMPL_MEMBER_INVOKE(MACRO, CTX, TUPLE)            \
+  COSMERON_INTERNAL_OBJ_IMPL_MEMBER_EXPAND(MACRO, CTX, PP_UNWRAP TUPLE)
+
+#define COSMERON_INTERNAL_OBJ_IMPL_MEMBER(CTX, M)                              \
+  COSMERON_INTERNAL_OBJ_IMPL_MEMBER_INVOKE(                                    \
+      PP_OP_CAT2(COSMERON_INTERNAL_OBJ_IMPL_TAG_, PP_SEQ_GET_1 M),             \
+      CTX, M)
+
+#define COSMERON_INTERNAL_OBJ_IMPL_TAG_0(CTX, C, I, R, N, P, ...)             \
+  COSMERON_INTERNAL_OBJ_IMPL_MEMBER_I(CTX, C, I, R, N, P, __VA_ARGS__)
+#define COSMERON_INTERNAL_OBJ_IMPL_TAG_1(CTX, C, I, R, N, P, ...)             \
+  COSMERON_INTERNAL_OBJ_IMPL_MEMBER_I(CTX, C, I, R, N, P, __VA_ARGS__)
+#define COSMERON_INTERNAL_OBJ_IMPL_TAG_2(CTX, ...)
+#define COSMERON_INTERNAL_OBJ_IMPL_TAG_3(CTX, ...)
+#define COSMERON_INTERNAL_OBJ_IMPL_TAG_4(CTX, ...)
+#define COSMERON_INTERNAL_OBJ_IMPL_TAG_103(CTX, ...)
+#define COSMERON_INTERNAL_OBJ_IMPL_TAG_107(CTX, TAG, SPACE_NAME, METHODS)     \
+  PP_FOREACH_D2_CTX(COSMERON_INTERNAL_OBJ_IMPL_MEMBER,                        \
+                    (NS(PP_SEQ_GET_1 CTX, SPACE_NAME), PP_SEQ_GET_2 CTX),      \
+                    PP_UNWRAP METHODS)
+
+#define COSMERON_INTERNAL_OBJ_VAR_IMPL(CTX, M)                                \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
+      COSMERON_INTERNAL_OBJ_VAR_IMPL_I, CTX, M)
+
+#define COSMERON_INTERNAL_OBJ_VAR_IMPL_I(CTX, C, I, R, N, P, ...)             \
+  PP_OP_CAT2(COSMERON_INTERNAL_OBJ_IMPL_BODY_, I)(                             \
+      CTX, R, COSMERON_VAR_RESOLVE_NAME(PP_SEQ_GET_3 CTX, N), P, __VA_ARGS__)
+
+#define COSMERON_INTERNAL_OBJ_IMPL_TAG_108(CTX, TAG, FAMILY, VARIANTS)        \
+  COSMERON_EXPAND_INNER_MEMBERS(COSMERON_INTERNAL_OBJ_VAR_IMPL,               \
+                                (PP_SEQ_GET_1 CTX, PP_SEQ_GET_2 CTX, FAMILY), \
+                                PP_UNWRAP VARIANTS)
+#define COSMERON_INTERNAL_OBJ_IMPL_TAG_109(CTX, ...)
+#define COSMERON_INTERNAL_OBJ_IMPL_TAG_110(CTX, ...)
+#define COSMERON_INTERNAL_OBJ_IMPL_TAG_111(CTX, ...)
+#define COSMERON_INTERNAL_OBJ_IMPL_TAG_112(CTX, ...)
+#define COSMERON_INTERNAL_OBJ_IMPL_TAG_113(CTX, ...)
+#define COSMERON_INTERNAL_OBJ_IMPL_TAG_114(CTX, ...)
+#define COSMERON_INTERNAL_OBJ_IMPL_TAG_901(CTX, ...)
+#define COSMERON_INTERNAL_OBJ_IMPL_TAG_902(CTX, ...)
+
+#define COSMERON_EMIT_IMPL_101(MOD, TAG, NAME, BASE, FIELDS_DECL, METHODS)    \
+  PP_FOREACH_D2_CTX(COSMERON_INTERNAL_OBJ_IMPL_MEMBER,                        \
+                    (NS(LIB_PREFIX(MOD), NAME), MODULE_TYPE(MOD, NAME)),      \
+                    PP_UNWRAP METHODS)
+
+/* Package Implementation */
+#define COSMERON_INTERNAL_PKG_IMPL_BODY_0(PKG, R, N, P, ...)
+#define COSMERON_INTERNAL_PKG_IMPL_BODY_1(PKG, R, N, P, ...)                   \
+  static inline COSMERON_MAYBE_UNUSED R NS(PKG, N)                            \
+      COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P)                              \
+      __VA_ARGS__
+
+#define COSMERON_INTERNAL_PKG_IMPL_MEMBER_I(PKG, C, I, R, N, P, ...)           \
+  PP_OP_CAT2(COSMERON_INTERNAL_PKG_IMPL_BODY_, I)(PKG, R, N, P, __VA_ARGS__)
+
+#define COSMERON_INTERNAL_PKG_IMPL_MEMBER_EXPAND(MACRO, PKG, ...)              \
+  MACRO(PKG, __VA_ARGS__)
+#define COSMERON_INTERNAL_PKG_IMPL_MEMBER_INVOKE(MACRO, PKG, TUPLE)            \
+  COSMERON_INTERNAL_PKG_IMPL_MEMBER_EXPAND(MACRO, PKG, PP_UNWRAP TUPLE)
+
+#define COSMERON_INTERNAL_PKG_IMPL_MEMBER(PKG, M)                              \
+  COSMERON_INTERNAL_PKG_IMPL_MEMBER_INVOKE(                                    \
+      PP_OP_CAT2(COSMERON_INTERNAL_PKG_IMPL_TAG_, PP_SEQ_GET_1 M),            \
+      PKG, M)
+
+#define COSMERON_INTERNAL_PKG_IMPL_TAG_0(PKG, C, I, R, N, P, ...)             \
+  COSMERON_INTERNAL_PKG_IMPL_MEMBER_I(PKG, C, I, R, N, P, __VA_ARGS__)
+#define COSMERON_INTERNAL_PKG_IMPL_TAG_1(PKG, C, I, R, N, P, ...)             \
+  COSMERON_INTERNAL_PKG_IMPL_MEMBER_I(PKG, C, I, R, N, P, __VA_ARGS__)
+#define COSMERON_INTERNAL_PKG_IMPL_TAG_2(PKG, ...)
+#define COSMERON_INTERNAL_PKG_IMPL_TAG_3(PKG, ...)
+#define COSMERON_INTERNAL_PKG_IMPL_TAG_4(PKG, ...)
+#define COSMERON_INTERNAL_PKG_IMPL_TAG_103(PKG, ...)
+#define COSMERON_INTERNAL_PKG_IMPL_TAG_107(PKG, TAG, SPACE_NAME, METHODS)     \
+  PP_FOREACH_D2_CTX(COSMERON_INTERNAL_PKG_IMPL_MEMBER,                        \
+                    NS(PKG, SPACE_NAME), PP_UNWRAP METHODS)
+
+#define COSMERON_INTERNAL_PKG_VAR_IMPL(CTX, M)                                \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
+      COSMERON_INTERNAL_PKG_VAR_IMPL_I, CTX, M)
+
+#define COSMERON_INTERNAL_PKG_VAR_IMPL_I(CTX, C, I, R, N, P, ...)             \
+  PP_OP_CAT2(COSMERON_INTERNAL_PKG_IMPL_BODY_, I)(                             \
+      PP_SEQ_GET_1 CTX, R,                                                     \
+      COSMERON_VAR_RESOLVE_NAME(PP_SEQ_GET_2 CTX, N), P, __VA_ARGS__)
+
+#define COSMERON_INTERNAL_PKG_IMPL_TAG_108(PKG, TAG, FAMILY, VARIANTS)        \
+  COSMERON_EXPAND_INNER_MEMBERS(COSMERON_INTERNAL_PKG_VAR_IMPL,                \
+                                (PKG, FAMILY), PP_UNWRAP VARIANTS)
+#define COSMERON_INTERNAL_PKG_IMPL_TAG_109(PKG, ...)
+#define COSMERON_INTERNAL_PKG_IMPL_TAG_110(PKG, ...)
+#define COSMERON_INTERNAL_PKG_IMPL_TAG_111(PKG, ...)
+#define COSMERON_INTERNAL_PKG_IMPL_TAG_112(PKG, ...)
+#define COSMERON_INTERNAL_PKG_IMPL_TAG_113(PKG, ...)
+#define COSMERON_INTERNAL_PKG_IMPL_TAG_114(PKG, ...)
+
+#define COSMERON_EMIT_IMPL_102(MOD, TAG, NAME, BASE, FIELDS_DECL, METHODS)    \
+  PP_FOREACH_D2_CTX(COSMERON_INTERNAL_PKG_IMPL_MEMBER,                        \
+                    NS(LIB_PREFIX(MOD), NAME), PP_UNWRAP METHODS)
+
+/* Direct module functions */
+#define COSMERON_EMIT_IMPL_0(MOD, TAG, CONST_TAG, RET, NAME, PARAMS, ...)     \
+  static inline COSMERON_MAYBE_UNUSED RET NS(LIB_PREFIX(MOD), NAME)           \
+      COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(PARAMS)                         \
+      __VA_ARGS__
+
+#define COSMERON_EMIT_IMPL_1(MOD, TAG, CONST_TAG, RET, NAME, PARAMS, ...)     \
+  static inline COSMERON_MAYBE_UNUSED RET NS(LIB_PREFIX(MOD), NAME)           \
+      COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(PARAMS)                         \
+      __VA_ARGS__
+
+#define COSMERON_EMIT_IMPL_103(MOD, ...)
+#define COSMERON_EMIT_IMPL_106(MOD, ...)
+#define COSMERON_EMIT_IMPL_110(MOD, ...)
+#define COSMERON_EMIT_IMPL_111(MOD, ...)
+#define COSMERON_EMIT_IMPL_112(MOD, ...)
+#define COSMERON_EMIT_IMPL_113(MOD, ...)
+
+#define COSMERON_EMIT_IMPL_114(MOD, TAG, HAS_NAME, NAME, METHODS)               PP_FOREACH_D2_CTX(COSMERON_INTERNAL_PKG_IMPL_MEMBER,                                            COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME),                                 PP_UNWRAP METHODS)
+
+#define COSMERON_DISPATCH_IMPL_EXPAND(MACRO, MOD, ...) MACRO(MOD, __VA_ARGS__)
+#define COSMERON_DISPATCH_IMPL_INVOKE(MACRO, MOD, TUPLE)                       \
+  COSMERON_DISPATCH_IMPL_EXPAND(MACRO, MOD, PP_UNWRAP TUPLE)
+
+#define COSMERON_DISPATCH_IMPL(MOD, ITEM)                                      \
+  COSMERON_DISPATCH_IMPL_INVOKE(                                               \
+      PP_OP_CAT2(COSMERON_EMIT_IMPL_, PP_SEQ_GET_1 ITEM), MOD, ITEM)
+
+#define COSMERON_INTERNAL_MODULE_IMPL_2(DOM_DECL, MOD, ...)                   \
+  COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS()                                   \
+  PP_FOREACH_CTX(COSMERON_DISPATCH_IMPL, MOD, __VA_ARGS__)                     \
+  COSMERON_INTERNAL_SCOPE_POP_DIAGNOSTICS()                                    \
+  typedef int NS(_cosmeron_module_impl_semi, MOD, __LINE__)
+
+#define COSMERON_INTERNAL_MODULE_IMPL_1(MOD, ...)                              \
+  COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS()                                   \
+  PP_FOREACH_CTX(COSMERON_DISPATCH_IMPL, MOD, __VA_ARGS__)                     \
+  COSMERON_INTERNAL_SCOPE_POP_DIAGNOSTICS()                                    \
+  typedef int NS(_cosmeron_module_impl_semi, MOD, __LINE__)
+
+#define MODULE_IMPLEMENT(...)                                                  \
+  PP_OP_CAT2(COSMERON_INTERNAL_MODULE_IMPL_,                                   \
+             COSMERON_IS_DOMAIN(PP_SEQ_FIRST(__VA_ARGS__)))(__VA_ARGS__)
+
+#define OBJECT_IMPLEMENT_EX(MOD, OBJ, ...)                                     \
+  COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS()                                   \
+  COSMERON_EMIT_IMPL_101(MOD, 101, OBJ, (0, ~), (COSMERON_FIELDS_TAG, ()),     \
+                         (__VA_ARGS__))                                        \
+  COSMERON_INTERNAL_SCOPE_POP_DIAGNOSTICS()                                    \
+  typedef int NS(_cosmeron_obj_impl_semi, MOD, OBJ, __LINE__)
+
+#define PACKAGE_IMPLEMENT_EX(MOD, PKG, ...)                                    \
+  COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS()                                   \
+  COSMERON_EMIT_IMPL_102(MOD, 102, PKG, (0, ~), (~), (__VA_ARGS__))           \
+  COSMERON_INTERNAL_SCOPE_POP_DIAGNOSTICS()                                    \
+  typedef int NS(_cosmeron_pkg_impl_semi, MOD, PKG, __LINE__)
+
+#define INTERNAL_DEF(MOD, ...)                                                   COSMERON_EMIT_DECL_114(MOD, 114, 0, _cosmeron_root, (__VA_ARGS__))
+
+#define INTERNAL_DEF_EX(MOD, NAME, ...)                                          COSMERON_EMIT_DECL_114(MOD, 114, 1, NAME, (__VA_ARGS__))
+
+#define INTERNAL_IMPLEMENT(MOD, ...)                                             COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS()                                     COSMERON_EMIT_IMPL_114(MOD, 114, 0, _cosmeron_root, (__VA_ARGS__))            COSMERON_INTERNAL_SCOPE_POP_DIAGNOSTICS()                                      typedef int NS(_cosmeron_internal_impl_semi, MOD, __LINE__)
+
+#define INTERNAL_IMPLEMENT_EX(MOD, NAME, ...)                                    COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS()                                     COSMERON_EMIT_IMPL_114(MOD, 114, 1, NAME, (__VA_ARGS__))                       COSMERON_INTERNAL_SCOPE_POP_DIAGNOSTICS()                                      typedef int NS(_cosmeron_internal_impl_semi, MOD, NAME, __LINE__)
 
 /* EOF */

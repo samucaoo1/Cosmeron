@@ -9,19 +9,21 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define ERROR_CONFIG_COL_NAME(NAME, VALUE) NAME
-#define ERROR_CONFIG_COL_VALUE(NAME, VALUE) VALUE
-#define ERROR_CONFIG_GET(FIELD, ROW) PP_OP_CAT2(ERROR_CONFIG_COL_, FIELD) ROW
+/* ========================================================================== */
+/* Error Configuration Table & Enum                                           */
+/* ========================================================================== */
 
-#define ERROR_CONFIG_TABLE(X) \
+#define CONDITION_ERROR_CONFIG_COL_NAME(NAME, VALUE) NAME
+#define CONDITION_ERROR_CONFIG_COL_VALUE(NAME, VALUE) VALUE
+#define CONDITION_ERROR_CONFIG_GET(FIELD, ROW)                                 \
+  PP_OP_CAT2(CONDITION_ERROR_CONFIG_COL_, FIELD) ROW
+
+#define CONDITION_ERROR_CONFIG_TABLE(X)                                        \
   X((MAX_CHAIN_DEPTH, 16))
 
-typedef enum MODULE_ENUM(Condition, Error, Config) {
-#define ERROR_CONFIG_ENUM_ITEM(ROW) \
-  MODULE_CONST(Condition, Error, ERROR_CONFIG_GET(NAME, ROW)) = ERROR_CONFIG_GET(VALUE, ROW),
-  ERROR_CONFIG_TABLE(ERROR_CONFIG_ENUM_ITEM)
-#undef ERROR_CONFIG_ENUM_ITEM
-} MODULE_ENUM(Condition, Error, Config);
+/* ========================================================================== */
+/* Object Declaration: Condition_Error                                        */
+/* ========================================================================== */
 
 MODULE(DOMAIN(Core), Condition,
     OBJECT(Error,
@@ -29,8 +31,9 @@ MODULE(DOMAIN(Core), Condition,
             OPSTATUS code;
             const char *message;
             MODULE_TYPE(Diagnostic, Context) context;
-            const struct MODULE_TYPE(Condition, Error) *cause;
+            const MODULE_TYPE(Condition, Error) *cause;
         ),
+        ENUM(Config, CONDITION_ERROR_CONFIG_TABLE),
         OPERATION(Create, (OPSTATUS code, const char *message)),
         OPERATION(FromStatus, (OPSTATUS code)),
         PROCEDURE(Clear, ()),
@@ -49,12 +52,12 @@ MODULE(DOMAIN(Core), Condition,
               return self ? (self->code != STATUS_CONST(SUCCESS)) : true;
             }),
             CONST_PREDICATE_INLINE(Category, (MODULE_ENUM(Outcome, Status, Category) category), {
-              return self ? Outcome_Status_IsCategory(self->code, category) : false;
+              return self ? MODULE_FUNC(Outcome, Status, IsCategory)(self->code, category) : false;
             })
         ),
         CONST_FUNCTION_INLINE(MODULE_ENUM(Outcome, Status, Category), Category, (), {
-          return self ? Outcome_Status_CategoryOf(self->code)
-                      : STATUS_CONST(CATEGORY_GENERIC);
+          return self ? MODULE_FUNC(Outcome, Status, CategoryOf)(self->code)
+                      : STATUS_CATEGORY_CONST(GENERIC);
         }),
         OPERATION(SetContext, (const MODULE_TYPE(Diagnostic, Context) * context)),
         OPERATION(SetOrigin, (const char *file, uint32_t line,
@@ -67,14 +70,14 @@ MODULE(DOMAIN(Core), Condition,
           return self ? MODULE_FUNC(Diagnostic, Context, HasOrigin)(&self->context)
                       : false;
         }),
-        OPERATION(SetCause, (const struct MODULE_TYPE(Condition, Error) * cause)),
+        OPERATION(SetCause, (const MODULE_TYPE(Condition, Error) * cause)),
         CONST_PREDICATE_INLINE(HasCause, (), {
           return self && self->cause != NULL;
         }),
-        CONST_FUNCTION_INLINE(const struct MODULE_TYPE(Condition, Error) *, Cause, (), {
+        CONST_FUNCTION_INLINE(const MODULE_TYPE(Condition, Error) *, Cause, (), {
           return self ? self->cause : NULL;
         }),
-        CONST_FUNCTION(const struct MODULE_TYPE(Condition, Error) *, RootCause, ()),
+        CONST_FUNCTION(const MODULE_TYPE(Condition, Error) *, RootCause, ()),
         CONST_FUNCTION(size_t, Depth, ())
     )
 );

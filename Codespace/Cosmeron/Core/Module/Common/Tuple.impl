@@ -280,8 +280,8 @@
 #define COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER_E(GEN_MACRO, CTX, ...) \
   COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER_I(GEN_MACRO, CTX, __VA_ARGS__)
 
-#define COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER_I(GEN_MACRO, CTX, C, I, R, N, P, B) \
-  GEN_MACRO(CTX, C, I, R, N, P, B)
+#define COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER_I(GEN_MACRO, CTX, C, I, R, N, P, ...) \
+  GEN_MACRO(CTX, C, I, R, N, P, __VA_ARGS__)
 
 /* ------------------------------------------------------------
  * 9. Parameter Emission Helpers

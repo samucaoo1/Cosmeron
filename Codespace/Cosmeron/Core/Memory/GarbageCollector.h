@@ -31,13 +31,8 @@
   X((MAX_ROOTS,                 128U))    \
   X((WORKLIST_CHUNK_CAPACITY,   512U))
 
-enum MODULE_ENUM(Memory, GarbageCollector, Config) {
-#define GARBAGE_COLLECTOR_CONFIG_ENUM_ITEM(ROW) \
-  MODULE_CONST(MEMORY, GARBAGE_COLLECTOR, GARBAGE_COLLECTOR_CONFIG_GET(NAME, ROW)) = \
-      GARBAGE_COLLECTOR_CONFIG_GET(VALUE, ROW),
-  GARBAGE_COLLECTOR_CONFIG_TABLE(GARBAGE_COLLECTOR_CONFIG_ENUM_ITEM)
-#undef GARBAGE_COLLECTOR_CONFIG_ENUM_ITEM
-};
+ENUM_DEF_EX(MODULE_NS(Memory, GarbageCollector), Config,
+            GARBAGE_COLLECTOR_CONFIG_TABLE, PLAIN)
 
 CALLBACK_PROCEDURE(
     MODULE_INS(Memory, GcFinalizerFunction),
@@ -66,45 +61,45 @@ typedef struct MODULE_NS(Memory, GarbageCollector, Descriptor) {
   }
 
 /* ========================================================================== */
-/* 2. Internal Collector Data Structures                                      */
-/* ========================================================================== */
-
-typedef struct MODULE_ITYPE(Memory, GcWorklistChunk) {
-  void *items[MODULE_CONST(MEMORY, GARBAGE_COLLECTOR, WORKLIST_CHUNK_CAPACITY)];
-  size_t count;
-  struct MODULE_ITYPE(Memory, GcWorklistChunk) *next;
-} MODULE_ITYPE(Memory, GcWorklistChunk);
-
-typedef struct MODULE_ITYPE(Memory, GcWorklist) {
-  MODULE_ITYPE(Memory, GcWorklistChunk) *head;
-  MODULE_ITYPE(Memory, GcWorklistChunk) *freeChunks;
-  size_t totalPushed;
-  bool overflow;
-} MODULE_ITYPE(Memory, GcWorklist);
-
-typedef struct MODULE_ITYPE(Memory, GcFinalizerEntry) {
-  void *object;
-  GARBAGE_COLLECTOR_FINALIZER_CALLBACK callback;
-  struct MODULE_ITYPE(Memory, GcFinalizerEntry) *next;
-} MODULE_ITYPE(Memory, GcFinalizerEntry);
-
-typedef struct MODULE_ITYPE(Memory, GcRootEntry) {
-  const void *pointerAddress;
-  bool active;
-} MODULE_ITYPE(Memory, GcRootEntry);
-
-/* ========================================================================== */
-/* 3. Declarative TMemoryGarbageCollector Object & GC Package Facade          */
+/* 2. Declarative Module: Memory (Internal Collector Structs, Object & Facade)*/
 /* ========================================================================== */
 
 MODULE(DOMAIN(Core), Memory,
+    ISTRUCT(GcWorklistChunk,
+        FIELDS(
+            void *items[MODULE_CONST(Memory, GarbageCollector, WORKLIST_CHUNK_CAPACITY)];
+            size_t count;
+            struct MODULE_ITYPE(Memory, GcWorklistChunk) *next;
+        )
+    ),
+    ISTRUCT(GcWorklist,
+        FIELDS(
+            MODULE_ITYPE(Memory, GcWorklistChunk) *head;
+            MODULE_ITYPE(Memory, GcWorklistChunk) *freeChunks;
+            size_t totalPushed;
+            bool overflow;
+        )
+    ),
+    ISTRUCT(GcFinalizerEntry,
+        FIELDS(
+            void *object;
+            GARBAGE_COLLECTOR_FINALIZER_CALLBACK callback;
+            struct MODULE_ITYPE(Memory, GcFinalizerEntry) *next;
+        )
+    ),
+    ISTRUCT(GcRootEntry,
+        FIELDS(
+            const void *pointerAddress;
+            bool active;
+        )
+    ),
     OBJECT(GarbageCollector,
         FIELDS(
             MODULE_TYPE(Memory, Heap) heap;
             MODULE_ITYPE(Memory, GcWorklist) worklist;
             MODULE_ITYPE(Memory, GcFinalizerEntry) *finalizers;
             MODULE_ITYPE(Memory, GcFinalizerEntry) *pendingFinalizers;
-            MODULE_ITYPE(Memory, GcRootEntry) roots[MODULE_CONST(MEMORY, GARBAGE_COLLECTOR, MAX_ROOTS)];
+            MODULE_ITYPE(Memory, GcRootEntry) roots[MODULE_CONST(Memory, GarbageCollector, MAX_ROOTS)];
             const void *stackBottom;
             size_t nextThreshold;
             size_t liveBytesAfterGC;

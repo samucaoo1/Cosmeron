@@ -3,662 +3,637 @@
 #include <stdint.h>
 
 static _Thread_local MODULE_TYPE(Memory, GarbageCollector)
-    MODULE_INS(Memory, GcThreadDefaultCollector);
+    MODULE_INS(Memory, GarbageCollector, ThreadDefaultCollector);
 static _Thread_local bool
-    MODULE_INS(Memory, GcThreadDefaultInitialized) = false;
-
-/* Worklist internal routines */
-static inline void MODULE_IFUNC(Memory, GcWorklistInit)(
-    MODULE_ITYPE(Memory, GcWorklist) *wl) {
-  wl->head = NULL;
-  wl->freeChunks = NULL;
-  wl->totalPushed = 0U;
-  wl->overflow = false;
-}
-
-static inline void MODULE_IFUNC(Memory, GcWorklistDestroy)(
-    MODULE_ITYPE(Memory, GcWorklist) *wl) {
-  MODULE_ITYPE(Memory, GcWorklistChunk) *c = wl->head;
-  while (c) {
-    MODULE_ITYPE(Memory, GcWorklistChunk) *next = c->next;
-    void *raw = (void *)c;
-    MODULE_FUNC(Memory, Alloc, Free)(&raw);
-    c = next;
-  }
-  c = wl->freeChunks;
-  while (c) {
-    MODULE_ITYPE(Memory, GcWorklistChunk) *next = c->next;
-    void *raw = (void *)c;
-    MODULE_FUNC(Memory, Alloc, Free)(&raw);
-    c = next;
-  }
-  wl->head = NULL;
-  wl->freeChunks = NULL;
-}
-
-static inline OPSTATUS MODULE_IFUNC(Memory, GcWorklistPush)(
-    MODULE_ITYPE(Memory, GcWorklist) *wl, void *ptr) {
-  if (!ptr)
-    return STATUS_CONST(SUCCESS);
-
-  MODULE_ITYPE(Memory, GcWorklistChunk) *chunk = wl->head;
-  if (!chunk || chunk->count == MODULE_CONST(MEMORY, GARBAGE_COLLECTOR, WORKLIST_CHUNK_CAPACITY)) {
-    if (wl->freeChunks) {
-      chunk = wl->freeChunks;
-      wl->freeChunks = chunk->next;
-    } else {
-      void *raw = NULL;
-      OPSTATUS status = MODULE_FUNC(Memory, Alloc, Bytes)(&raw, sizeof(MODULE_ITYPE(Memory, GcWorklistChunk)));
-      if (status != STATUS_CONST(SUCCESS) || !raw) {
-        wl->overflow = true;
-        return STATUS_CONST(OUT_OF_MEMORY);
-      }
-      chunk = (MODULE_ITYPE(Memory, GcWorklistChunk) *)raw;
-    }
-    chunk->count = 0U;
-    chunk->next = wl->head;
-    wl->head = chunk;
-  }
-
-  chunk->items[chunk->count++] = ptr;
-  wl->totalPushed++;
-  return STATUS_CONST(SUCCESS);
-}
-
-static inline void *MODULE_IFUNC(Memory, GcWorklistPop)(
-    MODULE_ITYPE(Memory, GcWorklist) *wl) {
-  MODULE_ITYPE(Memory, GcWorklistChunk) *chunk = wl->head;
-  if (!chunk)
-    return NULL;
-
-  void *item = chunk->items[--chunk->count];
-  if (chunk->count == 0U) {
-    wl->head = chunk->next;
-    chunk->next = wl->freeChunks;
-    wl->freeChunks = chunk;
-  }
-  return item;
-}
-
-/* Mark helper */
-static inline void MODULE_FUNC(Memory, Internal, GcMarkCell)(
-    MODULE_TYPE(Memory, GarbageCollector) *self, void *ptr) {
-  if (!ptr)
-    return;
-
-  void *basePtr = NULL;
-  size_t cellSize = 0U;
-  uint8_t policy = 0U;
-
-  if (!MODULE_FUNC(Memory, Heap, ResolvePointer)(&self->heap, ptr, &basePtr, &cellSize, &policy))
-    return;
-
-  void *entry = MODULE_FUNC(Memory, Heap, LookupEntry)(&self->heap, basePtr);
-  if (!entry)
-    return;
-
-  uint8_t isLarge = *(uint8_t *)entry;
-  if (isLarge) {
-    MODULE_ITYPE(Memory, HeapSpan) *span = (MODULE_ITYPE(Memory, HeapSpan) *)entry;
-    if (!span->isMarked) {
-      span->isMarked = 1U;
-      if (span->policy != MODULE_CONST(MEMORY, HEAP, POLICY, ATOMIC)) {
-        MODULE_IFUNC(Memory, GcWorklistPush)(&self->worklist, span->data);
-      }
-    }
-    return;
-  }
-
-  MODULE_ITYPE(Memory, HeapPageHeader) *page = (MODULE_ITYPE(Memory, HeapPageHeader) *)entry;
-  uintptr_t offset = (uintptr_t)basePtr - (uintptr_t)page->payload;
-  uint16_t cellIndex = (uint16_t)(offset / page->elementSize);
-  size_t w = cellIndex / 64U;
-  uint64_t mask = 1ULL << (cellIndex % 64U);
-
-  if ((page->markBitmap[w] & mask) == 0ULL) {
-    page->markBitmap[w] |= mask;
-    if (page->policy != MODULE_CONST(MEMORY, HEAP, POLICY, ATOMIC)) {
-      MODULE_IFUNC(Memory, GcWorklistPush)(&self->worklist, basePtr);
-    }
-  }
-}
-
-static inline void MODULE_FUNC(Memory, Internal, GcScanMemoryRange)(
-    MODULE_TYPE(Memory, GarbageCollector) *self, const void *start, const void *end) {
-  uintptr_t low = (uintptr_t)start;
-  uintptr_t high = (uintptr_t)end;
-
-  if (low > high) {
-    uintptr_t tmp = low;
-    low = high;
-    high = tmp;
-  }
-
-  /* Align to void* boundary */
-  low = (low + sizeof(void *) - 1U) & ~(uintptr_t)(sizeof(void *) - 1U);
-
-  for (uintptr_t addr = low; addr + sizeof(void *) <= high; addr += sizeof(void *)) {
-    void *val = *(void **)addr;
-    if (val) {
-      uintptr_t v = (uintptr_t)val;
-      if (v >= self->heap.minAddress && v < self->heap.maxAddress) {
-        void *base = NULL;
-        if (MODULE_FUNC(Memory, Heap, ResolvePointer)(&self->heap, val, &base, NULL, NULL)) {
-          MODULE_FUNC(Memory, Internal, GcMarkCell)(self, base);
-        } else {
-          /* Address is within heap range but page is not allocated: blacklist it */
-          uintptr_t pageIdx = v >> MODULE_CONST(MEMORY, HEAP, PAGE_SHIFT);
-          MODULE_FUNC(Memory, Heap, BlacklistPage)(&self->heap, pageIdx);
-        }
-      }
-    }
-  }
-}
-
-/* ========================================================================== */
-/* TMemoryGarbageCollector Method Implementations                             */
-/* ========================================================================== */
-
-OBJECT_SCOPE(Memory, GarbageCollector)
-
-#define TARGET_IS_OBJECT 1
-#define SCOPE_TARGET MODULE_NS(Memory, GarbageCollector)
-
-SCOPE_OPERATION(Create,
-    (size_t initialHeapPages, const void *stackBottom)) {
-  if (!self)
-    return STATUS_CONST(INVALID_ARGUMENT);
+    MODULE_INS(Memory, GarbageCollector, ThreadDefaultInitialized) = false;
 
 #if !defined(OBJECT_DISABLE_FUNCTION_TABLE) && !defined(MODULE_DISABLE_FUNCTION_TABLE)
-  const void *api = self->api;
-  memset(self, 0, sizeof(*self));
-  self->api = api;
+#define GC_INIT_SELF(self) do { const void *api = (self)->api; memset((self), 0, sizeof(*(self))); (self)->api = api; } while (0)
 #else
-  memset(self, 0, sizeof(*self));
+#define GC_INIT_SELF(self) do { memset((self), 0, sizeof(*(self))); } while (0)
 #endif
-  OPSTATUS status = MODULE_FUNC(Memory, Heap, Create)(&self->heap, initialHeapPages);
-  if (status != STATUS_CONST(SUCCESS))
-    return status;
 
-  MODULE_IFUNC(Memory, GcWorklistInit)(&self->worklist);
-  self->finalizers = NULL;
-  self->pendingFinalizers = NULL;
-  self->stackBottom = stackBottom;
-  self->nextThreshold = MODULE_CONST(MEMORY, GARBAGE_COLLECTOR, DEFAULT_INITIAL_THRESHOLD);
-  self->liveBytesAfterGC = 0U;
-  self->totalAllocatedSinceGC = 0U;
-  self->growthPercent = MODULE_CONST(MEMORY, GARBAGE_COLLECTOR, DEFAULT_GROWTH_PERCENT);
-  self->pauseDepth = 0U;
-  self->isInitialized = true;
+/* ========================================================================== */
+/* TMemoryGarbageCollector & GC Package Implementations                       */
+/* ========================================================================== */
 
-  return STATUS_CONST(SUCCESS);
-}
+MODULE_IMPLEMENT(DOMAIN(Core), Memory,
+  INTERNAL_EX(GarbageCollector,
+    PROCEDURE(WorklistInit, (MODULE_ITYPE(Memory, GcWorklist) *wl), {
+      wl->head = NULL;
+      wl->freeChunks = NULL;
+      wl->totalPushed = 0U;
+      wl->overflow = false;
+    }),
 
-SCOPE_OPERATION(Destroy, ()) {
-  if (!self || !self->isInitialized)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  MODULE_ITYPE(Memory, GcFinalizerEntry) *f = self->finalizers;
-  while (f) {
-    MODULE_ITYPE(Memory, GcFinalizerEntry) *next = f->next;
-    void *raw = (void *)f;
-    MODULE_FUNC(Memory, Alloc, Free)(&raw);
-    f = next;
-  }
-  self->finalizers = NULL;
-
-  f = self->pendingFinalizers;
-  while (f) {
-    MODULE_ITYPE(Memory, GcFinalizerEntry) *next = f->next;
-    void *raw = (void *)f;
-    MODULE_FUNC(Memory, Alloc, Free)(&raw);
-    f = next;
-  }
-  self->pendingFinalizers = NULL;
-
-  MODULE_IFUNC(Memory, GcWorklistDestroy)(&self->worklist);
-  MODULE_FUNC(Memory, Heap, Destroy)(&self->heap);
-  self->isInitialized = false;
-
-  return STATUS_CONST(SUCCESS);
-}
-
-SCOPE_OPERATION(Alloc,
-    (void *outPointerObject, size_t size, uint8_t policy, const void *descriptor)) {
-  if (!self || !outPointerObject || size == 0U)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  if (!self->isInitialized) {
-    OPSTATUS initStat = MODULE_FUNC(Memory, GarbageCollector, Create)(self, 4U, NULL);
-    if (initStat != STATUS_CONST(SUCCESS))
-      return initStat;
-  }
-
-  if (self->pauseDepth == 0U && self->totalAllocatedSinceGC + size >= self->nextThreshold) {
-    MODULE_FUNC(Memory, GarbageCollector, Collect)(self);
-  }
-
-  OPSTATUS status = MODULE_FUNC(Memory, Heap, Alloc)(&self->heap, outPointerObject, size, policy, descriptor);
-  if (status == STATUS_CONST(SUCCESS)) {
-    self->totalAllocatedSinceGC += size;
-  }
-  return status;
-}
-
-SCOPE_OPERATION(AllocTyped,
-    (void *outPointerObject, const MODULE_NS(Memory, GarbageCollector, Descriptor) *descriptor)) {
-  if (!descriptor || descriptor->size == 0U)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  return MODULE_FUNC(Memory, GarbageCollector, Alloc)(
-      self, outPointerObject, descriptor->size, MODULE_CONST(MEMORY, HEAP, POLICY, TYPED), descriptor);
-}
-
-SCOPE_OPERATION(AllocAtomic,
-    (void *outPointerObject, size_t size)) {
-  return MODULE_FUNC(Memory, GarbageCollector, Alloc)(
-      self, outPointerObject, size, MODULE_CONST(MEMORY, HEAP, POLICY, ATOMIC), NULL);
-}
-
-SCOPE_OPERATION(SetFinalizer,
-    (const void *ptr, GARBAGE_COLLECTOR_FINALIZER_CALLBACK finalizer)) {
-  if (!self || !ptr || !CALLBACK_IS_VALID(finalizer))
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  void *raw = NULL;
-  OPSTATUS status = MODULE_FUNC(Memory, Alloc, Bytes)(&raw, sizeof(MODULE_ITYPE(Memory, GcFinalizerEntry)));
-  if (status != STATUS_CONST(SUCCESS) || !raw)
-    return STATUS_CONST(OUT_OF_MEMORY);
-
-  MODULE_ITYPE(Memory, GcFinalizerEntry) *entry = (MODULE_ITYPE(Memory, GcFinalizerEntry) *)raw;
-  entry->object = (void *)(uintptr_t)ptr;
-  entry->callback = finalizer;
-  entry->next = self->finalizers;
-  self->finalizers = entry;
-
-  return STATUS_CONST(SUCCESS);
-}
-
-SCOPE_OPERATION(PinRoot,
-    (const void *rootPointerAddress)) {
-  if (!self || !rootPointerAddress)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  for (size_t i = 0U; i < MODULE_CONST(MEMORY, GARBAGE_COLLECTOR, MAX_ROOTS); ++i) {
-    if (self->roots[i].active && self->roots[i].pointerAddress == rootPointerAddress)
-      return STATUS_CONST(SUCCESS);
-  }
-
-  for (size_t i = 0U; i < MODULE_CONST(MEMORY, GARBAGE_COLLECTOR, MAX_ROOTS); ++i) {
-    if (!self->roots[i].active) {
-      self->roots[i].pointerAddress = rootPointerAddress;
-      self->roots[i].active = true;
-      return STATUS_CONST(SUCCESS);
-    }
-  }
-
-  return STATUS_CONST(OUT_OF_RANGE);
-}
-
-SCOPE_OPERATION(UnpinRoot,
-    (const void *rootPointerAddress)) {
-  if (!self || !rootPointerAddress)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  for (size_t i = 0U; i < MODULE_CONST(MEMORY, GARBAGE_COLLECTOR, MAX_ROOTS); ++i) {
-    if (self->roots[i].active && self->roots[i].pointerAddress == rootPointerAddress) {
-      self->roots[i].active = false;
-      self->roots[i].pointerAddress = NULL;
-      return STATUS_CONST(SUCCESS);
-    }
-  }
-
-  return STATUS_CONST(INVALID_ARGUMENT);
-}
-
-SCOPE_OPERATION(Collect, ()) {
-  if (!self || !self->isInitialized || self->pauseDepth > 0U)
-    return STATUS_CONST(SUCCESS);
-
-  /* Phase 1: Preparation (Sync & Flip) */
-  jmp_buf calleeRegisters;
-  setjmp(calleeRegisters);
-
-  /* Clear Mark Bitmaps in all pages */
-  for (size_t i = 0U; i < MODULE_CONST(MEMORY, HEAP, SIZE_CLASS_COUNT); ++i) {
-    MODULE_ITYPE(Memory, HeapPageHeader) *p = self->heap.classes[i].activePages;
-    while (p) {
-      memset(p->markBitmap, 0, sizeof(p->markBitmap));
-      p = p->next;
-    }
-    p = self->heap.classes[i].fullPages;
-    while (p) {
-      memset(p->markBitmap, 0, sizeof(p->markBitmap));
-      p = p->next;
-    }
-  }
-  MODULE_ITYPE(Memory, HeapSpan) *span = self->heap.largeObjects;
-  while (span) {
-    span->isMarked = 0U;
-    span = span->next;
-  }
-
-  self->worklist.overflow = false;
-
-  /* Phase 2: Mark Roots */
-  /* Stack scanning */
-  volatile int stackAnchor = 0;
-  const void *stackTop = (const void *)&stackAnchor;
-  if (self->stackBottom) {
-    MODULE_FUNC(Memory, Internal, GcScanMemoryRange)(self, stackTop, self->stackBottom);
-  }
-  /* Registers flushed to stack via calleeRegisters */
-  MODULE_FUNC(Memory, Internal, GcScanMemoryRange)(
-      self, (const void *)&calleeRegisters,
-      (const void *)((uintptr_t)&calleeRegisters + sizeof(calleeRegisters)));
-
-  /* Registered / pinned roots */
-  for (size_t i = 0U; i < MODULE_CONST(MEMORY, GARBAGE_COLLECTOR, MAX_ROOTS); ++i) {
-    if (self->roots[i].active && self->roots[i].pointerAddress) {
-      void *rootVal = *(void **)self->roots[i].pointerAddress;
-      if (rootVal) {
-        MODULE_FUNC(Memory, Internal, GcMarkCell)(self, rootVal);
+    PROCEDURE(WorklistDestroy, (MODULE_ITYPE(Memory, GcWorklist) *wl), {
+      MODULE_ITYPE(Memory, GcWorklistChunk) *c = wl->head;
+      while (c) {
+        MODULE_ITYPE(Memory, GcWorklistChunk) *next = c->next;
+        void *raw = (void *)c;
+        MODULE_FUNC(Memory, Alloc, Free)(&raw);
+        c = next;
       }
-    }
-  }
+      c = wl->freeChunks;
+      while (c) {
+        MODULE_ITYPE(Memory, GcWorklistChunk) *next = c->next;
+        void *raw = (void *)c;
+        MODULE_FUNC(Memory, Alloc, Free)(&raw);
+        c = next;
+      }
+      wl->head = NULL;
+      wl->freeChunks = NULL;
+    }),
 
-  /* Phase 3: Iterative Tracing */
-  while (true) {
-    void *item = MODULE_IFUNC(Memory, GcWorklistPop)(&self->worklist);
-    if (!item) {
-      if (self->worklist.overflow) {
-        /* Fallback linear page scan when overflow occurred */
-        self->worklist.overflow = false;
-        for (size_t i = 0U; i < MODULE_CONST(MEMORY, HEAP, SIZE_CLASS_COUNT); ++i) {
-          MODULE_ITYPE(Memory, HeapPageHeader) *p = self->heap.classes[i].activePages;
-          while (p) {
-            if (p->policy != MODULE_CONST(MEMORY, HEAP, POLICY, ATOMIC)) {
-              for (size_t w = 0U; w < MODULE_CONST(MEMORY, HEAP, BITMAP_WORDS); ++w) {
-                if (p->markBitmap[w] != 0ULL) {
-                  for (uint8_t b = 0U; b < 64U; ++b) {
-                    if ((p->markBitmap[w] & (1ULL << b)) != 0ULL) {
-                      void *cell = p->payload + (((w * 64U) + b) * p->elementSize);
-                      MODULE_FUNC(Memory, Internal, GcScanMemoryRange)(
-                          self, cell, (const void *)((uintptr_t)cell + p->elementSize));
+    OPERATION(WorklistPush, (MODULE_ITYPE(Memory, GcWorklist) *wl, void *ptr), {
+      if (!ptr)
+        return STATUS_CONST(SUCCESS);
+
+      MODULE_ITYPE(Memory, GcWorklistChunk) *chunk = wl->head;
+      if (!chunk || chunk->count == MODULE_CONST(Memory, GarbageCollector, WORKLIST_CHUNK_CAPACITY)) {
+        if (wl->freeChunks) {
+          chunk = wl->freeChunks;
+          wl->freeChunks = chunk->next;
+        } else {
+          void *raw = NULL;
+          OPSTATUS status = MODULE_FUNC(Memory, Alloc, Bytes)(&raw, sizeof(MODULE_ITYPE(Memory, GcWorklistChunk)));
+          if (status != STATUS_CONST(SUCCESS) || !raw) {
+            wl->overflow = true;
+            return STATUS_CONST(OUT_OF_MEMORY);
+          }
+          chunk = (MODULE_ITYPE(Memory, GcWorklistChunk) *)raw;
+        }
+        chunk->count = 0U;
+        chunk->next = wl->head;
+        wl->head = chunk;
+      }
+
+      chunk->items[chunk->count++] = ptr;
+      wl->totalPushed++;
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    FUNCTION(void *, WorklistPop, (MODULE_ITYPE(Memory, GcWorklist) *wl), {
+      MODULE_ITYPE(Memory, GcWorklistChunk) *chunk = wl->head;
+      if (!chunk)
+        return NULL;
+
+      void *item = chunk->items[--chunk->count];
+      if (chunk->count == 0U) {
+        wl->head = chunk->next;
+        chunk->next = wl->freeChunks;
+        wl->freeChunks = chunk;
+      }
+      return item;
+    }),
+
+    PROCEDURE(MarkCell, (MODULE_TYPE(Memory, GarbageCollector) *self, void *ptr), {
+      if (!ptr)
+        return;
+
+      void *basePtr = NULL;
+      size_t cellSize = 0U;
+      uint8_t policy = 0U;
+
+      if (!MODULE_FUNC(Memory, Heap, ResolvePointer)(&self->heap, ptr, &basePtr, &cellSize, &policy))
+        return;
+
+      void *entry = MODULE_FUNC(Memory, Heap, LookupEntry)(&self->heap, basePtr);
+      if (!entry)
+        return;
+
+      uint8_t isLarge = *(uint8_t *)entry;
+      if (isLarge) {
+        MODULE_ITYPE(Memory, HeapSpan) *span = (MODULE_ITYPE(Memory, HeapSpan) *)entry;
+        if (!span->isMarked) {
+          span->isMarked = 1U;
+          if (span->policy != MODULE_CONST(MEMORY, HEAP, POLICY, ATOMIC)) {
+            MODULE_IFUNC(Memory, GarbageCollector, WorklistPush)(&self->worklist, span->data);
+          }
+        }
+        return;
+      }
+
+      MODULE_ITYPE(Memory, HeapPageHeader) *page = (MODULE_ITYPE(Memory, HeapPageHeader) *)entry;
+      uintptr_t offset = (uintptr_t)basePtr - (uintptr_t)page->payload;
+      uint16_t cellIndex = (uint16_t)(offset / page->elementSize);
+      size_t w = cellIndex / 64U;
+      uint64_t mask = 1ULL << (cellIndex % 64U);
+
+      if ((page->markBitmap[w] & mask) == 0ULL) {
+        page->markBitmap[w] |= mask;
+        if (page->policy != MODULE_CONST(MEMORY, HEAP, POLICY, ATOMIC)) {
+          MODULE_IFUNC(Memory, GarbageCollector, WorklistPush)(&self->worklist, basePtr);
+        }
+      }
+    }),
+
+    PROCEDURE(ScanMemoryRange, (MODULE_TYPE(Memory, GarbageCollector) *self, const void *start, const void *end), {
+      uintptr_t low = (uintptr_t)start;
+      uintptr_t high = (uintptr_t)end;
+
+      if (low > high) {
+        uintptr_t tmp = low;
+        low = high;
+        high = tmp;
+      }
+
+      /* Align to void* boundary */
+      low = (low + sizeof(void *) - 1U) & ~(uintptr_t)(sizeof(void *) - 1U);
+
+      for (uintptr_t addr = low; addr + sizeof(void *) <= high; addr += sizeof(void *)) {
+        void *val = *(void **)addr;
+        if (val) {
+          uintptr_t v = (uintptr_t)val;
+          if (v >= self->heap.minAddress && v < self->heap.maxAddress) {
+            void *base = NULL;
+            if (MODULE_FUNC(Memory, Heap, ResolvePointer)(&self->heap, val, &base, NULL, NULL)) {
+              MODULE_IFUNC(Memory, GarbageCollector, MarkCell)(self, base);
+            } else {
+              /* Address is within heap range but page is not allocated: blacklist it */
+              uintptr_t pageIdx = v >> MODULE_CONST(MEMORY, HEAP, PAGE_SHIFT);
+              MODULE_FUNC(Memory, Heap, BlacklistPage)(&self->heap, pageIdx);
+            }
+          }
+        }
+      }
+    })
+  ),
+
+  OBJECT(GarbageCollector,
+    OPERATION(Create, (size_t initialHeapPages, const void *stackBottom), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      GC_INIT_SELF(self);
+      OPSTATUS status = MODULE_FUNC(Memory, Heap, Create)(&self->heap, initialHeapPages);
+      if (status != STATUS_CONST(SUCCESS))
+        return status;
+
+      MODULE_IFUNC(Memory, GarbageCollector, WorklistInit)(&self->worklist);
+      self->finalizers = NULL;
+      self->pendingFinalizers = NULL;
+      self->stackBottom = stackBottom;
+      self->nextThreshold = MODULE_CONST(Memory, GarbageCollector, DEFAULT_INITIAL_THRESHOLD);
+      self->liveBytesAfterGC = 0U;
+      self->totalAllocatedSinceGC = 0U;
+      self->growthPercent = MODULE_CONST(Memory, GarbageCollector, DEFAULT_GROWTH_PERCENT);
+      self->pauseDepth = 0U;
+      self->isInitialized = true;
+
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(Destroy, (), {
+      if (!self || !self->isInitialized)
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      MODULE_ITYPE(Memory, GcFinalizerEntry) *f = self->finalizers;
+      while (f) {
+        MODULE_ITYPE(Memory, GcFinalizerEntry) *next = f->next;
+        void *raw = (void *)f;
+        MODULE_FUNC(Memory, Alloc, Free)(&raw);
+        f = next;
+      }
+      self->finalizers = NULL;
+
+      f = self->pendingFinalizers;
+      while (f) {
+        MODULE_ITYPE(Memory, GcFinalizerEntry) *next = f->next;
+        void *raw = (void *)f;
+        MODULE_FUNC(Memory, Alloc, Free)(&raw);
+        f = next;
+      }
+      self->pendingFinalizers = NULL;
+
+      MODULE_IFUNC(Memory, GarbageCollector, WorklistDestroy)(&self->worklist);
+      MODULE_FUNC(Memory, Heap, Destroy)(&self->heap);
+      self->isInitialized = false;
+
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(Alloc, (void *outPointerObject, size_t size, uint8_t policy, const void *descriptor), {
+      if (!self || !outPointerObject || size == 0U)
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      if (!self->isInitialized) {
+        OPSTATUS initStat = MODULE_FUNC(Memory, GarbageCollector, Create)(self, 4U, NULL);
+        if (initStat != STATUS_CONST(SUCCESS))
+          return initStat;
+      }
+
+      if (self->pauseDepth == 0U && self->totalAllocatedSinceGC + size >= self->nextThreshold) {
+        MODULE_FUNC(Memory, GarbageCollector, Collect)(self);
+      }
+
+      OPSTATUS status = MODULE_FUNC(Memory, Heap, Alloc)(&self->heap, outPointerObject, size, policy, descriptor);
+      if (status == STATUS_CONST(SUCCESS)) {
+        self->totalAllocatedSinceGC += size;
+      }
+      return status;
+    }),
+
+    OPERATION(AllocTyped, (void *outPointerObject, const MODULE_NS(Memory, GarbageCollector, Descriptor) *descriptor), {
+      if (!descriptor || descriptor->size == 0U)
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      return MODULE_FUNC(Memory, GarbageCollector, Alloc)(
+          self, outPointerObject, descriptor->size, MODULE_CONST(MEMORY, HEAP, POLICY, TYPED), descriptor);
+    }),
+
+    OPERATION(AllocAtomic, (void *outPointerObject, size_t size), {
+      return MODULE_FUNC(Memory, GarbageCollector, Alloc)(
+          self, outPointerObject, size, MODULE_CONST(MEMORY, HEAP, POLICY, ATOMIC), NULL);
+    }),
+
+    OPERATION(SetFinalizer, (const void *ptr, GARBAGE_COLLECTOR_FINALIZER_CALLBACK finalizer), {
+      if (!self || !ptr || !CALLBACK_IS_VALID(finalizer))
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      void *raw = NULL;
+      OPSTATUS status = MODULE_FUNC(Memory, Alloc, Bytes)(&raw, sizeof(MODULE_ITYPE(Memory, GcFinalizerEntry)));
+      if (status != STATUS_CONST(SUCCESS) || !raw)
+        return STATUS_CONST(OUT_OF_MEMORY);
+
+      MODULE_ITYPE(Memory, GcFinalizerEntry) *entry = (MODULE_ITYPE(Memory, GcFinalizerEntry) *)raw;
+      entry->object = (void *)(uintptr_t)ptr;
+      entry->callback = finalizer;
+      entry->next = self->finalizers;
+      self->finalizers = entry;
+
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(PinRoot, (const void *rootPointerAddress), {
+      if (!self || !rootPointerAddress)
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      for (size_t i = 0U; i < MODULE_CONST(Memory, GarbageCollector, MAX_ROOTS); ++i) {
+        if (self->roots[i].active && self->roots[i].pointerAddress == rootPointerAddress)
+          return STATUS_CONST(SUCCESS);
+      }
+
+      for (size_t i = 0U; i < MODULE_CONST(Memory, GarbageCollector, MAX_ROOTS); ++i) {
+        if (!self->roots[i].active) {
+          self->roots[i].pointerAddress = rootPointerAddress;
+          self->roots[i].active = true;
+          return STATUS_CONST(SUCCESS);
+        }
+      }
+
+      return STATUS_CONST(OUT_OF_RANGE);
+    }),
+
+    OPERATION(UnpinRoot, (const void *rootPointerAddress), {
+      if (!self || !rootPointerAddress)
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      for (size_t i = 0U; i < MODULE_CONST(Memory, GarbageCollector, MAX_ROOTS); ++i) {
+        if (self->roots[i].active && self->roots[i].pointerAddress == rootPointerAddress) {
+          self->roots[i].active = false;
+          self->roots[i].pointerAddress = NULL;
+          return STATUS_CONST(SUCCESS);
+        }
+      }
+
+      return STATUS_CONST(INVALID_ARGUMENT);
+    }),
+
+    OPERATION(Collect, (), {
+      if (!self || !self->isInitialized || self->pauseDepth > 0U)
+        return STATUS_CONST(SUCCESS);
+
+      /* Phase 1: Preparation (Sync & Flip) */
+      jmp_buf calleeRegisters;
+      setjmp(calleeRegisters);
+
+      /* Clear Mark Bitmaps in all pages */
+      for (size_t i = 0U; i < MODULE_CONST(MEMORY, HEAP, SIZE_CLASS_COUNT); ++i) {
+        MODULE_ITYPE(Memory, HeapPageHeader) *p = self->heap.classes[i].activePages;
+        while (p) {
+          memset(p->markBitmap, 0, sizeof(p->markBitmap));
+          p = p->next;
+        }
+        p = self->heap.classes[i].fullPages;
+        while (p) {
+          memset(p->markBitmap, 0, sizeof(p->markBitmap));
+          p = p->next;
+        }
+      }
+      MODULE_ITYPE(Memory, HeapSpan) *span = self->heap.largeObjects;
+      while (span) {
+        span->isMarked = 0U;
+        span = span->next;
+      }
+
+      self->worklist.overflow = false;
+
+      /* Phase 2: Mark Roots */
+      /* Stack scanning */
+      volatile int stackAnchor = 0;
+      const void *stackTop = (const void *)&stackAnchor;
+      if (self->stackBottom) {
+        MODULE_IFUNC(Memory, GarbageCollector, ScanMemoryRange)(self, stackTop, self->stackBottom);
+      }
+      /* Registers flushed to stack via calleeRegisters */
+      MODULE_IFUNC(Memory, GarbageCollector, ScanMemoryRange)(
+          self, (const void *)&calleeRegisters,
+          (const void *)((uintptr_t)&calleeRegisters + sizeof(calleeRegisters)));
+
+      /* Registered / pinned roots */
+      for (size_t i = 0U; i < MODULE_CONST(Memory, GarbageCollector, MAX_ROOTS); ++i) {
+        if (self->roots[i].active && self->roots[i].pointerAddress) {
+          void *rootVal = *(void **)self->roots[i].pointerAddress;
+          if (rootVal) {
+            MODULE_IFUNC(Memory, GarbageCollector, MarkCell)(self, rootVal);
+          }
+        }
+      }
+
+      /* Phase 3: Iterative Tracing */
+      while (true) {
+        void *item = MODULE_IFUNC(Memory, GarbageCollector, WorklistPop)(&self->worklist);
+        if (!item) {
+          if (self->worklist.overflow) {
+            /* Fallback linear page scan when overflow occurred */
+            self->worklist.overflow = false;
+            for (size_t i = 0U; i < MODULE_CONST(MEMORY, HEAP, SIZE_CLASS_COUNT); ++i) {
+              MODULE_ITYPE(Memory, HeapPageHeader) *p = self->heap.classes[i].activePages;
+              while (p) {
+                if (p->policy != MODULE_CONST(MEMORY, HEAP, POLICY, ATOMIC)) {
+                  for (size_t w = 0U; w < MODULE_CONST(MEMORY, HEAP, BITMAP_WORDS); ++w) {
+                    if (p->markBitmap[w] != 0ULL) {
+                      for (uint8_t b = 0U; b < 64U; ++b) {
+                        if ((p->markBitmap[w] & (1ULL << b)) != 0ULL) {
+                          void *cell = p->payload + (((w * 64U) + b) * p->elementSize);
+                          MODULE_IFUNC(Memory, GarbageCollector, ScanMemoryRange)(
+                              self, cell, (const void *)((uintptr_t)cell + p->elementSize));
+                        }
+                      }
                     }
                   }
                 }
+                p = p->next;
               }
             }
-            p = p->next;
+            if (self->worklist.head != NULL)
+              continue;
           }
+          break;
         }
-        if (self->worklist.head != NULL)
-          continue;
-      }
-      break;
-    }
 
-    void *base = NULL;
-    size_t sz = 0U;
-    uint8_t pol = 0U;
-    if (MODULE_FUNC(Memory, Heap, ResolvePointer)(&self->heap, item, &base, &sz, &pol)) {
-      if (pol == MODULE_CONST(MEMORY, HEAP, POLICY, TYPED)) {
-        void *ent = MODULE_FUNC(Memory, Heap, LookupEntry)(&self->heap, base);
-        const MODULE_NS(Memory, GarbageCollector, Descriptor) *desc = NULL;
-        if (ent) {
-          uint8_t isL = *(uint8_t *)ent;
-          desc = isL ? (const MODULE_NS(Memory, GarbageCollector, Descriptor) *)((MODULE_ITYPE(Memory, HeapSpan) *)ent)->descriptor
-                     : (const MODULE_NS(Memory, GarbageCollector, Descriptor) *)((MODULE_ITYPE(Memory, HeapPageHeader) *)ent)->descriptor;
-        }
-        if (desc && desc->bitmap != 0ULL) {
-          uint64_t bm = desc->bitmap;
-          while (bm != 0ULL) {
-            uint8_t bit = (uint8_t)__builtin_ctzll(bm);
-            size_t off = (size_t)bit * sizeof(void *);
-            if (off + sizeof(void *) <= sz) {
-              void *child = *(void **)((uintptr_t)base + off);
-              if (child)
-                MODULE_FUNC(Memory, Internal, GcMarkCell)(self, child);
+        void *base = NULL;
+        size_t sz = 0U;
+        uint8_t pol = 0U;
+        if (MODULE_FUNC(Memory, Heap, ResolvePointer)(&self->heap, item, &base, &sz, &pol)) {
+          if (pol == MODULE_CONST(MEMORY, HEAP, POLICY, TYPED)) {
+            void *ent = MODULE_FUNC(Memory, Heap, LookupEntry)(&self->heap, base);
+            const MODULE_NS(Memory, GarbageCollector, Descriptor) *desc = NULL;
+            if (ent) {
+              uint8_t isL = *(uint8_t *)ent;
+              desc = isL ? (const MODULE_NS(Memory, GarbageCollector, Descriptor) *)((MODULE_ITYPE(Memory, HeapSpan) *)ent)->descriptor
+                         : (const MODULE_NS(Memory, GarbageCollector, Descriptor) *)((MODULE_ITYPE(Memory, HeapPageHeader) *)ent)->descriptor;
             }
-            bm &= (bm - 1ULL);
+            if (desc && desc->bitmap != 0ULL) {
+              uint64_t bm = desc->bitmap;
+              while (bm != 0ULL) {
+                uint8_t bit = (uint8_t)__builtin_ctzll(bm);
+                size_t off = (size_t)bit * sizeof(void *);
+                if (off + sizeof(void *) <= sz) {
+                  void *child = *(void **)((uintptr_t)base + off);
+                  if (child)
+                    MODULE_IFUNC(Memory, GarbageCollector, MarkCell)(self, child);
+                }
+                bm &= (bm - 1ULL);
+              }
+            }
+          } else if (pol == MODULE_CONST(MEMORY, HEAP, POLICY, CONSERVATIVE)) {
+            MODULE_IFUNC(Memory, GarbageCollector, ScanMemoryRange)(self, base, (const void *)((uintptr_t)base + sz));
           }
         }
-      } else if (pol == MODULE_CONST(MEMORY, HEAP, POLICY, CONSERVATIVE)) {
-        MODULE_FUNC(Memory, Internal, GcScanMemoryRange)(self, base, (const void *)((uintptr_t)base + sz));
       }
-    }
-  }
 
-  /* Phase 4: Finalization Enqueue (Pre-Sweep) */
-  MODULE_ITYPE(Memory, GcFinalizerEntry) **curr = &self->finalizers;
-  while (*curr) {
-    MODULE_ITYPE(Memory, GcFinalizerEntry) *entry = *curr;
-    void *obj = entry->object;
-    void *base = NULL;
-    size_t sz = 0U;
-    uint8_t pol = 0U;
-    bool isAlive = false;
+      /* Phase 4: Finalization Enqueue (Pre-Sweep) */
+      MODULE_ITYPE(Memory, GcFinalizerEntry) **curr = &self->finalizers;
+      while (*curr) {
+        MODULE_ITYPE(Memory, GcFinalizerEntry) *entry = *curr;
+        void *obj = entry->object;
+        void *base = NULL;
+        size_t sz = 0U;
+        uint8_t pol = 0U;
+        bool isAlive = false;
 
-    if (MODULE_FUNC(Memory, Heap, ResolvePointer)(&self->heap, obj, &base, &sz, &pol)) {
-      void *ent = MODULE_FUNC(Memory, Heap, LookupEntry)(&self->heap, base);
-      if (ent) {
-        uint8_t isL = *(uint8_t *)ent;
-        if (isL) {
-          isAlive = ((MODULE_ITYPE(Memory, HeapSpan) *)ent)->isMarked != 0U;
+        if (MODULE_FUNC(Memory, Heap, ResolvePointer)(&self->heap, obj, &base, &sz, &pol)) {
+          void *ent = MODULE_FUNC(Memory, Heap, LookupEntry)(&self->heap, base);
+          if (ent) {
+            uint8_t isL = *(uint8_t *)ent;
+            if (isL) {
+              isAlive = ((MODULE_ITYPE(Memory, HeapSpan) *)ent)->isMarked != 0U;
+            } else {
+              MODULE_ITYPE(Memory, HeapPageHeader) *pg = (MODULE_ITYPE(Memory, HeapPageHeader) *)ent;
+              uint16_t cIdx = (uint16_t)(((uintptr_t)base - (uintptr_t)pg->payload) / pg->elementSize);
+              isAlive = (pg->markBitmap[cIdx / 64U] & (1ULL << (cIdx % 64U))) != 0ULL;
+            }
+          }
+        }
+
+        if (!isAlive) {
+          /* Unlink from active finalizers and move to pendingFinalizers */
+          *curr = entry->next;
+          entry->next = self->pendingFinalizers;
+          self->pendingFinalizers = entry;
+
+          /* Resurrect object and its sub-graph for safe finalizer execution */
+          MODULE_IFUNC(Memory, GarbageCollector, MarkCell)(self, obj);
+          while (self->worklist.head) {
+            void *it = MODULE_IFUNC(Memory, GarbageCollector, WorklistPop)(&self->worklist);
+            if (it) {
+              void *b = NULL;
+              size_t s = 0U;
+              uint8_t p = 0U;
+              if (MODULE_FUNC(Memory, Heap, ResolvePointer)(&self->heap, it, &b, &s, &p) &&
+                  p == MODULE_CONST(MEMORY, HEAP, POLICY, CONSERVATIVE)) {
+                MODULE_IFUNC(Memory, GarbageCollector, ScanMemoryRange)(self, b, (const void *)((uintptr_t)b + s));
+              }
+            }
+          }
         } else {
-          MODULE_ITYPE(Memory, HeapPageHeader) *pg = (MODULE_ITYPE(Memory, HeapPageHeader) *)ent;
-          uint16_t cIdx = (uint16_t)(((uintptr_t)base - (uintptr_t)pg->payload) / pg->elementSize);
-          isAlive = (pg->markBitmap[cIdx / 64U] & (1ULL << (cIdx % 64U))) != 0ULL;
+          curr = &entry->next;
         }
       }
-    }
 
-    if (!isAlive) {
-      /* Unlink from active finalizers and move to pendingFinalizers */
-      *curr = entry->next;
-      entry->next = self->pendingFinalizers;
-      self->pendingFinalizers = entry;
+      /* Phase 5: Sweep & Execute Finalizers */
+      for (size_t i = 0U; i < MODULE_CONST(MEMORY, HEAP, SIZE_CLASS_COUNT); ++i) {
+        MODULE_FUNC(Memory, Heap, LazySweepClass)(&self->heap, i);
+      }
 
-      /* Resurrect object and its sub-graph for safe finalizer execution */
-      MODULE_FUNC(Memory, Internal, GcMarkCell)(self, obj);
-      while (self->worklist.head) {
-        void *it = MODULE_IFUNC(Memory, GcWorklistPop)(&self->worklist);
-        if (it) {
-          void *b = NULL;
-          size_t s = 0U;
-          uint8_t p = 0U;
-          if (MODULE_FUNC(Memory, Heap, ResolvePointer)(&self->heap, it, &b, &s, &p) &&
-              p == MODULE_CONST(MEMORY, HEAP, POLICY, CONSERVATIVE)) {
-            MODULE_FUNC(Memory, Internal, GcScanMemoryRange)(self, b, (const void *)((uintptr_t)b + s));
-          }
+      /* Sweep large objects */
+      MODULE_ITYPE(Memory, HeapSpan) **spanPtr = &self->heap.largeObjects;
+      while (*spanPtr) {
+        MODULE_ITYPE(Memory, HeapSpan) *s = *spanPtr;
+        if (!s->isMarked) {
+          *spanPtr = s->next;
+          if (s->next)
+            s->next->prev = s->prev;
+          self->heap.liveBytes = (self->heap.liveBytes >= s->size) ? (self->heap.liveBytes - s->size) : 0U;
+          void *raw = s->rawBlock;
+          MODULE_FUNC(Memory, Alloc, Free)(&raw);
+        } else {
+          spanPtr = &s->next;
         }
       }
-    } else {
-      curr = &entry->next;
-    }
-  }
 
-  /* Phase 5: Sweep & Execute Finalizers */
-  for (size_t i = 0U; i < MODULE_CONST(MEMORY, HEAP, SIZE_CLASS_COUNT); ++i) {
-    MODULE_FUNC(Memory, Heap, LazySweepClass)(&self->heap, i);
-  }
+      self->liveBytesAfterGC = self->heap.liveBytes;
 
-  /* Sweep large objects */
-  MODULE_ITYPE(Memory, HeapSpan) **spanPtr = &self->heap.largeObjects;
-  while (*spanPtr) {
-    MODULE_ITYPE(Memory, HeapSpan) *s = *spanPtr;
-    if (!s->isMarked) {
-      *spanPtr = s->next;
-      if (s->next)
-        s->next->prev = s->prev;
-      self->heap.liveBytes = (self->heap.liveBytes >= s->size) ? (self->heap.liveBytes - s->size) : 0U;
-      void *raw = s->rawBlock;
-      MODULE_FUNC(Memory, Alloc, Free)(&raw);
-    } else {
-      spanPtr = &s->next;
-    }
-  }
+      /* Adaptive Pacing formula: NextThreshold = LiveBytes * (1 + GrowthFactor / SurvivalRate) */
+      size_t allocated = self->totalAllocatedSinceGC;
+      self->totalAllocatedSinceGC = 0U;
 
-  self->liveBytesAfterGC = self->heap.liveBytes;
+      double survivalRate = allocated > 0U ? ((double)self->liveBytesAfterGC / (double)allocated) : 1.0;
+      if (survivalRate < 0.1)
+        survivalRate = 0.1;
 
-  /* Adaptive Pacing formula: NextThreshold = LiveBytes * (1 + GrowthFactor / SurvivalRate) */
-  size_t allocated = self->totalAllocatedSinceGC;
-  self->totalAllocatedSinceGC = 0U;
+      double factor = (double)self->growthPercent / (survivalRate * 100.0);
+      if (factor < ((double)MODULE_CONST(Memory, GarbageCollector, MIN_PACING_PERCENT) / 100.0))
+        factor = (double)MODULE_CONST(Memory, GarbageCollector, MIN_PACING_PERCENT) / 100.0;
+      if (factor > ((double)MODULE_CONST(Memory, GarbageCollector, MAX_PACING_PERCENT) / 100.0))
+        factor = (double)MODULE_CONST(Memory, GarbageCollector, MAX_PACING_PERCENT) / 100.0;
 
-  double survivalRate = allocated > 0U ? ((double)self->liveBytesAfterGC / (double)allocated) : 1.0;
-  if (survivalRate < 0.1)
-    survivalRate = 0.1;
+      self->nextThreshold = (size_t)((double)self->liveBytesAfterGC * (1.0 + factor));
+      if (self->nextThreshold < MODULE_CONST(Memory, GarbageCollector, DEFAULT_INITIAL_THRESHOLD))
+        self->nextThreshold = MODULE_CONST(Memory, GarbageCollector, DEFAULT_INITIAL_THRESHOLD);
 
-  double factor = (double)self->growthPercent / (survivalRate * 100.0);
-  if (factor < ((double)MODULE_CONST(MEMORY, GARBAGE_COLLECTOR, MIN_PACING_PERCENT) / 100.0))
-    factor = (double)MODULE_CONST(MEMORY, GARBAGE_COLLECTOR, MIN_PACING_PERCENT) / 100.0;
-  if (factor > ((double)MODULE_CONST(MEMORY, GARBAGE_COLLECTOR, MAX_PACING_PERCENT) / 100.0))
-    factor = (double)MODULE_CONST(MEMORY, GARBAGE_COLLECTOR, MAX_PACING_PERCENT) / 100.0;
+      /* Drain pending finalizers */
+      while (self->pendingFinalizers) {
+        MODULE_ITYPE(Memory, GcFinalizerEntry) *f = self->pendingFinalizers;
+        self->pendingFinalizers = f->next;
+        CALLBACK_INVOKE(f->callback, f->object);
+        void *raw = (void *)f;
+        MODULE_FUNC(Memory, Alloc, Free)(&raw);
+      }
 
-  self->nextThreshold = (size_t)((double)self->liveBytesAfterGC * (1.0 + factor));
-  if (self->nextThreshold < MODULE_CONST(MEMORY, GARBAGE_COLLECTOR, DEFAULT_INITIAL_THRESHOLD))
-    self->nextThreshold = MODULE_CONST(MEMORY, GARBAGE_COLLECTOR, DEFAULT_INITIAL_THRESHOLD);
+      return STATUS_CONST(SUCCESS);
+    }),
 
-  /* Drain pending finalizers */
-  while (self->pendingFinalizers) {
-    MODULE_ITYPE(Memory, GcFinalizerEntry) *f = self->pendingFinalizers;
-    self->pendingFinalizers = f->next;
-    CALLBACK_INVOKE(f->callback, f->object);
-    void *raw = (void *)f;
-    MODULE_FUNC(Memory, Alloc, Free)(&raw);
-  }
+    PROCEDURE(Pause, (), {
+      if (self)
+        self->pauseDepth++;
+    }),
 
-  return STATUS_CONST(SUCCESS);
-}
+    PROCEDURE(Resume, (), {
+      if (self && self->pauseDepth > 0U)
+        self->pauseDepth--;
+    }),
 
-SCOPE_PROCEDURE(Pause, ()) {
-  if (self)
-    self->pauseDepth++;
-}
+    CONST_PREDICATE(Contains, (const void *ptr), {
+      return self ? MODULE_FUNC(Memory, Heap, Contains)(&self->heap, ptr) : false;
+    })
+  ),
 
-SCOPE_PROCEDURE(Resume, ()) {
-  if (self && self->pauseDepth > 0U)
-    self->pauseDepth--;
-}
+  PACKAGE(GC,
+    OPERATION(Startup, (const void *stackBottom), {
+      if (MODULE_INS(Memory, GarbageCollector, ThreadDefaultInitialized))
+        return STATUS_CONST(SUCCESS);
 
-SCOPE_PREDICATE(Contains, (const void *ptr)) {
-  return self ? MODULE_FUNC(Memory, Heap, Contains)(&self->heap, ptr) : false;
-}
+      OPSTATUS status = MODULE_FUNC(Memory, GarbageCollector, Create)(
+          &MODULE_INS(Memory, GarbageCollector, ThreadDefaultCollector), 4U, stackBottom);
+      if (status == STATUS_CONST(SUCCESS)) {
+        MODULE_INS(Memory, GarbageCollector, ThreadDefaultInitialized) = true;
+      }
+      return status;
+    }),
 
-#undef SCOPE_TARGET
-#undef TARGET_IS_OBJECT
+    OPERATION(Shutdown, (), {
+      if (!MODULE_INS(Memory, GarbageCollector, ThreadDefaultInitialized))
+        return STATUS_CONST(SUCCESS);
 
-OBJECT_SCOPE_END()
+      OPSTATUS status = MODULE_FUNC(Memory, GarbageCollector, Destroy)(&MODULE_INS(Memory, GarbageCollector, ThreadDefaultCollector));
+      MODULE_INS(Memory, GarbageCollector, ThreadDefaultInitialized) = false;
+      return status;
+    }),
 
-/* ========================================================================== */
-/* Package GC (Thread Default Facade)                                         */
-/* ========================================================================== */
+    FUNCTION(MODULE_TYPE(Memory, GarbageCollector) *, DefaultCollector, (), {
+      if (!MODULE_INS(Memory, GarbageCollector, ThreadDefaultInitialized)) {
+        volatile int anchor = 0;
+        MODULE_FUNC(Memory, GarbageCollector, Create)(
+            &MODULE_INS(Memory, GarbageCollector, ThreadDefaultCollector), 4U, (const void *)&anchor);
+        MODULE_INS(Memory, GarbageCollector, ThreadDefaultInitialized) = true;
+      }
+      return &MODULE_INS(Memory, GarbageCollector, ThreadDefaultCollector);
+    }),
 
-PACKAGE_SCOPE(Memory, GC)
+    OPERATION(Alloc, (void *outPointerObject, size_t size), {
+      MODULE_TYPE(Memory, GarbageCollector) *collector =
+          MODULE_FUNC(Memory, GC, DefaultCollector)();
+      return MODULE_FUNC(Memory, GarbageCollector, Alloc)(
+          collector, outPointerObject, size, MODULE_CONST(MEMORY, HEAP, POLICY, CONSERVATIVE), NULL);
+    }),
 
-PACKAGE_OPERATION_IMPLEMENT_EX(MODULE_NS(Memory, GC), Startup, (const void *stackBottom)) {
-  if (MODULE_INS(Memory, GcThreadDefaultInitialized))
-    return STATUS_CONST(SUCCESS);
+    OPERATION(AllocTyped,
+        (void *outPointerObject, const MODULE_NS(Memory, GarbageCollector, Descriptor) *descriptor), {
+      MODULE_TYPE(Memory, GarbageCollector) *collector =
+          MODULE_FUNC(Memory, GC, DefaultCollector)();
+      return MODULE_FUNC(Memory, GarbageCollector, AllocTyped)(collector, outPointerObject, descriptor);
+    }),
 
-  OPSTATUS status = MODULE_FUNC(Memory, GarbageCollector, Create)(
-      &MODULE_INS(Memory, GcThreadDefaultCollector), 4U, stackBottom);
-  if (status == STATUS_CONST(SUCCESS)) {
-    MODULE_INS(Memory, GcThreadDefaultInitialized) = true;
-  }
-  return status;
-}
+    OPERATION(AllocAtomic, (void *outPointerObject, size_t size), {
+      MODULE_TYPE(Memory, GarbageCollector) *collector =
+          MODULE_FUNC(Memory, GC, DefaultCollector)();
+      return MODULE_FUNC(Memory, GarbageCollector, AllocAtomic)(collector, outPointerObject, size);
+    }),
 
-PACKAGE_OPERATION_IMPLEMENT_EX(MODULE_NS(Memory, GC), Shutdown, ()) {
-  if (!MODULE_INS(Memory, GcThreadDefaultInitialized))
-    return STATUS_CONST(SUCCESS);
+    OPERATION(SetFinalizer,
+        (const void *ptr, GARBAGE_COLLECTOR_FINALIZER_CALLBACK finalizer), {
+      MODULE_TYPE(Memory, GarbageCollector) *collector =
+          MODULE_FUNC(Memory, GC, DefaultCollector)();
+      return MODULE_FUNC(Memory, GarbageCollector, SetFinalizer)(collector, ptr, finalizer);
+    }),
 
-  OPSTATUS status = MODULE_FUNC(Memory, GarbageCollector, Destroy)(&MODULE_INS(Memory, GcThreadDefaultCollector));
-  MODULE_INS(Memory, GcThreadDefaultInitialized) = false;
-  return status;
-}
+    OPERATION(PinRoot, (const void *rootPointerAddress), {
+      MODULE_TYPE(Memory, GarbageCollector) *collector =
+          MODULE_FUNC(Memory, GC, DefaultCollector)();
+      return MODULE_FUNC(Memory, GarbageCollector, PinRoot)(collector, rootPointerAddress);
+    }),
 
-PACKAGE_FUNCTION_IMPLEMENT_EX(MODULE_NS(Memory, GC),
-    MODULE_TYPE(Memory, GarbageCollector) *, DefaultCollector, ()) {
-  if (!MODULE_INS(Memory, GcThreadDefaultInitialized)) {
-    volatile int anchor = 0;
-    MODULE_FUNC(Memory, GarbageCollector, Create)(
-        &MODULE_INS(Memory, GcThreadDefaultCollector), 4U, (const void *)&anchor);
-    MODULE_INS(Memory, GcThreadDefaultInitialized) = true;
-  }
-  return &MODULE_INS(Memory, GcThreadDefaultCollector);
-}
+    OPERATION(UnpinRoot, (const void *rootPointerAddress), {
+      MODULE_TYPE(Memory, GarbageCollector) *collector =
+          MODULE_FUNC(Memory, GC, DefaultCollector)();
+      return MODULE_FUNC(Memory, GarbageCollector, UnpinRoot)(collector, rootPointerAddress);
+    }),
 
-PACKAGE_OPERATION_IMPLEMENT_EX(MODULE_NS(Memory, GC), Alloc, (void *outPointerObject, size_t size)) {
-  MODULE_TYPE(Memory, GarbageCollector) *collector =
-      MODULE_FUNC(Memory, GC, DefaultCollector)();
-  return MODULE_FUNC(Memory, GarbageCollector, Alloc)(
-      collector, outPointerObject, size, MODULE_CONST(MEMORY, HEAP, POLICY, CONSERVATIVE), NULL);
-}
+    OPERATION(Collect, (), {
+      MODULE_TYPE(Memory, GarbageCollector) *collector =
+          MODULE_FUNC(Memory, GC, DefaultCollector)();
+      return MODULE_FUNC(Memory, GarbageCollector, Collect)(collector);
+    }),
 
-PACKAGE_OPERATION_IMPLEMENT_EX(MODULE_NS(Memory, GC), AllocTyped,
-    (void *outPointerObject, const MODULE_NS(Memory, GarbageCollector, Descriptor) *descriptor)) {
-  MODULE_TYPE(Memory, GarbageCollector) *collector =
-      MODULE_FUNC(Memory, GC, DefaultCollector)();
-  return MODULE_FUNC(Memory, GarbageCollector, AllocTyped)(collector, outPointerObject, descriptor);
-}
+    PROCEDURE(Pause, (), {
+      MODULE_TYPE(Memory, GarbageCollector) *collector =
+          MODULE_FUNC(Memory, GC, DefaultCollector)();
+      MODULE_FUNC(Memory, GarbageCollector, Pause)(collector);
+    }),
 
-PACKAGE_OPERATION_IMPLEMENT_EX(MODULE_NS(Memory, GC), AllocAtomic, (void *outPointerObject, size_t size)) {
-  MODULE_TYPE(Memory, GarbageCollector) *collector =
-      MODULE_FUNC(Memory, GC, DefaultCollector)();
-  return MODULE_FUNC(Memory, GarbageCollector, AllocAtomic)(collector, outPointerObject, size);
-}
+    PROCEDURE(Resume, (), {
+      MODULE_TYPE(Memory, GarbageCollector) *collector =
+          MODULE_FUNC(Memory, GC, DefaultCollector)();
+      MODULE_FUNC(Memory, GarbageCollector, Resume)(collector);
+    }),
 
-PACKAGE_OPERATION_IMPLEMENT_EX(MODULE_NS(Memory, GC), SetFinalizer,
-    (const void *ptr, GARBAGE_COLLECTOR_FINALIZER_CALLBACK finalizer)) {
-  MODULE_TYPE(Memory, GarbageCollector) *collector =
-      MODULE_FUNC(Memory, GC, DefaultCollector)();
-  return MODULE_FUNC(Memory, GarbageCollector, SetFinalizer)(collector, ptr, finalizer);
-}
+    FUNCTION(size_t, LiveBytes, (), {
+      MODULE_TYPE(Memory, GarbageCollector) *collector =
+          MODULE_FUNC(Memory, GC, DefaultCollector)();
+      return MODULE_FUNC(Memory, GarbageCollector, LiveBytes)(collector);
+    }),
 
-PACKAGE_OPERATION_IMPLEMENT_EX(MODULE_NS(Memory, GC), PinRoot, (const void *rootPointerAddress)) {
-  MODULE_TYPE(Memory, GarbageCollector) *collector =
-      MODULE_FUNC(Memory, GC, DefaultCollector)();
-  return MODULE_FUNC(Memory, GarbageCollector, PinRoot)(collector, rootPointerAddress);
-}
+    PREDICATE(Contains, (const void *ptr), {
+      MODULE_TYPE(Memory, GarbageCollector) *collector =
+          MODULE_FUNC(Memory, GC, DefaultCollector)();
+      return MODULE_FUNC(Memory, GarbageCollector, Contains)(collector, ptr);
+    })
+  )
+);
 
-PACKAGE_OPERATION_IMPLEMENT_EX(MODULE_NS(Memory, GC), UnpinRoot, (const void *rootPointerAddress)) {
-  MODULE_TYPE(Memory, GarbageCollector) *collector =
-      MODULE_FUNC(Memory, GC, DefaultCollector)();
-  return MODULE_FUNC(Memory, GarbageCollector, UnpinRoot)(collector, rootPointerAddress);
-}
-
-PACKAGE_OPERATION_IMPLEMENT_EX(MODULE_NS(Memory, GC), Collect, ()) {
-  MODULE_TYPE(Memory, GarbageCollector) *collector =
-      MODULE_FUNC(Memory, GC, DefaultCollector)();
-  return MODULE_FUNC(Memory, GarbageCollector, Collect)(collector);
-}
-
-PACKAGE_PROCEDURE_IMPLEMENT_EX(MODULE_NS(Memory, GC), Pause, ()) {
-  MODULE_TYPE(Memory, GarbageCollector) *collector =
-      MODULE_FUNC(Memory, GC, DefaultCollector)();
-  MODULE_FUNC(Memory, GarbageCollector, Pause)(collector);
-}
-
-PACKAGE_PROCEDURE_IMPLEMENT_EX(MODULE_NS(Memory, GC), Resume, ()) {
-  MODULE_TYPE(Memory, GarbageCollector) *collector =
-      MODULE_FUNC(Memory, GC, DefaultCollector)();
-  MODULE_FUNC(Memory, GarbageCollector, Resume)(collector);
-}
-
-PACKAGE_FUNCTION_IMPLEMENT_EX(MODULE_NS(Memory, GC), size_t, LiveBytes, ()) {
-  MODULE_TYPE(Memory, GarbageCollector) *collector =
-      MODULE_FUNC(Memory, GC, DefaultCollector)();
-  return MODULE_FUNC(Memory, GarbageCollector, LiveBytes)(collector);
-}
-
-PACKAGE_PREDICATE_IMPLEMENT_EX(MODULE_NS(Memory, GC), Contains, (const void *ptr)) {
-  MODULE_TYPE(Memory, GarbageCollector) *collector =
-      MODULE_FUNC(Memory, GC, DefaultCollector)();
-  return MODULE_FUNC(Memory, GarbageCollector, Contains)(collector, ptr);
-}
-
-PACKAGE_SCOPE_END()
+#undef GC_INIT_SELF
 
 /* EOF */
-

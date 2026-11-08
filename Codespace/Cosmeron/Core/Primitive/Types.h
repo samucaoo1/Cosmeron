@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Module/Namespace.h"
+#include "../Module/Module.h"
 #include "../Preprocessor/Compiling.inc"
 #include "../Preprocessor/Operations.h"
 #include "TypeTable/TypeTable.h"
@@ -9,52 +9,43 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#ifndef PRIMITIVE_TYPE
-#define PRIMITIVE_TYPE(NAME) NS(LIB_PREFIX(Primitive), NAME)
-#endif
-#ifndef PRIMITIVE_FUNC
-#define PRIMITIVE_FUNC(NAME) NS(LIB_PREFIX(Primitive), NAME)
-#endif
-#ifndef PRIMITIVE_CONST
-#define PRIMITIVE_CONST(NAME) CNS(LIB_PREFIX_CONST(PRIMITIVE), NAME)
-#endif
-
 /* ========================================================================== */
-/* Category Enumeration & Conversion                                          */
+/* 1. Declarative Module: Primitive (Category Enum & Conversion Package)      */
 /* ========================================================================== */
 
-typedef enum PRIMITIVE_TYPE(Category) {
-#define PRIMITIVE_CATEGORY_ENUM_ITEM(ROW)                                     \
-  PRIMITIVE_CONST(PRIMITIVE_CATEGORY_GET(NAME, ROW)),
-  PRIMITIVE_CATEGORY_TABLE(PRIMITIVE_CATEGORY_ENUM_ITEM)
-#undef PRIMITIVE_CATEGORY_ENUM_ITEM
-} PRIMITIVE_TYPE(Category);
-
-static inline const char *PRIMITIVE_FUNC(CategoryToString)(PRIMITIVE_TYPE(Category) category) {
-  switch (category) {
-#define PRIMITIVE_CATEGORY_CASE_ITEM(ROW)                                     \
-  case PRIMITIVE_CONST(PRIMITIVE_CATEGORY_GET(NAME, ROW)):                     \
+#define PRIMITIVE_CATEGORY_CASE(ROW)                                           \
+  case MODULE_CONST(Primitive, PRIMITIVE_CATEGORY_GET(NAME, ROW)):             \
     return PRIMITIVE_CATEGORY_GET(DESC, ROW);
-    PRIMITIVE_CATEGORY_TABLE(PRIMITIVE_CATEGORY_CASE_ITEM)
-#undef PRIMITIVE_CATEGORY_CASE_ITEM
-    default:
-      return "Unknown";
-  }
-}
+
+MODULE(DOMAIN(Core), Primitive,
+    ENUM_EX(Category, PRIMITIVE_CATEGORY_TABLE, NAME_ONLY),
+    PACKAGE(Category,
+        FUNCTION_INLINE(const char *, ToString,
+                        (MODULE_ENUM(Primitive, Category) category), {
+          switch (category) {
+            PRIMITIVE_CATEGORY_TABLE(PRIMITIVE_CATEGORY_CASE)
+            default:
+              return "Unknown";
+          }
+        })
+    )
+);
+
+#undef PRIMITIVE_CATEGORY_CASE
 
 /* ========================================================================== */
-/* Canonical Namespaced Primitive Types                                       */
+/* 2. Canonical Namespaced Primitive Types                                    */
 /* ========================================================================== */
 
 #define PRIMITIVE_TYPE_TYPEDEF(ROW)                                            \
   typedef PRIMITIVE_TYPE_GET(TYPE, ROW)                                        \
-      PRIMITIVE_TYPE(PRIMITIVE_TYPE_GET(T_NAME, ROW));
+      MODULE_TYPE(Primitive, PRIMITIVE_TYPE_GET(NAME, ROW));
 
 PRIMITIVE_TYPE_TABLE(PRIMITIVE_TYPE_TYPEDEF)
 #undef PRIMITIVE_TYPE_TYPEDEF
 
 /* ========================================================================== */
-/* Category Iteration Views                                                   */
+/* 3. Category Iteration Views                                                */
 /* ========================================================================== */
 
 #define PRIMITIVE_FOR_EACH(X)               PRIMITIVE_TYPE_TABLE(X)
@@ -67,4 +58,5 @@ PRIMITIVE_TYPE_TABLE(PRIMITIVE_TYPE_TYPEDEF)
 #define PRIMITIVE_FOR_EACH_FLOAT(X)         PRIMITIVE_TYPE_TABLE_FLOAT(X)
 #define PRIMITIVE_FOR_EACH_ARCHITECTURE(X)  PRIMITIVE_TYPE_TABLE_ARCHITECTURE(X)
 #define PRIMITIVE_FOR_EACH_NUMERIC(X)       PRIMITIVE_TYPE_TABLE_NUMERIC(X)
+
 /* EOF */

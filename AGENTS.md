@@ -150,6 +150,13 @@ Everything must live inside the library/module namespace whenever C allows it. E
   - Binding: `callback.Bind(&callback, func, ctx)` or `CALLBACK_FUNC(NAME, Bind)(func, ctx)`.
 - **Declarative Packages:** Use `PACKAGE(PKG, ...)`.
   - Invocation: `PACKAGE_CALL(PKG, FuncName, args...)` or direct calls `PKG_FuncName(...)`.
+- **Declarative Internal Scopes (`INTERNAL` / `INTERNAL_EX`):** Use `INTERNAL(...)` or `INTERNAL_EX(PKG, ...)`.
+  - Intended for internal helpers, non-public routines, and module infrastructure.
+  - Zero FunctionTable overhead: pure `static inline` functions with no vtables or function pointers.
+  - Generates canonical namespaced internal identifiers:
+    - Module-level `INTERNAL(...)` $\to$ `MOD_Internal_FuncName` (invoked via `MODULE_IFUNC(MOD, FuncName)` or `MODULE_ICALL(MOD, FuncName, (args...))`).
+    - Component-level `INTERNAL_EX(PKG, ...)` or `INTERNAL(PKG, ...)` $\to$ `MOD_PKG_Internal_FuncName` (invoked via `MODULE_IFUNC(MOD, PKG, FuncName)` or `MODULE_ICALL(MOD, PKG, FuncName, (args...))`).
+  - Usable inside `MODULE(...)` for declarations in headers/infrastructure (`.inc`), inside `MODULE_IMPLEMENT(...)` for implementations in `.impl`, or standalone via `INTERNAL_DEF` / `INTERNAL_IMPLEMENT`.
 - **Declarative Events & Reactive Mutation:**
   - Events are declared natively inside `OBJECT` or `PACKAGE` with zero heap allocation:
     - `EVENT_PROCEDURE(Name, ((Type, argName), ...))` (infallible, `void`)

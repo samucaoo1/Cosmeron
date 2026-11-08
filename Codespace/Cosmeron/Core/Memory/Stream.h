@@ -25,13 +25,6 @@
   X((SEEK_CURRENT, 1, "Current stream position")) \
   X((SEEK_END,     2, "End of stream"))
 
-typedef enum MODULE_ENUM(Memory, Stream, SeekOrigin) {
-#define STREAM_SEEK_ORIGIN_ENUM_ITEM(ROW) \
-  MODULE_CONST(MEMORY, STREAM, STREAM_SEEK_ORIGIN_GET(NAME, ROW)) = STREAM_SEEK_ORIGIN_GET(VALUE, ROW),
-  STREAM_SEEK_ORIGIN_TABLE(STREAM_SEEK_ORIGIN_ENUM_ITEM)
-#undef STREAM_SEEK_ORIGIN_ENUM_ITEM
-} MODULE_ENUM(Memory, Stream, SeekOrigin);
-
 /* ========================================================================== */
 /* 2. Declarative TMemoryStream Object                                        */
 /* ========================================================================== */
@@ -45,6 +38,7 @@ MODULE(DOMAIN(Core), Memory,
             uint8_t bitOffset;
             bool isReadOnly;
         ),
+        ENUM(SeekOrigin, STREAM_SEEK_ORIGIN_TABLE),
         VARIANT(Init,
             OPERATION(Read, (const void *buffer, size_t size)),
             OPERATION(Write, (void *buffer, size_t capacity))

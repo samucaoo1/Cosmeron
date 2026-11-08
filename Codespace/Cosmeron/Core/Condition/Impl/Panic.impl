@@ -1,0 +1,91 @@
+#pragma once
+
+#include <stdio.h>
+#include <stdlib.h>
+
+static _Thread_local TCALLBACK(MODULE_NS(Condition, Panic, Handler))
+    MODULE_IFUNC(Condition, Panic_CustomHandler) = {0};
+
+MODULE_IMPLEMENT(DOMAIN(Core), Condition,
+  PACKAGE(Panic,
+    FUNCTION(const char *, KindName, (MODULE_ENUM(Condition, PanicKind) kind), {
+      switch (kind) {
+      case MODULE_CONST(Condition, ASSERT):
+        return "ASSERT";
+      case MODULE_CONST(Condition, VERIFY):
+        return "VERIFY";
+      case MODULE_CONST(Condition, ENSURE):
+        return "ENSURE";
+      case MODULE_CONST(Condition, UNREACHABLE):
+        return "UNREACHABLE";
+      case MODULE_CONST(Condition, PANIC):
+      default:
+        return "PANIC";
+      }
+    }),
+
+    PROCEDURE(SetHandler,
+              (TCALLBACK(MODULE_NS(Condition, Panic, Handler)) handler), {
+      MODULE_IFUNC(Condition, Panic_CustomHandler) = handler;
+    }),
+
+    PROCEDURE(ResetHandler, (), {
+      MODULE_IFUNC(Condition, Panic_CustomHandler).function = NULL;
+      MODULE_IFUNC(Condition, Panic_CustomHandler).context = NULL;
+    }),
+
+    FUNCTION(TCALLBACK(MODULE_NS(Condition, Panic, Handler)), GetHandler, (), {
+      return MODULE_IFUNC(Condition, Panic_CustomHandler);
+    }),
+
+    PROCEDURE(Trigger,
+              (MODULE_ENUM(Condition, PanicKind) kind, const char *message,
+               const char *expression, const char *file, uint32_t line,
+               const char *function), {
+      MODULE_TYPE(Condition, PanicInfo) info;
+      info.kind = kind;
+      info.message = message;
+      info.expression = expression;
+      info.file = file;
+      info.line = line;
+      info.function = function;
+
+      if (CALLBACK_IS_VALID(MODULE_IFUNC(Condition, Panic_CustomHandler))) {
+        CALLBACK_INVOKE(MODULE_IFUNC(Condition, Panic_CustomHandler), &info);
+        return;
+      }
+
+      fprintf(stderr, "\n*** PANIC [%s] ***\n",
+              MODULE_FUNC(Condition, Panic, KindName)(kind));
+      fprintf(stderr, "Message:  %s\n", info.message ? info.message : "<none>");
+      if (info.expression != NULL) {
+        fprintf(stderr, "Expr:     %s\n", info.expression);
+      }
+      fprintf(stderr, "Location: %s:%u (in %s)\n",
+              info.file ? info.file : "<unknown>", info.line,
+              info.function ? info.function : "<unknown>");
+
+      MODULE_TYPE(Diagnostic, Stacktrace) st;
+      MODULE_FUNC(Diagnostic, Stacktrace, Init)(&st);
+      if (OBJECT_CALL(&st, Capture, 1U, 16U) == STATUS_CONST(SUCCESS) &&
+          OBJECT_CALL_0(&st, FrameCount) > 0U) {
+        char stBuffer[1024];
+        size_t written = 0U;
+        if (OBJECT_CALL(&st, Format, stBuffer, sizeof(stBuffer), &written) ==
+            STATUS_CONST(SUCCESS)) {
+          fprintf(stderr, "Stacktrace:\n%s\n", stBuffer);
+        }
+      }
+
+      fflush(stderr);
+      abort();
+    }),
+
+    PROCEDURE(Now, (const char *message), {
+      PANIC(message);
+    })
+  )
+);
+
+/* EOF */
+

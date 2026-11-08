@@ -220,7 +220,7 @@
 
 #if !defined(PACKAGE_DISABLE_FUNCTION_TABLE) && !defined(MODULE_DISABLE_FUNCTION_TABLE)
 
-#define PACKAGE(PKG, ...)                                                       \
+#define PACKAGE_DEF(PKG, ...)                                                   \
   PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO, PKG, __VA_ARGS__)   \
   struct NS(PKG, FunctionTable) {                                             \
     int _reserved;                                                              \
@@ -240,12 +240,14 @@
 
 #else
 
-#define PACKAGE(PKG, ...)                                                       \
+#define PACKAGE_DEF(PKG, ...)                                                   \
   PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO, PKG, __VA_ARGS__)   \
   PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_PACKAGE_GEN_INLINE, PKG, __VA_ARGS__)  \
   typedef int NS(_cosmeron_package_semi, PKG, __LINE__)
 
 #endif
+
+#define PACKAGE(PKG, ...) PACKAGE_DEF(PKG, __VA_ARGS__)
 
 /* ------------------------------------------------------------
  * 4. Package Implementation Finalizer

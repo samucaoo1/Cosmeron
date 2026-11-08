@@ -7,18 +7,15 @@
 #include "Common.inc"
 
 /* ========================================================================== */
-/* Internal Types                                                             */
-/* ========================================================================== */
-
-typedef struct MODULE_ITYPE(Memory, PoolNode) {
-  struct MODULE_ITYPE(Memory, PoolNode) *next;
-} MODULE_ITYPE(Memory, PoolNode);
-
-/* ========================================================================== */
-/* Object Declaration: Memory_Pool                                            */
+/* Declarative Module: Memory (Internal PoolNode Struct & TMemoryPool Object) */
 /* ========================================================================== */
 
 MODULE(DOMAIN(Core), Memory,
+    ISTRUCT(PoolNode,
+        FIELDS(
+            struct MODULE_ITYPE(Memory, PoolNode) *next;
+        )
+    ),
     OBJECT(Pool,
         FIELDS(
             void *buffer;

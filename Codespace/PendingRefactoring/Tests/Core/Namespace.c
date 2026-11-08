@@ -1,7 +1,7 @@
 #define COSMERON_NAMESPACE CosmeronTest
 #define COSMERON_NAMESPACE_CONST COSMERON_TEST
 
-#include "../../Cosmeron/Core/Module/Namespace.h"
+#include "../../../Cosmeron/Core/Module/Namespace.h"
 
 LIBRARY_NAMESPACE_CONFIG(COSMERON,
     NAME(CosmeronTest),

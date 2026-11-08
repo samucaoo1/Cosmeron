@@ -1,76 +1,60 @@
 #pragma once
 
-PACKAGE_SCOPE(Outcome, Status)
-
-/* ========================================================================== */
-/* 1. Category Resolution                                                     */
-/* ========================================================================== */
-
-PACKAGE_FUNCTION_IMPLEMENT_EX(MODULE_NS(Outcome, Status),
-                              MODULE_ENUM(Outcome, Status, Category),
-                              CategoryOf, (OPSTATUS status)) {
-  switch (status) {
 #define STATUS_CATEGORY_CASE(ROW)                                              \
   case STATUS_CONST(STATUS_GET(NAME, ROW)):                                    \
     return STATUS_CATEGORY_CONST(STATUS_GET(CATEGORY, ROW));
-    STATUS_TABLE(STATUS_CATEGORY_CASE)
-#undef STATUS_CATEGORY_CASE
-    default:
-      return STATUS_CATEGORY_CONST(GENERIC);
-  }
-}
 
-/* ========================================================================== */
-/* 2. Category Name Helper                                                    */
-/* ========================================================================== */
-
-PACKAGE_FUNCTION_IMPLEMENT_EX(MODULE_NS(Outcome, Status), const char *,
-                              CategoryName,
-                              (MODULE_ENUM(Outcome, Status, Category) category)) {
-  switch (category) {
 #define STATUS_CAT_NAME_CASE(ROW)                                              \
   case STATUS_CATEGORY_CONST(STATUS_CATEGORY_GET(NAME, ROW)):                  \
     return STATUS_CATEGORY_GET(MESSAGE, ROW);
-    STATUS_CATEGORY_TABLE(STATUS_CAT_NAME_CASE)
-#undef STATUS_CAT_NAME_CASE
-    default:
-      return "Unknown";
-  }
-}
 
-/* ========================================================================== */
-/* 3. Status Identifier Name Helper                                           */
-/* ========================================================================== */
-
-PACKAGE_FUNCTION_IMPLEMENT_EX(MODULE_NS(Outcome, Status), const char *, Name,
-                              (OPSTATUS status)) {
-  switch (status) {
 #define STATUS_NAME_CASE(ROW)                                                  \
   case STATUS_CONST(STATUS_GET(NAME, ROW)):                                    \
     return PP_OP_STRING(STATUS_GET(NAME, ROW));
-  STATUS_TABLE(STATUS_NAME_CASE)
-#undef STATUS_NAME_CASE
-    default:
-      return "UNKNOWN";
-  }
-}
 
-/* ========================================================================== */
-/* 4. Human-Readable Status Message                                           */
-/* ========================================================================== */
-
-PACKAGE_FUNCTION_IMPLEMENT_EX(MODULE_NS(Outcome, Status), const char *, Message,
-                              (OPSTATUS status)) {
-  switch (status) {
 #define STATUS_MESSAGE_CASE(ROW)                                               \
   case STATUS_CONST(STATUS_GET(NAME, ROW)):                                    \
     return STATUS_GET(MESSAGE, ROW);
-  STATUS_TABLE(STATUS_MESSAGE_CASE)
-#undef STATUS_MESSAGE_CASE
-    default:
-      return "Unknown status";
-  }
-}
 
-PACKAGE_SCOPE_END()
+MODULE_IMPLEMENT(DOMAIN(Core), Outcome,
+  PACKAGE(Status,
+    FUNCTION(MODULE_ENUM(Outcome, Status, Category), CategoryOf, (OPSTATUS status), {
+      switch (status) {
+        STATUS_TABLE(STATUS_CATEGORY_CASE)
+        default:
+          return STATUS_CATEGORY_CONST(GENERIC);
+      }
+    }),
+
+    FUNCTION(const char *, CategoryName, (MODULE_ENUM(Outcome, Status, Category) category), {
+      switch (category) {
+        STATUS_CATEGORY_TABLE(STATUS_CAT_NAME_CASE)
+        default:
+          return "Unknown";
+      }
+    }),
+
+    FUNCTION(const char *, Name, (OPSTATUS status), {
+      switch (status) {
+        STATUS_TABLE(STATUS_NAME_CASE)
+        default:
+          return "UNKNOWN";
+      }
+    }),
+
+    FUNCTION(const char *, Message, (OPSTATUS status), {
+      switch (status) {
+        STATUS_TABLE(STATUS_MESSAGE_CASE)
+        default:
+          return "Unknown status";
+      }
+    })
+  )
+);
+
+#undef STATUS_CATEGORY_CASE
+#undef STATUS_CAT_NAME_CASE
+#undef STATUS_NAME_CASE
+#undef STATUS_MESSAGE_CASE
+
 /* EOF */

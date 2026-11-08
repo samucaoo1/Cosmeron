@@ -1,8 +1,8 @@
 /* Compile with: cc -std=c11 -Wall -Wextra -pedantic -I Codespace
  * Codespace/Tests/Core/Callback.c -o callback-test && ./callback-test */
-#include "../../Cosmeron/Core/Module/Callback/Callback.h"
-#include "../../Cosmeron/Core/Module/Package.h"
-#include "../../Cosmeron/Core/Module/Object.h"
+#include "../../../Cosmeron/Core/Module/Callback/Callback.h"
+#include "../../../Cosmeron/Core/Module/Package.h"
+#include "../../../Cosmeron/Core/Module/Object.h"
 #include <assert.h>
 
 CALLBACK_FUNCTION(int, Scale, (int value));

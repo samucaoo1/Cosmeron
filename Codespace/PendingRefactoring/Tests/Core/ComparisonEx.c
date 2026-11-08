@@ -1,5 +1,5 @@
-#include "../../Cosmeron/Core/Algorithm/Comparison.h"
-#include "../../Cosmeron/Core/Module/Module.h"
+#include "../../../Cosmeron/Core/Algorithm/Comparison.h"
+#include "../../../Cosmeron/Core/Module/Module.h"
 #include <assert.h>
 #include <math.h>
 #include <string.h>

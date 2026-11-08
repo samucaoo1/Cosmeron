@@ -1,5 +1,5 @@
-#include "../../Cosmeron/Core/Algorithm/Comparison.h"
-#include "../../Cosmeron/Core/Algorithm/Repeat.h"
+#include "../../../Cosmeron/Core/Algorithm/Comparison.h"
+#include "../../../Cosmeron/Core/Algorithm/Repeat.h"
 
 #include <string.h>
 

@@ -32,6 +32,10 @@ DOMAIN (Architectural / Filesystem Grouping: Core, Container, Text, Security, IO
 - **`PACKAGE`**: A stateless, cohesive collection of free functions, events, callbacks, and sub-namespaces. It does **not** bind a receiver `self` and does **not** emit an instance struct or a `T`-prefixed type.
 - **`STRUCT`**: A pure Plain Old Data (POD) struct container. It emits a namespaced `T`-prefixed type (`ModuleName_TStructName`), but contains **zero overhead**: no `api` pointer, no FunctionTable, and no receiver `self`. Fully compatible with C designated initializers (`.field = val`), ABI register passing, and `memcpy`.
 - **`ISTRUCT`**: An internal Plain Old Data (POD) struct container. It emits an internal namespaced type (`ModuleName_Internal_StructName`) without the `T` prefix, respecting Cosmeron's rule that internal types omit `T`. Contains zero FunctionTable overhead.
+- **`INTERNAL` / `INTERNAL_EX`**: An internal declarative scope for helper routines and module infrastructure. Emits pure `static inline` functions with **zero FunctionTable overhead**.
+  - Module-level: `INTERNAL(...)` emits `ModuleName_Internal_FuncName`.
+  - Component-level: `INTERNAL_EX(Comp, ...)` or `INTERNAL(Comp, ...)` emits `ModuleName_Comp_Internal_FuncName`.
+  - Invocations: use `MODULE_IFUNC(Mod, ...)` or `MODULE_ICALL(Mod, ..., (args...))`.
 - **`OBJECT`**: A stateful type with structured fields, lifecycle helpers (`Init`), receiver-bound methods (`self`), and automatic user type generation with the `T` prefix (`ModuleName_TObjectName`).
 
 ### 1.3 Sub-Namespaces (`SPACE`) & Overload Families (`VARIANT`)

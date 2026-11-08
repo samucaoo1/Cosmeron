@@ -1,0 +1,139 @@
+#pragma once
+
+#include "../Common.inc"
+
+static inline void MODULE_IFUNC(Diagnostic, Format_WriteContext)(
+    MODULE_ITYPE(Diagnostic, FormatWriter) *w,
+    const MODULE_TYPE(Diagnostic, Context) *context) {
+  if (context == NULL || !OBJECT_CALL_0(context, HasOrigin)) {
+    MODULE_IFUNC(Diagnostic, FormatWriter_AppendStr)(w, "<no origin>");
+    return;
+  }
+
+  MODULE_IFUNC(Diagnostic, FormatWriter_AppendStr)(w, "at ");
+  MODULE_IFUNC(Diagnostic, FormatWriter_AppendStr)(
+      w, context->file ? context->file : "<unknown-file>");
+  MODULE_IFUNC(Diagnostic, FormatWriter_AppendChar)(w, ':');
+  MODULE_IFUNC(Diagnostic, FormatWriter_AppendUint)(w, context->line);
+  MODULE_IFUNC(Diagnostic, FormatWriter_AppendStr)(w, " in ");
+  MODULE_IFUNC(Diagnostic, FormatWriter_AppendStr)(
+      w, context->function ? context->function : "<unknown-func>");
+  MODULE_IFUNC(Diagnostic, FormatWriter_AppendStr)(w, "()");
+
+  if (context->description != NULL && context->description[0] != '\0') {
+    MODULE_IFUNC(Diagnostic, FormatWriter_AppendStr)(w, " - ");
+    MODULE_IFUNC(Diagnostic, FormatWriter_AppendStr)(w, context->description);
+  }
+}
+
+static inline void MODULE_IFUNC(Diagnostic, Format_WriteErrorSingle)(
+    MODULE_ITYPE(Diagnostic, FormatWriter) *w,
+    const MODULE_TYPE(Condition, Error) *error, bool detailed) {
+  OPSTATUS code = OBJECT_CALL_0(error, Code);
+  const char *msg = OBJECT_CALL_0(error, Message);
+  const char *name = MODULE_FUNC(Outcome, Status, Name)(code);
+
+  MODULE_IFUNC(Diagnostic, FormatWriter_AppendChar)(w, '[');
+  MODULE_IFUNC(Diagnostic, FormatWriter_AppendStr)(w, name);
+  MODULE_IFUNC(Diagnostic, FormatWriter_AppendStr)(w, "] ");
+  MODULE_IFUNC(Diagnostic, FormatWriter_AppendStr)(w, msg);
+
+  if (detailed && OBJECT_CALL_0(error, HasContext)) {
+    MODULE_IFUNC(Diagnostic, FormatWriter_AppendStr)(w, " (");
+    MODULE_IFUNC(Diagnostic, Format_WriteContext)(
+        w, OBJECT_CALL_0(error, Context));
+    MODULE_IFUNC(Diagnostic, FormatWriter_AppendChar)(w, ')');
+  }
+}
+
+MODULE_IMPLEMENT(DOMAIN(Core), Diagnostic,
+  PACKAGE(Format,
+    OPERATION(Simple,
+              (const MODULE_TYPE(Condition, Error) *error, char *outBuffer,
+               size_t capacity, size_t *outWritten), {
+      if (outWritten != NULL)
+        *outWritten = 0U;
+      if (!error || !outBuffer || capacity == 0U)
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      MODULE_ITYPE(Diagnostic, FormatWriter) w;
+      MODULE_IFUNC(Diagnostic, FormatWriter_Init)(&w, outBuffer, capacity);
+      MODULE_IFUNC(Diagnostic, Format_WriteErrorSingle)(&w, error, false);
+
+      if (outWritten != NULL)
+        *outWritten = w.written;
+      return w.overflow ? STATUS_CONST(INSUFFICIENT_SPACE) : STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(Detailed,
+              (const MODULE_TYPE(Condition, Error) *error, char *outBuffer,
+               size_t capacity, size_t *outWritten), {
+      if (outWritten != NULL)
+        *outWritten = 0U;
+      if (!error || !outBuffer || capacity == 0U)
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      MODULE_ITYPE(Diagnostic, FormatWriter) w;
+      MODULE_IFUNC(Diagnostic, FormatWriter_Init)(&w, outBuffer, capacity);
+      MODULE_IFUNC(Diagnostic, Format_WriteErrorSingle)(&w, error, true);
+
+      if (outWritten != NULL)
+        *outWritten = w.written;
+      return w.overflow ? STATUS_CONST(INSUFFICIENT_SPACE) : STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(Chain,
+              (const MODULE_TYPE(Condition, Error) *error, char *outBuffer,
+               size_t capacity, size_t *outWritten), {
+      if (outWritten != NULL)
+        *outWritten = 0U;
+      if (!error || !outBuffer || capacity == 0U)
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      MODULE_ITYPE(Diagnostic, FormatWriter) w;
+      MODULE_IFUNC(Diagnostic, FormatWriter_Init)(&w, outBuffer, capacity);
+
+      const MODULE_TYPE(Condition, Error) *current = error;
+      size_t index = 0U;
+      size_t maxDepth = MODULE_CONST(Condition, Error, MAX_CHAIN_DEPTH);
+
+      while (current != NULL && index < maxDepth) {
+        if (index > 0U)
+          MODULE_IFUNC(Diagnostic, FormatWriter_AppendStr)(&w, "\n  caused by: ");
+
+        MODULE_IFUNC(Diagnostic, FormatWriter_AppendChar)(&w, '[');
+        MODULE_IFUNC(Diagnostic, FormatWriter_AppendChar)(&w, '#');
+        MODULE_IFUNC(Diagnostic, FormatWriter_AppendUint)(&w, index);
+        MODULE_IFUNC(Diagnostic, FormatWriter_AppendStr)(&w, "] ");
+        MODULE_IFUNC(Diagnostic, Format_WriteErrorSingle)(&w, current, true);
+
+        current = current->cause;
+        index++;
+      }
+
+      if (outWritten != NULL)
+        *outWritten = w.written;
+      return w.overflow ? STATUS_CONST(INSUFFICIENT_SPACE) : STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(Context,
+              (const MODULE_TYPE(Diagnostic, Context) *context, char *outBuffer,
+               size_t capacity, size_t *outWritten), {
+      if (outWritten != NULL)
+        *outWritten = 0U;
+      if (!context || !outBuffer || capacity == 0U)
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      MODULE_ITYPE(Diagnostic, FormatWriter) w;
+      MODULE_IFUNC(Diagnostic, FormatWriter_Init)(&w, outBuffer, capacity);
+      MODULE_IFUNC(Diagnostic, Format_WriteContext)(&w, context);
+
+      if (outWritten != NULL)
+        *outWritten = w.written;
+      return w.overflow ? STATUS_CONST(INSUFFICIENT_SPACE) : STATUS_CONST(SUCCESS);
+    })
+  )
+);
+
+/* EOF */
+

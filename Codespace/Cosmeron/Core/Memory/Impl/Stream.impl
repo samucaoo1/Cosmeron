@@ -1,269 +1,20 @@
 #pragma once
 
-OBJECT_SCOPE(Memory, Stream)
+#include <stdint.h>
+#include <string.h>
 
-#define TARGET_IS_OBJECT 1
-#define SCOPE_TARGET MODULE_NS(Memory, Stream)
+/* ========================================================================== */
+/* 1. Scalar Endian Serialization Implementation Macros                       */
+/* ========================================================================== */
 
-SCOPE_OPERATION(InitRead, (const void *buffer, size_t size)) {
-  if (!self || (!buffer && size > 0U))
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  self->data = (uint8_t *)(uintptr_t)buffer;
-  self->capacity = size;
-  self->offset = 0U;
-  self->bitOffset = 0U;
-  self->isReadOnly = true;
-  return STATUS_CONST(SUCCESS);
-}
-
-SCOPE_OPERATION(InitWrite, (void *buffer, size_t capacity)) {
-  if (!self || (!buffer && capacity > 0U))
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  self->data = (uint8_t *)buffer;
-  self->capacity = capacity;
-  self->offset = 0U;
-  self->bitOffset = 0U;
-  self->isReadOnly = false;
-  return STATUS_CONST(SUCCESS);
-}
-
-SCOPE_OPERATION(AlignToByte, ()) {
-  if (!self)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  if (self->bitOffset > 0U) {
-    if (self->offset >= self->capacity)
-      return STATUS_CONST(OUT_OF_RANGE);
-    self->offset++;
-    self->bitOffset = 0U;
-  }
-  return STATUS_CONST(SUCCESS);
-}
-
-SCOPE_OPERATION(Seek, (int64_t offset, MODULE_ENUM(Memory, Stream, SeekOrigin) origin)) {
-  if (!self)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  self->bitOffset = 0U;
-
-  switch (origin) {
-  case MODULE_CONST(MEMORY, STREAM, SEEK_BEGIN):
-    if (offset < 0 || (uint64_t)offset > self->capacity)
-      return STATUS_CONST(OUT_OF_RANGE);
-    self->offset = (size_t)offset;
-    return STATUS_CONST(SUCCESS);
-
-  case MODULE_CONST(MEMORY, STREAM, SEEK_CURRENT):
-    if (offset < 0) {
-      size_t backward = (size_t)(-offset);
-      if (backward > self->offset)
-        return STATUS_CONST(OUT_OF_RANGE);
-      self->offset -= backward;
-    } else {
-      size_t forward = (size_t)offset;
-      if (forward > self->capacity - self->offset)
-        return STATUS_CONST(OUT_OF_RANGE);
-      self->offset += forward;
-    }
-    return STATUS_CONST(SUCCESS);
-
-  case MODULE_CONST(MEMORY, STREAM, SEEK_END):
-    if (offset > 0)
-      return STATUS_CONST(OUT_OF_RANGE);
-    {
-      size_t backward = (size_t)(-offset);
-      if (backward > self->capacity)
-        return STATUS_CONST(OUT_OF_RANGE);
-      self->offset = self->capacity - backward;
-    }
-    return STATUS_CONST(SUCCESS);
-
-  default:
-    return STATUS_CONST(INVALID_ARGUMENT);
-  }
-}
-
-SCOPE_OPERATION(Skip, (size_t count)) {
-  OPSTATUS status;
-  if (!self)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  status = MODULE_FUNC(Memory, Stream, AlignToByte)(self);
-  if (status != STATUS_CONST(SUCCESS))
-    return status;
-
-  if (count > MODULE_FUNC(Memory, Stream, Remaining)(self))
-    return STATUS_CONST(OUT_OF_RANGE);
-
-  self->offset += count;
-  return STATUS_CONST(SUCCESS);
-}
-
-SCOPE_OPERATION(Rewind, ()) {
-  if (!self)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  self->offset = 0U;
-  self->bitOffset = 0U;
-  return STATUS_CONST(SUCCESS);
-}
-
-SCOPE_OPERATION(Slice, (size_t size, MODULE_TYPE(Memory, Stream) *outSubStream)) {
-  if (!self || !outSubStream)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  if (size > MODULE_FUNC(Memory, Stream, Remaining)(self))
-    return STATUS_CONST(OUT_OF_RANGE);
-
-  if (MODULE_FUNC(Memory, Stream, AlignToByte)((MODULE_TYPE(Memory, Stream) *)self) != STATUS_CONST(SUCCESS))
-    return STATUS_CONST(OUT_OF_RANGE);
-
-  outSubStream->data = self->data ? (self->data + self->offset) : NULL;
-  outSubStream->capacity = size;
-  outSubStream->offset = 0U;
-  outSubStream->bitOffset = 0U;
-  outSubStream->isReadOnly = self->isReadOnly;
 #if !defined(OBJECT_DISABLE_FUNCTION_TABLE) && !defined(MODULE_DISABLE_FUNCTION_TABLE)
-  outSubStream->api = self->api;
+#define STREAM_COPY_API(dest, src) do { (dest)->api = (src)->api; } while (0)
+#else
+#define STREAM_COPY_API(dest, src) ((void)0)
 #endif
-  return STATUS_CONST(SUCCESS);
-}
 
-SCOPE_OPERATION(ReadSlice, (size_t size, MODULE_TYPE(Memory, Stream) *outSubStream)) {
-  OPSTATUS status = MODULE_FUNC(Memory, Stream, Slice)(self, size, outSubStream);
-  if (status != STATUS_CONST(SUCCESS))
-    return status;
-
-  self->offset += size;
-  return STATUS_CONST(SUCCESS);
-}
-
-SCOPE_OPERATION(ReadBytes, (void *destination, size_t size)) {
-  if (!self || !destination)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  if (size == 0U)
-    return STATUS_CONST(SUCCESS);
-
-  if (MODULE_FUNC(Memory, Stream, AlignToByte)(self) != STATUS_CONST(SUCCESS))
-    return STATUS_CONST(OUT_OF_RANGE);
-
-  if (size > MODULE_FUNC(Memory, Stream, Remaining)(self))
-    return STATUS_CONST(OUT_OF_RANGE);
-
-  memcpy(destination, self->data + self->offset, size);
-  self->offset += size;
-  return STATUS_CONST(SUCCESS);
-}
-
-SCOPE_OPERATION(PeekBytes, (void *destination, size_t size)) {
-  if (!self || !destination)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  if (size == 0U)
-    return STATUS_CONST(SUCCESS);
-
-  if (size > MODULE_FUNC(Memory, Stream, Remaining)(self))
-    return STATUS_CONST(OUT_OF_RANGE);
-
-  memcpy(destination, self->data + self->offset, size);
-  return STATUS_CONST(SUCCESS);
-}
-
-SCOPE_OPERATION(ReadBits, (uint8_t bitCount, uint64_t *outValue)) {
-  uint64_t result = 0U;
-
-  if (!self || !outValue || bitCount > 64U)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  if (!MODULE_FUNC(Memory, Stream, HasRemainingBits)(self, (size_t)bitCount))
-    return STATUS_CONST(OUT_OF_RANGE);
-
-  for (uint8_t i = 0U; i < bitCount; ++i) {
-    uint8_t bit = (uint8_t)((self->data[self->offset] >> (7U - self->bitOffset)) & 1U);
-    result = (result << 1U) | bit;
-    self->bitOffset++;
-    if (self->bitOffset == 8U) {
-      self->bitOffset = 0U;
-      self->offset++;
-    }
-  }
-
-  *outValue = result;
-  return STATUS_CONST(SUCCESS);
-}
-
-SCOPE_OPERATION(WriteBits, (uint64_t value, uint8_t bitCount)) {
-  if (!self || bitCount > 64U)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  if (self->isReadOnly)
-    return STATUS_CONST(NOT_SUPPORTED);
-
-  if (!MODULE_FUNC(Memory, Stream, HasRemainingBits)(self, (size_t)bitCount))
-    return STATUS_CONST(INSUFFICIENT_SPACE);
-
-  for (uint8_t i = 0U; i < bitCount; ++i) {
-    uint8_t bit = (uint8_t)((value >> (bitCount - 1U - i)) & 1U);
-    if (self->bitOffset == 0U) {
-      self->data[self->offset] = 0U;
-    }
-    self->data[self->offset] |= (uint8_t)(bit << (7U - self->bitOffset));
-    self->bitOffset++;
-    if (self->bitOffset == 8U) {
-      self->bitOffset = 0U;
-      self->offset++;
-    }
-  }
-
-  return STATUS_CONST(SUCCESS);
-}
-
-SCOPE_OPERATION(WriteBytes, (const void *source, size_t size)) {
-  if (!self || !source)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  if (size == 0U)
-    return STATUS_CONST(SUCCESS);
-
-  if (self->isReadOnly)
-    return STATUS_CONST(NOT_SUPPORTED);
-
-  if (MODULE_FUNC(Memory, Stream, AlignToByte)(self) != STATUS_CONST(SUCCESS))
-    return STATUS_CONST(INSUFFICIENT_SPACE);
-
-  if (size > MODULE_FUNC(Memory, Stream, Remaining)(self))
-    return STATUS_CONST(INSUFFICIENT_SPACE);
-
-  memcpy(self->data + self->offset, source, size);
-  self->offset += size;
-  return STATUS_CONST(SUCCESS);
-}
-
-SCOPE_OPERATION(ReadUInt8, (uint8_t *outValue)) {
-  return MODULE_FUNC(Memory, Stream, ReadBytes)(self, outValue, sizeof(uint8_t));
-}
-
-SCOPE_OPERATION(ReadInt8, (int8_t *outValue)) {
-  return MODULE_FUNC(Memory, Stream, ReadBytes)(self, outValue, sizeof(int8_t));
-}
-
-SCOPE_OPERATION(PeekUInt8, (uint8_t *outValue)) {
-  return MODULE_FUNC(Memory, Stream, PeekBytes)(self, outValue, sizeof(uint8_t));
-}
-
-SCOPE_OPERATION(WriteUInt8, (uint8_t value)) {
-  return MODULE_FUNC(Memory, Stream, WriteBytes)(self, &value, sizeof(uint8_t));
-}
-
-SCOPE_OPERATION(WriteInt8, (int8_t value)) {
-  return MODULE_FUNC(Memory, Stream, WriteBytes)(self, &value, sizeof(int8_t));
-}
-
-#define STREAM_IMPL_SCALAR_LE_BE(UTYPE, ITYPE, SUFFIX)                         \
-  SCOPE_OPERATION(PP_OP_CAT3(ReadUInt, SUFFIX, LE), (UTYPE *outValue)) {        \
+#define STREAM_IMPL_READ_SCALAR_LE_BE(UTYPE, ITYPE, SUFFIX)                   \
+  OPERATION(PP_OP_CAT2(UInt, PP_OP_CAT2(SUFFIX, LE)), (UTYPE *outValue), {    \
     const uint8_t *b;                                                          \
     if (!self || !outValue) return STATUS_CONST(INVALID_ARGUMENT);             \
     if (MODULE_FUNC(Memory, Stream, AlignToByte)(self) != STATUS_CONST(SUCCESS)) return STATUS_CONST(OUT_OF_RANGE); \
@@ -275,8 +26,8 @@ SCOPE_OPERATION(WriteInt8, (int8_t value)) {
     }                                                                          \
     self->offset += sizeof(UTYPE);                                             \
     return STATUS_CONST(SUCCESS);                                              \
-  }                                                                            \
-  SCOPE_OPERATION(PP_OP_CAT3(ReadUInt, SUFFIX, BE), (UTYPE *outValue)) {        \
+  }),                                                                          \
+  OPERATION(PP_OP_CAT2(UInt, PP_OP_CAT2(SUFFIX, BE)), (UTYPE *outValue), {    \
     const uint8_t *b;                                                          \
     if (!self || !outValue) return STATUS_CONST(INVALID_ARGUMENT);             \
     if (MODULE_FUNC(Memory, Stream, AlignToByte)(self) != STATUS_CONST(SUCCESS)) return STATUS_CONST(OUT_OF_RANGE); \
@@ -288,20 +39,22 @@ SCOPE_OPERATION(WriteInt8, (int8_t value)) {
     }                                                                          \
     self->offset += sizeof(UTYPE);                                             \
     return STATUS_CONST(SUCCESS);                                              \
-  }                                                                            \
-  SCOPE_OPERATION(PP_OP_CAT3(ReadInt, SUFFIX, LE), (ITYPE *outValue)) {         \
+  }),                                                                          \
+  OPERATION(PP_OP_CAT2(Int, PP_OP_CAT2(SUFFIX, LE)), (ITYPE *outValue), {     \
     UTYPE unsignedVal = 0U;                                                    \
     OPSTATUS status = MODULE_FUNC(Memory, Stream, PP_OP_CAT3(ReadUInt, SUFFIX, LE))(self, &unsignedVal); \
     if (status == STATUS_CONST(SUCCESS) && outValue) *outValue = (ITYPE)unsignedVal; \
     return status;                                                             \
-  }                                                                            \
-  SCOPE_OPERATION(PP_OP_CAT3(ReadInt, SUFFIX, BE), (ITYPE *outValue)) {         \
+  }),                                                                          \
+  OPERATION(PP_OP_CAT2(Int, PP_OP_CAT2(SUFFIX, BE)), (ITYPE *outValue), {     \
     UTYPE unsignedVal = 0U;                                                    \
     OPSTATUS status = MODULE_FUNC(Memory, Stream, PP_OP_CAT3(ReadUInt, SUFFIX, BE))(self, &unsignedVal); \
     if (status == STATUS_CONST(SUCCESS) && outValue) *outValue = (ITYPE)unsignedVal; \
     return status;                                                             \
-  }                                                                            \
-  SCOPE_OPERATION(PP_OP_CAT3(WriteUInt, SUFFIX, LE), (UTYPE value)) {           \
+  })
+
+#define STREAM_IMPL_WRITE_SCALAR_LE_BE(UTYPE, ITYPE, SUFFIX)                  \
+  OPERATION(PP_OP_CAT2(UInt, PP_OP_CAT2(SUFFIX, LE)), (UTYPE value), {        \
     uint8_t *b;                                                                \
     if (!self) return STATUS_CONST(INVALID_ARGUMENT);                          \
     if (self->isReadOnly) return STATUS_CONST(NOT_SUPPORTED);                  \
@@ -313,8 +66,8 @@ SCOPE_OPERATION(WriteInt8, (int8_t value)) {
     }                                                                          \
     self->offset += sizeof(UTYPE);                                             \
     return STATUS_CONST(SUCCESS);                                              \
-  }                                                                            \
-  SCOPE_OPERATION(PP_OP_CAT3(WriteUInt, SUFFIX, BE), (UTYPE value)) {           \
+  }),                                                                          \
+  OPERATION(PP_OP_CAT2(UInt, PP_OP_CAT2(SUFFIX, BE)), (UTYPE value), {        \
     uint8_t *b;                                                                \
     if (!self) return STATUS_CONST(INVALID_ARGUMENT);                          \
     if (self->isReadOnly) return STATUS_CONST(NOT_SUPPORTED);                  \
@@ -327,22 +80,294 @@ SCOPE_OPERATION(WriteInt8, (int8_t value)) {
     }                                                                          \
     self->offset += sizeof(UTYPE);                                             \
     return STATUS_CONST(SUCCESS);                                              \
-  }                                                                            \
-  SCOPE_OPERATION(PP_OP_CAT3(WriteInt, SUFFIX, LE), (ITYPE value)) {            \
+  }),                                                                          \
+  OPERATION(PP_OP_CAT2(Int, PP_OP_CAT2(SUFFIX, LE)), (ITYPE value), {         \
     return MODULE_FUNC(Memory, Stream, PP_OP_CAT3(WriteUInt, SUFFIX, LE))(self, (UTYPE)value); \
-  }                                                                            \
-  SCOPE_OPERATION(PP_OP_CAT3(WriteInt, SUFFIX, BE), (ITYPE value)) {            \
+  }),                                                                          \
+  OPERATION(PP_OP_CAT2(Int, PP_OP_CAT2(SUFFIX, BE)), (ITYPE value), {         \
     return MODULE_FUNC(Memory, Stream, PP_OP_CAT3(WriteUInt, SUFFIX, BE))(self, (UTYPE)value); \
-  }
+  })
 
-STREAM_IMPL_SCALAR_LE_BE(uint16_t, int16_t, 16)
-STREAM_IMPL_SCALAR_LE_BE(uint32_t, int32_t, 32)
-STREAM_IMPL_SCALAR_LE_BE(uint64_t, int64_t, 64)
+/* ========================================================================== */
+/* 2. Declarative Implementation: Memory_Stream                               */
+/* ========================================================================== */
 
-#undef STREAM_IMPL_SCALAR_LE_BE
-#undef SCOPE_TARGET
-#undef TARGET_IS_OBJECT
+MODULE_IMPLEMENT(DOMAIN(Core), Memory,
+  OBJECT(Stream,
+    VARIANT(Init,
+      OPERATION(Read, (const void *buffer, size_t size), {
+        if (!self || (!buffer && size > 0U))
+          return STATUS_CONST(INVALID_ARGUMENT);
 
-OBJECT_SCOPE_END()
+        self->data = (uint8_t *)(uintptr_t)buffer;
+        self->capacity = size;
+        self->offset = 0U;
+        self->bitOffset = 0U;
+        self->isReadOnly = true;
+        return STATUS_CONST(SUCCESS);
+      }),
+      OPERATION(Write, (void *buffer, size_t capacity), {
+        if (!self || (!buffer && capacity > 0U))
+          return STATUS_CONST(INVALID_ARGUMENT);
+
+        self->data = (uint8_t *)buffer;
+        self->capacity = capacity;
+        self->offset = 0U;
+        self->bitOffset = 0U;
+        self->isReadOnly = false;
+        return STATUS_CONST(SUCCESS);
+      })
+    ),
+
+    OPERATION(Seek, (int64_t offset, MODULE_ENUM(Memory, Stream, SeekOrigin) origin), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      self->bitOffset = 0U;
+
+      switch (origin) {
+      case MODULE_CONST(Memory, Stream, SEEK_BEGIN):
+        if (offset < 0 || (uint64_t)offset > self->capacity)
+          return STATUS_CONST(OUT_OF_RANGE);
+        self->offset = (size_t)offset;
+        return STATUS_CONST(SUCCESS);
+
+      case MODULE_CONST(Memory, Stream, SEEK_CURRENT):
+        if (offset < 0) {
+          size_t backward = (size_t)(-offset);
+          if (backward > self->offset)
+            return STATUS_CONST(OUT_OF_RANGE);
+          self->offset -= backward;
+        } else {
+          size_t forward = (size_t)offset;
+          if (forward > self->capacity - self->offset)
+            return STATUS_CONST(OUT_OF_RANGE);
+          self->offset += forward;
+        }
+        return STATUS_CONST(SUCCESS);
+
+      case MODULE_CONST(Memory, Stream, SEEK_END):
+        if (offset > 0)
+          return STATUS_CONST(OUT_OF_RANGE);
+        {
+          size_t backward = (size_t)(-offset);
+          if (backward > self->capacity)
+            return STATUS_CONST(OUT_OF_RANGE);
+          self->offset = self->capacity - backward;
+        }
+        return STATUS_CONST(SUCCESS);
+
+      default:
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+    }),
+
+    OPERATION(Skip, (size_t count), {
+      OPSTATUS status;
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      status = MODULE_FUNC(Memory, Stream, AlignToByte)(self);
+      if (status != STATUS_CONST(SUCCESS))
+        return status;
+
+      if (count > MODULE_FUNC(Memory, Stream, Remaining)(self))
+        return STATUS_CONST(OUT_OF_RANGE);
+
+      self->offset += count;
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(Rewind, (), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      self->offset = 0U;
+      self->bitOffset = 0U;
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(AlignToByte, (), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      if (self->bitOffset > 0U) {
+        if (self->offset >= self->capacity)
+          return STATUS_CONST(OUT_OF_RANGE);
+        self->offset++;
+        self->bitOffset = 0U;
+      }
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    CONST_OPERATION(Slice, (size_t size, MODULE_TYPE(Memory, Stream) *outSubStream), {
+      if (!self || !outSubStream)
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      if (size > MODULE_FUNC(Memory, Stream, Remaining)(self))
+        return STATUS_CONST(OUT_OF_RANGE);
+
+      if (MODULE_FUNC(Memory, Stream, AlignToByte)((MODULE_TYPE(Memory, Stream) *)self) != STATUS_CONST(SUCCESS))
+        return STATUS_CONST(OUT_OF_RANGE);
+
+      outSubStream->data = self->data ? (self->data + self->offset) : NULL;
+      outSubStream->capacity = size;
+      outSubStream->offset = 0U;
+      outSubStream->bitOffset = 0U;
+      outSubStream->isReadOnly = self->isReadOnly;
+      STREAM_COPY_API(outSubStream, self);
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    VARIANT(Read,
+      OPERATION(Slice, (size_t size, MODULE_TYPE(Memory, Stream) *outSubStream), {
+        OPSTATUS status = MODULE_FUNC(Memory, Stream, Slice)(self, size, outSubStream);
+        if (status != STATUS_CONST(SUCCESS))
+          return status;
+
+        self->offset += size;
+        return STATUS_CONST(SUCCESS);
+      }),
+
+      OPERATION(Bytes, (void *destination, size_t size), {
+        if (!self || !destination)
+          return STATUS_CONST(INVALID_ARGUMENT);
+
+        if (size == 0U)
+          return STATUS_CONST(SUCCESS);
+
+        if (MODULE_FUNC(Memory, Stream, AlignToByte)(self) != STATUS_CONST(SUCCESS))
+          return STATUS_CONST(OUT_OF_RANGE);
+
+        if (size > MODULE_FUNC(Memory, Stream, Remaining)(self))
+          return STATUS_CONST(OUT_OF_RANGE);
+
+        memcpy(destination, self->data + self->offset, size);
+        self->offset += size;
+        return STATUS_CONST(SUCCESS);
+      }),
+
+      OPERATION(Bits, (uint8_t bitCount, uint64_t *outValue), {
+        uint64_t result = 0U;
+
+        if (!self || !outValue || bitCount > 64U)
+          return STATUS_CONST(INVALID_ARGUMENT);
+
+        if (!MODULE_FUNC(Memory, Stream, HasRemainingBits)(self, (size_t)bitCount))
+          return STATUS_CONST(OUT_OF_RANGE);
+
+        for (uint8_t i = 0U; i < bitCount; ++i) {
+          uint8_t bit = (uint8_t)((self->data[self->offset] >> (7U - self->bitOffset)) & 1U);
+          result = (result << 1U) | bit;
+          self->bitOffset++;
+          if (self->bitOffset == 8U) {
+            self->bitOffset = 0U;
+            self->offset++;
+          }
+        }
+
+        *outValue = result;
+        return STATUS_CONST(SUCCESS);
+      }),
+
+      OPERATION(UInt8, (uint8_t *outValue), {
+        return MODULE_FUNC(Memory, Stream, ReadBytes)(self, outValue, sizeof(uint8_t));
+      }),
+
+      OPERATION(Int8, (int8_t *outValue), {
+        return MODULE_FUNC(Memory, Stream, ReadBytes)(self, outValue, sizeof(int8_t));
+      }),
+
+      STREAM_IMPL_READ_SCALAR_LE_BE(uint16_t, int16_t, 16),
+      STREAM_IMPL_READ_SCALAR_LE_BE(uint32_t, int32_t, 32),
+      STREAM_IMPL_READ_SCALAR_LE_BE(uint64_t, int64_t, 64)
+    ),
+
+    VARIANT(Peek,
+      CONST_OPERATION(Bytes, (void *destination, size_t size), {
+        if (!self || !destination)
+          return STATUS_CONST(INVALID_ARGUMENT);
+
+        if (size == 0U)
+          return STATUS_CONST(SUCCESS);
+
+        if (size > MODULE_FUNC(Memory, Stream, Remaining)(self))
+          return STATUS_CONST(OUT_OF_RANGE);
+
+        memcpy(destination, self->data + self->offset, size);
+        return STATUS_CONST(SUCCESS);
+      }),
+
+      CONST_OPERATION(UInt8, (uint8_t *outValue), {
+        return MODULE_FUNC(Memory, Stream, PeekBytes)(self, outValue, sizeof(uint8_t));
+      })
+    ),
+
+    VARIANT(Write,
+      OPERATION(Bytes, (const void *source, size_t size), {
+        if (!self || !source)
+          return STATUS_CONST(INVALID_ARGUMENT);
+
+        if (size == 0U)
+          return STATUS_CONST(SUCCESS);
+
+        if (self->isReadOnly)
+          return STATUS_CONST(NOT_SUPPORTED);
+
+        if (MODULE_FUNC(Memory, Stream, AlignToByte)(self) != STATUS_CONST(SUCCESS))
+          return STATUS_CONST(INSUFFICIENT_SPACE);
+
+        if (size > MODULE_FUNC(Memory, Stream, Remaining)(self))
+          return STATUS_CONST(INSUFFICIENT_SPACE);
+
+        memcpy(self->data + self->offset, source, size);
+        self->offset += size;
+        return STATUS_CONST(SUCCESS);
+      }),
+
+      OPERATION(Bits, (uint64_t value, uint8_t bitCount), {
+        if (!self || bitCount > 64U)
+          return STATUS_CONST(INVALID_ARGUMENT);
+
+        if (self->isReadOnly)
+          return STATUS_CONST(NOT_SUPPORTED);
+
+        if (!MODULE_FUNC(Memory, Stream, HasRemainingBits)(self, (size_t)bitCount))
+          return STATUS_CONST(INSUFFICIENT_SPACE);
+
+        for (uint8_t i = 0U; i < bitCount; ++i) {
+          uint8_t bit = (uint8_t)((value >> (bitCount - 1U - i)) & 1U);
+          if (self->bitOffset == 0U) {
+            self->data[self->offset] = 0U;
+          }
+          self->data[self->offset] |= (uint8_t)(bit << (7U - self->bitOffset));
+          self->bitOffset++;
+          if (self->bitOffset == 8U) {
+            self->bitOffset = 0U;
+            self->offset++;
+          }
+        }
+
+        return STATUS_CONST(SUCCESS);
+      }),
+
+      OPERATION(UInt8, (uint8_t value), {
+        return MODULE_FUNC(Memory, Stream, WriteBytes)(self, &value, sizeof(uint8_t));
+      }),
+
+      OPERATION(Int8, (int8_t value), {
+        return MODULE_FUNC(Memory, Stream, WriteBytes)(self, &value, sizeof(int8_t));
+      }),
+
+      STREAM_IMPL_WRITE_SCALAR_LE_BE(uint16_t, int16_t, 16),
+      STREAM_IMPL_WRITE_SCALAR_LE_BE(uint32_t, int32_t, 32),
+      STREAM_IMPL_WRITE_SCALAR_LE_BE(uint64_t, int64_t, 64)
+    )
+  )
+);
+
+#undef STREAM_IMPL_READ_SCALAR_LE_BE
+#undef STREAM_IMPL_WRITE_SCALAR_LE_BE
+#undef STREAM_COPY_API
 
 /* EOF */

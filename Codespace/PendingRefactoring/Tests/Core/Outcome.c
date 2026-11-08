@@ -1,9 +1,11 @@
-#include "../../Cosmeron/Core/Outcome/Status.h"
-#include "../../Cosmeron/Core/Outcome/Result.h"
+#include "../../../Cosmeron/Core/Outcome/Status.h"
+#include "../../../Cosmeron/Core/Outcome/Result.h"
 
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
+
+TEMPLATE_INSTANTIATE(Result, int32, int32_t);
 
 #define STATUS_TEST_COUNT(ROW) +1
 enum { Outcome_Test_StatusCount = 0 STATUS_TABLE(STATUS_TEST_COUNT) };
@@ -24,13 +26,13 @@ static int32_t double_val(int32_t x, void *ctx) {
   return x * 2;
 }
 
-static OPSTATUS check_positive(int32_t x, RESULT_TYPE(int32) *out, void *ctx) {
+static OPSTATUS check_positive(int32_t x, MODULE_TYPED(Outcome, Result, int32) *out, void *ctx) {
   (void)ctx;
   if (x > 0) {
     return OBJECT_CALL(out, Ok, x * 10);
   }
-  ERROR_TYPE(Error) e;
-  TError_Create(&e, STATUS_CONST(INVALID_ARGUMENT), "Must be positive");
+  MODULE_TYPE(Condition, Error) e;
+  MODULE_FUNC(Condition, Error, Create)(&e, STATUS_CONST(INVALID_ARGUMENT), "Must be positive");
   return OBJECT_CALL(out, Err, &e);
 }
 
@@ -52,60 +54,55 @@ int main(void) {
     return 6;
 
   /* 2. Predicates: IsSuccess / IsFailure / IsSpecial */
-  assert(Status_IsSuccess(STATUS_CONST(SUCCESS)) == true);
-  assert(Status_IsSuccess(STATUS_CONST(GENERIC_ERROR)) == false);
-  assert(Status_IsFailure(STATUS_CONST(SUCCESS)) == false);
-  assert(Status_IsFailure(STATUS_CONST(INVALID_ARGUMENT)) == true);
+  assert(MODULE_FUNC(Outcome, Status, IsSuccess)(STATUS_CONST(SUCCESS)) == true);
+  assert(MODULE_FUNC(Outcome, Status, IsSuccess)(STATUS_CONST(GENERIC_ERROR)) == false);
+  assert(MODULE_FUNC(Outcome, Status, IsFailure)(STATUS_CONST(SUCCESS)) == false);
+  assert(MODULE_FUNC(Outcome, Status, IsFailure)(STATUS_CONST(INVALID_ARGUMENT)) == true);
 
-  assert(Status_IsSpecial(STATUS_CONST(WOULD_BLOCK)) == true);
-  assert(Status_IsSpecial(STATUS_CONST(INCOMPLETE_SEQUENCE)) == true);
-  assert(Status_IsSpecial(STATUS_CONST(SUCCESS)) == false);
-  assert(Status_IsSpecial(STATUS_CONST(OUT_OF_MEMORY)) == false);
+  assert(MODULE_FUNC(Outcome, Status, IsSpecial)(STATUS_CONST(WOULD_BLOCK)) == true);
+  assert(MODULE_FUNC(Outcome, Status, IsSpecial)(STATUS_CONST(INCOMPLETE_SEQUENCE)) == true);
+  assert(MODULE_FUNC(Outcome, Status, IsSpecial)(STATUS_CONST(SUCCESS)) == false);
+  assert(MODULE_FUNC(Outcome, Status, IsSpecial)(STATUS_CONST(OUT_OF_MEMORY)) == false);
 
   /* 3. Categories and CategoryOf */
-  assert(Status_CategoryOf(STATUS_CONST(SUCCESS)) ==
-         STATUS_CONST(CATEGORY_SUCCESS));
-  assert(Status_CategoryOf(STATUS_CONST(INVALID_ARGUMENT)) ==
-         STATUS_CONST(CATEGORY_GENERIC));
-  assert(Status_CategoryOf(STATUS_CONST(OUT_OF_MEMORY)) ==
-         STATUS_CONST(CATEGORY_MEMORY));
-  assert(Status_CategoryOf(STATUS_CONST(INSUFFICIENT_SPACE)) ==
-         STATUS_CONST(CATEGORY_MEMORY));
-  assert(Status_CategoryOf(STATUS_CONST(TIMEOUT)) ==
-         STATUS_CONST(CATEGORY_CONCURRENCY));
-  assert(Status_CategoryOf(STATUS_CONST(WOULD_BLOCK)) ==
-         STATUS_CONST(CATEGORY_CONCURRENCY));
-  assert(Status_CategoryOf(STATUS_CONST(ARITHMETIC_OVERFLOW)) ==
-         STATUS_CONST(CATEGORY_ARITHMETIC));
-  assert(Status_CategoryOf(STATUS_CONST(DIVISION_BY_ZERO)) ==
-         STATUS_CONST(CATEGORY_ARITHMETIC));
-  assert(Status_CategoryOf(STATUS_CONST(INVALID_SEQUENCE)) ==
-         STATUS_CONST(CATEGORY_SEQUENCE));
-  assert(Status_CategoryOf(STATUS_CONST(INCOMPLETE_SEQUENCE)) ==
-         STATUS_CONST(CATEGORY_SEQUENCE));
+  assert(MODULE_FUNC(Outcome, Status, CategoryOf)(STATUS_CONST(SUCCESS)) ==
+         STATUS_CATEGORY_CONST(SUCCESS));
+  assert(MODULE_FUNC(Outcome, Status, CategoryOf)(STATUS_CONST(INVALID_ARGUMENT)) ==
+         STATUS_CATEGORY_CONST(GENERIC));
+  assert(MODULE_FUNC(Outcome, Status, CategoryOf)(STATUS_CONST(OUT_OF_MEMORY)) ==
+         STATUS_CATEGORY_CONST(MEMORY));
+  assert(MODULE_FUNC(Outcome, Status, CategoryOf)(STATUS_CONST(INSUFFICIENT_SPACE)) ==
+         STATUS_CATEGORY_CONST(MEMORY));
+  assert(MODULE_FUNC(Outcome, Status, CategoryOf)(STATUS_CONST(TIMEOUT)) ==
+         STATUS_CATEGORY_CONST(CONCURRENCY));
+  assert(MODULE_FUNC(Outcome, Status, CategoryOf)(STATUS_CONST(WOULD_BLOCK)) ==
+         STATUS_CATEGORY_CONST(CONCURRENCY));
+  assert(MODULE_FUNC(Outcome, Status, CategoryOf)(STATUS_CONST(ARITHMETIC_OVERFLOW)) ==
+         STATUS_CATEGORY_CONST(ARITHMETIC));
+  assert(MODULE_FUNC(Outcome, Status, CategoryOf)(STATUS_CONST(DIVISION_BY_ZERO)) ==
+         STATUS_CATEGORY_CONST(ARITHMETIC));
+  assert(MODULE_FUNC(Outcome, Status, CategoryOf)(STATUS_CONST(INVALID_SEQUENCE)) ==
+         STATUS_CATEGORY_CONST(SEQUENCE));
+  assert(MODULE_FUNC(Outcome, Status, CategoryOf)(STATUS_CONST(INCOMPLETE_SEQUENCE)) ==
+         STATUS_CATEGORY_CONST(SEQUENCE));
 
   /* 4. IsCategory predicate */
-  assert(Status_IsCategory(STATUS_CONST(OUT_OF_MEMORY),
-                           STATUS_CONST(CATEGORY_MEMORY)) == true);
-  assert(Status_IsCategory(STATUS_CONST(OUT_OF_MEMORY),
-                           STATUS_CONST(CATEGORY_GENERIC)) == false);
+  assert(MODULE_FUNC(Outcome, Status, IsCategory)(STATUS_CONST(OUT_OF_MEMORY),
+                                                  STATUS_CATEGORY_CONST(MEMORY)) == true);
+  assert(MODULE_FUNC(Outcome, Status, IsCategory)(STATUS_CONST(OUT_OF_MEMORY),
+                                                  STATUS_CATEGORY_CONST(GENERIC)) == false);
 
   /* 5. Names and Messages */
-  assert(strcmp(Status_Name(STATUS_CONST(SUCCESS)), "SUCCESS") == 0);
-  assert(strcmp(Status_Name(STATUS_CONST(OUT_OF_RANGE)), "OUT_OF_RANGE") == 0);
-  assert(strcmp(Status_Message(STATUS_CONST(SUCCESS)), "Success") == 0);
-  assert(strcmp(Status_Message(STATUS_CONST(NOT_FOUND)), "Not found") == 0);
-  assert(strcmp(Status_CategoryName(STATUS_CONST(CATEGORY_CONCURRENCY)),
+  assert(strcmp(MODULE_FUNC(Outcome, Status, Name)(STATUS_CONST(SUCCESS)), "SUCCESS") == 0);
+  assert(strcmp(MODULE_FUNC(Outcome, Status, Name)(STATUS_CONST(OUT_OF_RANGE)), "OUT_OF_RANGE") == 0);
+  assert(strcmp(MODULE_FUNC(Outcome, Status, Message)(STATUS_CONST(SUCCESS)), "Success") == 0);
+  assert(strcmp(MODULE_FUNC(Outcome, Status, Message)(STATUS_CONST(NOT_FOUND)), "Not found") == 0);
+  assert(strcmp(MODULE_FUNC(Outcome, Status, CategoryName)(STATUS_CATEGORY_CONST(CONCURRENCY)),
                 "Concurrency") == 0);
 
-  /* 6. PACKAGE_CALL verification */
-  assert(PACKAGE_CALL(Status, IsSuccess, STATUS_CONST(SUCCESS)) == true);
-  assert(strcmp(PACKAGE_CALL(Status, Message, STATUS_CONST(TIMEOUT)),
-                "Timeout") == 0);
-
-  /* 7. RESULT_TYPE(SUFFIX) operations and queries */
-  RESULT_TYPE(int32) res;
-  assert(TResult_int32_Init(&res) == STATUS_CONST(SUCCESS));
+  /* 6. RESULT operations and queries */
+  MODULE_TYPED(Outcome, Result, int32) res;
+  assert(MODULE_FUNC(Outcome, Result, int32, Init)(&res) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&res, Ok, 100) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL_0(&res, IsOk) == true);
   assert(OBJECT_CALL_0(&res, IsError) == false);
@@ -115,15 +112,15 @@ int main(void) {
   assert(OBJECT_CALL(&res, Value, &val) == STATUS_CONST(SUCCESS));
   assert(val == 100);
 
-  ERROR_TYPE(Error) extractedErr;
+  MODULE_TYPE(Condition, Error) extractedErr;
   assert(OBJECT_CALL(&res, Error, &extractedErr) == STATUS_CONST(INVALID_ARGUMENT));
 
   /* Err result */
-  ERROR_TYPE(Error) customErr;
-  assert(TError_Create(&customErr, STATUS_CONST(OUT_OF_MEMORY), "Allocation failed") ==
+  MODULE_TYPE(Condition, Error) customErr;
+  assert(MODULE_FUNC(Condition, Error, Create)(&customErr, STATUS_CONST(OUT_OF_MEMORY), "Allocation failed") ==
          STATUS_CONST(SUCCESS));
-  RESULT_TYPE(int32) errRes;
-  assert(TResult_int32_Init(&errRes) == STATUS_CONST(SUCCESS));
+  MODULE_TYPED(Outcome, Result, int32) errRes;
+  assert(MODULE_FUNC(Outcome, Result, int32, Init)(&errRes) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&errRes, Err, &customErr) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL_0(&errRes, IsOk) == false);
   assert(OBJECT_CALL_0(&errRes, IsError) == true);
@@ -134,64 +131,68 @@ int main(void) {
   assert(val == 42); /* out untouched */
 
   assert(OBJECT_CALL(&errRes, Error, &extractedErr) == STATUS_CONST(SUCCESS));
-  assert(TError_Code(&extractedErr) == STATUS_CONST(OUT_OF_MEMORY));
-  assert(strcmp(TError_Message(&extractedErr), "Allocation failed") == 0);
+  assert(OBJECT_CALL_0(&extractedErr, Code) == STATUS_CONST(OUT_OF_MEMORY));
+  assert(strcmp(OBJECT_CALL_0(&extractedErr, Message), "Allocation failed") == 0);
 
   /* FromStatus */
-  RESULT_TYPE(int32) statusRes;
-  assert(TResult_int32_Init(&statusRes) == STATUS_CONST(SUCCESS));
+  MODULE_TYPED(Outcome, Result, int32) statusRes;
+  assert(MODULE_FUNC(Outcome, Result, int32, Init)(&statusRes) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&statusRes, FromStatus, STATUS_CONST(TIMEOUT)) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL_0(&statusRes, IsOk) == false);
   assert(OBJECT_CALL(&statusRes, Error, &extractedErr) == STATUS_CONST(SUCCESS));
-  assert(TError_Code(&extractedErr) == STATUS_CONST(TIMEOUT));
-  assert(strcmp(TError_Message(&extractedErr), "Timeout") == 0);
+  assert(OBJECT_CALL_0(&extractedErr, Code) == STATUS_CONST(TIMEOUT));
+  assert(strcmp(OBJECT_CALL_0(&extractedErr, Message), "Timeout") == 0);
 
   assert(OBJECT_CALL(&statusRes, FromStatus, STATUS_CONST(SUCCESS)) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL_0(&statusRes, IsOk) == true);
 
   /* Map: on Ok */
-  RESULT_TYPE(int32) mappedRes;
-  assert(TResult_int32_Init(&mappedRes) == STATUS_CONST(SUCCESS));
-  assert(OBJECT_CALL(&res, Map, RESULT_MAP_BIND(int32, double_val, NULL), &mappedRes) ==
-         STATUS_CONST(SUCCESS));
+  TCALLBACK(MODULE_CALLBACK(Outcome, Result, int32, MapFunction)) mapCb = {
+      .function = double_val,
+      .context = NULL
+  };
+
+  MODULE_TYPED(Outcome, Result, int32) mappedRes;
+  assert(MODULE_FUNC(Outcome, Result, int32, Init)(&mappedRes) == STATUS_CONST(SUCCESS));
+  assert(OBJECT_CALL(&res, Map, mapCb, &mappedRes) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL_0(&mappedRes, IsOk) == true);
   assert(OBJECT_CALL(&mappedRes, ValueOr, 0) == 200);
 
   /* Map: on Err */
-  RESULT_TYPE(int32) mappedErr;
-  assert(TResult_int32_Init(&mappedErr) == STATUS_CONST(SUCCESS));
-  assert(OBJECT_CALL(&errRes, Map, RESULT_MAP_BIND(int32, double_val, NULL), &mappedErr) ==
-         STATUS_CONST(SUCCESS));
+  MODULE_TYPED(Outcome, Result, int32) mappedErr;
+  assert(MODULE_FUNC(Outcome, Result, int32, Init)(&mappedErr) == STATUS_CONST(SUCCESS));
+  assert(OBJECT_CALL(&errRes, Map, mapCb, &mappedErr) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL_0(&mappedErr, IsError) == true);
   assert(OBJECT_CALL(&mappedErr, Error, &extractedErr) == STATUS_CONST(SUCCESS));
-  assert(TError_Code(&extractedErr) == STATUS_CONST(OUT_OF_MEMORY));
+  assert(OBJECT_CALL_0(&extractedErr, Code) == STATUS_CONST(OUT_OF_MEMORY));
 
   /* AndThen: on Ok -> Ok */
-  RESULT_TYPE(int32) boundRes;
-  assert(TResult_int32_Init(&boundRes) == STATUS_CONST(SUCCESS));
-  assert(OBJECT_CALL(&res, AndThen, RESULT_BIND_BIND(int32, check_positive, NULL), &boundRes) ==
-         STATUS_CONST(SUCCESS));
+  TCALLBACK(MODULE_CALLBACK(Outcome, Result, int32, BindFunction)) bindCb = {
+      .function = check_positive,
+      .context = NULL
+  };
+
+  MODULE_TYPED(Outcome, Result, int32) boundRes;
+  assert(MODULE_FUNC(Outcome, Result, int32, Init)(&boundRes) == STATUS_CONST(SUCCESS));
+  assert(OBJECT_CALL(&res, AndThen, bindCb, &boundRes) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL_0(&boundRes, IsOk) == true);
   assert(OBJECT_CALL(&boundRes, ValueOr, 0) == 1000);
 
   /* AndThen: on Ok -> Err */
-  RESULT_TYPE(int32) negRes;
-  assert(TResult_int32_Init(&negRes) == STATUS_CONST(SUCCESS));
+  MODULE_TYPED(Outcome, Result, int32) negRes;
+  assert(MODULE_FUNC(Outcome, Result, int32, Init)(&negRes) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&negRes, Ok, -5) == STATUS_CONST(SUCCESS));
-  assert(OBJECT_CALL(&negRes, AndThen, RESULT_BIND_BIND(int32, check_positive, NULL), &boundRes) ==
-         STATUS_CONST(SUCCESS));
+  assert(OBJECT_CALL(&negRes, AndThen, bindCb, &boundRes) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL_0(&boundRes, IsError) == true);
   assert(OBJECT_CALL(&boundRes, Error, &extractedErr) == STATUS_CONST(SUCCESS));
-  assert(TError_Code(&extractedErr) == STATUS_CONST(INVALID_ARGUMENT));
-  assert(strcmp(TError_Message(&extractedErr), "Must be positive") == 0);
+  assert(OBJECT_CALL_0(&extractedErr, Code) == STATUS_CONST(INVALID_ARGUMENT));
+  assert(strcmp(OBJECT_CALL_0(&extractedErr, Message), "Must be positive") == 0);
 
   /* AndThen: on Err -> preserves original Err */
-  assert(OBJECT_CALL(&errRes, AndThen, RESULT_BIND_BIND(int32, check_positive, NULL), &boundRes) ==
-         STATUS_CONST(SUCCESS));
+  assert(OBJECT_CALL(&errRes, AndThen, bindCb, &boundRes) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL_0(&boundRes, IsError) == true);
   assert(OBJECT_CALL(&boundRes, Error, &extractedErr) == STATUS_CONST(SUCCESS));
-  assert(TError_Code(&extractedErr) == STATUS_CONST(OUT_OF_MEMORY));
+  assert(OBJECT_CALL_0(&extractedErr, Code) == STATUS_CONST(OUT_OF_MEMORY));
 
   return 0;
 }
-
