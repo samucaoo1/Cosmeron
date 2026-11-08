@@ -121,6 +121,11 @@ Everything must live inside the library/module namespace whenever C allows it. E
   - Usable inside `MODULE(...)` or standalone via `STRUCT(MOD, NAME, FIELDS(...))`.
   - Free functions operating on structs are placed in an accompanying `PACKAGE(NAME, ...)`.
   - Forward declarations: `FORWARD_STRUCT(MOD, NAME)` and `FORWARD_TEMPLATE_STRUCT(MOD, NAME, SUFFIX)`.
+- **Declarative Internal Structs (`ISTRUCT` / `TEMPLATE_ISTRUCT`):** Use `ISTRUCT(NAME, FIELDS(...))` and `TEMPLATE_ISTRUCT(NAME, (ARGS...), FIELDS(...))`.
+  - Intended for internal implementation structures (allocator nodes, radix levels, book-keeping headers) that do **not** use the user-facing `T` prefix.
+  - Generates canonical namespaced internal types: `MODULE_ITYPE(MOD, NAME)` $\to$ `MOD_Internal_NAME` and `MODULE_ITYPED(MOD, NAME, SUFFIX)` $\to$ `MOD_Internal_NAME_SUFFIX`.
+  - Usable inside `MODULE(...)` or standalone via `ISTRUCT(MOD, NAME, FIELDS(...))`.
+  - Forward declarations: `FORWARD_ISTRUCT(MOD, NAME)` and `FORWARD_TEMPLATE_ISTRUCT(MOD, NAME, SUFFIX)`.
 - **Declarative Objects:** Use `OBJECT(CLASS, FIELDS(...), ...)` and `OBJECT_EXTENDS(CLASS, BASE_CLASS, FIELDS(...), ...)`.
   - Members are declared with `OPERATION`, `PREDICATE`, `FUNCTION`, `PROCEDURE`, `COMPARISON`.
   - Comparison extensions generate specialized comparisons directly inside objects:

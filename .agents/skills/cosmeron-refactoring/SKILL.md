@@ -25,6 +25,7 @@ DOMAIN (Agrupamento Arquitetural/Pasta: Core, Container, Text, IO, Graphics)
   └── MODULE (Unidade Fundamental de Compilação e Semântica: Memory, File, Bit, Text)
         ├── PACKAGE (Conjuntos Estáticos de Funções Livres: Alloc, Operations)
         ├── STRUCT (Containers POD Puros de Dados sem self/vtable: Point, Range, Header)
+        ├── ISTRUCT (Containers POD Internos sem prefixo T e sem vtable: HeapPageHeader, HeapSpan)
         └── OBJECT (Instâncias com Estado, Receptor 'self' e FunctionTable: Stream, Pool)
               ├── SPACE (Sub-Namespaces Aninhados / Sub-Tabelas: Transform, Codec)
               └── VARIANT (Famílias de Sobrecargas Planas: Alloc, AllocAndFill)
@@ -72,6 +73,14 @@ MODULE(DOMAIN(Core), Text,
         FIELDS(
             int32_t x;
             int32_t y;
+        )
+    ),
+
+    /* 1.6. Struct POD interno (Gera Text_Internal_BufferNode sem prefixo T e sem vtable/api) */
+    ISTRUCT(BufferNode,
+        FIELDS(
+            void *next;
+            size_t size;
         )
     ),
 

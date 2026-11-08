@@ -71,60 +71,60 @@ ENUM_DEF_EX(MODULE_NS(Memory, Heap), PageState, HEAP_PAGE_STATE_TABLE, HEAP_PAGE
 ENUM_DEF_EX(MODULE_NS(Memory, Heap), Config, HEAP_CONFIG_TABLE, HEAP_CONFIG_DISPATCH)
 
 /* ========================================================================== */
-/* 2. Internal BiBOP and Radix Structures                                     */
-/* ========================================================================== */
-
-typedef struct MODULE_ITYPE(Memory, HeapPageHeader) {
-  uint8_t isLargeSpan;
-  uint8_t policy;
-  uint8_t state;
-  uint8_t _reserved;
-  uint16_t sizeClassIndex;
-  uint16_t elementSize;
-  uint16_t cellCount;
-  uint16_t freeCellCount;
-  uint16_t firstFreeCell;
-  struct MODULE_ITYPE(Memory, HeapPageHeader) *next;
-  struct MODULE_ITYPE(Memory, HeapPageHeader) *prev;
-  void *rawBlock;
-  const void *descriptor;
-  uint64_t allocBitmap[MODULE_CONST(MEMORY, HEAP, BITMAP_WORDS)];
-  uint64_t markBitmap[MODULE_CONST(MEMORY, HEAP, BITMAP_WORDS)];
-  uint8_t _padding[128 - (4 * sizeof(void *) + 8 * sizeof(uint64_t) + 16)];
-  uint8_t payload[];
-} MODULE_ITYPE(Memory, HeapPageHeader);
-
-typedef struct MODULE_ITYPE(Memory, HeapSpan) {
-  uint8_t isLargeSpan;
-  uint8_t policy;
-  uint8_t isMarked;
-  uint8_t _reserved;
-  struct MODULE_ITYPE(Memory, HeapSpan) *next;
-  struct MODULE_ITYPE(Memory, HeapSpan) *prev;
-  size_t pageCount;
-  size_t size;
-  const void *descriptor;
-  void *rawBlock;
-  uint8_t data[];
-} MODULE_ITYPE(Memory, HeapSpan);
-
-typedef struct MODULE_ITYPE(Memory, HeapRadixLevel2) {
-  uintptr_t l1Key;
-  void *pages[1U << MODULE_CONST(MEMORY, HEAP, RADIX_LEVEL2_BITS)];
-  struct MODULE_ITYPE(Memory, HeapRadixLevel2) *next;
-} MODULE_ITYPE(Memory, HeapRadixLevel2);
-
-typedef struct MODULE_ITYPE(Memory, HeapSizeClass) {
-  MODULE_ITYPE(Memory, HeapPageHeader) *activePages;
-  MODULE_ITYPE(Memory, HeapPageHeader) *fullPages;
-  size_t elementSize;
-} MODULE_ITYPE(Memory, HeapSizeClass);
-
-/* ========================================================================== */
-/* 3. Declarative TMemoryHeap Object                                          */
+/* 2. Declarative Module, Internal BiBOP Structures and TMemoryHeap Object     */
 /* ========================================================================== */
 
 MODULE(DOMAIN(Core), Memory,
+    ISTRUCT(HeapPageHeader,
+        FIELDS(
+            uint8_t isLargeSpan;
+            uint8_t policy;
+            uint8_t state;
+            uint8_t _reserved;
+            uint16_t sizeClassIndex;
+            uint16_t elementSize;
+            uint16_t cellCount;
+            uint16_t freeCellCount;
+            uint16_t firstFreeCell;
+            MODULE_ITYPE(Memory, HeapPageHeader) *next;
+            MODULE_ITYPE(Memory, HeapPageHeader) *prev;
+            void *rawBlock;
+            const void *descriptor;
+            uint64_t allocBitmap[MODULE_CONST(MEMORY, HEAP, BITMAP_WORDS)];
+            uint64_t markBitmap[MODULE_CONST(MEMORY, HEAP, BITMAP_WORDS)];
+            uint8_t _padding[128 - (4 * sizeof(void *) + 8 * sizeof(uint64_t) + 16)];
+            uint8_t payload[];
+        )
+    ),
+    ISTRUCT(HeapSpan,
+        FIELDS(
+            uint8_t isLargeSpan;
+            uint8_t policy;
+            uint8_t isMarked;
+            uint8_t _reserved;
+            MODULE_ITYPE(Memory, HeapSpan) *next;
+            MODULE_ITYPE(Memory, HeapSpan) *prev;
+            size_t pageCount;
+            size_t size;
+            const void *descriptor;
+            void *rawBlock;
+            uint8_t data[];
+        )
+    ),
+    ISTRUCT(HeapRadixLevel2,
+        FIELDS(
+            uintptr_t l1Key;
+            void *pages[1U << MODULE_CONST(MEMORY, HEAP, RADIX_LEVEL2_BITS)];
+            MODULE_ITYPE(Memory, HeapRadixLevel2) *next;
+        )
+    ),
+    ISTRUCT(HeapSizeClass,
+        FIELDS(
+            MODULE_ITYPE(Memory, HeapPageHeader) *activePages;
+            MODULE_ITYPE(Memory, HeapPageHeader) *fullPages;
+            size_t elementSize;
+        )
+    ),
     OBJECT(Heap,
         FIELDS(
             MODULE_ITYPE(Memory, HeapRadixLevel2) *radixBuckets[MODULE_CONST(MEMORY, HEAP, RADIX_BUCKETS_COUNT)];

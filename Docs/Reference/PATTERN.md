@@ -31,6 +31,7 @@ DOMAIN (Architectural / Filesystem Grouping: Core, Container, Text, Security, IO
 ### 1.2 Packages vs. Structs vs. Objects
 - **`PACKAGE`**: A stateless, cohesive collection of free functions, events, callbacks, and sub-namespaces. It does **not** bind a receiver `self` and does **not** emit an instance struct or a `T`-prefixed type.
 - **`STRUCT`**: A pure Plain Old Data (POD) struct container. It emits a namespaced `T`-prefixed type (`ModuleName_TStructName`), but contains **zero overhead**: no `api` pointer, no FunctionTable, and no receiver `self`. Fully compatible with C designated initializers (`.field = val`), ABI register passing, and `memcpy`.
+- **`ISTRUCT`**: An internal Plain Old Data (POD) struct container. It emits an internal namespaced type (`ModuleName_Internal_StructName`) without the `T` prefix, respecting Cosmeron's rule that internal types omit `T`. Contains zero FunctionTable overhead.
 - **`OBJECT`**: A stateful type with structured fields, lifecycle helpers (`Init`), receiver-bound methods (`self`), and automatic user type generation with the `T` prefix (`ModuleName_TObjectName`).
 
 ### 1.3 Sub-Namespaces (`SPACE`) & Overload Families (`VARIANT`)
@@ -197,21 +198,21 @@ MODULE(DOMAIN(Core), StreamBuffer,
 
 ---
 
-## 5. Templates (`TEMPLATE_OBJECT`, `TEMPLATE_PACKAGE` & `TEMPLATE_STRUCT`)
+## 5. Templates (`TEMPLATE_OBJECT`, `TEMPLATE_PACKAGE`, `TEMPLATE_STRUCT` & `TEMPLATE_ISTRUCT`)
 
 Cosmeron uses a **zero-blueprint, single-source-of-truth** template engine.
 
 ### 5.1 Rules for Templates
-1. **Zero Blueprint Macros**: Never define separate `#define TEMPLATE_<Name>(...)` macros duplicating member lists. The template is declared **once**, directly inside `MODULE(...)` via `TEMPLATE_OBJECT`, `TEMPLATE_PACKAGE`, or `TEMPLATE_STRUCT`.
+1. **Zero Blueprint Macros**: Never define separate `#define TEMPLATE_<Name>(...)` macros duplicating member lists. The template is declared **once**, directly inside `MODULE(...)` via `TEMPLATE_OBJECT`, `TEMPLATE_PACKAGE`, `TEMPLATE_STRUCT`, or `TEMPLATE_ISTRUCT`.
 2. **Inline vs Non-Inline**:
    - Templates with inline methods use `OPERATION_INLINE(...)`, `FUNCTION_INLINE(...)`.
    - Non-inline template methods are implemented in the implementation file via explicit prototype macros.
-   - `TEMPLATE_STRUCT` requires only `FIELDS(...)` with zero vtable or method overhead.
+   - `TEMPLATE_STRUCT` / `TEMPLATE_ISTRUCT` require only `FIELDS(...)` with zero vtable or method overhead.
 3. **Instantiation**:
    - On-demand instantiation: `TEMPLATE_INSTANTIATE(Name, Suffix, Type)`.
-   - Direct template struct instantiation: `TEMPLATE_STRUCT(Mod, Name, Suffix, FIELDS(...))`.
+   - Direct template struct instantiation: `TEMPLATE_STRUCT(Mod, Name, Suffix, FIELDS(...))` or `TEMPLATE_ISTRUCT(Mod, Name, Suffix, FIELDS(...))`.
    - Table-driven batch instantiation: `TEMPLATE_INSTANTIATE_TABLE(Name, TYPE_TABLE)`.
-   - Type naming for user types: `T<Name>_<suffix>` (e.g. `TVector_uint32`, `TPair_int`).
+   - Type naming for user types: `T<Name>_<suffix>` (e.g. `TVector_uint32`, `TPair_int`). Internal types omit `T` (`<Name>_<suffix>`).
 
 ---
 
