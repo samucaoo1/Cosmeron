@@ -31,13 +31,13 @@ typedef enum MODULE_ENUM(Outcome, Status, Category) {
 /* 3. Universal OPSTATUS Enum (Decoupled Row-Tuple Pattern)                   */
 /* ========================================================================== */
 
-typedef enum MODULE_ENUM(Outcome, Status, Status) {
+typedef enum MODULE_ENUM(Outcome, Status) {
 #define STATUS_ENUM_ITEM(ROW) STATUS_CONST(STATUS_GET(NAME, ROW)),
   STATUS_TABLE(STATUS_ENUM_ITEM)
 #undef STATUS_ENUM_ITEM
-} OPSTATUS;
+} MODULE_ENUM(Outcome, Status);
 
-typedef OPSTATUS MODULE_ENUM(Outcome, Status, Status);
+typedef MODULE_ENUM(Outcome, Status) OPSTATUS;
 
 /* ========================================================================== */
 /* 4. Declarative Package: Outcome_Status                                     */

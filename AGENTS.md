@@ -113,6 +113,14 @@ Everything must live inside the library/module namespace whenever C allows it. E
 
 ## 4. Structs, Objects & Function Tables
 
+- **Declarative Structs (POD Data Containers):** Use `STRUCT(NAME, FIELDS(...))` and `TEMPLATE_STRUCT(NAME, (ARGS...), FIELDS(...))`.
+  - Intended for pure Plain Old Data (POD) types without methods, receiver `self`, or `FunctionTable` overhead.
+  - Zero memory overhead: no `api` pointer, zero cache line pollution, exactly `sizeof(fields)`.
+  - Fully C-ABI compliant: supports designated initializers (`.field = val`), direct register passing by value, `memcpy`, `memcmp`, and strict contiguity in arrays.
+  - Generates canonical namespaced types: `MODULE_TYPE(MOD, NAME)` $\to$ `MOD_TNAME` and `MODULE_TYPED(MOD, NAME, SUFFIX)` $\to$ `MOD_TNAME_SUFFIX`.
+  - Usable inside `MODULE(...)` or standalone via `STRUCT(MOD, NAME, FIELDS(...))`.
+  - Free functions operating on structs are placed in an accompanying `PACKAGE(NAME, ...)`.
+  - Forward declarations: `FORWARD_STRUCT(MOD, NAME)` and `FORWARD_TEMPLATE_STRUCT(MOD, NAME, SUFFIX)`.
 - **Declarative Objects:** Use `OBJECT(CLASS, FIELDS(...), ...)` and `OBJECT_EXTENDS(CLASS, BASE_CLASS, FIELDS(...), ...)`.
   - Members are declared with `OPERATION`, `PREDICATE`, `FUNCTION`, `PROCEDURE`, `COMPARISON`.
   - Comparison extensions generate specialized comparisons directly inside objects:
@@ -147,8 +155,8 @@ Everything must live inside the library/module namespace whenever C allows it. E
   - Reactive mutation helper: `OBJECT_MUTATE(self, ClassName, fieldName, newValue, EventName)` evaluates `self->fieldName != (newValue)`, updates the field, and emits the event.
 - **Compile-time disabling:** Every Function Table family provides compile-time disabling via `MODULE_DISABLE_FUNCTION_TABLE`, `PACKAGE_DISABLE_FUNCTION_TABLE`, or `OBJECT_DISABLE_FUNCTION_TABLE`. When defined, no struct, instance, or table is emitted.
 - **Naming:** Always use the term `FunctionTable`, never `VTable`.
-- **Universal Template Engine (`TEMPLATE_OBJECT` / `TEMPLATE_PACKAGE`):**
-  - Declare parameterized templates directly inside `MODULE(...)` via `TEMPLATE_OBJECT(Name, (SUFFIX, TYPE), ...)` or `TEMPLATE_PACKAGE(Name, (SUFFIX, TYPE), ...)`.
+- **Universal Template Engine (`TEMPLATE_OBJECT` / `TEMPLATE_PACKAGE` / `TEMPLATE_STRUCT`):**
+  - Declare parameterized templates directly inside `MODULE(...)` via `TEMPLATE_OBJECT(Name, (SUFFIX, TYPE), ...)`, `TEMPLATE_PACKAGE(Name, (SUFFIX, TYPE), ...)`, or `TEMPLATE_STRUCT(Name, (SUFFIX, TYPE), FIELDS(...))`.
   - **Zero Blueprint Macros**: Never create `#define TEMPLATE_<Name>(...)` macros duplicating member lists. The template is declared once, directly inside `MODULE(...)`.
   - Instantiate on-demand with `TEMPLATE_INSTANTIATE(Name, Suffix, Type)`.
   - Batch instantiate with X-Macros via `TEMPLATE_INSTANTIATE_TABLE(Name, TYPE_TABLE)`.
@@ -160,6 +168,17 @@ Everything must live inside the library/module namespace whenever C allows it. E
 ## 5. Enums & Constants
 
 - **Mandatory X-Macro / Table Pattern:** Every enum must be implemented via an X-Macro table (`<DOMAIN>_TABLE(X)`). Directly hardcoding raw lists inside `enum { ... }` is strictly prohibited. The table macro is the single source of truth for generating enum values, constants, descriptions, and string tables.
+- **Declarative Enums (`ENUM` / `ENUM_EX`):**
+  - Use `ENUM(Name, TABLE)` or `ENUM_EX(Name, TABLE, DISPATCH)` natively inside `MODULE(...)`, `PACKAGE(...)`, or `OBJECT(...)`.
+  - For standalone declarations outside `MODULE(...)`, use `ENUM_DEF(TARGET, Name, TABLE)` or `ENUM_DEF_EX(TARGET, Name, TABLE, DISPATCH)`.
+  - Zero FunctionTable overhead: enums declared inside `PACKAGE` or `OBJECT` do not emit fields or entries into `FunctionTable`.
+  - Generates canonical namespaced enum types: `MODULE_ENUM(...)` / `NS(TARGET, Name)`.
+  - **Configurable Dispatch Presets:**
+    - `PLAIN` (or `NAME_VALUE`, default for `ENUM(Name, TABLE)`): emits `CNS(TARGET, NAME) = VALUE,` (or `CNS(TARGET, NAME),` if 1 column).
+    - `QUALIFIED`: emits `CNS(TARGET, ENUM_NAME, NAME) = VALUE,` (prefixed by enum name to guarantee zero collisions across multiple enums in the same target).
+    - `NAME_ONLY`: emits `CNS(TARGET, NAME),` without value assignment (allows C to auto-increment from 0).
+    - `QUALIFIED_NAME`: emits `CNS(TARGET, ENUM_NAME, NAME),` without value assignment.
+    - Custom dispatch macro: user passes `DISPATCH(TARGET, ENUM_NAME, ROW)` for specialized row transformations (e.g., bitshifts `1U << VALUE`, custom prefixes).
 - Enums exist for named constant domains and function signatures. Never use raw integers for categorical states.
 - Output enums: use short `*OUT` alias in signatures (e.g., `CMPOUT`).
 - Public constants: `*_CONST(NAME)` (e.g., `STATUS_CONST(SUCCESS)`).

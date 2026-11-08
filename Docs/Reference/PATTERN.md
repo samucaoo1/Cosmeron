@@ -14,6 +14,7 @@ Cosmeron organizes code into four declarative tiers:
 DOMAIN (Architectural / Filesystem Grouping: Core, Container, Text, Security, IO)
   └── MODULE (Fundamental Unit of Compilation & Semantics: Memory, File, Bit, Text)
         ├── PACKAGE (Static Collections of Free Functions: Alloc, Operations, Swap)
+        ├── STRUCT (Pure POD Data Containers without self/vtable: Point, Range, Header)
         └── OBJECT (Stateful Instances with Receiver 'self' and FunctionTable: Stream, Pool)
               ├── SPACE (Nested Sub-Namespaces / Sub-Tables: Transform, Codec)
               └── VARIANT (Flat Overload Families: Alloc, AllocAndFill, AllocZeroed)
@@ -27,8 +28,9 @@ DOMAIN (Architectural / Filesystem Grouping: Core, Container, Text, Security, IO
   - Standalone without domain: `MODULE(ModuleName, ...)`
 - In both cases, the emitted canonical C symbols use `[Library_]ModuleName_Entity` format.
 
-### 1.2 Packages vs. Objects
+### 1.2 Packages vs. Structs vs. Objects
 - **`PACKAGE`**: A stateless, cohesive collection of free functions, events, callbacks, and sub-namespaces. It does **not** bind a receiver `self` and does **not** emit an instance struct or a `T`-prefixed type.
+- **`STRUCT`**: A pure Plain Old Data (POD) struct container. It emits a namespaced `T`-prefixed type (`ModuleName_TStructName`), but contains **zero overhead**: no `api` pointer, no FunctionTable, and no receiver `self`. Fully compatible with C designated initializers (`.field = val`), ABI register passing, and `memcpy`.
 - **`OBJECT`**: A stateful type with structured fields, lifecycle helpers (`Init`), receiver-bound methods (`self`), and automatic user type generation with the `T` prefix (`ModuleName_TObjectName`).
 
 ### 1.3 Sub-Namespaces (`SPACE`) & Overload Families (`VARIANT`)
@@ -145,6 +147,14 @@ MODULE(DOMAIN(Core), StreamBuffer,
     /* 1. Enum via X-Macro table */
     ENUM(SeekOrigin, SEEK_TABLE),
 
+    /* 1.5 Pure POD Struct (Zero vtable overhead) */
+    STRUCT(Point,
+        FIELDS(
+            int32_t x;
+            int32_t y;
+        )
+    ),
+
     /* 2. Stateful Object */
     OBJECT(Buffer,
         FIELDS(
@@ -187,19 +197,21 @@ MODULE(DOMAIN(Core), StreamBuffer,
 
 ---
 
-## 5. Templates (`TEMPLATE_OBJECT` & `TEMPLATE_PACKAGE`)
+## 5. Templates (`TEMPLATE_OBJECT`, `TEMPLATE_PACKAGE` & `TEMPLATE_STRUCT`)
 
 Cosmeron uses a **zero-blueprint, single-source-of-truth** template engine.
 
 ### 5.1 Rules for Templates
-1. **Zero Blueprint Macros**: Never define separate `#define TEMPLATE_<Name>(...)` macros duplicating member lists. The template is declared **once**, directly inside `MODULE(...)`.
+1. **Zero Blueprint Macros**: Never define separate `#define TEMPLATE_<Name>(...)` macros duplicating member lists. The template is declared **once**, directly inside `MODULE(...)` via `TEMPLATE_OBJECT`, `TEMPLATE_PACKAGE`, or `TEMPLATE_STRUCT`.
 2. **Inline vs Non-Inline**:
    - Templates with inline methods use `OPERATION_INLINE(...)`, `FUNCTION_INLINE(...)`.
    - Non-inline template methods are implemented in the implementation file via explicit prototype macros.
+   - `TEMPLATE_STRUCT` requires only `FIELDS(...)` with zero vtable or method overhead.
 3. **Instantiation**:
    - On-demand instantiation: `TEMPLATE_INSTANTIATE(Name, Suffix, Type)`.
+   - Direct template struct instantiation: `TEMPLATE_STRUCT(Mod, Name, Suffix, FIELDS(...))`.
    - Table-driven batch instantiation: `TEMPLATE_INSTANTIATE_TABLE(Name, TYPE_TABLE)`.
-   - Type naming for user types: `T<Name>_<suffix>` (e.g. `TVector_uint32`).
+   - Type naming for user types: `T<Name>_<suffix>` (e.g. `TVector_uint32`, `TPair_int`).
 
 ---
 
@@ -317,13 +329,48 @@ Every enum must be implemented via a decoupled X-Macro table using the **Row-Tup
   X((SET, 0, "Seek from beginning")) \
   X((CUR, 1, "Seek from current position")) \
   X((END, 2, "Seek from end"))
+```
 
-typedef enum MODULE_ENUM(File, SeekOrigin) {
-#define SEEK_ENUM_ITEM(ROW) \
-  MODULE_CONST(File, SEEK_GET(NAME, ROW)) = SEEK_GET(VALUE, ROW),
-  SEEK_TABLE(SEEK_ENUM_ITEM)
-#undef SEEK_ENUM_ITEM
-} MODULE_ENUM(File, SeekOrigin);
+### 9.1 Declarative Enums (`ENUM` / `ENUM_EX`)
+
+Enums are declared natively inside `MODULE(...)`, `PACKAGE(...)`, or `OBJECT(...)`, or standalone via `ENUM_DEF` / `ENUM_DEF_EX`:
+
+```c
+MODULE(DOMAIN(Core), File,
+  /* Top-level module enum: generates File_SeekOrigin and File_SET = 0, File_CUR = 1... */
+  ENUM(SeekOrigin, SEEK_TABLE),
+
+  PACKAGE(Stream,
+    /* Inside package with PLAIN dispatch: generates File_Stream_SET = 0... */
+    ENUM(Seek, SEEK_TABLE),
+
+    /* Inside package with QUALIFIED dispatch: generates File_Stream_QualifiedSeek_SET = 0... */
+    ENUM_EX(QualifiedSeek, SEEK_TABLE, QUALIFIED),
+
+    FUNCTION(int, Position, (void))
+  ),
+
+  OBJECT(Handle,
+    FIELDS(
+      File_Handle_State state;
+    ),
+    /* Inside object: enum is available before struct fields and methods */
+    ENUM(State, STATE_TABLE)
+  )
+);
+```
+
+### 9.2 Dispatch Presets
+- `PLAIN` (or `NAME_VALUE`, default for `ENUM`): Emits `CNS(TARGET, NAME) = VALUE,`.
+- `QUALIFIED`: Emits `CNS(TARGET, ENUM_NAME, NAME) = VALUE,` to prevent constant collisions when multiple enums share names (e.g. `DEFAULT`, `NONE`, `IDLE`).
+- `NAME_ONLY`: Emits `CNS(TARGET, NAME),` letting C auto-increment from 0.
+- `QUALIFIED_NAME`: Emits `CNS(TARGET, ENUM_NAME, NAME),` without values.
+- **Custom Dispatch**: Pass any macro `DISPATCH(TARGET, ENUM_NAME, ROW)` for custom transformations (e.g. bit-shifts `1U << VALUE`).
+
+Standalone declarations outside `MODULE`:
+```c
+ENUM_DEF(MODULE_NS(File, Stream), Seek, SEEK_TABLE);
+ENUM_DEF_EX(MODULE_NS(File, Stream), Seek, SEEK_TABLE, QUALIFIED);
 ```
 
 ---
@@ -333,8 +380,10 @@ typedef enum MODULE_ENUM(File, SeekOrigin) {
 External consumers interact with modules using the unified grammar of `Namespace.h`:
 
 ```c
-/* 1. Object Types (automatic 'T' prefix) */
+/* 1. Types (Objects and Structs receive automatic 'T' prefix) */
 MODULE_TYPE(StreamBuffer, Buffer) buf; /* Expands to: StreamBuffer_TBuffer */
+MODULE_TYPE(Geometry, Point) pt = { .x = 10, .y = 20 }; /* Pure POD Struct */
+MODULE_TYPED(Geometry, Pair, int) pair = { .first = 1, .second = 2 }; /* Template Struct */
 
 /* 2. Enums and Constants */
 MODULE_ENUM(File, SeekOrigin) origin = MODULE_CONST(File, CUR);

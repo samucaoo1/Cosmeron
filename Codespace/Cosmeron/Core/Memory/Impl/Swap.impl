@@ -1,0 +1,62 @@
+#pragma once
+
+#include <stdint.h>
+
+PACKAGE_SCOPE(Memory, Swap)
+
+#define SCOPE_TARGET MODULE_NS(Memory, Swap)
+
+SCOPE_PKG_OPERATION(Bytes, (void *left, void *right, size_t size)) {
+  unsigned char temporary[MODULE_CONST(Memory, Swap, BLOCK_SIZE)];
+  unsigned char *leftBytes = (unsigned char *)left;
+  unsigned char *rightBytes = (unsigned char *)right;
+
+  if (size == 0U)
+    return STATUS_CONST(SUCCESS);
+  if (!left || !right)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (left == right)
+    return STATUS_CONST(SUCCESS);
+
+  {
+    uintptr_t leftAddress = (uintptr_t)left;
+    uintptr_t rightAddress = (uintptr_t)right;
+    if (size > (size_t)(UINTPTR_MAX - leftAddress) ||
+        size > (size_t)(UINTPTR_MAX - rightAddress))
+      return STATUS_CONST(OUT_OF_RANGE);
+    if ((leftAddress < rightAddress && leftAddress + size > rightAddress) ||
+        (rightAddress < leftAddress && rightAddress + size > leftAddress))
+      return STATUS_CONST(INVALID_ARGUMENT);
+  }
+
+  while (size != 0U) {
+    size_t blockSize = size > MODULE_CONST(Memory, Swap, BLOCK_SIZE)
+                           ? MODULE_CONST(Memory, Swap, BLOCK_SIZE)
+                           : size;
+
+    memcpy(temporary, leftBytes, blockSize);
+    memcpy(leftBytes, rightBytes, blockSize);
+    memcpy(rightBytes, temporary, blockSize);
+
+    leftBytes += blockSize;
+    rightBytes += blockSize;
+    size -= blockSize;
+  }
+
+  return STATUS_CONST(SUCCESS);
+}
+
+SCOPE_PKG_OPERATION(Array, (void *left, void *right, size_t count, size_t elementSize)) {
+  size_t size = 0U;
+  OPSTATUS status = MODULE_IFUNC(Memory, CheckedMultiplySize)(count, elementSize, &size);
+  if (status != STATUS_CONST(SUCCESS))
+    return status;
+
+  return MODULE_FUNC(Memory, Swap, Bytes)(left, right, size);
+}
+
+#undef SCOPE_TARGET
+
+PACKAGE_SCOPE_END()
+
+/* EOF */

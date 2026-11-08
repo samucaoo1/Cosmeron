@@ -64,14 +64,12 @@
   typedef MODULE_TYPE(MOD, OBJ)                                                \
       NS(_cosmeron_scope_obj_self_t, MOD, OBJ, __LINE__);
 
-#define COSMERON_INTERNAL_OBJECT_SCOPE_1(END_TOKEN)                            \
-  COSMERON_INTERNAL_SCOPE_POP_DIAGNOSTICS()
-
 #define OBJECT_SCOPE(...)                                                      \
   PP_OP_CAT2(COSMERON_INTERNAL_OBJECT_SCOPE_,                                  \
              PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
 
-#define OBJECT_SCOPE_END() COSMERON_INTERNAL_OBJECT_SCOPE_1(END)
+#define OBJECT_SCOPE_END()                                                     \
+  COSMERON_INTERNAL_SCOPE_POP_DIAGNOSTICS()
 
 /* ============================================================
  * 2. PACKAGE_SCOPE: Begins package implementation block
@@ -81,14 +79,12 @@
   COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS()                                   \
   typedef int NS(_cosmeron_pkg_scope_semi, MOD, PKG, __LINE__);
 
-#define COSMERON_INTERNAL_PACKAGE_SCOPE_1(END_TOKEN)                           \
-  COSMERON_INTERNAL_SCOPE_POP_DIAGNOSTICS()
-
 #define PACKAGE_SCOPE(...)                                                     \
   PP_OP_CAT2(COSMERON_INTERNAL_PACKAGE_SCOPE_,                                 \
              PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
 
-#define PACKAGE_SCOPE_END() COSMERON_INTERNAL_PACKAGE_SCOPE_1(END)
+#define PACKAGE_SCOPE_END()                                                    \
+  COSMERON_INTERNAL_SCOPE_POP_DIAGNOSTICS()
 
 /* ============================================================
  * 2.5 MODULE_SCOPE: Unified module scope dispatcher
@@ -117,6 +113,7 @@
  * 4. Scoped Implementation Sugar (when SCOPE_TARGET is defined)
  * ============================================================ */
 
+/* Object Scope Family */
 #define SCOPE_OPERATION(NAME, PARAMS)                                          \
   OBJECT_OPERATION_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
 
@@ -132,26 +129,25 @@
 #define SCOPE_COMPARISON(NAME, PARAMS)                                         \
   OBJECT_COMPARISON_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
 
-#define SCOPE_PKG_OPERATION(NAME, PARAMS)                                      \
-  PACKAGE_OPERATION_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+#define SCOPE_OBJ_OPERATION(NAME, PARAMS)                                      \
+  OBJECT_OPERATION_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
 
-#define SCOPE_PKG_FUNCTION(RET, NAME, PARAMS)                                  \
-  PACKAGE_FUNCTION_IMPLEMENT_EX(SCOPE_TARGET, RET, NAME, PARAMS)
+#define SCOPE_OBJ_FUNCTION(RET, NAME, PARAMS)                                  \
+  OBJECT_FUNCTION_IMPLEMENT_EX(SCOPE_TARGET, RET, NAME, PARAMS)
 
-#define SCOPE_PKG_PREDICATE(NAME, PARAMS)                                      \
-  PACKAGE_PREDICATE_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+#define SCOPE_OBJ_PREDICATE(NAME, PARAMS)                                      \
+  OBJECT_PREDICATE_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
 
-#define SCOPE_PKG_PROCEDURE(NAME, PARAMS)                                      \
-  PACKAGE_PROCEDURE_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+#define SCOPE_OBJ_PROCEDURE(NAME, PARAMS)                                      \
+  OBJECT_PROCEDURE_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
 
-#define SCOPE_PKG_COMPARISON(NAME, PARAMS)                                     \
-  PACKAGE_COMPARISON_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
-
-#define SCOPE_COMPARISON(NAME, PARAMS)                                         \
+#define SCOPE_OBJ_COMPARISON(NAME, PARAMS)                                     \
   OBJECT_COMPARISON_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
 
+/* Package Scope Family */
 #define SCOPE_PKG_OPERATION(NAME, PARAMS)                                      \
   PACKAGE_OPERATION_IMPLEMENT_EX(SCOPE_TARGET, NAME, PARAMS)
+
 #define SCOPE_PKG_FUNCTION(RET, NAME, PARAMS)                                  \
   PACKAGE_FUNCTION_IMPLEMENT_EX(SCOPE_TARGET, RET, NAME, PARAMS)
 

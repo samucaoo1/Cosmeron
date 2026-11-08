@@ -24,6 +24,7 @@ O ecossistema é organizado em quatro níveis hierárquicos:
 DOMAIN (Agrupamento Arquitetural/Pasta: Core, Container, Text, IO, Graphics)
   └── MODULE (Unidade Fundamental de Compilação e Semântica: Memory, File, Bit, Text)
         ├── PACKAGE (Conjuntos Estáticos de Funções Livres: Alloc, Operations)
+        ├── STRUCT (Containers POD Puros de Dados sem self/vtable: Point, Range, Header)
         └── OBJECT (Instâncias com Estado, Receptor 'self' e FunctionTable: Stream, Pool)
               ├── SPACE (Sub-Namespaces Aninhados / Sub-Tabelas: Transform, Codec)
               └── VARIANT (Famílias de Sobrecargas Planas: Alloc, AllocAndFill)
@@ -62,8 +63,17 @@ Os cabeçalhos declaram o módulo via `MODULE(...)`:
 #include "Core/Module/Module.h"
 
 MODULE(DOMAIN(Core), Text,
-    /* 1. Enum com tabela X-Macro desacoplada */
+    /* 1. Enum com tabela X-Macro desacoplada (suporta ENUM e ENUM_EX com dispatch PLAIN, QUALIFIED, NAME_ONLY ou custom) */
     ENUM(SeekOrigin, SEEK_TABLE),
+    ENUM_EX(Policy, POLICY_TABLE, QUALIFIED),
+
+    /* 1.5. Struct POD puro (Gera Text_TPoint sem vtable/api) */
+    STRUCT(Point,
+        FIELDS(
+            int32_t x;
+            int32_t y;
+        )
+    ),
 
     /* 2. Objeto com estado (Gera automaticamente o tipo Text_TString) */
     OBJECT(String,
@@ -110,7 +120,7 @@ MODULE(DOMAIN(Core), Text,
 
 ---
 
-## 3. Templates Declarativos (`TEMPLATE_OBJECT` e `TEMPLATE_PACKAGE`)
+## 3. Templates Declarativos (`TEMPLATE_OBJECT`, `TEMPLATE_PACKAGE` e `TEMPLATE_STRUCT`)
 
 Templates são declarados dentro de `MODULE(...)`:
 
@@ -131,6 +141,13 @@ MODULE(DOMAIN(Container), Container,
     TEMPLATE_PACKAGE(BitOps, (SUFFIX, TYPE),
         OPERATION(Set, (TYPE *value, uint8_t bit)),
         PREDICATE(Check, (TYPE value, uint8_t bit))
+    ),
+
+    TEMPLATE_STRUCT(Pair, (SUFFIX, TYPE),
+        FIELDS(
+            TYPE first;
+            TYPE second;
+        )
     )
 );
 ```
@@ -139,7 +156,8 @@ MODULE(DOMAIN(Container), Container,
 - **Zero Macros de Blueprint**: Proibido definir macros `#define TEMPLATE_<Name>(...)` duplicando listas de membros. A declaração vive exclusivamente dentro de `MODULE(...)`.
 - **Modos de Instanciação:**
   1. **Instanciação Direta:** `TEMPLATE_INSTANTIATE(Vector, uint32, uint32_t);`
-  2. **Instanciação em Lote (X-Macro):** `TEMPLATE_INSTANTIATE_TABLE(BitOps, BIT_WIDTH_TABLE);`
+  2. **Instanciação de Struct:** `TEMPLATE_STRUCT(Container, Pair, int, FIELDS(int first; int second;));`
+  3. **Instanciação em Lote (X-Macro):** `TEMPLATE_INSTANTIATE_TABLE(BitOps, BIT_WIDTH_TABLE);`
 
 ---
 

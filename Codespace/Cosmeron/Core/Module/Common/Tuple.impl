@@ -310,4 +310,16 @@
 #define COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(PARAMS) \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PKG_PARAMS_EMPTY_, \
              PP_IS_EMPTY_PARAMS(PARAMS))(PARAMS)
+
+/* ------------------------------------------------------------
+ * 10. Variant Name Resolver
+ * ------------------------------------------------------------ */
+#define PROBE_VAR_BASE__COSMERON_BASE_ ,
+#define COSMERON_IS_VAR_BASE(x) PP_ARG_COUNT(PP_OP_CAT2(PROBE_VAR_BASE_, x))
+
+#define COSMERON_VAR_RESOLVE_NAME_2(FAMILY, N) FAMILY
+#define COSMERON_VAR_RESOLVE_NAME_1(FAMILY, N) PP_OP_CAT2(FAMILY, N)
+#define COSMERON_VAR_RESOLVE_NAME(FAMILY, N) \
+  PP_OP_CAT2(COSMERON_VAR_RESOLVE_NAME_, COSMERON_IS_VAR_BASE(N))(FAMILY, N)
+
 /* EOF */

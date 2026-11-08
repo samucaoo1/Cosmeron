@@ -1,0 +1,36 @@
+#pragma once
+
+OBJECT_SCOPE(Diagnostic, Context)
+
+#define SCOPE_TARGET MODULE_NS(Diagnostic, Context)
+
+SCOPE_OPERATION(Create,
+                (const char *file, uint32_t line,
+                 const char *function, const char *description,
+                 const void *userData)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  MODULE_FUNC(Diagnostic, Context, Init)(self);
+  self->file = file;
+  self->line = line;
+  self->function = function;
+  self->description = description;
+  self->userData = userData;
+  return STATUS_CONST(SUCCESS);
+}
+
+SCOPE_PROCEDURE(Clear, ()) {
+  if (!self)
+    return;
+  self->file = NULL;
+  self->line = 0U;
+  self->function = NULL;
+  self->description = NULL;
+  self->userData = NULL;
+}
+
+#undef SCOPE_TARGET
+
+OBJECT_SCOPE_END()
+
+/* EOF */

@@ -141,8 +141,19 @@
 #define FORWARD_OBJECT(MOD, NAME)                                              \
   typedef struct MODULE_TYPE(MOD, NAME) MODULE_TYPE(MOD, NAME)
 
+#define FORWARD_STRUCT(MOD, NAME) FORWARD_OBJECT(MOD, NAME)
+
 #define FORWARD_TEMPLATE_OBJECT(MOD, NAME, SUFFIX)                             \
   typedef struct MODULE_TYPED(MOD, NAME, SUFFIX) MODULE_TYPED(MOD, NAME, SUFFIX)
+
+#define FORWARD_TEMPLATE_STRUCT(MOD, NAME, SUFFIX)                             \
+  FORWARD_TEMPLATE_OBJECT(MOD, NAME, SUFFIX)
+
+#define FORWARD_ISTRUCT(MOD, NAME)                                             \
+  typedef struct MODULE_ITYPE(MOD, NAME) MODULE_ITYPE(MOD, NAME)
+
+#define FORWARD_TEMPLATE_ISTRUCT(MOD, NAME, SUFFIX)                            \
+  typedef struct MODULE_ITYPED(MOD, NAME, SUFFIX) MODULE_ITYPED(MOD, NAME, SUFFIX)
 
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) ||              \
     (defined(__GNUC__) && !defined(__STRICT_ANSI__))
@@ -160,7 +171,47 @@
 #define DOMAIN_NS(DOMAIN, ...) NS_JOIN(DOMAIN, __VA_ARGS__)
 
 /* ============================================================
- * 5. Unified Cross-Module Invocations (MODULE_CALL)
+ * 4.5 Internal Namespace Variants (Single 'I' Discriminator)
+ * Automatically injects the canonical 'Internal' / 'INTERNAL' token in O(1).
+ * ============================================================ */
+
+#define COSMERON_INTERNAL_MOD_INS_1(NAME)                                      \
+  LIB_PREFIX(NS_JOIN(Internal, NAME))
+#define COSMERON_INTERNAL_MOD_INS_2(MOD, NAME)                                 \
+  LIB_PREFIX(NS_JOIN(MOD, Internal, NAME))
+#define COSMERON_INTERNAL_MOD_INS_3(MOD, PKG, NAME)                            \
+  LIB_PREFIX(NS_JOIN(MOD, PKG, Internal, NAME))
+#define COSMERON_INTERNAL_MOD_INS_4(MOD, PKG, SUB, NAME)                       \
+  LIB_PREFIX(NS_JOIN(MOD, PKG, SUB, Internal, NAME))
+#define COSMERON_INTERNAL_MOD_INS_5(MOD, PKG, SUB, SUB2, NAME)                 \
+  LIB_PREFIX(NS_JOIN(MOD, PKG, SUB, SUB2, Internal, NAME))
+
+#define MODULE_INS(...)                                                        \
+  PP_OP_CAT2(COSMERON_INTERNAL_MOD_INS_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+
+#define MODULE_IFUNC(...) MODULE_INS(__VA_ARGS__)
+#define MODULE_ITYPE(...) MODULE_INS(__VA_ARGS__)
+#define MODULE_ITYPED(...) MODULE_INS(__VA_ARGS__)
+#define MODULE_IENUM(...) MODULE_INS(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_MOD_ICONST_1(NAME)                                   \
+  LIB_PREFIX_CONST(NS_JOIN(INTERNAL, NAME))
+#define COSMERON_INTERNAL_MOD_ICONST_2(MOD, NAME)                              \
+  LIB_PREFIX_CONST(NS_JOIN(MOD, INTERNAL, NAME))
+#define COSMERON_INTERNAL_MOD_ICONST_3(MOD, PKG, NAME)                         \
+  LIB_PREFIX_CONST(NS_JOIN(MOD, PKG, INTERNAL, NAME))
+#define COSMERON_INTERNAL_MOD_ICONST_4(MOD, PKG, SUB, NAME)                    \
+  LIB_PREFIX_CONST(NS_JOIN(MOD, PKG, SUB, INTERNAL, NAME))
+#define COSMERON_INTERNAL_MOD_ICONST_5(MOD, PKG, SUB, SUB2, NAME)              \
+  LIB_PREFIX_CONST(NS_JOIN(MOD, PKG, SUB, SUB2, INTERNAL, NAME))
+
+#define MODULE_ICONST(...)                                                     \
+  PP_OP_CAT2(COSMERON_INTERNAL_MOD_ICONST_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+
+#define MODULE_ICNS(...) MODULE_ICONST(__VA_ARGS__)
+
+/* ============================================================
+ * 5. Unified Cross-Module Invocations (MODULE_CALL & MODULE_ICALL)
  * Resolves paths of any depth (2, 3, 4, 5+ levels) directly to C symbols in O(1).
  * ============================================================ */
 
@@ -180,5 +231,18 @@
 
 #define MODULE_CALL(...)                                                       \
   MODULE_CALL_DISPATCH(PP_ARG_COUNT(__VA_ARGS__), __VA_ARGS__)
+
+#define COSMERON_INTERNAL_ICALL_2(A, ARGS) MODULE_IFUNC(A) ARGS
+#define COSMERON_INTERNAL_ICALL_3(A, B, ARGS) MODULE_IFUNC(A, B) ARGS
+#define COSMERON_INTERNAL_ICALL_4(A, B, C, ARGS) MODULE_IFUNC(A, B, C) ARGS
+#define COSMERON_INTERNAL_ICALL_5(A, B, C, D, ARGS) MODULE_IFUNC(A, B, C, D) ARGS
+#define COSMERON_INTERNAL_ICALL_6(A, B, C, D, E, ARGS)                         \
+  MODULE_IFUNC(A, B, C, D, E) ARGS
+
+#define MODULE_ICALL_DISPATCH(count, ...)                                      \
+  PP_OP_CAT2(COSMERON_INTERNAL_ICALL_, count)(__VA_ARGS__)
+
+#define MODULE_ICALL(...)                                                      \
+  MODULE_ICALL_DISPATCH(PP_ARG_COUNT(__VA_ARGS__), __VA_ARGS__)
 
 /* EOF */

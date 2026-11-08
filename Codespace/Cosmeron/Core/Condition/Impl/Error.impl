@@ -1,0 +1,131 @@
+#pragma once
+
+OBJECT_SCOPE(Condition, Error)
+
+#define SCOPE_TARGET MODULE_NS(Condition, Error)
+
+SCOPE_OPERATION(Create, (OPSTATUS code, const char *message)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  MODULE_FUNC(Condition, Error, Init)(self);
+  self->code = code;
+  self->message = message;
+  MODULE_FUNC(Diagnostic, Context, Clear)(&self->context);
+  self->cause = NULL;
+  return STATUS_CONST(SUCCESS);
+}
+
+SCOPE_OPERATION(FromStatus, (OPSTATUS code)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  MODULE_FUNC(Condition, Error, Init)(self);
+  self->code = code;
+  self->message = NULL;
+  MODULE_FUNC(Diagnostic, Context, Clear)(&self->context);
+  self->cause = NULL;
+  return STATUS_CONST(SUCCESS);
+}
+
+SCOPE_PROCEDURE(Clear, ()) {
+  if (!self)
+    return;
+  self->code = STATUS_CONST(SUCCESS);
+  self->message = NULL;
+  MODULE_FUNC(Diagnostic, Context, Clear)(&self->context);
+  self->cause = NULL;
+}
+
+SCOPE_FUNCTION(const char *, Message, ()) {
+  if (!self)
+    return "Unknown error (null pointer)";
+  if (self->message)
+    return self->message;
+  return MODULE_FUNC(Outcome, Status, Message)(self->code);
+}
+
+SCOPE_OPERATION(SetContext, (const MODULE_TYPE(Diagnostic, Context) * context)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  if (context) {
+    self->context = *context;
+  } else {
+    MODULE_FUNC(Diagnostic, Context, Clear)(&self->context);
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+SCOPE_OPERATION(SetOrigin,
+                (const char *file, uint32_t line,
+                 const char *function, const char *description,
+                 const void *userData)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+  return MODULE_FUNC(Diagnostic, Context, Create)(&self->context, file, line,
+                                                  function, description,
+                                                  userData);
+}
+
+SCOPE_OPERATION(SetCause, (const struct MODULE_TYPE(Condition, Error) * cause)) {
+  if (!self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  if (cause == NULL) {
+    self->cause = NULL;
+    return STATUS_CONST(SUCCESS);
+  }
+
+  /* Prevent immediate self-cycle */
+  if (cause == self)
+    return STATUS_CONST(INVALID_ARGUMENT);
+
+  /* Traverse cause chain to detect cycle or depth overflow */
+  const struct MODULE_TYPE(Condition, Error) *curr = cause;
+  size_t count = 0U;
+  while (curr != NULL) {
+    if (curr == self)
+      return STATUS_CONST(INVALID_ARGUMENT);
+
+    count++;
+    if (count > MODULE_CONST(Condition, Error, MAX_CHAIN_DEPTH))
+      return STATUS_CONST(OUT_OF_RANGE);
+
+    curr = curr->cause;
+  }
+
+  self->cause = cause;
+  return STATUS_CONST(SUCCESS);
+}
+
+SCOPE_FUNCTION(const struct MODULE_TYPE(Condition, Error) *, RootCause, ()) {
+  if (!self)
+    return NULL;
+  const struct MODULE_TYPE(Condition, Error) *curr = self;
+  size_t count = 0U;
+  while (curr->cause != NULL && count < MODULE_CONST(Condition, Error, MAX_CHAIN_DEPTH)) {
+    if (curr->cause == self)
+      break;
+    curr = curr->cause;
+    count++;
+  }
+  return curr;
+}
+
+SCOPE_FUNCTION(size_t, Depth, ()) {
+  if (!self)
+    return 0U;
+  size_t depth = 1U;
+  const struct MODULE_TYPE(Condition, Error) *curr = self->cause;
+  while (curr != NULL && depth <= MODULE_CONST(Condition, Error, MAX_CHAIN_DEPTH)) {
+    if (curr == self)
+      break;
+    depth++;
+    curr = curr->cause;
+  }
+  return depth;
+}
+
+#undef SCOPE_TARGET
+
+OBJECT_SCOPE_END()
+
+/* EOF */
