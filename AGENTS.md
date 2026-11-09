@@ -114,13 +114,13 @@ Everything must live inside the library/module namespace whenever C allows it. E
 ## 4. Structs, Objects & Function Tables
 
 - **Declarative Structs (POD Data Containers):** Use `STRUCT(NAME, FIELDS(...))` and `TEMPLATE_STRUCT(NAME, (ARGS...), FIELDS(...))`.
-  - Intended for pure Plain Old Data (POD) types without methods, receiver `self`, or `FunctionTable` overhead.
+  - **Canonical Pure POD Rule (POD Puro Canônico é Regra Absoluta):** Structs are strictly Plain Old Data containers without methods, receiver `self`, `Create`, `Extract`, `Unpack`, `Cast_*`, or `FunctionTable` overhead.
   - Zero memory overhead: no `api` pointer, zero cache line pollution, exactly `sizeof(fields)`.
   - Fully C-ABI compliant: supports designated initializers (`.field = val`), direct register passing by value, `memcpy`, `memcmp`, and strict contiguity in arrays.
   - Generates canonical namespaced types: `MODULE_TYPE(MOD, NAME)` $\to$ `MOD_TNAME` and `MODULE_TYPED(MOD, NAME, SUFFIX)` $\to$ `MOD_TNAME_SUFFIX`.
   - Usable inside `MODULE(...)` or standalone via `STRUCT(MOD, NAME, FIELDS(...))`.
-  - Free functions operating on structs are placed in an accompanying `PACKAGE(NAME, ...)`.
   - Forward declarations: `FORWARD_STRUCT(MOD, NAME)` and `FORWARD_TEMPLATE_STRUCT(MOD, NAME, SUFFIX)`.
+  - Never generate artificial constructors, destructors, extraction helpers, or FunctionTables around POD structs. Manipulation and instantiation rely 100% on native C11 constructs (designated initializers and direct field access).
 - **Declarative Internal Structs (`ISTRUCT` / `TEMPLATE_ISTRUCT`):** Use `ISTRUCT(NAME, FIELDS(...))` and `TEMPLATE_ISTRUCT(NAME, (ARGS...), FIELDS(...))`.
   - Intended for internal implementation structures (allocator nodes, radix levels, book-keeping headers) that do **not** use the user-facing `T` prefix.
   - Generates canonical namespaced internal types: `MODULE_ITYPE(MOD, NAME)` $\to$ `MOD_Internal_NAME` and `MODULE_ITYPED(MOD, NAME, SUFFIX)` $\to$ `MOD_Internal_NAME_SUFFIX`.
@@ -169,7 +169,8 @@ Everything must live inside the library/module namespace whenever C allows it. E
 - **Naming:** Always use the term `FunctionTable`, never `VTable`.
 - **Universal Template Engine (`TEMPLATE_OBJECT` / `TEMPLATE_PACKAGE` / `TEMPLATE_STRUCT`):**
   - Declare parameterized templates directly inside `MODULE(...)` via `TEMPLATE_OBJECT(Name, (SUFFIX, TYPE), ...)`, `TEMPLATE_PACKAGE(Name, (SUFFIX, TYPE), ...)`, or `TEMPLATE_STRUCT(Name, (SUFFIX, TYPE), FIELDS(...))`.
-  - **Zero Blueprint Macros**: Never create `#define TEMPLATE_<Name>(...)` macros duplicating member lists. The template is declared once, directly inside `MODULE(...)`.
+  - **Zero Blueprint Macros & Zero Workaround Hacks:** Never create `#define TEMPLATE_<Name>(...)` macros duplicating member lists, multi-line macros with `\`, or include-file webs to simulate templates. The template is declared once, directly inside `MODULE(...)`.
+  - **DSL Extension Protocol:** If a desired feature (e.g. structured packing/unpacking, batch operations, serialization) does not fit cleanly into the existing declarative DSL, **NEVER** improvise workaround hacks. **STOP IMMEDIATELY**, propose a clean extension to the declarative DSL engine (`MODULE(...)`, `Declarative.impl`), consult the user, and wait for approval.
   - Instantiate on-demand with `TEMPLATE_INSTANTIATE(Name, Suffix, Type)`.
   - Batch instantiate with X-Macros via `TEMPLATE_INSTANTIATE_TABLE(Name, TYPE_TABLE)`.
   - Type naming convention for user types: `T<Name>_<suffix>` (e.g. `TStack_int`, `TVector_uint32`).

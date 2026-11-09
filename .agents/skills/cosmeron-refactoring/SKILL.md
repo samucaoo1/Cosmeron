@@ -162,7 +162,9 @@ MODULE(DOMAIN(Container), Container,
 ```
 
 ### Regras de Templates:
-- **Zero Macros de Blueprint**: Proibido definir macros `#define TEMPLATE_<Name>(...)` duplicando listas de membros. A declaração vive exclusivamente dentro de `MODULE(...)`.
+- **POD Puro Canônico é Regra Absoluta:** `STRUCT` e `TEMPLATE_STRUCT` são unicamente Plain Old Data. É expressamente proibido criar métodos artificiais (`Create`, `Extract`, `Unpack`, `Cast_*`) ou tabelas de funções (`FunctionTable`) para structs. Manipulação e instanciação usam 100% C11 nativo (designated initializers e acesso direto por ponto).
+- **Zero Macros de Blueprint & Zero Gambiarras:** Proibido definir macros `#define TEMPLATE_<Name>(...)`, blocos monolíticos de código com `\` ou teias de inclusão manual `.inc`. A declaração vive exclusivamente dentro de `MODULE(...)`.
+- **Protocolo de Extensão da DSL:** Se uma funcionalidade necessária (como pack/unpack ou serialização) não se encaixa de forma limpa na DSL declarativa existente, **NUNCA improvise soluções malucas**. Pare imediatamente, proponha uma extensão canônica para a DSL (`MODULE(...)`, `Declarative.impl`) e consulte o usuário.
 - **Modos de Instanciação:**
   1. **Instanciação Direta:** `TEMPLATE_INSTANTIATE(Vector, uint32, uint32_t);`
   2. **Instanciação de Struct:** `TEMPLATE_STRUCT(Container, Pair, int, FIELDS(int first; int second;));`

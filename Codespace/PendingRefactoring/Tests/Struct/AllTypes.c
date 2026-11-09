@@ -1,57 +1,64 @@
-#include "../../Cosmeron/Modules/Struct/TDual.h"
-#include "../../Cosmeron/Modules/Struct/TPair.h"
-#include "../../Cosmeron/Modules/Struct/TPenta.h"
-#include "../../Cosmeron/Modules/Struct/TQuad.h"
-#include "../../Cosmeron/Modules/Struct/TTriple.h"
+#include "../../../Cosmeron/Modules/Struct/TDual.h"
+#include "../../../Cosmeron/Modules/Struct/TPair.h"
+#include "../../../Cosmeron/Modules/Struct/TPenta.h"
+#include "../../../Cosmeron/Modules/Struct/TQuad.h"
+#include "../../../Cosmeron/Modules/Struct/TTriple.h"
 
 #define TEST_PAIR(TYPE, SUFFIX)                                                \
   do {                                                                         \
-    TYPE a = (TYPE)0, b = (TYPE)0;                                             \
-    TPAIR_TYPE(SUFFIX) value = CAST_TYPE_TO_STRUCT(SUFFIX, TPair)(             \
-        (TYPE)1, (TYPE)2);                                                     \
-    CAST_STRUCT_TO_TYPE(TPair, SUFFIX)(value, &a, &b);                         \
-    if (a != (TYPE)1 || b != (TYPE)2)                                          \
+    Struct_TPair_##SUFFIX val = {.value1 = (TYPE)1, .value2 = (TYPE)2};        \
+    if (val.value1 != (TYPE)1 || val.value2 != (TYPE)2)                        \
+      return __LINE__;                                                         \
+    if (val.values[0] != (TYPE)1 || val.values[1] != (TYPE)2)                  \
       return __LINE__;                                                         \
   } while (0)
 
 #define TEST_DUAL(TYPE, SUFFIX)                                                \
   do {                                                                         \
-    TYPE a = (TYPE)0, b = (TYPE)0;                                             \
-    TDUAL_TYPE(SUFFIX) value = CAST_TYPE_TO_STRUCT(SUFFIX, TDual)(             \
-        (TYPE)1, (TYPE)2);                                                     \
-    CAST_STRUCT_TO_TYPE(TDual, SUFFIX)(value, &a, &b);                         \
-    if (a != (TYPE)1 || b != (TYPE)2)                                          \
+    Struct_TDual_##SUFFIX val = {.start = (TYPE)1, .last = (TYPE)2};           \
+    if (val.first != (TYPE)1 || val.end != (TYPE)2)                            \
+      return __LINE__;                                                         \
+    if (val.values[0] != (TYPE)1 || val.values[1] != (TYPE)2)                  \
       return __LINE__;                                                         \
   } while (0)
 
 #define TEST_TRIPLE(TYPE, SUFFIX)                                              \
   do {                                                                         \
-    TYPE a = (TYPE)0, b = (TYPE)0, c = (TYPE)0;                                \
-    TTRIPLE_TYPE(SUFFIX) value = CAST_TYPE_TO_STRUCT(SUFFIX, TTriple)(         \
-        (TYPE)1, (TYPE)2, (TYPE)3);                                            \
-    CAST_STRUCT_TO_TYPE(TTriple, SUFFIX)(value, &a, &b, &c);                  \
-    if (a != (TYPE)1 || b != (TYPE)2 || c != (TYPE)3)                          \
+    Struct_TTriple_##SUFFIX val = {                                            \
+        .value1 = (TYPE)1, .value2 = (TYPE)2, .value3 = (TYPE)3};              \
+    if (val.length != (TYPE)1 || val.width != (TYPE)2 ||                       \
+        val.height != (TYPE)3)                                                 \
+      return __LINE__;                                                         \
+    if (val.values[0] != (TYPE)1 || val.values[1] != (TYPE)2 ||                \
+        val.values[2] != (TYPE)3)                                              \
       return __LINE__;                                                         \
   } while (0)
 
 #define TEST_QUAD(TYPE, SUFFIX)                                                \
   do {                                                                         \
-    TYPE a = (TYPE)0, b = (TYPE)0, c = (TYPE)0, d = (TYPE)0;                   \
-    TQUAD_TYPE(SUFFIX) value = CAST_TYPE_TO_STRUCT(SUFFIX, TQuad)(             \
-        (TYPE)1, (TYPE)2, (TYPE)3, (TYPE)4);                                   \
-    CAST_STRUCT_TO_TYPE(TQuad, SUFFIX)(value, &a, &b, &c, &d);                \
-    if (a != (TYPE)1 || b != (TYPE)2 || c != (TYPE)3 || d != (TYPE)4)          \
+    Struct_TQuad_##SUFFIX val = {.left = (TYPE)1,                              \
+                                 .right = (TYPE)2,                             \
+                                 .top = (TYPE)3,                               \
+                                 .bottom = (TYPE)4};                           \
+    if (val.value1 != (TYPE)1 || val.value2 != (TYPE)2 ||                      \
+        val.value3 != (TYPE)3 || val.value4 != (TYPE)4)                        \
+      return __LINE__;                                                         \
+    if (val.values[0] != (TYPE)1 || val.values[1] != (TYPE)2 ||                \
+        val.values[2] != (TYPE)3 || val.values[3] != (TYPE)4)                  \
       return __LINE__;                                                         \
   } while (0)
 
 #define TEST_PENTA(TYPE, SUFFIX)                                               \
   do {                                                                         \
-    TYPE a = (TYPE)0, b = (TYPE)0, c = (TYPE)0, d = (TYPE)0, e = (TYPE)0;      \
-    TPENTA_TYPE(SUFFIX) value = CAST_TYPE_TO_STRUCT(SUFFIX, TPenta)(           \
-        (TYPE)1, (TYPE)2, (TYPE)3, (TYPE)4, (TYPE)5);                          \
-    CAST_STRUCT_TO_TYPE(TPenta, SUFFIX)(value, &a, &b, &c, &d, &e);           \
-    if (a != (TYPE)1 || b != (TYPE)2 || c != (TYPE)3 || d != (TYPE)4 ||        \
-        e != (TYPE)5)                                                          \
+    Struct_TPenta_##SUFFIX val = {.value1 = (TYPE)1,                           \
+                                  .value2 = (TYPE)2,                           \
+                                  .value3 = (TYPE)3,                           \
+                                  .value4 = (TYPE)4,                           \
+                                  .value5 = (TYPE)5};                          \
+    if (val.a != (TYPE)1 || val.b != (TYPE)2 || val.c != (TYPE)3 ||            \
+        val.d != (TYPE)4 || val.e != (TYPE)5)                                  \
+      return __LINE__;                                                         \
+    if (val.values[0] != (TYPE)1 || val.values[4] != (TYPE)5)                  \
       return __LINE__;                                                         \
   } while (0)
 

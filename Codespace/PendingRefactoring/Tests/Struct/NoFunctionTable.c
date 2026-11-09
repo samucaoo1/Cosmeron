@@ -1,42 +1,39 @@
-#define PACKAGE_DISABLE_FUNCTION_TABLE 1
-#include "../../Cosmeron/Modules/Struct/Struct.h"
+#include "../../../Cosmeron/Modules/Struct/Struct.h"
+#include <assert.h>
 
 int main(void) {
-  Struct_TPair_int32 pair = Struct_TPair_int32_Create(10, 20);
-  int32_t a = 0, b = 0;
-  if (Struct_TPair_int32_Extract(pair, &a, &b) != STATUS_CONST(SUCCESS))
+  /* Verify exact POD sizes (zero vtable or api pointer overhead) */
+  static_assert(sizeof(Struct_TPair_int32) == sizeof(int32_t) * 2,
+                "TPair size mismatch");
+  static_assert(sizeof(Struct_TDual_int32) == sizeof(int32_t) * 2,
+                "TDual size mismatch");
+  static_assert(sizeof(Struct_TTriple_int32) == sizeof(int32_t) * 3,
+                "TTriple size mismatch");
+  static_assert(sizeof(Struct_TQuad_int32) == sizeof(int32_t) * 4,
+                "TQuad size mismatch");
+  static_assert(sizeof(Struct_TPenta_int32) == sizeof(int32_t) * 5,
+                "TPenta size mismatch");
+
+  Struct_TPair_int32 pair = {.value1 = 10, .value2 = 20};
+  if (pair.value1 != 10 || pair.value2 != 20)
     return 1;
-  if (a != 10 || b != 20)
+
+  Struct_TDual_int32 dual = {.start = 30, .end = 40};
+  if (dual.start != 30 || dual.end != 40)
     return 2;
 
-  Struct_TDual_int32 dual = Struct_TDual_int32_Create(30, 40);
-  int32_t c = 0, d = 0;
-  Struct_TDual_int32_Unpack(dual, &c, &d);
-  if (c != 30 || d != 40)
+  Struct_TTriple_int32 triple = {.length = 1, .width = 2, .height = 3};
+  if (triple.length != 1 || triple.width != 2 || triple.height != 3)
     return 3;
 
-  Struct_TTriple_int32 triple = Struct_TTriple_int32_Create(1, 2, 3);
-  int32_t e = 0, f = 0, g = 0;
-  if (Struct_TTriple_int32_Extract(triple, &e, &f, &g) != STATUS_CONST(SUCCESS))
+  Struct_TQuad_int32 quad = {.left = 1, .right = 2, .top = 3, .bottom = 4};
+  if (quad.left != 1 || quad.right != 2 || quad.top != 3 || quad.bottom != 4)
     return 4;
-  if (e != 1 || f != 2 || g != 3)
+
+  Struct_TPenta_int32 penta = {.value1 = 1, .value2 = 2, .value3 = 3,
+                               .value4 = 4, .value5 = 5};
+  if (penta.value1 != 1 || penta.value5 != 5)
     return 5;
-
-  Struct_TQuad_int32 quad = Struct_TQuad_int32_Create(1, 2, 3, 4);
-  int32_t h = 0, i = 0, j = 0, k = 0;
-  if (Struct_TQuad_int32_Extract(quad, &h, &i, &j, &k) != STATUS_CONST(SUCCESS))
-    return 6;
-  if (h != 1 || i != 2 || j != 3 || k != 4)
-    return 7;
-
-  Struct_TPenta_int32 penta = Struct_TPenta_int32_Create(1, 2, 3, 4, 5);
-  int32_t l = 0, m = 0, n = 0, o = 0, p = 0;
-  if (Struct_TPenta_int32_Extract(penta, &l, &m, &n, &o, &p) !=
-      STATUS_CONST(SUCCESS))
-    return 8;
-  if (l != 1 || m != 2 || n != 3 || o != 4 || p != 5)
-    return 9;
 
   return 0;
 }
-
