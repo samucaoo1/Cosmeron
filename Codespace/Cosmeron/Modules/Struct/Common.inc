@@ -47,81 +47,12 @@
   STRUCT_COMPLEX_TYPE_TABLE(X)
 
 /* ==========================================================================
- * Template Struct Internal Definitions for Batch Instantiation
+ * Module Template Forwarding Helper
+ * Enables: TEMPLATE_INSTANTIATE(Struct, Target, Params...)
  * ========================================================================== */
 
-#define TEMPLATE_Pair_IMPLEMENT(...) /* empty */
-#define TEMPLATE_Pair(SUFFIX, TYPE)                                            \
-  TEMPLATE_STRUCT(Struct, Pair, SUFFIX, FIELDS(                               \
-      union {                                                                  \
-        struct {                                                               \
-          union { TYPE value1; TYPE first; TYPE a; TYPE x1; TYPE x; };         \
-          union { TYPE value2; TYPE second; TYPE b; TYPE x2; TYPE y; };        \
-        };                                                                     \
-        union { TYPE value[2]; TYPE values[2]; };                              \
-      };                                                                       \
-  ))
-
-#define TEMPLATE_Dual_IMPLEMENT(...) /* empty */
-#define TEMPLATE_Dual(SUFFIX, TYPE)                                            \
-  TEMPLATE_STRUCT(Struct, Dual, SUFFIX, FIELDS(                               \
-      union {                                                                  \
-        struct {                                                               \
-          union {                                                              \
-            TYPE value1; TYPE a; TYPE x1; TYPE x; TYPE col;                    \
-            TYPE length; TYPE real; TYPE state1; TYPE begin;                   \
-            TYPE first; TYPE start;                                            \
-          };                                                                   \
-          union {                                                              \
-            TYPE value2; TYPE b; TYPE x2; TYPE y; TYPE row;                    \
-            TYPE width; TYPE imaginary; TYPE state2; TYPE end;                 \
-            TYPE second; TYPE last;                                            \
-          };                                                                   \
-        };                                                                     \
-        union { TYPE value[2]; TYPE values[2]; };                              \
-      };                                                                       \
-  ))
-
-#define TEMPLATE_Triple_IMPLEMENT(...) /* empty */
-#define TEMPLATE_Triple(SUFFIX, TYPE)                                          \
-  TEMPLATE_STRUCT(Struct, Triple, SUFFIX, FIELDS(                             \
-      union {                                                                  \
-        struct {                                                               \
-          union { TYPE value1; TYPE a; TYPE x1; TYPE x; TYPE length; TYPE red; };\
-          union { TYPE value2; TYPE b; TYPE x2; TYPE y; TYPE width; TYPE green; };\
-          union { TYPE value3; TYPE c; TYPE x3; TYPE z; TYPE height; TYPE blue; };\
-        };                                                                     \
-        union { TYPE value[3]; TYPE values[3]; };                              \
-      };                                                                       \
-  ))
-
-#define TEMPLATE_Quad_IMPLEMENT(...) /* empty */
-#define TEMPLATE_Quad(SUFFIX, TYPE)                                            \
-  TEMPLATE_STRUCT(Struct, Quad, SUFFIX, FIELDS(                               \
-      union {                                                                  \
-        struct {                                                               \
-          union { TYPE value1; TYPE a; TYPE x1; TYPE x; TYPE left; TYPE red; };\
-          union { TYPE value2; TYPE b; TYPE x2; TYPE y; TYPE right; TYPE green; };\
-          union { TYPE value3; TYPE c; TYPE x3; TYPE z; TYPE top; TYPE blue; };\
-          union { TYPE value4; TYPE d; TYPE x4; TYPE w; TYPE bottom; TYPE alpha; };\
-        };                                                                     \
-        union { TYPE value[4]; TYPE values[4]; };                              \
-      };                                                                       \
-  ))
-
-#define TEMPLATE_Penta_IMPLEMENT(...) /* empty */
-#define TEMPLATE_Penta(SUFFIX, TYPE)                                           \
-  TEMPLATE_STRUCT(Struct, Penta, SUFFIX, FIELDS(                              \
-      union {                                                                  \
-        struct {                                                               \
-          union { TYPE value1; TYPE a; };                                      \
-          union { TYPE value2; TYPE b; };                                      \
-          union { TYPE value3; TYPE c; };                                      \
-          union { TYPE value4; TYPE d; };                                      \
-          union { TYPE value5; TYPE e; };                                      \
-        };                                                                     \
-        union { TYPE value[5]; TYPE values[5]; };                              \
-      };                                                                       \
-  ))
+#ifndef TEMPLATE_Struct
+#define TEMPLATE_Struct(TARGET, ...) NS(TEMPLATE_Struct, TARGET)(__VA_ARGS__)
+#endif
 
 /* EOF */

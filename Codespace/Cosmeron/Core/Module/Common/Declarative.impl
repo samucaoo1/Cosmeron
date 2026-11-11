@@ -1188,13 +1188,13 @@
       NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable);                      \
   COSMERON_INTERNAL_PKG_GEN_ENUMS(                                             \
       NS(LIB_PREFIX(MOD), NAME, SUFFIX), (__VA_ARGS__))                       \
+  COSMERON_INTERNAL_PKG_GEN_MEMBERS(                                           \
+      NS(LIB_PREFIX(MOD), NAME, SUFFIX), (__VA_ARGS__))                        \
   struct NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable) {                   \
     int _reserved;                                                             \
     PP_FOREACH_D2_CTX(COSMERON_MACRO_INTERNAL_PKG_FT_FIELD,                   \
                       NS(LIB_PREFIX(MOD), NAME, SUFFIX), __VA_ARGS__)          \
   };                                                                           \
-  COSMERON_INTERNAL_PKG_GEN_MEMBERS(                                           \
-      NS(LIB_PREFIX(MOD), NAME, SUFFIX), (__VA_ARGS__))                        \
   static inline COSMERON_MAYBE_UNUSED                                          \
   const struct NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable) *             \
   NS(LIB_PREFIX(MOD), NAME, SUFFIX, GetFunctionTable)(void) {                 \

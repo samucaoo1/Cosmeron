@@ -1,0 +1,25 @@
+/* Penta.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Struct_Penta
+#define TEMPLATE_Struct_Penta(SUFFIX, TYPE)                                     \
+  TEMPLATE_STRUCT(Struct, Penta, SUFFIX, FIELDS(                                \
+      union {                                                                   \
+        struct {                                                                \
+          union { TYPE value1; TYPE first; TYPE a; };                           \
+          union { TYPE value2; TYPE second; TYPE b; };                          \
+          union { TYPE value3; TYPE third; TYPE c; };                           \
+          union { TYPE value4; TYPE fourth; TYPE d; };                          \
+          union { TYPE value5; TYPE fifth; TYPE e; };                           \
+        };                                                                      \
+        union { TYPE value[5]; TYPE values[5]; };                               \
+      };                                                                        \
+  ))
+#define TEMPLATE_Penta(SUFFIX, TYPE) TEMPLATE_Struct_Penta(SUFFIX, TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Struct_Penta(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif

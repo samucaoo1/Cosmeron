@@ -1,0 +1,22 @@
+/* Swap.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Memory_Swap
+#define TEMPLATE_Memory_Swap(SUFFIX, TYPE)                                     \
+  TEMPLATE_PACKAGE(Memory, Swap, SUFFIX,                                       \
+      PROCEDURE_INLINE(Values, (TYPE *left, TYPE *right), {                    \
+        if (!left || !right || left == right) return;                          \
+        TYPE temporary = *left;                                                \
+        *left = *right;                                                        \
+        *right = temporary;                                                    \
+      })                                                                       \
+  )
+#define TEMPLATE_Swap(SUFFIX, TYPE) TEMPLATE_Memory_Swap(SUFFIX, TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Memory_Swap(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif
+

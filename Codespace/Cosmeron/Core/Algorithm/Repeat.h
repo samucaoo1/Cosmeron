@@ -36,24 +36,24 @@ MODULE(DOMAIN(Core), Algorithm,
             PROCEDURE((size_t count,
                        TCALLBACK(MODULE_NS(Algorithm, Repeat, Procedure)) action)),
             PROCEDURE(Indexed,
-                      (size_t count,
-                       TCALLBACK(MODULE_NS(Algorithm, Repeat, ProcedureIndexed)) action))
+                       (size_t count,
+                        TCALLBACK(MODULE_NS(Algorithm, Repeat, ProcedureIndexed)) action))
         ),
 
         VARIANT(Operation,
             OPERATION((size_t count,
                        TCALLBACK(MODULE_NS(Algorithm, Repeat, Operation)) operation)),
             OPERATION(Indexed,
-                      (size_t count,
-                       TCALLBACK(MODULE_NS(Algorithm, Repeat, OperationIndexed)) operation))
+                       (size_t count,
+                        TCALLBACK(MODULE_NS(Algorithm, Repeat, OperationIndexed)) operation))
         ),
 
         VARIANT(Predicate,
             PREDICATE((size_t count,
                        TCALLBACK(MODULE_NS(Algorithm, Repeat, Predicate)) predicate)),
             PREDICATE(Indexed,
-                      (size_t count,
-                       TCALLBACK(MODULE_NS(Algorithm, Repeat, PredicateIndexed)) predicate))
+                       (size_t count,
+                        TCALLBACK(MODULE_NS(Algorithm, Repeat, PredicateIndexed)) predicate))
         ),
 
         OPERATION(Bytes, (void *destination, const void *pattern,
@@ -61,65 +61,23 @@ MODULE(DOMAIN(Core), Algorithm,
         PRIMITIVE_TYPE_TABLE(REPEAT_PRIMITIVE_DECL)
         OPERATION(CString,
                   (const char **destination, const char *value, size_t count))
-    ),
-
-    /* 1.2 Parameterized Package Template: Algorithm_Repeat_<SUFFIX> */
-    TEMPLATE_PACKAGE(Repeat, (SUFFIX, TYPE),
-        CALLBACK(FUNCTION(TYPE, Generator, ())),
-        CALLBACK(FUNCTION(TYPE, GeneratorIndexed, (size_t index))),
-        CALLBACK(FUNCTION(TYPE, IndexedGenerator, (size_t index))),
-        OPERATION_INLINE(Fill, (TYPE * destination, TYPE value, size_t count), {
-            if (count == 0U)
-              return STATUS_CONST(SUCCESS);
-            if (!destination)
-              return STATUS_CONST(INVALID_ARGUMENT);
-            if (sizeof(TYPE) != 0U && count > SIZE_MAX / sizeof(TYPE))
-              return STATUS_CONST(ARITHMETIC_OVERFLOW);
-            for (size_t i = 0U; i < count; ++i) {
-              destination[i] = value;
-            }
-            return STATUS_CONST(SUCCESS);
-        }),
-        VARIANT(Generate,
-            OPERATION_INLINE(
-                (TYPE * destination, size_t count,
-                 TCALLBACK(MODULE_NS(Algorithm, Repeat, SUFFIX, Generator)) generator),
-                {
-                  if (count == 0U)
-                    return STATUS_CONST(SUCCESS);
-                  if (!destination || !CALLBACK_IS_VALID(generator))
-                    return STATUS_CONST(INVALID_ARGUMENT);
-                  if (sizeof(TYPE) != 0U && count > SIZE_MAX / sizeof(TYPE))
-                    return STATUS_CONST(ARITHMETIC_OVERFLOW);
-                  for (size_t i = 0U; i < count; ++i) {
-                    destination[i] = CALLBACK_CALL(generator);
-                  }
-                  return STATUS_CONST(SUCCESS);
-                }),
-            OPERATION_INLINE(
-                Indexed,
-                (TYPE * destination, size_t count,
-                 TCALLBACK(MODULE_NS(Algorithm, Repeat, SUFFIX, GeneratorIndexed)) generator),
-                {
-                  if (count == 0U)
-                    return STATUS_CONST(SUCCESS);
-                  if (!destination || !CALLBACK_IS_VALID(generator))
-                    return STATUS_CONST(INVALID_ARGUMENT);
-                  if (sizeof(TYPE) != 0U && count > SIZE_MAX / sizeof(TYPE))
-                    return STATUS_CONST(ARITHMETIC_OVERFLOW);
-                  for (size_t i = 0U; i < count; ++i) {
-                    destination[i] = CALLBACK_CALL(generator, i);
-                  }
-                  return STATUS_CONST(SUCCESS);
-                })
-        )
     )
 );
 
 #undef REPEAT_PRIMITIVE_DECL
 
 /* ========================================================================== */
-/* 2. Implementation Include                                                  */
+/* 2. Template Package: Algorithm_Repeat                                      */
+/* ========================================================================== */
+
+#ifndef TEMPLATE_Algorithm
+#define TEMPLATE_Algorithm(TARGET, ...) NS(TEMPLATE_Algorithm, TARGET)(__VA_ARGS__)
+#endif
+
+#include "Repeat.def"
+
+/* ========================================================================== */
+/* 3. Implementation Include                                                  */
 /* ========================================================================== */
 
 #include "Impl/Repeat.impl"

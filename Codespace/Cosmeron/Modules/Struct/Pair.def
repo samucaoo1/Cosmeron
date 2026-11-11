@@ -1,0 +1,23 @@
+/* Pair.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Struct_Pair
+#define TEMPLATE_Struct_Pair(SUFFIX, TYPE)                                     \
+  TEMPLATE_STRUCT(Struct, Pair, SUFFIX, FIELDS(                                \
+      union {                                                                   \
+        struct {                                                                \
+          union { TYPE value1; TYPE first; TYPE a; TYPE x1; TYPE x; };          \
+          union { TYPE value2; TYPE second; TYPE b; TYPE x2; TYPE y; };         \
+        };                                                                      \
+        union { TYPE value[2]; TYPE values[2]; };                               \
+      };                                                                        \
+  ))
+#define TEMPLATE_Pair(SUFFIX, TYPE) TEMPLATE_Struct_Pair(SUFFIX, TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Struct_Pair(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif
+

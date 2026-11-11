@@ -1,0 +1,23 @@
+/* Triple.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Struct_Triple
+#define TEMPLATE_Struct_Triple(SUFFIX, TYPE)                                    \
+  TEMPLATE_STRUCT(Struct, Triple, SUFFIX, FIELDS(                               \
+      union {                                                                   \
+        struct {                                                                \
+          union { TYPE value1; TYPE first; TYPE a; TYPE x1; TYPE x; TYPE length; TYPE red; };\
+          union { TYPE value2; TYPE second; TYPE b; TYPE x2; TYPE y; TYPE width; TYPE green; };\
+          union { TYPE value3; TYPE third; TYPE c; TYPE x3; TYPE z; TYPE height; TYPE blue; };\
+        };                                                                      \
+        union { TYPE value[3]; TYPE values[3]; };                               \
+      };                                                                        \
+  ))
+#define TEMPLATE_Triple(SUFFIX, TYPE) TEMPLATE_Struct_Triple(SUFFIX, TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Struct_Triple(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif

@@ -167,13 +167,21 @@ Everything must live inside the library/module namespace whenever C allows it. E
   - Reactive mutation helper: `OBJECT_MUTATE(self, ClassName, fieldName, newValue, EventName)` evaluates `self->fieldName != (newValue)`, updates the field, and emits the event.
 - **Compile-time disabling:** Every Function Table family provides compile-time disabling via `MODULE_DISABLE_FUNCTION_TABLE`, `PACKAGE_DISABLE_FUNCTION_TABLE`, or `OBJECT_DISABLE_FUNCTION_TABLE`. When defined, no struct, instance, or table is emitted.
 - **Naming:** Always use the term `FunctionTable`, never `VTable`.
-- **Universal Template Engine (`TEMPLATE_OBJECT` / `TEMPLATE_PACKAGE` / `TEMPLATE_STRUCT`):**
-  - Declare parameterized templates directly inside `MODULE(...)` via `TEMPLATE_OBJECT(Name, (SUFFIX, TYPE), ...)`, `TEMPLATE_PACKAGE(Name, (SUFFIX, TYPE), ...)`, or `TEMPLATE_STRUCT(Name, (SUFFIX, TYPE), FIELDS(...))`.
-  - **Zero Blueprint Macros & Zero Workaround Hacks:** Never create `#define TEMPLATE_<Name>(...)` macros duplicating member lists, multi-line macros with `\`, or include-file webs to simulate templates. The template is declared once, directly inside `MODULE(...)`.
-  - **DSL Extension Protocol:** If a desired feature (e.g. structured packing/unpacking, batch operations, serialization) does not fit cleanly into the existing declarative DSL, **NEVER** improvise workaround hacks. **STOP IMMEDIATELY**, propose a clean extension to the declarative DSL engine (`MODULE(...)`, `Declarative.impl`), consult the user, and wait for approval.
-  - Instantiate on-demand with `TEMPLATE_INSTANTIATE(Name, Suffix, Type)`.
-  - Batch instantiate with X-Macros via `TEMPLATE_INSTANTIATE_TABLE(Name, TYPE_TABLE)`.
-  - Type naming convention for user types: `T<Name>_<suffix>` (e.g. `TStack_int`, `TVector_uint32`).
+- **Universal Dual-Mode `.def` Template Engine (`TEMPLATE_OBJECT` / `TEMPLATE_PACKAGE` / `TEMPLATE_STRUCT`):**
+  - **Single Source of Truth (`.def` files):** Templates are defined once and only once in their canonical `.def` file: `<Target>.def` (e.g. `Codespace/Cosmeron/Modules/Struct/Triple.def`, `Codespace/Cosmeron/Core/Memory/Swap.def`).
+  - **Dual-Mode Engine in `.def`:**
+    - **Mode 1 (Macro Export - Primary / Recommended):** When included normally without parameter macros defined, the `.def` exports `TEMPLATE_<Module>_<Target>(PARAMS...)` using the canonical declarative DSL (`TEMPLATE_STRUCT`, `TEMPLATE_PACKAGE`, `TEMPLATE_OBJECT`), enabling:
+      - On-demand instantiation: `TEMPLATE_INSTANTIATE(Module, Target, Suffix, ConcreteType, ...)`.
+      - Table-driven batch instantiation: `TEMPLATE_INSTANTIATE_TABLE(Module, Target, TYPE_TABLE)`.
+    - **Mode 2 (Direct Include Instantiation):** If included with parameters defined beforehand (e.g. `#define SUFFIX MeuTipo` / `#define TYPE MeuTipo` then `#include "Target.def"`), the `.def` automatically expands `TEMPLATE_<Module>_<Target>(SUFFIX, TYPE)` and `#undef`s the parameter variables to restore a clean environment.
+  - **Zero Duplication & Zero Workaround Hacks:** Never duplicate member lists or field declarations. The template is declared once in its `.def` file.
+  - **Homogeneous Parameter Order (3-Tier Rule):** All templates follow `(SUFFIX, [DATA_TYPES...], [METADATA...])`:
+    - Arity 2: `(SUFFIX, TYPE)` (e.g. `Triple`, `Swap`, `Vector`).
+    - Arity 3: `(SUFFIX, FIRST_TYPE, SECOND_TYPE)` or `(SUFFIX, KEY_TYPE, VALUE_TYPE)` (e.g. `Dual`, `Map`).
+    - Arity 3/4: `(SUFFIX, TYPE, CAPACITY)` (e.g. `StaticArray`, `RingBuffer`).
+    - Matching X-Macro rows unpack directly without glue code via `PP_UNWRAP ROW`.
+  - **Autocontained Inline & Struct Templates:** Structs (pure POD) and inline methods (`OPERATION_INLINE`, `PROCEDURE_INLINE`, `FUNCTION_INLINE`) are completely self-contained. The template engine (`Template.impl`) never requires stub/dummy `_IMPLEMENT` macros for inline templates or structs.
+  - Type naming convention for user types: `T<Name>_<suffix>` (e.g. `TStack_int`, `TVector_uint32`, `TTriple_uint32`).
   - Prohibit ad-hoc monolithic instantiation macros (e.g., `VECTOR_IMPLEMENT_ALL`).
 
 ---

@@ -204,19 +204,71 @@ MODULE(DOMAIN(Core), StreamBuffer,
 
 ## 5. Templates (`TEMPLATE_OBJECT`, `TEMPLATE_PACKAGE`, `TEMPLATE_STRUCT` & `TEMPLATE_ISTRUCT`)
 
-Cosmeron uses a **zero-blueprint, single-source-of-truth** template engine.
+Cosmeron uses a **canonical, single-source-of-truth Dual-Mode `.def` template engine**.
 
-### 5.1 Rules for Templates
-1. **Zero Blueprint Macros**: Never define separate `#define TEMPLATE_<Name>(...)` macros duplicating member lists. The template is declared **once**, directly inside `MODULE(...)` via `TEMPLATE_OBJECT`, `TEMPLATE_PACKAGE`, `TEMPLATE_STRUCT`, or `TEMPLATE_ISTRUCT`.
-2. **Inline vs Non-Inline**:
-   - Templates with inline methods use `OPERATION_INLINE(...)`, `FUNCTION_INLINE(...)`.
-   - Non-inline template methods are implemented in the implementation file via explicit prototype macros.
-   - `TEMPLATE_STRUCT` / `TEMPLATE_ISTRUCT` require only `FIELDS(...)` with zero vtable or method overhead.
-3. **Instantiation**:
-   - On-demand instantiation: `TEMPLATE_INSTANTIATE(Name, Suffix, Type)`.
-   - Direct template struct instantiation: `TEMPLATE_STRUCT(Mod, Name, Suffix, FIELDS(...))` or `TEMPLATE_ISTRUCT(Mod, Name, Suffix, FIELDS(...))`.
-   - Table-driven batch instantiation: `TEMPLATE_INSTANTIATE_TABLE(Name, TYPE_TABLE)`.
-   - Type naming for user types: `T<Name>_<suffix>` (e.g. `TVector_uint32`, `TPair_int`). Internal types omit `T` (`<Name>_<suffix>`).
+### 5.1 Architecture: The Dual-Mode `.def` Definition File
+Templates are defined in their canonical `.def` definition file: `<Target>.def` (e.g. `Codespace/Cosmeron/Modules/Struct/Triple.def`, `Codespace/Cosmeron/Core/Memory/Swap.def`).
+
+The `.def` file is the **Single Source of Truth** for the template. The body is declared **once and only once** using the canonical declarative DSL (`TEMPLATE_STRUCT`, `TEMPLATE_PACKAGE`, `TEMPLATE_OBJECT`), and serves two modes seamlessly:
+
+```c
+/* Triple.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Struct_Triple
+#define TEMPLATE_Struct_Triple(SUFFIX, TYPE)                                    \
+  TEMPLATE_STRUCT(Struct, Triple, SUFFIX, FIELDS(                               \
+      union {                                                                   \
+        struct { TYPE first; TYPE second; TYPE third; };                        \
+        TYPE values[3];                                                         \
+      };                                                                        \
+  ))
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Struct_Triple(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif
+```
+
+#### Dual-Mode Operation:
+1. **Mode 1 (Macro Export - Primary & Recommended):**  
+   Included normally without parameters defined (e.g. `#include "Triple.def"` inside the public header). It exports the `TEMPLATE_<Module>_<Target>` macro, enabling:
+   - On-demand instantiation: `TEMPLATE_INSTANTIATE(Module, Target, Suffix, ConcreteType, ...)`.
+   - Table-driven batch instantiation: `TEMPLATE_INSTANTIATE_TABLE(Module, Target, TYPE_TABLE)`.
+2. **Mode 2 (Direct Include Instantiation):**  
+   If included with parameters defined beforehand (e.g. `#define SUFFIX MyType` / `#define TYPE MyType` then `#include "Triple.def"`), the `.def` automatically expands the template macro and `#undef`s the parameter variables to restore a clean environment.
+
+### 5.2 Rules for Templates
+1. **Zero Duplication & Single Source of Truth**: The template body is written once and only once inside its `.def` file. Never duplicate member lists or field declarations.
+2. **Naming Convention**:
+   - Macro: `TEMPLATE_<Module>_<Target>(PARAMS...)` (e.g. `TEMPLATE_Memory_Swap`, `TEMPLATE_Struct_Triple`, `TEMPLATE_Container_Vector`).
+   - For structs, the concept name is used without `T` in the template macro name (`TEMPLATE_Struct_Triple`).
+   - Generated user types: `T<Target>_<suffix>` (e.g. `Struct_TTriple_uint32`, `Container_TVector_int`).
+   - Generated internal types: `<Target>_<suffix>` (omit `T`).
+3. **Instantiation Syntax**:
+   - On-demand instantiation:  
+     `TEMPLATE_INSTANTIATE(Module, Target, Suffix, ConcreteType, ...);`
+   - Table-driven batch instantiation:  
+     `TEMPLATE_INSTANTIATE_TABLE(Module, Target, TYPE_TABLE);`
+4. **Homogeneous Parameter Order (3-Tier Rule)**:
+   The parameter list across all templates follows a strict homogeneous hierarchy:
+   $$\text{Order: } (\underbrace{\text{SUFFIX}}_{1\text{st: Identifier}}, \quad \underbrace{\text{DATA TYPES...}}_{2\text{nd: Primary Types}}, \quad \underbrace{\text{METADATA...}}_{3\text{rd: Static Capacities / Policies}})$$
+   - **Arity 2 (Single Type)**: `(SUFFIX, TYPE)` (e.g. `Swap`, `Triple`, `Vector`, `Stack`, `Queue`).
+   - **Arity 3 (Dual / Heterogeneous Types)**: `(SUFFIX, FIRST_TYPE, SECOND_TYPE)` or `(SUFFIX, KEY_TYPE, VALUE_TYPE)` (e.g. `Dual`, `Map`, `Dict`, `HashMap`).
+   - **Arity 3 / 4 (Static Capacity / Policy)**: `(SUFFIX, TYPE, CAPACITY)` (e.g. `StaticArray`, `RingBuffer`) or `(SUFFIX, KEY_TYPE, VALUE_TYPE, CAPACITY)`.
+   - Matching X-Macro rows unpack directly without glue code via `PP_UNWRAP ROW`:
+     ```c
+     #define STRUCT_TYPE_TABLE(X) \
+       X((uint8, uint8_t))        \
+       X((uint16, uint16_t))      \
+       X((uint32, uint32_t))
+     ```
+5. **Autocontained Inline & Struct Templates**:
+   - Structs (pure POD) and templates with inline methods (`OPERATION_INLINE`, `PROCEDURE_INLINE`, `FUNCTION_INLINE`) are completely self-contained.
+   - The template engine (`Template.impl`) never requires stub/dummy `_IMPLEMENT` macros for inline templates or structs. Non-inline template methods are implemented in `.impl` files only when non-inline members exist.
+
 
 ---
 

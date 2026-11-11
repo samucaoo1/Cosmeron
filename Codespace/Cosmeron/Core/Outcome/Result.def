@@ -1,0 +1,121 @@
+/* Result.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Outcome_Result
+#define TEMPLATE_Outcome_Result(SUFFIX, TYPE)                                   \
+  TEMPLATE_OBJECT(Outcome, Result, SUFFIX,                                      \
+      FIELDS(                                                                   \
+          bool isOk;                                                            \
+          union {                                                               \
+            TYPE value;                                                         \
+            MODULE_TYPE(Condition, Error) error;                                \
+          } storage;                                                            \
+      ),                                                                        \
+                                                                                \
+      CALLBACK(FUNCTION(TYPE, MapFunction, (TYPE value))),                      \
+      CALLBACK(OPERATION(                                                       \
+          BindFunction,                                                         \
+          (TYPE value, struct MODULE_TYPED(Outcome, Result, SUFFIX) * outResult))),\
+                                                                                \
+      OPERATION_INLINE(Ok, (TYPE value), {                                      \
+        if (!self)                                                              \
+          return STATUS_CONST(INVALID_ARGUMENT);                                \
+        MODULE_FUNC(Outcome, Result, SUFFIX, Init)(self);                       \
+        self->isOk = true;                                                      \
+        self->storage.value = value;                                            \
+        return STATUS_CONST(SUCCESS);                                           \
+      }),                                                                       \
+                                                                                \
+      OPERATION_INLINE(Err, (const MODULE_TYPE(Condition, Error) * error), {     \
+        if (!self || !error)                                                    \
+          return STATUS_CONST(INVALID_ARGUMENT);                                \
+        MODULE_FUNC(Outcome, Result, SUFFIX, Init)(self);                       \
+        self->isOk = false;                                                     \
+        self->storage.error = *error;                                           \
+        return STATUS_CONST(SUCCESS);                                           \
+      }),                                                                       \
+                                                                                \
+      OPERATION_INLINE(FromStatus, (OPSTATUS status), {                         \
+        if (!self)                                                              \
+          return STATUS_CONST(INVALID_ARGUMENT);                                \
+        MODULE_FUNC(Outcome, Result, SUFFIX, Init)(self);                       \
+        if (status == STATUS_CONST(SUCCESS)) {                                  \
+          self->isOk = true;                                                    \
+          memset(&self->storage, 0, sizeof(self->storage));                     \
+        } else {                                                                \
+          self->isOk = false;                                                   \
+          MODULE_FUNC(Condition, Error, FromStatus)(&self->storage.error, status);\
+        }                                                                       \
+        return STATUS_CONST(SUCCESS);                                           \
+      }),                                                                       \
+                                                                                \
+      VARIANT(Is,                                                               \
+          CONST_PREDICATE_INLINE(Ok, (), {                                      \
+            return self ? self->isOk : false;                                   \
+          }),                                                                   \
+          CONST_PREDICATE_INLINE(Error, (), {                                   \
+            return self ? !self->isOk : true;                                   \
+          })                                                                    \
+      ),                                                                        \
+                                                                                \
+      VARIANT(Value,                                                            \
+          CONST_OPERATION_INLINE((TYPE * outValue), {                           \
+            if (!self || !outValue)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                            \
+            if (!self->isOk)                                                    \
+              return self->storage.error.code;                                  \
+            *outValue = self->storage.value;                                    \
+            return STATUS_CONST(SUCCESS);                                       \
+          }),                                                                   \
+          CONST_FUNCTION_INLINE(TYPE, Or, (TYPE fallback), {                    \
+            return (self && self->isOk) ? self->storage.value : fallback;       \
+          })                                                                    \
+      ),                                                                        \
+                                                                                \
+      CONST_OPERATION_INLINE(Error, (MODULE_TYPE(Condition, Error) * outError), {\
+        if (!self || !outError)                                                 \
+          return STATUS_CONST(INVALID_ARGUMENT);                                \
+        if (self->isOk)                                                         \
+          return STATUS_CONST(INVALID_ARGUMENT);                                \
+        *outError = self->storage.error;                                        \
+        return STATUS_CONST(SUCCESS);                                           \
+      }),                                                                       \
+                                                                                \
+      CONST_OPERATION_INLINE(                                                   \
+          Map,                                                                  \
+          (TCALLBACK(MODULE_CALLBACK(Outcome, Result, SUFFIX, MapFunction)) mapper,\
+           struct MODULE_TYPED(Outcome, Result, SUFFIX) * outResult),          \
+          {                                                                     \
+            if (!self || !outResult || !CALLBACK_IS_VALID(mapper))              \
+              return STATUS_CONST(INVALID_ARGUMENT);                            \
+            if (!self->isOk) {                                                  \
+              return MODULE_FUNC(Outcome, Result, SUFFIX, Err)(                \
+                  outResult, &self->storage.error);                             \
+            }                                                                   \
+            TYPE mapped = CALLBACK_INVOKE(mapper, self->storage.value);         \
+            return MODULE_FUNC(Outcome, Result, SUFFIX, Ok)(outResult, mapped);\
+          }),                                                                   \
+                                                                                \
+      CONST_OPERATION_INLINE(                                                   \
+          AndThen,                                                              \
+          (TCALLBACK(MODULE_CALLBACK(Outcome, Result, SUFFIX, BindFunction)) binder,\
+           struct MODULE_TYPED(Outcome, Result, SUFFIX) * outResult),          \
+          {                                                                     \
+            if (!self || !outResult || !CALLBACK_IS_VALID(binder))              \
+              return STATUS_CONST(INVALID_ARGUMENT);                            \
+            if (!self->isOk) {                                                  \
+              return MODULE_FUNC(Outcome, Result, SUFFIX, Err)(                \
+                  outResult, &self->storage.error);                             \
+            }                                                                   \
+            return CALLBACK_INVOKE(binder, self->storage.value, outResult);     \
+          })                                                                    \
+  )
+#define TEMPLATE_Result(SUFFIX, TYPE) TEMPLATE_Outcome_Result(SUFFIX, TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Outcome_Result(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif
+

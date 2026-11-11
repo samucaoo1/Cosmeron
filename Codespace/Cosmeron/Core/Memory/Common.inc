@@ -52,4 +52,13 @@ MODULE(Memory,
   )
 );
 
+/* ==========================================================================
+ * Module Template Forwarding Helper
+ * Enables: TEMPLATE_INSTANTIATE(Memory, Target, Params...)
+ * ========================================================================== */
+
+#ifndef TEMPLATE_Memory
+#define TEMPLATE_Memory(TARGET, ...) NS(TEMPLATE_Memory, TARGET)(__VA_ARGS__)
+#endif
+
 /* EOF */

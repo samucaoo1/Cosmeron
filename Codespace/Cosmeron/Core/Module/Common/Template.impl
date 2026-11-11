@@ -3,50 +3,54 @@
 #include "Tuple.impl"
 
 /* ============================================================
- * Universal Template Instantiation Engine
- * Supports both Object templates and Package templates,
- * with multi-parameter variadic argument lists.
+ * Universal Dual-Mode Template Instantiation Engine
+ * Supports both Object templates, Package templates, and Struct templates,
+ * with multi-parameter variadic argument lists and dual-mode .def files.
  * ============================================================ */
 
 /* ------------------------------------------------------------
- * 1. Inline-Only Trait Detection
- * If TEMPLATE_<NAME>_INLINE_ONLY is defined as 1, NS is suppressed.
- * Otherwise, NS(TEMPLATE, NAME, IMPLEMENT) is expanded.
- *
- * For zero-boilerplate inline-only templates, authors can either:
- * a) Define `#define TEMPLATE_<NAME>_INLINE_ONLY 1`
- * b) Define `#define TEMPLATE_<NAME>_IMPLEMENT(...) // empty`
+ * 1. Implementation Trait Detection (Non-inline vs Autocontained)
+ * Structs (pure POD) and inline-only methods are completely autocontained
+ * and do not require any dummy _IMPLEMENT stubs.
+ * Only templates with TEMPLATE_<NAME>_HAS_IMPL defined as 1
+ * will emit a separate _IMPLEMENT call.
  * ------------------------------------------------------------ */
 
-#define COSMERON_MACRO_INTERNAL_TPL_IMPL_1(NAME, ...) /* 1 = inline-only: omit NS */
-#define COSMERON_MACRO_INTERNAL_TPL_IMPL_0(NAME, ...) NS(TEMPLATE, NAME, IMPLEMENT)(__VA_ARGS__)
+#define COSMERON_MACRO_INTERNAL_TPL_IMPL_1(NAME, ...) NS(TEMPLATE, NAME, IMPLEMENT)(__VA_ARGS__)
+#define COSMERON_MACRO_INTERNAL_TPL_IMPL_0(NAME, ...) /* Autocontained: omit _IMPLEMENT */
 
 #define COSMERON_MACRO_INTERNAL_IS_1_CHECK(val, defaultVal) val
 #define COSMERON_MACRO_INTERNAL_IS_1_1 1
 #define COSMERON_MACRO_INTERNAL_IS_1_0 0
 
-#define COSMERON_MACRO_INTERNAL_IS_TPL_INLINE_ONLY(NAME) \
-  COSMERON_MACRO_INTERNAL_IS_1_CHECK(PP_OP_CAT2(COSMERON_MACRO_INTERNAL_IS_1_, NS(TEMPLATE, NAME, INLINE_ONLY)), 0)
+#define COSMERON_MACRO_INTERNAL_TPL_HAS_IMPL(NAME) \
+  COSMERON_MACRO_INTERNAL_IS_1_CHECK(PP_OP_CAT2(COSMERON_MACRO_INTERNAL_IS_1_, NS(TEMPLATE, NAME, HAS_IMPL)), 0)
 
 /* ------------------------------------------------------------
- * 2. Declaration-Only Instantiation (Header / Inline-Only)
+ * 2. Declaration / Inline Instantiation
  * ------------------------------------------------------------ */
 #define TEMPLATE_DECLARE(NAME, ...) \
   NS(TEMPLATE, NAME)(__VA_ARGS__)
 
 /* ------------------------------------------------------------
- * 3. Full Instantiation (Declaration + Implementation)
+ * 3. Full Instantiation (Declaration + Optional Implementation)
  * ------------------------------------------------------------ */
 #define TEMPLATE_IMPLEMENT(NAME, ...) \
   NS(TEMPLATE, NAME)(__VA_ARGS__); \
-  NS(TEMPLATE, NAME, IMPLEMENT)(__VA_ARGS__) \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_TPL_IMPL_, \
+             COSMERON_MACRO_INTERNAL_TPL_HAS_IMPL(NAME))(NAME, __VA_ARGS__) \
   typedef int NS(_cosmeron_tpl_impl_semi, NAME, __LINE__)
 
 /* ------------------------------------------------------------
  * 4. Unified Instantiation Alias & Table-Driven Batch
+ * Supports:
+ *   TEMPLATE_INSTANTIATE(Target, Params...)
+ *   TEMPLATE_INSTANTIATE(Module, Target, Params...)
+ *   TEMPLATE_INSTANTIATE_TABLE(Target, Table)
+ *   TEMPLATE_INSTANTIATE_TABLE(Module, Target, Table)
  * ------------------------------------------------------------ */
 #define TEMPLATE_INSTANTIATE(NAME, ...) \
-  TEMPLATE_IMPLEMENT(NAME, __VA_ARGS__)
+  NS(TEMPLATE, NAME)(__VA_ARGS__)
 
 #ifndef COSMERON_COMMA_ROW
 #define COSMERON_COMMA_ROW(ROW) ROW,
@@ -62,10 +66,19 @@
 
 #define COSMERON_EXPAND_TPL_TABLE_INVOKE(m, ctx, ...) m(ctx, __VA_ARGS__)
 
-#define TEMPLATE_INSTANTIATE_TABLE(NAME, TABLE)                                \
+#define COSMERON_INTERNAL_TPL_TABLE_DISP_2(TARGET, TABLE)                      \
   COSMERON_EXPAND_TPL_TABLE_INVOKE(                                            \
-      PP_MAP_NONE_CTX, COSMERON_INTERNAL_TPL_ROW_DISPATCH, NAME,               \
-      TABLE(COSMERON_COMMA_ROW) ~)                                             \
-  typedef int NS(_cosmeron_tpl_table_semi, NAME, __LINE__)
+      PP_MAP_NONE_CTX, COSMERON_INTERNAL_TPL_ROW_DISPATCH, TARGET,             \
+      TABLE(COSMERON_COMMA_ROW) ~)
+
+#define COSMERON_INTERNAL_TPL_TABLE_DISP_3(MOD, TARGET, TABLE)                 \
+  COSMERON_EXPAND_TPL_TABLE_INVOKE(                                            \
+      PP_MAP_NONE_CTX, COSMERON_INTERNAL_TPL_ROW_DISPATCH, NS(MOD, TARGET),   \
+      TABLE(COSMERON_COMMA_ROW) ~)
+
+#define TEMPLATE_INSTANTIATE_TABLE(...)                                        \
+  PP_OP_CAT2(COSMERON_INTERNAL_TPL_TABLE_DISP_,                                \
+             PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)                           \
+  typedef int NS(_cosmeron_tpl_table_semi, __LINE__)
 
 /* EOF */

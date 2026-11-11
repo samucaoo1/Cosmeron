@@ -1,0 +1,31 @@
+/* Dual.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Struct_Dual
+#define TEMPLATE_Struct_Dual(SUFFIX, TYPE)                                     \
+  TEMPLATE_STRUCT(Struct, Dual, SUFFIX, FIELDS(                                \
+      union {                                                                   \
+        struct {                                                                \
+          union {                                                               \
+            TYPE value1; TYPE a; TYPE x1; TYPE x; TYPE col;                     \
+            TYPE length; TYPE real; TYPE state1; TYPE begin;                    \
+            TYPE first; TYPE start;                                             \
+          };                                                                    \
+          union {                                                               \
+            TYPE value2; TYPE b; TYPE x2; TYPE y; TYPE row;                     \
+            TYPE width; TYPE imaginary; TYPE state2; TYPE end;                  \
+            TYPE second; TYPE last;                                             \
+          };                                                                    \
+        };                                                                      \
+        union { TYPE value[2]; TYPE values[2]; };                               \
+      };                                                                        \
+  ))
+#define TEMPLATE_Dual(SUFFIX, TYPE) TEMPLATE_Struct_Dual(SUFFIX, TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Struct_Dual(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif
+

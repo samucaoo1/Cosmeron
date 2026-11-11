@@ -1,0 +1,24 @@
+/* Quad.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Struct_Quad
+#define TEMPLATE_Struct_Quad(SUFFIX, TYPE)                                      \
+  TEMPLATE_STRUCT(Struct, Quad, SUFFIX, FIELDS(                                 \
+      union {                                                                   \
+        struct {                                                                \
+          union { TYPE value1; TYPE first; TYPE a; TYPE x1; TYPE x; TYPE left; TYPE red; }; \
+          union { TYPE value2; TYPE second; TYPE b; TYPE x2; TYPE y; TYPE right; TYPE green; };\
+          union { TYPE value3; TYPE third; TYPE c; TYPE x3; TYPE z; TYPE top; TYPE blue; }; \
+          union { TYPE value4; TYPE fourth; TYPE d; TYPE x4; TYPE w; TYPE bottom; TYPE alpha; };\
+        };                                                                      \
+        union { TYPE value[4]; TYPE values[4]; };                               \
+      };                                                                        \
+  ))
+#define TEMPLATE_Quad(SUFFIX, TYPE) TEMPLATE_Struct_Quad(SUFFIX, TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Struct_Quad(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif
