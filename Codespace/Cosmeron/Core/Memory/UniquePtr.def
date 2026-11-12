@@ -7,7 +7,7 @@
           TYPE *ptr;                                                            \
       ),                                                                        \
                                                                                 \
-      PROCEDURE_INLINE(Destroy, (), {                                           \
+      PROCEDURE_INLINE(Free, (), {                                              \
         if (self && self->ptr != NULL) {                                        \
           void *raw = (void *)self->ptr;                                        \
           MODULE_FUNC(Memory, Alloc, Free)(&raw);                               \
@@ -20,7 +20,7 @@
           return STATUS_CONST(INVALID_ARGUMENT);                                \
         if (self->ptr == newPtr)                                                \
           return STATUS_CONST(SUCCESS);                                         \
-        MODULE_FUNC(Memory, UniquePtr, SUFFIX, Destroy)(self);                  \
+        MODULE_FUNC(Memory, UniquePtr, SUFFIX, Free)(self);                    \
         self->ptr = newPtr;                                                     \
         return STATUS_CONST(SUCCESS);                                           \
       }),                                                                       \
@@ -33,9 +33,10 @@
         return STATUS_CONST(SUCCESS);                                           \
       }),                                                                       \
                                                                                 \
-      OPERATION_INLINE(Make, (TYPE value), {                                    \
+      OPERATION_INLINE(Alloc, (TYPE value), {                                   \
         if (!self)                                                              \
           return STATUS_CONST(INVALID_ARGUMENT);                                \
+        MODULE_FUNC(Memory, UniquePtr, SUFFIX, Free)(self);                    \
         MODULE_FUNC(Memory, UniquePtr, SUFFIX, Init)(self);                     \
         void *raw = NULL;                                                       \
         OPSTATUS status =                                                       \
@@ -47,9 +48,10 @@
         return STATUS_CONST(SUCCESS);                                           \
       }),                                                                       \
                                                                                 \
-      OPERATION_INLINE(MakeDefault, (), {                                       \
+      OPERATION_INLINE(AllocZero, (), {                                         \
         if (!self)                                                              \
           return STATUS_CONST(INVALID_ARGUMENT);                                \
+        MODULE_FUNC(Memory, UniquePtr, SUFFIX, Free)(self);                    \
         MODULE_FUNC(Memory, UniquePtr, SUFFIX, Init)(self);                     \
         void *raw = NULL;                                                       \
         OPSTATUS status =                                                       \
@@ -67,7 +69,7 @@
                            return STATUS_CONST(INVALID_ARGUMENT);               \
                          if (self == other)                                     \
                            return STATUS_CONST(SUCCESS);                        \
-                         MODULE_FUNC(Memory, UniquePtr, SUFFIX, Destroy)(self); \
+                         MODULE_FUNC(Memory, UniquePtr, SUFFIX, Free)(self);    \
                          self->ptr = other->ptr;                                \
                          other->ptr = NULL;                                     \
                          return STATUS_CONST(SUCCESS);                          \

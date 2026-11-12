@@ -28,7 +28,7 @@
         return STATUS_CONST(SUCCESS);                                           \
       }),                                                                       \
                                                                                 \
-      PROCEDURE_INLINE(Destroy, (), {                                           \
+      PROCEDURE_INLINE(Free, (), {                                              \
         if (self) {                                                             \
           MODULE_FUNC(Memory, WeakPtrAtomic, SUFFIX, Reset)(self);              \
         }                                                                       \
@@ -59,7 +59,7 @@
                            return STATUS_CONST(INVALID_ARGUMENT);               \
                          if (self == other)                                     \
                            return STATUS_CONST(SUCCESS);                        \
-                         MODULE_FUNC(Memory, WeakPtrAtomic, SUFFIX, Destroy)(   \
+                         MODULE_FUNC(Memory, WeakPtrAtomic, SUFFIX, Free)(      \
                              self);                                             \
                          self->ptr = other->ptr;                                \
                          self->control = other->control;                        \

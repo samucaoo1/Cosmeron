@@ -11,7 +11,7 @@
           TYPE *ptr;                                                            \
       ),                                                                        \
                                                                                 \
-      PROCEDURE_INLINE(Destroy, (), {                                           \
+      PROCEDURE_INLINE(Free, (), {                                              \
         if (self && self->ptr != NULL) {                                        \
           if (self->ptr->refCount > 0U) {                                       \
             self->ptr->refCount--;                                              \
@@ -65,7 +65,7 @@
       OPERATION_INLINE(Reset, (TYPE * newPtr), {                                \
         if (!self)                                                              \
           return STATUS_CONST(INVALID_ARGUMENT);                                \
-        MODULE_FUNC(Memory, IntrusivePtr, SUFFIX, Destroy)(self);               \
+        MODULE_FUNC(Memory, IntrusivePtr, SUFFIX, Free)(self);                  \
         return MODULE_FUNC(Memory, IntrusivePtr, SUFFIX, FromPointer)(self,     \
                                                                       newPtr);  \
       }),                                                                       \
@@ -78,7 +78,7 @@
                            return STATUS_CONST(INVALID_ARGUMENT);               \
                          if (self == other)                                     \
                            return STATUS_CONST(SUCCESS);                        \
-                         MODULE_FUNC(Memory, IntrusivePtr, SUFFIX, Destroy)(    \
+                         MODULE_FUNC(Memory, IntrusivePtr, SUFFIX, Free)(       \
                              self);                                             \
                          self->ptr = other->ptr;                                \
                          other->ptr = NULL;                                     \
