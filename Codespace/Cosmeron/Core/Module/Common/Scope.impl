@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Namespace.h"
+#include "../../Preprocessor/Detect.h"
 #include "../../Preprocessor/Arguments.h"
 #include "../../Preprocessor/Operations.h"
 #include "Dispatch.impl"
@@ -12,7 +13,7 @@
 
 /* --- Diagnostic Scoping Pragmas --- */
 #ifndef COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS
-#if defined(__clang__)
+#if COMPILER_CLANG
 #define COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS()                             \
   _Pragma("clang diagnostic push")                                             \
   _Pragma("clang diagnostic ignored \"-Wunused-function\"")                    \
@@ -21,7 +22,7 @@
 
 #define COSMERON_INTERNAL_SCOPE_POP_DIAGNOSTICS()                              \
   _Pragma("clang diagnostic pop")
-#elif defined(__GNUC__)
+#elif COMPILER_GCC
 #define COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS()                             \
   _Pragma("GCC diagnostic push")                                               \
   _Pragma("GCC diagnostic ignored \"-Wunused-function\"")                      \

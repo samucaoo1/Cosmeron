@@ -3,7 +3,7 @@
 #include "../../Core/Module/Module.h"
 #include "../../Core/Outcome/Status.h"
 #include "../../Core/Preprocessor/Compiling.inc"
-#include "../../Core/Preprocessor/Detect/Compiler.h"
+#include "../../Core/Preprocessor/Detect.h"
 
 #include <complex.h>
 #include <inttypes.h>

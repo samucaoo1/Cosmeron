@@ -1,18 +1,19 @@
 # Callback
 
-Callback represents a typed function pointer together with an optional borrowed context. It provides a type-safe, declarative abstraction for callbacks across Cosmeron modules.
+`Callback` represents a pure, stateless typed function pointer in Cosmeron with zero memory or dispatch overhead. It is strictly 8 bytes on 64-bit architectures (`sizeof == sizeof(void *)`).
 
 ## Contract
 
-Each declaration generates a specialized callback type `TCALLBACK(NAME)` containing:
+Each callback declaration generates a clean C function pointer type:
 
-- A concrete function pointer with the exact signature specified plus `void *context`.
-- A non-owning `void *context`.
-- `Bind(&cb, function, context)` to package a function pointer and its context.
-- `IsValid(&cb)` or `CALLBACK_IS_VALID(cb)` to check whether a function is bound.
-- `CALLBACK_INVOKE(cb, args...)` to invoke the callback with stored context.
+- Root declaration: `TCALLBACK(NAME)` expanding to `TCallback_NAME`.
+- Scoped declaration inside `MODULE`, `PACKAGE`, or `OBJECT`: expands to `MOD_TCallback_NAME` or `MOD_PKG_TCallback_NAME`.
+- Direct pointer assignment: `TCALLBACK(Scale) cb = MyFunction;`
+- Validity check: `CALLBACK_IS_VALID(cb)` evaluates `cb != NULL`.
+- Invalidation / Empty: `CALLBACK_EMPTY` evaluates to `NULL`.
+- Invocation: `CALLBACK_CALL(cb, args...)` or `CALLBACK_INVOKE(cb, args...)` or direct `cb(args...)`.
 
-The context is borrowed. Callback does not allocate, copy, or release it. The caller must keep the pointed-to context alive for every invocation.
+Callbacks are strictly stateless. When state or a context pointer is required, use `Closure` (`TCLOSURE`). Pure callbacks can be promoted directly into closures without glue code or allocation via `CLOSURE_FUNC(NAME_FromCallback)(cb)`.
 
 ## Descriptors
 
@@ -30,101 +31,52 @@ Nullary callbacks use standard empty parentheses `()` without requiring special 
 
 ## Usage Examples
 
-### 1. Value-Returning Callback
+### 1. Standalone Callbacks
 
 ```c
 #include "Cosmeron/Core/Module/Callback/Callback.h"
 
-CALLBACK_FUNCTION(int, Scale, (int value));
+CALLBACK_FUNCTION(int, BinaryOp, (int a, int b));
+CALLBACK_PROCEDURE(Logger, (int code));
 
-typedef struct {
-    int factor;
-} ScaleContext;
+static int Add(int a, int b) {
+    return a + b;
+}
 
-static int ScaleValue(int value, void *context) {
-    ScaleContext *state = context;
-    return value * state->factor;
+static void PrintCode(int code) {
+    printf("Code: %d\n", code);
 }
 
 int main(void) {
-    ScaleContext state = { 3 };
-    TCALLBACK(Scale) callback =
-        CALLBACK_FUNC(Scale_Bind)(ScaleValue, &state);
+    TCALLBACK(BinaryOp) op = Add;
+    assert(CALLBACK_IS_VALID(op));
+    assert(CALLBACK_CALL(op, 10, 20) == 30);
 
-    if (!CALLBACK_IS_VALID(callback))
-        return 1;
+    TCALLBACK(Logger) log = PrintCode;
+    CALLBACK_CALL(log, 200);
 
-    return CALLBACK_INVOKE(callback, 4) == 12 ? 0 : 1;
+    return 0;
 }
 ```
 
-### 2. Procedures, Operations and Predicates
+### 2. Grouped Declarations in Modules (`CALLBACK(...)` block)
+
+Callbacks can be integrated directly inside `MODULE`, `PACKAGE`, or `OBJECT` declarations using the `CALLBACK(...)` variadic block:
 
 ```c
-/* Infallible procedure returning void */
-CALLBACK_PROCEDURE(Notify, (int code));
-
-/* Fallible operation returning OPSTATUS */
-CALLBACK_OPERATION(Commit, (int value));
-
-/* Predicate proposition returning bool */
-CALLBACK_PREDICATE(IsPositive, (int value));
-
-/* Three-way comparison returning CMPOUT */
-CALLBACK_COMPARISON(CompareKeys, (int left, int right));
-```
-
-### 3. Nullary Callbacks
-
-Callbacks without ordinary parameters use standard empty parentheses `()`:
-
-```c
-CALLBACK_FUNCTION(int, ReadSetting, ());
-CALLBACK_PROCEDURE(ResetSetting, ());
-CALLBACK_OPERATION(Flush, ());
-CALLBACK_PREDICATE(IsEnabled, ());
-```
-
-### 4. Inlining Callbacks in Modules (`PACKAGE` and `OBJECT`)
-
-Callbacks can be integrated directly inside `PACKAGE` and `OBJECT` declarations using the `CALLBACK(...)` capsule:
-
-```c
-PACKAGE(EventBus,
+MODULE(DOMAIN(Core), Math,
     CALLBACK(
-        OPERATION(OnEvent, (int code))
-    )
-);
-
-OBJECT(Widget,
-    FIELDS(
-        int id;
+        FUNCTION(int, Transform, (int x)),
+        PREDICATE(IsPrime, (int x))
     ),
-    CALLBACK(
-        PREDICATE(Filter, (int value))
+    PACKAGE(Operations,
+        CALLBACK(
+            PROCEDURE(OnStep, (size_t step))
+        )
     )
 );
 ```
 
-### 5. Automatic Comparator Adapters
-
-Any object comparison returning `CMPOUT` automatically generates a type-erased bridge to `TCALLBACK(Comparison)`:
-
-```c
-OBJECT(Person,
-    FIELDS(
-        int age;
-    ),
-    COMPARISON_NUMERIC(CompareAge, age)
-);
-
-/* Automatically generated: */
-TCALLBACK(Comparison) cb = Person_CompareAge_AsComparator();
-CALLBACK_INVOKE(cb, &person1, &person2);
-```
-
-## Invocation and Validity
-
-- **Universal invocation:** `CALLBACK_CALL(callback, ...)` or `CALLBACK_INVOKE(callback, ...)` accepts an arbitrary number of arguments and automatically forwards the stored context as the final parameter.
-- **Validity checking:** Check via `CALLBACK_IS_VALID(callback)` or `callback.IsValid(&callback)`.
-- **Value semantics:** Callbacks are small value types (two pointers plus member function pointers) and can be passed and copied by value.
+Accessing scoped callback types:
+- Module scope: `MODULE_CALLBACK(Core, Math, Transform)`
+- Package scope: `MODULE_CALLBACK(Math, Operations, OnStep)`

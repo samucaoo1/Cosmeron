@@ -54,11 +54,11 @@
   CALLBACK_FUNCTION(R, NS(PKG, N), P);
 
 #define COSMERON_MACRO_INTERNAL_PACKAGE_PROTO_C_3(PKG, R, N, P)                \
-  CALLBACK_PROCEDURE(NS(PKG, N), P);                                           \
+  CLOSURE_PROCEDURE(NS(PKG, N), P);                                           \
   static inline OPSTATUS NS(PKG, N, Subscribe)(                                \
-      TCALLBACK(NS(PKG, N)) listener);                                         \
+      TCLOSURE(NS(PKG, N)) listener);                                         \
   static inline OPSTATUS NS(PKG, N, Unsubscribe)(                              \
-      TCALLBACK(NS(PKG, N)) listener);                                         \
+      TCLOSURE(NS(PKG, N)) listener);                                         \
   static inline void NS(PKG, N, Emit)                                         \
       COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P);                              \
   static inline OPSTATUS NS(PKG, N, Clear)(void);                              \
@@ -66,11 +66,11 @@
   static inline uint8_t NS(PKG, N, Capacity)(void);
 
 #define COSMERON_MACRO_INTERNAL_PACKAGE_PROTO_C_4(PKG, R, N, P)                \
-  CALLBACK_OPERATION(NS(PKG, N), P);                                           \
+  CLOSURE_OPERATION(NS(PKG, N), P);                                           \
   static inline OPSTATUS NS(PKG, N, Subscribe)(                                \
-      TCALLBACK(NS(PKG, N)) listener);                                         \
+      TCLOSURE(NS(PKG, N)) listener);                                         \
   static inline OPSTATUS NS(PKG, N, Unsubscribe)(                              \
-      TCALLBACK(NS(PKG, N)) listener);                                         \
+      TCLOSURE(NS(PKG, N)) listener);                                         \
   static inline OPSTATUS NS(PKG, N, Emit)                                      \
       COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P);                              \
   static inline OPSTATUS NS(PKG, N, Clear)(void);                              \
@@ -80,18 +80,45 @@
 #define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_I(PKG, C, I, R, N, P, B)    \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PACKAGE_PROTO_C_, C)(PKG, R, N, P)
 
-#define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO(PKG, M) \
-  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_I, PKG, M)
+#define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_0(PKG, M)               \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
+      COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_I, PKG, M)
+#define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_1(PKG, M)               \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
+      COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_I, PKG, M)
+#define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_3(PKG, M)               \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
+      COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_I, PKG, M)
+#define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_4(PKG, M)               \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
+      COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_I, PKG, M)
+#define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_107(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_108(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_109(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_110(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_111(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_112(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_113(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_114(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_115(PKG, M)             \
+  PP_FOREACH_D2_CTX(COSMERON_INTERNAL_SCOPE_CB_MEMBER, LIB_PREFIX(PKG),        \
+                    PP_UNWRAP PP_SEQ_GET_2 M)
+#define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_116(PKG, M)             \
+  PP_FOREACH_D2_CTX(COSMERON_INTERNAL_SCOPE_CL_MEMBER, LIB_PREFIX(PKG),        \
+                    PP_UNWRAP PP_SEQ_GET_2 M)
+
+#define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO(PKG, M)                     \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_, PP_SEQ_GET_1 M)(PKG, M)
 
 #define COSMERON_MACRO_INTERNAL_PKG_EVENT_INLINE_PROC(PKG, CAP, N, P, ARGS)    \
   _Static_assert((CAP) <= 16, "Cosmeron Event capacity cannot exceed 16 slots");\
   static COSMERON_MAYBE_UNUSED struct {                                         \
     uint8_t count;                                                             \
-    TCALLBACK(NS(PKG, N)) listeners[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];   \
+    TCLOSURE(NS(PKG, N)) listeners[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];   \
   } NS(PKG, event, N);                                                         \
   static inline OPSTATUS NS(PKG, N, Subscribe)(                                \
-      TCALLBACK(NS(PKG, N)) listener) {                                        \
-    if (!CALLBACK_IS_VALID(listener))                                          \
+      TCLOSURE(NS(PKG, N)) listener) {                                        \
+    if (!CLOSURE_IS_VALID(listener))                                          \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (NS(PKG, event, N).count >= COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)) {   \
       return STATUS_CONST(OUT_OF_RANGE);                                       \
@@ -100,7 +127,7 @@
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
   static inline OPSTATUS NS(PKG, N, Unsubscribe)(                              \
-      TCALLBACK(NS(PKG, N)) listener) {                                        \
+      TCLOSURE(NS(PKG, N)) listener) {                                        \
     for (uint8_t i = 0; i < NS(PKG, event, N).count; ++i) {                   \
       if (NS(PKG, event, N).listeners[i].function == listener.function &&      \
           NS(PKG, event, N).listeners[i].context == listener.context) {        \
@@ -117,7 +144,7 @@
       COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P) {                             \
     if (NS(PKG, event, N).count == 0) return;                                  \
     uint8_t activeCount = NS(PKG, event, N).count;                             \
-    TCALLBACK(NS(PKG, N)) snapshot[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];    \
+    TCLOSURE(NS(PKG, N)) snapshot[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];    \
     for (uint8_t i = 0; i < activeCount; ++i) {                                \
       snapshot[i] = NS(PKG, event, N).listeners[i];                           \
     }                                                                          \
@@ -140,11 +167,11 @@
   _Static_assert((CAP) <= 16, "Cosmeron Event capacity cannot exceed 16 slots");\
   static COSMERON_MAYBE_UNUSED struct {                                         \
     uint8_t count;                                                             \
-    TCALLBACK(NS(PKG, N)) listeners[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];   \
+    TCLOSURE(NS(PKG, N)) listeners[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];   \
   } NS(PKG, event, N);                                                         \
   static inline OPSTATUS NS(PKG, N, Subscribe)(                                \
-      TCALLBACK(NS(PKG, N)) listener) {                                        \
-    if (!CALLBACK_IS_VALID(listener))                                          \
+      TCLOSURE(NS(PKG, N)) listener) {                                        \
+    if (!CLOSURE_IS_VALID(listener))                                          \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (NS(PKG, event, N).count >= COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)) {   \
       return STATUS_CONST(OUT_OF_RANGE);                                       \
@@ -153,7 +180,7 @@
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
   static inline OPSTATUS NS(PKG, N, Unsubscribe)(                              \
-      TCALLBACK(NS(PKG, N)) listener) {                                        \
+      TCLOSURE(NS(PKG, N)) listener) {                                        \
     for (uint8_t i = 0; i < NS(PKG, event, N).count; ++i) {                   \
       if (NS(PKG, event, N).listeners[i].function == listener.function &&      \
           NS(PKG, event, N).listeners[i].context == listener.context) {        \
@@ -170,7 +197,7 @@
       COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P) {                             \
     if (NS(PKG, event, N).count == 0) return STATUS_CONST(SUCCESS);            \
     uint8_t activeCount = NS(PKG, event, N).count;                             \
-    TCALLBACK(NS(PKG, N)) snapshot[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];    \
+    TCLOSURE(NS(PKG, N)) snapshot[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];    \
     for (uint8_t i = 0; i < activeCount; ++i) {                                \
       snapshot[i] = NS(PKG, event, N).listeners[i];                           \
     }                                                                          \
@@ -211,8 +238,31 @@
 #define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_INLINE_I(PKG, C, I, R, N, P, B)  \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PACKAGE_GEN_INLINE_C_, C)(PKG, I, R, N, P, B)
 
-#define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_INLINE(PKG, M) \
-  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(COSMERON_MACRO_INTERNAL_PACKAGE_GEN_INLINE_I, PKG, M)
+#define COSMERON_MACRO_INTERNAL_PKG_GEN_INLINE_TAG_0(PKG, M)                  \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
+      COSMERON_MACRO_INTERNAL_PACKAGE_GEN_INLINE_I, PKG, M)
+#define COSMERON_MACRO_INTERNAL_PKG_GEN_INLINE_TAG_1(PKG, M)                  \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
+      COSMERON_MACRO_INTERNAL_PACKAGE_GEN_INLINE_I, PKG, M)
+#define COSMERON_MACRO_INTERNAL_PKG_GEN_INLINE_TAG_3(PKG, M)                  \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
+      COSMERON_MACRO_INTERNAL_PACKAGE_GEN_INLINE_I, PKG, M)
+#define COSMERON_MACRO_INTERNAL_PKG_GEN_INLINE_TAG_4(PKG, M)                  \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
+      COSMERON_MACRO_INTERNAL_PACKAGE_GEN_INLINE_I, PKG, M)
+#define COSMERON_MACRO_INTERNAL_PKG_GEN_INLINE_TAG_107(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PKG_GEN_INLINE_TAG_108(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PKG_GEN_INLINE_TAG_109(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PKG_GEN_INLINE_TAG_110(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PKG_GEN_INLINE_TAG_111(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PKG_GEN_INLINE_TAG_112(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PKG_GEN_INLINE_TAG_113(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PKG_GEN_INLINE_TAG_114(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PKG_GEN_INLINE_TAG_115(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PKG_GEN_INLINE_TAG_116(PKG, M)
+
+#define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_INLINE(PKG, M)                    \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PKG_GEN_INLINE_TAG_, PP_SEQ_GET_1 M)(PKG, M)
 
 /* ------------------------------------------------------------
  * 3. Top-Level PACKAGE Declarator

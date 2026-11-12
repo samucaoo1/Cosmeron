@@ -255,7 +255,7 @@ The `.def` file is the **Single Source of Truth** for the template. The body is 
 4. **Homogeneous Parameter Order (3-Tier Rule)**:
    The parameter list across all templates follows a strict homogeneous hierarchy:
    $$\text{Order: } (\underbrace{\text{SUFFIX}}_{1\text{st: Identifier}}, \quad \underbrace{\text{DATA TYPES...}}_{2\text{nd: Primary Types}}, \quad \underbrace{\text{METADATA...}}_{3\text{rd: Static Capacities / Policies}})$$
-   - **Arity 2 (Single Type)**: `(SUFFIX, TYPE)` (e.g. `Swap`, `Triple`, `Vector`, `Stack`, `Queue`).
+   - **Arity 2 (Single Type)**: `(SUFFIX, TYPE)` (e.g. `Swap`, `Triple`, `Vector`, `Stack`, `Queue`, `Result`, `Optional`).
    - **Arity 3 (Dual / Heterogeneous Types)**: `(SUFFIX, FIRST_TYPE, SECOND_TYPE)` or `(SUFFIX, KEY_TYPE, VALUE_TYPE)` (e.g. `Dual`, `Map`, `Dict`, `HashMap`).
    - **Arity 3 / 4 (Static Capacity / Policy)**: `(SUFFIX, TYPE, CAPACITY)` (e.g. `StaticArray`, `RingBuffer`) or `(SUFFIX, KEY_TYPE, VALUE_TYPE, CAPACITY)`.
    - Matching X-Macro rows unpack directly without glue code via `PP_UNWRAP ROW`:
@@ -333,24 +333,72 @@ OBJECT_SCOPE_END()
 
 ---
 
-## 7. Declarative Callbacks & Events
+## 7. Declarative Callbacks, Closures & Events
 
-### 7.1 First-Class Callbacks (`TCALLBACK`)
-Callbacks can be declared inside `PACKAGE`, `OBJECT`, or standalone using category descriptors:
-- `CALLBACK_OPERATION(Name, (params))`
-- `CALLBACK_PREDICATE(Name, (params))`
-- `CALLBACK_FUNCTION(Ret, Name, (params))`
-- `CALLBACK_PROCEDURE(Name, (params))`
-- `CALLBACK_COMPARISON(Name, (params))`
+### 7.1 First-Class Pure Callbacks (`TCALLBACK`)
+Callbacks represent pure, stateless function pointers with zero overhead (exactly `sizeof(void *)`, 8 bytes on 64-bit platforms). They are declared standalone or in variadic blocks across `MODULE`, `PACKAGE`, or `OBJECT`:
 
-Universal invocation & validation:
-- Invocation: `CALLBACK_CALL(cb, args...)`
-- Validation: `CALLBACK_IS_VALID(cb)`
-- Canonical comparator: `TCALLBACK(Comparison)`
+- Declarations:
+  - `CALLBACK_OPERATION(Name, (params))`
+  - `CALLBACK_PREDICATE(Name, (params))`
+  - `CALLBACK_FUNCTION(Ret, Name, (params))`
+  - `CALLBACK_PROCEDURE(Name, (params))`
+  - `CALLBACK_COMPARISON(Name, (params))`
+- Variadic block syntax:
+  ```c
+  MODULE(DOMAIN(Core), MyModule,
+    CALLBACK(
+      FUNCTION(int, Transform, (int x)),
+      PROCEDURE(Log, (int code))
+    )
+  );
+  ```
+- Universal invocation & validation:
+  - Invocation: `CALLBACK_CALL(cb, args...)` or `CALLBACK_INVOKE(cb, args...)`
+  - Validation: `CALLBACK_IS_VALID(cb)`
+  - Empty: `CALLBACK_EMPTY` (`NULL`)
 
-### 7.2 Declarative Events (`EVENT_PROCEDURE` & `EVENT_OPERATION`)
-- Zero-allocation 1-to-N observer notification.
+### 7.2 Contextual Fat Closures (`TCLOSURE`)
+Closures represent contextual callables combining a function pointer and an optional borrowed context in a 16-byte Pure POD structure (`sizeof == 2 * sizeof(void *)`):
+
+```c
+typedef struct TClosure_Name {
+  union {
+    TCallback_Name callback;
+    Name_Function function;
+  };
+  void *context;
+} TClosure_Name;
+```
+
+- Declarations:
+  - `CLOSURE_OPERATION(Name, (params))`
+  - `CLOSURE_PREDICATE(Name, (params))`
+  - `CLOSURE_FUNCTION(Ret, Name, (params))`
+  - `CLOSURE_PROCEDURE(Name, (params))`
+  - `CLOSURE_COMPARISON(Name, (params))`
+- Variadic block syntax:
+  ```c
+  MODULE(DOMAIN(Core), MyModule,
+    CLOSURE(
+      FUNCTION(int, Compute, (int x)),
+      PREDICATE(Validate, (int x))
+    )
+  );
+  ```
+- Construction & Binding:
+  - `CLOSURE_FUNC(Name_Bind)(fn, ctx)`: Binds a stateful target taking trailing `void *context`.
+  - `CLOSURE_FUNC(Name_FromCallback)(cb)`: Promotes a pure stateless callback without wrappers.
+- Sentinel Dual-Dispatch:
+  - `CLOSURE_CALL(cl, args...)` dynamically checks `cl.context == NULL`. If null, invokes `cl.callback(args...)` directly. If non-null, unwraps the sentinel `(context == (void *)1 ? NULL : context)` and invokes `cl.function(args..., ctx)`.
+- Method Adapter:
+  - `CLOSURE_ADAPT_OBJECT_METHOD(CLOSURE_TYPE, CLASS_TYPE, METHOD_FUNC, RET, PARAMS, ARGS)` bridges object receiver methods `(CLASS *self, ...)` to closure signatures `(..., void *context)`.
+  - `CLOSURE_AS_CLOSURE(METHOD_FUNC, self)` creates a ready-to-use closure from an object instance.
+
+### 7.3 Declarative Events (`EVENT_PROCEDURE` & `EVENT_OPERATION`)
+- Zero-allocation 1-to-N observer notification powered natively by `TCLOSURE`.
 - Static slots embedded in struct or package scope with automatic cache-line decay (4, 8, 12, or 16 slots).
+- Supports subscribing both stateful closures (`Bind`) and pure callbacks (`FromCallback`).
 - Re-entrancy safe: `Emit` takes a stack snapshot of active listeners before dispatching.
 - Reactive field mutation: `OBJECT_MUTATE(self, ClassName, fieldName, newValue, EventName)` updates state and emits on change.
 
@@ -441,6 +489,7 @@ External consumers interact with modules using the unified grammar of `Namespace
 MODULE_TYPE(StreamBuffer, Buffer) buf; /* Expands to: StreamBuffer_TBuffer */
 MODULE_TYPE(Geometry, Point) pt = { .x = 10, .y = 20 }; /* Pure POD Struct */
 MODULE_TYPED(Geometry, Pair, int) pair = { .first = 1, .second = 2 }; /* Template Struct */
+MODULE_TYPED(Outcome, Optional, int32) opt; /* Template Object */
 
 /* 2. Enums and Constants */
 MODULE_ENUM(File, SeekOrigin) origin = MODULE_CONST(File, CUR);
@@ -474,4 +523,16 @@ StreamBuffer_Utils_StrLen("test");
 4. **Zero blueprint macros**: Never create `#define TEMPLATE_<Name>(...)` macros duplicating declarations.
 5. **Zero backward compatibility layers**: Never emit wrappers or legacy typedefs (`typedef ERROR_TYPE(TError) TError;` is strictly forbidden).
 6. **Zero magic numbers**: Use named status constants (`STATUS(...)`) and X-Macro enums.
-7. **English only**: All code identifiers, comments, commit messages, and documentation must be written in English.
+7. **Zero ad-hoc platform/compiler checks**: All OS, compiler, libc, and processor architecture detection must be conducted strictly via `Codespace/Cosmeron/Core/Preprocessor/Detect.h`. Never write `#ifdef _WIN32`, `#ifdef __linux__`, `#if defined(__clang__)`, etc.
+8. **English only**: All code identifiers, comments, commit messages, and documentation must be written in English.
+
+---
+
+## 12. Centralized Platform & Environment Detection (`Detect.h`)
+
+All environment-dependent code must include `Core/Preprocessor/Detect.h` (or `Detect/Detect.h`). Detection provides normalized `0` or `1` compile-time constants:
+
+- **Operating System (`OperationSystem.h`):** `OS_WINDOWS`, `OS_LINUX`, `OS_MAC`, `OS_IOS`, `OS_BSD`, `OS_FREEBSD`, `OS_OPENBSD`, `OS_NETBSD`, `OS_DRAGONFLY`, `OS_SOLARIS`, `OS_AIX`, `OS_HAIKU`, `OS_QNX`, `OS_HURD`, `OS_REDOX`, `OS_WASI`, `OS_EMSCRIPTEN`, `OS_POSIX`, `OS_UNIX`, `OS_ANDROID`, `OS_OHOS`.
+- **Compiler Family (`Compiler.h`):** `COMPILER_CLANG`, `COMPILER_GCC`, `COMPILER_MSVC`, `COMPILER_INTEL`, `COMPILER_KNOWN`.
+- **Processor Architecture (`Processor.h`):** `PROCESSOR_X86`, `PROCESSOR_X64`, `PROCESSOR_ARM`, `PROCESSOR_ARM64`, `PROCESSOR_RISCV`, `PROCESSOR_WASM`, `PROCESSOR_PPC`, `PROCESSOR_PPC64`, `PROCESSOR_MIPS`, `PROCESSOR_LOONGARCH64`, `PROCESSOR_S390X`, `PROCESSOR_KNOWN`.
+- **C Library (`Library.h`):** `LIBC_GLIBC`, `LIBC_MUSL`, `LIBC_BIONIC`, `LIBC_MSVC`, `LIBC_APPLE`, `LIBC_BSD`, `LIBC_UCLIBC`, `LIBC_NEWLIB`, `LIBC_WASI`, `LIBC_EMSCRIPTEN`, `LIBC_RELIBC`, `LIBC_KNOWN`.

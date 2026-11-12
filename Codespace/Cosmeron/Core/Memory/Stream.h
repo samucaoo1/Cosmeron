@@ -131,8 +131,6 @@ MODULE(DOMAIN(Core), Memory,
     )
 );
 
-typedef MODULE_TYPE(Memory, Stream) TMemoryStream;
-
 #include "Impl/Stream.impl"
 
 /* EOF */

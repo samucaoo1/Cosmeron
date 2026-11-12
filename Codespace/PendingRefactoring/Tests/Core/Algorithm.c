@@ -1,5 +1,6 @@
-#include "../../../Cosmeron/Core/Algorithm/Comparison.h"
-#include "../../../Cosmeron/Core/Algorithm/Repeat.h"
+#include "Cosmeron/Core/Algorithm/Comparison.h"
+#include "Cosmeron/Core/Algorithm/Repeat.h"
+#include "Cosmeron/Core/Algorithm/Repeat.def"
 
 #include <string.h>
 
@@ -8,14 +9,14 @@ typedef struct AlgorithmTest_Point {
   int y;
 } AlgorithmTest_Point;
 
-TEMPLATE_DECLARE(REPEAT, Point, AlgorithmTest_Point);
+TEMPLATE_Algorithm_Repeat(Point, AlgorithmTest_Point);
 
 static CMPOUT compare_int_pointer(const void *left, const void *right,
                                   void *context) {
   (void)context;
   const int leftValue = *(const int *)left;
   const int rightValue = *(const int *)right;
-  return COMPARISON_FUNC(Int)(leftValue, rightValue);
+  return Algorithm_Comparison_Int(leftValue, rightValue);
 }
 
 static void increment_counter(void *context) {
@@ -72,25 +73,25 @@ int main(void) {
   int left = 4;
   int right = 9;
 
-  if (COMPARISON_FUNC(Int)(1, 2) != COMPARISON_CONST(LOWER))
+  if (Algorithm_Comparison_Int(1, 2) != COMPARISON_CONST(LOWER))
     return 1;
-  if (COMPARISON_FUNC(Double)(3.0, 3.0) != COMPARISON_CONST(EQUAL))
+  if (Algorithm_Comparison_Double(3.0, 3.0) != COMPARISON_CONST(EQUAL))
     return 2;
-  if (COMPARISON_FUNC(CString)("b", "a") != COMPARISON_CONST(HIGHER))
+  if (Algorithm_Comparison_CString("b", "a") != COMPARISON_CONST(HIGHER))
     return 3;
-  if (COMPARISON_FUNC(LongDouble)(1.0L, 2.0L) != COMPARISON_CONST(LOWER))
+  if (Algorithm_Comparison_LongDouble(1.0L, 2.0L) != COMPARISON_CONST(LOWER))
     return 4;
 
-  if (COMPARISON_FUNC(Bytes)(lowerBytes, sizeof(lowerBytes), higherBytes,
-                             sizeof(higherBytes)) != COMPARISON_CONST(LOWER))
+  if (Algorithm_Comparison_Bytes(lowerBytes, sizeof(lowerBytes), higherBytes,
+                                sizeof(higherBytes)) != COMPARISON_CONST(LOWER))
     return 5;
-  if (COMPARISON_FUNC(Bytes)(lowerBytes, 1, higherBytes, 2) !=
+  if (Algorithm_Comparison_Bytes(lowerBytes, 1, higherBytes, 2) !=
       COMPARISON_CONST(LOWER))
     return 6;
 
-  TCALLBACK(Comparison) comparison =
-      CALLBACK_FUNC(Comparison_Bind)(compare_int_pointer, NULL);
-  if (CALLBACK_INVOKE(comparison, &left, &right) !=
+  TCLOSURE(Comparison) comparison =
+      CLOSURE_FUNC(Comparison_Bind)(compare_int_pointer, NULL);
+  if (CLOSURE_INVOKE(comparison, &left, &right) !=
       COMPARISON_CONST(LOWER))
     return 7;
 
@@ -103,15 +104,15 @@ int main(void) {
     return 9;
 
   /* ======================================================================== */
-  /* Test Algorithm_Repeat: Callbacks                                         */
+  /* Test Algorithm_Repeat: Closures                                          */
   /* ======================================================================== */
 
   int counter = 0;
-  TCALLBACK(NS(Algorithm_Repeat, Procedure)) proc =
-      CALLBACK_FUNC(NS(Algorithm_Repeat, Procedure_Bind))(increment_counter,
-                                                         &counter);
-  TCALLBACK(NS(Algorithm_Repeat, Procedure)) invalidProc =
-      CALLBACK_FUNC(NS(Algorithm_Repeat, Procedure_Bind))(NULL, NULL);
+  MODULE_CLOSURE(Algorithm, Repeat, Procedure) proc =
+      NS_JOIN(MODULE_CLOSURE_FUNC(Algorithm, Repeat, Procedure), Bind)(
+          increment_counter, &counter);
+  MODULE_CLOSURE(Algorithm, Repeat, Procedure) invalidProc =
+      NS_JOIN(MODULE_CLOSURE_FUNC(Algorithm, Repeat, Procedure), Bind)(NULL, NULL);
 
   Algorithm_Repeat_Procedure(5U, proc);
   if (counter != 5)
@@ -127,19 +128,19 @@ int main(void) {
     return 11;
 
   size_t indexSum = 0U;
-  TCALLBACK(NS(Algorithm_Repeat, IndexedProcedure)) indexedProc =
-      CALLBACK_FUNC(NS(Algorithm_Repeat, IndexedProcedure_Bind))(
+  MODULE_CLOSURE(Algorithm, Repeat, ProcedureIndexed) indexedProc =
+      NS_JOIN(MODULE_CLOSURE_FUNC(Algorithm, Repeat, ProcedureIndexed), Bind)(
           add_index_to_counter, &indexSum);
-  Algorithm_Repeat_IndexedProcedure(4U, indexedProc);
+  Algorithm_Repeat_ProcedureIndexed(4U, indexedProc);
   if (indexSum != 6U) /* 0 + 1 + 2 + 3 */
     return 12;
 
   int opRemaining = 3;
-  TCALLBACK(NS(Algorithm_Repeat, Operation)) op =
-      CALLBACK_FUNC(NS(Algorithm_Repeat, Operation_Bind))(step_with_limit,
-                                                          &opRemaining);
-  TCALLBACK(NS(Algorithm_Repeat, Operation)) invalidOp =
-      CALLBACK_FUNC(NS(Algorithm_Repeat, Operation_Bind))(NULL, NULL);
+  MODULE_CLOSURE(Algorithm, Repeat, Operation) op =
+      NS_JOIN(MODULE_CLOSURE_FUNC(Algorithm, Repeat, Operation), Bind)(
+          step_with_limit, &opRemaining);
+  MODULE_CLOSURE(Algorithm, Repeat, Operation) invalidOp =
+      NS_JOIN(MODULE_CLOSURE_FUNC(Algorithm, Repeat, Operation), Bind)(NULL, NULL);
 
   if (Algorithm_Repeat_Operation(0U, invalidOp) != STATUS_CONST(SUCCESS))
     return 13;
@@ -153,21 +154,21 @@ int main(void) {
     return 16;
 
   size_t stopAt = 2U;
-  TCALLBACK(NS(Algorithm_Repeat, IndexedOperation)) indexedOp =
-      CALLBACK_FUNC(NS(Algorithm_Repeat, IndexedOperation_Bind))(
+  MODULE_CLOSURE(Algorithm, Repeat, OperationIndexed) indexedOp =
+      NS_JOIN(MODULE_CLOSURE_FUNC(Algorithm, Repeat, OperationIndexed), Bind)(
           indexed_step_with_limit, &stopAt);
-  if (Algorithm_Repeat_IndexedOperation(2U, indexedOp) != STATUS_CONST(SUCCESS))
+  if (Algorithm_Repeat_OperationIndexed(2U, indexedOp) != STATUS_CONST(SUCCESS))
     return 17;
-  if (Algorithm_Repeat_IndexedOperation(4U, indexedOp) !=
+  if (Algorithm_Repeat_OperationIndexed(4U, indexedOp) !=
       STATUS_CONST(OUT_OF_RANGE))
     return 18;
 
   int predRemaining = 2;
-  TCALLBACK(NS(Algorithm_Repeat, Predicate)) pred =
-      CALLBACK_FUNC(NS(Algorithm_Repeat, Predicate_Bind))(countdown_predicate,
-                                                          &predRemaining);
-  TCALLBACK(NS(Algorithm_Repeat, Predicate)) invalidPred =
-      CALLBACK_FUNC(NS(Algorithm_Repeat, Predicate_Bind))(NULL, NULL);
+  MODULE_CLOSURE(Algorithm, Repeat, Predicate) pred =
+      NS_JOIN(MODULE_CLOSURE_FUNC(Algorithm, Repeat, Predicate), Bind)(
+          countdown_predicate, &predRemaining);
+  MODULE_CLOSURE(Algorithm, Repeat, Predicate) invalidPred =
+      NS_JOIN(MODULE_CLOSURE_FUNC(Algorithm, Repeat, Predicate), Bind)(NULL, NULL);
 
   if (!Algorithm_Repeat_Predicate(0U, invalidPred))
     return 19;
@@ -179,12 +180,12 @@ int main(void) {
     return 22;
 
   size_t threshold = 3U;
-  TCALLBACK(NS(Algorithm_Repeat, IndexedPredicate)) indexedPred =
-      CALLBACK_FUNC(NS(Algorithm_Repeat, IndexedPredicate_Bind))(
+  MODULE_CLOSURE(Algorithm, Repeat, PredicateIndexed) indexedPred =
+      NS_JOIN(MODULE_CLOSURE_FUNC(Algorithm, Repeat, PredicateIndexed), Bind)(
           indexed_below_threshold, &threshold);
-  if (!Algorithm_Repeat_IndexedPredicate(3U, indexedPred))
+  if (!Algorithm_Repeat_PredicateIndexed(3U, indexedPred))
     return 23;
-  if (Algorithm_Repeat_IndexedPredicate(4U, indexedPred))
+  if (Algorithm_Repeat_PredicateIndexed(4U, indexedPred))
     return 24;
 
   /* ======================================================================== */
@@ -254,8 +255,8 @@ int main(void) {
     return 37;
 
   int baseVal = 5;
-  TCALLBACK(NS(Algorithm_Repeat, Point, Generator)) gen =
-      CALLBACK_FUNC(NS(Algorithm_Repeat, Point, Generator_Bind))(
+  MODULE_CLOSURE(Algorithm, Repeat, Point, Generator) gen =
+      NS_JOIN(MODULE_CLOSURE_FUNC(Algorithm, Repeat, Point, Generator), Bind)(
           generate_constant_point, &baseVal);
   if (Algorithm_Repeat_Point_Generate(points, 3U, gen) != STATUS_CONST(SUCCESS))
     return 38;
@@ -265,8 +266,8 @@ int main(void) {
   }
 
   int offsetVal = 100;
-  TCALLBACK(NS(Algorithm_Repeat, Point, IndexedGenerator)) indexedGen =
-      CALLBACK_FUNC(NS(Algorithm_Repeat, Point, IndexedGenerator_Bind))(
+  MODULE_CLOSURE(Algorithm, Repeat, Point, GeneratorIndexed) indexedGen =
+      NS_JOIN(MODULE_CLOSURE_FUNC(Algorithm, Repeat, Point, GeneratorIndexed), Bind)(
           generate_indexed_point, &offsetVal);
   if (Algorithm_Repeat_Point_GenerateIndexed(points, 3U, indexedGen) !=
       STATUS_CONST(SUCCESS))

@@ -40,9 +40,6 @@ MODULE(DOMAIN(Core), Diagnostic,
     )
 );
 
-typedef MODULE_TYPE(Diagnostic, Stacktrace) TDiagnosticStacktrace;
-typedef MODULE_TYPE(Diagnostic, Stacktrace) TStacktrace;
-
 #include "Impl/Stacktrace.impl"
 
 /* EOF */

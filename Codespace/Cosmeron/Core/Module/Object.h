@@ -63,11 +63,11 @@
   CALLBACK_FUNCTION(R, NS(CLASS, N), P);
 
 #define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_C_3(CLASS, R, N, P)           \
-  CALLBACK_PROCEDURE(NS(CLASS, N), P);                                         \
+  CLOSURE_PROCEDURE(NS(CLASS, N), P);                                          \
   static inline OPSTATUS NS(CLASS, N, Subscribe)(                              \
-      CLASS * self, TCALLBACK(NS(CLASS, N)) listener);                         \
+      CLASS * self, TCLOSURE(NS(CLASS, N)) listener);                          \
   static inline OPSTATUS NS(CLASS, N, Unsubscribe)(                            \
-      CLASS * self, TCALLBACK(NS(CLASS, N)) listener);                         \
+      CLASS * self, TCLOSURE(NS(CLASS, N)) listener);                          \
   static inline void NS(CLASS, N, Emit)                                        \
       COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(CLASS, 0, P);                    \
   static inline OPSTATUS NS(CLASS, N, Clear)(CLASS * self);                    \
@@ -75,11 +75,11 @@
   static inline uint8_t NS(CLASS, N, Capacity)(const CLASS *self);
 
 #define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_C_4(CLASS, R, N, P)           \
-  CALLBACK_OPERATION(NS(CLASS, N), P);                                         \
+  CLOSURE_OPERATION(NS(CLASS, N), P);                                          \
   static inline OPSTATUS NS(CLASS, N, Subscribe)(                              \
-      CLASS * self, TCALLBACK(NS(CLASS, N)) listener);                         \
+      CLASS * self, TCLOSURE(NS(CLASS, N)) listener);                          \
   static inline OPSTATUS NS(CLASS, N, Unsubscribe)(                            \
-      CLASS * self, TCALLBACK(NS(CLASS, N)) listener);                         \
+      CLASS * self, TCLOSURE(NS(CLASS, N)) listener);                          \
   static inline OPSTATUS NS(CLASS, N, Emit)                                    \
       COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(CLASS, 0, P);                    \
   static inline OPSTATUS NS(CLASS, N, Clear)(CLASS * self);                    \
@@ -89,9 +89,35 @@
 #define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_I(CLASS, C, I, R, N, P, B)    \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_C_, C)(CLASS, R, N, P)
 
-#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO(CLASS, M)                     \
+#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_0(CLASS, M)               \
   COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
       COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_I, CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_1(CLASS, M)               \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
+      COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_I, CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_3(CLASS, M)               \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
+      COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_I, CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_4(CLASS, M)               \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
+      COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_I, CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_107(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_108(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_109(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_110(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_111(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_112(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_113(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_114(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_115(CLASS, M)             \
+  PP_FOREACH_D2_CTX(COSMERON_INTERNAL_SCOPE_CB_MEMBER, LIB_PREFIX(CLASS),      \
+                    PP_UNWRAP PP_SEQ_GET_2 M)
+#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_116(CLASS, M)             \
+  PP_FOREACH_D2_CTX(COSMERON_INTERNAL_SCOPE_CL_MEMBER, LIB_PREFIX(CLASS),      \
+                    PP_UNWRAP PP_SEQ_GET_2 M)
+
+#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO(CLASS, M)                     \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_, PP_SEQ_GET_1 M)(CLASS, M)
 
 /* --- Event Fields in Struct --- */
 #define COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_C_0(CLASS, I, N)
@@ -101,7 +127,7 @@
   _Static_assert((I) <= 16, "Cosmeron Event capacity cannot exceed 16 slots"); \
   struct {                                                                     \
     uint8_t count;                                                             \
-    TCALLBACK(NS(CLASS, N)) listeners[COSMERON_EVENT_NORMALIZE_CAPACITY(I)];   \
+    TCLOSURE(NS(CLASS, N)) listeners[COSMERON_EVENT_NORMALIZE_CAPACITY(I)];    \
   } NS(event, N);
 #define COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_C_4(CLASS, I, N)               \
   COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_C_3(CLASS, I, N)
@@ -109,9 +135,27 @@
 #define COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_I(CLASS, C, I, R, N, P, B)     \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_C_, C)(CLASS, I, N)
 
-#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_EVENT_FIELD(CLASS, M)               \
+#define COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_TAG_0(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_TAG_1(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_TAG_3(CLASS, M)                 \
   COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
       COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_I, CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_TAG_4(CLASS, M)                 \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
+      COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_I, CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_TAG_107(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_TAG_108(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_TAG_109(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_TAG_110(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_TAG_111(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_TAG_112(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_TAG_113(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_TAG_114(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_TAG_115(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_TAG_116(CLASS, M)
+
+#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_EVENT_FIELD(CLASS, M)               \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_TAG_, PP_SEQ_GET_1 M)(CLASS, M)
 
 /* --- Event Initializer in Init --- */
 #define COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_C_0(CLASS, N)
@@ -125,9 +169,27 @@
 #define COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_I(CLASS, C, I, R, N, P, B)      \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_C_, C)(CLASS, N)
 
-#define COSMERON_MACRO_INTERNAL_OBJECT_INIT_EVENT(CLASS, M)                    \
+#define COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_TAG_0(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_TAG_1(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_TAG_3(CLASS, M)                 \
   COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
       COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_I, CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_TAG_4(CLASS, M)                 \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
+      COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_I, CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_TAG_107(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_TAG_108(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_TAG_109(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_TAG_110(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_TAG_111(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_TAG_112(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_TAG_113(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_TAG_114(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_TAG_115(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_TAG_116(CLASS, M)
+
+#define COSMERON_MACRO_INTERNAL_OBJECT_INIT_EVENT(CLASS, M)                    \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_TAG_, PP_SEQ_GET_1 M)(CLASS, M)
 
 #define COSMERON_MACRO_INTERNAL_PROBE_CMP_CMPOUT ,
 #define COSMERON_MACRO_INTERNAL_IS_CMP_TYPE(r)                                 \
@@ -145,8 +207,8 @@
       return COMPARISON_CONST(HIGHER);                                         \
     return NS(CLASS, N)((const CLASS *)left, (const CLASS *)right);            \
   }                                                                            \
-  static inline TCALLBACK(Comparison) NS(CLASS, N, AsComparator)(void) {       \
-    return NS(CALLBACK_FUNC(Comparison),                                       \
+  static inline TCLOSURE(Comparison) NS(CLASS, N, AsComparator)(void) {        \
+    return NS(CLOSURE_FUNC(Comparison),                                        \
               Bind)(NS(CLASS, N, ComparatorAdapter), NULL);                    \
   }
 
@@ -154,10 +216,10 @@
 
 #define COSMERON_MACRO_INTERNAL_OBJ_EVENT_INLINE_PROC(CLASS, CAP, N, P, ARGS)  \
   static inline OPSTATUS NS(CLASS, N, Subscribe)(                              \
-      CLASS * self, TCALLBACK(NS(CLASS, N)) listener) {                        \
+      CLASS * self, TCLOSURE(NS(CLASS, N)) listener) {                         \
     if (!self)                                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    if (!CALLBACK_IS_VALID(listener))                                          \
+    if (!CLOSURE_IS_VALID(listener))                                           \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (self->NS(event, N).count >= COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)) {  \
       return STATUS_CONST(OUT_OF_RANGE);                                       \
@@ -166,7 +228,7 @@
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
   static inline OPSTATUS NS(CLASS, N, Unsubscribe)(                            \
-      CLASS * self, TCALLBACK(NS(CLASS, N)) listener) {                        \
+      CLASS * self, TCLOSURE(NS(CLASS, N)) listener) {                         \
     if (!self)                                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     for (uint8_t i = 0; i < self->NS(event, N).count; ++i) {                   \
@@ -187,7 +249,7 @@
     if (!self || self->NS(event, N).count == 0)                                \
       return;                                                                  \
     uint8_t activeCount = self->NS(event, N).count;                            \
-    TCALLBACK(NS(CLASS, N)) snapshot[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];  \
+    TCLOSURE(NS(CLASS, N)) snapshot[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];   \
     for (uint8_t i = 0; i < activeCount; ++i) {                                \
       snapshot[i] = self->NS(event, N).listeners[i];                           \
     }                                                                          \
@@ -211,10 +273,10 @@
 
 #define COSMERON_MACRO_INTERNAL_OBJ_EVENT_INLINE_OP(CLASS, CAP, N, P, ARGS)    \
   static inline OPSTATUS NS(CLASS, N, Subscribe)(                              \
-      CLASS * self, TCALLBACK(NS(CLASS, N)) listener) {                        \
+      CLASS * self, TCLOSURE(NS(CLASS, N)) listener) {                         \
     if (!self)                                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    if (!CALLBACK_IS_VALID(listener))                                          \
+    if (!CLOSURE_IS_VALID(listener))                                           \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (self->NS(event, N).count >= COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)) {  \
       return STATUS_CONST(OUT_OF_RANGE);                                       \
@@ -223,7 +285,7 @@
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
   static inline OPSTATUS NS(CLASS, N, Unsubscribe)(                            \
-      CLASS * self, TCALLBACK(NS(CLASS, N)) listener) {                        \
+      CLASS * self, TCLOSURE(NS(CLASS, N)) listener) {                         \
     if (!self)                                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     for (uint8_t i = 0; i < self->NS(event, N).count; ++i) {                   \
@@ -246,7 +308,7 @@
     if (self->NS(event, N).count == 0)                                         \
       return STATUS_CONST(SUCCESS);                                            \
     uint8_t activeCount = self->NS(event, N).count;                            \
-    TCALLBACK(NS(CLASS, N)) snapshot[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];  \
+    TCLOSURE(NS(CLASS, N)) snapshot[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];   \
     for (uint8_t i = 0; i < activeCount; ++i) {                                \
       snapshot[i] = self->NS(event, N).listeners[i];                           \
     }                                                                          \
@@ -295,9 +357,31 @@
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJECT_GEN_INLINE_C_, C)(CLASS, I, R, N,  \
                                                               P, B)
 
-#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_INLINE(CLASS, M)                    \
+#define COSMERON_MACRO_INTERNAL_OBJ_GEN_INLINE_TAG_0(CLASS, M)                 \
   COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
       COSMERON_MACRO_INTERNAL_OBJECT_GEN_INLINE_I, CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_GEN_INLINE_TAG_1(CLASS, M)                 \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
+      COSMERON_MACRO_INTERNAL_OBJECT_GEN_INLINE_I, CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_GEN_INLINE_TAG_3(CLASS, M)                 \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
+      COSMERON_MACRO_INTERNAL_OBJECT_GEN_INLINE_I, CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_GEN_INLINE_TAG_4(CLASS, M)                 \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
+      COSMERON_MACRO_INTERNAL_OBJECT_GEN_INLINE_I, CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_GEN_INLINE_TAG_107(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_GEN_INLINE_TAG_108(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_GEN_INLINE_TAG_109(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_GEN_INLINE_TAG_110(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_GEN_INLINE_TAG_111(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_GEN_INLINE_TAG_112(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_GEN_INLINE_TAG_113(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_GEN_INLINE_TAG_114(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_GEN_INLINE_TAG_115(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_GEN_INLINE_TAG_116(CLASS, M)
+
+#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_INLINE(CLASS, M)                    \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJ_GEN_INLINE_TAG_, PP_SEQ_GET_1 M)(CLASS, M)
 
 /* ------------------------------------------------------------
  * 3. Top-Level OBJECT Declarator
@@ -316,7 +400,7 @@
   };                                                                           \
   struct CLASS {                                                               \
     const struct NS(CLASS, FunctionTable) * api;                               \
-    FIELDS_BLOCK                                                               \
+    COSMERON_INTERNAL_UNWRAP_FIELDS(FIELDS_BLOCK)                              \
     PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_GEN_EVENT_FIELD, CLASS,      \
                    __VA_ARGS__)                                                \
   };                                                                           \
@@ -354,7 +438,7 @@
   struct CLASS {                                                               \
     BASE_CLASS base;                                                           \
     const struct NS(CLASS, FunctionTable) * api;                               \
-    FIELDS_BLOCK                                                               \
+    COSMERON_INTERNAL_UNWRAP_FIELDS(FIELDS_BLOCK)                              \
     PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_GEN_EVENT_FIELD, CLASS,      \
                    __VA_ARGS__)                                                \
   };                                                                           \
@@ -384,7 +468,7 @@
   typedef struct CLASS CLASS;                                                  \
   PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO, CLASS, __VA_ARGS__) \
   struct CLASS {                                                               \
-    FIELDS_BLOCK                                                               \
+    COSMERON_INTERNAL_UNWRAP_FIELDS(FIELDS_BLOCK)                              \
     PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_GEN_EVENT_FIELD, CLASS,      \
                    __VA_ARGS__)                                                \
   };                                                                           \
@@ -407,7 +491,7 @@
   PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO, CLASS, __VA_ARGS__) \
   struct CLASS {                                                               \
     BASE_CLASS base;                                                           \
-    FIELDS_BLOCK                                                               \
+    COSMERON_INTERNAL_UNWRAP_FIELDS(FIELDS_BLOCK)                              \
     PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_GEN_EVENT_FIELD, CLASS,      \
                    __VA_ARGS__)                                                \
   };                                                                           \

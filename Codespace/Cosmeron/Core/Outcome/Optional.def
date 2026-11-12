@@ -1,0 +1,148 @@
+/* Optional.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Outcome_Optional
+#define TEMPLATE_Outcome_Optional(SUFFIX, TYPE)                                 \
+  TEMPLATE_OBJECT(Outcome, Optional, SUFFIX,                                    \
+      FIELDS(                                                                   \
+          bool hasValue;                                                        \
+          TYPE value;                                                           \
+      ),                                                                        \
+                                                                                \
+      CLOSURE(                                                                  \
+          FUNCTION(TYPE, MapFunction, (TYPE value)),                            \
+          OPERATION(                                                            \
+              BindFunction,                                                     \
+              (TYPE value, struct MODULE_TYPED(Outcome, Optional, SUFFIX) * outOptional)), \
+          PREDICATE(FilterPredicate, (TYPE value))),                            \
+                                                                                \
+      OPERATION_INLINE(Some, (TYPE value), {                                    \
+        if (!self)                                                              \
+          return STATUS_CONST(INVALID_ARGUMENT);                                \
+        MODULE_FUNC(Outcome, Optional, SUFFIX, Init)(self);                     \
+        self->hasValue = true;                                                  \
+        self->value = value;                                                    \
+        return STATUS_CONST(SUCCESS);                                           \
+      }),                                                                       \
+                                                                                \
+      OPERATION_INLINE(None, (), {                                              \
+        if (!self)                                                              \
+          return STATUS_CONST(INVALID_ARGUMENT);                                \
+        MODULE_FUNC(Outcome, Optional, SUFFIX, Init)(self);                     \
+        self->hasValue = false;                                                 \
+        memset(&self->value, 0, sizeof(TYPE));                                  \
+        return STATUS_CONST(SUCCESS);                                           \
+      }),                                                                       \
+                                                                                \
+      OPERATION_INLINE(FromPointer, (const TYPE * ptr), {                       \
+        if (!self)                                                              \
+          return STATUS_CONST(INVALID_ARGUMENT);                                \
+        MODULE_FUNC(Outcome, Optional, SUFFIX, Init)(self);                     \
+        if (ptr != NULL) {                                                      \
+          self->hasValue = true;                                                \
+          self->value = *ptr;                                                   \
+        } else {                                                                \
+          self->hasValue = false;                                               \
+          memset(&self->value, 0, sizeof(TYPE));                                \
+        }                                                                       \
+        return STATUS_CONST(SUCCESS);                                           \
+      }),                                                                       \
+                                                                                \
+      PROCEDURE_INLINE(Clear, (), {                                             \
+        if (self) {                                                             \
+          self->hasValue = false;                                               \
+          memset(&self->value, 0, sizeof(TYPE));                                \
+        }                                                                       \
+      }),                                                                       \
+                                                                                \
+      CONST_PREDICATE_INLINE(HasValue, (), {                                    \
+        return self ? self->hasValue : false;                                   \
+      }),                                                                       \
+                                                                                \
+      VARIANT(Is,                                                               \
+          CONST_PREDICATE_INLINE(Some, (), {                                    \
+            return self ? self->hasValue : false;                               \
+          }),                                                                   \
+          CONST_PREDICATE_INLINE(None, (), {                                    \
+            return self ? !self->hasValue : true;                               \
+          })                                                                    \
+      ),                                                                        \
+                                                                                \
+      VARIANT(Value,                                                            \
+          CONST_OPERATION_INLINE((TYPE * outValue), {                           \
+            if (!self || !outValue)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                            \
+            if (!self->hasValue)                                                \
+              return STATUS_CONST(NOT_FOUND);                                   \
+            *outValue = self->value;                                            \
+            return STATUS_CONST(SUCCESS);                                       \
+          }),                                                                   \
+          CONST_FUNCTION_INLINE(TYPE, Or, (TYPE fallback), {                    \
+            return (self && self->hasValue) ? self->value : fallback;           \
+          }),                                                                   \
+          CONST_FUNCTION_INLINE(const TYPE *, Pointer, (), {                    \
+            return (self && self->hasValue) ? &self->value : NULL;              \
+          })                                                                    \
+      ),                                                                        \
+                                                                                \
+      FUNCTION_INLINE(TYPE *, MutablePointer, (), {                             \
+        return (self && self->hasValue) ? &self->value : NULL;                  \
+      }),                                                                       \
+                                                                                \
+      CONST_OPERATION_INLINE(                                                   \
+          Map,                                                                  \
+          (MODULE_CLOSURE(Outcome, Optional, SUFFIX, MapFunction) mapper,       \
+           struct MODULE_TYPED(Outcome, Optional, SUFFIX) * outOptional),      \
+          {                                                                     \
+            if (!self || !outOptional || !CLOSURE_IS_VALID(mapper))            \
+              return STATUS_CONST(INVALID_ARGUMENT);                            \
+            MODULE_FUNC(Outcome, Optional, SUFFIX, Init)(outOptional);          \
+            if (!self->hasValue) {                                              \
+              return MODULE_FUNC(Outcome, Optional, SUFFIX, None)(outOptional);\
+            }                                                                   \
+            TYPE mapped = CLOSURE_CALL(mapper, self->value);                    \
+            return MODULE_FUNC(Outcome, Optional, SUFFIX, Some)(outOptional,   \
+                                                                mapped);        \
+          }),                                                                   \
+                                                                                \
+      CONST_OPERATION_INLINE(                                                   \
+          AndThen,                                                              \
+          (MODULE_CLOSURE(Outcome, Optional, SUFFIX, BindFunction) binder,      \
+           struct MODULE_TYPED(Outcome, Optional, SUFFIX) * outOptional),      \
+          {                                                                     \
+            if (!self || !outOptional || !CLOSURE_IS_VALID(binder))            \
+              return STATUS_CONST(INVALID_ARGUMENT);                            \
+            MODULE_FUNC(Outcome, Optional, SUFFIX, Init)(outOptional);          \
+            if (!self->hasValue) {                                              \
+              return MODULE_FUNC(Outcome, Optional, SUFFIX, None)(outOptional);\
+            }                                                                   \
+            return CLOSURE_CALL(binder, self->value, outOptional);              \
+          }),                                                                   \
+                                                                                \
+      CONST_OPERATION_INLINE(                                                   \
+          Filter,                                                               \
+          (MODULE_CLOSURE(Outcome, Optional, SUFFIX, FilterPredicate) predicate,\
+           struct MODULE_TYPED(Outcome, Optional, SUFFIX) * outOptional),      \
+          {                                                                     \
+            if (!self || !outOptional || !CLOSURE_IS_VALID(predicate))         \
+              return STATUS_CONST(INVALID_ARGUMENT);                            \
+            MODULE_FUNC(Outcome, Optional, SUFFIX, Init)(outOptional);          \
+            if (!self->hasValue) {                                              \
+              return MODULE_FUNC(Outcome, Optional, SUFFIX, None)(outOptional);\
+            }                                                                   \
+            if (CLOSURE_CALL(predicate, self->value)) {                         \
+              return MODULE_FUNC(Outcome, Optional, SUFFIX, Some)(              \
+                  outOptional, self->value);                                    \
+            }                                                                   \
+            return MODULE_FUNC(Outcome, Optional, SUFFIX, None)(outOptional);   \
+          })                                                                    \
+  )
+#define TEMPLATE_Optional(SUFFIX, TYPE) TEMPLATE_Outcome_Optional(SUFFIX, TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Outcome_Optional(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif
+

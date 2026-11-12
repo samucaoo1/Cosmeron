@@ -1,0 +1,104 @@
+/* WeakPtr.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Memory_WeakPtr
+#define TEMPLATE_Memory_WeakPtr(SUFFIX, TYPE)                                   \
+  FORWARD_TEMPLATE_OBJECT(Memory, SharedPtr, SUFFIX);                           \
+  TEMPLATE_OBJECT(Memory, WeakPtr, SUFFIX,                                      \
+      FIELDS(                                                                   \
+          TYPE *ptr;                                                            \
+          MODULE_ITYPE(Memory, SharedControlBlock) *control;                    \
+      ),                                                                        \
+                                                                                \
+      OPERATION_INLINE(Reset, (), {                                             \
+        if (!self)                                                              \
+          return STATUS_CONST(INVALID_ARGUMENT);                                \
+        if (self->control != NULL) {                                            \
+          if (self->control->weakCount > 0U) {                                  \
+            self->control->weakCount--;                                         \
+          }                                                                     \
+          if (self->control->weakCount == 0U &&                                 \
+              self->control->strongCount == 0U) {                               \
+            void *cbRaw = (void *)self->control;                                \
+            self->control = NULL;                                               \
+            MODULE_FUNC(Memory, Alloc, Free)(&cbRaw);                           \
+          }                                                                     \
+          self->ptr = NULL;                                                     \
+          self->control = NULL;                                                 \
+        }                                                                       \
+        return STATUS_CONST(SUCCESS);                                           \
+      }),                                                                       \
+                                                                                \
+      PROCEDURE_INLINE(Destroy, (), {                                           \
+        if (self) {                                                             \
+          MODULE_FUNC(Memory, WeakPtr, SUFFIX, Reset)(self);                    \
+        }                                                                       \
+      }),                                                                       \
+                                                                                \
+      CONST_OPERATION_INLINE(Clone,                                             \
+                       (struct MODULE_TYPED(Memory, WeakPtr, SUFFIX) * outWeak),\
+                       {                                                        \
+                         if (!self || !outWeak)                                 \
+                           return STATUS_CONST(INVALID_ARGUMENT);               \
+                         MODULE_FUNC(Memory, WeakPtr, SUFFIX, Init)(outWeak);   \
+                         if (self->control != NULL) {                           \
+                           self->control->weakCount++;                          \
+                           outWeak->ptr = self->ptr;                            \
+                           outWeak->control = self->control;                    \
+                         }                                                      \
+                         return STATUS_CONST(SUCCESS);                          \
+                       }),                                                      \
+                                                                                \
+      OPERATION_INLINE(Move,                                                    \
+                       (struct MODULE_TYPED(Memory, WeakPtr, SUFFIX) * other),  \
+                       {                                                        \
+                         if (!self || !other)                                   \
+                           return STATUS_CONST(INVALID_ARGUMENT);               \
+                         if (self == other)                                     \
+                           return STATUS_CONST(SUCCESS);                        \
+                         MODULE_FUNC(Memory, WeakPtr, SUFFIX, Destroy)(self);   \
+                         self->ptr = other->ptr;                                \
+                         self->control = other->control;                        \
+                         other->ptr = NULL;                                     \
+                         other->control = NULL;                                 \
+                         return STATUS_CONST(SUCCESS);                          \
+                       }),                                                      \
+                                                                                \
+      CONST_PREDICATE_INLINE(IsExpired, (), {                                   \
+        return (!self || !self->control || self->control->strongCount == 0U);   \
+      }),                                                                       \
+                                                                                \
+      CONST_PREDICATE_INLINE(IsValid, (), {                                     \
+        return (self && self->control && self->control->strongCount > 0U);      \
+      }),                                                                       \
+                                                                                \
+      CONST_FUNCTION_INLINE(size_t, UseCount, (), {                             \
+        return (self && self->control) ? self->control->strongCount : 0U;       \
+      }),                                                                       \
+                                                                                \
+      CONST_OPERATION(                                                          \
+          Upgrade,                                                              \
+          (struct MODULE_TYPED(Memory, SharedPtr, SUFFIX) * outShared)),        \
+                                                                                \
+      PROCEDURE_INLINE(Swap,                                                    \
+                       (struct MODULE_TYPED(Memory, WeakPtr, SUFFIX) * other),  \
+                       {                                                        \
+                         if (!self || !other || self == other)                  \
+                           return;                                              \
+                         TYPE *tempPtr = self->ptr;                             \
+                         MODULE_ITYPE(Memory, SharedControlBlock) *tempCb =     \
+                             self->control;                                     \
+                         self->ptr = other->ptr;                                \
+                         self->control = other->control;                        \
+                         other->ptr = tempPtr;                                  \
+                         other->control = tempCb;                               \
+                       })                                                       \
+  )
+#define TEMPLATE_WeakPtr(SUFFIX, TYPE) TEMPLATE_Memory_WeakPtr(SUFFIX, TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Memory_WeakPtr(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif

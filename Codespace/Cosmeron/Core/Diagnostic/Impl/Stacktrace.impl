@@ -1,18 +1,16 @@
 #pragma once
 
 #include "../Common.inc"
-#include "../../Preprocessor/Detect/OperationSystem.h"
-#include "../../Preprocessor/Detect/Library.h"
+#include "../../Preprocessor/Detect.h"
 
-#if defined(OS_WINDOWS) && OS_WINDOWS
+#if OS_WINDOWS
   #define WIN32_LEAN_AND_MEAN
   #include <windows.h>
-#elif (defined(OS_LINUX) && OS_LINUX && defined(LIBC_GLIBC) && LIBC_GLIBC) || \
-      (defined(OS_MAC) && OS_MAC) || (defined(OS_BSD) && OS_BSD)
+#elif (OS_LINUX && LIBC_GLIBC) || OS_MAC || OS_BSD
   #include <execinfo.h>
 #endif
 
-#if defined(OS_WINDOWS) && OS_WINDOWS
+#if OS_WINDOWS
 static inline size_t MODULE_IFUNC(Diagnostic, Stacktrace_CaptureRaw)(
     void **frames, size_t limit, size_t skipFrames) {
   void *tempFrames[MODULE_CONST(Diagnostic, Stacktrace, MAX_FRAMES) + 16U];
@@ -23,8 +21,7 @@ static inline size_t MODULE_IFUNC(Diagnostic, Stacktrace_CaptureRaw)(
       (DWORD)(skipFrames + 1U), (DWORD)limit, frames, NULL);
   return (size_t)captured;
 }
-#elif (defined(OS_LINUX) && OS_LINUX && defined(LIBC_GLIBC) && LIBC_GLIBC) || \
-      (defined(OS_MAC) && OS_MAC) || (defined(OS_BSD) && OS_BSD)
+#elif (OS_LINUX && LIBC_GLIBC) || OS_MAC || OS_BSD
 static inline size_t MODULE_IFUNC(Diagnostic, Stacktrace_CaptureRaw)(
     void **frames, size_t limit, size_t skipFrames) {
   void *tempFrames[MODULE_CONST(Diagnostic, Stacktrace, MAX_FRAMES) + 16U];

@@ -9,6 +9,7 @@
 #include "Heap.h"
 #include "Stream.h"
 #include "GarbageCollector.h"
+#include "SmartPointer.h"
 
 /* EOF */
 

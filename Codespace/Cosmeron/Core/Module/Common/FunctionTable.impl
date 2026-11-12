@@ -19,15 +19,15 @@
   R (*N) COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(CLASS, 1, P);
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_C_2(CLASS, R, N, P)
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_C_3(CLASS, R, N, P)               \
-  OPSTATUS (*NS(N, Subscribe))(CLASS * self, TCALLBACK(NS(CLASS, N)) listener); \
-  OPSTATUS (*NS(N, Unsubscribe))(CLASS * self, TCALLBACK(NS(CLASS, N)) listener);\
+  OPSTATUS (*NS(N, Subscribe))(CLASS * self, TCLOSURE(NS(CLASS, N)) listener); \
+  OPSTATUS (*NS(N, Unsubscribe))(CLASS * self, TCLOSURE(NS(CLASS, N)) listener);\
   void (*NS(N, Emit)) COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(CLASS, 0, P);    \
   OPSTATUS (*NS(N, Clear))(CLASS * self);                                      \
   uint8_t (*NS(N, Count))(const CLASS * self);                                 \
   uint8_t (*NS(N, Capacity))(const CLASS * self);
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_C_4(CLASS, R, N, P)               \
-  OPSTATUS (*NS(N, Subscribe))(CLASS * self, TCALLBACK(NS(CLASS, N)) listener); \
-  OPSTATUS (*NS(N, Unsubscribe))(CLASS * self, TCALLBACK(NS(CLASS, N)) listener);\
+  OPSTATUS (*NS(N, Subscribe))(CLASS * self, TCLOSURE(NS(CLASS, N)) listener); \
+  OPSTATUS (*NS(N, Unsubscribe))(CLASS * self, TCLOSURE(NS(CLASS, N)) listener);\
   OPSTATUS (*NS(N, Emit)) COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(CLASS, 0, P);\
   OPSTATUS (*NS(N, Clear))(CLASS * self);                                      \
   uint8_t (*NS(N, Count))(const CLASS * self);                                 \
@@ -72,6 +72,8 @@
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_TAG_112(CLASS, M)
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_TAG_113(CLASS, M)
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_TAG_114(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_TAG_115(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_TAG_116(CLASS, M)
 
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD(CLASS, M)                         \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_TAG_, PP_SEQ_GET_1 M)(CLASS, M)
@@ -128,6 +130,8 @@
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_TAG_112(CLASS, M)
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_TAG_113(CLASS, M)
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_TAG_114(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_TAG_115(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_TAG_116(CLASS, M)
 
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY(CLASS, M)                         \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_TAG_, PP_SEQ_GET_1 M)(CLASS, M)
@@ -142,15 +146,15 @@
   R (*N) COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P);
 #define COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_C_2(PKG, R, N, P)
 #define COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_C_3(PKG, R, N, P)                 \
-  OPSTATUS (*NS(N, Subscribe))(TCALLBACK(NS(PKG, N)) listener);                \
-  OPSTATUS (*NS(N, Unsubscribe))(TCALLBACK(NS(PKG, N)) listener);              \
+  OPSTATUS (*NS(N, Subscribe))(TCLOSURE(NS(PKG, N)) listener);                 \
+  OPSTATUS (*NS(N, Unsubscribe))(TCLOSURE(NS(PKG, N)) listener);               \
   void (*NS(N, Emit)) COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P);              \
   OPSTATUS (*NS(N, Clear))(void);                                              \
   uint8_t (*NS(N, Count))(void);                                               \
   uint8_t (*NS(N, Capacity))(void);
 #define COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_C_4(PKG, R, N, P)                 \
-  OPSTATUS (*NS(N, Subscribe))(TCALLBACK(NS(PKG, N)) listener);                \
-  OPSTATUS (*NS(N, Unsubscribe))(TCALLBACK(NS(PKG, N)) listener);              \
+  OPSTATUS (*NS(N, Subscribe))(TCLOSURE(NS(PKG, N)) listener);                 \
+  OPSTATUS (*NS(N, Unsubscribe))(TCLOSURE(NS(PKG, N)) listener);               \
   OPSTATUS (*NS(N, Emit)) COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P);          \
   OPSTATUS (*NS(N, Clear))(void);                                              \
   uint8_t (*NS(N, Count))(void);                                               \
@@ -195,6 +199,8 @@
 #define COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_TAG_112(PKG, M)
 #define COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_TAG_113(PKG, M)
 #define COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_TAG_114(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_TAG_115(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_TAG_116(PKG, M)
 
 #define COSMERON_MACRO_INTERNAL_PKG_FT_FIELD(PKG, M)                           \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_TAG_, PP_SEQ_GET_1 M)(PKG, M)
@@ -251,6 +257,8 @@
 #define COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_TAG_112(PKG, M)
 #define COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_TAG_113(PKG, M)
 #define COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_TAG_114(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_TAG_115(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_TAG_116(PKG, M)
 
 #define COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY(PKG, M)                           \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_TAG_, PP_SEQ_GET_1 M)(PKG, M)

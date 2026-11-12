@@ -3,9 +3,10 @@
 #ifndef TEMPLATE_Algorithm_Repeat
 #define TEMPLATE_Algorithm_Repeat(SUFFIX, TYPE)                                 \
   TEMPLATE_PACKAGE(Algorithm, Repeat, SUFFIX,                                   \
-      CALLBACK(FUNCTION(TYPE, Generator, ())),                                 \
-      CALLBACK(FUNCTION(TYPE, GeneratorIndexed, (size_t index))),              \
-      CALLBACK(FUNCTION(TYPE, IndexedGenerator, (size_t index))),              \
+      CLOSURE(                                                                 \
+          FUNCTION(TYPE, Generator, ()),                                       \
+          FUNCTION(TYPE, GeneratorIndexed, (size_t index)),                     \
+          FUNCTION(TYPE, IndexedGenerator, (size_t index))),                    \
       OPERATION_INLINE(Fill, (TYPE * destination, TYPE value, size_t count), {  \
           if (count == 0U)                                                      \
             return STATUS_CONST(SUCCESS);                                       \
@@ -21,32 +22,32 @@
       VARIANT(Generate,                                                         \
           OPERATION_INLINE(                                                     \
               (TYPE * destination, size_t count,                                \
-               TCALLBACK(MODULE_NS(Algorithm, Repeat, SUFFIX, Generator)) generator),\
+               MODULE_CLOSURE(Algorithm, Repeat, SUFFIX, Generator) generator),\
               {                                                                 \
                 if (count == 0U)                                                \
                   return STATUS_CONST(SUCCESS);                                 \
-                if (!destination || !CALLBACK_IS_VALID(generator))              \
+                if (!destination || !CLOSURE_IS_VALID(generator))               \
                   return STATUS_CONST(INVALID_ARGUMENT);                        \
                 if (sizeof(TYPE) != 0U && count > SIZE_MAX / sizeof(TYPE))      \
                   return STATUS_CONST(ARITHMETIC_OVERFLOW);                     \
                 for (size_t i = 0U; i < count; ++i) {                           \
-                  destination[i] = CALLBACK_CALL(generator);                    \
+                  destination[i] = CLOSURE_CALL(generator);                     \
                 }                                                               \
                 return STATUS_CONST(SUCCESS);                                   \
               }),                                                               \
           OPERATION_INLINE(                                                     \
               Indexed,                                                          \
               (TYPE * destination, size_t count,                                \
-               TCALLBACK(MODULE_NS(Algorithm, Repeat, SUFFIX, GeneratorIndexed)) generator),\
+               MODULE_CLOSURE(Algorithm, Repeat, SUFFIX, GeneratorIndexed) generator),\
               {                                                                 \
                 if (count == 0U)                                                \
                   return STATUS_CONST(SUCCESS);                                 \
-                if (!destination || !CALLBACK_IS_VALID(generator))              \
+                if (!destination || !CLOSURE_IS_VALID(generator))               \
                   return STATUS_CONST(INVALID_ARGUMENT);                        \
                 if (sizeof(TYPE) != 0U && count > SIZE_MAX / sizeof(TYPE))      \
                   return STATUS_CONST(ARITHMETIC_OVERFLOW);                     \
                 for (size_t i = 0U; i < count; ++i) {                           \
-                  destination[i] = CALLBACK_CALL(generator, i);                 \
+                  destination[i] = CLOSURE_CALL(generator, i);                  \
                 }                                                               \
                 return STATUS_CONST(SUCCESS);                                   \
               })                                                                \

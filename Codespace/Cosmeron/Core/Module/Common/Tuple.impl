@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Namespace.h"
+#include "../../Preprocessor/Detect.h"
 #include "../../Preprocessor/Foreach.h"
 #include "../../Preprocessor/Repeat.h"
 #include "../../Preprocessor/Sequence.h"
@@ -11,6 +12,13 @@
  * ============================================================ */
 
 #define FIELDS(...) __VA_ARGS__
+
+#define COSMERON_INTERNAL_UNWRAP_FIELDS_HELPER(TAG, BODY) PP_UNWRAP BODY
+#define COSMERON_INTERNAL_UNWRAP_FIELDS_1(DECL)                                \
+  COSMERON_INTERNAL_UNWRAP_FIELDS_HELPER DECL
+#define COSMERON_INTERNAL_UNWRAP_FIELDS_0(DECL) DECL
+#define COSMERON_INTERNAL_UNWRAP_FIELDS(DECL)                                  \
+  PP_OP_CAT2(COSMERON_INTERNAL_UNWRAP_FIELDS_, PP_IS_PAREN(DECL))(DECL)
 
 /* ------------------------------------------------------------
  * 1. Operations (Fallible operation returning OPSTATUS)
@@ -94,25 +102,23 @@
   (0, 1, CMPOUT, NAME, PARAMS, BODY)
 
 /* ------------------------------------------------------------
- * 6. Declarative Callbacks in Modules
+ * 6. Declarative Callbacks and Closures in Modules
  * ------------------------------------------------------------ */
-#define COSMERON_MACRO_INTERNAL_CALLBACK_UNWRAP_I(C, I, R, N, P, B)            \
-  (2, 0, R, N, P, { (void)0; })
+#define COSMERON_DECL_TAG_CALLBACK 115
+#define COSMERON_DECL_TAG_CLOSURE  116
 
-#define COSMERON_MACRO_INTERNAL_CALLBACK_UNWRAP_E(...)                         \
-  COSMERON_MACRO_INTERNAL_CALLBACK_UNWRAP_I(__VA_ARGS__)
+#undef CALLBACK
+#define CALLBACK(...) (COSMERON_DECL_TAG_CALLBACK, (__VA_ARGS__))
 
-#define COSMERON_MACRO_INTERNAL_CALLBACK_UNWRAP(M)                             \
-  COSMERON_MACRO_INTERNAL_CALLBACK_UNWRAP_E(PP_UNWRAP M)
-
-#define CALLBACK(M) COSMERON_MACRO_INTERNAL_CALLBACK_UNWRAP(M)
+#undef CLOSURE
+#define CLOSURE(...)  (COSMERON_DECL_TAG_CLOSURE, (__VA_ARGS__))
 
 /* ------------------------------------------------------------
  * 7. Declarative Events in Modules
  * ------------------------------------------------------------ */
 
 #ifndef COSMERON_MAYBE_UNUSED
-#if defined(__GNUC__) || defined(__clang__)
+#if COMPILER_GCC || COMPILER_CLANG
 #define COSMERON_MAYBE_UNUSED __attribute__((unused))
 #else
 #define COSMERON_MAYBE_UNUSED
@@ -124,13 +130,13 @@
 #define COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)                                 \
   ((CAP) <= 4 ? 4 : ((CAP) <= 8 ? 8 : ((CAP) <= 12 ? 12 : 16)))
 
-#define COSMERON_MACRO_INTERNAL_EV_INVOKE_EMPTY_1(CB, ARGS)                    \
-  CALLBACK_CALL(CB)
-#define COSMERON_MACRO_INTERNAL_EV_INVOKE_EMPTY_0(CB, ARGS)                    \
-  CALLBACK_CALL(CB, PP_UNWRAP ARGS)
-#define COSMERON_MACRO_INTERNAL_EV_INVOKE(CB, ARGS)                            \
+#define COSMERON_MACRO_INTERNAL_EV_INVOKE_EMPTY_1(CL, ARGS)                    \
+  CLOSURE_CALL(CL)
+#define COSMERON_MACRO_INTERNAL_EV_INVOKE_EMPTY_0(CL, ARGS)                    \
+  CLOSURE_CALL(CL, PP_UNWRAP ARGS)
+#define COSMERON_MACRO_INTERNAL_EV_INVOKE(CL, ARGS)                            \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_EV_INVOKE_EMPTY_,                         \
-             PP_IS_EMPTY_PARAMS(ARGS))(CB, ARGS)
+             PP_IS_EMPTY_PARAMS(ARGS))(CL, ARGS)
 
 /* Automatic Parameter and Argument Extraction from Tuples ((Type, Name), ...) */
 #define COSMERON_MACRO_INTERNAL_EV_PARAM_I(T, N) T N

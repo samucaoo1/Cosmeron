@@ -1,0 +1,120 @@
+/* WeakPtrAtomic.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Memory_WeakPtrAtomic
+#define TEMPLATE_Memory_WeakPtrAtomic(SUFFIX, TYPE)                             \
+  FORWARD_TEMPLATE_OBJECT(Memory, SharedPtrAtomic, SUFFIX);                     \
+  TEMPLATE_OBJECT(Memory, WeakPtrAtomic, SUFFIX,                                \
+      FIELDS(                                                                   \
+          TYPE *ptr;                                                            \
+          MODULE_ITYPE(Memory, SharedControlBlockAtomic) *control;              \
+      ),                                                                        \
+                                                                                \
+      OPERATION_INLINE(Reset, (), {                                             \
+        if (!self)                                                              \
+          return STATUS_CONST(INVALID_ARGUMENT);                                \
+        if (self->control != NULL) {                                            \
+          if (__atomic_sub_fetch(&self->control->weakCount, 1,                 \
+                                 __ATOMIC_ACQ_REL) == 0) {                      \
+            if (__atomic_load_n(&self->control->strongCount,                   \
+                                __ATOMIC_ACQUIRE) == 0) {                       \
+              void *cbRaw = (void *)self->control;                              \
+              self->control = NULL;                                             \
+              MODULE_FUNC(Memory, Alloc, Free)(&cbRaw);                         \
+            }                                                                   \
+          }                                                                     \
+          self->ptr = NULL;                                                     \
+          self->control = NULL;                                                 \
+        }                                                                       \
+        return STATUS_CONST(SUCCESS);                                           \
+      }),                                                                       \
+                                                                                \
+      PROCEDURE_INLINE(Destroy, (), {                                           \
+        if (self) {                                                             \
+          MODULE_FUNC(Memory, WeakPtrAtomic, SUFFIX, Reset)(self);              \
+        }                                                                       \
+      }),                                                                       \
+                                                                                \
+      CONST_OPERATION_INLINE(Clone,                                             \
+                       (struct MODULE_TYPED(Memory, WeakPtrAtomic, SUFFIX) *    \
+                        outWeak),                                               \
+                       {                                                        \
+                         if (!self || !outWeak)                                 \
+                           return STATUS_CONST(INVALID_ARGUMENT);               \
+                         MODULE_FUNC(Memory, WeakPtrAtomic, SUFFIX, Init)(      \
+                             outWeak);                                          \
+                         if (self->control != NULL) {                           \
+                           __atomic_add_fetch(&self->control->weakCount, 1,     \
+                                              __ATOMIC_RELAXED);                \
+                           outWeak->ptr = self->ptr;                            \
+                           outWeak->control = self->control;                    \
+                         }                                                      \
+                         return STATUS_CONST(SUCCESS);                          \
+                       }),                                                      \
+                                                                                \
+      OPERATION_INLINE(Move,                                                    \
+                       (struct MODULE_TYPED(Memory, WeakPtrAtomic, SUFFIX) *    \
+                        other),                                                 \
+                       {                                                        \
+                         if (!self || !other)                                   \
+                           return STATUS_CONST(INVALID_ARGUMENT);               \
+                         if (self == other)                                     \
+                           return STATUS_CONST(SUCCESS);                        \
+                         MODULE_FUNC(Memory, WeakPtrAtomic, SUFFIX, Destroy)(   \
+                             self);                                             \
+                         self->ptr = other->ptr;                                \
+                         self->control = other->control;                        \
+                         other->ptr = NULL;                                     \
+                         other->control = NULL;                                 \
+                         return STATUS_CONST(SUCCESS);                          \
+                       }),                                                      \
+                                                                                \
+      CONST_PREDICATE_INLINE(IsExpired, (), {                                   \
+        if (!self || !self->control)                                            \
+          return true;                                                          \
+        return __atomic_load_n(&self->control->strongCount,                     \
+                               __ATOMIC_ACQUIRE) == 0U;                         \
+      }),                                                                       \
+                                                                                \
+      CONST_PREDICATE_INLINE(IsValid, (), {                                     \
+        if (!self || !self->control)                                            \
+          return false;                                                         \
+        return __atomic_load_n(&self->control->strongCount,                     \
+                               __ATOMIC_ACQUIRE) > 0U;                          \
+      }),                                                                       \
+                                                                                \
+      CONST_FUNCTION_INLINE(size_t, UseCount, (), {                             \
+        if (!self || !self->control)                                            \
+          return 0U;                                                            \
+        return (size_t)__atomic_load_n(&self->control->strongCount,             \
+                                       __ATOMIC_ACQUIRE);                       \
+      }),                                                                       \
+                                                                                \
+      CONST_OPERATION(                                                          \
+          Upgrade,                                                              \
+          (struct MODULE_TYPED(Memory, SharedPtrAtomic, SUFFIX) * outShared)), \
+                                                                                \
+      PROCEDURE_INLINE(Swap,                                                    \
+                       (struct MODULE_TYPED(Memory, WeakPtrAtomic, SUFFIX) *    \
+                        other),                                                 \
+                       {                                                        \
+                         if (!self || !other || self == other)                  \
+                           return;                                              \
+                         TYPE *tempPtr = self->ptr;                             \
+                         MODULE_ITYPE(Memory, SharedControlBlockAtomic) *       \
+                             tempCb = self->control;                            \
+                         self->ptr = other->ptr;                                \
+                         self->control = other->control;                        \
+                         other->ptr = tempPtr;                                  \
+                         other->control = tempCb;                               \
+                       })                                                       \
+  )
+#define TEMPLATE_WeakPtrAtomic(SUFFIX, TYPE)                                   \
+  TEMPLATE_Memory_WeakPtrAtomic(SUFFIX, TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Memory_WeakPtrAtomic(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif

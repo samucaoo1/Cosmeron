@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static _Thread_local TCALLBACK(MODULE_NS(Condition, Panic, Handler))
-    MODULE_IFUNC(Condition, Panic_CustomHandler) = {0};
+static _Thread_local MODULE_CLOSURE(Condition, Panic, Handler)
+    MODULE_IFUNC(Condition, Panic_CustomHandler) = CLOSURE_EMPTY;
 
 MODULE_IMPLEMENT(DOMAIN(Core), Condition,
   PACKAGE(Panic,
@@ -25,7 +25,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Condition,
     }),
 
     PROCEDURE(SetHandler,
-              (TCALLBACK(MODULE_NS(Condition, Panic, Handler)) handler), {
+              (MODULE_CLOSURE(Condition, Panic, Handler) handler), {
       MODULE_IFUNC(Condition, Panic_CustomHandler) = handler;
     }),
 
@@ -34,7 +34,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Condition,
       MODULE_IFUNC(Condition, Panic_CustomHandler).context = NULL;
     }),
 
-    FUNCTION(TCALLBACK(MODULE_NS(Condition, Panic, Handler)), GetHandler, (), {
+    FUNCTION(MODULE_CLOSURE(Condition, Panic, Handler), GetHandler, (), {
       return MODULE_IFUNC(Condition, Panic_CustomHandler);
     }),
 
@@ -50,8 +50,8 @@ MODULE_IMPLEMENT(DOMAIN(Core), Condition,
       info.line = line;
       info.function = function;
 
-      if (CALLBACK_IS_VALID(MODULE_IFUNC(Condition, Panic_CustomHandler))) {
-        CALLBACK_INVOKE(MODULE_IFUNC(Condition, Panic_CustomHandler), &info);
+      if (CLOSURE_IS_VALID(MODULE_IFUNC(Condition, Panic_CustomHandler))) {
+        CLOSURE_CALL(MODULE_IFUNC(Condition, Panic_CustomHandler), &info);
         return;
       }
 

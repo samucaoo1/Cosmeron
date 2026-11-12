@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Namespace.h"
+#include "../../Preprocessor/Detect.h"
 #include "../../Preprocessor/Arguments.h"
 #include "../../Preprocessor/Foreach.h"
 #include "../../Preprocessor/Map.h"
@@ -10,6 +11,7 @@
 #include "FunctionTable.impl"
 #include "ComparisonEx.impl"
 #include "../Callback/Callback.h"
+#include "../Closure/Closure.h"
 
 /* ============================================================
  * Declarative Module Engine (Core/Module/Common/Declarative.impl)
@@ -23,7 +25,7 @@
 #define DOMAIN(D) (COSMERON_DOMAIN_TAG, D)
 
 #ifndef COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS
-#if defined(__clang__)
+#if COMPILER_CLANG
 #define COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS()                             \
   _Pragma("clang diagnostic push")                                             \
   _Pragma("clang diagnostic ignored \"-Wunused-function\"")                    \
@@ -32,7 +34,7 @@
 
 #define COSMERON_INTERNAL_SCOPE_POP_DIAGNOSTICS()                              \
   _Pragma("clang diagnostic pop")
-#elif defined(__GNUC__)
+#elif COMPILER_GCC
 #define COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS()                             \
   _Pragma("GCC diagnostic push")                                               \
   _Pragma("GCC diagnostic ignored \"-Wunused-function\"")                      \
@@ -45,79 +47,15 @@
 #define COSMERON_INTERNAL_SCOPE_PUSH_DIAGNOSTICS()
 #define COSMERON_INTERNAL_SCOPE_POP_DIAGNOSTICS()
 #endif
-
-/* ============================================================
- * 2.5 INTERNAL Emitter
- * ============================================================ */
-
-#define COSMERON_INTERNAL_TARGET_0(MOD, NAME) NS(LIB_PREFIX(MOD), Internal)
-#define COSMERON_INTERNAL_TARGET_1(MOD, NAME) NS(LIB_PREFIX(MOD), NAME, Internal)
-#define COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME)                          \
-  PP_OP_CAT2(COSMERON_INTERNAL_TARGET_, HAS_NAME)(MOD, NAME)
-
-#define COSMERON_EMIT_DECL_114(MOD, TAG, HAS_NAME, NAME, METHODS)             \
-  COSMERON_INTERNAL_PKG_GEN_ENUMS(                                             \
-      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
-  COSMERON_INTERNAL_PKG_GEN_MEMBERS(                                           \
-      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
-  typedef int NS(_cosmeron_decl_internal_semi, MOD, HAS_NAME, NAME, __LINE__);
 #endif
 
-/* ============================================================
- * 2.5 INTERNAL Emitter
- * ============================================================ */
-
-#define COSMERON_INTERNAL_TARGET_0(MOD, NAME) NS(LIB_PREFIX(MOD), Internal)
-#define COSMERON_INTERNAL_TARGET_1(MOD, NAME) NS(LIB_PREFIX(MOD), NAME, Internal)
-#define COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME)                          \
-  PP_OP_CAT2(COSMERON_INTERNAL_TARGET_, HAS_NAME)(MOD, NAME)
-
-#define COSMERON_EMIT_DECL_114(MOD, TAG, HAS_NAME, NAME, METHODS)             \
-  COSMERON_INTERNAL_PKG_GEN_ENUMS(                                             \
-      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
-  COSMERON_INTERNAL_PKG_GEN_MEMBERS(                                           \
-      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
-  typedef int NS(_cosmeron_decl_internal_semi, MOD, HAS_NAME, NAME, __LINE__);
-
 #ifndef COSMERON_MAYBE_UNUSED
-#if defined(__GNUC__) || defined(__clang__)
+#if COMPILER_GCC || COMPILER_CLANG
 #define COSMERON_MAYBE_UNUSED __attribute__((unused))
 #else
 #define COSMERON_MAYBE_UNUSED
 #endif
-
-/* ============================================================
- * 2.5 INTERNAL Emitter
- * ============================================================ */
-
-#define COSMERON_INTERNAL_TARGET_0(MOD, NAME) NS(LIB_PREFIX(MOD), Internal)
-#define COSMERON_INTERNAL_TARGET_1(MOD, NAME) NS(LIB_PREFIX(MOD), NAME, Internal)
-#define COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME)                          \
-  PP_OP_CAT2(COSMERON_INTERNAL_TARGET_, HAS_NAME)(MOD, NAME)
-
-#define COSMERON_EMIT_DECL_114(MOD, TAG, HAS_NAME, NAME, METHODS)             \
-  COSMERON_INTERNAL_PKG_GEN_ENUMS(                                             \
-      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
-  COSMERON_INTERNAL_PKG_GEN_MEMBERS(                                           \
-      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
-  typedef int NS(_cosmeron_decl_internal_semi, MOD, HAS_NAME, NAME, __LINE__);
 #endif
-
-/* ============================================================
- * 2.5 INTERNAL Emitter
- * ============================================================ */
-
-#define COSMERON_INTERNAL_TARGET_0(MOD, NAME) NS(LIB_PREFIX(MOD), Internal)
-#define COSMERON_INTERNAL_TARGET_1(MOD, NAME) NS(LIB_PREFIX(MOD), NAME, Internal)
-#define COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME)                          \
-  PP_OP_CAT2(COSMERON_INTERNAL_TARGET_, HAS_NAME)(MOD, NAME)
-
-#define COSMERON_EMIT_DECL_114(MOD, TAG, HAS_NAME, NAME, METHODS)             \
-  COSMERON_INTERNAL_PKG_GEN_ENUMS(                                             \
-      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
-  COSMERON_INTERNAL_PKG_GEN_MEMBERS(                                           \
-      COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
-  typedef int NS(_cosmeron_decl_internal_semi, MOD, HAS_NAME, NAME, __LINE__);
 
 /* --- Declarative Tag Constants --- */
 #define COSMERON_DECL_TAG_OBJECT 101
@@ -133,6 +71,8 @@
 #define COSMERON_DECL_TAG_ISTRUCT 112
 #define COSMERON_DECL_TAG_TPL_ISTRUCT 113
 #define COSMERON_DECL_TAG_INTERNAL 114
+#define COSMERON_DECL_TAG_CALLBACK 115
+#define COSMERON_DECL_TAG_CLOSURE 116
 
 /* --- Inheritance and Fields Descriptors --- */
 #define COSMERON_EXTENDS_TAG 901
@@ -214,9 +154,7 @@
 #define INTERNAL_EX(NAME, ...)                                                 \
   (COSMERON_DECL_TAG_INTERNAL, 1, NAME, (__VA_ARGS__))
 
-/* --- Space & Variant Descriptors --- */
-#define SPACE(NAME, ...)                                                       \
-  (COSMERON_DECL_TAG_SPACE, NAME, (__VA_ARGS__))
+/* --- Variant Descriptors --- */
 
 #define VARIANT(FAMILY, ...)                                                   \
   (COSMERON_DECL_TAG_VARIANT, FAMILY, (__VA_ARGS__))
@@ -690,9 +628,11 @@
   PP_OP_CAT2(COSMERON_INTERNAL_EXT_FIELD_, PP_SEQ_GET_1 TUPLE)(                \
       MOD, PP_SEQ_GET_2 TUPLE)
 
+#ifndef COSMERON_INTERNAL_UNWRAP_FIELDS
 #define COSMERON_INTERNAL_UNWRAP_FIELDS_HELPER(TAG, BODY) PP_UNWRAP BODY
 #define COSMERON_INTERNAL_UNWRAP_FIELDS(DECL)                                  \
   COSMERON_INTERNAL_UNWRAP_FIELDS_HELPER DECL
+#endif
 
 /* Prototype emission for Object methods */
 #define COSMERON_INTERNAL_SELF_TYPE_0(T) T
@@ -730,6 +670,20 @@
       COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(PP_SEQ_GET_2 CTX, C, P)         \
       PP_OP_CAT2(COSMERON_INTERNAL_OBJ_BODY_, I)(__VA_ARGS__)
 
+#define COSMERON_INTERNAL_SCOPE_CB_MEMBER(SCOPE, M)                            \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
+      COSMERON_INTERNAL_SCOPE_CB_MEMBER_I, SCOPE, M)
+
+#define COSMERON_INTERNAL_SCOPE_CB_MEMBER_I(SCOPE, C, I, R, N, P, ...)          \
+  COSMERON_MACRO_INTERNAL_CB_SCOPED_GEN(SCOPE, N, R, P)
+
+#define COSMERON_INTERNAL_SCOPE_CL_MEMBER(SCOPE, M)                            \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
+      COSMERON_INTERNAL_SCOPE_CL_MEMBER_I, SCOPE, M)
+
+#define COSMERON_INTERNAL_SCOPE_CL_MEMBER_I(SCOPE, C, I, R, N, P, ...)          \
+  COSMERON_MACRO_INTERNAL_CL_SCOPED_GEN(SCOPE, N, R, P)
+
 #define COSMERON_INTERNAL_OBJ_MEMBER_EXPAND(MACRO, CTX, ...)                   \
   MACRO(CTX, __VA_ARGS__)
 
@@ -754,6 +708,12 @@
 #define COSMERON_INTERNAL_OBJ_MEMBER_TAG_112(CTX, ...)
 #define COSMERON_INTERNAL_OBJ_MEMBER_TAG_113(CTX, ...)
 #define COSMERON_INTERNAL_OBJ_MEMBER_TAG_114(CTX, ...)
+#define COSMERON_INTERNAL_OBJ_MEMBER_TAG_115(CTX, TAG, MEMBERS)                \
+  PP_FOREACH_D3_CTX(COSMERON_INTERNAL_SCOPE_CB_MEMBER, PP_SEQ_GET_1 CTX,        \
+                    PP_UNWRAP MEMBERS)
+#define COSMERON_INTERNAL_OBJ_MEMBER_TAG_116(CTX, TAG, MEMBERS)                \
+  PP_FOREACH_D3_CTX(COSMERON_INTERNAL_SCOPE_CL_MEMBER, PP_SEQ_GET_1 CTX,        \
+                    PP_UNWRAP MEMBERS)
 
 #define COSMERON_INTERNAL_OBJ_ENUM_MEMBER_EXPAND(MACRO, CTX, ...)              \
   MACRO(CTX, __VA_ARGS__)
@@ -775,6 +735,8 @@
 #define COSMERON_INTERNAL_OBJ_ENUM_TAG_112(CTX, ...)
 #define COSMERON_INTERNAL_OBJ_ENUM_TAG_113(CTX, ...)
 #define COSMERON_INTERNAL_OBJ_ENUM_TAG_114(CTX, ...)
+#define COSMERON_INTERNAL_OBJ_ENUM_TAG_115(CTX, ...)
+#define COSMERON_INTERNAL_OBJ_ENUM_TAG_116(CTX, ...)
 #define COSMERON_INTERNAL_OBJ_ENUM_TAG_103(CTX, TAG, NAME, TABLE, DISP)        \
   COSMERON_INTERNAL_EMIT_ENUM_DEF(PP_SEQ_GET_1 CTX, NAME, TABLE, DISP)
 
@@ -956,6 +918,12 @@
 #define COSMERON_INTERNAL_PKG_MEMBER_TAG_112(CLASS, ...)
 #define COSMERON_INTERNAL_PKG_MEMBER_TAG_113(CLASS, ...)
 #define COSMERON_INTERNAL_PKG_MEMBER_TAG_114(CLASS, ...)
+#define COSMERON_INTERNAL_PKG_MEMBER_TAG_115(CLASS, TAG, MEMBERS)              \
+  PP_FOREACH_D3_CTX(COSMERON_INTERNAL_SCOPE_CB_MEMBER, CLASS,                  \
+                    PP_UNWRAP MEMBERS)
+#define COSMERON_INTERNAL_PKG_MEMBER_TAG_116(CLASS, TAG, MEMBERS)              \
+  PP_FOREACH_D3_CTX(COSMERON_INTERNAL_SCOPE_CL_MEMBER, CLASS,                  \
+                    PP_UNWRAP MEMBERS)
 
 #define COSMERON_INTERNAL_PKG_ENUM_MEMBER_EXPAND(MACRO, CLASS, ...)            \
   MACRO(CLASS, __VA_ARGS__)
@@ -977,6 +945,8 @@
 #define COSMERON_INTERNAL_PKG_ENUM_TAG_112(CLASS, ...)
 #define COSMERON_INTERNAL_PKG_ENUM_TAG_113(CLASS, ...)
 #define COSMERON_INTERNAL_PKG_ENUM_TAG_114(CLASS, ...)
+#define COSMERON_INTERNAL_PKG_ENUM_TAG_115(CLASS, ...)
+#define COSMERON_INTERNAL_PKG_ENUM_TAG_116(CLASS, ...)
 #define COSMERON_INTERNAL_PKG_ENUM_TAG_103(CLASS, TAG, NAME, TABLE, DISP)      \
   COSMERON_INTERNAL_EMIT_ENUM_DEF(CLASS, NAME, TABLE, DISP)
 
@@ -1086,6 +1056,14 @@
 
 #define COSMERON_EMIT_DECL_112(MOD, TAG, NAME, FIELDS_DECL)                  \
   ISTRUCT_DEF(MOD, NAME, FIELDS_DECL);
+
+#define COSMERON_EMIT_DECL_115(MOD, TAG, MEMBERS)                             \
+  PP_FOREACH_D2_CTX(COSMERON_INTERNAL_SCOPE_CB_MEMBER, LIB_PREFIX(MOD),        \
+                    PP_UNWRAP MEMBERS)
+
+#define COSMERON_EMIT_DECL_116(MOD, TAG, MEMBERS)                             \
+  PP_FOREACH_D2_CTX(COSMERON_INTERNAL_SCOPE_CL_MEMBER, LIB_PREFIX(MOD),        \
+                    PP_UNWRAP MEMBERS)
 
 /* ============================================================
  * 4. TEMPLATE Emitters
@@ -1258,10 +1236,10 @@
              PP_IS_PAREN(B))(A, B, __VA_ARGS__)
 
 #define COSMERON_EMIT_DECL_104(MOD, TAG, NAME, ARGS, FIELDS_DECL, METHODS)    \
-  typedef int NS(_cosmeron_decl_tpl_obj_semi, MOD, NAME, __LINE__);
+  _Static_assert(0, "Declaring TEMPLATE_OBJECT inside MODULE(...) is prohibited. Define templates in canonical .def files.");
 
 #define COSMERON_EMIT_DECL_105(MOD, TAG, NAME, ARGS, FIELDS_DECL, METHODS)    \
-  typedef int NS(_cosmeron_decl_tpl_pkg_semi, MOD, NAME, __LINE__);
+  _Static_assert(0, "Declaring TEMPLATE_PACKAGE inside MODULE(...) is prohibited. Define templates in canonical .def files.");
 
 #define TEMPLATE_STRUCT_DEF(MOD, NAME, SUFFIX, FIELDS_DECL)                   \
   typedef struct MODULE_TYPED(MOD, NAME, SUFFIX)                              \
@@ -1272,7 +1250,7 @@
   typedef int NS(_cosmeron_tpl_struct_semi, MOD, NAME, SUFFIX, __LINE__)
 
 #define COSMERON_EMIT_DECL_111(MOD, TAG, NAME, ARGS, FIELDS_DECL)             \
-  typedef int NS(_cosmeron_decl_tpl_struct_semi, MOD, NAME, __LINE__);
+  _Static_assert(0, "Declaring TEMPLATE_STRUCT inside MODULE(...) is prohibited. Define templates in canonical .def files.");
 
 #define TEMPLATE_ISTRUCT_DEF(MOD, NAME, SUFFIX, FIELDS_DECL)                  \
   typedef struct MODULE_ITYPED(MOD, NAME, SUFFIX)                             \
@@ -1283,7 +1261,7 @@
   typedef int NS(_cosmeron_tpl_istruct_semi, MOD, NAME, SUFFIX, __LINE__)
 
 #define COSMERON_EMIT_DECL_113(MOD, TAG, NAME, ARGS, FIELDS_DECL)            \
-  typedef int NS(_cosmeron_decl_tpl_istruct_semi, MOD, NAME, __LINE__);
+  _Static_assert(0, "Declaring TEMPLATE_ISTRUCT inside MODULE(...) is prohibited. Define templates in canonical .def files.");
 
 /* ============================================================
  * 5. Direct Free Functions on Pure Module (Section 4.3)
@@ -1299,14 +1277,7 @@
       COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(PARAMS);
 
 /* ============================================================
- * 6. TABLE Policy Emitter (Section 6.2)
- * ============================================================ */
-
-#define COSMERON_EMIT_DECL_106(MOD, TAG, MODE)                                \
-  typedef int NS(_cosmeron_decl_table_semi, MOD, MODE, __LINE__);
-
-/* ============================================================
- * 7. Top-Level MODULE Declarator
+ * 6. Top-Level MODULE Declarator
  * Supports standalone: MODULE(ModuleName, ...)
  * and drawer/metadata: MODULE(DOMAIN(DomainName), ModuleName, ...)
  * Module is the fundamental semantic unit; domain is organizational grouping.
@@ -1386,6 +1357,8 @@
 #define COSMERON_INTERNAL_OBJ_IMPL_TAG_112(CTX, ...)
 #define COSMERON_INTERNAL_OBJ_IMPL_TAG_113(CTX, ...)
 #define COSMERON_INTERNAL_OBJ_IMPL_TAG_114(CTX, ...)
+#define COSMERON_INTERNAL_OBJ_IMPL_TAG_115(CTX, ...)
+#define COSMERON_INTERNAL_OBJ_IMPL_TAG_116(CTX, ...)
 #define COSMERON_INTERNAL_OBJ_IMPL_TAG_901(CTX, ...)
 #define COSMERON_INTERNAL_OBJ_IMPL_TAG_902(CTX, ...)
 
@@ -1444,6 +1417,8 @@
 #define COSMERON_INTERNAL_PKG_IMPL_TAG_112(PKG, ...)
 #define COSMERON_INTERNAL_PKG_IMPL_TAG_113(PKG, ...)
 #define COSMERON_INTERNAL_PKG_IMPL_TAG_114(PKG, ...)
+#define COSMERON_INTERNAL_PKG_IMPL_TAG_115(PKG, ...)
+#define COSMERON_INTERNAL_PKG_IMPL_TAG_116(PKG, ...)
 
 #define COSMERON_EMIT_IMPL_102(MOD, TAG, NAME, BASE, FIELDS_DECL, METHODS)    \
   PP_FOREACH_D2_CTX(COSMERON_INTERNAL_PKG_IMPL_MEMBER,                        \
@@ -1466,6 +1441,8 @@
 #define COSMERON_EMIT_IMPL_111(MOD, ...)
 #define COSMERON_EMIT_IMPL_112(MOD, ...)
 #define COSMERON_EMIT_IMPL_113(MOD, ...)
+#define COSMERON_EMIT_IMPL_115(MOD, ...)
+#define COSMERON_EMIT_IMPL_116(MOD, ...)
 
 #define COSMERON_EMIT_IMPL_114(MOD, TAG, HAS_NAME, NAME, METHODS)               PP_FOREACH_D2_CTX(COSMERON_INTERNAL_PKG_IMPL_MEMBER,                                            COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME),                                 PP_UNWRAP METHODS)
 

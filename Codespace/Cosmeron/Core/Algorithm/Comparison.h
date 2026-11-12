@@ -50,11 +50,12 @@ static inline const char *MODULE_FUNC(Algorithm, Comparison,
 }
 
 /* ========================================================================== */
-/* 2. First-Class System Comparator Callback                                  */
+/* 2. First-Class System Comparator Callable (Callback & Closure)             */
 /* ========================================================================== */
 
 #include "../Module/Callback/Callback.h"
-CALLBACK_COMPARISON(Comparison, (const void *left, const void *right));
+#include "../Module/Closure/Closure.h"
+CLOSURE_COMPARISON(Comparison, (const void *left, const void *right));
 
 /* ========================================================================== */
 /* 3. Module Framework & Primitive Types                                      */

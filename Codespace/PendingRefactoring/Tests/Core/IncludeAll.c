@@ -5,6 +5,7 @@
 #include "../../../Cosmeron/Core/Cast/Integer.h"
 #include "../../../Cosmeron/Core/Outcome/Status.h"
 #include "../../../Cosmeron/Core/Outcome/Result.h"
+#include "../../../Cosmeron/Core/Outcome/Optional.h"
 #include "../../../Cosmeron/Core/Condition/Panic.h"
 #include "../../../Cosmeron/Core/Condition/Error.h"
 #include "../../../Cosmeron/Core/Condition/Exception.h"
@@ -20,10 +21,7 @@
 #include "../../../Cosmeron/Core/Memory/Stream.h"
 #include "../../../Cosmeron/Core/Memory/Swap.h"
 #include "../../../Cosmeron/Core/Module/Module.h"
-#include "../../../Cosmeron/Core/Preprocessor/Detect/Compiler.h"
-#include "../../../Cosmeron/Core/Preprocessor/Detect/Library.h"
-#include "../../../Cosmeron/Core/Preprocessor/Detect/OperationSystem.h"
-#include "../../../Cosmeron/Core/Preprocessor/Detect/Processor.h"
+#include "../../../Cosmeron/Core/Preprocessor/Detect.h"
 #include "../../../Cosmeron/Core/Primitive/Types.h"
 
 int main(void) { return 0; }

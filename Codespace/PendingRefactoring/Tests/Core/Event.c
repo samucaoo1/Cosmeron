@@ -1,4 +1,6 @@
-#include "../../../Cosmeron/Core/Module/Module.h"
+#include "Cosmeron/Core/Algorithm/Comparison.h"
+#include "Cosmeron/Core/Outcome/Status.h"
+#include "Cosmeron/Core/Module/Module.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -8,7 +10,7 @@
 /* 1. Declarative Object with Events                                          */
 /* ========================================================================== */
 
-OBJECT(Button,
+OBJECT_DEF(Button,
     FIELDS(
         int id;
     ),
@@ -28,7 +30,7 @@ OBJECT_IMPLEMENT(Button);
 /* 2. Declarative Object with Reactive Mutation (OBJECT_MUTATE)               */
 /* ========================================================================== */
 
-OBJECT(Slider,
+OBJECT_DEF(Slider,
     FIELDS(
         int value;
     ),
@@ -46,7 +48,7 @@ OBJECT_IMPLEMENT(Slider);
 /* 3. Declarative Package with Events                                         */
 /* ========================================================================== */
 
-PACKAGE(Bus,
+PACKAGE_DEF(Bus,
     EVENT_PROCEDURE(OnMessage, ((int, topic), (int, payload)), 4),
     EVENT_OPERATION(OnFilter, ((int, value)), 4)
 );
@@ -104,7 +106,7 @@ static void OnBusMessage(int topic, int payload, void *context) {
 
 /* Handler for re-entrancy test */
 static Button *g_reentrant_btn = NULL;
-static TCALLBACK(Button_Click) g_reentrant_cb;
+static TCLOSURE(Button_Click) g_reentrant_cb;
 static int g_reentrant_calls = 0;
 
 static void OnReentrantClick(int button, int x, int y, void *context) {
@@ -131,7 +133,7 @@ static void Test_ObjectEventProcedure(void) {
   assert(OBJECT_CALL(&btn, Hover_Capacity) == 8);
   assert(OBJECT_CALL(&btn, Hover_Count) == 0);
 
-  TCALLBACK(Button_Hover) hcb = CALLBACK_FUNC(Button_Hover_Bind)(OnButtonHover, NULL);
+  TCLOSURE(Button_Hover) hcb = CLOSURE_FUNC(Button_Hover_Bind)(OnButtonHover, NULL);
   assert(OBJECT_CALL(&btn, Hover_Subscribe, hcb) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&btn, Hover_Count) == 1);
   g_hover_count = 0;
@@ -140,11 +142,11 @@ static void Test_ObjectEventProcedure(void) {
   assert(OBJECT_CALL(&btn, Hover_Unsubscribe, hcb) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&btn, Hover_Count) == 0);
 
-  TCALLBACK(Button_Click) cb1 = CALLBACK_FUNC(Button_Click_Bind)(OnButtonClick, (void *)(uintptr_t)1);
-  TCALLBACK(Button_Click) cb2 = CALLBACK_FUNC(Button_Click_Bind)(OnButtonClick, (void *)(uintptr_t)2);
-  TCALLBACK(Button_Click) cb3 = CALLBACK_FUNC(Button_Click_Bind)(OnButtonClick, (void *)(uintptr_t)3);
-  TCALLBACK(Button_Click) cb4 = CALLBACK_FUNC(Button_Click_Bind)(OnButtonClick, (void *)(uintptr_t)4);
-  TCALLBACK(Button_Click) cb5 = CALLBACK_FUNC(Button_Click_Bind)(OnButtonClick, (void *)(uintptr_t)5);
+  TCLOSURE(Button_Click) cb1 = CLOSURE_FUNC(Button_Click_Bind)(OnButtonClick, (void *)(uintptr_t)1);
+  TCLOSURE(Button_Click) cb2 = CLOSURE_FUNC(Button_Click_Bind)(OnButtonClick, (void *)(uintptr_t)2);
+  TCLOSURE(Button_Click) cb3 = CLOSURE_FUNC(Button_Click_Bind)(OnButtonClick, (void *)(uintptr_t)3);
+  TCLOSURE(Button_Click) cb4 = CLOSURE_FUNC(Button_Click_Bind)(OnButtonClick, (void *)(uintptr_t)4);
+  TCLOSURE(Button_Click) cb5 = CLOSURE_FUNC(Button_Click_Bind)(OnButtonClick, (void *)(uintptr_t)5);
 
   /* Subscribe 4 listeners */
   assert(OBJECT_CALL(&btn, Click_Subscribe, cb1) == STATUS_CONST(SUCCESS));
@@ -184,7 +186,7 @@ static void Test_ObjectNullaryEvent(void) {
   Button btn;
   assert(Button_Init(&btn) == STATUS_CONST(SUCCESS));
 
-  TCALLBACK(Button_Reset) cb = CALLBACK_FUNC(Button_Reset_Bind)(OnButtonReset, NULL);
+  TCLOSURE(Button_Reset) cb = CLOSURE_FUNC(Button_Reset_Bind)(OnButtonReset, NULL);
   assert(OBJECT_CALL(&btn, Reset_Subscribe, cb) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&btn, Reset_Count) == 1);
 
@@ -201,10 +203,10 @@ static void Test_ObjectReentrancy(void) {
   assert(Button_Init(&btn) == STATUS_CONST(SUCCESS));
 
   g_reentrant_btn = &btn;
-  g_reentrant_cb = CALLBACK_FUNC(Button_Click_Bind)(OnReentrantClick, NULL);
+  g_reentrant_cb = CLOSURE_FUNC(Button_Click_Bind)(OnReentrantClick, NULL);
   assert(OBJECT_CALL(&btn, Click_Subscribe, g_reentrant_cb) == STATUS_CONST(SUCCESS));
 
-  TCALLBACK(Button_Click) dummyCb = CALLBACK_FUNC(Button_Click_Bind)(OnButtonClick, (void *)(uintptr_t)99);
+  TCLOSURE(Button_Click) dummyCb = CLOSURE_FUNC(Button_Click_Bind)(OnButtonClick, (void *)(uintptr_t)99);
   assert(OBJECT_CALL(&btn, Click_Subscribe, dummyCb) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&btn, Click_Count) == 2);
 
@@ -225,9 +227,9 @@ static void Test_ObjectEventOperation(void) {
   Button btn;
   assert(Button_Init(&btn) == STATUS_CONST(SUCCESS));
 
-  TCALLBACK(Button_Validate) passCb = CALLBACK_FUNC(Button_Validate_Bind)(OnValidatePass, NULL);
-  TCALLBACK(Button_Validate) failCb = CALLBACK_FUNC(Button_Validate_Bind)(OnValidateFail, NULL);
-  TCALLBACK(Button_Validate) unreachCb = CALLBACK_FUNC(Button_Validate_Bind)(OnValidateUnreachable, NULL);
+  TCLOSURE(Button_Validate) passCb = CLOSURE_FUNC(Button_Validate_Bind)(OnValidatePass, NULL);
+  TCLOSURE(Button_Validate) failCb = CLOSURE_FUNC(Button_Validate_Bind)(OnValidateFail, NULL);
+  TCLOSURE(Button_Validate) unreachCb = CLOSURE_FUNC(Button_Validate_Bind)(OnValidateUnreachable, NULL);
 
   assert(OBJECT_CALL(&btn, Validate_Subscribe, passCb) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&btn, Validate_Subscribe, failCb) == STATUS_CONST(SUCCESS));
@@ -247,7 +249,7 @@ static void Test_PackageEvents(void) {
   assert(PACKAGE_CALL(Bus, OnMessage_Capacity) == 4);
   assert(PACKAGE_CALL(Bus, OnMessage_Count) == 0);
 
-  TCALLBACK(Bus_OnMessage) cb = CALLBACK_FUNC(Bus_OnMessage_Bind)(OnBusMessage, NULL);
+  TCLOSURE(Bus_OnMessage) cb = CLOSURE_FUNC(Bus_OnMessage_Bind)(OnBusMessage, NULL);
   assert(PACKAGE_CALL(Bus, OnMessage_Subscribe, cb) == STATUS_CONST(SUCCESS));
   assert(PACKAGE_CALL(Bus, OnMessage_Count) == 1);
 
@@ -268,7 +270,7 @@ static void Test_DirectObjectEventCalls(void) {
   assert(Button_Click_Capacity(&btn) == 4);
   assert(Button_Click_Count(&btn) == 0);
 
-  TCALLBACK(Button_Click) cb = CALLBACK_FUNC(Button_Click_Bind)(OnButtonClick, (void *)(uintptr_t)10);
+  TCLOSURE(Button_Click) cb = CLOSURE_FUNC(Button_Click_Bind)(OnButtonClick, (void *)(uintptr_t)10);
   assert(Button_Click_Subscribe(&btn, cb) == STATUS_CONST(SUCCESS));
   assert(Button_Click_Count(&btn) == 1);
 
@@ -296,8 +298,8 @@ static void Test_ReactiveMutation(void) {
   assert(Slider_Init(&slider) == STATUS_CONST(SUCCESS));
   slider.value = 10;
 
-  TCALLBACK(Slider_OnValueChanged) cb =
-      CALLBACK_FUNC(Slider_OnValueChanged_Bind)(OnSliderChanged, NULL);
+  TCLOSURE(Slider_OnValueChanged) cb =
+      CLOSURE_FUNC(Slider_OnValueChanged_Bind)(OnSliderChanged, NULL);
 
   assert(OBJECT_CALL(&slider, OnValueChanged_Subscribe, cb) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&slider, OnValueChanged_Count) == 1);

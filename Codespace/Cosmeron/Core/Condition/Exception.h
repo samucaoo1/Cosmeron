@@ -12,16 +12,13 @@
 #include <stdint.h>
 
 /* ========================================================================== */
-/* 1. Exception Cleanup Callback Declaration                                  */
-/* ========================================================================== */
-
-CALLBACK_PROCEDURE(MODULE_NS(Condition, ExceptionFrame, Cleanup), ());
-
-/* ========================================================================== */
-/* 2. Declarative Module: Condition (ExceptionFrame Object & Exception Package)*/
+/* 1. Declarative Module: Condition (ExceptionFrame Object & Exception Package)*/
 /* ========================================================================== */
 
 MODULE(DOMAIN(Core), Condition,
+    CLOSURE(
+        PROCEDURE(ExceptionCleanup, ())
+    ),
     OBJECT(ExceptionFrame,
         FIELDS(
             jmp_buf env;
@@ -31,7 +28,7 @@ MODULE(DOMAIN(Core), Condition,
             bool threw;
             bool caught;
             bool rethrow;
-            TCALLBACK(MODULE_NS(Condition, ExceptionFrame, Cleanup)) cleanup;
+            MODULE_CLOSURE(Condition, ExceptionCleanup) cleanup;
         ),
         CONST_FUNCTION_INLINE(const MODULE_TYPE(Condition, Error) *, Error, (), {
           return self ? &self->error : NULL;
@@ -43,7 +40,7 @@ MODULE(DOMAIN(Core), Condition,
           return self ? self->caught : false;
         }),
         PROCEDURE_INLINE(SetCleanup,
-                         (TCALLBACK(MODULE_NS(Condition, ExceptionFrame, Cleanup)) cleanup), {
+                         (MODULE_CLOSURE(Condition, ExceptionCleanup) cleanup), {
           if (self)
             self->cleanup = cleanup;
         })
@@ -52,7 +49,7 @@ MODULE(DOMAIN(Core), Condition,
         PROCEDURE(PushFrame, (MODULE_TYPE(Condition, ExceptionFrame) *frame)),
         PROCEDURE(PopFrame, ()),
         PROCEDURE(RegisterCleanup,
-                  (TCALLBACK(MODULE_NS(Condition, ExceptionFrame, Cleanup)) cleanup)),
+                  (MODULE_CLOSURE(Condition, ExceptionCleanup) cleanup)),
         PROCEDURE(Throw, (const MODULE_TYPE(Condition, Error) *error)),
         PROCEDURE(ThrowStatus,
                   (OPSTATUS status, const char *message, const char *file,
@@ -99,9 +96,6 @@ MODULE(DOMAIN(Core), Condition,
         })
     )
 );
-
-typedef MODULE_TYPE(Condition, ExceptionFrame) TExceptionFrame;
-typedef MODULE_TYPE(Condition, ExceptionFrame) TConditionExceptionFrame;
 
 /* ========================================================================== */
 /* 3. Public Control-Flow Macros                                              */

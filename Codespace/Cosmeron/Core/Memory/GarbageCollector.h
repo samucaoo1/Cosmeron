@@ -2,9 +2,10 @@
 
 #include "../Outcome/Status.h"
 #include "../Module/Callback/Callback.h"
+#include "../Module/Closure/Closure.h"
 #include "../Module/Module.h"
 #include "../Preprocessor/Compiling.inc"
-#include "../Preprocessor/Detect/OperationSystem.h"
+#include "../Preprocessor/Detect.h"
 #include "Alloc.h"
 #include "Heap.h"
 #include "Common.inc"
@@ -16,7 +17,7 @@
 #include <string.h>
 
 /* ========================================================================== */
-/* 1. Constants and Callbacks                                                 */
+/* 1. Constants and Callables                                                 */
 /* ========================================================================== */
 
 #define GARBAGE_COLLECTOR_CONFIG_COL_NAME(NAME, VALUE) NAME
@@ -34,16 +35,19 @@
 ENUM_DEF_EX(MODULE_NS(Memory, GarbageCollector), Config,
             GARBAGE_COLLECTOR_CONFIG_TABLE, PLAIN)
 
-CALLBACK_PROCEDURE(
+CLOSURE_PROCEDURE(
     MODULE_INS(Memory, GcFinalizerFunction),
     (void *ptr)
 );
 
+#define GARBAGE_COLLECTOR_FINALIZER_CLOSURE \
+  TCLOSURE(MODULE_INS(Memory, GcFinalizerFunction))
+
 #define GARBAGE_COLLECTOR_FINALIZER_CALLBACK \
-  TCALLBACK(MODULE_INS(Memory, GcFinalizerFunction))
+  TCLOSURE(MODULE_INS(Memory, GcFinalizerFunction))
 
 #define GARBAGE_COLLECTOR_FINALIZER_BIND(FN, CTX) \
-  NS(CALLBACK_FUNC(MODULE_INS(Memory, GcFinalizerFunction)), Bind)((FN), (CTX))
+  NS(CLOSURE_FUNC(MODULE_INS(Memory, GcFinalizerFunction)), Bind)((FN), (CTX))
 
 /* Typed struct descriptor */
 typedef struct MODULE_NS(Memory, GarbageCollector, Descriptor) {
@@ -141,9 +145,6 @@ MODULE(DOMAIN(Core), Memory,
         PREDICATE(Contains, (const void *ptr))
     )
 );
-
-typedef MODULE_TYPE(Memory, GarbageCollector) TMemoryGarbageCollector;
-typedef MODULE_TYPE(Memory, GarbageCollector) TGarbageCollector;
 
 #include "Impl/GarbageCollector.impl"
 

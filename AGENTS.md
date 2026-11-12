@@ -253,11 +253,15 @@ Function contracts follow their result:
 
 ---
 
-## 9. Platform & OS Detection
+## 9. Platform, Compiler & Environment Detection (`Detect.h`)
 
-- Any OS-conditional logic or platform checks must include and use `Codespace/Cosmeron/Core/Preprocessor/Detect/OperationSystem.h`.
-- Use normalized platform macros (`OS_WINDOWS`, `OS_LINUX`, `OS_MAC`, `OS_BSD`, `OS_UNIX`, `OS_POSIX`, `OS_OHOS`, etc.).
-- Do not perform ad-hoc or duplicated checks directly against native compiler macros (e.g. `#ifdef _WIN32`, `__linux__`) outside of Core detection infrastructure.
+- **Mandatory Centralized Detection:** All platform, operating system, compiler, C library (libc), and processor architecture detection **MUST** be performed exclusively through `Codespace/Cosmeron/Core/Preprocessor/Detect.h` (or `Detect/Detect.h`).
+- **Strict Prohibition of Raw Checks:** Never perform ad-hoc, direct, or duplicated checks against native compiler macros (e.g. `#ifdef _WIN32`, `#ifdef __linux__`, `#if defined(__clang__)`, `#if defined(__GNUC__)`, `#ifdef _MSC_VER`, `#ifdef __x86_64__`, `#ifdef __GLIBC__`) outside of the Core Preprocessor detection headers.
+- **Normalized 0/1 Compile-Time Flags:** Always use the normalized boolean flags provided by `Detect.h`:
+  - **Operating System:** `OS_WINDOWS`, `OS_LINUX`, `OS_MAC`, `OS_IOS`, `OS_BSD`, `OS_FREEBSD`, `OS_OPENBSD`, `OS_NETBSD`, `OS_DRAGONFLY`, `OS_SOLARIS`, `OS_AIX`, `OS_HAIKU`, `OS_QNX`, `OS_HURD`, `OS_REDOX`, `OS_WASI`, `OS_EMSCRIPTEN`, `OS_POSIX`, `OS_UNIX`, `OS_ANDROID`, `OS_OHOS`, etc.
+  - **Compiler Family:** `COMPILER_CLANG`, `COMPILER_GCC`, `COMPILER_MSVC`, `COMPILER_INTEL`, `COMPILER_KNOWN`.
+  - **Processor Architecture:** `PROCESSOR_X86`, `PROCESSOR_X64`, `PROCESSOR_ARM`, `PROCESSOR_ARM64`, `PROCESSOR_RISCV`, `PROCESSOR_WASM`, `PROCESSOR_PPC`, `PROCESSOR_PPC64`, `PROCESSOR_MIPS`, `PROCESSOR_LOONGARCH64`, `PROCESSOR_S390X`, `PROCESSOR_KNOWN`.
+  - **C Standard Library (libc):** `LIBC_GLIBC`, `LIBC_MUSL`, `LIBC_BIONIC`, `LIBC_MSVC`, `LIBC_APPLE`, `LIBC_BSD`, `LIBC_UCLIBC`, `LIBC_NEWLIB`, `LIBC_WASI`, `LIBC_EMSCRIPTEN`, `LIBC_RELIBC`, `LIBC_KNOWN`.
 
 ---
 

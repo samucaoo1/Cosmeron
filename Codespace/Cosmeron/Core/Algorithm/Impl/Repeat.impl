@@ -31,36 +31,36 @@ MODULE_IMPLEMENT(DOMAIN(Core), Algorithm,
   PACKAGE(Repeat,
     VARIANT(Procedure,
       PROCEDURE((size_t count,
-                 TCALLBACK(MODULE_NS(Algorithm, Repeat, Procedure)) action), {
-        if (count == 0U || !CALLBACK_IS_VALID(action))
+                 MODULE_CLOSURE(Algorithm, Repeat, Procedure) action), {
+        if (count == 0U || !CLOSURE_IS_VALID(action))
           return;
 
         for (size_t i = 0U; i < count; ++i) {
-          CALLBACK_CALL(action);
+          CLOSURE_CALL(action);
         }
       }),
       PROCEDURE(Indexed,
                 (size_t count,
-                 TCALLBACK(MODULE_NS(Algorithm, Repeat, ProcedureIndexed)) action), {
-        if (count == 0U || !CALLBACK_IS_VALID(action))
+                 MODULE_CLOSURE(Algorithm, Repeat, ProcedureIndexed) action), {
+        if (count == 0U || !CLOSURE_IS_VALID(action))
           return;
 
         for (size_t i = 0U; i < count; ++i) {
-          CALLBACK_CALL(action, i);
+          CLOSURE_CALL(action, i);
         }
       })
     ),
 
     VARIANT(Operation,
       OPERATION((size_t count,
-                 TCALLBACK(MODULE_NS(Algorithm, Repeat, Operation)) operation), {
+                 MODULE_CLOSURE(Algorithm, Repeat, Operation) operation), {
         if (count == 0U)
           return STATUS_CONST(SUCCESS);
-        if (!CALLBACK_IS_VALID(operation))
+        if (!CLOSURE_IS_VALID(operation))
           return STATUS_CONST(INVALID_ARGUMENT);
 
         for (size_t i = 0U; i < count; ++i) {
-          OPSTATUS status = CALLBACK_CALL(operation);
+          OPSTATUS status = CLOSURE_CALL(operation);
           if (status != STATUS_CONST(SUCCESS))
             return status;
         }
@@ -69,14 +69,14 @@ MODULE_IMPLEMENT(DOMAIN(Core), Algorithm,
       }),
       OPERATION(Indexed,
                 (size_t count,
-                 TCALLBACK(MODULE_NS(Algorithm, Repeat, OperationIndexed)) operation), {
+                 MODULE_CLOSURE(Algorithm, Repeat, OperationIndexed) operation), {
         if (count == 0U)
           return STATUS_CONST(SUCCESS);
-        if (!CALLBACK_IS_VALID(operation))
+        if (!CLOSURE_IS_VALID(operation))
           return STATUS_CONST(INVALID_ARGUMENT);
 
         for (size_t i = 0U; i < count; ++i) {
-          OPSTATUS status = CALLBACK_CALL(operation, i);
+          OPSTATUS status = CLOSURE_CALL(operation, i);
           if (status != STATUS_CONST(SUCCESS))
             return status;
         }
@@ -87,14 +87,14 @@ MODULE_IMPLEMENT(DOMAIN(Core), Algorithm,
 
     VARIANT(Predicate,
       PREDICATE((size_t count,
-                 TCALLBACK(MODULE_NS(Algorithm, Repeat, Predicate)) predicate), {
+                 MODULE_CLOSURE(Algorithm, Repeat, Predicate) predicate), {
         if (count == 0U)
           return true;
-        if (!CALLBACK_IS_VALID(predicate))
+        if (!CLOSURE_IS_VALID(predicate))
           return false;
 
         for (size_t i = 0U; i < count; ++i) {
-          if (!CALLBACK_CALL(predicate))
+          if (!CLOSURE_CALL(predicate))
             return false;
         }
 
@@ -102,14 +102,14 @@ MODULE_IMPLEMENT(DOMAIN(Core), Algorithm,
       }),
       PREDICATE(Indexed,
                 (size_t count,
-                 TCALLBACK(MODULE_NS(Algorithm, Repeat, PredicateIndexed)) predicate), {
+                 MODULE_CLOSURE(Algorithm, Repeat, PredicateIndexed) predicate), {
         if (count == 0U)
           return true;
-        if (!CALLBACK_IS_VALID(predicate))
+        if (!CLOSURE_IS_VALID(predicate))
           return false;
 
         for (size_t i = 0U; i < count; ++i) {
-          if (!CALLBACK_CALL(predicate, i))
+          if (!CLOSURE_CALL(predicate, i))
             return false;
         }
 
@@ -181,17 +181,17 @@ MODULE_IMPLEMENT(DOMAIN(Core), Algorithm,
 /* ========================================================================== */
 
 static inline COSMERON_MAYBE_UNUSED void MODULE_FUNC(Algorithm, Repeat, IndexedProcedure)(
-    size_t count, TCALLBACK(MODULE_NS(Algorithm, Repeat, ProcedureIndexed)) action) {
+    size_t count, MODULE_CLOSURE(Algorithm, Repeat, ProcedureIndexed) action) {
   MODULE_FUNC(Algorithm, Repeat, ProcedureIndexed)(count, action);
 }
 
 static inline COSMERON_MAYBE_UNUSED OPSTATUS MODULE_FUNC(Algorithm, Repeat, IndexedOperation)(
-    size_t count, TCALLBACK(MODULE_NS(Algorithm, Repeat, OperationIndexed)) operation) {
+    size_t count, MODULE_CLOSURE(Algorithm, Repeat, OperationIndexed) operation) {
   return MODULE_FUNC(Algorithm, Repeat, OperationIndexed)(count, operation);
 }
 
 static inline COSMERON_MAYBE_UNUSED bool MODULE_FUNC(Algorithm, Repeat, IndexedPredicate)(
-    size_t count, TCALLBACK(MODULE_NS(Algorithm, Repeat, PredicateIndexed)) predicate) {
+    size_t count, MODULE_CLOSURE(Algorithm, Repeat, PredicateIndexed) predicate) {
   return MODULE_FUNC(Algorithm, Repeat, PredicateIndexed)(count, predicate);
 }
 

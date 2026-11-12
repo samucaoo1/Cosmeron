@@ -45,8 +45,6 @@ MODULE(DOMAIN(Core), Memory,
     )
 );
 
-typedef MODULE_TYPE(Memory, Pool) TMemoryPool;
-
 #include "Impl/Pool.impl"
 
 /* EOF */

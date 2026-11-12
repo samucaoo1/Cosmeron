@@ -160,8 +160,6 @@ MODULE(DOMAIN(Core), Memory,
     )
 );
 
-typedef MODULE_TYPE(Memory, Heap) TMemoryHeap;
-
 #include "Impl/Heap.impl"
 
 /* EOF */

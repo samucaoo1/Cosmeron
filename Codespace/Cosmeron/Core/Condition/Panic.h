@@ -43,11 +43,11 @@ MODULE(DOMAIN(Core), Condition,
         )
     ),
     PACKAGE(Panic,
-        CALLBACK(
+        CLOSURE(
             PROCEDURE(Handler, (const MODULE_TYPE(Condition, PanicInfo) *info))
         ),
-        PROCEDURE(SetHandler, (TCALLBACK(MODULE_NS(Condition, Panic, Handler)) handler)),
-        FUNCTION(TCALLBACK(MODULE_NS(Condition, Panic, Handler)), GetHandler, ()),
+        PROCEDURE(SetHandler, (MODULE_CLOSURE(Condition, Panic, Handler) handler)),
+        FUNCTION(MODULE_CLOSURE(Condition, Panic, Handler), GetHandler, ()),
         PROCEDURE(ResetHandler, ()),
         FUNCTION(const char *, KindName, (MODULE_ENUM(Condition, PanicKind) kind)),
         PROCEDURE(Trigger, (MODULE_ENUM(Condition, PanicKind) kind, const char *message,

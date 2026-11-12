@@ -1,0 +1,293 @@
+#pragma once
+
+#include "../../../Preprocessor/Arguments.h"
+#include "../../../Preprocessor/Boolean.h"
+#include "../../../Preprocessor/Detect.h"
+#include "../../../Preprocessor/Operations.h"
+#include "../../Namespace.h"
+#include "../../Callback/Impl/Callback.impl"
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#ifndef COSMERON_MAYBE_UNUSED
+#if COMPILER_GCC || COMPILER_CLANG
+#define COSMERON_MAYBE_UNUSED __attribute__((unused))
+#else
+#define COSMERON_MAYBE_UNUSED
+#endif
+#endif
+
+/* ========================================================================== */
+/* 1. Universal Closure Invocation & Validation Engine (16 Bytes Dual-Mode)   */
+/* ========================================================================== */
+
+static const int _cosmeron_closure_null_ctx_sentinel = 0;
+#define COSMERON_CLOSURE_NULL_CONTEXT ((void *)&_cosmeron_closure_null_ctx_sentinel)
+
+#define COSMERON_MACRO_INTERNAL_CL_RESOLVE_CTX(ctx)                            \
+  ((ctx) == COSMERON_CLOSURE_NULL_CONTEXT ? NULL : (ctx))
+
+#define COSMERON_MACRO_INTERNAL_CL_INVOKE_0(cl)                                \
+  (((cl).context != NULL)                                                      \
+       ? (cl).function(COSMERON_MACRO_INTERNAL_CL_RESOLVE_CTX((cl).context))   \
+       : (cl).callback())
+
+#define COSMERON_MACRO_INTERNAL_CL_INVOKE_1(cl, ...)                           \
+  (((cl).context != NULL)                                                      \
+       ? (cl).function(__VA_ARGS__,                                            \
+                       COSMERON_MACRO_INTERNAL_CL_RESOLVE_CTX((cl).context))   \
+       : (cl).callback(__VA_ARGS__))
+
+#define CLOSURE_INVOKE(...)                                                    \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CL_INVOKE_,                               \
+             PP_HAS_COMMA(__VA_ARGS__))(__VA_ARGS__)
+
+#define CLOSURE_CALL(...) CLOSURE_INVOKE(__VA_ARGS__)
+
+#define CLOSURE_IS_VALID(cl) ((cl).function != NULL)
+
+#define CLOSURE_EMPTY { .function = NULL, .context = NULL }
+
+/* ========================================================================== */
+/* 2. Parameter Emission Helpers for Closures                                 */
+/* ========================================================================== */
+
+#define COSMERON_MACRO_INTERNAL_CL_PARAM_1(PARAMS) (void *context)
+#define COSMERON_MACRO_INTERNAL_CL_PARAM_0(PARAMS) (PP_UNWRAP PARAMS, void *context)
+
+#define COSMERON_MACRO_INTERNAL_CL_PARAMS(PARAMS)                              \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CL_PARAM_,                                \
+             PP_IS_EMPTY_PARAMS(PARAMS))(PARAMS)
+
+/* ========================================================================== */
+/* 3. Core Scoped Closure Generation Templates                                */
+/* ========================================================================== */
+
+#define COSMERON_MACRO_INTERNAL_CL_SCOPED_BASE(SCOPE, NAME, RET, PARAMS)       \
+  typedef RET (*NS_JOIN(SCOPE, TCallback, NAME))                               \
+      COSMERON_MACRO_INTERNAL_CB_PARAMS(PARAMS);                               \
+  typedef RET (*NS_JOIN(SCOPE, Closure, NAME, Function))                       \
+      COSMERON_MACRO_INTERNAL_CL_PARAMS(PARAMS);                               \
+  typedef struct NS_JOIN(SCOPE, TClosure, NAME) {                              \
+    union {                                                                    \
+      NS_JOIN(SCOPE, TCallback, NAME) callback;                                \
+      NS_JOIN(SCOPE, Closure, NAME, Function) function;                        \
+    };                                                                         \
+    void *context;                                                             \
+  } NS_JOIN(SCOPE, TClosure, NAME);                                            \
+  static inline COSMERON_MAYBE_UNUSED NS_JOIN(SCOPE, TClosure, NAME)          \
+      NS_JOIN(SCOPE, Closure, NAME, Bind)(                                     \
+          NS_JOIN(SCOPE, Closure, NAME, Function) function,                   \
+          void *context) {                                                     \
+    NS_JOIN(SCOPE, TClosure, NAME) cl;                                         \
+    cl.function = function;                                                    \
+    cl.context = (context != NULL) ? context : COSMERON_CLOSURE_NULL_CONTEXT;  \
+    return cl;                                                                 \
+  }                                                                            \
+  static inline COSMERON_MAYBE_UNUSED NS_JOIN(SCOPE, TClosure, NAME)          \
+      NS_JOIN(SCOPE, Closure, NAME, FromCallback)(                             \
+          NS_JOIN(SCOPE, TCallback, NAME) callback) {                          \
+    NS_JOIN(SCOPE, TClosure, NAME) cl;                                         \
+    cl.callback = callback;                                                    \
+    cl.context = NULL;                                                         \
+    return cl;                                                                 \
+  }                                                                            \
+  static inline COSMERON_MAYBE_UNUSED NS_JOIN(SCOPE, TClosure, NAME)          \
+      NS_JOIN(SCOPE, Closure, NAME, Empty)(void) {                             \
+    NS_JOIN(SCOPE, TClosure, NAME) cl;                                         \
+    cl.function = NULL;                                                        \
+    cl.context = NULL;                                                         \
+    return cl;                                                                 \
+  }                                                                            \
+  static inline COSMERON_MAYBE_UNUSED bool NS_JOIN(                            \
+      SCOPE, Closure, NAME, IsValid)(                                          \
+      NS_JOIN(SCOPE, TClosure, NAME) closure) {                                \
+    return closure.function != NULL;                                           \
+  }
+
+#define COSMERON_MACRO_INTERNAL_CL_SCOPED_NULLARY_VAL_0(SCOPE, NAME, RET)
+#define COSMERON_MACRO_INTERNAL_CL_SCOPED_NULLARY_VAL_1(SCOPE, NAME, RET)      \
+  static inline COSMERON_MAYBE_UNUSED RET NS_JOIN(                             \
+      SCOPE, Closure, NAME, Invoke)(                                           \
+      NS_JOIN(SCOPE, TClosure, NAME) closure) {                                \
+    return CLOSURE_INVOKE(closure);                                            \
+  }
+
+#define COSMERON_MACRO_INTERNAL_CL_SCOPED_NULLARY_VOID_0(SCOPE, NAME)
+#define COSMERON_MACRO_INTERNAL_CL_SCOPED_NULLARY_VOID_1(SCOPE, NAME)          \
+  static inline COSMERON_MAYBE_UNUSED void NS_JOIN(                            \
+      SCOPE, Closure, NAME, Invoke)(                                           \
+      NS_JOIN(SCOPE, TClosure, NAME) closure) {                                \
+    CLOSURE_INVOKE(closure);                                                   \
+  }
+
+#define COSMERON_MACRO_INTERNAL_CL_SCOPED_GEN_0(SCOPE, NAME, RET, PARAMS)      \
+  COSMERON_MACRO_INTERNAL_CL_SCOPED_BASE(SCOPE, NAME, RET, PARAMS)             \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CL_SCOPED_NULLARY_VAL_,                   \
+             PP_IS_EMPTY_PARAMS(PARAMS))(SCOPE, NAME, RET)                     \
+  typedef int NS(_cosmeron_cl_scoped_semi, SCOPE, NAME, __LINE__);
+
+#define COSMERON_MACRO_INTERNAL_CL_SCOPED_GEN_1(SCOPE, NAME, RET, PARAMS)      \
+  COSMERON_MACRO_INTERNAL_CL_SCOPED_BASE(SCOPE, NAME, void, PARAMS)            \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CL_SCOPED_NULLARY_VOID_,                  \
+             PP_IS_EMPTY_PARAMS(PARAMS))(SCOPE, NAME)                          \
+  typedef int NS(_cosmeron_cl_scoped_semi, SCOPE, NAME, __LINE__);
+
+#define COSMERON_MACRO_INTERNAL_CL_SCOPED_GEN(SCOPE, NAME, RET, PARAMS)        \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CL_SCOPED_GEN_,                           \
+             COSMERON_MACRO_INTERNAL_CB_IS_VOID(RET))(SCOPE, NAME, RET, PARAMS)
+
+/* ========================================================================== */
+/* 4. Standalone Root-Level Closure Generation Templates                      */
+/* ========================================================================== */
+
+#define COSMERON_MACRO_INTERNAL_CL_ROOT_BASE(NAME, RET, PARAMS)                \
+  typedef RET (*TCALLBACK(NAME)) COSMERON_MACRO_INTERNAL_CB_PARAMS(PARAMS);    \
+  typedef RET (*NS_JOIN(CLOSURE_FUNC(NAME), Function))                         \
+      COSMERON_MACRO_INTERNAL_CL_PARAMS(PARAMS);                               \
+  typedef struct TCLOSURE(NAME) {                                              \
+    union {                                                                    \
+      TCALLBACK(NAME) callback;                                                \
+      NS_JOIN(CLOSURE_FUNC(NAME), Function) function;                          \
+    };                                                                         \
+    void *context;                                                             \
+  } TCLOSURE(NAME);                                                            \
+  static inline COSMERON_MAYBE_UNUSED TCLOSURE(NAME)                           \
+      NS_JOIN(CLOSURE_FUNC(NAME), Bind)(                                       \
+          NS_JOIN(CLOSURE_FUNC(NAME), Function) function,                     \
+          void *context) {                                                     \
+    TCLOSURE(NAME) cl;                                                         \
+    cl.function = function;                                                    \
+    cl.context = (context != NULL) ? context : COSMERON_CLOSURE_NULL_CONTEXT;  \
+    return cl;                                                                 \
+  }                                                                            \
+  static inline COSMERON_MAYBE_UNUSED TCLOSURE(NAME)                           \
+      NS_JOIN(CLOSURE_FUNC(NAME), FromCallback)(TCALLBACK(NAME) callback) {    \
+    TCLOSURE(NAME) cl;                                                         \
+    cl.callback = callback;                                                    \
+    cl.context = NULL;                                                         \
+    return cl;                                                                 \
+  }                                                                            \
+  static inline COSMERON_MAYBE_UNUSED TCLOSURE(NAME)                           \
+      NS_JOIN(CLOSURE_FUNC(NAME), Empty)(void) {                               \
+    TCLOSURE(NAME) cl;                                                         \
+    cl.function = NULL;                                                        \
+    cl.context = NULL;                                                         \
+    return cl;                                                                 \
+  }                                                                            \
+  static inline COSMERON_MAYBE_UNUSED bool NS_JOIN(                            \
+      CLOSURE_FUNC(NAME), IsValid)(TCLOSURE(NAME) closure) {                   \
+    return closure.function != NULL;                                           \
+  }
+
+#define COSMERON_MACRO_INTERNAL_CL_ROOT_NULLARY_VAL_0(NAME, RET)
+#define COSMERON_MACRO_INTERNAL_CL_ROOT_NULLARY_VAL_1(NAME, RET)               \
+  static inline COSMERON_MAYBE_UNUSED RET NS_JOIN(                             \
+      CLOSURE_FUNC(NAME), Invoke)(TCLOSURE(NAME) closure) {                    \
+    return CLOSURE_INVOKE(closure);                                            \
+  }
+
+#define COSMERON_MACRO_INTERNAL_CL_ROOT_NULLARY_VOID_0(NAME)
+#define COSMERON_MACRO_INTERNAL_CL_ROOT_NULLARY_VOID_1(NAME)                  \
+  static inline COSMERON_MAYBE_UNUSED void NS_JOIN(                            \
+      CLOSURE_FUNC(NAME), Invoke)(TCLOSURE(NAME) closure) {                    \
+    CLOSURE_INVOKE(closure);                                                   \
+  }
+
+#define COSMERON_MACRO_INTERNAL_CL_GEN_VALUE(NAME, RET, PARAMS)                \
+  COSMERON_MACRO_INTERNAL_CL_ROOT_BASE(NAME, RET, PARAMS)                      \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CL_ROOT_NULLARY_VAL_,                      \
+             PP_IS_EMPTY_PARAMS(PARAMS))(NAME, RET)                            \
+  typedef int NS(_cosmeron_closure_semi, NAME, __LINE__)
+
+#define COSMERON_MACRO_INTERNAL_CL_GEN_VOID(NAME, PARAMS)                      \
+  COSMERON_MACRO_INTERNAL_CL_ROOT_BASE(NAME, void, PARAMS)                     \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CL_ROOT_NULLARY_VOID_,                     \
+             PP_IS_EMPTY_PARAMS(PARAMS))(NAME)                                 \
+  typedef int NS(_cosmeron_closure_semi, NAME, __LINE__)
+
+#define COSMERON_MACRO_INTERNAL_CL_GEN_DISPATCH_0(NAME, RET, PARAMS)           \
+  COSMERON_MACRO_INTERNAL_CL_GEN_VALUE(NAME, RET, PARAMS)
+
+#define COSMERON_MACRO_INTERNAL_CL_GEN_DISPATCH_1(NAME, RET, PARAMS)           \
+  COSMERON_MACRO_INTERNAL_CL_GEN_VOID(NAME, PARAMS)
+
+#define COSMERON_MACRO_INTERNAL_CL_GEN(NAME, RET, PARAMS)                      \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CL_GEN_DISPATCH_,                         \
+             COSMERON_MACRO_INTERNAL_CB_IS_VOID(RET))(NAME, RET, PARAMS)
+
+/* ========================================================================== */
+/* 5. Public Standalone Closure Descriptors                                   */
+/* ========================================================================== */
+
+#define CLOSURE_FUNCTION(RET, NAME, PARAMS)                                    \
+  COSMERON_MACRO_INTERNAL_CL_GEN(NAME, RET, PARAMS)
+
+#define CLOSURE_PROCEDURE(NAME, PARAMS)                                        \
+  COSMERON_MACRO_INTERNAL_CL_GEN_VOID(NAME, PARAMS)
+
+#define CLOSURE_OPERATION(NAME, PARAMS)                                        \
+  COSMERON_MACRO_INTERNAL_CL_GEN_VALUE(NAME, OPSTATUS, PARAMS)
+
+#define CLOSURE_PREDICATE(NAME, PARAMS)                                        \
+  COSMERON_MACRO_INTERNAL_CL_GEN_VALUE(NAME, bool, PARAMS)
+
+#define CLOSURE_COMPARISON(NAME, PARAMS)                                       \
+  COSMERON_MACRO_INTERNAL_CL_GEN_VALUE(NAME, CMPOUT, PARAMS)
+
+/* Scoped Closure Descriptors (for explicit Target/Module qualification) */
+#define CLOSURE_SCOPED_FUNCTION(SCOPE, RET, NAME, PARAMS)                      \
+  COSMERON_MACRO_INTERNAL_CL_SCOPED_GEN(SCOPE, NAME, RET, PARAMS)
+
+#define CLOSURE_SCOPED_PROCEDURE(SCOPE, NAME, PARAMS)                          \
+  COSMERON_MACRO_INTERNAL_CL_SCOPED_GEN(SCOPE, NAME, void, PARAMS)
+
+#define CLOSURE_SCOPED_OPERATION(SCOPE, NAME, PARAMS)                          \
+  COSMERON_MACRO_INTERNAL_CL_SCOPED_GEN(SCOPE, NAME, OPSTATUS, PARAMS)
+
+#define CLOSURE_SCOPED_PREDICATE(SCOPE, NAME, PARAMS)                          \
+  COSMERON_MACRO_INTERNAL_CL_SCOPED_GEN(SCOPE, NAME, bool, PARAMS)
+
+#define CLOSURE_SCOPED_COMPARISON(SCOPE, NAME, PARAMS)                         \
+  COSMERON_MACRO_INTERNAL_CL_SCOPED_GEN(SCOPE, NAME, CMPOUT, PARAMS)
+
+/* ========================================================================== */
+/* 6. Object Method Adapters (Abordagem 3B - On-Demand Method Binding)        */
+/* Generates an inline adapter bridging (CLASS *self, ...) to (..., void *ctx)*/
+/* ========================================================================== */
+
+#define COSMERON_INTERNAL_CL_ADAPT_BODY_0(RET, CLASS_TYPE, FUNC, ARGS)        \
+  return FUNC((CLASS_TYPE *)context, PP_UNWRAP ARGS);
+#define COSMERON_INTERNAL_CL_ADAPT_BODY_1(RET, CLASS_TYPE, FUNC, ARGS)        \
+  FUNC((CLASS_TYPE *)context, PP_UNWRAP ARGS);
+
+#define CLOSURE_ADAPT_OBJECT_METHOD_NULLARY(CLOSURE_TYPE, CLASS_TYPE, METHOD_FUNC, RET)\
+  static inline RET NS_JOIN(METHOD_FUNC, ClosureAdapter)(void *context) {      \
+    PP_OP_CAT2(COSMERON_INTERNAL_CL_ADAPT_BODY_,                              \
+               COSMERON_MACRO_INTERNAL_CB_IS_VOID(RET))(RET, CLASS_TYPE, METHOD_FUNC, ())\
+  }                                                                            \
+  static inline CLOSURE_TYPE NS_JOIN(METHOD_FUNC, AsClosure)(CLASS_TYPE *self){\
+    CLOSURE_TYPE cl;                                                           \
+    cl.function = NS_JOIN(METHOD_FUNC, ClosureAdapter);                        \
+    cl.context = (void *)self;                                                 \
+    return cl;                                                                 \
+  }
+
+#define CLOSURE_ADAPT_OBJECT_METHOD(CLOSURE_TYPE, CLASS_TYPE, METHOD_FUNC, RET, PARAMS, ARGS) \
+  static inline RET NS_JOIN(METHOD_FUNC, ClosureAdapter)(PP_UNWRAP PARAMS, void *context) { \
+    PP_OP_CAT2(COSMERON_INTERNAL_CL_ADAPT_BODY_,                              \
+               COSMERON_MACRO_INTERNAL_CB_IS_VOID(RET))(RET, CLASS_TYPE, METHOD_FUNC, ARGS)\
+  }                                                                            \
+  static inline CLOSURE_TYPE NS_JOIN(METHOD_FUNC, AsClosure)(CLASS_TYPE *self){\
+    CLOSURE_TYPE cl;                                                           \
+    cl.function = NS_JOIN(METHOD_FUNC, ClosureAdapter);                        \
+    cl.context = (void *)self;                                                 \
+    return cl;                                                                 \
+  }
+
+#define CLOSURE_ADAPTED_METHOD(METHOD_FUNC) NS_JOIN(METHOD_FUNC, ClosureAdapter)
+#define CLOSURE_AS_CLOSURE(METHOD_FUNC, SELF) NS_JOIN(METHOD_FUNC, AsClosure)(SELF)
+
+/* EOF */

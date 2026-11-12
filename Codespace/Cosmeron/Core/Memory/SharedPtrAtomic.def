@@ -1,0 +1,242 @@
+/* SharedPtrAtomic.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Memory_SharedPtrAtomic
+#define TEMPLATE_Memory_SharedPtrAtomic(SUFFIX, TYPE)                           \
+  TEMPLATE_OBJECT(Memory, SharedPtrAtomic, SUFFIX,                              \
+      FIELDS(                                                                   \
+          TYPE *ptr;                                                            \
+          MODULE_ITYPE(Memory, SharedControlBlockAtomic) *control;              \
+      ),                                                                        \
+                                                                                \
+      OPERATION_INLINE(Reset, (), {                                             \
+        if (!self)                                                              \
+          return STATUS_CONST(INVALID_ARGUMENT);                                \
+        if (self->control != NULL) {                                            \
+          if (__atomic_sub_fetch(&self->control->strongCount, 1,               \
+                                 __ATOMIC_ACQ_REL) == 0) {                      \
+            void *rawPtr = self->control->managedPointer;                       \
+            self->control->managedPointer = NULL;                               \
+            if (rawPtr != NULL) {                                               \
+              MODULE_FUNC(Memory, Alloc, Free)(&rawPtr);                        \
+            }                                                                   \
+            if (__atomic_load_n(&self->control->weakCount,                     \
+                                __ATOMIC_ACQUIRE) == 0) {                       \
+              void *cbRaw = (void *)self->control;                              \
+              self->control = NULL;                                             \
+              MODULE_FUNC(Memory, Alloc, Free)(&cbRaw);                         \
+            }                                                                   \
+          }                                                                     \
+          self->ptr = NULL;                                                     \
+          self->control = NULL;                                                 \
+        }                                                                       \
+        return STATUS_CONST(SUCCESS);                                           \
+      }),                                                                       \
+                                                                                \
+      PROCEDURE_INLINE(Destroy, (), {                                           \
+        if (self) {                                                             \
+          MODULE_FUNC(Memory, SharedPtrAtomic, SUFFIX, Reset)(self);            \
+        }                                                                       \
+      }),                                                                       \
+                                                                                \
+      OPERATION_INLINE(FromPointer, (TYPE * rawPtr), {                          \
+        if (!self)                                                              \
+          return STATUS_CONST(INVALID_ARGUMENT);                                \
+        MODULE_FUNC(Memory, SharedPtrAtomic, SUFFIX, Init)(self);               \
+        void *cbRaw = NULL;                                                     \
+        OPSTATUS status = MODULE_FUNC(Memory, Alloc, Bytes)(                    \
+            &cbRaw, sizeof(MODULE_ITYPE(Memory, SharedControlBlockAtomic)));    \
+        if (status != STATUS_CONST(SUCCESS))                                    \
+          return status;                                                        \
+        MODULE_ITYPE(Memory, SharedControlBlockAtomic) *cb =                    \
+            (MODULE_ITYPE(Memory, SharedControlBlockAtomic) *)cbRaw;            \
+        cb->strongCount = 1U;                                                   \
+        cb->weakCount = 0U;                                                     \
+        cb->managedPointer = (void *)rawPtr;                                    \
+        self->ptr = rawPtr;                                                     \
+        self->control = cb;                                                     \
+        return STATUS_CONST(SUCCESS);                                           \
+      }),                                                                       \
+                                                                                \
+      OPERATION_INLINE(Make, (TYPE value), {                                    \
+        if (!self)                                                              \
+          return STATUS_CONST(INVALID_ARGUMENT);                                \
+        MODULE_FUNC(Memory, SharedPtrAtomic, SUFFIX, Init)(self);               \
+        void *valRaw = NULL;                                                    \
+        OPSTATUS status =                                                       \
+            MODULE_FUNC(Memory, Alloc, Bytes)(&valRaw, sizeof(TYPE));           \
+        if (status != STATUS_CONST(SUCCESS))                                    \
+          return status;                                                        \
+        *(TYPE *)valRaw = value;                                                \
+        status = MODULE_FUNC(Memory, SharedPtrAtomic, SUFFIX, FromPointer)(     \
+            self, (TYPE *)valRaw);                                              \
+        if (status != STATUS_CONST(SUCCESS)) {                                  \
+          MODULE_FUNC(Memory, Alloc, Free)(&valRaw);                            \
+          return status;                                                        \
+        }                                                                       \
+        return STATUS_CONST(SUCCESS);                                           \
+      }),                                                                       \
+                                                                                \
+      OPERATION_INLINE(MakeDefault, (), {                                       \
+        if (!self)                                                              \
+          return STATUS_CONST(INVALID_ARGUMENT);                                \
+        MODULE_FUNC(Memory, SharedPtrAtomic, SUFFIX, Init)(self);               \
+        void *valRaw = NULL;                                                    \
+        OPSTATUS status =                                                       \
+            MODULE_FUNC(Memory, Alloc, ZeroBytes)(&valRaw, sizeof(TYPE));       \
+        if (status != STATUS_CONST(SUCCESS))                                    \
+          return status;                                                        \
+        status = MODULE_FUNC(Memory, SharedPtrAtomic, SUFFIX, FromPointer)(     \
+            self, (TYPE *)valRaw);                                              \
+        if (status != STATUS_CONST(SUCCESS)) {                                  \
+          MODULE_FUNC(Memory, Alloc, Free)(&valRaw);                            \
+          return status;                                                        \
+        }                                                                       \
+        return STATUS_CONST(SUCCESS);                                           \
+      }),                                                                       \
+                                                                                \
+      CONST_OPERATION_INLINE(Clone,                                             \
+                       (struct MODULE_TYPED(Memory, SharedPtrAtomic, SUFFIX) *  \
+                        outShared),                                             \
+                       {                                                        \
+                         if (!self || !outShared)                               \
+                           return STATUS_CONST(INVALID_ARGUMENT);               \
+                         MODULE_FUNC(Memory, SharedPtrAtomic, SUFFIX, Init)(    \
+                             outShared);                                        \
+                         if (self->control != NULL) {                           \
+                           __atomic_add_fetch(&self->control->strongCount, 1,   \
+                                              __ATOMIC_RELAXED);                \
+                           outShared->ptr = self->ptr;                          \
+                           outShared->control = self->control;                  \
+                         }                                                      \
+                         return STATUS_CONST(SUCCESS);                          \
+                       }),                                                      \
+                                                                                \
+      OPERATION_INLINE(Move,                                                    \
+                       (struct MODULE_TYPED(Memory, SharedPtrAtomic, SUFFIX) *  \
+                        other),                                                 \
+                       {                                                        \
+                         if (!self || !other)                                   \
+                           return STATUS_CONST(INVALID_ARGUMENT);               \
+                         if (self == other)                                     \
+                           return STATUS_CONST(SUCCESS);                        \
+                         MODULE_FUNC(Memory, SharedPtrAtomic, SUFFIX, Destroy)( \
+                             self);                                             \
+                         self->ptr = other->ptr;                                \
+                         self->control = other->control;                        \
+                         other->ptr = NULL;                                     \
+                         other->control = NULL;                                 \
+                         return STATUS_CONST(SUCCESS);                          \
+                       }),                                                      \
+                                                                                \
+      OPERATION_INLINE(ResetWithPointer, (TYPE * newPtr), {                     \
+        if (!self)                                                              \
+          return STATUS_CONST(INVALID_ARGUMENT);                                \
+        MODULE_FUNC(Memory, SharedPtrAtomic, SUFFIX, Reset)(self);              \
+        return MODULE_FUNC(Memory, SharedPtrAtomic, SUFFIX, FromPointer)(       \
+            self, newPtr);                                                      \
+      }),                                                                       \
+                                                                                \
+      CONST_PREDICATE_INLINE(IsValid, (), {                                     \
+        if (!self || !self->ptr || !self->control)                              \
+          return false;                                                         \
+        return __atomic_load_n(&self->control->strongCount,                     \
+                               __ATOMIC_ACQUIRE) > 0U;                          \
+      }),                                                                       \
+                                                                                \
+      CONST_FUNCTION_INLINE(const TYPE *, Get, (), {                            \
+        return self ? self->ptr : NULL;                                         \
+      }),                                                                       \
+                                                                                \
+      FUNCTION_INLINE(TYPE *, GetMutable, (), {                                 \
+        return self ? self->ptr : NULL;                                         \
+      }),                                                                       \
+                                                                                \
+      CONST_FUNCTION_INLINE(size_t, UseCount, (), {                             \
+        if (!self || !self->control)                                            \
+          return 0U;                                                            \
+        return (size_t)__atomic_load_n(&self->control->strongCount,             \
+                                       __ATOMIC_ACQUIRE);                       \
+      }),                                                                       \
+                                                                                \
+      CONST_PREDICATE_INLINE(Unique, (), {                                      \
+        return (MODULE_FUNC(Memory, SharedPtrAtomic, SUFFIX, UseCount)(self) ==\
+                1U);                                                            \
+      }),                                                                       \
+                                                                                \
+      CONST_OPERATION_INLINE(                                                   \
+          Downgrade,                                                            \
+          (struct MODULE_TYPED(Memory, WeakPtrAtomic, SUFFIX) * outWeak),       \
+          {                                                                     \
+            if (!self || !outWeak)                                              \
+              return STATUS_CONST(INVALID_ARGUMENT);                            \
+            MODULE_FUNC(Memory, WeakPtrAtomic, SUFFIX, Init)(outWeak);          \
+            if (!self->control)                                                 \
+              return STATUS_CONST(SUCCESS);                                     \
+            __atomic_add_fetch(&self->control->weakCount, 1, __ATOMIC_RELAXED); \
+            outWeak->ptr = self->ptr;                                           \
+            outWeak->control = self->control;                                   \
+            return STATUS_CONST(SUCCESS);                                       \
+          }),                                                                   \
+                                                                                \
+      OPERATION_INLINE(                                                         \
+          FromWeak,                                                             \
+          (const struct MODULE_TYPED(Memory, WeakPtrAtomic, SUFFIX) * weak),    \
+          {                                                                     \
+            if (!self || !weak)                                                 \
+              return STATUS_CONST(INVALID_ARGUMENT);                            \
+            MODULE_FUNC(Memory, SharedPtrAtomic, SUFFIX, Init)(self);           \
+            if (!weak->control)                                                 \
+              return STATUS_CONST(NOT_FOUND);                                   \
+            uintptr_t current = __atomic_load_n(&weak->control->strongCount,    \
+                                                __ATOMIC_RELAXED);              \
+            while (current != 0) {                                              \
+              if (__atomic_compare_exchange_n(&weak->control->strongCount,      \
+                                              &current, current + 1, true,      \
+                                              __ATOMIC_ACQ_REL,                 \
+                                              __ATOMIC_RELAXED)) {              \
+                self->ptr = (TYPE *)weak->control->managedPointer;              \
+                self->control = weak->control;                                  \
+                return STATUS_CONST(SUCCESS);                                   \
+              }                                                                 \
+            }                                                                   \
+            return STATUS_CONST(NOT_FOUND);                                     \
+          }),                                                                   \
+                                                                                \
+      PROCEDURE_INLINE(Swap,                                                    \
+                       (struct MODULE_TYPED(Memory, SharedPtrAtomic, SUFFIX) *  \
+                        other),                                                 \
+                       {                                                        \
+                         if (!self || !other || self == other)                  \
+                           return;                                              \
+                         TYPE *tempPtr = self->ptr;                             \
+                         MODULE_ITYPE(Memory, SharedControlBlockAtomic) *       \
+                             tempCb = self->control;                            \
+                         self->ptr = other->ptr;                                \
+                         self->control = other->control;                        \
+                         other->ptr = tempPtr;                                  \
+                         other->control = tempCb;                               \
+                       })                                                       \
+  );                                                                            \
+  static inline OPSTATUS MODULE_FUNC(Memory, WeakPtrAtomic, SUFFIX, Upgrade)(   \
+      const struct MODULE_TYPED(Memory, WeakPtrAtomic, SUFFIX) * self,          \
+      struct MODULE_TYPED(Memory, SharedPtrAtomic, SUFFIX) * outShared) {       \
+    return MODULE_FUNC(Memory, SharedPtrAtomic, SUFFIX, FromWeak)(outShared,    \
+                                                                  self);        \
+  }                                                                             \
+  static inline OPSTATUS MODULE_FUNC(Memory, WeakPtrAtomic, SUFFIX, FromShared)(\
+      struct MODULE_TYPED(Memory, WeakPtrAtomic, SUFFIX) * self,                \
+      const struct MODULE_TYPED(Memory, SharedPtrAtomic, SUFFIX) * shared) {    \
+    return MODULE_FUNC(Memory, SharedPtrAtomic, SUFFIX, Downgrade)(shared,      \
+                                                                   self);       \
+  }                                                                             \
+  typedef int NS(_cosmeron_semi_shared_atomic_, SUFFIX, __LINE__)
+#define TEMPLATE_SharedPtrAtomic(SUFFIX, TYPE)                                 \
+  TEMPLATE_Memory_SharedPtrAtomic(SUFFIX, TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Memory_SharedPtrAtomic(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif

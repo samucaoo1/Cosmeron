@@ -281,4 +281,5 @@ Ao refatorar qualquer módulo:
 4. **Declare o módulo com `MODULE(...)`** agrupando seus `OBJECT`, `PACKAGE`, `ENUM`, `SPACE`, `VARIANT` ou `TEMPLATE_*`.
 5. **Implemente no `.impl` usando `MODULE_SCOPE`**, sem adicionar finalizadores `PACKAGE_IMPLEMENT`/`OBJECT_IMPLEMENT`.
 6. **Substitua comparadores e callbacks brutos por `TCALLBACK(...)`**.
-7. **Atualize e valide os testes correspondentes em `Codespace/Tests/`** (`-Wall -Wextra -Wpedantic -Werror`).
+8. **Substitua qualquer checagem direta de SO, compilador ou arquitetura por `Detect.h`**: Proibido `#ifdef _WIN32`, `#ifdef __linux__`, `#if defined(__clang__)`, etc. Toda detecção é centralizada via `Codespace/Cosmeron/Core/Preprocessor/Detect.h`.
+9. **Atualize e valide os testes correspondentes em `Codespace/Tests/`** (`-Wall -Wextra -Wpedantic -Werror`).

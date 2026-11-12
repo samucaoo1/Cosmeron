@@ -20,7 +20,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Condition,
     }),
 
     PROCEDURE(RegisterCleanup,
-              (TCALLBACK(MODULE_NS(Condition, ExceptionFrame, Cleanup)) cleanup), {
+              (MODULE_CLOSURE(Condition, ExceptionCleanup) cleanup), {
       if (MODULE_IFUNC(Condition, Exception_CurrentFrame) != NULL) {
         MODULE_IFUNC(Condition, Exception_CurrentFrame)->cleanup = cleanup;
       }
@@ -34,8 +34,8 @@ MODULE_IMPLEMENT(DOMAIN(Core), Condition,
         return;
       }
 
-      if (CALLBACK_IS_VALID(frame->cleanup)) {
-        CALLBACK_INVOKE(frame->cleanup);
+      if (CLOSURE_IS_VALID(frame->cleanup)) {
+        CLOSURE_CALL(frame->cleanup);
         frame->cleanup.function = NULL;
         frame->cleanup.context = NULL;
       }

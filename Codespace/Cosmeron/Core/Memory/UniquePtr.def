@@ -1,0 +1,114 @@
+/* UniquePtr.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Memory_UniquePtr
+#define TEMPLATE_Memory_UniquePtr(SUFFIX, TYPE)                                 \
+  TEMPLATE_OBJECT(Memory, UniquePtr, SUFFIX,                                    \
+      FIELDS(                                                                   \
+          TYPE *ptr;                                                            \
+      ),                                                                        \
+                                                                                \
+      PROCEDURE_INLINE(Destroy, (), {                                           \
+        if (self && self->ptr != NULL) {                                        \
+          void *raw = (void *)self->ptr;                                        \
+          MODULE_FUNC(Memory, Alloc, Free)(&raw);                               \
+          self->ptr = NULL;                                                     \
+        }                                                                       \
+      }),                                                                       \
+                                                                                \
+      OPERATION_INLINE(Reset, (TYPE * newPtr), {                                \
+        if (!self)                                                              \
+          return STATUS_CONST(INVALID_ARGUMENT);                                \
+        if (self->ptr == newPtr)                                                \
+          return STATUS_CONST(SUCCESS);                                         \
+        MODULE_FUNC(Memory, UniquePtr, SUFFIX, Destroy)(self);                  \
+        self->ptr = newPtr;                                                     \
+        return STATUS_CONST(SUCCESS);                                           \
+      }),                                                                       \
+                                                                                \
+      OPERATION_INLINE(FromPointer, (TYPE * rawPtr), {                          \
+        if (!self)                                                              \
+          return STATUS_CONST(INVALID_ARGUMENT);                                \
+        MODULE_FUNC(Memory, UniquePtr, SUFFIX, Init)(self);                     \
+        self->ptr = rawPtr;                                                     \
+        return STATUS_CONST(SUCCESS);                                           \
+      }),                                                                       \
+                                                                                \
+      OPERATION_INLINE(Make, (TYPE value), {                                    \
+        if (!self)                                                              \
+          return STATUS_CONST(INVALID_ARGUMENT);                                \
+        MODULE_FUNC(Memory, UniquePtr, SUFFIX, Init)(self);                     \
+        void *raw = NULL;                                                       \
+        OPSTATUS status =                                                       \
+            MODULE_FUNC(Memory, Alloc, Bytes)(&raw, sizeof(TYPE));              \
+        if (status != STATUS_CONST(SUCCESS))                                    \
+          return status;                                                        \
+        *(TYPE *)raw = value;                                                   \
+        self->ptr = (TYPE *)raw;                                                \
+        return STATUS_CONST(SUCCESS);                                           \
+      }),                                                                       \
+                                                                                \
+      OPERATION_INLINE(MakeDefault, (), {                                       \
+        if (!self)                                                              \
+          return STATUS_CONST(INVALID_ARGUMENT);                                \
+        MODULE_FUNC(Memory, UniquePtr, SUFFIX, Init)(self);                     \
+        void *raw = NULL;                                                       \
+        OPSTATUS status =                                                       \
+            MODULE_FUNC(Memory, Alloc, ZeroBytes)(&raw, sizeof(TYPE));          \
+        if (status != STATUS_CONST(SUCCESS))                                    \
+          return status;                                                        \
+        self->ptr = (TYPE *)raw;                                                \
+        return STATUS_CONST(SUCCESS);                                           \
+      }),                                                                       \
+                                                                                \
+      OPERATION_INLINE(Move,                                                    \
+                       (struct MODULE_TYPED(Memory, UniquePtr, SUFFIX) * other), \
+                       {                                                        \
+                         if (!self || !other)                                   \
+                           return STATUS_CONST(INVALID_ARGUMENT);               \
+                         if (self == other)                                     \
+                           return STATUS_CONST(SUCCESS);                        \
+                         MODULE_FUNC(Memory, UniquePtr, SUFFIX, Destroy)(self); \
+                         self->ptr = other->ptr;                                \
+                         other->ptr = NULL;                                     \
+                         return STATUS_CONST(SUCCESS);                          \
+                       }),                                                      \
+                                                                                \
+      OPERATION_INLINE(Release, (TYPE * *outPtr), {                             \
+        if (!self || !outPtr)                                                   \
+          return STATUS_CONST(INVALID_ARGUMENT);                                \
+        *outPtr = self->ptr;                                                    \
+        self->ptr = NULL;                                                       \
+        return STATUS_CONST(SUCCESS);                                           \
+      }),                                                                       \
+                                                                                \
+      CONST_PREDICATE_INLINE(IsValid, (), {                                     \
+        return (self && self->ptr != NULL);                                     \
+      }),                                                                       \
+                                                                                \
+      CONST_FUNCTION_INLINE(const TYPE *, Get, (), {                            \
+        return self ? self->ptr : NULL;                                         \
+      }),                                                                       \
+                                                                                \
+      FUNCTION_INLINE(TYPE *, GetMutable, (), {                                 \
+        return self ? self->ptr : NULL;                                         \
+      }),                                                                       \
+                                                                                \
+      PROCEDURE_INLINE(Swap,                                                    \
+                       (struct MODULE_TYPED(Memory, UniquePtr, SUFFIX) * other), \
+                       {                                                        \
+                         if (!self || !other || self == other)                  \
+                           return;                                              \
+                         TYPE *temporary = self->ptr;                           \
+                         self->ptr = other->ptr;                                \
+                         other->ptr = temporary;                                \
+                       })                                                       \
+  )
+#define TEMPLATE_UniquePtr(SUFFIX, TYPE) TEMPLATE_Memory_UniquePtr(SUFFIX, TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Memory_UniquePtr(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif

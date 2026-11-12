@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Preprocessor/Compiling.inc"
+#include "../Preprocessor/Detect.h"
 #include "../Preprocessor/Arguments.h"
 #include "../Preprocessor/Boolean.h"
 #include "../Preprocessor/Operations.h"
@@ -134,14 +135,51 @@
 #define STATUS_CONST(CODE) STATUS(CODE)
 #endif
 
-/* 6. Cross-Module Callback */
-#define MODULE_CALLBACK(MOD, ...) LIB_PREFIX(NS(MOD, __VA_ARGS__))
+/* 6. Cross-Module Callback & Closure */
+#define COSMERON_INTERNAL_MOD_CB_2(MOD, NAME)                                 \
+  LIB_PREFIX(NS_JOIN(MOD, TCallback, NAME))
+#define COSMERON_INTERNAL_MOD_CB_3(MOD, PKG, NAME)                             \
+  LIB_PREFIX(NS_JOIN(MOD, PKG, TCallback, NAME))
+#define COSMERON_INTERNAL_MOD_CB_4(MOD, PKG, SUB, NAME)                        \
+  LIB_PREFIX(NS_JOIN(MOD, PKG, SUB, TCallback, NAME))
+#define COSMERON_INTERNAL_MOD_CB_5(MOD, PKG, SUB1, SUB2, NAME)                 \
+  LIB_PREFIX(NS_JOIN(MOD, PKG, SUB1, SUB2, TCallback, NAME))
+
+#define MODULE_CALLBACK(...)                                                   \
+  PP_OP_CAT2(COSMERON_INTERNAL_MOD_CB_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_MOD_CL_2(MOD, NAME)                                 \
+  LIB_PREFIX(NS_JOIN(MOD, TClosure, NAME))
+#define COSMERON_INTERNAL_MOD_CL_3(MOD, PKG, NAME)                             \
+  LIB_PREFIX(NS_JOIN(MOD, PKG, TClosure, NAME))
+#define COSMERON_INTERNAL_MOD_CL_4(MOD, PKG, SUB, NAME)                        \
+  LIB_PREFIX(NS_JOIN(MOD, PKG, SUB, TClosure, NAME))
+#define COSMERON_INTERNAL_MOD_CL_5(MOD, PKG, SUB1, SUB2, NAME)                 \
+  LIB_PREFIX(NS_JOIN(MOD, PKG, SUB1, SUB2, TClosure, NAME))
+
+#define MODULE_CLOSURE(...)                                                    \
+  PP_OP_CAT2(COSMERON_INTERNAL_MOD_CL_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_MOD_CL_FUNC_2(MOD, NAME)                             \
+  LIB_PREFIX(NS_JOIN(MOD, Closure, NAME))
+#define COSMERON_INTERNAL_MOD_CL_FUNC_3(MOD, PKG, NAME)                         \
+  LIB_PREFIX(NS_JOIN(MOD, PKG, Closure, NAME))
+#define COSMERON_INTERNAL_MOD_CL_FUNC_4(MOD, PKG, SUB, NAME)                    \
+  LIB_PREFIX(NS_JOIN(MOD, PKG, SUB, Closure, NAME))
+#define COSMERON_INTERNAL_MOD_CL_FUNC_5(MOD, PKG, SUB1, SUB2, NAME)             \
+  LIB_PREFIX(NS_JOIN(MOD, PKG, SUB1, SUB2, Closure, NAME))
+
+#define MODULE_CLOSURE_FUNC(...)                                               \
+  PP_OP_CAT2(COSMERON_INTERNAL_MOD_CL_FUNC_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
 
 /* 7. Forward Declarations */
 #define FORWARD_OBJECT(MOD, NAME)                                              \
   typedef struct MODULE_TYPE(MOD, NAME) MODULE_TYPE(MOD, NAME)
 
 #define FORWARD_STRUCT(MOD, NAME) FORWARD_OBJECT(MOD, NAME)
+
+#define FORWARD_CLOSURE(...)                                                   \
+  typedef struct MODULE_CLOSURE(__VA_ARGS__) MODULE_CLOSURE(__VA_ARGS__)
 
 #define FORWARD_TEMPLATE_OBJECT(MOD, NAME, SUFFIX)                             \
   typedef struct MODULE_TYPED(MOD, NAME, SUFFIX) MODULE_TYPED(MOD, NAME, SUFFIX)
@@ -156,7 +194,7 @@
   typedef struct MODULE_ITYPED(MOD, NAME, SUFFIX) MODULE_ITYPED(MOD, NAME, SUFFIX)
 
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) ||              \
-    (defined(__GNUC__) && !defined(__STRICT_ANSI__))
+    ((COMPILER_GCC || COMPILER_CLANG) && !defined(__STRICT_ANSI__))
 #define FORWARD_ENUM(MOD, NAME)                                                \
   typedef enum MODULE_ENUM(MOD, NAME) MODULE_ENUM(MOD, NAME)
 #endif
@@ -193,6 +231,26 @@
 #define MODULE_ITYPE(...) MODULE_INS(__VA_ARGS__)
 #define MODULE_ITYPED(...) MODULE_INS(__VA_ARGS__)
 #define MODULE_IENUM(...) MODULE_INS(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_MOD_ICB_2(MOD, NAME)                                \
+  LIB_PREFIX(NS_JOIN(MOD, Internal, TCallback, NAME))
+#define COSMERON_INTERNAL_MOD_ICB_3(MOD, PKG, NAME)                            \
+  LIB_PREFIX(NS_JOIN(MOD, PKG, Internal, TCallback, NAME))
+#define COSMERON_INTERNAL_MOD_ICB_4(MOD, PKG, SUB, NAME)                       \
+  LIB_PREFIX(NS_JOIN(MOD, PKG, SUB, Internal, TCallback, NAME))
+
+#define MODULE_ICALLBACK(...)                                                  \
+  PP_OP_CAT2(COSMERON_INTERNAL_MOD_ICB_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+
+#define COSMERON_INTERNAL_MOD_ICL_2(MOD, NAME)                                \
+  LIB_PREFIX(NS_JOIN(MOD, Internal, TClosure, NAME))
+#define COSMERON_INTERNAL_MOD_ICL_3(MOD, PKG, NAME)                            \
+  LIB_PREFIX(NS_JOIN(MOD, PKG, Internal, TClosure, NAME))
+#define COSMERON_INTERNAL_MOD_ICL_4(MOD, PKG, SUB, NAME)                       \
+  LIB_PREFIX(NS_JOIN(MOD, PKG, SUB, Internal, TClosure, NAME))
+
+#define MODULE_ICLOSURE(...)                                                   \
+  PP_OP_CAT2(COSMERON_INTERNAL_MOD_ICL_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
 
 #define COSMERON_INTERNAL_MOD_ICONST_1(NAME)                                   \
   LIB_PREFIX_CONST(NS_JOIN(INTERNAL, NAME))

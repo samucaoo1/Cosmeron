@@ -44,6 +44,7 @@ Canonical module and package API references. Each document includes the exported
 - [Error](Modules/Error.md) — statuses, panic and errors
 - [Memory](Modules/Memory.md) — allocation, arenas and memory operations
 - [Module](Modules/Module.md) — declarative package, object, dispatch and template architecture
+- [Outcome](Modules/Outcome.md) — operational status, result and optional abstractions
 - [Object](Modules/Object.md) — declarative object-oriented structures and dispatch tables
 - [Package](Modules/Package.md) — declarative namespaces and free function tables
 - [Preprocessor](Modules/Preprocessor.md) — token operations, expansion and iteration

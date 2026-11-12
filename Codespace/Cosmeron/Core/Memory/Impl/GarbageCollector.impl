@@ -248,7 +248,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
     }),
 
     OPERATION(SetFinalizer, (const void *ptr, GARBAGE_COLLECTOR_FINALIZER_CALLBACK finalizer), {
-      if (!self || !ptr || !CALLBACK_IS_VALID(finalizer))
+      if (!self || !ptr || !CLOSURE_IS_VALID(finalizer))
         return STATUS_CONST(INVALID_ARGUMENT);
 
       void *raw = NULL;
@@ -508,7 +508,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
       while (self->pendingFinalizers) {
         MODULE_ITYPE(Memory, GcFinalizerEntry) *f = self->pendingFinalizers;
         self->pendingFinalizers = f->next;
-        CALLBACK_INVOKE(f->callback, f->object);
+        CLOSURE_CALL(f->callback, f->object);
         void *raw = (void *)f;
         MODULE_FUNC(Memory, Alloc, Free)(&raw);
       }

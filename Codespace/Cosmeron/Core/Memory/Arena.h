@@ -41,8 +41,6 @@ MODULE(DOMAIN(Core), Memory,
     )
 );
 
-typedef MODULE_TYPE(Memory, Arena) TMemoryArena;
-
 #include "Impl/Arena.impl"
 
 /* EOF */

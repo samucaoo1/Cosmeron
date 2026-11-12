@@ -4,6 +4,7 @@
 #include "Common/Tuple.impl"
 #include "Common/ComparisonEx.impl"
 #include "Callback/Callback.h"
+#include "Closure/Closure.h"
 #include "Common/FunctionTable.impl"
 #include "Common/Dispatch.impl"
 #include "Common/Template.impl"
