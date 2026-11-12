@@ -1,0 +1,352 @@
+/* Any.def - Dual Mode Engine for SBO-Sized Type-Erased Any Containers */
+
+#ifndef TEMPLATE_Primitive_Any
+#define TEMPLATE_Primitive_Any(NAME, SBO_BYTES)                                \
+  MODULE(DOMAIN(Core), Primitive,                                              \
+      ISTRUCT(PP_OP_CAT2(NAME, Storage),                                       \
+          FIELDS(                                                              \
+              union {                                                          \
+                  void *heapPointer;                                           \
+                  max_align_t alignDummy;                                      \
+                  unsigned char inlineBytes[(SBO_BYTES)];                      \
+              } as;                                                            \
+          )                                                                    \
+      ),                                                                       \
+                                                                               \
+      STRUCT(NAME,                                                             \
+          FIELDS(                                                              \
+              const MODULE_TYPE(Primitive, Traits) *traits;                    \
+              MODULE_ITYPE(Primitive, PP_OP_CAT2(NAME, Storage)) storage;      \
+          )                                                                    \
+      ),                                                                       \
+                                                                               \
+      INTERNAL_EX(NAME,                                                        \
+          OPERATION(SelfInit, (void *instance), {                              \
+            if (!instance)                                                     \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            memset(instance, 0, sizeof(MODULE_TYPE(Primitive, NAME)));         \
+            return STATUS_CONST(SUCCESS);                                      \
+          }),                                                                  \
+          PROCEDURE(SelfDispose, (void *instance), {                           \
+            if (!instance)                                                     \
+              return;                                                          \
+            MODULE_TYPE(Primitive, NAME) *self =                               \
+                (MODULE_TYPE(Primitive, NAME) *)instance;                      \
+            MODULE_FUNC(Primitive, AnyConversion, DisposeRaw)(                 \
+                &self->traits, &self->storage.as.heapPointer,                  \
+                self->storage.as.inlineBytes, (size_t)(SBO_BYTES));            \
+          }),                                                                  \
+          OPERATION(SelfCopy, (void *destination, const void *source), {       \
+            MODULE_TYPE(Primitive, NAME) *dst =                                \
+                (MODULE_TYPE(Primitive, NAME) *)destination;                   \
+            const MODULE_TYPE(Primitive, NAME) *src =                          \
+                (const MODULE_TYPE(Primitive, NAME) *)source;                  \
+            if (!dst || !src)                                                  \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Primitive, AnyConversion, Clone)(               \
+                &dst->traits, &dst->storage.as.heapPointer,                    \
+                dst->storage.as.inlineBytes, (size_t)(SBO_BYTES),              \
+                &src->traits, &src->storage.as.heapPointer,                    \
+                src->storage.as.inlineBytes, (size_t)(SBO_BYTES));             \
+          }),                                                                  \
+          PROCEDURE(SelfMove, (void *destination, void *source), {             \
+            MODULE_TYPE(Primitive, NAME) *dst =                                \
+                (MODULE_TYPE(Primitive, NAME) *)destination;                   \
+            MODULE_TYPE(Primitive, NAME) *src =                                \
+                (MODULE_TYPE(Primitive, NAME) *)source;                        \
+            if (!dst || !src)                                                  \
+              return;                                                          \
+            MODULE_FUNC(Primitive, AnyConversion, Move)(                       \
+                &dst->traits, &dst->storage.as.heapPointer,                    \
+                dst->storage.as.inlineBytes, (size_t)(SBO_BYTES),              \
+                &src->traits, &src->storage.as.heapPointer,                    \
+                src->storage.as.inlineBytes, (size_t)(SBO_BYTES));             \
+          }),                                                                  \
+          COMPARISON(SelfCompare, (const void *left, const void *right), {     \
+            const MODULE_TYPE(Primitive, NAME) *a =                            \
+                (const MODULE_TYPE(Primitive, NAME) *)left;                    \
+            const MODULE_TYPE(Primitive, NAME) *b =                            \
+                (const MODULE_TYPE(Primitive, NAME) *)right;                   \
+            return MODULE_FUNC(Primitive, AnyConversion, CompareRaw)(          \
+                a ? a->traits : NULL,                                          \
+                a ? a->storage.as.heapPointer : NULL,                          \
+                a ? a->storage.as.inlineBytes : NULL, (size_t)(SBO_BYTES),     \
+                b ? b->traits : NULL,                                          \
+                b ? b->storage.as.heapPointer : NULL,                          \
+                b ? b->storage.as.inlineBytes : NULL, (size_t)(SBO_BYTES));    \
+          }),                                                                  \
+          FUNCTION(size_t, SelfHash, (const void *instance), {                 \
+            const MODULE_TYPE(Primitive, NAME) *self =                         \
+                (const MODULE_TYPE(Primitive, NAME) *)instance;                \
+            if (!self)                                                         \
+              return 0U;                                                       \
+            return MODULE_FUNC(Primitive, AnyConversion, HashRaw)(             \
+                self->traits, self->storage.as.heapPointer,                    \
+                self->storage.as.inlineBytes, (size_t)(SBO_BYTES));            \
+          })                                                                   \
+      ),                                                                       \
+                                                                               \
+      PACKAGE(NAME,                                                            \
+          PROCEDURE_INLINE(Init, (MODULE_TYPE(Primitive, NAME) * self), {      \
+            if (self)                                                          \
+              memset(self, 0, sizeof(*self));                                  \
+          }),                                                                  \
+          PROCEDURE_INLINE(Reset, (MODULE_TYPE(Primitive, NAME) * self), {     \
+            if (self)                                                          \
+              MODULE_FUNC(Primitive, AnyConversion, DisposeRaw)(               \
+                  &self->traits, &self->storage.as.heapPointer,                \
+                  self->storage.as.inlineBytes, (size_t)(SBO_BYTES));          \
+          }),                                                                  \
+          PROCEDURE_INLINE(Dispose, (MODULE_TYPE(Primitive, NAME) * self), {   \
+            if (self)                                                          \
+              MODULE_FUNC(Primitive, AnyConversion, DisposeRaw)(               \
+                  &self->traits, &self->storage.as.heapPointer,                \
+                  self->storage.as.inlineBytes, (size_t)(SBO_BYTES));          \
+          }),                                                                  \
+          OPERATION_INLINE(Emplace,                                            \
+                           (MODULE_TYPE(Primitive, NAME) * self,               \
+                            const MODULE_TYPE(Primitive, Traits) * traits,     \
+                            const void *sourceInstance), {                     \
+            if (!self)                                                         \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Primitive, AnyConversion, EmplaceRaw)(          \
+                &self->traits, &self->storage.as.heapPointer,                  \
+                self->storage.as.inlineBytes, (size_t)(SBO_BYTES), traits,     \
+                sourceInstance);                                               \
+          }),                                                                  \
+          OPERATION_INLINE(MoveFrom,                                           \
+                           (MODULE_TYPE(Primitive, NAME) * self,               \
+                            const MODULE_TYPE(Primitive, Traits) * traits,     \
+                            void *sourceInstance), {                           \
+            if (!self)                                                         \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Primitive, AnyConversion, MoveFromRaw)(         \
+                &self->traits, &self->storage.as.heapPointer,                  \
+                self->storage.as.inlineBytes, (size_t)(SBO_BYTES), traits,     \
+                sourceInstance);                                               \
+          }),                                                                  \
+          OPERATION_INLINE(Clone,                                              \
+                           (MODULE_TYPE(Primitive, NAME) * destination,        \
+                            const MODULE_TYPE(Primitive, NAME) * source), {    \
+            if (!destination || !source)                                       \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Primitive, AnyConversion, Clone)(               \
+                &destination->traits, &destination->storage.as.heapPointer,    \
+                destination->storage.as.inlineBytes, (size_t)(SBO_BYTES),      \
+                &source->traits, &source->storage.as.heapPointer,              \
+                source->storage.as.inlineBytes, (size_t)(SBO_BYTES));          \
+          }),                                                                  \
+          OPERATION_INLINE(Move,                                               \
+                           (MODULE_TYPE(Primitive, NAME) * destination,        \
+                            MODULE_TYPE(Primitive, NAME) * source), {          \
+            if (!destination || !source)                                       \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Primitive, AnyConversion, Move)(                \
+                &destination->traits, &destination->storage.as.heapPointer,    \
+                destination->storage.as.inlineBytes, (size_t)(SBO_BYTES),      \
+                &source->traits, &source->storage.as.heapPointer,              \
+                source->storage.as.inlineBytes, (size_t)(SBO_BYTES));          \
+          }),                                                                  \
+          OPERATION_INLINE(Swap,                                               \
+                           (MODULE_TYPE(Primitive, NAME) * left,               \
+                            MODULE_TYPE(Primitive, NAME) * right), {           \
+            if (!left || !right)                                               \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Primitive, AnyConversion, SwapRaw)(             \
+                &left->traits, &left->storage.as.heapPointer,                  \
+                left->storage.as.inlineBytes, (size_t)(SBO_BYTES),             \
+                &right->traits, &right->storage.as.heapPointer,                \
+                right->storage.as.inlineBytes, (size_t)(SBO_BYTES));           \
+          }),                                                                  \
+          PREDICATE_INLINE(HasValue,                                           \
+                           (const MODULE_TYPE(Primitive, NAME) * self), {      \
+            return self != NULL && self->traits != NULL;                       \
+          }),                                                                  \
+          PREDICATE_INLINE(IsEmpty,                                            \
+                           (const MODULE_TYPE(Primitive, NAME) * self), {      \
+            return !self || self->traits == NULL;                              \
+          }),                                                                  \
+          PREDICATE_INLINE(IsInline,                                           \
+                           (const MODULE_TYPE(Primitive, NAME) * self), {      \
+            if (!self || !self->traits)                                        \
+              return false;                                                    \
+            return MODULE_FUNC(Primitive, AnyConversion, FitsInline)(          \
+                self->traits, (size_t)(SBO_BYTES));                            \
+          }),                                                                  \
+          PREDICATE_INLINE(                                                    \
+              IsType,                                                          \
+              (const MODULE_TYPE(Primitive, NAME) * self,                      \
+               const MODULE_TYPE(Primitive, Traits) * expectedTraits),         \
+              {                                                                \
+                if (!self || !self->traits)                                    \
+                  return false;                                                \
+                return MODULE_FUNC(Primitive, Traits, IsEqual)(                \
+                    self->traits, expectedTraits);                             \
+              }),                                                              \
+          FUNCTION_INLINE(const MODULE_TYPE(Primitive, Traits) *, TraitsOf,    \
+                          (const MODULE_TYPE(Primitive, NAME) * self), {       \
+            return self ? self->traits : NULL;                                 \
+          }),                                                                  \
+          FUNCTION_INLINE(size_t, Capacity, (void), {                          \
+            return (size_t)(SBO_BYTES);                                        \
+          }),                                                                  \
+          FUNCTION_INLINE(const void *, RawPointer,                            \
+                          (const MODULE_TYPE(Primitive, NAME) * self), {       \
+            if (!self || !self->traits)                                        \
+              return NULL;                                                     \
+            return MODULE_FUNC(Primitive, AnyConversion, RawPointerOf)(        \
+                self->traits, self->storage.as.heapPointer,                    \
+                self->storage.as.inlineBytes, (size_t)(SBO_BYTES));            \
+          }),                                                                  \
+          FUNCTION_INLINE(void *, MutableRawPointer,                           \
+                          (MODULE_TYPE(Primitive, NAME) * self), {             \
+            if (!self || !self->traits)                                        \
+              return NULL;                                                     \
+            return MODULE_FUNC(Primitive, AnyConversion, MutableRawPointerOf)( \
+                self->traits, self->storage.as.heapPointer,                    \
+                self->storage.as.inlineBytes, (size_t)(SBO_BYTES));            \
+          }),                                                                  \
+          OPERATION_INLINE(                                                    \
+              Get,                                                             \
+              (const MODULE_TYPE(Primitive, NAME) * self,                      \
+               const MODULE_TYPE(Primitive, Traits) * expectedTraits,          \
+               void *outValue),                                                \
+              {                                                                \
+                if (!self || !expectedTraits || !outValue)                     \
+                  return STATUS_CONST(INVALID_ARGUMENT);                       \
+                if (!MODULE_FUNC(Primitive, Traits, IsEqual)(self->traits,     \
+                                                             expectedTraits))  \
+                  return STATUS_CONST(INVALID_ARGUMENT);                       \
+                const void *ptr =                                              \
+                    MODULE_FUNC(Primitive, AnyConversion, RawPointerOf)(       \
+                        self->traits, self->storage.as.heapPointer,            \
+                        self->storage.as.inlineBytes, (size_t)(SBO_BYTES));    \
+                return MODULE_FUNC(Primitive, Traits, Copy)(self->traits,      \
+                                                            outValue, ptr);    \
+              }),                                                              \
+          OPERATION_INLINE(                                                    \
+              Borrow,                                                          \
+              (const MODULE_TYPE(Primitive, NAME) * self,                      \
+               const MODULE_TYPE(Primitive, Traits) * expectedTraits,          \
+               const void **outPointer),                                       \
+              {                                                                \
+                if (!self || !expectedTraits || !outPointer)                   \
+                  return STATUS_CONST(INVALID_ARGUMENT);                       \
+                if (!MODULE_FUNC(Primitive, Traits, IsEqual)(self->traits,     \
+                                                             expectedTraits))  \
+                  return STATUS_CONST(INVALID_ARGUMENT);                       \
+                *outPointer =                                                  \
+                    MODULE_FUNC(Primitive, AnyConversion, RawPointerOf)(       \
+                        self->traits, self->storage.as.heapPointer,            \
+                        self->storage.as.inlineBytes, (size_t)(SBO_BYTES));    \
+                return STATUS_CONST(SUCCESS);                                  \
+              }),                                                              \
+          OPERATION_INLINE(                                                    \
+              BorrowMutable,                                                   \
+              (MODULE_TYPE(Primitive, NAME) * self,                            \
+               const MODULE_TYPE(Primitive, Traits) * expectedTraits,          \
+               void **outPointer),                                             \
+              {                                                                \
+                if (!self || !expectedTraits || !outPointer)                   \
+                  return STATUS_CONST(INVALID_ARGUMENT);                       \
+                if (!MODULE_FUNC(Primitive, Traits, IsEqual)(self->traits,     \
+                                                             expectedTraits))  \
+                  return STATUS_CONST(INVALID_ARGUMENT);                       \
+                *outPointer =                                                  \
+                    MODULE_FUNC(Primitive, AnyConversion, MutableRawPointerOf)(\
+                        self->traits, self->storage.as.heapPointer,            \
+                        self->storage.as.inlineBytes, (size_t)(SBO_BYTES));    \
+                return STATUS_CONST(SUCCESS);                                  \
+              }),                                                              \
+          OPERATION_INLINE(                                                    \
+              FromTaggedUnion,                                                 \
+              (MODULE_TYPE(Primitive, NAME) * self,                            \
+               const MODULE_TYPE(Primitive, TaggedUnion) * source),            \
+              {                                                                \
+                if (!self)                                                     \
+                  return STATUS_CONST(INVALID_ARGUMENT);                       \
+                return MODULE_FUNC(Primitive, AnyConversion,                   \
+                                   FromTaggedUnionRaw)(                        \
+                    &self->traits, &self->storage.as.heapPointer,              \
+                    self->storage.as.inlineBytes, (size_t)(SBO_BYTES),         \
+                    source);                                                   \
+              }),                                                              \
+          OPERATION_INLINE(                                                    \
+              ToTaggedUnion,                                                   \
+              (const MODULE_TYPE(Primitive, NAME) * self,                      \
+               MODULE_TYPE(Primitive, TaggedUnion) * outUnion),                \
+              {                                                                \
+                if (!self)                                                     \
+                  return STATUS_CONST(INVALID_ARGUMENT);                       \
+                return MODULE_FUNC(Primitive, AnyConversion, ToTaggedUnionRaw)(\
+                    self->traits, self->storage.as.heapPointer,                \
+                    self->storage.as.inlineBytes, (size_t)(SBO_BYTES),         \
+                    outUnion);                                                 \
+              }),                                                              \
+          COMPARISON_INLINE(Compare,                                           \
+                            (const MODULE_TYPE(Primitive, NAME) * left,        \
+                             const MODULE_TYPE(Primitive, NAME) * right), {    \
+            return MODULE_FUNC(Primitive, AnyConversion, CompareRaw)(          \
+                left ? left->traits : NULL,                                    \
+                left ? left->storage.as.heapPointer : NULL,                    \
+                left ? left->storage.as.inlineBytes : NULL,                    \
+                (size_t)(SBO_BYTES),                                           \
+                right ? right->traits : NULL,                                  \
+                right ? right->storage.as.heapPointer : NULL,                  \
+                right ? right->storage.as.inlineBytes : NULL,                  \
+                (size_t)(SBO_BYTES));                                          \
+          }),                                                                  \
+          PREDICATE_INLINE(Equals,                                             \
+                           (const MODULE_TYPE(Primitive, NAME) * left,         \
+                            const MODULE_TYPE(Primitive, NAME) * right), {     \
+            return MODULE_FUNC(Primitive, AnyConversion, EqualsRaw)(           \
+                left ? left->traits : NULL,                                    \
+                left ? left->storage.as.heapPointer : NULL,                    \
+                left ? left->storage.as.inlineBytes : NULL,                    \
+                (size_t)(SBO_BYTES),                                           \
+                right ? right->traits : NULL,                                  \
+                right ? right->storage.as.heapPointer : NULL,                  \
+                right ? right->storage.as.inlineBytes : NULL,                  \
+                (size_t)(SBO_BYTES));                                          \
+          }),                                                                  \
+          FUNCTION_INLINE(size_t, Hash,                                        \
+                          (const MODULE_TYPE(Primitive, NAME) * self), {       \
+            if (!self)                                                         \
+              return 0U;                                                       \
+            return MODULE_FUNC(Primitive, AnyConversion, HashRaw)(             \
+                self->traits, self->storage.as.heapPointer,                    \
+                self->storage.as.inlineBytes, (size_t)(SBO_BYTES));            \
+          }),                                                                  \
+          FUNCTION_INLINE(const MODULE_TYPE(Primitive, Traits) *, Traits,      \
+                          (void), {                                            \
+            static MODULE_TYPE(Primitive, Traits) descriptor;                  \
+            static bool initialized = false;                                   \
+            if (!initialized) {                                                \
+              descriptor.name = PP_OP_STRING(MODULE_TYPE(Primitive, NAME));    \
+              descriptor.size = sizeof(MODULE_TYPE(Primitive, NAME));          \
+              descriptor.alignment = _Alignof(MODULE_TYPE(Primitive, NAME));   \
+              descriptor.category = MODULE_CONST(Primitive, OBJECT);           \
+              descriptor.flags =                                               \
+                  MODULE_CONST(Primitive, TraitFlag, NEEDS_DISPOSE) |          \
+                  MODULE_CONST(Primitive, TraitFlag, IS_DYNAMIC);              \
+              descriptor.init = MODULE_IFUNC(Primitive, NAME, SelfInit);       \
+              descriptor.dispose = MODULE_IFUNC(Primitive, NAME, SelfDispose); \
+              descriptor.copy = MODULE_IFUNC(Primitive, NAME, SelfCopy);       \
+              descriptor.move = MODULE_IFUNC(Primitive, NAME, SelfMove);       \
+              descriptor.compare = MODULE_IFUNC(Primitive, NAME, SelfCompare); \
+              descriptor.hash = MODULE_IFUNC(Primitive, NAME, SelfHash);       \
+              initialized = true;                                              \
+            }                                                                  \
+            return &descriptor;                                                \
+          })                                                                   \
+      )                                                                        \
+  )
+#define TEMPLATE_Any(NAME, SBO_BYTES) TEMPLATE_Primitive_Any(NAME, SBO_BYTES)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(NAME) && defined(SBO_BYTES)
+  TEMPLATE_Primitive_Any(NAME, SBO_BYTES);
+  #undef NAME
+  #undef SBO_BYTES
+#endif

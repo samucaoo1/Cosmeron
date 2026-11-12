@@ -15,6 +15,9 @@
 /* 1. Declarative Module: Condition (ExceptionFrame Object & Exception Package)*/
 /* ========================================================================== */
 
+static _Thread_local void *MODULE_IFUNC(Condition, Exception_DeferWatermark) = NULL;
+static _Thread_local void (*MODULE_IFUNC(Condition, Exception_DeferUnwind))(void *) = NULL;
+
 MODULE(DOMAIN(Core), Condition,
     CLOSURE(
         PROCEDURE(ExceptionCleanup, ())
@@ -23,6 +26,7 @@ MODULE(DOMAIN(Core), Condition,
         FIELDS(
             jmp_buf env;
             struct MODULE_TYPE(Condition, ExceptionFrame) *previous;
+            void *deferWatermark;
             MODULE_TYPE(Condition, Error) error;
             int step;
             bool threw;
@@ -62,6 +66,8 @@ MODULE(DOMAIN(Core), Condition,
         FUNCTION_INLINE(int, Begin,
                         (MODULE_TYPE(Condition, ExceptionFrame) *frame, int jumpResult), {
           if (jumpResult == 0) {
+            frame->previous = NULL;
+            frame->deferWatermark = MODULE_IFUNC(Condition, Exception_DeferWatermark);
             frame->step = 0;
             frame->threw = false;
             frame->caught = false;

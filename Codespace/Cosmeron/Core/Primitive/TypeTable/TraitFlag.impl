@@ -1,0 +1,22 @@
+#pragma once
+
+#define PRIMITIVE_TRAIT_FLAG_COL_NAME(NAME, VALUE, DESC) NAME
+#define PRIMITIVE_TRAIT_FLAG_COL_VALUE(NAME, VALUE, DESC) VALUE
+#define PRIMITIVE_TRAIT_FLAG_COL_DESC(NAME, VALUE, DESC) DESC
+
+#define PRIMITIVE_TRAIT_FLAG_GET(FIELD, ROW)                                   \
+  PP_OP_CAT2(PRIMITIVE_TRAIT_FLAG_COL_, FIELD) ROW
+
+#define PRIMITIVE_TRAIT_FLAG_TABLE(X)                                          \
+  X((NONE, 0U, "No special traits"))                                           \
+  X((TRIVIAL_COPY, 1U << 0, "Safe to copy via raw memcpy"))                    \
+  X((TRIVIAL_COMPARE, 1U << 1, "Safe to equality-check via raw memcmp"))       \
+  X((NEEDS_DISPOSE, 1U << 2, "Requires dispose/destructor on cleanup"))        \
+  X((IS_NUMERIC, 1U << 3, "Supports numeric/arithmetic operations"))           \
+  X((IS_SIGNED, 1U << 4, "Signed numeric representation"))                     \
+  X((IS_INTEGER, 1U << 5, "Integral representation"))                          \
+  X((IS_FLOAT, 1U << 6, "Floating-point representation"))                      \
+  X((IS_DYNAMIC, 1U << 7, "Owns dynamic heap resources"))
+
+/* EOF */
+

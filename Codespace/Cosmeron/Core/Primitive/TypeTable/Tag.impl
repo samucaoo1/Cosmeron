@@ -1,0 +1,46 @@
+#pragma once
+
+#define PRIMITIVE_TAG_COL_NAME(NAME, CATEGORY, DESC)     NAME
+#define PRIMITIVE_TAG_COL_CATEGORY(NAME, CATEGORY, DESC) CATEGORY
+#define PRIMITIVE_TAG_COL_DESC(NAME, CATEGORY, DESC)     DESC
+
+#define PRIMITIVE_TAG_GET(FIELD, ROW) PP_OP_CAT2(PRIMITIVE_TAG_COL_, FIELD) ROW
+
+#define PRIMITIVE_TAG_SPECIAL_TABLE(X)                                         \
+  X((NONE,        OBJECT,    "Empty / Uninitialized"))                         \
+  X((CSTRING,     PTR,       "Null-terminated C string"))                      \
+  X((BYTES,       COMPOSITE, "Contiguous byte slice"))                           \
+  X((RAW_POINTER, PTR,       "Untyped raw memory address"))
+
+#define PRIMITIVE_TAG_PRIMITIVE_TABLE(X)                                       \
+  X((Boolean,    BOOL,  "Boolean"))                                            \
+  X((Int8,       INT,   "8-bit signed integer"))                               \
+  X((Int16,      INT,   "16-bit signed integer"))                              \
+  X((Int32,      INT,   "32-bit signed integer"))                              \
+  X((Int64,      INT,   "64-bit signed integer"))                              \
+  X((UInt8,      UINT,  "8-bit unsigned integer"))                             \
+  X((UInt16,     UINT,  "16-bit unsigned integer"))                            \
+  X((UInt32,     UINT,  "32-bit unsigned integer"))                            \
+  X((UInt64,     UINT,  "64-bit unsigned integer"))                            \
+  X((Char,       CHAR,  "Native character"))                                   \
+  X((Char8,      CHAR,  "8-bit character"))                                    \
+  X((Char16,     CHAR,  "16-bit character"))                                   \
+  X((Char32,     CHAR,  "32-bit character"))                                   \
+  X((Float32,    FLOAT, "32-bit IEEE 754 float"))                              \
+  X((Float64,    FLOAT, "64-bit IEEE 754 float"))                              \
+  X((Float,      FLOAT, "Native float"))                                       \
+  X((Double,     FLOAT, "Native double"))                                      \
+  X((LongDouble, FLOAT, "Extended precision float"))                           \
+  X((Int,        INT,   "Native signed integer"))                              \
+  X((UInt,       UINT,  "Native unsigned integer"))                            \
+  X((Size,       UINT,  "Unsigned size integer"))                              \
+  X((PtrDiff,    INT,   "Signed pointer difference"))                          \
+  X((IntPtr,     INT,   "Signed pointer-sized integer"))                       \
+  X((UIntPtr,    UINT,  "Unsigned pointer-sized integer"))
+
+#define PRIMITIVE_TAG_TABLE(X)                                                 \
+  PRIMITIVE_TAG_SPECIAL_TABLE(X)                                               \
+  PRIMITIVE_TAG_PRIMITIVE_TABLE(X)
+
+/* EOF */
+

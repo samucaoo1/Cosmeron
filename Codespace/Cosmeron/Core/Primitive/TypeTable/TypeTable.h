@@ -4,6 +4,7 @@
 #include "../../Preprocessor/Operations.h"
 
 #include "Category.impl"
+#include "TraitFlag.impl"
 #include "Boolean.impl"
 #include "Signed.impl"
 #include "Unsigned.impl"

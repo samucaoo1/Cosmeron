@@ -2,7 +2,7 @@ CC ?= cc
 CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L
 BUILD ?= .build
 
-TESTS := Namespace Cast Primitive Preprocessor Detect Outcome Condition Diagnostic Error Memory MemoryOperations MemoryUtilities Stream Algorithm Callback ComparisonEx Event Object ObjectEx ObjectNoFunctionTable Package PackageNoFunctionTable Pool PoolNoFunctionTable Heap GarbageCollector Calculator CalculatorNoFunctionTable ModuleEngine IncludeAll SmartPointer
+TESTS := Namespace Cast Primitive Preprocessor Detect Outcome Condition Defer Diagnostic Error Memory MemoryOperations MemoryUtilities Stream Algorithm Callback ComparisonEx Event Object ObjectEx ObjectNoFunctionTable Package PackageNoFunctionTable Pool PoolNoFunctionTable Heap GarbageCollector Calculator CalculatorNoFunctionTable ModuleEngine IncludeAll SmartPointer
 
 all: run
 

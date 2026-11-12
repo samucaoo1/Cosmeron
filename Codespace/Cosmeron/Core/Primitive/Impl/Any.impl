@@ -1,0 +1,784 @@
+#pragma once
+
+#include <string.h>
+
+/* ========================================================================== */
+/* 1. Internal Helpers & Trait Adapters                                       */
+/* ========================================================================== */
+
+MODULE(DOMAIN(Core), Primitive,
+  INTERNAL_EX(Any,
+    OPERATION(SelfInit, (void *instance), {
+      if (!instance)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      MODULE_FUNC(Primitive, Any, Init)((MODULE_TYPE(Primitive, Any) *)instance);
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    PROCEDURE(SelfDispose, (void *instance), {
+      MODULE_FUNC(Primitive, Any, Dispose)(
+          (MODULE_TYPE(Primitive, Any) *)instance);
+    }),
+
+    OPERATION(SelfCopy, (void *destination, const void *source), {
+      return MODULE_FUNC(Primitive, Any, Clone)(
+          (MODULE_TYPE(Primitive, Any) *)destination,
+          (const MODULE_TYPE(Primitive, Any) *)source);
+    }),
+
+    PROCEDURE(SelfMove, (void *destination, void *source), {
+      MODULE_FUNC(Primitive, Any, Move)(
+          (MODULE_TYPE(Primitive, Any) *)destination,
+          (MODULE_TYPE(Primitive, Any) *)source);
+    }),
+
+    COMPARISON(SelfCompare, (const void *left, const void *right), {
+      return MODULE_FUNC(Primitive, Any, Compare)(
+          (const MODULE_TYPE(Primitive, Any) *)left,
+          (const MODULE_TYPE(Primitive, Any) *)right);
+    }),
+
+    FUNCTION(size_t, SelfHash, (const void *instance), {
+      return MODULE_FUNC(Primitive, Any, Hash)(
+          (const MODULE_TYPE(Primitive, Any) *)instance);
+    })
+  )
+);
+
+/* ========================================================================== */
+/* 2. X-Macro Generators for Any Implementation                               */
+/* ========================================================================== */
+
+#define COSMERON_MACRO_INTERNAL_ANY_PRIMITIVE_IMPL(ROW)                        \
+  OPERATION(PP_OP_CAT2(Set_, PRIMITIVE_TYPE_GET(NAME, ROW)),                   \
+            (MODULE_TYPE(Primitive, Any) * self,                               \
+             PRIMITIVE_TYPE_GET(TYPE, ROW) value), {                           \
+    return MODULE_FUNC(Primitive, Any, Emplace)(                               \
+        self, MODULE_FUNC(Primitive, Traits, PRIMITIVE_TYPE_GET(NAME, ROW))(), \
+        &value);                                                               \
+  }),                                                                          \
+  OPERATION(PP_OP_CAT2(Get_, PRIMITIVE_TYPE_GET(NAME, ROW)),                   \
+            (const MODULE_TYPE(Primitive, Any) * self,                         \
+             PRIMITIVE_TYPE_GET(TYPE, ROW) * outValue), {                      \
+    return MODULE_FUNC(Primitive, Any, Get)(                                   \
+        self, MODULE_FUNC(Primitive, Traits, PRIMITIVE_TYPE_GET(NAME, ROW))(), \
+        outValue);                                                             \
+  }),
+
+#define COSMERON_MACRO_INTERNAL_ANY_TO_TU_BRANCH(ROW)                          \
+  if (MODULE_FUNC(Primitive, Traits, IsEqual)(                                 \
+          traits,                                                              \
+          MODULE_FUNC(Primitive, Traits, PRIMITIVE_TYPE_GET(NAME, ROW))())) {  \
+    return MODULE_FUNC(Primitive, TaggedUnion,                                 \
+                       PP_OP_CAT2(Set_, PRIMITIVE_TYPE_GET(NAME, ROW)))(       \
+        outUnion, *(const PRIMITIVE_TYPE_GET(TYPE, ROW) *)ptr);                \
+  }
+
+/* ========================================================================== */
+/* 3. Package Implementations: Primitive_AnyConversion & Primitive_Any        */
+/* ========================================================================== */
+
+MODULE_IMPLEMENT(DOMAIN(Core), Primitive,
+  PACKAGE(AnyConversion,
+    PREDICATE(FitsInline, (const MODULE_TYPE(Primitive, Traits) * traits,
+                           size_t sboCapacity), {
+      if (!traits)
+        return false;
+      return traits->size <= sboCapacity &&
+             traits->alignment <= _Alignof(max_align_t);
+    }),
+
+    FUNCTION(const void *, RawPointerOf,
+             (const MODULE_TYPE(Primitive, Traits) * traits,
+              void *heapPointer, const unsigned char *inlineBytes,
+              size_t sboCapacity), {
+      if (!traits)
+        return NULL;
+      if (MODULE_FUNC(Primitive, AnyConversion, FitsInline)(traits, sboCapacity))
+        return inlineBytes;
+      return heapPointer;
+    }),
+
+    FUNCTION(void *, MutableRawPointerOf,
+             (const MODULE_TYPE(Primitive, Traits) * traits,
+              void *heapPointer, unsigned char *inlineBytes,
+              size_t sboCapacity), {
+      if (!traits)
+        return NULL;
+      if (MODULE_FUNC(Primitive, AnyConversion, FitsInline)(traits, sboCapacity))
+        return inlineBytes;
+      return heapPointer;
+    }),
+
+    PROCEDURE(DisposeRaw,
+              (const MODULE_TYPE(Primitive, Traits) **traitsSlot,
+               void **heapSlot, unsigned char *inlineBytes,
+               size_t sboCapacity), {
+      if (!traitsSlot || !*traitsSlot)
+        return;
+      const MODULE_TYPE(Primitive, Traits) *traits = *traitsSlot;
+      void *ptr = MODULE_FUNC(Primitive, AnyConversion, MutableRawPointerOf)(
+          traits, heapSlot ? *heapSlot : NULL, inlineBytes, sboCapacity);
+      if (ptr != NULL) {
+        MODULE_FUNC(Primitive, Traits, Dispose)(traits, ptr);
+      }
+      if (!MODULE_FUNC(Primitive, AnyConversion, FitsInline)(traits,
+                                                             sboCapacity) &&
+          heapSlot != NULL && *heapSlot != NULL) {
+        MODULE_FUNC(Memory, Alloc, Free)(heapSlot);
+      }
+      *traitsSlot = NULL;
+      if (inlineBytes != NULL && sboCapacity > 0U) {
+        memset(inlineBytes, 0, sboCapacity);
+      }
+    }),
+
+    OPERATION(EmplaceRaw,
+              (const MODULE_TYPE(Primitive, Traits) **traitsSlot,
+               void **heapSlot, unsigned char *inlineBytes, size_t sboCapacity,
+               const MODULE_TYPE(Primitive, Traits) * traits,
+               const void *sourceInstance), {
+      if (!traitsSlot || !heapSlot || !inlineBytes ||
+          !MODULE_FUNC(Primitive, Traits, IsValid)(traits) || !sourceInstance)
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      const void *currentPtr =
+          MODULE_FUNC(Primitive, AnyConversion, RawPointerOf)(
+              *traitsSlot, *heapSlot, inlineBytes, sboCapacity);
+      if (sourceInstance == currentPtr &&
+          MODULE_FUNC(Primitive, Traits, IsEqual)(*traitsSlot, traits))
+        return STATUS_CONST(SUCCESS);
+
+      if (MODULE_FUNC(Primitive, AnyConversion, FitsInline)(traits,
+                                                            sboCapacity)) {
+        void *stagingHeap = NULL;
+        OPSTATUS status =
+            MODULE_FUNC(Memory, Alloc, ZeroBytes)(&stagingHeap, traits->size);
+        if (status != STATUS_CONST(SUCCESS))
+          return status;
+
+        status = MODULE_FUNC(Primitive, Traits, Copy)(traits, stagingHeap,
+                                                      sourceInstance);
+        if (status != STATUS_CONST(SUCCESS)) {
+          MODULE_FUNC(Memory, Alloc, Free)(&stagingHeap);
+          return status;
+        }
+
+        MODULE_FUNC(Primitive, AnyConversion, DisposeRaw)(
+            traitsSlot, heapSlot, inlineBytes, sboCapacity);
+        *traitsSlot = traits;
+        status = MODULE_FUNC(Primitive, Traits, Move)(traits, inlineBytes,
+                                                      stagingHeap);
+        MODULE_FUNC(Memory, Alloc, Free)(&stagingHeap);
+        if (status != STATUS_CONST(SUCCESS)) {
+          *traitsSlot = NULL;
+          memset(inlineBytes, 0, sboCapacity);
+          return status;
+        }
+        return STATUS_CONST(SUCCESS);
+      }
+
+      void *heapBuffer = NULL;
+      OPSTATUS status =
+          MODULE_FUNC(Memory, Alloc, ZeroBytes)(&heapBuffer, traits->size);
+      if (status != STATUS_CONST(SUCCESS))
+        return status;
+
+      status =
+          MODULE_FUNC(Primitive, Traits, Copy)(traits, heapBuffer, sourceInstance);
+      if (status != STATUS_CONST(SUCCESS)) {
+        MODULE_FUNC(Memory, Alloc, Free)(&heapBuffer);
+        return status;
+      }
+
+      MODULE_FUNC(Primitive, AnyConversion, DisposeRaw)(
+          traitsSlot, heapSlot, inlineBytes, sboCapacity);
+      *traitsSlot = traits;
+      *heapSlot = heapBuffer;
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(MoveFromRaw,
+              (const MODULE_TYPE(Primitive, Traits) **traitsSlot,
+               void **heapSlot, unsigned char *inlineBytes, size_t sboCapacity,
+               const MODULE_TYPE(Primitive, Traits) * traits,
+               void *sourceInstance), {
+      if (!traitsSlot || !heapSlot || !inlineBytes ||
+          !MODULE_FUNC(Primitive, Traits, IsValid)(traits) || !sourceInstance)
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      void *currentPtr =
+          MODULE_FUNC(Primitive, AnyConversion, MutableRawPointerOf)(
+              *traitsSlot, *heapSlot, inlineBytes, sboCapacity);
+      if (sourceInstance == currentPtr &&
+          MODULE_FUNC(Primitive, Traits, IsEqual)(*traitsSlot, traits))
+        return STATUS_CONST(SUCCESS);
+
+      if (MODULE_FUNC(Primitive, AnyConversion, FitsInline)(traits,
+                                                            sboCapacity)) {
+        void *stagingHeap = NULL;
+        OPSTATUS status =
+            MODULE_FUNC(Memory, Alloc, ZeroBytes)(&stagingHeap, traits->size);
+        if (status != STATUS_CONST(SUCCESS))
+          return status;
+
+        status = MODULE_FUNC(Primitive, Traits, Move)(traits, stagingHeap,
+                                                      sourceInstance);
+        if (status != STATUS_CONST(SUCCESS)) {
+          MODULE_FUNC(Memory, Alloc, Free)(&stagingHeap);
+          return status;
+        }
+
+        MODULE_FUNC(Primitive, AnyConversion, DisposeRaw)(
+            traitsSlot, heapSlot, inlineBytes, sboCapacity);
+        *traitsSlot = traits;
+        status = MODULE_FUNC(Primitive, Traits, Move)(traits, inlineBytes,
+                                                      stagingHeap);
+        MODULE_FUNC(Memory, Alloc, Free)(&stagingHeap);
+        if (status != STATUS_CONST(SUCCESS)) {
+          *traitsSlot = NULL;
+          memset(inlineBytes, 0, sboCapacity);
+          return status;
+        }
+        return STATUS_CONST(SUCCESS);
+      }
+
+      void *heapBuffer = NULL;
+      OPSTATUS status =
+          MODULE_FUNC(Memory, Alloc, ZeroBytes)(&heapBuffer, traits->size);
+      if (status != STATUS_CONST(SUCCESS))
+        return status;
+
+      status =
+          MODULE_FUNC(Primitive, Traits, Move)(traits, heapBuffer, sourceInstance);
+      if (status != STATUS_CONST(SUCCESS)) {
+        MODULE_FUNC(Memory, Alloc, Free)(&heapBuffer);
+        return status;
+      }
+
+      MODULE_FUNC(Primitive, AnyConversion, DisposeRaw)(
+          traitsSlot, heapSlot, inlineBytes, sboCapacity);
+      *traitsSlot = traits;
+      *heapSlot = heapBuffer;
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(Clone,
+              (const MODULE_TYPE(Primitive, Traits) **destTraits,
+               void **destHeap, unsigned char *destInline, size_t destSbo,
+               const MODULE_TYPE(Primitive, Traits) *const *srcTraits,
+               void *const *srcHeap, const unsigned char *srcInline,
+               size_t srcSbo), {
+      if (!destTraits || !destHeap || !destInline || !srcTraits || !srcHeap ||
+          !srcInline)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      if (destTraits == srcTraits)
+        return STATUS_CONST(SUCCESS);
+      if (!*srcTraits) {
+        MODULE_FUNC(Primitive, AnyConversion, DisposeRaw)(
+            destTraits, destHeap, destInline, destSbo);
+        return STATUS_CONST(SUCCESS);
+      }
+      const void *srcPtr = MODULE_FUNC(Primitive, AnyConversion, RawPointerOf)(
+          *srcTraits, *srcHeap, srcInline, srcSbo);
+      return MODULE_FUNC(Primitive, AnyConversion, EmplaceRaw)(
+          destTraits, destHeap, destInline, destSbo, *srcTraits, srcPtr);
+    }),
+
+    OPERATION(Move,
+              (const MODULE_TYPE(Primitive, Traits) **destTraits,
+               void **destHeap, unsigned char *destInline, size_t destSbo,
+               const MODULE_TYPE(Primitive, Traits) **srcTraits,
+               void **srcHeap, unsigned char *srcInline, size_t srcSbo), {
+      if (!destTraits || !destHeap || !destInline || !srcTraits || !srcHeap ||
+          !srcInline)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      if (destTraits == srcTraits)
+        return STATUS_CONST(SUCCESS);
+
+      MODULE_FUNC(Primitive, AnyConversion, DisposeRaw)(
+          destTraits, destHeap, destInline, destSbo);
+      if (!*srcTraits)
+        return STATUS_CONST(SUCCESS);
+
+      const MODULE_TYPE(Primitive, Traits) *traits = *srcTraits;
+      bool srcInlineFit =
+          MODULE_FUNC(Primitive, AnyConversion, FitsInline)(traits, srcSbo);
+      bool dstInlineFit =
+          MODULE_FUNC(Primitive, AnyConversion, FitsInline)(traits, destSbo);
+
+      if (!srcInlineFit && !dstInlineFit) {
+        *destTraits = traits;
+        *destHeap = *srcHeap;
+        *srcTraits = NULL;
+        *srcHeap = NULL;
+        return STATUS_CONST(SUCCESS);
+      }
+
+      if (srcInlineFit && dstInlineFit) {
+        *destTraits = traits;
+        OPSTATUS status = MODULE_FUNC(Primitive, Traits, Move)(
+            traits, destInline, srcInline);
+        *srcTraits = NULL;
+        memset(srcInline, 0, srcSbo);
+        if (status != STATUS_CONST(SUCCESS)) {
+          *destTraits = NULL;
+          memset(destInline, 0, destSbo);
+          return status;
+        }
+        return STATUS_CONST(SUCCESS);
+      }
+
+      if (!srcInlineFit && dstInlineFit) {
+        void *oldHeap = *srcHeap;
+        *destTraits = traits;
+        OPSTATUS status =
+            MODULE_FUNC(Primitive, Traits, Move)(traits, destInline, oldHeap);
+        MODULE_FUNC(Memory, Alloc, Free)(&oldHeap);
+        *srcTraits = NULL;
+        *srcHeap = NULL;
+        if (status != STATUS_CONST(SUCCESS)) {
+          *destTraits = NULL;
+          memset(destInline, 0, destSbo);
+          return status;
+        }
+        return STATUS_CONST(SUCCESS);
+      }
+
+      /* srcInlineFit && !dstInlineFit: promote inline -> heap */
+      void *newHeap = NULL;
+      OPSTATUS status =
+          MODULE_FUNC(Memory, Alloc, ZeroBytes)(&newHeap, traits->size);
+      if (status != STATUS_CONST(SUCCESS))
+        return status;
+
+      status = MODULE_FUNC(Primitive, Traits, Move)(traits, newHeap, srcInline);
+      *srcTraits = NULL;
+      memset(srcInline, 0, srcSbo);
+      if (status != STATUS_CONST(SUCCESS)) {
+        MODULE_FUNC(Memory, Alloc, Free)(&newHeap);
+        return status;
+      }
+      *destTraits = traits;
+      *destHeap = newHeap;
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(SwapRaw,
+              (const MODULE_TYPE(Primitive, Traits) **leftTraits,
+               void **leftHeap, unsigned char *leftInline, size_t leftSbo,
+               const MODULE_TYPE(Primitive, Traits) **rightTraits,
+               void **rightHeap, unsigned char *rightInline, size_t rightSbo), {
+      if (!leftTraits || !leftHeap || !leftInline || !rightTraits ||
+          !rightHeap || !rightInline)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      if (leftTraits == rightTraits)
+        return STATUS_CONST(SUCCESS);
+
+      const MODULE_TYPE(Primitive, Traits) *tempTraits = NULL;
+      union {
+        void *heapPointer;
+        max_align_t alignDummy;
+        unsigned char inlineBytes[256];
+      } tempStorage;
+      memset(&tempStorage, 0, sizeof(tempStorage));
+
+      OPSTATUS status = MODULE_FUNC(Primitive, AnyConversion, Move)(
+          &tempTraits, &tempStorage.heapPointer, tempStorage.inlineBytes,
+          sizeof(tempStorage.inlineBytes), leftTraits, leftHeap, leftInline,
+          leftSbo);
+      if (status != STATUS_CONST(SUCCESS))
+        return status;
+
+      status = MODULE_FUNC(Primitive, AnyConversion, Move)(
+          leftTraits, leftHeap, leftInline, leftSbo, rightTraits, rightHeap,
+          rightInline, rightSbo);
+      if (status != STATUS_CONST(SUCCESS)) {
+        MODULE_FUNC(Primitive, AnyConversion, Move)(
+            leftTraits, leftHeap, leftInline, leftSbo, &tempTraits,
+            &tempStorage.heapPointer, tempStorage.inlineBytes,
+            sizeof(tempStorage.inlineBytes));
+        return status;
+      }
+
+      return MODULE_FUNC(Primitive, AnyConversion, Move)(
+          rightTraits, rightHeap, rightInline, rightSbo, &tempTraits,
+          &tempStorage.heapPointer, tempStorage.inlineBytes,
+          sizeof(tempStorage.inlineBytes));
+    }),
+
+    OPERATION(FromTaggedUnionRaw,
+              (const MODULE_TYPE(Primitive, Traits) **traitsSlot,
+               void **heapSlot, unsigned char *inlineBytes, size_t sboCapacity,
+               const MODULE_TYPE(Primitive, TaggedUnion) * source), {
+      if (!traitsSlot || !heapSlot || !inlineBytes || !source)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      if (MODULE_FUNC(Primitive, TaggedUnion, IsEmpty)(source)) {
+        MODULE_FUNC(Primitive, AnyConversion, DisposeRaw)(
+            traitsSlot, heapSlot, inlineBytes, sboCapacity);
+        return STATUS_CONST(SUCCESS);
+      }
+      const MODULE_TYPE(Primitive, Traits) *traits =
+          MODULE_FUNC(Primitive, TaggedUnion, TraitsOf)(source);
+      const void *payload =
+          MODULE_FUNC(Primitive, TaggedUnion, PayloadPointer)(source);
+      if (!traits || !payload)
+        return STATUS_CONST(NOT_SUPPORTED);
+      return MODULE_FUNC(Primitive, AnyConversion, EmplaceRaw)(
+          traitsSlot, heapSlot, inlineBytes, sboCapacity, traits, payload);
+    }),
+
+    OPERATION(ToTaggedUnionRaw,
+              (const MODULE_TYPE(Primitive, Traits) * traits,
+               void *heapPointer, const unsigned char *inlineBytes,
+               size_t sboCapacity,
+               MODULE_TYPE(Primitive, TaggedUnion) * outUnion), {
+      if (!outUnion)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      if (!traits) {
+        MODULE_FUNC(Primitive, TaggedUnion, Init)(outUnion);
+        return STATUS_CONST(SUCCESS);
+      }
+
+      const void *ptr = MODULE_FUNC(Primitive, AnyConversion, RawPointerOf)(
+          traits, heapPointer, inlineBytes, sboCapacity);
+      if (!ptr)
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      if (MODULE_FUNC(Primitive, Traits, IsEqual)(
+              traits, MODULE_FUNC(Primitive, TaggedUnion, Traits)())) {
+        *outUnion = *(const MODULE_TYPE(Primitive, TaggedUnion) *)ptr;
+        return STATUS_CONST(SUCCESS);
+      }
+      if (MODULE_FUNC(Primitive, Traits, IsEqual)(
+              traits, MODULE_FUNC(Primitive, Traits, CString)())) {
+        return MODULE_FUNC(Primitive, TaggedUnion, Set_CString)(
+            outUnion, *(const char *const *)ptr);
+      }
+      if (MODULE_FUNC(Primitive, Traits, IsEqual)(
+              traits, MODULE_IFUNC(Primitive, TaggedUnion, ByteSliceTraits)())) {
+        const MODULE_TYPE(Primitive, ByteSlice) *slice =
+            (const MODULE_TYPE(Primitive, ByteSlice) *)ptr;
+        return MODULE_FUNC(Primitive, TaggedUnion, Set_Bytes)(
+            outUnion, slice->data, slice->size);
+      }
+      if (MODULE_FUNC(Primitive, Traits, IsEqual)(
+              traits,
+              MODULE_IFUNC(Primitive, TaggedUnion, RawPointerTraits)())) {
+        return MODULE_FUNC(Primitive, TaggedUnion, Set_RawPointer)(
+            outUnion, *(void *const *)ptr);
+      }
+
+      PRIMITIVE_TYPE_TABLE(COSMERON_MACRO_INTERNAL_ANY_TO_TU_BRANCH)
+
+      return STATUS_CONST(NOT_SUPPORTED);
+    }),
+
+    COMPARISON(CompareRaw,
+               (const MODULE_TYPE(Primitive, Traits) * leftTraits,
+                void *leftHeap, const unsigned char *leftInline, size_t leftSbo,
+                const MODULE_TYPE(Primitive, Traits) * rightTraits,
+                void *rightHeap, const unsigned char *rightInline,
+                size_t rightSbo), {
+      if (!leftTraits)
+        return (!rightTraits) ? COMPARISON_CONST(EQUAL)
+                              : COMPARISON_CONST(LOWER);
+      if (!rightTraits)
+        return COMPARISON_CONST(HIGHER);
+
+      if (!MODULE_FUNC(Primitive, Traits, IsEqual)(leftTraits, rightTraits)) {
+        uintptr_t la = (uintptr_t)leftTraits;
+        uintptr_t lb = (uintptr_t)rightTraits;
+        return la < lb ? COMPARISON_CONST(LOWER) : COMPARISON_CONST(HIGHER);
+      }
+
+      const void *leftPtr = MODULE_FUNC(Primitive, AnyConversion, RawPointerOf)(
+          leftTraits, leftHeap, leftInline, leftSbo);
+      const void *rightPtr =
+          MODULE_FUNC(Primitive, AnyConversion, RawPointerOf)(
+              rightTraits, rightHeap, rightInline, rightSbo);
+      return MODULE_FUNC(Primitive, Traits, Compare)(leftTraits, leftPtr,
+                                                     rightPtr);
+    }),
+
+    PREDICATE(EqualsRaw,
+              (const MODULE_TYPE(Primitive, Traits) * leftTraits,
+               void *leftHeap, const unsigned char *leftInline, size_t leftSbo,
+               const MODULE_TYPE(Primitive, Traits) * rightTraits,
+               void *rightHeap, const unsigned char *rightInline,
+               size_t rightSbo), {
+      if (!leftTraits || !rightTraits)
+        return (!leftTraits) && (!rightTraits);
+      if (!MODULE_FUNC(Primitive, Traits, IsEqual)(leftTraits, rightTraits))
+        return false;
+      const void *leftPtr = MODULE_FUNC(Primitive, AnyConversion, RawPointerOf)(
+          leftTraits, leftHeap, leftInline, leftSbo);
+      const void *rightPtr =
+          MODULE_FUNC(Primitive, AnyConversion, RawPointerOf)(
+              rightTraits, rightHeap, rightInline, rightSbo);
+      return MODULE_FUNC(Primitive, Traits, Equals)(leftTraits, leftPtr,
+                                                    rightPtr);
+    }),
+
+    FUNCTION(size_t, HashRaw,
+             (const MODULE_TYPE(Primitive, Traits) * traits,
+              void *heapPointer, const unsigned char *inlineBytes,
+              size_t sboCapacity), {
+      if (!traits)
+        return 0U;
+      size_t traitsHash =
+          MODULE_FUNC(Primitive, Traits, HashBytes)(&traits, sizeof(traits));
+      const void *ptr = MODULE_FUNC(Primitive, AnyConversion, RawPointerOf)(
+          traits, heapPointer, inlineBytes, sboCapacity);
+      size_t valHash = MODULE_FUNC(Primitive, Traits, Hash)(traits, ptr);
+      return traitsHash ^
+             (valHash + 0x9e3779b9U + (traitsHash << 6U) + (traitsHash >> 2U));
+    })
+  ),
+
+  PACKAGE(Any,
+    PROCEDURE(Init, (MODULE_TYPE(Primitive, Any) * self), {
+      if (!self)
+        return;
+      memset(self, 0, sizeof(*self));
+    }),
+
+    PROCEDURE(Reset, (MODULE_TYPE(Primitive, Any) * self), {
+      MODULE_FUNC(Primitive, Any, Dispose)(self);
+    }),
+
+    PROCEDURE(Dispose, (MODULE_TYPE(Primitive, Any) * self), {
+      if (!self)
+        return;
+      MODULE_FUNC(Primitive, AnyConversion, DisposeRaw)(
+          &self->traits, &self->storage.as.heapPointer,
+          self->storage.as.inlineBytes,
+          MODULE_CONST(Primitive, Any, SBO_CAPACITY));
+    }),
+
+    OPERATION(Emplace, (MODULE_TYPE(Primitive, Any) * self,
+                        const MODULE_TYPE(Primitive, Traits) * traits,
+                        const void *sourceInstance), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      return MODULE_FUNC(Primitive, AnyConversion, EmplaceRaw)(
+          &self->traits, &self->storage.as.heapPointer,
+          self->storage.as.inlineBytes,
+          MODULE_CONST(Primitive, Any, SBO_CAPACITY), traits, sourceInstance);
+    }),
+
+    OPERATION(MoveFrom, (MODULE_TYPE(Primitive, Any) * self,
+                         const MODULE_TYPE(Primitive, Traits) * traits,
+                         void *sourceInstance), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      return MODULE_FUNC(Primitive, AnyConversion, MoveFromRaw)(
+          &self->traits, &self->storage.as.heapPointer,
+          self->storage.as.inlineBytes,
+          MODULE_CONST(Primitive, Any, SBO_CAPACITY), traits, sourceInstance);
+    }),
+
+    OPERATION(Clone, (MODULE_TYPE(Primitive, Any) * destination,
+                      const MODULE_TYPE(Primitive, Any) * source), {
+      if (!destination || !source)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      return MODULE_FUNC(Primitive, AnyConversion, Clone)(
+          &destination->traits, &destination->storage.as.heapPointer,
+          destination->storage.as.inlineBytes,
+          MODULE_CONST(Primitive, Any, SBO_CAPACITY), &source->traits,
+          &source->storage.as.heapPointer, source->storage.as.inlineBytes,
+          MODULE_CONST(Primitive, Any, SBO_CAPACITY));
+    }),
+
+    OPERATION(Move, (MODULE_TYPE(Primitive, Any) * destination,
+                     MODULE_TYPE(Primitive, Any) * source), {
+      if (!destination || !source)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      return MODULE_FUNC(Primitive, AnyConversion, Move)(
+          &destination->traits, &destination->storage.as.heapPointer,
+          destination->storage.as.inlineBytes,
+          MODULE_CONST(Primitive, Any, SBO_CAPACITY), &source->traits,
+          &source->storage.as.heapPointer, source->storage.as.inlineBytes,
+          MODULE_CONST(Primitive, Any, SBO_CAPACITY));
+    }),
+
+    OPERATION(Swap, (MODULE_TYPE(Primitive, Any) * left,
+                     MODULE_TYPE(Primitive, Any) * right), {
+      if (!left || !right)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      return MODULE_FUNC(Primitive, AnyConversion, SwapRaw)(
+          &left->traits, &left->storage.as.heapPointer,
+          left->storage.as.inlineBytes,
+          MODULE_CONST(Primitive, Any, SBO_CAPACITY), &right->traits,
+          &right->storage.as.heapPointer, right->storage.as.inlineBytes,
+          MODULE_CONST(Primitive, Any, SBO_CAPACITY));
+    }),
+
+    PREDICATE(HasValue, (const MODULE_TYPE(Primitive, Any) * self), {
+      return self != NULL && self->traits != NULL;
+    }),
+
+    PREDICATE(IsEmpty, (const MODULE_TYPE(Primitive, Any) * self), {
+      return !MODULE_FUNC(Primitive, Any, HasValue)(self);
+    }),
+
+    PREDICATE(IsInline, (const MODULE_TYPE(Primitive, Any) * self), {
+      if (!MODULE_FUNC(Primitive, Any, HasValue)(self))
+        return false;
+      return MODULE_FUNC(Primitive, AnyConversion, FitsInline)(
+          self->traits, MODULE_CONST(Primitive, Any, SBO_CAPACITY));
+    }),
+
+    PREDICATE(IsType, (const MODULE_TYPE(Primitive, Any) * self,
+                       const MODULE_TYPE(Primitive, Traits) * expectedTraits), {
+      if (!MODULE_FUNC(Primitive, Any, HasValue)(self))
+        return false;
+      return MODULE_FUNC(Primitive, Traits, IsEqual)(self->traits,
+                                                      expectedTraits);
+    }),
+
+    FUNCTION(const MODULE_TYPE(Primitive, Traits) *, TraitsOf,
+             (const MODULE_TYPE(Primitive, Any) * self), {
+      return self ? self->traits : NULL;
+    }),
+
+    FUNCTION(size_t, Capacity, (void), {
+      return MODULE_CONST(Primitive, Any, SBO_CAPACITY);
+    }),
+
+    FUNCTION(const void *, RawPointer,
+             (const MODULE_TYPE(Primitive, Any) * self), {
+      if (!MODULE_FUNC(Primitive, Any, HasValue)(self))
+        return NULL;
+      return MODULE_FUNC(Primitive, AnyConversion, RawPointerOf)(
+          self->traits, self->storage.as.heapPointer,
+          self->storage.as.inlineBytes,
+          MODULE_CONST(Primitive, Any, SBO_CAPACITY));
+    }),
+
+    FUNCTION(void *, MutableRawPointer,
+             (MODULE_TYPE(Primitive, Any) * self), {
+      if (!MODULE_FUNC(Primitive, Any, HasValue)(self))
+        return NULL;
+      return MODULE_FUNC(Primitive, AnyConversion, MutableRawPointerOf)(
+          self->traits, self->storage.as.heapPointer,
+          self->storage.as.inlineBytes,
+          MODULE_CONST(Primitive, Any, SBO_CAPACITY));
+    }),
+
+    OPERATION(Get, (const MODULE_TYPE(Primitive, Any) * self,
+                    const MODULE_TYPE(Primitive, Traits) * expectedTraits,
+                    void *outValue), {
+      if (!self || !expectedTraits || !outValue)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      if (!MODULE_FUNC(Primitive, Any, IsType)(self, expectedTraits))
+        return STATUS_CONST(INVALID_ARGUMENT);
+      const void *ptr = MODULE_FUNC(Primitive, Any, RawPointer)(self);
+      return MODULE_FUNC(Primitive, Traits, Copy)(self->traits, outValue, ptr);
+    }),
+
+    OPERATION(Borrow, (const MODULE_TYPE(Primitive, Any) * self,
+                       const MODULE_TYPE(Primitive, Traits) * expectedTraits,
+                       const void **outPointer), {
+      if (!self || !expectedTraits || !outPointer)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      if (!MODULE_FUNC(Primitive, Any, IsType)(self, expectedTraits))
+        return STATUS_CONST(INVALID_ARGUMENT);
+      *outPointer = MODULE_FUNC(Primitive, Any, RawPointer)(self);
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(BorrowMutable,
+              (MODULE_TYPE(Primitive, Any) * self,
+               const MODULE_TYPE(Primitive, Traits) * expectedTraits,
+               void **outPointer), {
+      if (!self || !expectedTraits || !outPointer)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      if (!MODULE_FUNC(Primitive, Any, IsType)(self, expectedTraits))
+        return STATUS_CONST(INVALID_ARGUMENT);
+      *outPointer = MODULE_FUNC(Primitive, Any, MutableRawPointer)(self);
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    PRIMITIVE_TYPE_TABLE(COSMERON_MACRO_INTERNAL_ANY_PRIMITIVE_IMPL)
+
+    OPERATION(FromTaggedUnion,
+              (MODULE_TYPE(Primitive, Any) * self,
+               const MODULE_TYPE(Primitive, TaggedUnion) * source), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      return MODULE_FUNC(Primitive, AnyConversion, FromTaggedUnionRaw)(
+          &self->traits, &self->storage.as.heapPointer,
+          self->storage.as.inlineBytes,
+          MODULE_CONST(Primitive, Any, SBO_CAPACITY), source);
+    }),
+
+    OPERATION(ToTaggedUnion,
+              (const MODULE_TYPE(Primitive, Any) * self,
+               MODULE_TYPE(Primitive, TaggedUnion) * outUnion), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      return MODULE_FUNC(Primitive, AnyConversion, ToTaggedUnionRaw)(
+          self->traits, self->storage.as.heapPointer,
+          self->storage.as.inlineBytes,
+          MODULE_CONST(Primitive, Any, SBO_CAPACITY), outUnion);
+    }),
+
+    COMPARISON(Compare, (const MODULE_TYPE(Primitive, Any) * left,
+                         const MODULE_TYPE(Primitive, Any) * right), {
+      return MODULE_FUNC(Primitive, AnyConversion, CompareRaw)(
+          left ? left->traits : NULL,
+          left ? left->storage.as.heapPointer : NULL,
+          left ? left->storage.as.inlineBytes : NULL,
+          MODULE_CONST(Primitive, Any, SBO_CAPACITY),
+          right ? right->traits : NULL,
+          right ? right->storage.as.heapPointer : NULL,
+          right ? right->storage.as.inlineBytes : NULL,
+          MODULE_CONST(Primitive, Any, SBO_CAPACITY));
+    }),
+
+    PREDICATE(Equals, (const MODULE_TYPE(Primitive, Any) * left,
+                       const MODULE_TYPE(Primitive, Any) * right), {
+      return MODULE_FUNC(Primitive, AnyConversion, EqualsRaw)(
+          left ? left->traits : NULL,
+          left ? left->storage.as.heapPointer : NULL,
+          left ? left->storage.as.inlineBytes : NULL,
+          MODULE_CONST(Primitive, Any, SBO_CAPACITY),
+          right ? right->traits : NULL,
+          right ? right->storage.as.heapPointer : NULL,
+          right ? right->storage.as.inlineBytes : NULL,
+          MODULE_CONST(Primitive, Any, SBO_CAPACITY));
+    }),
+
+    FUNCTION(size_t, Hash, (const MODULE_TYPE(Primitive, Any) * self), {
+      if (!self)
+        return 0U;
+      return MODULE_FUNC(Primitive, AnyConversion, HashRaw)(
+          self->traits, self->storage.as.heapPointer,
+          self->storage.as.inlineBytes,
+          MODULE_CONST(Primitive, Any, SBO_CAPACITY));
+    }),
+
+    FUNCTION(const MODULE_TYPE(Primitive, Traits) *, Traits, (void), {
+      static const MODULE_TYPE(Primitive, Traits) descriptor = {
+          .name = "Primitive_TAny",
+          .size = sizeof(MODULE_TYPE(Primitive, Any)),
+          .alignment = _Alignof(MODULE_TYPE(Primitive, Any)),
+          .category = MODULE_CONST(Primitive, OBJECT),
+          .flags = MODULE_CONST(Primitive, TraitFlag, NEEDS_DISPOSE) |
+                   MODULE_CONST(Primitive, TraitFlag, IS_DYNAMIC),
+          .init = MODULE_IFUNC(Primitive, Any, SelfInit),
+          .dispose = MODULE_IFUNC(Primitive, Any, SelfDispose),
+          .copy = MODULE_IFUNC(Primitive, Any, SelfCopy),
+          .move = MODULE_IFUNC(Primitive, Any, SelfMove),
+          .compare = MODULE_IFUNC(Primitive, Any, SelfCompare),
+          .hash = MODULE_IFUNC(Primitive, Any, SelfHash)};
+      return &descriptor;
+    })
+  )
+);
+
+#undef COSMERON_MACRO_INTERNAL_ANY_PRIMITIVE_IMPL
+#undef COSMERON_MACRO_INTERNAL_ANY_TO_TU_BRANCH
+
+/* EOF */

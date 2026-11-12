@@ -12,6 +12,9 @@
   X((UINT, "Unsigned integer"))                                                 \
   X((CHAR, "Character"))                                                       \
   X((FLOAT, "Floating-point"))                                                 \
-  X((PTR, "Architecture pointer or integer"))
+  X((PTR, "Architecture pointer or integer"))                                  \
+  X((EXTENDED_NUMERIC, "Extended or arbitrary-precision numeric"))              \
+  X((COMPOSITE, "Composite structure or value type"))                          \
+  X((OBJECT, "Managed or stateful object"))
 /* EOF */
 

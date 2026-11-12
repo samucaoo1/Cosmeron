@@ -9,6 +9,7 @@
 #include "../../../Cosmeron/Core/Condition/Panic.h"
 #include "../../../Cosmeron/Core/Condition/Error.h"
 #include "../../../Cosmeron/Core/Condition/Exception.h"
+#include "../../../Cosmeron/Core/Condition/Defer.h"
 #include "../../../Cosmeron/Core/Diagnostic/Context.h"
 #include "../../../Cosmeron/Core/Diagnostic/Format.h"
 #include "../../../Cosmeron/Core/Diagnostic/Stacktrace.h"
@@ -23,5 +24,8 @@
 #include "../../../Cosmeron/Core/Module/Module.h"
 #include "../../../Cosmeron/Core/Preprocessor/Detect.h"
 #include "../../../Cosmeron/Core/Primitive/Types.h"
+#include "../../../Cosmeron/Core/Primitive/Traits.h"
+#include "../../../Cosmeron/Core/Primitive/TaggedUnion.h"
+#include "../../../Cosmeron/Core/Primitive/Any.h"
 
 int main(void) { return 0; }

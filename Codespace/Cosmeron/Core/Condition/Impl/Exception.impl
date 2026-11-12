@@ -34,6 +34,10 @@ MODULE_IMPLEMENT(DOMAIN(Core), Condition,
         return;
       }
 
+      if (MODULE_IFUNC(Condition, Exception_DeferUnwind) != NULL) {
+        MODULE_IFUNC(Condition, Exception_DeferUnwind)(frame->deferWatermark);
+      }
+
       if (CLOSURE_IS_VALID(frame->cleanup)) {
         CLOSURE_CALL(frame->cleanup);
         frame->cleanup.function = NULL;
