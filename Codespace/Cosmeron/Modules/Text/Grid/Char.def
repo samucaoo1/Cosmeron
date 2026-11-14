@@ -1,0 +1,221 @@
+/* Char.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Text_Char
+#define TEMPLATE_Text_Char(SUFFIX, TYPE)                                       \
+  TEMPLATE_OBJECT(Text, Char, SUFFIX,                                          \
+      FIELDS(                                                                  \
+          TYPE *data;                                                          \
+          MODULE_TYPED(Tuple, Dual, UInt16) size;                              \
+      ),                                                                       \
+                                                                               \
+      CONST_PREDICATE_INLINE(IsEmpty, (), {                                    \
+        return self->data == NULL;                                             \
+      }),                                                                      \
+                                                                               \
+      CONST_PREDICATE_INLINE(IsValid, (), {                                    \
+        return MODULE_ITYPE(Text, GridCharValid)(self->data, self->size);      \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Create, (MODULE_TYPED(Tuple, Dual, UInt16) size), {   \
+        return MODULE_ITYPE(Text, GridCharCreate)(                             \
+            (void **)&self->data, &self->size, size, sizeof(TYPE));            \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Destroy, (), {                                          \
+        if (self == NULL)                                                      \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_FUNC(Memory, Free)(self->data);                                 \
+        self->data = NULL;                                                     \
+        self->size.col = 0U;                                                   \
+        self->size.row = 0U;                                                   \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Resize, (MODULE_TYPED(Tuple, Dual, UInt16) size), {   \
+        MODULE_TYPED(Text, Char, SUFFIX) temporary = {0};                      \
+        OPSTATUS status;                                                       \
+        if (self == NULL || !MODULE_ITYPE(Text, GridCharValid)(self->data, self->size) || \
+            !MODULE_ITYPE(Text, GridCharSizeValid)(size))                      \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (size.col == self->size.col && size.row == self->size.row)          \
+          return STATUS_CONST(SUCCESS);                                        \
+        if (size.col == 0U)                                                    \
+          return MODULE_FUNC(Text, Char, SUFFIX, Destroy)(self);               \
+        status = MODULE_FUNC(Text, Char, SUFFIX, Create)(&temporary, size);    \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        if (self->data != NULL) {                                              \
+          uint16_t copyColumns =                                               \
+              self->size.col < size.col ? self->size.col : size.col;           \
+          uint16_t copyRows =                                                  \
+              self->size.row < size.row ? self->size.row : size.row;           \
+          for (uint16_t row = 0U; row < copyRows; ++row) {                     \
+            memcpy(temporary.data + (size_t)row * size.col,                    \
+                   self->data + (size_t)row * self->size.col,                  \
+                   (size_t)copyColumns * sizeof(TYPE));                        \
+          }                                                                    \
+        }                                                                      \
+        MODULE_FUNC(Memory, Free)(self->data);                                 \
+        *self = temporary;                                                     \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Recreate, (MODULE_TYPED(Tuple, Dual, UInt16) size), { \
+        OPSTATUS status;                                                       \
+        if (self == NULL || !MODULE_ITYPE(Text, GridCharSizeValid)(size))      \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        status = MODULE_FUNC(Text, Char, SUFFIX, Destroy)(self);               \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        return MODULE_FUNC(Text, Char, SUFFIX, Create)(self, size);            \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Clone, (const MODULE_TYPED(Text, Char, SUFFIX) *source), { \
+        OPSTATUS status;                                                       \
+        if (self == NULL || source == NULL || self == source ||                \
+            !MODULE_ITYPE(Text, GridCharValid)(source->data, source->size))    \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        status = MODULE_FUNC(Text, Char, SUFFIX, Recreate)(self, source->size);\
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        if (source->data != NULL) {                                            \
+          size_t count = (size_t)source->size.col * source->size.row;          \
+          memcpy(self->data, source->data, count * sizeof(TYPE));              \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Clear, (), {                                            \
+        if (self == NULL || !MODULE_ITYPE(Text, GridCharValid)(self->data, self->size)) \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->data != NULL) {                                              \
+          size_t count = (size_t)self->size.col * self->size.row;              \
+          memset(self->data, 0, count * sizeof(TYPE));                         \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(ReadCell,                                               \
+                             (MODULE_TYPED(Tuple, Dual, UInt16) position,      \
+                              TYPE *character), {                              \
+        if (self == NULL || character == NULL ||                               \
+            !MODULE_ITYPE(Text, GridCharValid)(self->data, self->size))        \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (position.col >= self->size.col || position.row >= self->size.row)  \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *character = self->data[(size_t)position.row * self->size.col + position.col]; \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(WriteCell,                                              \
+                       (MODULE_TYPED(Tuple, Dual, UInt16) position,            \
+                        TYPE character), {                                     \
+        if (self == NULL || !MODULE_ITYPE(Text, GridCharValid)(self->data, self->size)) \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (position.col >= self->size.col || position.row >= self->size.row)  \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        self->data[(size_t)position.row * self->size.col + position.col] = character; \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Fill, (TYPE character), {                               \
+        if (self == NULL || !MODULE_ITYPE(Text, GridCharValid)(self->data, self->size)) \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->data != NULL) {                                              \
+          size_t count = (size_t)self->size.col * self->size.row;              \
+          for (size_t i = 0U; i < count; ++i)                                  \
+            self->data[i] = character;                                         \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(FillRegion,                                             \
+                       (MODULE_TYPED(Tuple, Quad, UInt16) region,              \
+                        TYPE character), {                                     \
+        if (self == NULL || !MODULE_ITYPE(Text, GridCharValid)(self->data, self->size)) \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (!MODULE_ITYPE(Text, GridCharRegionValid)(self->size, region))      \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        for (uint16_t row = region.top; row <= region.bottom; ++row) {         \
+          TYPE *rowPtr = self->data + (size_t)row * self->size.col;            \
+          for (uint16_t col = region.left; col <= region.right; ++col)         \
+            rowPtr[col] = character;                                           \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Read,                                                   \
+                             (MODULE_TYPED(Tuple, Quad, UInt16) region,        \
+                              MODULE_TYPED(Text, Char, SUFFIX) *destination), { \
+        OPSTATUS status;                                                       \
+        MODULE_TYPED(Tuple, Dual, UInt16) regionSize;                          \
+        if (self == NULL || destination == NULL || self == destination ||      \
+            !MODULE_ITYPE(Text, GridCharValid)(self->data, self->size))        \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (!MODULE_ITYPE(Text, GridCharRegionValid)(self->size, region))      \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        regionSize.col = (uint16_t)(region.right - region.left + 1U);          \
+        regionSize.row = (uint16_t)(region.bottom - region.top + 1U);          \
+        status = MODULE_FUNC(Text, Char, SUFFIX, Recreate)(destination, regionSize); \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        for (uint16_t row = 0U; row < regionSize.row; ++row) {                 \
+          memcpy(destination->data + (size_t)row * regionSize.col,             \
+                 self->data + (size_t)(region.top + row) * self->size.col + region.left, \
+                 (size_t)regionSize.col * sizeof(TYPE));                       \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(WriteRegion,                                            \
+                       (MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition, \
+                        const MODULE_TYPED(Text, Char, SUFFIX) *source,        \
+                        MODULE_TYPED(Tuple, Quad, UInt16) sourceRegion), {     \
+        uint16_t copyWidth;                                                    \
+        uint16_t copyHeight;                                                   \
+        if (self == NULL || source == NULL || self == source ||                \
+            !MODULE_ITYPE(Text, GridCharValid)(self->data, self->size) ||      \
+            !MODULE_ITYPE(Text, GridCharValid)(source->data, source->size))    \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (!MODULE_ITYPE(Text, GridCharRegionValid)(source->size, sourceRegion)) \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        copyWidth = (uint16_t)(sourceRegion.right - sourceRegion.left + 1U);   \
+        copyHeight = (uint16_t)(sourceRegion.bottom - sourceRegion.top + 1U);  \
+        if (destinationPosition.col + copyWidth > self->size.col ||            \
+            destinationPosition.row + copyHeight > self->size.row)             \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        for (uint16_t row = 0U; row < copyHeight; ++row) {                     \
+          memcpy(self->data + (size_t)(destinationPosition.row + row) * self->size.col + \
+                     destinationPosition.col,                                  \
+                 source->data + (size_t)(sourceRegion.top + row) * source->size.col + \
+                     sourceRegion.left,                                        \
+                 (size_t)copyWidth * sizeof(TYPE));                            \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Write,                                                  \
+                       (MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition, \
+                        const MODULE_TYPED(Text, Char, SUFFIX) *source), {     \
+        MODULE_TYPED(Tuple, Quad, UInt16) sourceRegion;                        \
+        if (self == NULL || source == NULL || self == source ||                \
+            !MODULE_ITYPE(Text, GridCharValid)(self->data, self->size) ||      \
+            !MODULE_ITYPE(Text, GridCharValid)(source->data, source->size))    \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (source->size.col == 0U)                                            \
+          return STATUS_CONST(SUCCESS);                                        \
+        sourceRegion.left = 0U;                                                \
+        sourceRegion.top = 0U;                                                 \
+        sourceRegion.right = (uint16_t)(source->size.col - 1U);                \
+        sourceRegion.bottom = (uint16_t)(source->size.row - 1U);               \
+        return MODULE_FUNC(Text, Char, SUFFIX, WriteRegion)(                   \
+            self, destinationPosition, source, sourceRegion);                  \
+      })                                                                       \
+  )
+#endif
+
+#if defined(SUFFIX) && defined(TYPE)
+TEMPLATE_Text_Char(SUFFIX, TYPE)
+#undef SUFFIX
+#undef TYPE
+#endif

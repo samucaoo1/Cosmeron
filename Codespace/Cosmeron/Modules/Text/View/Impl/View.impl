@@ -1,239 +1,15 @@
 #pragma once
 
-#define COSMERON_MACRO_INTERNAL_TEXT_VIEW_IMPLEMENT(CHAR_TYPE, SUFFIX)        \
-  TEXT_VIEW_CREATE_PROTOTYPE(CHAR_TYPE, SUFFIX) {                              \
-    MODULE_TYPE(Text, View, SUFFIX) view;                                               \
-    view.data = data;                                                          \
-    view.size = data == NULL ? 0U : size;                                      \
-    return view;                                                               \
-  }                                                                            \
-                                                                               \
-  TEXT_VIEW_FROM_CSTR_PROTOTYPE(CHAR_TYPE, SUFFIX) {                          \
-    if (cstr == NULL) {                                                        \
-      return MODULE_FUNC(Text, View, SUFFIX, Empty)();                                  \
-    }                                                                          \
-    size_t len = 0U;                                                           \
-    while (cstr[len] != (CHAR_TYPE)0) {                                        \
-      ++len;                                                                   \
-    }                                                                          \
-    return MODULE_FUNC(Text, View, SUFFIX, Create)(cstr, len);                          \
-  }                                                                            \
-                                                                               \
-  TEXT_VIEW_EMPTY_PROTOTYPE(SUFFIX) {                                          \
-    MODULE_TYPE(Text, View, SUFFIX) view;                                               \
-    view.data = NULL;                                                          \
-    view.size = 0U;                                                            \
-    return view;                                                               \
-  }                                                                            \
-                                                                               \
-  TEXT_VIEW_LENGTH_PROTOTYPE(SUFFIX) {                                         \
-    return view.data != NULL ? view.size : 0U;                                 \
-  }                                                                            \
-                                                                               \
-  TEXT_VIEW_IS_EMPTY_PROTOTYPE(SUFFIX) {                                       \
-    return view.data == NULL || view.size == 0U;                               \
-  }                                                                            \
-                                                                               \
-  TEXT_VIEW_DATA_PROTOTYPE(CHAR_TYPE, SUFFIX) {                                \
-    return view.data;                                                          \
-  }                                                                            \
-                                                                               \
-  TEXT_VIEW_AT_PROTOTYPE(CHAR_TYPE, SUFFIX) {                                  \
-    if (outChar == NULL) {                                                     \
-      return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    }                                                                          \
-    if (view.data == NULL || index >= view.size) {                             \
-      return STATUS_CONST(OUT_OF_RANGE);                                       \
-    }                                                                          \
-    *outChar = &view.data[index];                                              \
-    return STATUS_CONST(SUCCESS);                                              \
-  }                                                                            \
-                                                                               \
-  TEXT_VIEW_SLICE_PROTOTYPE(SUFFIX) {                                          \
-    if (view.data == NULL || pos >= view.size) {                               \
-      return MODULE_FUNC(Text, View, SUFFIX, Empty)();                                  \
-    }                                                                          \
-    size_t available = view.size - pos;                                        \
-    size_t actual = count < available ? count : available;                     \
-    return MODULE_FUNC(Text, View, SUFFIX, Create)(view.data + pos, actual);            \
-  }                                                                            \
-                                                                               \
-  TEXT_VIEW_PREFIX_PROTOTYPE(SUFFIX) {                                         \
-    return MODULE_FUNC(Text, View, SUFFIX, Slice)(view, 0U, count);                     \
-  }                                                                            \
-                                                                               \
-  TEXT_VIEW_SUFFIX_PROTOTYPE(SUFFIX) {                                         \
-    if (view.data == NULL || count == 0U) {                                    \
-      return MODULE_FUNC(Text, View, SUFFIX, Empty)();                                  \
-    }                                                                          \
-    if (count >= view.size) {                                                  \
-      return view;                                                             \
-    }                                                                          \
-    return MODULE_FUNC(Text, View, SUFFIX, Create)(                                     \
-        view.data + (view.size - count), count);                               \
-  }                                                                            \
-                                                                               \
-  TEXT_VIEW_COMPARE_PROTOTYPE(SUFFIX) {                                        \
-    if (left.data == right.data && left.size == right.size) {                  \
-      return COMPARISON_CONST(EQUAL);                                           \
-    }                                                                          \
-    size_t minLen = left.size < right.size ? left.size : right.size;           \
-    if (minLen > 0U && left.data != NULL && right.data != NULL) {              \
-      for (size_t i = 0U; i < minLen; ++i) {                                   \
-        size_t a = (size_t)(sizeof(CHAR_TYPE) == 1U                            \
-                               ? (uint8_t)left.data[i]                         \
-                               : left.data[i]);                                \
-        size_t b = (size_t)(sizeof(CHAR_TYPE) == 1U                            \
-                               ? (uint8_t)right.data[i]                        \
-                               : right.data[i]);                               \
-        if (a < b) {                                                           \
-          return COMPARISON_CONST(LOWER);                                       \
-        }                                                                      \
-        if (a > b) {                                                           \
-          return COMPARISON_CONST(HIGHER);                                      \
-        }                                                                      \
-      }                                                                        \
-    }                                                                          \
-    if (left.size < right.size) {                                              \
-      return COMPARISON_CONST(LOWER);                                           \
-    }                                                                          \
-    if (left.size > right.size) {                                              \
-      return COMPARISON_CONST(HIGHER);                                          \
-    }                                                                          \
-    return COMPARISON_CONST(EQUAL);                                             \
-  }                                                                            \
-                                                                               \
-  TEXT_VIEW_EQUAL_PROTOTYPE(SUFFIX) {                                          \
-    if (left.data == right.data && left.size == right.size) {                  \
-      return true;                                                             \
-    }                                                                          \
-    if (left.size != right.size) {                                             \
-      return false;                                                            \
-    }                                                                          \
-    if (left.size == 0U) {                                                     \
-      return true;                                                             \
-    }                                                                          \
-    if (left.data == NULL || right.data == NULL) {                             \
-      return false;                                                            \
-    }                                                                          \
-    return memcmp(left.data, right.data, left.size * sizeof(CHAR_TYPE)) == 0;  \
-  }                                                                            \
-                                                                               \
-  TEXT_VIEW_EQUAL_CSTR_PROTOTYPE(CHAR_TYPE, SUFFIX) {                          \
-    if (cstr == NULL) {                                                        \
-      return view.data == NULL || view.size == 0U;                             \
-    }                                                                          \
-    MODULE_TYPE(Text, View, SUFFIX) other = MODULE_FUNC(Text, View, SUFFIX, FromCStr)(cstr);     \
-    return MODULE_FUNC(Text, View, SUFFIX, Equal)(view, other);                         \
-  }                                                                            \
-                                                                               \
-  TEXT_VIEW_FIND_PROTOTYPE(CHAR_TYPE, SUFFIX) {                                \
-    if (outIndex == NULL) {                                                    \
-      return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    }                                                                          \
-    if (view.data == NULL || start >= view.size) {                             \
-      return STATUS_CONST(NOT_FOUND);                                          \
-    }                                                                          \
-    for (size_t i = start; i < view.size; ++i) {                               \
-      if (view.data[i] == ch) {                                                \
-        *outIndex = i;                                                         \
-        return STATUS_CONST(SUCCESS);                                          \
-      }                                                                        \
-    }                                                                          \
-    return STATUS_CONST(NOT_FOUND);                                            \
-  }                                                                            \
-                                                                               \
-  TEXT_VIEW_FIND_VIEW_PROTOTYPE(CHAR_TYPE, SUFFIX) {                           \
-    if (outIndex == NULL) {                                                    \
-      return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    }                                                                          \
-    if (needle.size == 0U) {                                                   \
-      if (start <= view.size) {                                                \
-        *outIndex = start;                                                     \
-        return STATUS_CONST(SUCCESS);                                          \
-      }                                                                        \
-      return STATUS_CONST(NOT_FOUND);                                          \
-    }                                                                          \
-    if (view.data == NULL || needle.data == NULL || start >= view.size) {      \
-      return STATUS_CONST(NOT_FOUND);                                          \
-    }                                                                          \
-    if (needle.size > view.size - start) {                                     \
-      return STATUS_CONST(NOT_FOUND);                                          \
-    }                                                                          \
-    size_t limit = view.size - needle.size;                                    \
-    for (size_t i = start; i <= limit; ++i) {                                  \
-      if (memcmp(view.data + i, needle.data,                                   \
-                 needle.size * sizeof(CHAR_TYPE)) == 0) {                      \
-        *outIndex = i;                                                         \
-        return STATUS_CONST(SUCCESS);                                          \
-      }                                                                        \
-    }                                                                          \
-    return STATUS_CONST(NOT_FOUND);                                            \
-  }                                                                            \
-                                                                               \
-  TEXT_VIEW_FIND_CSTR_PROTOTYPE(CHAR_TYPE, SUFFIX) {                           \
-    if (needle == NULL) {                                                      \
-      return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    }                                                                          \
-    MODULE_TYPE(Text, View, SUFFIX) needleView =                                        \
-        MODULE_FUNC(Text, View, SUFFIX, FromCStr)(needle);                              \
-    return MODULE_FUNC(Text, View, SUFFIX, FindView)(view, needleView, start,           \
-                                            outIndex);                         \
-  }                                                                            \
-                                                                               \
-  TEXT_VIEW_STARTS_WITH_PROTOTYPE(SUFFIX) {                                    \
-    if (prefix.size == 0U) {                                                   \
-      return true;                                                             \
-    }                                                                          \
-    if (view.data == NULL || prefix.data == NULL || view.size < prefix.size) { \
-      return false;                                                            \
-    }                                                                          \
-    return memcmp(view.data, prefix.data,                                      \
-                  prefix.size * sizeof(CHAR_TYPE)) == 0;                       \
-  }                                                                            \
-                                                                               \
-  TEXT_VIEW_STARTS_WITH_CSTR_PROTOTYPE(CHAR_TYPE, SUFFIX) {                    \
-    if (prefix == NULL) {                                                      \
-      return false;                                                            \
-    }                                                                          \
-    MODULE_TYPE(Text, View, SUFFIX) prefixView =                                        \
-        MODULE_FUNC(Text, View, SUFFIX, FromCStr)(prefix);                              \
-    return MODULE_FUNC(Text, View, SUFFIX, StartsWith)(view, prefixView);               \
-  }                                                                            \
-                                                                               \
-  TEXT_VIEW_ENDS_WITH_PROTOTYPE(SUFFIX) {                                      \
-    if (suffix.size == 0U) {                                                   \
-      return true;                                                             \
-    }                                                                          \
-    if (view.data == NULL || suffix.data == NULL || view.size < suffix.size) { \
-      return false;                                                            \
-    }                                                                          \
-    return memcmp(view.data + (view.size - suffix.size), suffix.data,          \
-                  suffix.size * sizeof(CHAR_TYPE)) == 0;                       \
-  }                                                                            \
-                                                                               \
-  TEXT_VIEW_ENDS_WITH_CSTR_PROTOTYPE(CHAR_TYPE, SUFFIX) {                      \
-    if (suffix == NULL) {                                                      \
-      return false;                                                            \
-    }                                                                          \
-    MODULE_TYPE(Text, View, SUFFIX) suffixView =                                        \
-        MODULE_FUNC(Text, View, SUFFIX, FromCStr)(suffix);                              \
-    return MODULE_FUNC(Text, View, SUFFIX, EndsWith)(view, suffixView);                 \
-  }
-
-COSMERON_MACRO_INTERNAL_TEXT_VIEW_IMPLEMENT(char, 8)
-COSMERON_MACRO_INTERNAL_TEXT_VIEW_IMPLEMENT(MODULE_TYPE(Text, Char16), 16)
-COSMERON_MACRO_INTERNAL_TEXT_VIEW_IMPLEMENT(MODULE_TYPE(Text, Char32), 32)
-
-#undef COSMERON_MACRO_INTERNAL_TEXT_VIEW_IMPLEMENT
-
-TEXT_VIEW8_VALIDATE_PROTOTYPE {
+PACKAGE_PREDICATE_IMPLEMENT_EX(Text_View8, Validate,
+                               (MODULE_TYPED(Text, View, 8) view)) {
   if (view.size == 0U) return true;
   if (view.data == NULL) return false;
   return MODULE_FUNC(Text, UTF8, Validate)((const unsigned char *)view.data, view.size);
 }
 
-TEXT_VIEW8_COUNT_CODEPOINTS_PROTOTYPE {
+PACKAGE_OPERATION_IMPLEMENT_EX(Text_View8, CountCodepoints,
+                               (MODULE_TYPED(Text, View, 8) view,
+                                size_t *outCount)) {
   if (outCount == NULL) return STATUS_CONST(INVALID_ARGUMENT);
   if (view.size == 0U) {
     *outCount = 0U;
@@ -245,7 +21,9 @@ TEXT_VIEW8_COUNT_CODEPOINTS_PROTOTYPE {
       (const unsigned char *)view.data, view.size, outCount, &units);
 }
 
-TEXT_VIEW8_NEXT_CODEPOINT_PROTOTYPE {
+PACKAGE_OPERATION_IMPLEMENT_EX(Text_View8, NextCodepoint,
+                               (MODULE_TYPED(Text, View, 8) *view,
+                                MODULE_TYPE(Text, Char32) *outCodepoint)) {
   if (view == NULL || outCodepoint == NULL) {
     return STATUS_CONST(INVALID_ARGUMENT);
   }
@@ -263,7 +41,8 @@ TEXT_VIEW8_NEXT_CODEPOINT_PROTOTYPE {
   return STATUS_CONST(SUCCESS);
 }
 
-TEXT_VIEW8_TRIM_LEFT_PROTOTYPE {
+PACKAGE_FUNCTION_IMPLEMENT_EX(Text_View8, MODULE_TYPED(Text, View, 8),
+                              TrimLeft, (MODULE_TYPED(Text, View, 8) view)) {
   if (view.data == NULL || view.size == 0U) {
     return view;
   }
@@ -285,7 +64,8 @@ TEXT_VIEW8_TRIM_LEFT_PROTOTYPE {
   return MODULE_FUNC(Text, View, 8, Create)((const char *)ptr, remaining);
 }
 
-TEXT_VIEW8_TRIM_RIGHT_PROTOTYPE {
+PACKAGE_FUNCTION_IMPLEMENT_EX(Text_View8, MODULE_TYPED(Text, View, 8),
+                              TrimRight, (MODULE_TYPED(Text, View, 8) view)) {
   if (view.data == NULL || view.size == 0U) {
     return view;
   }
@@ -312,11 +92,15 @@ TEXT_VIEW8_TRIM_RIGHT_PROTOTYPE {
   return MODULE_FUNC(Text, View, 8, Create)(view.data, end);
 }
 
-TEXT_VIEW8_TRIM_PROTOTYPE {
-  return MODULE_FUNC(Text, View, 8, TrimLeft)(MODULE_FUNC(Text, View, 8, TrimRight)(view));
+PACKAGE_FUNCTION_IMPLEMENT_EX(Text_View8, MODULE_TYPED(Text, View, 8), Trim,
+                              (MODULE_TYPED(Text, View, 8) view)) {
+  return MODULE_FUNC(Text, View8, TrimLeft)(MODULE_FUNC(Text, View8, TrimRight)(view));
 }
 
-TEXT_VIEW8_SLICE_CODEPOINTS_PROTOTYPE {
+PACKAGE_OPERATION_IMPLEMENT_EX(Text_View8, SliceCodepoints,
+                               (MODULE_TYPED(Text, View, 8) view,
+                                size_t codepointStart, size_t codepointCount,
+                                MODULE_TYPED(Text, View, 8) *outView)) {
   if (outView == NULL) {
     return STATUS_CONST(INVALID_ARGUMENT);
   }

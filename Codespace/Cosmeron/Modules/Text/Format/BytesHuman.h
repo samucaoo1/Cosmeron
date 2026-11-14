@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../../Core/Condition/Status.h"
-#include "../../../Core/Module/Package.h"
+#include "../../../Core/Module/Module.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -22,42 +22,18 @@ enum {
 #endif
 #endif
 
-MODULE(Text,
+MODULE(DOMAIN(Modules), Text,
     PACKAGE(BytesHuman,
-        FUNCTION(OPSTATUS, Format,
-                 (char *buffer, size_t capacity, size_t *outWritten,
-                  uint64_t bytes)),
-        FUNCTION(OPSTATUS, FormatEx,
-                 (char *buffer, size_t capacity, size_t *outWritten, uint64_t bytes,
-                  unsigned unitStandard, unsigned precision)),
-        FUNCTION(OPSTATUS, Parse, (const char *str, uint64_t *outBytes))
+        VARIANT(Format,
+                OPERATION((char *buffer, size_t capacity, size_t *outWritten,
+                           uint64_t bytes)),
+                OPERATION(Ex,
+                          (char *buffer, size_t capacity, size_t *outWritten,
+                           uint64_t bytes, unsigned unitStandard,
+                           unsigned precision))
+        ),
+        OPERATION(Parse, (const char *str, uint64_t *outBytes))
     )
 );
-
-/* Convenience forwards */
-static inline OPSTATUS Text_Format_BytesHuman(char *buffer, size_t capacity,
-                                              size_t *outWritten,
-                                              uint64_t bytes) {
-  return Text_BytesHuman_Format(buffer, capacity, outWritten, bytes);
-}
-
-static inline OPSTATUS Text_Format_BytesHumanEx(char *buffer, size_t capacity,
-                                                size_t *outWritten,
-                                                uint64_t bytes,
-                                                unsigned unitStandard,
-                                                unsigned precision) {
-  return Text_BytesHuman_FormatEx(buffer, capacity, outWritten, bytes,
-                                  unitStandard, precision);
-}
-
-static inline OPSTATUS Text_Parse_BytesHuman(const char *str,
-                                             uint64_t *outBytes) {
-  return Text_BytesHuman_Parse(str, outBytes);
-}
-
-static inline OPSTATUS Text_Format_ParseBytesHuman(const char *str,
-                                                  uint64_t *outBytes) {
-  return Text_BytesHuman_Parse(str, outBytes);
-}
 
 #include "Impl/BytesHuman.impl"

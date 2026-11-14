@@ -645,7 +645,10 @@ static inline void MODULE_INS(Text, Format, FormatCosmeronType)(
   }
 }
 
-TEXT_FORMAT_VARIADIC_PROTOTYPE {
+PACKAGE_OPERATION_IMPLEMENT_EX(Text_Format, Variadic,
+                               (char *buffer, size_t capacity,
+                                size_t *outWritten, const char *format,
+                                va_list arguments)) {
   if (format == NULL) {
     return STATUS_CONST(INVALID_ARGUMENT);
   }
@@ -1084,7 +1087,9 @@ TEXT_FORMAT_VARIADIC_PROTOTYPE {
   return STATUS_CONST(SUCCESS);
 }
 
-TEXT_FORMAT_PROTOTYPE {
+static inline OPSTATUS MODULE_FUNC(Text, Format)(
+    char *buffer, size_t capacity, size_t *outWritten, const char *format,
+    ...) {
   OPSTATUS status;
   va_list args;
   va_start(args, format);
@@ -1093,7 +1098,8 @@ TEXT_FORMAT_PROTOTYPE {
   return status;
 }
 
-TEXT_FORMAT_UNSAFE_PROTOTYPE {
+static inline OPSTATUS MODULE_FUNC(Text, Format, Unsafe)(
+    char *buffer, size_t *outWritten, const char *format, ...) {
   OPSTATUS status;
   va_list args;
   va_start(args, format);
@@ -1102,7 +1108,9 @@ TEXT_FORMAT_UNSAFE_PROTOTYPE {
   return status;
 }
 
-TEXT_FORMAT_UNSAFE_VARIADIC_PROTOTYPE {
+PACKAGE_OPERATION_IMPLEMENT_EX(Text_Format, Unsafe_Variadic,
+                               (char *buffer, size_t *outWritten,
+                                const char *format, va_list arguments)) {
   return MODULE_FUNC(Text, Format, Variadic)(buffer, SIZE_MAX, outWritten, format,
                                     arguments);
 }

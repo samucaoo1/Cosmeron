@@ -211,7 +211,8 @@ OBJECT_PROTOTYPEEX(Text_Builder, AppendFormatVariadic, (const char *format, va_l
   return STATUS_CONST(SUCCESS);
 }
 
-TEXT_BUILDER_APPEND_FORMAT_PROTOTYPE {
+OBJECT_OPERATION_IMPLEMENT_EX(Text_Builder, AppendFormat,
+                              (const char *format, ...)) {
   if (!self || !format)
     return STATUS_CONST(INVALID_ARGUMENT);
 

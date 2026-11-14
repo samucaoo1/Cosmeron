@@ -2,6 +2,7 @@
 
 #include "../../../Core/Condition/Status.h"
 #include "../../../Core/Memory/Alloc.h"
+#include "../../../Core/Module/Module.h"
 #include "../../Tuple/TDual.h"
 #include "../../Tuple/TQuad.h"
 
@@ -81,107 +82,53 @@ enum {
   CNS(Text, Grid_Color, WINDOWS_COUNT)
 };
 
-#define TEXT_GRID_ATTRIBUTE_DEFAULT_PROTOTYPE                               \
-  static inline MODULE_TYPE(Text, Attribute, Cell)                                \
-  MODULE_FUNC(Text, Attribute, Default)(void)
-
-#define TEXT_GRID_COLOR_WINDOWS_PALETTE_PROTOTYPE                           \
-  static inline const MODULE_TYPE(Text, Grid_Color, RGB) *                            \
-  MODULE_FUNC(Text, Grid_Color, WindowsPalette)(void)
-
-#define TEXT_GRID_ATTRIBUTE_IS_EMPTY_PROTOTYPE                              \
-  static inline bool MODULE_FUNC(Text, Attribute, IsEmpty)(                      \
-      const MODULE_TYPE(Text, Attribute, Grid) *grid)
-
-#define TEXT_GRID_ATTRIBUTE_IS_VALID_PROTOTYPE                              \
-  static inline bool MODULE_FUNC(Text, Attribute, IsValid)(                      \
-      const MODULE_TYPE(Text, Attribute, Grid) *grid)
-
-#define TEXT_GRID_ATTRIBUTE_CREATE_PROTOTYPE                                \
-  static inline OPSTATUS MODULE_FUNC(Text, Attribute, Create)(                   \
-      MODULE_TYPE(Text, Attribute, Grid) *grid, MODULE_TYPED(Tuple, Dual, UInt16) size)
-
-#define TEXT_GRID_ATTRIBUTE_DESTROY_PROTOTYPE                               \
-  static inline OPSTATUS MODULE_FUNC(Text, Attribute, Destroy)(                  \
-      MODULE_TYPE(Text, Attribute, Grid) *grid)
-
-#define TEXT_GRID_ATTRIBUTE_RESIZE_PROTOTYPE                                \
-  static inline OPSTATUS MODULE_FUNC(Text, Attribute, Resize)(                   \
-      MODULE_TYPE(Text, Attribute, Grid) *grid, MODULE_TYPED(Tuple, Dual, UInt16) size)
-
-#define TEXT_GRID_ATTRIBUTE_RECREATE_PROTOTYPE                              \
-  static inline OPSTATUS MODULE_FUNC(Text, Attribute, Recreate)(                 \
-      MODULE_TYPE(Text, Attribute, Grid) *grid, MODULE_TYPED(Tuple, Dual, UInt16) size)
-
-#define TEXT_GRID_ATTRIBUTE_CLONE_PROTOTYPE                                 \
-  static inline OPSTATUS MODULE_FUNC(Text, Attribute, Clone)(                    \
-      MODULE_TYPE(Text, Attribute, Grid) *destination,                           \
-      const MODULE_TYPE(Text, Attribute, Grid) *source)
-
-#define TEXT_GRID_ATTRIBUTE_CLEAR_PROTOTYPE                                 \
-  static inline OPSTATUS MODULE_FUNC(Text, Attribute, Clear)(                    \
-      MODULE_TYPE(Text, Attribute, Grid) *grid)
-
-#define TEXT_GRID_ATTRIBUTE_CLEAR_WITH_PROTOTYPE                            \
-  static inline OPSTATUS MODULE_FUNC(Text, Attribute, ClearWith)(                \
-      MODULE_TYPE(Text, Attribute, Grid) *grid,                                  \
-      MODULE_TYPE(Text, Attribute, Cell) attribute)
-
-#define TEXT_GRID_ATTRIBUTE_FILL_PROTOTYPE                                  \
-  static inline OPSTATUS MODULE_FUNC(Text, Attribute, Fill)(                     \
-      MODULE_TYPE(Text, Attribute, Grid) *grid,                                  \
-      MODULE_TYPE(Text, Attribute, Cell) attribute)
-
-#define TEXT_GRID_ATTRIBUTE_READ_CELL_PROTOTYPE                             \
-  static inline OPSTATUS MODULE_FUNC(Text, Attribute, ReadCell)(                 \
-      const MODULE_TYPE(Text, Attribute, Grid) *grid, MODULE_TYPED(Tuple, Dual, UInt16) position,\
-      MODULE_TYPE(Text, Attribute, Cell) *attribute)
-
-#define TEXT_GRID_ATTRIBUTE_WRITE_CELL_PROTOTYPE                            \
-  static inline OPSTATUS MODULE_FUNC(Text, Attribute, WriteCell)(                \
-      MODULE_TYPE(Text, Attribute, Grid) *grid, MODULE_TYPED(Tuple, Dual, UInt16) position,     \
-      MODULE_TYPE(Text, Attribute, Cell) attribute)
-
-#define TEXT_GRID_ATTRIBUTE_FILL_REGION_PROTOTYPE                           \
-  static inline OPSTATUS MODULE_FUNC(Text, Attribute, FillRegion)(               \
-      MODULE_TYPE(Text, Attribute, Grid) *grid, MODULE_TYPED(Tuple, Quad, UInt16) region,       \
-      MODULE_TYPE(Text, Attribute, Cell) attribute)
-
-#define TEXT_GRID_ATTRIBUTE_READ_PROTOTYPE                                  \
-  static inline OPSTATUS MODULE_FUNC(Text, Attribute, Read)(                     \
-      const MODULE_TYPE(Text, Attribute, Grid) *source, MODULE_TYPED(Tuple, Quad, UInt16) region,\
-      MODULE_TYPE(Text, Attribute, Grid) *destination)
-
-#define TEXT_GRID_ATTRIBUTE_WRITE_PROTOTYPE                                 \
-  static inline OPSTATUS MODULE_FUNC(Text, Attribute, Write)(                    \
-      MODULE_TYPE(Text, Attribute, Grid) *destination,                           \
-      MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition,                                \
-      const MODULE_TYPE(Text, Attribute, Grid) *source)
-
-#define TEXT_GRID_ATTRIBUTE_WRITE_REGION_PROTOTYPE                          \
-  static inline OPSTATUS MODULE_FUNC(Text, Attribute, WriteRegion)(              \
-      MODULE_TYPE(Text, Attribute, Grid) *destination,                           \
-      MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition,                                \
-      const MODULE_TYPE(Text, Attribute, Grid) *source,                          \
-      MODULE_TYPED(Tuple, Quad, UInt16) sourceRegion)
-
-TEXT_GRID_ATTRIBUTE_DEFAULT_PROTOTYPE;
-TEXT_GRID_COLOR_WINDOWS_PALETTE_PROTOTYPE;
-TEXT_GRID_ATTRIBUTE_IS_EMPTY_PROTOTYPE;
-TEXT_GRID_ATTRIBUTE_IS_VALID_PROTOTYPE;
-TEXT_GRID_ATTRIBUTE_CREATE_PROTOTYPE;
-TEXT_GRID_ATTRIBUTE_DESTROY_PROTOTYPE;
-TEXT_GRID_ATTRIBUTE_RESIZE_PROTOTYPE;
-TEXT_GRID_ATTRIBUTE_RECREATE_PROTOTYPE;
-TEXT_GRID_ATTRIBUTE_CLONE_PROTOTYPE;
-TEXT_GRID_ATTRIBUTE_CLEAR_PROTOTYPE;
-TEXT_GRID_ATTRIBUTE_CLEAR_WITH_PROTOTYPE;
-TEXT_GRID_ATTRIBUTE_FILL_PROTOTYPE;
-TEXT_GRID_ATTRIBUTE_READ_CELL_PROTOTYPE;
-TEXT_GRID_ATTRIBUTE_WRITE_CELL_PROTOTYPE;
-TEXT_GRID_ATTRIBUTE_FILL_REGION_PROTOTYPE;
-TEXT_GRID_ATTRIBUTE_READ_PROTOTYPE;
-TEXT_GRID_ATTRIBUTE_WRITE_PROTOTYPE;
-TEXT_GRID_ATTRIBUTE_WRITE_REGION_PROTOTYPE;
+MODULE(DOMAIN(Modules), Text,
+    PACKAGE(Attribute,
+        FUNCTION(MODULE_TYPE(Text, Attribute, Cell), Default, ()),
+        PREDICATE(IsEmpty, (const MODULE_TYPE(Text, Attribute, Grid) *grid)),
+        PREDICATE(IsValid, (const MODULE_TYPE(Text, Attribute, Grid) *grid)),
+        OPERATION(Create, (MODULE_TYPE(Text, Attribute, Grid) *grid,
+                           MODULE_TYPED(Tuple, Dual, UInt16) size)),
+        OPERATION(Destroy, (MODULE_TYPE(Text, Attribute, Grid) *grid)),
+        OPERATION(Resize, (MODULE_TYPE(Text, Attribute, Grid) *grid,
+                           MODULE_TYPED(Tuple, Dual, UInt16) size)),
+        OPERATION(Recreate, (MODULE_TYPE(Text, Attribute, Grid) *grid,
+                             MODULE_TYPED(Tuple, Dual, UInt16) size)),
+        OPERATION(Clone, (MODULE_TYPE(Text, Attribute, Grid) *destination,
+                          const MODULE_TYPE(Text, Attribute, Grid) *source)),
+        VARIANT(Clear,
+                OPERATION((MODULE_TYPE(Text, Attribute, Grid) *grid)),
+                OPERATION(With, (MODULE_TYPE(Text, Attribute, Grid) *grid,
+                                 MODULE_TYPE(Text, Attribute, Cell) attribute))
+        ),
+        OPERATION(Fill, (MODULE_TYPE(Text, Attribute, Grid) *grid,
+                         MODULE_TYPE(Text, Attribute, Cell) attribute)),
+        OPERATION(ReadCell, (const MODULE_TYPE(Text, Attribute, Grid) *grid,
+                             MODULE_TYPED(Tuple, Dual, UInt16) position,
+                             MODULE_TYPE(Text, Attribute, Cell) *attribute)),
+        OPERATION(WriteCell, (MODULE_TYPE(Text, Attribute, Grid) *grid,
+                              MODULE_TYPED(Tuple, Dual, UInt16) position,
+                              MODULE_TYPE(Text, Attribute, Cell) attribute)),
+        OPERATION(FillRegion, (MODULE_TYPE(Text, Attribute, Grid) *grid,
+                               MODULE_TYPED(Tuple, Quad, UInt16) region,
+                               MODULE_TYPE(Text, Attribute, Cell) attribute)),
+        OPERATION(Read, (const MODULE_TYPE(Text, Attribute, Grid) *source,
+                         MODULE_TYPED(Tuple, Quad, UInt16) region,
+                         MODULE_TYPE(Text, Attribute, Grid) *destination)),
+        VARIANT(Write,
+                OPERATION((MODULE_TYPE(Text, Attribute, Grid) *destination,
+                           MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition,
+                           const MODULE_TYPE(Text, Attribute, Grid) *source)),
+                OPERATION(Region,
+                          (MODULE_TYPE(Text, Attribute, Grid) *destination,
+                           MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition,
+                           const MODULE_TYPE(Text, Attribute, Grid) *source,
+                           MODULE_TYPED(Tuple, Quad, UInt16) sourceRegion))
+        )
+    ),
+    PACKAGE(Grid_Color,
+        FUNCTION(const MODULE_TYPE(Text, Grid_Color, RGB) *, WindowsPalette, ())
+    )
+);
 
 #include "Impl/Attribute.impl"

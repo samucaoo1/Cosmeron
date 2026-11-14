@@ -25,7 +25,9 @@ static inline bool MODULE_ITYPE(Text, WidthInIntervals)(
   return false;
 }
 
-TEXT_WIDTH_CODEPOINT_PROTOTYPE {
+PACKAGE_OPERATION_IMPLEMENT_EX(Text_Width, Codepoint,
+                               (MODULE_TYPE(Text, Char32) codepoint,
+                                int *outWidth)) {
   static const MODULE_ITYPE(Text, WidthInterval_InternalType_) zeroWidth[] = {
         {0x0300U, 0x036FU}, {0x0483U, 0x0489U}, {0x0591U, 0x05BDU},
         {0x05BFU, 0x05BFU}, {0x05C1U, 0x05C2U}, {0x05C4U, 0x05C5U},
@@ -77,7 +79,9 @@ TEXT_WIDTH_CODEPOINT_PROTOTYPE {
   return STATUS_CONST(SUCCESS);
 }
 
-TEXT_WIDTH_UTF8_PROTOTYPE {
+PACKAGE_OPERATION_IMPLEMENT_EX(Text_Width, UTF8,
+                               (const unsigned char *input, size_t size,
+                                size_t *outColumns, size_t *outUnits)) {
   size_t offset = 0U;
   size_t columns = 0U;
 

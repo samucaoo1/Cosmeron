@@ -616,6 +616,12 @@
 #define ENUM_DEF_EX(TARGET, NAME, TABLE, DISP)                                 \
   COSMERON_INTERNAL_EMIT_ENUM_DEF(TARGET, NAME, TABLE, DISP)
 
+#define IENUM_DEF(TARGET, NAME, TABLE)                                         \
+  COSMERON_INTERNAL_EMIT_ENUM_DEF(NS(TARGET, INTERNAL), NAME, TABLE, PLAIN)
+
+#define IENUM_DEF_EX(TARGET, NAME, TABLE, DISP)                                \
+  COSMERON_INTERNAL_EMIT_ENUM_DEF(NS(TARGET, INTERNAL), NAME, TABLE, DISP)
+
 /* ============================================================
  * 1. OBJECT Emitter
  * ============================================================ */

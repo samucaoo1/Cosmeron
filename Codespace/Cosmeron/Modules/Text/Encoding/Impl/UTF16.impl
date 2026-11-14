@@ -1,6 +1,8 @@
 #pragma once
 
-TEXT_UTF16_ENCODED_LENGTH_PROTOTYPE {
+PACKAGE_OPERATION_IMPLEMENT_EX(Text_UTF16, EncodedLength,
+                               (MODULE_TYPE(Text, Char32) codepoint,
+                                size_t *outUnits)) {
   uint_least32_t value = (uint_least32_t)codepoint;
 
   if (outUnits == NULL)
@@ -12,7 +14,10 @@ TEXT_UTF16_ENCODED_LENGTH_PROTOTYPE {
   return STATUS_CONST(SUCCESS);
 }
 
-TEXT_UTF16_ENCODE_PROTOTYPE {
+PACKAGE_OPERATION_IMPLEMENT_EX(Text_UTF16, Encode,
+                               (MODULE_TYPE(Text, Char32) codepoint,
+                                MODULE_TYPE(Text, Char16) *output,
+                                size_t capacity, size_t *outUnits)) {
   uint_least32_t value = (uint_least32_t)codepoint;
   size_t length = 0U;
   OPSTATUS status;
@@ -40,7 +45,11 @@ TEXT_UTF16_ENCODE_PROTOTYPE {
   return STATUS_CONST(SUCCESS);
 }
 
-TEXT_UTF16_DECODE_PROTOTYPE {
+PACKAGE_OPERATION_IMPLEMENT_EX(Text_UTF16, Decode,
+                               (const MODULE_TYPE(Text, Char16) *input,
+                                size_t size,
+                                MODULE_TYPE(Text, Char32) *outCodepoint,
+                                size_t *outUnits)) {
   uint_least32_t first;
   MODULE_TYPE(Text, Char32) codepoint;
   size_t units;
@@ -74,7 +83,9 @@ TEXT_UTF16_DECODE_PROTOTYPE {
   return STATUS_CONST(SUCCESS);
 }
 
-TEXT_UTF16_VALIDATE_PROTOTYPE {
+PACKAGE_PREDICATE_IMPLEMENT_EX(Text_UTF16, Validate,
+                               (const MODULE_TYPE(Text, Char16) *input,
+                                size_t size)) {
   size_t offset = 0U;
 
   if (input == NULL && size != 0U)

@@ -1,0 +1,331 @@
+/* Grid.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Text_Grid
+#define TEMPLATE_Text_Grid(SUFFIX, TYPE)                                       \
+  TEMPLATE_OBJECT(Text, Grid, SUFFIX,                                          \
+      FIELDS(                                                                  \
+          MODULE_TYPED(Text, Char, SUFFIX) chars;                              \
+          MODULE_TYPE(Text, Attribute, Grid) attributes;                       \
+      ),                                                                       \
+                                                                               \
+      CONST_PREDICATE_INLINE(IsEmpty, (), {                                    \
+        if (self == NULL)                                                      \
+          return true;                                                         \
+        return MODULE_FUNC(Text, Char, SUFFIX, IsEmpty)(&self->chars) &&       \
+               MODULE_FUNC(Text, Attribute, IsEmpty)(&self->attributes);       \
+      }),                                                                      \
+                                                                               \
+      CONST_PREDICATE_INLINE(IsValid, (), {                                    \
+        if (self == NULL)                                                      \
+          return false;                                                        \
+        if (!MODULE_FUNC(Text, Char, SUFFIX, IsValid)(&self->chars) ||         \
+            !MODULE_FUNC(Text, Attribute, IsValid)(&self->attributes))         \
+          return false;                                                        \
+        return self->chars.size.col == self->attributes.size.col &&            \
+               self->chars.size.row == self->attributes.size.row;              \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Create, (MODULE_TYPED(Tuple, Dual, UInt16) size), {   \
+        OPSTATUS status;                                                       \
+        if (self == NULL)                                                      \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        status = MODULE_FUNC(Text, Char, SUFFIX, Create)(&self->chars, size);  \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        status = MODULE_FUNC(Text, Attribute, Create)(&self->attributes, size); \
+        if (status != STATUS_CONST(SUCCESS)) {                                 \
+          MODULE_FUNC(Text, Char, SUFFIX, Destroy)(&self->chars);              \
+          return status;                                                       \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Destroy, (), {                                          \
+        OPSTATUS charStatus;                                                   \
+        OPSTATUS attributeStatus;                                              \
+        if (self == NULL)                                                      \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        charStatus = MODULE_FUNC(Text, Char, SUFFIX, Destroy)(&self->chars);   \
+        attributeStatus =                                                      \
+            MODULE_FUNC(Text, Attribute, Destroy)(&self->attributes);          \
+        return charStatus != STATUS_CONST(SUCCESS) ? charStatus                \
+                                                   : attributeStatus;          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(WriteRegion,                                            \
+                       (MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition, \
+                        const MODULE_TYPED(Text, Grid, SUFFIX) *source,        \
+                        MODULE_TYPED(Tuple, Quad, UInt16) sourceRegion), {     \
+        OPSTATUS status;                                                       \
+        if (self == source ||                                                  \
+            !MODULE_FUNC(Text, Grid, SUFFIX, IsValid)(self) ||                 \
+            !MODULE_FUNC(Text, Grid, SUFFIX, IsValid)(source))                 \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        status = MODULE_FUNC(Text, Char, SUFFIX, WriteRegion)(                 \
+            &self->chars, destinationPosition, &source->chars, sourceRegion);  \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        return MODULE_FUNC(Text, Attribute, WriteRegion)(                      \
+            &self->attributes, destinationPosition, &source->attributes,       \
+            sourceRegion);                                                     \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Resize, (MODULE_TYPED(Tuple, Dual, UInt16) size), {   \
+        MODULE_TYPED(Text, Grid, SUFFIX) temporary = {0};                      \
+        OPSTATUS status;                                                       \
+        if (!MODULE_FUNC(Text, Grid, SUFFIX, IsValid)(self))                   \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (size.col == self->chars.size.col &&                                \
+            size.row == self->chars.size.row)                                  \
+          return STATUS_CONST(SUCCESS);                                        \
+        if (size.col == 0U && size.row == 0U)                                  \
+          return MODULE_FUNC(Text, Grid, SUFFIX, Destroy)(self);               \
+        status = MODULE_FUNC(Text, Grid, SUFFIX, Create)(&temporary, size);    \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        if (self->chars.size.col > 0U && self->chars.size.row > 0U) {          \
+          MODULE_TYPED(Tuple, Dual, UInt16) origin;                            \
+          MODULE_TYPED(Tuple, Quad, UInt16) copyRegion;                        \
+          uint16_t copyColumns = self->chars.size.col < size.col               \
+                                     ? self->chars.size.col                    \
+                                     : size.col;                               \
+          uint16_t copyRows = self->chars.size.row < size.row                  \
+                                  ? self->chars.size.row                       \
+                                  : size.row;                                  \
+          origin.col = 0U;                                                     \
+          origin.row = 0U;                                                     \
+          copyRegion.left = 0U;                                                \
+          copyRegion.top = 0U;                                                 \
+          copyRegion.right = (uint16_t)(copyColumns - 1U);                     \
+          copyRegion.bottom = (uint16_t)(copyRows - 1U);                       \
+          status = MODULE_FUNC(Text, Grid, SUFFIX, WriteRegion)(               \
+              &temporary, origin, self, copyRegion);                           \
+          if (status != STATUS_CONST(SUCCESS)) {                               \
+            MODULE_FUNC(Text, Grid, SUFFIX, Destroy)(&temporary);              \
+            return status;                                                     \
+          }                                                                    \
+        }                                                                      \
+        MODULE_FUNC(Text, Grid, SUFFIX, Destroy)(self);                        \
+        *self = temporary;                                                     \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Recreate, (MODULE_TYPED(Tuple, Dual, UInt16) size), { \
+        OPSTATUS status;                                                       \
+        if (self == NULL)                                                      \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        status = MODULE_FUNC(Text, Grid, SUFFIX, Destroy)(self);               \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        return MODULE_FUNC(Text, Grid, SUFFIX, Create)(self, size);            \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Clone, (const MODULE_TYPED(Text, Grid, SUFFIX) *source), { \
+        OPSTATUS status;                                                       \
+        if (self == NULL || self == source ||                                  \
+            !MODULE_FUNC(Text, Grid, SUFFIX, IsValid)(source))                 \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        status = MODULE_FUNC(Text, Char, SUFFIX, Clone)(                       \
+            &self->chars, &source->chars);                                     \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        status = MODULE_FUNC(Text, Attribute, Clone)(                          \
+            &self->attributes, &source->attributes);                           \
+        if (status != STATUS_CONST(SUCCESS)) {                                 \
+          MODULE_FUNC(Text, Char, SUFFIX, Destroy)(&self->chars);              \
+          return status;                                                       \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Clear, (), {                                            \
+        OPSTATUS status;                                                       \
+        if (!MODULE_FUNC(Text, Grid, SUFFIX, IsValid)(self))                   \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        status = MODULE_FUNC(Text, Char, SUFFIX, Clear)(&self->chars);         \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        return MODULE_FUNC(Text, Attribute, Clear)(&self->attributes);         \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(ClearWith,                                              \
+                       (TYPE character,                                        \
+                        MODULE_TYPE(Text, Attribute, Cell) attribute), {       \
+        OPSTATUS status;                                                       \
+        if (!MODULE_FUNC(Text, Grid, SUFFIX, IsValid)(self))                   \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        status = MODULE_FUNC(Text, Char, SUFFIX, Fill)(&self->chars, character); \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        return MODULE_FUNC(Text, Attribute, ClearWith)(&self->attributes,      \
+                                                       attribute);             \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(ReadCell,                                               \
+                       (MODULE_TYPED(Tuple, Dual, UInt16) position,            \
+                        TYPE *character,                                       \
+                        MODULE_TYPE(Text, Attribute, Cell) *attribute), {      \
+        OPSTATUS status;                                                       \
+        if (!MODULE_FUNC(Text, Grid, SUFFIX, IsValid)(self))                   \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (character != NULL) {                                               \
+          status = MODULE_FUNC(Text, Char, SUFFIX, ReadCell)(                  \
+              &self->chars, position, character);                              \
+          if (status != STATUS_CONST(SUCCESS))                                 \
+            return status;                                                     \
+        }                                                                      \
+        if (attribute != NULL) {                                               \
+          status = MODULE_FUNC(Text, Attribute, ReadCell)(                     \
+              &self->attributes, position, attribute);                         \
+          if (status != STATUS_CONST(SUCCESS))                                 \
+            return status;                                                     \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(WriteCell,                                              \
+                       (MODULE_TYPED(Tuple, Dual, UInt16) position,            \
+                        TYPE character,                                        \
+                        MODULE_TYPE(Text, Attribute, Cell) attribute), {       \
+        OPSTATUS status;                                                       \
+        if (!MODULE_FUNC(Text, Grid, SUFFIX, IsValid)(self))                   \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        status = MODULE_FUNC(Text, Char, SUFFIX, WriteCell)(                   \
+            &self->chars, position, character);                                \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        return MODULE_FUNC(Text, Attribute, WriteCell)(                        \
+            &self->attributes, position, attribute);                           \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Fill,                                                   \
+                       (TYPE character,                                        \
+                        MODULE_TYPE(Text, Attribute, Cell) attribute), {       \
+        OPSTATUS status;                                                       \
+        if (!MODULE_FUNC(Text, Grid, SUFFIX, IsValid)(self))                   \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        status = MODULE_FUNC(Text, Char, SUFFIX, Fill)(&self->chars, character); \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        return MODULE_FUNC(Text, Attribute, Fill)(&self->attributes, attribute); \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(FillRegion,                                             \
+                       (MODULE_TYPED(Tuple, Quad, UInt16) region,              \
+                        TYPE character,                                        \
+                        MODULE_TYPE(Text, Attribute, Cell) attribute), {       \
+        OPSTATUS status;                                                       \
+        if (!MODULE_FUNC(Text, Grid, SUFFIX, IsValid)(self))                   \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        status = MODULE_FUNC(Text, Char, SUFFIX, FillRegion)(                  \
+            &self->chars, region, character);                                  \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        return MODULE_FUNC(Text, Attribute, FillRegion)(                       \
+            &self->attributes, region, attribute);                             \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Read,                                                   \
+                       (MODULE_TYPED(Tuple, Quad, UInt16) region,              \
+                        MODULE_TYPED(Text, Grid, SUFFIX) *destination), {      \
+        OPSTATUS status;                                                       \
+        if (self == destination ||                                             \
+            !MODULE_FUNC(Text, Grid, SUFFIX, IsValid)(self) ||                 \
+            destination == NULL)                                               \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        status = MODULE_FUNC(Text, Char, SUFFIX, Read)(                        \
+            &self->chars, region, &destination->chars);                        \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        status = MODULE_FUNC(Text, Attribute, Read)(                           \
+            &self->attributes, region, &destination->attributes);              \
+        if (status != STATUS_CONST(SUCCESS)) {                                 \
+          MODULE_FUNC(Text, Char, SUFFIX, Destroy)(&destination->chars);       \
+          return status;                                                       \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Write,                                                  \
+                       (MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition, \
+                        const MODULE_TYPED(Text, Grid, SUFFIX) *source), {     \
+        OPSTATUS status;                                                       \
+        if (self == source ||                                                  \
+            !MODULE_FUNC(Text, Grid, SUFFIX, IsValid)(self) ||                 \
+            !MODULE_FUNC(Text, Grid, SUFFIX, IsValid)(source))                 \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        status = MODULE_FUNC(Text, Char, SUFFIX, Write)(                       \
+            &self->chars, destinationPosition, &source->chars);                \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        return MODULE_FUNC(Text, Attribute, Write)(                            \
+            &self->attributes, destinationPosition, &source->attributes);      \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(BlitRegion,                                             \
+                       (MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition, \
+                        const MODULE_TYPED(Text, Grid, SUFFIX) *source,        \
+                        MODULE_TYPED(Tuple, Quad, UInt16) sourceRegion,        \
+                        TYPE transparentCharacter), {                          \
+        uint16_t copyWidth;                                                    \
+        uint16_t copyHeight;                                                   \
+        if (self == source ||                                                  \
+            !MODULE_FUNC(Text, Grid, SUFFIX, IsValid)(self) ||                 \
+            !MODULE_FUNC(Text, Grid, SUFFIX, IsValid)(source))                 \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (sourceRegion.left > sourceRegion.right ||                          \
+            sourceRegion.top > sourceRegion.bottom ||                          \
+            sourceRegion.right >= source->chars.size.col ||                    \
+            sourceRegion.bottom >= source->chars.size.row)                     \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        copyWidth = (uint16_t)(sourceRegion.right - sourceRegion.left + 1U);   \
+        copyHeight = (uint16_t)(sourceRegion.bottom - sourceRegion.top + 1U);  \
+        if (destinationPosition.col + copyWidth > self->chars.size.col ||      \
+            destinationPosition.row + copyHeight > self->chars.size.row)       \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        for (uint16_t row = 0U; row < copyHeight; ++row) {                     \
+          size_t dstRowOffset =                                                \
+              (size_t)(destinationPosition.row + row) * self->chars.size.col + \
+              destinationPosition.col;                                         \
+          size_t srcRowOffset =                                                \
+              (size_t)(sourceRegion.top + row) * source->chars.size.col +      \
+              sourceRegion.left;                                               \
+          for (uint16_t col = 0U; col < copyWidth; ++col) {                    \
+            TYPE ch = source->chars.data[srcRowOffset + col];                  \
+            if (ch != transparentCharacter) {                                  \
+              self->chars.data[dstRowOffset + col] = ch;                       \
+              self->attributes.data[dstRowOffset + col] =                      \
+                  source->attributes.data[srcRowOffset + col];                 \
+            }                                                                  \
+          }                                                                    \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Blit,                                                   \
+                       (MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition, \
+                        const MODULE_TYPED(Text, Grid, SUFFIX) *source,        \
+                        TYPE transparentCharacter), {                          \
+        MODULE_TYPED(Tuple, Quad, UInt16) sourceRegion;                        \
+        if (self == source ||                                                  \
+            !MODULE_FUNC(Text, Grid, SUFFIX, IsValid)(self) ||                 \
+            !MODULE_FUNC(Text, Grid, SUFFIX, IsValid)(source))                 \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (source->chars.size.col == 0U || source->chars.size.row == 0U)      \
+          return STATUS_CONST(SUCCESS);                                        \
+        sourceRegion.left = 0U;                                                \
+        sourceRegion.top = 0U;                                                 \
+        sourceRegion.right = (uint16_t)(source->chars.size.col - 1U);          \
+        sourceRegion.bottom = (uint16_t)(source->chars.size.row - 1U);         \
+        return MODULE_FUNC(Text, Grid, SUFFIX, BlitRegion)(                    \
+            self, destinationPosition, source, sourceRegion,                   \
+            transparentCharacter);                                             \
+      })                                                                       \
+  )
+#endif
+
+#if defined(SUFFIX) && defined(TYPE)
+TEMPLATE_Text_Grid(SUFFIX, TYPE)
+#undef SUFFIX
+#undef TYPE
+#endif

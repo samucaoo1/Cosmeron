@@ -1,6 +1,8 @@
 #pragma once
 
-TEXT_UTF8_ENCODED_LENGTH_PROTOTYPE {
+PACKAGE_OPERATION_IMPLEMENT_EX(Text_UTF8, EncodedLength,
+                               (MODULE_TYPE(Text, Char32) codepoint,
+                                size_t *outUnits)) {
   uint_least32_t value = (uint_least32_t)codepoint;
 
   if (outUnits == NULL)
@@ -20,7 +22,10 @@ TEXT_UTF8_ENCODED_LENGTH_PROTOTYPE {
   return STATUS_CONST(SUCCESS);
 }
 
-TEXT_UTF8_ENCODE_PROTOTYPE {
+PACKAGE_OPERATION_IMPLEMENT_EX(Text_UTF8, Encode,
+                               (MODULE_TYPE(Text, Char32) codepoint,
+                                unsigned char *output, size_t capacity,
+                                size_t *outUnits)) {
   uint_least32_t value = (uint_least32_t)codepoint;
   size_t length = 0U;
   OPSTATUS status;
@@ -57,7 +62,10 @@ TEXT_UTF8_ENCODE_PROTOTYPE {
   return STATUS_CONST(SUCCESS);
 }
 
-TEXT_UTF8_DECODE_PROTOTYPE {
+PACKAGE_OPERATION_IMPLEMENT_EX(Text_UTF8, Decode,
+                               (const unsigned char *input, size_t size,
+                                MODULE_TYPE(Text, Char32) *outCodepoint,
+                                size_t *outUnits)) {
   uint_least32_t value;
   uint_least32_t minimum;
   size_t length;
@@ -108,7 +116,9 @@ TEXT_UTF8_DECODE_PROTOTYPE {
   return STATUS_CONST(SUCCESS);
 }
 
-TEXT_UTF8_COUNT_PROTOTYPE {
+PACKAGE_OPERATION_IMPLEMENT_EX(Text_UTF8, Count,
+                               (const unsigned char *input, size_t size,
+                                size_t *outCodepoints, size_t *outUnits)) {
   size_t offset = 0U;
   size_t count = 0U;
 
@@ -134,7 +144,8 @@ TEXT_UTF8_COUNT_PROTOTYPE {
   return STATUS_CONST(SUCCESS);
 }
 
-TEXT_UTF8_VALIDATE_PROTOTYPE {
+PACKAGE_PREDICATE_IMPLEMENT_EX(Text_UTF8, Validate,
+                               (const unsigned char *input, size_t size)) {
   size_t codepoints;
   size_t units;
   return MODULE_FUNC(Text, UTF8, Count)(input, size, &codepoints, &units) ==
