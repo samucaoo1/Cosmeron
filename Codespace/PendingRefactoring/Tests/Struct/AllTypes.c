@@ -76,24 +76,35 @@
   TEST_PENTA(TYPE, SUFFIX)
 
 int main(void) {
-  TEST_STANDARD(uint8_t, uint8);
-  TEST_STANDARD(uint16_t, uint16);
-  TEST_STANDARD(uint32_t, uint32);
-  TEST_STANDARD(uint64_t, uint64);
-  TEST_STANDARD(int8_t, int8);
-  TEST_STANDARD(int16_t, int16);
-  TEST_STANDARD(int32_t, int32);
-  TEST_STANDARD(int64_t, int64);
-  TEST_STANDARD(float, float);
-  TEST_STANDARD(double, double);
-  TEST_STANDARD(long double, longdouble);
-
-  TEST_DUAL(size_t, size);
+  TEST_STANDARD(bool, Boolean);
+  TEST_STANDARD(uint8_t, UInt8);
+  TEST_STANDARD(uint16_t, UInt16);
+  TEST_STANDARD(uint32_t, UInt32);
+  TEST_STANDARD(uint64_t, UInt64);
+  TEST_STANDARD(int8_t, Int8);
+  TEST_STANDARD(int16_t, Int16);
+  TEST_STANDARD(int32_t, Int32);
+  TEST_STANDARD(int64_t, Int64);
+  TEST_STANDARD(char, Char);
+  TEST_STANDARD(uint8_t, Char8);
+  TEST_STANDARD(uint16_t, Char16);
+  TEST_STANDARD(uint32_t, Char32);
+  TEST_STANDARD(float, Float32);
+  TEST_STANDARD(double, Float64);
+  TEST_STANDARD(float, Float);
+  TEST_STANDARD(double, Double);
+  TEST_STANDARD(long double, LongDouble);
+  TEST_STANDARD(int, Int);
+  TEST_STANDARD(unsigned int, UInt);
+  TEST_STANDARD(size_t, Size);
+  TEST_STANDARD(ptrdiff_t, PtrDiff);
+  TEST_STANDARD(intptr_t, IntPtr);
+  TEST_STANDARD(uintptr_t, UIntPtr);
 
 #if !COMPILER_MSVC
-  TEST_NONPAIR(float _Complex, float_complex);
-  TEST_NONPAIR(double _Complex, double_complex);
-  TEST_NONPAIR(long double _Complex, longdouble_complex);
+  TEST_STANDARD(float _Complex, FloatComplex);
+  TEST_STANDARD(double _Complex, DoubleComplex);
+  TEST_STANDARD(long double _Complex, LongDoubleComplex);
 #endif
 
   return 0;

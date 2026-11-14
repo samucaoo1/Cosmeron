@@ -1,0 +1,370 @@
+#pragma once
+
+#define COSMERON_MACRO_INTERNAL_BIT_MASK_EVEN_ODD_U64                          \
+  UINT64_C(0x5555555555555555)
+#define COSMERON_MACRO_INTERNAL_BIT_MASK_PAIRS_U64                             \
+  UINT64_C(0x3333333333333333)
+#define COSMERON_MACRO_INTERNAL_BIT_MASK_NIBBLES_U64                           \
+  UINT64_C(0x0F0F0F0F0F0F0F0F)
+
+#define TEMPLATE_Bit_IMPLEMENT(SUFFIX, TYPE)                                   \
+  PACKAGE_OPERATION_IMPLEMENT_EX(NS(Bit, SUFFIX), Set,                         \
+                                 (TYPE *value, uint8_t bit)) {                 \
+    if (!value)                                                                \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (bit >= (uint8_t)(sizeof(TYPE) * 8U))                                   \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *value = (TYPE)(*value | (TYPE)((TYPE)1U << bit));                         \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  PACKAGE_OPERATION_IMPLEMENT_EX(NS(Bit, SUFFIX), Clear,                       \
+                                 (TYPE *value, uint8_t bit)) {                 \
+    if (!value)                                                                \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (bit >= (uint8_t)(sizeof(TYPE) * 8U))                                   \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *value = (TYPE)(*value & (TYPE)~(TYPE)((TYPE)1U << bit));                  \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  PACKAGE_OPERATION_IMPLEMENT_EX(NS(Bit, SUFFIX), Flip,                        \
+                                 (TYPE *value, uint8_t bit)) {                 \
+    if (!value)                                                                \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (bit >= (uint8_t)(sizeof(TYPE) * 8U))                                   \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *value = (TYPE)(*value ^ (TYPE)((TYPE)1U << bit));                         \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  PACKAGE_PREDICATE_IMPLEMENT_EX(NS(Bit, SUFFIX), Check,                       \
+                                 (TYPE value, uint8_t bit)) {                  \
+    return (bit < (uint8_t)(sizeof(TYPE) * 8U)) &&                             \
+           ((value & (TYPE)((TYPE)1U << bit)) != 0);                           \
+  }                                                                            \
+                                                                               \
+  PACKAGE_PROCEDURE_IMPLEMENT_EX(NS(Bit, SUFFIX), MaskSet,                     \
+                                 (TYPE *value, TYPE mask)) {                   \
+    if (value)                                                                 \
+      *value = (TYPE)(*value | mask);                                          \
+  }                                                                            \
+                                                                               \
+  PACKAGE_PROCEDURE_IMPLEMENT_EX(NS(Bit, SUFFIX), MaskClear,                   \
+                                 (TYPE *value, TYPE mask)) {                   \
+    if (value)                                                                 \
+      *value = (TYPE)(*value & (TYPE)~mask);                                   \
+  }                                                                            \
+                                                                               \
+  PACKAGE_PROCEDURE_IMPLEMENT_EX(NS(Bit, SUFFIX), MaskFlip,                    \
+                                 (TYPE *value, TYPE mask)) {                   \
+    if (value)                                                                 \
+      *value = (TYPE)(*value ^ mask);                                          \
+  }                                                                            \
+                                                                               \
+  PACKAGE_PREDICATE_IMPLEMENT_EX(NS(Bit, SUFFIX), MaskCheckAll,                \
+                                 (TYPE value, TYPE mask)) {                    \
+    return (value & mask) == mask;                                             \
+  }                                                                            \
+                                                                               \
+  PACKAGE_PREDICATE_IMPLEMENT_EX(NS(Bit, SUFFIX), MaskCheckAny,                \
+                                 (TYPE value, TYPE mask)) {                    \
+    return (value & mask) != 0;                                                \
+  }                                                                            \
+                                                                               \
+  PACKAGE_OPERATION_IMPLEMENT_EX(NS(Bit, SUFFIX), MaskRange,                   \
+                                 (uint8_t high, uint8_t low, TYPE *outMask)) { \
+    const uint8_t totalBits = (uint8_t)(sizeof(TYPE) * 8U);                    \
+    if (!outMask)                                                              \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (high < low || low >= totalBits || high >= totalBits)                   \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    const uint8_t width = (uint8_t)(high - low + 1U);                          \
+    if (width == totalBits) {                                                  \
+      *outMask = (TYPE)~(TYPE)0;                                               \
+    } else {                                                                   \
+      const TYPE baseMask = (TYPE)(((TYPE)1U << width) - (TYPE)1U);            \
+      *outMask = (TYPE)(baseMask << low);                                      \
+    }                                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  PACKAGE_FUNCTION_IMPLEMENT_EX(NS(Bit, SUFFIX), size_t, Popcount,             \
+                                (TYPE value)) {                                \
+    uint64_t temp = (uint64_t)value;                                           \
+    temp -= (temp >> 1U) & COSMERON_MACRO_INTERNAL_BIT_MASK_EVEN_ODD_U64;      \
+    temp = (temp & COSMERON_MACRO_INTERNAL_BIT_MASK_PAIRS_U64) +               \
+           ((temp >> 2U) & COSMERON_MACRO_INTERNAL_BIT_MASK_PAIRS_U64);        \
+    temp = (temp + (temp >> 4U)) &                                             \
+           COSMERON_MACRO_INTERNAL_BIT_MASK_NIBBLES_U64;                       \
+    return (size_t)((temp * UINT64_C(0x0101010101010101)) >> 56U);             \
+  }                                                                            \
+                                                                               \
+  PACKAGE_FUNCTION_IMPLEMENT_EX(NS(Bit, SUFFIX), size_t, CountLeadingZeros,    \
+                                (TYPE value)) {                                \
+    const size_t totalBits = sizeof(TYPE) * 8U;                                \
+    if (value == 0)                                                            \
+      return totalBits;                                                        \
+    uint64_t v = (uint64_t)value << (64U - totalBits);                         \
+    size_t count = 0U;                                                         \
+    if ((v & UINT64_C(0xFFFFFFFF00000000)) == 0U) {                            \
+      count += 32U;                                                            \
+      v <<= 32U;                                                               \
+    }                                                                          \
+    if ((v & UINT64_C(0xFFFF000000000000)) == 0U) {                            \
+      count += 16U;                                                            \
+      v <<= 16U;                                                               \
+    }                                                                          \
+    if ((v & UINT64_C(0xFF00000000000000)) == 0U) {                            \
+      count += 8U;                                                             \
+      v <<= 8U;                                                                \
+    }                                                                          \
+    if ((v & UINT64_C(0xF000000000000000)) == 0U) {                            \
+      count += 4U;                                                             \
+      v <<= 4U;                                                                \
+    }                                                                          \
+    if ((v & UINT64_C(0xC000000000000000)) == 0U) {                            \
+      count += 2U;                                                             \
+      v <<= 2U;                                                                \
+    }                                                                          \
+    if ((v & UINT64_C(0x8000000000000000)) == 0U)                              \
+      count += 1U;                                                             \
+    return count;                                                              \
+  }                                                                            \
+                                                                               \
+  PACKAGE_FUNCTION_IMPLEMENT_EX(NS(Bit, SUFFIX), size_t, CountTrailingZeros,   \
+                                (TYPE value)) {                                \
+    const size_t totalBits = sizeof(TYPE) * 8U;                                \
+    if (value == 0)                                                            \
+      return totalBits;                                                        \
+    uint64_t v = (uint64_t)value;                                              \
+    size_t count = 0U;                                                         \
+    if (totalBits > 32U && (v & UINT64_C(0xFFFFFFFF)) == 0U) {                 \
+      count += 32U;                                                            \
+      v >>= 32U;                                                               \
+    }                                                                          \
+    if (totalBits > 16U && (v & UINT64_C(0xFFFF)) == 0U) {                     \
+      count += 16U;                                                            \
+      v >>= 16U;                                                               \
+    }                                                                          \
+    if (totalBits > 8U && (v & UINT64_C(0xFF)) == 0U) {                        \
+      count += 8U;                                                             \
+      v >>= 8U;                                                                \
+    }                                                                          \
+    if ((v & UINT64_C(0xF)) == 0U) {                                           \
+      count += 4U;                                                             \
+      v >>= 4U;                                                                \
+    }                                                                          \
+    if ((v & UINT64_C(0x3)) == 0U) {                                           \
+      count += 2U;                                                             \
+      v >>= 2U;                                                                \
+    }                                                                          \
+    if ((v & UINT64_C(0x1)) == 0U)                                             \
+      count += 1U;                                                             \
+    return count;                                                              \
+  }                                                                            \
+                                                                               \
+  PACKAGE_PREDICATE_IMPLEMENT_EX(NS(Bit, SUFFIX), Parity, (TYPE value)) {      \
+    return (MODULE_FUNC(Bit, SUFFIX, Popcount)(value) & 1U) != 0U;             \
+  }                                                                            \
+                                                                               \
+  PACKAGE_PREDICATE_IMPLEMENT_EX(NS(Bit, SUFFIX), IsPowerOfTwo,                \
+                                 (TYPE value)) {                               \
+    return (value != 0) && ((value & (TYPE)(value - 1)) == 0);                 \
+  }                                                                            \
+                                                                               \
+  PACKAGE_FUNCTION_IMPLEMENT_EX(NS(Bit, SUFFIX), TYPE, FloorPowerOfTwo,        \
+                                (TYPE value)) {                                \
+    if (value == 0)                                                            \
+      return (TYPE)0;                                                          \
+    const size_t totalBits = sizeof(TYPE) * 8U;                                \
+    const size_t msb =                                                         \
+        totalBits - 1U - MODULE_FUNC(Bit, SUFFIX, CountLeadingZeros)(value);   \
+    return (TYPE)((TYPE)1U << msb);                                            \
+  }                                                                            \
+                                                                               \
+  PACKAGE_OPERATION_IMPLEMENT_EX(NS(Bit, SUFFIX), NextPowerOfTwo,              \
+                                 (TYPE value, TYPE *outResult)) {              \
+    if (!outResult)                                                            \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (value <= (TYPE)1) {                                                    \
+      *outResult = (TYPE)1;                                                    \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    const size_t totalBits = sizeof(TYPE) * 8U;                                \
+    const size_t shift =                                                       \
+        totalBits -                                                            \
+        MODULE_FUNC(Bit, SUFFIX, CountLeadingZeros)((TYPE)(value - (TYPE)1));  \
+    if (shift >= totalBits)                                                    \
+      return STATUS_CONST(ARITHMETIC_OVERFLOW);                                \
+    *outResult = (TYPE)((TYPE)1U << shift);                                    \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  PACKAGE_OPERATION_IMPLEMENT_EX(NS(Bit, SUFFIX), Log2Floor,                   \
+                                 (TYPE value, uint8_t *outLog)) {              \
+    if (!outLog)                                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (value == 0)                                                            \
+      return STATUS_CONST(NOT_FOUND);                                          \
+    const size_t totalBits = sizeof(TYPE) * 8U;                                \
+    *outLog = (uint8_t)(totalBits - 1U -                                       \
+                        MODULE_FUNC(Bit, SUFFIX, CountLeadingZeros)(value));   \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  PACKAGE_OPERATION_IMPLEMENT_EX(NS(Bit, SUFFIX), Log2Ceil,                    \
+                                 (TYPE value, uint8_t *outLog)) {              \
+    if (!outLog)                                                               \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (value == 0)                                                            \
+      return STATUS_CONST(NOT_FOUND);                                          \
+    if (value == (TYPE)1) {                                                    \
+      *outLog = 0U;                                                            \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    const size_t totalBits = sizeof(TYPE) * 8U;                                \
+    *outLog = (uint8_t)(totalBits -                                            \
+                        MODULE_FUNC(Bit, SUFFIX, CountLeadingZeros)(           \
+                            (TYPE)(value - (TYPE)1)));                         \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  PACKAGE_OPERATION_IMPLEMENT_EX(NS(Bit, SUFFIX), IndexLSB,                    \
+                                 (TYPE value, TYPE *outIndex)) {               \
+    if (!outIndex)                                                             \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (value == 0)                                                            \
+      return STATUS_CONST(NOT_FOUND);                                          \
+    *outIndex = (TYPE)MODULE_FUNC(Bit, SUFFIX, CountTrailingZeros)(value);     \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  PACKAGE_OPERATION_IMPLEMENT_EX(NS(Bit, SUFFIX), IndexMSB,                    \
+                                 (TYPE value, TYPE *outIndex)) {               \
+    if (!outIndex)                                                             \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (value == 0)                                                            \
+      return STATUS_CONST(NOT_FOUND);                                          \
+    const size_t totalBits = sizeof(TYPE) * 8U;                                \
+    *outIndex = (TYPE)(totalBits - 1U -                                        \
+                       MODULE_FUNC(Bit, SUFFIX, CountLeadingZeros)(value));    \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  PACKAGE_FUNCTION_IMPLEMENT_EX(NS(Bit, SUFFIX), TYPE, IsolateLowestSet,       \
+                                (TYPE value)) {                                \
+    return (TYPE)(value & (TYPE)(0U - value));                                 \
+  }                                                                            \
+                                                                               \
+  PACKAGE_FUNCTION_IMPLEMENT_EX(NS(Bit, SUFFIX), TYPE, ClearLowestSet,         \
+                                (TYPE value)) {                                \
+    return (TYPE)(value & (TYPE)(value - (TYPE)1));                            \
+  }                                                                            \
+                                                                               \
+  PACKAGE_FUNCTION_IMPLEMENT_EX(NS(Bit, SUFFIX), TYPE, RotateLeft,             \
+                                (TYPE value, TYPE shift)) {                    \
+    const uint8_t totalBits = (uint8_t)(sizeof(TYPE) * 8U);                    \
+    shift = (TYPE)(shift % (TYPE)totalBits);                                   \
+    if (shift == 0)                                                            \
+      return value;                                                            \
+    return (TYPE)((value << shift) | (value >> (totalBits - shift)));          \
+  }                                                                            \
+                                                                               \
+  PACKAGE_FUNCTION_IMPLEMENT_EX(NS(Bit, SUFFIX), TYPE, RotateRight,            \
+                                (TYPE value, TYPE shift)) {                    \
+    const uint8_t totalBits = (uint8_t)(sizeof(TYPE) * 8U);                    \
+    shift = (TYPE)(shift % (TYPE)totalBits);                                   \
+    if (shift == 0)                                                            \
+      return value;                                                            \
+    return (TYPE)((value >> shift) | (value << (totalBits - shift)));          \
+  }                                                                            \
+                                                                               \
+  PACKAGE_FUNCTION_IMPLEMENT_EX(NS(Bit, SUFFIX), TYPE, ReverseBits,            \
+                                (TYPE value)) {                                \
+    uint64_t v = (uint64_t)value;                                              \
+    v = ((v >> 1U) & COSMERON_MACRO_INTERNAL_BIT_MASK_EVEN_ODD_U64) |          \
+        ((v & COSMERON_MACRO_INTERNAL_BIT_MASK_EVEN_ODD_U64) << 1U);           \
+    v = ((v >> 2U) & COSMERON_MACRO_INTERNAL_BIT_MASK_PAIRS_U64) |             \
+        ((v & COSMERON_MACRO_INTERNAL_BIT_MASK_PAIRS_U64) << 2U);              \
+    v = ((v >> 4U) & COSMERON_MACRO_INTERNAL_BIT_MASK_NIBBLES_U64) |           \
+        ((v & COSMERON_MACRO_INTERNAL_BIT_MASK_NIBBLES_U64) << 4U);            \
+    if (sizeof(TYPE) > 1U) {                                                   \
+      v = ((v >> 8U) & UINT64_C(0x00FF00FF00FF00FF)) |                         \
+          ((v & UINT64_C(0x00FF00FF00FF00FF)) << 8U);                          \
+    }                                                                          \
+    if (sizeof(TYPE) > 2U) {                                                   \
+      v = ((v >> 16U) & UINT64_C(0x0000FFFF0000FFFF)) |                        \
+          ((v & UINT64_C(0x0000FFFF0000FFFF)) << 16U);                         \
+    }                                                                          \
+    if (sizeof(TYPE) > 4U) {                                                   \
+      v = (v >> 32U) | (v << 32U);                                             \
+    }                                                                          \
+    return (TYPE)v;                                                            \
+  }                                                                            \
+                                                                               \
+  PACKAGE_FUNCTION_IMPLEMENT_EX(NS(Bit, SUFFIX), TYPE, ByteSwap,               \
+                                (TYPE value)) {                                \
+    if (sizeof(TYPE) == 1U)                                                    \
+      return value;                                                            \
+    uint64_t v = (uint64_t)value;                                              \
+    if (sizeof(TYPE) == 2U)                                                    \
+      return (TYPE)(((v & UINT64_C(0x00FF)) << 8U) |                           \
+                    ((v & UINT64_C(0xFF00)) >> 8U));                           \
+    if (sizeof(TYPE) == 4U)                                                    \
+      return (TYPE)(((v & UINT64_C(0x000000FF)) << 24U) |                      \
+                    ((v & UINT64_C(0x0000FF00)) << 8U) |                       \
+                    ((v & UINT64_C(0x00FF0000)) >> 8U) |                       \
+                    ((v & UINT64_C(0xFF000000)) >> 24U));                      \
+    return (TYPE)(((v & UINT64_C(0x00000000000000FF)) << 56U) |                \
+                  ((v & UINT64_C(0x000000000000FF00)) << 40U) |                \
+                  ((v & UINT64_C(0x0000000000FF0000)) << 24U) |                \
+                  ((v & UINT64_C(0x00000000FF000000)) << 8U) |                 \
+                  ((v & UINT64_C(0x000000FF00000000)) >> 8U) |                 \
+                  ((v & UINT64_C(0x0000FF0000000000)) >> 24U) |                \
+                  ((v & UINT64_C(0x00FF000000000000)) >> 40U) |                \
+                  ((v & UINT64_C(0xFF00000000000000)) >> 56U));                \
+  }                                                                            \
+                                                                               \
+  PACKAGE_OPERATION_IMPLEMENT_EX(                                              \
+      NS(Bit, SUFFIX), Extract,                                                \
+      (TYPE value, uint8_t high, uint8_t low, TYPE *outField)) {               \
+    const uint8_t totalBits = (uint8_t)(sizeof(TYPE) * 8U);                    \
+    if (!outField)                                                             \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (high < low || low >= totalBits || high >= totalBits)                   \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    const uint8_t width = (uint8_t)(high - low + 1U);                          \
+    if (width == totalBits) {                                                  \
+      *outField = value;                                                       \
+    } else {                                                                   \
+      const TYPE mask = (TYPE)(((TYPE)1U << width) - (TYPE)1U);                \
+      *outField = (TYPE)((value >> low) & mask);                               \
+    }                                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  PACKAGE_OPERATION_IMPLEMENT_EX(                                              \
+      NS(Bit, SUFFIX), Insert,                                                 \
+      (TYPE *value, uint8_t high, uint8_t low, TYPE fieldValue)) {             \
+    const uint8_t totalBits = (uint8_t)(sizeof(TYPE) * 8U);                    \
+    if (!value)                                                                \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (high < low || low >= totalBits || high >= totalBits)                   \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    const uint8_t width = (uint8_t)(high - low + 1U);                          \
+    if (width == totalBits) {                                                  \
+      *value = fieldValue;                                                     \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    const TYPE mask = (TYPE)(((TYPE)1U << width) - (TYPE)1U);                  \
+    const TYPE maskedField = (TYPE)(fieldValue & mask);                        \
+    const TYPE shiftedMask = (TYPE)(mask << low);                              \
+    const TYPE cleared = (TYPE)(*value & (TYPE)~shiftedMask);                  \
+    *value = (TYPE)(cleared | (TYPE)(maskedField << low));                     \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  PACKAGE_IMPLEMENT(NS(Bit, SUFFIX));
+
+/* EOF */
+

@@ -1,9 +1,0 @@
-#pragma once
-
-#include "TBigint.impl"
-
-#define TEMPLATE_TDECIMAL_IMPLEMENT(SUFFIX, TYPE)                              \
-  COSMERON_MACRO_INTERNAL_TYPE_BIGINT_IMPLEMENT(                               \
-      TDECIMAL_TYPE(SUFFIX), TDECIMAL_FUNC, SUFFIX, TYPE)
-
-/* EOF */

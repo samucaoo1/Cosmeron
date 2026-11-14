@@ -1,0 +1,35 @@
+/* Tag.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Type_Tag
+#define TEMPLATE_Type_Tag(SUFFIX, UINT_TYPE)                                   \
+  TEMPLATE_OBJECT(Type, Tag, SUFFIX,                                           \
+      FIELDS(                                                                  \
+          UINT_TYPE value;                                                     \
+          char text[((SUFFIX) / 8U) + 1U];                                     \
+      ),                                                                       \
+      OPERATION(FromString, (const char *chars)),                              \
+      OPERATION(FromUInt, (UINT_TYPE value)),                                  \
+      OPERATION(FromBytes, (const void *bytes, size_t length)),                \
+      OPERATION(ReadBE, (const void *src)),                                    \
+      OPERATION(ReadLE, (const void *src)),                                    \
+      CONST_OPERATION(WriteBE, (void *dest)),                                  \
+      CONST_OPERATION(WriteLE, (void *dest)),                                  \
+      CONST_OPERATION(ToString, (char *dest, size_t destCapacity)),             \
+      CONST_FUNCTION(const char *, Text, ()),                                  \
+      CONST_FUNCTION(UINT_TYPE, ToUInt, ()),                                    \
+      CONST_PREDICATE(IsPrintable, ()),                                        \
+      CONST_PREDICATE(Equal,                                                   \
+                      (const MODULE_TYPED(Type, Tag, SUFFIX) *other)),         \
+      CONST_OPERATION(Compare,                                                 \
+                      (const MODULE_TYPED(Type, Tag, SUFFIX) *other,           \
+                       CMPOUT *result))                                        \
+  )
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Type_Tag(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif
+

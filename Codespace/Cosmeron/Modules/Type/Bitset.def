@@ -1,0 +1,50 @@
+/* Bitset.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Type_Bitset
+#define TEMPLATE_Type_Bitset(SUFFIX, BIT_COUNT)                                \
+  TEMPLATE_OBJECT(Type, Bitset, SUFFIX,                                        \
+      FIELDS(                                                                  \
+          uint64_t limb[((size_t)(BIT_COUNT) + 63U) / 64U];                    \
+      ),                                                                       \
+      OPERATION(Clear, ()),                                                    \
+      OPERATION(SetAll, ()),                                                   \
+      OPERATION(And, (const MODULE_TYPED(Type, Bitset, SUFFIX) *source)),      \
+      OPERATION(Or, (const MODULE_TYPED(Type, Bitset, SUFFIX) *source)),       \
+      OPERATION(Xor, (const MODULE_TYPED(Type, Bitset, SUFFIX) *source)),      \
+      OPERATION(Not, ()),                                                      \
+      OPERATION(ShiftLeft, (size_t bitCount)),                                 \
+      OPERATION(ShiftRight, (size_t bitCount)),                                \
+      OPERATION(BitSet, (size_t bit)),                                         \
+      OPERATION(BitClear, (size_t bit)),                                       \
+      OPERATION(BitFlip, (size_t bit)),                                        \
+      CONST_OPERATION(BitCheck, (size_t bit, bool *outResult)),                \
+      CONST_PREDICATE(BitTest, (size_t bit)),                                  \
+      OPERATION(SetRange, (size_t startBit, size_t endBit)),                   \
+      OPERATION(ClearRange, (size_t startBit, size_t endBit)),                 \
+      OPERATION(FlipRange, (size_t startBit, size_t endBit)),                  \
+      CONST_FUNCTION(size_t, Count, ()),                                       \
+      CONST_FUNCTION(size_t, Capacity, ()),                                    \
+      CONST_PREDICATE(Any, ()),                                                \
+      CONST_PREDICATE(All, ()),                                                \
+      CONST_PREDICATE(None, ()),                                               \
+      CONST_PREDICATE(Equal,                                                   \
+                      (const MODULE_TYPED(Type, Bitset, SUFFIX) *other)),      \
+      CONST_PREDICATE(IsSubset,                                                \
+                      (const MODULE_TYPED(Type, Bitset, SUFFIX) *other)),      \
+      CONST_PREDICATE(IsDisjoint,                                              \
+                      (const MODULE_TYPED(Type, Bitset, SUFFIX) *other)),      \
+      CONST_PREDICATE(Intersects,                                              \
+                      (const MODULE_TYPED(Type, Bitset, SUFFIX) *other)),      \
+      CONST_OPERATION(FindFirstSet, (size_t *outBit)),                         \
+      CONST_OPERATION(FindFirstZero, (size_t *outBit)),                        \
+      CONST_OPERATION(FindNextSet, (size_t startBit, size_t *outBit))          \
+  )
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(BIT_COUNT)
+  TEMPLATE_Type_Bitset(SUFFIX, BIT_COUNT);
+  #undef SUFFIX
+  #undef BIT_COUNT
+#endif
+

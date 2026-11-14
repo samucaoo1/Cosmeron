@@ -1,0 +1,409 @@
+/* RedBlack.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef COSMERON_MACRO_INTERNAL_TREE_RB_CORE
+#define COSMERON_MACRO_INTERNAL_TREE_RB_CORE(TARGET, NODE_TYPE, SUFFIX)        \
+  PREDICATE(IsRed, (const NODE_TYPE *node), {                                  \
+    return node != NULL && node->color == Tree_RBColor_RED;                    \
+  }),                                                                          \
+                                                                               \
+  FUNCTION(size_t, NodeHeight, (const NODE_TYPE *node), {                      \
+    return MODULE_IFUNC(Tree, NS(TARGET, SUFFIX), ComputeHeight)(node);        \
+  }),                                                                          \
+                                                                               \
+  PROCEDURE(RotateLeft, (NODE_TYPE **root, NODE_TYPE *x), {                    \
+    NODE_TYPE *y = x->right;                                                   \
+    x->right = y->left;                                                        \
+    if (y->left)                                                               \
+      y->left->parent = x;                                                     \
+    y->parent = x->parent;                                                     \
+    if (!x->parent)                                                            \
+      *root = y;                                                               \
+    else if (x == x->parent->left)                                             \
+      x->parent->left = y;                                                     \
+    else                                                                       \
+      x->parent->right = y;                                                    \
+    y->left = x;                                                               \
+    x->parent = y;                                                             \
+  }),                                                                          \
+                                                                               \
+  PROCEDURE(RotateRight, (NODE_TYPE **root, NODE_TYPE *y), {                   \
+    NODE_TYPE *x = y->left;                                                    \
+    y->left = x->right;                                                        \
+    if (x->right)                                                              \
+      x->right->parent = y;                                                    \
+    x->parent = y->parent;                                                     \
+    if (!y->parent)                                                            \
+      *root = x;                                                               \
+    else if (y == y->parent->left)                                             \
+      y->parent->left = x;                                                     \
+    else                                                                       \
+      y->parent->right = x;                                                    \
+    x->right = y;                                                              \
+    y->parent = x;                                                             \
+  }),                                                                          \
+                                                                               \
+  PROCEDURE(InsertFixup, (NODE_TYPE **root, NODE_TYPE *node), {                \
+    while (node->parent && node->parent->color == Tree_RBColor_RED) {          \
+      if (node->parent->parent &&                                              \
+          node->parent == node->parent->parent->left) {                        \
+        NODE_TYPE *u = node->parent->parent->right;                            \
+        if (MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), IsRed)(u)) {          \
+          node->parent->color = Tree_RBColor_BLACK;                            \
+          u->color = Tree_RBColor_BLACK;                                       \
+          node->parent->parent->color = Tree_RBColor_RED;                      \
+          node = node->parent->parent;                                         \
+        } else {                                                               \
+          if (node == node->parent->right) {                                   \
+            node = node->parent;                                               \
+            MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), RotateLeft)(root,     \
+                                                                     node);    \
+          }                                                                    \
+          node->parent->color = Tree_RBColor_BLACK;                            \
+          node->parent->parent->color = Tree_RBColor_RED;                      \
+          MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), RotateRight)(           \
+              root, node->parent->parent);                                     \
+        }                                                                      \
+      } else if (node->parent->parent) {                                       \
+        NODE_TYPE *u = node->parent->parent->left;                             \
+        if (MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), IsRed)(u)) {          \
+          node->parent->color = Tree_RBColor_BLACK;                            \
+          u->color = Tree_RBColor_BLACK;                                       \
+          node->parent->parent->color = Tree_RBColor_RED;                      \
+          node = node->parent->parent;                                         \
+        } else {                                                               \
+          if (node == node->parent->left) {                                    \
+            node = node->parent;                                               \
+            MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), RotateRight)(root,    \
+                                                                      node);   \
+          }                                                                    \
+          node->parent->color = Tree_RBColor_BLACK;                            \
+          node->parent->parent->color = Tree_RBColor_RED;                      \
+          MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), RotateLeft)(            \
+              root, node->parent->parent);                                     \
+        }                                                                      \
+      } else {                                                                 \
+        break;                                                                 \
+      }                                                                        \
+    }                                                                          \
+    if (*root)                                                                 \
+      (*root)->color = Tree_RBColor_BLACK;                                     \
+  }),                                                                          \
+                                                                               \
+  PROCEDURE(DeleteFixup,                                                       \
+            (NODE_TYPE **root, NODE_TYPE *node, NODE_TYPE *par), {             \
+              while (node != *root &&                                          \
+                     (node == NULL || node->color == Tree_RBColor_BLACK)) {    \
+                if (par == NULL)                                               \
+                  break;                                                       \
+                if (node == par->left) {                                       \
+                  NODE_TYPE *s = par->right;                                   \
+                  if (s && s->color == Tree_RBColor_RED) {                     \
+                    s->color = Tree_RBColor_BLACK;                             \
+                    par->color = Tree_RBColor_RED;                             \
+                    MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), RotateLeft)(  \
+                        root, par);                                            \
+                    s = par->right;                                            \
+                  }                                                            \
+                  if (s && (!s->left || s->left->color == Tree_RBColor_BLACK) && \
+                      (!s->right || s->right->color == Tree_RBColor_BLACK)) {  \
+                    s->color = Tree_RBColor_RED;                               \
+                    node = par;                                                \
+                    par = node->parent;                                        \
+                  } else if (s) {                                              \
+                    if (!s->right || s->right->color == Tree_RBColor_BLACK) {  \
+                      if (s->left)                                             \
+                        s->left->color = Tree_RBColor_BLACK;                   \
+                      s->color = Tree_RBColor_RED;                             \
+                      MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX),             \
+                                   RotateRight)(root, s);                      \
+                      s = par->right;                                          \
+                    }                                                          \
+                    if (s) {                                                   \
+                      s->color = par->color;                                   \
+                      par->color = Tree_RBColor_BLACK;                         \
+                      if (s->right)                                            \
+                        s->right->color = Tree_RBColor_BLACK;                  \
+                      MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), RotateLeft)(\
+                          root, par);                                          \
+                    }                                                          \
+                    node = *root;                                              \
+                    break;                                                     \
+                  } else {                                                     \
+                    break;                                                     \
+                  }                                                            \
+                } else {                                                       \
+                  NODE_TYPE *s = par->left;                                    \
+                  if (s && s->color == Tree_RBColor_RED) {                     \
+                    s->color = Tree_RBColor_BLACK;                             \
+                    par->color = Tree_RBColor_RED;                             \
+                    MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), RotateRight)( \
+                        root, par);                                            \
+                    s = par->left;                                             \
+                  }                                                            \
+                  if (s && (!s->right || s->right->color == Tree_RBColor_BLACK) &&\
+                      (!s->left || s->left->color == Tree_RBColor_BLACK)) {    \
+                    s->color = Tree_RBColor_RED;                               \
+                    node = par;                                                \
+                    par = node->parent;                                        \
+                  } else if (s) {                                              \
+                    if (!s->left || s->left->color == Tree_RBColor_BLACK) {    \
+                      if (s->right)                                            \
+                        s->right->color = Tree_RBColor_BLACK;                  \
+                      s->color = Tree_RBColor_RED;                             \
+                      MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX),             \
+                                   RotateLeft)(root, s);                       \
+                      s = par->left;                                           \
+                    }                                                          \
+                    if (s) {                                                   \
+                      s->color = par->color;                                   \
+                      par->color = Tree_RBColor_BLACK;                         \
+                      if (s->left)                                             \
+                        s->left->color = Tree_RBColor_BLACK;                   \
+                      MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX),             \
+                                   RotateRight)(root, par);                    \
+                    }                                                          \
+                    node = *root;                                              \
+                    break;                                                     \
+                  } else {                                                     \
+                    break;                                                     \
+                  }                                                            \
+                }                                                              \
+              }                                                                \
+              if (node)                                                        \
+                node->color = Tree_RBColor_BLACK;                              \
+            }),                                                                \
+                                                                               \
+  PROCEDURE(RemoveNode, (NODE_TYPE **root, size_t *size, NODE_TYPE *z), {      \
+    NODE_TYPE *y = z;                                                          \
+    NODE_TYPE *x = NULL;                                                       \
+    NODE_TYPE *xp = NULL;                                                      \
+    MODULE_ENUM(Tree, RBColor) yc = y->color;                                  \
+    if (!z->left) {                                                            \
+      x = z->right;                                                            \
+      xp = z->parent;                                                          \
+      MODULE_IFUNC(Tree, NS(TARGET, SUFFIX), Transplant)(root, z, z->right);   \
+    } else if (!z->right) {                                                    \
+      x = z->left;                                                             \
+      xp = z->parent;                                                          \
+      MODULE_IFUNC(Tree, NS(TARGET, SUFFIX), Transplant)(root, z, z->left);    \
+    } else {                                                                   \
+      y = MODULE_IFUNC(Tree, NS(TARGET, SUFFIX), MinNode)(z->right);           \
+      yc = y->color;                                                           \
+      x = y->right;                                                            \
+      if (y->parent == z) {                                                    \
+        xp = y;                                                                \
+      } else {                                                                 \
+        xp = y->parent;                                                        \
+        MODULE_IFUNC(Tree, NS(TARGET, SUFFIX), Transplant)(root, y, y->right); \
+        y->right = z->right;                                                   \
+        y->right->parent = y;                                                  \
+      }                                                                        \
+      MODULE_IFUNC(Tree, NS(TARGET, SUFFIX), Transplant)(root, z, y);          \
+      y->left = z->left;                                                       \
+      y->left->parent = y;                                                     \
+      y->color = z->color;                                                     \
+    }                                                                          \
+    void *raw = (void *)z;                                                     \
+    MODULE_IFUNC(Tree, FreeNode)(&raw);                                        \
+    (*size)--;                                                                 \
+    if (yc == Tree_RBColor_BLACK) {                                            \
+      MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), DeleteFixup)(root, x, xp);  \
+    }                                                                          \
+  })
+#endif
+
+#ifndef TEMPLATE_Tree_RBSet
+#define TEMPLATE_Tree_RBSet(SUFFIX, KEY_TYPE)                                  \
+  TEMPLATE_ISTRUCT(Tree, RBSetNode, SUFFIX,                                    \
+      FIELDS(                                                                  \
+          struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX) *parent;               \
+          struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX) *left;                 \
+          struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX) *right;                \
+          MODULE_ENUM(Tree, RBColor) color;                                    \
+          KEY_TYPE key;                                                        \
+      ));                                                                      \
+  CLOSURE_SCOPED_COMPARISON(NS(LIB_PREFIX(Tree), RBSet, SUFFIX), Comparator,   \
+                            (KEY_TYPE left, KEY_TYPE right))                   \
+  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Tree), RBSet, SUFFIX), Visitor,       \
+                           (const KEY_TYPE *key))                              \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_HELPERS(                                    \
+      RBSet, SUFFIX, struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX), KEY_TYPE,  \
+      MODULE_CLOSURE(Tree, RBSet, SUFFIX, Comparator))                         \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_SET_TRAVERSE(                               \
+      RBSet, SUFFIX, struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX),            \
+      MODULE_CLOSURE(Tree, RBSet, SUFFIX, Visitor))                            \
+  INTERNAL_DEF_EX(                                                             \
+      Tree, NS(RBSet, Algo, SUFFIX),                                           \
+      COSMERON_MACRO_INTERNAL_TREE_RB_CORE(                                    \
+          RBSet, struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX), SUFFIX),       \
+                                                                               \
+      FUNCTION(struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX) *, CreateNode,    \
+               (KEY_TYPE key), {                                               \
+                 void *raw = NULL;                                             \
+                 if (MODULE_IFUNC(Tree, AllocNode)(                            \
+                         &raw, sizeof(struct MODULE_ITYPED(Tree, RBSetNode,    \
+                                                            SUFFIX))) !=       \
+                     STATUS_CONST(SUCCESS)) {                                  \
+                   return NULL;                                                \
+                 }                                                             \
+                 struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX) *node =         \
+                     (struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX) *)raw;     \
+                 node->parent = NULL;                                          \
+                 node->left = NULL;                                            \
+                 node->right = NULL;                                           \
+                 node->color = Tree_RBColor_RED;                               \
+                 node->key = key;                                              \
+                 return node;                                                  \
+               }),                                                             \
+                                                                               \
+      OPERATION(InsertSet,                                                     \
+                (struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX) **root,         \
+                 size_t *size,                                                 \
+                 MODULE_CLOSURE(Tree, RBSet, SUFFIX, Comparator) cmp,          \
+                 KEY_TYPE key),                                                \
+                {                                                              \
+                  struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX) *cur = *root;  \
+                  struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX) *par = NULL;   \
+                  CMPOUT lastCmp = COMPARISON_CONST(EQUAL);                    \
+                  while (cur != NULL) {                                        \
+                    par = cur;                                                 \
+                    lastCmp = CLOSURE_CALL(cmp, key, cur->key);                \
+                    if (lastCmp < COMPARISON_CONST(EQUAL))                     \
+                      cur = cur->left;                                         \
+                    else if (lastCmp > COMPARISON_CONST(EQUAL))                \
+                      cur = cur->right;                                        \
+                    else                                                       \
+                      return STATUS_CONST(ALREADY_EXISTS);                     \
+                  }                                                            \
+                  struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX) *node =        \
+                      MODULE_IFUNC(Tree, NS(RBSet, Algo, SUFFIX),              \
+                                   CreateNode)(key);                           \
+                  if (!node)                                                   \
+                    return STATUS_CONST(OUT_OF_MEMORY);                        \
+                  node->parent = par;                                          \
+                  if (!par)                                                    \
+                    *root = node;                                              \
+                  else if (lastCmp < COMPARISON_CONST(EQUAL))                  \
+                    par->left = node;                                          \
+                  else                                                         \
+                    par->right = node;                                         \
+                  (*size)++;                                                   \
+                  MODULE_IFUNC(Tree, NS(RBSet, Algo, SUFFIX), InsertFixup)(    \
+                      root, node);                                             \
+                  return STATUS_CONST(SUCCESS);                                \
+                }))                                                            \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_SET_ITER(                                   \
+      RBSet, RBSetIter, SUFFIX,                                                \
+      struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX), KEY_TYPE);                \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_SET_OBJECT(                                 \
+      RBSet, RBSetIter, SUFFIX,                                                \
+      struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX), KEY_TYPE)
+#endif
+
+#ifndef TEMPLATE_Tree_RBMap
+#define TEMPLATE_Tree_RBMap(SUFFIX, KEY_TYPE, VALUE_TYPE)                      \
+  TEMPLATE_ISTRUCT(Tree, RBMapNode, SUFFIX,                                    \
+      FIELDS(                                                                  \
+          struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX) *parent;               \
+          struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX) *left;                 \
+          struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX) *right;                \
+          MODULE_ENUM(Tree, RBColor) color;                                    \
+          KEY_TYPE key;                                                        \
+          VALUE_TYPE value;                                                    \
+      ));                                                                      \
+  CLOSURE_SCOPED_COMPARISON(NS(LIB_PREFIX(Tree), RBMap, SUFFIX), Comparator,   \
+                            (KEY_TYPE left, KEY_TYPE right))                   \
+  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Tree), RBMap, SUFFIX), Visitor,       \
+                           (KEY_TYPE key, VALUE_TYPE *value))                  \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_HELPERS(                                    \
+      RBMap, SUFFIX, struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX), KEY_TYPE,  \
+      MODULE_CLOSURE(Tree, RBMap, SUFFIX, Comparator))                         \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_MAP_TRAVERSE(                               \
+      RBMap, SUFFIX, struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX),            \
+      MODULE_CLOSURE(Tree, RBMap, SUFFIX, Visitor))                            \
+  INTERNAL_DEF_EX(                                                             \
+      Tree, NS(RBMap, Algo, SUFFIX),                                           \
+      COSMERON_MACRO_INTERNAL_TREE_RB_CORE(                                    \
+          RBMap, struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX), SUFFIX),       \
+                                                                               \
+      FUNCTION(struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX) *, CreateNode,    \
+               (KEY_TYPE key, VALUE_TYPE value), {                             \
+                 void *raw = NULL;                                             \
+                 if (MODULE_IFUNC(Tree, AllocNode)(                            \
+                         &raw, sizeof(struct MODULE_ITYPED(Tree, RBMapNode,    \
+                                                            SUFFIX))) !=       \
+                     STATUS_CONST(SUCCESS)) {                                  \
+                   return NULL;                                                \
+                 }                                                             \
+                 struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX) *node =         \
+                     (struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX) *)raw;     \
+                 node->parent = NULL;                                          \
+                 node->left = NULL;                                            \
+                 node->right = NULL;                                           \
+                 node->color = Tree_RBColor_RED;                               \
+                 node->key = key;                                              \
+                 node->value = value;                                          \
+                 return node;                                                  \
+               }),                                                             \
+                                                                               \
+      OPERATION(InsertMap,                                                     \
+                (struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX) **root,         \
+                 size_t *size,                                                 \
+                 MODULE_CLOSURE(Tree, RBMap, SUFFIX, Comparator) cmp,          \
+                 KEY_TYPE key, VALUE_TYPE value, bool allowUpdate),            \
+                {                                                              \
+                  struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX) *cur = *root;  \
+                  struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX) *par = NULL;   \
+                  CMPOUT lastCmp = COMPARISON_CONST(EQUAL);                    \
+                  while (cur != NULL) {                                        \
+                    par = cur;                                                 \
+                    lastCmp = CLOSURE_CALL(cmp, key, cur->key);                \
+                    if (lastCmp < COMPARISON_CONST(EQUAL))                     \
+                      cur = cur->left;                                         \
+                    else if (lastCmp > COMPARISON_CONST(EQUAL))                \
+                      cur = cur->right;                                        \
+                    else {                                                     \
+                      if (allowUpdate) {                                       \
+                        cur->value = value;                                    \
+                        return STATUS_CONST(SUCCESS);                          \
+                      }                                                        \
+                      return STATUS_CONST(ALREADY_EXISTS);                     \
+                    }                                                          \
+                  }                                                            \
+                  struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX) *node =        \
+                      MODULE_IFUNC(Tree, NS(RBMap, Algo, SUFFIX),              \
+                                   CreateNode)(key, value);                    \
+                  if (!node)                                                   \
+                    return STATUS_CONST(OUT_OF_MEMORY);                        \
+                  node->parent = par;                                          \
+                  if (!par)                                                    \
+                    *root = node;                                              \
+                  else if (lastCmp < COMPARISON_CONST(EQUAL))                  \
+                    par->left = node;                                          \
+                  else                                                         \
+                    par->right = node;                                         \
+                  (*size)++;                                                   \
+                  MODULE_IFUNC(Tree, NS(RBMap, Algo, SUFFIX), InsertFixup)(    \
+                      root, node);                                             \
+                  return STATUS_CONST(SUCCESS);                                \
+                }))                                                            \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_MAP_ITER(                                   \
+      RBMap, RBMapIter, SUFFIX,                                                \
+      struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX), KEY_TYPE, VALUE_TYPE);    \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_MAP_OBJECT(                                 \
+      RBMap, RBMapIter, SUFFIX,                                                \
+      struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX), KEY_TYPE, VALUE_TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(KEY_TYPE) && defined(VALUE_TYPE)
+  TEMPLATE_Tree_RBMap(SUFFIX, KEY_TYPE, VALUE_TYPE);
+  #undef SUFFIX
+  #undef KEY_TYPE
+  #undef VALUE_TYPE
+#elif defined(SUFFIX) && defined(KEY_TYPE)
+  TEMPLATE_Tree_RBSet(SUFFIX, KEY_TYPE);
+  #undef SUFFIX
+  #undef KEY_TYPE
+#endif
+

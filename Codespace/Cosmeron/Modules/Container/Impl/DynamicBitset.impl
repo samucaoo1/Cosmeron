@@ -1,0 +1,342 @@
+#pragma once
+
+#include <string.h>
+
+MODULE_IMPLEMENT(Container,
+  OBJECT(DynamicBitset,
+    OPERATION(Create, (size_t bitCount), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      MODULE_FUNC(Container, DynamicBitset, Init)(self);
+      self->limbs = NULL;
+      self->bitCount = 0U;
+      self->limbCount = 0U;
+      self->limbCapacity = 0U;
+      if (bitCount == 0U)
+        return STATUS_CONST(SUCCESS);
+      const size_t neededLimbs = (bitCount + 63U) / 64U;
+      OPSTATUS status = MODULE_FUNC(Memory, Alloc, ZeroArray)(
+          &self->limbs, neededLimbs, sizeof(uint64_t));
+      if (status != STATUS_CONST(SUCCESS))
+        return status;
+      self->bitCount = bitCount;
+      self->limbCount = neededLimbs;
+      self->limbCapacity = neededLimbs;
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(Dispose, (), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      if (self->limbs)
+        Memory_Free(self->limbs);
+      self->bitCount = 0U;
+      self->limbCount = 0U;
+      self->limbCapacity = 0U;
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(Reserve, (size_t minBitCapacity), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      const size_t neededLimbs =
+          minBitCapacity == 0U ? 0U : (minBitCapacity + 63U) / 64U;
+      if (neededLimbs <= self->limbCapacity)
+        return STATUS_CONST(SUCCESS);
+      uint64_t *newLimbs = self->limbs;
+      OPSTATUS status = MODULE_FUNC(Memory, Alloc, ReallocArray)(
+          &newLimbs, neededLimbs, sizeof(uint64_t));
+      if (status != STATUS_CONST(SUCCESS))
+        return status;
+      memset(&newLimbs[self->limbCapacity], 0,
+             (neededLimbs - self->limbCapacity) * sizeof(uint64_t));
+      self->limbs = newLimbs;
+      self->limbCapacity = neededLimbs;
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(Resize, (size_t newBitCount), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      if (newBitCount > self->limbCapacity * 64U) {
+        OPSTATUS status =
+            MODULE_FUNC(Container, DynamicBitset, Reserve)(self, newBitCount);
+        if (status != STATUS_CONST(SUCCESS))
+          return status;
+      }
+      const size_t newLimbCount =
+          newBitCount == 0U ? 0U : (newBitCount + 63U) / 64U;
+      if (newLimbCount > self->limbCount && self->limbs) {
+        memset(&self->limbs[self->limbCount], 0,
+               (newLimbCount - self->limbCount) * sizeof(uint64_t));
+      }
+      self->bitCount = newBitCount;
+      self->limbCount = newLimbCount;
+      MODULE_IFUNC(Type, LimbsMaskTail)(self->limbs, self->limbCount,
+                                        self->bitCount);
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    CONST_OPERATION(Clone,
+                    (MODULE_TYPE(Container, DynamicBitset) *outClone), {
+      if (!self || !outClone || self == outClone)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      OPSTATUS status = MODULE_FUNC(Container, DynamicBitset, Create)(
+          outClone, self->bitCount);
+      if (status != STATUS_CONST(SUCCESS))
+        return status;
+      if (self->limbCount > 0U && self->limbs && outClone->limbs) {
+        memcpy(outClone->limbs, self->limbs,
+               self->limbCount * sizeof(uint64_t));
+      }
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(Clear, (), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      if (self->limbs && self->limbCount > 0U)
+        memset(self->limbs, 0, self->limbCount * sizeof(uint64_t));
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(SetAll, (), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      if (self->limbs && self->limbCount > 0U) {
+        memset(self->limbs, 0xFF, self->limbCount * sizeof(uint64_t));
+        MODULE_IFUNC(Type, LimbsMaskTail)(self->limbs, self->limbCount,
+                                          self->bitCount);
+      }
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(And, (const MODULE_TYPE(Container, DynamicBitset) *source), {
+      if (!self || !source || self->bitCount != source->bitCount)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      for (size_t i = 0U; i < self->limbCount; ++i)
+        self->limbs[i] &= source->limbs[i];
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(Or, (const MODULE_TYPE(Container, DynamicBitset) *source), {
+      if (!self || !source || self->bitCount != source->bitCount)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      for (size_t i = 0U; i < self->limbCount; ++i)
+        self->limbs[i] |= source->limbs[i];
+      MODULE_IFUNC(Type, LimbsMaskTail)(self->limbs, self->limbCount,
+                                        self->bitCount);
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(Xor, (const MODULE_TYPE(Container, DynamicBitset) *source), {
+      if (!self || !source || self->bitCount != source->bitCount)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      for (size_t i = 0U; i < self->limbCount; ++i)
+        self->limbs[i] ^= source->limbs[i];
+      MODULE_IFUNC(Type, LimbsMaskTail)(self->limbs, self->limbCount,
+                                        self->bitCount);
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(Not, (), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      for (size_t i = 0U; i < self->limbCount; ++i)
+        self->limbs[i] = ~self->limbs[i];
+      MODULE_IFUNC(Type, LimbsMaskTail)(self->limbs, self->limbCount,
+                                        self->bitCount);
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(ShiftLeft, (size_t bitCount), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      MODULE_IFUNC(Type, LimbsShiftLeft)(self->limbs, self->limbCount,
+                                         self->bitCount, bitCount);
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(ShiftRight, (size_t bitCount), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      MODULE_IFUNC(Type, LimbsShiftRight)(self->limbs, self->limbCount,
+                                          bitCount);
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(BitSet, (size_t bit), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      if (bit >= self->bitCount)
+        return STATUS_CONST(OUT_OF_RANGE);
+      return MODULE_FUNC(Bit, 64, Set)(&self->limbs[bit / 64U],
+                                       (uint8_t)(bit % 64U));
+    }),
+
+    OPERATION(BitClear, (size_t bit), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      if (bit >= self->bitCount)
+        return STATUS_CONST(OUT_OF_RANGE);
+      return MODULE_FUNC(Bit, 64, Clear)(&self->limbs[bit / 64U],
+                                         (uint8_t)(bit % 64U));
+    }),
+
+    OPERATION(BitFlip, (size_t bit), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      if (bit >= self->bitCount)
+        return STATUS_CONST(OUT_OF_RANGE);
+      return MODULE_FUNC(Bit, 64, Flip)(&self->limbs[bit / 64U],
+                                        (uint8_t)(bit % 64U));
+    }),
+
+    CONST_OPERATION(BitCheck, (size_t bit, bool *outResult), {
+      if (!self || !outResult)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      if (bit >= self->bitCount)
+        return STATUS_CONST(OUT_OF_RANGE);
+      *outResult =
+          MODULE_FUNC(Bit, 64, Check)(self->limbs[bit / 64U],
+                                      (uint8_t)(bit % 64U));
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    CONST_PREDICATE(BitTest, (size_t bit), {
+      if (!self || bit >= self->bitCount)
+        return false;
+      return MODULE_FUNC(Bit, 64, Check)(self->limbs[bit / 64U],
+                                         (uint8_t)(bit % 64U));
+    }),
+
+    OPERATION(SetRange, (size_t startBit, size_t endBit), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      if (startBit > endBit || endBit > self->bitCount)
+        return STATUS_CONST(OUT_OF_RANGE);
+      MODULE_IFUNC(Type, LimbsSetRange)(self->limbs, startBit, endBit);
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(ClearRange, (size_t startBit, size_t endBit), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      if (startBit > endBit || endBit > self->bitCount)
+        return STATUS_CONST(OUT_OF_RANGE);
+      MODULE_IFUNC(Type, LimbsClearRange)(self->limbs, startBit, endBit);
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(FlipRange, (size_t startBit, size_t endBit), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      if (startBit > endBit || endBit > self->bitCount)
+        return STATUS_CONST(OUT_OF_RANGE);
+      MODULE_IFUNC(Type, LimbsFlipRange)(self->limbs, startBit, endBit);
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    CONST_FUNCTION(size_t, Count, (), {
+      if (!self)
+        return 0U;
+      return MODULE_IFUNC(Type, LimbsPopcount)(self->limbs, self->limbCount);
+    }),
+
+    CONST_FUNCTION(size_t, Size, (), {
+      return self ? self->bitCount : 0U;
+    }),
+
+    CONST_FUNCTION(size_t, Capacity, (), {
+      return self ? (self->limbCapacity * 64U) : 0U;
+    }),
+
+    CONST_PREDICATE(Any, (), {
+      if (!self)
+        return false;
+      return MODULE_IFUNC(Type, LimbsAny)(self->limbs, self->limbCount);
+    }),
+
+    CONST_PREDICATE(All, (), {
+      if (!self || self->bitCount == 0U)
+        return false;
+      return MODULE_IFUNC(Type, LimbsAll)(self->limbs, self->limbCount,
+                                          self->bitCount);
+    }),
+
+    CONST_PREDICATE(None, (), {
+      return !MODULE_FUNC(Container, DynamicBitset, Any)(self);
+    }),
+
+    CONST_PREDICATE(Equal,
+                    (const MODULE_TYPE(Container, DynamicBitset) *other), {
+      if (!self || !other)
+        return self == other;
+      if (self->bitCount != other->bitCount)
+        return false;
+      if (self->limbCount == 0U)
+        return true;
+      return MODULE_IFUNC(Type, LimbsEqual)(self->limbs, other->limbs,
+                                            self->limbCount);
+    }),
+
+    CONST_PREDICATE(IsSubset,
+                    (const MODULE_TYPE(Container, DynamicBitset) *other), {
+      if (!self || !other || self->bitCount != other->bitCount)
+        return false;
+      if (self->limbCount == 0U)
+        return true;
+      return MODULE_IFUNC(Type, LimbsIsSubset)(self->limbs, other->limbs,
+                                               self->limbCount);
+    }),
+
+    CONST_PREDICATE(IsDisjoint,
+                    (const MODULE_TYPE(Container, DynamicBitset) *other), {
+      if (!self || !other || self->bitCount != other->bitCount)
+        return false;
+      if (self->limbCount == 0U)
+        return true;
+      return !MODULE_IFUNC(Type, LimbsIntersects)(self->limbs, other->limbs,
+                                                  self->limbCount);
+    }),
+
+    CONST_PREDICATE(Intersects,
+                    (const MODULE_TYPE(Container, DynamicBitset) *other), {
+      if (!self || !other || self->bitCount != other->bitCount)
+        return false;
+      if (self->limbCount == 0U)
+        return false;
+      return MODULE_IFUNC(Type, LimbsIntersects)(self->limbs, other->limbs,
+                                                 self->limbCount);
+    }),
+
+    CONST_OPERATION(FindFirstSet, (size_t *outBit), {
+      if (!self || !outBit)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      return MODULE_IFUNC(Type, LimbsFindFirstSet)(
+                 self->limbs, self->limbCount, self->bitCount, outBit)
+                 ? STATUS_CONST(SUCCESS)
+                 : STATUS_CONST(NOT_FOUND);
+    }),
+
+    CONST_OPERATION(FindFirstZero, (size_t *outBit), {
+      if (!self || !outBit)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      return MODULE_IFUNC(Type, LimbsFindFirstZero)(
+                 self->limbs, self->limbCount, self->bitCount, outBit)
+                 ? STATUS_CONST(SUCCESS)
+                 : STATUS_CONST(NOT_FOUND);
+    }),
+
+    CONST_OPERATION(FindNextSet, (size_t startBit, size_t *outBit), {
+      if (!self || !outBit)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      return MODULE_IFUNC(Type, LimbsFindNextSet)(
+                 self->limbs, self->limbCount, self->bitCount, startBit, outBit)
+                 ? STATUS_CONST(SUCCESS)
+                 : STATUS_CONST(NOT_FOUND);
+    })
+  )
+);
+
+/* EOF */

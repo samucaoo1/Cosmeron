@@ -1,0 +1,279 @@
+/* Ring.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Linked_Ring
+#define TEMPLATE_Linked_Ring(SUFFIX, TYPE)                                     \
+  TEMPLATE_OBJECT(Linked, Ring, SUFFIX,                                        \
+      FIELDS(                                                                  \
+          struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *head;               \
+          struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *tail;               \
+          struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *back;               \
+          size_t size;                                                         \
+          size_t capacity;                                                     \
+          bool ownsNodes;                                                      \
+      ),                                                                       \
+                                                                               \
+      CLOSURE(PROCEDURE(Visitor, (TYPE *element))),                            \
+                                                                               \
+      OPERATION_INLINE(Create, (size_t capacity), {                            \
+        if (!self || capacity == 0U)                                           \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_FUNC(Linked, Ring, SUFFIX, Init)(self);                         \
+        struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *first = NULL;         \
+        struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *prev = NULL;          \
+        for (size_t i = 0U; i < capacity; ++i) {                               \
+          void *raw = NULL;                                                    \
+          OPSTATUS status = MODULE_IFUNC(Linked, AllocNode)(                   \
+              &raw, sizeof(struct MODULE_TYPED(Linked, SingleNode, SUFFIX)));  \
+          if (status != STATUS_CONST(SUCCESS)) {                               \
+            struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *curr = first;     \
+            while (curr != NULL) {                                             \
+              struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *next =          \
+                  curr->next;                                                  \
+              void *freePtr = (void *)curr;                                    \
+              MODULE_IFUNC(Linked, FreeNode)(&freePtr);                        \
+              curr = next;                                                     \
+            }                                                                  \
+            return status;                                                     \
+          }                                                                    \
+          struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *node =              \
+              (struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *)raw;          \
+          node->next = NULL;                                                   \
+          if (!first)                                                          \
+            first = node;                                                      \
+          if (prev)                                                            \
+            prev->next = node;                                                 \
+          prev = node;                                                         \
+        }                                                                      \
+        prev->next = first;                                                    \
+        self->head = first;                                                    \
+        self->tail = first;                                                    \
+        self->back = NULL;                                                     \
+        self->size = 0U;                                                       \
+        self->capacity = capacity;                                             \
+        self->ownsNodes = true;                                                \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          FromNodes,                                                           \
+          (struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *nodes,             \
+           size_t capacity),                                                   \
+          {                                                                    \
+            if (!self || !nodes || capacity == 0U)                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            MODULE_FUNC(Linked, Ring, SUFFIX, Init)(self);                     \
+            for (size_t i = 0U; i + 1U < capacity; ++i) {                      \
+              nodes[i].next = &nodes[i + 1U];                                  \
+            }                                                                  \
+            nodes[capacity - 1U].next = &nodes[0U];                            \
+            self->head = &nodes[0U];                                           \
+            self->tail = &nodes[0U];                                           \
+            self->back = NULL;                                                 \
+            self->size = 0U;                                                   \
+            self->capacity = capacity;                                         \
+            self->ownsNodes = false;                                           \
+            return STATUS_CONST(SUCCESS);                                      \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(Dispose, (), {                                          \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->ownsNodes && self->head && self->capacity > 0U) {            \
+          struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *curr = self->head;  \
+          for (size_t i = 0U; i < self->capacity; ++i) {                       \
+            struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *next =            \
+                curr->next;                                                    \
+            void *raw = (void *)curr;                                          \
+            MODULE_IFUNC(Linked, FreeNode)(&raw);                              \
+            curr = next;                                                       \
+          }                                                                    \
+        }                                                                      \
+        self->head = NULL;                                                     \
+        self->tail = NULL;                                                     \
+        self->back = NULL;                                                     \
+        self->size = 0U;                                                       \
+        self->capacity = 0U;                                                   \
+        self->ownsNodes = false;                                               \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      PROCEDURE_INLINE(Destroy, (), {                                          \
+        (void)MODULE_FUNC(Linked, Ring, SUFFIX, Dispose)(self);                \
+      }),                                                                      \
+                                                                               \
+      PROCEDURE_INLINE(Clear, (), {                                            \
+        if (self) {                                                            \
+          self->tail = self->head;                                             \
+          self->back = NULL;                                                   \
+          self->size = 0U;                                                     \
+        }                                                                      \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Push, (TYPE value), {                                   \
+        if (!self || !self->head)                                              \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size >= self->capacity)                                      \
+          return STATUS_CONST(INSUFFICIENT_SPACE);                             \
+        self->tail->value = value;                                             \
+        self->back = self->tail;                                               \
+        self->tail = self->tail->next;                                         \
+        self->size++;                                                          \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(PushBack, (TYPE value), {                               \
+        return MODULE_FUNC(Linked, Ring, SUFFIX, Push)(self, value);           \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Pop, (TYPE *outValue), {                                \
+        if (!self || !self->head)                                              \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size == 0U)                                                  \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        if (outValue)                                                          \
+          *outValue = self->head->value;                                       \
+        self->head = self->head->next;                                         \
+        self->size--;                                                          \
+        if (self->size == 0U)                                                  \
+          self->back = NULL;                                                   \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(PopFront, (TYPE *outValue), {                           \
+        return MODULE_FUNC(Linked, Ring, SUFFIX, Pop)(self, outValue);         \
+      }),                                                                      \
+                                                                               \
+      CONST_OPERATION_INLINE(Peek, (TYPE *outValue), {                         \
+        if (!self || !outValue)                                                \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size == 0U)                                                  \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *outValue = self->head->value;                                         \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Overwrite, (TYPE value, TYPE *outDropped), {            \
+        if (!self || !self->head || self->capacity == 0U)                      \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size >= self->capacity) {                                    \
+          if (outDropped)                                                      \
+            *outDropped = self->head->value;                                   \
+          self->head = self->head->next;                                       \
+          self->tail->value = value;                                           \
+          self->back = self->tail;                                             \
+          self->tail = self->tail->next;                                       \
+        } else {                                                               \
+          self->tail->value = value;                                           \
+          self->back = self->tail;                                             \
+          self->tail = self->tail->next;                                       \
+          self->size++;                                                        \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Front, (TYPE **out), {                                  \
+        if (!self || !out)                                                     \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size == 0U)                                                  \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *out = &self->head->value;                                             \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Back, (TYPE **out), {                                   \
+        if (!self || !out)                                                     \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size == 0U || !self->back)                                   \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *out = &self->back->value;                                             \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(At, (size_t index, TYPE **out), {                       \
+        if (!self || !out)                                                     \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (index >= self->size)                                               \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *curr = self->head;    \
+        for (size_t i = 0U; i < index; ++i)                                    \
+          curr = curr->next;                                                   \
+        *out = &curr->value;                                                   \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      CONST_PREDICATE_INLINE(IsEmpty, (), {                                    \
+        return !self || self->size == 0U;                                      \
+      }),                                                                      \
+                                                                               \
+      CONST_PREDICATE_INLINE(Empty, (), {                                      \
+        return !self || self->size == 0U;                                      \
+      }),                                                                      \
+                                                                               \
+      CONST_PREDICATE_INLINE(IsFull, (), {                                     \
+        return self && self->size >= self->capacity;                           \
+      }),                                                                      \
+                                                                               \
+      CONST_PREDICATE_INLINE(Full, (), {                                       \
+        return self && self->size >= self->capacity;                           \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(size_t, Size, (), {                                \
+        return self ? self->size : 0U;                                         \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(size_t, Count, (), {                               \
+        return self ? self->size : 0U;                                         \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(size_t, Capacity, (), {                            \
+        return self ? self->capacity : 0U;                                     \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(size_t, Available, (), {                           \
+        return (self && self->capacity >= self->size)                          \
+                   ? (self->capacity - self->size)                             \
+                   : 0U;                                                       \
+      }),                                                                      \
+                                                                               \
+      /* --- Optional Iterator Protocol (Bounded Forward) --- */               \
+      OPERATION_INLINE(                                                        \
+          Begin,                                                               \
+          (struct MODULE_TYPED(Iterator, Forward, SUFFIX) *outIter), {         \
+            if (!self || !outIter)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Iterator, Forward, SUFFIX, FromNodes)(          \
+                outIter, (self->size > 0U) ? self->head : NULL, self->size);   \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          End,                                                                 \
+          (struct MODULE_TYPED(Iterator, Forward, SUFFIX) *outIter), {         \
+            if (!self || !outIter)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Iterator, Forward, SUFFIX, FromNodes)(          \
+                outIter, NULL, 0U);                                            \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          ForEach,                                                             \
+          (MODULE_CLOSURE(Linked, Ring, SUFFIX, Visitor) visitor), {           \
+            if (!self || !CLOSURE_IS_VALID(visitor))                           \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *curr =            \
+                self->head;                                                    \
+            for (size_t i = 0U; i < self->size; ++i) {                         \
+              CLOSURE_CALL(visitor, &curr->value);                             \
+              curr = curr->next;                                               \
+            }                                                                  \
+            return STATUS_CONST(SUCCESS);                                      \
+          })                                                                   \
+  )
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Linked_Ring(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif
+

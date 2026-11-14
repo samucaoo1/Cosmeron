@@ -1,0 +1,188 @@
+/* Stream.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Iterator_Stream
+#define TEMPLATE_Iterator_Stream(SUFFIX, TYPE)                                 \
+  TEMPLATE_OBJECT(Iterator, Stream, SUFFIX,                                    \
+      FIELDS(                                                                  \
+          void *state;                                                         \
+          OPSTATUS (*nextFn)(void *state, TYPE *outValue);                     \
+          bool (*hasNextFn)(const void *state);                                \
+          OPSTATUS (*resetFn)(void *state);                                    \
+      ),                                                                       \
+                                                                               \
+      CLOSURE(                                                                 \
+          PROCEDURE(Visitor, (TYPE value)),                                    \
+          PROCEDURE(IndexedVisitor, (size_t index, TYPE value)),               \
+          PREDICATE(Predicate, (TYPE value)),                                  \
+          FUNCTION(TYPE, Mapper, (TYPE value))),                               \
+                                                                               \
+      OPERATION_INLINE(Bind,                                                   \
+                       (void *state,                                           \
+                        OPSTATUS (*nextFn)(void *state, TYPE *outValue),       \
+                        bool (*hasNextFn)(const void *state),                  \
+                        OPSTATUS (*resetFn)(void *state)),                     \
+                       {                                                       \
+                         if (!self || !nextFn)                                 \
+                           return STATUS_CONST(INVALID_ARGUMENT);              \
+                         MODULE_FUNC(Iterator, Stream, SUFFIX, Init)(self);    \
+                         self->state = state;                                  \
+                         self->nextFn = nextFn;                                \
+                         self->hasNextFn = hasNextFn;                          \
+                         self->resetFn = resetFn;                              \
+                         return STATUS_CONST(SUCCESS);                         \
+                       }),                                                     \
+                                                                               \
+      CONST_PREDICATE_INLINE(IsValid, (), {                                    \
+        return self != NULL && self->nextFn != NULL;                           \
+      }),                                                                      \
+                                                                               \
+      CONST_PREDICATE_INLINE(HasNext, (), {                                    \
+        if (!self || !self->hasNextFn)                                         \
+          return false;                                                        \
+        return self->hasNextFn(self->state);                                   \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Next, (TYPE *outValue), {                               \
+        if (!self || !self->nextFn || !outValue)                               \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        return self->nextFn(self->state, outValue);                            \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Reset, (), {                                            \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (!self->resetFn)                                                    \
+          return STATUS_CONST(NOT_SUPPORTED);                                  \
+        return self->resetFn(self->state);                                     \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Skip, (size_t count, size_t *outSkipped), {             \
+        if (!self || !self->nextFn)                                            \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        size_t skipped = 0U;                                                   \
+        TYPE dummy;                                                            \
+        for (size_t i = 0U; i < count; ++i) {                                  \
+          OPSTATUS status = self->nextFn(self->state, &dummy);                 \
+          if (status != STATUS_CONST(SUCCESS))                                 \
+            break;                                                             \
+          skipped++;                                                           \
+        }                                                                      \
+        if (outSkipped)                                                        \
+          *outSkipped = skipped;                                               \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Count, (size_t *outCount), {                            \
+        if (!self || !self->nextFn || !outCount)                               \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        size_t total = 0U;                                                     \
+        TYPE dummy;                                                            \
+        while (self->nextFn(self->state, &dummy) == STATUS_CONST(SUCCESS)) {   \
+          total++;                                                             \
+        }                                                                      \
+        *outCount = total;                                                     \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          ForEach,                                                             \
+          (MODULE_CLOSURE(Iterator, Stream, SUFFIX, Visitor) visitor), {       \
+            if (!self || !self->nextFn || !CLOSURE_IS_VALID(visitor))          \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            TYPE item;                                                         \
+            while (self->nextFn(self->state, &item) == STATUS_CONST(SUCCESS)) {\
+              CLOSURE_CALL(visitor, item);                                     \
+            }                                                                  \
+            return STATUS_CONST(SUCCESS);                                      \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          ForEachIndexed,                                                      \
+          (MODULE_CLOSURE(Iterator, Stream, SUFFIX, IndexedVisitor) visitor), {\
+            if (!self || !self->nextFn || !CLOSURE_IS_VALID(visitor))          \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            TYPE item;                                                         \
+            size_t index = 0U;                                                 \
+            while (self->nextFn(self->state, &item) == STATUS_CONST(SUCCESS)) {\
+              CLOSURE_CALL(visitor, index, item);                              \
+              index++;                                                         \
+            }                                                                  \
+            return STATUS_CONST(SUCCESS);                                      \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          FindIf,                                                              \
+          (MODULE_CLOSURE(Iterator, Stream, SUFFIX, Predicate) predicate,      \
+           TYPE *outValue),                                                    \
+          {                                                                    \
+            if (!self || !self->nextFn || !outValue ||                         \
+                !CLOSURE_IS_VALID(predicate))                                  \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            TYPE item;                                                         \
+            while (self->nextFn(self->state, &item) == STATUS_CONST(SUCCESS)) {\
+              if (CLOSURE_CALL(predicate, item)) {                             \
+                *outValue = item;                                              \
+                return STATUS_CONST(SUCCESS);                                  \
+              }                                                                \
+            }                                                                  \
+            return STATUS_CONST(NOT_FOUND);                                    \
+          }),                                                                  \
+                                                                               \
+      PREDICATE_INLINE(                                                        \
+          Any,                                                                 \
+          (MODULE_CLOSURE(Iterator, Stream, SUFFIX, Predicate) predicate), {   \
+            if (!self || !self->nextFn || !CLOSURE_IS_VALID(predicate))        \
+              return false;                                                    \
+            TYPE item;                                                         \
+            while (self->nextFn(self->state, &item) == STATUS_CONST(SUCCESS)) {\
+              if (CLOSURE_CALL(predicate, item))                               \
+                return true;                                                   \
+            }                                                                  \
+            return false;                                                      \
+          }),                                                                  \
+                                                                               \
+      PREDICATE_INLINE(                                                        \
+          All,                                                                 \
+          (MODULE_CLOSURE(Iterator, Stream, SUFFIX, Predicate) predicate), {   \
+            if (!self || !self->nextFn || !CLOSURE_IS_VALID(predicate))        \
+              return false;                                                    \
+            TYPE item;                                                         \
+            while (self->nextFn(self->state, &item) == STATUS_CONST(SUCCESS)) {\
+              if (!CLOSURE_CALL(predicate, item))                              \
+                return false;                                                  \
+            }                                                                  \
+            return true;                                                       \
+          }),                                                                  \
+                                                                               \
+      PREDICATE_INLINE(                                                        \
+          None,                                                                \
+          (MODULE_CLOSURE(Iterator, Stream, SUFFIX, Predicate) predicate), {   \
+            return !MODULE_FUNC(Iterator, Stream, SUFFIX, Any)(self,           \
+                                                               predicate);     \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(CollectToBuffer,                                        \
+                       (TYPE *dest, size_t capacity, size_t *outWritten), {    \
+                         if (!self || !self->nextFn || !outWritten ||          \
+                             (capacity > 0U && !dest))                         \
+                           return STATUS_CONST(INVALID_ARGUMENT);              \
+                         size_t count = 0U;                                    \
+                         TYPE item;                                            \
+                         while (count < capacity &&                            \
+                                self->nextFn(self->state, &item) ==            \
+                                    STATUS_CONST(SUCCESS)) {                   \
+                           dest[count++] = item;                               \
+                         }                                                     \
+                         *outWritten = count;                                  \
+                         return STATUS_CONST(SUCCESS);                         \
+                       })                                                      \
+  )
+#define TEMPLATE_Stream(SUFFIX, TYPE) TEMPLATE_Iterator_Stream(SUFFIX, TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Iterator_Stream(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif

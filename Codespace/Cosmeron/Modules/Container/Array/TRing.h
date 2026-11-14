@@ -1,0 +1,15 @@
+#ifndef COSMERON_CONTAINER_ARRAY_TRING_H
+#define COSMERON_CONTAINER_ARRAY_TRING_H
+
+#include "Common.inc"
+#include "Ring.def"
+
+/* Ordered Primitive Type Instantiations */
+#define COSMERON_MACRO_INTERNAL_ARRAY_RING_ROW(ROW)                            \
+  TEMPLATE_INSTANTIATE(Array, Ring, PRIMITIVE_TYPE_GET(NAME, ROW),             \
+                       PRIMITIVE_TYPE_GET(TYPE, ROW));
+
+PRIMITIVE_TYPE_TABLE_ORDERED(COSMERON_MACRO_INTERNAL_ARRAY_RING_ROW)
+#undef COSMERON_MACRO_INTERNAL_ARRAY_RING_ROW
+
+#endif /* COSMERON_CONTAINER_ARRAY_TRING_H */

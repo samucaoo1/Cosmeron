@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../../Preprocessor/Detect.h"
+
 #define PRIMITIVE_TAG_COL_NAME(NAME, CATEGORY, DESC)     NAME
 #define PRIMITIVE_TAG_COL_CATEGORY(NAME, CATEGORY, DESC) CATEGORY
 #define PRIMITIVE_TAG_COL_DESC(NAME, CATEGORY, DESC)     DESC
@@ -38,9 +40,19 @@
   X((IntPtr,     INT,   "Signed pointer-sized integer"))                       \
   X((UIntPtr,    UINT,  "Unsigned pointer-sized integer"))
 
+#if !COMPILER_MSVC
+#define PRIMITIVE_TAG_COMPLEX_TABLE(X)                                         \
+  X((FloatComplex,      FLOAT, "Single-precision complex float"))              \
+  X((DoubleComplex,     FLOAT, "Double-precision complex float"))              \
+  X((LongDoubleComplex, FLOAT, "Extended-precision complex float"))
+#else
+#define PRIMITIVE_TAG_COMPLEX_TABLE(X)
+#endif
+
 #define PRIMITIVE_TAG_TABLE(X)                                                 \
   PRIMITIVE_TAG_SPECIAL_TABLE(X)                                               \
-  PRIMITIVE_TAG_PRIMITIVE_TABLE(X)
+  PRIMITIVE_TAG_PRIMITIVE_TABLE(X)                                             \
+  PRIMITIVE_TAG_COMPLEX_TABLE(X)
 
 /* EOF */
 

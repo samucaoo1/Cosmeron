@@ -1,0 +1,64 @@
+/* Bigint.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Type_Bigint
+#define TEMPLATE_Type_Bigint(SUFFIX, TYPE)                                     \
+  TEMPLATE_OBJECT(Type, Bigint, SUFFIX,                                        \
+      FIELDS(                                                                  \
+          union {                                                              \
+            TYPE limb[((SUFFIX) / 64U)];                                       \
+            uint8_t byte[((SUFFIX) / 8U)];                                     \
+          };                                                                   \
+      ),                                                                       \
+      OPERATION(Clear, ()),                                                    \
+      OPERATION(Init, ()),                                                     \
+      OPERATION(Add, (const MODULE_TYPED(Type, Bigint, SUFFIX) *source)),      \
+      OPERATION(Sub, (const MODULE_TYPED(Type, Bigint, SUFFIX) *source)),      \
+      OPERATION(Mul, (const MODULE_TYPED(Type, Bigint, SUFFIX) *source)),      \
+      CONST_OPERATION(DivMod,                                                  \
+                      (const MODULE_TYPED(Type, Bigint, SUFFIX) *divisor,      \
+                       MODULE_TYPED(Type, Bigint, SUFFIX) *outQuotient,        \
+                       MODULE_TYPED(Type, Bigint, SUFFIX) *outRemainder)),     \
+      OPERATION(Div, (const MODULE_TYPED(Type, Bigint, SUFFIX) *divisor)),     \
+      OPERATION(Mod, (const MODULE_TYPED(Type, Bigint, SUFFIX) *divisor)),     \
+      OPERATION(Increment, ()),                                                \
+      OPERATION(Decrement, ()),                                                \
+      OPERATION(And, (const MODULE_TYPED(Type, Bigint, SUFFIX) *source)),      \
+      OPERATION(Or, (const MODULE_TYPED(Type, Bigint, SUFFIX) *source)),       \
+      OPERATION(Xor, (const MODULE_TYPED(Type, Bigint, SUFFIX) *source)),      \
+      OPERATION(Not, ()),                                                      \
+      OPERATION(ShiftLeft, (unsigned bitCount)),                               \
+      OPERATION(ShiftRight, (unsigned bitCount)),                              \
+      OPERATION(RotateLeft, (unsigned shift)),                                 \
+      OPERATION(RotateRight, (unsigned shift)),                                \
+      OPERATION(BitSet, (uint32_t bit)),                                       \
+      OPERATION(BitClear, (uint32_t bit)),                                     \
+      CONST_OPERATION(BitCheck, (uint32_t bit, bool *outResult)),              \
+      CONST_OPERATION(Compare,                                                 \
+                      (const MODULE_TYPED(Type, Bigint, SUFFIX) *other,        \
+                       CMPOUT *result)),                                       \
+      CONST_PREDICATE(Equal,                                                   \
+                      (const MODULE_TYPED(Type, Bigint, SUFFIX) *other)),      \
+      CONST_PREDICATE(NotEqual,                                                \
+                      (const MODULE_TYPED(Type, Bigint, SUFFIX) *other)),      \
+      CONST_PREDICATE(LessThan,                                                \
+                      (const MODULE_TYPED(Type, Bigint, SUFFIX) *other)),      \
+      CONST_PREDICATE(GreaterThan,                                             \
+                      (const MODULE_TYPED(Type, Bigint, SUFFIX) *other)),      \
+      CONST_PREDICATE(LessOrEqual,                                             \
+                      (const MODULE_TYPED(Type, Bigint, SUFFIX) *other)),      \
+      CONST_PREDICATE(GreaterOrEqual,                                          \
+                      (const MODULE_TYPED(Type, Bigint, SUFFIX) *other)),      \
+      CONST_PREDICATE(IsZero, ()),                                             \
+      CONST_OPERATION(ToCStringBase, (char *buffer, size_t bufferSize,         \
+                                      unsigned base)),                         \
+      CONST_OPERATION(ToCString, (char *buffer, size_t bufferSize))            \
+  )
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Type_Bigint(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif
+

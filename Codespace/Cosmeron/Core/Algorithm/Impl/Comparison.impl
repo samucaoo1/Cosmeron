@@ -19,9 +19,41 @@
                                : COMPARISON_CONST(EQUAL));                     \
   }),
 
+#define COMPARISON_COMPLEX_IMPL(NAME_VAL, COMPLEX_TYPE, REAL_TYPE)             \
+  FUNCTION(CMPOUT, NAME_VAL, (COMPLEX_TYPE left, COMPLEX_TYPE right), {        \
+    union {                                                                    \
+      COMPLEX_TYPE value;                                                      \
+      REAL_TYPE parts[2];                                                      \
+    } lhs = {.value = left}, rhs = {.value = right};                           \
+    for (size_t i = 0U; i < 2U; ++i) {                                         \
+      bool leftNan = (lhs.parts[i] != lhs.parts[i]);                           \
+      bool rightNan = (rhs.parts[i] != rhs.parts[i]);                         \
+      if (leftNan || rightNan) {                                               \
+        if (leftNan && rightNan)                                               \
+          continue;                                                            \
+        return leftNan ? COMPARISON_CONST(HIGHER) : COMPARISON_CONST(LOWER);   \
+      }                                                                        \
+      if (lhs.parts[i] < rhs.parts[i])                                         \
+        return COMPARISON_CONST(LOWER);                                        \
+      if (lhs.parts[i] > rhs.parts[i])                                         \
+        return COMPARISON_CONST(HIGHER);                                       \
+    }                                                                          \
+    return COMPARISON_CONST(EQUAL);                                            \
+  }),
+
+#if !COMPILER_MSVC
+#define COMPARISON_COMPLEX_IMPLEMENT_ALL()                                     \
+  COMPARISON_COMPLEX_IMPL(FloatComplex, float _Complex, float)                 \
+  COMPARISON_COMPLEX_IMPL(DoubleComplex, double _Complex, double)              \
+  COMPARISON_COMPLEX_IMPL(LongDoubleComplex, long double _Complex, long double)
+#else
+#define COMPARISON_COMPLEX_IMPLEMENT_ALL()
+#endif
+
 MODULE_IMPLEMENT(DOMAIN(Core), Algorithm,
   PACKAGE(Comparison,
-    PRIMITIVE_TYPE_TABLE(COMPARISON_PRIMITIVE_IMPLEMENT)
+    PRIMITIVE_TYPE_TABLE_ORDERED(COMPARISON_PRIMITIVE_IMPLEMENT)
+    COMPARISON_COMPLEX_IMPLEMENT_ALL()
     FUNCTION(CMPOUT, CString, (const char *left, const char *right), {
       if (left == right)
         return COMPARISON_CONST(EQUAL);
@@ -69,5 +101,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Algorithm,
 );
 
 #undef COMPARISON_PRIMITIVE_IMPLEMENT
+#undef COMPARISON_COMPLEX_IMPL
+#undef COMPARISON_COMPLEX_IMPLEMENT_ALL
 
 /* EOF */

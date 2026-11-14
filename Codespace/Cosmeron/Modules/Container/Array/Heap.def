@@ -1,0 +1,326 @@
+/* Heap.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Array_Heap
+#define TEMPLATE_Array_Heap(SUFFIX, TYPE)                                      \
+  CLOSURE_SCOPED_COMPARISON(NS(LIB_PREFIX(Array), Heap, SUFFIX), Comparator,   \
+                            (TYPE left, TYPE right))                           \
+  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Array), Heap, SUFFIX), Visitor,       \
+                           (TYPE *element))                                    \
+  INTERNAL_DEF_EX(                                                             \
+      Array, NS(Heap, SUFFIX),                                                 \
+      COMPARISON(DefaultMinCompare, (TYPE left, TYPE right, void *context), {  \
+        (void)context;                                                         \
+        return (left < right)                                                  \
+                   ? COMPARISON_CONST(LOWER)                                   \
+                   : ((left > right) ? COMPARISON_CONST(HIGHER)                \
+                                     : COMPARISON_CONST(EQUAL));               \
+      }),                                                                      \
+      COMPARISON(DefaultMaxCompare, (TYPE left, TYPE right, void *context), {  \
+        (void)context;                                                         \
+        return (left > right)                                                  \
+                   ? COMPARISON_CONST(LOWER)                                   \
+                   : ((left < right) ? COMPARISON_CONST(HIGHER)                \
+                                     : COMPARISON_CONST(EQUAL));               \
+      }))                                                                      \
+  TEMPLATE_OBJECT(Array, Heap, SUFFIX,                                         \
+      FIELDS(                                                                  \
+          TYPE *data;                                                          \
+          size_t size;                                                         \
+          size_t capacity;                                                     \
+          MODULE_CLOSURE(Array, Heap, SUFFIX, Comparator) compare;             \
+      ),                                                                       \
+                                                                               \
+      CONST_COMPARISON_INLINE(DefaultMinCompare, (TYPE left, TYPE right), {    \
+        (void)self;                                                            \
+        return MODULE_IFUNC(Array, NS(Heap, SUFFIX), DefaultMinCompare)(       \
+            left, right, NULL);                                                \
+      }),                                                                      \
+                                                                               \
+      CONST_COMPARISON_INLINE(DefaultMaxCompare, (TYPE left, TYPE right), {    \
+        (void)self;                                                            \
+        return MODULE_IFUNC(Array, NS(Heap, SUFFIX), DefaultMaxCompare)(       \
+            left, right, NULL);                                                \
+      }),                                                                      \
+                                                                               \
+      PROCEDURE_INLINE(SiftUp, (size_t index), {                               \
+        if (!self || !self->data || !CLOSURE_IS_VALID(self->compare))          \
+          return;                                                              \
+        size_t child = index;                                                  \
+        while (child > 0U) {                                                   \
+          size_t parent = (child - 1U) / 2U;                                   \
+          if (CLOSURE_CALL(self->compare, self->data[parent],                  \
+                           self->data[child]) <= COMPARISON_CONST(EQUAL)) {    \
+            break;                                                             \
+          }                                                                    \
+          TYPE temp = self->data[child];                                       \
+          self->data[child] = self->data[parent];                              \
+          self->data[parent] = temp;                                           \
+          child = parent;                                                      \
+        }                                                                      \
+      }),                                                                      \
+                                                                               \
+      PROCEDURE_INLINE(SiftDown, (size_t index), {                             \
+        if (!self || !self->data || !CLOSURE_IS_VALID(self->compare))          \
+          return;                                                              \
+        size_t parent = index;                                                 \
+        while (true) {                                                         \
+          size_t left = 2U * parent + 1U;                                      \
+          size_t right = 2U * parent + 2U;                                     \
+          size_t best = parent;                                                \
+          if (left < self->size &&                                             \
+              CLOSURE_CALL(self->compare, self->data[left],                    \
+                           self->data[best]) < COMPARISON_CONST(EQUAL)) {      \
+            best = left;                                                       \
+          }                                                                    \
+          if (right < self->size &&                                            \
+              CLOSURE_CALL(self->compare, self->data[right],                   \
+                           self->data[best]) < COMPARISON_CONST(EQUAL)) {      \
+            best = right;                                                      \
+          }                                                                    \
+          if (best == parent)                                                  \
+            break;                                                             \
+          TYPE temp = self->data[parent];                                      \
+          self->data[parent] = self->data[best];                               \
+          self->data[best] = temp;                                             \
+          parent = best;                                                       \
+        }                                                                      \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          CreateWithComparator,                                                \
+          (size_t initialCapacity,                                             \
+           MODULE_CLOSURE(Array, Heap, SUFFIX, Comparator) comparator),        \
+          {                                                                    \
+            if (!self || !CLOSURE_IS_VALID(comparator))                        \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            MODULE_FUNC(Array, Heap, SUFFIX, Init)(self);                      \
+            self->data = NULL;                                                 \
+            self->size = 0U;                                                   \
+            self->capacity = 0U;                                               \
+            self->compare = comparator;                                        \
+            if (initialCapacity == 0U)                                         \
+              return STATUS_CONST(SUCCESS);                                    \
+            return MODULE_IFUNC(Array, ReserveBuffer)(                         \
+                (void **)&self->data, &self->capacity, initialCapacity,        \
+                sizeof(TYPE));                                                 \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(CreateMin, (size_t initialCapacity), {                  \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_CLOSURE(Array, Heap, SUFFIX, Comparator) cmp =                  \
+            NS_JOIN(MODULE_CLOSURE_FUNC(Array, Heap, SUFFIX, Comparator),      \
+                    Bind)(                                                     \
+                MODULE_IFUNC(Array, NS(Heap, SUFFIX), DefaultMinCompare),      \
+                NULL);                                                         \
+        return MODULE_FUNC(Array, Heap, SUFFIX, CreateWithComparator)(         \
+            self, initialCapacity, cmp);                                       \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(CreateMax, (size_t initialCapacity), {                  \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_CLOSURE(Array, Heap, SUFFIX, Comparator) cmp =                  \
+            NS_JOIN(MODULE_CLOSURE_FUNC(Array, Heap, SUFFIX, Comparator),      \
+                    Bind)(                                                     \
+                MODULE_IFUNC(Array, NS(Heap, SUFFIX), DefaultMaxCompare),      \
+                NULL);                                                         \
+        return MODULE_FUNC(Array, Heap, SUFFIX, CreateWithComparator)(         \
+            self, initialCapacity, cmp);                                       \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Dispose, (), {                                          \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->data)                                                        \
+          Memory_Free(self->data);                                             \
+        self->data = NULL;                                                     \
+        self->size = 0U;                                                       \
+        self->capacity = 0U;                                                   \
+        self->compare =                                                        \
+            NS_JOIN(MODULE_CLOSURE_FUNC(Array, Heap, SUFFIX, Comparator),      \
+                    Empty)();                                                  \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      PROCEDURE_INLINE(Destroy, (), {                                          \
+        (void)MODULE_FUNC(Array, Heap, SUFFIX, Dispose)(self);                 \
+      }),                                                                      \
+                                                                               \
+      PROCEDURE_INLINE(Clear, (), {                                            \
+        if (self)                                                              \
+          self->size = 0U;                                                     \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Reserve, (size_t newCapacity), {                        \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        return MODULE_IFUNC(Array, ReserveBuffer)(                             \
+            (void **)&self->data, &self->capacity, newCapacity, sizeof(TYPE)); \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(ShrinkToFit, (), {                                      \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        return MODULE_IFUNC(Array, ShrinkBuffer)(                              \
+            (void **)&self->data, self->size, &self->capacity, sizeof(TYPE));  \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Heapify, (), {                                          \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (!CLOSURE_IS_VALID(self->compare)) {                                \
+          self->compare =                                                      \
+              NS_JOIN(MODULE_CLOSURE_FUNC(Array, Heap, SUFFIX, Comparator),    \
+                      Bind)(                                                   \
+                  MODULE_IFUNC(Array, NS(Heap, SUFFIX), DefaultMinCompare),    \
+                  NULL);                                                       \
+        }                                                                      \
+        if (self->size > 1U) {                                                 \
+          for (size_t i = self->size / 2U; i > 0U; --i) {                      \
+            MODULE_FUNC(Array, Heap, SUFFIX, SiftDown)(self, i - 1U);          \
+          }                                                                    \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(FromBuffer, (const TYPE *buffer, size_t count), {       \
+        if (!self || (count > 0U && !buffer))                                  \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        OPSTATUS status =                                                      \
+            MODULE_FUNC(Array, Heap, SUFFIX, CreateMin)(self, count);          \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        if (count == 0U)                                                       \
+          return STATUS_CONST(SUCCESS);                                        \
+        memcpy(self->data, buffer, count * sizeof(TYPE));                      \
+        self->size = count;                                                    \
+        return MODULE_FUNC(Array, Heap, SUFFIX, Heapify)(self);                \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Push, (TYPE value), {                                   \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (!CLOSURE_IS_VALID(self->compare)) {                                \
+          self->compare =                                                      \
+              NS_JOIN(MODULE_CLOSURE_FUNC(Array, Heap, SUFFIX, Comparator),    \
+                      Bind)(                                                   \
+                  MODULE_IFUNC(Array, NS(Heap, SUFFIX), DefaultMinCompare),    \
+                  NULL);                                                       \
+        }                                                                      \
+        OPSTATUS status = MODULE_IFUNC(Array, EnsureCapacity)(                 \
+            (void **)&self->data, self->size, &self->capacity, sizeof(TYPE));  \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        size_t index = self->size++;                                           \
+        self->data[index] = value;                                             \
+        MODULE_FUNC(Array, Heap, SUFFIX, SiftUp)(self, index);                 \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Pop, (TYPE *outValue), {                                \
+        if (!self || !outValue || !CLOSURE_IS_VALID(self->compare))            \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size == 0U)                                                  \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *outValue = self->data[0U];                                            \
+        self->size--;                                                          \
+        if (self->size > 0U) {                                                 \
+          self->data[0U] = self->data[self->size];                             \
+          MODULE_FUNC(Array, Heap, SUFFIX, SiftDown)(self, 0U);                \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      CONST_OPERATION_INLINE(Peek, (TYPE *outValue), {                         \
+        if (!self || !outValue)                                                \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size == 0U)                                                  \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *outValue = self->data[0U];                                            \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Top, (TYPE **out), {                                    \
+        if (!self || !out)                                                     \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size == 0U)                                                  \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *out = &self->data[0U];                                                \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Replace, (TYPE inValue, TYPE *outValue), {              \
+        if (!self || !outValue || !CLOSURE_IS_VALID(self->compare))            \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size == 0U)                                                  \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *outValue = self->data[0U];                                            \
+        self->data[0U] = inValue;                                              \
+        MODULE_FUNC(Array, Heap, SUFFIX, SiftDown)(self, 0U);                  \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(PushPop, (TYPE inValue, TYPE *outValue), {              \
+        if (!self || !outValue || !CLOSURE_IS_VALID(self->compare))            \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size == 0U ||                                                \
+            CLOSURE_CALL(self->compare, inValue, self->data[0U]) <=            \
+                COMPARISON_CONST(EQUAL)) {                                     \
+          *outValue = inValue;                                                 \
+          return STATUS_CONST(SUCCESS);                                        \
+        }                                                                      \
+        *outValue = self->data[0U];                                            \
+        self->data[0U] = inValue;                                              \
+        MODULE_FUNC(Array, Heap, SUFFIX, SiftDown)(self, 0U);                  \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      CONST_PREDICATE_INLINE(IsEmpty, (), {                                    \
+        return !self || self->size == 0U;                                      \
+      }),                                                                      \
+                                                                               \
+      CONST_PREDICATE_INLINE(Empty, (), {                                      \
+        return !self || self->size == 0U;                                      \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(size_t, Size, (), {                                \
+        return self ? self->size : 0U;                                         \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(size_t, Count, (), {                               \
+        return self ? self->size : 0U;                                         \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(size_t, Capacity, (), {                            \
+        return self ? self->capacity : 0U;                                     \
+      }),                                                                      \
+                                                                               \
+      /* --- Iterator Protocol (Level-Order Traversal) --- */                  \
+      OPERATION_INLINE(                                                        \
+          Begin,                                                               \
+          (struct MODULE_TYPED(Iterator, Contiguous, SUFFIX) *outIter), {      \
+            if (!self || !outIter)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Iterator, Contiguous, SUFFIX, FromBuffer)(      \
+                outIter, self->data, self->size, 0U, false);                   \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          End,                                                                 \
+          (struct MODULE_TYPED(Iterator, Contiguous, SUFFIX) *outIter), {      \
+            if (!self || !outIter)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Iterator, Contiguous, SUFFIX, FromBuffer)(      \
+                outIter, self->data, self->size, self->size, false);           \
+          })                                                                   \
+  )
+#define TEMPLATE_Heap(SUFFIX, TYPE) TEMPLATE_Array_Heap(SUFFIX, TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Array_Heap(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif

@@ -1,0 +1,270 @@
+#pragma once
+
+#define TEMPLATE_Type_Bitset_IMPLEMENT(SUFFIX, BIT_COUNT)                      \
+  OBJECT_OPERATION_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), Clear, ()) {         \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    memset(self->limb, 0, sizeof(self->limb));                                 \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), SetAll, ()) {        \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    memset(self->limb, 0xFF, sizeof(self->limb));                              \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    MODULE_IFUNC(Type, LimbsMaskTail)(self->limb, limbCount, (BIT_COUNT));     \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), And,                 \
+                                (const MODULE_TYPED(Type, Bitset, SUFFIX)      \
+                                     *source)) {                               \
+    if (!self || !source)                                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    for (size_t i = 0U; i < limbCount; ++i)                                    \
+      self->limb[i] &= source->limb[i];                                        \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), Or,                  \
+                                (const MODULE_TYPED(Type, Bitset, SUFFIX)      \
+                                     *source)) {                               \
+    if (!self || !source)                                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    for (size_t i = 0U; i < limbCount; ++i)                                    \
+      self->limb[i] |= source->limb[i];                                        \
+    MODULE_IFUNC(Type, LimbsMaskTail)(self->limb, limbCount, (BIT_COUNT));     \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), Xor,                 \
+                                (const MODULE_TYPED(Type, Bitset, SUFFIX)      \
+                                     *source)) {                               \
+    if (!self || !source)                                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    for (size_t i = 0U; i < limbCount; ++i)                                    \
+      self->limb[i] ^= source->limb[i];                                        \
+    MODULE_IFUNC(Type, LimbsMaskTail)(self->limb, limbCount, (BIT_COUNT));     \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), Not, ()) {           \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    for (size_t i = 0U; i < limbCount; ++i)                                    \
+      self->limb[i] = ~self->limb[i];                                          \
+    MODULE_IFUNC(Type, LimbsMaskTail)(self->limb, limbCount, (BIT_COUNT));     \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), ShiftLeft,           \
+                                (size_t bitCount)) {                           \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    MODULE_IFUNC(Type, LimbsShiftLeft)(self->limb, limbCount, (BIT_COUNT),     \
+                                       bitCount);                              \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), ShiftRight,          \
+                                (size_t bitCount)) {                           \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    MODULE_IFUNC(Type, LimbsShiftRight)(self->limb, limbCount, bitCount);      \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), BitSet,              \
+                                (size_t bit)) {                                \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (bit >= (size_t)(BIT_COUNT))                                            \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    return MODULE_FUNC(Bit, 64, Set)(&self->limb[bit / 64U],                   \
+                                     (uint8_t)(bit % 64U));                    \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), BitClear,            \
+                                (size_t bit)) {                                \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (bit >= (size_t)(BIT_COUNT))                                            \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    return MODULE_FUNC(Bit, 64, Clear)(&self->limb[bit / 64U],                 \
+                                       (uint8_t)(bit % 64U));                  \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), BitFlip,             \
+                                (size_t bit)) {                                \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (bit >= (size_t)(BIT_COUNT))                                            \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    return MODULE_FUNC(Bit, 64, Flip)(&self->limb[bit / 64U],                  \
+                                      (uint8_t)(bit % 64U));                   \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), BitCheck,            \
+                                (size_t bit, bool *outResult)) {               \
+    if (!self || !outResult)                                                   \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (bit >= (size_t)(BIT_COUNT))                                            \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *outResult =                                                               \
+        MODULE_FUNC(Bit, 64, Check)(self->limb[bit / 64U],                     \
+                                    (uint8_t)(bit % 64U));                     \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_PREDICATE_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), BitTest,             \
+                                (size_t bit)) {                                \
+    if (!self || bit >= (size_t)(BIT_COUNT))                                   \
+      return false;                                                            \
+    return MODULE_FUNC(Bit, 64, Check)(self->limb[bit / 64U],                  \
+                                       (uint8_t)(bit % 64U));                  \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), SetRange,            \
+                                (size_t startBit, size_t endBit)) {            \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (startBit > endBit || endBit > (size_t)(BIT_COUNT))                     \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    MODULE_IFUNC(Type, LimbsSetRange)(self->limb, startBit, endBit);           \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), ClearRange,          \
+                                (size_t startBit, size_t endBit)) {            \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (startBit > endBit || endBit > (size_t)(BIT_COUNT))                     \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    MODULE_IFUNC(Type, LimbsClearRange)(self->limb, startBit, endBit);         \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), FlipRange,           \
+                                (size_t startBit, size_t endBit)) {            \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (startBit > endBit || endBit > (size_t)(BIT_COUNT))                     \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    MODULE_IFUNC(Type, LimbsFlipRange)(self->limb, startBit, endBit);          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+                                                                               \
+  OBJECT_FUNCTION_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), size_t, Count, ()) {  \
+    if (!self)                                                                 \
+      return 0U;                                                               \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    return MODULE_IFUNC(Type, LimbsPopcount)(self->limb, limbCount);           \
+  }                                                                            \
+                                                                               \
+  OBJECT_FUNCTION_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), size_t, Capacity,     \
+                               ()) {                                           \
+    (void)self;                                                                \
+    return (size_t)(BIT_COUNT);                                                \
+  }                                                                            \
+                                                                               \
+  OBJECT_PREDICATE_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), Any, ()) {           \
+    if (!self)                                                                 \
+      return false;                                                            \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    return MODULE_IFUNC(Type, LimbsAny)(self->limb, limbCount);                \
+  }                                                                            \
+                                                                               \
+  OBJECT_PREDICATE_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), All, ()) {           \
+    if (!self)                                                                 \
+      return false;                                                            \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    return MODULE_IFUNC(Type, LimbsAll)(self->limb, limbCount, (BIT_COUNT));   \
+  }                                                                            \
+                                                                               \
+  OBJECT_PREDICATE_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), None, ()) {          \
+    return !NS(Type, Bitset, SUFFIX, Any)(self);                               \
+  }                                                                            \
+                                                                               \
+  OBJECT_PREDICATE_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), Equal,               \
+                                (const MODULE_TYPED(Type, Bitset, SUFFIX)      \
+                                     *other)) {                                \
+    if (!self || !other)                                                       \
+      return self == other;                                                    \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    return MODULE_IFUNC(Type, LimbsEqual)(self->limb, other->limb, limbCount); \
+  }                                                                            \
+                                                                               \
+  OBJECT_PREDICATE_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), IsSubset,            \
+                                (const MODULE_TYPED(Type, Bitset, SUFFIX)      \
+                                     *other)) {                                \
+    if (!self || !other)                                                       \
+      return false;                                                            \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    return MODULE_IFUNC(Type, LimbsIsSubset)(self->limb, other->limb,          \
+                                             limbCount);                       \
+  }                                                                            \
+                                                                               \
+  OBJECT_PREDICATE_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), IsDisjoint,          \
+                                (const MODULE_TYPED(Type, Bitset, SUFFIX)      \
+                                     *other)) {                                \
+    if (!self || !other)                                                       \
+      return false;                                                            \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    return !MODULE_IFUNC(Type, LimbsIntersects)(self->limb, other->limb,       \
+                                                limbCount);                    \
+  }                                                                            \
+                                                                               \
+  OBJECT_PREDICATE_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), Intersects,          \
+                                (const MODULE_TYPED(Type, Bitset, SUFFIX)      \
+                                     *other)) {                                \
+    if (!self || !other)                                                       \
+      return false;                                                            \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    return MODULE_IFUNC(Type, LimbsIntersects)(self->limb, other->limb,        \
+                                               limbCount);                     \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), FindFirstSet,        \
+                                (size_t *outBit)) {                            \
+    if (!self || !outBit)                                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    return MODULE_IFUNC(Type, LimbsFindFirstSet)(self->limb, limbCount,        \
+                                                 (BIT_COUNT), outBit)          \
+               ? STATUS_CONST(SUCCESS)                                         \
+               : STATUS_CONST(NOT_FOUND);                                      \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), FindFirstZero,       \
+                                (size_t *outBit)) {                            \
+    if (!self || !outBit)                                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    return MODULE_IFUNC(Type, LimbsFindFirstZero)(self->limb, limbCount,       \
+                                                  (BIT_COUNT), outBit)         \
+               ? STATUS_CONST(SUCCESS)                                         \
+               : STATUS_CONST(NOT_FOUND);                                      \
+  }                                                                            \
+                                                                               \
+  OBJECT_OPERATION_IMPLEMENT_EX(NS(Type, Bitset, SUFFIX), FindNextSet,         \
+                                (size_t startBit, size_t *outBit)) {           \
+    if (!self || !outBit)                                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    return MODULE_IFUNC(Type, LimbsFindNextSet)(self->limb, limbCount,         \
+                                                (BIT_COUNT), startBit, outBit) \
+               ? STATUS_CONST(SUCCESS)                                         \
+               : STATUS_CONST(NOT_FOUND);                                      \
+  }                                                                            \
+                                                                               \
+  OBJECT_IMPLEMENT(NS(Type, Bitset, SUFFIX));
+
+/* EOF */
+

@@ -5,11 +5,11 @@ TEMPLATE_INSTANTIATE(Pair, custom16, uint16_t);
 
 int main(void) {
   /* Native designated initialization */
-  Struct_TPair_int32 pair = {.x = 1, .y = 2};
-  Struct_TQuad_uint16 rect = {.left = 5, .right = 6, .top = 3, .bottom = 4};
-  Struct_TDual_size range = {.start = 2, .end = 8};
-  Struct_TTriple_int32 size = {.length = 10, .width = 20, .height = 30};
-  Struct_TPenta_int32 penta = {.value1 = 1, .value2 = 2, .value3 = 3,
+  Struct_TPair_Int32 pair = {.x = 1, .y = 2};
+  Struct_TQuad_UInt16 rect = {.left = 5, .right = 6, .top = 3, .bottom = 4};
+  Struct_TDual_Size range = {.start = 2, .end = 8};
+  Struct_TTriple_Int32 size = {.length = 10, .width = 20, .height = 30};
+  Struct_TPenta_Int32 penta = {.value1 = 1, .value2 = 2, .value3 = 3,
                                .value4 = 4, .value5 = 5};
 
   if (pair.first != 1 || pair.second != 2 || pair.values[0] != 1 ||
@@ -23,7 +23,7 @@ int main(void) {
     return 4;
 
   /* Value semantics: pass-by-value, direct copying */
-  Struct_TPair_int32 copy = pair;
+  Struct_TPair_Int32 copy = pair;
   if (copy.x != 1 || copy.y != 2)
     return 5;
 

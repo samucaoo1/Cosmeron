@@ -1,0 +1,335 @@
+/* Vector.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Array_Vector
+#define TEMPLATE_Array_Vector(SUFFIX, TYPE)                                    \
+  TEMPLATE_OBJECT(Array, Vector, SUFFIX,                                       \
+      FIELDS(                                                                  \
+          TYPE *data;                                                          \
+          size_t size;                                                         \
+          size_t capacity;                                                     \
+      ),                                                                       \
+                                                                               \
+      CLOSURE(                                                                 \
+          PROCEDURE(Visitor, (TYPE *element)),                                 \
+          PREDICATE(Predicate, (const TYPE *element))),                        \
+                                                                               \
+      OPERATION_INLINE(Create, (size_t initialCapacity), {                     \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_FUNC(Array, Vector, SUFFIX, Init)(self);                        \
+        self->data = NULL;                                                     \
+        self->size = 0U;                                                       \
+        self->capacity = 0U;                                                   \
+        if (initialCapacity == 0U)                                             \
+          return STATUS_CONST(SUCCESS);                                        \
+        return MODULE_IFUNC(Array, ReserveBuffer)(                             \
+            (void **)&self->data, &self->capacity, initialCapacity,            \
+            sizeof(TYPE));                                                     \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(FromBuffer, (const TYPE *buffer, size_t count), {       \
+        if (!self || (count > 0U && !buffer))                                  \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        OPSTATUS status =                                                      \
+            MODULE_FUNC(Array, Vector, SUFFIX, Create)(self, count);           \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        if (count > 0U) {                                                      \
+          memcpy(self->data, buffer, count * sizeof(TYPE));                    \
+          self->size = count;                                                  \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Dispose, (), {                                          \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->data)                                                        \
+          Memory_Free(self->data);                                             \
+        self->data = NULL;                                                     \
+        self->size = 0U;                                                       \
+        self->capacity = 0U;                                                   \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      PROCEDURE_INLINE(Destroy, (), {                                          \
+        (void)MODULE_FUNC(Array, Vector, SUFFIX, Dispose)(self);               \
+      }),                                                                      \
+                                                                               \
+      CONST_OPERATION_INLINE(                                                  \
+          Clone, (struct MODULE_TYPED(Array, Vector, SUFFIX) *outClone), {     \
+            if (!self || !outClone || self == outClone)                        \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Array, Vector, SUFFIX, FromBuffer)(             \
+                outClone, self->data, self->size);                             \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(Reserve, (size_t newCapacity), {                        \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        return MODULE_IFUNC(Array, ReserveBuffer)(                             \
+            (void **)&self->data, &self->capacity, newCapacity, sizeof(TYPE)); \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(ShrinkToFit, (), {                                      \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        return MODULE_IFUNC(Array, ShrinkBuffer)(                              \
+            (void **)&self->data, self->size, &self->capacity, sizeof(TYPE));  \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Resize, (size_t newSize, TYPE fillValue), {             \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (newSize > self->capacity) {                                        \
+          OPSTATUS status =                                                    \
+              MODULE_FUNC(Array, Vector, SUFFIX, Reserve)(self, newSize);      \
+          if (status != STATUS_CONST(SUCCESS))                                 \
+            return status;                                                     \
+        }                                                                      \
+        for (size_t i = self->size; i < newSize; ++i) {                        \
+          self->data[i] = fillValue;                                           \
+        }                                                                      \
+        self->size = newSize;                                                  \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      PROCEDURE_INLINE(Clear, (), {                                            \
+        if (self)                                                              \
+          self->size = 0U;                                                     \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(At, (size_t index, TYPE **out), {                       \
+        if (!self || !out)                                                     \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (index >= self->size)                                               \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *out = &self->data[index];                                             \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      CONST_OPERATION_INLINE(ConstAt, (size_t index, const TYPE **out), {      \
+        if (!self || !out)                                                     \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (index >= self->size)                                               \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *out = &self->data[index];                                             \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      CONST_OPERATION_INLINE(Get, (size_t index, TYPE *outValue), {            \
+        if (!self || !outValue)                                                \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (index >= self->size)                                               \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *outValue = self->data[index];                                         \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Set, (size_t index, TYPE value), {                      \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (index >= self->size)                                               \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        self->data[index] = value;                                             \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Front, (TYPE **out), {                                  \
+        if (!self || !out)                                                     \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size == 0U)                                                  \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *out = &self->data[0U];                                                \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Back, (TYPE **out), {                                   \
+        if (!self || !out)                                                     \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size == 0U)                                                  \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *out = &self->data[self->size - 1U];                                   \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Data, (TYPE **outData), {                               \
+        if (!self || !outData)                                                 \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        *outData = self->data;                                                 \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      CONST_OPERATION_INLINE(ConstData, (const TYPE **outData), {              \
+        if (!self || !outData)                                                 \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        *outData = self->data;                                                 \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(PushBack, (TYPE value), {                               \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        OPSTATUS status = MODULE_IFUNC(Array, EnsureCapacity)(                 \
+            (void **)&self->data, self->size, &self->capacity, sizeof(TYPE));  \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        self->data[self->size++] = value;                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(PopBack, (TYPE *outValue), {                            \
+        if (!self || !outValue)                                                \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size == 0U)                                                  \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *outValue = self->data[--self->size];                                  \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Insert, (size_t position, TYPE value), {                \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (position > self->size)                                             \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        OPSTATUS status = MODULE_IFUNC(Array, EnsureCapacity)(                 \
+            (void **)&self->data, self->size, &self->capacity, sizeof(TYPE));  \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        if (position < self->size) {                                           \
+          memmove(&self->data[position + 1U], &self->data[position],           \
+                  (self->size - position) * sizeof(TYPE));                     \
+        }                                                                      \
+        self->data[position] = value;                                          \
+        self->size++;                                                          \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Erase, (size_t position, size_t count), {               \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (position > self->size || count > self->size - position)            \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        if (count == 0U)                                                       \
+          return STATUS_CONST(SUCCESS);                                        \
+        if (position + count < self->size) {                                   \
+          memmove(&self->data[position], &self->data[position + count],        \
+                  (self->size - position - count) * sizeof(TYPE));             \
+        }                                                                      \
+        self->size -= count;                                                   \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(RemoveAt, (size_t position, TYPE *outValue), {          \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (position >= self->size)                                            \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        if (outValue)                                                          \
+          *outValue = self->data[position];                                    \
+        return MODULE_FUNC(Array, Vector, SUFFIX, Erase)(self, position, 1U);  \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(SwapRemove, (size_t position, TYPE *outValue), {        \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (position >= self->size)                                            \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        if (outValue)                                                          \
+          *outValue = self->data[position];                                    \
+        self->size--;                                                          \
+        if (position < self->size)                                             \
+          self->data[position] = self->data[self->size];                       \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(PushFront, (TYPE value), {                              \
+        return MODULE_FUNC(Array, Vector, SUFFIX, Insert)(self, 0U, value);    \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(PopFront, (TYPE *outValue), {                           \
+        if (!self || !outValue)                                                \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size == 0U)                                                  \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *outValue = self->data[0U];                                            \
+        return MODULE_FUNC(Array, Vector, SUFFIX, Erase)(self, 0U, 1U);        \
+      }),                                                                      \
+                                                                               \
+      CONST_PREDICATE_INLINE(IsEmpty, (), {                                    \
+        return !self || self->size == 0U;                                      \
+      }),                                                                      \
+                                                                               \
+      CONST_PREDICATE_INLINE(Empty, (), {                                      \
+        return !self || self->size == 0U;                                      \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(size_t, Size, (), {                                \
+        return self ? self->size : 0U;                                         \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(size_t, Count, (), {                               \
+        return self ? self->size : 0U;                                         \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(size_t, Capacity, (), {                            \
+        return self ? self->capacity : 0U;                                     \
+      }),                                                                      \
+                                                                               \
+      /* --- Iterator Protocol --- */                                          \
+      OPERATION_INLINE(                                                        \
+          Begin,                                                               \
+          (struct MODULE_TYPED(Iterator, Contiguous, SUFFIX) *outIter), {      \
+            if (!self || !outIter)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Iterator, Contiguous, SUFFIX, FromBuffer)(      \
+                outIter, self->data, self->size, 0U, false);                   \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          End,                                                                 \
+          (struct MODULE_TYPED(Iterator, Contiguous, SUFFIX) *outIter), {      \
+            if (!self || !outIter)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Iterator, Contiguous, SUFFIX, FromBuffer)(      \
+                outIter, self->data, self->size, self->size, false);           \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          RBegin,                                                              \
+          (struct MODULE_TYPED(Iterator, Contiguous, SUFFIX) *outIter), {      \
+            if (!self || !outIter)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Iterator, Contiguous, SUFFIX, FromBuffer)(      \
+                outIter, self->data, self->size, 0U, true);                    \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          REnd,                                                                \
+          (struct MODULE_TYPED(Iterator, Contiguous, SUFFIX) *outIter), {      \
+            if (!self || !outIter)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Iterator, Contiguous, SUFFIX, FromBuffer)(      \
+                outIter, self->data, self->size, self->size, true);            \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          ForEach,                                                             \
+          (MODULE_CLOSURE(Array, Vector, SUFFIX, Visitor) visitor), {          \
+            if (!self || !CLOSURE_IS_VALID(visitor))                           \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            for (size_t i = 0U; i < self->size; ++i) {                         \
+              CLOSURE_CALL(visitor, &self->data[i]);                           \
+            }                                                                  \
+            return STATUS_CONST(SUCCESS);                                      \
+          })                                                                   \
+  )
+#define TEMPLATE_Vector(SUFFIX, TYPE) TEMPLATE_Array_Vector(SUFFIX, TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Array_Vector(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif

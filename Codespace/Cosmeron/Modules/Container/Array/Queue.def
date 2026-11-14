@@ -1,0 +1,233 @@
+/* Queue.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Array_Queue
+#define TEMPLATE_Array_Queue(SUFFIX, TYPE)                                     \
+  TEMPLATE_OBJECT(Array, Queue, SUFFIX,                                        \
+      FIELDS(                                                                  \
+          TYPE *data;                                                          \
+          size_t size;                                                         \
+          size_t capacity;                                                     \
+          size_t head;                                                         \
+      ),                                                                       \
+                                                                               \
+      CLOSURE(                                                                 \
+          PROCEDURE(Visitor, (TYPE *element)),                                 \
+          PREDICATE(Predicate, (const TYPE *element))),                        \
+                                                                               \
+      OPERATION_INLINE(Create, (size_t initialCapacity), {                     \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_FUNC(Array, Queue, SUFFIX, Init)(self);                         \
+        self->data = NULL;                                                     \
+        self->size = 0U;                                                       \
+        self->capacity = 0U;                                                   \
+        self->head = 0U;                                                       \
+        if (initialCapacity == 0U)                                             \
+          return STATUS_CONST(SUCCESS);                                        \
+        return MODULE_IFUNC(Array, ReserveBuffer)(                             \
+            (void **)&self->data, &self->capacity, initialCapacity,            \
+            sizeof(TYPE));                                                     \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Dispose, (), {                                          \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->data)                                                        \
+          Memory_Free(self->data);                                             \
+        self->data = NULL;                                                     \
+        self->size = 0U;                                                       \
+        self->capacity = 0U;                                                   \
+        self->head = 0U;                                                       \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      PROCEDURE_INLINE(Destroy, (), {                                          \
+        (void)MODULE_FUNC(Array, Queue, SUFFIX, Dispose)(self);                \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Compact, (), {                                          \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->head == 0U)                                                  \
+          return STATUS_CONST(SUCCESS);                                        \
+        const size_t logicalSize = self->size - self->head;                    \
+        if (logicalSize > 0U) {                                                \
+          memmove(self->data, &self->data[self->head],                         \
+                  logicalSize * sizeof(TYPE));                                 \
+        }                                                                      \
+        self->size = logicalSize;                                              \
+        self->head = 0U;                                                       \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Reserve, (size_t newCapacity), {                        \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        return MODULE_IFUNC(Array, ReserveBuffer)(                             \
+            (void **)&self->data, &self->capacity, newCapacity, sizeof(TYPE)); \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(ShrinkToFit, (), {                                      \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        OPSTATUS status = MODULE_FUNC(Array, Queue, SUFFIX, Compact)(self);    \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        return MODULE_IFUNC(Array, ShrinkBuffer)(                              \
+            (void **)&self->data, self->size, &self->capacity, sizeof(TYPE));  \
+      }),                                                                      \
+                                                                               \
+      PROCEDURE_INLINE(Clear, (), {                                            \
+        if (self) {                                                            \
+          self->size = 0U;                                                     \
+          self->head = 0U;                                                     \
+        }                                                                      \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Push, (TYPE value), {                                   \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->head > 0U && self->size == self->capacity) {                 \
+          OPSTATUS status = MODULE_FUNC(Array, Queue, SUFFIX, Compact)(self);  \
+          if (status != STATUS_CONST(SUCCESS))                                 \
+            return status;                                                     \
+        }                                                                      \
+        OPSTATUS status = MODULE_IFUNC(Array, EnsureCapacity)(                 \
+            (void **)&self->data, self->size, &self->capacity, sizeof(TYPE));  \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        self->data[self->size++] = value;                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Pop, (TYPE *outValue), {                                \
+        if (!self || !outValue)                                                \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size <= self->head)                                          \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *outValue = self->data[self->head++];                                  \
+        if (self->size == self->head) {                                        \
+          self->size = 0U;                                                     \
+          self->head = 0U;                                                     \
+          return STATUS_CONST(SUCCESS);                                        \
+        }                                                                      \
+        if (self->head >= (self->capacity / 2U))                               \
+          return MODULE_FUNC(Array, Queue, SUFFIX, Compact)(self);             \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Enqueue, (TYPE value), {                                \
+        return MODULE_FUNC(Array, Queue, SUFFIX, Push)(self, value);           \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Dequeue, (TYPE *outValue), {                            \
+        return MODULE_FUNC(Array, Queue, SUFFIX, Pop)(self, outValue);         \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Front, (TYPE **out), {                                  \
+        if (!self || !out)                                                     \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size <= self->head)                                          \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *out = &self->data[self->head];                                        \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Back, (TYPE **out), {                                   \
+        if (!self || !out)                                                     \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size <= self->head)                                          \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *out = &self->data[self->size - 1U];                                   \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      CONST_OPERATION_INLINE(Peek, (TYPE *outValue), {                         \
+        if (!self || !outValue)                                                \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size <= self->head)                                          \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *outValue = self->data[self->head];                                    \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      CONST_PREDICATE_INLINE(IsEmpty, (), {                                    \
+        return !self || self->size <= self->head;                              \
+      }),                                                                      \
+                                                                               \
+      CONST_PREDICATE_INLINE(Empty, (), {                                      \
+        return !self || self->size <= self->head;                              \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(size_t, Size, (), {                                \
+        return (self && self->size >= self->head) ? (self->size - self->head)  \
+                                                  : 0U;                        \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(size_t, Count, (), {                               \
+        return (self && self->size >= self->head) ? (self->size - self->head)  \
+                                                  : 0U;                        \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(size_t, Capacity, (), {                            \
+        return self ? self->capacity : 0U;                                     \
+      }),                                                                      \
+                                                                               \
+      /* --- Iterator Protocol (Front-to-Back FIFO) --- */                     \
+      OPERATION_INLINE(                                                        \
+          Begin,                                                               \
+          (struct MODULE_TYPED(Iterator, Contiguous, SUFFIX) *outIter), {      \
+            if (!self || !outIter)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            const size_t logicalSize =                                         \
+                (self->size >= self->head) ? (self->size - self->head) : 0U;   \
+            TYPE *startPtr = self->data ? &self->data[self->head] : NULL;      \
+            return MODULE_FUNC(Iterator, Contiguous, SUFFIX, FromBuffer)(      \
+                outIter, startPtr, logicalSize, 0U, false);                    \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          End,                                                                 \
+          (struct MODULE_TYPED(Iterator, Contiguous, SUFFIX) *outIter), {      \
+            if (!self || !outIter)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            const size_t logicalSize =                                         \
+                (self->size >= self->head) ? (self->size - self->head) : 0U;   \
+            TYPE *startPtr = self->data ? &self->data[self->head] : NULL;      \
+            return MODULE_FUNC(Iterator, Contiguous, SUFFIX, FromBuffer)(      \
+                outIter, startPtr, logicalSize, logicalSize, false);           \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          RBegin,                                                              \
+          (struct MODULE_TYPED(Iterator, Contiguous, SUFFIX) *outIter), {      \
+            if (!self || !outIter)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            const size_t logicalSize =                                         \
+                (self->size >= self->head) ? (self->size - self->head) : 0U;   \
+            TYPE *startPtr = self->data ? &self->data[self->head] : NULL;      \
+            return MODULE_FUNC(Iterator, Contiguous, SUFFIX, FromBuffer)(      \
+                outIter, startPtr, logicalSize, 0U, true);                     \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          REnd,                                                                \
+          (struct MODULE_TYPED(Iterator, Contiguous, SUFFIX) *outIter), {      \
+            if (!self || !outIter)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            const size_t logicalSize =                                         \
+                (self->size >= self->head) ? (self->size - self->head) : 0U;   \
+            TYPE *startPtr = self->data ? &self->data[self->head] : NULL;      \
+            return MODULE_FUNC(Iterator, Contiguous, SUFFIX, FromBuffer)(      \
+                outIter, startPtr, logicalSize, logicalSize, true);            \
+          })                                                                   \
+  )
+#define TEMPLATE_Queue(SUFFIX, TYPE) TEMPLATE_Array_Queue(SUFFIX, TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Array_Queue(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif

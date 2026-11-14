@@ -1,0 +1,20 @@
+/* SingleNode.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Linked_SingleNode
+#define TEMPLATE_Linked_SingleNode(SUFFIX, TYPE)                               \
+  FORWARD_TEMPLATE_STRUCT(Linked, SingleNode, SUFFIX);                         \
+  struct MODULE_TYPED(Linked, SingleNode, SUFFIX) {                            \
+    TYPE value;                                                                \
+    struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *next;                     \
+  }
+#define TEMPLATE_SingleNode(SUFFIX, TYPE)                                      \
+  TEMPLATE_Linked_SingleNode(SUFFIX, TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Linked_SingleNode(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif
+

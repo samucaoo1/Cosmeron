@@ -1,0 +1,198 @@
+/* Bidirectional.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Iterator_Bidirectional
+#define TEMPLATE_Iterator_Bidirectional(SUFFIX, TYPE)                          \
+  TEMPLATE_OBJECT(Iterator, Bidirectional, SUFFIX,                             \
+      FIELDS(                                                                  \
+          struct MODULE_TYPED(Linked, DoubleNode, SUFFIX) *start;              \
+          struct MODULE_TYPED(Linked, DoubleNode, SUFFIX) *current;            \
+          struct MODULE_TYPED(Linked, DoubleNode, SUFFIX) *last;               \
+          bool reverse;                                                        \
+      ),                                                                       \
+                                                                               \
+      CLOSURE(                                                                 \
+          PROCEDURE(Visitor, (TYPE *element)),                                 \
+          PROCEDURE(ConstVisitor, (const TYPE *element)),                      \
+          PREDICATE(Predicate, (const TYPE *element))),                        \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          FromNodes,                                                           \
+          (struct MODULE_TYPED(Linked, DoubleNode, SUFFIX) *head,              \
+           struct MODULE_TYPED(Linked, DoubleNode, SUFFIX) *tail,              \
+           struct MODULE_TYPED(Linked, DoubleNode, SUFFIX) *current,           \
+           bool reverse),                                                      \
+          {                                                                    \
+            if (!self)                                                         \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            MODULE_FUNC(Iterator, Bidirectional, SUFFIX, Init)(self);          \
+            self->start = reverse ? tail : head;                               \
+            self->current = current;                                           \
+            self->last = reverse ? head : tail;                                \
+            self->reverse = reverse;                                           \
+            return STATUS_CONST(SUCCESS);                                      \
+          }),                                                                  \
+                                                                               \
+      CONST_PREDICATE_INLINE(IsValid, (), {                                    \
+        return self != NULL && self->current != NULL;                          \
+      }),                                                                      \
+                                                                               \
+      CONST_PREDICATE_INLINE(HasNext, (), {                                    \
+        return self != NULL && self->current != NULL;                          \
+      }),                                                                      \
+                                                                               \
+      CONST_PREDICATE_INLINE(HasPrev, (), {                                    \
+        if (!self)                                                             \
+          return false;                                                        \
+        if (self->current != NULL) {                                           \
+          return (self->reverse ? self->current->next : self->current->prev) !=\
+                 NULL;                                                         \
+        }                                                                      \
+        return self->last != NULL;                                             \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Reset, (), {                                            \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        self->current = self->start;                                           \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Get, (TYPE **outPtr), {                                 \
+        if (!self || !outPtr)                                                  \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (!self->current)                                                    \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *outPtr = &self->current->value;                                       \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      CONST_OPERATION_INLINE(ConstGet, (const TYPE **outPtr), {                \
+        if (!self || !outPtr)                                                  \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (!self->current)                                                    \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *outPtr = &self->current->value;                                       \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      CONST_OPERATION_INLINE(Value, (TYPE *outValue), {                        \
+        if (!self || !outValue)                                                \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (!self->current)                                                    \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *outValue = self->current->value;                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Set, (TYPE value), {                                    \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (!self->current)                                                    \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        self->current->value = value;                                          \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Next, (), {                                             \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (!self->current)                                                    \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        self->last = self->current;                                            \
+        self->current =                                                        \
+            self->reverse ? self->current->prev : self->current->next;         \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Prev, (), {                                             \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (!self->current) {                                                  \
+          if (!self->last)                                                     \
+            return STATUS_CONST(OUT_OF_RANGE);                                 \
+          self->current = self->last;                                          \
+          return STATUS_CONST(SUCCESS);                                        \
+        }                                                                      \
+        struct MODULE_TYPED(Linked, DoubleNode, SUFFIX) *prevNode =            \
+            self->reverse ? self->current->next : self->current->prev;         \
+        if (!prevNode)                                                         \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        self->current = prevNode;                                              \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(StepValue, (TYPE *outValue), {                          \
+        if (!self || !outValue)                                                \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (!self->current)                                                    \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *outValue = self->current->value;                                      \
+        self->last = self->current;                                            \
+        self->current =                                                        \
+            self->reverse ? self->current->prev : self->current->next;         \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(StepPtr, (TYPE **outPtr), {                             \
+        if (!self || !outPtr)                                                  \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (!self->current)                                                    \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *outPtr = &self->current->value;                                       \
+        self->last = self->current;                                            \
+        self->current =                                                        \
+            self->reverse ? self->current->prev : self->current->next;         \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      CONST_PREDICATE_INLINE(                                                  \
+          Equal,                                                               \
+          (const struct MODULE_TYPED(Iterator, Bidirectional, SUFFIX) *other), \
+          {                                                                    \
+            if (!self || !other)                                               \
+              return self == other;                                            \
+            return self->current == other->current &&                          \
+                   self->reverse == other->reverse;                            \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          ForEach,                                                             \
+          (MODULE_CLOSURE(Iterator, Bidirectional, SUFFIX, Visitor) visitor),  \
+          {                                                                    \
+            if (!self || !CLOSURE_IS_VALID(visitor))                           \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            while (self->current != NULL) {                                    \
+              CLOSURE_CALL(visitor, &self->current->value);                    \
+              self->last = self->current;                                      \
+              self->current =                                                  \
+                  self->reverse ? self->current->prev : self->current->next;   \
+            }                                                                  \
+            return STATUS_CONST(SUCCESS);                                      \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          ToStream,                                                            \
+          (struct MODULE_TYPED(Iterator, Stream, SUFFIX) *outStream), {        \
+            if (!self || !outStream)                                           \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Iterator, Stream, SUFFIX, Bind)(                \
+                outStream, (void *)self,                                       \
+                (OPSTATUS (*)(void *, TYPE *))MODULE_FUNC(                     \
+                    Iterator, Bidirectional, SUFFIX, StepValue),               \
+                (bool (*)(const void *))MODULE_FUNC(                           \
+                    Iterator, Bidirectional, SUFFIX, HasNext),                 \
+                (OPSTATUS (*)(void *))MODULE_FUNC(                             \
+                    Iterator, Bidirectional, SUFFIX, Reset));                  \
+          })                                                                   \
+  )
+#define TEMPLATE_Bidirectional(SUFFIX, TYPE)                                   \
+  TEMPLATE_Iterator_Bidirectional(SUFFIX, TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Iterator_Bidirectional(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif
+

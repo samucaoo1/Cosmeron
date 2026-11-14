@@ -218,6 +218,7 @@ int main(void) {
   const int countExactInt = 0 PRIMITIVE_FOR_EACH_EXACT_INTEGER(COUNT_ITEM);
   const int countChar = 0 PRIMITIVE_FOR_EACH_CHARACTER(COUNT_ITEM);
   const int countFloat = 0 PRIMITIVE_FOR_EACH_FLOAT(COUNT_ITEM);
+  const int countComplex = 0 PRIMITIVE_FOR_EACH_COMPLEX(COUNT_ITEM);
   const int countArch = 0 PRIMITIVE_FOR_EACH_ARCHITECTURE(COUNT_ITEM);
   const int countInt = 0 PRIMITIVE_FOR_EACH_INTEGER(COUNT_ITEM);
   const int countNumeric = 0 PRIMITIVE_FOR_EACH_NUMERIC(COUNT_ITEM);
@@ -229,10 +230,19 @@ int main(void) {
   if (countExactInt != 8) return 13;
   if (countChar != 4) return 14;
   if (countFloat != 5) return 15;
+#if !COMPILER_MSVC
+  if (countComplex != 3) return 20;
+  if (countArch != 6) return 16;
+  if (countInt != 14) return 17;
+  if (countNumeric != 22) return 18;
+  if (countTotal != 27) return 19;
+#else
+  if (countComplex != 0) return 20;
   if (countArch != 6) return 16;
   if (countInt != 14) return 17;
   if (countNumeric != 19) return 18;
   if (countTotal != 24) return 19;
+#endif
 
   /* 4. Verify Static Trait Descriptors for Built-in Primitives */
   const MODULE_TYPE(Primitive, Traits) *tInt32 =

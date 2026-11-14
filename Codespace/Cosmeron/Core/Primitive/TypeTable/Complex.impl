@@ -1,0 +1,15 @@
+#pragma once
+
+#include "../../Preprocessor/Detect.h"
+
+#if !COMPILER_MSVC
+#define PRIMITIVE_TYPE_TABLE_COMPLEX(X)                                        \
+  X((float _Complex, FloatComplex, FC, TFloatComplex, FLOAT, 64))              \
+  X((double _Complex, DoubleComplex, DC, TDoubleComplex, FLOAT, 128))          \
+  X((long double _Complex, LongDoubleComplex, LDC, TLongDoubleComplex, FLOAT,  \
+     0))
+#else
+#define PRIMITIVE_TYPE_TABLE_COMPLEX(X)
+#endif
+/* EOF */
+

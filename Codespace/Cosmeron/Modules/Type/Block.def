@@ -1,0 +1,41 @@
+/* Block.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Type_Block
+#define TEMPLATE_Type_Block(SUFFIX, TYPE)                                      \
+  TEMPLATE_OBJECT(Type, Block, SUFFIX,                                         \
+      FIELDS(                                                                  \
+          union {                                                              \
+            TYPE limb[((SUFFIX) / 64U)];                                       \
+            uint8_t byte[((SUFFIX) / 8U)];                                     \
+          };                                                                   \
+      ),                                                                       \
+      OPERATION(Clear, ()),                                                    \
+      OPERATION(SetAll, ()),                                                   \
+      OPERATION(And, (const MODULE_TYPED(Type, Block, SUFFIX) *source)),       \
+      OPERATION(Or, (const MODULE_TYPED(Type, Block, SUFFIX) *source)),        \
+      OPERATION(Xor, (const MODULE_TYPED(Type, Block, SUFFIX) *source)),       \
+      OPERATION(Not, ()),                                                      \
+      OPERATION(ShiftLeft, (unsigned bitCount)),                               \
+      OPERATION(ShiftRight, (unsigned bitCount)),                              \
+      OPERATION(RotateLeft, (unsigned shift)),                                 \
+      OPERATION(RotateRight, (unsigned shift)),                                \
+      OPERATION(BitSet, (uint32_t bit)),                                       \
+      OPERATION(BitClear, (uint32_t bit)),                                     \
+      OPERATION(BitFlip, (uint32_t bit)),                                      \
+      CONST_OPERATION(BitCheck, (uint32_t bit, bool *outResult)),              \
+      CONST_FUNCTION(size_t, Popcount, ()),                                    \
+      CONST_PREDICATE(Any, ()),                                                \
+      CONST_PREDICATE(All, ()),                                                \
+      CONST_PREDICATE(None, ()),                                               \
+      CONST_PREDICATE(Equal,                                                   \
+                      (const MODULE_TYPED(Type, Block, SUFFIX) *other))        \
+  )
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Type_Block(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif
+

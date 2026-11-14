@@ -23,11 +23,11 @@ The types contain values directly. They do **not** allocate memory, own external
 The module is built entirely on Cosmeron's canonical architectural patterns:
 
 1. **Declarative Packages (`PACKAGE`)**:
-   Each family specialization is declared as a package (`Struct_TPair_int32`, `Struct_TDual_size`, etc.), exposing both static inline functions and dispatch function tables (`Struct_TPair_int32_FunctionTable`).
+   Each family specialization is declared as a package (`Struct_TPair_Int32`, `Struct_TDual_Size`, etc.), exposing both static inline functions and dispatch function tables (`Struct_TPair_Int32_FunctionTable`).
 2. **Universal Template Engine (`TEMPLATE_<FAMILY>` / `TEMPLATE_<FAMILY>_IMPLEMENT`)**:
    Every family supports generic instantiation for any type via `TEMPLATE_DECLARE(Family, Suffix, Type)` in headers and `TEMPLATE_IMPLEMENT(Family, Suffix, Type)` in implementation units.
-3. **Decoupled X-Macro Table (`STRUCT_TYPE_TABLE`)**:
-   Single source of truth for standard types, suffixes, and complex-type gating using parenthesized row tuples and decoupled column selectors (`STRUCT_TYPE_COL_*`, `STRUCT_TYPE_GET`).
+3. **Unified Primitive X-Macro Table (`PRIMITIVE_TYPE_TABLE`)**:
+   Integrated directly with `Core/Primitive/Types.h` (`PRIMITIVE_TYPE_TABLE`), using canonical `NAME` suffixes (`Int32`, `UInt8`, `Size`, `FloatComplex`, etc.) and decoupled column selectors (`PRIMITIVE_TYPE_GET(NAME, ROW)`, `PRIMITIVE_TYPE_GET(TYPE, ROW)`).
 4. **Strict Function Contracts**:
    - `FUNCTION`: Value-producing construction (`Create`).
    - `OPERATION`: Fallible extraction returning `OPSTATUS` (`Extract`) with pointer validation.
@@ -59,77 +59,56 @@ All Struct operations support canonical calling styles:
 Call the namespaced package function directly:
 
 ```c
-Struct_TPair_int32 pair = Struct_TPair_int32_Create(10, 20);
+Struct_TPair_Int32 pair = Struct_TPair_Int32_Create(10, 20);
 int32_t x = 0, y = 0;
-OPSTATUS status = Struct_TPair_int32_Extract(pair, &x, &y);
+OPSTATUS status = Struct_TPair_Int32_Extract(pair, &x, &y);
 ```
 
 ### 2. Macro Form
 Uses the canonical namespace generator `TPAIR_FUNC(SUFFIX, NAME)`:
 
 ```c
-Struct_TPair_int32 pair = TPAIR_FUNC(int32, Create)(10, 20);
+Struct_TPair_Int32 pair = TPAIR_FUNC(Int32, Create)(10, 20);
 ```
 
 ### 3. Declarative Package Call
 Dispatches through `PACKAGE_CALL` or the package function table:
 
 ```c
-Struct_TPair_int32 pair = PACKAGE_CALL(TPAIR_PKG(int32), Create, 10, 20);
+Struct_TPair_Int32 pair = PACKAGE_CALL(TPAIR_PKG(Int32), Create, 10, 20);
 
-const Struct_TPair_int32_FunctionTable *ft = Struct_TPair_int32_GetFunctionTable();
-Struct_TPair_int32 pair2 = ft->Create(30, 40);
+const Struct_TPair_Int32_FunctionTable *ft = Struct_TPair_Int32_GetFunctionTable();
+Struct_TPair_Int32 pair2 = ft->Create(30, 40);
 ```
 
 ### 4. Cast Helpers
 Each family generates canonical Cast functions:
 
 ```c
-Struct_TPair_int32 pair = Cast_int32_To_TPair(10, 20);
+Struct_TPair_Int32 pair = Cast_Int32_To_TPair(10, 20);
 int32_t first = 0, second = 0;
-Cast_TPair_To_int32(pair, &first, &second);
+Cast_TPair_To_Int32(pair, &first, &second);
 
 /* Or generic macros */
-TPAIR_TYPE(int32) p = CAST_TYPE_TO_STRUCT(int32, TPair)(10, 20);
-CAST_STRUCT_TO_TYPE(TPair, int32)(p, &first, &second);
+TPAIR_TYPE(Int32) p = CAST_TYPE_TO_STRUCT(Int32, TPair)(10, 20);
+CAST_STRUCT_TO_TYPE(TPair, Int32)(p, &first, &second);
 ```
 
 ---
 
 # Standard Types & X-Macro Table
 
-Standard types are registered in `STRUCT_TYPE_TABLE(X)`:
+Standard and complex primitive types are imported from `Core/Primitive/Types.h` via `PRIMITIVE_TYPE_TABLE(X)`:
 
-```c
-#define STRUCT_TYPE_COL_SUFFIX(SUFFIX, TYPE) SUFFIX
-#define STRUCT_TYPE_COL_TYPE(SUFFIX, TYPE)   TYPE
-#define STRUCT_TYPE_GET(FIELD, ROW) PP_OP_CAT2(STRUCT_TYPE_COL_, FIELD) ROW
+- **Boolean**: `Boolean` (`bool`)
+- **Signed**: `Int8`, `Int16`, `Int32`, `Int64`
+- **Unsigned**: `UInt8`, `UInt16`, `UInt32`, `UInt64`
+- **Character**: `Char`, `Char8`, `Char16`, `Char32`
+- **Float**: `Float32`, `Float64`, `Float`, `Double`, `LongDouble`
+- **Complex** (when `!COMPILER_MSVC`): `FloatComplex`, `DoubleComplex`, `LongDoubleComplex`
+- **Architecture**: `Int`, `UInt`, `Size`, `PtrDiff`, `IntPtr`, `UIntPtr`
 
-#define STRUCT_STANDARD_TYPE_TABLE(X) \
-  X((uint8, uint8_t))                 \
-  X((uint16, uint16_t))               \
-  X((uint32, uint32_t))               \
-  X((uint64, uint64_t))               \
-  X((size, size_t))                   \
-  X((int8, int8_t))                   \
-  X((int16, int16_t))                 \
-  X((int32, int32_t))                 \
-  X((int64, int64_t))                 \
-  X((float, float))                   \
-  X((double, double))                 \
-  X((longdouble, long double))
-
-#if !COMPILER_MSVC
-#define STRUCT_COMPLEX_TYPE_TABLE(X)  \
-  X((float_complex, float _Complex))  \
-  X((double_complex, double _Complex))\
-  X((longdouble_complex, long double _Complex))
-#else
-#define STRUCT_COMPLEX_TYPE_TABLE(X)
-#endif
-```
-
-All 5 families are built-in instantiated for all 12 standard types and the 3 complex types (when `!COMPILER_MSVC`).
+All 5 families are built-in instantiated for every type in `PRIMITIVE_TYPE_TABLE(X)`.
 
 ---
 

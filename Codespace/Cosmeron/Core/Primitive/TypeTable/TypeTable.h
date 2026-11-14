@@ -9,6 +9,7 @@
 #include "Signed.impl"
 #include "Unsigned.impl"
 #include "Character.impl"
+#include "Complex.impl"
 #include "Float.impl"
 #include "Architecture.impl"
 
@@ -36,14 +37,19 @@
 
 #define PRIMITIVE_TYPE_TABLE_NUMERIC(X)                                        \
   PRIMITIVE_TYPE_TABLE_INTEGER(X)                                              \
-  PRIMITIVE_TYPE_TABLE_FLOAT(X)
+  PRIMITIVE_TYPE_TABLE_FLOAT(X)                                                \
+  PRIMITIVE_TYPE_TABLE_COMPLEX(X)
 
-#define PRIMITIVE_TYPE_TABLE(X)                                                \
+#define PRIMITIVE_TYPE_TABLE_ORDERED(X)                                        \
   PRIMITIVE_TYPE_TABLE_BOOLEAN(X)                                              \
   PRIMITIVE_TYPE_TABLE_SIGNED(X)                                               \
   PRIMITIVE_TYPE_TABLE_UNSIGNED(X)                                             \
   PRIMITIVE_TYPE_TABLE_CHARACTER(X)                                            \
   PRIMITIVE_TYPE_TABLE_FLOAT(X)                                                \
   PRIMITIVE_TYPE_TABLE_ARCHITECTURE(X)
+
+#define PRIMITIVE_TYPE_TABLE(X)                                                \
+  PRIMITIVE_TYPE_TABLE_ORDERED(X)                                              \
+  PRIMITIVE_TYPE_TABLE_COMPLEX(X)
 /* EOF */
 

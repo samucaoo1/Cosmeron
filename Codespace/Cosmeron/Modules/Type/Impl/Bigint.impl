@@ -1,0 +1,485 @@
+#pragma once
+
+#define COSMERON_MACRO_INTERNAL_TYPE_BIGINT_IMPLEMENT(CLASS_TYPE, CLASS_PREFIX, TYPE)        \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, Clear, ()) {                       \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    memset(self->byte, 0, sizeof(self->byte));                                 \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, Add, (const CLASS_TYPE *source)) {  \
+    if (!self || !source)                                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    CLASS_TYPE resultValue = *self;                                            \
+    unsigned char carry = 0;                                                   \
+    for (size_t i = 0; i < limbCount; ++i) {                                   \
+      const TYPE left = resultValue.limb[i];                                   \
+      const TYPE right = source->limb[i];                                      \
+      const TYPE sum = (TYPE)(left + right);                                   \
+      const unsigned char c1 = (unsigned char)(sum < left);                    \
+      const TYPE result = (TYPE)(sum + (TYPE)carry);                           \
+      const unsigned char c2 = (unsigned char)(carry && result == 0);          \
+      resultValue.limb[i] = result;                                            \
+      carry = (unsigned char)(c1 | c2);                                        \
+    }                                                                          \
+    if (carry)                                                                 \
+      return STATUS_CONST(ARITHMETIC_OVERFLOW);                                \
+    *self = resultValue;                                                       \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, Sub, (const CLASS_TYPE *source)) {  \
+    if (!self || !source)                                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    CLASS_TYPE resultValue = *self;                                            \
+    unsigned char borrow = 0;                                                  \
+    for (size_t i = 0; i < limbCount; ++i) {                                   \
+      const TYPE left = resultValue.limb[i];                                   \
+      const TYPE right = source->limb[i];                                      \
+      const TYPE difference = (TYPE)(left - right);                            \
+      const unsigned char b1 = (unsigned char)(left < right);                  \
+      const unsigned char b2 = (unsigned char)(borrow && difference == 0);     \
+      resultValue.limb[i] = (TYPE)(difference - (TYPE)borrow);                 \
+      borrow = (unsigned char)(b1 | b2);                                       \
+    }                                                                          \
+    if (borrow)                                                                \
+      return STATUS_CONST(ARITHMETIC_OVERFLOW);                                \
+    *self = resultValue;                                                       \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, Mul, (const CLASS_TYPE *source)) {  \
+    if (!self || !source)                                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    CLASS_TYPE left = *self;                                                   \
+    CLASS_TYPE result = {0};                                                   \
+    for (size_t bit = 0; bit < limbCount * sizeof(TYPE) * 8U; ++bit) {         \
+      const size_t limbIndex = bit / (sizeof(TYPE) * 8U);                      \
+      const size_t bitIndex = bit % (sizeof(TYPE) * 8U);                       \
+      if (((source->limb[limbIndex] >> bitIndex) & (TYPE)1U) != 0U) {          \
+        if (bit != 0U) {                                                       \
+          const size_t wholeLimbShift = bit / (sizeof(TYPE) * 8U);             \
+          const size_t intraLimbShift = bit % (sizeof(TYPE) * 8U);             \
+          for (size_t i = limbCount; i-- > 0;) {                               \
+            if (left.limb[i] == 0U)                                            \
+              continue;                                                        \
+            if (i + wholeLimbShift >= limbCount)                               \
+              return STATUS_CONST(ARITHMETIC_OVERFLOW);                        \
+            if (intraLimbShift != 0U &&                                        \
+                i + wholeLimbShift + 1U >= limbCount &&                        \
+                (left.limb[i] >> (sizeof(TYPE) * 8U - intraLimbShift)) != 0U)  \
+              return STATUS_CONST(ARITHMETIC_OVERFLOW);                        \
+          }                                                                    \
+        }                                                                      \
+        CLASS_TYPE shifted = left;                                             \
+        OPSTATUS status =                                                      \
+            NS(CLASS_PREFIX, ShiftLeft)(&shifted, (unsigned)bit);                \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        status = NS(CLASS_PREFIX, Add)(&result, &shifted);                       \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+      }                                                                        \
+    }                                                                          \
+    for (size_t i = 0; i < limbCount; ++i)                                     \
+      self->limb[i] = result.limb[i];                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, DivMod,                            \
+                                (const CLASS_TYPE *divisor,                    \
+                                 CLASS_TYPE *outQuotient,                      \
+                                 CLASS_TYPE *outRemainder)) {                  \
+    if (!self || !divisor || !outQuotient || !outRemainder ||                  \
+        outQuotient == outRemainder)                                           \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    if (NS(CLASS_PREFIX, IsZero)(divisor))                                       \
+      return STATUS_CONST(DIVISION_BY_ZERO);                                   \
+    CLASS_TYPE q = {0};                                                        \
+    CLASS_TYPE r = {0};                                                        \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    const size_t bitsPerLimb = sizeof(TYPE) * 8U;                              \
+    for (size_t bit = limbCount * bitsPerLimb; bit-- > 0;) {                   \
+      const bool carriedHighBit =                                              \
+          (r.limb[limbCount - 1U] >> (bitsPerLimb - 1U)) != 0U;                \
+      OPSTATUS status = NS(CLASS_PREFIX, ShiftLeft)(&r, 1U);                     \
+      if (status != STATUS_CONST(SUCCESS))                                     \
+        return status;                                                         \
+      const size_t limbIndex = bit / bitsPerLimb;                              \
+      const size_t bitIndex = bit % bitsPerLimb;                               \
+      r.limb[0] |= (TYPE)((self->limb[limbIndex] >> bitIndex) & (TYPE)1U);     \
+      CMPOUT comparison = COMPARISON_CONST(LOWER);                             \
+      if (!carriedHighBit) {                                                   \
+        status = NS(CLASS_PREFIX, Compare)(&r, divisor, &comparison);            \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+      }                                                                        \
+      if (carriedHighBit || comparison != COMPARISON_CONST(LOWER)) {           \
+        if (carriedHighBit) {                                                  \
+          unsigned char borrow = 0U;                                           \
+          for (size_t i = 0; i < limbCount; ++i) {                             \
+            const TYPE leftVal = r.limb[i];                                    \
+            const TYPE rightVal = divisor->limb[i];                            \
+            const TYPE difference = (TYPE)(leftVal - rightVal);                \
+            const unsigned char b1 = (unsigned char)(leftVal < rightVal);      \
+            const unsigned char b2 =                                           \
+                (unsigned char)(borrow && difference == 0U);                   \
+            r.limb[i] = (TYPE)(difference - (TYPE)borrow);                     \
+            borrow = (unsigned char)(b1 | b2);                                 \
+          }                                                                    \
+        } else {                                                               \
+          status = NS(CLASS_PREFIX, Sub)(&r, divisor);                           \
+          if (status != STATUS_CONST(SUCCESS))                                 \
+            return status;                                                     \
+        }                                                                      \
+        q.limb[limbIndex] |= (TYPE)((TYPE)1U << bitIndex);                     \
+      }                                                                        \
+    }                                                                          \
+    for (size_t i = 0; i < limbCount; ++i) {                                   \
+      outQuotient->limb[i] = q.limb[i];                                        \
+      outRemainder->limb[i] = r.limb[i];                                       \
+    }                                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, Div,                               \
+                                (const CLASS_TYPE *divisor)) {                 \
+    if (!self || !divisor)                                                     \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    CLASS_TYPE quotient;                                                       \
+    CLASS_TYPE remainder;                                                      \
+    OPSTATUS status =                                                          \
+        NS(CLASS_PREFIX, DivMod)(self, divisor, &quotient, &remainder);          \
+    if (status == STATUS_CONST(SUCCESS)) {                                     \
+      const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);     \
+      for (size_t i = 0; i < limbCount; ++i)                                   \
+        self->limb[i] = quotient.limb[i];                                      \
+    }                                                                          \
+    return status;                                                             \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, Mod,                               \
+                                (const CLASS_TYPE *divisor)) {                 \
+    if (!self || !divisor)                                                     \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    CLASS_TYPE quotient;                                                       \
+    CLASS_TYPE remainder;                                                      \
+    OPSTATUS status =                                                          \
+        NS(CLASS_PREFIX, DivMod)(self, divisor, &quotient, &remainder);          \
+    if (status == STATUS_CONST(SUCCESS)) {                                     \
+      const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);     \
+      for (size_t i = 0; i < limbCount; ++i)                                   \
+        self->limb[i] = remainder.limb[i];                                     \
+    }                                                                          \
+    return status;                                                             \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, Increment, ()) {                   \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    CLASS_TYPE resultValue = *self;                                            \
+    for (size_t i = 0; i < limbCount; ++i) {                                   \
+      if (++resultValue.limb[i] != 0) {                                        \
+        *self = resultValue;                                                   \
+        return STATUS_CONST(SUCCESS);                                          \
+      }                                                                        \
+    }                                                                          \
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);                                  \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, Decrement, ()) {                   \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    CLASS_TYPE resultValue = *self;                                            \
+    for (size_t i = 0; i < limbCount; ++i) {                                   \
+      if (resultValue.limb[i]-- != 0) {                                        \
+        *self = resultValue;                                                   \
+        return STATUS_CONST(SUCCESS);                                          \
+      }                                                                        \
+    }                                                                          \
+    return STATUS_CONST(ARITHMETIC_OVERFLOW);                                  \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, And, (const CLASS_TYPE *source)) { \
+    if (!self || !source)                                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    for (size_t i = 0; i < limbCount; ++i)                                     \
+      self->limb[i] &= source->limb[i];                                        \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, Or, (const CLASS_TYPE *source)) {  \
+    if (!self || !source)                                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    for (size_t i = 0; i < limbCount; ++i)                                     \
+      self->limb[i] |= source->limb[i];                                        \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, Xor, (const CLASS_TYPE *source)) { \
+    if (!self || !source)                                                      \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    for (size_t i = 0; i < limbCount; ++i)                                     \
+      self->limb[i] ^= source->limb[i];                                        \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, Not, ()) {                         \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    for (size_t i = 0; i < limbCount; ++i)                                     \
+      self->limb[i] = ~self->limb[i];                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, ShiftLeft, (unsigned bitCount)) {  \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    const size_t bitsPerLimb = sizeof(self->limb[0]) * 8U;                     \
+    const size_t totalBitCapacity = limbCount * bitsPerLimb;                   \
+    if (bitCount >= totalBitCapacity) {                                        \
+      memset(self->byte, 0, sizeof(self->byte));                               \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    const size_t wholeLimbShift = bitCount / bitsPerLimb;                      \
+    const size_t intraLimbShift = bitCount % bitsPerLimb;                      \
+    if (wholeLimbShift > 0U) {                                                 \
+      for (size_t i = limbCount; i-- > wholeLimbShift;)                        \
+        self->limb[i] = self->limb[i - wholeLimbShift];                        \
+      memset(self->limb, 0, wholeLimbShift * sizeof(self->limb[0]));           \
+    }                                                                          \
+    if (intraLimbShift > 0U) {                                                 \
+      for (size_t i = limbCount; i-- > 1U;)                                    \
+        self->limb[i] = (self->limb[i] << intraLimbShift) |                    \
+                        (self->limb[i - 1U] >>                                 \
+                         (bitsPerLimb - intraLimbShift));                      \
+      self->limb[0] <<= intraLimbShift;                                        \
+    }                                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, ShiftRight, (unsigned bitCount)) { \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    const size_t bitsPerLimb = sizeof(self->limb[0]) * 8U;                     \
+    const size_t totalBitCapacity = limbCount * bitsPerLimb;                   \
+    if (bitCount >= totalBitCapacity) {                                        \
+      memset(self->byte, 0, sizeof(self->byte));                               \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    const size_t wholeLimbShift = bitCount / bitsPerLimb;                      \
+    const size_t intraLimbShift = bitCount % bitsPerLimb;                      \
+    if (wholeLimbShift > 0U) {                                                 \
+      for (size_t i = 0; i < limbCount - wholeLimbShift; ++i)                  \
+        self->limb[i] = self->limb[i + wholeLimbShift];                        \
+      memset(&self->limb[limbCount - wholeLimbShift], 0,                       \
+             wholeLimbShift * sizeof(self->limb[0]));                          \
+    }                                                                          \
+    if (intraLimbShift > 0U) {                                                 \
+      for (size_t i = 0; i < limbCount - 1U; ++i)                              \
+        self->limb[i] = (self->limb[i] >> intraLimbShift) |                    \
+                        (self->limb[i + 1U]                                    \
+                         << (bitsPerLimb - intraLimbShift));                   \
+      self->limb[limbCount - 1U] >>= intraLimbShift;                           \
+    }                                                                          \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, RotateLeft, (unsigned shift)) {    \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t totalBits =                                                   \
+        (sizeof(self->limb) / sizeof(self->limb[0])) *                         \
+        sizeof(self->limb[0]) * 8U;                                            \
+    if (totalBits > (size_t)UINT_MAX)                                          \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    const unsigned totalBitsValue = (unsigned)totalBits;                       \
+    if (shift == 0U || shift % totalBitsValue == 0U)                           \
+      return STATUS_CONST(SUCCESS);                                            \
+    shift %= totalBitsValue;                                                   \
+    CLASS_TYPE temp = *self;                                                   \
+    NS(CLASS_PREFIX, ShiftLeft)(self, shift);                                    \
+    NS(CLASS_PREFIX, ShiftRight)(&temp, totalBitsValue - shift);                 \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    for (size_t i = 0; i < limbCount; ++i)                                     \
+      self->limb[i] |= temp.limb[i];                                           \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, RotateRight, (unsigned shift)) {   \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t totalBits =                                                   \
+        (sizeof(self->limb) / sizeof(self->limb[0])) *                         \
+        sizeof(self->limb[0]) * 8U;                                            \
+    if (totalBits > (size_t)UINT_MAX)                                          \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    const unsigned totalBitsValue = (unsigned)totalBits;                       \
+    if (shift == 0U || shift % totalBitsValue == 0U)                           \
+      return STATUS_CONST(SUCCESS);                                            \
+    shift %= totalBitsValue;                                                   \
+    CLASS_TYPE temp = *self;                                                   \
+    NS(CLASS_PREFIX, ShiftRight)(self, shift);                                   \
+    NS(CLASS_PREFIX, ShiftLeft)(&temp, totalBitsValue - shift);                  \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    for (size_t i = 0; i < limbCount; ++i)                                     \
+      self->limb[i] |= temp.limb[i];                                           \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, BitSet, (uint32_t bit)) {          \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t bitsPerLimb = sizeof(self->limb[0]) * 8U;                     \
+    const size_t limbIndex = bit / bitsPerLimb;                                \
+    const uint8_t intraBit = (uint8_t)(bit % bitsPerLimb);                     \
+    if (limbIndex >= sizeof(self->limb) / sizeof(self->limb[0]))               \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    self->limb[limbIndex] |= (TYPE)((TYPE)1U << intraBit);                     \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, BitClear, (uint32_t bit)) {        \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t bitsPerLimb = sizeof(self->limb[0]) * 8U;                     \
+    const size_t limbIndex = bit / bitsPerLimb;                                \
+    const uint8_t intraBit = (uint8_t)(bit % bitsPerLimb);                     \
+    if (limbIndex >= sizeof(self->limb) / sizeof(self->limb[0]))               \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    self->limb[limbIndex] &= (TYPE)(~((TYPE)1U << intraBit));                  \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, BitCheck,                          \
+                                (uint32_t bit, bool *outResult)) {             \
+    if (!self || !outResult)                                                   \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t bitsPerLimb = sizeof(self->limb[0]) * 8U;                     \
+    const size_t limbIndex = bit / bitsPerLimb;                                \
+    const uint8_t intraBit = (uint8_t)(bit % bitsPerLimb);                     \
+    if (limbIndex >= sizeof(self->limb) / sizeof(self->limb[0]))               \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    *outResult = ((self->limb[limbIndex] >> intraBit) & (TYPE)1U) != 0U;       \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, Compare,                           \
+                                (const CLASS_TYPE *other, CMPOUT *result)) {   \
+    if (!self || !other || !result)                                            \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    for (size_t i = limbCount; i-- > 0;) {                                     \
+      if (self->limb[i] < other->limb[i]) {                                    \
+        *result = COMPARISON_CONST(LOWER);                                     \
+        return STATUS_CONST(SUCCESS);                                          \
+      }                                                                        \
+      if (self->limb[i] > other->limb[i]) {                                    \
+        *result = COMPARISON_CONST(HIGHER);                                    \
+        return STATUS_CONST(SUCCESS);                                          \
+      }                                                                        \
+    }                                                                          \
+    *result = COMPARISON_CONST(EQUAL);                                         \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_PREDICATE_IMPLEMENT_EX(CLASS_PREFIX, Equal,                             \
+                                (const CLASS_TYPE *other)) {                   \
+    if (!self || !other)                                                       \
+      return false;                                                            \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    for (size_t i = 0; i < limbCount; ++i)                                     \
+      if (self->limb[i] != other->limb[i])                                     \
+        return false;                                                          \
+    return true;                                                               \
+  }                                                                            \
+  OBJECT_PREDICATE_IMPLEMENT_EX(CLASS_PREFIX, NotEqual,                          \
+                                (const CLASS_TYPE *other)) {                   \
+    if (!self || !other)                                                       \
+      return false;                                                            \
+    return !NS(CLASS_PREFIX, Equal)(self, other);                                \
+  }                                                                            \
+  OBJECT_PREDICATE_IMPLEMENT_EX(CLASS_PREFIX, LessThan,                          \
+                                (const CLASS_TYPE *other)) {                   \
+    CMPOUT result;                                                             \
+    if (NS(CLASS_PREFIX, Compare)(self, other, &result) !=                       \
+        STATUS_CONST(SUCCESS))                                                 \
+      return false;                                                            \
+    return result == COMPARISON_CONST(LOWER);                                  \
+  }                                                                            \
+  OBJECT_PREDICATE_IMPLEMENT_EX(CLASS_PREFIX, GreaterThan,                       \
+                                (const CLASS_TYPE *other)) {                   \
+    CMPOUT result;                                                             \
+    if (NS(CLASS_PREFIX, Compare)(self, other, &result) !=                       \
+        STATUS_CONST(SUCCESS))                                                 \
+      return false;                                                            \
+    return result == COMPARISON_CONST(HIGHER);                                 \
+  }                                                                            \
+  OBJECT_PREDICATE_IMPLEMENT_EX(CLASS_PREFIX, LessOrEqual,                       \
+                                (const CLASS_TYPE *other)) {                   \
+    CMPOUT result;                                                             \
+    if (NS(CLASS_PREFIX, Compare)(self, other, &result) !=                       \
+        STATUS_CONST(SUCCESS))                                                 \
+      return false;                                                            \
+    return result != COMPARISON_CONST(HIGHER);                                 \
+  }                                                                            \
+  OBJECT_PREDICATE_IMPLEMENT_EX(CLASS_PREFIX, GreaterOrEqual,                    \
+                                (const CLASS_TYPE *other)) {                   \
+    CMPOUT result;                                                             \
+    if (NS(CLASS_PREFIX, Compare)(self, other, &result) !=                       \
+        STATUS_CONST(SUCCESS))                                                 \
+      return false;                                                            \
+    return result != COMPARISON_CONST(LOWER);                                  \
+  }                                                                            \
+  OBJECT_PREDICATE_IMPLEMENT_EX(CLASS_PREFIX, IsZero, ()) {                      \
+    if (!self)                                                                 \
+      return false;                                                            \
+    const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);       \
+    for (size_t i = 0; i < limbCount; ++i) {                                   \
+      if (self->limb[i] != 0U)                                                 \
+        return false;                                                          \
+    }                                                                          \
+    return true;                                                               \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, ToCStringBase,                     \
+                                (char *buffer, size_t bufferSize,              \
+                                 unsigned base)) {                             \
+    if (!self || !buffer || bufferSize == 0U || base < 2U || base > 36U)       \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    CLASS_TYPE current = *self;                                                \
+    char reverse[sizeof(current.byte) * 8U + 1U];                              \
+    size_t length = 0U;                                                        \
+    if (NS(CLASS_PREFIX, IsZero)(&current)) {                                    \
+      if (bufferSize < 2U)                                                     \
+        return STATUS_CONST(OUT_OF_RANGE);                                     \
+      buffer[0] = '0';                                                         \
+      buffer[1] = '\0';                                                        \
+      return STATUS_CONST(SUCCESS);                                            \
+    }                                                                          \
+    while (!NS(CLASS_PREFIX, IsZero)(&current)) {                                \
+      unsigned remainder = 0U;                                                 \
+      for (size_t i = sizeof(current.limb) / sizeof(current.limb[0]);          \
+           i-- > 0;) {                                                         \
+        TYPE next = current.limb[i];                                           \
+        TYPE quotient = 0U;                                                    \
+        for (size_t bit = sizeof(TYPE) * 8U; bit-- > 0;) {                     \
+          remainder = (remainder << 1U) | (unsigned)((next >> bit) & 1U);      \
+          if (remainder >= base) {                                             \
+            remainder -= base;                                                 \
+            quotient |= (TYPE)((TYPE)1U << bit);                               \
+          }                                                                    \
+        }                                                                      \
+        current.limb[i] = quotient;                                            \
+      }                                                                        \
+      reverse[length++] = (char)(remainder < 10U ? '0' + remainder             \
+                                                 : 'A' + remainder - 10U);     \
+    }                                                                          \
+    if (bufferSize <= length)                                                  \
+      return STATUS_CONST(OUT_OF_RANGE);                                       \
+    for (size_t i = 0; i < length; ++i)                                        \
+      buffer[i] = reverse[length - i - 1U];                                    \
+    buffer[length] = '\0';                                                     \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  OBJECT_OPERATION_IMPLEMENT_EX(CLASS_PREFIX, ToCString,                         \
+                                (char *buffer, size_t bufferSize)) {           \
+    return NS(CLASS_PREFIX, ToCStringBase)(self, buffer, bufferSize, 10U);       \
+  }                                                                            \
+  OBJECT_IMPLEMENT(CLASS_PREFIX);
+
+#define TEMPLATE_Type_Bigint_IMPLEMENT(SUFFIX, TYPE)                           \
+  COSMERON_MACRO_INTERNAL_TYPE_BIGINT_IMPLEMENT(                               \
+      MODULE_TYPED(Type, Bigint, SUFFIX), NS(Type, Bigint, SUFFIX), TYPE)
+
+/* EOF */

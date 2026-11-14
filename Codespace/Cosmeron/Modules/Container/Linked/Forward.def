@@ -1,0 +1,271 @@
+/* Forward.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Linked_Forward
+#define TEMPLATE_Linked_Forward(SUFFIX, TYPE)                                  \
+  TEMPLATE_OBJECT(Linked, Forward, SUFFIX,                                     \
+      FIELDS(                                                                  \
+          struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *head;               \
+          struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *tail;               \
+          size_t size;                                                         \
+      ),                                                                       \
+                                                                               \
+      CLOSURE(PROCEDURE(Visitor, (TYPE *element))),                            \
+                                                                               \
+      OPERATION_INLINE(Create, (), {                                           \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_FUNC(Linked, Forward, SUFFIX, Init)(self);                      \
+        self->head = NULL;                                                     \
+        self->tail = NULL;                                                     \
+        self->size = 0U;                                                       \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      PROCEDURE_INLINE(Clear, (), {                                            \
+        if (!self)                                                             \
+          return;                                                              \
+        struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *curr = self->head;    \
+        while (curr != NULL) {                                                 \
+          struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *next = curr->next;  \
+          void *raw = (void *)curr;                                            \
+          MODULE_IFUNC(Linked, FreeNode)(&raw);                                \
+          curr = next;                                                         \
+        }                                                                      \
+        self->head = NULL;                                                     \
+        self->tail = NULL;                                                     \
+        self->size = 0U;                                                       \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Dispose, (), {                                          \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_FUNC(Linked, Forward, SUFFIX, Clear)(self);                     \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      PROCEDURE_INLINE(Destroy, (), {                                          \
+        (void)MODULE_FUNC(Linked, Forward, SUFFIX, Dispose)(self);             \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(PushFront, (TYPE value), {                              \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        void *raw = NULL;                                                      \
+        OPSTATUS status = MODULE_IFUNC(Linked, AllocNode)(                     \
+            &raw, sizeof(struct MODULE_TYPED(Linked, SingleNode, SUFFIX)));    \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *node =                \
+            (struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *)raw;            \
+        node->value = value;                                                   \
+        node->next = self->head;                                               \
+        self->head = node;                                                     \
+        if (!self->tail)                                                       \
+          self->tail = node;                                                   \
+        self->size++;                                                          \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(PushBack, (TYPE value), {                               \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        void *raw = NULL;                                                      \
+        OPSTATUS status = MODULE_IFUNC(Linked, AllocNode)(                     \
+            &raw, sizeof(struct MODULE_TYPED(Linked, SingleNode, SUFFIX)));    \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *node =                \
+            (struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *)raw;            \
+        node->value = value;                                                   \
+        node->next = NULL;                                                     \
+        if (self->tail) {                                                      \
+          self->tail->next = node;                                             \
+        } else {                                                               \
+          self->head = node;                                                   \
+        }                                                                      \
+        self->tail = node;                                                     \
+        self->size++;                                                          \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(PopFront, (TYPE *outValue), {                           \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (!self->head)                                                       \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *node = self->head;    \
+        if (outValue)                                                          \
+          *outValue = node->value;                                             \
+        self->head = node->next;                                               \
+        if (!self->head)                                                       \
+          self->tail = NULL;                                                   \
+        void *raw = (void *)node;                                              \
+        MODULE_IFUNC(Linked, FreeNode)(&raw);                                  \
+        self->size--;                                                          \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      /* Node-based insertion (independent of Iterator) */                     \
+      OPERATION_INLINE(                                                        \
+          InsertAfter,                                                         \
+          (struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *pos, TYPE value,   \
+           struct MODULE_TYPED(Linked, SingleNode, SUFFIX) **outNode),         \
+          {                                                                    \
+            if (!self)                                                         \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            if (!pos) {                                                        \
+              OPSTATUS status =                                                \
+                  MODULE_FUNC(Linked, Forward, SUFFIX, PushFront)(self, value);\
+              if (status == STATUS_CONST(SUCCESS) && outNode)                  \
+                *outNode = self->head;                                         \
+              return status;                                                   \
+            }                                                                  \
+            void *raw = NULL;                                                  \
+            OPSTATUS status = MODULE_IFUNC(Linked, AllocNode)(                 \
+                &raw, sizeof(struct MODULE_TYPED(Linked, SingleNode, SUFFIX)));\
+            if (status != STATUS_CONST(SUCCESS))                               \
+              return status;                                                   \
+            struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *node =            \
+                (struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *)raw;        \
+            node->value = value;                                               \
+            node->next = pos->next;                                            \
+            pos->next = node;                                                  \
+            if (self->tail == pos)                                             \
+              self->tail = node;                                               \
+            self->size++;                                                      \
+            if (outNode)                                                       \
+              *outNode = node;                                                 \
+            return STATUS_CONST(SUCCESS);                                      \
+          }),                                                                  \
+                                                                               \
+      /* Iterator-based insertion */                                           \
+      OPERATION_INLINE(                                                        \
+          InsertAfterIter,                                                     \
+          (struct MODULE_TYPED(Iterator, Forward, SUFFIX) *iter, TYPE value),  \
+          {                                                                    \
+            if (!self || !iter)                                                \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Linked, Forward, SUFFIX, InsertAfter)(          \
+                self, iter->current, value, NULL);                             \
+          }),                                                                  \
+                                                                               \
+      /* Node-based erasure (independent of Iterator) */                       \
+      OPERATION_INLINE(                                                        \
+          EraseAfter,                                                          \
+          (struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *pos,               \
+           TYPE *outValue),                                                    \
+          {                                                                    \
+            if (!self)                                                         \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            if (!pos)                                                          \
+              return MODULE_FUNC(Linked, Forward, SUFFIX, PopFront)(           \
+                  self, outValue);                                             \
+            if (!pos->next)                                                    \
+              return STATUS_CONST(OUT_OF_RANGE);                               \
+            struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *target =          \
+                pos->next;                                                     \
+            if (outValue)                                                      \
+              *outValue = target->value;                                       \
+            pos->next = target->next;                                          \
+            if (self->tail == target)                                          \
+              self->tail = pos;                                                \
+            void *raw = (void *)target;                                        \
+            MODULE_IFUNC(Linked, FreeNode)(&raw);                              \
+            self->size--;                                                      \
+            return STATUS_CONST(SUCCESS);                                      \
+          }),                                                                  \
+                                                                               \
+      /* Iterator-based erasure */                                             \
+      OPERATION_INLINE(                                                        \
+          EraseAfterIter,                                                      \
+          (struct MODULE_TYPED(Iterator, Forward, SUFFIX) *iter,               \
+           TYPE *outValue),                                                    \
+          {                                                                    \
+            if (!self || !iter)                                                \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Linked, Forward, SUFFIX, EraseAfter)(           \
+                self, iter->current, outValue);                                \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(Front, (TYPE **out), {                                  \
+        if (!self || !out)                                                     \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (!self->head)                                                       \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *out = &self->head->value;                                             \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Back, (TYPE **out), {                                   \
+        if (!self || !out)                                                     \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (!self->tail)                                                       \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *out = &self->tail->value;                                             \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      FUNCTION_INLINE(struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *, Head, \
+                      (), { return self ? self->head : NULL; }),               \
+                                                                               \
+      FUNCTION_INLINE(struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *, Tail, \
+                      (), { return self ? self->tail : NULL; }),               \
+                                                                               \
+      CONST_PREDICATE_INLINE(IsEmpty, (), {                                    \
+        return !self || self->size == 0U;                                      \
+      }),                                                                      \
+                                                                               \
+      CONST_PREDICATE_INLINE(Empty, (), {                                      \
+        return !self || self->size == 0U;                                      \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(size_t, Size, (), {                                \
+        return self ? self->size : 0U;                                         \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(size_t, Count, (), {                               \
+        return self ? self->size : 0U;                                         \
+      }),                                                                      \
+                                                                               \
+      /* --- Optional Iterator Protocol --- */                                 \
+      OPERATION_INLINE(                                                        \
+          Begin,                                                               \
+          (struct MODULE_TYPED(Iterator, Forward, SUFFIX) *outIter), {         \
+            if (!self || !outIter)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Iterator, Forward, SUFFIX, FromNodes)(          \
+                outIter, self->head, self->size);                              \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          End,                                                                 \
+          (struct MODULE_TYPED(Iterator, Forward, SUFFIX) *outIter), {         \
+            if (!self || !outIter)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Iterator, Forward, SUFFIX, FromNodes)(          \
+                outIter, NULL, 0U);                                            \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          ForEach,                                                             \
+          (MODULE_CLOSURE(Linked, Forward, SUFFIX, Visitor) visitor), {        \
+            if (!self || !CLOSURE_IS_VALID(visitor))                           \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *curr =            \
+                self->head;                                                    \
+            while (curr != NULL) {                                             \
+              CLOSURE_CALL(visitor, &curr->value);                             \
+              curr = curr->next;                                               \
+            }                                                                  \
+            return STATUS_CONST(SUCCESS);                                      \
+          })                                                                   \
+  )
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Linked_Forward(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif
+

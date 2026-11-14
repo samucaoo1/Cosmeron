@@ -1,0 +1,47 @@
+/* Bit.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Bit
+#define TEMPLATE_Bit(SUFFIX, TYPE)                                             \
+  MODULE(DOMAIN(Core), Bit,                                                    \
+    PACKAGE(SUFFIX,                                                            \
+        OPERATION(Set, (TYPE *value, uint8_t bit)),                            \
+        OPERATION(Clear, (TYPE *value, uint8_t bit)),                          \
+        OPERATION(Flip, (TYPE *value, uint8_t bit)),                           \
+        PREDICATE(Check, (TYPE value, uint8_t bit)),                           \
+        PROCEDURE(MaskSet, (TYPE *value, TYPE mask)),                          \
+        PROCEDURE(MaskClear, (TYPE *value, TYPE mask)),                        \
+        PROCEDURE(MaskFlip, (TYPE *value, TYPE mask)),                         \
+        PREDICATE(MaskCheckAll, (TYPE value, TYPE mask)),                      \
+        PREDICATE(MaskCheckAny, (TYPE value, TYPE mask)),                      \
+        OPERATION(MaskRange, (uint8_t high, uint8_t low, TYPE *outMask)),      \
+        FUNCTION(size_t, Popcount, (TYPE value)),                              \
+        FUNCTION(size_t, CountLeadingZeros, (TYPE value)),                     \
+        FUNCTION(size_t, CountTrailingZeros, (TYPE value)),                    \
+        PREDICATE(Parity, (TYPE value)),                                       \
+        PREDICATE(IsPowerOfTwo, (TYPE value)),                                 \
+        FUNCTION(TYPE, FloorPowerOfTwo, (TYPE value)),                         \
+        OPERATION(NextPowerOfTwo, (TYPE value, TYPE *outResult)),              \
+        OPERATION(Log2Floor, (TYPE value, uint8_t *outLog)),                   \
+        OPERATION(Log2Ceil, (TYPE value, uint8_t *outLog)),                    \
+        OPERATION(IndexLSB, (TYPE value, TYPE *outIndex)),                     \
+        OPERATION(IndexMSB, (TYPE value, TYPE *outIndex)),                     \
+        FUNCTION(TYPE, IsolateLowestSet, (TYPE value)),                        \
+        FUNCTION(TYPE, ClearLowestSet, (TYPE value)),                          \
+        FUNCTION(TYPE, RotateLeft, (TYPE value, TYPE shift)),                  \
+        FUNCTION(TYPE, RotateRight, (TYPE value, TYPE shift)),                 \
+        FUNCTION(TYPE, ReverseBits, (TYPE value)),                             \
+        FUNCTION(TYPE, ByteSwap, (TYPE value)),                                \
+        OPERATION(Extract,                                                     \
+                  (TYPE value, uint8_t high, uint8_t low, TYPE *outField)),    \
+        OPERATION(Insert,                                                      \
+                  (TYPE *value, uint8_t high, uint8_t low, TYPE fieldValue))   \
+    )                                                                          \
+  )
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Bit(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif

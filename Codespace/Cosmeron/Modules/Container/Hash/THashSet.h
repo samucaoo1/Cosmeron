@@ -1,0 +1,16 @@
+#ifndef COSMERON_CONTAINER_HASH_THASHSET_H
+#define COSMERON_CONTAINER_HASH_THASHSET_H
+
+#include "Common.inc"
+#include "Set.def"
+
+/* Pre-instantiated primitive HashSet types */
+#define COSMERON_MACRO_INTERNAL_HASH_SET_ROW(ROW)                              \
+  TEMPLATE_INSTANTIATE(Hash, HashSet, PRIMITIVE_TYPE_GET(NAME, ROW),           \
+                       PRIMITIVE_TYPE_GET(TYPE, ROW));
+
+PRIMITIVE_TYPE_TABLE_ORDERED(COSMERON_MACRO_INTERNAL_HASH_SET_ROW)
+#undef COSMERON_MACRO_INTERNAL_HASH_SET_ROW
+
+#endif /* COSMERON_CONTAINER_HASH_THASHSET_H */
+

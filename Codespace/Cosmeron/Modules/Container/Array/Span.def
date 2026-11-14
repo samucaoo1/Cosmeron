@@ -1,0 +1,233 @@
+/* Span.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Array_Span
+#define TEMPLATE_Array_Span(SUFFIX, TYPE)                                      \
+  TEMPLATE_OBJECT(Array, Span, SUFFIX,                                         \
+      FIELDS(                                                                  \
+          TYPE *data;                                                          \
+          size_t size;                                                         \
+      ),                                                                       \
+                                                                               \
+      CLOSURE(                                                                 \
+          PROCEDURE(Visitor, (TYPE *element)),                                 \
+          PREDICATE(Predicate, (const TYPE *element))),                        \
+                                                                               \
+      OPERATION_INLINE(FromBuffer, (TYPE *buffer, size_t count), {             \
+        if (!self || (count > 0U && !buffer))                                  \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_FUNC(Array, Span, SUFFIX, Init)(self);                          \
+        self->data = buffer;                                                   \
+        self->size = count;                                                    \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          FromVector,                                                          \
+          (const struct MODULE_TYPED(Array, Vector, SUFFIX) *vector), {        \
+            if (!self || !vector)                                              \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            MODULE_FUNC(Array, Span, SUFFIX, Init)(self);                      \
+            self->data = vector->data;                                         \
+            self->size = vector->size;                                         \
+            return STATUS_CONST(SUCCESS);                                      \
+          }),                                                                  \
+                                                                               \
+      PROCEDURE_INLINE(Clear, (), {                                            \
+        if (self) {                                                            \
+          self->data = NULL;                                                   \
+          self->size = 0U;                                                     \
+        }                                                                      \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(At, (size_t index, TYPE **out), {                       \
+        if (!self || !out)                                                     \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (index >= self->size)                                               \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *out = &self->data[index];                                             \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      CONST_OPERATION_INLINE(ConstAt, (size_t index, const TYPE **out), {      \
+        if (!self || !out)                                                     \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (index >= self->size)                                               \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *out = &self->data[index];                                             \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      CONST_OPERATION_INLINE(Get, (size_t index, TYPE *outValue), {            \
+        if (!self || !outValue)                                                \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (index >= self->size)                                               \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *outValue = self->data[index];                                         \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Set, (size_t index, TYPE value), {                      \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (index >= self->size)                                               \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        self->data[index] = value;                                             \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Front, (TYPE **out), {                                  \
+        if (!self || !out)                                                     \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size == 0U)                                                  \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *out = &self->data[0U];                                                \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Back, (TYPE **out), {                                   \
+        if (!self || !out)                                                     \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size == 0U)                                                  \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *out = &self->data[self->size - 1U];                                   \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Data, (TYPE **outData), {                               \
+        if (!self || !outData)                                                 \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        *outData = self->data;                                                 \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      CONST_OPERATION_INLINE(ConstData, (const TYPE **outData), {              \
+        if (!self || !outData)                                                 \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        *outData = self->data;                                                 \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(size_t, Size, (), {                                \
+        return self ? self->size : 0U;                                         \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(size_t, Count, (), {                               \
+        return self ? self->size : 0U;                                         \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(size_t, SizeBytes, (), {                           \
+        return self ? self->size * sizeof(TYPE) : 0U;                          \
+      }),                                                                      \
+                                                                               \
+      CONST_PREDICATE_INLINE(IsEmpty, (), {                                    \
+        return !self || self->size == 0U;                                      \
+      }),                                                                      \
+                                                                               \
+      CONST_PREDICATE_INLINE(Empty, (), {                                      \
+        return !self || self->size == 0U;                                      \
+      }),                                                                      \
+                                                                               \
+      CONST_OPERATION_INLINE(                                                  \
+          Subspan,                                                             \
+          (size_t offset, size_t count,                                        \
+           struct MODULE_TYPED(Array, Span, SUFFIX) *outSpan),                 \
+          {                                                                    \
+            if (!self || !outSpan)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            if (offset > self->size || count > self->size - offset)            \
+              return STATUS_CONST(OUT_OF_RANGE);                               \
+            MODULE_FUNC(Array, Span, SUFFIX, Init)(outSpan);                   \
+            outSpan->data = self->data ? self->data + offset : NULL;           \
+            outSpan->size = count;                                             \
+            return STATUS_CONST(SUCCESS);                                      \
+          }),                                                                  \
+                                                                               \
+      CONST_OPERATION_INLINE(                                                  \
+          First,                                                               \
+          (size_t count, struct MODULE_TYPED(Array, Span, SUFFIX) *outSpan), { \
+            return MODULE_FUNC(Array, Span, SUFFIX, Subspan)(                  \
+                self, 0U, count, outSpan);                                     \
+          }),                                                                  \
+                                                                               \
+      CONST_OPERATION_INLINE(                                                  \
+          Last,                                                                \
+          (size_t count, struct MODULE_TYPED(Array, Span, SUFFIX) *outSpan), { \
+            if (!self || !outSpan)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            if (count > self->size)                                            \
+              return STATUS_CONST(OUT_OF_RANGE);                               \
+            return MODULE_FUNC(Array, Span, SUFFIX, Subspan)(                  \
+                self, self->size - count, count, outSpan);                     \
+          }),                                                                  \
+                                                                               \
+      CONST_PREDICATE_INLINE(                                                  \
+          Equal, (const struct MODULE_TYPED(Array, Span, SUFFIX) *other), {    \
+            if (!self || !other)                                               \
+              return self == other;                                            \
+            if (self->size != other->size)                                     \
+              return false;                                                    \
+            for (size_t i = 0U; i < self->size; ++i) {                         \
+              if (self->data[i] != other->data[i])                             \
+                return false;                                                  \
+            }                                                                  \
+            return true;                                                       \
+          }),                                                                  \
+                                                                               \
+      /* --- Iterator Protocol --- */                                          \
+      OPERATION_INLINE(                                                        \
+          Begin,                                                               \
+          (struct MODULE_TYPED(Iterator, Contiguous, SUFFIX) *outIter), {      \
+            if (!self || !outIter)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Iterator, Contiguous, SUFFIX, FromBuffer)(      \
+                outIter, self->data, self->size, 0U, false);                   \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          End,                                                                 \
+          (struct MODULE_TYPED(Iterator, Contiguous, SUFFIX) *outIter), {      \
+            if (!self || !outIter)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Iterator, Contiguous, SUFFIX, FromBuffer)(      \
+                outIter, self->data, self->size, self->size, false);           \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          RBegin,                                                              \
+          (struct MODULE_TYPED(Iterator, Contiguous, SUFFIX) *outIter), {      \
+            if (!self || !outIter)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Iterator, Contiguous, SUFFIX, FromBuffer)(      \
+                outIter, self->data, self->size, 0U, true);                    \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          REnd,                                                                \
+          (struct MODULE_TYPED(Iterator, Contiguous, SUFFIX) *outIter), {      \
+            if (!self || !outIter)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_FUNC(Iterator, Contiguous, SUFFIX, FromBuffer)(      \
+                outIter, self->data, self->size, self->size, true);            \
+          }),                                                                  \
+                                                                               \
+      OPERATION_INLINE(                                                        \
+          ForEach,                                                             \
+          (MODULE_CLOSURE(Array, Span, SUFFIX, Visitor) visitor), {            \
+            if (!self || !CLOSURE_IS_VALID(visitor))                           \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            for (size_t i = 0U; i < self->size; ++i) {                         \
+              CLOSURE_CALL(visitor, &self->data[i]);                           \
+            }                                                                  \
+            return STATUS_CONST(SUCCESS);                                      \
+          })                                                                   \
+  )
+#define TEMPLATE_Span(SUFFIX, TYPE) TEMPLATE_Array_Span(SUFFIX, TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Array_Span(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif
+

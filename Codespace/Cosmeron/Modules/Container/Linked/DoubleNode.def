@@ -1,0 +1,21 @@
+/* DoubleNode.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Linked_DoubleNode
+#define TEMPLATE_Linked_DoubleNode(SUFFIX, TYPE)                               \
+  FORWARD_TEMPLATE_STRUCT(Linked, DoubleNode, SUFFIX);                         \
+  struct MODULE_TYPED(Linked, DoubleNode, SUFFIX) {                            \
+    TYPE value;                                                                \
+    struct MODULE_TYPED(Linked, DoubleNode, SUFFIX) *prev;                     \
+    struct MODULE_TYPED(Linked, DoubleNode, SUFFIX) *next;                     \
+  }
+#define TEMPLATE_DoubleNode(SUFFIX, TYPE)                                      \
+  TEMPLATE_Linked_DoubleNode(SUFFIX, TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Linked_DoubleNode(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif
+

@@ -1,5 +1,6 @@
 #include "../../../Cosmeron/Core/Algorithm/Comparison.h"
 #include "../../../Cosmeron/Core/Algorithm/Repeat.h"
+#include "../../../Cosmeron/Core/Bit/Bit.h"
 #include "../../../Cosmeron/Core/Cast/Cast.h"
 #include "../../../Cosmeron/Core/Cast/Float.h"
 #include "../../../Cosmeron/Core/Cast/Integer.h"
