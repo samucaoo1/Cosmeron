@@ -4,7 +4,8 @@
 
 MODULE_IMPLEMENT(Container,
   OBJECT(DynamicBitset,
-    OPERATION(Create, (size_t bitCount), {
+    OPERATION(CreateWithAllocator,
+              (size_t bitCount, MODULE_TYPE(Memory, Allocator) allocator), {
       if (!self)
         return STATUS_CONST(INVALID_ARGUMENT);
       MODULE_FUNC(Container, DynamicBitset, Init)(self);
@@ -12,11 +13,15 @@ MODULE_IMPLEMENT(Container,
       self->bitCount = 0U;
       self->limbCount = 0U;
       self->limbCapacity = 0U;
+      self->allocator = MODULE_FUNC(Memory, Allocator, IsValid)(&allocator)
+                            ? allocator
+                            : MODULE_FUNC(Memory, Allocator, Default)();
       if (bitCount == 0U)
         return STATUS_CONST(SUCCESS);
       const size_t neededLimbs = (bitCount + 63U) / 64U;
-      OPSTATUS status = MODULE_FUNC(Memory, Alloc, ZeroArray)(
-          &self->limbs, neededLimbs, sizeof(uint64_t));
+      OPSTATUS status = MODULE_FUNC(Memory, Allocator, Calloc)(
+          &self->allocator, neededLimbs, sizeof(uint64_t),
+          (void **)&self->limbs);
       if (status != STATUS_CONST(SUCCESS))
         return status;
       self->bitCount = bitCount;
@@ -25,11 +30,20 @@ MODULE_IMPLEMENT(Container,
       return STATUS_CONST(SUCCESS);
     }),
 
+    OPERATION(Create, (size_t bitCount), {
+      return MODULE_FUNC(Container, DynamicBitset, CreateWithAllocator)(
+          self, bitCount, MODULE_FUNC(Memory, Allocator, Default)());
+    }),
+
     OPERATION(Dispose, (), {
       if (!self)
         return STATUS_CONST(INVALID_ARGUMENT);
-      if (self->limbs)
-        Memory_Free(self->limbs);
+      if (self->limbs) {
+        MODULE_FUNC(Memory, Allocator, Free)(
+            &self->allocator, self->limbs,
+            self->limbCapacity * sizeof(uint64_t));
+        self->limbs = NULL;
+      }
       self->bitCount = 0U;
       self->limbCount = 0U;
       self->limbCapacity = 0U;
@@ -43,11 +57,13 @@ MODULE_IMPLEMENT(Container,
           minBitCapacity == 0U ? 0U : (minBitCapacity + 63U) / 64U;
       if (neededLimbs <= self->limbCapacity)
         return STATUS_CONST(SUCCESS);
-      uint64_t *newLimbs = self->limbs;
-      OPSTATUS status = MODULE_FUNC(Memory, Alloc, ReallocArray)(
-          &newLimbs, neededLimbs, sizeof(uint64_t));
+      void *newLimbsRaw = NULL;
+      OPSTATUS status = MODULE_FUNC(Memory, Allocator, Realloc)(
+          &self->allocator, self->limbs, self->limbCapacity * sizeof(uint64_t),
+          neededLimbs * sizeof(uint64_t), &newLimbsRaw);
       if (status != STATUS_CONST(SUCCESS))
         return status;
+      uint64_t *newLimbs = (uint64_t *)newLimbsRaw;
       memset(&newLimbs[self->limbCapacity], 0,
              (neededLimbs - self->limbCapacity) * sizeof(uint64_t));
       self->limbs = newLimbs;

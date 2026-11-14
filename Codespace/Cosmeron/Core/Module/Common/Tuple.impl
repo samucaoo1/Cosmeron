@@ -1,9 +1,9 @@
 #pragma once
 
 #include "../Namespace.h"
-#include "../../Preprocessor/Detect.h"
+#include "../../Preprocessor/Detect/Detect.h"
 #include "../../Preprocessor/Foreach.h"
-#include "../../Preprocessor/Repeat.h"
+#include "../../Preprocessor/Unroll.h"
 #include "../../Preprocessor/Sequence.h"
 
 /* ============================================================

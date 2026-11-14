@@ -1,7 +1,7 @@
 #ifndef COSMERON_CONTAINER_TREE_TAVL_H
 #define COSMERON_CONTAINER_TREE_TAVL_H
 
-#include "Common.inc"
+#include "Impl/Common.inc"
 #include "AVL.def"
 
 /* Pre-instantiated primitive AVLSet types (ordered types) */

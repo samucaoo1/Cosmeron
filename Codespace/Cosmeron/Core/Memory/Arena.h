@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../Outcome/Status.h"
+#include "../Condition/Status.h"
 #include "../Module/Module.h"
 #include "../Preprocessor/Compiling.inc"
 #include "Alloc.h"
-#include "Common.inc"
+#include "Impl/Common.inc"
 
 /* ========================================================================== */
 /* Object Declaration: Memory_Arena                                           */
@@ -42,5 +42,39 @@ MODULE(DOMAIN(Core), Memory,
 );
 
 #include "Impl/Arena.impl"
+#include "Allocator.h"
+
+/* ========================================================================== */
+/* Allocator Adapter: Memory_Arena_AsAllocator                                */
+/* ========================================================================== */
+
+static inline OPSTATUS MODULE_FUNC(Memory, Arena, AllocatorAlloc)(
+    void *context, size_t size, size_t alignment, void **outPtr) {
+  return MODULE_FUNC(Memory, Arena, AllocAligned)(
+      (MODULE_TYPE(Memory, Arena) *)context, outPtr, size, alignment);
+}
+
+static inline void MODULE_FUNC(Memory, Arena, AllocatorFree)(void *context,
+                                                             void *ptr,
+                                                             size_t size) {
+  (void)context;
+  (void)ptr;
+  (void)size;
+}
+
+static inline MODULE_TYPE(Memory, Allocator)
+MODULE_FUNC(Memory, Arena, AsAllocator)(MODULE_TYPE(Memory, Arena) *self) {
+  static const MODULE_TYPE(Memory, AllocatorOps) ops = {
+      .Alloc = MODULE_FUNC(Memory, Arena, AllocatorAlloc),
+      .Realloc = NULL,
+      .Free = MODULE_FUNC(Memory, Arena, AllocatorFree),
+      .capabilities = CNS(Memory, BULK_RESET),
+  };
+  MODULE_TYPE(Memory, Allocator) alloc = {
+      .context = self,
+      .ops = &ops,
+  };
+  return alloc;
+}
 
 /* EOF */

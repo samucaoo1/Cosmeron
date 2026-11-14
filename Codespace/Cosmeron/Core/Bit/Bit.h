@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Common.inc"
+#include "Impl/Common.inc"
 #include "Bit.def"
 #include "Impl/Bit.impl"
 

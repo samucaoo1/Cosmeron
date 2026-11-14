@@ -1,7 +1,7 @@
 #ifndef COSMERON_CONTAINER_ARRAY_TRING_H
 #define COSMERON_CONTAINER_ARRAY_TRING_H
 
-#include "Common.inc"
+#include "Impl/Common.inc"
 #include "Ring.def"
 
 /* Ordered Primitive Type Instantiations */

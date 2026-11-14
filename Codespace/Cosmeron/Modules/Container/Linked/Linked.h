@@ -1,7 +1,7 @@
 #ifndef COSMERON_CONTAINER_LINKED_H
 #define COSMERON_CONTAINER_LINKED_H
 
-#include "Common.inc"
+#include "Impl/Common.inc"
 #include "TSingleNode.h"
 #include "TDoubleNode.h"
 #include "TForward.h"

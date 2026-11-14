@@ -1,7 +1,7 @@
 #ifndef COSMERON_CONTAINER_ARRAY_TSPAN_H
 #define COSMERON_CONTAINER_ARRAY_TSPAN_H
 
-#include "Common.inc"
+#include "Impl/Common.inc"
 #include "TVector.h"
 #include "Span.def"
 

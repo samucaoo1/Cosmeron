@@ -1,7 +1,7 @@
 #ifndef COSMERON_CONTAINER_HASH_THASHSET_H
 #define COSMERON_CONTAINER_HASH_THASHSET_H
 
-#include "Common.inc"
+#include "Impl/Common.inc"
 #include "Set.def"
 
 /* Pre-instantiated primitive HashSet types */

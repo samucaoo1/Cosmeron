@@ -1,7 +1,7 @@
 #ifndef COSMERON_CONTAINER_TREE_TBTREE_H
 #define COSMERON_CONTAINER_TREE_TBTREE_H
 
-#include "Common.inc"
+#include "Impl/Common.inc"
 #include "BTree.def"
 
 /* Pre-instantiated primitive BTreeSet types (ordered types) */

@@ -1,0 +1,17 @@
+#include "../../../Core/Module/Module.h"
+
+#define TEMPLATE_Math_MaxAndMin(SUFFIX, TYPE)                                  \
+  static inline TYPE MODULE_FUNC(Math, Max, SUFFIX)(TYPE a, TYPE b) {          \
+    return (a > b) ? a : b;                                                    \
+  }                                                                            \
+  static inline TYPE MODULE_FUNC(Math, Min, SUFFIX)(TYPE a, TYPE b) {          \
+    return (a < b) ? a : b;                                                    \
+  }
+
+#if defined(SUFFIX) && defined(TYPE)
+TEMPLATE_Math_MaxAndMin(SUFFIX, TYPE)
+#undef SUFFIX
+#undef TYPE
+#endif
+
+/* EOF */

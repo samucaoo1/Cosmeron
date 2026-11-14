@@ -1,7 +1,7 @@
 #ifndef COSMERON_CONTAINER_ITERATOR_TCIRCULAR_H
 #define COSMERON_CONTAINER_ITERATOR_TCIRCULAR_H
 
-#include "Common.inc"
+#include "Impl/Common.inc"
 #include "TStream.h"
 #include "Circular.def"
 

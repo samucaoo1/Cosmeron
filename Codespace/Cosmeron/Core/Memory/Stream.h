@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../Outcome/Status.h"
+#include "../Condition/Status.h"
 #include "../Module/Module.h"
 #include "../Preprocessor/Compiling.inc"
 #include "../Preprocessor/Operations.h"
-#include "Common.inc"
+#include "Impl/Common.inc"
 
 #include <stdbool.h>
 #include <stddef.h>

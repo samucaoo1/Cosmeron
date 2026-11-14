@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Common.inc"
+#include "../Impl/Common.inc"
 
 static inline void MODULE_IFUNC(Diagnostic, Format_WriteContext)(
     MODULE_ITYPE(Diagnostic, FormatWriter) *w,

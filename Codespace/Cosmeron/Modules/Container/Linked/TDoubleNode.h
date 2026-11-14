@@ -2,7 +2,7 @@
 #define COSMERON_CONTAINER_LINKED_TDOUBLENODE_H
 
 #include "../../../Core/Module/Module.h"
-#include "../../../Core/Primitive/Types.h"
+#include "../../../Core/Types/Primitive.h"
 
 #ifndef TEMPLATE_Linked
 #define TEMPLATE_Linked(TARGET, ...) NS(TEMPLATE_Linked, TARGET)(__VA_ARGS__)

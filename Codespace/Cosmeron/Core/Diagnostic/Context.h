@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Outcome/Status.h"
+#include "../Condition/Status.h"
 #include "../Module/Module.h"
 #include "../Preprocessor/Compiling.inc"
 

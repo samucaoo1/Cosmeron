@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../Common.inc"
-#include "../../Preprocessor/Detect.h"
+#include "../Impl/Common.inc"
+#include "../../Preprocessor/Detect/Detect.h"
 
 #if OS_WINDOWS
   #define WIN32_LEAN_AND_MEAN

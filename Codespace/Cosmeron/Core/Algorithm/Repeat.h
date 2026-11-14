@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../Outcome/Status.h"
+#include "../Condition/Status.h"
 #include "../Module/Module.h"
 #include "../Preprocessor/Compiling.inc"
-#include "../Primitive/Types.h"
+#include "../Types/Primitive.h"
 
 #include <stdbool.h>
 #include <stddef.h>

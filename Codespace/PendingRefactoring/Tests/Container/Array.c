@@ -1,13 +1,13 @@
 #include "../../../Cosmeron/Modules/Container/Array/Array.h"
-#include "../../../Cosmeron/Modules/Struct/Struct.h"
+#include "../../../Cosmeron/Modules/Tuple/Tuple.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 
 /* Custom POD struct instantiation test */
-TEMPLATE_INSTANTIATE(Iterator, Stream, PairInt32, MODULE_TYPED(Struct, Pair, Int32));
-TEMPLATE_INSTANTIATE(Iterator, Contiguous, PairInt32, MODULE_TYPED(Struct, Pair, Int32));
-TEMPLATE_INSTANTIATE(Array, Vector, PairInt32, MODULE_TYPED(Struct, Pair, Int32));
+TEMPLATE_INSTANTIATE(Iterator, Stream, PairInt32, MODULE_TYPED(Tuple, Pair, Int32));
+TEMPLATE_INSTANTIATE(Iterator, Contiguous, PairInt32, MODULE_TYPED(Tuple, Pair, Int32));
+TEMPLATE_INSTANTIATE(Array, Vector, PairInt32, MODULE_TYPED(Tuple, Pair, Int32));
 
 /* Internal helpers for closures in tests (strictly namespaced) */
 INTERNAL_DEF(
@@ -272,15 +272,15 @@ static void NS(ArrayTest, CustomStructVector)(void) {
   assert(MODULE_FUNC(Array, Vector, PairInt32, Create)(&pairVec, 2U) ==
          STATUS_CONST(SUCCESS));
 
-  MODULE_TYPED(Struct, Pair, Int32) p1 = {.value1 = 1, .value2 = 10};
-  MODULE_TYPED(Struct, Pair, Int32) p2 = {.value1 = 2, .value2 = 20};
+  MODULE_TYPED(Tuple, Pair, Int32) p1 = {.value1 = 1, .value2 = 10};
+  MODULE_TYPED(Tuple, Pair, Int32) p2 = {.value1 = 2, .value2 = 20};
   assert(OBJECT_CALL(&pairVec, PushBack, p1) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&pairVec, PushBack, p2) == STATUS_CONST(SUCCESS));
 
   MODULE_TYPED(Iterator, Contiguous, PairInt32) it;
   assert(OBJECT_CALL(&pairVec, Begin, &it) == STATUS_CONST(SUCCESS));
 
-  MODULE_TYPED(Struct, Pair, Int32) outPair;
+  MODULE_TYPED(Tuple, Pair, Int32) outPair;
   assert(OBJECT_CALL(&it, StepValue, &outPair) == STATUS_CONST(SUCCESS));
   assert(outPair.value1 == 1 && outPair.value2 == 10);
   assert(OBJECT_CALL(&it, StepValue, &outPair) == STATUS_CONST(SUCCESS));

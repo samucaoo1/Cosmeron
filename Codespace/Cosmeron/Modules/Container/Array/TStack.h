@@ -1,7 +1,7 @@
 #ifndef COSMERON_CONTAINER_ARRAY_TSTACK_H
 #define COSMERON_CONTAINER_ARRAY_TSTACK_H
 
-#include "Common.inc"
+#include "Impl/Common.inc"
 #include "Stack.def"
 
 /* Ordered Primitive Type Instantiations */

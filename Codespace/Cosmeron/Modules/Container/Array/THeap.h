@@ -1,7 +1,7 @@
 #ifndef COSMERON_CONTAINER_ARRAY_THEAP_H
 #define COSMERON_CONTAINER_ARRAY_THEAP_H
 
-#include "Common.inc"
+#include "Impl/Common.inc"
 #include "Heap.def"
 
 /* Ordered Primitive Type Instantiations */

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../Outcome/Status.h"
+#include "../Condition/Status.h"
 #include "../Module/Module.h"
 #include "../Preprocessor/Compiling.inc"
 #include "Alloc.h"
-#include "Common.inc"
+#include "Impl/Common.inc"
 
 /* ========================================================================== */
 /* Declarative Module: Memory (Internal PoolNode Struct & TMemoryPool Object) */
@@ -46,5 +46,45 @@ MODULE(DOMAIN(Core), Memory,
 );
 
 #include "Impl/Pool.impl"
+#include "Allocator.h"
+
+/* ========================================================================== */
+/* Allocator Adapter: Memory_Pool_AsAllocator                                 */
+/* ========================================================================== */
+
+static inline OPSTATUS MODULE_FUNC(Memory, Pool, AllocatorAlloc)(
+    void *context, size_t size, size_t alignment, void **outPtr) {
+  (void)alignment;
+  MODULE_TYPE(Memory, Pool) *pool = (MODULE_TYPE(Memory, Pool) *)context;
+  if (!pool || size > pool->elementSize) {
+    return STATUS_CONST(OUT_OF_RANGE);
+  }
+  return MODULE_FUNC(Memory, Pool, Alloc)(pool, outPtr);
+}
+
+static inline void MODULE_FUNC(Memory, Pool, AllocatorFree)(void *context,
+                                                            void *ptr,
+                                                            size_t size) {
+  (void)size;
+  MODULE_TYPE(Memory, Pool) *pool = (MODULE_TYPE(Memory, Pool) *)context;
+  if (pool && ptr) {
+    (void)MODULE_FUNC(Memory, Pool, Free)(pool, ptr);
+  }
+}
+
+static inline MODULE_TYPE(Memory, Allocator)
+MODULE_FUNC(Memory, Pool, AsAllocator)(MODULE_TYPE(Memory, Pool) *self) {
+  static const MODULE_TYPE(Memory, AllocatorOps) ops = {
+      .Alloc = MODULE_FUNC(Memory, Pool, AllocatorAlloc),
+      .Realloc = NULL,
+      .Free = MODULE_FUNC(Memory, Pool, AllocatorFree),
+      .capabilities = CNS(Memory, SUPPORTS_FREE) | CNS(Memory, BULK_RESET),
+  };
+  MODULE_TYPE(Memory, Allocator) alloc = {
+      .context = self,
+      .ops = &ops,
+  };
+  return alloc;
+}
 
 /* EOF */

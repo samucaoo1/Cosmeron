@@ -1,7 +1,7 @@
 #ifndef COSMERON_CONTAINER_H
 #define COSMERON_CONTAINER_H
 
-#include "DynamicBitset.h"
+#include "Bitset/DynamicBitset.h"
 #include "Iterator/Iterator.h"
 #include "Array/Array.h"
 #include "Linked/Linked.h"

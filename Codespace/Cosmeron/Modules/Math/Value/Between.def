@@ -1,0 +1,35 @@
+#include <stdbool.h>
+
+#include "../../../Core/Module/Module.h"
+#include "../Impl/Common.inc"
+
+#define TEMPLATE_Math_Between(SUFFIX, TYPE)                                    \
+  static inline bool MODULE_FUNC(Math, IsBetween, SUFFIX)(                     \
+      TYPE value, TYPE minimum, TYPE maximum) {                                \
+    if (minimum > maximum) {                                                   \
+      return false;                                                            \
+    }                                                                          \
+    return value >= minimum && value <= maximum;                               \
+  }                                                                            \
+  static inline MODULE_ENUM(Math, RangeResult)                                 \
+      MODULE_FUNC(Math, Between, SUFFIX)(TYPE value, TYPE minimum,             \
+                                         TYPE maximum) {                       \
+    if (minimum > maximum) {                                                   \
+      return CNS(Math, INVALID_RANGE);                                         \
+    }                                                                          \
+    if (value < minimum) {                                                     \
+      return CNS(Math, BELOW_RANGE);                                           \
+    }                                                                          \
+    if (value > maximum) {                                                     \
+      return CNS(Math, ABOVE_RANGE);                                           \
+    }                                                                          \
+    return CNS(Math, IN_RANGE);                                                \
+  }
+
+#if defined(SUFFIX) && defined(TYPE)
+TEMPLATE_Math_Between(SUFFIX, TYPE)
+#undef SUFFIX
+#undef TYPE
+#endif
+
+/* EOF */

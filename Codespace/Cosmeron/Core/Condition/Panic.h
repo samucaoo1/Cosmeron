@@ -3,7 +3,7 @@
 #include "../Diagnostic/Stacktrace.h"
 #include "../Module/Callback/Callback.h"
 #include "../Module/Module.h"
-#include "../Outcome/Status.h"
+#include "../Condition/Status.h"
 #include "../Preprocessor/Compiling.inc"
 #include "../Preprocessor/Operations.h"
 

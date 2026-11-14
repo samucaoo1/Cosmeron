@@ -1,7 +1,7 @@
 #ifndef COSMERON_CONTAINER_LINKED_TQUEUE_H
 #define COSMERON_CONTAINER_LINKED_TQUEUE_H
 
-#include "Common.inc"
+#include "Impl/Common.inc"
 #include "Queue.def"
 
 /* Ordered Primitive Type Instantiations */

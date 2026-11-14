@@ -1,7 +1,7 @@
 #ifndef COSMERON_CONTAINER_LINKED_TDEQUE_H
 #define COSMERON_CONTAINER_LINKED_TDEQUE_H
 
-#include "Common.inc"
+#include "Impl/Common.inc"
 #include "Deque.def"
 
 /* Ordered Primitive Type Instantiations */

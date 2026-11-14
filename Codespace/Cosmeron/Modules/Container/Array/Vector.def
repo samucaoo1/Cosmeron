@@ -22,7 +22,7 @@
         self->capacity = 0U;                                                   \
         if (initialCapacity == 0U)                                             \
           return STATUS_CONST(SUCCESS);                                        \
-        return MODULE_IFUNC(Array, ReserveBuffer)(                             \
+        return MODULE_IFUNC(Array, ReserveBuffer)(NULL,                              \
             (void **)&self->data, &self->capacity, initialCapacity,            \
             sizeof(TYPE));                                                     \
       }),                                                                      \
@@ -67,14 +67,14 @@
       OPERATION_INLINE(Reserve, (size_t newCapacity), {                        \
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        return MODULE_IFUNC(Array, ReserveBuffer)(                             \
+        return MODULE_IFUNC(Array, ReserveBuffer)(NULL,                              \
             (void **)&self->data, &self->capacity, newCapacity, sizeof(TYPE)); \
       }),                                                                      \
                                                                                \
       OPERATION_INLINE(ShrinkToFit, (), {                                      \
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        return MODULE_IFUNC(Array, ShrinkBuffer)(                              \
+        return MODULE_IFUNC(Array, ShrinkBuffer)(NULL,                               \
             (void **)&self->data, self->size, &self->capacity, sizeof(TYPE));  \
       }),                                                                      \
                                                                                \
@@ -170,7 +170,7 @@
       OPERATION_INLINE(PushBack, (TYPE value), {                               \
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        OPSTATUS status = MODULE_IFUNC(Array, EnsureCapacity)(                 \
+        OPSTATUS status = MODULE_IFUNC(Array, EnsureCapacity)(NULL,                  \
             (void **)&self->data, self->size, &self->capacity, sizeof(TYPE));  \
         if (status != STATUS_CONST(SUCCESS))                                   \
           return status;                                                       \
@@ -192,7 +192,7 @@
           return STATUS_CONST(INVALID_ARGUMENT);                               \
         if (position > self->size)                                             \
           return STATUS_CONST(OUT_OF_RANGE);                                   \
-        OPSTATUS status = MODULE_IFUNC(Array, EnsureCapacity)(                 \
+        OPSTATUS status = MODULE_IFUNC(Array, EnsureCapacity)(NULL,                  \
             (void **)&self->data, self->size, &self->capacity, sizeof(TYPE));  \
         if (status != STATUS_CONST(SUCCESS))                                   \
           return status;                                                       \

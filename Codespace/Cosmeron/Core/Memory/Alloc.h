@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../Outcome/Status.h"
+#include "../Condition/Status.h"
 #include "../Module/Module.h"
 #include "../Preprocessor/Compiling.inc"
-#include "Common.inc"
+#include "Impl/Common.inc"
 
 /* ========================================================================== */
 /* Package Declaration: Memory_Alloc                                          */

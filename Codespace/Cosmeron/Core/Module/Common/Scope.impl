@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../Namespace.h"
-#include "../../Preprocessor/Detect.h"
+#include "../../Preprocessor/Detect/Detect.h"
 #include "../../Preprocessor/Arguments.h"
 #include "../../Preprocessor/Operations.h"
 #include "Dispatch.impl"

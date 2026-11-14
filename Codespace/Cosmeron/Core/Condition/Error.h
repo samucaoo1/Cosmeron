@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../Diagnostic/Context.h"
-#include "../Outcome/Status.h"
+#include "../Condition/Status.h"
 #include "../Module/Module.h"
 #include "../Preprocessor/Compiling.inc"
 

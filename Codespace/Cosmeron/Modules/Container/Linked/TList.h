@@ -1,7 +1,7 @@
 #ifndef COSMERON_CONTAINER_LINKED_TLIST_H
 #define COSMERON_CONTAINER_LINKED_TLIST_H
 
-#include "Common.inc"
+#include "Impl/Common.inc"
 #include "List.def"
 
 /* Ordered Primitive Type Instantiations */

@@ -2,7 +2,7 @@
 
 #include "../../../Preprocessor/Arguments.h"
 #include "../../../Preprocessor/Boolean.h"
-#include "../../../Preprocessor/Detect.h"
+#include "../../../Preprocessor/Detect/Detect.h"
 #include "../../../Preprocessor/Operations.h"
 #include "../../Namespace.h"
 #include "../../Callback/Impl/Callback.impl"

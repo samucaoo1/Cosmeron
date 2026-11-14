@@ -1,7 +1,7 @@
 #ifndef COSMERON_CONTAINER_HASH_THASHMAP_H
 #define COSMERON_CONTAINER_HASH_THASHMAP_H
 
-#include "Common.inc"
+#include "Impl/Common.inc"
 #include "Map.def"
 
 /* Pre-instantiated common HashMap types */

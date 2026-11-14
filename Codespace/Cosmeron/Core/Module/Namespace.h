@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../Preprocessor/Compiling.inc"
-#include "../Preprocessor/Detect.h"
 #include "../Preprocessor/Arguments.h"
 #include "../Preprocessor/Boolean.h"
+#include "../Preprocessor/Compiling.inc"
+#include "../Preprocessor/Detect/Detect.h"
 #include "../Preprocessor/Operations.h"
 #include "../Preprocessor/Tree.h"
 
@@ -17,11 +17,16 @@
 #define COSMERON_INTERNAL_NS_JOIN_1(_1) _1
 #define COSMERON_INTERNAL_NS_JOIN_2(_1, _2) PP_OP_CAT3(_1, _, _2)
 #define COSMERON_INTERNAL_NS_JOIN_3(_1, _2, _3) PP_OP_CAT5(_1, _, _2, _, _3)
-#define COSMERON_INTERNAL_NS_JOIN_4(_1, _2, _3, _4) PP_OP_CAT7(_1, _, _2, _, _3, _, _4)
-#define COSMERON_INTERNAL_NS_JOIN_5(_1, _2, _3, _4, _5) PP_OP_CAT9(_1, _, _2, _, _3, _, _4, _, _5)
-#define COSMERON_INTERNAL_NS_JOIN_6(_1, _2, _3, _4, _5, _6) PP_OP_CAT11(_1, _, _2, _, _3, _, _4, _, _5, _, _6)
-#define COSMERON_INTERNAL_NS_JOIN_7(_1, _2, _3, _4, _5, _6, _7) PP_OP_CAT13(_1, _, _2, _, _3, _, _4, _, _5, _, _6, _, _7)
-#define COSMERON_INTERNAL_NS_JOIN_8(_1, _2, _3, _4, _5, _6, _7, _8) PP_OP_CAT15(_1, _, _2, _, _3, _, _4, _, _5, _, _6, _, _7, _, _8)
+#define COSMERON_INTERNAL_NS_JOIN_4(_1, _2, _3, _4)                            \
+  PP_OP_CAT7(_1, _, _2, _, _3, _, _4)
+#define COSMERON_INTERNAL_NS_JOIN_5(_1, _2, _3, _4, _5)                        \
+  PP_OP_CAT9(_1, _, _2, _, _3, _, _4, _, _5)
+#define COSMERON_INTERNAL_NS_JOIN_6(_1, _2, _3, _4, _5, _6)                    \
+  PP_OP_CAT11(_1, _, _2, _, _3, _, _4, _, _5, _, _6)
+#define COSMERON_INTERNAL_NS_JOIN_7(_1, _2, _3, _4, _5, _6, _7)                \
+  PP_OP_CAT13(_1, _, _2, _, _3, _, _4, _, _5, _, _6, _, _7)
+#define COSMERON_INTERNAL_NS_JOIN_8(_1, _2, _3, _4, _5, _6, _7, _8)            \
+  PP_OP_CAT15(_1, _, _2, _, _3, _, _4, _, _5, _, _6, _, _7, _, _8)
 
 #define NS_JOIN(...)                                                           \
   PP_OP_CAT2(COSMERON_INTERNAL_NS_JOIN_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
@@ -59,8 +64,7 @@
 #endif
 
 /* Resolve Current Depth Mode */
-#if !defined(COSMERON_NAMESPACE) ||                                            \
-    defined(COSMERON_NAMESPACE_MODE_BARE) ||                                   \
+#if !defined(COSMERON_NAMESPACE) || defined(COSMERON_NAMESPACE_MODE_BARE) ||   \
     (defined(COSMERON_NAMESPACE_MODE) && (COSMERON_NAMESPACE_MODE == BARE))
 #define LIB_PREFIX(...) NS(__VA_ARGS__)
 #define LIB_PREFIX_CONST(...) CNS(__VA_ARGS__)
@@ -80,7 +84,8 @@
  * ============================================================ */
 
 #if defined(COSMERON_TABLE_DISABLED) ||                                        \
-    (defined(COSMERON_TABLE) && (COSMERON_TABLE == DISABLED || COSMERON_TABLE == 0))
+    (defined(COSMERON_TABLE) &&                                                \
+     (COSMERON_TABLE == DISABLED || COSMERON_TABLE == 0))
 #ifndef MODULE_DISABLE_FUNCTION_TABLE
 #define MODULE_DISABLE_FUNCTION_TABLE 1
 #endif
@@ -106,20 +111,35 @@
  * 4. Cross-Module Consumption Grammar
  * ============================================================ */
 
-/* 1. MODULE_TYPE: Generates user type with automatic 'T' prefix for objects */
-#define COSMERON_INTERNAL_MOD_TYPE_2(MOD, OBJ) LIB_PREFIX(PP_OP_CAT4(MOD, _, T, OBJ))
+/* 1. MODULE_TYPE: Generates user type with automatic 'T' prefix on 1st token */
+#define COSMERON_INTERNAL_MOD_TYPE_2(MOD, OBJ)                                 \
+  LIB_PREFIX(PP_OP_CAT4(T, MOD, _, OBJ))
 #define COSMERON_INTERNAL_MOD_TYPE_3(MOD, PKG, OBJ)                            \
-  LIB_PREFIX(PP_OP_CAT6(MOD, _, PKG, _, T, OBJ))
+  LIB_PREFIX(PP_OP_CAT6(T, MOD, _, PKG, _, OBJ))
 #define MODULE_TYPE(...)                                                       \
-  PP_OP_CAT2(COSMERON_INTERNAL_MOD_TYPE_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+  PP_OP_CAT2(COSMERON_INTERNAL_MOD_TYPE_,                                      \
+             PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
 
-/* 2. MODULE_TYPED: Specialization by another type */
-#define COSMERON_INTERNAL_MOD_TYPED_3(MOD, OBJ, SUFFIX)                       \
-  LIB_PREFIX(PP_OP_CAT6(MOD, _, T, OBJ, _, SUFFIX))
-#define COSMERON_INTERNAL_MOD_TYPED_4(MOD, PKG, OBJ, SUFFIX)                  \
-  LIB_PREFIX(PP_OP_CAT8(MOD, _, PKG, _, T, OBJ, _, SUFFIX))
+/* 2. MODULE_TYPED: Specialization by another type ('T' on 1st token) */
+#define COSMERON_INTERNAL_MOD_TYPED_3(MOD, OBJ, SUFFIX)                        \
+  LIB_PREFIX(PP_OP_CAT6(T, MOD, _, OBJ, _, SUFFIX))
+#define COSMERON_INTERNAL_MOD_TYPED_4(MOD, PKG, OBJ, SUFFIX)                   \
+  LIB_PREFIX(PP_OP_CAT8(T, MOD, _, PKG, _, OBJ, _, SUFFIX))
 #define MODULE_TYPED(...)                                                      \
-  PP_OP_CAT2(COSMERON_INTERNAL_MOD_TYPED_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+  PP_OP_CAT2(COSMERON_INTERNAL_MOD_TYPED_,                                     \
+             PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+
+/* 2b. MODULE_SUBTYPE / MODULE_SUBTYPED: 'T' on 2nd token (e.g. Tree_TAVL_Set)
+ */
+#define MODULE_SUBTYPE(MOD, SUB, OBJ)                                          \
+  LIB_PREFIX(PP_OP_CAT6(MOD, _, T, SUB, _, OBJ))
+#define MODULE_SUBTYPED(MOD, SUB, OBJ, SUFFIX)                                 \
+  LIB_PREFIX(PP_OP_CAT8(MOD, _, T, SUB, _, OBJ, _, SUFFIX))
+
+/* 2c. Multi-type naming utilities for Map/Pair/Graph specializations */
+#define MODULE_NAME_KV(KEY, VAL) PP_OP_CAT5(K, KEY, _, V, VAL)
+#define MODULE_NAME_AND(A, B) PP_OP_CAT3(A, And, B)
+#define MODULE_NAME_VW(VERTEX, WEIGHT) PP_OP_CAT5(V, VERTEX, _, W, WEIGHT)
 
 /* 3. MODULE_ENUM: Enum type strictly WITHOUT 'T' prefix in O(1) */
 #define MODULE_ENUM(...) LIB_PREFIX(NS_JOIN(__VA_ARGS__))
@@ -136,7 +156,7 @@
 #endif
 
 /* 6. Cross-Module Callback & Closure */
-#define COSMERON_INTERNAL_MOD_CB_2(MOD, NAME)                                 \
+#define COSMERON_INTERNAL_MOD_CB_2(MOD, NAME)                                  \
   LIB_PREFIX(NS_JOIN(MOD, TCallback, NAME))
 #define COSMERON_INTERNAL_MOD_CB_3(MOD, PKG, NAME)                             \
   LIB_PREFIX(NS_JOIN(MOD, PKG, TCallback, NAME))
@@ -148,7 +168,7 @@
 #define MODULE_CALLBACK(...)                                                   \
   PP_OP_CAT2(COSMERON_INTERNAL_MOD_CB_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
 
-#define COSMERON_INTERNAL_MOD_CL_2(MOD, NAME)                                 \
+#define COSMERON_INTERNAL_MOD_CL_2(MOD, NAME)                                  \
   LIB_PREFIX(NS_JOIN(MOD, TClosure, NAME))
 #define COSMERON_INTERNAL_MOD_CL_3(MOD, PKG, NAME)                             \
   LIB_PREFIX(NS_JOIN(MOD, PKG, TClosure, NAME))
@@ -162,15 +182,16 @@
 
 #define COSMERON_INTERNAL_MOD_CL_FUNC_2(MOD, NAME)                             \
   LIB_PREFIX(NS_JOIN(MOD, Closure, NAME))
-#define COSMERON_INTERNAL_MOD_CL_FUNC_3(MOD, PKG, NAME)                         \
+#define COSMERON_INTERNAL_MOD_CL_FUNC_3(MOD, PKG, NAME)                        \
   LIB_PREFIX(NS_JOIN(MOD, PKG, Closure, NAME))
-#define COSMERON_INTERNAL_MOD_CL_FUNC_4(MOD, PKG, SUB, NAME)                    \
+#define COSMERON_INTERNAL_MOD_CL_FUNC_4(MOD, PKG, SUB, NAME)                   \
   LIB_PREFIX(NS_JOIN(MOD, PKG, SUB, Closure, NAME))
-#define COSMERON_INTERNAL_MOD_CL_FUNC_5(MOD, PKG, SUB1, SUB2, NAME)             \
+#define COSMERON_INTERNAL_MOD_CL_FUNC_5(MOD, PKG, SUB1, SUB2, NAME)            \
   LIB_PREFIX(NS_JOIN(MOD, PKG, SUB1, SUB2, Closure, NAME))
 
 #define MODULE_CLOSURE_FUNC(...)                                               \
-  PP_OP_CAT2(COSMERON_INTERNAL_MOD_CL_FUNC_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+  PP_OP_CAT2(COSMERON_INTERNAL_MOD_CL_FUNC_,                                   \
+             PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
 
 /* 7. Forward Declarations */
 #define FORWARD_OBJECT(MOD, NAME)                                              \
@@ -191,7 +212,8 @@
   typedef struct MODULE_ITYPE(MOD, NAME) MODULE_ITYPE(MOD, NAME)
 
 #define FORWARD_TEMPLATE_ISTRUCT(MOD, NAME, SUFFIX)                            \
-  typedef struct MODULE_ITYPED(MOD, NAME, SUFFIX) MODULE_ITYPED(MOD, NAME, SUFFIX)
+  typedef struct MODULE_ITYPED(MOD, NAME, SUFFIX)                              \
+      MODULE_ITYPED(MOD, NAME, SUFFIX)
 
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) ||              \
     ((COMPILER_GCC || COMPILER_CLANG) && !defined(__STRICT_ANSI__))
@@ -213,8 +235,7 @@
  * Automatically injects the canonical 'Internal' / 'INTERNAL' token in O(1).
  * ============================================================ */
 
-#define COSMERON_INTERNAL_MOD_INS_1(NAME)                                      \
-  LIB_PREFIX(NS_JOIN(Internal, NAME))
+#define COSMERON_INTERNAL_MOD_INS_1(NAME) LIB_PREFIX(NS_JOIN(Internal, NAME))
 #define COSMERON_INTERNAL_MOD_INS_2(MOD, NAME)                                 \
   LIB_PREFIX(NS_JOIN(MOD, Internal, NAME))
 #define COSMERON_INTERNAL_MOD_INS_3(MOD, PKG, NAME)                            \
@@ -232,7 +253,7 @@
 #define MODULE_ITYPED(...) MODULE_INS(__VA_ARGS__)
 #define MODULE_IENUM(...) MODULE_INS(__VA_ARGS__)
 
-#define COSMERON_INTERNAL_MOD_ICB_2(MOD, NAME)                                \
+#define COSMERON_INTERNAL_MOD_ICB_2(MOD, NAME)                                 \
   LIB_PREFIX(NS_JOIN(MOD, Internal, TCallback, NAME))
 #define COSMERON_INTERNAL_MOD_ICB_3(MOD, PKG, NAME)                            \
   LIB_PREFIX(NS_JOIN(MOD, PKG, Internal, TCallback, NAME))
@@ -242,7 +263,7 @@
 #define MODULE_ICALLBACK(...)                                                  \
   PP_OP_CAT2(COSMERON_INTERNAL_MOD_ICB_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
 
-#define COSMERON_INTERNAL_MOD_ICL_2(MOD, NAME)                                \
+#define COSMERON_INTERNAL_MOD_ICL_2(MOD, NAME)                                 \
   LIB_PREFIX(NS_JOIN(MOD, Internal, TClosure, NAME))
 #define COSMERON_INTERNAL_MOD_ICL_3(MOD, PKG, NAME)                            \
   LIB_PREFIX(NS_JOIN(MOD, PKG, Internal, TClosure, NAME))
@@ -264,13 +285,15 @@
   LIB_PREFIX_CONST(NS_JOIN(MOD, PKG, SUB, SUB2, INTERNAL, NAME))
 
 #define MODULE_ICONST(...)                                                     \
-  PP_OP_CAT2(COSMERON_INTERNAL_MOD_ICONST_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+  PP_OP_CAT2(COSMERON_INTERNAL_MOD_ICONST_,                                    \
+             PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
 
 #define MODULE_ICNS(...) MODULE_ICONST(__VA_ARGS__)
 
 /* ============================================================
  * 5. Unified Cross-Module Invocations (MODULE_CALL & MODULE_ICALL)
- * Resolves paths of any depth (2, 3, 4, 5+ levels) directly to C symbols in O(1).
+ * Resolves paths of any depth (2, 3, 4, 5+ levels) directly to C symbols in
+ * O(1).
  * ============================================================ */
 
 #define COSMERON_INTERNAL_CALL_2(A, ARGS) LIB_PREFIX(A) ARGS
@@ -293,7 +316,8 @@
 #define COSMERON_INTERNAL_ICALL_2(A, ARGS) MODULE_IFUNC(A) ARGS
 #define COSMERON_INTERNAL_ICALL_3(A, B, ARGS) MODULE_IFUNC(A, B) ARGS
 #define COSMERON_INTERNAL_ICALL_4(A, B, C, ARGS) MODULE_IFUNC(A, B, C) ARGS
-#define COSMERON_INTERNAL_ICALL_5(A, B, C, D, ARGS) MODULE_IFUNC(A, B, C, D) ARGS
+#define COSMERON_INTERNAL_ICALL_5(A, B, C, D, ARGS)                            \
+  MODULE_IFUNC(A, B, C, D) ARGS
 #define COSMERON_INTERNAL_ICALL_6(A, B, C, D, E, ARGS)                         \
   MODULE_IFUNC(A, B, C, D, E) ARGS
 

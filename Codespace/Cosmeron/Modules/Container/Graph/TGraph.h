@@ -1,7 +1,7 @@
 #ifndef COSMERON_CONTAINER_GRAPH_TGRAPH_H
 #define COSMERON_CONTAINER_GRAPH_TGRAPH_H
 
-#include "Common.inc"
+#include "Impl/Common.inc"
 #include "Graph.def"
 
 /* Pre-instantiated common Graph types */

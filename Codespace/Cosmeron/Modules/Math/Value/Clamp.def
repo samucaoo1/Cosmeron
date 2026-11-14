@@ -1,0 +1,27 @@
+#include "../../../Core/Module/Module.h"
+
+#define TEMPLATE_Math_Clamp(SUFFIX, TYPE)                                      \
+  static inline TYPE MODULE_FUNC(Math, Clamp, SUFFIX)(TYPE value,              \
+                                                      TYPE minimum,            \
+                                                      TYPE maximum) {          \
+    if (minimum > maximum) {                                                   \
+      TYPE temp = minimum;                                                     \
+      minimum = maximum;                                                       \
+      maximum = temp;                                                          \
+    }                                                                          \
+    if (value < minimum) {                                                     \
+      return minimum;                                                          \
+    }                                                                          \
+    if (value > maximum) {                                                     \
+      return maximum;                                                          \
+    }                                                                          \
+    return value;                                                              \
+  }
+
+#if defined(SUFFIX) && defined(TYPE)
+TEMPLATE_Math_Clamp(SUFFIX, TYPE)
+#undef SUFFIX
+#undef TYPE
+#endif
+
+/* EOF */

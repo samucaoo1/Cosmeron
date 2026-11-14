@@ -62,7 +62,7 @@ CLOSURE_COMPARISON(Comparison, (const void *left, const void *right));
 /* ========================================================================== */
 
 #include "../Module/Module.h"
-#include "../Primitive/Types.h"
+#include "../Types/Primitive.h"
 
 /* ========================================================================== */
 /* 4. Package Declaration: Algorithm_Comparison                               */

@@ -1,7 +1,7 @@
 #ifndef COSMERON_CONTAINER_ITERATOR_TSTREAM_H
 #define COSMERON_CONTAINER_ITERATOR_TSTREAM_H
 
-#include "Common.inc"
+#include "Impl/Common.inc"
 #include "Stream.def"
 
 /* Ordered Primitive Type Instantiations */

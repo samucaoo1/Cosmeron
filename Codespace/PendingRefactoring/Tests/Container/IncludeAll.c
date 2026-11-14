@@ -1,5 +1,5 @@
 #include "../../../Cosmeron/Modules/Container/Container.h"
-#include "../../../Cosmeron/Modules/Container/DynamicBitset.h"
+#include "../../../Cosmeron/Modules/Container/Bitset/DynamicBitset.h"
 #include "../../../Cosmeron/Modules/Container/Iterator/Iterator.h"
 #include "../../../Cosmeron/Modules/Container/Iterator/TStream.h"
 #include "../../../Cosmeron/Modules/Container/Iterator/TContiguous.h"

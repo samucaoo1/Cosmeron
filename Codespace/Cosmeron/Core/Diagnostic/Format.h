@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Common.inc"
+#include "Impl/Common.inc"
 #include "Context.h"
 #include "../Condition/Error.h"
-#include "../Outcome/Status.h"
+#include "../Condition/Status.h"
 #include "../Module/Module.h"
 
 #include <stddef.h>

@@ -1,15 +1,16 @@
 #pragma once
 
-#include "Common.inc"
+#include "Impl/Common.inc"
 #include "Operations.h"
 #include "Alloc.h"
-#include "Swap.h"
+#include "Allocator.h"
+#include "../Algorithm/Swap.h"
 #include "Arena.h"
 #include "Pool.h"
 #include "Heap.h"
 #include "Stream.h"
-#include "GarbageCollector.h"
-#include "SmartPointer.h"
+#include "Collector.h"
+#include "Pointer/Pointer.h"
 
 /* EOF */
 

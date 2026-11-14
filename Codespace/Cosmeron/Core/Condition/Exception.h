@@ -2,7 +2,7 @@
 
 #include "../Module/Callback/Callback.h"
 #include "../Module/Module.h"
-#include "../Outcome/Status.h"
+#include "../Condition/Status.h"
 #include "Error.h"
 #include "Panic.h"
 

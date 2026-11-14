@@ -2,9 +2,9 @@
 
 #include "../Module/Closure/Closure.h"
 #include "../Module/Module.h"
-#include "../Preprocessor/Detect.h"
+#include "../Preprocessor/Detect/Detect.h"
 #include "../Preprocessor/Operations.h"
-#include "../Primitive/Traits.h"
+#include "../Types/Traits.h"
 #include "Exception.h"
 
 #include <stdbool.h>
@@ -19,15 +19,15 @@ MODULE(DOMAIN(Core), Condition,
         PROCEDURE(DeferAction, ())
     ),
 
-    STRUCT(DeferNode,
+    ISTRUCT(DeferNode,
         FIELDS(
             MODULE_CLOSURE(Condition, DeferAction) action;
-            struct MODULE_TYPE(Condition, DeferNode) *previous;
+            struct MODULE_ITYPE(Condition, DeferNode) *previous;
             bool active;
         )
     ),
 
-    STRUCT(DeferTraitsTarget,
+    ISTRUCT(DeferTraitsTarget,
         FIELDS(
             const MODULE_TYPE(Primitive, Traits) *traits;
             void *instance;
@@ -35,18 +35,18 @@ MODULE(DOMAIN(Core), Condition,
     ),
 
     PACKAGE(Defer,
-        PROCEDURE_INLINE(Cancel, (MODULE_TYPE(Condition, DeferNode) *node), {
+        PROCEDURE_INLINE(Cancel, (MODULE_ITYPE(Condition, DeferNode) *node), {
           if (node != NULL) {
             node->active = false;
           }
         }),
 
         CONST_PREDICATE_INLINE(IsActive,
-                               (const MODULE_TYPE(Condition, DeferNode) *node), {
+                               (const MODULE_ITYPE(Condition, DeferNode) *node), {
           return node != NULL && node->active;
         }),
 
-        PROCEDURE_INLINE(Execute, (MODULE_TYPE(Condition, DeferNode) *node), {
+        PROCEDURE_INLINE(Execute, (MODULE_ITYPE(Condition, DeferNode) *node), {
           if (node != NULL && node->active && node->action.function != NULL) {
             node->active = false;
             node->action.function(node->action.context);
@@ -54,8 +54,8 @@ MODULE(DOMAIN(Core), Condition,
         }),
 
         PROCEDURE_INLINE(DisposeTraitsAdapter, (void *context), {
-          MODULE_TYPE(Condition, DeferTraitsTarget) *target =
-              (MODULE_TYPE(Condition, DeferTraitsTarget) *)context;
+          MODULE_ITYPE(Condition, DeferTraitsTarget) *target =
+              (MODULE_ITYPE(Condition, DeferTraitsTarget) *)context;
           if (target != NULL && target->traits != NULL &&
               target->instance != NULL) {
             MODULE_FUNC(Primitive, Traits, Dispose)(target->traits,
@@ -66,22 +66,22 @@ MODULE(DOMAIN(Core), Condition,
 
     INTERNAL_EX(Defer,
         PROCEDURE_INLINE(UnwindTo, (void *watermark), {
-          MODULE_TYPE(Condition, DeferNode) *target =
-              (MODULE_TYPE(Condition, DeferNode) *)watermark;
+          MODULE_ITYPE(Condition, DeferNode) *target =
+              (MODULE_ITYPE(Condition, DeferNode) *)watermark;
           while (MODULE_IFUNC(Condition, Exception_DeferWatermark) != NULL &&
                  MODULE_IFUNC(Condition, Exception_DeferWatermark) != target) {
-            MODULE_TYPE(Condition, DeferNode) *current =
-                (MODULE_TYPE(Condition, DeferNode) *)
+            MODULE_ITYPE(Condition, DeferNode) *current =
+                (MODULE_ITYPE(Condition, DeferNode) *)
                     MODULE_IFUNC(Condition, Exception_DeferWatermark);
             MODULE_IFUNC(Condition, Exception_DeferWatermark) = current->previous;
             MODULE_FUNC(Condition, Defer, Execute)(current);
           }
         }),
 
-        FUNCTION_INLINE(MODULE_TYPE(Condition, DeferNode) *, LinkNode,
-                        (MODULE_TYPE(Condition, DeferNode) *node), {
-          MODULE_TYPE(Condition, DeferNode) *previous =
-              (MODULE_TYPE(Condition, DeferNode) *)
+        FUNCTION_INLINE(MODULE_ITYPE(Condition, DeferNode) *, LinkNode,
+                        (MODULE_ITYPE(Condition, DeferNode) *node), {
+          MODULE_ITYPE(Condition, DeferNode) *previous =
+              (MODULE_ITYPE(Condition, DeferNode) *)
                   MODULE_IFUNC(Condition, Exception_DeferWatermark);
           MODULE_IFUNC(Condition, Exception_DeferWatermark) = node;
           MODULE_IFUNC(Condition, Exception_DeferUnwind) =
@@ -89,7 +89,7 @@ MODULE(DOMAIN(Core), Condition,
           return previous;
         }),
 
-        PROCEDURE_INLINE(CleanupNode, (MODULE_TYPE(Condition, DeferNode) *node), {
+        PROCEDURE_INLINE(CleanupNode, (MODULE_ITYPE(Condition, DeferNode) *node), {
           if (node == NULL) {
             return;
           }
@@ -149,7 +149,7 @@ MODULE(DOMAIN(Core), Condition,
   __attribute__((cleanup(FUNC)))
 
 #define DEFER_NAMED(VAR_NAME, FUNC, CONTEXT)                                   \
-  MODULE_TYPE(Condition, DeferNode) VAR_NAME                                   \
+  MODULE_ITYPE(Condition, DeferNode) VAR_NAME                                   \
       COSMERON_MACRO_INTERNAL_DEFER_CLEANUP(                                   \
           MODULE_IFUNC(Condition, Defer, CleanupNode)) = {                     \
           .action = {.function = (FUNC), .context = (CONTEXT)},                \
@@ -161,7 +161,7 @@ MODULE(DOMAIN(Core), Condition,
   DEFER_NAMED(PP_OP_CAT2(_cosm_defer_node_, __LINE__), (FUNC), (CONTEXT))
 
 #define DEFER_TRAITS_NAMED(VAR_NAME, TRAITS_PTR, INSTANCE_PTR)                 \
-  MODULE_TYPE(Condition, DeferTraitsTarget)                                    \
+  MODULE_ITYPE(Condition, DeferTraitsTarget)                                    \
       PP_OP_CAT2(VAR_NAME, _target) = {                                        \
           .traits = (TRAITS_PTR),                                              \
           .instance = (INSTANCE_PTR),                                          \

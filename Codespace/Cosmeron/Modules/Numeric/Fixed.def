@@ -1,0 +1,91 @@
+#include <stdint.h>
+
+#include "../../Core/Algorithm/Comparison.h"
+#include "../../Core/Condition/Status.h"
+#include "../../Core/Module/Module.h"
+
+#define TEMPLATE_Numeric_Fixed(SUFFIX, TYPE, WIDE_TYPE, FRAC_BITS)             \
+  MODULE(Numeric,                                                              \
+      STRUCT(PP_OP_CAT2(Fixed_, SUFFIX),                                       \
+          FIELDS(                                                              \
+              TYPE raw;                                                        \
+          )                                                                    \
+      )                                                                        \
+  );                                                                           \
+  static inline MODULE_TYPED(Numeric, Fixed, SUFFIX)                           \
+      MODULE_FUNC(Numeric, Fixed, FromRaw, SUFFIX)(TYPE raw) {                 \
+    MODULE_TYPED(Numeric, Fixed, SUFFIX) f = {.raw = raw};                     \
+    return f;                                                                  \
+  }                                                                            \
+  static inline MODULE_TYPED(Numeric, Fixed, SUFFIX)                           \
+      MODULE_FUNC(Numeric, Fixed, FromInt, SUFFIX)(TYPE value) {               \
+    return MODULE_FUNC(Numeric, Fixed, FromRaw, SUFFIX)(                       \
+        (TYPE)((WIDE_TYPE)value << (FRAC_BITS)));                              \
+  }                                                                            \
+  static inline MODULE_TYPED(Numeric, Fixed, SUFFIX)                           \
+      MODULE_FUNC(Numeric, Fixed, FromFloat64, SUFFIX)(double value) {         \
+    double scale = (double)((WIDE_TYPE)1 << (FRAC_BITS));                      \
+    return MODULE_FUNC(Numeric, Fixed, FromRaw, SUFFIX)(                       \
+        (TYPE)(value * scale + (value >= 0.0 ? 0.5 : -0.5)));                  \
+  }                                                                            \
+  static inline TYPE MODULE_FUNC(Numeric, Fixed, ToInt, SUFFIX)(               \
+      MODULE_TYPED(Numeric, Fixed, SUFFIX) value) {                            \
+    return (TYPE)(value.raw >> (FRAC_BITS));                                   \
+  }                                                                            \
+  static inline double MODULE_FUNC(Numeric, Fixed, ToFloat64, SUFFIX)(         \
+      MODULE_TYPED(Numeric, Fixed, SUFFIX) value) {                            \
+    double scale = (double)((WIDE_TYPE)1 << (FRAC_BITS));                      \
+    return (double)value.raw / scale;                                          \
+  }                                                                            \
+  static inline MODULE_TYPED(Numeric, Fixed, SUFFIX)                           \
+      MODULE_FUNC(Numeric, Fixed, Add, SUFFIX)(                                \
+          MODULE_TYPED(Numeric, Fixed, SUFFIX) a,                              \
+          MODULE_TYPED(Numeric, Fixed, SUFFIX) b) {                            \
+    return MODULE_FUNC(Numeric, Fixed, FromRaw, SUFFIX)((TYPE)(a.raw + b.raw));\
+  }                                                                            \
+  static inline MODULE_TYPED(Numeric, Fixed, SUFFIX)                           \
+      MODULE_FUNC(Numeric, Fixed, Sub, SUFFIX)(                                \
+          MODULE_TYPED(Numeric, Fixed, SUFFIX) a,                              \
+          MODULE_TYPED(Numeric, Fixed, SUFFIX) b) {                            \
+    return MODULE_FUNC(Numeric, Fixed, FromRaw, SUFFIX)((TYPE)(a.raw - b.raw));\
+  }                                                                            \
+  static inline MODULE_TYPED(Numeric, Fixed, SUFFIX)                           \
+      MODULE_FUNC(Numeric, Fixed, Mul, SUFFIX)(                                \
+          MODULE_TYPED(Numeric, Fixed, SUFFIX) a,                              \
+          MODULE_TYPED(Numeric, Fixed, SUFFIX) b) {                            \
+    WIDE_TYPE prod = ((WIDE_TYPE)a.raw * (WIDE_TYPE)b.raw) >> (FRAC_BITS);     \
+    return MODULE_FUNC(Numeric, Fixed, FromRaw, SUFFIX)((TYPE)prod);           \
+  }                                                                            \
+  static inline OPSTATUS MODULE_FUNC(Numeric, Fixed, Div, SUFFIX)(             \
+      MODULE_TYPED(Numeric, Fixed, SUFFIX) a,                                  \
+      MODULE_TYPED(Numeric, Fixed, SUFFIX) b,                                  \
+      MODULE_TYPED(Numeric, Fixed, SUFFIX) *outValue) {                        \
+    if (!outValue || b.raw == 0) {                                             \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    }                                                                          \
+    WIDE_TYPE num = ((WIDE_TYPE)a.raw << (FRAC_BITS));                         \
+    *outValue =                                                                \
+        MODULE_FUNC(Numeric, Fixed, FromRaw, SUFFIX)((TYPE)(num / b.raw));     \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  static inline CMPOUT MODULE_FUNC(Numeric, Fixed, Compare, SUFFIX)(           \
+      MODULE_TYPED(Numeric, Fixed, SUFFIX) a,                                  \
+      MODULE_TYPED(Numeric, Fixed, SUFFIX) b) {                                \
+    if (a.raw < b.raw) {                                                       \
+      return COMPARISON_CONST(LOWER);                                          \
+    }                                                                          \
+    if (a.raw > b.raw) {                                                       \
+      return COMPARISON_CONST(HIGHER);                                         \
+    }                                                                          \
+    return COMPARISON_CONST(EQUAL);                                            \
+  }
+
+#if defined(SUFFIX) && defined(TYPE) && defined(WIDE_TYPE) && defined(FRAC_BITS)
+TEMPLATE_Numeric_Fixed(SUFFIX, TYPE, WIDE_TYPE, FRAC_BITS)
+#undef SUFFIX
+#undef TYPE
+#undef WIDE_TYPE
+#undef FRAC_BITS
+#endif
+
+/* EOF */

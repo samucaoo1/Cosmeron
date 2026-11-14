@@ -1,7 +1,7 @@
 #ifndef COSMERON_CONTAINER_ITERATOR_TFORWARD_H
 #define COSMERON_CONTAINER_ITERATOR_TFORWARD_H
 
-#include "Common.inc"
+#include "Impl/Common.inc"
 #include "../Linked/TSingleNode.h"
 #include "TStream.h"
 #include "Forward.def"

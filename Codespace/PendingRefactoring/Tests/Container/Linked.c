@@ -1,18 +1,18 @@
 #include "../../../Cosmeron/Modules/Container/Linked/Linked.h"
-#include "../../../Cosmeron/Modules/Struct/Struct.h"
+#include "../../../Cosmeron/Modules/Tuple/Tuple.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 
 /* Custom POD struct instantiation test */
 TEMPLATE_INSTANTIATE(Linked, DoubleNode, PairInt32,
-                     MODULE_TYPED(Struct, Pair, Int32));
+                     MODULE_TYPED(Tuple, Pair, Int32));
 TEMPLATE_INSTANTIATE(Iterator, Stream, PairInt32,
-                     MODULE_TYPED(Struct, Pair, Int32));
+                     MODULE_TYPED(Tuple, Pair, Int32));
 TEMPLATE_INSTANTIATE(Iterator, Bidirectional, PairInt32,
-                     MODULE_TYPED(Struct, Pair, Int32));
+                     MODULE_TYPED(Tuple, Pair, Int32));
 TEMPLATE_INSTANTIATE(Linked, List, PairInt32,
-                     MODULE_TYPED(Struct, Pair, Int32));
+                     MODULE_TYPED(Tuple, Pair, Int32));
 
 /* Internal helpers for closures in tests (strictly namespaced) */
 INTERNAL_DEF(
@@ -242,14 +242,14 @@ static void NS(LinkedTest, CustomStructList)(void) {
   assert(MODULE_FUNC(Linked, List, PairInt32, Create)(&pairList) ==
          STATUS_CONST(SUCCESS));
 
-  MODULE_TYPED(Struct, Pair, Int32) p1 = {.value1 = 3, .value2 = 30};
-  MODULE_TYPED(Struct, Pair, Int32) p2 = {.value1 = 4, .value2 = 40};
+  MODULE_TYPED(Tuple, Pair, Int32) p1 = {.value1 = 3, .value2 = 30};
+  MODULE_TYPED(Tuple, Pair, Int32) p2 = {.value1 = 4, .value2 = 40};
   assert(OBJECT_CALL(&pairList, PushBack, p1) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&pairList, PushBack, p2) == STATUS_CONST(SUCCESS));
 
   MODULE_TYPED(Iterator, Bidirectional, PairInt32) it;
   assert(OBJECT_CALL(&pairList, Begin, &it) == STATUS_CONST(SUCCESS));
-  MODULE_TYPED(Struct, Pair, Int32) outPair;
+  MODULE_TYPED(Tuple, Pair, Int32) outPair;
   assert(OBJECT_CALL(&it, StepValue, &outPair) == STATUS_CONST(SUCCESS));
   assert(outPair.value1 == 3 && outPair.value2 == 30);
   assert(OBJECT_CALL(&it, StepValue, &outPair) == STATUS_CONST(SUCCESS));

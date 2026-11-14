@@ -1,7 +1,7 @@
 #ifndef COSMERON_CONTAINER_TREE_TREDBLACK_H
 #define COSMERON_CONTAINER_TREE_TREDBLACK_H
 
-#include "Common.inc"
+#include "Impl/Common.inc"
 #include "RedBlack.def"
 
 /* Pre-instantiated primitive RBSet types (ordered types) */

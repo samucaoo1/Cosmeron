@@ -1,7 +1,7 @@
 #ifndef COSMERON_CONTAINER_ITERATOR_TBIDIRECTIONAL_H
 #define COSMERON_CONTAINER_ITERATOR_TBIDIRECTIONAL_H
 
-#include "Common.inc"
+#include "Impl/Common.inc"
 #include "../Linked/TDoubleNode.h"
 #include "TStream.h"
 #include "Bidirectional.def"
