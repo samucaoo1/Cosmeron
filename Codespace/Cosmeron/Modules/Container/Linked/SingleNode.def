@@ -7,8 +7,6 @@
     TYPE value;                                                                \
     struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *next;                     \
   }
-#define TEMPLATE_SingleNode(SUFFIX, TYPE)                                      \
-  TEMPLATE_Linked_SingleNode(SUFFIX, TYPE)
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */

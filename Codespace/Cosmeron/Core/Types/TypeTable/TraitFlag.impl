@@ -1,13 +1,13 @@
 #pragma once
 
-#define PRIMITIVE_TRAIT_FLAG_COL_NAME(NAME, VALUE, DESC) NAME
-#define PRIMITIVE_TRAIT_FLAG_COL_VALUE(NAME, VALUE, DESC) VALUE
-#define PRIMITIVE_TRAIT_FLAG_COL_DESC(NAME, VALUE, DESC) DESC
+#define TYPE_TRAIT_FLAG_COL_NAME(NAME, VALUE, DESC) NAME
+#define TYPE_TRAIT_FLAG_COL_VALUE(NAME, VALUE, DESC) VALUE
+#define TYPE_TRAIT_FLAG_COL_DESC(NAME, VALUE, DESC) DESC
 
-#define PRIMITIVE_TRAIT_FLAG_GET(FIELD, ROW)                                   \
-  PP_OP_CAT2(PRIMITIVE_TRAIT_FLAG_COL_, FIELD) ROW
+#define TYPE_TRAIT_FLAG_GET(FIELD, ROW)                                        \
+  PP_OP_CAT2(TYPE_TRAIT_FLAG_COL_, FIELD) ROW
 
-#define PRIMITIVE_TRAIT_FLAG_TABLE(X)                                          \
+#define TYPE_TRAIT_FLAG_TABLE(X)                                               \
   X((NONE, 0U, "No special traits"))                                           \
   X((TRIVIAL_COPY, 1U << 0, "Safe to copy via raw memcpy"))                    \
   X((TRIVIAL_COMPARE, 1U << 1, "Safe to equality-check via raw memcmp"))       \

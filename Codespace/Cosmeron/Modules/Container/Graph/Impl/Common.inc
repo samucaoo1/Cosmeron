@@ -24,15 +24,6 @@
 #include <stdint.h>
 
 /* ==========================================================================
- * Module Template Forwarding Helper
- * Enables: TEMPLATE_INSTANTIATE(Graph, Target, Params...)
- * ========================================================================== */
-
-#ifndef TEMPLATE_Graph
-#define TEMPLATE_Graph(TARGET, ...) NS(TEMPLATE_Graph, TARGET)(__VA_ARGS__)
-#endif
-
-/* ==========================================================================
  * Graph Config Table (Row-Tuple X-Macro Pattern)
  * ========================================================================== */
 

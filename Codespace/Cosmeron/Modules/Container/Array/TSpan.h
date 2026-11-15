@@ -2,15 +2,8 @@
 #define COSMERON_CONTAINER_ARRAY_TSPAN_H
 
 #include "Impl/Common.inc"
-#include "TVector.h"
 #include "Span.def"
 
-/* Ordered Primitive Type Instantiations */
-#define COSMERON_MACRO_INTERNAL_ARRAY_SPAN_ROW(ROW)                            \
-  TEMPLATE_INSTANTIATE(Array, Span, PRIMITIVE_TYPE_GET(NAME, ROW),             \
-                       PRIMITIVE_TYPE_GET(TYPE, ROW));
-
-PRIMITIVE_TYPE_TABLE_ORDERED(COSMERON_MACRO_INTERNAL_ARRAY_SPAN_ROW)
-#undef COSMERON_MACRO_INTERNAL_ARRAY_SPAN_ROW
+TEMPLATE_INSTANTIATE_TABLE(Array, Span, CONTAINER_ORDERED_TYPE_TABLE);
 
 #endif /* COSMERON_CONTAINER_ARRAY_TSPAN_H */

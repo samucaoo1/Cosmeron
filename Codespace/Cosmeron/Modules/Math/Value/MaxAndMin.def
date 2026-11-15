@@ -1,17 +1,20 @@
-#include "../../../Core/Module/Module.h"
+/* MaxAndMin.def - Dual Mode Engine (Zero Duplication) */
 
+#ifndef TEMPLATE_Math_MaxAndMin
 #define TEMPLATE_Math_MaxAndMin(SUFFIX, TYPE)                                  \
-  static inline TYPE MODULE_FUNC(Math, Max, SUFFIX)(TYPE a, TYPE b) {          \
-    return (a > b) ? a : b;                                                    \
-  }                                                                            \
-  static inline TYPE MODULE_FUNC(Math, Min, SUFFIX)(TYPE a, TYPE b) {          \
-    return (a < b) ? a : b;                                                    \
-  }
-
-#if defined(SUFFIX) && defined(TYPE)
-TEMPLATE_Math_MaxAndMin(SUFFIX, TYPE)
-#undef SUFFIX
-#undef TYPE
+  TEMPLATE_PACKAGE(Math, MaxAndMin, SUFFIX,                                    \
+      FUNCTION_INLINE(TYPE, Max, (TYPE a, TYPE b), {                           \
+        return (a > b) ? a : b;                                                \
+      }),                                                                      \
+      FUNCTION_INLINE(TYPE, Min, (TYPE a, TYPE b), {                           \
+        return (a < b) ? a : b;                                                \
+      })                                                                       \
+  )
 #endif
 
-/* EOF */
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Math_MaxAndMin(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif

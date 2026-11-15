@@ -11,11 +11,11 @@
 #include <string.h>
 
 /* ========================================================================== */
-/* Outcome Module: Declarative Template Object Optional                       */
+/* Type Module: Declarative Template Object Optional                       */
 /* ========================================================================== */
 
-#ifndef TEMPLATE_Outcome
-#define TEMPLATE_Outcome(TARGET, ...) NS(TEMPLATE_Outcome, TARGET)(__VA_ARGS__)
+#ifndef TEMPLATE_Type
+#define TEMPLATE_Type(TARGET, ...) NS(TEMPLATE_Type, TARGET)(__VA_ARGS__)
 #endif
 
 #include "Optional.def"

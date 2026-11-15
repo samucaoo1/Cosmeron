@@ -1,10 +1,8 @@
 #pragma once
 
-#include <stdint.h>
-
+#include "Impl/Common.inc"
 #include "Rational.def"
 
-TEMPLATE_Numeric_Rational(Int32, int32_t)
-TEMPLATE_Numeric_Rational(Int64, int64_t)
+TEMPLATE_INSTANTIATE_TABLE(Numeric, Rational, NUMERIC_RATIONAL_TYPE_TABLE);
 
 /* EOF */

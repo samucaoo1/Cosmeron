@@ -1,64 +1,302 @@
 /* Decimal.def - Dual Mode Engine (Zero Duplication) */
 
-#ifndef TEMPLATE_Type_Decimal
-#define TEMPLATE_Type_Decimal(SUFFIX, TYPE)                                    \
-  TEMPLATE_OBJECT(Type, Decimal, SUFFIX,                                       \
+#ifndef TEMPLATE_Numeric_Decimal
+#define TEMPLATE_Numeric_Decimal(SUFFIX, TYPE)                                 \
+  TEMPLATE_OBJECT(Numeric, Decimal, SUFFIX,                                    \
       FIELDS(                                                                  \
           union {                                                              \
             TYPE limb[((SUFFIX) / 64U)];                                       \
             uint8_t byte[((SUFFIX) / 8U)];                                     \
           };                                                                   \
       ),                                                                       \
-      OPERATION(Clear, ()),                                                    \
-      OPERATION(Init, ()),                                                     \
-      OPERATION(Add, (const MODULE_TYPED(Type, Decimal, SUFFIX) *source)),     \
-      OPERATION(Sub, (const MODULE_TYPED(Type, Decimal, SUFFIX) *source)),     \
-      OPERATION(Mul, (const MODULE_TYPED(Type, Decimal, SUFFIX) *source)),     \
-      CONST_OPERATION(DivMod,                                                  \
-                      (const MODULE_TYPED(Type, Decimal, SUFFIX) *divisor,     \
-                       MODULE_TYPED(Type, Decimal, SUFFIX) *outQuotient,       \
-                       MODULE_TYPED(Type, Decimal, SUFFIX) *outRemainder)),    \
-      OPERATION(Div, (const MODULE_TYPED(Type, Decimal, SUFFIX) *divisor)),    \
-      OPERATION(Mod, (const MODULE_TYPED(Type, Decimal, SUFFIX) *divisor)),    \
-      OPERATION(Increment, ()),                                                \
-      OPERATION(Decrement, ()),                                                \
-      OPERATION(And, (const MODULE_TYPED(Type, Decimal, SUFFIX) *source)),     \
-      OPERATION(Or, (const MODULE_TYPED(Type, Decimal, SUFFIX) *source)),      \
-      OPERATION(Xor, (const MODULE_TYPED(Type, Decimal, SUFFIX) *source)),     \
-      OPERATION(Not, ()),                                                      \
-      OPERATION(ShiftLeft, (unsigned bitCount)),                               \
-      OPERATION(ShiftRight, (unsigned bitCount)),                              \
-      OPERATION(RotateLeft, (unsigned shift)),                                 \
-      OPERATION(RotateRight, (unsigned shift)),                                \
-      OPERATION(BitSet, (uint32_t bit)),                                       \
-      OPERATION(BitClear, (uint32_t bit)),                                     \
-      CONST_OPERATION(BitCheck, (uint32_t bit, bool *outResult)),              \
-      CONST_OPERATION(Compare,                                                 \
-                      (const MODULE_TYPED(Type, Decimal, SUFFIX) *other,       \
-                       CMPOUT *result)),                                       \
-      CONST_PREDICATE(Equal,                                                   \
-                      (const MODULE_TYPED(Type, Decimal, SUFFIX) *other)),     \
-      CONST_PREDICATE(NotEqual,                                                \
-                      (const MODULE_TYPED(Type, Decimal, SUFFIX) *other)),     \
-      CONST_PREDICATE(LessThan,                                                \
-                      (const MODULE_TYPED(Type, Decimal, SUFFIX) *other)),     \
-      CONST_PREDICATE(GreaterThan,                                             \
-                      (const MODULE_TYPED(Type, Decimal, SUFFIX) *other)),     \
-      CONST_PREDICATE(LessOrEqual,                                             \
-                      (const MODULE_TYPED(Type, Decimal, SUFFIX) *other)),     \
-      CONST_PREDICATE(GreaterOrEqual,                                          \
-                      (const MODULE_TYPED(Type, Decimal, SUFFIX) *other)),     \
-      CONST_PREDICATE(IsZero, ()),                                             \
-      CONST_OPERATION(ToCStringBase, (char *buffer, size_t bufferSize,         \
-                                      unsigned base)),                         \
-      CONST_OPERATION(ToCString, (char *buffer, size_t bufferSize))            \
+      OPERATION_INLINE(Clear, (), {                                            \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_IFUNC(Numeric, LimbClear)(                                      \
+            self->limb, sizeof(self->limb) / sizeof(self->limb[0]));           \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      OPERATION_INLINE(Add,                                                    \
+                       (const MODULE_TYPED(Numeric, Decimal, SUFFIX) *source), { \
+        if (!self || !source)                                                  \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_TYPED(Numeric, Decimal, SUFFIX) resultValue = *self;            \
+        const OPSTATUS status = MODULE_IFUNC(Numeric, LimbAdd)(                \
+            resultValue.limb, source->limb,                                    \
+            sizeof(self->limb) / sizeof(self->limb[0]));                       \
+        if (status == STATUS_CONST(SUCCESS)) {                                 \
+          *self = resultValue;                                                 \
+        }                                                                      \
+        return status;                                                         \
+      }),                                                                      \
+      OPERATION_INLINE(Sub,                                                    \
+                       (const MODULE_TYPED(Numeric, Decimal, SUFFIX) *source), { \
+        if (!self || !source)                                                  \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_TYPED(Numeric, Decimal, SUFFIX) resultValue = *self;            \
+        const OPSTATUS status = MODULE_IFUNC(Numeric, LimbSub)(                \
+            resultValue.limb, source->limb,                                    \
+            sizeof(self->limb) / sizeof(self->limb[0]));                       \
+        if (status == STATUS_CONST(SUCCESS)) {                                 \
+          *self = resultValue;                                                 \
+        }                                                                      \
+        return status;                                                         \
+      }),                                                                      \
+      OPERATION_INLINE(Mul,                                                    \
+                       (const MODULE_TYPED(Numeric, Decimal, SUFFIX) *source), { \
+        if (!self || !source)                                                  \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_TYPED(Numeric, Decimal, SUFFIX) left = *self;                   \
+        MODULE_TYPED(Numeric, Decimal, SUFFIX) result = {0};                   \
+        MODULE_TYPED(Numeric, Decimal, SUFFIX) shifted = {0};                  \
+        const OPSTATUS status = MODULE_IFUNC(Numeric, LimbMul)(                \
+            left.limb, source->limb, result.limb, shifted.limb,                \
+            sizeof(self->limb) / sizeof(self->limb[0]));                       \
+        if (status == STATUS_CONST(SUCCESS)) {                                 \
+          *self = left;                                                        \
+        }                                                                      \
+        return status;                                                         \
+      }),                                                                      \
+      VARIANT(Div,                                                             \
+          OPERATION_INLINE(,                                                   \
+              (const MODULE_TYPED(Numeric, Decimal, SUFFIX) *divisor), {       \
+            if (!self || !divisor)                                             \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            MODULE_TYPED(Numeric, Decimal, SUFFIX) quotient = {0};             \
+            MODULE_TYPED(Numeric, Decimal, SUFFIX) remainder = {0};            \
+            const OPSTATUS status = MODULE_IFUNC(Numeric, LimbDivMod)(         \
+                self->limb, divisor->limb, quotient.limb, remainder.limb,      \
+                sizeof(self->limb) / sizeof(self->limb[0]));                   \
+            if (status == STATUS_CONST(SUCCESS)) {                             \
+              *self = quotient;                                                \
+            }                                                                  \
+            return status;                                                     \
+          }),                                                                  \
+          CONST_OPERATION_INLINE(Mod,                                          \
+              (const MODULE_TYPED(Numeric, Decimal, SUFFIX) *divisor,          \
+               MODULE_TYPED(Numeric, Decimal, SUFFIX) *outQuotient,            \
+               MODULE_TYPED(Numeric, Decimal, SUFFIX) *outRemainder), {        \
+            if (!self || !divisor || !outQuotient || !outRemainder ||          \
+                outQuotient == outRemainder)                                   \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            return MODULE_IFUNC(Numeric, LimbDivMod)(                          \
+                self->limb, divisor->limb, outQuotient->limb,                  \
+                outRemainder->limb,                                            \
+                sizeof(self->limb) / sizeof(self->limb[0]));                   \
+          })                                                                   \
+      ),                                                                       \
+      OPERATION_INLINE(Mod,                                                    \
+                       (const MODULE_TYPED(Numeric, Decimal, SUFFIX) *divisor), { \
+        if (!self || !divisor)                                                 \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_TYPED(Numeric, Decimal, SUFFIX) quotient = {0};                 \
+        MODULE_TYPED(Numeric, Decimal, SUFFIX) remainder = {0};                \
+        const OPSTATUS status = MODULE_IFUNC(Numeric, LimbDivMod)(             \
+            self->limb, divisor->limb, quotient.limb, remainder.limb,          \
+            sizeof(self->limb) / sizeof(self->limb[0]));                       \
+        if (status == STATUS_CONST(SUCCESS)) {                                 \
+          *self = remainder;                                                   \
+        }                                                                      \
+        return status;                                                         \
+      }),                                                                      \
+      OPERATION_INLINE(Increment, (), {                                        \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_TYPED(Numeric, Decimal, SUFFIX) resultValue = *self;            \
+        const OPSTATUS status = MODULE_IFUNC(Numeric, LimbIncrement)(          \
+            resultValue.limb, sizeof(self->limb) / sizeof(self->limb[0]));     \
+        if (status == STATUS_CONST(SUCCESS)) {                                 \
+          *self = resultValue;                                                 \
+        }                                                                      \
+        return status;                                                         \
+      }),                                                                      \
+      OPERATION_INLINE(Decrement, (), {                                        \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_TYPED(Numeric, Decimal, SUFFIX) resultValue = *self;            \
+        const OPSTATUS status = MODULE_IFUNC(Numeric, LimbDecrement)(          \
+            resultValue.limb, sizeof(self->limb) / sizeof(self->limb[0]));     \
+        if (status == STATUS_CONST(SUCCESS)) {                                 \
+          *self = resultValue;                                                 \
+        }                                                                      \
+        return status;                                                         \
+      }),                                                                      \
+      OPERATION_INLINE(And,                                                    \
+                       (const MODULE_TYPED(Numeric, Decimal, SUFFIX) *source), { \
+        if (!self || !source)                                                  \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_IFUNC(Numeric, LimbAnd)(                                        \
+            self->limb, source->limb,                                          \
+            sizeof(self->limb) / sizeof(self->limb[0]));                       \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      OPERATION_INLINE(Or,                                                     \
+                       (const MODULE_TYPED(Numeric, Decimal, SUFFIX) *source), { \
+        if (!self || !source)                                                  \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_IFUNC(Numeric, LimbOr)(                                         \
+            self->limb, source->limb,                                          \
+            sizeof(self->limb) / sizeof(self->limb[0]));                       \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      OPERATION_INLINE(Xor,                                                    \
+                       (const MODULE_TYPED(Numeric, Decimal, SUFFIX) *source), { \
+        if (!self || !source)                                                  \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_IFUNC(Numeric, LimbXor)(                                        \
+            self->limb, source->limb,                                          \
+            sizeof(self->limb) / sizeof(self->limb[0]));                       \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      OPERATION_INLINE(Not, (), {                                              \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_IFUNC(Numeric, LimbNot)(                                        \
+            self->limb, sizeof(self->limb) / sizeof(self->limb[0]));           \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      OPERATION_INLINE(ShiftLeft, (unsigned bitCount), {                       \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_IFUNC(Numeric, LimbShiftLeft)(                                  \
+            self->limb, sizeof(self->limb) / sizeof(self->limb[0]), bitCount); \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      OPERATION_INLINE(ShiftRight, (unsigned bitCount), {                      \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_IFUNC(Numeric, LimbShiftRight)(                                 \
+            self->limb, sizeof(self->limb) / sizeof(self->limb[0]), bitCount); \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      OPERATION_INLINE(RotateLeft, (unsigned shift), {                         \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_TYPED(Numeric, Decimal, SUFFIX) scratch = {0};                  \
+        return MODULE_IFUNC(Numeric, LimbRotateLeft)(                          \
+            self->limb, scratch.limb,                                          \
+            sizeof(self->limb) / sizeof(self->limb[0]), shift);                \
+      }),                                                                      \
+      OPERATION_INLINE(RotateRight, (unsigned shift), {                        \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_TYPED(Numeric, Decimal, SUFFIX) scratch = {0};                  \
+        return MODULE_IFUNC(Numeric, LimbRotateRight)(                         \
+            self->limb, scratch.limb,                                          \
+            sizeof(self->limb) / sizeof(self->limb[0]), shift);                \
+      }),                                                                      \
+      OPERATION_INLINE(BitSet, (uint32_t bit), {                               \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        return MODULE_IFUNC(Numeric, LimbBitSet)(                              \
+            self->limb, sizeof(self->limb) / sizeof(self->limb[0]), bit);      \
+      }),                                                                      \
+      OPERATION_INLINE(BitClear, (uint32_t bit), {                             \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        return MODULE_IFUNC(Numeric, LimbBitClear)(                            \
+            self->limb, sizeof(self->limb) / sizeof(self->limb[0]), bit);      \
+      }),                                                                      \
+      CONST_OPERATION_INLINE(BitCheck, (uint32_t bit, bool *outResult), {      \
+        if (!self || !outResult)                                               \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        return MODULE_IFUNC(Numeric, LimbBitCheck)(                            \
+            self->limb, sizeof(self->limb) / sizeof(self->limb[0]), bit,       \
+            outResult);                                                        \
+      }),                                                                      \
+      CONST_OPERATION_INLINE(Compare,                                          \
+                             (const MODULE_TYPED(Numeric, Decimal, SUFFIX) *other, \
+                              CMPOUT *result), {                               \
+        if (!self || !other || !result)                                        \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        *result = MODULE_IFUNC(Numeric, LimbCompare)(                          \
+            self->limb, other->limb,                                           \
+            sizeof(self->limb) / sizeof(self->limb[0]));                       \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      CONST_PREDICATE_INLINE(Equal,                                            \
+                             (const MODULE_TYPED(Numeric, Decimal, SUFFIX) *other), { \
+        if (!self || !other)                                                   \
+          return false;                                                        \
+        return MODULE_IFUNC(Numeric, LimbEqual)(                               \
+            self->limb, other->limb,                                           \
+            sizeof(self->limb) / sizeof(self->limb[0]));                       \
+      }),                                                                      \
+      CONST_PREDICATE_INLINE(NotEqual,                                         \
+                             (const MODULE_TYPED(Numeric, Decimal, SUFFIX) *other), { \
+        if (!self || !other)                                                   \
+          return false;                                                        \
+        return !MODULE_IFUNC(Numeric, LimbEqual)(                              \
+            self->limb, other->limb,                                           \
+            sizeof(self->limb) / sizeof(self->limb[0]));                       \
+      }),                                                                      \
+      CONST_PREDICATE_INLINE(LessThan,                                         \
+                             (const MODULE_TYPED(Numeric, Decimal, SUFFIX) *other), { \
+        if (!self || !other)                                                   \
+          return false;                                                        \
+        return MODULE_IFUNC(Numeric, LimbCompare)(                             \
+                   self->limb, other->limb,                                    \
+                   sizeof(self->limb) / sizeof(self->limb[0])) ==              \
+               COMPARISON_CONST(LOWER);                                        \
+      }),                                                                      \
+      CONST_PREDICATE_INLINE(GreaterThan,                                      \
+                             (const MODULE_TYPED(Numeric, Decimal, SUFFIX) *other), { \
+        if (!self || !other)                                                   \
+          return false;                                                        \
+        return MODULE_IFUNC(Numeric, LimbCompare)(                             \
+                   self->limb, other->limb,                                    \
+                   sizeof(self->limb) / sizeof(self->limb[0])) ==              \
+               COMPARISON_CONST(HIGHER);                                       \
+      }),                                                                      \
+      CONST_PREDICATE_INLINE(LessOrEqual,                                      \
+                             (const MODULE_TYPED(Numeric, Decimal, SUFFIX) *other), { \
+        if (!self || !other)                                                   \
+          return false;                                                        \
+        return MODULE_IFUNC(Numeric, LimbCompare)(                             \
+                   self->limb, other->limb,                                    \
+                   sizeof(self->limb) / sizeof(self->limb[0])) !=              \
+               COMPARISON_CONST(HIGHER);                                       \
+      }),                                                                      \
+      CONST_PREDICATE_INLINE(GreaterOrEqual,                                   \
+                             (const MODULE_TYPED(Numeric, Decimal, SUFFIX) *other), { \
+        if (!self || !other)                                                   \
+          return false;                                                        \
+        return MODULE_IFUNC(Numeric, LimbCompare)(                             \
+                   self->limb, other->limb,                                    \
+                   sizeof(self->limb) / sizeof(self->limb[0])) !=              \
+               COMPARISON_CONST(LOWER);                                        \
+      }),                                                                      \
+      CONST_PREDICATE_INLINE(IsZero, (), {                                     \
+        if (!self)                                                             \
+          return false;                                                        \
+        return MODULE_IFUNC(Numeric, LimbIsZero)(                              \
+            self->limb, sizeof(self->limb) / sizeof(self->limb[0]));           \
+      }),                                                                      \
+      VARIANT(ToCString,                                                       \
+          CONST_OPERATION_INLINE(, (char *buffer, size_t bufferSize), {        \
+            if (!self || !buffer)                                              \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            MODULE_TYPED(Numeric, Decimal, SUFFIX) scratch = *self;            \
+            return MODULE_IFUNC(Numeric, LimbToCStringBase)(                   \
+                scratch.limb, sizeof(self->limb) / sizeof(self->limb[0]),      \
+                buffer, bufferSize, 10U);                                      \
+          }),                                                                  \
+          CONST_OPERATION_INLINE(Base,                                         \
+              (char *buffer, size_t bufferSize, unsigned base), {              \
+            if (!self || !buffer)                                              \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            MODULE_TYPED(Numeric, Decimal, SUFFIX) scratch = *self;            \
+            return MODULE_IFUNC(Numeric, LimbToCStringBase)(                   \
+                scratch.limb, sizeof(self->limb) / sizeof(self->limb[0]),      \
+                buffer, bufferSize, base);                                     \
+          })                                                                   \
+      )                                                                        \
   )
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
 #if defined(SUFFIX) && defined(TYPE)
-  TEMPLATE_Type_Decimal(SUFFIX, TYPE);
+  TEMPLATE_Numeric_Decimal(SUFFIX, TYPE);
   #undef SUFFIX
   #undef TYPE
 #endif
-

@@ -1,8 +1,8 @@
 /* Optional.def - Dual Mode Engine (Zero Duplication) */
 
-#ifndef TEMPLATE_Outcome_Optional
-#define TEMPLATE_Outcome_Optional(SUFFIX, TYPE)                                 \
-  TEMPLATE_OBJECT(Outcome, Optional, SUFFIX,                                    \
+#ifndef TEMPLATE_Type_Optional
+#define TEMPLATE_Type_Optional(SUFFIX, TYPE)                                 \
+  TEMPLATE_OBJECT(Type, Optional, SUFFIX,                                    \
       FIELDS(                                                                   \
           bool hasValue;                                                        \
           TYPE value;                                                           \
@@ -12,13 +12,13 @@
           FUNCTION(TYPE, MapFunction, (TYPE value)),                            \
           OPERATION(                                                            \
               BindFunction,                                                     \
-              (TYPE value, struct MODULE_TYPED(Outcome, Optional, SUFFIX) * outOptional)), \
+              (TYPE value, struct MODULE_TYPED(Type, Optional, SUFFIX) * outOptional)), \
           PREDICATE(FilterPredicate, (TYPE value))),                            \
                                                                                 \
       OPERATION_INLINE(Some, (TYPE value), {                                    \
         if (!self)                                                              \
           return STATUS_CONST(INVALID_ARGUMENT);                                \
-        MODULE_FUNC(Outcome, Optional, SUFFIX, Init)(self);                     \
+        MODULE_FUNC(Type, Optional, SUFFIX, Init)(self);                     \
         self->hasValue = true;                                                  \
         self->value = value;                                                    \
         return STATUS_CONST(SUCCESS);                                           \
@@ -27,7 +27,7 @@
       OPERATION_INLINE(None, (), {                                              \
         if (!self)                                                              \
           return STATUS_CONST(INVALID_ARGUMENT);                                \
-        MODULE_FUNC(Outcome, Optional, SUFFIX, Init)(self);                     \
+        MODULE_FUNC(Type, Optional, SUFFIX, Init)(self);                     \
         self->hasValue = false;                                                 \
         memset(&self->value, 0, sizeof(TYPE));                                  \
         return STATUS_CONST(SUCCESS);                                           \
@@ -36,7 +36,7 @@
       OPERATION_INLINE(FromPointer, (const TYPE * ptr), {                       \
         if (!self)                                                              \
           return STATUS_CONST(INVALID_ARGUMENT);                                \
-        MODULE_FUNC(Outcome, Optional, SUFFIX, Init)(self);                     \
+        MODULE_FUNC(Type, Optional, SUFFIX, Init)(self);                     \
         if (ptr != NULL) {                                                      \
           self->hasValue = true;                                                \
           self->value = *ptr;                                                   \
@@ -90,58 +90,58 @@
                                                                                 \
       CONST_OPERATION_INLINE(                                                   \
           Map,                                                                  \
-          (MODULE_CLOSURE(Outcome, Optional, SUFFIX, MapFunction) mapper,       \
-           struct MODULE_TYPED(Outcome, Optional, SUFFIX) * outOptional),      \
+          (MODULE_CLOSURE(Type, Optional, SUFFIX, MapFunction) mapper,       \
+           struct MODULE_TYPED(Type, Optional, SUFFIX) * outOptional),      \
           {                                                                     \
             if (!self || !outOptional || !CLOSURE_IS_VALID(mapper))            \
               return STATUS_CONST(INVALID_ARGUMENT);                            \
-            MODULE_FUNC(Outcome, Optional, SUFFIX, Init)(outOptional);          \
+            MODULE_FUNC(Type, Optional, SUFFIX, Init)(outOptional);          \
             if (!self->hasValue) {                                              \
-              return MODULE_FUNC(Outcome, Optional, SUFFIX, None)(outOptional);\
+              return MODULE_FUNC(Type, Optional, SUFFIX, None)(outOptional);\
             }                                                                   \
             TYPE mapped = CLOSURE_CALL(mapper, self->value);                    \
-            return MODULE_FUNC(Outcome, Optional, SUFFIX, Some)(outOptional,   \
+            return MODULE_FUNC(Type, Optional, SUFFIX, Some)(outOptional,   \
                                                                 mapped);        \
           }),                                                                   \
                                                                                 \
       CONST_OPERATION_INLINE(                                                   \
           AndThen,                                                              \
-          (MODULE_CLOSURE(Outcome, Optional, SUFFIX, BindFunction) binder,      \
-           struct MODULE_TYPED(Outcome, Optional, SUFFIX) * outOptional),      \
+          (MODULE_CLOSURE(Type, Optional, SUFFIX, BindFunction) binder,      \
+           struct MODULE_TYPED(Type, Optional, SUFFIX) * outOptional),      \
           {                                                                     \
             if (!self || !outOptional || !CLOSURE_IS_VALID(binder))            \
               return STATUS_CONST(INVALID_ARGUMENT);                            \
-            MODULE_FUNC(Outcome, Optional, SUFFIX, Init)(outOptional);          \
+            MODULE_FUNC(Type, Optional, SUFFIX, Init)(outOptional);          \
             if (!self->hasValue) {                                              \
-              return MODULE_FUNC(Outcome, Optional, SUFFIX, None)(outOptional);\
+              return MODULE_FUNC(Type, Optional, SUFFIX, None)(outOptional);\
             }                                                                   \
             return CLOSURE_CALL(binder, self->value, outOptional);              \
           }),                                                                   \
                                                                                 \
       CONST_OPERATION_INLINE(                                                   \
           Filter,                                                               \
-          (MODULE_CLOSURE(Outcome, Optional, SUFFIX, FilterPredicate) predicate,\
-           struct MODULE_TYPED(Outcome, Optional, SUFFIX) * outOptional),      \
+          (MODULE_CLOSURE(Type, Optional, SUFFIX, FilterPredicate) predicate,\
+           struct MODULE_TYPED(Type, Optional, SUFFIX) * outOptional),      \
           {                                                                     \
             if (!self || !outOptional || !CLOSURE_IS_VALID(predicate))         \
               return STATUS_CONST(INVALID_ARGUMENT);                            \
-            MODULE_FUNC(Outcome, Optional, SUFFIX, Init)(outOptional);          \
+            MODULE_FUNC(Type, Optional, SUFFIX, Init)(outOptional);          \
             if (!self->hasValue) {                                              \
-              return MODULE_FUNC(Outcome, Optional, SUFFIX, None)(outOptional);\
+              return MODULE_FUNC(Type, Optional, SUFFIX, None)(outOptional);\
             }                                                                   \
             if (CLOSURE_CALL(predicate, self->value)) {                         \
-              return MODULE_FUNC(Outcome, Optional, SUFFIX, Some)(              \
+              return MODULE_FUNC(Type, Optional, SUFFIX, Some)(              \
                   outOptional, self->value);                                    \
             }                                                                   \
-            return MODULE_FUNC(Outcome, Optional, SUFFIX, None)(outOptional);   \
+            return MODULE_FUNC(Type, Optional, SUFFIX, None)(outOptional);   \
           })                                                                    \
   )
-#define TEMPLATE_Optional(SUFFIX, TYPE) TEMPLATE_Outcome_Optional(SUFFIX, TYPE)
+#define TEMPLATE_Optional(SUFFIX, TYPE) TEMPLATE_Type_Optional(SUFFIX, TYPE)
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
 #if defined(SUFFIX) && defined(TYPE)
-  TEMPLATE_Outcome_Optional(SUFFIX, TYPE);
+  TEMPLATE_Type_Optional(SUFFIX, TYPE);
   #undef SUFFIX
   #undef TYPE
 #endif

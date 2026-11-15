@@ -222,7 +222,6 @@
                 outIter, startPtr, logicalSize, logicalSize, true);            \
           })                                                                   \
   )
-#define TEMPLATE_Queue(SUFFIX, TYPE) TEMPLATE_Array_Queue(SUFFIX, TYPE)
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */

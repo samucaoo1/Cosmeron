@@ -4,13 +4,6 @@
 #include "Impl/Common.inc"
 #include "List.def"
 
-/* Ordered Primitive Type Instantiations */
-#define COSMERON_MACRO_INTERNAL_LINKED_LIST_ROW(ROW)                           \
-  TEMPLATE_INSTANTIATE(Linked, List, PRIMITIVE_TYPE_GET(NAME, ROW),            \
-                       PRIMITIVE_TYPE_GET(TYPE, ROW));
-
-PRIMITIVE_TYPE_TABLE_ORDERED(COSMERON_MACRO_INTERNAL_LINKED_LIST_ROW)
-#undef COSMERON_MACRO_INTERNAL_LINKED_LIST_ROW
+TEMPLATE_INSTANTIATE_TABLE(Linked, List, CONTAINER_ORDERED_TYPE_TABLE);
 
 #endif /* COSMERON_CONTAINER_LINKED_TLIST_H */
-

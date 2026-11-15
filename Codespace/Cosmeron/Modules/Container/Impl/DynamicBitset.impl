@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-MODULE_IMPLEMENT(Container,
+MODULE_IMPLEMENT(DOMAIN(Container), Container,
   OBJECT(DynamicBitset,
     OPERATION(CreateWithAllocator,
               (size_t bitCount, MODULE_TYPE(Memory, Allocator) allocator), {

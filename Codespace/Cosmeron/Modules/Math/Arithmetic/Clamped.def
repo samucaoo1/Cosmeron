@@ -1,0 +1,121 @@
+/* Clamped.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Math_ClampedArithmeticSigned
+#define TEMPLATE_Math_ClampedArithmeticSigned(SUFFIX, TYPE, MINIMUM, MAXIMUM)  \
+  TEMPLATE_PACKAGE(Math, ClampedArithmetic, SUFFIX,                            \
+      VARIANT(Clamp,                                                           \
+          FUNCTION_INLINE(TYPE, Add,                                           \
+                          (TYPE a, TYPE b, TYPE minimum, TYPE maximum), {      \
+            TYPE res = 0;                                                      \
+            if (MODULE_FUNC(Math, Arithmetic, SUFFIX, Add)(a, b, &res) !=      \
+                STATUS_CONST(SUCCESS)) {                                       \
+              return (b > 0) ? maximum : minimum;                              \
+            }                                                                  \
+            return MODULE_FUNC(Math, Clamp, SUFFIX, Apply)(res, minimum,       \
+                                                           maximum);           \
+          }),                                                                  \
+          FUNCTION_INLINE(TYPE, Sub,                                           \
+                          (TYPE a, TYPE b, TYPE minimum, TYPE maximum), {      \
+            TYPE res = 0;                                                      \
+            if (MODULE_FUNC(Math, Arithmetic, SUFFIX, Sub)(a, b, &res) !=      \
+                STATUS_CONST(SUCCESS)) {                                       \
+              return (b < 0) ? maximum : minimum;                              \
+            }                                                                  \
+            return MODULE_FUNC(Math, Clamp, SUFFIX, Apply)(res, minimum,       \
+                                                           maximum);           \
+          }),                                                                  \
+          FUNCTION_INLINE(TYPE, Mul,                                           \
+                          (TYPE a, TYPE b, TYPE minimum, TYPE maximum), {      \
+            TYPE res = 0;                                                      \
+            if (MODULE_FUNC(Math, Arithmetic, SUFFIX, Mul)(a, b, &res) !=      \
+                STATUS_CONST(SUCCESS)) {                                       \
+              const bool sameSign =                                            \
+                  ((a > 0) && (b > 0)) || ((a < 0) && (b < 0));                \
+              return sameSign ? maximum : minimum;                             \
+            }                                                                  \
+            return MODULE_FUNC(Math, Clamp, SUFFIX, Apply)(res, minimum,       \
+                                                           maximum);           \
+          })                                                                   \
+      ),                                                                       \
+      VARIANT(Saturating,                                                      \
+          FUNCTION_INLINE(TYPE, Add, (TYPE a, TYPE b), {                       \
+            return MODULE_FUNC(Math, ClampedArithmetic, SUFFIX, ClampAdd)(     \
+                a, b, MINIMUM, MAXIMUM);                                       \
+          }),                                                                  \
+          FUNCTION_INLINE(TYPE, Sub, (TYPE a, TYPE b), {                       \
+            return MODULE_FUNC(Math, ClampedArithmetic, SUFFIX, ClampSub)(     \
+                a, b, MINIMUM, MAXIMUM);                                       \
+          }),                                                                  \
+          FUNCTION_INLINE(TYPE, Mul, (TYPE a, TYPE b), {                       \
+            return MODULE_FUNC(Math, ClampedArithmetic, SUFFIX, ClampMul)(     \
+                a, b, MINIMUM, MAXIMUM);                                       \
+          })                                                                   \
+      )                                                                        \
+  )
+#endif
+
+#ifndef TEMPLATE_Math_ClampedArithmeticUnsigned
+#define TEMPLATE_Math_ClampedArithmeticUnsigned(SUFFIX, TYPE, MAXIMUM)         \
+  TEMPLATE_PACKAGE(Math, ClampedArithmetic, SUFFIX,                            \
+      VARIANT(Clamp,                                                           \
+          FUNCTION_INLINE(TYPE, Add,                                           \
+                          (TYPE a, TYPE b, TYPE minimum, TYPE maximum), {      \
+            TYPE res = 0;                                                      \
+            if (MODULE_FUNC(Math, Arithmetic, SUFFIX, Add)(a, b, &res) !=      \
+                STATUS_CONST(SUCCESS)) {                                       \
+              return maximum;                                                  \
+            }                                                                  \
+            return MODULE_FUNC(Math, Clamp, SUFFIX, Apply)(res, minimum,       \
+                                                           maximum);           \
+          }),                                                                  \
+          FUNCTION_INLINE(TYPE, Sub,                                           \
+                          (TYPE a, TYPE b, TYPE minimum, TYPE maximum), {      \
+            TYPE res = 0;                                                      \
+            if (MODULE_FUNC(Math, Arithmetic, SUFFIX, Sub)(a, b, &res) !=      \
+                STATUS_CONST(SUCCESS)) {                                       \
+              return minimum;                                                  \
+            }                                                                  \
+            return MODULE_FUNC(Math, Clamp, SUFFIX, Apply)(res, minimum,       \
+                                                           maximum);           \
+          }),                                                                  \
+          FUNCTION_INLINE(TYPE, Mul,                                           \
+                          (TYPE a, TYPE b, TYPE minimum, TYPE maximum), {      \
+            TYPE res = 0;                                                      \
+            if (MODULE_FUNC(Math, Arithmetic, SUFFIX, Mul)(a, b, &res) !=      \
+                STATUS_CONST(SUCCESS)) {                                       \
+              return maximum;                                                  \
+            }                                                                  \
+            return MODULE_FUNC(Math, Clamp, SUFFIX, Apply)(res, minimum,       \
+                                                           maximum);           \
+          })                                                                   \
+      ),                                                                       \
+      VARIANT(Saturating,                                                      \
+          FUNCTION_INLINE(TYPE, Add, (TYPE a, TYPE b), {                       \
+            return MODULE_FUNC(Math, ClampedArithmetic, SUFFIX, ClampAdd)(     \
+                a, b, 0, MAXIMUM);                                             \
+          }),                                                                  \
+          FUNCTION_INLINE(TYPE, Sub, (TYPE a, TYPE b), {                       \
+            return MODULE_FUNC(Math, ClampedArithmetic, SUFFIX, ClampSub)(     \
+                a, b, 0, MAXIMUM);                                             \
+          }),                                                                  \
+          FUNCTION_INLINE(TYPE, Mul, (TYPE a, TYPE b), {                       \
+            return MODULE_FUNC(Math, ClampedArithmetic, SUFFIX, ClampMul)(     \
+                a, b, 0, MAXIMUM);                                             \
+          })                                                                   \
+      )                                                                        \
+  )
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE) && defined(MINIMUM) && defined(MAXIMUM)
+  TEMPLATE_Math_ClampedArithmeticSigned(SUFFIX, TYPE, MINIMUM, MAXIMUM);
+  #undef SUFFIX
+  #undef TYPE
+  #undef MINIMUM
+  #undef MAXIMUM
+#elif defined(SUFFIX) && defined(TYPE) && defined(MAXIMUM)
+  TEMPLATE_Math_ClampedArithmeticUnsigned(SUFFIX, TYPE, MAXIMUM);
+  #undef SUFFIX
+  #undef TYPE
+  #undef MAXIMUM
+#endif

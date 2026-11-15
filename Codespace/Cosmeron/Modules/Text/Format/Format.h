@@ -2,6 +2,7 @@
 
 #include "../../../Core/Condition/Status.h"
 #include "../../../Core/Module/Module.h"
+#include "../../../Core/Types/TaggedUnion.h"
 #include "../../Tuple/TDual.h"
 #include "../../Tuple/TPair.h"
 #include "../../Tuple/TPenta.h"
@@ -18,21 +19,35 @@
 
 MODULE(DOMAIN(Modules), Text,
     PACKAGE(Format,
-        OPERATION(Variadic,
-                  (char *buffer, size_t capacity, size_t *outWritten,
-                   const char *format, va_list arguments)),
-        OPERATION(Unsafe_Variadic,
-                  (char *buffer, size_t *outWritten, const char *format,
-                   va_list arguments))
+        VARIANT(Variadic,
+                OPERATION((char *buffer, size_t capacity, size_t *outWritten,
+                           const char *format, va_list arguments)),
+                OPERATION(Unsafe,
+                          (char *buffer, size_t *outWritten, const char *format,
+                           va_list arguments))
+        ),
+        OPERATION_INLINE(Buffer,
+                         (char *buffer, size_t capacity, size_t *outWritten,
+                          const char *format, ...), {
+          OPSTATUS status;
+          va_list args;
+          va_start(args, format);
+          status = MODULE_FUNC(Text, Format, Variadic)(buffer, capacity,
+                                                       outWritten, format, args);
+          va_end(args);
+          return status;
+        }),
+        OPERATION_INLINE(Unsafe,
+                         (char *buffer, size_t *outWritten, const char *format, ...), {
+          OPSTATUS status;
+          va_list args;
+          va_start(args, format);
+          status = MODULE_FUNC(Text, Format, VariadicUnsafe)(buffer, outWritten, format, args);
+          va_end(args);
+          return status;
+        })
     )
 );
-
-static inline OPSTATUS MODULE_FUNC(Text, Format)(
-    char *buffer, size_t capacity, size_t *outWritten, const char *format,
-    ...);
-
-static inline OPSTATUS MODULE_FUNC(Text, Format, Unsafe)(
-    char *buffer, size_t *outWritten, const char *format, ...);
 
 #include "Impl/Format.impl"
 #include "BytesHuman.h"

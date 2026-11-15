@@ -34,6 +34,11 @@
   X((32, uint32_t, 4))                                                         \
   X((64, uint64_t, 8))
 
+#define TYPE_BYTETAG_TYPE_TABLE(X)                                             \
+  X((16, uint16_t))                                                            \
+  X((32, uint32_t))                                                            \
+  X((64, uint64_t))
+
 /* ==========================================================================
  * Type Width Table (Row-Tuple Pattern: Block, Bigint, Decimal, Bitset)
  * ========================================================================== */
@@ -58,10 +63,7 @@
 #define TEMPLATE_Type(TARGET, ...) NS(TEMPLATE_Type, TARGET)(__VA_ARGS__)
 #endif
 
-#define TEMPLATE_Type_ByteTag_HAS_IMPL     1
 #define TEMPLATE_Type_Block_HAS_IMPL   1
-#define TEMPLATE_Type_Bigint_HAS_IMPL  1
-#define TEMPLATE_Type_Decimal_HAS_IMPL 1
 #define TEMPLATE_Type_Bitset_HAS_IMPL  1
 
 /* ==========================================================================

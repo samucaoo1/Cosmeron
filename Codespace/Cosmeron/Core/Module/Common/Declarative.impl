@@ -622,6 +622,27 @@
 #define IENUM_DEF_EX(TARGET, NAME, TABLE, DISP)                                \
   COSMERON_INTERNAL_EMIT_ENUM_DEF(NS(TARGET, INTERNAL), NAME, TABLE, DISP)
 
+#define COSMERON_INTERNAL_ARRAY_COL_1(ROW) PP_SEQ_GET_1 ROW,
+#define COSMERON_INTERNAL_ARRAY_COL_2(ROW) PP_SEQ_GET_2 ROW,
+#define COSMERON_INTERNAL_ARRAY_COL_3(ROW) PP_SEQ_GET_3 ROW,
+#define COSMERON_INTERNAL_ARRAY_COL_4(ROW) PP_SEQ_GET_4 ROW,
+#define COSMERON_INTERNAL_ARRAY_COL_5(ROW) PP_SEQ_GET_5 ROW,
+#define COSMERON_INTERNAL_ARRAY_COL_6(ROW) PP_SEQ_GET_6 ROW,
+#define COSMERON_INTERNAL_ARRAY_COL_7(ROW) PP_SEQ_GET_7 ROW,
+#define COSMERON_INTERNAL_ARRAY_COL_8(ROW) PP_SEQ_GET_8 ROW,
+
+#define COSMERON_INTERNAL_EMIT_TABLE_ARRAY_DEF(TARGET, TYPE, NAME, TABLE, COL) \
+  static const COSMERON_MAYBE_UNUSED TYPE NS(TARGET, NAME)[] = {               \
+      TABLE(PP_OP_CAT2(COSMERON_INTERNAL_ARRAY_COL_, COL))                     \
+  };
+
+#define TABLE_ARRAY_DEF(TARGET, TYPE, NAME, TABLE, COL)                        \
+  COSMERON_INTERNAL_EMIT_TABLE_ARRAY_DEF(TARGET, TYPE, NAME, TABLE, COL)
+
+#define ITABLE_ARRAY_DEF(TARGET, TYPE, NAME, TABLE, COL)                       \
+  COSMERON_INTERNAL_EMIT_TABLE_ARRAY_DEF(NS(TARGET, INTERNAL), TYPE, NAME,     \
+                                         TABLE, COL)
+
 /* ============================================================
  * 1. OBJECT Emitter
  * ============================================================ */
@@ -1077,77 +1098,72 @@
 
 #if !defined(OBJECT_DISABLE_FUNCTION_TABLE) && !defined(MODULE_DISABLE_FUNCTION_TABLE)
 
-#define TEMPLATE_OBJECT_DEF(MOD, NAME, SUFFIX, FIELDS_DECL, ...)               \
-  typedef struct MODULE_TYPED(MOD, NAME, SUFFIX)                              \
-      MODULE_TYPED(MOD, NAME, SUFFIX);                                         \
-  typedef struct NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable)             \
-      NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable);                      \
-  COSMERON_INTERNAL_OBJ_GEN_ENUMS(                                             \
-      (NS(LIB_PREFIX(MOD), NAME, SUFFIX), MODULE_TYPED(MOD, NAME, SUFFIX)),   \
-      (__VA_ARGS__))                                                           \
-  struct MODULE_TYPED(MOD, NAME, SUFFIX) {                                     \
-    const struct NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable) * api;      \
+#define COSMERON_INTERNAL_TPL_OBJ_DEF_EX(OBJ_PREFIX, OBJ_TYPE, FIELDS_DECL, ...) \
+  typedef struct OBJ_TYPE OBJ_TYPE;                                            \
+  typedef struct NS(OBJ_PREFIX, FunctionTable) NS(OBJ_PREFIX, FunctionTable);  \
+  COSMERON_INTERNAL_OBJ_GEN_ENUMS((OBJ_PREFIX, OBJ_TYPE), (__VA_ARGS__))       \
+  struct OBJ_TYPE {                                                            \
+    const struct NS(OBJ_PREFIX, FunctionTable) * api;                          \
     COSMERON_INTERNAL_UNWRAP_FIELDS(FIELDS_DECL)                               \
   };                                                                           \
-  static inline COSMERON_MAYBE_UNUSED OPSTATUS NS(LIB_PREFIX(MOD), NAME,       \
-                                                  SUFFIX, Init)(               \
-      MODULE_TYPED(MOD, NAME, SUFFIX) * self);                                 \
-  COSMERON_INTERNAL_OBJ_GEN_MEMBERS(                                           \
-      (NS(LIB_PREFIX(MOD), NAME, SUFFIX), MODULE_TYPED(MOD, NAME, SUFFIX)),   \
-      (__VA_ARGS__))                                                           \
-  struct NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable) {                   \
+  static inline COSMERON_MAYBE_UNUSED OPSTATUS NS(OBJ_PREFIX, Init)(           \
+      OBJ_TYPE * self);                                                        \
+  COSMERON_INTERNAL_OBJ_GEN_MEMBERS((OBJ_PREFIX, OBJ_TYPE), (__VA_ARGS__))     \
+  struct NS(OBJ_PREFIX, FunctionTable) {                                       \
     int _reserved;                                                             \
-    PP_FOREACH_D2_CTX(COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD,                   \
-                      MODULE_TYPED(MOD, NAME, SUFFIX), __VA_ARGS__)           \
+    PP_FOREACH_D2_CTX(COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD, OBJ_TYPE,          \
+                      __VA_ARGS__)                                             \
   };                                                                           \
   static inline COSMERON_MAYBE_UNUSED                                          \
-  const struct NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable) *             \
-  NS(LIB_PREFIX(MOD), NAME, SUFFIX, GetFunctionTable)(void) {                 \
+  const struct NS(OBJ_PREFIX, FunctionTable) *                                 \
+  NS(OBJ_PREFIX, GetFunctionTable)(void) {                                     \
     static const COSMERON_MAYBE_UNUSED                                         \
-    struct NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable) table = {         \
+    struct NS(OBJ_PREFIX, FunctionTable) table = {                             \
         ._reserved = 0,                                                        \
-        PP_FOREACH_D2_CTX(COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY,                \
-                          NS(LIB_PREFIX(MOD), NAME, SUFFIX), __VA_ARGS__)      \
+        PP_FOREACH_D2_CTX(COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY, OBJ_PREFIX,    \
+                          __VA_ARGS__)                                         \
     };                                                                         \
     return &table;                                                             \
   }                                                                            \
-  static inline COSMERON_MAYBE_UNUSED OPSTATUS NS(LIB_PREFIX(MOD), NAME,       \
-                                                  SUFFIX, Init)(               \
-      MODULE_TYPED(MOD, NAME, SUFFIX) * self) {                                \
+  static inline COSMERON_MAYBE_UNUSED OPSTATUS NS(OBJ_PREFIX, Init)(           \
+      OBJ_TYPE * self) {                                                       \
     if (!self)                                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    self->api = NS(LIB_PREFIX(MOD), NAME, SUFFIX, GetFunctionTable)();        \
+    self->api = NS(OBJ_PREFIX, GetFunctionTable)();                            \
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
-  typedef int NS(_cosmeron_tpl_obj_semi, MOD, NAME, SUFFIX, __LINE__)
+  typedef int NS(_cosmeron_tpl_obj_semi, OBJ_PREFIX, __LINE__)
 
 #else
 
-#define TEMPLATE_OBJECT_DEF(MOD, NAME, SUFFIX, FIELDS_DECL, ...)               \
-  typedef struct MODULE_TYPED(MOD, NAME, SUFFIX)                              \
-      MODULE_TYPED(MOD, NAME, SUFFIX);                                         \
-  COSMERON_INTERNAL_OBJ_GEN_ENUMS(                                             \
-      (NS(LIB_PREFIX(MOD), NAME, SUFFIX), MODULE_TYPED(MOD, NAME, SUFFIX)),   \
-      (__VA_ARGS__))                                                           \
-  struct MODULE_TYPED(MOD, NAME, SUFFIX) {                                     \
+#define COSMERON_INTERNAL_TPL_OBJ_DEF_EX(OBJ_PREFIX, OBJ_TYPE, FIELDS_DECL, ...) \
+  typedef struct OBJ_TYPE OBJ_TYPE;                                            \
+  COSMERON_INTERNAL_OBJ_GEN_ENUMS((OBJ_PREFIX, OBJ_TYPE), (__VA_ARGS__))       \
+  struct OBJ_TYPE {                                                            \
     COSMERON_INTERNAL_UNWRAP_FIELDS(FIELDS_DECL)                               \
   };                                                                           \
-  static inline COSMERON_MAYBE_UNUSED OPSTATUS NS(LIB_PREFIX(MOD), NAME,       \
-                                                  SUFFIX, Init)(               \
-      MODULE_TYPED(MOD, NAME, SUFFIX) * self);                                 \
-  COSMERON_INTERNAL_OBJ_GEN_MEMBERS(                                           \
-      (NS(LIB_PREFIX(MOD), NAME, SUFFIX), MODULE_TYPED(MOD, NAME, SUFFIX)),   \
-      (__VA_ARGS__))                                                           \
-  static inline COSMERON_MAYBE_UNUSED OPSTATUS NS(LIB_PREFIX(MOD), NAME,       \
-                                                  SUFFIX, Init)(               \
-      MODULE_TYPED(MOD, NAME, SUFFIX) * self) {                                \
+  static inline COSMERON_MAYBE_UNUSED OPSTATUS NS(OBJ_PREFIX, Init)(           \
+      OBJ_TYPE * self);                                                        \
+  COSMERON_INTERNAL_OBJ_GEN_MEMBERS((OBJ_PREFIX, OBJ_TYPE), (__VA_ARGS__))     \
+  static inline COSMERON_MAYBE_UNUSED OPSTATUS NS(OBJ_PREFIX, Init)(           \
+      OBJ_TYPE * self) {                                                       \
     if (!self)                                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
-  typedef int NS(_cosmeron_tpl_obj_semi, MOD, NAME, SUFFIX, __LINE__)
+  typedef int NS(_cosmeron_tpl_obj_semi, OBJ_PREFIX, __LINE__)
 
 #endif
+
+#define TEMPLATE_OBJECT_DEF(MOD, NAME, SUFFIX, FIELDS_DECL, ...)               \
+  COSMERON_INTERNAL_TPL_OBJ_DEF_EX(NS(LIB_PREFIX(MOD), NAME, SUFFIX),          \
+                                   MODULE_TYPED(MOD, NAME, SUFFIX),            \
+                                   FIELDS_DECL, __VA_ARGS__)
+
+#define TEMPLATE_OBJECT_ROOT(NAME, SUFFIX, FIELDS_DECL, ...)                   \
+  COSMERON_INTERNAL_TPL_OBJ_DEF_EX(NS(LIB_PREFIX(NAME), SUFFIX),               \
+                                   MODULE_TYPED(NAME, SUFFIX),                 \
+                                   FIELDS_DECL, __VA_ARGS__)
 
 /* ============================================================
  * 2.5 INTERNAL Emitter

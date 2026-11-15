@@ -1,0 +1,34 @@
+/* Linear.def - Dual Mode Engine (Zero Duplication) */
+
+#ifndef TEMPLATE_Math_LinearEquation
+#define TEMPLATE_Math_LinearEquation(SUFFIX, TYPE)                             \
+  TEMPLATE_PACKAGE(Math, LinearEquation, SUFFIX,                               \
+      OPERATION_INLINE(Solve,                                                  \
+                       (TYPE a, TYPE b, TYPE *outResult,                       \
+                        MODULE_ENUM(Math, Solution) *outSolution), {           \
+        if (!outResult || !outSolution) {                                      \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        }                                                                      \
+        if (a == (TYPE)0) {                                                    \
+          if (b == (TYPE)0) {                                                  \
+            *outSolution = MODULE_CONST(Math, INFINITE);                       \
+            *outResult = (TYPE)0;                                              \
+            return STATUS_CONST(SUCCESS);                                      \
+          }                                                                    \
+          *outSolution = MODULE_CONST(Math, NONE);                             \
+          *outResult = (TYPE)0;                                                \
+          return STATUS_CONST(SUCCESS);                                        \
+        }                                                                      \
+        *outSolution = MODULE_CONST(Math, ONE);                                \
+        *outResult = -b / a;                                                   \
+        return STATUS_CONST(SUCCESS);                                          \
+      })                                                                       \
+  )
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Math_LinearEquation(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif

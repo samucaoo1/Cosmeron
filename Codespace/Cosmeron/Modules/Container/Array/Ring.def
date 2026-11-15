@@ -426,7 +426,6 @@
             return STATUS_CONST(SUCCESS);                                      \
           })                                                                   \
   )
-#define TEMPLATE_Ring(SUFFIX, TYPE) TEMPLATE_Array_Ring(SUFFIX, TYPE)
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */

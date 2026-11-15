@@ -10,54 +10,37 @@
 #include <stdint.h>
 
 /* ========================================================================== */
-/* 1. Declarative Module: Primitive (Category Enum & Conversion Package)      */
+/* 1. Declarative Module: Type (Category Enum & Primitive Typedefs)           */
 /* ========================================================================== */
 
-#define PRIMITIVE_CATEGORY_CASE(ROW)                                           \
-  case MODULE_CONST(Primitive, PRIMITIVE_CATEGORY_GET(NAME, ROW)):             \
-    return PRIMITIVE_CATEGORY_GET(DESC, ROW);
+#define COSMERON_MACRO_INTERNAL_TYPE_CATEGORY_CASE(ROW)                        \
+  case MODULE_CONST(Type, Category, TYPE_CATEGORY_GET(NAME, ROW)):             \
+    return TYPE_CATEGORY_GET(DESC, ROW);
 
-MODULE(DOMAIN(Core), Primitive,
-       ENUM_EX(Category, PRIMITIVE_CATEGORY_TABLE, NAME_ONLY),
-       PACKAGE(Category,
-               FUNCTION_INLINE(const char *, ToString,
-                               (MODULE_ENUM(Primitive, Category) category), {
-                                 switch (category) {
-                                   PRIMITIVE_CATEGORY_TABLE(
-                                       PRIMITIVE_CATEGORY_CASE)
-                                 default:
-                                   return "Unknown";
-                                 }
-                               })));
+MODULE(
+    DOMAIN(Core), Type, ENUM_EX(Category, TYPE_CATEGORY_TABLE, QUALIFIED_NAME),
+    PACKAGE(Category,
+            FUNCTION_INLINE(const char *, ToString,
+                            (MODULE_ENUM(Type, Category) category), {
+                              switch (category) {
+                                TYPE_CATEGORY_TABLE(
+                                    COSMERON_MACRO_INTERNAL_TYPE_CATEGORY_CASE)
+                              default:
+                                return "Unknown";
+                              }
+                            })));
 
-#undef PRIMITIVE_CATEGORY_CASE
+#undef COSMERON_MACRO_INTERNAL_TYPE_CATEGORY_CASE
 
 /* ========================================================================== */
 /* 2. Canonical Namespaced Primitive Types                                    */
 /* ========================================================================== */
 
-#define PRIMITIVE_TYPE_TYPEDEF(ROW)                                            \
+#define COSMERON_MACRO_INTERNAL_TYPE_PRIMITIVE_TYPEDEF(ROW)                    \
   typedef PRIMITIVE_TYPE_GET(TYPE, ROW)                                        \
-      MODULE_TYPE(Primitive, PRIMITIVE_TYPE_GET(NAME, ROW));
+      MODULE_TYPE(Type, PRIMITIVE_TYPE_GET(NAME, ROW));
 
-PRIMITIVE_TYPE_TABLE(PRIMITIVE_TYPE_TYPEDEF)
-#undef PRIMITIVE_TYPE_TYPEDEF
-
-/* ========================================================================== */
-/* 3. Category Iteration Views                                                */
-/* ========================================================================== */
-
-#define PRIMITIVE_FOR_EACH(X) PRIMITIVE_TYPE_TABLE(X)
-#define PRIMITIVE_FOR_EACH_BOOLEAN(X) PRIMITIVE_TYPE_TABLE_BOOLEAN(X)
-#define PRIMITIVE_FOR_EACH_SIGNED(X) PRIMITIVE_TYPE_TABLE_SIGNED(X)
-#define PRIMITIVE_FOR_EACH_UNSIGNED(X) PRIMITIVE_TYPE_TABLE_UNSIGNED(X)
-#define PRIMITIVE_FOR_EACH_EXACT_INTEGER(X)                                    \
-  PRIMITIVE_TYPE_TABLE_EXACT_INTEGER(X)
-#define PRIMITIVE_FOR_EACH_INTEGER(X) PRIMITIVE_TYPE_TABLE_INTEGER(X)
-#define PRIMITIVE_FOR_EACH_CHARACTER(X) PRIMITIVE_TYPE_TABLE_CHARACTER(X)
-#define PRIMITIVE_FOR_EACH_FLOAT(X) PRIMITIVE_TYPE_TABLE_FLOAT(X)
-#define PRIMITIVE_FOR_EACH_COMPLEX(X) PRIMITIVE_TYPE_TABLE_COMPLEX(X)
-#define PRIMITIVE_FOR_EACH_ARCHITECTURE(X) PRIMITIVE_TYPE_TABLE_ARCHITECTURE(X)
-#define PRIMITIVE_FOR_EACH_NUMERIC(X) PRIMITIVE_TYPE_TABLE_NUMERIC(X)
+PRIMITIVE_TYPE_TABLE(COSMERON_MACRO_INTERNAL_TYPE_PRIMITIVE_TYPEDEF)
+#undef COSMERON_MACRO_INTERNAL_TYPE_PRIMITIVE_TYPEDEF
 
 /* EOF */

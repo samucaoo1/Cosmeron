@@ -56,25 +56,109 @@
 #define COSMERON_COMMA_ROW(ROW) ROW,
 #endif
 
-#define COSMERON_INTERNAL_TPL_ROW_DISPATCH(NAME, ROW)                         \
-  PP_OP_CAT2(COSMERON_TPL_ROW_CASE_, PP_IS_PAREN(ROW))(NAME, ROW)
+#define COSMERON_TPL_MAP_1(NAME, SENTINEL) /* Sentinel ~ ignored */
+#define COSMERON_TPL_MAP_2(NAME, ROW, ...)                                     \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_1(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_3(NAME, ROW, ...)                                     \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_2(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_4(NAME, ROW, ...)                                     \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_3(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_5(NAME, ROW, ...)                                     \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_4(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_6(NAME, ROW, ...)                                     \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_5(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_7(NAME, ROW, ...)                                     \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_6(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_8(NAME, ROW, ...)                                     \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_7(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_9(NAME, ROW, ...)                                     \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_8(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_10(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_9(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_11(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_10(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_12(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_11(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_13(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_12(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_14(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_13(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_15(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_14(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_16(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_15(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_17(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_16(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_18(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_17(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_19(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_18(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_20(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_19(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_21(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_20(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_22(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_21(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_23(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_22(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_24(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_23(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_25(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_24(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_26(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_25(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_27(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_26(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_28(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_27(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_29(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_28(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_30(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_29(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_31(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_30(NAME, __VA_ARGS__)
+#define COSMERON_TPL_MAP_32(NAME, ROW, ...)                                    \
+  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);                                   \
+  COSMERON_TPL_MAP_31(NAME, __VA_ARGS__)
 
-#define COSMERON_TPL_ROW_CASE_1(NAME, ROW)                                    \
-  TEMPLATE_INSTANTIATE(NAME, PP_UNWRAP ROW);
-
-#define COSMERON_TPL_ROW_CASE_0(NAME, ROW) /* Sentinel ~ ignored */
-
-#define COSMERON_EXPAND_TPL_TABLE_INVOKE(m, ctx, ...) m(ctx, __VA_ARGS__)
+#define COSMERON_TPL_MAP_DISPATCH(NAME, ...)                                   \
+  PP_OP_CAT2(COSMERON_TPL_MAP_, PP_ARG_COUNT(__VA_ARGS__))(NAME, __VA_ARGS__)
 
 #define COSMERON_INTERNAL_TPL_TABLE_DISP_2(TARGET, TABLE)                      \
-  COSMERON_EXPAND_TPL_TABLE_INVOKE(                                            \
-      PP_MAP_NONE_CTX, COSMERON_INTERNAL_TPL_ROW_DISPATCH, TARGET,             \
-      TABLE(COSMERON_COMMA_ROW) ~)
+  COSMERON_TPL_MAP_DISPATCH(TARGET, TABLE(COSMERON_COMMA_ROW) ~)
 
 #define COSMERON_INTERNAL_TPL_TABLE_DISP_3(MOD, TARGET, TABLE)                 \
-  COSMERON_EXPAND_TPL_TABLE_INVOKE(                                            \
-      PP_MAP_NONE_CTX, COSMERON_INTERNAL_TPL_ROW_DISPATCH, NS(MOD, TARGET),   \
-      TABLE(COSMERON_COMMA_ROW) ~)
+  COSMERON_TPL_MAP_DISPATCH(NS(MOD, TARGET), TABLE(COSMERON_COMMA_ROW) ~)
 
 #define TEMPLATE_INSTANTIATE_TABLE(...)                                        \
   PP_OP_CAT2(COSMERON_INTERNAL_TPL_TABLE_DISP_,                                \

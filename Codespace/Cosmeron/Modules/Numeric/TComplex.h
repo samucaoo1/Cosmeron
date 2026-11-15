@@ -1,9 +1,8 @@
 #pragma once
 
+#include "Impl/Common.inc"
 #include "Complex.def"
 
-TEMPLATE_Numeric_Complex(Float32, float)
-TEMPLATE_Numeric_Complex(Float64, double)
-TEMPLATE_Numeric_Complex(Float128, long double)
+TEMPLATE_INSTANTIATE_TABLE(Numeric, Complex, NUMERIC_COMPLEX_TYPE_TABLE);
 
 /* EOF */

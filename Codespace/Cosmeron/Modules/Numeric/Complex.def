@@ -1,95 +1,92 @@
-#include <stdbool.h>
+/* Complex.def - Dual Mode Engine (Zero Duplication) */
 
-#include "../../Core/Condition/Status.h"
-#include "../../Core/Module/Module.h"
-
+#ifndef TEMPLATE_Numeric_Complex
 #define TEMPLATE_Numeric_Complex(SUFFIX, TYPE)                                 \
-  MODULE(Numeric,                                                              \
-      STRUCT(PP_OP_CAT2(Complex_, SUFFIX),                                     \
-          FIELDS(                                                              \
-              TYPE real;                                                       \
-              TYPE imag;                                                       \
-          )                                                                    \
+  TEMPLATE_STRUCT(Numeric, Complex, SUFFIX,                                    \
+      FIELDS(                                                                  \
+          TYPE real;                                                           \
+          TYPE imag;                                                           \
       )                                                                        \
   );                                                                           \
-  static inline MODULE_TYPED(Numeric, Complex, SUFFIX)                         \
-      MODULE_FUNC(Numeric, Complex, Make, SUFFIX)(TYPE real, TYPE imag) {      \
-    MODULE_TYPED(Numeric, Complex, SUFFIX) z = {.real = real, .imag = imag};   \
-    return z;                                                                  \
-  }                                                                            \
-  static inline MODULE_TYPED(Numeric, Complex, SUFFIX)                         \
-      MODULE_FUNC(Numeric, Complex, Add, SUFFIX)(                              \
-          MODULE_TYPED(Numeric, Complex, SUFFIX) a,                            \
-          MODULE_TYPED(Numeric, Complex, SUFFIX) b) {                          \
-    return MODULE_FUNC(Numeric, Complex, Make, SUFFIX)(a.real + b.real,        \
-                                                       a.imag + b.imag);       \
-  }                                                                            \
-  static inline MODULE_TYPED(Numeric, Complex, SUFFIX)                         \
-      MODULE_FUNC(Numeric, Complex, Sub, SUFFIX)(                              \
-          MODULE_TYPED(Numeric, Complex, SUFFIX) a,                            \
-          MODULE_TYPED(Numeric, Complex, SUFFIX) b) {                          \
-    return MODULE_FUNC(Numeric, Complex, Make, SUFFIX)(a.real - b.real,        \
-                                                       a.imag - b.imag);       \
-  }                                                                            \
-  static inline MODULE_TYPED(Numeric, Complex, SUFFIX)                         \
-      MODULE_FUNC(Numeric, Complex, Mul, SUFFIX)(                              \
-          MODULE_TYPED(Numeric, Complex, SUFFIX) a,                            \
-          MODULE_TYPED(Numeric, Complex, SUFFIX) b) {                          \
-    return MODULE_FUNC(Numeric, Complex, Make, SUFFIX)(                        \
-        a.real * b.real - a.imag * b.imag,                                     \
-        a.real * b.imag + a.imag * b.real);                                    \
-  }                                                                            \
-  static inline OPSTATUS MODULE_FUNC(Numeric, Complex, Div, SUFFIX)(           \
-      MODULE_TYPED(Numeric, Complex, SUFFIX) a,                                \
-      MODULE_TYPED(Numeric, Complex, SUFFIX) b,                                \
-      MODULE_TYPED(Numeric, Complex, SUFFIX) *outValue) {                      \
-    if (!outValue) {                                                           \
-      return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    }                                                                          \
-    TYPE denom = b.real * b.real + b.imag * b.imag;                            \
-    if (denom == (TYPE)0) {                                                    \
-      return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    }                                                                          \
-    outValue->real = (a.real * b.real + a.imag * b.imag) / denom;              \
-    outValue->imag = (a.imag * b.real - a.real * b.imag) / denom;              \
-    return STATUS_CONST(SUCCESS);                                              \
-  }                                                                            \
-  static inline MODULE_TYPED(Numeric, Complex, SUFFIX)                         \
-      MODULE_FUNC(Numeric, Complex, Conjugate, SUFFIX)(                        \
-          MODULE_TYPED(Numeric, Complex, SUFFIX) z) {                          \
-    return MODULE_FUNC(Numeric, Complex, Make, SUFFIX)(z.real, -z.imag);       \
-  }                                                                            \
-  static inline TYPE MODULE_FUNC(Numeric, Complex, MagnitudeSquared, SUFFIX)(  \
-      MODULE_TYPED(Numeric, Complex, SUFFIX) z) {                              \
-    return z.real * z.real + z.imag * z.imag;                                  \
-  }                                                                            \
-  static inline TYPE MODULE_FUNC(Numeric, Complex, Magnitude, SUFFIX)(         \
-      MODULE_TYPED(Numeric, Complex, SUFFIX) z) {                              \
-    TYPE magSq =                                                               \
-        MODULE_FUNC(Numeric, Complex, MagnitudeSquared, SUFFIX)(z);            \
-    if (magSq <= (TYPE)0) {                                                    \
-      return (TYPE)0;                                                          \
-    }                                                                          \
-    TYPE guess = magSq > (TYPE)1 ? magSq * (TYPE)0.5 : (TYPE)1;                \
-    for (int i = 0; i < 64; ++i) {                                             \
-      TYPE next = (TYPE)0.5 * (guess + magSq / guess);                         \
-      if (next == guess) {                                                     \
-        break;                                                                 \
-      }                                                                        \
-      guess = next;                                                            \
-    }                                                                          \
-    return guess;                                                              \
-  }                                                                            \
-  static inline bool MODULE_FUNC(Numeric, Complex, Equals, SUFFIX)(            \
-      MODULE_TYPED(Numeric, Complex, SUFFIX) a,                                \
-      MODULE_TYPED(Numeric, Complex, SUFFIX) b) {                              \
-    return a.real == b.real && a.imag == b.imag;                               \
-  }
-
-#if defined(SUFFIX) && defined(TYPE)
-TEMPLATE_Numeric_Complex(SUFFIX, TYPE)
-#undef SUFFIX
-#undef TYPE
+  TEMPLATE_PACKAGE(Numeric, Complex, SUFFIX,                                   \
+      FUNCTION_INLINE(MODULE_TYPED(Numeric, Complex, SUFFIX), Make,            \
+                      (TYPE real, TYPE imag), {                                \
+        MODULE_TYPED(Numeric, Complex, SUFFIX) z;                              \
+        z.real = real;                                                         \
+        z.imag = imag;                                                         \
+        return z;                                                              \
+      }),                                                                      \
+      FUNCTION_INLINE(MODULE_TYPED(Numeric, Complex, SUFFIX), Add,             \
+                      (MODULE_TYPED(Numeric, Complex, SUFFIX) a,               \
+                       MODULE_TYPED(Numeric, Complex, SUFFIX) b), {            \
+        return MODULE_FUNC(Numeric, Complex, SUFFIX, Make)(a.real + b.real,    \
+                                                           a.imag + b.imag);   \
+      }),                                                                      \
+      FUNCTION_INLINE(MODULE_TYPED(Numeric, Complex, SUFFIX), Sub,             \
+                      (MODULE_TYPED(Numeric, Complex, SUFFIX) a,               \
+                       MODULE_TYPED(Numeric, Complex, SUFFIX) b), {            \
+        return MODULE_FUNC(Numeric, Complex, SUFFIX, Make)(a.real - b.real,    \
+                                                           a.imag - b.imag);   \
+      }),                                                                      \
+      FUNCTION_INLINE(MODULE_TYPED(Numeric, Complex, SUFFIX), Mul,             \
+                      (MODULE_TYPED(Numeric, Complex, SUFFIX) a,               \
+                       MODULE_TYPED(Numeric, Complex, SUFFIX) b), {            \
+        return MODULE_FUNC(Numeric, Complex, SUFFIX, Make)(                    \
+            a.real * b.real - a.imag * b.imag,                                 \
+            a.real * b.imag + a.imag * b.real);                                \
+      }),                                                                      \
+      OPERATION_INLINE(Div,                                                    \
+                       (MODULE_TYPED(Numeric, Complex, SUFFIX) a,              \
+                        MODULE_TYPED(Numeric, Complex, SUFFIX) b,              \
+                        MODULE_TYPED(Numeric, Complex, SUFFIX) *outValue), {   \
+        if (!outValue) {                                                       \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        }                                                                      \
+        const TYPE denom = b.real * b.real + b.imag * b.imag;                  \
+        if (denom == (TYPE)0) {                                                \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        }                                                                      \
+        outValue->real = (a.real * b.real + a.imag * b.imag) / denom;          \
+        outValue->imag = (a.imag * b.real - a.real * b.imag) / denom;          \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      FUNCTION_INLINE(MODULE_TYPED(Numeric, Complex, SUFFIX), Conjugate,       \
+                      (MODULE_TYPED(Numeric, Complex, SUFFIX) z), {            \
+        return MODULE_FUNC(Numeric, Complex, SUFFIX, Make)(z.real, -z.imag);   \
+      }),                                                                      \
+      VARIANT(Magnitude,                                                       \
+          FUNCTION_INLINE(TYPE, Squared,                                       \
+                          (MODULE_TYPED(Numeric, Complex, SUFFIX) z), {        \
+            return z.real * z.real + z.imag * z.imag;                          \
+          }),                                                                  \
+          FUNCTION_INLINE(TYPE, (MODULE_TYPED(Numeric, Complex, SUFFIX) z), {  \
+            const TYPE magSq = MODULE_FUNC(                                    \
+                Numeric, Complex, SUFFIX, MagnitudeSquared)(z);                \
+            if (magSq <= (TYPE)0) {                                            \
+              return (TYPE)0;                                                  \
+            }                                                                  \
+            TYPE guess = magSq > (TYPE)1 ? magSq * (TYPE)0.5 : (TYPE)1;        \
+            for (int i = 0; i < 64; ++i) {                                     \
+              const TYPE next = (TYPE)0.5 * (guess + magSq / guess);           \
+              if (next == guess) {                                             \
+                break;                                                         \
+              }                                                                \
+              guess = next;                                                    \
+            }                                                                  \
+            return guess;                                                      \
+          })                                                                   \
+      ),                                                                       \
+      PREDICATE_INLINE(Equals,                                                 \
+                       (MODULE_TYPED(Numeric, Complex, SUFFIX) a,              \
+                        MODULE_TYPED(Numeric, Complex, SUFFIX) b), {           \
+        return a.real == b.real && a.imag == b.imag;                           \
+      })                                                                       \
+  )
 #endif
 
-/* EOF */
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Numeric_Complex(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif

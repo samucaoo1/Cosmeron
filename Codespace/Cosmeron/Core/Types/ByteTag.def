@@ -1,28 +1,153 @@
 /* ByteTag.def - Dual Mode Engine (Zero Duplication) */
 
 #ifndef TEMPLATE_Type_ByteTag
-#define TEMPLATE_Type_ByteTag(SUFFIX, UINT_TYPE)                                   \
-  TEMPLATE_OBJECT(Type, ByteTag, SUFFIX,                                           \
+#define TEMPLATE_Type_ByteTag(SUFFIX, UINT_TYPE)                               \
+  TEMPLATE_OBJECT(Type, ByteTag, SUFFIX,                                       \
       FIELDS(                                                                  \
           UINT_TYPE value;                                                     \
           char text[((SUFFIX) / 8U) + 1U];                                     \
       ),                                                                       \
-      OPERATION(FromString, (const char *chars)),                              \
-      OPERATION(FromUInt, (UINT_TYPE value)),                                  \
-      OPERATION(FromBytes, (const void *bytes, size_t length)),                \
-      OPERATION(ReadBE, (const void *src)),                                    \
-      OPERATION(ReadLE, (const void *src)),                                    \
-      CONST_OPERATION(WriteBE, (void *dest)),                                  \
-      CONST_OPERATION(WriteLE, (void *dest)),                                  \
-      CONST_OPERATION(ToString, (char *dest, size_t destCapacity)),             \
-      CONST_FUNCTION(const char *, Text, ()),                                  \
-      CONST_FUNCTION(UINT_TYPE, ToUInt, ()),                                    \
-      CONST_PREDICATE(IsPrintable, ()),                                        \
-      CONST_PREDICATE(Equal,                                                   \
-                      (const MODULE_TYPED(Type, ByteTag, SUFFIX) *other)),         \
-      CONST_OPERATION(Compare,                                                 \
-                      (const MODULE_TYPED(Type, ByteTag, SUFFIX) *other,           \
-                       CMPOUT *result))                                        \
+      OPERATION_INLINE(FromString, (const char *chars), {                      \
+        if (!self || !chars)                                                   \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        UINT_TYPE val = 0U;                                                    \
+        size_t inLen = strlen(chars);                                          \
+        for (size_t i = 0U; i < ((SUFFIX) / 8U); ++i) {                        \
+          char c = (i < inLen) ? chars[i] : ' ';                               \
+          self->text[i] = c;                                                   \
+          size_t shift = (((SUFFIX) / 8U) - 1U - i) * 8U;                      \
+          val |= ((UINT_TYPE)(uint8_t)c) << shift;                             \
+        }                                                                      \
+        self->text[((SUFFIX) / 8U)] = '\0';                                    \
+        self->value = val;                                                     \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      OPERATION_INLINE(FromUInt, (UINT_TYPE value), {                          \
+        if (!self)                                                             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        self->value = value;                                                   \
+        for (size_t i = 0U; i < ((SUFFIX) / 8U); ++i) {                        \
+          size_t shift = (((SUFFIX) / 8U) - 1U - i) * 8U;                      \
+          self->text[i] = (char)((value >> shift) & 0xFFU);                    \
+        }                                                                      \
+        self->text[((SUFFIX) / 8U)] = '\0';                                    \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      OPERATION_INLINE(FromBytes, (const void *bytes, size_t length), {        \
+        if (!self || (!bytes && length > 0U))                                  \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        const uint8_t *src = (const uint8_t *)bytes;                           \
+        UINT_TYPE val = 0U;                                                    \
+        for (size_t i = 0U; i < ((SUFFIX) / 8U); ++i) {                        \
+          char c = (src && i < length) ? (char)src[i] : ' ';                   \
+          self->text[i] = c;                                                   \
+          size_t shift = (((SUFFIX) / 8U) - 1U - i) * 8U;                      \
+          val |= ((UINT_TYPE)(uint8_t)c) << shift;                             \
+        }                                                                      \
+        self->text[((SUFFIX) / 8U)] = '\0';                                    \
+        self->value = val;                                                     \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      OPERATION_INLINE(ReadBE, (const void *src), {                            \
+        if (!self || !src)                                                     \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        const uint8_t *p = (const uint8_t *)src;                               \
+        UINT_TYPE val = 0U;                                                    \
+        for (size_t i = 0U; i < ((SUFFIX) / 8U); ++i) {                        \
+          char c = (char)p[i];                                                 \
+          self->text[i] = c;                                                   \
+          size_t shift = (((SUFFIX) / 8U) - 1U - i) * 8U;                      \
+          val |= ((UINT_TYPE)(uint8_t)c) << shift;                             \
+        }                                                                      \
+        self->text[((SUFFIX) / 8U)] = '\0';                                    \
+        self->value = val;                                                     \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      OPERATION_INLINE(ReadLE, (const void *src), {                            \
+        if (!self || !src)                                                     \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        const uint8_t *p = (const uint8_t *)src;                               \
+        UINT_TYPE val = 0U;                                                    \
+        for (size_t i = 0U; i < ((SUFFIX) / 8U); ++i) {                        \
+          size_t shift = i * 8U;                                               \
+          val |= ((UINT_TYPE)p[i]) << shift;                                   \
+        }                                                                      \
+        self->value = val;                                                     \
+        for (size_t i = 0U; i < ((SUFFIX) / 8U); ++i) {                        \
+          size_t shift = (((SUFFIX) / 8U) - 1U - i) * 8U;                      \
+          self->text[i] = (char)((val >> shift) & 0xFFU);                      \
+        }                                                                      \
+        self->text[((SUFFIX) / 8U)] = '\0';                                    \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      CONST_OPERATION_INLINE(WriteBE, (void *dest), {                          \
+        if (!self || !dest)                                                    \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        uint8_t *outBytes = (uint8_t *)dest;                                   \
+        for (size_t i = 0U; i < ((SUFFIX) / 8U); ++i) {                        \
+          size_t shift = (((SUFFIX) / 8U) - 1U - i) * 8U;                      \
+          outBytes[i] = (uint8_t)((self->value >> shift) & 0xFFU);             \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      CONST_OPERATION_INLINE(WriteLE, (void *dest), {                          \
+        if (!self || !dest)                                                    \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        uint8_t *outBytes = (uint8_t *)dest;                                   \
+        for (size_t i = 0U; i < ((SUFFIX) / 8U); ++i) {                        \
+          size_t shift = i * 8U;                                               \
+          outBytes[i] = (uint8_t)((self->value >> shift) & 0xFFU);             \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      CONST_OPERATION_INLINE(ToString, (char *dest, size_t destCapacity), {    \
+        if (!self || !dest || destCapacity == 0U)                              \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (destCapacity < (((SUFFIX) / 8U) + 1U))                             \
+          return STATUS_CONST(INSUFFICIENT_SPACE);                             \
+        for (size_t i = 0U; i < ((SUFFIX) / 8U); ++i) {                        \
+          uint8_t c = (uint8_t)self->text[i];                                  \
+          dest[i] = (c >= 0x20U && c <= 0x7EU) ? (char)c : '.';                \
+        }                                                                      \
+        dest[((SUFFIX) / 8U)] = '\0';                                          \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      CONST_FUNCTION_INLINE(const char *, Text, (), {                          \
+        return self ? self->text : "";                                         \
+      }),                                                                      \
+      CONST_FUNCTION_INLINE(UINT_TYPE, ToUInt, (), {                           \
+        return self ? self->value : (UINT_TYPE)0U;                             \
+      }),                                                                      \
+      CONST_PREDICATE_INLINE(IsPrintable, (), {                                \
+        if (!self)                                                             \
+          return false;                                                        \
+        for (size_t i = 0U; i < ((SUFFIX) / 8U); ++i) {                        \
+          uint8_t c = (uint8_t)self->text[i];                                  \
+          if (c < 0x20U || c > 0x7EU)                                          \
+            return false;                                                      \
+        }                                                                      \
+        return true;                                                           \
+      }),                                                                      \
+      CONST_PREDICATE_INLINE(                                                  \
+          Equal, (const MODULE_TYPED(Type, ByteTag, SUFFIX) *other), {         \
+            if (!self || !other)                                               \
+              return self == other;                                            \
+            return self->value == other->value;                                \
+          }),                                                                  \
+      CONST_OPERATION_INLINE(                                                  \
+          Compare,                                                             \
+          (const MODULE_TYPED(Type, ByteTag, SUFFIX) *other, CMPOUT *result),  \
+          {                                                                    \
+            if (!self || !other || !result)                                    \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            if (self->value < other->value)                                    \
+              *result = COMPARISON_CONST(LOWER);                               \
+            else if (self->value > other->value)                               \
+              *result = COMPARISON_CONST(HIGHER);                              \
+            else                                                               \
+              *result = COMPARISON_CONST(EQUAL);                               \
+            return STATUS_CONST(SUCCESS);                                      \
+          })                                                                   \
   )
 #endif
 
@@ -32,4 +157,3 @@
   #undef SUFFIX
   #undef TYPE
 #endif
-

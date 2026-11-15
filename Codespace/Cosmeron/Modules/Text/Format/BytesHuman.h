@@ -6,14 +6,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
-enum {
-  CNS(Text, Format, BYTE_UNIT_IEC) = 0U,
-  CNS(Text, Format, BYTE_UNIT_SI) = 1U,
-  CNS(Text, Format, BYTES_DEFAULT_PRECISION) = 2U,
-  CNS(Text, Format, BYTES_MAX_PRECISION) = 6U,
-  CNS(Text, Format, BYTES_IEC_BASE) = 1024U,
-  CNS(Text, Format, BYTES_SI_BASE) = 1000U
-};
+#define TEXT_FORMAT_BYTES_HUMAN_TABLE(X)                                       \
+  X((BYTE_UNIT_IEC, 0U))                                                       \
+  X((BYTE_UNIT_SI, 1U))                                                        \
+  X((BYTES_DEFAULT_PRECISION, 2U))                                             \
+  X((BYTES_MAX_PRECISION, 6U))                                                 \
+  X((BYTES_IEC_BASE, 1024U))                                                   \
+  X((BYTES_SI_BASE, 1000U))
+
+ENUM_DEF(Text_Format, BytesHumanConfig, TEXT_FORMAT_BYTES_HUMAN_TABLE)
 
 #if defined(TEXT_DISABLE_FUNCTION_TABLE) ||                                    \
     defined(TEXT_BYTES_HUMAN_DISABLE_FUNCTION_TABLE)

@@ -221,7 +221,6 @@
             return STATUS_CONST(SUCCESS);                                      \
           })                                                                   \
   )
-#define TEMPLATE_Span(SUFFIX, TYPE) TEMPLATE_Array_Span(SUFFIX, TYPE)
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */

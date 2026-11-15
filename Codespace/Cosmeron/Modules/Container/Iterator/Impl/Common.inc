@@ -17,6 +17,7 @@
 #include "../../../../Core/Preprocessor/Compiling.inc"
 #include "../../../../Core/Preprocessor/Operations.h"
 #include "../../../../Core/Types/Primitive.h"
+#include "../../Impl/Common.inc"
 
 #include <stdbool.h>
 #include <stddef.h>

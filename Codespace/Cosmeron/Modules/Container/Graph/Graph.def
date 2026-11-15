@@ -1,37 +1,37 @@
 /* Graph.def - Dual Mode Engine (Zero Duplication) */
 
-#ifndef TEMPLATE_Graph_Graph
-#define TEMPLATE_Graph_Graph(SUFFIX, VERTEX_TYPE, WEIGHT_TYPE)                 \
-  TEMPLATE_STRUCT(Graph, GraphEdge, SUFFIX,                                    \
+#ifndef TEMPLATE_Graph
+#define TEMPLATE_Graph(SUFFIX, VERTEX_TYPE, WEIGHT_TYPE)                 \
+  TEMPLATE_STRUCT(Graph, Edge, SUFFIX,                                    \
       FIELDS(                                                                  \
           size_t destination;                                                  \
           WEIGHT_TYPE weight;                                                  \
       ));                                                                      \
-  TEMPLATE_ISTRUCT(Graph, GraphVertex, SUFFIX,                                 \
+  TEMPLATE_ISTRUCT(Graph, Vertex, SUFFIX,                                 \
       FIELDS(                                                                  \
           VERTEX_TYPE data;                                                    \
-          MODULE_TYPED(Graph, GraphEdge, SUFFIX) *edges;                       \
+          MODULE_TYPED(Graph, Edge, SUFFIX) *edges;                       \
           size_t edgeCount;                                                    \
           size_t edgeCapacity;                                                 \
       ));                                                                      \
-  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Graph), Graph, SUFFIX), Visitor,      \
+  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Graph), SUFFIX), Visitor,      \
                            (size_t vertexIndex, VERTEX_TYPE *data))            \
                                                                                \
-  TEMPLATE_OBJECT(Graph, GraphVertexIter, SUFFIX,                              \
+  TEMPLATE_OBJECT(Graph, VertexIter, SUFFIX,                              \
       FIELDS(                                                                  \
-          struct MODULE_ITYPED(Graph, GraphVertex, SUFFIX) *vertices;          \
+          struct MODULE_ITYPED(Graph, Vertex, SUFFIX) *vertices;          \
           size_t count;                                                        \
           size_t index;                                                        \
       ),                                                                       \
                                                                                \
       OPERATION_INLINE(                                                        \
           FromVertices,                                                        \
-          (struct MODULE_ITYPED(Graph, GraphVertex, SUFFIX) *vertices,         \
+          (struct MODULE_ITYPED(Graph, Vertex, SUFFIX) *vertices,         \
            size_t count, size_t index),                                        \
           {                                                                    \
             if (!self)                                                         \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            MODULE_FUNC(Graph, GraphVertexIter, SUFFIX, Init)(self);           \
+            MODULE_FUNC(Graph, VertexIter, SUFFIX, Init)(self);           \
             self->vertices = vertices;                                         \
             self->count = count;                                               \
             self->index = (index <= count) ? index : count;                    \
@@ -44,13 +44,13 @@
       }),                                                                      \
                                                                                \
       CONST_PREDICATE_INLINE(HasNext, (), {                                    \
-        return MODULE_FUNC(Graph, GraphVertexIter, SUFFIX, IsValid)(self);     \
+        return MODULE_FUNC(Graph, VertexIter, SUFFIX, IsValid)(self);     \
       }),                                                                      \
                                                                                \
       CONST_OPERATION_INLINE(Index, (size_t *outIndex), {                      \
         if (!self || !outIndex)                                                \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        if (!MODULE_FUNC(Graph, GraphVertexIter, SUFFIX, IsValid)(self))       \
+        if (!MODULE_FUNC(Graph, VertexIter, SUFFIX, IsValid)(self))       \
           return STATUS_CONST(OUT_OF_RANGE);                                   \
         *outIndex = self->index;                                               \
         return STATUS_CONST(SUCCESS);                                          \
@@ -59,7 +59,7 @@
       OPERATION_INLINE(Get, (VERTEX_TYPE **outData), {                         \
         if (!self || !outData)                                                 \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        if (!MODULE_FUNC(Graph, GraphVertexIter, SUFFIX, IsValid)(self))       \
+        if (!MODULE_FUNC(Graph, VertexIter, SUFFIX, IsValid)(self))       \
           return STATUS_CONST(OUT_OF_RANGE);                                   \
         *outData = &self->vertices[self->index].data;                          \
         return STATUS_CONST(SUCCESS);                                          \
@@ -68,7 +68,7 @@
       OPERATION_INLINE(StepNext, (), {                                         \
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        if (!MODULE_FUNC(Graph, GraphVertexIter, SUFFIX, IsValid)(self))       \
+        if (!MODULE_FUNC(Graph, VertexIter, SUFFIX, IsValid)(self))       \
           return STATUS_CONST(OUT_OF_RANGE);                                   \
         self->index++;                                                         \
         return STATUS_CONST(SUCCESS);                                          \
@@ -77,7 +77,7 @@
       OPERATION_INLINE(Next, (VERTEX_TYPE **outData), {                        \
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        if (!MODULE_FUNC(Graph, GraphVertexIter, SUFFIX, IsValid)(self))       \
+        if (!MODULE_FUNC(Graph, VertexIter, SUFFIX, IsValid)(self))       \
           return STATUS_CONST(OUT_OF_RANGE);                                   \
         if (outData)                                                           \
           *outData = &self->vertices[self->index].data;                        \
@@ -87,7 +87,7 @@
                                                                                \
       CONST_PREDICATE_INLINE(                                                  \
           Equals,                                                              \
-          (const struct MODULE_TYPED(Graph, GraphVertexIter, SUFFIX) *other),  \
+          (const struct MODULE_TYPED(Graph, VertexIter, SUFFIX) *other),  \
           {                                                                    \
             if (!self || !other)                                               \
               return false;                                                    \
@@ -96,21 +96,21 @@
           })                                                                   \
   );                                                                           \
                                                                                \
-  TEMPLATE_OBJECT(Graph, GraphEdgeIter, SUFFIX,                                \
+  TEMPLATE_OBJECT(Graph, EdgeIter, SUFFIX,                                \
       FIELDS(                                                                  \
-          MODULE_TYPED(Graph, GraphEdge, SUFFIX) *edges;                       \
+          MODULE_TYPED(Graph, Edge, SUFFIX) *edges;                       \
           size_t count;                                                        \
           size_t index;                                                        \
       ),                                                                       \
                                                                                \
       OPERATION_INLINE(                                                        \
           FromEdges,                                                           \
-          (MODULE_TYPED(Graph, GraphEdge, SUFFIX) *edges, size_t count,        \
+          (MODULE_TYPED(Graph, Edge, SUFFIX) *edges, size_t count,        \
            size_t index),                                                      \
           {                                                                    \
             if (!self)                                                         \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            MODULE_FUNC(Graph, GraphEdgeIter, SUFFIX, Init)(self);             \
+            MODULE_FUNC(Graph, EdgeIter, SUFFIX, Init)(self);             \
             self->edges = edges;                                               \
             self->count = count;                                               \
             self->index = (index <= count) ? index : count;                    \
@@ -123,14 +123,14 @@
       }),                                                                      \
                                                                                \
       CONST_PREDICATE_INLINE(HasNext, (), {                                    \
-        return MODULE_FUNC(Graph, GraphEdgeIter, SUFFIX, IsValid)(self);       \
+        return MODULE_FUNC(Graph, EdgeIter, SUFFIX, IsValid)(self);       \
       }),                                                                      \
                                                                                \
-      OPERATION_INLINE(Get, (MODULE_TYPED(Graph, GraphEdge, SUFFIX) **outEdge),\
+      OPERATION_INLINE(Get, (MODULE_TYPED(Graph, Edge, SUFFIX) **outEdge),\
                        {                                                       \
                          if (!self || !outEdge)                                \
                            return STATUS_CONST(INVALID_ARGUMENT);              \
-                         if (!MODULE_FUNC(Graph, GraphEdgeIter, SUFFIX,        \
+                         if (!MODULE_FUNC(Graph, EdgeIter, SUFFIX,        \
                                           IsValid)(self)) {                    \
                            return STATUS_CONST(OUT_OF_RANGE);                  \
                          }                                                     \
@@ -141,17 +141,17 @@
       OPERATION_INLINE(StepNext, (), {                                         \
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        if (!MODULE_FUNC(Graph, GraphEdgeIter, SUFFIX, IsValid)(self))         \
+        if (!MODULE_FUNC(Graph, EdgeIter, SUFFIX, IsValid)(self))         \
           return STATUS_CONST(OUT_OF_RANGE);                                   \
         self->index++;                                                         \
         return STATUS_CONST(SUCCESS);                                          \
       }),                                                                      \
                                                                                \
       OPERATION_INLINE(                                                        \
-          Next, (MODULE_TYPED(Graph, GraphEdge, SUFFIX) **outEdge), {          \
+          Next, (MODULE_TYPED(Graph, Edge, SUFFIX) **outEdge), {          \
             if (!self)                                                         \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            if (!MODULE_FUNC(Graph, GraphEdgeIter, SUFFIX, IsValid)(self))     \
+            if (!MODULE_FUNC(Graph, EdgeIter, SUFFIX, IsValid)(self))     \
               return STATUS_CONST(OUT_OF_RANGE);                               \
             if (outEdge)                                                       \
               *outEdge = &self->edges[self->index];                            \
@@ -161,16 +161,16 @@
                                                                                \
       CONST_PREDICATE_INLINE(                                                  \
           Equals,                                                              \
-          (const struct MODULE_TYPED(Graph, GraphEdgeIter, SUFFIX) *other), {  \
+          (const struct MODULE_TYPED(Graph, EdgeIter, SUFFIX) *other), {  \
             if (!self || !other)                                               \
               return false;                                                    \
             return self->edges == other->edges && self->index == other->index; \
           })                                                                   \
   );                                                                           \
                                                                                \
-  TEMPLATE_OBJECT(Graph, Graph, SUFFIX,                                        \
+  TEMPLATE_OBJECT_ROOT(Graph, SUFFIX,                                        \
       FIELDS(                                                                  \
-          struct MODULE_ITYPED(Graph, GraphVertex, SUFFIX) *vertices;          \
+          struct MODULE_ITYPED(Graph, Vertex, SUFFIX) *vertices;          \
           size_t vertexCount;                                                  \
           size_t vertexCapacity;                                               \
           size_t edgeCount;                                                    \
@@ -179,7 +179,7 @@
       OPERATION_INLINE(Create, (), {                                           \
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        MODULE_FUNC(Graph, Graph, SUFFIX, Init)(self);                         \
+        MODULE_FUNC(Graph, SUFFIX, Init)(self);                         \
         self->vertices = NULL;                                                 \
         self->vertexCount = 0U;                                                \
         self->vertexCapacity = 0U;                                             \
@@ -204,7 +204,7 @@
       OPERATION_INLINE(Dispose, (), {                                          \
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        MODULE_FUNC(Graph, Graph, SUFFIX, Clear)(self);                        \
+        MODULE_FUNC(Graph, SUFFIX, Clear)(self);                        \
         if (self->vertices) {                                                  \
           void *raw = (void *)self->vertices;                                  \
           MODULE_IFUNC(Graph, FreeBuffer)(&raw);                               \
@@ -215,7 +215,7 @@
       }),                                                                      \
                                                                                \
       PROCEDURE_INLINE(Destroy, (), {                                          \
-        (void)MODULE_FUNC(Graph, Graph, SUFFIX, Dispose)(self);                \
+        (void)MODULE_FUNC(Graph, SUFFIX, Dispose)(self);                \
       }),                                                                      \
                                                                                \
       OPERATION_INLINE(AddVertex, (VERTEX_TYPE data, size_t *outIndex), {      \
@@ -229,11 +229,11 @@
           void *raw = (void *)self->vertices;                                  \
           OPSTATUS status = MODULE_IFUNC(Graph, ReallocBuffer)(                \
               &raw, nextCap,                                                   \
-              sizeof(struct MODULE_ITYPED(Graph, GraphVertex, SUFFIX)));       \
+              sizeof(struct MODULE_ITYPED(Graph, Vertex, SUFFIX)));       \
           if (status != STATUS_CONST(SUCCESS))                                 \
             return status;                                                     \
           self->vertices =                                                     \
-              (struct MODULE_ITYPED(Graph, GraphVertex, SUFFIX) *)raw;         \
+              (struct MODULE_ITYPED(Graph, Vertex, SUFFIX) *)raw;         \
           self->vertexCapacity = nextCap;                                      \
         }                                                                      \
         size_t idx = self->vertexCount;                                        \
@@ -254,7 +254,7 @@
                 destination >= self->vertexCount) {                            \
               return STATUS_CONST(OUT_OF_RANGE);                               \
             }                                                                  \
-            struct MODULE_ITYPED(Graph, GraphVertex, SUFFIX) *v =              \
+            struct MODULE_ITYPED(Graph, Vertex, SUFFIX) *v =              \
                 &self->vertices[source];                                       \
             for (size_t i = 0U; i < v->edgeCount; i++) {                       \
               if (v->edges[i].destination == destination) {                    \
@@ -270,10 +270,10 @@
               void *raw = (void *)v->edges;                                    \
               OPSTATUS status = MODULE_IFUNC(Graph, ReallocBuffer)(            \
                   &raw, nextCap,                                               \
-                  sizeof(MODULE_TYPED(Graph, GraphEdge, SUFFIX)));             \
+                  sizeof(MODULE_TYPED(Graph, Edge, SUFFIX)));             \
               if (status != STATUS_CONST(SUCCESS))                             \
                 return status;                                                 \
-              v->edges = (MODULE_TYPED(Graph, GraphEdge, SUFFIX) *)raw;        \
+              v->edges = (MODULE_TYPED(Graph, Edge, SUFFIX) *)raw;        \
               v->edgeCapacity = nextCap;                                       \
             }                                                                  \
             v->edges[v->edgeCount].destination = destination;                  \
@@ -288,7 +288,7 @@
             destination >= self->vertexCount) {                                \
           return STATUS_CONST(OUT_OF_RANGE);                                   \
         }                                                                      \
-        struct MODULE_ITYPED(Graph, GraphVertex, SUFFIX) *v =                  \
+        struct MODULE_ITYPED(Graph, Vertex, SUFFIX) *v =                  \
             &self->vertices[source];                                           \
         for (size_t i = 0U; i < v->edgeCount; i++) {                           \
           if (v->edges[i].destination == destination) {                        \
@@ -312,7 +312,7 @@
           self->vertices[i - 1U] = self->vertices[i];                          \
         self->vertexCount--;                                                   \
         for (size_t i = 0U; i < self->vertexCount; i++) {                      \
-          struct MODULE_ITYPED(Graph, GraphVertex, SUFFIX) *v =                \
+          struct MODULE_ITYPED(Graph, Vertex, SUFFIX) *v =                \
               &self->vertices[i];                                              \
           size_t writeIdx = 0U;                                                \
           for (size_t j = 0U; j < v->edgeCount; j++) {                         \
@@ -320,7 +320,7 @@
               self->edgeCount--;                                               \
               continue;                                                        \
             }                                                                  \
-            MODULE_TYPED(Graph, GraphEdge, SUFFIX) edge = v->edges[j];         \
+            MODULE_TYPED(Graph, Edge, SUFFIX) edge = v->edges[j];         \
             if (edge.destination > index)                                      \
               edge.destination--;                                              \
             v->edges[writeIdx++] = edge;                                       \
@@ -354,7 +354,7 @@
             destination >= self->vertexCount) {                                \
           return false;                                                        \
         }                                                                      \
-        const struct MODULE_ITYPED(Graph, GraphVertex, SUFFIX) *v =            \
+        const struct MODULE_ITYPED(Graph, Vertex, SUFFIX) *v =            \
             &self->vertices[source];                                           \
         for (size_t i = 0U; i < v->edgeCount; i++) {                           \
           if (v->edges[i].destination == destination)                          \
@@ -372,7 +372,7 @@
                 destination >= self->vertexCount) {                            \
               return STATUS_CONST(OUT_OF_RANGE);                               \
             }                                                                  \
-            struct MODULE_ITYPED(Graph, GraphVertex, SUFFIX) *v =              \
+            struct MODULE_ITYPED(Graph, Vertex, SUFFIX) *v =              \
                 &self->vertices[source];                                       \
             for (size_t i = 0U; i < v->edgeCount; i++) {                       \
               if (v->edges[i].destination == destination) {                    \
@@ -393,7 +393,7 @@
                 destination >= self->vertexCount) {                            \
               return STATUS_CONST(OUT_OF_RANGE);                               \
             }                                                                  \
-            const struct MODULE_ITYPED(Graph, GraphVertex, SUFFIX) *v =        \
+            const struct MODULE_ITYPED(Graph, Vertex, SUFFIX) *v =        \
                 &self->vertices[source];                                       \
             for (size_t i = 0U; i < v->edgeCount; i++) {                       \
               if (v->edges[i].destination == destination) {                    \
@@ -429,19 +429,19 @@
       /* --- Optional Iterators --- */                                         \
       OPERATION_INLINE(                                                        \
           BeginVertices,                                                       \
-          (struct MODULE_TYPED(Graph, GraphVertexIter, SUFFIX) *outIter), {    \
+          (struct MODULE_TYPED(Graph, VertexIter, SUFFIX) *outIter), {    \
             if (!self || !outIter)                                             \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            return MODULE_FUNC(Graph, GraphVertexIter, SUFFIX, FromVertices)(  \
+            return MODULE_FUNC(Graph, VertexIter, SUFFIX, FromVertices)(  \
                 outIter, self->vertices, self->vertexCount, 0U);               \
           }),                                                                  \
                                                                                \
       OPERATION_INLINE(                                                        \
           EndVertices,                                                         \
-          (struct MODULE_TYPED(Graph, GraphVertexIter, SUFFIX) *outIter), {    \
+          (struct MODULE_TYPED(Graph, VertexIter, SUFFIX) *outIter), {    \
             if (!self || !outIter)                                             \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            return MODULE_FUNC(Graph, GraphVertexIter, SUFFIX, FromVertices)(  \
+            return MODULE_FUNC(Graph, VertexIter, SUFFIX, FromVertices)(  \
                 outIter, self->vertices, self->vertexCount,                    \
                 self->vertexCount);                                            \
           }),                                                                  \
@@ -449,13 +449,13 @@
       OPERATION_INLINE(                                                        \
           BeginEdges,                                                          \
           (size_t vertexIndex,                                                 \
-           struct MODULE_TYPED(Graph, GraphEdgeIter, SUFFIX) *outIter),        \
+           struct MODULE_TYPED(Graph, EdgeIter, SUFFIX) *outIter),        \
           {                                                                    \
             if (!self || !outIter)                                             \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             if (vertexIndex >= self->vertexCount)                              \
               return STATUS_CONST(OUT_OF_RANGE);                               \
-            return MODULE_FUNC(Graph, GraphEdgeIter, SUFFIX, FromEdges)(       \
+            return MODULE_FUNC(Graph, EdgeIter, SUFFIX, FromEdges)(       \
                 outIter, self->vertices[vertexIndex].edges,                    \
                 self->vertices[vertexIndex].edgeCount, 0U);                    \
           }),                                                                  \
@@ -463,13 +463,13 @@
       OPERATION_INLINE(                                                        \
           EndEdges,                                                            \
           (size_t vertexIndex,                                                 \
-           struct MODULE_TYPED(Graph, GraphEdgeIter, SUFFIX) *outIter),        \
+           struct MODULE_TYPED(Graph, EdgeIter, SUFFIX) *outIter),        \
           {                                                                    \
             if (!self || !outIter)                                             \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             if (vertexIndex >= self->vertexCount)                              \
               return STATUS_CONST(OUT_OF_RANGE);                               \
-            return MODULE_FUNC(Graph, GraphEdgeIter, SUFFIX, FromEdges)(       \
+            return MODULE_FUNC(Graph, EdgeIter, SUFFIX, FromEdges)(       \
                 outIter, self->vertices[vertexIndex].edges,                    \
                 self->vertices[vertexIndex].edgeCount,                         \
                 self->vertices[vertexIndex].edgeCount);                        \
@@ -479,7 +479,7 @@
       OPERATION_INLINE(                                                        \
           BFS,                                                                 \
           (size_t start,                                                       \
-           MODULE_CLOSURE(Graph, Graph, SUFFIX, Visitor) visitor),             \
+           MODULE_CLOSURE(Graph, SUFFIX, Visitor) visitor),                    \
           {                                                                    \
             if (!self || !CLOSURE_IS_VALID(visitor))                           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
@@ -508,7 +508,7 @@
             while (head < tail) {                                              \
               size_t curr = queue[head++];                                     \
               CLOSURE_CALL(visitor, curr, &self->vertices[curr].data);         \
-              const struct MODULE_ITYPED(Graph, GraphVertex, SUFFIX) *v =      \
+              const struct MODULE_ITYPED(Graph, Vertex, SUFFIX) *v =      \
                   &self->vertices[curr];                                       \
               for (size_t i = 0U; i < v->edgeCount; i++) {                     \
                 size_t next = v->edges[i].destination;                         \
@@ -526,7 +526,7 @@
       OPERATION_INLINE(                                                        \
           DFS,                                                                 \
           (size_t start,                                                       \
-           MODULE_CLOSURE(Graph, Graph, SUFFIX, Visitor) visitor),             \
+           MODULE_CLOSURE(Graph, SUFFIX, Visitor) visitor),                    \
           {                                                                    \
             if (!self || !CLOSURE_IS_VALID(visitor))                           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
@@ -556,7 +556,7 @@
                 continue;                                                      \
               visited[curr] = true;                                            \
               CLOSURE_CALL(visitor, curr, &self->vertices[curr].data);         \
-              const struct MODULE_ITYPED(Graph, GraphVertex, SUFFIX) *v =      \
+              const struct MODULE_ITYPED(Graph, Vertex, SUFFIX) *v =      \
                   &self->vertices[curr];                                       \
               for (size_t i = v->edgeCount; i > 0U; i--) {                     \
                 size_t next = v->edges[i - 1U].destination;                    \
@@ -573,7 +573,7 @@
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
 #if defined(SUFFIX) && defined(VERTEX_TYPE) && defined(WEIGHT_TYPE)
-  TEMPLATE_Graph_Graph(SUFFIX, VERTEX_TYPE, WEIGHT_TYPE);
+  TEMPLATE_Graph(SUFFIX, VERTEX_TYPE, WEIGHT_TYPE);
   #undef SUFFIX
   #undef VERTEX_TYPE
   #undef WEIGHT_TYPE

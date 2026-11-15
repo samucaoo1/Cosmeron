@@ -2,18 +2,43 @@
 
 #ifndef TEMPLATE_Tuple_Quad
 #define TEMPLATE_Tuple_Quad(SUFFIX, TYPE)                                      \
-  TEMPLATE_STRUCT(Tuple, Quad, SUFFIX, FIELDS(                                 \
-      union {                                                                   \
-        struct {                                                                \
-          union { TYPE value1; TYPE first; TYPE a; TYPE x1; TYPE x; TYPE left; TYPE red; }; \
-          union { TYPE value2; TYPE second; TYPE b; TYPE x2; TYPE y; TYPE right; TYPE green; };\
-          union { TYPE value3; TYPE third; TYPE c; TYPE x3; TYPE z; TYPE top; TYPE blue; }; \
-          union { TYPE value4; TYPE fourth; TYPE d; TYPE x4; TYPE w; TYPE bottom; TYPE alpha; };\
-        };                                                                      \
-        union { TYPE value[4]; TYPE values[4]; };                               \
-      };                                                                        \
-  ))
-#define TEMPLATE_Quad(SUFFIX, TYPE) TEMPLATE_Tuple_Quad(SUFFIX, TYPE)
+  TEMPLATE_STRUCT(Tuple, Quad, SUFFIX,                                         \
+      FIELDS(                                                                  \
+          union {                                                              \
+            struct {                                                           \
+              union { TYPE value1; TYPE first; TYPE a; TYPE x1; TYPE x; TYPE left; TYPE red; }; \
+              union { TYPE value2; TYPE second; TYPE b; TYPE x2; TYPE y; TYPE right; TYPE green; }; \
+              union { TYPE value3; TYPE third; TYPE c; TYPE x3; TYPE z; TYPE top; TYPE blue; }; \
+              union { TYPE value4; TYPE fourth; TYPE d; TYPE x4; TYPE w; TYPE bottom; TYPE alpha; }; \
+            };                                                                 \
+            union { TYPE value[4]; TYPE values[4]; };                          \
+          };                                                                   \
+      )                                                                        \
+  );                                                                           \
+  TEMPLATE_PACKAGE(Tuple, Quad, SUFFIX,                                        \
+      FUNCTION_INLINE(MODULE_TYPED(Tuple, Quad, SUFFIX), Pack,                 \
+                      (TYPE first, TYPE second, TYPE third, TYPE fourth), {    \
+        MODULE_TYPED(Tuple, Quad, SUFFIX) tuple;                               \
+        tuple.value1 = first;                                                  \
+        tuple.value2 = second;                                                 \
+        tuple.value3 = third;                                                  \
+        tuple.value4 = fourth;                                                 \
+        return tuple;                                                          \
+      }),                                                                      \
+      OPERATION_INLINE(Unpack,                                                 \
+                       (MODULE_TYPED(Tuple, Quad, SUFFIX) tuple,               \
+                        TYPE *outFirst, TYPE *outSecond, TYPE *outThird,       \
+                        TYPE *outFourth), {                                    \
+        if (!outFirst || !outSecond || !outThird || !outFourth) {              \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        }                                                                      \
+        *outFirst = tuple.value1;                                              \
+        *outSecond = tuple.value2;                                             \
+        *outThird = tuple.value3;                                              \
+        *outFourth = tuple.value4;                                             \
+        return STATUS_CONST(SUCCESS);                                          \
+      })                                                                       \
+  )
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */

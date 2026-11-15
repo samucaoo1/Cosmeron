@@ -8,8 +8,6 @@
     struct MODULE_TYPED(Linked, DoubleNode, SUFFIX) *prev;                     \
     struct MODULE_TYPED(Linked, DoubleNode, SUFFIX) *next;                     \
   }
-#define TEMPLATE_DoubleNode(SUFFIX, TYPE)                                      \
-  TEMPLATE_Linked_DoubleNode(SUFFIX, TYPE)
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */

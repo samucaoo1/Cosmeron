@@ -1,37 +1,38 @@
 #pragma once
 
-PACKAGE_PREDICATE_IMPLEMENT_EX(Text_Codepoint, IsValid,
-                               (MODULE_TYPE(Text, Char32) codepoint)) {
-  return (uint_least32_t)codepoint <= UINT32_C(0x10FFFF);
-}
+MODULE_IMPLEMENT(DOMAIN(Modules), Text,
+  PACKAGE(Codepoint,
+    VARIANT(Is,
+      PREDICATE(Valid, (MODULE_TYPE(Text, Char32) codepoint), {
+        return (uint_least32_t)codepoint <= UINT32_C(0x10FFFF);
+      }),
 
-PACKAGE_PREDICATE_IMPLEMENT_EX(Text_Codepoint, IsScalar,
-                               (MODULE_TYPE(Text, Char32) codepoint)) {
-  uint_least32_t value = (uint_least32_t)codepoint;
-  return value <= UINT32_C(0x10FFFF) &&
-         !(value >= UINT32_C(0xD800) && value <= UINT32_C(0xDFFF));
-}
+      PREDICATE(Scalar, (MODULE_TYPE(Text, Char32) codepoint), {
+        uint_least32_t value = (uint_least32_t)codepoint;
+        return value <= UINT32_C(0x10FFFF) &&
+               !(value >= UINT32_C(0xD800) && value <= UINT32_C(0xDFFF));
+      }),
 
-PACKAGE_PREDICATE_IMPLEMENT_EX(Text_Codepoint, IsASCII,
-                               (MODULE_TYPE(Text, Char32) codepoint)) {
-  return (uint_least32_t)codepoint <= UINT32_C(0x7F);
-}
+      PREDICATE(ASCII, (MODULE_TYPE(Text, Char32) codepoint), {
+        return (uint_least32_t)codepoint <= UINT32_C(0x7F);
+      }),
 
-PACKAGE_PREDICATE_IMPLEMENT_EX(Text_Codepoint, IsControl,
-                               (MODULE_TYPE(Text, Char32) codepoint)) {
-  uint_least32_t value = (uint_least32_t)codepoint;
-  return value <= UINT32_C(0x1F) ||
-         (value >= UINT32_C(0x7F) && value <= UINT32_C(0x9F));
-}
+      PREDICATE(Control, (MODULE_TYPE(Text, Char32) codepoint), {
+        uint_least32_t value = (uint_least32_t)codepoint;
+        return value <= UINT32_C(0x1F) ||
+               (value >= UINT32_C(0x7F) && value <= UINT32_C(0x9F));
+      }),
 
-PACKAGE_PREDICATE_IMPLEMENT_EX(Text_Codepoint, IsWhitespace,
-                               (MODULE_TYPE(Text, Char32) codepoint)) {
-  uint_least32_t value = (uint_least32_t)codepoint;
-  return (value >= UINT32_C(0x0009) && value <= UINT32_C(0x000D)) ||
-         value == UINT32_C(0x0020) || value == UINT32_C(0x0085) ||
-         value == UINT32_C(0x00A0) || value == UINT32_C(0x1680) ||
-         (value >= UINT32_C(0x2000) && value <= UINT32_C(0x200A)) ||
-         value == UINT32_C(0x2028) || value == UINT32_C(0x2029) ||
-         value == UINT32_C(0x202F) || value == UINT32_C(0x205F) ||
-         value == UINT32_C(0x3000);
-}
+      PREDICATE(Whitespace, (MODULE_TYPE(Text, Char32) codepoint), {
+        uint_least32_t value = (uint_least32_t)codepoint;
+        return (value >= UINT32_C(0x0009) && value <= UINT32_C(0x000D)) ||
+               value == UINT32_C(0x0020) || value == UINT32_C(0x0085) ||
+               value == UINT32_C(0x00A0) || value == UINT32_C(0x1680) ||
+               (value >= UINT32_C(0x2000) && value <= UINT32_C(0x200A)) ||
+               value == UINT32_C(0x2028) || value == UINT32_C(0x2029) ||
+               value == UINT32_C(0x202F) || value == UINT32_C(0x205F) ||
+               value == UINT32_C(0x3000);
+      })
+    )
+  )
+);

@@ -20,7 +20,7 @@
 /* Declarative Object: Container_TDynamicBitset                               */
 /* ========================================================================== */
 
-MODULE(Container,
+MODULE(DOMAIN(Container), Container,
   OBJECT(DynamicBitset,
       FIELDS(
           uint64_t *limbs;

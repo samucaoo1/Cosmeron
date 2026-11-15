@@ -8,13 +8,13 @@
 /* 1. Internal Helpers & Trait Adapters                                       */
 /* ========================================================================== */
 
-MODULE(DOMAIN(Core), Primitive,
+MODULE(DOMAIN(Core), Type,
   INTERNAL_EX(TaggedUnion,
     COMPARISON(Compare_ByteSlice, (const void *left, const void *right), {
-      const MODULE_TYPE(Primitive, ByteSlice) *a =
-          (const MODULE_TYPE(Primitive, ByteSlice) *)left;
-      const MODULE_TYPE(Primitive, ByteSlice) *b =
-          (const MODULE_TYPE(Primitive, ByteSlice) *)right;
+      const MODULE_TYPE(Type, ByteSlice) *a =
+          (const MODULE_TYPE(Type, ByteSlice) *)left;
+      const MODULE_TYPE(Type, ByteSlice) *b =
+          (const MODULE_TYPE(Type, ByteSlice) *)right;
       return MODULE_FUNC(Algorithm, Comparison, Bytes)(
           a->data, a->size, b->data, b->size);
     }),
@@ -22,9 +22,9 @@ MODULE(DOMAIN(Core), Primitive,
     FUNCTION(size_t, Hash_ByteSlice, (const void *instance), {
       if (!instance)
         return 0U;
-      const MODULE_TYPE(Primitive, ByteSlice) *slice =
-          (const MODULE_TYPE(Primitive, ByteSlice) *)instance;
-      return MODULE_FUNC(Primitive, Traits, HashBytes)(slice->data,
+      const MODULE_TYPE(Type, ByteSlice) *slice =
+          (const MODULE_TYPE(Type, ByteSlice) *)instance;
+      return MODULE_FUNC(Type, Traits, HashBytes)(slice->data,
                                                        slice->size);
     }),
 
@@ -43,51 +43,51 @@ MODULE(DOMAIN(Core), Primitive,
     FUNCTION(size_t, Hash_RawPointer, (const void *instance), {
       if (!instance)
         return 0U;
-      return MODULE_FUNC(Primitive, Traits, HashBytes)(instance,
+      return MODULE_FUNC(Type, Traits, HashBytes)(instance,
                                                        sizeof(void *));
     }),
 
     COMPARISON(Compare_Self, (const void *left, const void *right), {
-      return MODULE_FUNC(Primitive, TaggedUnion, Compare)(
-          (const MODULE_TYPE(Primitive, TaggedUnion) *)left,
-          (const MODULE_TYPE(Primitive, TaggedUnion) *)right);
+      return MODULE_FUNC(Type, TaggedUnion, Compare)(
+          (const MODULE_TYPE(Type, TaggedUnion) *)left,
+          (const MODULE_TYPE(Type, TaggedUnion) *)right);
     }),
 
     FUNCTION(size_t, Hash_Self, (const void *instance), {
-      return MODULE_FUNC(Primitive, TaggedUnion, Hash)(
-          (const MODULE_TYPE(Primitive, TaggedUnion) *)instance);
+      return MODULE_FUNC(Type, TaggedUnion, Hash)(
+          (const MODULE_TYPE(Type, TaggedUnion) *)instance);
     }),
 
-    FUNCTION(const MODULE_TYPE(Primitive, Traits) *, ByteSliceTraits, (void), {
-      static const MODULE_TYPE(Primitive, Traits) descriptor = {
+    FUNCTION(const MODULE_TYPE(Type, Traits) *, ByteSliceTraits, (void), {
+      static const MODULE_TYPE(Type, Traits) descriptor = {
           .name = "Primitive_TByteSlice",
-          .size = sizeof(MODULE_TYPE(Primitive, ByteSlice)),
-          .alignment = _Alignof(MODULE_TYPE(Primitive, ByteSlice)),
-          .category = MODULE_CONST(Primitive, COMPOSITE),
-          .flags = MODULE_CONST(Primitive, TraitFlag, TRIVIAL_COPY),
+          .size = sizeof(MODULE_TYPE(Type, ByteSlice)),
+          .alignment = _Alignof(MODULE_TYPE(Type, ByteSlice)),
+          .category = MODULE_CONST(Type, Category, COMPOSITE),
+          .flags = MODULE_CONST(Type, TraitFlag, TRIVIAL_COPY),
           .init = NULL,
           .dispose = NULL,
           .copy = NULL,
           .move = NULL,
-          .compare = MODULE_IFUNC(Primitive, TaggedUnion, Compare_ByteSlice),
-          .hash = MODULE_IFUNC(Primitive, TaggedUnion, Hash_ByteSlice)};
+          .compare = MODULE_IFUNC(Type, TaggedUnion, Compare_ByteSlice),
+          .hash = MODULE_IFUNC(Type, TaggedUnion, Hash_ByteSlice)};
       return &descriptor;
     }),
 
-    FUNCTION(const MODULE_TYPE(Primitive, Traits) *, RawPointerTraits, (void), {
-      static const MODULE_TYPE(Primitive, Traits) descriptor = {
+    FUNCTION(const MODULE_TYPE(Type, Traits) *, RawPointerTraits, (void), {
+      static const MODULE_TYPE(Type, Traits) descriptor = {
           .name = "void*",
           .size = sizeof(void *),
           .alignment = _Alignof(void *),
-          .category = MODULE_CONST(Primitive, PTR),
-          .flags = MODULE_CONST(Primitive, TraitFlag, TRIVIAL_COPY) |
-                   MODULE_CONST(Primitive, TraitFlag, TRIVIAL_COMPARE),
+          .category = MODULE_CONST(Type, Category, PTR),
+          .flags = MODULE_CONST(Type, TraitFlag, TRIVIAL_COPY) |
+                   MODULE_CONST(Type, TraitFlag, TRIVIAL_COMPARE),
           .init = NULL,
           .dispose = NULL,
           .copy = NULL,
           .move = NULL,
-          .compare = MODULE_IFUNC(Primitive, TaggedUnion, Compare_RawPointer),
-          .hash = MODULE_IFUNC(Primitive, TaggedUnion, Hash_RawPointer)};
+          .compare = MODULE_IFUNC(Type, TaggedUnion, Compare_RawPointer),
+          .hash = MODULE_IFUNC(Type, TaggedUnion, Hash_RawPointer)};
       return &descriptor;
     })
   )
@@ -99,54 +99,54 @@ MODULE(DOMAIN(Core), Primitive,
 
 #define COSMERON_MACRO_INTERNAL_TU_PRIMITIVE_IMPL(ROW)                         \
   OPERATION(PP_OP_CAT2(Set_, PRIMITIVE_TYPE_GET(NAME, ROW)),                   \
-            (MODULE_TYPE(Primitive, TaggedUnion) * self,                       \
+            (MODULE_TYPE(Type, TaggedUnion) * self,                       \
              PRIMITIVE_TYPE_GET(TYPE, ROW) value), {                           \
     if (!self)                                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     memset(self, 0, sizeof(*self));                                            \
-    self->tag = MODULE_CONST(Primitive, Tag, PRIMITIVE_TYPE_GET(NAME, ROW));   \
+    self->tag = MODULE_CONST(Type, Tag, PRIMITIVE_TYPE_GET(NAME, ROW));   \
     self->value.as.PRIMITIVE_TYPE_GET(NAME, ROW) = value;                      \
     return STATUS_CONST(SUCCESS);                                              \
   }),                                                                          \
-  FUNCTION(MODULE_TYPE(Primitive, TaggedUnion),                                \
+  FUNCTION(MODULE_TYPE(Type, TaggedUnion),                                \
            PP_OP_CAT2(From_, PRIMITIVE_TYPE_GET(NAME, ROW)),                   \
            (PRIMITIVE_TYPE_GET(TYPE, ROW) value), {                            \
-    MODULE_TYPE(Primitive, TaggedUnion) result;                                \
+    MODULE_TYPE(Type, TaggedUnion) result;                                \
     memset(&result, 0, sizeof(result));                                        \
-    result.tag = MODULE_CONST(Primitive, Tag, PRIMITIVE_TYPE_GET(NAME, ROW));  \
+    result.tag = MODULE_CONST(Type, Tag, PRIMITIVE_TYPE_GET(NAME, ROW));  \
     result.value.as.PRIMITIVE_TYPE_GET(NAME, ROW) = value;                     \
     return result;                                                             \
   }),                                                                          \
   OPERATION(PP_OP_CAT2(Get_, PRIMITIVE_TYPE_GET(NAME, ROW)),                   \
-            (const MODULE_TYPE(Primitive, TaggedUnion) * self,                 \
+            (const MODULE_TYPE(Type, TaggedUnion) * self,                 \
              PRIMITIVE_TYPE_GET(TYPE, ROW) * outValue), {                      \
     if (!self || !outValue)                                                    \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (self->tag !=                                                           \
-        MODULE_CONST(Primitive, Tag, PRIMITIVE_TYPE_GET(NAME, ROW)))           \
+        MODULE_CONST(Type, Tag, PRIMITIVE_TYPE_GET(NAME, ROW)))           \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     *outValue = self->value.as.PRIMITIVE_TYPE_GET(NAME, ROW);                  \
     return STATUS_CONST(SUCCESS);                                              \
   }),
 
 #define COSMERON_MACRO_INTERNAL_TU_TAG_NAME_CASE(ROW)                          \
-  case MODULE_CONST(Primitive, Tag, PRIMITIVE_TAG_GET(NAME, ROW)):             \
-    return PRIMITIVE_TAG_GET(DESC, ROW);
+  case MODULE_CONST(Type, Tag, TYPE_TAG_GET(NAME, ROW)):             \
+    return TYPE_TAG_GET(DESC, ROW);
 
 #define COSMERON_MACRO_INTERNAL_TU_CATEGORY_CASE(ROW)                          \
-  case MODULE_CONST(Primitive, Tag, PRIMITIVE_TAG_GET(NAME, ROW)):             \
-    return MODULE_CONST(Primitive, PRIMITIVE_TAG_GET(CATEGORY, ROW));
+  case MODULE_CONST(Type, Tag, TYPE_TAG_GET(NAME, ROW)):             \
+    return MODULE_CONST(Type, Category, TYPE_TAG_GET(CATEGORY, ROW));
 
 #define COSMERON_MACRO_INTERNAL_TU_TRAITS_CASE(ROW)                            \
-  case MODULE_CONST(Primitive, Tag, PRIMITIVE_TYPE_GET(NAME, ROW)):            \
-    return MODULE_FUNC(Primitive, Traits, PRIMITIVE_TYPE_GET(NAME, ROW))();
+  case MODULE_CONST(Type, Tag, PRIMITIVE_TYPE_GET(NAME, ROW)):            \
+    return MODULE_FUNC(Type, Traits, PRIMITIVE_TYPE_GET(NAME, ROW))();
 
 #define COSMERON_MACRO_INTERNAL_TU_PAYLOAD_PTR_CASE(ROW)                       \
-  case MODULE_CONST(Primitive, Tag, PRIMITIVE_TYPE_GET(NAME, ROW)):            \
+  case MODULE_CONST(Type, Tag, PRIMITIVE_TYPE_GET(NAME, ROW)):            \
     return &self->value.as.PRIMITIVE_TYPE_GET(NAME, ROW);
 
 #define COSMERON_MACRO_INTERNAL_TU_COMPARE_CASE(ROW)                           \
-  case MODULE_CONST(Primitive, Tag, PRIMITIVE_TYPE_GET(NAME, ROW)):            \
+  case MODULE_CONST(Type, Tag, PRIMITIVE_TYPE_GET(NAME, ROW)):            \
     return MODULE_FUNC(Algorithm, Comparison, PRIMITIVE_TYPE_GET(NAME, ROW))(  \
         left->value.as.PRIMITIVE_TYPE_GET(NAME, ROW),                          \
         right->value.as.PRIMITIVE_TYPE_GET(NAME, ROW));
@@ -155,188 +155,188 @@ MODULE(DOMAIN(Core), Primitive,
 /* 3. Package Implementation: Primitive_TaggedUnion                           */
 /* ========================================================================== */
 
-MODULE_IMPLEMENT(DOMAIN(Core), Primitive,
+MODULE_IMPLEMENT(DOMAIN(Core), Type,
   PACKAGE(TaggedUnion,
-    PROCEDURE(Init, (MODULE_TYPE(Primitive, TaggedUnion) * self), {
+    PROCEDURE(Init, (MODULE_TYPE(Type, TaggedUnion) * self), {
       if (!self)
         return;
       memset(self, 0, sizeof(*self));
-      self->tag = MODULE_CONST(Primitive, Tag, NONE);
+      self->tag = MODULE_CONST(Type, Tag, NONE);
     }),
 
-    PROCEDURE(Clear, (MODULE_TYPE(Primitive, TaggedUnion) * self), {
-      MODULE_FUNC(Primitive, TaggedUnion, Init)(self);
+    PROCEDURE(Clear, (MODULE_TYPE(Type, TaggedUnion) * self), {
+      MODULE_FUNC(Type, TaggedUnion, Init)(self);
     }),
 
     PRIMITIVE_TYPE_TABLE(COSMERON_MACRO_INTERNAL_TU_PRIMITIVE_IMPL)
 
-    OPERATION(Set_CString, (MODULE_TYPE(Primitive, TaggedUnion) * self,
+    OPERATION(Set_CString, (MODULE_TYPE(Type, TaggedUnion) * self,
                             const char *value), {
       if (!self)
         return STATUS_CONST(INVALID_ARGUMENT);
       memset(self, 0, sizeof(*self));
-      self->tag = MODULE_CONST(Primitive, Tag, CSTRING);
+      self->tag = MODULE_CONST(Type, Tag, CSTRING);
       self->value.as.cString = value;
       return STATUS_CONST(SUCCESS);
     }),
 
-    FUNCTION(MODULE_TYPE(Primitive, TaggedUnion), From_CString,
+    FUNCTION(MODULE_TYPE(Type, TaggedUnion), From_CString,
              (const char *value), {
-      MODULE_TYPE(Primitive, TaggedUnion) result;
+      MODULE_TYPE(Type, TaggedUnion) result;
       memset(&result, 0, sizeof(result));
-      result.tag = MODULE_CONST(Primitive, Tag, CSTRING);
+      result.tag = MODULE_CONST(Type, Tag, CSTRING);
       result.value.as.cString = value;
       return result;
     }),
 
-    OPERATION(Get_CString, (const MODULE_TYPE(Primitive, TaggedUnion) * self,
+    OPERATION(Get_CString, (const MODULE_TYPE(Type, TaggedUnion) * self,
                             const char **outValue), {
       if (!self || !outValue)
         return STATUS_CONST(INVALID_ARGUMENT);
-      if (self->tag != MODULE_CONST(Primitive, Tag, CSTRING))
+      if (self->tag != MODULE_CONST(Type, Tag, CSTRING))
         return STATUS_CONST(INVALID_ARGUMENT);
       *outValue = self->value.as.cString;
       return STATUS_CONST(SUCCESS);
     }),
 
-    OPERATION(Set_Bytes, (MODULE_TYPE(Primitive, TaggedUnion) * self,
+    OPERATION(Set_Bytes, (MODULE_TYPE(Type, TaggedUnion) * self,
                           const void *data, size_t size), {
       if (!self || (size > 0U && !data))
         return STATUS_CONST(INVALID_ARGUMENT);
       memset(self, 0, sizeof(*self));
-      self->tag = MODULE_CONST(Primitive, Tag, BYTES);
+      self->tag = MODULE_CONST(Type, Tag, BYTES);
       self->value.as.bytes.data = data;
       self->value.as.bytes.size = size;
       return STATUS_CONST(SUCCESS);
     }),
 
-    FUNCTION(MODULE_TYPE(Primitive, TaggedUnion), From_Bytes,
+    FUNCTION(MODULE_TYPE(Type, TaggedUnion), From_Bytes,
              (const void *data, size_t size), {
-      MODULE_TYPE(Primitive, TaggedUnion) result;
+      MODULE_TYPE(Type, TaggedUnion) result;
       memset(&result, 0, sizeof(result));
       if (size > 0U && !data) {
-        result.tag = MODULE_CONST(Primitive, Tag, NONE);
+        result.tag = MODULE_CONST(Type, Tag, NONE);
         return result;
       }
-      result.tag = MODULE_CONST(Primitive, Tag, BYTES);
+      result.tag = MODULE_CONST(Type, Tag, BYTES);
       result.value.as.bytes.data = data;
       result.value.as.bytes.size = size;
       return result;
     }),
 
-    OPERATION(Get_Bytes, (const MODULE_TYPE(Primitive, TaggedUnion) * self,
-                          MODULE_TYPE(Primitive, ByteSlice) * outValue), {
+    OPERATION(Get_Bytes, (const MODULE_TYPE(Type, TaggedUnion) * self,
+                          MODULE_TYPE(Type, ByteSlice) * outValue), {
       if (!self || !outValue)
         return STATUS_CONST(INVALID_ARGUMENT);
-      if (self->tag != MODULE_CONST(Primitive, Tag, BYTES))
+      if (self->tag != MODULE_CONST(Type, Tag, BYTES))
         return STATUS_CONST(INVALID_ARGUMENT);
       *outValue = self->value.as.bytes;
       return STATUS_CONST(SUCCESS);
     }),
 
-    OPERATION(Set_RawPointer, (MODULE_TYPE(Primitive, TaggedUnion) * self,
+    OPERATION(Set_RawPointer, (MODULE_TYPE(Type, TaggedUnion) * self,
                                void *pointer), {
       if (!self)
         return STATUS_CONST(INVALID_ARGUMENT);
       memset(self, 0, sizeof(*self));
-      self->tag = MODULE_CONST(Primitive, Tag, RAW_POINTER);
+      self->tag = MODULE_CONST(Type, Tag, RAW_POINTER);
       self->value.as.rawPointer = pointer;
       return STATUS_CONST(SUCCESS);
     }),
 
-    FUNCTION(MODULE_TYPE(Primitive, TaggedUnion), From_RawPointer,
+    FUNCTION(MODULE_TYPE(Type, TaggedUnion), From_RawPointer,
              (void *pointer), {
-      MODULE_TYPE(Primitive, TaggedUnion) result;
+      MODULE_TYPE(Type, TaggedUnion) result;
       memset(&result, 0, sizeof(result));
-      result.tag = MODULE_CONST(Primitive, Tag, RAW_POINTER);
+      result.tag = MODULE_CONST(Type, Tag, RAW_POINTER);
       result.value.as.rawPointer = pointer;
       return result;
     }),
 
-    OPERATION(Get_RawPointer, (const MODULE_TYPE(Primitive, TaggedUnion) * self,
+    OPERATION(Get_RawPointer, (const MODULE_TYPE(Type, TaggedUnion) * self,
                                void **outValue), {
       if (!self || !outValue)
         return STATUS_CONST(INVALID_ARGUMENT);
-      if (self->tag != MODULE_CONST(Primitive, Tag, RAW_POINTER))
+      if (self->tag != MODULE_CONST(Type, Tag, RAW_POINTER))
         return STATUS_CONST(INVALID_ARGUMENT);
       *outValue = self->value.as.rawPointer;
       return STATUS_CONST(SUCCESS);
     }),
 
-    OPERATION(CoerceInt64, (const MODULE_TYPE(Primitive, TaggedUnion) * self,
+    OPERATION(CoerceInt64, (const MODULE_TYPE(Type, TaggedUnion) * self,
                             int64_t *outValue), {
       if (!self || !outValue)
         return STATUS_CONST(INVALID_ARGUMENT);
 
       switch (self->tag) {
-        case MODULE_CONST(Primitive, Tag, Boolean):
+        case MODULE_CONST(Type, Tag, Boolean):
           *outValue = self->value.as.Boolean ? 1 : 0;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Int8):
+        case MODULE_CONST(Type, Tag, Int8):
           *outValue = (int64_t)self->value.as.Int8;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Int16):
+        case MODULE_CONST(Type, Tag, Int16):
           *outValue = (int64_t)self->value.as.Int16;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Int32):
+        case MODULE_CONST(Type, Tag, Int32):
           *outValue = (int64_t)self->value.as.Int32;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Int64):
+        case MODULE_CONST(Type, Tag, Int64):
           *outValue = self->value.as.Int64;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Int):
+        case MODULE_CONST(Type, Tag, Int):
           *outValue = (int64_t)self->value.as.Int;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, PtrDiff):
+        case MODULE_CONST(Type, Tag, PtrDiff):
           *outValue = (int64_t)self->value.as.PtrDiff;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, IntPtr):
+        case MODULE_CONST(Type, Tag, IntPtr):
           *outValue = (int64_t)self->value.as.IntPtr;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, UInt8):
+        case MODULE_CONST(Type, Tag, UInt8):
           *outValue = (int64_t)self->value.as.UInt8;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, UInt16):
+        case MODULE_CONST(Type, Tag, UInt16):
           *outValue = (int64_t)self->value.as.UInt16;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, UInt32):
+        case MODULE_CONST(Type, Tag, UInt32):
           *outValue = (int64_t)self->value.as.UInt32;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, UInt64):
+        case MODULE_CONST(Type, Tag, UInt64):
           if (self->value.as.UInt64 > (uint64_t)INT64_MAX)
             return STATUS_CONST(ARITHMETIC_OVERFLOW);
           *outValue = (int64_t)self->value.as.UInt64;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, UInt):
+        case MODULE_CONST(Type, Tag, UInt):
           if ((uint64_t)self->value.as.UInt > (uint64_t)INT64_MAX)
             return STATUS_CONST(ARITHMETIC_OVERFLOW);
           *outValue = (int64_t)self->value.as.UInt;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Size):
+        case MODULE_CONST(Type, Tag, Size):
           if ((uint64_t)self->value.as.Size > (uint64_t)INT64_MAX)
             return STATUS_CONST(ARITHMETIC_OVERFLOW);
           *outValue = (int64_t)self->value.as.Size;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, UIntPtr):
+        case MODULE_CONST(Type, Tag, UIntPtr):
           if ((uint64_t)self->value.as.UIntPtr > (uint64_t)INT64_MAX)
             return STATUS_CONST(ARITHMETIC_OVERFLOW);
           *outValue = (int64_t)self->value.as.UIntPtr;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Char):
+        case MODULE_CONST(Type, Tag, Char):
           *outValue = (int64_t)self->value.as.Char;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Char8):
+        case MODULE_CONST(Type, Tag, Char8):
           *outValue = (int64_t)self->value.as.Char8;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Char16):
+        case MODULE_CONST(Type, Tag, Char16):
           *outValue = (int64_t)self->value.as.Char16;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Char32):
+        case MODULE_CONST(Type, Tag, Char32):
           *outValue = (int64_t)self->value.as.Char32;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Float32):
-        case MODULE_CONST(Primitive, Tag, Float): {
-          double v = (self->tag == MODULE_CONST(Primitive, Tag, Float32))
+        case MODULE_CONST(Type, Tag, Float32):
+        case MODULE_CONST(Type, Tag, Float): {
+          double v = (self->tag == MODULE_CONST(Type, Tag, Float32))
                          ? (double)self->value.as.Float32
                          : (double)self->value.as.Float;
           if (!isfinite(v))
@@ -346,9 +346,9 @@ MODULE_IMPLEMENT(DOMAIN(Core), Primitive,
           *outValue = (int64_t)v;
           return STATUS_CONST(SUCCESS);
         }
-        case MODULE_CONST(Primitive, Tag, Float64):
-        case MODULE_CONST(Primitive, Tag, Double): {
-          double v = (self->tag == MODULE_CONST(Primitive, Tag, Float64))
+        case MODULE_CONST(Type, Tag, Float64):
+        case MODULE_CONST(Type, Tag, Double): {
+          double v = (self->tag == MODULE_CONST(Type, Tag, Float64))
                          ? self->value.as.Float64
                          : self->value.as.Double;
           if (!isfinite(v))
@@ -358,7 +358,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Primitive,
           *outValue = (int64_t)v;
           return STATUS_CONST(SUCCESS);
         }
-        case MODULE_CONST(Primitive, Tag, LongDouble): {
+        case MODULE_CONST(Type, Tag, LongDouble): {
           long double v = self->value.as.LongDouble;
           if (!isfinite(v))
             return STATUS_CONST(OUT_OF_RANGE);
@@ -372,88 +372,88 @@ MODULE_IMPLEMENT(DOMAIN(Core), Primitive,
       }
     }),
 
-    OPERATION(CoerceUInt64, (const MODULE_TYPE(Primitive, TaggedUnion) * self,
+    OPERATION(CoerceUInt64, (const MODULE_TYPE(Type, TaggedUnion) * self,
                              uint64_t *outValue), {
       if (!self || !outValue)
         return STATUS_CONST(INVALID_ARGUMENT);
 
       switch (self->tag) {
-        case MODULE_CONST(Primitive, Tag, Boolean):
+        case MODULE_CONST(Type, Tag, Boolean):
           *outValue = self->value.as.Boolean ? 1U : 0U;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Int8):
+        case MODULE_CONST(Type, Tag, Int8):
           if (self->value.as.Int8 < 0)
             return STATUS_CONST(ARITHMETIC_OVERFLOW);
           *outValue = (uint64_t)self->value.as.Int8;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Int16):
+        case MODULE_CONST(Type, Tag, Int16):
           if (self->value.as.Int16 < 0)
             return STATUS_CONST(ARITHMETIC_OVERFLOW);
           *outValue = (uint64_t)self->value.as.Int16;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Int32):
+        case MODULE_CONST(Type, Tag, Int32):
           if (self->value.as.Int32 < 0)
             return STATUS_CONST(ARITHMETIC_OVERFLOW);
           *outValue = (uint64_t)self->value.as.Int32;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Int64):
+        case MODULE_CONST(Type, Tag, Int64):
           if (self->value.as.Int64 < 0)
             return STATUS_CONST(ARITHMETIC_OVERFLOW);
           *outValue = (uint64_t)self->value.as.Int64;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Int):
+        case MODULE_CONST(Type, Tag, Int):
           if (self->value.as.Int < 0)
             return STATUS_CONST(ARITHMETIC_OVERFLOW);
           *outValue = (uint64_t)self->value.as.Int;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, PtrDiff):
+        case MODULE_CONST(Type, Tag, PtrDiff):
           if (self->value.as.PtrDiff < 0)
             return STATUS_CONST(ARITHMETIC_OVERFLOW);
           *outValue = (uint64_t)self->value.as.PtrDiff;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, IntPtr):
+        case MODULE_CONST(Type, Tag, IntPtr):
           if (self->value.as.IntPtr < 0)
             return STATUS_CONST(ARITHMETIC_OVERFLOW);
           *outValue = (uint64_t)self->value.as.IntPtr;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, UInt8):
+        case MODULE_CONST(Type, Tag, UInt8):
           *outValue = (uint64_t)self->value.as.UInt8;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, UInt16):
+        case MODULE_CONST(Type, Tag, UInt16):
           *outValue = (uint64_t)self->value.as.UInt16;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, UInt32):
+        case MODULE_CONST(Type, Tag, UInt32):
           *outValue = (uint64_t)self->value.as.UInt32;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, UInt64):
+        case MODULE_CONST(Type, Tag, UInt64):
           *outValue = self->value.as.UInt64;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, UInt):
+        case MODULE_CONST(Type, Tag, UInt):
           *outValue = (uint64_t)self->value.as.UInt;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Size):
+        case MODULE_CONST(Type, Tag, Size):
           *outValue = (uint64_t)self->value.as.Size;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, UIntPtr):
+        case MODULE_CONST(Type, Tag, UIntPtr):
           *outValue = (uint64_t)self->value.as.UIntPtr;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Char):
+        case MODULE_CONST(Type, Tag, Char):
           if (self->value.as.Char < 0)
             return STATUS_CONST(ARITHMETIC_OVERFLOW);
           *outValue = (uint64_t)self->value.as.Char;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Char8):
+        case MODULE_CONST(Type, Tag, Char8):
           *outValue = (uint64_t)self->value.as.Char8;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Char16):
+        case MODULE_CONST(Type, Tag, Char16):
           *outValue = (uint64_t)self->value.as.Char16;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Char32):
+        case MODULE_CONST(Type, Tag, Char32):
           *outValue = (uint64_t)self->value.as.Char32;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Float32):
-        case MODULE_CONST(Primitive, Tag, Float): {
-          double v = (self->tag == MODULE_CONST(Primitive, Tag, Float32))
+        case MODULE_CONST(Type, Tag, Float32):
+        case MODULE_CONST(Type, Tag, Float): {
+          double v = (self->tag == MODULE_CONST(Type, Tag, Float32))
                          ? (double)self->value.as.Float32
                          : (double)self->value.as.Float;
           if (!isfinite(v))
@@ -463,9 +463,9 @@ MODULE_IMPLEMENT(DOMAIN(Core), Primitive,
           *outValue = (uint64_t)v;
           return STATUS_CONST(SUCCESS);
         }
-        case MODULE_CONST(Primitive, Tag, Float64):
-        case MODULE_CONST(Primitive, Tag, Double): {
-          double v = (self->tag == MODULE_CONST(Primitive, Tag, Float64))
+        case MODULE_CONST(Type, Tag, Float64):
+        case MODULE_CONST(Type, Tag, Double): {
+          double v = (self->tag == MODULE_CONST(Type, Tag, Float64))
                          ? self->value.as.Float64
                          : self->value.as.Double;
           if (!isfinite(v))
@@ -475,7 +475,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Primitive,
           *outValue = (uint64_t)v;
           return STATUS_CONST(SUCCESS);
         }
-        case MODULE_CONST(Primitive, Tag, LongDouble): {
+        case MODULE_CONST(Type, Tag, LongDouble): {
           long double v = self->value.as.LongDouble;
           if (!isfinite(v))
             return STATUS_CONST(OUT_OF_RANGE);
@@ -489,82 +489,82 @@ MODULE_IMPLEMENT(DOMAIN(Core), Primitive,
       }
     }),
 
-    OPERATION(CoerceFloat64, (const MODULE_TYPE(Primitive, TaggedUnion) * self,
+    OPERATION(CoerceFloat64, (const MODULE_TYPE(Type, TaggedUnion) * self,
                               double *outValue), {
       if (!self || !outValue)
         return STATUS_CONST(INVALID_ARGUMENT);
 
       switch (self->tag) {
-        case MODULE_CONST(Primitive, Tag, Boolean):
+        case MODULE_CONST(Type, Tag, Boolean):
           *outValue = self->value.as.Boolean ? 1.0 : 0.0;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Int8):
+        case MODULE_CONST(Type, Tag, Int8):
           *outValue = (double)self->value.as.Int8;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Int16):
+        case MODULE_CONST(Type, Tag, Int16):
           *outValue = (double)self->value.as.Int16;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Int32):
+        case MODULE_CONST(Type, Tag, Int32):
           *outValue = (double)self->value.as.Int32;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Int64):
+        case MODULE_CONST(Type, Tag, Int64):
           *outValue = (double)self->value.as.Int64;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Int):
+        case MODULE_CONST(Type, Tag, Int):
           *outValue = (double)self->value.as.Int;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, PtrDiff):
+        case MODULE_CONST(Type, Tag, PtrDiff):
           *outValue = (double)self->value.as.PtrDiff;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, IntPtr):
+        case MODULE_CONST(Type, Tag, IntPtr):
           *outValue = (double)self->value.as.IntPtr;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, UInt8):
+        case MODULE_CONST(Type, Tag, UInt8):
           *outValue = (double)self->value.as.UInt8;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, UInt16):
+        case MODULE_CONST(Type, Tag, UInt16):
           *outValue = (double)self->value.as.UInt16;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, UInt32):
+        case MODULE_CONST(Type, Tag, UInt32):
           *outValue = (double)self->value.as.UInt32;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, UInt64):
+        case MODULE_CONST(Type, Tag, UInt64):
           *outValue = (double)self->value.as.UInt64;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, UInt):
+        case MODULE_CONST(Type, Tag, UInt):
           *outValue = (double)self->value.as.UInt;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Size):
+        case MODULE_CONST(Type, Tag, Size):
           *outValue = (double)self->value.as.Size;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, UIntPtr):
+        case MODULE_CONST(Type, Tag, UIntPtr):
           *outValue = (double)self->value.as.UIntPtr;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Char):
+        case MODULE_CONST(Type, Tag, Char):
           *outValue = (double)self->value.as.Char;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Char8):
+        case MODULE_CONST(Type, Tag, Char8):
           *outValue = (double)self->value.as.Char8;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Char16):
+        case MODULE_CONST(Type, Tag, Char16):
           *outValue = (double)self->value.as.Char16;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Char32):
+        case MODULE_CONST(Type, Tag, Char32):
           *outValue = (double)self->value.as.Char32;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Float32):
+        case MODULE_CONST(Type, Tag, Float32):
           *outValue = (double)self->value.as.Float32;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Float):
+        case MODULE_CONST(Type, Tag, Float):
           *outValue = (double)self->value.as.Float;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Float64):
+        case MODULE_CONST(Type, Tag, Float64):
           *outValue = self->value.as.Float64;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, Double):
+        case MODULE_CONST(Type, Tag, Double):
           *outValue = self->value.as.Double;
           return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Primitive, Tag, LongDouble):
+        case MODULE_CONST(Type, Tag, LongDouble):
           *outValue = (double)self->value.as.LongDouble;
           return STATUS_CONST(SUCCESS);
         default:
@@ -572,73 +572,73 @@ MODULE_IMPLEMENT(DOMAIN(Core), Primitive,
       }
     }),
 
-    PREDICATE(IsEmpty, (const MODULE_TYPE(Primitive, TaggedUnion) * self), {
-      return !self || self->tag == MODULE_CONST(Primitive, Tag, NONE);
+    PREDICATE(IsEmpty, (const MODULE_TYPE(Type, TaggedUnion) * self), {
+      return !self || self->tag == MODULE_CONST(Type, Tag, NONE);
     }),
 
-    PREDICATE(IsTag, (const MODULE_TYPE(Primitive, TaggedUnion) * self,
-                      MODULE_ENUM(Primitive, Tag) tag), {
+    PREDICATE(IsTag, (const MODULE_TYPE(Type, TaggedUnion) * self,
+                      MODULE_ENUM(Type, Tag) tag), {
       if (!self)
-        return tag == MODULE_CONST(Primitive, Tag, NONE);
+        return tag == MODULE_CONST(Type, Tag, NONE);
       return self->tag == tag;
     }),
 
-    PREDICATE(IsNumeric, (const MODULE_TYPE(Primitive, TaggedUnion) * self), {
-      const MODULE_TYPE(Primitive, Traits) *traits =
-          MODULE_FUNC(Primitive, TaggedUnion, TraitsOf)(self);
-      return MODULE_FUNC(Primitive, Traits, IsNumeric)(traits);
+    PREDICATE(IsNumeric, (const MODULE_TYPE(Type, TaggedUnion) * self), {
+      const MODULE_TYPE(Type, Traits) *traits =
+          MODULE_FUNC(Type, TaggedUnion, TraitsOf)(self);
+      return MODULE_FUNC(Type, Traits, IsNumeric)(traits);
     }),
 
-    PREDICATE(IsInteger, (const MODULE_TYPE(Primitive, TaggedUnion) * self), {
-      const MODULE_TYPE(Primitive, Traits) *traits =
-          MODULE_FUNC(Primitive, TaggedUnion, TraitsOf)(self);
-      return MODULE_FUNC(Primitive, Traits, IsInteger)(traits);
+    PREDICATE(IsInteger, (const MODULE_TYPE(Type, TaggedUnion) * self), {
+      const MODULE_TYPE(Type, Traits) *traits =
+          MODULE_FUNC(Type, TaggedUnion, TraitsOf)(self);
+      return MODULE_FUNC(Type, Traits, IsInteger)(traits);
     }),
 
-    PREDICATE(IsSigned, (const MODULE_TYPE(Primitive, TaggedUnion) * self), {
-      const MODULE_TYPE(Primitive, Traits) *traits =
-          MODULE_FUNC(Primitive, TaggedUnion, TraitsOf)(self);
-      return MODULE_FUNC(Primitive, Traits, IsSigned)(traits);
+    PREDICATE(IsSigned, (const MODULE_TYPE(Type, TaggedUnion) * self), {
+      const MODULE_TYPE(Type, Traits) *traits =
+          MODULE_FUNC(Type, TaggedUnion, TraitsOf)(self);
+      return MODULE_FUNC(Type, Traits, IsSigned)(traits);
     }),
 
-    PREDICATE(IsFloat, (const MODULE_TYPE(Primitive, TaggedUnion) * self), {
-      const MODULE_TYPE(Primitive, Traits) *traits =
-          MODULE_FUNC(Primitive, TaggedUnion, TraitsOf)(self);
-      return MODULE_FUNC(Primitive, Traits, IsFloat)(traits);
+    PREDICATE(IsFloat, (const MODULE_TYPE(Type, TaggedUnion) * self), {
+      const MODULE_TYPE(Type, Traits) *traits =
+          MODULE_FUNC(Type, TaggedUnion, TraitsOf)(self);
+      return MODULE_FUNC(Type, Traits, IsFloat)(traits);
     }),
 
-    FUNCTION(const char *, TagName, (MODULE_ENUM(Primitive, Tag) tag), {
+    FUNCTION(const char *, TagName, (MODULE_ENUM(Type, Tag) tag), {
       switch (tag) {
-        PRIMITIVE_TAG_TABLE(COSMERON_MACRO_INTERNAL_TU_TAG_NAME_CASE)
+        TYPE_TAG_TABLE(COSMERON_MACRO_INTERNAL_TU_TAG_NAME_CASE)
         default:
           return "Unknown";
       }
     }),
 
-    FUNCTION(MODULE_ENUM(Primitive, Category), CategoryOf,
-             (const MODULE_TYPE(Primitive, TaggedUnion) * self), {
+    FUNCTION(MODULE_ENUM(Type, Category), CategoryOf,
+             (const MODULE_TYPE(Type, TaggedUnion) * self), {
       if (!self)
-        return MODULE_CONST(Primitive, OBJECT);
+        return MODULE_CONST(Type, Category, OBJECT);
       switch (self->tag) {
-        PRIMITIVE_TAG_TABLE(COSMERON_MACRO_INTERNAL_TU_CATEGORY_CASE)
+        TYPE_TAG_TABLE(COSMERON_MACRO_INTERNAL_TU_CATEGORY_CASE)
         default:
-          return MODULE_CONST(Primitive, OBJECT);
+          return MODULE_CONST(Type, Category, OBJECT);
       }
     }),
 
-    FUNCTION(const MODULE_TYPE(Primitive, Traits) *, TraitsOf,
-             (const MODULE_TYPE(Primitive, TaggedUnion) * self), {
+    FUNCTION(const MODULE_TYPE(Type, Traits) *, TraitsOf,
+             (const MODULE_TYPE(Type, TaggedUnion) * self), {
       if (!self)
         return NULL;
       switch (self->tag) {
-        case MODULE_CONST(Primitive, Tag, NONE):
+        case MODULE_CONST(Type, Tag, NONE):
           return NULL;
-        case MODULE_CONST(Primitive, Tag, CSTRING):
-          return MODULE_FUNC(Primitive, Traits, CString)();
-        case MODULE_CONST(Primitive, Tag, BYTES):
-          return MODULE_IFUNC(Primitive, TaggedUnion, ByteSliceTraits)();
-        case MODULE_CONST(Primitive, Tag, RAW_POINTER):
-          return MODULE_IFUNC(Primitive, TaggedUnion, RawPointerTraits)();
+        case MODULE_CONST(Type, Tag, CSTRING):
+          return MODULE_FUNC(Type, Traits, CString)();
+        case MODULE_CONST(Type, Tag, BYTES):
+          return MODULE_IFUNC(Type, TaggedUnion, ByteSliceTraits)();
+        case MODULE_CONST(Type, Tag, RAW_POINTER):
+          return MODULE_IFUNC(Type, TaggedUnion, RawPointerTraits)();
         PRIMITIVE_TYPE_TABLE(COSMERON_MACRO_INTERNAL_TU_TRAITS_CASE)
         default:
           return NULL;
@@ -646,17 +646,17 @@ MODULE_IMPLEMENT(DOMAIN(Core), Primitive,
     }),
 
     FUNCTION(const void *, PayloadPointer,
-             (const MODULE_TYPE(Primitive, TaggedUnion) * self), {
+             (const MODULE_TYPE(Type, TaggedUnion) * self), {
       if (!self)
         return NULL;
       switch (self->tag) {
-        case MODULE_CONST(Primitive, Tag, NONE):
+        case MODULE_CONST(Type, Tag, NONE):
           return NULL;
-        case MODULE_CONST(Primitive, Tag, CSTRING):
+        case MODULE_CONST(Type, Tag, CSTRING):
           return &self->value.as.cString;
-        case MODULE_CONST(Primitive, Tag, BYTES):
+        case MODULE_CONST(Type, Tag, BYTES):
           return &self->value.as.bytes;
-        case MODULE_CONST(Primitive, Tag, RAW_POINTER):
+        case MODULE_CONST(Type, Tag, RAW_POINTER):
           return &self->value.as.rawPointer;
         PRIMITIVE_TYPE_TABLE(COSMERON_MACRO_INTERNAL_TU_PAYLOAD_PTR_CASE)
         default:
@@ -664,8 +664,8 @@ MODULE_IMPLEMENT(DOMAIN(Core), Primitive,
       }
     }),
 
-    COMPARISON(Compare, (const MODULE_TYPE(Primitive, TaggedUnion) * left,
-                         const MODULE_TYPE(Primitive, TaggedUnion) * right), {
+    COMPARISON(Compare, (const MODULE_TYPE(Type, TaggedUnion) * left,
+                         const MODULE_TYPE(Type, TaggedUnion) * right), {
       if (left == right)
         return COMPARISON_CONST(EQUAL);
       if (!left)
@@ -677,17 +677,17 @@ MODULE_IMPLEMENT(DOMAIN(Core), Primitive,
                                       : COMPARISON_CONST(HIGHER);
       }
       switch (left->tag) {
-        case MODULE_CONST(Primitive, Tag, NONE):
+        case MODULE_CONST(Type, Tag, NONE):
           return COMPARISON_CONST(EQUAL);
-        case MODULE_CONST(Primitive, Tag, CSTRING):
+        case MODULE_CONST(Type, Tag, CSTRING):
           return MODULE_FUNC(Algorithm, Comparison, CString)(
               left->value.as.cString, right->value.as.cString);
-        case MODULE_CONST(Primitive, Tag, BYTES):
+        case MODULE_CONST(Type, Tag, BYTES):
           return MODULE_FUNC(Algorithm, Comparison, Bytes)(
               left->value.as.bytes.data, left->value.as.bytes.size,
               right->value.as.bytes.data, right->value.as.bytes.size);
-        case MODULE_CONST(Primitive, Tag, RAW_POINTER):
-          return MODULE_IFUNC(Primitive, TaggedUnion, Compare_RawPointer)(
+        case MODULE_CONST(Type, Tag, RAW_POINTER):
+          return MODULE_IFUNC(Type, TaggedUnion, Compare_RawPointer)(
               &left->value.as.rawPointer, &right->value.as.rawPointer);
         PRIMITIVE_TYPE_TABLE(COSMERON_MACRO_INTERNAL_TU_COMPARE_CASE)
         default:
@@ -695,38 +695,38 @@ MODULE_IMPLEMENT(DOMAIN(Core), Primitive,
       }
     }),
 
-    PREDICATE(Equals, (const MODULE_TYPE(Primitive, TaggedUnion) * left,
-                       const MODULE_TYPE(Primitive, TaggedUnion) * right), {
-      return MODULE_FUNC(Primitive, TaggedUnion, Compare)(left, right) ==
+    PREDICATE(Equals, (const MODULE_TYPE(Type, TaggedUnion) * left,
+                       const MODULE_TYPE(Type, TaggedUnion) * right), {
+      return MODULE_FUNC(Type, TaggedUnion, Compare)(left, right) ==
              COMPARISON_CONST(EQUAL);
     }),
 
-    FUNCTION(size_t, Hash, (const MODULE_TYPE(Primitive, TaggedUnion) * self), {
-      if (!self || self->tag == MODULE_CONST(Primitive, Tag, NONE))
+    FUNCTION(size_t, Hash, (const MODULE_TYPE(Type, TaggedUnion) * self), {
+      if (!self || self->tag == MODULE_CONST(Type, Tag, NONE))
         return 0U;
-      size_t tagHash = MODULE_FUNC(Primitive, Traits, HashBytes)(
+      size_t tagHash = MODULE_FUNC(Type, Traits, HashBytes)(
           &self->tag, sizeof(self->tag));
-      const MODULE_TYPE(Primitive, Traits) *traits =
-          MODULE_FUNC(Primitive, TaggedUnion, TraitsOf)(self);
+      const MODULE_TYPE(Type, Traits) *traits =
+          MODULE_FUNC(Type, TaggedUnion, TraitsOf)(self);
       const void *payload =
-          MODULE_FUNC(Primitive, TaggedUnion, PayloadPointer)(self);
-      size_t valHash = MODULE_FUNC(Primitive, Traits, Hash)(traits, payload);
+          MODULE_FUNC(Type, TaggedUnion, PayloadPointer)(self);
+      size_t valHash = MODULE_FUNC(Type, Traits, Hash)(traits, payload);
       return tagHash ^ (valHash + 0x9e3779b9U + (tagHash << 6U) + (tagHash >> 2U));
     }),
 
-    FUNCTION(const MODULE_TYPE(Primitive, Traits) *, Traits, (void), {
-      static const MODULE_TYPE(Primitive, Traits) descriptor = {
+    FUNCTION(const MODULE_TYPE(Type, Traits) *, Traits, (void), {
+      static const MODULE_TYPE(Type, Traits) descriptor = {
           .name = "Primitive_TTaggedUnion",
-          .size = sizeof(MODULE_TYPE(Primitive, TaggedUnion)),
-          .alignment = _Alignof(MODULE_TYPE(Primitive, TaggedUnion)),
-          .category = MODULE_CONST(Primitive, COMPOSITE),
-          .flags = MODULE_CONST(Primitive, TraitFlag, TRIVIAL_COPY),
+          .size = sizeof(MODULE_TYPE(Type, TaggedUnion)),
+          .alignment = _Alignof(MODULE_TYPE(Type, TaggedUnion)),
+          .category = MODULE_CONST(Type, Category, COMPOSITE),
+          .flags = MODULE_CONST(Type, TraitFlag, TRIVIAL_COPY),
           .init = NULL,
           .dispose = NULL,
           .copy = NULL,
           .move = NULL,
-          .compare = MODULE_IFUNC(Primitive, TaggedUnion, Compare_Self),
-          .hash = MODULE_IFUNC(Primitive, TaggedUnion, Hash_Self)};
+          .compare = MODULE_IFUNC(Type, TaggedUnion, Compare_Self),
+          .hash = MODULE_IFUNC(Type, TaggedUnion, Hash_Self)};
       return &descriptor;
     })
   )

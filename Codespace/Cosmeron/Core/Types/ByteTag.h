@@ -1,27 +1,10 @@
 #pragma once
 
-#include "Impl/ByteTag.impl"
 #include "Impl/Common.inc"
 #include "ByteTag.def"
 
-#define TYPE_BYTETAG_WIDTH_COL_SUFFIX(SUFFIX, TYPE, BYTES) SUFFIX
-#define TYPE_BYTETAG_WIDTH_COL_TYPE(SUFFIX, TYPE, BYTES) TYPE
-#define TYPE_BYTETAG_WIDTH_COL_BYTES(SUFFIX, TYPE, BYTES) BYTES
-#define TYPE_BYTETAG_WIDTH_GET(FIELD, ROW)                                         \
-  PP_OP_CAT2(TYPE_BYTETAG_WIDTH_COL_, FIELD) ROW
-
-#define TYPE_BYTETAG_WIDTH_TABLE(X)                                                \
-  X((16, uint16_t, 2))                                                         \
-  X((32, uint32_t, 4))                                                         \
-  X((64, uint64_t, 8))
-
 /* Standard Width Instantiations */
-#define COSMERON_MACRO_INTERNAL_TYPE_BYTETAG_INST(ROW)                             \
-  TEMPLATE_IMPLEMENT(Type_ByteTag, TYPE_BYTETAG_WIDTH_GET(SUFFIX, ROW),                \
-                     TYPE_BYTETAG_WIDTH_GET(TYPE, ROW));
-
-TYPE_BYTETAG_WIDTH_TABLE(COSMERON_MACRO_INTERNAL_TYPE_BYTETAG_INST)
-#undef COSMERON_MACRO_INTERNAL_TYPE_BYTETAG_INST
+TEMPLATE_INSTANTIATE_TABLE(Type, ByteTag, TYPE_BYTETAG_TYPE_TABLE);
 
 /* Compile-Time Tag Packing Helpers */
 #define TYPE_BYTETAG_MAKE_16(a, b)                                                 \

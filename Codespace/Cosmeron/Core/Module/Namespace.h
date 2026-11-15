@@ -121,6 +121,8 @@
              PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
 
 /* 2. MODULE_TYPED: Specialization by another type ('T' on 1st token) */
+#define COSMERON_INTERNAL_MOD_TYPED_2(OBJ, SUFFIX)                             \
+  LIB_PREFIX(PP_OP_CAT4(T, OBJ, _, SUFFIX))
 #define COSMERON_INTERNAL_MOD_TYPED_3(MOD, OBJ, SUFFIX)                        \
   LIB_PREFIX(PP_OP_CAT6(T, MOD, _, OBJ, _, SUFFIX))
 #define COSMERON_INTERNAL_MOD_TYPED_4(MOD, PKG, OBJ, SUFFIX)                   \

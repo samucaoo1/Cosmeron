@@ -243,7 +243,6 @@
                     Iterator, Circular, SUFFIX, Reset));                       \
           })                                                                   \
   )
-#define TEMPLATE_Circular(SUFFIX, TYPE) TEMPLATE_Iterator_Circular(SUFFIX, TYPE)
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */

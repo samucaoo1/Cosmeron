@@ -177,7 +177,6 @@
                          return STATUS_CONST(SUCCESS);                         \
                        })                                                      \
   )
-#define TEMPLATE_Stream(SUFFIX, TYPE) TEMPLATE_Iterator_Stream(SUFFIX, TYPE)
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */

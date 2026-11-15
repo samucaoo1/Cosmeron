@@ -369,7 +369,6 @@
             return STATUS_CONST(SUCCESS);                                      \
           })                                                                   \
   )
-#define TEMPLATE_List(SUFFIX, TYPE) TEMPLATE_Linked_List(SUFFIX, TYPE)
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */

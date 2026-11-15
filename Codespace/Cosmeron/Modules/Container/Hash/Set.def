@@ -1,20 +1,20 @@
 /* Set.def - Dual Mode Engine (Zero Duplication) */
 
-#ifndef TEMPLATE_Hash_HashSet
-#define TEMPLATE_Hash_HashSet(SUFFIX, KEY_TYPE)                                \
-  TEMPLATE_ISTRUCT(Hash, HashSetBucket, SUFFIX,                                \
+#ifndef TEMPLATE_Hash_Set
+#define TEMPLATE_Hash_Set(SUFFIX, KEY_TYPE)                                \
+  TEMPLATE_ISTRUCT(Hash, SetBucket, SUFFIX,                                \
       FIELDS(                                                                  \
           KEY_TYPE key;                                                        \
           MODULE_ENUM(Hash, BucketState) state;                                \
       ));                                                                      \
-  CLOSURE_SCOPED_FUNCTION(NS(LIB_PREFIX(Hash), HashSet, SUFFIX), size_t,       \
+  CLOSURE_SCOPED_FUNCTION(NS(LIB_PREFIX(Hash), Set, SUFFIX), size_t,       \
                           Hasher, (KEY_TYPE key))                              \
-  CLOSURE_SCOPED_PREDICATE(NS(LIB_PREFIX(Hash), HashSet, SUFFIX), Equals,      \
+  CLOSURE_SCOPED_PREDICATE(NS(LIB_PREFIX(Hash), Set, SUFFIX), Equals,      \
                            (KEY_TYPE left, KEY_TYPE right))                    \
-  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Hash), HashSet, SUFFIX), Visitor,     \
+  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Hash), Set, SUFFIX), Visitor,     \
                            (const KEY_TYPE *key))                              \
   INTERNAL_DEF_EX(                                                             \
-      Hash, NS(HashSet, SUFFIX),                                               \
+      Hash, NS(Set, SUFFIX),                                               \
       FUNCTION(size_t, DefaultHash, (KEY_TYPE key, void *context), {           \
         (void)context;                                                         \
         return MODULE_IFUNC(Hash, HashBytes)(&key, sizeof(KEY_TYPE));          \
@@ -27,7 +27,7 @@
                 }),                                                            \
                                                                                \
       FUNCTION(size_t, NextOccupied,                                           \
-               (const struct MODULE_ITYPED(Hash, HashSetBucket, SUFFIX)        \
+               (const struct MODULE_ITYPED(Hash, SetBucket, SUFFIX)        \
                     *buckets,                                                  \
                 size_t capacity, size_t startIndex),                           \
                {                                                               \
@@ -40,11 +40,11 @@
                }),                                                             \
                                                                                \
       PREDICATE(FindSlot,                                                      \
-                (const struct MODULE_ITYPED(Hash, HashSetBucket, SUFFIX)       \
+                (const struct MODULE_ITYPED(Hash, SetBucket, SUFFIX)       \
                      *buckets,                                                 \
                  size_t capacity,                                              \
-                 MODULE_CLOSURE(Hash, HashSet, SUFFIX, Hasher) hasher,         \
-                 MODULE_CLOSURE(Hash, HashSet, SUFFIX, Equals) equals,         \
+                 MODULE_CLOSURE(Hash, Set, SUFFIX, Hasher) hasher,         \
+                 MODULE_CLOSURE(Hash, Set, SUFFIX, Equals) equals,         \
                  KEY_TYPE key, size_t *outIndex),                              \
                 {                                                              \
                   if (!buckets || capacity == 0U)                              \
@@ -75,9 +75,9 @@
                   return false;                                                \
                 }))                                                            \
                                                                                \
-  TEMPLATE_OBJECT(Hash, HashSetIter, SUFFIX,                                   \
+  TEMPLATE_OBJECT(Hash, SetIter, SUFFIX,                                   \
       FIELDS(                                                                  \
-          struct MODULE_ITYPED(Hash, HashSetBucket, SUFFIX) *buckets;          \
+          struct MODULE_ITYPED(Hash, SetBucket, SUFFIX) *buckets;          \
           size_t capacity;                                                     \
           size_t index;                                                        \
       ),                                                                       \
@@ -86,16 +86,16 @@
                                                                                \
       OPERATION_INLINE(                                                        \
           FromBuckets,                                                         \
-          (struct MODULE_ITYPED(Hash, HashSetBucket, SUFFIX) *buckets,         \
+          (struct MODULE_ITYPED(Hash, SetBucket, SUFFIX) *buckets,         \
            size_t capacity, size_t index),                                     \
           {                                                                    \
             if (!self)                                                         \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            MODULE_FUNC(Hash, HashSetIter, SUFFIX, Init)(self);                \
+            MODULE_FUNC(Hash, SetIter, SUFFIX, Init)(self);                \
             self->buckets = buckets;                                           \
             self->capacity = capacity;                                         \
             self->index = (buckets && index < capacity)                        \
-                              ? MODULE_IFUNC(Hash, NS(HashSet, SUFFIX),        \
+                              ? MODULE_IFUNC(Hash, NS(Set, SUFFIX),        \
                                              NextOccupied)(buckets, capacity,  \
                                                            index)              \
                               : capacity;                                      \
@@ -109,14 +109,14 @@
       }),                                                                      \
                                                                                \
       CONST_PREDICATE_INLINE(HasNext, (), {                                    \
-        return MODULE_FUNC(Hash, HashSetIter, SUFFIX, IsValid)(self);          \
+        return MODULE_FUNC(Hash, SetIter, SUFFIX, IsValid)(self);          \
       }),                                                                      \
                                                                                \
       OPERATION_INLINE(Reset, (), {                                            \
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
         self->index = self->buckets                                            \
-                          ? MODULE_IFUNC(Hash, NS(HashSet, SUFFIX),            \
+                          ? MODULE_IFUNC(Hash, NS(Set, SUFFIX),            \
                                          NextOccupied)(self->buckets,          \
                                                        self->capacity, 0U)     \
                           : 0U;                                                \
@@ -126,24 +126,24 @@
       CONST_OPERATION_INLINE(Get, (const KEY_TYPE **outKey), {                 \
         if (!self || !outKey)                                                  \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        if (!MODULE_FUNC(Hash, HashSetIter, SUFFIX, IsValid)(self))            \
+        if (!MODULE_FUNC(Hash, SetIter, SUFFIX, IsValid)(self))            \
           return STATUS_CONST(OUT_OF_RANGE);                                   \
         *outKey = &self->buckets[self->index].key;                             \
         return STATUS_CONST(SUCCESS);                                          \
       }),                                                                      \
                                                                                \
       CONST_OPERATION_INLINE(ConstGet, (const KEY_TYPE **outKey), {            \
-        return MODULE_FUNC(Hash, HashSetIter, SUFFIX, Get)(self, outKey);      \
+        return MODULE_FUNC(Hash, SetIter, SUFFIX, Get)(self, outKey);      \
       }),                                                                      \
                                                                                \
       CONST_OPERATION_INLINE(Key, (const KEY_TYPE **outKey), {                 \
-        return MODULE_FUNC(Hash, HashSetIter, SUFFIX, Get)(self, outKey);      \
+        return MODULE_FUNC(Hash, SetIter, SUFFIX, Get)(self, outKey);      \
       }),                                                                      \
                                                                                \
       CONST_OPERATION_INLINE(Value, (KEY_TYPE *outKey), {                      \
         if (!self || !outKey)                                                  \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        if (!MODULE_FUNC(Hash, HashSetIter, SUFFIX, IsValid)(self))            \
+        if (!MODULE_FUNC(Hash, SetIter, SUFFIX, IsValid)(self))            \
           return STATUS_CONST(OUT_OF_RANGE);                                   \
         *outKey = self->buckets[self->index].key;                              \
         return STATUS_CONST(SUCCESS);                                          \
@@ -152,9 +152,9 @@
       OPERATION_INLINE(StepNext, (), {                                         \
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        if (!MODULE_FUNC(Hash, HashSetIter, SUFFIX, IsValid)(self))            \
+        if (!MODULE_FUNC(Hash, SetIter, SUFFIX, IsValid)(self))            \
           return STATUS_CONST(OUT_OF_RANGE);                                   \
-        self->index = MODULE_IFUNC(Hash, NS(HashSet, SUFFIX), NextOccupied)(   \
+        self->index = MODULE_IFUNC(Hash, NS(Set, SUFFIX), NextOccupied)(   \
             self->buckets, self->capacity, self->index + 1U);                  \
         return STATUS_CONST(SUCCESS);                                          \
       }),                                                                      \
@@ -162,18 +162,18 @@
       OPERATION_INLINE(Next, (const KEY_TYPE **outKey), {                      \
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        if (!MODULE_FUNC(Hash, HashSetIter, SUFFIX, IsValid)(self))            \
+        if (!MODULE_FUNC(Hash, SetIter, SUFFIX, IsValid)(self))            \
           return STATUS_CONST(OUT_OF_RANGE);                                   \
         if (outKey)                                                            \
           *outKey = &self->buckets[self->index].key;                           \
-        self->index = MODULE_IFUNC(Hash, NS(HashSet, SUFFIX), NextOccupied)(   \
+        self->index = MODULE_IFUNC(Hash, NS(Set, SUFFIX), NextOccupied)(   \
             self->buckets, self->capacity, self->index + 1U);                  \
         return STATUS_CONST(SUCCESS);                                          \
       }),                                                                      \
                                                                                \
       CONST_PREDICATE_INLINE(                                                  \
           Equals,                                                              \
-          (const struct MODULE_TYPED(Hash, HashSetIter, SUFFIX) *other), {     \
+          (const struct MODULE_TYPED(Hash, SetIter, SUFFIX) *other), {     \
             if (!self || !other)                                               \
               return false;                                                    \
             return self->buckets == other->buckets &&                          \
@@ -182,27 +182,27 @@
                                                                                \
       OPERATION_INLINE(                                                        \
           ForEach,                                                             \
-          (MODULE_CLOSURE(Hash, HashSetIter, SUFFIX, Visitor) visitor), {      \
+          (MODULE_CLOSURE(Hash, SetIter, SUFFIX, Visitor) visitor), {      \
             if (!self || !CLOSURE_IS_VALID(visitor))                           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            while (MODULE_FUNC(Hash, HashSetIter, SUFFIX, IsValid)(self)) {    \
+            while (MODULE_FUNC(Hash, SetIter, SUFFIX, IsValid)(self)) {    \
               CLOSURE_CALL(visitor, &self->buckets[self->index].key);          \
               self->index =                                                    \
-                  MODULE_IFUNC(Hash, NS(HashSet, SUFFIX), NextOccupied)(       \
+                  MODULE_IFUNC(Hash, NS(Set, SUFFIX), NextOccupied)(       \
                       self->buckets, self->capacity, self->index + 1U);        \
             }                                                                  \
             return STATUS_CONST(SUCCESS);                                      \
           })                                                                   \
   );                                                                           \
                                                                                \
-  TEMPLATE_OBJECT(Hash, HashSet, SUFFIX,                                       \
+  TEMPLATE_OBJECT(Hash, Set, SUFFIX,                                       \
       FIELDS(                                                                  \
-          struct MODULE_ITYPED(Hash, HashSetBucket, SUFFIX) *buckets;          \
+          struct MODULE_ITYPED(Hash, SetBucket, SUFFIX) *buckets;          \
           size_t capacity;                                                     \
           size_t size;                                                         \
           size_t deleted;                                                      \
-          MODULE_CLOSURE(Hash, HashSet, SUFFIX, Hasher) hasher;                \
-          MODULE_CLOSURE(Hash, HashSet, SUFFIX, Equals) equals;                \
+          MODULE_CLOSURE(Hash, Set, SUFFIX, Hasher) hasher;                \
+          MODULE_CLOSURE(Hash, Set, SUFFIX, Equals) equals;                \
       ),                                                                       \
                                                                                \
       OPERATION_INLINE(                                                        \
@@ -213,27 +213,27 @@
           {                                                                    \
             if (!self)                                                         \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            MODULE_FUNC(Hash, HashSet, SUFFIX, Init)(self);                    \
+            MODULE_FUNC(Hash, Set, SUFFIX, Init)(self);                    \
             self->buckets = NULL;                                              \
             self->capacity = 0U;                                               \
             self->size = 0U;                                                   \
             self->deleted = 0U;                                                \
             self->hasher = NS_JOIN(                                            \
-                MODULE_CLOSURE_FUNC(Hash, HashSet, SUFFIX, Hasher), Bind)(     \
+                MODULE_CLOSURE_FUNC(Hash, Set, SUFFIX, Hasher), Bind)(     \
                 hashFn ? hashFn                                                \
-                       : MODULE_IFUNC(Hash, NS(HashSet, SUFFIX), DefaultHash), \
+                       : MODULE_IFUNC(Hash, NS(Set, SUFFIX), DefaultHash), \
                 hashFn ? context : NULL);                                      \
             self->equals = NS_JOIN(                                            \
-                MODULE_CLOSURE_FUNC(Hash, HashSet, SUFFIX, Equals), Bind)(     \
+                MODULE_CLOSURE_FUNC(Hash, Set, SUFFIX, Equals), Bind)(     \
                 equalsFn                                                       \
                     ? equalsFn                                                 \
-                    : MODULE_IFUNC(Hash, NS(HashSet, SUFFIX), DefaultEquals),  \
+                    : MODULE_IFUNC(Hash, NS(Set, SUFFIX), DefaultEquals),  \
                 equalsFn ? context : NULL);                                    \
             return STATUS_CONST(SUCCESS);                                      \
           }),                                                                  \
                                                                                \
       OPERATION_INLINE(Create, (), {                                           \
-        return MODULE_FUNC(Hash, HashSet, SUFFIX, CreateWithHash)(             \
+        return MODULE_FUNC(Hash, Set, SUFFIX, CreateWithHash)(             \
             self, NULL, NULL, NULL);                                           \
       }),                                                                      \
                                                                                \
@@ -263,7 +263,7 @@
       }),                                                                      \
                                                                                \
       PROCEDURE_INLINE(Destroy, (), {                                          \
-        (void)MODULE_FUNC(Hash, HashSet, SUFFIX, Dispose)(self);               \
+        (void)MODULE_FUNC(Hash, Set, SUFFIX, Dispose)(self);               \
       }),                                                                      \
                                                                                \
       OPERATION_INLINE(Rehash, (size_t newCapacity), {                         \
@@ -275,18 +275,18 @@
         void *raw = NULL;                                                      \
         OPSTATUS status = MODULE_IFUNC(Hash, AllocBuckets)(                    \
             &raw, targetCap,                                                   \
-            sizeof(struct MODULE_ITYPED(Hash, HashSetBucket, SUFFIX)));        \
+            sizeof(struct MODULE_ITYPED(Hash, SetBucket, SUFFIX)));        \
         if (status != STATUS_CONST(SUCCESS))                                   \
           return status;                                                       \
-        struct MODULE_ITYPED(Hash, HashSetBucket, SUFFIX) *newBuckets =        \
-            (struct MODULE_ITYPED(Hash, HashSetBucket, SUFFIX) *)raw;          \
+        struct MODULE_ITYPED(Hash, SetBucket, SUFFIX) *newBuckets =        \
+            (struct MODULE_ITYPED(Hash, SetBucket, SUFFIX) *)raw;          \
         for (size_t i = 0U; i < targetCap; i++)                                \
           newBuckets[i].state = Hash_BucketState_EMPTY;                        \
         if (self->buckets) {                                                   \
           for (size_t i = 0U; i < self->capacity; i++) {                       \
             if (self->buckets[i].state == Hash_BucketState_OCCUPIED) {         \
               size_t slot = 0U;                                                \
-              (void)MODULE_IFUNC(Hash, NS(HashSet, SUFFIX), FindSlot)(         \
+              (void)MODULE_IFUNC(Hash, NS(Set, SUFFIX), FindSlot)(         \
                   newBuckets, targetCap, self->hasher, self->equals,           \
                   self->buckets[i].key, &slot);                                \
               newBuckets[slot].key = self->buckets[i].key;                     \
@@ -311,7 +311,7 @@
             1U;                                                                \
         if (needed <= self->capacity)                                          \
           return STATUS_CONST(SUCCESS);                                        \
-        return MODULE_FUNC(Hash, HashSet, SUFFIX, Rehash)(self, needed);       \
+        return MODULE_FUNC(Hash, Set, SUFFIX, Rehash)(self, needed);       \
       }),                                                                      \
                                                                                \
       OPERATION_INLINE(Insert, (KEY_TYPE key), {                               \
@@ -328,12 +328,12 @@
                          ? self->capacity * Hash_Config_GROWTH_FACTOR          \
                          : self->capacity);                                    \
           OPSTATUS status =                                                    \
-              MODULE_FUNC(Hash, HashSet, SUFFIX, Rehash)(self, nextCap);       \
+              MODULE_FUNC(Hash, Set, SUFFIX, Rehash)(self, nextCap);       \
           if (status != STATUS_CONST(SUCCESS))                                 \
             return status;                                                     \
         }                                                                      \
         size_t slot = 0U;                                                      \
-        if (MODULE_IFUNC(Hash, NS(HashSet, SUFFIX), FindSlot)(                 \
+        if (MODULE_IFUNC(Hash, NS(Set, SUFFIX), FindSlot)(                 \
                 self->buckets, self->capacity, self->hasher, self->equals,     \
                 key, &slot)) {                                                 \
           return STATUS_CONST(ALREADY_EXISTS);                                 \
@@ -350,7 +350,7 @@
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
         size_t slot = 0U;                                                      \
-        if (!MODULE_IFUNC(Hash, NS(HashSet, SUFFIX), FindSlot)(                \
+        if (!MODULE_IFUNC(Hash, NS(Set, SUFFIX), FindSlot)(                \
                 self->buckets, self->capacity, self->hasher, self->equals,     \
                 key, &slot)) {                                                 \
           return STATUS_CONST(NOT_FOUND);                                      \
@@ -363,9 +363,9 @@
                                                                                \
       OPERATION_INLINE(                                                        \
           EraseIter,                                                           \
-          (struct MODULE_TYPED(Hash, HashSetIter, SUFFIX) *iter), {            \
+          (struct MODULE_TYPED(Hash, SetIter, SUFFIX) *iter), {            \
             if (!self || !iter ||                                              \
-                !MODULE_FUNC(Hash, HashSetIter, SUFFIX, IsValid)(iter) ||      \
+                !MODULE_FUNC(Hash, SetIter, SUFFIX, IsValid)(iter) ||      \
                 iter->buckets != self->buckets) {                              \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             }                                                                  \
@@ -373,7 +373,7 @@
             self->size--;                                                      \
             self->deleted++;                                                   \
             iter->index =                                                      \
-                MODULE_IFUNC(Hash, NS(HashSet, SUFFIX), NextOccupied)(         \
+                MODULE_IFUNC(Hash, NS(Set, SUFFIX), NextOccupied)(         \
                     self->buckets, self->capacity, iter->index + 1U);          \
             return STATUS_CONST(SUCCESS);                                      \
           }),                                                                  \
@@ -382,7 +382,7 @@
         if (!self || !outKey)                                                  \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
         size_t slot = 0U;                                                      \
-        if (!MODULE_IFUNC(Hash, NS(HashSet, SUFFIX), FindSlot)(                \
+        if (!MODULE_IFUNC(Hash, NS(Set, SUFFIX), FindSlot)(                \
                 self->buckets, self->capacity, self->hasher, self->equals,     \
                 key, &slot)) {                                                 \
           return STATUS_CONST(NOT_FOUND);                                      \
@@ -394,7 +394,7 @@
       CONST_PREDICATE_INLINE(Contains, (KEY_TYPE key), {                       \
         if (!self)                                                             \
           return false;                                                        \
-        return MODULE_IFUNC(Hash, NS(HashSet, SUFFIX), FindSlot)(              \
+        return MODULE_IFUNC(Hash, NS(Set, SUFFIX), FindSlot)(              \
             self->buckets, self->capacity, self->hasher, self->equals, key,    \
             NULL);                                                             \
       }),                                                                      \
@@ -421,44 +421,44 @@
                                                                                \
       /* --- Optional Iterator Protocol (Forward) --- */                       \
       CONST_OPERATION_INLINE(                                                  \
-          Begin, (struct MODULE_TYPED(Hash, HashSetIter, SUFFIX) *outIter), {  \
+          Begin, (struct MODULE_TYPED(Hash, SetIter, SUFFIX) *outIter), {  \
             if (!self || !outIter)                                             \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            return MODULE_FUNC(Hash, HashSetIter, SUFFIX, FromBuckets)(        \
+            return MODULE_FUNC(Hash, SetIter, SUFFIX, FromBuckets)(        \
                 outIter, self->buckets, self->capacity, 0U);                   \
           }),                                                                  \
                                                                                \
       CONST_OPERATION_INLINE(                                                  \
-          End, (struct MODULE_TYPED(Hash, HashSetIter, SUFFIX) *outIter), {    \
+          End, (struct MODULE_TYPED(Hash, SetIter, SUFFIX) *outIter), {    \
             if (!self || !outIter)                                             \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            return MODULE_FUNC(Hash, HashSetIter, SUFFIX, FromBuckets)(        \
+            return MODULE_FUNC(Hash, SetIter, SUFFIX, FromBuckets)(        \
                 outIter, self->buckets, self->capacity, self->capacity);       \
           }),                                                                  \
                                                                                \
       CONST_OPERATION_INLINE(                                                  \
           FindIter,                                                            \
           (KEY_TYPE key,                                                       \
-           struct MODULE_TYPED(Hash, HashSetIter, SUFFIX) *outIter),           \
+           struct MODULE_TYPED(Hash, SetIter, SUFFIX) *outIter),           \
           {                                                                    \
             if (!self || !outIter)                                             \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             size_t slot = 0U;                                                  \
-            if (!MODULE_IFUNC(Hash, NS(HashSet, SUFFIX), FindSlot)(            \
+            if (!MODULE_IFUNC(Hash, NS(Set, SUFFIX), FindSlot)(            \
                     self->buckets, self->capacity, self->hasher, self->equals, \
                     key, &slot)) {                                             \
-              MODULE_FUNC(Hash, HashSetIter, SUFFIX, FromBuckets)(             \
+              MODULE_FUNC(Hash, SetIter, SUFFIX, FromBuckets)(             \
                   outIter, self->buckets, self->capacity, self->capacity);     \
               return STATUS_CONST(NOT_FOUND);                                  \
             }                                                                  \
-            MODULE_FUNC(Hash, HashSetIter, SUFFIX, FromBuckets)(               \
+            MODULE_FUNC(Hash, SetIter, SUFFIX, FromBuckets)(               \
                 outIter, self->buckets, self->capacity, slot);                 \
             return STATUS_CONST(SUCCESS);                                      \
           }),                                                                  \
                                                                                \
       CONST_OPERATION_INLINE(                                                  \
           ForEach,                                                             \
-          (MODULE_CLOSURE(Hash, HashSet, SUFFIX, Visitor) visitor), {          \
+          (MODULE_CLOSURE(Hash, Set, SUFFIX, Visitor) visitor), {          \
             if (!self || !CLOSURE_IS_VALID(visitor))                           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             for (size_t i = 0U; i < self->capacity; i++) {                     \
@@ -472,7 +472,7 @@
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
 #if defined(SUFFIX) && defined(KEY_TYPE)
-  TEMPLATE_Hash_HashSet(SUFFIX, KEY_TYPE);
+  TEMPLATE_Hash_Set(SUFFIX, KEY_TYPE);
   #undef SUFFIX
   #undef KEY_TYPE
 #endif

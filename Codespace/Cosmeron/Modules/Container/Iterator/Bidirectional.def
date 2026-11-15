@@ -185,8 +185,6 @@
                     Iterator, Bidirectional, SUFFIX, Reset));                  \
           })                                                                   \
   )
-#define TEMPLATE_Bidirectional(SUFFIX, TYPE)                                   \
-  TEMPLATE_Iterator_Bidirectional(SUFFIX, TYPE)
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */

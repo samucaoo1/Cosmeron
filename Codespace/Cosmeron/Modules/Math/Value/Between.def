@@ -1,35 +1,33 @@
-#include <stdbool.h>
+/* Between.def - Dual Mode Engine (Zero Duplication) */
 
-#include "../../../Core/Module/Module.h"
-#include "../Impl/Common.inc"
-
+#ifndef TEMPLATE_Math_Between
 #define TEMPLATE_Math_Between(SUFFIX, TYPE)                                    \
-  static inline bool MODULE_FUNC(Math, IsBetween, SUFFIX)(                     \
-      TYPE value, TYPE minimum, TYPE maximum) {                                \
-    if (minimum > maximum) {                                                   \
-      return false;                                                            \
-    }                                                                          \
-    return value >= minimum && value <= maximum;                               \
-  }                                                                            \
-  static inline MODULE_ENUM(Math, RangeResult)                                 \
-      MODULE_FUNC(Math, Between, SUFFIX)(TYPE value, TYPE minimum,             \
-                                         TYPE maximum) {                       \
-    if (minimum > maximum) {                                                   \
-      return CNS(Math, INVALID_RANGE);                                         \
-    }                                                                          \
-    if (value < minimum) {                                                     \
-      return CNS(Math, BELOW_RANGE);                                           \
-    }                                                                          \
-    if (value > maximum) {                                                     \
-      return CNS(Math, ABOVE_RANGE);                                           \
-    }                                                                          \
-    return CNS(Math, IN_RANGE);                                                \
-  }
-
-#if defined(SUFFIX) && defined(TYPE)
-TEMPLATE_Math_Between(SUFFIX, TYPE)
-#undef SUFFIX
-#undef TYPE
+  TEMPLATE_PACKAGE(Math, Between, SUFFIX,                                      \
+      PREDICATE_INLINE(Is, (TYPE value, TYPE minimum, TYPE maximum), {         \
+        if (minimum > maximum) {                                               \
+          return false;                                                        \
+        }                                                                      \
+        return value >= minimum && value <= maximum;                           \
+      }),                                                                      \
+      FUNCTION_INLINE(MODULE_ENUM(Math, RangeResult), Classify,                \
+                      (TYPE value, TYPE minimum, TYPE maximum), {              \
+        if (minimum > maximum) {                                               \
+          return MODULE_CONST(Math, INVALID_RANGE);                            \
+        }                                                                      \
+        if (value < minimum) {                                                 \
+          return MODULE_CONST(Math, BELOW_RANGE);                              \
+        }                                                                      \
+        if (value > maximum) {                                                 \
+          return MODULE_CONST(Math, ABOVE_RANGE);                              \
+        }                                                                      \
+        return MODULE_CONST(Math, IN_RANGE);                                   \
+      })                                                                       \
+  )
 #endif
 
-/* EOF */
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Math_Between(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif
