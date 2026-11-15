@@ -266,8 +266,9 @@
   } while (0)
 
 /* ------------------------------------------------------------
- * 7. Backward Compatibility Aliases
+ * 7. Backward Compatibility Aliases (Bronze Standard / Deprecated)
  * ------------------------------------------------------------ */
+/* Bronze Standard (Deprecated): Use FUNCTION / CONST_FUNCTION / *_INLINE */
 #define METHOD(RET, NAME, PARAMS) FUNCTION(RET, NAME, PARAMS)
 #define CONST_METHOD(RET, NAME, PARAMS) CONST_FUNCTION(RET, NAME, PARAMS)
 #define METHOD_CONST(RET, NAME, PARAMS) CONST_FUNCTION(RET, NAME, PARAMS)

@@ -30,11 +30,22 @@
   X((32, uint32_t, 32U, UINT32_MAX))                                           \
   X((64, uint64_t, 64U, UINT64_MAX))
 
+#define BIT_WIDTH_TYPE_TABLE(X)                                                \
+  X((8, uint8_t))                                                              \
+  X((16, uint16_t))                                                            \
+  X((32, uint32_t))                                                            \
+  X((64, uint64_t))
+
 /* ========================================================================== */
-/* Template Engine Trait                                                      */
+/* Internal Bitwise Masks                                                     */
 /* ========================================================================== */
 
-#define TEMPLATE_Bit_HAS_IMPL 1
+#define COSMERON_MACRO_INTERNAL_BIT_MASK_EVEN_ODD_U64                          \
+  UINT64_C(0x5555555555555555)
+#define COSMERON_MACRO_INTERNAL_BIT_MASK_PAIRS_U64                             \
+  UINT64_C(0x3333333333333333)
+#define COSMERON_MACRO_INTERNAL_BIT_MASK_NIBBLES_U64                           \
+  UINT64_C(0x0F0F0F0F0F0F0F0F)
 
 /* EOF */
 

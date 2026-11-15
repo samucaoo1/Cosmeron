@@ -1,34 +1,34 @@
 #pragma once
 
-#define STATUS_CATEGORY_CASE(ROW)                                              \
+#define COSMERON_MACRO_INTERNAL_STATUS_CATEGORY_CASE(ROW)                      \
   case STATUS_CONST(STATUS_GET(NAME, ROW)):                                    \
     return STATUS_CATEGORY_CONST(STATUS_GET(CATEGORY, ROW));
 
-#define STATUS_CAT_NAME_CASE(ROW)                                              \
+#define COSMERON_MACRO_INTERNAL_STATUS_CAT_NAME_CASE(ROW)                      \
   case STATUS_CATEGORY_CONST(STATUS_CATEGORY_GET(NAME, ROW)):                  \
     return STATUS_CATEGORY_GET(MESSAGE, ROW);
 
-#define STATUS_NAME_CASE(ROW)                                                  \
+#define COSMERON_MACRO_INTERNAL_STATUS_NAME_CASE(ROW)                          \
   case STATUS_CONST(STATUS_GET(NAME, ROW)):                                    \
     return PP_OP_STRING(STATUS_GET(NAME, ROW));
 
-#define STATUS_MESSAGE_CASE(ROW)                                               \
+#define COSMERON_MACRO_INTERNAL_STATUS_MESSAGE_CASE(ROW)                       \
   case STATUS_CONST(STATUS_GET(NAME, ROW)):                                    \
     return STATUS_GET(MESSAGE, ROW);
 
-MODULE_IMPLEMENT(DOMAIN(Core), Outcome,
+MODULE_IMPLEMENT(DOMAIN(Core), Condition,
   PACKAGE(Status,
-    FUNCTION(MODULE_ENUM(Outcome, Status, Category), CategoryOf, (OPSTATUS status), {
+    FUNCTION(MODULE_ENUM(Condition, Status, Category), CategoryOf, (OPSTATUS status), {
       switch (status) {
-        STATUS_TABLE(STATUS_CATEGORY_CASE)
+        STATUS_TABLE(COSMERON_MACRO_INTERNAL_STATUS_CATEGORY_CASE)
         default:
           return STATUS_CATEGORY_CONST(GENERIC);
       }
     }),
 
-    FUNCTION(const char *, CategoryName, (MODULE_ENUM(Outcome, Status, Category) category), {
+    FUNCTION(const char *, CategoryName, (MODULE_ENUM(Condition, Status, Category) category), {
       switch (category) {
-        STATUS_CATEGORY_TABLE(STATUS_CAT_NAME_CASE)
+        STATUS_CATEGORY_TABLE(COSMERON_MACRO_INTERNAL_STATUS_CAT_NAME_CASE)
         default:
           return "Unknown";
       }
@@ -36,7 +36,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Outcome,
 
     FUNCTION(const char *, Name, (OPSTATUS status), {
       switch (status) {
-        STATUS_TABLE(STATUS_NAME_CASE)
+        STATUS_TABLE(COSMERON_MACRO_INTERNAL_STATUS_NAME_CASE)
         default:
           return "UNKNOWN";
       }
@@ -44,7 +44,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Outcome,
 
     FUNCTION(const char *, Message, (OPSTATUS status), {
       switch (status) {
-        STATUS_TABLE(STATUS_MESSAGE_CASE)
+        STATUS_TABLE(COSMERON_MACRO_INTERNAL_STATUS_MESSAGE_CASE)
         default:
           return "Unknown status";
       }
@@ -52,9 +52,9 @@ MODULE_IMPLEMENT(DOMAIN(Core), Outcome,
   )
 );
 
-#undef STATUS_CATEGORY_CASE
-#undef STATUS_CAT_NAME_CASE
-#undef STATUS_NAME_CASE
-#undef STATUS_MESSAGE_CASE
+#undef COSMERON_MACRO_INTERNAL_STATUS_CATEGORY_CASE
+#undef COSMERON_MACRO_INTERNAL_STATUS_CAT_NAME_CASE
+#undef COSMERON_MACRO_INTERNAL_STATUS_NAME_CASE
+#undef COSMERON_MACRO_INTERNAL_STATUS_MESSAGE_CASE
 
 /* EOF */

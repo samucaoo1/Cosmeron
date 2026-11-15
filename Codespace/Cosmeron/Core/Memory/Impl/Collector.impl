@@ -8,9 +8,9 @@ static _Thread_local bool
     MODULE_INS(Memory, Collector, ThreadDefaultInitialized) = false;
 
 #if !defined(OBJECT_DISABLE_FUNCTION_TABLE) && !defined(MODULE_DISABLE_FUNCTION_TABLE)
-#define GC_INIT_SELF(self) do { const void *api = (self)->api; memset((self), 0, sizeof(*(self))); (self)->api = api; } while (0)
+#define COSMERON_MACRO_INTERNAL_COLLECTOR_INIT_SELF(self) do { const void *api = (self)->api; memset((self), 0, sizeof(*(self))); (self)->api = api; } while (0)
 #else
-#define GC_INIT_SELF(self) do { memset((self), 0, sizeof(*(self))); } while (0)
+#define COSMERON_MACRO_INTERNAL_COLLECTOR_INIT_SELF(self) do { memset((self), 0, sizeof(*(self))); } while (0)
 #endif
 
 /* ========================================================================== */
@@ -19,24 +19,24 @@ static _Thread_local bool
 
 MODULE_IMPLEMENT(DOMAIN(Core), Memory,
   INTERNAL_EX(Collector,
-    PROCEDURE(WorklistInit, (MODULE_ITYPE(Memory, GcWorklist) *wl), {
+    PROCEDURE(WorklistInit, (MODULE_ITYPE(Memory, CollectorWorklist) *wl), {
       wl->head = NULL;
       wl->freeChunks = NULL;
       wl->totalPushed = 0U;
       wl->overflow = false;
     }),
 
-    PROCEDURE(WorklistDestroy, (MODULE_ITYPE(Memory, GcWorklist) *wl), {
-      MODULE_ITYPE(Memory, GcWorklistChunk) *c = wl->head;
+    PROCEDURE(WorklistDestroy, (MODULE_ITYPE(Memory, CollectorWorklist) *wl), {
+      MODULE_ITYPE(Memory, CollectorWorklistChunk) *c = wl->head;
       while (c) {
-        MODULE_ITYPE(Memory, GcWorklistChunk) *next = c->next;
+        MODULE_ITYPE(Memory, CollectorWorklistChunk) *next = c->next;
         void *raw = (void *)c;
         MODULE_FUNC(Memory, Alloc, Free)(&raw);
         c = next;
       }
       c = wl->freeChunks;
       while (c) {
-        MODULE_ITYPE(Memory, GcWorklistChunk) *next = c->next;
+        MODULE_ITYPE(Memory, CollectorWorklistChunk) *next = c->next;
         void *raw = (void *)c;
         MODULE_FUNC(Memory, Alloc, Free)(&raw);
         c = next;
@@ -45,23 +45,23 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
       wl->freeChunks = NULL;
     }),
 
-    OPERATION(WorklistPush, (MODULE_ITYPE(Memory, GcWorklist) *wl, void *ptr), {
+    OPERATION(WorklistPush, (MODULE_ITYPE(Memory, CollectorWorklist) *wl, void *ptr), {
       if (!ptr)
         return STATUS_CONST(SUCCESS);
 
-      MODULE_ITYPE(Memory, GcWorklistChunk) *chunk = wl->head;
+      MODULE_ITYPE(Memory, CollectorWorklistChunk) *chunk = wl->head;
       if (!chunk || chunk->count == MODULE_CONST(Memory, Collector, WORKLIST_CHUNK_CAPACITY)) {
         if (wl->freeChunks) {
           chunk = wl->freeChunks;
           wl->freeChunks = chunk->next;
         } else {
           void *raw = NULL;
-          OPSTATUS status = MODULE_FUNC(Memory, Alloc, Bytes)(&raw, sizeof(MODULE_ITYPE(Memory, GcWorklistChunk)));
+          OPSTATUS status = MODULE_FUNC(Memory, Alloc, Bytes)(&raw, sizeof(MODULE_ITYPE(Memory, CollectorWorklistChunk)));
           if (status != STATUS_CONST(SUCCESS) || !raw) {
             wl->overflow = true;
             return STATUS_CONST(OUT_OF_MEMORY);
           }
-          chunk = (MODULE_ITYPE(Memory, GcWorklistChunk) *)raw;
+          chunk = (MODULE_ITYPE(Memory, CollectorWorklistChunk) *)raw;
         }
         chunk->count = 0U;
         chunk->next = wl->head;
@@ -73,8 +73,8 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
       return STATUS_CONST(SUCCESS);
     }),
 
-    FUNCTION(void *, WorklistPop, (MODULE_ITYPE(Memory, GcWorklist) *wl), {
-      MODULE_ITYPE(Memory, GcWorklistChunk) *chunk = wl->head;
+    FUNCTION(void *, WorklistPop, (MODULE_ITYPE(Memory, CollectorWorklist) *wl), {
+      MODULE_ITYPE(Memory, CollectorWorklistChunk) *chunk = wl->head;
       if (!chunk)
         return NULL;
 
@@ -157,6 +157,19 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
           }
         }
       }
+    }),
+
+    OPERATION(AllocatorAlloc,
+              (void *context, size_t size, size_t alignment, void **outPtr), {
+      (void)alignment;
+      return MODULE_FUNC(Memory, Collector, Alloc)(
+          (MODULE_TYPE(Memory, Collector) *)context, outPtr, size, 0U, NULL);
+    }),
+
+    PROCEDURE(AllocatorFree, (void *context, void *ptr, size_t size), {
+      (void)context;
+      (void)ptr;
+      (void)size;
     })
   ),
 
@@ -165,7 +178,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
       if (!self)
         return STATUS_CONST(INVALID_ARGUMENT);
 
-      GC_INIT_SELF(self);
+      COSMERON_MACRO_INTERNAL_COLLECTOR_INIT_SELF(self);
       OPSTATUS status = MODULE_FUNC(Memory, Heap, Create)(&self->heap, initialHeapPages);
       if (status != STATUS_CONST(SUCCESS))
         return status;
@@ -175,8 +188,8 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
       self->pendingFinalizers = NULL;
       self->stackBottom = stackBottom;
       self->nextThreshold = MODULE_CONST(Memory, Collector, DEFAULT_INITIAL_THRESHOLD);
-      self->liveBytesAfterGC = 0U;
-      self->totalAllocatedSinceGC = 0U;
+      self->liveBytesAfterCollect = 0U;
+      self->totalAllocatedSinceCollect = 0U;
       self->growthPercent = MODULE_CONST(Memory, Collector, DEFAULT_GROWTH_PERCENT);
       self->pauseDepth = 0U;
       self->isInitialized = true;
@@ -188,9 +201,9 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
       if (!self || !self->isInitialized)
         return STATUS_CONST(INVALID_ARGUMENT);
 
-      MODULE_ITYPE(Memory, GcFinalizerEntry) *f = self->finalizers;
+      MODULE_ITYPE(Memory, CollectorFinalizerEntry) *f = self->finalizers;
       while (f) {
-        MODULE_ITYPE(Memory, GcFinalizerEntry) *next = f->next;
+        MODULE_ITYPE(Memory, CollectorFinalizerEntry) *next = f->next;
         void *raw = (void *)f;
         MODULE_FUNC(Memory, Alloc, Free)(&raw);
         f = next;
@@ -199,7 +212,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
 
       f = self->pendingFinalizers;
       while (f) {
-        MODULE_ITYPE(Memory, GcFinalizerEntry) *next = f->next;
+        MODULE_ITYPE(Memory, CollectorFinalizerEntry) *next = f->next;
         void *raw = (void *)f;
         MODULE_FUNC(Memory, Alloc, Free)(&raw);
         f = next;
@@ -223,18 +236,18 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
           return initStat;
       }
 
-      if (self->pauseDepth == 0U && self->totalAllocatedSinceGC + size >= self->nextThreshold) {
+      if (self->pauseDepth == 0U && self->totalAllocatedSinceCollect + size >= self->nextThreshold) {
         MODULE_FUNC(Memory, Collector, Collect)(self);
       }
 
       OPSTATUS status = MODULE_FUNC(Memory, Heap, Alloc)(&self->heap, outPointerObject, size, policy, descriptor);
       if (status == STATUS_CONST(SUCCESS)) {
-        self->totalAllocatedSinceGC += size;
+        self->totalAllocatedSinceCollect += size;
       }
       return status;
     }),
 
-    OPERATION(AllocTyped, (void *outPointerObject, const MODULE_NS(Memory, Collector, Descriptor) *descriptor), {
+    OPERATION(AllocTyped, (void *outPointerObject, const MODULE_TYPE(Memory, CollectorDescriptor) *descriptor), {
       if (!descriptor || descriptor->size == 0U)
         return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -247,16 +260,16 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
           self, outPointerObject, size, MODULE_CONST(MEMORY, HEAP, POLICY, ATOMIC), NULL);
     }),
 
-    OPERATION(SetFinalizer, (const void *ptr, GARBAGE_COLLECTOR_FINALIZER_CALLBACK finalizer), {
+    OPERATION(SetFinalizer, (const void *ptr, MEMORY_COLLECTOR_FINALIZER_CALLBACK finalizer), {
       if (!self || !ptr || !CLOSURE_IS_VALID(finalizer))
         return STATUS_CONST(INVALID_ARGUMENT);
 
       void *raw = NULL;
-      OPSTATUS status = MODULE_FUNC(Memory, Alloc, Bytes)(&raw, sizeof(MODULE_ITYPE(Memory, GcFinalizerEntry)));
+      OPSTATUS status = MODULE_FUNC(Memory, Alloc, Bytes)(&raw, sizeof(MODULE_ITYPE(Memory, CollectorFinalizerEntry)));
       if (status != STATUS_CONST(SUCCESS) || !raw)
         return STATUS_CONST(OUT_OF_MEMORY);
 
-      MODULE_ITYPE(Memory, GcFinalizerEntry) *entry = (MODULE_ITYPE(Memory, GcFinalizerEntry) *)raw;
+      MODULE_ITYPE(Memory, CollectorFinalizerEntry) *entry = (MODULE_ITYPE(Memory, CollectorFinalizerEntry) *)raw;
       entry->object = (void *)(uintptr_t)ptr;
       entry->callback = finalizer;
       entry->next = self->finalizers;
@@ -389,11 +402,11 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
         if (MODULE_FUNC(Memory, Heap, ResolvePointer)(&self->heap, item, &base, &sz, &pol)) {
           if (pol == MODULE_CONST(MEMORY, HEAP, POLICY, TYPED)) {
             void *ent = MODULE_FUNC(Memory, Heap, LookupEntry)(&self->heap, base);
-            const MODULE_NS(Memory, Collector, Descriptor) *desc = NULL;
+            const MODULE_TYPE(Memory, CollectorDescriptor) *desc = NULL;
             if (ent) {
               uint8_t isL = *(uint8_t *)ent;
-              desc = isL ? (const MODULE_NS(Memory, Collector, Descriptor) *)((MODULE_ITYPE(Memory, HeapSpan) *)ent)->descriptor
-                         : (const MODULE_NS(Memory, Collector, Descriptor) *)((MODULE_ITYPE(Memory, HeapPageHeader) *)ent)->descriptor;
+              desc = isL ? (const MODULE_TYPE(Memory, CollectorDescriptor) *)((MODULE_ITYPE(Memory, HeapSpan) *)ent)->descriptor
+                         : (const MODULE_TYPE(Memory, CollectorDescriptor) *)((MODULE_ITYPE(Memory, HeapPageHeader) *)ent)->descriptor;
             }
             if (desc && desc->bitmap != 0ULL) {
               uint64_t bm = desc->bitmap;
@@ -415,9 +428,9 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
       }
 
       /* Phase 4: Finalization Enqueue (Pre-Sweep) */
-      MODULE_ITYPE(Memory, GcFinalizerEntry) **curr = &self->finalizers;
+      MODULE_ITYPE(Memory, CollectorFinalizerEntry) **curr = &self->finalizers;
       while (*curr) {
-        MODULE_ITYPE(Memory, GcFinalizerEntry) *entry = *curr;
+        MODULE_ITYPE(Memory, CollectorFinalizerEntry) *entry = *curr;
         void *obj = entry->object;
         void *base = NULL;
         size_t sz = 0U;
@@ -484,13 +497,13 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
         }
       }
 
-      self->liveBytesAfterGC = self->heap.liveBytes;
+      self->liveBytesAfterCollect = self->heap.liveBytes;
 
       /* Adaptive Pacing formula: NextThreshold = LiveBytes * (1 + GrowthFactor / SurvivalRate) */
-      size_t allocated = self->totalAllocatedSinceGC;
-      self->totalAllocatedSinceGC = 0U;
+      size_t allocated = self->totalAllocatedSinceCollect;
+      self->totalAllocatedSinceCollect = 0U;
 
-      double survivalRate = allocated > 0U ? ((double)self->liveBytesAfterGC / (double)allocated) : 1.0;
+      double survivalRate = allocated > 0U ? ((double)self->liveBytesAfterCollect / (double)allocated) : 1.0;
       if (survivalRate < 0.1)
         survivalRate = 0.1;
 
@@ -500,13 +513,13 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
       if (factor > ((double)MODULE_CONST(Memory, Collector, MAX_PACING_PERCENT) / 100.0))
         factor = (double)MODULE_CONST(Memory, Collector, MAX_PACING_PERCENT) / 100.0;
 
-      self->nextThreshold = (size_t)((double)self->liveBytesAfterGC * (1.0 + factor));
+      self->nextThreshold = (size_t)((double)self->liveBytesAfterCollect * (1.0 + factor));
       if (self->nextThreshold < MODULE_CONST(Memory, Collector, DEFAULT_INITIAL_THRESHOLD))
         self->nextThreshold = MODULE_CONST(Memory, Collector, DEFAULT_INITIAL_THRESHOLD);
 
       /* Drain pending finalizers */
       while (self->pendingFinalizers) {
-        MODULE_ITYPE(Memory, GcFinalizerEntry) *f = self->pendingFinalizers;
+        MODULE_ITYPE(Memory, CollectorFinalizerEntry) *f = self->pendingFinalizers;
         self->pendingFinalizers = f->next;
         CLOSURE_CALL(f->callback, f->object);
         void *raw = (void *)f;
@@ -528,10 +541,24 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
 
     CONST_PREDICATE(Contains, (const void *ptr), {
       return self ? MODULE_FUNC(Memory, Heap, Contains)(&self->heap, ptr) : false;
+    }),
+
+    FUNCTION(MODULE_TYPE(Memory, Allocator), AsAllocator, (), {
+      static const MODULE_TYPE(Memory, AllocatorOps) ops = {
+          .Alloc = MODULE_IFUNC(Memory, Collector, AllocatorAlloc),
+          .Realloc = NULL,
+          .Free = MODULE_IFUNC(Memory, Collector, AllocatorFree),
+          .capabilities = MODULE_CONST(Memory, NONE),
+      };
+      MODULE_TYPE(Memory, Allocator) alloc = {
+          .context = self,
+          .ops = &ops,
+      };
+      return alloc;
     })
   ),
 
-  PACKAGE(GC,
+  PACKAGE(GlobalCollector,
     OPERATION(Startup, (const void *stackBottom), {
       if (MODULE_INS(Memory, Collector, ThreadDefaultInitialized))
         return STATUS_CONST(SUCCESS);
@@ -565,75 +592,75 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
 
     OPERATION(Alloc, (void *outPointerObject, size_t size), {
       MODULE_TYPE(Memory, Collector) *collector =
-          MODULE_FUNC(Memory, GC, DefaultCollector)();
+          MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
       return MODULE_FUNC(Memory, Collector, Alloc)(
           collector, outPointerObject, size, MODULE_CONST(MEMORY, HEAP, POLICY, CONSERVATIVE), NULL);
     }),
 
     OPERATION(AllocTyped,
-        (void *outPointerObject, const MODULE_NS(Memory, Collector, Descriptor) *descriptor), {
+        (void *outPointerObject, const MODULE_TYPE(Memory, CollectorDescriptor) *descriptor), {
       MODULE_TYPE(Memory, Collector) *collector =
-          MODULE_FUNC(Memory, GC, DefaultCollector)();
+          MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
       return MODULE_FUNC(Memory, Collector, AllocTyped)(collector, outPointerObject, descriptor);
     }),
 
     OPERATION(AllocAtomic, (void *outPointerObject, size_t size), {
       MODULE_TYPE(Memory, Collector) *collector =
-          MODULE_FUNC(Memory, GC, DefaultCollector)();
+          MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
       return MODULE_FUNC(Memory, Collector, AllocAtomic)(collector, outPointerObject, size);
     }),
 
     OPERATION(SetFinalizer,
-        (const void *ptr, GARBAGE_COLLECTOR_FINALIZER_CALLBACK finalizer), {
+        (const void *ptr, MEMORY_COLLECTOR_FINALIZER_CALLBACK finalizer), {
       MODULE_TYPE(Memory, Collector) *collector =
-          MODULE_FUNC(Memory, GC, DefaultCollector)();
+          MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
       return MODULE_FUNC(Memory, Collector, SetFinalizer)(collector, ptr, finalizer);
     }),
 
     OPERATION(PinRoot, (const void *rootPointerAddress), {
       MODULE_TYPE(Memory, Collector) *collector =
-          MODULE_FUNC(Memory, GC, DefaultCollector)();
+          MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
       return MODULE_FUNC(Memory, Collector, PinRoot)(collector, rootPointerAddress);
     }),
 
     OPERATION(UnpinRoot, (const void *rootPointerAddress), {
       MODULE_TYPE(Memory, Collector) *collector =
-          MODULE_FUNC(Memory, GC, DefaultCollector)();
+          MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
       return MODULE_FUNC(Memory, Collector, UnpinRoot)(collector, rootPointerAddress);
     }),
 
     OPERATION(Collect, (), {
       MODULE_TYPE(Memory, Collector) *collector =
-          MODULE_FUNC(Memory, GC, DefaultCollector)();
+          MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
       return MODULE_FUNC(Memory, Collector, Collect)(collector);
     }),
 
     PROCEDURE(Pause, (), {
       MODULE_TYPE(Memory, Collector) *collector =
-          MODULE_FUNC(Memory, GC, DefaultCollector)();
+          MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
       MODULE_FUNC(Memory, Collector, Pause)(collector);
     }),
 
     PROCEDURE(Resume, (), {
       MODULE_TYPE(Memory, Collector) *collector =
-          MODULE_FUNC(Memory, GC, DefaultCollector)();
+          MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
       MODULE_FUNC(Memory, Collector, Resume)(collector);
     }),
 
     FUNCTION(size_t, LiveBytes, (), {
       MODULE_TYPE(Memory, Collector) *collector =
-          MODULE_FUNC(Memory, GC, DefaultCollector)();
+          MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
       return MODULE_FUNC(Memory, Collector, LiveBytes)(collector);
     }),
 
     PREDICATE(Contains, (const void *ptr), {
       MODULE_TYPE(Memory, Collector) *collector =
-          MODULE_FUNC(Memory, GC, DefaultCollector)();
+          MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
       return MODULE_FUNC(Memory, Collector, Contains)(collector, ptr);
     })
   )
 );
 
-#undef GC_INIT_SELF
+#undef COSMERON_MACRO_INTERNAL_COLLECTOR_INIT_SELF
 
 /* EOF */

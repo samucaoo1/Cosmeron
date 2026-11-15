@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#define COMPARISON_PRIMITIVE_IMPLEMENT(ROW)                                    \
+#define COSMERON_MACRO_INTERNAL_COMPARISON_PRIMITIVE_IMPL(ROW)                 \
   FUNCTION(CMPOUT, PRIMITIVE_TYPE_GET(NAME, ROW),                              \
            (PRIMITIVE_TYPE_GET(TYPE, ROW) left,                                \
             PRIMITIVE_TYPE_GET(TYPE, ROW) right), {                            \
@@ -19,7 +19,7 @@
                                : COMPARISON_CONST(EQUAL));                     \
   }),
 
-#define COMPARISON_COMPLEX_IMPL(NAME_VAL, COMPLEX_TYPE, REAL_TYPE)             \
+#define COSMERON_MACRO_INTERNAL_COMPARISON_COMPLEX_IMPL(NAME_VAL, COMPLEX_TYPE, REAL_TYPE) \
   FUNCTION(CMPOUT, NAME_VAL, (COMPLEX_TYPE left, COMPLEX_TYPE right), {        \
     union {                                                                    \
       COMPLEX_TYPE value;                                                      \
@@ -42,18 +42,18 @@
   }),
 
 #if !COMPILER_MSVC
-#define COMPARISON_COMPLEX_IMPLEMENT_ALL()                                     \
-  COMPARISON_COMPLEX_IMPL(FloatComplex, float _Complex, float)                 \
-  COMPARISON_COMPLEX_IMPL(DoubleComplex, double _Complex, double)              \
-  COMPARISON_COMPLEX_IMPL(LongDoubleComplex, long double _Complex, long double)
+#define COSMERON_MACRO_INTERNAL_COMPARISON_COMPLEX_ALL()                       \
+  COSMERON_MACRO_INTERNAL_COMPARISON_COMPLEX_IMPL(FloatComplex, float _Complex, float) \
+  COSMERON_MACRO_INTERNAL_COMPARISON_COMPLEX_IMPL(DoubleComplex, double _Complex, double) \
+  COSMERON_MACRO_INTERNAL_COMPARISON_COMPLEX_IMPL(LongDoubleComplex, long double _Complex, long double)
 #else
-#define COMPARISON_COMPLEX_IMPLEMENT_ALL()
+#define COSMERON_MACRO_INTERNAL_COMPARISON_COMPLEX_ALL()
 #endif
 
 MODULE_IMPLEMENT(DOMAIN(Core), Algorithm,
   PACKAGE(Comparison,
-    PRIMITIVE_TYPE_TABLE_ORDERED(COMPARISON_PRIMITIVE_IMPLEMENT)
-    COMPARISON_COMPLEX_IMPLEMENT_ALL()
+    PRIMITIVE_TYPE_TABLE_ORDERED(COSMERON_MACRO_INTERNAL_COMPARISON_PRIMITIVE_IMPL)
+    COSMERON_MACRO_INTERNAL_COMPARISON_COMPLEX_ALL()
     FUNCTION(CMPOUT, CString, (const char *left, const char *right), {
       if (left == right)
         return COMPARISON_CONST(EQUAL);
@@ -100,8 +100,8 @@ MODULE_IMPLEMENT(DOMAIN(Core), Algorithm,
   )
 );
 
-#undef COMPARISON_PRIMITIVE_IMPLEMENT
-#undef COMPARISON_COMPLEX_IMPL
-#undef COMPARISON_COMPLEX_IMPLEMENT_ALL
+#undef COSMERON_MACRO_INTERNAL_COMPARISON_PRIMITIVE_IMPL
+#undef COSMERON_MACRO_INTERNAL_COMPARISON_COMPLEX_IMPL
+#undef COSMERON_MACRO_INTERNAL_COMPARISON_COMPLEX_ALL
 
 /* EOF */

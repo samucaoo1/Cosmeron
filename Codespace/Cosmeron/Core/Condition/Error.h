@@ -51,12 +51,12 @@ MODULE(DOMAIN(Core), Condition,
             CONST_PREDICATE_INLINE(Failure, (), {
               return self ? (self->code != STATUS_CONST(SUCCESS)) : true;
             }),
-            CONST_PREDICATE_INLINE(Category, (MODULE_ENUM(Outcome, Status, Category) category), {
-              return self ? MODULE_FUNC(Outcome, Status, IsCategory)(self->code, category) : false;
+            CONST_PREDICATE_INLINE(Category, (MODULE_ENUM(Condition, Status, Category) category), {
+              return self ? MODULE_FUNC(Condition, Status, IsCategory)(self->code, category) : false;
             })
         ),
-        CONST_FUNCTION_INLINE(MODULE_ENUM(Outcome, Status, Category), Category, (), {
-          return self ? MODULE_FUNC(Outcome, Status, CategoryOf)(self->code)
+        CONST_FUNCTION_INLINE(MODULE_ENUM(Condition, Status, Category), Category, (), {
+          return self ? MODULE_FUNC(Condition, Status, CategoryOf)(self->code)
                       : STATUS_CATEGORY_CONST(GENERIC);
         }),
         OPERATION(SetContext, (const MODULE_TYPE(Diagnostic, Context) * context)),

@@ -5,6 +5,7 @@
 #include "../Preprocessor/Compiling.inc"
 #include "../Preprocessor/Operations.h"
 #include "Alloc.h"
+#include "Allocator.h"
 #include "Impl/Common.inc"
 
 #include <stdbool.h>
@@ -156,47 +157,11 @@ MODULE(DOMAIN(Core), Memory,
         CONST_FUNCTION_INLINE(size_t, TotalAllocated, (), { return self ? self->totalAllocatedBytes : 0U; }),
         CONST_FUNCTION_INLINE(size_t, LiveBytes, (), { return self ? self->liveBytes : 0U; }),
         CONST_FUNCTION_INLINE(size_t, PageCount, (), { return self ? self->pageCount : 0U; }),
-        CONST_PREDICATE(Contains, (const void *ptr))
+        CONST_PREDICATE(Contains, (const void *ptr)),
+        FUNCTION(MODULE_TYPE(Memory, Allocator), AsAllocator, ())
     )
 );
 
 #include "Impl/Heap.impl"
-#include "Allocator.h"
-
-/* ========================================================================== */
-/* Allocator Adapter: Memory_Heap_AsAllocator                                 */
-/* ========================================================================== */
-
-static inline OPSTATUS MODULE_FUNC(Memory, Heap, AllocatorAlloc)(
-    void *context, size_t size, size_t alignment, void **outPtr) {
-  (void)alignment;
-  return MODULE_FUNC(Memory, Heap, Alloc)(
-      (MODULE_TYPE(Memory, Heap) *)context, outPtr, size, 0U, NULL);
-}
-
-static inline void MODULE_FUNC(Memory, Heap, AllocatorFree)(void *context,
-                                                            void *ptr,
-                                                            size_t size) {
-  (void)size;
-  MODULE_TYPE(Memory, Heap) *heap = (MODULE_TYPE(Memory, Heap) *)context;
-  if (heap && ptr) {
-    (void)MODULE_FUNC(Memory, Heap, FreeCell)(heap, ptr);
-  }
-}
-
-static inline MODULE_TYPE(Memory, Allocator)
-MODULE_FUNC(Memory, Heap, AsAllocator)(MODULE_TYPE(Memory, Heap) *self) {
-  static const MODULE_TYPE(Memory, AllocatorOps) ops = {
-      .Alloc = MODULE_FUNC(Memory, Heap, AllocatorAlloc),
-      .Realloc = NULL,
-      .Free = MODULE_FUNC(Memory, Heap, AllocatorFree),
-      .capabilities = CNS(Memory, SUPPORTS_FREE),
-  };
-  MODULE_TYPE(Memory, Allocator) alloc = {
-      .context = self,
-      .ops = &ops,
-  };
-  return alloc;
-}
 
 /* EOF */

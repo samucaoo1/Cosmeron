@@ -38,7 +38,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Condition,
         return "Unknown error (null pointer)";
       if (self->message)
         return self->message;
-      return MODULE_FUNC(Outcome, Status, Message)(self->code);
+      return MODULE_FUNC(Condition, Status, Message)(self->code);
     }),
 
     OPERATION(SetContext, (const MODULE_TYPE(Diagnostic, Context) * context), {

@@ -1,8 +1,12 @@
 #pragma once
 
+#include "../Module/Module.h"
 #include "../Module/Namespace.h"
+#include "../Module/Callback/Callback.h"
+#include "../Module/Closure/Closure.h"
 #include "../Preprocessor/Compiling.inc"
 #include "../Preprocessor/Operations.h"
+#include "../Types/Primitive.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -25,67 +29,56 @@
 #define COMPARISON_CONST(NAME) MODULE_CONST(ALGORITHM, COMPARISON, NAME)
 #endif
 
-typedef enum MODULE_ENUM(Algorithm, Comparison, Result) {
-#define COMPARISON_ENUM_ITEM(ROW)                                              \
+#define COSMERON_MACRO_INTERNAL_COMPARISON_RESULT_DISP(TARGET, ENUM_NAME, ROW)   \
   COMPARISON_CONST(COMPARISON_GET(NAME, ROW)) = COMPARISON_GET(VALUE, ROW),
-  COMPARISON_TABLE(COMPARISON_ENUM_ITEM)
-#undef COMPARISON_ENUM_ITEM
-} MODULE_ENUM(Algorithm, Comparison, Result);
+
+ENUM_DEF_EX(MODULE_NS(Algorithm, Comparison), Result, COMPARISON_TABLE,
+            COSMERON_MACRO_INTERNAL_COMPARISON_RESULT_DISP)
+#undef COSMERON_MACRO_INTERNAL_COMPARISON_RESULT_DISP
 
 /* Universal 3-way comparison output type alias */
 typedef MODULE_ENUM(Algorithm, Comparison, Result) CMPOUT;
-
-/* String representation helper */
-static inline const char *MODULE_FUNC(Algorithm, Comparison,
-                                      ToString)(CMPOUT result) {
-  switch (result) {
-#define COMPARISON_CASE_ITEM(ROW)                                              \
-  case COMPARISON_CONST(COMPARISON_GET(NAME, ROW)):                            \
-    return COMPARISON_GET(DESC, ROW);
-    COMPARISON_TABLE(COMPARISON_CASE_ITEM)
-#undef COMPARISON_CASE_ITEM
-  default:
-    return "Unknown";
-  }
-}
 
 /* ========================================================================== */
 /* 2. First-Class System Comparator Callable (Callback & Closure)             */
 /* ========================================================================== */
 
-#include "../Module/Callback/Callback.h"
-#include "../Module/Closure/Closure.h"
 CLOSURE_COMPARISON(Comparison, (const void *left, const void *right));
 
 /* ========================================================================== */
-/* 3. Module Framework & Primitive Types                                      */
+/* 3. Package Declaration: Algorithm_Comparison                               */
 /* ========================================================================== */
 
-#include "../Module/Module.h"
-#include "../Types/Primitive.h"
+#define COSMERON_MACRO_INTERNAL_COMPARISON_CASE_ITEM(ROW)                      \
+  case COMPARISON_CONST(COMPARISON_GET(NAME, ROW)):                            \
+    return COMPARISON_GET(DESC, ROW);
 
-/* ========================================================================== */
-/* 4. Package Declaration: Algorithm_Comparison                               */
-/* ========================================================================== */
-
-#define COMPARISON_PRIMITIVE_DECL(ROW)                                         \
+#define COSMERON_MACRO_INTERNAL_COMPARISON_PRIMITIVE_DECL(ROW)                 \
   FUNCTION(CMPOUT, PRIMITIVE_TYPE_GET(NAME, ROW),                              \
            (PRIMITIVE_TYPE_GET(TYPE, ROW) left,                                \
             PRIMITIVE_TYPE_GET(TYPE, ROW) right)),
 
 MODULE(DOMAIN(Core), Algorithm,
        PACKAGE(Comparison,
-               PRIMITIVE_TYPE_TABLE(COMPARISON_PRIMITIVE_DECL)
-                   FUNCTION(CMPOUT, CString,
-                            (const char *left, const char *right)),
+               FUNCTION_INLINE(const char *, ToString, (CMPOUT result), {
+                 switch (result) {
+                   COMPARISON_TABLE(COSMERON_MACRO_INTERNAL_COMPARISON_CASE_ITEM)
+                   default:
+                     return "Unknown";
+                 }
+               }),
+               PRIMITIVE_TYPE_TABLE(COSMERON_MACRO_INTERNAL_COMPARISON_PRIMITIVE_DECL)
+               FUNCTION(CMPOUT, CString,
+                        (const char *left, const char *right)),
                FUNCTION(CMPOUT, Bytes,
                         (const void *left, size_t leftSize, const void *right,
                          size_t rightSize))));
 
-#undef COMPARISON_PRIMITIVE_DECL
+#undef COSMERON_MACRO_INTERNAL_COMPARISON_CASE_ITEM
+#undef COSMERON_MACRO_INTERNAL_COMPARISON_PRIMITIVE_DECL
 
 /* ========================================================================== */
-/* 5. Implementation Include                                                  */
+/* 4. Implementation Include                                                  */
 /* ========================================================================== */
 
 #include "Impl/Comparison.impl"

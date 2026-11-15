@@ -7,6 +7,7 @@
 #include "../Preprocessor/Compiling.inc"
 #include "../Preprocessor/Detect/Detect.h"
 #include "Alloc.h"
+#include "Allocator.h"
 #include "Heap.h"
 #include "Impl/Common.inc"
 
@@ -20,48 +21,43 @@
 /* 1. Constants and Callables                                                 */
 /* ========================================================================== */
 
-#define GARBAGE_COLLECTOR_CONFIG_COL_NAME(NAME, VALUE) NAME
-#define GARBAGE_COLLECTOR_CONFIG_COL_VALUE(NAME, VALUE) VALUE
-#define GARBAGE_COLLECTOR_CONFIG_GET(FIELD, ROW) PP_OP_CAT2(GARBAGE_COLLECTOR_CONFIG_COL_, FIELD) ROW
+#define MEMORY_COLLECTOR_CONFIG_COL_NAME(NAME, VALUE) NAME
+#define MEMORY_COLLECTOR_CONFIG_COL_VALUE(NAME, VALUE) VALUE
+#define MEMORY_COLLECTOR_CONFIG_GET(FIELD, ROW)                                \
+  PP_OP_CAT2(MEMORY_COLLECTOR_CONFIG_COL_, FIELD) ROW
 
-#define GARBAGE_COLLECTOR_CONFIG_TABLE(X) \
-  X((DEFAULT_INITIAL_THRESHOLD, 65536U))  \
-  X((DEFAULT_GROWTH_PERCENT,    200U))    \
-  X((MIN_PACING_PERCENT,        25U))     \
-  X((MAX_PACING_PERCENT,        400U))    \
-  X((MAX_ROOTS,                 128U))    \
-  X((WORKLIST_CHUNK_CAPACITY,   512U))
+#define MEMORY_COLLECTOR_CONFIG_TABLE(X)                                       \
+  X((DEFAULT_INITIAL_THRESHOLD, 65536U))                                       \
+  X((DEFAULT_GROWTH_PERCENT, 200U))                                            \
+  X((MIN_PACING_PERCENT, 25U))                                                 \
+  X((MAX_PACING_PERCENT, 400U))                                                \
+  X((MAX_ROOTS, 128U))                                                         \
+  X((WORKLIST_CHUNK_CAPACITY, 512U))
 
 ENUM_DEF_EX(MODULE_NS(Memory, Collector), Config,
-            GARBAGE_COLLECTOR_CONFIG_TABLE, PLAIN)
+            MEMORY_COLLECTOR_CONFIG_TABLE, PLAIN)
 
 CLOSURE_PROCEDURE(
-    MODULE_INS(Memory, GcFinalizerFunction),
+    MODULE_INS(Memory, CollectorFinalizer),
     (void *ptr)
 );
 
-#define GARBAGE_COLLECTOR_FINALIZER_CLOSURE \
-  TCLOSURE(MODULE_INS(Memory, GcFinalizerFunction))
+#define MEMORY_COLLECTOR_FINALIZER_CLOSURE                                     \
+  TCLOSURE(MODULE_INS(Memory, CollectorFinalizer))
 
-#define GARBAGE_COLLECTOR_FINALIZER_CALLBACK \
-  TCLOSURE(MODULE_INS(Memory, GcFinalizerFunction))
+#define MEMORY_COLLECTOR_FINALIZER_CALLBACK                                    \
+  TCLOSURE(MODULE_INS(Memory, CollectorFinalizer))
 
-#define GARBAGE_COLLECTOR_FINALIZER_BIND(FN, CTX) \
-  NS(CLOSURE_FUNC(MODULE_INS(Memory, GcFinalizerFunction)), Bind)((FN), (CTX))
+#define MEMORY_COLLECTOR_FINALIZER_BIND(FN, CTX)                               \
+  NS(CLOSURE_FUNC(MODULE_INS(Memory, CollectorFinalizer)), Bind)((FN), (CTX))
 
-/* Typed struct descriptor */
-typedef struct MODULE_NS(Memory, Collector, Descriptor) {
-  size_t size;
-  uint64_t bitmap;
-} MODULE_NS(Memory, Collector, Descriptor);
-
-#define GARBAGE_COLLECTOR_FIELD_BIT(TYPE, FIELD) \
+#define MEMORY_COLLECTOR_FIELD_BIT(TYPE, FIELD)                                \
   (1ULL << (offsetof(TYPE, FIELD) / sizeof(void *)))
 
-#define GARBAGE_COLLECTOR_DESCRIPTOR_DEF(NAME, TYPE, ...) \
-  static const MODULE_NS(Memory, Collector, Descriptor) NAME = { \
-      .size = sizeof(TYPE), \
-      .bitmap = (0ULL | __VA_ARGS__) \
+#define MEMORY_COLLECTOR_DESCRIPTOR_DEF(NAME, TYPE, ...)                       \
+  static const MODULE_TYPE(Memory, CollectorDescriptor) NAME = {               \
+      .size = sizeof(TYPE),                                                    \
+      .bitmap = (0ULL | __VA_ARGS__)                                           \
   }
 
 /* ========================================================================== */
@@ -69,29 +65,35 @@ typedef struct MODULE_NS(Memory, Collector, Descriptor) {
 /* ========================================================================== */
 
 MODULE(DOMAIN(Core), Memory,
-    ISTRUCT(GcWorklistChunk,
+    STRUCT(CollectorDescriptor,
+        FIELDS(
+            size_t size;
+            uint64_t bitmap;
+        )
+    ),
+    ISTRUCT(CollectorWorklistChunk,
         FIELDS(
             void *items[MODULE_CONST(Memory, Collector, WORKLIST_CHUNK_CAPACITY)];
             size_t count;
-            struct MODULE_ITYPE(Memory, GcWorklistChunk) *next;
+            struct MODULE_ITYPE(Memory, CollectorWorklistChunk) *next;
         )
     ),
-    ISTRUCT(GcWorklist,
+    ISTRUCT(CollectorWorklist,
         FIELDS(
-            MODULE_ITYPE(Memory, GcWorklistChunk) *head;
-            MODULE_ITYPE(Memory, GcWorklistChunk) *freeChunks;
+            MODULE_ITYPE(Memory, CollectorWorklistChunk) *head;
+            MODULE_ITYPE(Memory, CollectorWorklistChunk) *freeChunks;
             size_t totalPushed;
             bool overflow;
         )
     ),
-    ISTRUCT(GcFinalizerEntry,
+    ISTRUCT(CollectorFinalizerEntry,
         FIELDS(
             void *object;
-            GARBAGE_COLLECTOR_FINALIZER_CALLBACK callback;
-            struct MODULE_ITYPE(Memory, GcFinalizerEntry) *next;
+            MEMORY_COLLECTOR_FINALIZER_CALLBACK callback;
+            struct MODULE_ITYPE(Memory, CollectorFinalizerEntry) *next;
         )
     ),
-    ISTRUCT(GcRootEntry,
+    ISTRUCT(CollectorRootEntry,
         FIELDS(
             const void *pointerAddress;
             bool active;
@@ -100,14 +102,14 @@ MODULE(DOMAIN(Core), Memory,
     OBJECT(Collector,
         FIELDS(
             MODULE_TYPE(Memory, Heap) heap;
-            MODULE_ITYPE(Memory, GcWorklist) worklist;
-            MODULE_ITYPE(Memory, GcFinalizerEntry) *finalizers;
-            MODULE_ITYPE(Memory, GcFinalizerEntry) *pendingFinalizers;
-            MODULE_ITYPE(Memory, GcRootEntry) roots[MODULE_CONST(Memory, Collector, MAX_ROOTS)];
+            MODULE_ITYPE(Memory, CollectorWorklist) worklist;
+            MODULE_ITYPE(Memory, CollectorFinalizerEntry) *finalizers;
+            MODULE_ITYPE(Memory, CollectorFinalizerEntry) *pendingFinalizers;
+            MODULE_ITYPE(Memory, CollectorRootEntry) roots[MODULE_CONST(Memory, Collector, MAX_ROOTS)];
             const void *stackBottom;
             size_t nextThreshold;
-            size_t liveBytesAfterGC;
-            size_t totalAllocatedSinceGC;
+            size_t liveBytesAfterCollect;
+            size_t totalAllocatedSinceCollect;
             uint32_t growthPercent;
             uint32_t pauseDepth;
             bool isInitialized;
@@ -115,27 +117,28 @@ MODULE(DOMAIN(Core), Memory,
         OPERATION(Create, (size_t initialHeapPages, const void *stackBottom)),
         OPERATION(Destroy, ()),
         OPERATION(Alloc, (void *outPointerObject, size_t size, uint8_t policy, const void *descriptor)),
-        OPERATION(AllocTyped, (void *outPointerObject, const MODULE_NS(Memory, Collector, Descriptor) *descriptor)),
+        OPERATION(AllocTyped, (void *outPointerObject, const MODULE_TYPE(Memory, CollectorDescriptor) *descriptor)),
         OPERATION(AllocAtomic, (void *outPointerObject, size_t size)),
-        OPERATION(SetFinalizer, (const void *ptr, GARBAGE_COLLECTOR_FINALIZER_CALLBACK finalizer)),
+        OPERATION(SetFinalizer, (const void *ptr, MEMORY_COLLECTOR_FINALIZER_CALLBACK finalizer)),
         OPERATION(PinRoot, (const void *rootPointerAddress)),
         OPERATION(UnpinRoot, (const void *rootPointerAddress)),
         OPERATION(Collect, ()),
         PROCEDURE(Pause, ()),
         PROCEDURE(Resume, ()),
         CONST_PREDICATE_INLINE(IsPaused, (), { return self && self->pauseDepth > 0U; }),
-        CONST_FUNCTION_INLINE(size_t, LiveBytes, (), { return self ? self->liveBytesAfterGC : 0U; }),
+        CONST_FUNCTION_INLINE(size_t, LiveBytes, (), { return self ? self->liveBytesAfterCollect : 0U; }),
         CONST_FUNCTION_INLINE(size_t, Threshold, (), { return self ? self->nextThreshold : 0U; }),
-        CONST_PREDICATE(Contains, (const void *ptr))
+        CONST_PREDICATE(Contains, (const void *ptr)),
+        FUNCTION(MODULE_TYPE(Memory, Allocator), AsAllocator, ())
     ),
-    PACKAGE(GC,
+    PACKAGE(GlobalCollector,
         OPERATION(Startup, (const void *stackBottom)),
         OPERATION(Shutdown, ()),
         FUNCTION(MODULE_TYPE(Memory, Collector) *, DefaultCollector, ()),
         OPERATION(Alloc, (void *outPointerObject, size_t size)),
-        OPERATION(AllocTyped, (void *outPointerObject, const MODULE_NS(Memory, Collector, Descriptor) *descriptor)),
+        OPERATION(AllocTyped, (void *outPointerObject, const MODULE_TYPE(Memory, CollectorDescriptor) *descriptor)),
         OPERATION(AllocAtomic, (void *outPointerObject, size_t size)),
-        OPERATION(SetFinalizer, (const void *ptr, GARBAGE_COLLECTOR_FINALIZER_CALLBACK finalizer)),
+        OPERATION(SetFinalizer, (const void *ptr, MEMORY_COLLECTOR_FINALIZER_CALLBACK finalizer)),
         OPERATION(PinRoot, (const void *rootPointerAddress)),
         OPERATION(UnpinRoot, (const void *rootPointerAddress)),
         OPERATION(Collect, ()),
@@ -147,41 +150,5 @@ MODULE(DOMAIN(Core), Memory,
 );
 
 #include "Impl/Collector.impl"
-#include "Allocator.h"
-
-/* ========================================================================== */
-/* Allocator Adapter: Memory_Collector_AsAllocator                            */
-/* ========================================================================== */
-
-static inline OPSTATUS MODULE_FUNC(Memory, Collector, AllocatorAlloc)(
-    void *context, size_t size, size_t alignment, void **outPtr) {
-  (void)alignment;
-  return MODULE_FUNC(Memory, Collector, Alloc)(
-      (MODULE_TYPE(Memory, Collector) *)context, outPtr, size, 0U, NULL);
-}
-
-static inline void MODULE_FUNC(Memory, Collector, AllocatorFree)(void *context,
-                                                                 void *ptr,
-                                                                 size_t size) {
-  (void)context;
-  (void)ptr;
-  (void)size;
-}
-
-static inline MODULE_TYPE(Memory, Allocator)
-MODULE_FUNC(Memory, Collector, AsAllocator)(
-    MODULE_TYPE(Memory, Collector) *self) {
-  static const MODULE_TYPE(Memory, AllocatorOps) ops = {
-      .Alloc = MODULE_FUNC(Memory, Collector, AllocatorAlloc),
-      .Realloc = NULL,
-      .Free = MODULE_FUNC(Memory, Collector, AllocatorFree),
-      .capabilities = CNS(Memory, NONE),
-  };
-  MODULE_TYPE(Memory, Allocator) alloc = {
-      .context = self,
-      .ops = &ops,
-  };
-  return alloc;
-}
 
 /* EOF */

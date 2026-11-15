@@ -153,6 +153,7 @@
                       PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_PROTO_ARG, \
                                      NS(CLASS, METHOD), __VA_ARGS__))
 
+/* Bronze Standard (Deprecated): Use OBJECT_SCOPE / OBJECT_*_IMPLEMENT_EX */
 #define OBJECT_PROTOTYPE(...) \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PROTO_DISPATCH_, \
              PP_HAS_MORE_THAN_2(__VA_ARGS__))(__VA_ARGS__)
@@ -168,12 +169,13 @@
       PP_FOREACH_COMMA_CTX(COSMERON_MACRO_INTERNAL_PKG_PROTO_ARG, \
                            NS(PKG, FUNC), __VA_ARGS__))
 
+/* Bronze Standard (Deprecated): Use PACKAGE_SCOPE / PACKAGE_*_IMPLEMENT_EX */
 #define PACKAGE_PROTOTYPE(...) \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PKG_PROTO_DISPATCH_, \
              PP_HAS_MORE_THAN_2(__VA_ARGS__))(__VA_ARGS__)
 
 /* ------------------------------------------------------------
- * 5. Backward Compatibility Aliases
+ * 5. Backward Compatibility Aliases (Bronze Standard / Deprecated)
  * ------------------------------------------------------------ */
 #define COSMERON_MACRO_INTERNAL_PROTOEX_2(CLASS, METHOD) \
   static inline NS(CLASS, METHOD, ret_t) NS(CLASS, METHOD) \
@@ -183,7 +185,8 @@
   static inline NS(CLASS, METHOD, ret_t) NS(CLASS, METHOD) \
       COSMERON_MACRO_INTERNAL_OBJ_PROTOEX_EMIT_PARAMS(CLASS, METHOD, PARAMS)
 
-#define OBJECT_PROTOTYPEEX(...) \
+/* Bronze Standard (Deprecated): Use OBJECT_*_IMPLEMENT_EX */
+#define OBJECT_PROTOTYPE_EX(...) \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PROTOEX_, \
              PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
 
@@ -194,7 +197,8 @@
   static inline NS(PKG, FUNC, ret_t) NS(PKG, FUNC) \
       COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(PARAMS)
 
-#define PACKAGE_PROTOTYPEEX(...) \
+/* Bronze Standard (Deprecated): Use PACKAGE_*_IMPLEMENT_EX */
+#define PACKAGE_PROTOTYPE_EX(...) \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PKG_PROTOEX_, \
              PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
 /* EOF */

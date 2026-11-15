@@ -3,11 +3,34 @@
 #include <stdint.h>
 #include <string.h>
 
-static const size_t MODULE_INS(Memory, Heap, SizeClassTable)[MODULE_CONST(MEMORY, HEAP, SIZE_CLASS_COUNT)] = {
-    16U,   32U,   48U,   64U,   80U,   96U,   112U,  128U,
-    160U,  192U,  224U,  256U,  320U,  384U,  448U,  512U,
-    640U,  768U,  896U,  1024U, 1280U, 1536U, 1792U, 2048U
-};
+#define COSMERON_MACRO_INTERNAL_HEAP_SIZE_CLASS_TABLE(X)                       \
+  X((16U))                                                                     \
+  X((32U))                                                                     \
+  X((48U))                                                                     \
+  X((64U))                                                                     \
+  X((80U))                                                                     \
+  X((96U))                                                                     \
+  X((112U))                                                                    \
+  X((128U))                                                                    \
+  X((160U))                                                                    \
+  X((192U))                                                                    \
+  X((224U))                                                                    \
+  X((256U))                                                                    \
+  X((320U))                                                                    \
+  X((384U))                                                                    \
+  X((448U))                                                                    \
+  X((512U))                                                                    \
+  X((640U))                                                                    \
+  X((768U))                                                                    \
+  X((896U))                                                                    \
+  X((1024U))                                                                   \
+  X((1280U))                                                                   \
+  X((1536U))                                                                   \
+  X((1792U))                                                                   \
+  X((2048U))
+
+ITABLE_ARRAY_DEF(MODULE_NS(Memory, Heap), size_t, SizeClassTable,
+                 COSMERON_MACRO_INTERNAL_HEAP_SIZE_CLASS_TABLE, 1)
 
 #if !defined(OBJECT_DISABLE_FUNCTION_TABLE) && !defined(MODULE_DISABLE_FUNCTION_TABLE)
 #define HEAP_INIT_SELF(self) do { const void *api = (self)->api; memset((self), 0, sizeof(*(self))); (self)->api = api; } while (0)
@@ -102,6 +125,21 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
       *outAligned = (void *)alignedAddr;
       *outRaw = raw;
       return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(AllocatorAlloc,
+              (void *context, size_t size, size_t alignment, void **outPtr), {
+      (void)alignment;
+      return MODULE_FUNC(Memory, Heap, Alloc)(
+          (MODULE_TYPE(Memory, Heap) *)context, outPtr, size, 0U, NULL);
+    }),
+
+    PROCEDURE(AllocatorFree, (void *context, void *ptr, size_t size), {
+      (void)size;
+      MODULE_TYPE(Memory, Heap) *heap = (MODULE_TYPE(Memory, Heap) *)context;
+      if (heap && ptr) {
+        (void)MODULE_FUNC(Memory, Heap, FreeCell)(heap, ptr);
+      }
     })
   ),
 
@@ -603,10 +641,25 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
     CONST_PREDICATE(Contains, (const void *ptr), {
       void *basePtr = NULL;
       return MODULE_FUNC(Memory, Heap, ResolvePointer)(self, ptr, &basePtr, NULL, NULL);
+    }),
+
+    FUNCTION(MODULE_TYPE(Memory, Allocator), AsAllocator, (), {
+      static const MODULE_TYPE(Memory, AllocatorOps) ops = {
+          .Alloc = MODULE_IFUNC(Memory, Heap, AllocatorAlloc),
+          .Realloc = NULL,
+          .Free = MODULE_IFUNC(Memory, Heap, AllocatorFree),
+          .capabilities = MODULE_CONST(Memory, SUPPORTS_FREE),
+      };
+      MODULE_TYPE(Memory, Allocator) alloc = {
+          .context = self,
+          .ops = &ops,
+      };
+      return alloc;
     })
   )
 );
 
+#undef COSMERON_MACRO_INTERNAL_HEAP_SIZE_CLASS_TABLE
 #undef HEAP_INIT_SELF
 
 /* EOF */

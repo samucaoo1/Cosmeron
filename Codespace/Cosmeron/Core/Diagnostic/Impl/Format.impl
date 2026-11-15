@@ -31,7 +31,7 @@ static inline void MODULE_IFUNC(Diagnostic, Format_WriteErrorSingle)(
     const MODULE_TYPE(Condition, Error) *error, bool detailed) {
   OPSTATUS code = OBJECT_CALL_0(error, Code);
   const char *msg = OBJECT_CALL_0(error, Message);
-  const char *name = MODULE_FUNC(Outcome, Status, Name)(code);
+  const char *name = MODULE_FUNC(Condition, Status, Name)(code);
 
   MODULE_IFUNC(Diagnostic, FormatWriter_AppendChar)(w, '[');
   MODULE_IFUNC(Diagnostic, FormatWriter_AppendStr)(w, name);

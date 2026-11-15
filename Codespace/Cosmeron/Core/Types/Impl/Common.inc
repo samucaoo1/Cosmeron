@@ -55,6 +55,18 @@
   X((512, uint64_t, 8, 64))                                                    \
   X((1024, uint64_t, 16, 128))
 
+#define TYPE_WIDTH_TYPE_TABLE(X)                                               \
+  X((128, uint64_t))                                                           \
+  X((256, uint64_t))                                                           \
+  X((512, uint64_t))                                                           \
+  X((1024, uint64_t))
+
+#define TYPE_BITSET_WIDTH_TABLE(X)                                             \
+  X((128, 128))                                                                \
+  X((256, 256))                                                                \
+  X((512, 512))                                                                \
+  X((1024, 1024))
+
 /* ==========================================================================
  * Module Template Forwarding Helper
  * ========================================================================== */
@@ -62,9 +74,6 @@
 #ifndef TEMPLATE_Type
 #define TEMPLATE_Type(TARGET, ...) NS(TEMPLATE_Type, TARGET)(__VA_ARGS__)
 #endif
-
-#define TEMPLATE_Type_Block_HAS_IMPL   1
-#define TEMPLATE_Type_Bitset_HAS_IMPL  1
 
 /* ==========================================================================
  * Shared Internal Bit/Limb Helpers (Zero FunctionTable Overhead)

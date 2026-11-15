@@ -1,6 +1,20 @@
 #pragma once
 
 MODULE_IMPLEMENT(DOMAIN(Core), Memory,
+  INTERNAL_EX(Arena,
+    OPERATION(AllocatorAlloc,
+              (void *context, size_t size, size_t alignment, void **outPtr), {
+      return MODULE_FUNC(Memory, Arena, AllocAligned)(
+          (MODULE_TYPE(Memory, Arena) *)context, outPtr, size, alignment);
+    }),
+
+    PROCEDURE(AllocatorFree, (void *context, void *ptr, size_t size), {
+      (void)context;
+      (void)ptr;
+      (void)size;
+    })
+  ),
+
   OBJECT(Arena,
     VARIANT(Create,
       OPERATION((size_t capacity), {
@@ -131,6 +145,20 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
 
       const uint8_t *bytePtr = (const uint8_t *)ptr;
       return (bytePtr >= self->buffer && bytePtr < self->buffer + self->offset);
+    }),
+
+    FUNCTION(MODULE_TYPE(Memory, Allocator), AsAllocator, (), {
+      static const MODULE_TYPE(Memory, AllocatorOps) ops = {
+          .Alloc = MODULE_IFUNC(Memory, Arena, AllocatorAlloc),
+          .Realloc = NULL,
+          .Free = MODULE_IFUNC(Memory, Arena, AllocatorFree),
+          .capabilities = MODULE_CONST(Memory, BULK_RESET),
+      };
+      MODULE_TYPE(Memory, Allocator) alloc = {
+          .context = self,
+          .ops = &ops,
+      };
+      return alloc;
     })
   )
 );

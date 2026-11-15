@@ -10,7 +10,6 @@
         *right = temporary;                                                    \
       })                                                                       \
   )
-#define TEMPLATE_Swap(SUFFIX, TYPE) TEMPLATE_Memory_Swap(SUFFIX, TYPE)
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */

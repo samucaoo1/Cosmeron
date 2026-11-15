@@ -6,7 +6,7 @@
 /* 1. Primitive Value Repetition Macro                                        */
 /* ========================================================================== */
 
-#define REPEAT_PRIMITIVE_IMPLEMENT(ROW)                                        \
+#define COSMERON_MACRO_INTERNAL_REPEAT_PRIMITIVE_IMPL(ROW)                     \
   OPERATION(                                                                   \
       PRIMITIVE_TYPE_GET(NAME, ROW),                                           \
       (PRIMITIVE_TYPE_GET(TYPE, ROW) * destination,                            \
@@ -153,7 +153,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Algorithm,
       return STATUS_CONST(SUCCESS);
     }),
 
-    PRIMITIVE_TYPE_TABLE(REPEAT_PRIMITIVE_IMPLEMENT)
+    PRIMITIVE_TYPE_TABLE(COSMERON_MACRO_INTERNAL_REPEAT_PRIMITIVE_IMPL)
 
     OPERATION(CString,
               (const char **destination, const char *value,
@@ -174,25 +174,6 @@ MODULE_IMPLEMENT(DOMAIN(Core), Algorithm,
   )
 );
 
-#undef REPEAT_PRIMITIVE_IMPLEMENT
-
-/* ========================================================================== */
-/* 3. Aliasing Forwarding Helpers                                             */
-/* ========================================================================== */
-
-static inline COSMERON_MAYBE_UNUSED void MODULE_FUNC(Algorithm, Repeat, IndexedProcedure)(
-    size_t count, MODULE_CLOSURE(Algorithm, Repeat, ProcedureIndexed) action) {
-  MODULE_FUNC(Algorithm, Repeat, ProcedureIndexed)(count, action);
-}
-
-static inline COSMERON_MAYBE_UNUSED OPSTATUS MODULE_FUNC(Algorithm, Repeat, IndexedOperation)(
-    size_t count, MODULE_CLOSURE(Algorithm, Repeat, OperationIndexed) operation) {
-  return MODULE_FUNC(Algorithm, Repeat, OperationIndexed)(count, operation);
-}
-
-static inline COSMERON_MAYBE_UNUSED bool MODULE_FUNC(Algorithm, Repeat, IndexedPredicate)(
-    size_t count, MODULE_CLOSURE(Algorithm, Repeat, PredicateIndexed) predicate) {
-  return MODULE_FUNC(Algorithm, Repeat, PredicateIndexed)(count, predicate);
-}
+#undef COSMERON_MACRO_INTERNAL_REPEAT_PRIMITIVE_IMPL
 
 /* EOF */
