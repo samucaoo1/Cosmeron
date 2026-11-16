@@ -71,6 +71,7 @@ def main() -> int:
     findings = scan(repo)
     for finding in findings:
         file_name, line_number, description = finding.split(":", 2)
+        print(f"privacy finding: {file_name}:{line_number}: {description.strip()}")
         print(f"::error file={file_name},line={line_number}::{description.strip()}")
     if findings:
         print(f"{len(findings)} local-path leak(s) found.", file=sys.stderr)
