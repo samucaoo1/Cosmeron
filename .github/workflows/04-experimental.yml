@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: experimental-${{ github.ref }}
+  group: experimental-restored-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
