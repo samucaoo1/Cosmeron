@@ -23,14 +23,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [c-cpp, python, actions]
+        include:
+          - language: c-cpp
+            build-mode: manual
+          - language: python
+            build-mode: none
+          - language: actions
+            build-mode: none
     steps:
       - uses: actions/checkout@v7
       - uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
-          build-mode: none
+          build-mode: ${{ matrix.build-mode }}
           queries: security-extended
+      - name: Build selected C test suites
+        if: ${{ matrix.language == 'c-cpp' }}
+        run: sh .github/scripts/test-portable-core.sh
       - uses: github/codeql-action/analyze@v4
 
   privacy:
