@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 uintptr_t CosmeronOHOS_Value(void);
 int CosmeronOHOS_Detect(void);
 int main(void) {
