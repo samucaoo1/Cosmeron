@@ -262,7 +262,8 @@
       return STATUS_CONST(INVALID_ARGUMENT);                                    \
     return MODULE_FUNC(Iterator, Circular, SUFFIX, Reset)(                      \
         (MODULE_TYPED(Iterator, Circular, SUFFIX) *)state);                     \
-  }
+  }                                                                             \\
+  typedef int NS(_cosmeron_stream_adapter, Iterator, Circular, SUFFIX)
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
