@@ -1,4 +1,4 @@
-#include "../../../Cosmeron/Modules/Type/Type.h"
+#include "../../Cosmeron/Modules/Type/Type.h"
 
 /* Custom width template instantiations via Dual-Mode Engine */
 TEMPLATE_IMPLEMENT(Type_Bigint, 192, uint64_t);

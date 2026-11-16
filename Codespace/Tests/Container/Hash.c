@@ -1,4 +1,4 @@
-#include "../../../Cosmeron/Modules/Container/Hash/Hash.h"
+#include "../../Cosmeron/Modules/Container/Hash/Hash.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>

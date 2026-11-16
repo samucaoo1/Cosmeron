@@ -1,4 +1,4 @@
-#include "../../../Cosmeron/Modules/Struct/Struct.h"
+#include "../../Cosmeron/Modules/Struct/Struct.h"
 #include <assert.h>
 
 int main(void) {

@@ -1,7 +1,7 @@
-#include "../../../Cosmeron/Core/Primitive/Types.h"
-#include "../../../Cosmeron/Core/Primitive/Traits.h"
-#include "../../../Cosmeron/Core/Primitive/TaggedUnion.h"
-#include "../../../Cosmeron/Core/Primitive/Any.h"
+#include "../../Cosmeron/Core/Primitive/Types.h"
+#include "../../Cosmeron/Core/Primitive/Traits.h"
+#include "../../Cosmeron/Core/Primitive/TaggedUnion.h"
+#include "../../Cosmeron/Core/Primitive/Any.h"
 
 #include <assert.h>
 #include <stdlib.h>

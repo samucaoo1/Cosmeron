@@ -2,7 +2,7 @@
 #define PACKAGE_DISABLE_FUNCTION_TABLE 1
 #define MODULE_DISABLE_FUNCTION_TABLE 1
 
-#include "../../../Cosmeron/Modules/Container/Container.h"
+#include "../../Cosmeron/Modules/Container/Container.h"
 #include <assert.h>
 
 int main(void) {

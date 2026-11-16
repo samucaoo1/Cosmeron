@@ -1,5 +1,5 @@
-#include "../../../Cosmeron/Modules/Container/Array/Array.h"
-#include "../../../Cosmeron/Modules/Tuple/Tuple.h"
+#include "../../Cosmeron/Modules/Container/Array/Array.h"
+#include "../../Cosmeron/Modules/Tuple/Tuple.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>

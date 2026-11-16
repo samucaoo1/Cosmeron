@@ -1,4 +1,4 @@
-#include "../../../Cosmeron/Core/Memory/SmartPointer.h"
+#include "../../Cosmeron/Core/Memory/SmartPointer.h"
 #include <assert.h>
 #include <stdint.h>
 

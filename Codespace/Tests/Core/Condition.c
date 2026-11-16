@@ -1,8 +1,8 @@
-#include "../../../Cosmeron/Core/Condition/Error.h"
-#include "../../../Cosmeron/Core/Condition/Panic.h"
-#include "../../../Cosmeron/Core/Condition/Exception.h"
-#include "../../../Cosmeron/Core/Diagnostic/Context.h"
-#include "../../../Cosmeron/Core/Outcome/Status.h"
+#include "../../Cosmeron/Core/Condition/Error.h"
+#include "../../Cosmeron/Core/Condition/Panic.h"
+#include "../../Cosmeron/Core/Condition/Exception.h"
+#include "../../Cosmeron/Core/Diagnostic/Context.h"
+#include "../../Cosmeron/Core/Outcome/Status.h"
 
 #include <assert.h>
 #include <string.h>

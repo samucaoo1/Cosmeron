@@ -1,4 +1,4 @@
-#include "../../../Cosmeron/Modules/Text/Text.h"
+#include "../../Cosmeron/Modules/Text/Text.h"
 
 #include <assert.h>
 #include <stdio.h>

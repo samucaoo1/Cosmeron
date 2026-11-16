@@ -1,4 +1,4 @@
-#include "../../../Cosmeron/Core/Preprocessor/Detect.h"
+#include "../../Cosmeron/Core/Preprocessor/Detect.h"
 
 #if (COMPILER_CLANG + COMPILER_GCC + COMPILER_MSVC + COMPILER_INTEL) > 1
 #error "Primary compiler-family detection must be mutually exclusive."

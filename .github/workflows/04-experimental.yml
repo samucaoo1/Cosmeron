@@ -60,7 +60,7 @@ jobs:
           OHOS_SDK: ${{ steps.sdk.outputs.ohos_sdk_native }}
           OHOS_ARCH: arm64-v8a
           OHOS_SYSTEM_PROBES: 'ON'
-        run: sh Tools/ohos/check-portability.sh
+        run: sh .github/tools/ohos/check-portability.sh
       - name: Save target compiler diagnostics
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
@@ -88,8 +88,8 @@ jobs:
           echo "### Probing Huawei HarmonyOS NEXT native C11 expectations ###"
           # Check header-only macros for platform discrimination
           gcc -std=c11 -Wall -Wextra -Wpedantic -Werror \
-            -I Codespace Tools/ohos/check-portability.sh >/dev/null 2>&1 || true
-          sh Tools/ohos/check-device.sh || true
+            -I Codespace .github/tools/ohos/check-portability.sh >/dev/null 2>&1 || true
+          sh .github/tools/ohos/check-device.sh || true
           echo "HarmonyOS NEXT probe logged."
 
   # =========================================================================
@@ -106,7 +106,7 @@ jobs:
       - name: Run Crostini validation suite inside Debian container
         run: |
           docker run --rm -v "$PWD:/workspace" -w /workspace debian:stable-slim \
-            /bin/sh -ec "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y gcc libc6-dev make python3; sh Tools/crostini/check.sh"
+            /bin/sh -ec "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y gcc libc6-dev make python3; sh .github/tools/crostini/check.sh"
 
   # =========================================================================
   # 4. OpenIndiana (Illumos kernel) VM (disabled)

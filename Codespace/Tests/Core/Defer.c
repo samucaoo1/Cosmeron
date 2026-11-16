@@ -1,7 +1,7 @@
-#include "../../../Cosmeron/Core/Condition/Defer.h"
-#include "../../../Cosmeron/Core/Condition/Exception.h"
-#include "../../../Cosmeron/Core/Outcome/Status.h"
-#include "../../../Cosmeron/Core/Primitive/Traits.h"
+#include "../../Cosmeron/Core/Condition/Defer.h"
+#include "../../Cosmeron/Core/Condition/Exception.h"
+#include "../../Cosmeron/Core/Outcome/Status.h"
+#include "../../Cosmeron/Core/Primitive/Traits.h"
 
 #include <assert.h>
 #include <stdbool.h>

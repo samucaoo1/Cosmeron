@@ -1,4 +1,4 @@
-#include "../../../Cosmeron/Core/Bit/Bit.h"
+#include "../../Cosmeron/Core/Bit/Bit.h"
 
 int main(void) {
   /* 1. Unit operations: Set, Clear, Flip, Check */

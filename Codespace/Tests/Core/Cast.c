@@ -1,6 +1,6 @@
-#include "../../../Cosmeron/Core/Cast/Cast.h"
-#include "../../../Cosmeron/Core/Module/Object.h"
-#include "../../../Cosmeron/Core/Module/Package.h"
+#include "../../Cosmeron/Core/Cast/Cast.h"
+#include "../../Cosmeron/Core/Module/Object.h"
+#include "../../Cosmeron/Core/Module/Package.h"
 
 #include <float.h>
 #include <math.h>

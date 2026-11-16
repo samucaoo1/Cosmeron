@@ -1,4 +1,4 @@
-#include "../../../Cosmeron/Modules/Container/Bitset/DynamicBitset.h"
+#include "../../Cosmeron/Modules/Container/Bitset/DynamicBitset.h"
 
 int main(void) {
   MODULE_TYPE(Container, DynamicBitset) bs = {0};

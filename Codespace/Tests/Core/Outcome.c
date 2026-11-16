@@ -1,6 +1,6 @@
-#include "../../../Cosmeron/Core/Outcome/Status.h"
-#include "../../../Cosmeron/Core/Outcome/Result.h"
-#include "../../../Cosmeron/Core/Outcome/Optional.h"
+#include "../../Cosmeron/Core/Outcome/Status.h"
+#include "../../Cosmeron/Core/Outcome/Result.h"
+#include "../../Cosmeron/Core/Outcome/Optional.h"
 
 #include <assert.h>
 #include <stdint.h>

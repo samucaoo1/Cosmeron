@@ -35,7 +35,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Documentation examples (strict C11)
-        run: python3 Tools/check_doc_examples.py --cc "${{ matrix.cc }}" --min-tests 6
+        run: python3 .github/tools/check_doc_examples.py --cc "${{ matrix.cc }}" --min-tests 6
 
       - name: Portable C11 suites
         env:
@@ -76,12 +76,12 @@ jobs:
         run: python3 .github/cosmeron/test_badges.py -v
 
       - name: Python syntax
-        run: python3 -m py_compile .github/scripts/*.py .github/entropy/*.py .github/cosmeron/*.py Tools/*.py
+        run: python3 -m py_compile .github/scripts/*.py .github/entropy/*.py .github/loc/*.py .github/cosmeron/*.py .github/tools/*.py
 
       - name: POSIX shell syntax (no hardware claims)
         run: |
           set -eu
-          for script in .github/scripts/*.sh Tools/*/*.sh; do
+          for script in .github/scripts/*.sh .github/tools/*/*.sh; do
             sh -n "$script"
             echo "syntax PASS: $script"
           done

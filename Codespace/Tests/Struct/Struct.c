@@ -1,4 +1,4 @@
-#include "../../../Cosmeron/Modules/Struct/Struct.h"
+#include "../../Cosmeron/Modules/Struct/Struct.h"
 
 /* Custom template instantiation of a pure POD struct */
 TEMPLATE_INSTANTIATE(Pair, custom16, uint16_t);

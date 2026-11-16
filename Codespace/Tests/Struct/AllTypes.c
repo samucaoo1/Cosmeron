@@ -1,8 +1,8 @@
-#include "../../../Cosmeron/Modules/Struct/TDual.h"
-#include "../../../Cosmeron/Modules/Struct/TPair.h"
-#include "../../../Cosmeron/Modules/Struct/TPenta.h"
-#include "../../../Cosmeron/Modules/Struct/TQuad.h"
-#include "../../../Cosmeron/Modules/Struct/TTriple.h"
+#include "../../Cosmeron/Modules/Struct/TDual.h"
+#include "../../Cosmeron/Modules/Struct/TPair.h"
+#include "../../Cosmeron/Modules/Struct/TPenta.h"
+#include "../../Cosmeron/Modules/Struct/TQuad.h"
+#include "../../Cosmeron/Modules/Struct/TTriple.h"
 
 #define TEST_PAIR(TYPE, SUFFIX)                                                \
   do {                                                                         \

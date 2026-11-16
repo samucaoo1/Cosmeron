@@ -1,5 +1,5 @@
 #define TYPE_DISABLE_FUNCTION_TABLE 1
-#include "../../../Cosmeron/Modules/Type/Type.h"
+#include "../../Cosmeron/Modules/Type/Type.h"
 
 int main(void) {
   /* Verify exact POD-like sizes with function tables disabled */
