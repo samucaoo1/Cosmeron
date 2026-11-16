@@ -2,6 +2,9 @@
 
 #ifndef TEMPLATE_Iterator_Contiguous
 #define TEMPLATE_Iterator_Contiguous(SUFFIX, TYPE)                             \
+  static OPSTATUS NS(Iterator, Contiguous, SUFFIX, StreamNext)(void *state, TYPE *outValue); \\
+  static bool NS(Iterator, Contiguous, SUFFIX, StreamHasNext)(const void *state); \\
+  static OPSTATUS NS(Iterator, Contiguous, SUFFIX, StreamReset)(void *state); \\
   TEMPLATE_OBJECT(Iterator, Contiguous, SUFFIX,                                \
       FIELDS(                                                                  \
           TYPE *base;                                                          \
@@ -226,7 +229,28 @@
                 NS(Iterator, Contiguous, SUFFIX, StreamHasNext),                \
                 NS(Iterator, Contiguous, SUFFIX, StreamReset));                \
           })                                                                   \
-  )
+  );                                                                           \\
+  static OPSTATUS NS(Iterator, Contiguous, SUFFIX, StreamNext)(                    \\
+      void *state, TYPE *outValue) {                                            \\
+    if (!state || !outValue)                                                    \\
+      return STATUS_CONST(INVALID_ARGUMENT);                                    \\
+    return MODULE_FUNC(Iterator, Contiguous, SUFFIX, StepValue)(                  \\
+        (MODULE_TYPED(Iterator, Contiguous, SUFFIX) *)state, outValue);            \\
+  }                                                                             \\
+  static bool NS(Iterator, Contiguous, SUFFIX, StreamHasNext)(                    \\
+      const void *state) {                                                      \\
+    if (!state)                                                                 \\
+      return false;                                                             \\
+    return MODULE_FUNC(Iterator, Contiguous, SUFFIX, HasNext)(                    \\
+        (const MODULE_TYPED(Iterator, Contiguous, SUFFIX) *)state);                \\
+  }                                                                             \\
+  static OPSTATUS NS(Iterator, Contiguous, SUFFIX, StreamReset)(void *state) {    \\
+    if (!state)                                                                 \\
+      return STATUS_CONST(INVALID_ARGUMENT);                                    \\
+    return MODULE_FUNC(Iterator, Contiguous, SUFFIX, Reset)(                      \\
+        (MODULE_TYPED(Iterator, Contiguous, SUFFIX) *)state);                      \\
+  }                                                                             \\
+  typedef int NS(Cosmeron, Iterator, Contiguous, StreamAdapter, SUFFIX)
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
