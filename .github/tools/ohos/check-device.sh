@@ -10,9 +10,9 @@ if ! command -v "$HDC" >/dev/null 2>&1; then
   echo "OpenHarmony hdc client not found: $HDC" >&2
   exit 2
 fi
-for binary in cosmeron_ohos_multi_tu cosmeron_ohos_posix_link; do
+for binary in cosmeron_ohos_multi_tu; do
   if [ ! -f "$build_dir/$binary" ]; then
-    echo "Missing $build_dir/$binary; run Tools/ohos/check-portability.sh first" >&2
+    echo "Missing $build_dir/$binary; run .github/tools/ohos/check-portability.sh first" >&2
     exit 2
   fi
 done
