@@ -70,7 +70,7 @@ def validate_doc_coverage(root: pathlib.Path) -> None:
         if (graphics_root / name).is_dir()
     }
     expected = core | modules | graphics
-    module_docs = root / "Docs" / "Modules"
+    module_docs = root / "Docs" / "en" / "Modules"
     present = {p.stem for p in module_docs.glob("*.md")}
     missing = sorted(expected - present)
     if missing:
@@ -98,14 +98,14 @@ def main() -> int:
     parser.add_argument(
         "--root",
         type=pathlib.Path,
-        default=pathlib.Path(__file__).resolve().parents[1],
+        default=pathlib.Path(__file__).resolve().parents[2],
         help="Cosmeron repository root",
     )
     args = parser.parse_args()
     root = args.root.resolve()
     try:
         validate_doc_coverage(root)
-        examples = collect_examples(root / "Docs" / "Modules")
+        examples = collect_examples(root / "Docs" / "en" / "Modules")
     except (OSError, ValueError) as error:
         print(f"Documentation error: {error}", file=sys.stderr)
         return 1
