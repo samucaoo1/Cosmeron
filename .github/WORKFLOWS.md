@@ -18,12 +18,18 @@ that manifest wherever the target supports execution or cross-compilation.
 
 - POSIX and Unix-like targets: `.github/scripts/test-portable-core.sh`
 - MSVC: `.github/scripts/test-msvc.ps1`
-- Nix: `flake.nix`, built by the platform workflow
-- BSD extended native integration: `.github/scripts/test-bsd-extended.sh`
+- Nix: `flake.nix` invokes the same portable runner
+- OpenHarmony: `.github/tools/ohos/CMakeLists.txt` reads the same manifest for cross-compilation
 
-Do not add a second copy of the portable test inventory to workflow files.
-Add a test to the manifest only after confirming that its source exists and
-is in scope.
+Do not add a second copy of the portable test inventory to workflow files,
+container commands, Nix expressions, or platform-specific scripts. Add or
+remove a portable suite only in `.github/tests.txt`; every consumer must read
+that file and fail when an entry is malformed or its source is missing.
+
+The standalone public-header check is intentionally a different test class:
+it discovers all public `*.h` files from the source tree. The Linux/OS/compiler
+matrices describe execution environments, not test-suite inventories. Their
+entries must not duplicate test names or test paths.
 
 ## Platform coverage
 
