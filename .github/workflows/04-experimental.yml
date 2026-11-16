@@ -60,7 +60,7 @@ jobs:
         run: |
           set -eu
           cat > "$RUNNER_TEMP/harmonyos-next-probe.c" <<'EOF'
-          #include "Codespace/Cosmeron/Core/Preprocessor/Detect.h"
+          #include "Codespace/Cosmeron/Core/Preprocessor/Detect/Detect.h"
           #if !OS_OHOS
           #error "The synthetic OHOS ABI marker was not detected"
           #endif
