@@ -2,8 +2,6 @@
   <img src="Docs/Assets/Brand/Cosmeron-Horizontal.png" alt="Cosmeron" width="600">
 </p>
 
-# Cosmeron
-
 > **A universe belong**
 
 ![C11](.github/badges/c11.svg)
