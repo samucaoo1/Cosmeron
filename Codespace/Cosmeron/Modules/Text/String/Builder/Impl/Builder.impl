@@ -17,14 +17,14 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
         return STATUS_CONST(SUCCESS);
 
       size_t newCap = self->capacity == 0U
-                          ? (size_t)CNS(Text, Builder, INTERNAL, INITIAL_CAPACITY)
+                          ? (size_t)CNS(Text, Builder, Internal, INITIAL_CAPACITY)
                           : self->capacity;
       while (newCap < needed) {
-        if (newCap > SIZE_MAX / (size_t)CNS(Text, Builder, INTERNAL, GROWTH_FACTOR)) {
+        if (newCap > SIZE_MAX / (size_t)CNS(Text, Builder, Internal, GROWTH_FACTOR)) {
           newCap = needed;
           break;
         }
-        newCap *= (size_t)CNS(Text, Builder, INTERNAL, GROWTH_FACTOR);
+        newCap *= (size_t)CNS(Text, Builder, Internal, GROWTH_FACTOR);
       }
       return MODULE_FUNC(Text, Builder, Reserve)(self, newCap);
     })
