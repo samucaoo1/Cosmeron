@@ -1,0 +1,149 @@
+name: 04 · Experimental
+
+# Informational portability probes. These jobs do not block merges.
+# Compile-only and synthetic probes are explicitly not device certification.
+
+on:
+  push:
+    branches: [main, Alpha-Version, pattern-refactor, audio-module]
+  pull_request:
+  schedule:
+    - cron: '29 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: experimental-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  openharmony:
+    name: Experimental / OpenHarmony SDK 6.0 (ARM64)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install official OpenHarmony native SDK
+        id: sdk
+        uses: openharmony-rs/setup-ohos-sdk@eb82b94ef522b07269679195c2512f22e922ef3b
+        with:
+          version: '6.0'
+          components: native
+          cache: 'true'
+      - name: Cross-compile C11 and OS-backed probes
+        env:
+          OHOS_SDK: ${{ steps.sdk.outputs.ohos_sdk_native }}
+          OHOS_ARCH: arm64-v8a
+          OHOS_SYSTEM_PROBES: 'ON'
+        run: sh .github/tools/ohos/check-portability.sh
+      - name: Upload target diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: openharmony-sdk-diagnostics
+          path: |
+            .build-ohos/target-macros.txt
+            .build-ohos/target-triple.txt
+          if-no-files-found: ignore
+
+  harmonyos-next:
+    name: Experimental / HarmonyOS NEXT boundary probe (synthetic)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check OHOS ABI overlay without claiming HarmonyOS NEXT support
+        run: |
+          set -eu
+          cat > "$RUNNER_TEMP/harmonyos-next-probe.c" <<'EOF'
+          #include "Codespace/Cosmeron/Core/Preprocessor/Detect.h"
+          #if !OS_OHOS
+          #error "The synthetic OHOS ABI marker was not detected"
+          #endif
+          int main(void) { return OS_OHOS ? 0 : 1; }
+          EOF
+          gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -D__OHOS__=1 -I .             "$RUNNER_TEMP/harmonyos-next-probe.c" -o "$RUNNER_TEMP/hos-probe"
+          "$RUNNER_TEMP/hos-probe"
+          echo "Synthetic ABI macro probe passed; HarmonyOS NEXT SDK/runtime remains UNVERIFIED."
+
+  chromeos-crostini:
+    name: Experimental / Crostini Linux userspace proxy (not Chromebook hardware)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run portable manifest in Debian container
+        run: |
+          docker run --rm -v "$PWD:/workspace" -w /workspace debian:stable-slim             /bin/sh -ec 'apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y gcc libc6-dev && sh .github/scripts/test-portable-core.sh'
+      - name: Explain hardware verification boundary
+        run: |
+          echo "This is a Debian userspace proxy only. Real Crostini validation requires a Chromebook; see .github/tools/crostini/README.md." >> "$GITHUB_STEP_SUMMARY"
+
+  android-ndk:
+    name: Experimental / Android NDK (aarch64)
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - name: Cross-compile manifest suites for Android
+        shell: bash
+        run: |
+          set -eu
+          NDK_ROOT="${ANDROID_NDK_LATEST_HOME:-${ANDROID_NDK_HOME:-}}"
+          if [ -z "$NDK_ROOT" ] || [ ! -d "$NDK_ROOT" ]; then
+            NDK_ROOT=$(find /usr/local/lib/android/sdk/ndk -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort -V | tail -n 1)
+          fi
+          test -n "$NDK_ROOT"
+          TOOLCHAIN="$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          CLANG=$(find "$TOOLCHAIN" -maxdepth 1 -name 'aarch64-linux-android*-clang' ! -name '*++' | sort -V | tail -n 1)
+          test -x "$CLANG"
+          PORTABLE_RUN=0 CC="$CLANG" sh .github/scripts/test-portable-core.sh
+          file .build-portable/*
+
+  ios-cross:
+    name: Experimental / iOS SDK (arm64 compile-only)
+    runs-on: macos-latest
+    timeout-minutes: 35
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - name: Cross-compile manifest suites for iOS
+        run: |
+          set -eu
+          xcrun --sdk iphoneos --show-sdk-path
+          PORTABLE_RUN=0 CC="xcrun --sdk iphoneos clang -arch arm64 -miphoneos-version-min=15.0"             sh .github/scripts/test-portable-core.sh
+          file .build-portable/*
+
+  redox-os:
+    name: Experimental / Redox OS macro probe (synthetic)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - name: Compile target-detection probe with Redox ABI markers
+        run: |
+          set -eu
+          gcc -std=c11 -Wall -Wextra -Wpedantic -Werror             -U__linux__ -U__linux -U__gnu_linux__ -Ulinux -D__redox__=1             -D_POSIX_C_SOURCE=200809L Codespace/Tests/Core/Detect.c             -o "$RUNNER_TEMP/redox-detect"
+          "$RUNNER_TEMP/redox-detect"
+          echo "Synthetic Redox macro probe passed; relibc/toolchain/runtime remain UNVERIFIED."
+
+  gate:
+    name: Experimental / Summary (non-blocking)
+    if: ${{ always() }}
+    needs: [openharmony, harmonyos-next, chromeos-crostini, android-ndk, ios-cross, redox-os]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Summarize experimental outcomes
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          REPORT_TITLE: Experimental Platforms
+          REPORT_STRICT: "0"
+        run: python3 .github/scripts/report-results.py
