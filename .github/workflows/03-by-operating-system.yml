@@ -47,7 +47,7 @@ jobs:
           IMAGE: ${{ matrix.image }}
           DISTRO: ${{ matrix.name }}
         run: |
-          docker run --rm -v "$PWD:/workspace" -w /workspace "$IMAGE" /bin/sh -ec '
+          docker run --rm -e DISTRO="$DISTRO" -v "$PWD:/workspace" -w /workspace "$IMAGE" /bin/sh -ec '
             case "$DISTRO" in
               "Alpine musl") apk add --no-cache gcc musl-dev ;;
               Fedora) dnf -y install gcc ;;
