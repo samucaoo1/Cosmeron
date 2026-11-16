@@ -1,0 +1,12 @@
+# Single Source of Truth for portable C11 CI test suites
+# Format: <Module> <TestName>
+Core Namespace
+Core Allocator
+Core Bit
+Core PackageNoFunctionTable
+Container Array
+Container DynamicBitset
+Container Iterator
+Container Linked
+Container Tree
+Tuple Tuple

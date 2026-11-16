@@ -34,9 +34,12 @@ run_suite() {
   done
 }
 
-run_suite Core Namespace Allocator Bit PackageNoFunctionTable
-run_suite Container Array DynamicBitset IncludeAll Iterator Linked NoFunctionTable Tree
-run_suite Tuple Tuple
+while IFS=' ' read -r module test || [ -n "$module" ]; do
+  case "$module" in
+    ""|\#*) continue ;;
+  esac
+  run_suite "$module" "$test"
+done < .github/tests.txt
 if [ "$PORTABLE_RUN" = 1 ]; then
   echo "[portable] all selected C11 suites passed"
 else
