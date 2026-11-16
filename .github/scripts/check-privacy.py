@@ -18,6 +18,7 @@ from pathlib import Path
 EXCLUDED_PREFIXES = (
     # Vendored SQLite amalgamation: upstream docs use /home/fred-style examples.
     "Codespace/Cosmeron/Modules/Database/SQLite/Internal/",
+    "Roadmap/Cosmeron/Modules/Database/SQLite/Internal/",
 )
 SELF_PATH = ".github/scripts/check-privacy.py"
 ALLOW_MARKER = "privacy-scan: allow"
