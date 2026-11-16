@@ -2,9 +2,9 @@
 
 #ifndef TEMPLATE_Iterator_Circular
 #define TEMPLATE_Iterator_Circular(SUFFIX, TYPE)                               \
-  static OPSTATUS NS(Iterator, Circular, SUFFIX, StreamNext)(void *state, TYPE *outValue); \\
-  static bool NS(Iterator, Circular, SUFFIX, StreamHasNext)(const void *state); \\
-  static OPSTATUS NS(Iterator, Circular, SUFFIX, StreamReset)(void *state); \\
+  static OPSTATUS NS(Iterator, Circular, SUFFIX, StreamNext)(void *state, TYPE *outValue); \
+  static bool NS(Iterator, Circular, SUFFIX, StreamHasNext)(const void *state); \
+  static OPSTATUS NS(Iterator, Circular, SUFFIX, StreamReset)(void *state); \
   TEMPLATE_OBJECT(Iterator, Circular, SUFFIX,                                  \
       FIELDS(                                                                  \
           TYPE *base;                                                          \
