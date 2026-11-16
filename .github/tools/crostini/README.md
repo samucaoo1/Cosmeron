@@ -5,7 +5,7 @@ environment**, not an ordinary Debian Docker runner.
 
 1. Enable Linux development environment in ChromeOS Settings > Developers.
 2. Install build tools inside Crostini (`sudo apt update && sudo apt install build-essential python3`).
-3. Clone Cosmeron, select the target branch, and run `sh  .github/tools/crostini/check.sh`.
+3. Clone Cosmeron, select the target branch, and run `sh .github/tools/crostini/check.sh`.
 4. Save `crostini-report.txt` and the terminal output; include the ChromeOS
    version and Chromebook model with your findings.
 
@@ -24,7 +24,7 @@ applications are three distinct targets and must not share a certification.
 On the same physical Chromebook, run:
 
 ```sh
-sh  .github/tools/crostini/check-hardware.sh
+sh .github/tools/crostini/check-hardware.sh
 ```
 
 Attach `crostini-hardware-report.txt` alongside `crostini-report.txt` to
