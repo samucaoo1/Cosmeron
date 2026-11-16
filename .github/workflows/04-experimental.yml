@@ -130,7 +130,16 @@ jobs:
       - name: Compile target-detection probe with Redox ABI markers
         run: |
           set -eu
-          gcc -std=c11 -Wall -Wextra -Wpedantic -Werror             -U__linux__ -U__linux -U__gnu_linux__ -Ulinux -D__redox__=1             -D_POSIX_C_SOURCE=200809L Codespace/Tests/Core/Detect.c             -o "$RUNNER_TEMP/redox-detect"
+          cat > "$RUNNER_TEMP/redox-detect.c" <<'EOF'
+          #include "Codespace/Cosmeron/Core/Preprocessor/Detect/Detect.h"
+          #if !OS_REDOX || !OS_UNIX
+          #error "The synthetic Redox target markers were not detected"
+          #endif
+          int main(void) { return OS_REDOX && OS_UNIX ? 0 : 1; }
+          EOF
+          gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -I . \
+            -U__linux__ -U__linux -U__gnu_linux__ -Ulinux -D__redox__=1 \
+            "$RUNNER_TEMP/redox-detect.c" -o "$RUNNER_TEMP/redox-detect"
           "$RUNNER_TEMP/redox-detect"
           echo "Synthetic Redox macro probe passed; relibc/toolchain/runtime remain UNVERIFIED."
 
