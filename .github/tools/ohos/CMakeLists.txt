@@ -5,7 +5,7 @@ if(NOT CMAKE_SYSTEM_NAME STREQUAL "OHOS")
   message(FATAL_ERROR "Use the OpenHarmony native SDK ohos.toolchain.cmake")
 endif()
 
-set(COSMERON_ROOT "${CMAKE_CURRENT_LIST_DIR}/../..")
+set(COSMERON_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../..")
 set(COSMERON_TARGETS
   "${COSMERON_ROOT}/Codespace/Tests/Core/Namespace.c"
   "${COSMERON_ROOT}/Codespace/Tests/Core/Preprocessor.c"
