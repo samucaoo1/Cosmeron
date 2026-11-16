@@ -13,7 +13,12 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: cosmeron-maintenance
+  cancel-in-progress: false
 
 jobs:
   maintenance:
@@ -24,23 +29,96 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - name: LOC report
-        run: python3 .github/loc/loc.py
-      - name: Entropy and badge tests
+
+      - name: Require canonical branch
+        shell: bash
+        run: |
+          if [ "$GITHUB_REF_NAME" != "main" ]; then
+            echo "Canonical maintenance publishing only runs from main."
+            exit 1
+          fi
+          test -d Codespace/Cosmeron
+
+      - name: Configure Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Freeze entropy origin when first published
+        shell: bash
+        run: |
+          git fetch --tags --force origin
+          if ! git rev-parse --verify --quiet refs/tags/entropy-origin >/dev/null; then
+            git tag -a entropy-origin "$GITHUB_SHA" -m "Cosmeron entropy origin"
+            git push origin refs/tags/entropy-origin
+          fi
+
+      - name: Test maintenance tools
         run: |
           python3 .github/entropy/test_entropy.py
           python3 .github/cosmeron/test_badges.py
-      - name: Calculate provisional entropy and badges
+
+      - name: Calculate canonical entropy
+        run: python3 .github/entropy/entropy.py --ref "$GITHUB_SHA" --output-dir "$RUNNER_TEMP/entropy"
+
+      - name: Verify entropy invariants
         run: |
-          python3 .github/entropy/entropy.py --provisional --output-dir "$RUNNER_TEMP/entropy-preview"
-          python3 .github/cosmeron/badges.py --output-dir "$RUNNER_TEMP/badges"
-      - name: Upload maintenance artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: maintenance-reports
-          path: |
-            .github/loc/state.json
-            .github/badges/loc.svg
-            ${{ runner.temp }}/entropy-preview/
-            ${{ runner.temp }}/badges/
-          if-no-files-found: ignore
+          python3 - "$GITHUB_SHA" "$RUNNER_TEMP/entropy/state.json" <<'PY'
+          import json
+          import sys
+
+          expected, filename = sys.argv[1:]
+          with open(filename, encoding="utf-8") as stream:
+              state = json.load(stream)
+          if state["ref_commit"] != expected:
+              raise SystemExit("entropy ref does not match the triggering commit")
+          if state["total"] != state["initial_entropy"] + state["accumulated_change"]:
+              raise SystemExit("entropy invariant failed")
+          if state["provisional"]:
+              raise SystemExit("canonical entropy state must not be provisional")
+          PY
+
+      - name: Generate LOC report, badges and entropy state
+        run: |
+          python3 .github/loc/loc.py
+          mkdir -p .github/badges
+          python3 .github/cosmeron/badges.py --output-dir .github/badges
+          cp "$RUNNER_TEMP/entropy/entropy.svg" .github/badges/entropy.svg
+          cp "$RUNNER_TEMP/entropy/state.json" .github/entropy/state.json
+
+      - name: Publish generated state through an automated pull request
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git fetch origin main
+          if [ "$(git rev-parse origin/main)" != "$GITHUB_SHA" ]; then
+            echo "main advanced during calculation; a newer run will publish it."
+            exit 0
+          fi
+
+          branch="automation/cosmeron-state"
+          git checkout -B "$branch" "$GITHUB_SHA"
+          git add .github/badges .github/entropy/state.json .github/loc/state.json
+
+          if git diff --cached --quiet; then
+            echo "Generated maintenance state is already up to date."
+            exit 0
+          fi
+
+          git commit -m "chore: update Cosmeron maintenance state [skip ci]"
+          git push --force origin "$branch"
+
+          pr_number="$(gh pr list --base main --head "$branch" --state open --json number --jq '.[0].number // empty')"
+          if [ -z "$pr_number" ]; then
+            gh pr create --base main --head "$branch" \
+              --title "chore: update Cosmeron maintenance state [skip ci]" \
+              --body "Automated refresh of LOC, badges and machine-readable entropy state."
+            pr_number="$(gh pr list --base main --head "$branch" --state open --json number --jq '.[0].number')"
+          fi
+
+          if [ -n "$pr_number" ]; then
+            gh pr merge "$pr_number" --squash --delete-branch \
+              --subject "chore: update Cosmeron maintenance state [skip ci]" || \
+              echo "PR #$pr_number requires manual approval or merge."
+          fi
