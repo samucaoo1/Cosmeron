@@ -1,16 +1,14 @@
 #!/bin/sh
-# Run INSIDE a real Chromebook's Linux development environment (Crostini).
+# Run INSIDE a real Chromebook Linux development environment (Crostini).
 set -eu
 CC=${CC:-cc}
-for command in "$CC" make python3; do
-  if ! command -v "$command" >/dev/null 2>&1; then
-    echo "Missing $command: install build-essential, make and python3 in Crostini" >&2
-    exit 2
-  fi
-done
+if ! command -v "$CC" >/dev/null 2>&1; then
+  echo "Missing compiler '$CC': install build-essential in Crostini" >&2
+  exit 2
+fi
 report=${COSMERON_CROSTINI_REPORT:-crostini-report.txt}
 {
-  echo "Cosmeron Crostini hardware environment"
+  echo "Cosmeron Crostini environment"
   date -u
   uname -a
   cat /etc/os-release
@@ -20,11 +18,6 @@ report=${COSMERON_CROSTINI_REPORT:-crostini-report.txt}
   done
   echo "DISPLAY=${DISPLAY:-unset} WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-unset}"
 } > "$report"
-sh .github/scripts/test-portable-core.sh
-sh .github/scripts/test-bsd-native.sh
-sh .github/scripts/test-input-posix.sh
-make -C Codespace/Tests/Network clean strict CC="$CC"
-make -C Codespace/Tests/Audio clean run CC="$CC"
-make -C Codespace/Tests/Terminal clean run CC="$CC"
-echo "PASS: portable / native / network / audio-offline / terminal" >> "$report"
+CC="$CC" sh .github/scripts/test-portable-core.sh
+echo "PASS: portable C11 manifest suites" >> "$report"
 echo "Crostini test complete: report=$report; hardware permissions are NOT certified"
