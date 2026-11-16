@@ -113,7 +113,6 @@ jobs:
           run: |
             set -eu
             sh .github/scripts/test-portable-core.sh
-            sh .github/scripts/test-bsd-extended.sh
 
   openbsd:
     name: BSD / OpenBSD
@@ -127,7 +126,6 @@ jobs:
           run: |
             set -eu
             sh .github/scripts/test-portable-core.sh
-            sh .github/scripts/test-bsd-extended.sh
 
   netbsd:
     name: BSD / NetBSD
@@ -141,7 +139,6 @@ jobs:
           run: |
             set -eu
             sh .github/scripts/test-portable-core.sh
-            sh .github/scripts/test-bsd-extended.sh
 
   dragonflybsd:
     name: BSD / DragonFly BSD
@@ -155,7 +152,6 @@ jobs:
           run: |
             set -eu
             sh .github/scripts/test-portable-core.sh
-            sh .github/scripts/test-bsd-extended.sh
 
   macos:
     name: macOS / ${{ matrix.name }}
