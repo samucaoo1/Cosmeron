@@ -2,6 +2,9 @@
 
 #ifndef TEMPLATE_Iterator_Forward
 #define TEMPLATE_Iterator_Forward(SUFFIX, TYPE)                                \
+  static OPSTATUS NS(Iterator, Forward, SUFFIX, StreamNext)(void *state, TYPE *outValue); \
+  static bool NS(Iterator, Forward, SUFFIX, StreamHasNext)(const void *state); \
+  static OPSTATUS NS(Iterator, Forward, SUFFIX, StreamReset)(void *state); \
   TEMPLATE_OBJECT(Iterator, Forward, SUFFIX,                                   \
       FIELDS(                                                                  \
           struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *start;              \
@@ -160,14 +163,32 @@
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             return MODULE_FUNC(Iterator, Stream, SUFFIX, Bind)(                \
                 outStream, (void *)self,                                       \
-                (OPSTATUS (*)(void *, TYPE *))MODULE_FUNC(                     \
-                    Iterator, Forward, SUFFIX, StepValue),                     \
-                (bool (*)(const void *))MODULE_FUNC(                           \
-                    Iterator, Forward, SUFFIX, HasNext),                       \
-                (OPSTATUS (*)(void *))MODULE_FUNC(                             \
-                    Iterator, Forward, SUFFIX, Reset));                        \
+                NS(Iterator, Forward, SUFFIX, StreamNext), \
+                NS(Iterator, Forward, SUFFIX, StreamHasNext), \
+                NS(Iterator, Forward, SUFFIX, StreamReset)); \
           })                                                                   \
-  )
+  ); \
+  static OPSTATUS NS(Iterator, Forward, SUFFIX, StreamNext)( \
+      void *state, TYPE *outValue) { \
+    if (!state || !outValue) \
+      return STATUS_CONST(INVALID_ARGUMENT); \
+    return MODULE_FUNC(Iterator, Forward, SUFFIX, StepValue)( \
+        (MODULE_TYPED(Iterator, Forward, SUFFIX) *)state, outValue); \
+  } \
+  static bool NS(Iterator, Forward, SUFFIX, StreamHasNext)( \
+      const void *state) { \
+    if (!state) \
+      return false; \
+    return MODULE_FUNC(Iterator, Forward, SUFFIX, HasNext)( \
+        (const MODULE_TYPED(Iterator, Forward, SUFFIX) *)state); \
+  } \
+  static OPSTATUS NS(Iterator, Forward, SUFFIX, StreamReset)(void *state) { \
+    if (!state) \
+      return STATUS_CONST(INVALID_ARGUMENT); \
+    return MODULE_FUNC(Iterator, Forward, SUFFIX, Reset)( \
+        (MODULE_TYPED(Iterator, Forward, SUFFIX) *)state); \
+  } \
+  typedef int NS(Cosmeron, Iterator, Forward, StreamAdapter, SUFFIX)
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
