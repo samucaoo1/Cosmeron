@@ -16,7 +16,7 @@ permissions:
 
 concurrency:
   group: experimental-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: true
 
 jobs:
   openharmony:
