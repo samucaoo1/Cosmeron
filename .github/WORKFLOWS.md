@@ -1,28 +1,40 @@
-# Cosmeron GitHub Actions Architecture
+# Cosmeron GitHub Actions
 
-The continuous integration architecture consists of exactly five modular workflows:
+The CI uses four workflows. The selected C test suites have one source of
+truth: `.github/tests.txt`. Every compiler and platform test runner reads
+that manifest; workflow files must not maintain independent suite lists.
 
-| # | Workflow | Purpose | Trigger | Required Gate |
-|---|---|---|---|---|
-| 01 | [Simple Test](workflows/01-simple-test.yml) | Fast feedback: strict portable C11 suite (GCC & Clang), standalone public headers, doc examples, tooling tests and actionlint | Every push & PR | `Simple Test / Gate` |
-| 02 | [Security](workflows/02-security.yml) | CodeQL (C/C++, Python, Actions), ASan + UBSan across all modules, TSan (Concurrency), decoder sanitizers (Compression, FLAC, MP3), stream fuzzing, and public-repository privacy scan | Push to main, PR to main, weekly, manual | `Security / Gate` |
-| 03 | [By Operating System](workflows/03-by-operating-system.yml) | Linux base distros (Debian, Ubuntu, Fedora, Arch, Void glibc/musl, Alpine, openSUSE, Gentoo, 32-bit, Nix + NixOS VM), BSD family (FreeBSD, OpenBSD, NetBSD, DragonFly BSD), Windows 10 & 11 (MinGW + MSVC), macOS (Apple Silicon + Intel) | Push to main/feature branches, PR to main, weekly, manual | `By Operating System / Gate` |
-| 04 | [Experimental](workflows/04-experimental.yml) | Feasibility research & diagnostic probes: OpenHarmony (OHOS SDK 6.0 ARM64), HarmonyOS NEXT (HOS), ChromeOS (Crostini proxy), OpenIndiana (Illumos VM), Oracle Solaris VM, Android NDK (aarch64), iOS (arm64) and audio parity | Push, PR, weekly, manual (non-blocking) | `Experimental / Summary` (informational) |
-| 05 | [Cosmeron](workflows/05-cosmeron.yml) | Entropy calculation ($H$), badge generation (C11, platforms, security, dependencies, entropy) and automated publishing via PR squash-merge | Push to main touching code/entropy/badges | N/A (automation) |
+| # | Workflow | Responsibility | Required gate |
+|---|---|---|---|
+| 01 | [CI](workflows/01-simple-test.yml) | GCC/Clang portable C11 suites, standalone public headers and repository tooling | `CI / Gate` |
+| 02 | [Platform Compatibility](workflows/03-by-operating-system.yml) | Linux distributions, FreeBSD, macOS, Windows MinGW and MSVC | `Platform Compatibility / Gate` |
+| 03 | [Security](workflows/02-security.yml) | CodeQL, repository privacy checks, ASan and UBSan over the manifest suites | `Security / Gate` |
+| 04 | [Maintenance](workflows/04-maintenance.yml) | LOC report, entropy calculation and badge artifacts | Informational |
 
-## Reading Workflow Results
+## Test selection
 
-- **01 (Simple Test):** Verifies the portable C11 core, header standalone compilability and repository tooling in minutes on a standard Ubuntu host.
-- **02 (Security):** Enforces static analysis, memory safety, concurrency contention safety and fuzzing invariants. Also runs `.github/scripts/check-privacy.py` to ensure local developer paths are never committed.
-- **03 (By Operating System):** Each Linux distribution runs its native container image (its own libc and toolchain). BSDs boot native VM guests via `vmactions`. Windows exercises both MSVC (`cl.exe`) and MinGW (`gcc.exe`). macOS tests both ARM64 and Intel architectures.
-- **04 (Experimental):** Results are non-blocking (`continue-on-error: true` and non-strict gate). They provide diagnostics and tracking for emerging or niche platform targets.
-- **05 (Cosmeron):** Generates official SVG badges in `.github/badges/` and updates `.github/entropy/state.json`.
+Each non-specialized C test runner consumes `.github/tests.txt`:
 
-## Branch Protection
+- POSIX: `.github/scripts/test-portable-core.sh`
+- MSVC: `.github/scripts/test-msvc.ps1`
 
-Configure the following status checks as required in repository settings:
-1. `Simple Test / Gate`
-2. `Security / Gate`
-3. `By Operating System / Gate`
+Do not add module-specific test inventories to workflows or runner scripts.
+To include or remove a portable test, change the manifest only after verifying
+that the corresponding source exists and is in scope.
 
-The old consolidated checks (`CI / Gate`, `Compatibility / Summary`) are replaced by these three gates.
+## Scope
+
+The workflows validate the repository's current test manifest. They do not
+assume that every module has been refactored or has a complete test suite.
+Module-specific fuzzers, parity tests and sanitizer jobs are intentionally
+not part of the general CI gate.
+
+## Branch protection
+
+Configure these required status checks:
+
+1. `CI / Gate`
+2. `Platform Compatibility / Gate`
+3. `Security / Gate`
+
+Maintenance artifacts are informational and do not block merges.
