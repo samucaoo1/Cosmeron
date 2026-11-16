@@ -80,7 +80,7 @@ PROCEDURE(FormatInteger, (
     bool isNegative, unsigned base, bool uppercase, bool flagMinus,
     bool flagPlus, bool flagSpace, bool flagHash, bool flagZero, size_t width,
     bool hasPrecision, size_t precision), {
-  char digitsBuffer[CNS(Text, Format, INTERNAL, BUFFER_CAPACITY)];
+  char digitsBuffer[CNS(Text, Format, Internal, BUFFER_CAPACITY)];
   size_t digitsCount = 0U;
   const char *digitsMap = uppercase ? "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                     : "0123456789abcdefghijklmnopqrstuvwxyz";
@@ -110,13 +110,13 @@ PROCEDURE(FormatInteger, (
       prefix[prefixLen++] = ' ';
     }
   } else if (flagHash && value != 0U) {
-    if (base == CNS(Text, Format, INTERNAL, BASE_HEXADECIMAL)) {
+    if (base == CNS(Text, Format, Internal, BASE_HEXADECIMAL)) {
       prefix[prefixLen++] = '0';
       prefix[prefixLen++] = uppercase ? 'X' : 'x';
-    } else if (base == CNS(Text, Format, INTERNAL, BASE_BINARY)) {
+    } else if (base == CNS(Text, Format, Internal, BASE_BINARY)) {
       prefix[prefixLen++] = '0';
       prefix[prefixLen++] = uppercase ? 'B' : 'b';
-    } else if (base == CNS(Text, Format, INTERNAL, BASE_OCTAL)) {
+    } else if (base == CNS(Text, Format, Internal, BASE_OCTAL)) {
       if (digitsCount == 0U || digitsBuffer[digitsCount - 1U] != '0') {
         prefix[prefixLen++] = '0';
       }
@@ -190,7 +190,7 @@ PROCEDURE(FormatFloat, (
   formatSpec[fmtLen++] = specifier;
   formatSpec[fmtLen] = '\0';
 
-  char tempBuf[CNS(Text, Format, INTERNAL, BUFFER_CAPACITY)];
+  char tempBuf[CNS(Text, Format, Internal, BUFFER_CAPACITY)];
   int formattedLen = 0;
   if (isLongDouble) {
     formattedLen = snprintf(tempBuf, sizeof(tempBuf), formatSpec, ldValue);
@@ -254,7 +254,7 @@ PROCEDURE(FormatSingleComponent, (
   bool isUnsignedSpec = (lastChar == 'u' || lastChar == 'x' || lastChar == 'X' ||
                          lastChar == 'o' || lastChar == 'b' || lastChar == 'B');
 
-  char outBuf[CNS(Text, Format, INTERNAL, BUFFER_CAPACITY)];
+  char outBuf[CNS(Text, Format, Internal, BUFFER_CAPACITY)];
   int written = 0;
 
   if (isFloatSpec || val.tag == CNS(Type, Tag, Float64)) {
@@ -401,7 +401,7 @@ PROCEDURE(FormatStruct, (
     }
   }
 
-  char renderBuf[CNS(Text, Format, INTERNAL, BUFFER_CAPACITY)];
+  char renderBuf[CNS(Text, Format, Internal, BUFFER_CAPACITY)];
   MODULE_ITYPE(Text, Format, Sink) tempSink = {renderBuf, sizeof(renderBuf), 0U};
 
   if (subFormat == NULL || subFormatLen == 0U) {
@@ -506,24 +506,24 @@ PROCEDURE(FormatCosmeronType, (
     return;
   }
 
-  unsigned base = CNS(Text, Format, INTERNAL, BASE_DECIMAL);
+  unsigned base = CNS(Text, Format, Internal, BASE_DECIMAL);
   bool uppercase = false;
 
   if (subFormat != NULL && subFormatLen > 0U) {
     if (subFormat[0] == 'x' || (subFormatLen == 2U && subFormat[0] == '1' && subFormat[1] == '6')) {
-      base = CNS(Text, Format, INTERNAL, BASE_HEXADECIMAL);
+      base = CNS(Text, Format, Internal, BASE_HEXADECIMAL);
       uppercase = false;
     } else if (subFormat[0] == 'X') {
-      base = CNS(Text, Format, INTERNAL, BASE_HEXADECIMAL);
+      base = CNS(Text, Format, Internal, BASE_HEXADECIMAL);
       uppercase = true;
     } else if (subFormat[0] == 'b' || (subFormatLen == 1U && subFormat[0] == '2')) {
-      base = CNS(Text, Format, INTERNAL, BASE_BINARY);
+      base = CNS(Text, Format, Internal, BASE_BINARY);
       uppercase = false;
     } else if (subFormat[0] == 'B') {
-      base = CNS(Text, Format, INTERNAL, BASE_BINARY);
+      base = CNS(Text, Format, Internal, BASE_BINARY);
       uppercase = true;
     } else if (subFormat[0] == 'o' || (subFormatLen == 1U && subFormat[0] == '8')) {
-      base = CNS(Text, Format, INTERNAL, BASE_OCTAL);
+      base = CNS(Text, Format, Internal, BASE_OCTAL);
     } else {
       unsigned parsedBase = 0U;
       for (size_t i = 0U; i < subFormatLen; ++i) {
@@ -531,14 +531,14 @@ PROCEDURE(FormatCosmeronType, (
           parsedBase = parsedBase * 10U + (unsigned)(subFormat[i] - '0');
         }
       }
-      if (parsedBase >= CNS(Text, Format, INTERNAL, BASE_BINARY) &&
-          parsedBase <= CNS(Text, Format, INTERNAL, BASE_MAX)) {
+      if (parsedBase >= CNS(Text, Format, Internal, BASE_BINARY) &&
+          parsedBase <= CNS(Text, Format, Internal, BASE_MAX)) {
         base = parsedBase;
       }
     }
   }
 
-  char renderBuf[CNS(Text, Format, INTERNAL, BUFFER_CAPACITY)];
+  char renderBuf[CNS(Text, Format, Internal, BUFFER_CAPACITY)];
   OPSTATUS status = STATUS_CONST(SUCCESS);
 
   if (isBigint) {
@@ -577,7 +577,7 @@ PROCEDURE(FormatCosmeronType, (
 
   size_t digitsLen = MODULE_IFUNC(Text, Format, StringLength)(renderBuf);
 
-  if (base == CNS(Text, Format, INTERNAL, BASE_HEXADECIMAL) && !uppercase) {
+  if (base == CNS(Text, Format, Internal, BASE_HEXADECIMAL) && !uppercase) {
     for (size_t i = 0U; i < digitsLen; ++i) {
       if (renderBuf[i] >= 'A' && renderBuf[i] <= 'F') {
         renderBuf[i] = (char)(renderBuf[i] + ('a' - 'A'));
@@ -589,13 +589,13 @@ PROCEDURE(FormatCosmeronType, (
   size_t prefixLen = 0U;
 
   if (flagHash) {
-    if (base == CNS(Text, Format, INTERNAL, BASE_HEXADECIMAL)) {
+    if (base == CNS(Text, Format, Internal, BASE_HEXADECIMAL)) {
       prefix[prefixLen++] = '0';
       prefix[prefixLen++] = uppercase ? 'X' : 'x';
-    } else if (base == CNS(Text, Format, INTERNAL, BASE_BINARY)) {
+    } else if (base == CNS(Text, Format, Internal, BASE_BINARY)) {
       prefix[prefixLen++] = '0';
       prefix[prefixLen++] = uppercase ? 'B' : 'b';
-    } else if (base == CNS(Text, Format, INTERNAL, BASE_OCTAL)) {
+    } else if (base == CNS(Text, Format, Internal, BASE_OCTAL)) {
       if (digitsLen == 0U || renderBuf[0] != '0') {
         prefix[prefixLen++] = '0';
       }
@@ -883,7 +883,7 @@ PROCEDURE(FormatCosmeronType, (
       bool isNeg = (sval < 0);
       uintmax_t uval = isNeg ? (uintmax_t)(-(sval + 1)) + 1U : (uintmax_t)sval;
       MODULE_IFUNC(Text, Format, FormatInteger)(&sink, uval, true, isNeg,
-                                     CNS(Text, Format, INTERNAL, BASE_DECIMAL), false,
+                                     CNS(Text, Format, Internal, BASE_DECIMAL), false,
                                      flagMinus, flagPlus, flagSpace, false,
                                      flagZero, width, hasPrecision, precision);
       break;
@@ -913,19 +913,19 @@ PROCEDURE(FormatCosmeronType, (
         uval = (uintmax_t)va_arg(arguments, unsigned int);
       }
 
-      unsigned base = CNS(Text, Format, INTERNAL, BASE_DECIMAL);
+      unsigned base = CNS(Text, Format, Internal, BASE_DECIMAL);
       bool uppercase = false;
       if (spec == 'o') {
-        base = CNS(Text, Format, INTERNAL, BASE_OCTAL);
+        base = CNS(Text, Format, Internal, BASE_OCTAL);
       } else if (spec == 'x') {
-        base = CNS(Text, Format, INTERNAL, BASE_HEXADECIMAL);
+        base = CNS(Text, Format, Internal, BASE_HEXADECIMAL);
       } else if (spec == 'X') {
-        base = CNS(Text, Format, INTERNAL, BASE_HEXADECIMAL);
+        base = CNS(Text, Format, Internal, BASE_HEXADECIMAL);
         uppercase = true;
       } else if (spec == 'b') {
-        base = CNS(Text, Format, INTERNAL, BASE_BINARY);
+        base = CNS(Text, Format, Internal, BASE_BINARY);
       } else if (spec == 'B') {
-        base = CNS(Text, Format, INTERNAL, BASE_BINARY);
+        base = CNS(Text, Format, Internal, BASE_BINARY);
         uppercase = true;
       }
 
@@ -964,10 +964,10 @@ PROCEDURE(FormatCosmeronType, (
           MODULE_IFUNC(Text, Format, FormatString)(&sink, "(null)", flagMinus, width,
                                         hasPrecision, precision);
         } else {
-          char tempBuf[CNS(Text, Format, INTERNAL, BUFFER_CAPACITY)];
+          char tempBuf[CNS(Text, Format, Internal, BUFFER_CAPACITY)];
           size_t pos = 0U;
           while (*wstr != L'\0' &&
-                 pos + 4U < CNS(Text, Format, INTERNAL, BUFFER_CAPACITY)) {
+                 pos + 4U < CNS(Text, Format, Internal, BUFFER_CAPACITY)) {
             unsigned char u8[8];
             size_t units = 0U;
             if (MODULE_FUNC(Text, UTF8, Encode)((MODULE_TYPE(Text, Char32))*wstr, u8,
@@ -998,7 +998,7 @@ PROCEDURE(FormatCosmeronType, (
       } else {
         MODULE_IFUNC(Text, Format, FormatInteger)(
             &sink, (uintptr_t)ptr, false, false,
-            CNS(Text, Format, INTERNAL, BASE_HEXADECIMAL), false, flagMinus, false, false,
+            CNS(Text, Format, Internal, BASE_HEXADECIMAL), false, flagMinus, false, false,
             true, false, width, false, 0U);
       }
       break;

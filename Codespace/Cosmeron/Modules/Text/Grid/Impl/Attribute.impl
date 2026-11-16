@@ -27,7 +27,7 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
   ),
   PACKAGE(Grid_Color,
     FUNCTION(const uint32_t *, WindowsPalette, (), {
-      return CNS(Text, Grid_Color, INTERNAL, WindowsPaletteData);
+      return CNS(Text, Grid_Color, Internal, WindowsPaletteData);
     })
   ),
 

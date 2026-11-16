@@ -2,6 +2,7 @@
 #define COSMERON_CONTAINER_ARRAY_TSPAN_H
 
 #include "Impl/Common.inc"
+#include "TVector.h"
 #include "Span.def"
 
 TEMPLATE_INSTANTIATE_TABLE(Array, Span, CONTAINER_ORDERED_TYPE_TABLE);
