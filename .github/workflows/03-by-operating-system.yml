@@ -18,7 +18,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: platforms-${{ github.ref }}
+  group: platforms-restored-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
