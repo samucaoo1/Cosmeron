@@ -32,7 +32,10 @@ def check_header(index: int, header: Path, root: Path, scratch: Path, compiler: 
         "-fsyntax-only",
         str(source),
     ]
-    completed = subprocess.run(command, text=True, capture_output=True)
+    try:
+        completed = subprocess.run(command, text=True, capture_output=True, timeout=30)
+    except subprocess.TimeoutExpired:
+        return (relative, "Compilation timed out after 30s")
     if completed.returncode != 0:
         return (relative, completed.stderr or completed.stdout)
     return None
