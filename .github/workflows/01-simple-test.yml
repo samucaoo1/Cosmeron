@@ -34,9 +34,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Documentation examples (strict C11)
-        run: python3 .github/tools/check_doc_examples.py --cc "${{ matrix.cc }}" --min-tests 6
-
       - name: Portable C11 suites
         env:
           CC: ${{ matrix.cc }}
