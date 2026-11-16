@@ -17,15 +17,15 @@
         if (requiredCapacity <= self->capacity)                                \
           return STATUS_CONST(SUCCESS);                                        \
         newCapacity = self->capacity == 0U                                     \
-                          ? CNS(Text, String, INTERNAL, INITIAL_CAPACITY)      \
+                          ? CNS(Text, String, Internal, INITIAL_CAPACITY)      \
                           : self->capacity;                                    \
         while (newCapacity < requiredCapacity) {                               \
           if (newCapacity >                                                    \
-              SIZE_MAX / CNS(Text, String, INTERNAL, GROWTH_FACTOR)) {         \
+              SIZE_MAX / CNS(Text, String, Internal, GROWTH_FACTOR)) {         \
             newCapacity = requiredCapacity;                                    \
             break;                                                             \
           }                                                                    \
-          newCapacity *= CNS(Text, String, INTERNAL, GROWTH_FACTOR);           \
+          newCapacity *= CNS(Text, String, Internal, GROWTH_FACTOR);           \
         }                                                                      \
         if (self->data == NULL) {                                              \
           void *allocated = NULL;                                              \
