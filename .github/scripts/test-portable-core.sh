@@ -35,6 +35,7 @@ run_suite() {
 }
 
 while IFS=' ' read -r module test || [ -n "$module" ]; do
+  test=$(printf '%s' "$test" | tr -d '\r')
   case "$module" in
     ""|\#*) continue ;;
   esac
