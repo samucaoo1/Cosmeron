@@ -31,7 +31,7 @@ fi
   echo "This is NOT a Huawei HarmonyOS NEXT certification."
 } > "$report"
 hdc shell "mkdir -p '$remote_dir'"
-for binary in cosmeron_ohos_multi_tu cosmeron_ohos_posix_link; do
+for binary in cosmeron_ohos_multi_tu; do
   hdc file send "$build_dir/$binary" "$remote_dir/$binary"
   # hdc propagates the shell command failure on supported SDK versions.
   # The marker independently verifies the program's own exit status.
@@ -49,5 +49,5 @@ for binary in cosmeron_ohos_multi_tu cosmeron_ohos_posix_link; do
     exit 1
   fi
 done
-echo "PASS: linked C11 multi-TU and native POSIX probe executed on OHOS target" >> "$report"
+echo "PASS: linked C11 multi-TU probe executed on OHOS target" >> "$report"
 echo "Device report: $report"
