@@ -1,3 +1,5 @@
+uintptr_t CosmeronOHOS_Value(void);
 int CosmeronOHOS_Detect(void);
-int CosmeronOHOS_Status(void);
-int main(void) { (void)CosmeronOHOS_Detect(); return CosmeronOHOS_Status() != 0; }
+int main(void) {
+  return (CosmeronOHOS_Detect() == 0 || CosmeronOHOS_Value() == 0) ? 1 : 0;
+}
