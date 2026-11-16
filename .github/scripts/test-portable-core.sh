@@ -1,11 +1,11 @@
 #!/bin/sh
-# Portable C11 regression suite: cc + POSIX shell only. No GNU make required.
-# Deliberately uses the real module tests, not fabricated compile-only probes.
-# PORTABLE_RUN=0 builds and links every suite without executing it; used by
-# cross-compilation targets (Android, iOS) whose binaries run elsewhere.
+# Portable C11 regression suite. The manifest is the only test-suite inventory.
+# PORTABLE_RUN=0 builds and links without executing (cross-compilation).
+# PORTABLE_CFLAGS adds compiler flags without changing the selected suites.
 set -eu
 CC=${CC:-cc}
 PORTABLE_RUN=${PORTABLE_RUN:-1}
+PORTABLE_CFLAGS=${PORTABLE_CFLAGS:-}
 export CC
 mkdir -p .build-portable
 printf '[portable] %s %s | compiler: %s | execute: %s\n' \
@@ -21,26 +21,31 @@ execute() {
 
 run_suite() {
   module=$1
-  shift
-  for test in "$@"; do
-    echo "[portable] $module/$test"
-    (
-      cd "Codespace/Tests/$module"
-      $CC -std=c11 -Wall -Wextra -Wpedantic -Werror \
-        -D_POSIX_C_SOURCE=200809L "$test.c" \
-        -o "../../../.build-portable/${module}_${test}"
-      execute "../../../.build-portable/${module}_${test}"
-    )
-  done
+  test=$2
+  echo "[portable] $module/$test"
+  (
+    cd "Codespace/Tests/$module"
+    # PORTABLE_CFLAGS is intentionally word-split into compiler arguments.
+    # shellcheck disable=SC2086
+    $CC -std=c11 -Wall -Wextra -Wpedantic -Werror \
+      -D_POSIX_C_SOURCE=200809L $PORTABLE_CFLAGS "$test.c" \
+      -o "../../../.build-portable/${module}_${test}"
+    execute "../../../.build-portable/${module}_${test}"
+  )
 }
 
-while IFS=' ' read -r module test || [ -n "$module" ]; do
-  test=$(printf '%s' "$test" | tr -d '\r')
-  case "$module" in
+while IFS=' ' read -r module test || [ -n "${module:-}" ]; do
+  test=$(printf '%s' "${test:-}" | tr -d '\r')
+  case "${module:-}" in
     ""|\#*) continue ;;
   esac
+  if [ -z "$test" ]; then
+    echo "[portable] invalid manifest entry: $module" >&2
+    exit 2
+  fi
   run_suite "$module" "$test"
 done < .github/tests.txt
+
 if [ "$PORTABLE_RUN" = 1 ]; then
   echo "[portable] all selected C11 suites passed"
 else
