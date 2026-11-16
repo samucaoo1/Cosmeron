@@ -9,7 +9,7 @@ which checks the SDK archive against the upstream SHA-256 value.
 ## Repeat the SDK check
 ```sh
 OHOS_SDK=/path/to/ohos-sdk/native OHOS_ARCH=arm64-v8a \
-  sh Tools/ohos/check-portability.sh
+  sh  .github/tools/ohos/check-portability.sh
 ```
 
 Objects from C11 public headers are cross-compiled with `-Werror`, and
@@ -56,11 +56,11 @@ of actual device compatibility.
 
 ## Run linked probes on a real OpenHarmony target
 
-After cross-building with `Tools/ohos/check-portability.sh`, connect a compatible
+After cross-building with ` .github/tools/ohos/check-portability.sh`, connect a compatible
 OpenHarmony device or emulator with the `hdc` utility installed:
 
 ```sh
-HDC_TARGET=<device-id> sh Tools/ohos/check-device.sh
+HDC_TARGET=<device-id> sh  .github/tools/ohos/check-device.sh
 ```
 
 `OHOS_BUILD_DIR`, `HDC` and `OHOS_DEVICE_REPORT` are configurable.
