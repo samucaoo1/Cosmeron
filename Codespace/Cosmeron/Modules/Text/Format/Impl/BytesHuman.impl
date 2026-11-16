@@ -33,10 +33,10 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
           return STATUS_CONST(INVALID_ARGUMENT);
         }
 
-        static const char *const iecUnits[CNS(Text, Format, INTERNAL, UNIT_COUNT)] = {
+        static const char *const iecUnits[CNS(Text, Format, Internal, UNIT_COUNT)] = {
             "B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"
         };
-        static const char *const siUnits[CNS(Text, Format, INTERNAL, UNIT_COUNT)] = {
+        static const char *const siUnits[CNS(Text, Format, Internal, UNIT_COUNT)] = {
             "B", "KB", "MB", "GB", "TB", "PB", "EB"
         };
 
@@ -57,7 +57,7 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
         } else {
           double value = (double)bytes;
           size_t unitIndex = 0U;
-          while (value >= base && unitIndex + 1U < (size_t)CNS(Text, Format, INTERNAL, UNIT_COUNT)) {
+          while (value >= base && unitIndex + 1U < (size_t)CNS(Text, Format, Internal, UNIT_COUNT)) {
             value /= base;
             unitIndex++;
           }
