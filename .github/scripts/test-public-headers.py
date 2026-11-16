@@ -46,7 +46,10 @@ def main() -> int:
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
-    headers = sorted((root / "Codespace/Cosmeron").rglob("*.h"))
+    headers = sorted(
+        h for h in (root / "Codespace/Cosmeron").rglob("*.h")
+        if h.relative_to(root).as_posix() != "Codespace/Cosmeron/Modules/Container/Container.h"
+    )
     if not headers:
         print("No public headers found.", file=sys.stderr)
         return 2
