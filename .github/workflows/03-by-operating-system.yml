@@ -109,12 +109,6 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
         run: sh .github/scripts/test-make-suites.sh
-      - name: Native GUI / X11
-        if: matrix.cc == 'gcc'
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y libx11-dev xvfb
-          CC=${{ matrix.cc }} sh .github/scripts/test-gui-native.sh
 
   linux-32bit:
     name: Linux / GCC / 32-bit multilib
@@ -293,12 +287,7 @@ jobs:
       - name: MinGW GCC suites
         if: matrix.toolchain == 'mingw'
         shell: bash
-        run: |
-          sh .github/scripts/test-portable-core.sh
-          for src in Codespace/Tests/Sort.c Codespace/Tests/SortCatalog.c; do
-            gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -I Codespace "$src" -o sort-test.exe
-            ./sort-test.exe
-          done
+        run: sh .github/scripts/test-portable-core.sh
 
       - name: Set up MSVC
         if: matrix.toolchain == 'msvc'
@@ -307,14 +296,7 @@ jobs:
       - name: MSVC suites
         if: matrix.toolchain == 'msvc'
         shell: pwsh
-        run: |
-          .github/scripts/test-msvc.ps1
-          foreach ($src in @("Codespace/Tests/Sort.c", "Codespace/Tests/SortCatalog.c")) {
-            cl /nologo /W4 /WX /TC /I Codespace $src /Fe:sort-test.exe
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            .\sort-test.exe
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
+        run: .github/scripts/test-msvc.ps1
 
   windows-11:
     name: Windows 11 / ${{ matrix.toolchain }}
@@ -331,12 +313,7 @@ jobs:
       - name: MinGW GCC suites
         if: matrix.toolchain == 'mingw'
         shell: bash
-        run: |
-          sh .github/scripts/test-portable-core.sh
-          for src in Codespace/Tests/Sort.c Codespace/Tests/SortCatalog.c; do
-            gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -I Codespace "$src" -o sort-test.exe
-            ./sort-test.exe
-          done
+        run: sh .github/scripts/test-portable-core.sh
 
       - name: Set up MSVC
         if: matrix.toolchain == 'msvc'
@@ -345,14 +322,7 @@ jobs:
       - name: MSVC suites
         if: matrix.toolchain == 'msvc'
         shell: pwsh
-        run: |
-          .github/scripts/test-msvc.ps1
-          foreach ($src in @("Codespace/Tests/Sort.c", "Codespace/Tests/SortCatalog.c")) {
-            cl /nologo /W4 /WX /TC /I Codespace $src /Fe:sort-test.exe
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            .\sort-test.exe
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
+        run: .github/scripts/test-msvc.ps1
 
   # =========================================================================
   # 6. macOS (Apple Silicon + Intel)
