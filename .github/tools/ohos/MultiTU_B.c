@@ -1,2 +1,2 @@
-#include "Cosmeron/Core/Error/Status.h"
-int CosmeronOHOS_Status(void) { return STATUS_CONST(SUCCESS); }
+#include <stdint.h>
+uintptr_t CosmeronOHOS_Value(void) { return (uintptr_t)sizeof(uintptr_t); }
