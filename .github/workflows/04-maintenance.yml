@@ -1,0 +1,46 @@
+name: 04 · Maintenance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Codespace/Cosmeron/**'
+      - '.github/entropy/**'
+      - '.github/badges/**'
+      - '.github/cosmeron/**'
+      - '.github/loc/**'
+      - '.gitattributes'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  maintenance:
+    name: Maintenance / LOC, entropy and badges
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: LOC report
+        run: python3 .github/loc/loc.py
+      - name: Entropy and badge tests
+        run: |
+          python3 .github/entropy/test_entropy.py
+          python3 .github/cosmeron/test_badges.py
+      - name: Calculate provisional entropy and badges
+        run: |
+          python3 .github/entropy/entropy.py --provisional --output-dir "$RUNNER_TEMP/entropy-preview"
+          python3 .github/cosmeron/badges.py --output-dir "$RUNNER_TEMP/badges"
+      - name: Upload maintenance artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: maintenance-reports
+          path: |
+            .github/loc/state.json
+            .github/badges/loc.svg
+            ${{ runner.temp }}/entropy-preview/
+            ${{ runner.temp }}/badges/
+          if-no-files-found: ignore
