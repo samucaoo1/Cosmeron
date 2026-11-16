@@ -90,7 +90,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
               (const MODULE_TYPE(Memory, Allocator) *self, size_t size,
                void **outPtr), {
       return MODULE_FUNC(Memory, Allocator, AllocAligned)(
-          self, size, MODULE_FUNC(Memory, MaxAlignment)(), outPtr);
+          self, size, MODULE_IFUNC(Memory, MaxAlignment)(), outPtr);
     }),
 
     OPERATION(Calloc,
@@ -105,7 +105,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
       size_t totalSize = count * elementSize;
       void *ptr = NULL;
       OPSTATUS status = MODULE_FUNC(Memory, Allocator, AllocAligned)(
-          self, totalSize, MODULE_FUNC(Memory, MaxAlignment)(), &ptr);
+          self, totalSize, MODULE_IFUNC(Memory, MaxAlignment)(), &ptr);
       if (status != STATUS_CONST(SUCCESS)) {
         return status;
       }
@@ -131,11 +131,11 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
       }
       if (resolved->ops->Realloc) {
         return resolved->ops->Realloc(resolved->context, ptr, oldSize, newSize,
-                                      MODULE_FUNC(Memory, MaxAlignment)(), outPtr);
+                                      MODULE_IFUNC(Memory, MaxAlignment)(), outPtr);
       }
       void *nextPtr = NULL;
       OPSTATUS status = resolved->ops->Alloc(resolved->context, newSize,
-                                             MODULE_FUNC(Memory, MaxAlignment)(), &nextPtr);
+                                             MODULE_IFUNC(Memory, MaxAlignment)(), &nextPtr);
       if (status != STATUS_CONST(SUCCESS)) {
         return status;
       }
