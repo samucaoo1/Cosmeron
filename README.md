@@ -22,6 +22,12 @@ Cosmeron is a zero-dependency **C11** ecosystem and standard library built aroun
 
 ---
 
+## License
+
+Cosmeron is licensed under the **European Union Public Licence 1.2 (EUPL-1.2)**. The canonical licence is available in the repository root as [`LICENSE`](LICENSE), with official language copies in [English](Docs/en/LICENSE.md), [Português](Docs/pt/LICENSE.md), and [Español](Docs/es/LICENSE.md).
+
+---
+
 ## The Declarative C11 DSL
 
 Cosmeron replaces ad-hoc boilerplate with a clean, type-safe declarative DSL in pure C11:

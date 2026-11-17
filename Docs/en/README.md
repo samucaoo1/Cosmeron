@@ -17,6 +17,8 @@ Project-level policies and legal or community documents.
 - [Support](Governance/SUPPORT.md)
 - [Code of Conduct](Governance/CODE_OF_CONDUCT.md)
 - [Licensing rationale](Governance/LICENSING.md)
+- [EUPL 1.2 — official licence text](LICENSE.md)
+- [EUPL 1.2 — official licence texts](Governance/LICENSE.md)
 - [Security policy](Governance/SECURITY.md)
 
 ### [Project](Project/)
