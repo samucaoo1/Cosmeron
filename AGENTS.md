@@ -165,7 +165,11 @@ Everything must live inside the library/module namespace whenever C allows it. E
     - Nullary events: `EVENT_PROCEDURE(Reset, ())`.
   - API automatically emitted per event: `Subscribe`, `Unsubscribe` (FIFO shift removal by `function` + `context`), `Emit` (re-entrancy safe via stack snapshot), `Clear`, `Count`, `Capacity`.
   - Reactive mutation helper: `OBJECT_MUTATE(self, ClassName, fieldName, newValue, EventName)` evaluates `self->fieldName != (newValue)`, updates the field, and emits the event.
-- **Compile-time disabling:** Every Function Table family provides compile-time disabling via `MODULE_DISABLE_FUNCTION_TABLE`, `PACKAGE_DISABLE_FUNCTION_TABLE`, or `OBJECT_DISABLE_FUNCTION_TABLE`. When defined, no struct, instance, or table is emitted.
+- **Compile-time & intrinsic FunctionTable disabling:**
+  - **Global / family switches:** `MODULE_DISABLE_FUNCTION_TABLE`, `PACKAGE_DISABLE_FUNCTION_TABLE`, or `OBJECT_DISABLE_FUNCTION_TABLE` (and `COSMERON_TABLE_*` policies in `Namespace.h`).
+  - **Per-module / per-target switches (expansion-time, non-leaking):** `<MOD>_DISABLE_FUNCTION_TABLE`, `<MOD>_<NAME>_DISABLE_FUNCTION_TABLE`, `COSMERON_DISABLE_FT_<MOD>`, or `COSMERON_DISABLE_FT_<MOD>_<NAME>`. Module headers/`Common.inc` must map their `<UPPER>_DISABLE_FUNCTION_TABLE` adapters to `COSMERON_DISABLE_FT_*` rather than setting global `PACKAGE_DISABLE_FUNCTION_TABLE` / `OBJECT_DISABLE_FUNCTION_TABLE`.
+  - **Intrinsic DSL tag:** `NO_FUNCTION_TABLE` inside `PACKAGE(...)`, `OBJECT(...)` (after `EXTENDS`/`FIELDS`), `PACKAGE_DEF(...)`, `OBJECT_DEF(...)`, or `TEMPLATE_*_DEF(...)` permanently omits the `FunctionTable` for that declaration.
+  - **Object `.impl` helpers:** Use `OBJECT_RESET_ZERO(MOD, NAME, self)` and `OBJECT_COPY_API(MOD, NAME, dest, src)` instead of manual `#if !defined(OBJECT_DISABLE_FUNCTION_TABLE)` guards.
 - **Naming:** Always use the term `FunctionTable`, never `VTable`.
 - **Universal Dual-Mode `.def` Template Engine (`TEMPLATE_OBJECT` / `TEMPLATE_PACKAGE` / `TEMPLATE_STRUCT`):**
   - **Single Source of Truth (`.def` files):** Templates are defined once and only once in their canonical `.def` file: `<Target>.def` (e.g. `Codespace/Cosmeron/Modules/Struct/Triple.def`, `Codespace/Cosmeron/Core/Memory/Swap.def`).
@@ -181,6 +185,11 @@ Everything must live inside the library/module namespace whenever C allows it. E
     - Arity 3/4: `(SUFFIX, TYPE, CAPACITY)` (e.g. `StaticArray`, `RingBuffer`).
     - Matching X-Macro rows unpack directly without glue code via `PP_UNWRAP ROW`.
   - **Autocontained Inline & Struct Templates:** Structs (pure POD) and inline methods (`OPERATION_INLINE`, `PROCEDURE_INLINE`, `FUNCTION_INLINE`) are completely self-contained. The template engine (`Template.impl`) never requires stub/dummy `_IMPLEMENT` macros for inline templates or structs.
+  - **Gold Standard for `.def` + `Common.inc` Templates:**
+    - Use `MODULE_TEMPLATE(DOMAIN(...), Mod, PACKAGE(SUFFIX, ...))` inside `.def` files when a template emits top-level packages/objects directly under the module namespace (e.g. `Codespace/Cosmeron/Core/Bit/Bit.def` emitting `Bit_<SUFFIX>_*`), alongside `TEMPLATE_OBJECT`, `TEMPLATE_PACKAGE`, and `TEMPLATE_STRUCT`.
+    - Extract width/type-independent algorithms (such as 64-bit SWAR routines) and internal constants into `Common.inc` inside `MODULE(DOMAIN(...), Mod, INTERNAL(ENUM(...), FUNCTION(...), ...))` so they are emitted once with zero `FunctionTable` overhead and no duplicate code across instantiations.
+    - Replace raw `#define` constant/mask macros and magic numbers with X-Macro `ENUM` tables inside `INTERNAL(...)` (accessed via `CNS(Mod, Internal, NAME)`) and typed `const` locals for wide hex masks (`UINT64_C(...)`), delegating from `.def` via `MODULE_IFUNC(Mod, Helper)`.
+    - Group related method/function families in `.def` declaratively using `VARIANT(Family, ...)` (e.g. `Mask`, `Count`, `Log2`, `Index`, `Rotate`).
   - Type naming convention for user types: `T<Name>_<suffix>` (e.g. `TStack_int`, `TVector_uint32`, `TTriple_uint32`).
   - Prohibit ad-hoc monolithic instantiation macros (e.g., `VECTOR_IMPLEMENT_ALL`).
 

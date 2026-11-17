@@ -1,8 +1,7 @@
 #pragma once
 
-#if defined(MATH_DISABLE_FUNCTION_TABLE) &&                                    \
-    !defined(PACKAGE_DISABLE_FUNCTION_TABLE)
-#define PACKAGE_DISABLE_FUNCTION_TABLE 1
+#if defined(MATH_DISABLE_FUNCTION_TABLE) && !defined(COSMERON_DISABLE_FT_Math)
+#define COSMERON_DISABLE_FT_Math 1
 #endif
 
 #include "../../../Core/Condition/Status.h"

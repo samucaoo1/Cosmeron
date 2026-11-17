@@ -7,12 +7,6 @@ static _Thread_local MODULE_TYPE(Memory, Collector)
 static _Thread_local bool
     MODULE_INS(Memory, Collector, ThreadDefaultInitialized) = false;
 
-#if !defined(OBJECT_DISABLE_FUNCTION_TABLE) && !defined(MODULE_DISABLE_FUNCTION_TABLE)
-#define COSMERON_MACRO_INTERNAL_COLLECTOR_INIT_SELF(self) do { const void *api = (self)->api; memset((self), 0, sizeof(*(self))); (self)->api = api; } while (0)
-#else
-#define COSMERON_MACRO_INTERNAL_COLLECTOR_INIT_SELF(self) do { memset((self), 0, sizeof(*(self))); } while (0)
-#endif
-
 /* ========================================================================== */
 /* TMemoryCollector & GC Package Implementations                       */
 /* ========================================================================== */
@@ -178,7 +172,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
       if (!self)
         return STATUS_CONST(INVALID_ARGUMENT);
 
-      COSMERON_MACRO_INTERNAL_COLLECTOR_INIT_SELF(self);
+      OBJECT_RESET_ZERO(Memory, Collector, self);
       OPSTATUS status = MODULE_FUNC(Memory, Heap, Create)(&self->heap, initialHeapPages);
       if (status != STATUS_CONST(SUCCESS))
         return status;
@@ -660,7 +654,5 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
     })
   )
 );
-
-#undef COSMERON_MACRO_INTERNAL_COLLECTOR_INIT_SELF
 
 /* EOF */

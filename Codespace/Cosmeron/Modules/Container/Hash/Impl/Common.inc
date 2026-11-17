@@ -1,14 +1,10 @@
 #ifndef COSMERON_CONTAINER_HASH_COMMON_INC
 #define COSMERON_CONTAINER_HASH_COMMON_INC
 
-#if defined(CONTAINER_DISABLE_FUNCTION_TABLE) &&                               \
-    !defined(OBJECT_DISABLE_FUNCTION_TABLE)
-#define OBJECT_DISABLE_FUNCTION_TABLE 1
-#endif
-
-#if defined(HASH_DISABLE_FUNCTION_TABLE) &&                                    \
-    !defined(OBJECT_DISABLE_FUNCTION_TABLE)
-#define OBJECT_DISABLE_FUNCTION_TABLE 1
+#if (defined(CONTAINER_DISABLE_FUNCTION_TABLE) ||                               \
+     defined(HASH_DISABLE_FUNCTION_TABLE)) &&                                  \
+    !defined(COSMERON_DISABLE_FT_Container_Hash)
+#define COSMERON_DISABLE_FT_Container_Hash 1
 #endif
 
 #include "../../../../Core/Memory/Allocator.h"

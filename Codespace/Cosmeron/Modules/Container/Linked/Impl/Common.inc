@@ -1,14 +1,10 @@
 #ifndef COSMERON_CONTAINER_LINKED_COMMON_INC
 #define COSMERON_CONTAINER_LINKED_COMMON_INC
 
-#if defined(CONTAINER_DISABLE_FUNCTION_TABLE) &&                               \
-    !defined(OBJECT_DISABLE_FUNCTION_TABLE)
-#define OBJECT_DISABLE_FUNCTION_TABLE 1
-#endif
-
-#if defined(LINKED_DISABLE_FUNCTION_TABLE) &&                                  \
-    !defined(OBJECT_DISABLE_FUNCTION_TABLE)
-#define OBJECT_DISABLE_FUNCTION_TABLE 1
+#if (defined(CONTAINER_DISABLE_FUNCTION_TABLE) ||                               \
+     defined(LINKED_DISABLE_FUNCTION_TABLE)) &&                                \
+    !defined(COSMERON_DISABLE_FT_Container_Linked)
+#define COSMERON_DISABLE_FT_Container_Linked 1
 #endif
 
 #include "../../../../Core/Memory/Allocator.h"

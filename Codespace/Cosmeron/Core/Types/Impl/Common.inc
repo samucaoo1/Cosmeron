@@ -1,8 +1,7 @@
 #pragma once
 
-#if defined(TYPE_DISABLE_FUNCTION_TABLE) &&                                    \
-    !defined(OBJECT_DISABLE_FUNCTION_TABLE)
-#define OBJECT_DISABLE_FUNCTION_TABLE 1
+#if defined(TYPE_DISABLE_FUNCTION_TABLE) && !defined(COSMERON_DISABLE_FT_Type)
+#define COSMERON_DISABLE_FT_Type 1
 #endif
 
 #include "../../Algorithm/Comparison.h"

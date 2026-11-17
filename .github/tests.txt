@@ -4,6 +4,7 @@ Core Namespace
 Core Allocator
 Core Bit
 Core PackageNoFunctionTable
+Core PerModuleNoFunctionTable
 Container Array
 Container DynamicBitset
 Container Iterator

@@ -269,6 +269,13 @@ The `.def` file is the **Single Source of Truth** for the template. The body is 
    - Structs (pure POD) and templates with inline methods (`OPERATION_INLINE`, `PROCEDURE_INLINE`, `FUNCTION_INLINE`) are completely self-contained.
    - The template engine (`Template.impl`) never requires stub/dummy `_IMPLEMENT` macros for inline templates or structs. Non-inline template methods are implemented in `.impl` files only when non-inline members exist.
 
+### 5.3 Gold Standard for Module Templates (`.def` + `Common.inc`)
+When a module template emits parameterized subpackages or objects directly under its own module namespace (such as `Core/Bit/Bit.def` generating `Bit_8_*`..`Bit_64_*`), follow the Gold Standard architecture:
+1. **`MODULE_TEMPLATE` in `.def`:** Wrap top-level module-scoped template definitions with `MODULE_TEMPLATE(DOMAIN(...), Mod, PACKAGE(SUFFIX, ...))` instead of bare `MODULE(...)` to distinguish template blueprints from fixed module declarations.
+2. **Shared `INTERNAL` Infrastructure in `Common.inc`:** Place width- or type-independent algorithms (e.g. 64-bit SWAR helpers `Popcount64`, `CountLeadingZeros64`, `ReverseBits64`, `ByteSwap64`) and internal constants once inside `MODULE(DOMAIN(...), Mod, INTERNAL(ENUM(...), FUNCTION(...), ...))` in `Impl/Common.inc`. This guarantees zero `FunctionTable` overhead and avoids duplicating heavy logic in every template instantiation.
+3. **Zero Raw `#define` Constants / Magic Numbers:** Define internal numeric constants through an X-Macro table + `ENUM` inside `INTERNAL(...)` (referenced via `CNS(Mod, Internal, NAME)`), and keep 64-bit hex masks (`UINT64_C(...)`) as named `const` variables inside the `INTERNAL` helpers. Delegate from `.def` via `MODULE_IFUNC(Mod, Helper)`.
+4. **Declarative `VARIANT` Families:** Group related prefixes into `VARIANT(Family, ...)` blocks inside `.def` (e.g., `VARIANT(Mask, Set, Clear, Flip, CheckAll, CheckAny, Range)`, `VARIANT(Count, LeadingZeros, TrailingZeros)`, `VARIANT(Log2, Floor, Ceil)`, `VARIANT(Index, LSB, MSB)`, `VARIANT(Rotate, Left, Right)`).
+
 
 ---
 
@@ -415,6 +422,8 @@ In resource-constrained or embedded environments, dispatch tables can be elimina
 - `-DMODULE_DISABLE_FUNCTION_TABLE`: Disables all tables globally.
 - `-DPACKAGE_DISABLE_FUNCTION_TABLE`: Disables tables for static packages.
 - `-DOBJECT_DISABLE_FUNCTION_TABLE`: Disables tables for objects.
+- Per-module / per-target switches (`<MOD>_DISABLE_FUNCTION_TABLE`, `<MOD>_<NAME>_DISABLE_FUNCTION_TABLE`, `COSMERON_DISABLE_FT_<MOD>`, `COSMERON_DISABLE_FT_<MOD>_<NAME>`): Evaluated at macro expansion time without leaking to subsequent modules in the same translation unit.
+- Intrinsic DSL tag (`NO_FUNCTION_TABLE`): Placed inside `PACKAGE(...)`, `OBJECT(...)` (after `EXTENDS`/`FIELDS`), or template blocks to permanently omit the `FunctionTable` for that declaration.
 
 When disabled, no `FunctionTable` struct or table instance is emitted in memory.
 

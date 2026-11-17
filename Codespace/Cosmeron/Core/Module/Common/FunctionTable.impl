@@ -74,6 +74,7 @@
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_TAG_114(CLASS, M)
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_TAG_115(CLASS, M)
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_TAG_116(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_TAG_117(CLASS, M)
 
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD(CLASS, M)                         \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJ_FT_FIELD_TAG_, PP_SEQ_GET_1 M)(CLASS, M)
@@ -132,6 +133,7 @@
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_TAG_114(CLASS, M)
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_TAG_115(CLASS, M)
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_TAG_116(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_TAG_117(CLASS, M)
 
 #define COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY(CLASS, M)                         \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJ_FT_ENTRY_TAG_, PP_SEQ_GET_1 M)(CLASS, M)
@@ -201,6 +203,7 @@
 #define COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_TAG_114(PKG, M)
 #define COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_TAG_115(PKG, M)
 #define COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_TAG_116(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_TAG_117(PKG, M)
 
 #define COSMERON_MACRO_INTERNAL_PKG_FT_FIELD(PKG, M)                           \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PKG_FT_FIELD_TAG_, PP_SEQ_GET_1 M)(PKG, M)
@@ -259,8 +262,121 @@
 #define COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_TAG_114(PKG, M)
 #define COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_TAG_115(PKG, M)
 #define COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_TAG_116(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_TAG_117(PKG, M)
 
 #define COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY(PKG, M)                           \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY_TAG_, PP_SEQ_GET_1 M)(PKG, M)
+
+/* ------------------------------------------------------------
+ * 3. Expansion-Time & Intrinsic FunctionTable Policy Helpers
+ * ------------------------------------------------------------ */
+
+#define COSMERON_DECL_TAG_NO_FUNCTION_TABLE 117
+#define NO_FUNCTION_TABLE (COSMERON_DECL_TAG_NO_FUNCTION_TABLE, 0)
+
+#define COSMERON_INTERNAL_FT_CHECK_N(x, n, ...) n
+#define COSMERON_INTERNAL_FT_CHECK(...)                                        \
+  COSMERON_INTERNAL_FT_CHECK_N(__VA_ARGS__, 0, )
+#define COSMERON_INTERNAL_FT_PROBE(x) x, 1,
+
+#define COSMERON_INTERNAL_FT_FLAG_VAL_1 COSMERON_INTERNAL_FT_PROBE(~)
+
+#define COSMERON_INTERNAL_FT_FLAG_NONEMPTY(FLAG)                               \
+  COSMERON_INTERNAL_FT_CHECK(PP_OP_CAT2(COSMERON_INTERNAL_FT_FLAG_VAL_, FLAG))
+#define COSMERON_INTERNAL_FT_FLAG_IS_SET_1(FLAG) 1
+#define COSMERON_INTERNAL_FT_FLAG_IS_SET_0(FLAG)                               \
+  COSMERON_INTERNAL_FT_FLAG_NONEMPTY(FLAG)
+#define COSMERON_INTERNAL_FT_FLAG_IS_SET(FLAG)                                 \
+  PP_OP_CAT2(COSMERON_INTERNAL_FT_FLAG_IS_SET_, PP_IS_EMPTY(FLAG))(FLAG)
+
+#define COSMERON_INTERNAL_PROBE_FT_TAG_117 ,
+#define COSMERON_INTERNAL_PROBE_NO_FT_ITEM(M)                                  \
+  PP_OP_CAT2(COSMERON_INTERNAL_PROBE_FT_TAG_, PP_SEQ_GET_1 M)
+
+#define COSMERON_INTERNAL_HAS_NO_FT_TAG_1(METHODS) 0
+#define COSMERON_INTERNAL_HAS_NO_FT_TAG_0(METHODS)                             \
+  PP_HAS_COMMA(                                                                \
+      PP_FOREACH_D2(COSMERON_INTERNAL_PROBE_NO_FT_ITEM, PP_UNWRAP METHODS))
+#define COSMERON_INTERNAL_HAS_NO_FT_TAG(METHODS)                               \
+  PP_OP_CAT2(COSMERON_INTERNAL_HAS_NO_FT_TAG_,                                 \
+             PP_IS_EMPTY_PARAMS(METHODS))(METHODS)
+
+#define COSMERON_INTERNAL_FT_OR3(A, B, C)                                      \
+  PP_BOOL_OR(PP_BOOL_OR(A, B), C)
+
+#define COSMERON_INTERNAL_PKG_FT_DISABLED(MOD, NAME, METHODS)                  \
+  PP_BOOL_OR(                                                                  \
+      COSMERON_INTERNAL_FT_OR3(                                                \
+          COSMERON_INTERNAL_FT_FLAG_IS_SET(MODULE_DISABLE_FUNCTION_TABLE),     \
+          COSMERON_INTERNAL_FT_FLAG_IS_SET(PACKAGE_DISABLE_FUNCTION_TABLE),    \
+          COSMERON_INTERNAL_FT_FLAG_IS_SET(PP_OP_CAT2(COSMERON_DISABLE_FT_, MOD))), \
+      COSMERON_INTERNAL_FT_OR3(                                                \
+          COSMERON_INTERNAL_FT_FLAG_IS_SET(                                    \
+              PP_OP_CAT2(MOD, _DISABLE_FUNCTION_TABLE)),                       \
+          COSMERON_INTERNAL_FT_OR3(                                            \
+              COSMERON_INTERNAL_FT_FLAG_IS_SET(                                \
+                  PP_OP_CAT4(COSMERON_DISABLE_FT_, MOD, _, NAME)),             \
+              COSMERON_INTERNAL_FT_FLAG_IS_SET(                                \
+                  PP_OP_CAT4(MOD, _, NAME, _DISABLE_FUNCTION_TABLE)),          \
+              0),                                                              \
+          COSMERON_INTERNAL_HAS_NO_FT_TAG(METHODS)))
+
+#define COSMERON_INTERNAL_OBJ_FT_DISABLED(MOD, NAME, METHODS)                  \
+  PP_BOOL_OR(                                                                  \
+      COSMERON_INTERNAL_FT_OR3(                                                \
+          COSMERON_INTERNAL_FT_FLAG_IS_SET(MODULE_DISABLE_FUNCTION_TABLE),     \
+          COSMERON_INTERNAL_FT_FLAG_IS_SET(OBJECT_DISABLE_FUNCTION_TABLE),     \
+          COSMERON_INTERNAL_FT_FLAG_IS_SET(PP_OP_CAT2(COSMERON_DISABLE_FT_, MOD))), \
+      COSMERON_INTERNAL_FT_OR3(                                                \
+          COSMERON_INTERNAL_FT_FLAG_IS_SET(                                    \
+              PP_OP_CAT2(MOD, _DISABLE_FUNCTION_TABLE)),                       \
+          COSMERON_INTERNAL_FT_OR3(                                            \
+              COSMERON_INTERNAL_FT_FLAG_IS_SET(                                \
+                  PP_OP_CAT4(COSMERON_DISABLE_FT_, MOD, _, NAME)),             \
+              COSMERON_INTERNAL_FT_FLAG_IS_SET(                                \
+                  PP_OP_CAT4(MOD, _, NAME, _DISABLE_FUNCTION_TABLE)),          \
+              0),                                                              \
+          COSMERON_INTERNAL_HAS_NO_FT_TAG(METHODS)))
+
+#define COSMERON_INTERNAL_PKG_FT_DISABLED_DOM(DOM, MOD, NAME, METHODS)         \
+  PP_BOOL_OR(                                                                  \
+      COSMERON_INTERNAL_PKG_FT_DISABLED(MOD, NAME, METHODS),                   \
+      PP_BOOL_OR(                                                              \
+          COSMERON_INTERNAL_FT_FLAG_IS_SET(                                    \
+              PP_OP_CAT2(COSMERON_DISABLE_FT_, DOM)),                          \
+          COSMERON_INTERNAL_FT_FLAG_IS_SET(                                    \
+              PP_OP_CAT4(COSMERON_DISABLE_FT_, DOM, _, MOD))))
+
+#define COSMERON_INTERNAL_OBJ_FT_DISABLED_DOM(DOM, MOD, NAME, METHODS)         \
+  PP_BOOL_OR(                                                                  \
+      COSMERON_INTERNAL_OBJ_FT_DISABLED(MOD, NAME, METHODS),                   \
+      PP_BOOL_OR(                                                              \
+          COSMERON_INTERNAL_FT_FLAG_IS_SET(                                    \
+              PP_OP_CAT2(COSMERON_DISABLE_FT_, DOM)),                          \
+          COSMERON_INTERNAL_FT_FLAG_IS_SET(                                    \
+              PP_OP_CAT4(COSMERON_DISABLE_FT_, DOM, _, MOD))))
+
+#define COSMERON_INTERNAL_STANDALONE_PKG_FT_DISABLED(PKG, ITEMS)               \
+  PP_BOOL_OR(                                                                  \
+      COSMERON_INTERNAL_FT_OR3(                                                \
+          COSMERON_INTERNAL_FT_FLAG_IS_SET(MODULE_DISABLE_FUNCTION_TABLE),     \
+          COSMERON_INTERNAL_FT_FLAG_IS_SET(PACKAGE_DISABLE_FUNCTION_TABLE),    \
+          COSMERON_INTERNAL_FT_FLAG_IS_SET(PP_OP_CAT2(COSMERON_DISABLE_FT_, PKG))), \
+      PP_BOOL_OR(                                                              \
+          COSMERON_INTERNAL_FT_FLAG_IS_SET(                                    \
+              PP_OP_CAT2(PKG, _DISABLE_FUNCTION_TABLE)),                       \
+          COSMERON_INTERNAL_HAS_NO_FT_TAG(ITEMS)))
+
+#define COSMERON_INTERNAL_STANDALONE_OBJ_FT_DISABLED(CLASS, ITEMS)             \
+  PP_BOOL_OR(                                                                  \
+      COSMERON_INTERNAL_FT_OR3(                                                \
+          COSMERON_INTERNAL_FT_FLAG_IS_SET(MODULE_DISABLE_FUNCTION_TABLE),     \
+          COSMERON_INTERNAL_FT_FLAG_IS_SET(OBJECT_DISABLE_FUNCTION_TABLE),     \
+          COSMERON_INTERNAL_FT_FLAG_IS_SET(                                    \
+              PP_OP_CAT2(COSMERON_DISABLE_FT_, CLASS))),                       \
+      PP_BOOL_OR(                                                              \
+          COSMERON_INTERNAL_FT_FLAG_IS_SET(                                    \
+              PP_OP_CAT2(CLASS, _DISABLE_FUNCTION_TABLE)),                     \
+          COSMERON_INTERNAL_HAS_NO_FT_TAG(ITEMS)))
 
 /* EOF */

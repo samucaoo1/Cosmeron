@@ -32,12 +32,6 @@
 ITABLE_ARRAY_DEF(MODULE_NS(Memory, Heap), size_t, SizeClassTable,
                  COSMERON_MACRO_INTERNAL_HEAP_SIZE_CLASS_TABLE, 1)
 
-#if !defined(OBJECT_DISABLE_FUNCTION_TABLE) && !defined(MODULE_DISABLE_FUNCTION_TABLE)
-#define HEAP_INIT_SELF(self) do { const void *api = (self)->api; memset((self), 0, sizeof(*(self))); (self)->api = api; } while (0)
-#else
-#define HEAP_INIT_SELF(self) do { memset((self), 0, sizeof(*(self))); } while (0)
-#endif
-
 /* ========================================================================== */
 /* TMemoryHeap Method Implementations                                         */
 /* ========================================================================== */
@@ -148,7 +142,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
       if (!self)
         return STATUS_CONST(INVALID_ARGUMENT);
 
-      HEAP_INIT_SELF(self);
+      OBJECT_RESET_ZERO(Memory, Heap, self);
       self->minAddress = UINTPTR_MAX;
       self->maxAddress = 0U;
 
@@ -660,6 +654,4 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
 );
 
 #undef COSMERON_MACRO_INTERNAL_HEAP_SIZE_CLASS_TABLE
-#undef HEAP_INIT_SELF
-
 /* EOF */

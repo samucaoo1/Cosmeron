@@ -7,12 +7,6 @@
 /* 1. Scalar Endian Serialization Implementation Macros                       */
 /* ========================================================================== */
 
-#if !defined(OBJECT_DISABLE_FUNCTION_TABLE) && !defined(MODULE_DISABLE_FUNCTION_TABLE)
-#define STREAM_COPY_API(dest, src) do { (dest)->api = (src)->api; } while (0)
-#else
-#define STREAM_COPY_API(dest, src) ((void)0)
-#endif
-
 #define STREAM_IMPL_READ_SCALAR_LE_BE(UTYPE, ITYPE, SUFFIX)                   \
   OPERATION(PP_OP_CAT2(UInt, PP_OP_CAT2(SUFFIX, LE)), (UTYPE *outValue), {    \
     const uint8_t *b;                                                          \
@@ -215,7 +209,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
       outSubStream->offset = 0U;
       outSubStream->bitOffset = 0U;
       outSubStream->isReadOnly = self->isReadOnly;
-      STREAM_COPY_API(outSubStream, self);
+      OBJECT_COPY_API(Memory, Stream, outSubStream, self);
       return STATUS_CONST(SUCCESS);
     }),
 
@@ -368,6 +362,4 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
 
 #undef STREAM_IMPL_READ_SCALAR_LE_BE
 #undef STREAM_IMPL_WRITE_SCALAR_LE_BE
-#undef STREAM_COPY_API
-
 /* EOF */

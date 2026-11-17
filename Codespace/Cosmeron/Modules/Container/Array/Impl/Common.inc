@@ -3,14 +3,10 @@
 
 #include "../../../../Core/Memory/Allocator.h"
 
-#if defined(CONTAINER_DISABLE_FUNCTION_TABLE) &&                               \
-    !defined(OBJECT_DISABLE_FUNCTION_TABLE)
-#define OBJECT_DISABLE_FUNCTION_TABLE 1
-#endif
-
-#if defined(ARRAY_DISABLE_FUNCTION_TABLE) &&                                   \
-    !defined(OBJECT_DISABLE_FUNCTION_TABLE)
-#define OBJECT_DISABLE_FUNCTION_TABLE 1
+#if (defined(CONTAINER_DISABLE_FUNCTION_TABLE) ||                               \
+     defined(ARRAY_DISABLE_FUNCTION_TABLE)) &&                                 \
+    !defined(COSMERON_DISABLE_FT_Container_Array)
+#define COSMERON_DISABLE_FT_Container_Array 1
 #endif
 
 #include "../../../../Core/Algorithm/Comparison.h"

@@ -163,7 +163,10 @@ MODULE(DOMAIN(Container), Container,
 
 ### Regras de Templates:
 - **POD Puro Canônico é Regra Absoluta:** `STRUCT` e `TEMPLATE_STRUCT` são unicamente Plain Old Data. É expressamente proibido criar métodos artificiais (`Create`, `Extract`, `Unpack`, `Cast_*`) ou tabelas de funções (`FunctionTable`) para structs. Manipulação e instanciação usam 100% C11 nativo (designated initializers e acesso direto por ponto).
-- **Zero Macros de Blueprint & Zero Gambiarras:** Proibido definir macros `#define TEMPLATE_<Name>(...)`, blocos monolíticos de código com `\` ou teias de inclusão manual `.inc`. A declaração vive exclusivamente dentro de `MODULE(...)`.
+- **Zero Macros de Blueprint & Zero Gambiarras:** Proibido definir macros `#define TEMPLATE_<Name>(...)` avulsas fora dos arquivos `.def` canônicos, blocos monolíticos de código com `\` para contornar a DSL ou teias de inclusão manual `.inc`. Quando o template instancia pacotes/objetos diretamente sob o módulo (como em `Core/Bit/Bit.def`), use `MODULE_TEMPLATE(DOMAIN(...), Mod, ...)` dentro do `.def`.
+- **Padrão Ouro para `.def` + `Common.inc`:**
+  - Extraia algoritmos independentes de largura/tipo (ex.: helpers SWAR de 64 bits) e constantes numéricas para `MODULE(DOMAIN(...), Mod, INTERNAL(ENUM(...), FUNCTION(...), ...))` em `Impl/Common.inc` — evitando duplicação entre instanciações, mantendo zero overhead de `FunctionTable` e eliminando `#define` de máscaras e números mágicos.
+  - No `.def`, delegue para esses helpers via `MODULE_IFUNC(Mod, Helper)`, leia constantes internas via `CNS(Mod, Internal, CONST)` e agrupe famílias relacionadas com `VARIANT(...)` (`Mask`, `Count`, `Log2`, `Index`, `Rotate`, etc.).
 - **Protocolo de Extensão da DSL:** Se uma funcionalidade necessária (como pack/unpack ou serialização) não se encaixa de forma limpa na DSL declarativa existente, **NUNCA improvise soluções malucas**. Pare imediatamente, proponha uma extensão canônica para a DSL (`MODULE(...)`, `Declarative.impl`) e consulte o usuário.
 - **Modos de Instanciação:**
   1. **Instanciação Direta:** `TEMPLATE_INSTANTIATE(Vector, uint32, uint32_t);`

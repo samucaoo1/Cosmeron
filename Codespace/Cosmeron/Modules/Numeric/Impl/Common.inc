@@ -1,13 +1,8 @@
 #pragma once
 
 #if defined(NUMERIC_DISABLE_FUNCTION_TABLE) &&                                 \
-    !defined(OBJECT_DISABLE_FUNCTION_TABLE)
-#define OBJECT_DISABLE_FUNCTION_TABLE 1
-#endif
-
-#if defined(NUMERIC_DISABLE_FUNCTION_TABLE) &&                                 \
-    !defined(PACKAGE_DISABLE_FUNCTION_TABLE)
-#define PACKAGE_DISABLE_FUNCTION_TABLE 1
+    !defined(COSMERON_DISABLE_FT_Numeric)
+#define COSMERON_DISABLE_FT_Numeric 1
 #endif
 
 #include "../../../Core/Algorithm/Comparison.h"

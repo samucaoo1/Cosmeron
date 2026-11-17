@@ -115,6 +115,7 @@
 #define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_116(CLASS, M)             \
   PP_FOREACH_D2_CTX(COSMERON_INTERNAL_SCOPE_CL_MEMBER, LIB_PREFIX(CLASS),      \
                     PP_UNWRAP PP_SEQ_GET_2 M)
+#define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_117(CLASS, M)
 
 #define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO(CLASS, M)                     \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_, PP_SEQ_GET_1 M)(CLASS, M)
@@ -153,6 +154,7 @@
 #define COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_TAG_114(CLASS, M)
 #define COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_TAG_115(CLASS, M)
 #define COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_TAG_116(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_TAG_117(CLASS, M)
 
 #define COSMERON_MACRO_INTERNAL_OBJECT_GEN_EVENT_FIELD(CLASS, M)               \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_TAG_, PP_SEQ_GET_1 M)(CLASS, M)
@@ -187,6 +189,7 @@
 #define COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_TAG_114(CLASS, M)
 #define COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_TAG_115(CLASS, M)
 #define COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_TAG_116(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_TAG_117(CLASS, M)
 
 #define COSMERON_MACRO_INTERNAL_OBJECT_INIT_EVENT(CLASS, M)                    \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJ_INIT_EVENT_TAG_, PP_SEQ_GET_1 M)(CLASS, M)
@@ -379,6 +382,7 @@
 #define COSMERON_MACRO_INTERNAL_OBJ_GEN_INLINE_TAG_114(CLASS, M)
 #define COSMERON_MACRO_INTERNAL_OBJ_GEN_INLINE_TAG_115(CLASS, M)
 #define COSMERON_MACRO_INTERNAL_OBJ_GEN_INLINE_TAG_116(CLASS, M)
+#define COSMERON_MACRO_INTERNAL_OBJ_GEN_INLINE_TAG_117(CLASS, M)
 
 #define COSMERON_MACRO_INTERNAL_OBJECT_GEN_INLINE(CLASS, M)                    \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_OBJ_GEN_INLINE_TAG_, PP_SEQ_GET_1 M)(CLASS, M)
@@ -387,10 +391,7 @@
  * 3. Top-Level OBJECT Declarator
  * ------------------------------------------------------------ */
 
-#if !defined(OBJECT_DISABLE_FUNCTION_TABLE) &&                                 \
-    !defined(MODULE_DISABLE_FUNCTION_TABLE)
-
-#define OBJECT_DEF(CLASS, FIELDS_BLOCK, ...)                                   \
+#define COSMERON_INTERNAL_OBJECT_DEF_WITH_FT(CLASS, FIELDS_BLOCK, ...)         \
   typedef struct CLASS CLASS;                                                  \
   typedef struct NS(CLASS, FunctionTable) NS(CLASS, FunctionTable);            \
   PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO, CLASS, __VA_ARGS__) \
@@ -424,10 +425,35 @@
   }                                                                            \
   typedef int NS(_cosmeron_object_semi, CLASS, __LINE__)
 
+#define COSMERON_INTERNAL_OBJECT_DEF_NO_FT(CLASS, FIELDS_BLOCK, ...)           \
+  typedef struct CLASS CLASS;                                                  \
+  PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO, CLASS, __VA_ARGS__) \
+  struct CLASS {                                                               \
+    COSMERON_INTERNAL_UNWRAP_FIELDS(FIELDS_BLOCK)                              \
+    PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_GEN_EVENT_FIELD, CLASS,      \
+                   __VA_ARGS__)                                                \
+  };                                                                           \
+  PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_GEN_INLINE, CLASS,             \
+                 __VA_ARGS__)                                                  \
+  static inline OPSTATUS NS(CLASS, Init)(CLASS * self) {                       \
+    if (!self)                                                                 \
+      return STATUS_CONST(INVALID_ARGUMENT);                                   \
+    PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_INIT_EVENT, CLASS,           \
+                   __VA_ARGS__)                                                \
+    return STATUS_CONST(SUCCESS);                                              \
+  }                                                                            \
+  typedef int NS(_cosmeron_object_semi, CLASS, __LINE__)
+
+#define OBJECT_DEF(CLASS, FIELDS_BLOCK, ...)                                   \
+  PP_IIF(COSMERON_INTERNAL_STANDALONE_OBJ_FT_DISABLED(CLASS, (__VA_ARGS__)),   \
+         COSMERON_INTERNAL_OBJECT_DEF_NO_FT,                                   \
+         COSMERON_INTERNAL_OBJECT_DEF_WITH_FT)(CLASS, FIELDS_BLOCK, __VA_ARGS__)
+
 #define OBJECT(CLASS, FIELDS_BLOCK, ...)                                       \
   OBJECT_DEF(CLASS, FIELDS_BLOCK, __VA_ARGS__)
 
-#define OBJECT_EXTENDS(CLASS, BASE_CLASS, FIELDS_BLOCK, ...)                   \
+#define COSMERON_INTERNAL_OBJECT_EXTENDS_WITH_FT(CLASS, BASE_CLASS,            \
+                                                 FIELDS_BLOCK, ...)            \
   typedef struct CLASS CLASS;                                                  \
   typedef struct NS(CLASS, FunctionTable) NS(CLASS, FunctionTable);            \
   PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO, CLASS, __VA_ARGS__) \
@@ -462,31 +488,8 @@
   }                                                                            \
   typedef int NS(_cosmeron_object_semi, CLASS, __LINE__)
 
-#else
-
-#define OBJECT_DEF(CLASS, FIELDS_BLOCK, ...)                                   \
-  typedef struct CLASS CLASS;                                                  \
-  PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO, CLASS, __VA_ARGS__) \
-  struct CLASS {                                                               \
-    COSMERON_INTERNAL_UNWRAP_FIELDS(FIELDS_BLOCK)                              \
-    PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_GEN_EVENT_FIELD, CLASS,      \
-                   __VA_ARGS__)                                                \
-  };                                                                           \
-  PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_GEN_INLINE, CLASS,             \
-                 __VA_ARGS__)                                                  \
-  static inline OPSTATUS NS(CLASS, Init)(CLASS * self) {                       \
-    if (!self)                                                                 \
-      return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_INIT_EVENT, CLASS,           \
-                   __VA_ARGS__)                                                \
-    return STATUS_CONST(SUCCESS);                                              \
-  }                                                                            \
-  typedef int NS(_cosmeron_object_semi, CLASS, __LINE__)
-
-#define OBJECT(CLASS, FIELDS_BLOCK, ...)                                       \
-  OBJECT_DEF(CLASS, FIELDS_BLOCK, __VA_ARGS__)
-
-#define OBJECT_EXTENDS(CLASS, BASE_CLASS, FIELDS_BLOCK, ...)                   \
+#define COSMERON_INTERNAL_OBJECT_EXTENDS_NO_FT(CLASS, BASE_CLASS,              \
+                                               FIELDS_BLOCK, ...)              \
   typedef struct CLASS CLASS;                                                  \
   PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO, CLASS, __VA_ARGS__) \
   struct CLASS {                                                               \
@@ -506,7 +509,11 @@
   }                                                                            \
   typedef int NS(_cosmeron_object_semi, CLASS, __LINE__)
 
-#endif
+#define OBJECT_EXTENDS(CLASS, BASE_CLASS, FIELDS_BLOCK, ...)                   \
+  PP_IIF(COSMERON_INTERNAL_STANDALONE_OBJ_FT_DISABLED(CLASS, (__VA_ARGS__)),   \
+         COSMERON_INTERNAL_OBJECT_EXTENDS_NO_FT,                               \
+         COSMERON_INTERNAL_OBJECT_EXTENDS_WITH_FT)(CLASS, BASE_CLASS,          \
+                                                   FIELDS_BLOCK, __VA_ARGS__)
 
 /* ------------------------------------------------------------
  * 4. Legacy / Manual Form (Backwards Compatibility)

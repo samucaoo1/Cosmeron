@@ -1,14 +1,10 @@
 #ifndef COSMERON_CONTAINER_TREE_COMMON_INC
 #define COSMERON_CONTAINER_TREE_COMMON_INC
 
-#if defined(CONTAINER_DISABLE_FUNCTION_TABLE) &&                               \
-    !defined(OBJECT_DISABLE_FUNCTION_TABLE)
-#define OBJECT_DISABLE_FUNCTION_TABLE 1
-#endif
-
-#if defined(TREE_DISABLE_FUNCTION_TABLE) &&                                    \
-    !defined(OBJECT_DISABLE_FUNCTION_TABLE)
-#define OBJECT_DISABLE_FUNCTION_TABLE 1
+#if (defined(CONTAINER_DISABLE_FUNCTION_TABLE) ||                               \
+     defined(TREE_DISABLE_FUNCTION_TABLE)) &&                                  \
+    !defined(COSMERON_DISABLE_FT_Container_Tree)
+#define COSMERON_DISABLE_FT_Container_Tree 1
 #endif
 
 #include "../../../../Core/Algorithm/Comparison.h"

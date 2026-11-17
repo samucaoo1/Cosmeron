@@ -5,11 +5,12 @@
 #include "../../../Core/Module/Module.h"
 #include "../Grid/Attribute.h"
 
-#if defined(TEXT_DISABLE_FUNCTION_TABLE) ||                                    \
-    defined(TEXT_ATTRIBUTED_DISABLE_FUNCTION_TABLE)
-#ifndef OBJECT_DISABLE_FUNCTION_TABLE
-#define OBJECT_DISABLE_FUNCTION_TABLE
+#if defined(TEXT_DISABLE_FUNCTION_TABLE) && !defined(COSMERON_DISABLE_FT_Text)
+#define COSMERON_DISABLE_FT_Text 1
 #endif
+#if defined(TEXT_ATTRIBUTED_DISABLE_FUNCTION_TABLE) &&                         \
+    !defined(COSMERON_DISABLE_FT_Text_AttributedText)
+#define COSMERON_DISABLE_FT_Text_AttributedText 1
 #endif
 
 /* Attributed text span and object definition */

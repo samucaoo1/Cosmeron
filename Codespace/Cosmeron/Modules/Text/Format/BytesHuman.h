@@ -16,11 +16,12 @@
 
 ENUM_DEF(Text_Format, BytesHumanConfig, TEXT_FORMAT_BYTES_HUMAN_TABLE)
 
-#if defined(TEXT_DISABLE_FUNCTION_TABLE) ||                                    \
-    defined(TEXT_BYTES_HUMAN_DISABLE_FUNCTION_TABLE)
-#ifndef PACKAGE_DISABLE_FUNCTION_TABLE
-#define PACKAGE_DISABLE_FUNCTION_TABLE
+#if defined(TEXT_DISABLE_FUNCTION_TABLE) && !defined(COSMERON_DISABLE_FT_Text)
+#define COSMERON_DISABLE_FT_Text 1
 #endif
+#if defined(TEXT_BYTES_HUMAN_DISABLE_FUNCTION_TABLE) &&                        \
+    !defined(COSMERON_DISABLE_FT_Text_BytesHuman)
+#define COSMERON_DISABLE_FT_Text_BytesHuman 1
 #endif
 
 MODULE(DOMAIN(Modules), Text,

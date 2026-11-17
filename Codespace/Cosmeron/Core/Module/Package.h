@@ -106,6 +106,7 @@
 #define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_116(PKG, M)             \
   PP_FOREACH_D2_CTX(COSMERON_INTERNAL_SCOPE_CL_MEMBER, LIB_PREFIX(PKG),        \
                     PP_UNWRAP PP_SEQ_GET_2 M)
+#define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_117(PKG, M)
 
 #define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO(PKG, M)                     \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_, PP_SEQ_GET_1 M)(PKG, M)
@@ -260,6 +261,7 @@
 #define COSMERON_MACRO_INTERNAL_PKG_GEN_INLINE_TAG_114(PKG, M)
 #define COSMERON_MACRO_INTERNAL_PKG_GEN_INLINE_TAG_115(PKG, M)
 #define COSMERON_MACRO_INTERNAL_PKG_GEN_INLINE_TAG_116(PKG, M)
+#define COSMERON_MACRO_INTERNAL_PKG_GEN_INLINE_TAG_117(PKG, M)
 
 #define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_INLINE(PKG, M)                    \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PKG_GEN_INLINE_TAG_, PP_SEQ_GET_1 M)(PKG, M)
@@ -268,9 +270,7 @@
  * 3. Top-Level PACKAGE Declarator
  * ------------------------------------------------------------ */
 
-#if !defined(PACKAGE_DISABLE_FUNCTION_TABLE) && !defined(MODULE_DISABLE_FUNCTION_TABLE)
-
-#define PACKAGE_DEF(PKG, ...)                                                   \
+#define COSMERON_INTERNAL_PACKAGE_DEF_WITH_FT(PKG, ...)                        \
   PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO, PKG, __VA_ARGS__)   \
   struct NS(PKG, FunctionTable) {                                             \
     int _reserved;                                                              \
@@ -288,14 +288,15 @@
   }                                                                             \
   typedef int NS(_cosmeron_package_semi, PKG, __LINE__)
 
-#else
-
-#define PACKAGE_DEF(PKG, ...)                                                   \
+#define COSMERON_INTERNAL_PACKAGE_DEF_NO_FT(PKG, ...)                          \
   PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO, PKG, __VA_ARGS__)   \
   PP_FOREACH_CTX(COSMERON_MACRO_INTERNAL_PACKAGE_GEN_INLINE, PKG, __VA_ARGS__)  \
   typedef int NS(_cosmeron_package_semi, PKG, __LINE__)
 
-#endif
+#define PACKAGE_DEF(PKG, ...)                                                  \
+  PP_IIF(COSMERON_INTERNAL_STANDALONE_PKG_FT_DISABLED(PKG, (__VA_ARGS__)),     \
+         COSMERON_INTERNAL_PACKAGE_DEF_NO_FT,                                  \
+         COSMERON_INTERNAL_PACKAGE_DEF_WITH_FT)(PKG, __VA_ARGS__)
 
 #define PACKAGE(PKG, ...) PACKAGE_DEF(PKG, __VA_ARGS__)
 

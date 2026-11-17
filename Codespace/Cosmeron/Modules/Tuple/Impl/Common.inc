@@ -1,8 +1,8 @@
 #pragma once
 
 #if defined(TUPLE_DISABLE_FUNCTION_TABLE) &&                                   \
-    !defined(PACKAGE_DISABLE_FUNCTION_TABLE)
-#define PACKAGE_DISABLE_FUNCTION_TABLE 1
+    !defined(COSMERON_DISABLE_FT_Tuple)
+#define COSMERON_DISABLE_FT_Tuple 1
 #endif
 
 #include "../../../Core/Condition/Status.h"

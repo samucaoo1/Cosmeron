@@ -1,8 +1,8 @@
 #pragma once
 
 #if defined(CONTAINER_DISABLE_FUNCTION_TABLE) &&                               \
-    !defined(OBJECT_DISABLE_FUNCTION_TABLE)
-#define OBJECT_DISABLE_FUNCTION_TABLE 1
+    !defined(COSMERON_DISABLE_FT_Container)
+#define COSMERON_DISABLE_FT_Container 1
 #endif
 
 #include "../../../Core/Memory/Alloc.h"

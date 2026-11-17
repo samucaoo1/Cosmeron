@@ -9,11 +9,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#if defined(TEXT_DISABLE_FUNCTION_TABLE) ||                                    \
-    defined(TEXT_CSTRING_DISABLE_FUNCTION_TABLE)
-#ifndef PACKAGE_DISABLE_FUNCTION_TABLE
-#define PACKAGE_DISABLE_FUNCTION_TABLE
+#if defined(TEXT_DISABLE_FUNCTION_TABLE) && !defined(COSMERON_DISABLE_FT_Text)
+#define COSMERON_DISABLE_FT_Text 1
 #endif
+#if defined(TEXT_CSTRING_DISABLE_FUNCTION_TABLE) &&                            \
+    !defined(COSMERON_DISABLE_FT_Text_CString)
+#define COSMERON_DISABLE_FT_Text_CString 1
 #endif
 
 MODULE(DOMAIN(Modules), Text,
