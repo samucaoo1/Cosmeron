@@ -1,13 +1,17 @@
 # Memory
 
-The **Memory** module provides memory allocation, byte operations, swapping, and arena allocation with a consistent `OPSTATUS` error model. Its public APIs operate on caller-owned pointers and buffers; the module does not add garbage collection or automatic ownership tracking.
+The **Memory** module provides raw allocation and byte operations, allocator interfaces, arenas, pools, a page/size-class heap, binary streams, a collector, smart pointers and fixed-width memory blocks. Operations use an explicit `OPSTATUS` contract where failure is possible. The module includes both manual-memory primitives and higher-level ownership and collection facilities.
 
-Memory is a **Core** module. Include only the packages you need:
+Memory is a **Core** module. The `Memory.h` aggregate includes Operations, Alloc, Allocator, Algorithm/Swap, Arena, Pool, Heap, Stream, Collector and Pointer. Use it for the complete surface, or include individual headers:
+
+```c
+#include "Cosmeron/Core/Memory/Memory.h"
+```
 
 ```c
 #include "Cosmeron/Core/Memory/Alloc.h"
 #include "Cosmeron/Core/Memory/Operations.h"
-#include "Cosmeron/Core/Memory/Swap.h"
+#include "Cosmeron/Core/Algorithm/Swap.h"
 #include "Cosmeron/Core/Memory/Arena.h"
 ```
 
@@ -19,8 +23,15 @@ Memory is a **Core** module. Include only the packages you need:
 | --- | --- | --- |
 | [Alloc](#allocation) | `Alloc.h` | Heap allocation, reallocation, and freeing |
 | [Operations](#memory-operations) | `Operations.h` | Copy, move, fill, and zero memory |
-| [Swap](#swapping) | `Swap.h` | Exchange non-overlapping object bytes |
+| [Swap](#swapping) | `../Algorithm/Swap.h` | Exchange non-overlapping object bytes |
 | [Arena](#arena-allocation) | `Arena.h` | Linear allocation from a reusable buffer |
+| Allocator | `Allocator.h` | Type-erased allocation interface and capabilities |
+| Pool | `Pool.h` | Fixed-size element pool |
+| Heap | `Heap.h` | Page/size-class allocator and allocation policies |
+| Stream | `Stream.h` | Bounded binary reader/writer with bit and endian-aware operations |
+| Collector | `Collector.h` | Tracing collector built on the Heap |
+| Smart pointers | `Pointer/Pointer.h` | Unique, shared, weak, atomic and intrusive pointer families |
+| Block | `Block.h` | Fixed-width bitwise memory block objects (direct include) |
 
 The library's naming macros resolve automatically to the configured namespace. For example, these two calls are equivalent with the default namespace:
 
@@ -1788,5 +1799,105 @@ int main(void) {
 - A successful allocation of zero total bytes returns a null pointer rather than allocating storage.
 - `Memory_Free` is a macro with a typed-pointer ergonomic benefit, whereas `FreePointer` is a status-returning function for `void *` variables.
 - An arena is a linear allocator, not an ownership-tracking collector. Individual arena allocations cannot be resized or freed.
-- No `Try`, `Safe`, `Debug`, or garbage-collection API is present in this branch's Memory module; this reference covers **implemented interfaces only**.
+- `Memory.h` aggregates allocator, pool, heap, stream, collector and smart-pointer facilities. `Block.h` is a separate direct-include header and is not pulled into the aggregate.
 
+
+
+---
+
+# Allocator interface
+
+Header: `Allocator.h`.
+
+`MODULE_TYPE(Memory, Allocator)` is a type-erased allocator value. It stores an operations-table pointer and a context pointer so containers and memory objects can use a caller-selected allocation strategy without depending directly on `malloc`.
+
+The capability table declares `NONE`, `SUPPORTS_REALLOC`, `SUPPORTS_FREE`, `THREAD_SAFE` and `BULK_RESET`. The package provides `Default()` for the system allocator, `IsValid(allocator)`, `Alloc.Bytes(size)`, `Alloc.Aligned(size, alignment)`, `Calloc(count, elementSize)`, `Realloc(ptr, oldSize, newSize, alignment, outPtr)` and `Free(ptr, size)`.
+
+The allocator's context and operations table must remain valid for the life of objects using it. A custom allocator must honor the capabilities it advertises; do not assume reallocation or thread-safety support unless the corresponding capability is set.
+
+# Pool
+
+Header: `Pool.h`.
+
+A Pool manages a fixed number of equally sized elements. It can own the backing storage or operate over a caller-provided buffer.
+
+| Method | Purpose |
+| --- | --- |
+| `Create(elementSize, elementCount)` | Allocates pool storage |
+| `Create.Buffer(buffer, bufferSize, elementSize)` | Initializes a pool over caller-owned storage |
+| `Alloc(outPointerObject)` | Acquires one free element |
+| `Free(ptr)` / `Free.Pointer(inoutPointerObject)` | Returns an element to the pool |
+| `Reset()` | Makes all elements available again |
+| `Destroy()` | Releases owned storage and resets the object |
+| `Capacity()`, `Available()`, `Allocated()`, `ElementSize()` | Reads pool statistics |
+| `Contains(ptr)` | Checks whether an address belongs to the pool |
+| `AsAllocator()` | Adapts the pool to the generic Allocator interface |
+
+Reset invalidates all outstanding element allocations. Do not return the same element twice or free a pointer that did not originate from that pool.
+
+# Heap
+
+Header: `Heap.h`.
+
+`MODULE_TYPE(Memory, Heap)` is a page-based allocator with size classes for small allocations and a separate path for large allocations. Its public interface includes `Create(initialPages)`, `Destroy`, `Alloc`, `Alloc.Small`, `Alloc.Large`, `FreeCell`, `BlacklistPage`, `IsBlacklisted`, `LookupEntry`, `ResolvePointer`, `SweepPage`, `LazySweepClass`, `TotalAllocated`, `LiveBytes`, `PageCount`, `Contains` and `AsAllocator`.
+
+The allocation policy values include manual, conservative, typed, atomic, immutable, traced and pinned modes. They describe allocation and collector behavior; they are not interchangeable with the Collector's root-registration operations. Follow the policy and type-descriptor contract when allocating typed or traced objects.
+
+# Binary stream
+
+Header: `Stream.h`.
+
+`MODULE_TYPE(Memory, Stream)` is a bounded reader/writer over a caller-provided byte buffer. `Init.Read(buffer, size)` creates a read-only view; `Init.Write(buffer, capacity)` creates a writable stream.
+
+Observers include `Remaining`, `RemainingBits`, `Position`, `BitPosition`, `Capacity`, `IsAtEnd`, `IsReadOnly`, `HasRemaining`, `HasRemainingBits`, `Data` and `Current`. Navigation includes `Seek`, `Skip`, `Rewind`, `AlignToByte` and `Slice`. `SeekOrigin` identifies the beginning, current position or end.
+
+Read operations include `Bytes`, `Bits` and signed/unsigned 8-, 16-, 32- and 64-bit values in explicit little- and big-endian forms. `Peek` reads without advancing. Write operations provide corresponding byte, bit and endian-aware primitive writers.
+
+~~~c
+unsigned char bytes[8] = {0x01, 0x02, 0x03, 0x04};
+MODULE_TYPE(Memory, Stream) stream = {0};
+
+OPSTATUS status = API(&stream, Init, Read, bytes, sizeof bytes);
+uint32_t value = 0;
+if (status == STATUS_CONST(SUCCESS))
+    status = API(&stream, Read, UInt32BE, &value);
+~~~
+
+The stream is bounded: reads and writes validate arguments and available capacity. Endianness is selected by the operation name, not by the host machine.
+
+# Collector
+
+Header: `Collector.h`.
+
+The Collector combines the Heap with root tracking, tracing and finalizer support. It provides a per-instance `MODULE_TYPE(Memory, Collector)` and the `GlobalCollector` package.
+
+Instance methods include `Create(initialHeapPages, stackBottom)`, `Destroy`, `Alloc`, `Alloc.Typed`, `Alloc.Atomic`, `SetFinalizer`, `PinRoot`, `UnpinRoot`, `Collect`, `Pause`, `Resume`, `IsPaused`, `LiveBytes`, `Threshold`, `Contains` and `AsAllocator`.
+
+`GlobalCollector` provides `Startup(stackBottom)`, `Shutdown`, `DefaultCollector` and corresponding allocation, finalizer, root, collection and pause/resume operations.
+
+The root API receives the **address of a root pointer**, not the allocation address itself. Pin and unpin the same root slot, and keep that slot valid while registered. `stackBottom` must satisfy the platform/thread stack-boundary contract. Collection and finalizers can execute user code; they are not equivalent to a plain `free`.
+
+# Smart pointer families
+
+Header: `Pointer/Pointer.h`.
+
+The aggregate header includes these generated families:
+
+| Family | Ownership model | Main operations |
+| --- | --- | --- |
+| `Unique` | One owning handle | `Alloc`, `AllocZero`, `FromPointer`, `Reset`, `Move`, `Release`, `Free`, `Get`, `GetMutable`, `Swap` |
+| `Shared` | Reference-counted shared ownership | `From.Pointer`, `From.Weak`, `Alloc`, `Reset`, `Free`, `Clone`, `Move`, `Get`, `Get.Mutable`, `UseCount`, `Unique`, `Swap` |
+| `Weak` | Non-owning reference to a Shared control block | `Reset`, `Free`, `Clone`, `Move`, `IsExpired`, `IsValid`, `UseCount`, `Upgrade`, `Swap` |
+| `AtomicShared` | Atomic shared-reference operations | Shared-like creation, reset, clone/move, access, use-count and swap operations |
+| `AtomicWeak` | Atomic weak-reference operations | Weak-like reset, clone/move, expiration, upgrade and swap operations |
+| `Intrusive` | Reference count associated with the user object | `FromPointer`, `FromExistingPointer`, `Clone`, `Reset`, `Move`, `Release`, `Free`, `Get`, `GetMutable`, `UseCount`, `Unique`, `Swap` |
+
+These are generated by their `.def` templates and require explicit type specializations. `Unique` is suitable for exclusive ownership; `Shared`/`Weak` provide shared lifetime management; atomic variants provide atomic reference-count operations; `Intrusive` requires the object's intrusive control-field contract.
+
+A weak pointer does not own the object. Upgrade it to a Shared pointer before accessing the object, and check the returned status because the object may already have expired. Atomic pointer operations do not make the pointed-to object itself thread-safe.
+
+# Fixed-width memory block
+
+Header: `Block.h` (included directly).
+
+`Block` generates fixed-width objects backed by `uint64_t` limbs. It provides clear/set-all, bitwise `And`/`Or`/`Xor`/`Not`, shifts, rotations, bit set/clear/flip/check, population count, any/all/none predicates and equality. It is useful for fixed-width masks and value objects that do not need a dynamically allocated bitset.

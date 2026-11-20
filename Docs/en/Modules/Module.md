@@ -14,8 +14,8 @@ The **Module** core subsystem provides Cosmeron's declarative architectural fram
 
 | Component | File | Purpose |
 | --- | --- | --- |
-| [Package](Package.md) | `Package.h` | Declarative namespaces of free functions with optional function tables |
-| [Object](Object.md) | `Object.h` | Declarative object-oriented classes, inheritance, receivers, and dispatch tables |
+| [Package](#package-framework) | `Package.h` | Declarative namespaces of free functions with optional function tables |
+| [Object](#object-framework) | `Object.h` | Declarative object-oriented classes, inheritance, receivers, and dispatch tables |
 | Tuple | `Common/Tuple.impl` | Member tuple specifications (`OPERATION`, `PREDICATE`, `FUNCTION`, `PROCEDURE`) |
 | Dispatch | `Common/Dispatch.impl` | Unified implementation prototypes and dispatchers (`*_IMPLEMENT_EX`, `*_PROTOTYPEEX`) |
 | Template | `Common/Template.impl` | Universal template engine (`TEMPLATE_DECLARE`, `TEMPLATE_IMPLEMENT`) |
@@ -648,7 +648,37 @@ int main(void) {
 
 # See also
 
-- [Object](Object.md): Detailed reference for `OBJECT`, `OBJECT_EXTENDS`, and `TObject`.
-- [Package](Package.md): Detailed reference for `PACKAGE` and `PACKAGE_CALL`.
+- [Object framework](#object-framework): receiver-based methods, function tables and object dispatch.
+- [Package framework](#package-framework): free-function declarations and package dispatch.
 - [Preprocessor](Preprocessor.md): Underlying preprocessor macro toolkit.
-- [Error](Error.md): Status codes (`OPSTATUS`) returned by operations.
+- [Condition](Condition.md): Status codes (`OPSTATUS`) returned by operations.
+
+
+---
+
+# Package framework
+
+A Package groups free functions under one module namespace. It may declare `FUNCTION`, `PROCEDURE`, `OPERATION`, `PREDICATE` and `COMPARISON` members and may use a function table for indirect dispatch. The declarative form is `PACKAGE(Name, members...)` inside a `MODULE(...)` declaration.
+
+`PACKAGE_API(package, member, ...)` calls through a Package function table. `PACKAGE_CALL(...)` is the compatibility alias. Module-qualified free-function calls can also use the module/package call form where the header exposes it. Prefer the helper macro declared by the owning header; do not manually reconstruct generated symbol names.
+
+# Object framework
+
+An Object declares a C structure together with its generated methods and API/function-table member. Its `FIELDS(...)` define stored state; `OPERATION`, `FUNCTION`, `PROCEDURE`, `PREDICATE` and related descriptors declare member contracts. The declarative form is `OBJECT(Name, fields and methods...)` inside a `MODULE(...)` declaration.
+
+`API(object, member, ...)` dispatches through the object's API table and supplies the receiver to the selected method. `OBJECT_CALL(...)` and `OBJECT_CALL_0(...)` are call helpers; `OBJECT_AS(object, Type)` casts an object pointer to a compatible object type. Object and Package calls are not interchangeable: an Object method receives a receiver, while a Package function does not.
+
+# Callback and Closure
+
+The umbrella `Module.h` includes `Callback/Callback.h` and `Closure/Closure.h`. These represent different callable contracts.
+
+| Concept | Representation | State |
+| --- | --- | --- |
+| Callback | Function pointer | No stored context; state must be passed through its declared arguments or other application-owned state |
+| Closure | Function pointer plus `void *context` | Carries an explicit borrowed context pointer |
+
+`TCALLBACK(NAME)` and `CALLBACK_FUNC(NAME)` name standalone callback types and helpers. The callback declaration macros include `CALLBACK_FUNCTION`, `CALLBACK_PROCEDURE`, `CALLBACK_OPERATION`, `CALLBACK_PREDICATE` and `CALLBACK_COMPARISON`. `CALLBACK_EMPTY` represents an empty callback; `CALLBACK_INVOKE` invokes it.
+
+`TCLOSURE(NAME)` and `CLOSURE_FUNC(NAME)` name closure types and helpers. The closure declaration macros include `CLOSURE_FUNCTION`, `CLOSURE_PROCEDURE`, `CLOSURE_OPERATION`, `CLOSURE_PREDICATE` and `CLOSURE_COMPARISON`. A bound closure stores a function and a context pointer; `CLOSURE_EMPTY` represents an empty closure and `CLOSURE_INVOKE` invokes a closure using its declared signature.
+
+Within a Package or Object declaration, the `CALLBACK(...)` and `CLOSURE(...)` descriptor groups declare typed callable members. Prefer a closure when the callee needs per-instance state. The context is borrowed: the caller must keep the referenced object alive for every possible invocation. Never cast between unrelated callback/closure signatures.

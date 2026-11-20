@@ -1,12 +1,12 @@
 # Text
 
-The **Text** module supplies Unicode code point checks, UTF-8/UTF-16 conversion, approximate display-width measurement, and a **two-dimensional off-screen text canvas** with character and visual-attribute planes. It is organized as a C11, header-included API.
+The **Text** module supplies Unicode code point checks, UTF-8/UTF-16 conversion, display-width estimation, non-owning views, mutable strings and builders, C-string utilities, formatting, attributed text, and a two-dimensional off-screen text canvas. It is organized as a C11, header-included API.
 
 ```c
 #include "Cosmeron/Modules/Text/Text.h"
 ```
 
-The aggregate header includes all Text packages. The individual headers may also be included directly.
+The aggregate `Text.h` includes Unicode/encoding, grid, format, view, string, C-string, builder and attributed-text packages. Individual headers may also be included directly.
 
 **Scope:** The `Grid` functions operate on memory-backed cells. They do **not** write to `stdout`, control a terminal, read `stdin`, call `ncurses`, or flush/display the canvas. Terminal I/O and rendering backends belong to a separate layer.
 
@@ -32,7 +32,7 @@ The aggregate header includes all Text packages. The individual headers may also
 ```c
 TEXT_GRID_TYPE(char32) canvas = {0};
 OPSTATUS status = TEXT_GRID_FUNC(char32, Create)(
-    &canvas, (TDUAL_TYPE(uint16)){.col = 80, .row = 25});
+    &canvas, (MODULE_TYPED(Tuple, Dual, UInt16)){.col = 80, .row = 25});
 ```
 
 ### Direct form
@@ -40,7 +40,7 @@ OPSTATUS status = TEXT_GRID_FUNC(char32, Create)(
 ```c
 Text_Grid_TGrid_char32 canvas = {0};
 OPSTATUS status = Text_Grid_char32_Create(
-    &canvas, (Struct_TDual_uint16){.col = 80, .row = 25});
+    &canvas, (MODULE_TYPED(Tuple, Dual, UInt16)){.col = 80, .row = 25});
 ```
 
 With the default namespace, both forms refer to the same generated type and function. The macro form automatically follows a custom `COSMERON_NAMESPACE`; the direct symbol spelling shown here assumes the default namespace.
@@ -141,7 +141,7 @@ With the default namespace, both forms refer to the same generated type and func
 | `TEXT_GRID_ATTRIBUTE_TYPE(Flags)` | `Text_Grid_Attribute_TFlags` | 16-bit flag storage |
 | `TEXT_GRID_UNDERLINE_TYPE(Style)` | `Text_Grid_Underline_TStyle` | Underline style identifier |
 
-A grid uses `TDUAL_TYPE(uint16)` dimensions: `.col` means width in cells and `.row` means height. The position `{.x, .y}` is **zero-based** and storage is row-major: `data[y * size.col + x]`. A rectangle uses `TQUAD_TYPE(uint16)` fields `.left`, `.right`, `.top`, `.bottom`, with **inclusive** right and bottom bounds.
+A grid uses `MODULE_TYPED(Tuple, Dual, UInt16)` dimensions: `.col` means width in cells and `.row` means height. The position `{.x, .y}` is **zero-based** and storage is row-major: `data[y * size.col + x]`. A rectangle uses `MODULE_TYPED(Tuple, Quad, UInt16)` fields `.left`, `.right`, `.top`, `.bottom`, with **inclusive** right and bottom bounds.
 
 ## Grid storage
 
@@ -612,7 +612,7 @@ OPSTATUS Text_UTF8_Decode(const unsigned char *input, size_t size, Text_TChar32 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `input` | `const unsigned char *input` | Input code-unit span; counted by size, not necessarily NUL terminated. |
-| `size` | `size_t size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses Struct_TDual_uint16. |
+| `size` | `size_t size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses MODULE_TYPED(Tuple, Dual, UInt16). |
 | `outCodepoint` | `TEXT_TYPE(TChar32) *outCodepoint` | Writable output Unicode scalar. |
 | `outUnits` | `size_t *outUnits` | Output count of encoded/consumed code units (bytes for UTF-8, uint16 units for UTF-16). |
 
@@ -665,7 +665,7 @@ bool Text_UTF8_Validate(const unsigned char *input, size_t size);
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `input` | `const unsigned char *input` | Input code-unit span; counted by size, not necessarily NUL terminated. |
-| `size` | `size_t size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses Struct_TDual_uint16. |
+| `size` | `size_t size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses MODULE_TYPED(Tuple, Dual, UInt16). |
 
 ---
 
@@ -715,7 +715,7 @@ OPSTATUS Text_UTF8_Count(const unsigned char *input, size_t size, size_t *outCod
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `input` | `const unsigned char *input` | Input code-unit span; counted by size, not necessarily NUL terminated. |
-| `size` | `size_t size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses Struct_TDual_uint16. |
+| `size` | `size_t size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses MODULE_TYPED(Tuple, Dual, UInt16). |
 | `outCodepoints` | `size_t *outCodepoints` | Writable total decoded code-point count. |
 | `outUnits` | `size_t *outUnits` | Output count of encoded/consumed code units (bytes for UTF-8, uint16 units for UTF-16). |
 
@@ -889,7 +889,7 @@ OPSTATUS Text_UTF16_Decode(const Text_TChar16 *input, size_t size, Text_TChar32 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `input` | `const TEXT_TYPE(TChar16) *input` | Input code-unit span; counted by size, not necessarily NUL terminated. |
-| `size` | `size_t size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses Struct_TDual_uint16. |
+| `size` | `size_t size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses MODULE_TYPED(Tuple, Dual, UInt16). |
 | `outCodepoint` | `TEXT_TYPE(TChar32) *outCodepoint` | Writable output Unicode scalar. |
 | `outUnits` | `size_t *outUnits` | Output count of encoded/consumed code units (bytes for UTF-8, uint16 units for UTF-16). |
 
@@ -942,7 +942,7 @@ bool Text_UTF16_Validate(const Text_TChar16 *input, size_t size);
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `input` | `const TEXT_TYPE(TChar16) *input` | Input code-unit span; counted by size, not necessarily NUL terminated. |
-| `size` | `size_t size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses Struct_TDual_uint16. |
+| `size` | `size_t size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses MODULE_TYPED(Tuple, Dual, UInt16). |
 
 ---
 
@@ -1059,7 +1059,7 @@ OPSTATUS Text_Width_UTF8(const unsigned char *input, size_t size, size_t *outCol
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `input` | `const unsigned char *input` | Input code-unit span; counted by size, not necessarily NUL terminated. |
-| `size` | `size_t size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses Struct_TDual_uint16. |
+| `size` | `size_t size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses MODULE_TYPED(Tuple, Dual, UInt16). |
 | `outColumns` | `size_t *outColumns` | Writable total display-column result. |
 | `outUnits` | `size_t *outUnits` | Output count of encoded/consumed code units (bytes for UTF-8, uint16 units for UTF-16). |
 
@@ -1270,13 +1270,13 @@ Allocates storage for a previously empty grid at a requested column/row size.
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Create)(TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) size);
+OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Create)(TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, MODULE_TYPED(Tuple, Dual, UInt16) size);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_Attribute_Create(Text_Grid_Attribute_TGrid *grid, Struct_TDual_uint16 size);
+OPSTATUS Text_Grid_Attribute_Create(Text_Grid_Attribute_TGrid *grid, MODULE_TYPED(Tuple, Dual, UInt16) size);
 ```
 
 ---
@@ -1286,7 +1286,7 @@ OPSTATUS Text_Grid_Attribute_Create(Text_Grid_Attribute_TGrid *grid, Struct_TDua
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `grid` | `TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid` | Pointer to a correctly initialized grid. |
-| `size` | `TDUAL_TYPE(uint16) size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses Struct_TDual_uint16. |
+| `size` | `MODULE_TYPED(Tuple, Dual, UInt16) size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses MODULE_TYPED(Tuple, Dual, UInt16). |
 
 ---
 
@@ -1306,7 +1306,7 @@ Requires a zero-initialized or destroyed **empty** destination. Both dimensions 
 
 ```c
 TEXT_GRID_ATTRIBUTE_TYPE(Grid) grid = {0};
-TDUAL_TYPE(uint16) size = {.col = 4, .row = 3};
+MODULE_TYPED(Tuple, Dual, UInt16) size = {.col = 4, .row = 3};
 OPSTATUS status = TEXT_GRID_ATTRIBUTE_FUNC(Create)(&grid, size);
 ```
 
@@ -1369,13 +1369,13 @@ Resizes the grid, retaining the overlapping top-left portion and initializing ne
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Resize)(TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) size);
+OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Resize)(TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, MODULE_TYPED(Tuple, Dual, UInt16) size);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_Attribute_Resize(Text_Grid_Attribute_TGrid *grid, Struct_TDual_uint16 size);
+OPSTATUS Text_Grid_Attribute_Resize(Text_Grid_Attribute_TGrid *grid, MODULE_TYPED(Tuple, Dual, UInt16) size);
 ```
 
 ---
@@ -1385,7 +1385,7 @@ OPSTATUS Text_Grid_Attribute_Resize(Text_Grid_Attribute_TGrid *grid, Struct_TDua
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `grid` | `TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid` | Pointer to a correctly initialized grid. |
-| `size` | `TDUAL_TYPE(uint16) size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses Struct_TDual_uint16. |
+| `size` | `MODULE_TYPED(Tuple, Dual, UInt16) size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses MODULE_TYPED(Tuple, Dual, UInt16). |
 
 ---
 
@@ -1404,7 +1404,7 @@ Allocates a new grid and preserves the overlapping **top-left** area. New cells 
 ### Example
 
 ```c
-TDUAL_TYPE(uint16) size = {.col = 4, .row = 3};
+MODULE_TYPED(Tuple, Dual, UInt16) size = {.col = 4, .row = 3};
 OPSTATUS status = TEXT_GRID_ATTRIBUTE_FUNC(Resize)(&grid, size);
 ```
 
@@ -1419,13 +1419,13 @@ Replaces an existing valid grid with a freshly initialized grid of the requested
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Recreate)(TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) size);
+OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Recreate)(TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, MODULE_TYPED(Tuple, Dual, UInt16) size);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_Attribute_Recreate(Text_Grid_Attribute_TGrid *grid, Struct_TDual_uint16 size);
+OPSTATUS Text_Grid_Attribute_Recreate(Text_Grid_Attribute_TGrid *grid, MODULE_TYPED(Tuple, Dual, UInt16) size);
 ```
 
 ---
@@ -1435,7 +1435,7 @@ OPSTATUS Text_Grid_Attribute_Recreate(Text_Grid_Attribute_TGrid *grid, Struct_TD
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `grid` | `TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid` | Pointer to a correctly initialized grid. |
-| `size` | `TDUAL_TYPE(uint16) size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses Struct_TDual_uint16. |
+| `size` | `MODULE_TYPED(Tuple, Dual, UInt16) size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses MODULE_TYPED(Tuple, Dual, UInt16). |
 
 ---
 
@@ -1454,7 +1454,7 @@ Allocates fresh storage of the new size, discarding old contents only after succ
 ### Example
 
 ```c
-TDUAL_TYPE(uint16) size = {.col = 4, .row = 3};
+MODULE_TYPED(Tuple, Dual, UInt16) size = {.col = 4, .row = 3};
 OPSTATUS status = TEXT_GRID_ATTRIBUTE_FUNC(Recreate)(&grid, size);
 ```
 
@@ -1667,13 +1667,13 @@ Reads the character or attribute stored at a zero-based cell position.
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(ReadCell)(const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) position, TEXT_GRID_ATTRIBUTE_TYPE(Cell) *attribute);
+OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(ReadCell)(const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, MODULE_TYPED(Tuple, Dual, UInt16) position, TEXT_GRID_ATTRIBUTE_TYPE(Cell) *attribute);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_Attribute_ReadCell(const Text_Grid_Attribute_TGrid *grid, Struct_TDual_uint16 position, Text_Grid_Attribute_TCell *attribute);
+OPSTATUS Text_Grid_Attribute_ReadCell(const Text_Grid_Attribute_TGrid *grid, MODULE_TYPED(Tuple, Dual, UInt16) position, Text_Grid_Attribute_TCell *attribute);
 ```
 
 ---
@@ -1683,7 +1683,7 @@ OPSTATUS Text_Grid_Attribute_ReadCell(const Text_Grid_Attribute_TGrid *grid, Str
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `grid` | `const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid` | Pointer to a correctly initialized grid. |
-| `position` | `TDUAL_TYPE(uint16) position` | Zero-based (x,y) position, Struct TDual_uint16. |
+| `position` | `MODULE_TYPED(Tuple, Dual, UInt16) position` | Zero-based (x,y) position, Tuple Dual UInt16. |
 | `attribute` | `TEXT_GRID_ATTRIBUTE_TYPE(Cell) *attribute` | Attribute cell value, or writable attribute pointer on ReadCell. |
 
 ---
@@ -1703,7 +1703,7 @@ Access uses `data[y * columns + x]`; positions must lie inside the allocated dim
 ### Example
 
 ```c
-TDUAL_TYPE(uint16) position = {.x = 1, .y = 1};
+MODULE_TYPED(Tuple, Dual, UInt16) position = {.x = 1, .y = 1};
 TEXT_GRID_ATTRIBUTE_TYPE(Cell) cell = TEXT_GRID_ATTRIBUTE_FUNC(Default)();
 OPSTATUS status = TEXT_GRID_ATTRIBUTE_FUNC(ReadCell)(&grid, position, &cell);
 ```
@@ -1719,13 +1719,13 @@ Writes a character or attribute at a zero-based cell position.
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(WriteCell)(TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TDUAL_TYPE(uint16) position, TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute);
+OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(WriteCell)(TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, MODULE_TYPED(Tuple, Dual, UInt16) position, TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_Attribute_WriteCell(Text_Grid_Attribute_TGrid *grid, Struct_TDual_uint16 position, Text_Grid_Attribute_TCell attribute);
+OPSTATUS Text_Grid_Attribute_WriteCell(Text_Grid_Attribute_TGrid *grid, MODULE_TYPED(Tuple, Dual, UInt16) position, Text_Grid_Attribute_TCell attribute);
 ```
 
 ---
@@ -1735,7 +1735,7 @@ OPSTATUS Text_Grid_Attribute_WriteCell(Text_Grid_Attribute_TGrid *grid, Struct_T
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `grid` | `TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid` | Pointer to a correctly initialized grid. |
-| `position` | `TDUAL_TYPE(uint16) position` | Zero-based (x,y) position, Struct TDual_uint16. |
+| `position` | `MODULE_TYPED(Tuple, Dual, UInt16) position` | Zero-based (x,y) position, Tuple Dual UInt16. |
 | `attribute` | `TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute` | Attribute cell value, or writable attribute pointer on ReadCell. |
 
 ---
@@ -1755,7 +1755,7 @@ Access uses `data[y * columns + x]`; positions must lie inside the allocated dim
 ### Example
 
 ```c
-TDUAL_TYPE(uint16) position = {.x = 1, .y = 1};
+MODULE_TYPED(Tuple, Dual, UInt16) position = {.x = 1, .y = 1};
 TEXT_GRID_ATTRIBUTE_TYPE(Cell) cell = TEXT_GRID_ATTRIBUTE_FUNC(Default)();
 OPSTATUS status = TEXT_GRID_ATTRIBUTE_FUNC(WriteCell)(&grid, position, cell);
 ```
@@ -1771,13 +1771,13 @@ Fills an inclusive rectangle with the requested attributes.
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(FillRegion)(TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, TQUAD_TYPE(uint16) region, TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute);
+OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(FillRegion)(TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid, MODULE_TYPED(Tuple, Quad, UInt16) region, TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_Attribute_FillRegion(Text_Grid_Attribute_TGrid *grid, Struct_TQuad_uint16 region, Text_Grid_Attribute_TCell attribute);
+OPSTATUS Text_Grid_Attribute_FillRegion(Text_Grid_Attribute_TGrid *grid, MODULE_TYPED(Tuple, Quad, UInt16) region, Text_Grid_Attribute_TCell attribute);
 ```
 
 ---
@@ -1787,7 +1787,7 @@ OPSTATUS Text_Grid_Attribute_FillRegion(Text_Grid_Attribute_TGrid *grid, Struct_
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `grid` | `TEXT_GRID_ATTRIBUTE_TYPE(Grid) *grid` | Pointer to a correctly initialized grid. |
-| `region` | `TQUAD_TYPE(uint16) region` | Inclusive rectangle (left/right/top/bottom), Struct TQuad_uint16. |
+| `region` | `MODULE_TYPED(Tuple, Quad, UInt16) region` | Inclusive rectangle (left/right/top/bottom), Tuple Quad UInt16. |
 | `attribute` | `TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute` | Attribute cell value, or writable attribute pointer on ReadCell. |
 
 ---
@@ -1807,8 +1807,8 @@ The rectangle is inclusive; invalid ordering returns INVALID_ARGUMENT, and out-o
 ### Example
 
 ```c
-TDUAL_TYPE(uint16) position = {.x = 1, .y = 1};
-TQUAD_TYPE(uint16) region = {.left = 0, .right = 1, .top = 0, .bottom = 1};
+MODULE_TYPED(Tuple, Dual, UInt16) position = {.x = 1, .y = 1};
+MODULE_TYPED(Tuple, Quad, UInt16) region = {.left = 0, .right = 1, .top = 0, .bottom = 1};
 TEXT_GRID_ATTRIBUTE_TYPE(Cell) cell = TEXT_GRID_ATTRIBUTE_FUNC(Default)();
 OPSTATUS status = TEXT_GRID_ATTRIBUTE_FUNC(FillRegion)(&grid, region, cell);
 ```
@@ -1824,13 +1824,13 @@ Extracts an inclusive rectangular region into an independently owned destination
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Read)(const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source, TQUAD_TYPE(uint16) region, TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination);
+OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Read)(const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source, MODULE_TYPED(Tuple, Quad, UInt16) region, TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_Attribute_Read(const Text_Grid_Attribute_TGrid *source, Struct_TQuad_uint16 region, Text_Grid_Attribute_TGrid *destination);
+OPSTATUS Text_Grid_Attribute_Read(const Text_Grid_Attribute_TGrid *source, MODULE_TYPED(Tuple, Quad, UInt16) region, Text_Grid_Attribute_TGrid *destination);
 ```
 
 ---
@@ -1840,7 +1840,7 @@ OPSTATUS Text_Grid_Attribute_Read(const Text_Grid_Attribute_TGrid *source, Struc
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `source` | `const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source` | Read-only source grid with valid storage. |
-| `region` | `TQUAD_TYPE(uint16) region` | Inclusive rectangle (left/right/top/bottom), Struct TQuad_uint16. |
+| `region` | `MODULE_TYPED(Tuple, Quad, UInt16) region` | Inclusive rectangle (left/right/top/bottom), Tuple Quad UInt16. |
 | `destination` | `TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination` | Writable grid object; must be structurally valid, including zero-initialized empty form. |
 
 ---
@@ -1860,7 +1860,7 @@ The selected rectangle is copied to newly allocated temporary storage, then repl
 ### Example
 
 ```c
-TQUAD_TYPE(uint16) region = {.left = 0, .right = 1, .top = 0, .bottom = 1};
+MODULE_TYPED(Tuple, Quad, UInt16) region = {.left = 0, .right = 1, .top = 0, .bottom = 1};
 /* source and destination: already valid TEXT_GRID_ATTRIBUTE_TYPE(Grid) objects. */
 OPSTATUS status = TEXT_GRID_ATTRIBUTE_FUNC(Read)(&source, region, &destination);
 ```
@@ -1876,13 +1876,13 @@ Overwrites a destination region using all of a source grid's cells.
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Write)(TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination, TDUAL_TYPE(uint16) destinationPosition, const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source);
+OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(Write)(TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination, MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition, const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_Attribute_Write(Text_Grid_Attribute_TGrid *destination, Struct_TDual_uint16 destinationPosition, const Text_Grid_Attribute_TGrid *source);
+OPSTATUS Text_Grid_Attribute_Write(Text_Grid_Attribute_TGrid *destination, MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition, const Text_Grid_Attribute_TGrid *source);
 ```
 
 ---
@@ -1892,7 +1892,7 @@ OPSTATUS Text_Grid_Attribute_Write(Text_Grid_Attribute_TGrid *destination, Struc
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `destination` | `TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination` | Writable grid object; must be structurally valid, including zero-initialized empty form. |
-| `destinationPosition` | `TDUAL_TYPE(uint16) destinationPosition` | Zero-based (x,y) destination top-left corner. |
+| `destinationPosition` | `MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition` | Zero-based (x,y) destination top-left corner. |
 | `source` | `const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source` | Read-only source grid with valid storage. |
 
 ---
@@ -1912,7 +1912,7 @@ Copies source cells to destination, replacing their contents and attributes wher
 ### Example
 
 ```c
-TDUAL_TYPE(uint16) position = {.x = 1, .y = 1};
+MODULE_TYPED(Tuple, Dual, UInt16) position = {.x = 1, .y = 1};
 /* source and destination: already valid TEXT_GRID_ATTRIBUTE_TYPE(Grid) objects. */
 OPSTATUS status = TEXT_GRID_ATTRIBUTE_FUNC(Write)(&destination, position, &source);
 ```
@@ -1928,13 +1928,13 @@ Overwrites a destination region using an inclusive rectangle of the source.
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(WriteRegion)(TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination, TDUAL_TYPE(uint16) destinationPosition, const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source, TQUAD_TYPE(uint16) sourceRegion);
+OPSTATUS TEXT_GRID_ATTRIBUTE_FUNC(WriteRegion)(TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination, MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition, const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source, MODULE_TYPED(Tuple, Quad, UInt16) sourceRegion);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_Attribute_WriteRegion(Text_Grid_Attribute_TGrid *destination, Struct_TDual_uint16 destinationPosition, const Text_Grid_Attribute_TGrid *source, Struct_TQuad_uint16 sourceRegion);
+OPSTATUS Text_Grid_Attribute_WriteRegion(Text_Grid_Attribute_TGrid *destination, MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition, const Text_Grid_Attribute_TGrid *source, MODULE_TYPED(Tuple, Quad, UInt16) sourceRegion);
 ```
 
 ---
@@ -1944,9 +1944,9 @@ OPSTATUS Text_Grid_Attribute_WriteRegion(Text_Grid_Attribute_TGrid *destination,
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `destination` | `TEXT_GRID_ATTRIBUTE_TYPE(Grid) *destination` | Writable grid object; must be structurally valid, including zero-initialized empty form. |
-| `destinationPosition` | `TDUAL_TYPE(uint16) destinationPosition` | Zero-based (x,y) destination top-left corner. |
+| `destinationPosition` | `MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition` | Zero-based (x,y) destination top-left corner. |
 | `source` | `const TEXT_GRID_ATTRIBUTE_TYPE(Grid) *source` | Read-only source grid with valid storage. |
-| `sourceRegion` | `TQUAD_TYPE(uint16) sourceRegion` | Inclusive source rectangle, Struct TQuad_uint16. |
+| `sourceRegion` | `MODULE_TYPED(Tuple, Quad, UInt16) sourceRegion` | Inclusive source rectangle, Tuple Quad UInt16. |
 
 ---
 
@@ -1965,8 +1965,8 @@ Copies source cells to destination, replacing their contents and attributes wher
 ### Example
 
 ```c
-TQUAD_TYPE(uint16) region = {.left = 0, .right = 1, .top = 0, .bottom = 1};
-TDUAL_TYPE(uint16) position = {.x = 1, .y = 1};
+MODULE_TYPED(Tuple, Quad, UInt16) region = {.left = 0, .right = 1, .top = 0, .bottom = 1};
+MODULE_TYPED(Tuple, Dual, UInt16) position = {.x = 1, .y = 1};
 /* source and destination: already valid TEXT_GRID_ATTRIBUTE_TYPE(Grid) objects. */
 OPSTATUS status = TEXT_GRID_ATTRIBUTE_FUNC(WriteRegion)(&destination, position, &source, region);
 ```
@@ -2171,13 +2171,13 @@ Allocates storage for a previously empty grid at a requested column/row size.
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_CHAR_FUNC(char32, Create)(TEXT_GRID_CHAR_TYPE(char32) *grid, TDUAL_TYPE(uint16) size);
+OPSTATUS TEXT_GRID_CHAR_FUNC(char32, Create)(TEXT_GRID_CHAR_TYPE(char32) *grid, MODULE_TYPED(Tuple, Dual, UInt16) size);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_Char_char32_Create(Text_Grid_TCharGrid_char32 *grid, Struct_TDual_uint16 size);
+OPSTATUS Text_Grid_Char_char32_Create(Text_Grid_TCharGrid_char32 *grid, MODULE_TYPED(Tuple, Dual, UInt16) size);
 ```
 
 ---
@@ -2187,7 +2187,7 @@ OPSTATUS Text_Grid_Char_char32_Create(Text_Grid_TCharGrid_char32 *grid, Struct_T
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `grid` | `TEXT_GRID_CHAR_TYPE(char32) *grid` | Pointer to a correctly initialized grid. |
-| `size` | `TDUAL_TYPE(uint16) size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses Struct_TDual_uint16. |
+| `size` | `MODULE_TYPED(Tuple, Dual, UInt16) size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses MODULE_TYPED(Tuple, Dual, UInt16). |
 
 ---
 
@@ -2207,7 +2207,7 @@ Requires a zero-initialized or destroyed **empty** destination. Both dimensions 
 
 ```c
 TEXT_GRID_CHAR_TYPE(char32) grid = {0};
-TDUAL_TYPE(uint16) size = {.col = 4, .row = 3};
+MODULE_TYPED(Tuple, Dual, UInt16) size = {.col = 4, .row = 3};
 OPSTATUS status = TEXT_GRID_CHAR_FUNC(char32, Create)(&grid, size);
 ```
 
@@ -2270,13 +2270,13 @@ Resizes the grid, retaining the overlapping top-left portion and initializing ne
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_CHAR_FUNC(char32, Resize)(TEXT_GRID_CHAR_TYPE(char32) *grid, TDUAL_TYPE(uint16) size);
+OPSTATUS TEXT_GRID_CHAR_FUNC(char32, Resize)(TEXT_GRID_CHAR_TYPE(char32) *grid, MODULE_TYPED(Tuple, Dual, UInt16) size);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_Char_char32_Resize(Text_Grid_TCharGrid_char32 *grid, Struct_TDual_uint16 size);
+OPSTATUS Text_Grid_Char_char32_Resize(Text_Grid_TCharGrid_char32 *grid, MODULE_TYPED(Tuple, Dual, UInt16) size);
 ```
 
 ---
@@ -2286,7 +2286,7 @@ OPSTATUS Text_Grid_Char_char32_Resize(Text_Grid_TCharGrid_char32 *grid, Struct_T
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `grid` | `TEXT_GRID_CHAR_TYPE(char32) *grid` | Pointer to a correctly initialized grid. |
-| `size` | `TDUAL_TYPE(uint16) size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses Struct_TDual_uint16. |
+| `size` | `MODULE_TYPED(Tuple, Dual, UInt16) size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses MODULE_TYPED(Tuple, Dual, UInt16). |
 
 ---
 
@@ -2305,7 +2305,7 @@ Allocates a new grid and preserves the overlapping **top-left** area. New cells 
 ### Example
 
 ```c
-TDUAL_TYPE(uint16) size = {.col = 4, .row = 3};
+MODULE_TYPED(Tuple, Dual, UInt16) size = {.col = 4, .row = 3};
 OPSTATUS status = TEXT_GRID_CHAR_FUNC(char32, Resize)(&grid, size);
 ```
 
@@ -2320,13 +2320,13 @@ Replaces an existing valid grid with a freshly initialized grid of the requested
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_CHAR_FUNC(char32, Recreate)(TEXT_GRID_CHAR_TYPE(char32) *grid, TDUAL_TYPE(uint16) size);
+OPSTATUS TEXT_GRID_CHAR_FUNC(char32, Recreate)(TEXT_GRID_CHAR_TYPE(char32) *grid, MODULE_TYPED(Tuple, Dual, UInt16) size);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_Char_char32_Recreate(Text_Grid_TCharGrid_char32 *grid, Struct_TDual_uint16 size);
+OPSTATUS Text_Grid_Char_char32_Recreate(Text_Grid_TCharGrid_char32 *grid, MODULE_TYPED(Tuple, Dual, UInt16) size);
 ```
 
 ---
@@ -2336,7 +2336,7 @@ OPSTATUS Text_Grid_Char_char32_Recreate(Text_Grid_TCharGrid_char32 *grid, Struct
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `grid` | `TEXT_GRID_CHAR_TYPE(char32) *grid` | Pointer to a correctly initialized grid. |
-| `size` | `TDUAL_TYPE(uint16) size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses Struct_TDual_uint16. |
+| `size` | `MODULE_TYPED(Tuple, Dual, UInt16) size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses MODULE_TYPED(Tuple, Dual, UInt16). |
 
 ---
 
@@ -2355,7 +2355,7 @@ Allocates fresh storage of the new size, discarding old contents only after succ
 ### Example
 
 ```c
-TDUAL_TYPE(uint16) size = {.col = 4, .row = 3};
+MODULE_TYPED(Tuple, Dual, UInt16) size = {.col = 4, .row = 3};
 OPSTATUS status = TEXT_GRID_CHAR_FUNC(char32, Recreate)(&grid, size);
 ```
 
@@ -2468,13 +2468,13 @@ Reads the character or attribute stored at a zero-based cell position.
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_CHAR_FUNC(char32, ReadCell)(const TEXT_GRID_CHAR_TYPE(char32) *grid, TDUAL_TYPE(uint16) position, TEXT_TYPE(TChar32) *character);
+OPSTATUS TEXT_GRID_CHAR_FUNC(char32, ReadCell)(const TEXT_GRID_CHAR_TYPE(char32) *grid, MODULE_TYPED(Tuple, Dual, UInt16) position, TEXT_TYPE(TChar32) *character);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_Char_char32_ReadCell(const Text_Grid_TCharGrid_char32 *grid, Struct_TDual_uint16 position, Text_TChar32 *character);
+OPSTATUS Text_Grid_Char_char32_ReadCell(const Text_Grid_TCharGrid_char32 *grid, MODULE_TYPED(Tuple, Dual, UInt16) position, Text_TChar32 *character);
 ```
 
 ---
@@ -2484,7 +2484,7 @@ OPSTATUS Text_Grid_Char_char32_ReadCell(const Text_Grid_TCharGrid_char32 *grid, 
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `grid` | `const TEXT_GRID_CHAR_TYPE(char32) *grid` | Pointer to a correctly initialized grid. |
-| `position` | `TDUAL_TYPE(uint16) position` | Zero-based (x,y) position, Struct TDual_uint16. |
+| `position` | `MODULE_TYPED(Tuple, Dual, UInt16) position` | Zero-based (x,y) position, Tuple Dual UInt16. |
 | `character` | `TEXT_TYPE(TChar32) *character` | A single character code unit, or pointer output on read; not an entire Unicode text string. |
 
 ---
@@ -2504,7 +2504,7 @@ Access uses `data[y * columns + x]`; positions must lie inside the allocated dim
 ### Example
 
 ```c
-TDUAL_TYPE(uint16) position = {.x = 1, .y = 1};
+MODULE_TYPED(Tuple, Dual, UInt16) position = {.x = 1, .y = 1};
 TEXT_TYPE(TChar32) character = U'X';
 OPSTATUS status = TEXT_GRID_CHAR_FUNC(char32, ReadCell)(&grid, position, &character);
 ```
@@ -2520,13 +2520,13 @@ Writes a character or attribute at a zero-based cell position.
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_CHAR_FUNC(char32, WriteCell)(TEXT_GRID_CHAR_TYPE(char32) *grid, TDUAL_TYPE(uint16) position, TEXT_TYPE(TChar32) character);
+OPSTATUS TEXT_GRID_CHAR_FUNC(char32, WriteCell)(TEXT_GRID_CHAR_TYPE(char32) *grid, MODULE_TYPED(Tuple, Dual, UInt16) position, TEXT_TYPE(TChar32) character);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_Char_char32_WriteCell(Text_Grid_TCharGrid_char32 *grid, Struct_TDual_uint16 position, Text_TChar32 character);
+OPSTATUS Text_Grid_Char_char32_WriteCell(Text_Grid_TCharGrid_char32 *grid, MODULE_TYPED(Tuple, Dual, UInt16) position, Text_TChar32 character);
 ```
 
 ---
@@ -2536,7 +2536,7 @@ OPSTATUS Text_Grid_Char_char32_WriteCell(Text_Grid_TCharGrid_char32 *grid, Struc
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `grid` | `TEXT_GRID_CHAR_TYPE(char32) *grid` | Pointer to a correctly initialized grid. |
-| `position` | `TDUAL_TYPE(uint16) position` | Zero-based (x,y) position, Struct TDual_uint16. |
+| `position` | `MODULE_TYPED(Tuple, Dual, UInt16) position` | Zero-based (x,y) position, Tuple Dual UInt16. |
 | `character` | `TEXT_TYPE(TChar32) character` | A single character code unit, or pointer output on read; not an entire Unicode text string. |
 
 ---
@@ -2556,7 +2556,7 @@ Access uses `data[y * columns + x]`; positions must lie inside the allocated dim
 ### Example
 
 ```c
-TDUAL_TYPE(uint16) position = {.x = 1, .y = 1};
+MODULE_TYPED(Tuple, Dual, UInt16) position = {.x = 1, .y = 1};
 TEXT_TYPE(TChar32) character = U'X';
 OPSTATUS status = TEXT_GRID_CHAR_FUNC(char32, WriteCell)(&grid, position, character);
 ```
@@ -2622,13 +2622,13 @@ Fills an inclusive rectangle with the requested character.
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_CHAR_FUNC(char32, FillRegion)(TEXT_GRID_CHAR_TYPE(char32) *grid, TQUAD_TYPE(uint16) region, TEXT_TYPE(TChar32) character);
+OPSTATUS TEXT_GRID_CHAR_FUNC(char32, FillRegion)(TEXT_GRID_CHAR_TYPE(char32) *grid, MODULE_TYPED(Tuple, Quad, UInt16) region, TEXT_TYPE(TChar32) character);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_Char_char32_FillRegion(Text_Grid_TCharGrid_char32 *grid, Struct_TQuad_uint16 region, Text_TChar32 character);
+OPSTATUS Text_Grid_Char_char32_FillRegion(Text_Grid_TCharGrid_char32 *grid, MODULE_TYPED(Tuple, Quad, UInt16) region, Text_TChar32 character);
 ```
 
 ---
@@ -2638,7 +2638,7 @@ OPSTATUS Text_Grid_Char_char32_FillRegion(Text_Grid_TCharGrid_char32 *grid, Stru
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `grid` | `TEXT_GRID_CHAR_TYPE(char32) *grid` | Pointer to a correctly initialized grid. |
-| `region` | `TQUAD_TYPE(uint16) region` | Inclusive rectangle (left/right/top/bottom), Struct TQuad_uint16. |
+| `region` | `MODULE_TYPED(Tuple, Quad, UInt16) region` | Inclusive rectangle (left/right/top/bottom), Tuple Quad UInt16. |
 | `character` | `TEXT_TYPE(TChar32) character` | A single character code unit, or pointer output on read; not an entire Unicode text string. |
 
 ---
@@ -2658,8 +2658,8 @@ The rectangle is inclusive; invalid ordering returns INVALID_ARGUMENT, and out-o
 ### Example
 
 ```c
-TDUAL_TYPE(uint16) position = {.x = 1, .y = 1};
-TQUAD_TYPE(uint16) region = {.left = 0, .right = 1, .top = 0, .bottom = 1};
+MODULE_TYPED(Tuple, Dual, UInt16) position = {.x = 1, .y = 1};
+MODULE_TYPED(Tuple, Quad, UInt16) region = {.left = 0, .right = 1, .top = 0, .bottom = 1};
 TEXT_TYPE(TChar32) character = U'X';
 OPSTATUS status = TEXT_GRID_CHAR_FUNC(char32, FillRegion)(&grid, region, character);
 ```
@@ -2675,13 +2675,13 @@ Extracts an inclusive rectangular region into an independently owned destination
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_CHAR_FUNC(char32, Read)(const TEXT_GRID_CHAR_TYPE(char32) *source, TQUAD_TYPE(uint16) region, TEXT_GRID_CHAR_TYPE(char32) *destination);
+OPSTATUS TEXT_GRID_CHAR_FUNC(char32, Read)(const TEXT_GRID_CHAR_TYPE(char32) *source, MODULE_TYPED(Tuple, Quad, UInt16) region, TEXT_GRID_CHAR_TYPE(char32) *destination);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_Char_char32_Read(const Text_Grid_TCharGrid_char32 *source, Struct_TQuad_uint16 region, Text_Grid_TCharGrid_char32 *destination);
+OPSTATUS Text_Grid_Char_char32_Read(const Text_Grid_TCharGrid_char32 *source, MODULE_TYPED(Tuple, Quad, UInt16) region, Text_Grid_TCharGrid_char32 *destination);
 ```
 
 ---
@@ -2691,7 +2691,7 @@ OPSTATUS Text_Grid_Char_char32_Read(const Text_Grid_TCharGrid_char32 *source, St
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `source` | `const TEXT_GRID_CHAR_TYPE(char32) *source` | Read-only source grid with valid storage. |
-| `region` | `TQUAD_TYPE(uint16) region` | Inclusive rectangle (left/right/top/bottom), Struct TQuad_uint16. |
+| `region` | `MODULE_TYPED(Tuple, Quad, UInt16) region` | Inclusive rectangle (left/right/top/bottom), Tuple Quad UInt16. |
 | `destination` | `TEXT_GRID_CHAR_TYPE(char32) *destination` | Writable grid object; must be structurally valid, including zero-initialized empty form. |
 
 ---
@@ -2711,7 +2711,7 @@ The selected rectangle is copied to newly allocated temporary storage, then repl
 ### Example
 
 ```c
-TQUAD_TYPE(uint16) region = {.left = 0, .right = 1, .top = 0, .bottom = 1};
+MODULE_TYPED(Tuple, Quad, UInt16) region = {.left = 0, .right = 1, .top = 0, .bottom = 1};
 /* source and destination: already valid TEXT_GRID_CHAR_TYPE(char32) objects. */
 OPSTATUS status = TEXT_GRID_CHAR_FUNC(char32, Read)(&source, region, &destination);
 ```
@@ -2727,13 +2727,13 @@ Overwrites a destination region using all of a source grid's cells.
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_CHAR_FUNC(char32, Write)(TEXT_GRID_CHAR_TYPE(char32) *destination, TDUAL_TYPE(uint16) destinationPosition, const TEXT_GRID_CHAR_TYPE(char32) *source);
+OPSTATUS TEXT_GRID_CHAR_FUNC(char32, Write)(TEXT_GRID_CHAR_TYPE(char32) *destination, MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition, const TEXT_GRID_CHAR_TYPE(char32) *source);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_Char_char32_Write(Text_Grid_TCharGrid_char32 *destination, Struct_TDual_uint16 destinationPosition, const Text_Grid_TCharGrid_char32 *source);
+OPSTATUS Text_Grid_Char_char32_Write(Text_Grid_TCharGrid_char32 *destination, MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition, const Text_Grid_TCharGrid_char32 *source);
 ```
 
 ---
@@ -2743,7 +2743,7 @@ OPSTATUS Text_Grid_Char_char32_Write(Text_Grid_TCharGrid_char32 *destination, St
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `destination` | `TEXT_GRID_CHAR_TYPE(char32) *destination` | Writable grid object; must be structurally valid, including zero-initialized empty form. |
-| `destinationPosition` | `TDUAL_TYPE(uint16) destinationPosition` | Zero-based (x,y) destination top-left corner. |
+| `destinationPosition` | `MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition` | Zero-based (x,y) destination top-left corner. |
 | `source` | `const TEXT_GRID_CHAR_TYPE(char32) *source` | Read-only source grid with valid storage. |
 
 ---
@@ -2763,7 +2763,7 @@ Copies source cells to destination, replacing their contents and attributes wher
 ### Example
 
 ```c
-TDUAL_TYPE(uint16) position = {.x = 1, .y = 1};
+MODULE_TYPED(Tuple, Dual, UInt16) position = {.x = 1, .y = 1};
 /* source and destination: already valid TEXT_GRID_CHAR_TYPE(char32) objects. */
 OPSTATUS status = TEXT_GRID_CHAR_FUNC(char32, Write)(&destination, position, &source);
 ```
@@ -2779,13 +2779,13 @@ Overwrites a destination region using an inclusive rectangle of the source.
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_CHAR_FUNC(char32, WriteRegion)(TEXT_GRID_CHAR_TYPE(char32) *destination, TDUAL_TYPE(uint16) destinationPosition, const TEXT_GRID_CHAR_TYPE(char32) *source, TQUAD_TYPE(uint16) sourceRegion);
+OPSTATUS TEXT_GRID_CHAR_FUNC(char32, WriteRegion)(TEXT_GRID_CHAR_TYPE(char32) *destination, MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition, const TEXT_GRID_CHAR_TYPE(char32) *source, MODULE_TYPED(Tuple, Quad, UInt16) sourceRegion);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_Char_char32_WriteRegion(Text_Grid_TCharGrid_char32 *destination, Struct_TDual_uint16 destinationPosition, const Text_Grid_TCharGrid_char32 *source, Struct_TQuad_uint16 sourceRegion);
+OPSTATUS Text_Grid_Char_char32_WriteRegion(Text_Grid_TCharGrid_char32 *destination, MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition, const Text_Grid_TCharGrid_char32 *source, MODULE_TYPED(Tuple, Quad, UInt16) sourceRegion);
 ```
 
 ---
@@ -2795,9 +2795,9 @@ OPSTATUS Text_Grid_Char_char32_WriteRegion(Text_Grid_TCharGrid_char32 *destinati
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `destination` | `TEXT_GRID_CHAR_TYPE(char32) *destination` | Writable grid object; must be structurally valid, including zero-initialized empty form. |
-| `destinationPosition` | `TDUAL_TYPE(uint16) destinationPosition` | Zero-based (x,y) destination top-left corner. |
+| `destinationPosition` | `MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition` | Zero-based (x,y) destination top-left corner. |
 | `source` | `const TEXT_GRID_CHAR_TYPE(char32) *source` | Read-only source grid with valid storage. |
-| `sourceRegion` | `TQUAD_TYPE(uint16) sourceRegion` | Inclusive source rectangle, Struct TQuad_uint16. |
+| `sourceRegion` | `MODULE_TYPED(Tuple, Quad, UInt16) sourceRegion` | Inclusive source rectangle, Tuple Quad UInt16. |
 
 ---
 
@@ -2816,8 +2816,8 @@ Copies source cells to destination, replacing their contents and attributes wher
 ### Example
 
 ```c
-TQUAD_TYPE(uint16) region = {.left = 0, .right = 1, .top = 0, .bottom = 1};
-TDUAL_TYPE(uint16) position = {.x = 1, .y = 1};
+MODULE_TYPED(Tuple, Quad, UInt16) region = {.left = 0, .right = 1, .top = 0, .bottom = 1};
+MODULE_TYPED(Tuple, Dual, UInt16) position = {.x = 1, .y = 1};
 /* source and destination: already valid TEXT_GRID_CHAR_TYPE(char32) objects. */
 OPSTATUS status = TEXT_GRID_CHAR_FUNC(char32, WriteRegion)(&destination, position, &source, region);
 ```
@@ -2962,13 +2962,13 @@ Allocates storage for a previously empty grid at a requested column/row size.
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_FUNC(char32, Create)(TEXT_GRID_TYPE(char32) *grid, TDUAL_TYPE(uint16) size);
+OPSTATUS TEXT_GRID_FUNC(char32, Create)(TEXT_GRID_TYPE(char32) *grid, MODULE_TYPED(Tuple, Dual, UInt16) size);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_char32_Create(Text_Grid_TGrid_char32 *grid, Struct_TDual_uint16 size);
+OPSTATUS Text_Grid_char32_Create(Text_Grid_TGrid_char32 *grid, MODULE_TYPED(Tuple, Dual, UInt16) size);
 ```
 
 ---
@@ -2978,7 +2978,7 @@ OPSTATUS Text_Grid_char32_Create(Text_Grid_TGrid_char32 *grid, Struct_TDual_uint
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `grid` | `TEXT_GRID_TYPE(char32) *grid` | Pointer to a correctly initialized grid. |
-| `size` | `TDUAL_TYPE(uint16) size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses Struct_TDual_uint16. |
+| `size` | `MODULE_TYPED(Tuple, Dual, UInt16) size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses MODULE_TYPED(Tuple, Dual, UInt16). |
 
 ---
 
@@ -2998,7 +2998,7 @@ Requires a zero-initialized or destroyed **empty** destination. Both dimensions 
 
 ```c
 TEXT_GRID_TYPE(char32) grid = {0};
-TDUAL_TYPE(uint16) size = {.col = 4, .row = 3};
+MODULE_TYPED(Tuple, Dual, UInt16) size = {.col = 4, .row = 3};
 OPSTATUS status = TEXT_GRID_FUNC(char32, Create)(&grid, size);
 ```
 
@@ -3061,13 +3061,13 @@ Resizes the grid, retaining the overlapping top-left portion and initializing ne
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_FUNC(char32, Resize)(TEXT_GRID_TYPE(char32) *grid, TDUAL_TYPE(uint16) size);
+OPSTATUS TEXT_GRID_FUNC(char32, Resize)(TEXT_GRID_TYPE(char32) *grid, MODULE_TYPED(Tuple, Dual, UInt16) size);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_char32_Resize(Text_Grid_TGrid_char32 *grid, Struct_TDual_uint16 size);
+OPSTATUS Text_Grid_char32_Resize(Text_Grid_TGrid_char32 *grid, MODULE_TYPED(Tuple, Dual, UInt16) size);
 ```
 
 ---
@@ -3077,7 +3077,7 @@ OPSTATUS Text_Grid_char32_Resize(Text_Grid_TGrid_char32 *grid, Struct_TDual_uint
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `grid` | `TEXT_GRID_TYPE(char32) *grid` | Pointer to a correctly initialized grid. |
-| `size` | `TDUAL_TYPE(uint16) size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses Struct_TDual_uint16. |
+| `size` | `MODULE_TYPED(Tuple, Dual, UInt16) size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses MODULE_TYPED(Tuple, Dual, UInt16). |
 
 ---
 
@@ -3096,7 +3096,7 @@ Allocates a new grid and preserves the overlapping **top-left** area. New cells 
 ### Example
 
 ```c
-TDUAL_TYPE(uint16) size = {.col = 4, .row = 3};
+MODULE_TYPED(Tuple, Dual, UInt16) size = {.col = 4, .row = 3};
 OPSTATUS status = TEXT_GRID_FUNC(char32, Resize)(&grid, size);
 ```
 
@@ -3111,13 +3111,13 @@ Replaces an existing valid grid with a freshly initialized grid of the requested
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_FUNC(char32, Recreate)(TEXT_GRID_TYPE(char32) *grid, TDUAL_TYPE(uint16) size);
+OPSTATUS TEXT_GRID_FUNC(char32, Recreate)(TEXT_GRID_TYPE(char32) *grid, MODULE_TYPED(Tuple, Dual, UInt16) size);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_char32_Recreate(Text_Grid_TGrid_char32 *grid, Struct_TDual_uint16 size);
+OPSTATUS Text_Grid_char32_Recreate(Text_Grid_TGrid_char32 *grid, MODULE_TYPED(Tuple, Dual, UInt16) size);
 ```
 
 ---
@@ -3127,7 +3127,7 @@ OPSTATUS Text_Grid_char32_Recreate(Text_Grid_TGrid_char32 *grid, Struct_TDual_ui
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `grid` | `TEXT_GRID_TYPE(char32) *grid` | Pointer to a correctly initialized grid. |
-| `size` | `TDUAL_TYPE(uint16) size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses Struct_TDual_uint16. |
+| `size` | `MODULE_TYPED(Tuple, Dual, UInt16) size` | Length of input in bytes for UTF-8 or 16-bit units for UTF-16; grid size uses MODULE_TYPED(Tuple, Dual, UInt16). |
 
 ---
 
@@ -3146,7 +3146,7 @@ Allocates fresh storage of the new size, discarding old contents only after succ
 ### Example
 
 ```c
-TDUAL_TYPE(uint16) size = {.col = 4, .row = 3};
+MODULE_TYPED(Tuple, Dual, UInt16) size = {.col = 4, .row = 3};
 OPSTATUS status = TEXT_GRID_FUNC(char32, Recreate)(&grid, size);
 ```
 
@@ -3309,13 +3309,13 @@ Reads the character or attribute stored at a zero-based cell position.
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_FUNC(char32, ReadCell)(const TEXT_GRID_TYPE(char32) *grid, TDUAL_TYPE(uint16) position, TEXT_TYPE(TChar32) *character, TEXT_GRID_ATTRIBUTE_TYPE(Cell) *attribute);
+OPSTATUS TEXT_GRID_FUNC(char32, ReadCell)(const TEXT_GRID_TYPE(char32) *grid, MODULE_TYPED(Tuple, Dual, UInt16) position, TEXT_TYPE(TChar32) *character, TEXT_GRID_ATTRIBUTE_TYPE(Cell) *attribute);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_char32_ReadCell(const Text_Grid_TGrid_char32 *grid, Struct_TDual_uint16 position, Text_TChar32 *character, Text_Grid_Attribute_TCell *attribute);
+OPSTATUS Text_Grid_char32_ReadCell(const Text_Grid_TGrid_char32 *grid, MODULE_TYPED(Tuple, Dual, UInt16) position, Text_TChar32 *character, Text_Grid_Attribute_TCell *attribute);
 ```
 
 ---
@@ -3325,7 +3325,7 @@ OPSTATUS Text_Grid_char32_ReadCell(const Text_Grid_TGrid_char32 *grid, Struct_TD
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `grid` | `const TEXT_GRID_TYPE(char32) *grid` | Pointer to a correctly initialized grid. |
-| `position` | `TDUAL_TYPE(uint16) position` | Zero-based (x,y) position, Struct TDual_uint16. |
+| `position` | `MODULE_TYPED(Tuple, Dual, UInt16) position` | Zero-based (x,y) position, Tuple Dual UInt16. |
 | `character` | `TEXT_TYPE(TChar32) *character` | A single character code unit, or pointer output on read; not an entire Unicode text string. |
 | `attribute` | `TEXT_GRID_ATTRIBUTE_TYPE(Cell) *attribute` | Attribute cell value, or writable attribute pointer on ReadCell. |
 
@@ -3346,7 +3346,7 @@ Access uses `data[y * columns + x]`; positions must lie inside the allocated dim
 ### Example
 
 ```c
-TDUAL_TYPE(uint16) position = {.x = 1, .y = 1};
+MODULE_TYPED(Tuple, Dual, UInt16) position = {.x = 1, .y = 1};
 TEXT_GRID_ATTRIBUTE_TYPE(Cell) cell = TEXT_GRID_ATTRIBUTE_FUNC(Default)();
 TEXT_TYPE(TChar32) character = U'X';
 /* Both outputs must have writable storage. */
@@ -3364,13 +3364,13 @@ Writes a character or attribute at a zero-based cell position.
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_FUNC(char32, WriteCell)(TEXT_GRID_TYPE(char32) *grid, TDUAL_TYPE(uint16) position, TEXT_TYPE(TChar32) character, TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute);
+OPSTATUS TEXT_GRID_FUNC(char32, WriteCell)(TEXT_GRID_TYPE(char32) *grid, MODULE_TYPED(Tuple, Dual, UInt16) position, TEXT_TYPE(TChar32) character, TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_char32_WriteCell(Text_Grid_TGrid_char32 *grid, Struct_TDual_uint16 position, Text_TChar32 character, Text_Grid_Attribute_TCell attribute);
+OPSTATUS Text_Grid_char32_WriteCell(Text_Grid_TGrid_char32 *grid, MODULE_TYPED(Tuple, Dual, UInt16) position, Text_TChar32 character, Text_Grid_Attribute_TCell attribute);
 ```
 
 ---
@@ -3380,7 +3380,7 @@ OPSTATUS Text_Grid_char32_WriteCell(Text_Grid_TGrid_char32 *grid, Struct_TDual_u
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `grid` | `TEXT_GRID_TYPE(char32) *grid` | Pointer to a correctly initialized grid. |
-| `position` | `TDUAL_TYPE(uint16) position` | Zero-based (x,y) position, Struct TDual_uint16. |
+| `position` | `MODULE_TYPED(Tuple, Dual, UInt16) position` | Zero-based (x,y) position, Tuple Dual UInt16. |
 | `character` | `TEXT_TYPE(TChar32) character` | A single character code unit, or pointer output on read; not an entire Unicode text string. |
 | `attribute` | `TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute` | Attribute cell value, or writable attribute pointer on ReadCell. |
 
@@ -3401,7 +3401,7 @@ Access uses `data[y * columns + x]`; positions must lie inside the allocated dim
 ### Example
 
 ```c
-TDUAL_TYPE(uint16) position = {.x = 1, .y = 1};
+MODULE_TYPED(Tuple, Dual, UInt16) position = {.x = 1, .y = 1};
 TEXT_GRID_ATTRIBUTE_TYPE(Cell) cell = TEXT_GRID_ATTRIBUTE_FUNC(Default)();
 TEXT_TYPE(TChar32) character = U'X';
 OPSTATUS status = TEXT_GRID_FUNC(char32, WriteCell)(&grid, position, character, cell);
@@ -3470,13 +3470,13 @@ Fills an inclusive rectangle with the requested character and/or attributes.
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_FUNC(char32, FillRegion)(TEXT_GRID_TYPE(char32) *grid, TQUAD_TYPE(uint16) region, TEXT_TYPE(TChar32) character, TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute);
+OPSTATUS TEXT_GRID_FUNC(char32, FillRegion)(TEXT_GRID_TYPE(char32) *grid, MODULE_TYPED(Tuple, Quad, UInt16) region, TEXT_TYPE(TChar32) character, TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_char32_FillRegion(Text_Grid_TGrid_char32 *grid, Struct_TQuad_uint16 region, Text_TChar32 character, Text_Grid_Attribute_TCell attribute);
+OPSTATUS Text_Grid_char32_FillRegion(Text_Grid_TGrid_char32 *grid, MODULE_TYPED(Tuple, Quad, UInt16) region, Text_TChar32 character, Text_Grid_Attribute_TCell attribute);
 ```
 
 ---
@@ -3486,7 +3486,7 @@ OPSTATUS Text_Grid_char32_FillRegion(Text_Grid_TGrid_char32 *grid, Struct_TQuad_
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `grid` | `TEXT_GRID_TYPE(char32) *grid` | Pointer to a correctly initialized grid. |
-| `region` | `TQUAD_TYPE(uint16) region` | Inclusive rectangle (left/right/top/bottom), Struct TQuad_uint16. |
+| `region` | `MODULE_TYPED(Tuple, Quad, UInt16) region` | Inclusive rectangle (left/right/top/bottom), Tuple Quad UInt16. |
 | `character` | `TEXT_TYPE(TChar32) character` | A single character code unit, or pointer output on read; not an entire Unicode text string. |
 | `attribute` | `TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute` | Attribute cell value, or writable attribute pointer on ReadCell. |
 
@@ -3507,8 +3507,8 @@ The rectangle is inclusive; invalid ordering returns INVALID_ARGUMENT, and out-o
 ### Example
 
 ```c
-TDUAL_TYPE(uint16) position = {.x = 1, .y = 1};
-TQUAD_TYPE(uint16) region = {.left = 0, .right = 1, .top = 0, .bottom = 1};
+MODULE_TYPED(Tuple, Dual, UInt16) position = {.x = 1, .y = 1};
+MODULE_TYPED(Tuple, Quad, UInt16) region = {.left = 0, .right = 1, .top = 0, .bottom = 1};
 TEXT_GRID_ATTRIBUTE_TYPE(Cell) cell = TEXT_GRID_ATTRIBUTE_FUNC(Default)();
 TEXT_TYPE(TChar32) character = U'X';
 OPSTATUS status = TEXT_GRID_FUNC(char32, FillRegion)(&grid, region, character, cell);
@@ -3525,13 +3525,13 @@ Extracts an inclusive rectangular region into an independently owned destination
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_FUNC(char32, Read)(const TEXT_GRID_TYPE(char32) *source, TQUAD_TYPE(uint16) region, TEXT_GRID_TYPE(char32) *destination);
+OPSTATUS TEXT_GRID_FUNC(char32, Read)(const TEXT_GRID_TYPE(char32) *source, MODULE_TYPED(Tuple, Quad, UInt16) region, TEXT_GRID_TYPE(char32) *destination);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_char32_Read(const Text_Grid_TGrid_char32 *source, Struct_TQuad_uint16 region, Text_Grid_TGrid_char32 *destination);
+OPSTATUS Text_Grid_char32_Read(const Text_Grid_TGrid_char32 *source, MODULE_TYPED(Tuple, Quad, UInt16) region, Text_Grid_TGrid_char32 *destination);
 ```
 
 ---
@@ -3541,7 +3541,7 @@ OPSTATUS Text_Grid_char32_Read(const Text_Grid_TGrid_char32 *source, Struct_TQua
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `source` | `const TEXT_GRID_TYPE(char32) *source` | Read-only source grid with valid storage. |
-| `region` | `TQUAD_TYPE(uint16) region` | Inclusive rectangle (left/right/top/bottom), Struct TQuad_uint16. |
+| `region` | `MODULE_TYPED(Tuple, Quad, UInt16) region` | Inclusive rectangle (left/right/top/bottom), Tuple Quad UInt16. |
 | `destination` | `TEXT_GRID_TYPE(char32) *destination` | Writable grid object; must be structurally valid, including zero-initialized empty form. |
 
 ---
@@ -3561,7 +3561,7 @@ The selected rectangle is copied to newly allocated temporary storage, then repl
 ### Example
 
 ```c
-TQUAD_TYPE(uint16) region = {.left = 0, .right = 1, .top = 0, .bottom = 1};
+MODULE_TYPED(Tuple, Quad, UInt16) region = {.left = 0, .right = 1, .top = 0, .bottom = 1};
 /* source and destination: already valid TEXT_GRID_TYPE(char32) objects. */
 OPSTATUS status = TEXT_GRID_FUNC(char32, Read)(&source, region, &destination);
 ```
@@ -3577,13 +3577,13 @@ Overwrites a destination region using all of a source grid's cells.
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_FUNC(char32, Write)(TEXT_GRID_TYPE(char32) *destination, TDUAL_TYPE(uint16) destinationPosition, const TEXT_GRID_TYPE(char32) *source);
+OPSTATUS TEXT_GRID_FUNC(char32, Write)(TEXT_GRID_TYPE(char32) *destination, MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition, const TEXT_GRID_TYPE(char32) *source);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_char32_Write(Text_Grid_TGrid_char32 *destination, Struct_TDual_uint16 destinationPosition, const Text_Grid_TGrid_char32 *source);
+OPSTATUS Text_Grid_char32_Write(Text_Grid_TGrid_char32 *destination, MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition, const Text_Grid_TGrid_char32 *source);
 ```
 
 ---
@@ -3593,7 +3593,7 @@ OPSTATUS Text_Grid_char32_Write(Text_Grid_TGrid_char32 *destination, Struct_TDua
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `destination` | `TEXT_GRID_TYPE(char32) *destination` | Writable grid object; must be structurally valid, including zero-initialized empty form. |
-| `destinationPosition` | `TDUAL_TYPE(uint16) destinationPosition` | Zero-based (x,y) destination top-left corner. |
+| `destinationPosition` | `MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition` | Zero-based (x,y) destination top-left corner. |
 | `source` | `const TEXT_GRID_TYPE(char32) *source` | Read-only source grid with valid storage. |
 
 ---
@@ -3613,7 +3613,7 @@ Copies source cells to destination, replacing their contents and attributes wher
 ### Example
 
 ```c
-TDUAL_TYPE(uint16) position = {.x = 1, .y = 1};
+MODULE_TYPED(Tuple, Dual, UInt16) position = {.x = 1, .y = 1};
 /* source and destination: already valid TEXT_GRID_TYPE(char32) objects. */
 OPSTATUS status = TEXT_GRID_FUNC(char32, Write)(&destination, position, &source);
 ```
@@ -3629,13 +3629,13 @@ Overwrites a destination region using an inclusive rectangle of the source.
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_FUNC(char32, WriteRegion)(TEXT_GRID_TYPE(char32) *destination, TDUAL_TYPE(uint16) destinationPosition, const TEXT_GRID_TYPE(char32) *source, TQUAD_TYPE(uint16) sourceRegion);
+OPSTATUS TEXT_GRID_FUNC(char32, WriteRegion)(TEXT_GRID_TYPE(char32) *destination, MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition, const TEXT_GRID_TYPE(char32) *source, MODULE_TYPED(Tuple, Quad, UInt16) sourceRegion);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_char32_WriteRegion(Text_Grid_TGrid_char32 *destination, Struct_TDual_uint16 destinationPosition, const Text_Grid_TGrid_char32 *source, Struct_TQuad_uint16 sourceRegion);
+OPSTATUS Text_Grid_char32_WriteRegion(Text_Grid_TGrid_char32 *destination, MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition, const Text_Grid_TGrid_char32 *source, MODULE_TYPED(Tuple, Quad, UInt16) sourceRegion);
 ```
 
 ---
@@ -3645,9 +3645,9 @@ OPSTATUS Text_Grid_char32_WriteRegion(Text_Grid_TGrid_char32 *destination, Struc
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `destination` | `TEXT_GRID_TYPE(char32) *destination` | Writable grid object; must be structurally valid, including zero-initialized empty form. |
-| `destinationPosition` | `TDUAL_TYPE(uint16) destinationPosition` | Zero-based (x,y) destination top-left corner. |
+| `destinationPosition` | `MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition` | Zero-based (x,y) destination top-left corner. |
 | `source` | `const TEXT_GRID_TYPE(char32) *source` | Read-only source grid with valid storage. |
-| `sourceRegion` | `TQUAD_TYPE(uint16) sourceRegion` | Inclusive source rectangle, Struct TQuad_uint16. |
+| `sourceRegion` | `MODULE_TYPED(Tuple, Quad, UInt16) sourceRegion` | Inclusive source rectangle, Tuple Quad UInt16. |
 
 ---
 
@@ -3666,8 +3666,8 @@ Copies source cells to destination, replacing their contents and attributes wher
 ### Example
 
 ```c
-TQUAD_TYPE(uint16) region = {.left = 0, .right = 1, .top = 0, .bottom = 1};
-TDUAL_TYPE(uint16) position = {.x = 1, .y = 1};
+MODULE_TYPED(Tuple, Quad, UInt16) region = {.left = 0, .right = 1, .top = 0, .bottom = 1};
+MODULE_TYPED(Tuple, Dual, UInt16) position = {.x = 1, .y = 1};
 /* source and destination: already valid TEXT_GRID_TYPE(char32) objects. */
 OPSTATUS status = TEXT_GRID_FUNC(char32, WriteRegion)(&destination, position, &source, region);
 ```
@@ -3683,13 +3683,13 @@ Composites all cells of a source over a destination, applying attribute transpar
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_FUNC(char32, Blit)(TEXT_GRID_TYPE(char32) *destination, TDUAL_TYPE(uint16) destinationPosition, const TEXT_GRID_TYPE(char32) *source);
+OPSTATUS TEXT_GRID_FUNC(char32, Blit)(TEXT_GRID_TYPE(char32) *destination, MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition, const TEXT_GRID_TYPE(char32) *source);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_char32_Blit(Text_Grid_TGrid_char32 *destination, Struct_TDual_uint16 destinationPosition, const Text_Grid_TGrid_char32 *source);
+OPSTATUS Text_Grid_char32_Blit(Text_Grid_TGrid_char32 *destination, MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition, const Text_Grid_TGrid_char32 *source);
 ```
 
 ---
@@ -3699,7 +3699,7 @@ OPSTATUS Text_Grid_char32_Blit(Text_Grid_TGrid_char32 *destination, Struct_TDual
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `destination` | `TEXT_GRID_TYPE(char32) *destination` | Writable grid object; must be structurally valid, including zero-initialized empty form. |
-| `destinationPosition` | `TDUAL_TYPE(uint16) destinationPosition` | Zero-based (x,y) destination top-left corner. |
+| `destinationPosition` | `MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition` | Zero-based (x,y) destination top-left corner. |
 | `source` | `const TEXT_GRID_TYPE(char32) *source` | Read-only source grid with valid storage. |
 
 ---
@@ -3719,7 +3719,7 @@ Unlike Write, this **always copies the source character** while compositing the 
 ### Example
 
 ```c
-TDUAL_TYPE(uint16) position = {.x = 1, .y = 1};
+MODULE_TYPED(Tuple, Dual, UInt16) position = {.x = 1, .y = 1};
 /* source and destination: already valid TEXT_GRID_TYPE(char32) objects. */
 OPSTATUS status = TEXT_GRID_FUNC(char32, Blit)(&destination, position, &source);
 ```
@@ -3735,13 +3735,13 @@ Composites a rectangular source region over the destination.
 #### Macro form
 
 ```c
-OPSTATUS TEXT_GRID_FUNC(char32, BlitRegion)(TEXT_GRID_TYPE(char32) *destination, TDUAL_TYPE(uint16) destinationPosition, const TEXT_GRID_TYPE(char32) *source, TQUAD_TYPE(uint16) sourceRegion);
+OPSTATUS TEXT_GRID_FUNC(char32, BlitRegion)(TEXT_GRID_TYPE(char32) *destination, MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition, const TEXT_GRID_TYPE(char32) *source, MODULE_TYPED(Tuple, Quad, UInt16) sourceRegion);
 ```
 
 #### Direct form
 
 ```c
-OPSTATUS Text_Grid_char32_BlitRegion(Text_Grid_TGrid_char32 *destination, Struct_TDual_uint16 destinationPosition, const Text_Grid_TGrid_char32 *source, Struct_TQuad_uint16 sourceRegion);
+OPSTATUS Text_Grid_char32_BlitRegion(Text_Grid_TGrid_char32 *destination, MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition, const Text_Grid_TGrid_char32 *source, MODULE_TYPED(Tuple, Quad, UInt16) sourceRegion);
 ```
 
 ---
@@ -3751,9 +3751,9 @@ OPSTATUS Text_Grid_char32_BlitRegion(Text_Grid_TGrid_char32 *destination, Struct
 | Parameter | C type | Explanation |
 | --- | --- | --- |
 | `destination` | `TEXT_GRID_TYPE(char32) *destination` | Writable grid object; must be structurally valid, including zero-initialized empty form. |
-| `destinationPosition` | `TDUAL_TYPE(uint16) destinationPosition` | Zero-based (x,y) destination top-left corner. |
+| `destinationPosition` | `MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition` | Zero-based (x,y) destination top-left corner. |
 | `source` | `const TEXT_GRID_TYPE(char32) *source` | Read-only source grid with valid storage. |
-| `sourceRegion` | `TQUAD_TYPE(uint16) sourceRegion` | Inclusive source rectangle, Struct TQuad_uint16. |
+| `sourceRegion` | `MODULE_TYPED(Tuple, Quad, UInt16) sourceRegion` | Inclusive source rectangle, Tuple Quad UInt16. |
 
 ---
 
@@ -3772,8 +3772,8 @@ Unlike Write, this **always copies the source character** while compositing the 
 ### Example
 
 ```c
-TQUAD_TYPE(uint16) region = {.left = 0, .right = 1, .top = 0, .bottom = 1};
-TDUAL_TYPE(uint16) position = {.x = 1, .y = 1};
+MODULE_TYPED(Tuple, Quad, UInt16) region = {.left = 0, .right = 1, .top = 0, .bottom = 1};
+MODULE_TYPED(Tuple, Dual, UInt16) position = {.x = 1, .y = 1};
 /* source and destination: already valid TEXT_GRID_TYPE(char32) objects. */
 OPSTATUS status = TEXT_GRID_FUNC(char32, BlitRegion)(&destination, position, &source, region);
 ```
@@ -3815,8 +3815,8 @@ int main(void) {
     TEXT_GRID_TYPE(char32) canvas = {0};
     TEXT_GRID_ATTRIBUTE_TYPE(Cell) style =
         TEXT_GRID_ATTRIBUTE_FUNC(Default)();
-    TDUAL_TYPE(uint16) size = {.col = 20, .row = 6};
-    TDUAL_TYPE(uint16) position = {.x = 3, .y = 2};
+    MODULE_TYPED(Tuple, Dual, UInt16) size = {.col = 20, .row = 6};
+    MODULE_TYPED(Tuple, Dual, UInt16) position = {.x = 3, .y = 2};
     TEXT_TYPE(TChar32) actual = 0;
     TEXT_GRID_ATTRIBUTE_TYPE(Cell) actualStyle;
 
@@ -3851,8 +3851,8 @@ int main(void) {
 int main(void) {
     TEXT_GRID_TYPE(char32) background = {0};
     TEXT_GRID_TYPE(char32) overlay = {0};
-    TDUAL_TYPE(uint16) size = {.col = 2, .row = 1};
-    TDUAL_TYPE(uint16) origin = {.x = 0, .y = 0};
+    MODULE_TYPED(Tuple, Dual, UInt16) size = {.col = 2, .row = 1};
+    MODULE_TYPED(Tuple, Dual, UInt16) origin = {.x = 0, .y = 0};
     TEXT_GRID_ATTRIBUTE_TYPE(Cell) base =
         TEXT_GRID_ATTRIBUTE_FUNC(Default)();
     TEXT_GRID_ATTRIBUTE_TYPE(Cell) top =
@@ -3916,7 +3916,77 @@ The module does not currently implement Unicode normalization, grapheme segmenta
 
 # Notes
 
-- This reference is derived from **67 header prototype templates**, instantiated as **133 concrete functions** across `char`, `char16`, and `char32` where applicable.
+- The counts above refer only to the original Unicode and Grid prototype inventory; the aggregate Text header also includes String, View, CString, Builder, Format and Attributed packages documented below.
 - `TEXT_GRID_COLOR_RGB` and channel extraction operations are **macros**, not separate functions.
-- Source grid sizes use `TDUAL_TYPE(uint16)`; rectangular regions use `TQUAD_TYPE(uint16)` from the Struct module.
-- The documents describe the implementation on `audio-module`; test sources have been inspected, but the examples have not been separately compiled in this documentation step.
+- Source grid sizes use `MODULE_TYPED(Tuple, Dual, UInt16)`; rectangular regions use `MODULE_TYPED(Tuple, Quad, UInt16)` from the Tuple module.
+- This reference describes the `Alpha-Version` source tree. It does not claim a new CI run or a local build as part of the documentation update.
+
+
+---
+
+# Additional Text packages
+
+The aggregate `Text.h` also includes the following packages, which are separate from the Unicode and Grid API documented above.
+
+## String
+
+Header: `String/String.h`.
+
+The String templates instantiate `String8` (`char`), `String16` (`Text_Char16`) and `String32` (`Text_Char32`). They own growable, zero-terminated code-unit buffers and expose:
+
+| Group | Operations |
+| --- | --- |
+| Lifecycle and capacity | `Create`, `Reserve`, `Clone`, `Destroy`, `Clear`, `ShrinkToFit` |
+| Construction and append | `AppendBuffer`, `FromBuffer`, `FromCStr`, `Append`, `AppendString`, `FromView`, `AppendView` |
+| Element access | `At`, `SetAt`, `PushBack`, `PopBack` |
+| Editing | `Insert`, `InsertChar`, `Erase`, `Substr` |
+| Queries | `Length`, `Capacity`, `IsEmpty`, `CStr`, `Compare`, `Equal`, `Find`, `StartsWith`, `EndsWith` |
+| Views | `View`, `Slice` |
+
+`String8` adds UTF-8-aware operations: `AppendCodepoint`, `CountCodepoints`, `Validate`, `Trim`, `Format`, `AppendFormat` and `SliceCodepoints`. Its code-unit length is not the same as its Unicode code-point count.
+
+Use String when text must be mutable and owned by the application. Use View when the source memory is already owned elsewhere and only needs to be inspected.
+
+## String View
+
+Header: `View/View.h`.
+
+Views are non-owning typed spans over `char`, `Text_Char16` or `Text_Char32`. The generated API includes `Create`, `FromCStr`, `Empty`, `Length`, `IsEmpty`, `Data`, `At`, `Slice`, `Prefix`, `Suffix`, `Compare`, `Equal`, `Find`, `StartsWith` and `EndsWith`. `View8` additionally provides UTF-8 validation, code-point counting, next-code-point traversal, trim and code-point slicing.
+
+A view does not copy or terminate its source. It becomes invalid when the referenced storage moves, is freed or otherwise ceases to be valid. Its length is measured in code units unless an explicitly code-point-aware operation is used.
+
+## String Builder
+
+Header: `String/Builder/Builder.h`.
+
+`MODULE_TYPE(Text, Builder)` manages a dynamically growing UTF-8 buffer. It supports `Create(initialCapacity)`, `Destroy`, `Clear`, `Reserve`, `ShrinkToFit`, append variants for a character, C string, sized buffer, View, Unicode code point and formatted text, `BuildString(outString)`, and observers `Length`, `Capacity`, `IsEmpty`, `CStr` and `View`.
+
+Use Builder when composing a result incrementally, especially when the final String should be materialized only once. Its `View` and `CStr` results borrow Builder storage and must not be retained across operations that can reallocate it or after `Destroy`.
+
+## C-string utilities
+
+Header: `String/CString/CString.h`.
+
+The CString package provides bounded/unbounded variants of `Length`, `IsAscii`, `Copy`, `Concat`, `Compare`, `Equal`, `StartsWith`, `EndsWith`, `FindChar`, `FindLastChar`, `FindSubstring`, `Trim`, `CountChar`, `ReplaceChar` and `Duplicate`, plus `IsEmpty`, `Span`, `ComplementSpan` and `Free`.
+
+Use bounded variants when a buffer's extent is known and a terminator cannot be assumed to occur within an unbounded scan. `Copy` and `Concat` take destination capacity. `Duplicate` allocates a new string; release it with the package's `Free` operation.
+
+## General formatting
+
+Header: `Format/Format.h`.
+
+The Format package exposes `Variadic(buffer, capacity, outWritten, format, ...)`, `Variadic.Unsafe(...)`, `Buffer(...)` and `Unsafe(...)`. Safe operations accept output capacity and report status and the written length. The unsafe forms intentionally omit the bounded contract and should only be used when the destination is known to be large enough.
+
+## Human-readable byte sizes
+
+Header: `Format/BytesHuman.h`.
+
+`BytesHuman.Format` and `Format.Ex` format byte counts using IEC (base 1024) or SI (base 1000) units with a selected precision. `Parse(text, outBytes)` parses a textual byte-size representation into a `uint64_t`. Use the unit and precision constants declared by the header rather than hard-coding enum values.
+
+## Attributed text
+
+Header: `Attributed/Attributed.h`.
+
+`MODULE_TYPE(Text, Attributed)` stores UTF-8 text with associated attribute spans. It supports `Create(initialCapacity)`, `Destroy`, `Clear`, `Clear.Spans`, `SetText`, `AppendText`, `AddSpan`, `GetAttributeAt`, `RenderAnsi` and observers `Text`, `Length`, `SpanCount` and `SpanAt`.
+
+Attributed text is suitable for producing ANSI-styled terminal strings. `RenderAnsi` writes an ANSI representation into a caller-provided buffer; it is separate from the off-screen Grid canvas. It does not imply an interactive terminal backend, input handling or terminal control.

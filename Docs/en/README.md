@@ -18,7 +18,6 @@ Project-level policies and legal or community documents.
 - [Code of Conduct](Governance/CODE_OF_CONDUCT.md)
 - [Licensing rationale](Governance/LICENSING.md)
 - [EUPL 1.2 — official licence text](LICENSE.md)
-- [EUPL 1.2 — official licence texts](Governance/LICENSE.md)
 - [Security policy](Governance/SECURITY.md)
 
 ### [Project](Project/)
@@ -39,15 +38,15 @@ Cross-project technical conventions.
 
 Reference documentation for the refactored C11 DSL modules in `Codespace/Cosmeron/`:
 
-- **Core**: [Algorithm](Modules/Algorithm.md) · [Bit](Modules/Bit.md) · [Condition](Modules/Condition.md) · [Diagnostic](Modules/Diagnostic.md) · [Memory](Modules/Memory.md) · [Module](Modules/Module.md) · [Preprocessor](Modules/Preprocessor.md) · [Types](Modules/Types.md)
+- **Core**: [Algorithm](Modules/Algorithm.md) · [Bit](Modules/Bit.md) · [Condition](Modules/Condition.md) · [Diagnostic](Modules/Diagnostic.md) · [Memory](Modules/Memory.md) · [Module](Modules/Module.md) · [Preprocessor](Modules/Preprocessor.md) · [Types](Modules/Types.md) · [Cast](Modules/Cast.md)
 - **Modules**: [Container](Modules/Container.md) · [Math](Modules/Math.md) · [Numeric](Modules/Numeric.md) · [Text](Modules/Text.md) · [Tuple](Modules/Tuple.md)
 
 ### [Translations](Translations/)
 
 Localized project documentation.
 
-- [Português (Brasil)](Translations/Portugues-Brasil/README.md)
-- [Español (Latinoamérica)](Translations/Espanol-LATAM/README.md)
+- [Português (Brasil)](../pt/README.md)
+- [Español (Latinoamérica)](../es/README.md)
 
 ## Discovery
 

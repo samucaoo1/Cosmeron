@@ -1850,5 +1850,5 @@ enum {
 - `PP_FOREACH` processes a nonempty list; `PP_REPEAT` generates descending numeric indexes.
 - Recursive expansion can be limited by the compiler and finite `PP_EVAL` implementation.
 - The detection flags represent the families currently implemented, not every platform supported by C11.
-- Prefer ordinary C constructs when metaprogramming has no concrete benefit. Follow `Docs/Reference/PATTERN.md` by using `PP_OP_CAT2` and related helpers instead of raw `##` in module code.
+- Prefer ordinary C constructs when metaprogramming has no concrete benefit. Follow `../Reference/PATTERN.md` by using `PP_OP_CAT2` and related helpers instead of raw `##` in module code.
 - There is **no** public `Preprocessor.h` aggregate header or runtime “direct form” API in this branch.
