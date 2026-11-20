@@ -2,6 +2,7 @@
 #define COSMERON_CONTAINER_LINKED_STACK_H
 
 #include "Impl/Common.inc"
+#include "../Iterator/Forward.h"
 #include "SingleNode.h"
 #include "Stack.def"
 
