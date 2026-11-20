@@ -1,8 +1,7 @@
 <p align="center">
-  <img src="Docs/Assets/Brand/Cosmeron_%20Universo%20Além.png" alt="Cosmeron — A Universe Beyond" width="100%">
+  <img src="Docs/Assets/Brand/Cosmeron_1.0_Nebula.png" alt="Cosmeron — A Universe Beyond" width="100%">
 </p>
 
-> **A universe belong**
 <p align="center">
   <strong>A Universe Beyond</strong><br>
   <sub> Version 1.0.0 · Nebula </sub>
