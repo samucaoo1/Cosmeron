@@ -430,3 +430,60 @@ El patrón Row-Tuple permite extraer columnas de cada fila X-macro. Los presets 
 - Dispatch personalizado: recibe `DISPATCH(TARGET, ENUM_NAME, ROW)` y puede transformar la fila, por ejemplo en máscaras de bits.
 
 Las declaraciones fuera de `MODULE` utilizan `ENUM_DEF` o `ENUM_DEF_EX`, que reciben el namespace de destino, el nombre del enum, la tabla y, en la forma extendida, el preset de dispatch.
+
+
+### Ejemplos complementarios de referencia
+
+#### Tabla de tipos para instanciación en lote
+
+```c
+#define STRUCT_TYPE_TABLE(X) \\
+  X((uint8, uint8_t))        \\
+  X((uint16, uint16_t))      \\
+  X((uint32, uint32_t))
+```
+
+Cada fila proporciona el sufijo y el tipo C correspondiente. El desempaquetado debe seguir siendo compatible con `PP_UNWRAP ROW`.
+
+#### Estructura POD de closure
+
+```c
+typedef struct TClosure_Name {
+  union {
+    TCallback_Name callback;
+    Name_Function function;
+  };
+  void *context;
+} TClosure_Name;
+```
+
+El puntero de contexto es prestado: la closure no adquiere la propiedad del objeto apuntado.
+
+#### Declaración variádica de callbacks
+
+```c
+MODULE(DOMAIN(Core), MyModule,
+  CALLBACK(
+    FUNCTION(int, Transform, (int x)),
+    PROCEDURE(Log, (int code))
+  )
+);
+```
+
+#### Declaración variádica de closures
+
+```c
+MODULE(DOMAIN(Core), MyModule,
+  CLOSURE(
+    FUNCTION(int, Compute, (int x)),
+    PREDICATE(Validate, (int x))
+  )
+);
+```
+
+#### Declaraciones independientes de enum
+
+```c
+ENUM_DEF(MODULE_NS(File, Stream), Seek, SEEK_TABLE);
+ENUM_DEF_EX(MODULE_NS(File, Stream), Seek, SEEK_TABLE, QUALIFIED);
+```
