@@ -8,11 +8,11 @@ O módulo **Math** fornece aritmética entera comprobada, aritmética limitada y
 #include "Cosmeron/Modules/Math/Math.h"
 ~~~
 
-O cabeçalho agregado incluye los paquetes actuales:
+O cabeçalho agregador inclui los pacotes actuales:
 
-| Paquete | Encabezado público | Finalidade |
+| Pacote | Encabezado público | Finalidade |
 | --- | --- | --- |
-| Arithmetic | `Arithmetic/Basic.h` | Operaciones enteras con y sin signo comprobadas. |
+| Arithmetic | `Arithmetic/Basic.h` | Operaciones inteiras con y sem sinal comprobadas. |
 | ClampedArithmetic | `Arithmetic/Clamped.h` | Aritmética entera limitada y saturada. |
 | Between | `Value/Between.h` | Classificação y pertenencia a intervalos. |
 | Clamp | `Value/Clamp.h` | Limita un valor a un intervalo. |
@@ -26,13 +26,13 @@ O cabeçalho agregado incluye los paquetes actuales:
 
 ## Especializaciones de tipos
 
-Os sufixos públicos forman parte de los nombres generados. Utilize el sufijo exacto en lugar de suponer un alias C.
+Os sufixos públicos forman parte de los nombres generados. Utilize el sufijo exacto em vez de suponer un alias C.
 
-| Sufijo | Tipo C | Paquetes disponibles |
+| Sufijo | Tipo C | Pacotes disponibles |
 | --- | --- | --- |
 | `Bool` | `bool` | Value |
-| `Int8`, `Int16`, `Int32`, `Int64` | Entero con signo de ancho fijo | Arithmetic, ClampedArithmetic, Value |
-| `UInt8`, `UInt16`, `UInt32`, `UInt64` | Entero sin signo de ancho fijo | Arithmetic, ClampedArithmetic, Value |
+| `Int8`, `Int16`, `Int32`, `Int64` | Entero com sinal de ancho fijo | Arithmetic, ClampedArithmetic, Value |
+| `UInt8`, `UInt16`, `UInt32`, `UInt64` | Entero sem sinal de ancho fijo | Arithmetic, ClampedArithmetic, Value |
 | `Char` | `char` | Value |
 | `Float32` | `float` | Value, Equation |
 | `Float64` | `double` | Value, Equation |
@@ -49,9 +49,9 @@ Os sufixos públicos forman parte de los nombres generados. Utilize el sufijo ex
 
 Cabeçalho: `Arithmetic/Basic.h`.
 
-Los paquetes con y sin signo se nombran `MODULE_FUNC(Math, Arithmetic, <Suffix>, <Operation>)`.
+Los pacotes con y sem sinal se nombran `MODULE_FUNC(Math, Arithmetic, <Suffix>, <Operation>)`.
 
-| Función | Firma | Comportamento |
+| Função | Firma | Comportamento |
 | --- | --- | --- |
 | `Add` | `(TYPE a, TYPE b, TYPE *outResult)` | Suma comprobada. |
 | `Sub` | `(TYPE a, TYPE b, TYPE *outResult)` | Resta comprobada. |
@@ -68,18 +68,18 @@ if (status == STATUS_CONST(SUCCESS)) {
 }
 ~~~
 
-Todas as operações requieren un ponteiro de salida no nulo. El overflow y la aritmética inválida se informan mediante `OPSTATUS`; la salida solo é escrito cuando la operación tiene éxito. La división o el resto por cero son inválidos. El mínimo entero con signo dividido por -1 se informa como fora da faixa.
+Todas as operações requieren un ponteiro de salida no nulo. El overflow y la aritmética inválida se informan mediante `OPSTATUS`; la salida solo é escrito cuando la operación tiene éxito. La división o el resto por cero son inválidos. El mínimo inteiro com sinal dividido por -1 se informa como fora da faixa.
 
 ## ClampedArithmetic
 
 Cabeçalho: `Arithmetic/Clamped.h`.
 
-Cada especialização con o sin signo ofrece dos grupos:
+Cada especialização con o sem sinal ofrece dos grupos:
 
 | Variante | Métodos | Parámetros | Resultado |
 | --- | --- | --- | --- |
 | `Clamp` | `Add`, `Sub`, `Mul` | `a, b, minimum, maximum` | Retorna el resultado aritmético restringido al intervalo indicado. |
-| `Saturating` | `Add`, `Sub`, `Mul` | `a, b` | Retorna un valor saturado a los limites representables del tipo. |
+| `Saturating` | `Add`, `Sub`, `Mul` | `a, b` | Retorna um valor saturado a los limites representables del tipo. |
 
 ~~~c
 int32_t bounded = MODULE_FUNC(Math, ClampedArithmetic, Int32, Clamp, Add)(
@@ -89,18 +89,18 @@ int32_t saturated = MODULE_FUNC(Math, ClampedArithmetic, Int32, Saturating, Add)
     INT32_MAX, 10);
 ~~~
 
-A variante Clamp delega en aritmética comprobada. Si la operación intermedia desborda, elige el limite correspondiente; de lo contrario, limita el valor calculado. A variante Saturating utilize el mínimo/máximo integrado del tipo entero seleccionado. Estas funciones retornan un valor directamente, no un `OPSTATUS`.
+A variante Clamp delega en aritmética comprobada. Si la operación intermedia desborda, elige el limite correspondiente; de lo contrario, limita el valor calculado. A variante Saturating utilize el mínimo/máximo integrado del tipo inteiro seleccionado. Estas funções retornam un valor diretamente, no un `OPSTATUS`.
 
 ## Between
 
 Cabeçalho: `Value/Between.h`.
 
-| Función | Descrição |
+| Função | Descrição |
 | --- | --- |
 | `Classify(value, minimum, maximum)` | Retorna un `MODULE_ENUM(Math, RangeResult)` que indica abaixo, dentro, acima o intervalo inválido. |
 | `Is(value, minimum, maximum)` | Retorna true solo cuando el valor está dentro del intervalo inclusivo. |
 
-Os valores de `RangeResult` son `IN_RANGE`, `BELOW_RANGE`, `ABOVE_RANGE` y `INVALID_RANGE`. El intervalo incluye ambos extremos. Si `minimum > maximum`, `Classify` retorna `INVALID_RANGE` e `Is` retorna false.
+Os valores de `RangeResult` son `IN_RANGE`, `BELOW_RANGE`, `ABOVE_RANGE` y `INVALID_RANGE`. El intervalo inclui ambos extremos. Si `minimum > maximum`, `Classify` retorna `INVALID_RANGE` e `Is` retorna false.
 
 ~~~c
 MODULE_ENUM(Math, RangeResult) position =
@@ -126,7 +126,7 @@ Es un auxiliar que retorna un valor y no informa de un intervalo inválido; los 
 
 Cabeçalho: `Value/MaxAndMin.h`.
 
-O pacote solo proporciona las funciones binarias `Max(a, b)` y `Min(a, b)` para cada especialización de tipo ordenado. Retornan directamente el valor seleccionado.
+O pacote solo proporciona las funções binarias `Max(a, b)` y `Min(a, b)` para cada especialización de tipo ordenado. Retornan directamente el valor seleccionado.
 
 ~~~c
 int32_t maximum = MODULE_FUNC(Math, MaxAndMin, Int32, Max)(left, right);
@@ -197,29 +197,29 @@ OPSTATUS status = MODULE_FUNC(Math, QuadraticEquation, Float64, Solve)(
     1.0, -3.0, 2.0, &x1, &x2, &count);
 ~~~
 
-Los ponteiros de salida y el ponteiro de solución son obligatorios. A API Quadratic actual clasifica un discriminante negativo como complejo, pero no expone un objeto de resultado de raízes complejas ni un solucionador complejo separado. `Sqrt` utilize un cálculo iterativo acotado; utilize entradas finitas normales y considera la precisión de punto flotante, el overflow y el underflow.
+Los ponteiros de salida y el ponteiro de solución son obligatorios. A API Quadratic actual clasifica un discriminante negativo como complejo, pero no expone un objeto de resultado de raízes complejas ni un solucionador complejo separado. `Sqrt` utilize un cálculo iterativo limitado; utilize entradas finitas normales y considera la precisión de ponto flutuante, el overflow y el underflow.
 
 ---
 
 # Contratos y manejo de errores
 
-- As operações `Arithmetic` retornan `OPSTATUS` y escriben mediante un ponteiro de salida solo cuando tienen éxito.
-- `ClampedArithmetic`, `Clamp`, `Between.Is` y `MaxAndMin` retornan valores o clasificaciones booleanas directamente.
-- `Between.Classify` es el único auxiliar de intervalo que distingue un intervalo inválido de un valor fuera del intervalo ordinario.
-- `LinearEquation.Solve` y `QuadraticEquation.Solve` pueden tener éxito e informar `NONE`, `INFINITE` o `COMPLEX`. Inspecciona siempre el enum de solución.
+- As operações `Arithmetic` retornam `OPSTATUS` y escriben mediante un ponteiro de salida solo cuando tienen éxito.
+- `ClampedArithmetic`, `Clamp`, `Between.Is` y `MaxAndMin` retornam valores o clasificaciones booleanas directamente.
+- `Between.Classify` es el único auxiliar de intervalo que distingue un intervalo inválido de un valor fora do intervalo ordinario.
+- `LinearEquation.Solve` y `QuadraticEquation.Solve` pueden tener éxito e informar `NONE`, `INFINITE` o `COMPLEX`. Inspecciona sempre el enum de solución.
 - El enum de solución es `MODULE_ENUM(Math, Solution)`; la clasificación de intervalo utilize `MODULE_ENUM(Math, RangeResult)`.
-- As operações enteras están limitadas por su tipo C seleccionado. As operações de punto flotante heredan la precisión y el comportamiento de valores excepcionales de C.
+- As operações inteiras están limitadas por su tipo C seleccionado. As operações de ponto flutuante heredan la precisión y el comportamento de valores excepcionais de C.
 
-## Implementación y portabilidade
+## Implementación y portabilidadee
 
-Los templates y las tablas de instanciación están en los encabezados de cada paquete y en `Impl/Common.inc`. Incluye el encabezado público, no `Impl/*.impl` ni `.def`, desde el código consumidor. O cabeçalho agregado `Math.h` no depende de una biblioteca matemática separada para su implementação actual de ecuaciones.
+Los templates y las tablas de instanciación están en los encabezados de cada pacote y en `Impl/Common.inc`. Incluye el encabezado público, no `Impl/*.impl` ni `.def`, desde el código consumidor. O cabeçalho agregador `Math.h` no depende de una biblioteca matemática separada para su implementação actual de ecuaciones.
 
 ## Módulos relacionados
 
 - [Numeric](Numeric.md) — valores de punto fijo, racionales y de múltiples limbs.
 - [Algorithm](Algorithm.md) — comparación y repetición genérica.
 - [Types](Types.md) — nombres de tipos primitivos y traits.
-- [Module](Module.md) — declaraciones de templates y acceso a funciones con namespace.
+- [Module](Module.md) — declaraciones de templates y acceso a funções con namespace.
 
 ## Cabeçalhos de origen
 
