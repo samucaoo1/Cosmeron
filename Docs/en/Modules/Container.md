@@ -2,6 +2,8 @@
 
 The **Container** module provides generated C data structures for ordered storage, linked storage, associative lookup, trees, graphs, iteration and bit collections. It belongs to **Modules**. Its public API is built around typed `MODULE_TYPED` specializations, `MODULE_FUNC` package functions and `OBJECT_CALL` object methods.
 
+## Headers
+
 ~~~c
 #include "Cosmeron/Modules/Container/Container.h"
 ~~~
@@ -32,7 +34,7 @@ A generated object type is named with `MODULE_TYPED(Module, Family, Suffix)`. Pa
 
 ~~~c
 MODULE_TYPED(Array, Vector, Int32) values;
-OPSTATUS status = MODULE_FUNC(Array, Vector, Int32, Create)(&values, 4U);
+OPSTATUS status = OBJECT_CALL(&values, Create, 4U);
 
 if (status == STATUS_CONST(SUCCESS)) {
     (void)OBJECT_CALL(&values, PushBack, 10);
@@ -155,7 +157,7 @@ A Map associates a key with a value. It provides `Create`, `Clear`, `Dispose`, `
 
 ~~~c
 MODULE_TYPED(Hash, Map, Int32_Int32) map;
-OPSTATUS status = MODULE_FUNC(Hash, Map, Int32_Int32, Create)(&map);
+OPSTATUS status = OBJECT_CALL(&map, Create);
 
 if (status == STATUS_CONST(SUCCESS)) {
     (void)OBJECT_CALL(&map, Upsert, 1, 100);
@@ -219,10 +221,10 @@ Header: `Bitset/DynamicBitset.h`.
 
 ~~~c
 MODULE_TYPE(Bitset, Dynamic) bits = {0};
-OPSTATUS status = API(&bits, Create, 128U);
+OPSTATUS status = OBJECT_CALL(&bits, Create, 128U);
 if (status == STATUS_CONST(SUCCESS)) {
-    API(&bits, Bit, Set, 7U);
-    API(&bits, Dispose);
+    status = OBJECT_CALL(&bits, Bit, Set, 7U);
+    (void)OBJECT_CALL_0(&bits, Dispose);
 }
 ~~~
 
@@ -252,3 +254,23 @@ The bitset owns its allocated limbs and must be disposed. A custom allocator mus
 - `Destroy` is a convenience cleanup procedure; use `Dispose` when its status is needed.
 - Containers store C values by value unless a particular type explicitly provides an ownership wrapper.
 - Do not assume that a container is thread-safe unless its own header documents synchronization.
+
+
+## Related modules
+
+- [Algorithm](Algorithm.md) — comparison closures used by priority queues and associative containers.
+- [Bit](Bit.md) — scalar and fixed-size bit operations.
+- [Memory](Memory.md) — allocators used by dynamic containers and bitsets.
+- [Module](Module.md) — typed object and package declaration model.
+- [Types](Types.md) — primitive specializations and lifecycle traits.
+
+## Source headers
+
+- `Codespace/Cosmeron/Modules/Container/Container.h`
+- `Codespace/Cosmeron/Modules/Container/Array/Array.h`
+- `Codespace/Cosmeron/Modules/Container/Linked/Linked.h`
+- `Codespace/Cosmeron/Modules/Container/Hash/Hash.h`
+- `Codespace/Cosmeron/Modules/Container/Tree/Tree.h`
+- `Codespace/Cosmeron/Modules/Container/Graph/Graph.h`
+- `Codespace/Cosmeron/Modules/Container/Iterator/Iterator.h`
+- `Codespace/Cosmeron/Modules/Container/Bitset/DynamicBitset.h`

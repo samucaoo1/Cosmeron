@@ -1,15 +1,13 @@
 # Algorithm
 
-The **Algorithm** module supplies fundamental algorithmic building blocks for comparison, iteration, repetition, and data arrangement.
+The **Algorithm** module provides reusable comparison and repetition primitives. Its public API is split into the `Comparison` and `Repeat` packages; typed repetition templates are available for user-defined element types.
 
-The packages in this module are:
-- [Comparison](#comparison): Consistent three-way comparison interface for numerical values, strings, byte sequences, and custom comparators.
-- [Repeat](#repeat): Repetition of actions, fallible operations, predicates, memory patterns, primitive values, and typed element generation.
+## Headers
 
-```c
+~~~c
 #include "Cosmeron/Core/Algorithm/Comparison.h"
 #include "Cosmeron/Core/Algorithm/Repeat.h"
-```
+~~~
 
 ---
 
@@ -17,1059 +15,198 @@ The packages in this module are:
 
 ## Comparison
 
-All comparison functions return `CMPOUT`.
+A comparison returns `CMPOUT`, a three-value result:
 
 | Constant | Value | Meaning |
 | --- | ---: | --- |
-| `COMPARISON_CONST(LOWER)` | -1 | Left precedes right |
-| `COMPARISON_CONST(EQUAL)` | 0 | Both compare equally |
-| `COMPARISON_CONST(HIGHER)` | 1 | Left follows right |
+| `COMPARISON_CONST(LOWER)` | -1 | The left operand precedes the right operand. |
+| `COMPARISON_CONST(EQUAL)` | 0 | The operands compare equally. |
+| `COMPARISON_CONST(HIGHER)` | 1 | The left operand follows the right operand. |
 
-```c
-MODULE_FUNC(Algorithm, Comparison, Int)(3, 7);
-```
+Use this result instead of relying on an arbitrary negative or positive integer. `COMPARISON_CONST` provides the namespaced constants and `MODULE_ENUM(Algorithm, Comparison, Result)` names the enum type.
+
+The package also exposes `ToString`, ordered primitive comparisons, `CString` and `Bytes`. Where supported by the compiler, the implementation adds complex-number comparisons.
 
 ## Repeat
 
-The Repeat package provides counted repetition over typed closures (`MODULE_CLOSURE`), byte buffers, primitive arrays, and custom types via universal templates (`TEMPLATE_REPEAT`).
+The `Repeat` package runs a callback a fixed number of times, optionally passing a zero-based index. It supports procedures, fallible operations and predicates, as well as repeated byte patterns, primitive values and C-string pointers.
 
-Two equivalent call forms are supported:
-
-### Direct form
-
-```c
-Algorithm_Repeat_Procedure(5, action);
-Algorithm_Repeat_Int(array, 42, 10);
-```
-
-### Declarative form
-
-```c
-MODULE_CALL(Algorithm, Repeat, Procedure, (5, action));
-MODULE_CALL(Algorithm, Repeat, Int, (array, 42, 10));
-```
+The typed template adds value generation for a chosen C type. It is useful when a repeated value must be produced by a callback rather than copied from one constant.
 
 ---
 
 # API reference
 
-## Function summary
+## Comparison package
 
-### Comparison
+Header: `Cosmeron/Core/Algorithm/Comparison.h`.
 
-| Function | Description | Modifies input |
+| Function | Contract | Result |
 | --- | --- | --- |
-| [`Int`](#int) | Compares two `int` values | No |
-| [`Float`](#float) | Compares two `float` values | No |
-| [`Double`](#double) | Compares two `double` values | No |
-| [`LongDouble`](#longdouble) | Compares two `long double` values | No |
-| [`CString`](#cstring) | Compares two `const char *` values | No |
-| [`Bytes`](#bytes) | Lexicographic comparison of sized byte buffers | No |
+| `ToString` | Converts a `CMPOUT` value to its symbolic description. | `const char *` |
+| Primitive type functions | Compare the corresponding primitive values. The function names come from `PRIMITIVE_TYPE_TABLE`. | `CMPOUT` |
+| `CString` | Compares two null-terminated strings. | `CMPOUT` |
+| `Bytes` | Lexicographically compares two byte spans, using their lengths to break a common-prefix tie. | `CMPOUT` |
 
-### Repeat
+The primitive table includes Boolean, signed and unsigned integer, character, floating-point and architecture-sized types. The implementation also provides complex floating-point comparisons on compilers other than MSVC. Primitive type function suffixes follow the exact names in `PRIMITIVE_TYPE_TABLE` (for example `Int32`), not abbreviations.
 
-| Function | Description | Modifies input |
-| --- | --- | --- |
-| [`Procedure`](#procedure) | Repeats a nullary procedure `count` times | No |
-| [`ProcedureIndexed`](#procedureindexed) | Repeats a procedure with index `(0 .. count-1)` | No |
-| [`Operation`](#operation) | Repeats a fallible operation with short-circuit on error | No |
-| [`OperationIndexed`](#operationindexed) | Repeats a fallible operation with index and short-circuit | No |
-| [`Predicate`](#predicate) | Repeats a predicate while returning `true` | No |
-| [`PredicateIndexed`](#predicateindexed) | Repeats a predicate with index while returning `true` | No |
-| [`RepeatBytes`](#repeatbytes) | Repeats a byte pattern `count` times into destination | Yes |
-| [`RepeatPrimitives`](#repeatprimitives) | Prefills a primitive array with a value `count` times | Yes |
-| [`RepeatCString`](#repeatcstring) | Prefills an array of C-strings with a pointer `count` times | Yes |
+### Primitive comparison
 
----
-
-# Comparison types and constants
-
-### Types
-
-| Type | Description |
-| --- | --- |
-| `CMPOUT` | Enumeration with LOWER, EQUAL, HIGHER |
-| `TCLOSURE(Comparison)` | Callback `CMPOUT (*)(const void *, const void *, void *)` |
-
-Use `COMPARISON_CONST(NAME)` to access the namespaced comparison constants.
-
-### X-macro
-
-`COMPARISON_TABLE(X)` expands `X` once for each of the three comparison constants, in the order LOWER, EQUAL, HIGHER.
-
----
-
-# Numeric and string comparisons
-
-Functions in this group receive their inputs by value and return a comparison result without modifying either argument.
-
----
-
-# Int
-
-Compares two `int` values.
-
-### Syntax
-
-#### Macro form
-
-```c
-CMPOUT result = MODULE_FUNC(Algorithm, Comparison, Int)(left, right);
-```
-
-#### Direct form
-
-```c
-CMPOUT result = Comparison_Int(left, right);
-```
-
----
-
-### Parameters
-
-| Parameter | Explanation |
-| --- | --- |
-| `left` | First `int` value |
-| `right` | Second `int` value |
-
----
-
-### Return value
-
-Returns `COMPARISON_CONST(LOWER)` when left compares lower, `COMPARISON_CONST(HIGHER)` when higher, or `COMPARISON_CONST(EQUAL)` otherwise.
-
----
-
-### Remarks
-
-Integer comparisons use relational operators, avoiding subtraction overflow.
-
----
-
-### Example
-
-```c
-int a = 5, b = 10;
-CMPOUT result = MODULE_FUNC(Algorithm, Comparison, Int)(a, b);
-/* result == COMPARISON_CONST(LOWER) */
-```
-
----
-
-# Float
-
-Compares two `float` values.
-
-### Syntax
-
-#### Macro form
-
-```c
-CMPOUT result = MODULE_FUNC(Algorithm, Comparison, Float)(left, right);
-```
-
-#### Direct form
-
-```c
-CMPOUT result = Comparison_Float(left, right);
-```
-
----
-
-### Parameters
-
-| Parameter | Explanation |
-| --- | --- |
-| `left` | First `float` value |
-| `right` | Second `float` value |
-
----
-
-### Return value
-
-Returns `COMPARISON_CONST(LOWER)` when `left < right`, `COMPARISON_CONST(HIGHER)` when `left > right`, or `COMPARISON_CONST(EQUAL)` otherwise.
-
----
-
-### Remarks
-
-Does not establish total order for NaNs.
-
----
-
-### Example
-
-```c
-float a = 2.5f, b = 1.0f;
-CMPOUT result = MODULE_FUNC(Algorithm, Comparison, Float)(a, b);
-/* result == COMPARISON_CONST(HIGHER) */
-```
-
----
-
-# Double
-
-Compares two `double` values.
-
-### Syntax
-
-#### Macro form
-
-```c
-CMPOUT result = MODULE_FUNC(Algorithm, Comparison, Double)(left, right);
-```
-
-#### Direct form
-
-```c
-CMPOUT result = Comparison_Double(left, right);
-```
-
----
-
-### Parameters
-
-| Parameter | Explanation |
-| --- | --- |
-| `left` | First `double` value |
-| `right` | Second `double` value |
-
----
-
-### Return value
-
-Returns `COMPARISON_CONST(LOWER)` when `left < right`, `COMPARISON_CONST(HIGHER)` when `left > right`, or `COMPARISON_CONST(EQUAL)` otherwise.
-
----
-
-### Remarks
-
-Follows standard IEEE-754 ordering.
-
----
-
-### Example
-
-```c
-double a = 3.14, b = 3.14;
-CMPOUT result = MODULE_FUNC(Algorithm, Comparison, Double)(a, b);
-/* result == COMPARISON_CONST(EQUAL) */
-```
-
----
-
-# LongDouble
-
-Compares two `long double` values.
-
-### Syntax
-
-#### Macro form
-
-```c
-CMPOUT result = MODULE_FUNC(Algorithm, Comparison, LongDouble)(left, right);
-```
-
-#### Direct form
-
-```c
-CMPOUT result = Comparison_LongDouble(left, right);
-```
-
----
-
-### Parameters
-
-| Parameter | Explanation |
-| --- | --- |
-| `left` | First `long double` value |
-| `right` | Second `long double` value |
-
----
-
-### Return value
-
-Returns `COMPARISON_CONST(LOWER)` when `left < right`, `COMPARISON_CONST(HIGHER)` when `left > right`, or `COMPARISON_CONST(EQUAL)` otherwise.
-
----
-
-### Remarks
-
-Operates with extended precision.
-
----
-
-### Example
-
-```c
-long double a = 1.0L, b = 2.0L;
-CMPOUT result = MODULE_FUNC(Algorithm, Comparison, LongDouble)(a, b);
-/* result == COMPARISON_CONST(LOWER) */
-```
-
----
-
-# CString
-
-Compares two null-terminated C strings.
-
-### Syntax
-
-#### Macro form
-
-```c
-CMPOUT result = MODULE_FUNC(Algorithm, Comparison, CString)(left, right);
-```
-
-#### Direct form
-
-```c
-CMPOUT result = Comparison_CString(left, right);
-```
-
----
-
-### Parameters
-
-| Parameter | Explanation |
-| --- | --- |
-| `left` | First null-terminated string |
-| `right` | Second null-terminated string |
-
----
-
-### Return value
-
-Returns `COMPARISON_CONST(LOWER)` when `left` precedes `right`, `COMPARISON_CONST(HIGHER)` when following, or `COMPARISON_CONST(EQUAL)` if identical.
-
----
-
-### Remarks
-
-Compares lexicographically byte-by-byte using `strcmp`.
-
----
-
-### Example
-
-```c
-CMPOUT result = MODULE_FUNC(Algorithm, Comparison, CString)("apple", "banana");
-/* result == COMPARISON_CONST(LOWER) */
-```
-
----
-
-# Byte comparisons
-
----
-
-# Bytes
-
-Lexicographically compares two memory buffers with explicit lengths.
-
-### Syntax
-
-#### Macro form
-
-```c
-CMPOUT result = MODULE_FUNC(Algorithm, Comparison, Bytes)(left, leftSize, right, rightSize);
-```
-
-#### Direct form
-
-```c
-CMPOUT result = Comparison_Bytes(left, leftSize, right, rightSize);
-```
-
----
-
-### Parameters
-
-| Parameter | Explanation |
-| --- | --- |
-| `left` | Pointer to first buffer |
-| `leftSize` | Size in bytes of first buffer |
-| `right` | Pointer to second buffer |
-| `rightSize` | Size in bytes of second buffer |
-
----
-
-### Return value
-
-Returns comparison outcome between the two byte sequences.
-
----
-
-### Remarks
-
-If common prefixes match, shorter lengths precede longer lengths.
-
----
-
-### Example
-
-```c
-const unsigned char b1[] = {1, 2};
-const unsigned char b2[] = {1, 3};
-CMPOUT result = MODULE_FUNC(Algorithm, Comparison, Bytes)(b1, sizeof(b1), b2, sizeof(b2));
-/* result == COMPARISON_CONST(LOWER) */
-```
-
----
-
-# Custom comparison closures
-
-A custom comparison is represented by a typed closure rather than an Algorithm package function. The `CLOSURE_COMPARISON` declaration supplies the three-way `CMPOUT` return contract and the closure stores a function pointer plus a borrowed context pointer. Invoke it with `CLOSURE_INVOKE`.
+Use `MODULE_FUNC(Algorithm, Comparison, <PrimitiveName>)` with the corresponding C type. For example:
 
 ~~~c
-static CMPOUT compare_integer(const void *left, const void *right, void *context)
-{
-    (void)context;
-    return MODULE_FUNC(Algorithm, Comparison, Int)(
-        *(const int *)left, *(const int *)right);
+CMPOUT order = MODULE_FUNC(Algorithm, Comparison, Int32)(left, right);
+if (order == COMPARISON_CONST(LOWER)) {
+    /* left is smaller */
 }
-
-TCLOSURE(Comparison) comparator =
-    CLOSURE_FUNC(Comparison_Bind)(compare_integer, NULL);
-
-int left = 4, right = 9;
-CMPOUT result = CLOSURE_INVOKE(comparator, &left, &right);
 ~~~
 
-Keep the context alive for as long as the closure may be invoked. Do not cast a callback with a different signature to the comparison closure type.
+### CString
 
----
+~~~c
+CMPOUT order = MODULE_FUNC(Algorithm, Comparison, CString)(left, right);
+~~~
 
-# Repeat execution and loops
+A null pointer sorts before a non-null pointer. Two identical pointers compare equal. Non-null strings are compared using the C string ordering provided by the implementation.
 
-The Repeat package provides counted loop execution over typed closures.
+### Bytes
 
-### Callback types
+~~~c
+CMPOUT order = MODULE_FUNC(Algorithm, Comparison, Bytes)(
+    leftData, leftSize, rightData, rightSize);
+~~~
 
-| Callback Type | Invocation Signature | Purpose |
+The common prefix is compared first; if the bytes are equal, the shorter span sorts first. A null span is ordered before a non-null span. Do not pass invalid memory ranges.
+
+## Repeat package
+
+Header: `Cosmeron/Core/Algorithm/Repeat.h`.
+
+| Function | Description |
+| --- | --- |
+| `Procedure` | Calls a nullary procedure `count` times. |
+| `Procedure.Indexed` | Calls a procedure with indexes from zero to `count - 1`. |
+| `Operation` | Calls a fallible operation until it fails or all repetitions finish. |
+| `Operation.Indexed` | Same as `Operation`, passing the current zero-based index. |
+| `Predicate` | Returns whether every repeated predicate call succeeds. |
+| `Predicate.Indexed` | Same as `Predicate`, passing the current index. |
+| `Bytes` | Copies a byte pattern into consecutive slots in a destination buffer. |
+| Primitive type functions | Fills an array with one primitive value; names follow `PRIMITIVE_TYPE_TABLE`. |
+| `CString` | Fills an array of `const char *` slots with the same pointer. |
+
+### Callback signatures
+
+The callback types are closures generated by the package:
+
+| Closure | Signature | Use |
 | --- | --- | --- |
-| `MODULE_CLOSURE(Algorithm, Repeat, Procedure)` | `void (*)(void *context)` | Action executed without index |
-| `MODULE_CLOSURE(Algorithm, Repeat, ProcedureIndexed)` | `void (*)(size_t index, void *context)` | Action executed with index `0 .. count - 1` |
-| `MODULE_CLOSURE(Algorithm, Repeat, Operation)` | `OPSTATUS (*)(void *context)` | Fallible operation; halts on first failure |
-| `MODULE_CLOSURE(Algorithm, Repeat, OperationIndexed)` | `OPSTATUS (*)(size_t index, void *context)` | Fallible indexed operation; halts on first failure |
-| `MODULE_CLOSURE(Algorithm, Repeat, Predicate)` | `bool (*)(void *context)` | Evaluated while returning `true` |
-| `MODULE_CLOSURE(Algorithm, Repeat, PredicateIndexed)` | `bool (*)(size_t index, void *context)` | Evaluated with index while returning `true` |
+| `Procedure` | `void (void)` | Side effect without a result. |
+| `ProcedureIndexed` | `void (size_t index)` | Side effect that depends on the iteration. |
+| `Operation` | `OPSTATUS (void)` | Fallible work. |
+| `OperationIndexed` | `OPSTATUS (size_t index)` | Fallible indexed work. |
+| `Predicate` | `bool (void)` | A condition that must stay true. |
+| `PredicateIndexed` | `bool (size_t index)` | An indexed condition. |
 
----
+A closure stores a function and a context pointer. `CLOSURE_IS_VALID` tests whether its function is present and `CLOSURE_CALL` invokes it. Use the bind helpers generated for the closure type declared in the package.
 
-# Procedure
+### Fallible repetition
 
-Repeats an infallible action `count` times.
+~~~c
+OPSTATUS status = MODULE_FUNC(Algorithm, Repeat, Operation)(count, operation);
+~~~
 
-### Syntax
+For a nonzero count, an invalid operation closure returns `INVALID_ARGUMENT`. The first non-`SUCCESS` status is returned immediately; subsequent iterations are not executed. A zero count succeeds without invoking the closure.
 
-#### Direct form
+### Repeating bytes
 
-```c
-Algorithm_Repeat_Procedure(count, action);
-```
+~~~c
+unsigned char pattern[2] = {0xAA, 0x55};
+unsigned char output[6];
 
-#### Declarative form
+OPSTATUS status = MODULE_FUNC(Algorithm, Repeat, Bytes)(
+    output, pattern, sizeof(pattern), 3U);
+~~~
 
-```c
-MODULE_CALL(Algorithm, Repeat, Procedure, (count, action));
-```
+The resulting buffer contains three copies of the two-byte pattern. A zero count or zero pattern size succeeds without writing. For nonzero work, both pointers must be valid, the source and destination ranges must not overlap, and the total destination size must be representable.
 
----
+### Filling primitive arrays
 
-### Parameters
+~~~c
+int32_t values[4];
 
-| Parameter | Explanation |
+OPSTATUS status = MODULE_FUNC(Algorithm, Repeat, Int32)(
+    values, 42, 4U);
+~~~
+
+The operation writes the supplied value into each of the `count` elements. A zero count succeeds without requiring a destination pointer. Nonzero writes require a valid destination and reject element-count multiplication overflow.
+
+### Filling C-string pointer arrays
+
+~~~c
+const char *labels[3];
+
+OPSTATUS status = MODULE_FUNC(Algorithm, Repeat, CString)(
+    labels, "ready", 3U);
+~~~
+
+Only the pointers are copied; the pointed-to string is not duplicated and remains owned by its original storage.
+
+## Typed Repeat template
+
+`Repeat.def` defines `TEMPLATE_Algorithm_Repeat(SUFFIX, TYPE)`. It generates a package specialization with:
+
+| Function | Description |
 | --- | --- |
-| `count` | Number of times to execute the action |
-| `action` | `MODULE_CLOSURE(Algorithm, Repeat, Procedure)` action callback |
+| `Fill` | Fills a typed array with one value. |
+| `Generate` | Fills a typed array by invoking a nullary value generator. |
+| `Generate.Indexed` | Fills a typed array by invoking a generator with the element index. |
+
+The generated closure signatures are `TYPE (void)` and `TYPE (size_t index)`. Each generator must be valid when the count is nonzero. The operations return `OPSTATUS` and check destination validity and size arithmetic before writing.
+
+Instantiate the template through the common template engine:
+
+~~~c
+TEMPLATE_INSTANTIATE(Algorithm_Repeat, Point, Point);
+~~~
+
+The specialization's public type and function names use the supplied suffix. Define the template's type and callback implementations before using the generated package.
 
 ---
 
-### Return value
-
-None (`void`).
-
----
-
-### Remarks
-
-If `count == 0` or `action` is invalid, the call returns immediately as a no-op.
-
----
-
-### Example
-
-```c
-static void DoWork(void *ctx) {
-    int *c = (int *)ctx;
-    (*c)++;
-}
-
-int count = 0;
-MODULE_CLOSURE(Algorithm, Repeat, Procedure) cb =
-    MODULE_CLOSURE_FUNC(Algorithm, Repeat, Procedure, Bind)(DoWork, &count);
-Algorithm_Repeat_Procedure(5, cb);
-/* count == 5 */
-```
-
----
-
-# ProcedureIndexed
-
-Repeats an action `count` times, passing current iteration index `0 .. count - 1`.
-
-### Syntax
-
-#### Direct form
-
-```c
-Algorithm_Repeat_ProcedureIndexed(count, action);
-```
-
-#### Declarative form
-
-```c
-MODULE_CALL(Algorithm, Repeat, ProcedureIndexed, (count, action));
-```
-
----
-
-### Parameters
-
-| Parameter | Explanation |
-| --- | --- |
-| `count` | Number of times to execute the action |
-| `action` | `MODULE_CLOSURE(Algorithm, Repeat, ProcedureIndexed)` indexed callback |
-
----
-
-### Return value
-
-None (`void`).
-
----
-
-### Remarks
-
-Indexes are emitted in ascending order starting at 0 up to `count - 1`.
-
----
-
-### Example
-
-```c
-static void Accumulate(size_t index, void *ctx) {
-    *(size_t *)ctx += index;
-}
-
-size_t sum = 0;
-MODULE_CLOSURE(Algorithm, Repeat, ProcedureIndexed) cb =
-    MODULE_CLOSURE_FUNC(Algorithm, Repeat, ProcedureIndexed, Bind)(Accumulate, &sum);
-Algorithm_Repeat_ProcedureIndexed(4, cb);
-/* sum == 0 + 1 + 2 + 3 = 6 */
-```
-
----
-
-# Operation
-
-Repeats a fallible operation `count` times with short-circuit on failure.
-
-### Syntax
-
-#### Direct form
-
-```c
-OPSTATUS status = Algorithm_Repeat_Operation(count, operation);
-```
-
-#### Declarative form
-
-```c
-OPSTATUS status = MODULE_CALL(Algorithm, Repeat, Operation, (count, operation));
-```
-
----
-
-### Parameters
-
-| Parameter | Explanation |
-| --- | --- |
-| `count` | Number of times to invoke the operation |
-| `operation` | `MODULE_CLOSURE(Algorithm, Repeat, Operation)` operation callback |
-
----
-
-### Return value
-
-Returns `STATUS_CONST(SUCCESS)` if all iterations succeed or if `count == 0`. Returns the failing `OPSTATUS` on the first iteration that fails. Returns `STATUS_CONST(INVALID_ARGUMENT)` if `count > 0` and `operation` is invalid.
-
----
-
-### Remarks
-
-Stops executing immediately upon encountering any status code other than `SUCCESS`.
-
----
-
-### Example
-
-```c
-static OPSTATUS Step(void *ctx) {
-    int *remaining = (int *)ctx;
-    if (*remaining <= 0) return STATUS_CONST(OUT_OF_RANGE);
-    (*remaining)--;
-    return STATUS_CONST(SUCCESS);
-}
-
-int left = 2;
-MODULE_CLOSURE(Algorithm, Repeat, Operation) cb =
-    MODULE_CLOSURE_FUNC(Algorithm, Repeat, Operation, Bind)(Step, &left);
-OPSTATUS s = Algorithm_Repeat_Operation(2, cb);
-/* s == STATUS_CONST(SUCCESS), left == 0 */
-```
-
----
-
-# OperationIndexed
-
-Repeats an indexed fallible operation `count` times with short-circuit on failure.
-
-### Syntax
-
-#### Direct form
-
-```c
-OPSTATUS status = Algorithm_Repeat_OperationIndexed(count, operation);
-```
-
-#### Declarative form
-
-```c
-OPSTATUS status = MODULE_CALL(Algorithm, Repeat, OperationIndexed, (count, operation));
-```
-
----
-
-### Parameters
-
-| Parameter | Explanation |
-| --- | --- |
-| `count` | Number of times to invoke the operation |
-| `operation` | `MODULE_CLOSURE(Algorithm, Repeat, OperationIndexed)` indexed operation callback |
-
----
-
-### Return value
-
-Returns `STATUS_CONST(SUCCESS)` on full completion or if `count == 0`. Returns failing `OPSTATUS` on first error. Returns `STATUS_CONST(INVALID_ARGUMENT)` if `count > 0` and `operation` is invalid.
-
----
-
-### Remarks
-
-Short-circuits on failure; subsequent iterations are skipped.
-
----
-
-### Example
-
-```c
-static OPSTATUS LimitAt(size_t index, void *ctx) {
-    size_t max = *(size_t *)ctx;
-    return index < max ? STATUS_CONST(SUCCESS) : STATUS_CONST(OUT_OF_RANGE);
-}
-
-size_t max = 3;
-MODULE_CLOSURE(Algorithm, Repeat, OperationIndexed) cb =
-    MODULE_CLOSURE_FUNC(Algorithm, Repeat, OperationIndexed, Bind)(LimitAt, &max);
-OPSTATUS s = Algorithm_Repeat_OperationIndexed(5, cb);
-/* s == STATUS_CONST(OUT_OF_RANGE) */
-```
-
----
-
-# Predicate
-
-Repeats a predicate `count` times, stopping if it returns `false`.
-
-### Syntax
-
-#### Direct form
-
-```c
-bool allTrue = Algorithm_Repeat_Predicate(count, predicate);
-```
-
-#### Declarative form
-
-```c
-bool allTrue = MODULE_CALL(Algorithm, Repeat, Predicate, (count, predicate));
-```
-
----
-
-### Parameters
-
-| Parameter | Explanation |
-| --- | --- |
-| `count` | Number of times to evaluate the predicate |
-| `predicate` | `MODULE_CLOSURE(Algorithm, Repeat, Predicate)` predicate callback |
-
----
-
-### Return value
-
-Returns `true` if all iterations evaluate to `true` or if `count == 0`. Returns `false` on the first `false` evaluation or if `count > 0` and `predicate` is invalid.
-
----
-
-### Remarks
-
-Short-circuits on the first `false`.
-
----
-
-### Example
-
-```c
-static bool CheckItem(void *ctx) {
-    int *n = (int *)ctx;
-    return (*n)-- > 0;
-}
-
-int left = 3;
-MODULE_CLOSURE(Algorithm, Repeat, Predicate) cb =
-    MODULE_CLOSURE_FUNC(Algorithm, Repeat, Predicate, Bind)(CheckItem, &left);
-bool ok = Algorithm_Repeat_Predicate(3, cb);
-/* ok == true */
-```
-
----
-
-# PredicateIndexed
-
-Repeats an indexed predicate `count` times, stopping if it returns `false`.
-
-### Syntax
-
-#### Direct form
-
-```c
-bool allTrue = Algorithm_Repeat_PredicateIndexed(count, predicate);
-```
-
-#### Declarative form
-
-```c
-bool allTrue = MODULE_CALL(Algorithm, Repeat, PredicateIndexed, (count, predicate));
-```
-
----
-
-### Parameters
-
-| Parameter | Explanation |
-| --- | --- |
-| `count` | Number of times to evaluate the predicate |
-| `predicate` | `MODULE_CLOSURE(Algorithm, Repeat, PredicateIndexed)` indexed predicate callback |
-
----
-
-### Return value
-
-Returns `true` if all iterations evaluate to `true` or if `count == 0`. Returns `false` on first `false` or if `count > 0` and `predicate` is invalid.
-
----
-
-### Remarks
-
-Useful for range checking and validation sequences.
-
----
-
-### Example
-
-```c
-static bool BelowThreshold(size_t index, void *ctx) {
-    return index < *(size_t *)ctx;
-}
-
-size_t limit = 10;
-MODULE_CLOSURE(Algorithm, Repeat, PredicateIndexed) cb =
-    MODULE_CLOSURE_FUNC(Algorithm, Repeat, PredicateIndexed, Bind)(BelowThreshold, &limit);
-bool ok = Algorithm_Repeat_PredicateIndexed(5, cb);
-/* ok == true */
-```
-
----
-
-# Memory and primitive repetition
-
----
-
-# RepeatBytes
-
-Repeats a byte pattern `count` times into a destination memory buffer.
-
-### Syntax
-
-#### Direct form
-
-```c
-OPSTATUS status = Algorithm_Repeat_Bytes(destination, pattern, patternSize, count);
-```
-
-#### Declarative form
-
-```c
-OPSTATUS status = MODULE_CALL(Algorithm, Repeat, Bytes, (destination, pattern, patternSize, count));
-```
-
----
-
-### Parameters
-
-| Parameter | Explanation |
-| --- | --- |
-| `destination` | Pointer to destination buffer receiving repeated pattern |
-| `pattern` | Pointer to source byte pattern |
-| `patternSize` | Size in bytes of pattern |
-| `count` | Number of times pattern is written |
-
----
-
-### Return value
-
-Returns `STATUS_CONST(SUCCESS)` on success or when `count == 0` or `patternSize == 0`. Returns `STATUS_CONST(INVALID_ARGUMENT)` if pointers are null or buffers overlap. Returns `STATUS_CONST(ARITHMETIC_OVERFLOW)` if total bytes overflow `size_t`.
-
----
-
-### Remarks
-
-Performs checked arithmetic and overlap verification before copying.
-
----
-
-### Example
-
-```c
-const unsigned char pat[2] = {0xAA, 0x55};
-unsigned char dest[6];
-OPSTATUS s = Algorithm_Repeat_Bytes(dest, pat, sizeof(pat), 3);
-/* dest == {0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55} */
-```
-
----
-
-# RepeatPrimitives
-
-Prefills an array of primitive elements by repeating a scalar value `count` times.
-
-The following primitive operations are generated from `PRIMITIVE_TYPE_TABLE`:
-`Boolean`, `Int8`, `Int16`, `Int32`, `Int64`, `UInt8`, `UInt16`, `UInt32`, `UInt64`, `Char`, `Char8`, `Char16`, `Char32`, `Float32`, `Float64`, `Float`, `Double`, `LongDouble`, `Int`, `UInt`, `Size`, `PtrDiff`, `IntPtr`, `UIntPtr`.
-
-### Syntax
-
-#### Direct form
-
-```c
-OPSTATUS status = Algorithm_Repeat_Int(destination, value, count);
-```
-
-#### Declarative form
-
-```c
-OPSTATUS status = MODULE_CALL(Algorithm, Repeat, Int, (destination, value, count));
-```
-
----
-
-### Parameters
-
-| Parameter | Explanation |
-| --- | --- |
-| `destination` | Pointer to target primitive array |
-| `value` | Scalar value to assign to each element |
-| `count` | Number of elements to fill |
-
----
-
-### Return value
-
-Returns `STATUS_CONST(SUCCESS)` on success or when `count == 0`. Returns `STATUS_CONST(INVALID_ARGUMENT)` if `destination` is null. Returns `STATUS_CONST(ARITHMETIC_OVERFLOW)` if total array size overflows `size_t`.
-
----
-
-### Remarks
-
-Provides type-safe array filling for all native C and fixed-width integer/float types without raw casting.
-
----
-
-### Example
-
-```c
-int array[5];
-OPSTATUS s = Algorithm_Repeat_Int(array, 42, 5);
-/* array[0..4] == 42 */
-```
-
----
-
-# RepeatCString
-
-Repeats a `const char *` pointer `count` times into an array of string pointers.
-
-### Syntax
-
-#### Direct form
-
-```c
-OPSTATUS status = Algorithm_Repeat_CString(destination, value, count);
-```
-
-#### Declarative form
-
-```c
-OPSTATUS status = MODULE_CALL(Algorithm, Repeat, CString, (destination, value, count));
-```
-
----
-
-### Parameters
-
-| Parameter | Explanation |
-| --- | --- |
-| `destination` | Array of `const char *` pointers |
-| `value` | C-string pointer to assign |
-| `count` | Number of pointers to fill |
-
----
-
-### Return value
-
-Returns `STATUS_CONST(SUCCESS)` on success or when `count == 0`. Returns `STATUS_CONST(INVALID_ARGUMENT)` if `destination` is null. Returns `STATUS_CONST(ARITHMETIC_OVERFLOW)` if total pointer size overflows `size_t`.
-
----
-
-### Remarks
-
-Copies the pointer reference, not string content.
-
----
-
-### Example
-
-```c
-const char *names[3];
-OPSTATUS s = Algorithm_Repeat_CString(names, "cosmeron", 3);
-/* names[0..2] == "cosmeron" */
-```
-
----
-
-# Universal template engine
-
----
-
-# TEMPLATE_REPEAT
-
-Declares a type-specialized repeat subpackage for user-defined structs or custom types.
-
-### Syntax
-
-```c
-TEMPLATE_DECLARE(REPEAT, Suffix, Type);
-```
-
----
-
-### Parameters
-
-| Parameter | Explanation |
-| --- | --- |
-| `Suffix` | Identifier token for the specialized subpackage (e.g. `Point`) |
-| `Type` | Target C type to repeat, fill, and generate (e.g. `Point`) |
-
----
-
-### Return value
-
-Macro expansion declaring types and inline package prototypes.
-
----
-
-### Remarks
-
-Generates package `Algorithm_Repeat_<Suffix>` providing:
-- `Fill(Type *destination, Type value, size_t count)`: Fills array with `value`.
-- `Generate(Type *destination, size_t count, TCALLBACK(...) generator)`: Fills array by repeatedly invoking a generator callback.
-- `GenerateIndexed(Type *destination, size_t count, TCALLBACK(...) generator)`: Fills array by invoking a generator callback with current index `0 .. count - 1`.
-
----
-
-### Example
-
-```c
-typedef struct Point { int x; int y; } Point;
-TEMPLATE_DECLARE(REPEAT, Point, Point);
-
-Point pts[3];
-Point def = { 10, 20 };
-Algorithm_Repeat_Point_Fill(pts, def, 3);
-```
-
----
-
-# C11 smoke test
-
-The following complete example is compiled and executed by `Tools/check_doc_examples.py`. Unlike the individual API fragments above, it can be copied into one C11 translation unit.
-
-<!-- cosmeron-c11-test -->
-```c
-#include "Cosmeron/Core/Algorithm/Comparison.h"
+# Contracts and behavior
+
+- `OPERATION` functions return `OPSTATUS`; check for `STATUS_CONST(SUCCESS)` before assuming that output buffers were written.
+- `PROCEDURE` functions have no status result. An invalid procedure closure is treated as a no-op.
+- `PREDICATE` functions return `bool`; a zero repetition count is vacuously true.
+- Indexed callbacks receive indexes beginning at zero.
+- Repetition is synchronous. The package does not create threads or schedule background work.
+- `CString` repeats pointer values, not string contents.
+- `Bytes` rejects overlapping source and destination spans; it is not a general-purpose overlapping move operation.
+
+## Function-table configuration
+
+The package follows the Module function-table policy. Comparison and Repeat have separate package switches; define the relevant macro before including its header:
+
+~~~c
+#define ALGORITHM_DISABLE_FUNCTION_TABLE 1
+/* Comparison only: #define ALGORITHM_COMPARISON_DISABLE_FUNCTION_TABLE 1 */
+/* Repeat only:     #define ALGORITHM_REPEAT_DISABLE_FUNCTION_TABLE 1 */
 #include "Cosmeron/Core/Algorithm/Repeat.h"
-#include <assert.h>
-#include <string.h>
+~~~
 
-static void AddIndex(size_t index, void *ctx) {
-    *(size_t *)ctx += index;
-}
+Choose the same function-table configuration consistently across translation units that share the generated declarations.
 
-int main(void) {
-    /* 1. Comparison checks */
-    assert(MODULE_FUNC(Algorithm, Comparison, Int)(2, 3) == COMPARISON_CONST(LOWER));
-    assert(MODULE_FUNC(Algorithm, Comparison, Double)(3.0, 3.0) == COMPARISON_CONST(EQUAL));
+## Related modules
 
-    /* 2. Repeat Procedure */
-    size_t sum = 0;
-    MODULE_CLOSURE(Algorithm, Repeat, ProcedureIndexed) cb =
-        MODULE_CLOSURE_FUNC(Algorithm, Repeat, ProcedureIndexed, Bind)(AddIndex, &sum);
-    Algorithm_Repeat_ProcedureIndexed(4, cb);
-    assert(sum == 6); /* 0 + 1 + 2 + 3 */
+- [Bit](Bit.md) — bit-level primitives and bitsets.
+- [Memory](Memory.md) — byte operations, swapping and allocation.
+- [Module](Module.md) — package declarations, closures and invocation.
+- [Preprocessor](Preprocessor.md) — template and macro machinery.
 
-    /* 3. Repeat Primitive */
-    int numbers[4] = {0};
-    assert(Algorithm_Repeat_Int(numbers, 77, 4) == STATUS_CONST(SUCCESS));
-    assert(numbers[0] == 77 && numbers[3] == 77);
+## Source headers
 
-    /* 4. Repeat Bytes */
-    const unsigned char pat[2] = {0xAA, 0x55};
-    unsigned char dest[4] = {0};
-    assert(Algorithm_Repeat_Bytes(dest, pat, sizeof(pat), 2) == STATUS_CONST(SUCCESS));
-    assert(dest[0] == 0xAA && dest[1] == 0x55 && dest[2] == 0xAA && dest[3] == 0x55);
-
-    return 0;
-}
-```
-
-
----
-
-# Result and callback contracts
-
-The three-way comparison result is `CMPOUT`: `LOWER`, `EQUAL` or `HIGHER`. The built-in comparison functions return these values; do not treat them as Boolean values. Repeat procedure closures return `void`, operation closures return `OPSTATUS` and stop on the first failure, and predicate closures return `bool` and stop when the predicate becomes false. Indexed forms receive a zero-based index from `0` to `count - 1`. A count of zero performs no invocation.
-
-Primitive and byte repetition functions fill caller-provided storage; they do not allocate the destination array or buffer.
+- `Codespace/Cosmeron/Core/Algorithm/Comparison.h`
+- `Codespace/Cosmeron/Core/Algorithm/Repeat.h`
+- `Codespace/Cosmeron/Core/Algorithm/Repeat.def`
+- `Codespace/Cosmeron/Core/Algorithm/Impl/Comparison.impl`
+- `Codespace/Cosmeron/Core/Algorithm/Impl/Repeat.impl`

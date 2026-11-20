@@ -4,6 +4,8 @@ The **Preprocessor** module supplies utilities for C macro metaprogramming: argu
 
 It is **compile-time-only**. Unlike ordinary Cosmeron modules, these APIs have no callable C functions; the *Direct form* entries below therefore show literal expansions or clearly state that no direct C equivalent is defined.
 
+## Headers
+
 ```c
 #include "Cosmeron/Core/Preprocessor/Arguments.h"
 #include "Cosmeron/Core/Preprocessor/Boolean.h"
@@ -23,7 +25,7 @@ It is **compile-time-only**. Unlike ordinary Cosmeron modules, these APIs have n
 | [Eval](#expansion-control) | `Eval.h` | Deferred recursive expansions |
 | [Foreach](#foreach-and-map) | `Foreach.h` | Multi-dimensional iterative macro application |
 | [Map](#pp_map) | `Map.h` | Nestable evaluation engine (Motor 2) |
-| [Repeat](#repetition) | `Repeat.h` | Index-based repetition and increment/decrement |
+| [Repetition](#repetition) | `Unroll.h` | Index-based repeated expansion and increment/decrement |
 | [Sequence](#sequence-selection) | `Sequence.h` | Comma tuples and parenthesized sequence (SEQ) functional folding |
 | [Tree](#tree-reduction) | `Tree.h` | Binary tree reduction and token concatenation in $O(\log_2 N)$ |
 | [Tokens](#token-helpers) | `Tokens.h` | Emit punctuation tokens |
@@ -103,31 +105,31 @@ These are equivalent **as tokens**. They do not represent two public runtime fun
 
 ---
 
-# Token operations
+## Token operations
 
 Include `Cosmeron/Core/Preprocessor/Operations.h`. Token operations combine or expand **preprocessing tokens**, not C strings.
 
 ---
 
-# PP_OP_EXPAND
+### PP_OP_EXPAND
 
 Forwards a variadic token sequence through normal macro argument expansion.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_OP_EXPAND(...)
 ```
 
-#### Direct form
+##### Direct form
 
 The expanded argument tokens.
 
 ---
 
-### Parameters
+#### Parameters
 
 | Parameter | Explanation |
 | --- | --- |
@@ -135,20 +137,20 @@ The expanded argument tokens.
 
 ---
 
-### Return value
+#### Return value
 
 Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Remarks
+#### Remarks
 
 - Defined as `#define PP_OP_EXPAND(...) __VA_ARGS__`.
 - Does not act as an unlimited recursive expansion engine; use `PP_EVAL` for deferred patterns.
 
 ---
 
-### Example
+#### Example
 
 ```c
 #define VALUE 42
@@ -157,25 +159,25 @@ int value = PP_OP_EXPAND(VALUE); /* int value = 42; */
 
 ---
 
-# PP_OP_CAT
+### PP_OP_CAT
 
 Primitive two-token pasting using `##`, without pre-expansion of the adjacent arguments.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_OP_CAT(a, b)
 ```
 
-#### Direct form
+##### Direct form
 
 The literal pasted token, before subsequent rescanning.
 
 ---
 
-### Parameters
+#### Parameters
 
 | Parameter | Explanation |
 | --- | --- |
@@ -184,13 +186,13 @@ The literal pasted token, before subsequent rescanning.
 
 ---
 
-### Return value
+#### Return value
 
 Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Remarks
+#### Remarks
 
 - Arguments next to `##` are not expanded first.
 - Use only when argument expansion must intentionally be suppressed.
@@ -198,7 +200,7 @@ Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Example
+#### Example
 
 ```c
 #define ONE 1
@@ -209,25 +211,25 @@ int PP_OP_CAT(var_, ONE) = 3; /* int var_ONE = 3; */
 
 ---
 
-# PP_OP_CAT2
+### PP_OP_CAT2
 
 Concatenates two operands after an additional macro-expansion layer.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_OP_CAT2(a, b)
 ```
 
-#### Direct form
+##### Direct form
 
 The pasted token after expanded arguments, subject to further normal rescanning.
 
 ---
 
-### Parameters
+#### Parameters
 
 | Parameter | Explanation |
 | --- | --- |
@@ -236,13 +238,13 @@ The pasted token after expanded arguments, subject to further normal rescanning.
 
 ---
 
-### Return value
+#### Return value
 
 Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Remarks
+#### Remarks
 
 - Calls `PP_OP_CAT` through a wrapper, so argument macros can expand first.
 - Preferred for normal reusable namespace generation.
@@ -250,7 +252,7 @@ Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Example
+#### Example
 
 ```c
 #define PART Widget
@@ -260,13 +262,13 @@ int PP_OP_CAT2(PART, _Count) = 10;
 
 ---
 
-# PP_OP_CAT3 to PP_OP_CAT16
+### PP_OP_CAT3 to PP_OP_CAT16
 
 Concatenates between three and sixteen operands by composing the expanding concatenation primitives.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_OP_CAT3(a, b, c)
@@ -285,32 +287,32 @@ PP_OP_CAT15(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o)
 PP_OP_CAT16(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p)
 ```
 
-#### Direct form
+##### Direct form
 
 The resulting literal preprocessing token (there is no corresponding exported C function).
 
 ---
 
-### Parameters
+#### Parameters
 
 Each argument must expand to a token that can validly be pasted to its neighbors; the number of required arguments is given by the macro suffix.
 
 ---
 
-### Return value
+#### Return value
 
 One concatenated preprocessing token, possibly subsequently expanded.
 
 ---
 
-### Remarks
+#### Remarks
 
 - The implementation defines forms for up to 16 operands.
 - Module code should use these utilities rather than applying raw `##` outside the preprocessing layer.
 
 ---
 
-### Example
+#### Example
 
 ```c
 #define PREFIX Example
@@ -320,31 +322,31 @@ int PP_OP_CAT3(PREFIX, _, Field) = 1;
 
 ---
 
-# Argument counting
+## Argument counting
 
 Include `Cosmeron/Core/Preprocessor/Arguments.h`. The public interface is `PP_ARG_COUNT`; its `PP_ARG_RSEQ`, `PP_ARG_COUNT_IMPL`, and `PP_ARG_COUNT_SELECT` machinery implements the lookup.
 
 ---
 
-# PP_ARG_COUNT
+### PP_ARG_COUNT
 
 Counts a nonempty list of preprocessor macro arguments.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_ARG_COUNT(item1, item2, ...)
 ```
 
-#### Direct form
+##### Direct form
 
 An integer literal representing the number of items.
 
 ---
 
-### Parameters
+#### Parameters
 
 | Parameter | Explanation |
 | --- | --- |
@@ -352,13 +354,13 @@ An integer literal representing the number of items.
 
 ---
 
-### Return value
+#### Return value
 
 Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Remarks
+#### Remarks
 
 - Supports up to 100 arguments.
 - Empty input is **not** guaranteed to produce zero.
@@ -366,7 +368,7 @@ Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Example
+#### Example
 
 ```c
 enum { count = PP_ARG_COUNT(alpha, beta, gamma) };
@@ -375,31 +377,31 @@ enum { count = PP_ARG_COUNT(alpha, beta, gamma) };
 
 ---
 
-# Boolean operations
+## Boolean operations
 
 Include `Cosmeron/Core/Preprocessor/Boolean.h`. The Boolean domain is **integer tokens 0–100**: 0 is false and 1–100 are true. These macros do not evaluate arbitrary C expressions, negative values, or unbounded integer literals.
 
 ---
 
-# PP_BOOL
+### PP_BOOL
 
 Converts a supported integer token to 0 or 1.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_BOOL(x)
 ```
 
-#### Direct form
+##### Direct form
 
 0 if x is 0; 1 if x is 1–100.
 
 ---
 
-### Parameters
+#### Parameters
 
 | Parameter | Explanation |
 | --- | --- |
@@ -407,19 +409,19 @@ PP_BOOL(x)
 
 ---
 
-### Return value
+#### Return value
 
 The literal Boolean token 0 if x is 0; 1 if x is 1–100.
 
 ---
 
-### Remarks
+#### Remarks
 
 - Converts through a generated internal lookup table.
 
 ---
 
-### Example
+#### Example
 
 ```c
 int value = PP_BOOL(7); /* 1 */
@@ -427,25 +429,25 @@ int value = PP_BOOL(7); /* 1 */
 
 ---
 
-# PP_BOOL_NOT
+### PP_BOOL_NOT
 
 Negates a Boolean-convertible integer.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_BOOL_NOT(x)
 ```
 
-#### Direct form
+##### Direct form
 
 1 when x is 0, otherwise 0.
 
 ---
 
-### Parameters
+#### Parameters
 
 | Parameter | Explanation |
 | --- | --- |
@@ -453,19 +455,19 @@ PP_BOOL_NOT(x)
 
 ---
 
-### Return value
+#### Return value
 
 The literal Boolean token 1 when x is 0, otherwise 0.
 
 ---
 
-### Remarks
+#### Remarks
 
 - Normalizes with `PP_BOOL` before negating.
 
 ---
 
-### Example
+#### Example
 
 ```c
 enum { yes = PP_BOOL_NOT(0), no = PP_BOOL_NOT(2) };
@@ -473,25 +475,25 @@ enum { yes = PP_BOOL_NOT(0), no = PP_BOOL_NOT(2) };
 
 ---
 
-# PP_BOOL_IF
+### PP_BOOL_IF
 
 Emits tokens only if its condition is true.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_BOOL_IF(condition)(tokens)
 ```
 
-#### Direct form
+##### Direct form
 
 Either the supplied token sequence or nothing.
 
 ---
 
-### Parameters
+#### Parameters
 
 | Parameter | Explanation |
 | --- | --- |
@@ -500,19 +502,19 @@ Either the supplied token sequence or nothing.
 
 ---
 
-### Return value
+#### Return value
 
 The literal Boolean token Either the supplied token sequence or nothing.
 
 ---
 
-### Remarks
+#### Remarks
 
 - This is a compile-time selection, not a C `if`.
 
 ---
 
-### Example
+#### Example
 
 ```c
 PP_BOOL_IF(1)(int enabled = 1;)
@@ -521,25 +523,25 @@ PP_BOOL_IF(0)(int disabled = 1;)
 
 ---
 
-# PP_BOOL_IF_ELSE
+### PP_BOOL_IF_ELSE
 
 Chooses one of two parenthesized token sequences.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_BOOL_IF_ELSE(condition)(trueTokens)(falseTokens)
 ```
 
-#### Direct form
+##### Direct form
 
 The chosen token sequence.
 
 ---
 
-### Parameters
+#### Parameters
 
 | Parameter | Explanation |
 | --- | --- |
@@ -549,19 +551,19 @@ The chosen token sequence.
 
 ---
 
-### Return value
+#### Return value
 
 The literal Boolean token The chosen token sequence.
 
 ---
 
-### Remarks
+#### Remarks
 
 - Both parenthesized branches must be supplied.
 
 ---
 
-### Example
+#### Example
 
 ```c
 enum { value = PP_BOOL_IF_ELSE(7)(11)(22) };
@@ -570,25 +572,25 @@ enum { value = PP_BOOL_IF_ELSE(7)(11)(22) };
 
 ---
 
-# PP_BOOL_AND
+### PP_BOOL_AND
 
 Boolean conjunction.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_BOOL_AND(a, b)
 ```
 
-#### Direct form
+##### Direct form
 
 1 if both are nonzero, otherwise 0.
 
 ---
 
-### Parameters
+#### Parameters
 
 | Parameter | Explanation |
 | --- | --- |
@@ -597,19 +599,19 @@ PP_BOOL_AND(a, b)
 
 ---
 
-### Return value
+#### Return value
 
 The literal Boolean token 1 if both are nonzero, otherwise 0.
 
 ---
 
-### Remarks
+#### Remarks
 
 - Both operands are normalized to 0 or 1.
 
 ---
 
-### Example
+#### Example
 
 ```c
 enum { value = PP_BOOL_AND(2, 4) }; /* 1 */
@@ -617,25 +619,25 @@ enum { value = PP_BOOL_AND(2, 4) }; /* 1 */
 
 ---
 
-# PP_BOOL_OR
+### PP_BOOL_OR
 
 Boolean inclusive disjunction.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_BOOL_OR(a, b)
 ```
 
-#### Direct form
+##### Direct form
 
 1 if either is nonzero, otherwise 0.
 
 ---
 
-### Parameters
+#### Parameters
 
 | Parameter | Explanation |
 | --- | --- |
@@ -644,19 +646,19 @@ PP_BOOL_OR(a, b)
 
 ---
 
-### Return value
+#### Return value
 
 The literal Boolean token 1 if either is nonzero, otherwise 0.
 
 ---
 
-### Remarks
+#### Remarks
 
 - Both operands are normalized.
 
 ---
 
-### Example
+#### Example
 
 ```c
 enum { value = PP_BOOL_OR(0, 9) }; /* 1 */
@@ -664,25 +666,25 @@ enum { value = PP_BOOL_OR(0, 9) }; /* 1 */
 
 ---
 
-# PP_BOOL_XOR
+### PP_BOOL_XOR
 
 Boolean exclusive disjunction.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_BOOL_XOR(a, b)
 ```
 
-#### Direct form
+##### Direct form
 
 1 if exactly one is nonzero, otherwise 0.
 
 ---
 
-### Parameters
+#### Parameters
 
 | Parameter | Explanation |
 | --- | --- |
@@ -691,19 +693,19 @@ PP_BOOL_XOR(a, b)
 
 ---
 
-### Return value
+#### Return value
 
 The literal Boolean token 1 if exactly one is nonzero, otherwise 0.
 
 ---
 
-### Remarks
+#### Remarks
 
 - Both operands are normalized.
 
 ---
 
-### Example
+#### Example
 
 ```c
 enum { value = PP_BOOL_XOR(0, 3) }; /* 1 */
@@ -711,49 +713,49 @@ enum { value = PP_BOOL_XOR(0, 3) }; /* 1 */
 
 ---
 
-# Expansion control
+## Expansion control
 
 Include `Cosmeron/Core/Preprocessor/Eval.h`. These helpers delay and rescan macro expansion. They implement **preprocessor recursion**, not loops or functions at runtime.
 
 ---
 
-# PP_EMPTY
+### PP_EMPTY
 
 Emits no tokens.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_EMPTY()
 ```
 
-#### Direct form
+##### Direct form
 
 An empty token sequence.
 
 ---
 
-### Parameters
+#### Parameters
 
 None.
 
 ---
 
-### Return value
+#### Return value
 
 No tokens.
 
 ---
 
-### Remarks
+#### Remarks
 
 - Used internally as a spacer for deferral.
 
 ---
 
-### Example
+#### Example
 
 ```c
 #define VALUE() 7
@@ -762,25 +764,25 @@ int number = PP_EMPTY() VALUE(); /* int number = 7; */
 
 ---
 
-# PP_DEFER
+### PP_DEFER
 
 Delays invocation of a function-like macro by inserting an empty-macro barrier.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_DEFER(id)(arguments)
 ```
 
-#### Direct form
+##### Direct form
 
 A deferred token sequence rather than an immediate function call.
 
 ---
 
-### Parameters
+#### Parameters
 
 | Parameter | Explanation |
 | --- | --- |
@@ -788,13 +790,13 @@ A deferred token sequence rather than an immediate function call.
 
 ---
 
-### Return value
+#### Return value
 
 Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Remarks
+#### Remarks
 
 - Defined as `id PP_EMPTY()`.
 - Useful only with deliberate macro rescanning; its direct-looking syntax is not an exported C function.
@@ -802,7 +804,7 @@ Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Example
+#### Example
 
 ```c
 #define LATER() 5
@@ -812,25 +814,25 @@ Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-# PP_OBSTRUCT
+### PP_OBSTRUCT
 
 Adds a stronger delay that makes recursive indirect macro expansion possible.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_OBSTRUCT(tokens...)
 ```
 
-#### Direct form
+##### Direct form
 
 Supplied tokens with an additional deferred empty-macro barrier.
 
 ---
 
-### Parameters
+#### Parameters
 
 | Parameter | Explanation |
 | --- | --- |
@@ -838,13 +840,13 @@ Supplied tokens with an additional deferred empty-macro barrier.
 
 ---
 
-### Return value
+#### Return value
 
 Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Remarks
+#### Remarks
 
 - Defined using `PP_DEFER(PP_EMPTY)()`.
 - Usually combined with `PP_EVAL` and indirect recursion.
@@ -852,7 +854,7 @@ Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Example
+#### Example
 
 ```c
 #define INDIRECT() PP_EMPTY
@@ -861,25 +863,25 @@ PP_OBSTRUCT(INDIRECT)() /* Example expansion barrier. */
 
 ---
 
-# PP_EVAL
+### PP_EVAL
 
 Rescans expanded input through a fixed cascade of internal expansion helpers.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_EVAL(tokens...)
 ```
 
-#### Direct form
+##### Direct form
 
 A rescanned token sequence after the fixed expansion cascade.
 
 ---
 
-### Parameters
+#### Parameters
 
 | Parameter | Explanation |
 | --- | --- |
@@ -887,13 +889,13 @@ A rescanned token sequence after the fixed expansion cascade.
 
 ---
 
-### Return value
+#### Return value
 
 Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Remarks
+#### Remarks
 
 - Implementation uses `PP_EVAL1`, `PP_EVAL2`, and `PP_EVAL3`.
 - Expansion depth is finite and compiler-dependent.
@@ -901,7 +903,7 @@ Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Example
+#### Example
 
 ```c
 #define NUMBER 42
@@ -910,19 +912,19 @@ int result = PP_EVAL(NUMBER); /* 42 */
 
 ---
 
-# Foreach and Map
+## Foreach and Map
 
 `Foreach.h` provides a high-performance multi-dimensional macro iteration engine (`D1` through `D5`) supporting up to 256 arguments per dimension, along with a chunk engine (`PP_FOREACH_CHUNKS`) for processing massive datasets up to $256 \times 256 = 65,536$ elements.
 
 ---
 
-# PP_FOREACH
+### PP_FOREACH
 
 Applies a macro once to each supplied item in order, operating in Dimension 1 (default outer loop).
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_FOREACH(macro, a, b, c, ...)
@@ -960,13 +962,13 @@ PP_FOREACH_CHUNKS_COMMA(macro, (chunk1), (chunk2), ...)
 PP_FOREACH_CHUNKS_SEMI(macro, context, (chunk1), (chunk2), ...)
 ```
 
-#### Direct form
+##### Direct form
 
 The juxtaposed expansions `macro(a) macro(b) macro(c) ...` (or separated by comma/semicolon).
 
 ---
 
-### Parameters
+#### Parameters
 
 | Parameter | Explanation |
 | --- | --- |
@@ -976,13 +978,13 @@ The juxtaposed expansions `macro(a) macro(b) macro(c) ...` (or separated by comm
 
 ---
 
-### Return value
+#### Return value
 
 Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Remarks
+#### Remarks
 
 - Separator variants insert nothing (`PP_FOREACH`), commas (`PP_FOREACH_COMMA`), or semicolons (`PP_FOREACH_SEMI`).
 - Dimensions `D1` through `D5` use disjoint internal caller and dispatch tokens, guaranteeing zero expansion suppression when nesting.
@@ -990,7 +992,7 @@ Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Example
+#### Example
 
 ```c
 #define DECL_FIELD(name) int name;
@@ -1000,13 +1002,13 @@ struct Sample { PP_FOREACH(DECL_FIELD, width, height, depth) };
 
 ---
 
-# PP_MAP
+### PP_MAP
 
 Independent nestable evaluation engine (Motor 2) based on `PP_EVAL`. Unlike `PP_FOREACH` (which is space-concatenated by default), `PP_MAP` is comma-separated by default and fully disjoint from `PP_FOREACH`, allowing seamless nesting of `PP_MAP` inside `PP_FOREACH` without expansion suppression.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_MAP(macro, a, b, ...)
@@ -1017,13 +1019,13 @@ PP_MAP_NONE(macro, a, b, ...)
 PP_MAP_NONE_CTX(macro, context, a, b, ...)
 ```
 
-#### Direct form
+##### Direct form
 
 The emitted tokens separated by commas, semicolons, or empty token sequence.
 
 ---
 
-### Parameters
+#### Parameters
 
 | Parameter | Explanation |
 | --- | --- |
@@ -1033,27 +1035,27 @@ The emitted tokens separated by commas, semicolons, or empty token sequence.
 
 ---
 
-### Return value
+#### Return value
 
 Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Remarks
+#### Remarks
 
 - Separated by comma (`PP_MAP`), semicolon (`PP_MAP_SEMI`), or empty (`PP_MAP_NONE`).
 - Can be nested inside `PP_FOREACH` without colliding on recursion locks.
 
 ---
 
-### Remarks
+#### Remarks
 
 - Does not construct a collection or insert separators.
 - Defined in `Map.h`, which includes `Foreach.h`.
 
 ---
 
-### Example
+#### Example
 
 ```c
 #define ADD(item) +(item)
@@ -1063,31 +1065,31 @@ enum { sum = 0 PP_MAP(ADD, 1, 2, 3) }; /* 6 */
 
 ---
 
-# Repetition
+## Repetition
 
-Include `Cosmeron/Core/Preprocessor/Repeat.h`. Repetition differs from foreach: it generates numerical indexes in **descending order** rather than using an explicit item list.
+Include `Cosmeron/Core/Preprocessor/Unroll.h`. Repetition differs from foreach: it generates numerical indexes in **descending order** rather than using an explicit item list.
 
 ---
 
-# PP_REPEAT
+### PP_REPEAT
 
 Invokes a unary macro for each integer index from `count` down through 1.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_REPEAT(count, macro)
 ```
 
-#### Direct form
+##### Direct form
 
 For count 3, `macro(3) macro(2) macro(1)`.
 
 ---
 
-### Parameters
+#### Parameters
 
 | Parameter | Explanation |
 | --- | --- |
@@ -1096,13 +1098,13 @@ For count 3, `macro(3) macro(2) macro(1)`.
 
 ---
 
-### Return value
+#### Return value
 
 Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Remarks
+#### Remarks
 
 - Count 0 expands to nothing.
 - Indexes run downward: 3, 2, 1.
@@ -1111,7 +1113,7 @@ Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Example
+#### Example
 
 ```c
 #define ADD_INDEX(index) +(index)
@@ -1121,25 +1123,25 @@ enum { sum = 0 PP_REPEAT(3, ADD_INDEX) }; /* 6 */
 
 ---
 
-# PP_DEC
+### PP_DEC
 
 Decrements a small integer via fixed token mapping, saturating at zero.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_DEC(x)
 ```
 
-#### Direct form
+##### Direct form
 
 The literal result: 0→0, 1→0, 2→1, 3→2, 4→3, 5→4.
 
 ---
 
-### Parameters
+#### Parameters
 
 | Parameter | Explanation |
 | --- | --- |
@@ -1147,20 +1149,20 @@ The literal result: 0→0, 1→0, 2→1, 3→2, 4→3, 5→4.
 
 ---
 
-### Return value
+#### Return value
 
 Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Remarks
+#### Remarks
 
 - Not a general arithmetic macro.
 - Useful as the state transition for limited `PP_WHILE` examples.
 
 ---
 
-### Example
+#### Example
 
 ```c
 enum { n = PP_DEC(3), z = PP_DEC(0) }; /* n == 2; z == 0 */
@@ -1168,31 +1170,31 @@ enum { n = PP_DEC(3), z = PP_DEC(0) }; /* n == 2; z == 0 */
 
 ---
 
-# Sequence selection
+## Sequence selection
 
 `Sequence.h` handles both ordinary **comma-separated arguments (tuples)** and **parenthesized sequences (`(a)(b)(c)...`)** with full functional fold and enumeration capabilities.
 
 ---
 
-# PP_SEQ_FIRST
+### PP_SEQ_FIRST
 
 Selects the first item from a macro argument list.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_SEQ_FIRST(first, ...)
 ```
 
-#### Direct form
+##### Direct form
 
 The first argument token sequence.
 
 ---
 
-### Parameters
+#### Parameters
 
 | Parameter | Explanation |
 | --- | --- |
@@ -1201,19 +1203,19 @@ The first argument token sequence.
 
 ---
 
-### Return value
+#### Return value
 
 Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Remarks
+#### Remarks
 
 - Indexes are purely syntactic, with standard macro argument parsing.
 
 ---
 
-### Example
+#### Example
 
 ```c
 enum { n = PP_SEQ_FIRST(10, 20, 30) }; /* n == 10 */
@@ -1221,25 +1223,25 @@ enum { n = PP_SEQ_FIRST(10, 20, 30) }; /* n == 10 */
 
 ---
 
-# PP_SEQ_REST
+### PP_SEQ_REST
 
 Emits all arguments after the first, preserving their comma-separated form.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_SEQ_REST(first, ...)
 ```
 
-#### Direct form
+##### Direct form
 
 The remaining comma-separated arguments.
 
 ---
 
-### Parameters
+#### Parameters
 
 | Parameter | Explanation |
 | --- | --- |
@@ -1248,19 +1250,19 @@ The remaining comma-separated arguments.
 
 ---
 
-### Return value
+#### Return value
 
 Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Remarks
+#### Remarks
 
 - The output must appear in a grammatical context that accepts a comma-separated list.
 
 ---
 
-### Example
+#### Example
 
 ```c
 int values[] = { PP_SEQ_REST(0, 10, 20, 30) };
@@ -1269,13 +1271,13 @@ int values[] = { PP_SEQ_REST(0, 10, 20, 30) };
 
 ---
 
-# PP_SEQ_GET_1 to PP_SEQ_GET_10
+### PP_SEQ_GET_1 to PP_SEQ_GET_10
 
 Selects the indicated **one-based** position in a comma-separated argument list.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_SEQ_GET_1(a, ...)
@@ -1285,25 +1287,25 @@ PP_SEQ_GET_3(a, b, c, ...)
 PP_SEQ_GET_10(a, b, c, d, e, f, g, h, i, j, ...)
 ```
 
-#### Direct form
+##### Direct form
 
 The selected literal token sequence. These are macros, not C functions.
 
 ---
 
-### Parameters
+#### Parameters
 
 A comma-separated list containing at least as many arguments as the index. Unused later arguments are ignored.
 
 ---
 
-### Return value
+#### Return value
 
 Emits the token sequence at the selected position.
 
 ---
 
-### Remarks
+#### Remarks
 
 - Supports selectors 1 through 256.
 - Does not dynamically index a runtime array.
@@ -1311,7 +1313,7 @@ Emits the token sequence at the selected position.
 
 ---
 
-### Example
+#### Example
 
 ```c
 enum { second = PP_SEQ_GET_2(10, 20, 30) };
@@ -1321,11 +1323,11 @@ enum { fourth = PP_SEQ_GET_4(10, 20, 30, 40) };
 
 ---
 
-# Parenthesized Sequences (PP_SEQ)
+## Parenthesized Sequences (PP_SEQ)
 
 Parenthesized sequences represent collections in the format `(a)(b)(c)...`, providing total immunity against internal commas in C types or expressions (such as `void (*)(int, int)` or struct initializers).
 
-### Core Operations
+#### Core Operations
 
 | Macro | Description |
 | --- | --- |
@@ -1339,7 +1341,7 @@ Parenthesized sequences represent collections in the format `(a)(b)(c)...`, prov
 | `PP_SEQ_FOREACH(macro, seq)` | Emits `macro(a) macro(b) macro(c)`. |
 | `PP_SEQ_FOREACH_CTX(macro, ctx, seq)` | Emits `macro(ctx, a) macro(ctx, b) macro(ctx, c)`. |
 
-### Example
+#### Example
 
 ```c
 #define BIT_OR(acc, elem) ((acc) | (elem))
@@ -1350,13 +1352,13 @@ int values[] = { PP_SEQ_ENUM((10)(20)(30)) };
 
 ---
 
-# Tree reduction
+## Tree reduction
 
 `Tree.h` implements a **Binary Tree / Divide & Conquer Reduction Engine** ($O(\log_2 N)$ expansion depth).
 
 Instead of linear recursion ($A \to AB \to ABC \dots$), the engine partitions operations into balanced halves. It operates without `PP_EVAL`, providing reentrant, nested reductions immune to recursion locks.
 
-### Core Tree Reducers
+#### Core Tree Reducers
 
 | Macro | Description |
 | --- | --- |
@@ -1371,7 +1373,7 @@ Instead of linear recursion ($A \to AB \to ABC \dots$), the engine partitions op
 | `PP_TREE_CAT_CHUNKS_2D/3D/4D(...)` | Multidimensional token paste via Chunks. |
 | `PP_TREE_JOIN_UNDERSCORE_CHUNKS_2D/3D/4D(...)` | Multidimensional underscore joiner via Chunks. |
 
-### Example
+#### Example
 
 ```c
 #define ADD(a, b) (a + b)
@@ -1389,7 +1391,7 @@ int sum3D = PP_TREE_REDUCE_CHUNKS_3D(ADD,
 
 ---
 
-# Token helpers
+## Token helpers
 
 `Tokens.h` offers the following function-like macros for emitting simple tokens:
 
@@ -1401,7 +1403,7 @@ int sum3D = PP_TREE_REDUCE_CHUNKS_3D(ADD,
 | `PP_TOKEN_RPAREN()` | `)` |
 | `PP_TOKEN_TILDE()` | `~` |
 
-### Syntax
+#### Syntax
 
 ```c
 PP_TOKEN_EMPTY()
@@ -1411,21 +1413,21 @@ PP_TOKEN_RPAREN()
 PP_TOKEN_TILDE()
 ```
 
-### Parameters
+#### Parameters
 
 None.
 
-### Return value
+#### Return value
 
 The associated punctuation or empty token sequence. No runtime result.
 
-### Remarks
+#### Remarks
 
 - Useful when punctuation needs to appear after another macro-expansion phase.
 - `PP_TOKEN_EMPTY` and `PP_EMPTY` are similar empty-expansion helpers from different headers.
 - Delayed parentheses are sensitive to macro argument parsing; use `PP_TOKEN_LPAREN` and `PP_TOKEN_RPAREN` deliberately.
 
-### Example
+#### Example
 
 ```c
 #include "Cosmeron/Core/Preprocessor/Tokens.h"
@@ -1435,31 +1437,31 @@ int values[] = { 1 PP_TOKEN_COMMA() 2 PP_TOKEN_COMMA() 3 };
 
 ---
 
-# Conditional repetition
+## Conditional repetition
 
 `While.h` combines `Boolean.h` and `Eval.h` to repeatedly transform an expandable state token until a predicate becomes false.
 
 ---
 
-# PP_WHILE
+### PP_WHILE
 
 Applies an operation while a supplied predicate evaluates to true.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 PP_WHILE(pred, op, state)
 ```
 
-#### Direct form
+##### Direct form
 
 The final state token, reached when the predicate becomes false.
 
 ---
 
-### Parameters
+#### Parameters
 
 | Parameter | Explanation |
 | --- | --- |
@@ -1469,13 +1471,13 @@ The final state token, reached when the predicate becomes false.
 
 ---
 
-### Return value
+#### Return value
 
 Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Remarks
+#### Remarks
 
 - The operation must eventually cause the predicate to become false.
 - Expansion is limited by `PP_EVAL` depth and compiler limits; this is not an unbounded runtime loop.
@@ -1484,7 +1486,7 @@ Not a C runtime value. The macro expands to preprocessing tokens.
 
 ---
 
-### Example
+#### Example
 
 ```c
 #define TEST(s) PP_BOOL(s)
@@ -1497,13 +1499,13 @@ enum { result = PP_WHILE(TEST, STEP, 3) };
 
 ---
 
-# Platform detection
+## Platform detection
 
 The `Detect` headers expose 0/1 compile-time flags. An aggregate `*_KNOWN` expression is true when at least one implemented family is recognized. This is **target detection**, not runtime capability probing.
 
 ---
 
-# Compiler detection
+## Compiler detection
 
 Header: `Cosmeron/Core/Preprocessor/Detect/Compiler.h`
 
@@ -1515,9 +1517,9 @@ Header: `Cosmeron/Core/Preprocessor/Detect/Compiler.h`
 | `COMPILER_GCC` | GCC (unless preceding) |
 | `COMPILER_KNOWN` | Boolean OR of the four families |
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 #if COMPILER_CLANG
@@ -1525,27 +1527,27 @@ Header: `Cosmeron/Core/Preprocessor/Detect/Compiler.h`
 #endif
 ```
 
-#### Direct form
+##### Direct form
 
 Compiler built-ins such as `__clang__` or `_MSC_VER` can be used directly, **but they are not interchangeable** with these normalized, exclusive family flags.
 
 ---
 
-### Parameters
+#### Parameters
 
 None.
 
-### Return value
+#### Return value
 
 Numerical 0 or 1 for the family flags; a Boolean preprocessor expression for `COMPILER_KNOWN`.
 
-### Remarks
+#### Remarks
 
 - Intel is checked first, then Clang, MSVC and GCC; recognized families are mutually exclusive.
 - clang-cl can define multiple compiler vendor macros, but is classified as Clang here.
 - Other compilers may leave all four family flags false without making the build invalid.
 
-### Example
+#### Example
 
 ```c
 #include "Cosmeron/Core/Preprocessor/Detect/Compiler.h"
@@ -1558,7 +1560,7 @@ Numerical 0 or 1 for the family flags; a Boolean preprocessor expression for `CO
 
 ---
 
-# Operating-system detection
+## Operating-system detection
 
 Header: `Cosmeron/Core/Preprocessor/Detect/OperationSystem.h`
 
@@ -1589,9 +1591,9 @@ Header: `Cosmeron/Core/Preprocessor/Detect/OperationSystem.h`
 | `OS_POSIX` | POSIX-compatible platforms (`OS_UNIX`, `OS_ANDROID`, `OS_OHOS`) |
 | `OS_KNOWN` | Any recognized operating system target |
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 #if OS_WINDOWS
@@ -1601,28 +1603,28 @@ Header: `Cosmeron/Core/Preprocessor/Detect/OperationSystem.h`
 #endif
 ```
 
-#### Direct form
+##### Direct form
 
 Platform vendor macros such as `_WIN32` or `__linux__` may be tested manually, but are not guaranteed to mean exactly the same as Cosmeron's normalized flags.
 
 ---
 
-### Parameters
+#### Parameters
 
 None.
 
-### Return value
+#### Return value
 
 Numerical 0/1 flags and Boolean aggregate expressions.
 
-### Remarks
+#### Remarks
 
 - `OS_UNIX` and `OS_POSIX` recognize standardized Unix and POSIX-compatible platforms.
 - `OS_ANDROID` and `OS_OHOS` act as userland/ABI overlays over `OS_LINUX`.
 - On Windows the header defines `WIN32_LEAN_AND_MEAN` if it was not already defined.
 - These macros do not discover the operating system at runtime.
 
-### Example
+#### Example
 
 ```c
 #include "Cosmeron/Core/Preprocessor/Detect/OperationSystem.h"
@@ -1639,7 +1641,7 @@ Numerical 0/1 flags and Boolean aggregate expressions.
 
 ---
 
-# Processor detection
+## Processor detection
 
 Header: `Cosmeron/Core/Preprocessor/Detect/Processor.h`
 
@@ -1652,9 +1654,9 @@ Header: `Cosmeron/Core/Preprocessor/Detect/Processor.h`
 | `PROCESSOR_RISCV` | RISC-V |
 | `PROCESSOR_KNOWN` | Boolean OR of those architectures |
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 #if PROCESSOR_ARM64
@@ -1662,27 +1664,27 @@ Header: `Cosmeron/Core/Preprocessor/Detect/Processor.h`
 #endif
 ```
 
-#### Direct form
+##### Direct form
 
 Compiler-supplied architecture macros can be queried, but the `PROCESSOR_*` form is the stable interface provided by the library.
 
 ---
 
-### Parameters
+#### Parameters
 
 None.
 
-### Return value
+#### Return value
 
 0/1 numeric flags or an aggregate Boolean expression.
 
-### Remarks
+#### Remarks
 
 - Architecture detection concerns the compile target, not the actual machine running the binary.
 - RISC-V is detected as a family without distinguishing 32-bit from 64-bit.
 - These flags do not test architecture extensions such as AVX or NEON.
 
-### Example
+#### Example
 
 ```c
 #include "Cosmeron/Core/Preprocessor/Detect/Processor.h"
@@ -1695,7 +1697,7 @@ None.
 
 ---
 
-# C standard library detection
+## C standard library detection
 
 Header: `Cosmeron/Core/Preprocessor/Detect/Library.h`
 
@@ -1716,9 +1718,9 @@ Header: `Cosmeron/Core/Preprocessor/Detect/Library.h`
 
 Aliases prefixed with `LIBRARY_*` (`LIBRARY_GLIBC`, `LIBRARY_MUSL`, etc.) are also defined for convenience.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 #if LIBC_GLIBC
@@ -1728,26 +1730,26 @@ Aliases prefixed with `LIBRARY_*` (`LIBRARY_GLIBC`, `LIBRARY_MUSL`, etc.) are al
 #endif
 ```
 
-#### Direct form
+##### Direct form
 
 Platform macros such as `__GLIBC__` or `__BIONIC__` may be tested manually, but `LIBC_*` provides normalized mutually exclusive flags across all supported toolchains.
 
 ---
 
-### Parameters
+#### Parameters
 
 None.
 
-### Return value
+#### Return value
 
 Numerical 0/1 flags and Boolean aggregate expressions.
 
-### Remarks
+#### Remarks
 
 - Because musl intentionally does not export a vendor macro, `LIBC_MUSL` is identified on Linux targets when glibc, uClibc, Bionic, and Newlib are absent, or when `__MUSL__` is passed.
 - Detection is mutually exclusive across standard hosted C environments.
 
-### Example
+#### Example
 
 ```c
 #include "Cosmeron/Core/Preprocessor/Detect/Library.h"
@@ -1760,44 +1762,44 @@ Numerical 0/1 flags and Boolean aggregate expressions.
 
 ---
 
-# Inclusion diagnostics
+## Inclusion diagnostics
 
 The `Compiling.inc` file can emit an inclusion-time compiler message when `SHOW_INCLUDE_BUILD_MESSAGE` is defined.
 
 ---
 
-# SHOW_INCLUDE_BUILD_MESSAGE
+### SHOW_INCLUDE_BUILD_MESSAGE
 
 Enables a `#pragma message` diagnostic inside `Compiling.inc`.
 
-### Syntax
+#### Syntax
 
-#### Macro form
+##### Macro form
 
 ```c
 #define SHOW_INCLUDE_BUILD_MESSAGE
 #include "Cosmeron/Core/Preprocessor/Compiling.inc"
 ```
 
-#### Direct form
+##### Direct form
 
 There is no function equivalent; a compiler-specific `#pragma message` can be written manually.
 
 ---
 
-### Parameters
+#### Parameters
 
 None.
 
 ---
 
-### Return value
+#### Return value
 
 No runtime return. Emits an optional compiler diagnostic when the compiler supports the pragma.
 
 ---
 
-### Remarks
+#### Remarks
 
 - The emitted message uses `__FILE__` where the pragma appears, i.e. the `Compiling.inc` location, not automatically the including header.
 - Many headers include `Compiling.inc`, so output can repeat.
@@ -1806,7 +1808,7 @@ No runtime return. Emits an optional compiler diagnostic when the compiler suppo
 
 ---
 
-### Example
+#### Example
 
 ```c
 #define SHOW_INCLUDE_BUILD_MESSAGE
@@ -1851,4 +1853,18 @@ enum {
 - Recursive expansion can be limited by the compiler and finite `PP_EVAL` implementation.
 - The detection flags represent the families currently implemented, not every platform supported by C11.
 - Prefer ordinary C constructs when metaprogramming has no concrete benefit. Follow `../Reference/PATTERN.md` by using `PP_OP_CAT2` and related helpers instead of raw `##` in module code.
-- There is **no** public `Preprocessor.h` aggregate header or runtime “direct form” API in this branch.
+- There is **no** public `Preprocessor.h` aggregate header or runtime “direct form” API in the current public surface. Include the specific public headers (`Arguments.h`, `Boolean.h`, `Operations.h`, `Foreach.h` and `Compiling.inc`) required by the macros being used; do not include internal implementation fragments as a substitute.
+
+
+## Related modules
+
+- [Module](Module.md) — the public declaration DSL built on preprocessing helpers.
+- [Algorithm](Algorithm.md) — examples of typed templates and generated declarations.
+
+## Source headers
+
+- `Codespace/Cosmeron/Core/Preprocessor/Arguments.h`
+- `Codespace/Cosmeron/Core/Preprocessor/Boolean.h`
+- `Codespace/Cosmeron/Core/Preprocessor/Operations.h`
+- `Codespace/Cosmeron/Core/Preprocessor/Foreach.h`
+- `Codespace/Cosmeron/Core/Preprocessor/Compiling.inc`

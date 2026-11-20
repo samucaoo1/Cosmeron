@@ -1,96 +1,120 @@
 # Tuple
 
-The **Tuple** module provides fixed-arity, homogeneous tuple structures. Each specialization is a small C value type with positional fields, array-style access and generated `Pack`/`Unpack` helpers. It belongs to **Modules**.
+The **Tuple** module provides fixed-layout, typed POD structures for grouping two to five values. It includes both positional tuple types and semantic two-value aliases, with generated pack and unpack functions.
 
-```c
+## Header
+
+~~~c
 #include "Cosmeron/Modules/Tuple/Tuple.h"
-```
+~~~
 
-The aggregate header includes `Pair`, `Dual`, `Triple`, `Quad` and `Penta`.
+The aggregate header includes `Pair`, `Dual`, `Triple`, `Quad` and `Penta` templates.
 
 ---
 
 # Overview
 
-| Type family | Arity | Typical use |
+| Type | Arity | Intended use |
 | --- | ---: | --- |
-| `Pair` | 2 | Two values of the same type |
-| `Dual` | 2 | Two values with domain-oriented aliases |
-| `Triple` | 3 | Three components such as RGB, XYZ or dimensions |
-| `Quad` | 4 | Four components such as a rectangle or RGBA |
-| `Penta` | 5 | Five related values |
+| `Pair<T>` | 2 | Generic ordered pair. |
+| `Dual<T>` | 2 | Two related values with domain-specific aliases such as coordinate, size, interval or complex components. |
+| `Triple<T>` | 3 | Three related values, such as a 3D coordinate or RGB channels. |
+| `Quad<T>` | 4 | Four related values, such as a rectangle or RGBA channels. |
+| `Penta<T>` | 5 | Five ordered values. |
 
-All members of a specialization share the same C type. These are not heterogeneous tuples like `std::tuple` or Python tuples.
-
-## Built-in type specializations
-
-`TUPLE_TYPE_TABLE` generates specializations for `bool`, signed and unsigned 8/16/32/64-bit integers, `char`, `uint8_t`/`uint16_t`/`uint32_t` character units, `float`, `double`, `long double`, `int`, `unsigned int`, `size_t`, `ptrdiff_t`, `intptr_t` and `uintptr_t`. Complex floating-point specializations are included on non-MSVC compilers.
-
-Use `MODULE_TYPED(Tuple, Family, Suffix)` for a generated type and `MODULE_FUNC(Tuple, Family, Suffix, Function)` for generated operations. The suffix identifies a row in `TUPLE_TYPE_TABLE`, such as `Int32`, `Float64` or `Size`.
+Each specialization is a `STRUCT` with ordinary C storage. It has no heap ownership, hidden allocation or object receiver. Direct structure initialization and assignment are supported.
 
 ---
 
-# Pair
+# Built-in element types
 
-`Pair` exposes several aliases for its two positions:
+The `TUPLE_TYPE_TABLE` in `Modules/Tuple/Impl/Common.inc` supplies these element suffixes:
 
-| Position | Aliases |
+- Boolean;
+- signed and unsigned integers: Int8/16/32/64 and UInt8/16/32/64;
+- character widths: Char, Char8, Char16 and Char32;
+- floating point: Float32, Float64, Float, Double and LongDouble;
+- C integer/size types: Int, UInt, Size, PtrDiff, IntPtr and UIntPtr;
+- FloatComplex, DoubleComplex and LongDoubleComplex when the compiler is not MSVC.
+
+For example, `MODULE_TYPED(Tuple, Pair, Int32)` names a pair of `int32_t` values.
+
+---
+
+# API reference
+
+Every tuple template provides the same two package functions:
+
+| Function | Contract |
 | --- | --- |
-| First | `value1`, `first`, `a`, `x1`, `x` |
-| Second | `value2`, `second`, `b`, `x2`, `y` |
+| `Pack(value1, value2, ...)` | Returns a tuple initialized from the supplied values. |
+| `Unpack(tuple, out1, out2, ...)` | Copies tuple elements to caller-provided output pointers and returns `OPSTATUS`. |
 
-The same storage is available as `value[2]` or `values[2]`.
+The arity determines the number of arguments. `Unpack` rejects a null output pointer with `INVALID_ARGUMENT`.
 
-# Dual
+## Pair
 
-`Dual` is also a two-value structure, but its aliases are intentionally broader for domain-oriented code.
+The `Pair` fields include the canonical names `value1`/`first` and `value2`/`second`, aliases `a`/`b` and `x1`/`x2`, as well as the array aliases `value[2]` and `values[2]`.
 
-| First value | Second value |
-| --- | --- |
-| `value1`, `a`, `x1`, `x`, `col`, `length`, `real`, `state1`, `begin`, `first`, `start` | `value2`, `b`, `x2`, `y`, `row`, `width`, `imaginary`, `state2`, `end`, `second`, `last` |
+~~~c
+MODULE_TYPED(Tuple, Pair, Int32) pair =
+    MODULE_FUNC(Tuple, Pair, Int32, Pack)(10, 20);
 
-It also exposes `value[2]` and `values[2]`.
+int32_t first = 0;
+int32_t second = 0;
+OPSTATUS status = MODULE_FUNC(Tuple, Pair, Int32, Unpack)(
+    pair, &first, &second);
+~~~
 
-# Triple
+## Dual
 
-`Triple` exposes `value1`/`first`/`a`/`x1`/`x`/`length`/`red`, `value2`/`second`/`b`/`x2`/`y`/`width`/`green`, and `value3`/`third`/`c`/`x3`/`z`/`height`/`blue`. It also exposes `value[3]` and `values[3]`.
+`Dual` is also a two-value POD, but provides a broader set of semantic aliases: `x/y`, `col/row`, `length/width`, `real/imaginary`, `state1/state2`, `begin/end`, `first/second` and others.
 
-# Quad
+Use the alias that expresses the meaning of the values in the consuming code. Because these are union aliases, write one semantic interpretation and read it through the corresponding alias; do not treat the aliases as independent storage.
 
-`Quad` exposes four positions with aliases useful for coordinate, rectangle and color data: first (`value1`, `first`, `a`, `x1`, `x`, `left`, `red`), second (`value2`, `second`, `b`, `x2`, `y`, `right`, `green`), third (`value3`, `third`, `c`, `x3`, `z`, `top`, `blue`), and fourth (`value4`, `fourth`, `d`, `x4`, `w`, `bottom`, `alpha`). It also exposes `value[4]` and `values[4]`.
+## Triple, Quad and Penta
 
-# Penta
+- `Triple` exposes ordered first/second/third values, positional aliases and a fixed three-element value array.
+- `Quad` exposes four ordered values and semantic aliases such as left/right/top/bottom and red/green/blue/alpha.
+- `Penta` exposes five ordered values and a five-element value array.
 
-`Penta` exposes five positions through `value1`/`first`/`a` through `value5`/`fifth`/`e`, plus `value[5]` and `values[5]`.
-
----
-
-# Packing and unpacking
-
-Each family generates `Pack(v1, ..., vN)` which returns a tuple with its members filled in order, and `Unpack(tuple, &v1, ..., &vN)` which writes stored positions to output pointers and returns `OPSTATUS`.
-
-```c
-MODULE_TYPED(Tuple, Pair, Int32) coordinate =
-    MODULE_FUNC(Tuple, Pair, Int32, Pack)(12, 34);
-
-int32_t x = 0, y = 0;
-OPSTATUS status =
-    MODULE_FUNC(Tuple, Pair, Int32, Unpack)(coordinate, &x, &y);
-```
-
-A three-component value uses the same pattern:
-
-```c
-MODULE_TYPED(Tuple, Triple, Float32) rgb =
-    MODULE_FUNC(Tuple, Triple, Float32, Pack)(0.2f, 0.4f, 0.8f);
-```
+The exact aliases are intended for convenient naming, but the values still occupy a single shared POD tuple representation.
 
 ---
 
-# Usage guidance
+# Template use
 
-- Prefer named aliases (`col`, `row`, `red`, `green`, `blue`) when they clarify a position.
-- Prefer `value[N]` when iterating over homogeneous components.
-- Prefer `Pair` for a generic pair, and `Dual` when a pair's semantic aliases are useful.
-- These tuple structures do not allocate memory or manage the lifetime of pointed-to values.
-- Anonymous struct/union aliases are part of the public representation; compile with a toolchain mode supported by the project's headers.
+The tuple headers instantiate the current built-in type table automatically. The public template definitions are available in the corresponding `.def` files:
+
+- `Pair.def`
+- `Dual.def`
+- `Triple.def`
+- `Quad.def`
+- `Penta.def`
+
+The common template engine can be used to instantiate another compatible element type. The generated type suffix and C element type must be supplied in the same order expected by the matching `TEMPLATE_Tuple_<Name>(SUFFIX, TYPE)` macro.
+
+---
+
+# Contracts and limitations
+
+- Tuple values are stored by value and do not allocate memory.
+- `Pack` returns the fully initialized tuple by value.
+- `Unpack` writes each element to a distinct caller-owned output pointer.
+- The type is only as safe to copy as its element type. The built-in specializations use scalar C types; a custom element type with ownership or self-referential invariants should not be treated as trivially copyable without checking its contract.
+- Tuple types do not provide dynamic length, iteration, bounds checks or heterogeneous element types.
+- Use a dedicated struct when the elements have different C types or need domain-specific invariants.
+
+## Related modules
+
+- [Types](Types.md) — canonical primitive names.
+- [Module](Module.md) — generated POD structures and template engine.
+
+## Source headers
+
+- `Codespace/Cosmeron/Modules/Tuple/Tuple.h`
+- `Codespace/Cosmeron/Modules/Tuple/Pair.def`
+- `Codespace/Cosmeron/Modules/Tuple/Dual.def`
+- `Codespace/Cosmeron/Modules/Tuple/Triple.def`
+- `Codespace/Cosmeron/Modules/Tuple/Quad.def`
+- `Codespace/Cosmeron/Modules/Tuple/Penta.def`

@@ -1,684 +1,276 @@
 # Module
 
-The **Module** core subsystem provides Cosmeron's declarative architectural framework. It defines unified declarative schemas for modules, free-function namespaces (**Package**), object-oriented structures with receiver dispatch (**Object**), contract-driven member tuples, implementation prototypes, and universal generic template instantiation.
+The **Module** core provides Cosmeron's declarative C API system. It generates namespaced types, enums, constants, structs, objects, packages, callbacks, closures, templates and optional function tables from declarations in the headers.
 
-```c
+## Header
+
+~~~c
 #include "Cosmeron/Core/Module/Module.h"
-```
+~~~
+
+The aggregate header includes the namespace, declaration, object, package, callback, closure, dispatch, function-table, template and implementation-scope machinery used by the public module headers.
 
 ---
 
-# Overview
+# Architecture
 
-`Module.h` serves as the central umbrella header for module creation and code generation across the library. It coordinates several underlying components:
+The declaration model is organized as:
 
-| Component | File | Purpose |
-| --- | --- | --- |
-| [Package](#package-framework) | `Package.h` | Declarative namespaces of free functions with optional function tables |
-| [Object](#object-framework) | `Object.h` | Declarative object-oriented classes, inheritance, receivers, and dispatch tables |
-| Tuple | `Common/Tuple.impl` | Member tuple specifications (`OPERATION`, `PREDICATE`, `FUNCTION`, `PROCEDURE`) |
-| Dispatch | `Common/Dispatch.impl` | Unified implementation prototypes and dispatchers (`*_IMPLEMENT_EX`, `*_PROTOTYPEEX`) |
-| Template | `Common/Template.impl` | Universal template engine (`TEMPLATE_DECLARE`, `TEMPLATE_IMPLEMENT`) |
-| FunctionTable | `Common/FunctionTable.impl` | FunctionTable struct definitions and singleton table accessors |
-| Namespace | `Module.space` | Namespace prefixes and macro definitions for the Module core subsystem |
-
-### Member contract classification
-
-Member specifications inside declarative blocks follow Cosmeron's contract guidelines:
-
-| Specifier | Result Type | Contract / Purpose |
-| --- | --- | --- |
-| `OPERATION(NAME, PARAMS)` | `OPSTATUS` | Fallible operation returning a status code |
-| `PREDICATE(NAME, PARAMS)` | `bool` | Proposition or query returning a boolean |
-| `FUNCTION(RET, NAME, PARAMS)` | `RET` | General function returning a computed value |
-| `PROCEDURE(NAME, PARAMS)` | `void` | Infallible side-effecting action returning void |
-
-Each member category supports inline and const variants:
-- **Inline variants:** `OPERATION_INLINE`, `PREDICATE_INLINE`, `FUNCTION_INLINE`, `PROCEDURE_INLINE` accept a `{ ... }` body directly.
-- **Const variants:** `CONST_OPERATION`, `CONST_PREDICATE`, `CONST_FUNCTION`, `CONST_PROCEDURE` (and their `*_INLINE` counterparts) enforce a `const` receiver pointer (`const CLASS * self`) when used within an `OBJECT` block.
-
-### Compile-time configuration
-
-Every Function Table family supports compile-time disabling to eliminate static dispatch table overhead:
-
-| Macro Switch | Effect |
+| Construct | Purpose |
 | --- | --- |
-| `MODULE_DISABLE_FUNCTION_TABLE` | Omits function table structs and accessors across all packages and objects |
-| `PACKAGE_DISABLE_FUNCTION_TABLE` | Omits function tables specifically for packages |
-| `OBJECT_DISABLE_FUNCTION_TABLE` | Omits function tables specifically for objects |
+| `DOMAIN` | Separates broad library areas, such as `Core` and `Modules`. |
+| `MODULE` | Owns a related family of declarations under a public namespace. |
+| `PACKAGE` | Groups free functions that share a package name. |
+| `OBJECT` | Declares a stateful type with methods that receive an implicit object receiver. |
+| `STRUCT` | Declares a plain C data type with no implicit method receiver. |
+| `ISTRUCT` | Declares a module-internal plain structure. |
+| `VARIANT` | Groups related operations under a nested method/function path. |
+| `CALLBACK` | Declares a function-pointer callback signature. |
+| `CLOSURE` | Declares a callable signature that carries a context pointer. |
 
-### Implementation strategies: Explicit vs Unified
-
-When implementing declared non-inline operations, predicates, functions, or procedures, two complementary macro families are provided:
-
-1. **Explicit Family (Recommended - Zero Ambiguity & Zero Configuration):**
-   Explicitly declares whether the receiver `self` is bound (for objects) or omitted (for free package functions), requiring no traits or flags:
-   - For Objects: `OBJECT_OPERATION_IMPLEMENT_EX`, `OBJECT_PREDICATE_IMPLEMENT_EX`, `OBJECT_FUNCTION_IMPLEMENT_EX`, `OBJECT_PROCEDURE_IMPLEMENT_EX`
-   - For Packages: `PACKAGE_OPERATION_IMPLEMENT_EX`, `PACKAGE_PREDICATE_IMPLEMENT_EX`, `PACKAGE_FUNCTION_IMPLEMENT_EX`, `PACKAGE_PROCEDURE_IMPLEMENT_EX`
-
-2. **Unified Family with Trait Detection:**
-   Uses unified syntax (`OPERATION_IMPLEMENT_EX`, `PREDICATE_IMPLEMENT_EX`, `FUNCTION_IMPLEMENT_EX`, `PROCEDURE_IMPLEMENT_EX`) and automatically binds `self` as an Object receiver if **any** of the following three trait conditions hold:
-   - **Type Trait Tag:** `#define <TARGET>_IS_OBJECT 1` (e.g. `#define TCalculator_IS_OBJECT 1` or `#define TStack_int_IS_OBJECT 1`)
-   - **Namespaced Tag:** `#define COSMERON_TAG_OBJ_<TARGET> 1` (e.g. `#define COSMERON_TAG_OBJ_TCalculator 1`)
-   - **File-Wide Scope Override:** `#define TARGET_IS_OBJECT 1` (placed at the top of an object's `.impl` translation unit)
-
-   If none of these traits are detected, the unified macros automatically emit free functions for packages.
-
-### Backward compatibility aliases (deprecated)
-
-Macros listed under `Backward Compatibility Aliases` in `Tuple.impl` and `Dispatch.impl` exist strictly to preserve compatibility with existing legacy code. **They must not be used in new code.**
-
-| Header / Implementation | Deprecated Alias | Modern Replacement |
-| --- | --- | --- |
-| `Tuple.impl` | `METHOD(RET, NAME, PARAMS)` | `FUNCTION(RET, NAME, PARAMS)` |
-| `Tuple.impl` | `CONST_METHOD` / `METHOD_CONST` | `CONST_FUNCTION` |
-| `Tuple.impl` | `METHOD_INLINE(RET, NAME, PARAMS, BODY)` | `FUNCTION_INLINE(RET, NAME, PARAMS, BODY)` |
-| `Tuple.impl` | `CONST_METHOD_INLINE` / `METHOD_CONST_INLINE` | `CONST_FUNCTION_INLINE` |
-| `Tuple.impl` | `INLINE_FUNCTION` | `FUNCTION_INLINE` |
-| `Dispatch.impl` | `OBJECT_PROTOTYPEEX(...)` | `OBJECT_*_IMPLEMENT_EX` or unified `*_IMPLEMENT_EX` |
-| `Dispatch.impl` | `PACKAGE_PROTOTYPEEX(...)` | `PACKAGE_*_IMPLEMENT_EX` or unified `*_IMPLEMENT_EX` |
-| `Dispatch.impl` | `OBJECT_PROTOTYPE` / `PACKAGE_PROTOTYPE` | `*_IMPLEMENT_EX` (pure standard C11 without `__typeof__`) |
+A declaration is not a runtime class system. Objects and packages are generated C structs, functions and macros. There is no dynamic type discovery or automatic garbage collection supplied by the Module layer.
 
 ---
 
-# API reference
+# Namespace and public naming
 
-## FIELDS
+## Namespace access
 
-Specifies the member field declarations of an object structure.
+Header: `Namespace.h` (included by `Module.h`).
 
-### Syntax
+Use the semantic naming macros rather than constructing public identifiers manually:
 
-```c
-FIELDS(...)
-```
+| Macro | Purpose |
+| --- | --- |
+| `MODULE_TYPE(Module, Type)` | Names a non-templated public type. |
+| `MODULE_TYPED(Module, Type, Suffix)` | Names a generated typed specialization. |
+| `MODULE_ENUM(Module, Enum)` | Names a module enum. |
+| `MODULE_CONST(Module, Constant)` | Names a module constant. |
+| `MODULE_FUNC(Module, Function)` | Names a package or object function. |
+| `MODULE_FUNC(Module, Package, Function)` | Names a function in a package. |
+| `MODULE_CLOSURE(Module, Package, Name)` | Names a closure type generated in a package. |
+| `MODULE_CALLBACK(Module, Name)` | Names a callback type declared by a module. |
+| `MODULE_NS(...)` | Forms a module namespace token sequence. |
+| `NS(...)` / `CNS(...)` | Forms ordinary or constant namespace tokens. |
 
-### Parameters
+For example:
 
-- `...`: Struct field declarations (types, names, and semicolons).
+~~~c
+MODULE_TYPE(Type, Traits) descriptor;
+MODULE_TYPED(Numeric, Rational, Int32) fraction;
+MODULE_ENUM(Algorithm, Comparison, Result) order;
+~~~
 
-### Return value
+The actual identifier is produced by the configured library prefix and namespace rules. Application code should prefer these access macros to hard-coded expanded names.
 
-A preprocessor expansion defining the member fields within the target struct; does not evaluate to a runtime value.
+## Configuration
 
-### Remarks
+The namespace header defines the prefix and namespace policy macros used by the project. Configure them before including public module headers. Function-table policy is also a compile-time choice; a module, package or object may define a disable switch before its header is included.
 
-Used as the second argument of `OBJECT` or the third argument of `OBJECT_EXTENDS` to define fields cleanly in a structured block.
+Do not change namespace or function-table configuration between translation units that exchange the affected types. Doing so can produce incompatible names or object layouts.
 
-### Example
+Namespace configuration and public access macros are provided by `Core/Module/Namespace.h`.
 
-```c
-OBJECT(Point,
-  FIELDS(
-    int x;
-    int y;
-  )
+---
+
+# Packages
+
+A package is the right construct for operations that do not need an object receiver.
+
+## Declaration
+
+~~~c
+MODULE(DOMAIN(Modules), Example,
+    PACKAGE(Math,
+        FUNCTION(int, Add, (int left, int right)),
+        OPERATION(Divide, (int left, int right, int *outValue))
+    )
 );
-```
+~~~
+
+The package declaration generates namespaced functions and, when enabled, a typed function table. The function category determines its contract:
+
+| Declaration | Return contract |
+| --- | --- |
+| `PROCEDURE` | No return value; used for side effects. |
+| `FUNCTION` | Returns a value directly. |
+| `PREDICATE` | Returns `bool`. |
+| `OPERATION` | Returns `OPSTATUS` and may write output parameters. |
+| `COMPARISON` | Returns the library's three-way comparison result. |
+
+Use the narrowest applicable category and keep fallible work under `OPERATION`.
+
+## Invocation
+
+The canonical package function-table invocation macro is `PACKAGE_API`:
+
+~~~c
+int sum = PACKAGE_API(Example_Math, Add, 10, 20);
+~~~
+
+For a direct namespaced call that avoids the function table, use `MODULE_FUNC`:
+
+~~~c
+int sum = MODULE_FUNC(Example, Math, Add)(10, 20);
+~~~
+
+Package function tables are optional. If function tables are disabled, use the direct form rather than attempting package dispatch.
 
 ---
 
-## OPERATION
+# Objects
 
-Declares a fallible member operation returning `OPSTATUS`.
+An object combines a C struct with methods that receive a pointer to the instance as their first hidden receiver parameter.
 
-### Syntax
+## Declaration
 
-```c
-OPERATION(NAME, PARAMS)
-```
-
-### Parameters
-
-- `NAME`: Operation identifier.
-- `PARAMS`: Parameter list enclosed in parentheses `(...)`.
-
-### Return value
-
-Expands to a declarative member tuple `(0, 0, OPSTATUS, NAME, PARAMS, { return STATUS_CONST(SUCCESS); })`.
-
-### Remarks
-
-Used inside `OBJECT` or `PACKAGE` declarations. The operation contract requires returning `OPSTATUS` to indicate operational success or recoverable failure. For inline definitions, use `OPERATION_INLINE(NAME, PARAMS, BODY)`. For objects requiring a const receiver, use `CONST_OPERATION` or `CONST_OPERATION_INLINE`.
-
-### Example
-
-```c
-OBJECT(Device,
-  FIELDS(int fd;),
-  OPERATION(Open, (const char *path)),
-  OPERATION(Close, ())
+~~~c
+MODULE(DOMAIN(Modules), Counter,
+    OBJECT(Counter,
+        FIELDS(
+            int value;
+        ),
+        PROCEDURE(Reset, ()),
+        OPERATION(Add, (int amount)),
+        CONST_FUNCTION(int, Value, ())
+    )
 );
-```
+~~~
+
+The receiver is supplied by the generated object API. A method declared with `CONST_` is read-only with respect to its receiver contract.
+
+## Invocation
+
+The canonical object dispatch macro is `OBJECT_CALL`:
+
+~~~c
+MODULE_TYPE(Counter, Counter) counter = {0};
+
+OBJECT_CALL_0(&counter, Reset);
+OPSTATUS status = OBJECT_CALL(&counter, Add, 5);
+int value = OBJECT_CALL_0(&counter, Value);
+~~~
+
+For a direct call without object function-table dispatch, use the generated namespaced method:
+
+~~~c
+MODULE_FUNC(Counter, Counter, Add)(&counter, 5);
+~~~
+
+Use `OBJECT_CALL` when the object has a valid function table and runtime dispatch is intended. Use direct `MODULE_FUNC` calls when the configuration removes function tables or when direct dispatch is desired. Never call a method on an uninitialized or invalid object.
+
+## Inheritance and extensions
+
+The current Object declaration layer includes `OBJECT_EXTENDS` and typed casts such as `OBJECT_AS`. These are compile-time C layout/declaration facilities; they do not provide virtual inheritance or automatic lifetime management. Use them only when the base/derived layout and receiver contract are explicit.
 
 ---
 
-## PREDICATE
+# Structs and internal data
 
-Declares a boolean predicate member returning `bool`.
+Use `STRUCT` for a public POD data type and `ISTRUCT` for an implementation detail. A struct has no generated receiver and does not gain method dispatch merely by being declared in a module.
 
-### Syntax
-
-```c
-PREDICATE(NAME, PARAMS)
-```
-
-### Parameters
-
-- `NAME`: Predicate identifier.
-- `PARAMS`: Parameter list enclosed in parentheses `(...)`.
-
-### Return value
-
-Expands to a declarative member tuple `(0, 0, bool, NAME, PARAMS, { return false; })`.
-
-### Remarks
-
-Answers a proposition or state query. For inline implementations, use `PREDICATE_INLINE(NAME, PARAMS, BODY)`. For const receiver queries, use `CONST_PREDICATE` or `CONST_PREDICATE_INLINE`.
-
-### Example
-
-```c
-OBJECT(Buffer,
-  FIELDS(size_t count;),
-  CONST_PREDICATE_INLINE(IsEmpty, (), {
-    return self->count == 0U;
-  })
-);
-```
+For fixed-layout value types, prefer direct field initialization and ordinary assignment when the type's ownership contract permits it. Types requiring custom initialization, cloning, movement or disposal should use the dedicated object or traits facilities rather than treating the value as trivially copyable.
 
 ---
 
-## FUNCTION
+# Callbacks and closures
 
-Declares a general function member returning a value of type `RET`.
+## Callback
 
-### Syntax
+A callback is a function pointer with a declared signature. It does not inherently carry state.
 
-```c
-FUNCTION(RET, NAME, PARAMS)
-```
+`Callback.h` provides `TCALLBACK(Name)` for the generated type, `CALLBACK_FUNC(Name)` for helper names and `CALLBACK_EMPTY` as the null callback value.
 
-### Parameters
+## Closure
 
-- `RET`: Return type token.
-- `NAME`: Function identifier.
-- `PARAMS`: Parameter list enclosed in parentheses `(...)`.
+A closure pairs a function pointer with a context pointer. It is suitable for callbacks that need to refer to caller-owned state without a global variable.
 
-### Return value
+`Closure.h` provides `TCLOSURE(Name)` and `CLOSURE_FUNC(Name)`. The common call/validation macros are:
 
-Expands to a declarative member tuple `(0, 0, RET, NAME, PARAMS, { (void)0; })`.
+| Macro | Behavior |
+| --- | --- |
+| `CLOSURE_IS_VALID(closure)` | Tests whether the closure has a function. |
+| `CLOSURE_CALL(closure, ...)` | Invokes the closure. |
+| `CLOSURE_EMPTY` | Empty closure value. |
 
-### Remarks
-
-Used for computations or queries returning a specific type. For inline definitions, use `FUNCTION_INLINE(RET, NAME, PARAMS, BODY)`. For objects requiring a const receiver, use `CONST_FUNCTION` or `CONST_FUNCTION_INLINE`.
-
-### Example
-
-```c
-PACKAGE(MathUtils,
-  FUNCTION_INLINE(int, Clamp, (int v, int minVal, int maxVal), {
-    return v < minVal ? minVal : (v > maxVal ? maxVal : v);
-  })
-);
-```
+Closure declarations specify the return contract: `CLOSURE_FUNCTION`, `CLOSURE_PROCEDURE`, `CLOSURE_OPERATION`, `CLOSURE_PREDICATE` or `CLOSURE_COMPARISON`. A closure's context pointer is borrowed; the Module layer does not manage the pointed-to object's lifetime.
 
 ---
 
-## PROCEDURE
+# Templates
 
-Declares an infallible procedure member returning `void`.
+The canonical module template implementation uses a dual-mode `.def` file. A template can generate a struct, object or package specialization. It should be included from its public header and may be instantiated explicitly or from an X-macro type table.
 
-### Syntax
+## Instantiating a specialization
 
-```c
-PROCEDURE(NAME, PARAMS)
-```
+The common template helpers are:
 
-### Parameters
+| Macro | Purpose |
+| --- | --- |
+| `TEMPLATE_INSTANTIATE(Name, args...)` | Instantiates one named template. |
+| `TEMPLATE_INSTANTIATE_TABLE(Name, Table)` | Instantiates a template for every row returned by the table. |
+| `TEMPLATE_INSTANTIATE_TABLE(Module, Name, Table)` | Instantiates a module-qualified template for every row. |
 
-- `NAME`: Procedure identifier.
-- `PARAMS`: Parameter list enclosed in parentheses `(...)`.
+~~~c
+TEMPLATE_INSTANTIATE_TABLE(Numeric, Rational, NUMERIC_RATIONAL_TYPE_TABLE);
+~~~
 
-### Return value
+A table row is an argument tuple. Keep its row order identical to the corresponding template macro's parameter order.
 
-Expands to a declarative member tuple `(0, 0, void, NAME, PARAMS, { (void)0; })`.
+The template engine also exposes lower-level declaration/implementation helpers, but public module headers should encapsulate those details. Consumers should use the module's documented template instantiation entry points rather than invoking internal implementation macros.
 
-### Remarks
+## Dual-mode .def convention
 
-Used for infallible actions or state updates without a return value. For inline definitions, use `PROCEDURE_INLINE(NAME, PARAMS, BODY)`. For const receivers, use `CONST_PROCEDURE` or `CONST_PROCEDURE_INLINE`.
-
-### Example
-
-```c
-OBJECT(Logger,
-  FIELDS(int level;),
-  PROCEDURE(Log, (const char *message))
-);
-```
+A template's `.def` file defines the template macro and supports direct instantiation when the expected configuration macros are defined. The public header normally includes shared internal definitions, declares its package/object and includes the template definition. Do not include internal `Impl` or `Common.inc` files directly from application code.
 
 ---
 
-## OPERATION_IMPLEMENT_EX
+# Implementation and scopes
 
-Defines the implementation prototype for a fallible operation returning `OPSTATUS`.
+Non-inline implementations are emitted through explicit module implementation declarations. The current declaration system provides `MODULE_IMPLEMENT`, `OBJECT_IMPLEMENT_EX` and `PACKAGE_IMPLEMENT_EX`. Scope helpers such as `MODULE_SCOPE`, `OBJECT_SCOPE` and `PACKAGE_SCOPE` organize related implementations and end with their matching `*_SCOPE_END` macro.
 
-### Syntax
-
-```c
-OPERATION_IMPLEMENT_EX(TARGET, NAME, PARAMS)
-```
-
-### Parameters
-
-- `TARGET`: Identifier of the enclosing class or package.
-- `NAME`: Operation identifier.
-- `PARAMS`: Parameter list enclosed in parentheses `(...)`.
-
-### Return value
-
-Emits a static inline function prototype returning `OPSTATUS`.
-
-### Remarks
-
-Dispatches automatically to `OBJECT_OPERATION_IMPLEMENT_EX` (binding `CLASS * self`) if `TARGET` is detected as an object via trait tags (`<TARGET>_IS_OBJECT 1`, `COSMERON_TAG_OBJ_<TARGET> 1`, or `TARGET_IS_OBJECT 1`); otherwise dispatches to `PACKAGE_OPERATION_IMPLEMENT_EX`.
-
-### Example
-
-```c
-OPERATION_IMPLEMENT_EX(Counter, Reset, ()) {
-  if (!self) return STATUS_CONST(INVALID_ARGUMENT);
-  self->value = 0;
-  return STATUS_CONST(SUCCESS);
-}
-```
+A public header generally owns declarations and includes its implementation unit. Keep function bodies in the implementation files supplied by the module; consumers should include the public header only.
 
 ---
 
-## PREDICATE_IMPLEMENT_EX
+# Function tables
 
-Defines the implementation prototype for a boolean predicate returning `bool`.
+Function tables provide a typed dispatch path for packages and objects. They are optional compile-time output, not an independent virtual-method runtime.
 
-### Syntax
+- Use `PACKAGE_API` to dispatch package functions through a package table.
+- Use `OBJECT_CALL` to dispatch object methods through the object's table.
+- Use `MODULE_FUNC` for direct symbol invocation.
+- Configure the relevant disable switches before including headers.
+- Keep the same configuration across translation units sharing the declarations.
 
-```c
-PREDICATE_IMPLEMENT_EX(TARGET, NAME, PARAMS)
-```
-
-### Parameters
-
-- `TARGET`: Identifier of the enclosing class or package.
-- `NAME`: Predicate identifier.
-- `PARAMS`: Parameter list enclosed in parentheses `(...)`.
-
-### Return value
-
-Emits a static inline function prototype returning `bool`.
-
-### Remarks
-
-Dispatches to an object receiver or package free function based on object trait tags. Follows the implementation signature convention of returning `bool`.
-
-### Example
-
-```c
-PREDICATE_IMPLEMENT_EX(Counter, IsAtLimit, (int limit)) {
-  if (!self) return false;
-  return self->value >= limit;
-}
-```
+Function-table disabling may change generated object layout. Do not mix objects built with different table policies.
 
 ---
 
-## FUNCTION_IMPLEMENT_EX
-
-Defines the implementation prototype for a function returning type `RET`.
-
-### Syntax
-
-```c
-FUNCTION_IMPLEMENT_EX(TARGET, RET, NAME, PARAMS)
-```
-
-### Parameters
-
-- `TARGET`: Identifier of the enclosing class or package.
-- `RET`: Return type token.
-- `NAME`: Function identifier.
-- `PARAMS`: Parameter list enclosed in parentheses `(...)`.
-
-### Return value
-
-Emits a static inline function prototype returning `RET`.
-
-### Remarks
-
-Unified prototype generator for computing functions belonging to an object or package.
-
-### Example
-
-```c
-FUNCTION_IMPLEMENT_EX(MathUtils, int, Square, (int x)) {
-  return x * x;
-}
-```
-
----
-
-## PROCEDURE_IMPLEMENT_EX
-
-Defines the implementation prototype for an infallible procedure returning `void`.
-
-### Syntax
-
-```c
-PROCEDURE_IMPLEMENT_EX(TARGET, NAME, PARAMS)
-```
-
-### Parameters
-
-- `TARGET`: Identifier of the enclosing class or package.
-- `NAME`: Procedure identifier.
-- `PARAMS`: Parameter list enclosed in parentheses `(...)`.
-
-### Return value
-
-Emits a static inline function prototype returning `void`.
-
-### Remarks
-
-Unified prototype generator for infallible side-effecting operations.
-
-### Example
-
-```c
-PROCEDURE_IMPLEMENT_EX(Counter, Clear, ()) {
-  if (self) self->value = 0;
-}
-```
-
----
-
-## OBJECT_OPERATION_IMPLEMENT_EX
-
-Explicitly defines the implementation prototype for an object member operation returning `OPSTATUS`, unconditionally binding receiver pointer `self`.
-
-### Syntax
-
-```c
-OBJECT_OPERATION_IMPLEMENT_EX(CLASS, METHOD, PARAMS)
-```
-
-### Parameters
-
-- `CLASS`: Identifier of the target object class.
-- `METHOD`: Method identifier.
-- `PARAMS`: Parameter list enclosed in parentheses `(...)`.
-
-### Return value
-
-Emits a static inline function prototype returning `OPSTATUS` with receiver `(CLASS * self, ...)` or `(CLASS * self)` if `PARAMS` is empty `()`.
-
-### Remarks
-
-Recommended for object implementations to achieve zero ambiguity and eliminate any reliance on trait tags or file-scoped defines. Corresponds to companion macros:
-- `OBJECT_PREDICATE_IMPLEMENT_EX(CLASS, METHOD, PARAMS)` (returns `bool`)
-- `OBJECT_FUNCTION_IMPLEMENT_EX(CLASS, RET, METHOD, PARAMS)` (returns `RET`)
-- `OBJECT_PROCEDURE_IMPLEMENT_EX(CLASS, METHOD, PARAMS)` (returns `void`)
-
-### Example
-
-```c
-OBJECT_OPERATION_IMPLEMENT_EX(TCalculator, Add, (int a, int b, int *out)) {
-  if (!self || !out) return STATUS_CONST(INVALID_ARGUMENT);
-  *out = a + b;
-  self->result = *out;
-  return STATUS_CONST(SUCCESS);
-}
-```
-
----
-
-## PACKAGE_OPERATION_IMPLEMENT_EX
-
-Explicitly defines the implementation prototype for a package member operation returning `OPSTATUS` as a free function without a receiver.
-
-### Syntax
-
-```c
-PACKAGE_OPERATION_IMPLEMENT_EX(PKG, FUNC, PARAMS)
-```
-
-### Parameters
-
-- `PKG`: Identifier of the target package.
-- `FUNC`: Function identifier.
-- `PARAMS`: Parameter list enclosed in parentheses `(...)`.
-
-### Return value
-
-Emits a static inline free function prototype returning `OPSTATUS` with `PARAMS` or `(void)` if empty `()`.
-
-### Remarks
-
-Recommended for package implementations to eliminate any ambiguity. Corresponds to companion macros:
-- `PACKAGE_PREDICATE_IMPLEMENT_EX(PKG, FUNC, PARAMS)` (returns `bool`)
-- `PACKAGE_FUNCTION_IMPLEMENT_EX(PKG, RET, FUNC, PARAMS)` (returns `RET`)
-- `PACKAGE_PROCEDURE_IMPLEMENT_EX(PKG, FUNC, PARAMS)` (returns `void`)
-
-### Example
-
-```c
-PACKAGE_OPERATION_IMPLEMENT_EX(Math, SafeDivide, (int a, int b, int *out)) {
-  if (!out) return STATUS_CONST(INVALID_ARGUMENT);
-  if (b == 0) return STATUS_CONST(DIVISION_BY_ZERO);
-  *out = a / b;
-  return STATUS_CONST(SUCCESS);
-}
-```
-
----
-
-## TEMPLATE_DECLARE
-
-Instantiates the declarative interface of a generic template without generating method bodies.
-
-### Syntax
-
-```c
-TEMPLATE_DECLARE(NAME, SUFFIX, TYPE)
-```
-
-### Parameters
-
-- `NAME`: Template base name identifier token.
-- `SUFFIX`: Semantic type suffix identifier for the specialized name.
-- `TYPE`: C type used for specialization.
-
-### Return value
-
-Emits the declarative interface invocation `NS(TEMPLATE, NAME)(SUFFIX, TYPE)`.
-
-### Remarks
-
-Used in header files when declaring specialized types and function tables for a generic template without emitting separate implementation bodies.
-
-### Example
-
-```c
-TEMPLATE_DECLARE(TSTACK, int, int);
-```
-
----
-
-## TEMPLATE_IMPLEMENT
-
-Instantiates both the declarative interface and the implementation functions of a generic template.
-
-### Syntax
-
-```c
-TEMPLATE_IMPLEMENT(NAME, SUFFIX, TYPE)
-```
-
-### Parameters
-
-- `NAME`: Template base name identifier token.
-- `SUFFIX`: Semantic type suffix identifier for the specialized name.
-- `TYPE`: C type used for specialization.
-
-### Return value
-
-Expands both `NS(TEMPLATE, NAME)(SUFFIX, TYPE)` and `NS(TEMPLATE, NAME, IMPLEMENT)(SUFFIX, TYPE)`.
-
-### Remarks
-
-Instantiates the complete specialization in an implementation file (`.impl` or `.c`). If `TEMPLATE_<NAME>_INLINE_ONLY` is defined as 1, the implementation call is automatically suppressed for inline-only templates.
-
-### Example
-
-```c
-TEMPLATE_IMPLEMENT(TSTACK, int, int);
-```
-
----
-
-# C11 smoke test
-
-The following complete example is compiled and executed by `Tools/check_doc_examples.py`. It demonstrates package definition, object definition with fields and operations, template instantiation, and dispatch via function tables.
-
-<!-- cosmeron-c11-test -->
-```c
-#include "Cosmeron/Core/Module/Module.h"
-#include <assert.h>
-#include <stdbool.h>
-#include <stddef.h>
-
-/* 1. Declarative Package */
-PACKAGE(MathOps,
-  FUNCTION_INLINE(int, Add, (int a, int b), {
-    return a + b;
-  }),
-  PREDICATE_INLINE(IsPositive, (int x), {
-    return x > 0;
-  })
-);
-PACKAGE_IMPLEMENT(MathOps);
-
-/* 2. Declarative Object */
-OBJECT(Counter,
-  FIELDS(
-    int value;
-  ),
-  OPERATION(Increment, ()),
-  CONST_PREDICATE_INLINE(IsZero, (), {
-    return self->value == 0;
-  }),
-  CONST_FUNCTION_INLINE(int, Get, (), {
-    return self->value;
-  })
-);
-
-#define Counter_IS_OBJECT 1
-
-OPERATION_IMPLEMENT_EX(Counter, Increment, ()) {
-  self->value++;
-  return STATUS_CONST(SUCCESS);
-}
-OBJECT_IMPLEMENT(Counter);
-
-/* 3. Universal Template */
-#define TEMPLATE_TBOX(SUFFIX, TYPE) \
-  OBJECT( \
-    NS(TBox, SUFFIX), \
-    FIELDS( \
-      TYPE item; \
-    ), \
-    OPERATION(Set, (TYPE value)), \
-    CONST_FUNCTION_INLINE(TYPE, Get, (), { \
-      return self->item; \
-    }) \
-  )
-
-#define TBox_int_IS_OBJECT 1
-
-#define TEMPLATE_TBOX_IMPLEMENT(SUFFIX, TYPE) \
-  OPERATION_IMPLEMENT_EX(NS(TBox, SUFFIX), Set, (TYPE value)) { \
-    if (!self) return STATUS_CONST(INVALID_ARGUMENT); \
-    self->item = value; \
-    return STATUS_CONST(SUCCESS); \
-  }
-
-TEMPLATE_IMPLEMENT(TBOX, int, int);
-
-int main(void) {
-  /* Verify Package dispatch */
-  assert(PACKAGE_CALL(MathOps, Add, 10, 20) == 30);
-  assert(PACKAGE_CALL(MathOps, IsPositive, 5) == true);
-  assert(PACKAGE_CALL(MathOps, IsPositive, -2) == false);
-
-  /* Verify Object lifecycle and dispatch */
-  Counter c;
-  assert(Counter_Init(&c) == STATUS_CONST(SUCCESS));
-  c.value = 0;
-  assert(OBJECT_CALL_0(&c, IsZero) == true);
-  assert(OBJECT_CALL_0(&c, Increment) == STATUS_CONST(SUCCESS));
-  assert(OBJECT_CALL_0(&c, Get) == 1);
-  assert(OBJECT_CALL_0(&c, IsZero) == false);
-
-  /* Verify Template specialization */
-  TBox_int box;
-  assert(TBox_int_Init(&box) == STATUS_CONST(SUCCESS));
-  assert(OBJECT_CALL(&box, Set, 123) == STATUS_CONST(SUCCESS));
-  assert(OBJECT_CALL_0(&box, Get) == 123);
-
-  return 0;
-}
-```
-
----
-
-# Requirements
-
-- C11 compiler with standard macro support.
-- Header dependencies: `Cosmeron/Core/Module/Module.h` includes `Module.space`, `Common/Tuple.impl`, `Common/FunctionTable.impl`, `Common/Dispatch.impl`, `Common/Template.impl`, `Object.h`, and `Package.h`.
-- No dynamic memory allocation or external libraries required.
-
----
-
-# See also
-
-- [Object framework](#object-framework): receiver-based methods, function tables and object dispatch.
-- [Package framework](#package-framework): free-function declarations and package dispatch.
-- [Preprocessor](Preprocessor.md): Underlying preprocessor macro toolkit.
-- [Condition](Condition.md): Status codes (`OPSTATUS`) returned by operations.
-
-
----
-
-# Package framework
-
-A Package groups free functions under one module namespace. It may declare `FUNCTION`, `PROCEDURE`, `OPERATION`, `PREDICATE` and `COMPARISON` members and may use a function table for indirect dispatch. The declarative form is `PACKAGE(Name, members...)` inside a `MODULE(...)` declaration.
-
-`PACKAGE_API(package, member, ...)` calls through a Package function table. `PACKAGE_CALL(...)` is the compatibility alias. Module-qualified free-function calls can also use the module/package call form where the header exposes it. Prefer the helper macro declared by the owning header; do not manually reconstruct generated symbol names.
-
-# Object framework
-
-An Object declares a C structure together with its generated methods and API/function-table member. Its `FIELDS(...)` define stored state; `OPERATION`, `FUNCTION`, `PROCEDURE`, `PREDICATE` and related descriptors declare member contracts. The declarative form is `OBJECT(Name, fields and methods...)` inside a `MODULE(...)` declaration.
-
-`API(object, member, ...)` dispatches through the object's API table and supplies the receiver to the selected method. `OBJECT_CALL(...)` and `OBJECT_CALL_0(...)` are call helpers; `OBJECT_AS(object, Type)` casts an object pointer to a compatible object type. Object and Package calls are not interchangeable: an Object method receives a receiver, while a Package function does not.
-
-# Callback and Closure
-
-The umbrella `Module.h` includes `Callback/Callback.h` and `Closure/Closure.h`. These represent different callable contracts.
-
-| Concept | Representation | State |
-| --- | --- | --- |
-| Callback | Function pointer | No stored context; state must be passed through its declared arguments or other application-owned state |
-| Closure | Function pointer plus `void *context` | Carries an explicit borrowed context pointer |
-
-`TCALLBACK(NAME)` and `CALLBACK_FUNC(NAME)` name standalone callback types and helpers. The callback declaration macros include `CALLBACK_FUNCTION`, `CALLBACK_PROCEDURE`, `CALLBACK_OPERATION`, `CALLBACK_PREDICATE` and `CALLBACK_COMPARISON`. `CALLBACK_EMPTY` represents an empty callback; `CALLBACK_INVOKE` invokes it.
-
-`TCLOSURE(NAME)` and `CLOSURE_FUNC(NAME)` name closure types and helpers. The closure declaration macros include `CLOSURE_FUNCTION`, `CLOSURE_PROCEDURE`, `CLOSURE_OPERATION`, `CLOSURE_PREDICATE` and `CLOSURE_COMPARISON`. A bound closure stores a function and a context pointer; `CLOSURE_EMPTY` represents an empty closure and `CLOSURE_INVOKE` invokes a closure using its declared signature.
-
-Within a Package or Object declaration, the `CALLBACK(...)` and `CLOSURE(...)` descriptor groups declare typed callable members. Prefer a closure when the callee needs per-instance state. The context is borrowed: the caller must keep the referenced object alive for every possible invocation. Never cast between unrelated callback/closure signatures.
+# Practical guidance
+
+- Use `PACKAGE` for stateless operations and `OBJECT` only when state belongs to the instance.
+- Use `STRUCT` for POD values; it has no receiver or object function table.
+- Use `OPERATION` whenever a routine can fail and return an `OPSTATUS`.
+- Use `FUNCTION` for direct value results and `PREDICATE` for Boolean questions.
+- Use `CALLBACK` for plain function pointers; use `CLOSURE` when context must travel with the callable.
+- Keep template details in `.def` files and expose a clean public header.
+- Treat all pointers passed as context, callback data or fields according to their documented ownership; the Module system does not automatically own them.
+
+## Related modules
+
+- [Algorithm](Algorithm.md) — practical closure usage in repetition and comparison.
+- [Condition](Condition.md) — statuses and fallible operation results.
+- [Types](Types.md) — primitive and traits descriptors.
+- [Preprocessor](Preprocessor.md) — token and table helpers used by the declarative layer.
+
+## Source headers
+
+- `Codespace/Cosmeron/Core/Module/Module.h`
+- `Codespace/Cosmeron/Core/Module/Namespace.h`
+- `Codespace/Cosmeron/Core/Module/Object.h`
+- `Codespace/Cosmeron/Core/Module/Package.h`
+- `Codespace/Cosmeron/Core/Module/Callback/Callback.h`
+- `Codespace/Cosmeron/Core/Module/Closure/Closure.h`
+- `Codespace/Cosmeron/Core/Module/Common/Template.impl`
+- `Codespace/Cosmeron/Core/Module/Common/Declarative.impl`
