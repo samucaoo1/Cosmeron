@@ -1,9 +1,13 @@
 <p align="center">
-  <img src="Docs/Assets/Brand/Cosmeron-Horizontal.png"
-       alt="Cosmeron" width="600">
+  <img src="Docs/Assets/Brand/Cosmeron-Horizontal.png" alt="Cosmeron" width="600">
+  <img src="Docs/Assets/Brand/Cosmeron_%20Universo%20Além.png" alt="Cosmeron — A Universe Beyond" width="100%">
 </p>
 
 > **A universe belong**
+<p align="center">
+  <strong>A Universe Beyond</strong><br>
+  <sub> Version 1.0.0 · Nebula </sub>
+</p>
 
 ![C11](.github/badges/c11.svg)
 ![Platforms](.github/badges/platforms.svg)
@@ -16,20 +20,6 @@ library built around a **declarative DSL** for safe, modular,
 and portable systems programming—targeting native platforms
 (Linux, BSD, macOS, Windows) as well as **WebAssembly**
 (`WASI` / `Emscripten`).
-
----
-
-## Current Release
-
-### v2.0.0 — Nebula
-
-`4198759ba`
-
-*Entropy Signature · Aesthetic Identifier*
-
-A new generation begins.
-
----
 
 ## Development Progress
 
