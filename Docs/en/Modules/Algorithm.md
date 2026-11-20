@@ -183,18 +183,16 @@ The specialization's public type and function names use the supplied suffix. Def
 - `CString` repeats pointer values, not string contents.
 - `Bytes` rejects overlapping source and destination spans; it is not a general-purpose overlapping move operation.
 
-## Function-table configuration
+## Dispatch
 
-The package follows the Module function-table policy. Comparison and Repeat have separate package switches; define the relevant macro before including its header:
+The current `Comparison.h` and `Repeat.h` declarations disable function tables. Call their package functions directly through `MODULE_FUNC`; do not use `PACKAGE_API` for these packages. This is a compile-time property of these headers, not a runtime option.
 
 ~~~c
-#define ALGORITHM_DISABLE_FUNCTION_TABLE 1
-/* Comparison only: #define ALGORITHM_COMPARISON_DISABLE_FUNCTION_TABLE 1 */
-/* Repeat only:     #define ALGORITHM_REPEAT_DISABLE_FUNCTION_TABLE 1 */
-#include "Cosmeron/Core/Algorithm/Repeat.h"
+CMPOUT order = MODULE_FUNC(Algorithm, Comparison, Int32)(left, right);
+OPSTATUS status = MODULE_FUNC(Algorithm, Repeat, Operation)(count, operation);
 ~~~
 
-Choose the same function-table configuration consistently across translation units that share the generated declarations.
+`MODULE_FUNC` keeps the call bound to the generated public symbol and avoids requiring a package function table.
 
 ## Related modules
 

@@ -1,6 +1,6 @@
 # Condition
 
-The **Condition** module groups operational statuses, rich error values, scoped cleanup, panic handling and structured exception frames. Use the lightest mechanism that fits the failure: return an `OPSTATUS` for ordinary fallible operations, attach a `Condition_Error` when context or a cause chain is useful, and reserve panic/exception facilities for control-flow contracts that require them.
+The **Condition** module groups operational statuses, rich error values, scoped cleanup, panic handling and structured exception frames. Use the lightest mechanism that fits the failure: return an `OPSTATUS` for ordinary fallible operations, attach a `Condition_Error` when context or a cause chain is useful, and reserve panic/exception facilities for control-flow contracts that require them. The Condition headers disable function-table dispatch; call package functions and `Error` methods directly through `MODULE_FUNC(Condition, ...).
 
 ## Headers
 
@@ -77,11 +77,12 @@ Header: `Error.h`.
 ~~~c
 MODULE_TYPE(Condition, Error) error = {0};
 
-OPSTATUS status = OBJECT_CALL(&error, Create, STATUS_CONST(INVALID_ARGUMENT), "Invalid account identifier");
+OPSTATUS status = MODULE_FUNC(Condition, Error, Create)(
+    &error, STATUS_CONST(INVALID_ARGUMENT), "Invalid account identifier");
 
 if (status == STATUS_CONST(SUCCESS)) {
     const char *message =
-        OBJECT_CALL_0(&error, Message);
+        MODULE_FUNC(Condition, Error, Message)(&error);
 }
 ~~~
 
@@ -172,7 +173,7 @@ A `longjmp` does not unwind arbitrary C stack objects or run C++-style destructo
 
 ---
 
-# Choosing a mechanism
+# Contracts and choosing a mechanism
 
 - Return `OPSTATUS` for routine validation, I/O, allocation and arithmetic failures.
 - Use `Condition_Error` when a status needs a message, diagnostic origin or causal chain.

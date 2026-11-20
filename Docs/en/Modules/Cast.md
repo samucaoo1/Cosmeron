@@ -2,6 +2,8 @@
 
 The **Cast** module provides generated, checked conversions between supported C primitive types. It belongs to **Core** and complements `Type`: Type defines primitive aliases and metadata, while Cast defines conversions with range checks where required.
 
+## Headers
+
 ```c
 #include "Cosmeron/Core/Types/Cast/Cast.h"
 ```
@@ -22,11 +24,27 @@ Generated functions return `OPSTATUS` and write the converted value through an o
 
 ---
 
-# Integer conversions
+# API reference
+
+## Integer conversions
 
 The Integer package generates conversion operations for source types `Uint64`, `Uint32`, `Uint16`, `Uint8`, `Int64`, `Int32`, `Int16`, `Int8` and `Size`. It only generates destination pairs declared by `Integer.h`; an arbitrary pair is not automatically available.
 
-The generated operation name concatenates the source type, the literal `to`, and the destination suffix. For example:
+The generated operation name concatenates the source type, the literal `to`, and the destination suffix. The following table lists the exact destination suffixes declared by `Integer.h`; it is intentionally not a complete source/destination Cartesian product.
+
+| Source | Generated destination suffixes |
+| --- | --- |
+| `Uint64` | `32`, `16`, `8`, `I64`, `I32`, `I16`, `I8`, `Size` |
+| `Uint32` | `16`, `8`, `I64`, `I32`, `I16`, `I8` |
+| `Uint16` | `8`, `I64`, `I32`, `I16`, `I8` |
+| `Uint8` | `I64`, `I32`, `I16`, `I8` |
+| `Int64` | `32`, `16`, `8`, `U64`, `U32`, `U16`, `U8`, `Size` |
+| `Int32` | `16`, `8`, `U64`, `U32`, `U16`, `U8`, `Size` |
+| `Int16` | `8`, `U64`, `U32`, `U16`, `U8` |
+| `Int8` | `U64`, `U32`, `U16`, `U8` |
+| `Size` | `U64`, `U32`, `U16`, `U8`, `I64`, `I32` |
+
+For example:
 
 ```c
 uint32_t out = 0;
@@ -38,9 +56,20 @@ The operation validates its output pointer and returns `ARITHMETIC_OVERFLOW` whe
 
 ---
 
-# Floating-point conversions
+## Floating-point conversions
 
 The Float package declares conversions among `Float`, `Double`, `LongDouble`, selected signed and unsigned integer types, and `Size`. Its conversion table is explicit; it is not a complete Cartesian product of every primitive type.
+
+The exact source/destination suffix pairs are:
+
+| Source | Generated destination suffixes |
+| --- | --- |
+| `Float` | `Double`, `LongDouble`, `I64`, `I32`, `I16`, `I8`, `U64`, `U32`, `U16`, `U8`, `Size` |
+| `Double` | `Float`, `LongDouble`, `I64`, `I32`, `I16`, `I8`, `U64`, `U32`, `U16`, `U8`, `Size` |
+| `LongDouble` | `Float`, `Double`, `I64`, `I32`, `I16`, `I8`, `U64`, `U32`, `U16`, `U8`, `Size` |
+| `Int64`, `Int32`, `Uint64`, `Uint32`, `Size` | `Float`, `Double`, `LongDouble` |
+
+
 
 ```c
 double out = 0.0;
@@ -48,13 +77,13 @@ OPSTATUS status =
     MODULE_FUNC(Cast, Float, FloattoDouble)(input, &out);
 ```
 
-Float-to-integer operations check configured target bounds before casting. Float narrowing uses the maximum bound provided by its table entry. Integer-to-floating conversions are direct conversions and may lose precision when the destination format cannot exactly represent the source value.
+Float-to-integer operations check configured target bounds before casting and reject NaN and out-of-range values. Float narrowing checks the maximum bound provided by its table entry. Integer-to-floating conversions are direct conversions and may lose precision when the destination format cannot exactly represent the source value. Floating-to-integer conversions use the C cast after validation, so fractional values are truncated toward zero rather than rounded to nearest.
 
 Check `OPSTATUS` before using the output. Overflow is reported as `ARITHMETIC_OVERFLOW`; a null output pointer returns `INVALID_ARGUMENT`.
 
 ---
 
-# Conversion generator
+## Conversion generator
 
 `Converting.h` exposes the specification vocabulary used by the package headers:
 
@@ -71,10 +100,24 @@ These are primarily code-generation tools for defining conversion tables. Most a
 
 ---
 
-# Guidance and limitations
+# Contracts and limitations
 
 - Prefer Cast over an unchecked C cast when the API provides the required pair and runtime range validation is needed.
 - Range safety is not the same as exactness: a representable integer may still lose precision when converted to floating point.
 - Only conversions explicitly listed in `Integer.h` and `Float.h` are generated.
 - Cast does not provide conversions for arbitrary user-defined structs, pointers, strings or numeric types from the separate `Numeric` module.
 - Unit conversion, rounding policy and semantic validation remain application responsibilities.
+
+
+## Related modules
+
+- [Types](Types.md) — primitive type aliases and metadata.
+- [Numeric](Numeric.md) — rational, fixed-point, complex and multi-limb numeric representations.
+- [Module](Module.md) — generated package functions and namespace access.
+
+## Source headers
+
+- `Codespace/Cosmeron/Core/Types/Cast/Cast.h`
+- `Codespace/Cosmeron/Core/Types/Cast/Converting.h`
+- `Codespace/Cosmeron/Core/Types/Cast/Integer.h`
+- `Codespace/Cosmeron/Core/Types/Cast/Float.h`

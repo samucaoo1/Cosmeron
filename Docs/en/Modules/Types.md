@@ -32,7 +32,9 @@ Include individual headers when only one facility is required. The `Impl` and `T
 
 ---
 
-# Primitive types
+# API reference
+
+## Primitive types
 
 Header: `Primitive.h`.
 
@@ -60,7 +62,7 @@ Use the namespaced aliases when declaring interfaces shared with other Cosmeron 
 
 ---
 
-# Type traits
+## Type traits
 
 Header: `Traits.h`.
 
@@ -72,7 +74,7 @@ Header: `Traits.h`.
 
 The package supplies built-in descriptors for primitive types and a descriptor for C strings.
 
-## Introspection
+### Introspection
 
 | Method | Purpose |
 | --- | --- |
@@ -84,7 +86,7 @@ The package supplies built-in descriptors for primitive types and a descriptor f
 | `HasFlags` | Tests a bitmask of descriptor flags. |
 | `NeedsDispose` | Tests whether the value needs disposal. |
 
-## Type-erased lifecycle and value operations
+### Type-erased lifecycle and value operations
 
 | Method | Contract |
 | --- | --- |
@@ -104,7 +106,7 @@ A descriptor's callback pointers and the descriptor itself must outlive every op
 
 ---
 
-# TaggedUnion
+## TaggedUnion
 
 Header: `TaggedUnion.h`.
 
@@ -139,7 +141,7 @@ Getters are strict: they expect the active tag to match the requested type. Use 
 
 ---
 
-# Any
+## Any
 
 Header: `Any.h`.
 
@@ -147,7 +149,7 @@ Header: `Any.h`.
 
 The object stores a pointer to `Type_Traits` and either inline bytes or a heap pointer. Its lifetime operations use the descriptor callbacks.
 
-## Lifecycle and value management
+### Lifecycle and value management
 
 | Method | Contract |
 | --- | --- |
@@ -158,7 +160,7 @@ The object stores a pointer to `Type_Traits` and either inline bytes or a heap p
 | `Move(destination, source)` | Transfers the stored value. |
 | `Swap(left, right)` | Exchanges two containers. |
 
-## Introspection and access
+### Introspection and access
 
 | Method | Contract |
 | --- | --- |
@@ -198,7 +200,7 @@ Always dispose an Any value before its storage goes out of scope if its descript
 
 ---
 
-# Optional
+## Optional
 
 Header: `Optional.h` and template definition `Optional.def`.
 
@@ -228,7 +230,7 @@ The generated object stores `hasValue` plus an inline `value`.
 
 ---
 
-# Result
+## Result
 
 Header: `Result.h` and template definition `Result.def`.
 
@@ -255,7 +257,7 @@ Use Result when a function needs to return either a typed value or a richer erro
 
 ---
 
-# ByteTag
+## ByteTag
 
 Header: `ByteTag.h` and template definition `ByteTag.def`.
 
@@ -263,13 +265,13 @@ Built-in tags are `ByteTag16`, `ByteTag32` and `ByteTag64`. Each stores an unsig
 
 | Group | Operations |
 | --- | --- |
-| Construction | `From.String` |
+| Construction | `From.String(chars)`, `From.UInt(value)`, `From.Bytes(bytes, length)` |
 | Binary input | `Read.BE`, `Read.LE` |
 | Binary output | `Write.BE`, `Write.LE` |
 | Conversion | `To.String`, `To.UInt` |
 | Inspection | `Text`, `IsPrintable`, `Equal`, `Compare` |
 
-`Read` and `Write` take caller-provided byte buffers and use explicit big-endian or little-endian ordering, independent of host byte order. `To.String` requires a destination buffer large enough for all tag bytes plus the terminating NUL. Non-printable bytes are represented through the module's printable-text formatting rather than assumed to be valid display characters.
+`From.String` and `From.Bytes` pack into the fixed tag width and pad unused positions with spaces. `Read.BE`/`Read.LE` consume exactly the tag width from a caller-provided source pointer; `Write.BE`/`Write.LE` write exactly that width to a destination pointer. They use explicit byte ordering, independent of host byte order. The caller must provide at least the tag width in readable or writable bytes. `To.String` requires a destination buffer large enough for all tag bytes plus the terminating NUL. Non-printable bytes are represented through the module's printable-text formatting rather than assumed to be valid display characters.
 
 The compile-time helpers in the header can construct common constants from byte literals. Treat ByteTag as a compact identifier or FourCC-style tag, not as a general character string.
 

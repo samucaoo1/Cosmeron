@@ -2,7 +2,7 @@
 
 The **Tuple** module provides fixed-layout, typed POD structures for grouping two to five values. It includes both positional tuple types and semantic two-value aliases, with generated pack and unpack functions.
 
-## Header
+## Headers
 
 ~~~c
 #include "Cosmeron/Modules/Tuple/Tuple.h"
@@ -26,7 +26,7 @@ Each specialization is a `STRUCT` with ordinary C storage. It has no heap owners
 
 ---
 
-# Built-in element types
+## Built-in element types
 
 The `TUPLE_TYPE_TABLE` in `Modules/Tuple/Impl/Common.inc` supplies these element suffixes:
 
@@ -68,15 +68,25 @@ OPSTATUS status = MODULE_FUNC(Tuple, Pair, Int32, Unpack)(
 
 ## Dual
 
-`Dual` is also a two-value POD, but provides a broader set of semantic aliases: `x/y`, `col/row`, `length/width`, `real/imaginary`, `state1/state2`, `begin/end`, `first/second` and others.
+`Dual` is a two-value POD whose first field aliases are `value1`, `a`, `x1`, `x`, `col`, `length`, `real`, `state1`, `begin`, `first` and `start`. Its second field aliases are `value2`, `b`, `x2`, `y`, `row`, `width`, `imaginary`, `state2`, `end`, `second` and `last`.
+
+~~~c
+MODULE_TYPED(Tuple, Dual, UInt16) dimensions =
+    MODULE_FUNC(Tuple, Dual, UInt16, Pack)(80U, 25U);
+
+uint16_t columns = dimensions.col;
+uint16_t rows = dimensions.row;
+~~~
 
 Use the alias that expresses the meaning of the values in the consuming code. Because these are union aliases, write one semantic interpretation and read it through the corresponding alias; do not treat the aliases as independent storage.
 
 ## Triple, Quad and Penta
 
-- `Triple` exposes ordered first/second/third values, positional aliases and a fixed three-element value array.
-- `Quad` exposes four ordered values and semantic aliases such as left/right/top/bottom and red/green/blue/alpha.
-- `Penta` exposes five ordered values and a five-element value array.
+- `Triple` exposes `first`/`second`/`third`, `a`/`b`/`c`, `x`/`y`/`z`, `length`/`width`/`height`, `red`/`green`/`blue`, and `value[3]`/`values[3]` aliases.
+- `Quad` exposes `first` through `fourth`, positional aliases, `value[4]`/`values[4]`, geometric aliases `left`, `right`, `top`, `bottom` and color aliases `red`, `green`, `blue`, `alpha`.
+- `Penta` exposes `first` through `fifth`, `value[5]` and `values[5]`.
+
+For a rectangle-like value, for example, `MODULE_FUNC(Tuple, Quad, UInt16, Pack)(left, right, top, bottom)` returns a `Quad` whose fields can be read using those semantic aliases.
 
 The exact aliases are intended for convenient naming, but the values still occupy a single shared POD tuple representation.
 

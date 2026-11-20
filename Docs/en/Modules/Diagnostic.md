@@ -1,6 +1,6 @@
 # Diagnostic
 
-The **Diagnostic** module stores source-origin metadata, formats errors into caller-owned buffers and captures stack traces where the target platform provides support.
+The **Diagnostic** module stores source-origin metadata, formats errors into caller-owned buffers and captures stack traces where the target platform provides support. Its `Context`, `Format` and `Stacktrace` headers disable function tables; use direct `MODULE_FUNC(Diagnostic, ...)` calls for these APIs.
 
 ## Headers
 
@@ -42,7 +42,8 @@ Type: `MODULE_TYPE(Diagnostic, Context)`.
 ~~~c
 MODULE_TYPE(Diagnostic, Context) context = {0};
 
-OPSTATUS status = OBJECT_CALL(&context, Create, __FILE__, (uint32_t)__LINE__, __func__,
+OPSTATUS status = MODULE_FUNC(Diagnostic, Context, Create)(
+    &context, __FILE__, (uint32_t)__LINE__, __func__,
     "Loading configuration", NULL);
 ~~~
 
@@ -72,6 +73,8 @@ if (status == STATUS_CONST(SUCCESS)) {
 }
 ~~~
 
+`Context.h`, `Stacktrace.h` and `Format.h` disable Diagnostic function tables. Invoke object methods with direct `MODULE_FUNC(Diagnostic, Type, Method)` calls; the package formatters are also called directly with `MODULE_FUNC`.
+
 The caller owns the buffer. Always pass its actual capacity and check the returned status before consuming the output. A formatting operation can report insufficient space; do not assume that a truncated buffer contains a complete diagnostic.
 
 ## Stacktrace object
@@ -91,9 +94,10 @@ Type: `MODULE_TYPE(Diagnostic, Stacktrace)`. The object stores up to the configu
 ~~~c
 MODULE_TYPE(Diagnostic, Stacktrace) trace = {0};
 
-OPSTATUS status = OBJECT_CALL(&trace, Capture, 0U, 16U);
+OPSTATUS status = MODULE_FUNC(Diagnostic, Stacktrace, Capture)(
+    &trace, 0U, 16U);
 
-size_t count = OBJECT_CALL_0(&trace, FrameCount);
+size_t count = MODULE_FUNC(Diagnostic, Stacktrace, FrameCount)(&trace);
 ~~~
 
 Frame capture is platform-dependent and should be treated as best effort. The object stores raw addresses; it does not promise symbol names, source-line resolution or a portable unwinder on every target. Check the status from `Capture`, `FrameAt` and `Format`.

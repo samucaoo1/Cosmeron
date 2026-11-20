@@ -12,7 +12,9 @@ The aggregate header includes the Rational, Complex, Fixed, Bigint and Decimal d
 
 ---
 
-# Overview and available specializations
+# Overview
+
+## Available specializations
 
 | Family | Representation | Current built-in specializations |
 | --- | --- | --- |
@@ -122,7 +124,7 @@ Multiplication and conversion use the wider intermediate integer type configured
 
 Headers: `Bigint.h` and `Decimal.h`. Standard types: `MODULE_TYPE(Numeric, Bigint128)` through `Bigint1024` and `MODULE_TYPE(Numeric, Decimal128)` through `Decimal1024`.
 
-These are fixed-width objects backed by little-endian arrays of 64-bit limbs. They are not dynamically growing integers. The available method families are:
+These are fixed-width objects backed by arrays of 64-bit limbs, with the least-significant limb at index zero. They are not dynamically growing integers. `Decimal` is not a decimal floating-point or scaled-decimal type: it uses the same integer-limb representation and arithmetic model, with decimal text formatting; use `Fixed` or `Rational` when fractional values are required. The available method families are:
 
 | Group | Methods |
 | --- | --- |
@@ -160,7 +162,7 @@ The limb representation is exposed in the generated type. Directly writing limbs
 # Error and arithmetic behavior
 
 - Fallible operations return `OPSTATUS`. A failed operation may leave the receiver unchanged when the implementation uses a temporary result, but callers should rely on the documented method contract rather than assume transactional behavior everywhere.
-- `INVALID_ARGUMENT` is used for invalid pointers and invalid output combinations; a zero divisor is reported as `DIVISION_BY_ZERO`.
+- `INVALID_ARGUMENT` is used for invalid pointers and invalid output combinations. Zero-divisor status is API-specific: Bigint/Decimal limb division reports `DIVISION_BY_ZERO`, while Rational, Fixed and Complex operations currently report `INVALID_ARGUMENT` for zero denominators/divisors.
 - `ARITHMETIC_OVERFLOW` is returned when a fixed-width multi-limb operation cannot represent its result.
 - Rational and fixed-point storage is bounded by the underlying C integer types.
 - Complex values are floating-point values and can encounter rounding, overflow, underflow and NaN behavior.

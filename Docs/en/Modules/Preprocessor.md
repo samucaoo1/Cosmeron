@@ -10,7 +10,15 @@ It is **compile-time-only**. Unlike ordinary Cosmeron modules, these APIs have n
 #include "Cosmeron/Core/Preprocessor/Arguments.h"
 #include "Cosmeron/Core/Preprocessor/Boolean.h"
 #include "Cosmeron/Core/Preprocessor/Operations.h"
+#include "Cosmeron/Core/Preprocessor/Eval.h"
 #include "Cosmeron/Core/Preprocessor/Foreach.h"
+#include "Cosmeron/Core/Preprocessor/Map.h"
+#include "Cosmeron/Core/Preprocessor/Unroll.h"
+#include "Cosmeron/Core/Preprocessor/Sequence.h"
+#include "Cosmeron/Core/Preprocessor/Tree.h"
+#include "Cosmeron/Core/Preprocessor/Tokens.h"
+#include "Cosmeron/Core/Preprocessor/While.h"
+#include "Cosmeron/Core/Preprocessor/Detect/Detect.h"
 ```
 
 ---
@@ -55,7 +63,7 @@ These are equivalent **as tokens**. They do not represent two public runtime fun
 | `PP_ARG_COUNT` | 1–256 nonempty arguments |
 | `PP_FOREACH` (Dimensions 1–5) | 1–256 nonempty arguments per dimension |
 | `PP_FOREACH_CHUNKS` (2D, 3D, 4D) | Up to $256 \times 256 = 65,536$ (2D), $256^3 \approx 1.67 \times 10^7$ (3D), $256^4 \approx 4.29 \times 10^9$ (4D) |
-| `PP_MAP` | Unbounded recursive mapping over `PP_EVAL` |
+| `PP_MAP` | Nestable recursive mapping over `PP_EVAL` (subject to expansion limits) |
 | `PP_BOOL` | Literal integer tokens 0–256 |
 | `PP_OP_CAT` (variadic via Tree) and `PP_OP_CAT2`–`PP_OP_CAT32` | 1–32 pasted operands |
 | `PP_REPEAT` | Counts 0–256 |
@@ -76,7 +84,7 @@ These are equivalent **as tokens**. They do not represent two public runtime fun
 | [`PP_OP_EXPAND`](#pp_op_expand) | Normal argument expansion |
 | [`PP_OP_CAT`](#pp_op_cat) | Primitive token paste |
 | [`PP_OP_CAT2`](#pp_op_cat2) | Expanded two-token paste |
-| [`PP_OP_CAT3`–`PP_OP_CAT10`](#pp_op_cat3-to-pp_op_cat10) | Multitoken concatenation |
+| [`PP_OP_CAT3`–`PP_OP_CAT32`](#pp_op_cat3-to-pp_op_cat32) | Multitoken concatenation |
 | [`PP_ARG_COUNT`](#pp_arg_count) | Counts arguments |
 | [`PP_BOOL`](#pp_bool) | Converts supported integer tokens to 0/1 |
 | [`PP_BOOL_NOT`](#pp_bool_not) | Negates |
@@ -90,12 +98,12 @@ These are equivalent **as tokens**. They do not represent two public runtime fun
 | [`PP_OBSTRUCT`](#pp_obstruct) | Deferral barrier |
 | [`PP_EVAL`](#pp_eval) | Repeated evaluation |
 | [`PP_FOREACH`](#pp_foreach) | Applies macro to each item |
-| [`PP_MAP`](#pp_map) | Foreach alias |
+| [`PP_MAP`](#pp_map) | Nestable recursive mapping with configurable separators and context |
 | [`PP_REPEAT`](#pp_repeat) | Repeats macro by index |
 | [`PP_DEC`](#pp_dec) | Decrements limited integer token |
 | [`PP_SEQ_FIRST`](#pp_seq_first) | Selects first |
 | [`PP_SEQ_REST`](#pp_seq_rest) | Selects tail |
-| [`PP_SEQ_GET_1`–`PP_SEQ_GET_10`](#pp_seq_get_1-to-pp_seq_get_10) | Indexes argument lists |
+| [`PP_SEQ_GET_1`–`PP_SEQ_GET_256`](#pp_seq_get_1-to-pp_seq_get_256) | Selects one item from an argument list |
 | [`PP_TOKEN_*`](#token-helpers) | Punctuation |
 | [`PP_WHILE`](#pp_while) | Recursive conditional transform |
 | [Compiler detection](#compiler-detection) | Compiler family |
@@ -262,7 +270,7 @@ int PP_OP_CAT2(PART, _Count) = 10;
 
 ---
 
-### PP_OP_CAT3 to PP_OP_CAT16
+### PP_OP_CAT3 to PP_OP_CAT32
 
 Concatenates between three and sixteen operands by composing the expanding concatenation primitives.
 
@@ -1271,7 +1279,7 @@ int values[] = { PP_SEQ_REST(0, 10, 20, 30) };
 
 ---
 
-### PP_SEQ_GET_1 to PP_SEQ_GET_10
+### PP_SEQ_GET_1 to PP_SEQ_GET_256
 
 Selects the indicated **one-based** position in a comma-separated argument list.
 
@@ -1505,7 +1513,7 @@ The `Detect` headers expose 0/1 compile-time flags. An aggregate `*_KNOWN` expre
 
 ---
 
-## Compiler detection
+### Compiler detection
 
 Header: `Cosmeron/Core/Preprocessor/Detect/Compiler.h`
 
@@ -1560,7 +1568,7 @@ Numerical 0 or 1 for the family flags; a Boolean preprocessor expression for `CO
 
 ---
 
-## Operating-system detection
+### Operating-system detection
 
 Header: `Cosmeron/Core/Preprocessor/Detect/OperationSystem.h`
 
@@ -1641,7 +1649,7 @@ Numerical 0/1 flags and Boolean aggregate expressions.
 
 ---
 
-## Processor detection
+### Processor detection
 
 Header: `Cosmeron/Core/Preprocessor/Detect/Processor.h`
 
@@ -1697,7 +1705,7 @@ None.
 
 ---
 
-## C standard library detection
+### C standard library detection
 
 Header: `Cosmeron/Core/Preprocessor/Detect/Library.h`
 
@@ -1866,5 +1874,17 @@ enum {
 - `Codespace/Cosmeron/Core/Preprocessor/Arguments.h`
 - `Codespace/Cosmeron/Core/Preprocessor/Boolean.h`
 - `Codespace/Cosmeron/Core/Preprocessor/Operations.h`
+- `Codespace/Cosmeron/Core/Preprocessor/Eval.h`
 - `Codespace/Cosmeron/Core/Preprocessor/Foreach.h`
+- `Codespace/Cosmeron/Core/Preprocessor/Map.h`
+- `Codespace/Cosmeron/Core/Preprocessor/Unroll.h`
+- `Codespace/Cosmeron/Core/Preprocessor/Sequence.h`
+- `Codespace/Cosmeron/Core/Preprocessor/Tree.h`
+- `Codespace/Cosmeron/Core/Preprocessor/Tokens.h`
+- `Codespace/Cosmeron/Core/Preprocessor/While.h`
+- `Codespace/Cosmeron/Core/Preprocessor/Detect/Detect.h`
+- `Codespace/Cosmeron/Core/Preprocessor/Detect/Compiler.h`
+- `Codespace/Cosmeron/Core/Preprocessor/Detect/Library.h`
+- `Codespace/Cosmeron/Core/Preprocessor/Detect/OperationSystem.h`
+- `Codespace/Cosmeron/Core/Preprocessor/Detect/Processor.h`
 - `Codespace/Cosmeron/Core/Preprocessor/Compiling.inc`

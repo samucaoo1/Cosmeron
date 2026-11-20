@@ -25,9 +25,17 @@ The aggregate includes the following public areas:
 
 ---
 
-# Unicode and encodings
+# Overview
 
-## Codepoint
+Text is divided into Unicode validation/encoding, non-owning views, owned strings, incremental builders, bounded formatting, in-memory character/attribute grids and attributed UTF-8 output. These are data and formatting primitives; they do not provide terminal input or a rendering backend.
+
+---
+
+# API reference
+
+## Unicode and encodings
+
+### Codepoint
 
 Header: `Unicode/Codepoint.h`. Package: `Text_Codepoint`.
 
@@ -47,7 +55,7 @@ bool scalar = MODULE_FUNC(Text, Codepoint, Is, Scalar)(codepoint);
 
 Use `Scalar` before encoding. `Valid` alone permits surrogate code points, which are not Unicode scalar values.
 
-## UTF8
+### UTF8
 
 Header: `Encoding/UTF8.h`. Input and output buffers use `unsigned char` bytes.
 
@@ -70,7 +78,7 @@ OPSTATUS status = MODULE_FUNC(Text, UTF8, Encode)(
 
 The output buffer capacity is in bytes. Decoding receives the available byte count and writes the decoded code point and consumed byte count through output parameters. Check every status before reading output values.
 
-## UTF16
+### UTF16
 
 Header: `Encoding/UTF16.h`. Input and output use `MODULE_TYPE(Text, Char16)` code units.
 
@@ -83,7 +91,7 @@ Header: `Encoding/UTF16.h`. Input and output use `MODULE_TYPE(Text, Char16)` cod
 
 UTF-16 capacity and consumed-size values are measured in code units, not bytes. A supplementary scalar requires a surrogate pair.
 
-## Display width
+### Display width
 
 Header: `Unicode/Width.h`. Package: `Text_Width`.
 
@@ -96,9 +104,9 @@ The width calculation is a display-oriented estimate, not a full shaping or term
 
 ---
 
-# Views and strings
+## Views and strings
 
-## View
+### View
 
 Header: `View/View.h`.
 
@@ -118,7 +126,7 @@ The generated non-owning types are `MODULE_TYPE(Text, View8)`, `View16` and `Vie
 
 A view does not allocate, copy, or append a terminator. It is valid only while its underlying storage remains valid and unmoved. Lengths and indexes are code units unless a specifically code-point-aware operation is used.
 
-## Owned strings
+### Owned strings
 
 Header: `String/String.h`. The aggregate generates `String8`, `String16` and `String32`. All three use the same generated API; the element type differs:
 
@@ -145,14 +153,15 @@ The generated object methods are:
 
 ~~~c
 MODULE_TYPE(Text, String8) text = {0};
+const MODULE_TYPE(Text, Char8) input[] = "Cosmeron";
 
 OPSTATUS status = OBJECT_CALL(&text, Create, 16U);
 if (status == STATUS_CONST(SUCCESS)) {
-    status = OBJECT_CALL(&text, Append, "Cosmeron");
+    status = OBJECT_CALL(&text, Append, input);
 }
 if (status == STATUS_CONST(SUCCESS)) {
     size_t length = OBJECT_CALL_0(&text, Length);
-    const char *data = OBJECT_CALL_0(&text, CStr);
+    const MODULE_TYPE(Text, Char8) *data = OBJECT_CALL_0(&text, CStr);
     (void)length;
     (void)data;
 }
@@ -161,7 +170,7 @@ if (status == STATUS_CONST(SUCCESS)) {
 
 The string owns its backing allocation. A pointer returned by `CStr` is borrowed and can be invalidated by mutation, capacity changes or destruction. Use `View`/ `Slice` when a non-owning range is sufficient and keep the owner alive while the view is used.
 
-## C-string utilities
+### C-string utilities
 
 Header: `String/CString/CString.h`. Package: `Text_CString`.
 
@@ -183,7 +192,7 @@ The package provides:
 
 Prefer bounded operations whenever the available extent is known and the input may not contain a terminator inside that extent. `Copy` and `Concat` receive the destination capacity. `Duplicate` allocates a new string; release it with `Free`.
 
-## String Builder
+### String Builder
 
 Header: `String/Builder/Builder.h`. Type: `MODULE_TYPE(Text, Builder)`.
 
@@ -206,9 +215,9 @@ The Builder owns its buffer. `CStr` and `View` return borrowed references and mu
 
 ---
 
-# Formatting
+## Formatting
 
-## Format
+### Format
 
 Header: `Format/Format.h`. Package: `Text_Format`.
 
@@ -221,7 +230,7 @@ Header: `Format/Format.h`. Package: `Text_Format`.
 
 Prefer `Buffer` or `Variadic`. The unsafe forms intentionally omit the output-capacity argument and must only be used when the destination size is guaranteed.
 
-## Human-readable byte sizes
+### Human-readable byte sizes
 
 Header: `Format/BytesHuman.h`. Package: `Text_BytesHuman`.
 
@@ -235,21 +244,21 @@ The configuration enum defines IEC base 1024, SI base 1000, default precision 2 
 
 ---
 
-# Character and attribute grids
+## Character and attribute grids
 
-## Scope and layout
+### Scope and layout
 
 Grid operations work on memory-backed cells. The module does **not** write to stdout, control a terminal, read stdin, call ncurses or display a canvas. Rendering and terminal input belong to an application/backend layer.
 
 The character variants use `Char8`, `Char16` and `Char32`. Grid dimensions and positions use `MODULE_TYPED(Tuple, Dual, UInt16)`; rectangular regions use `MODULE_TYPED(Tuple, Quad, UInt16)`.
 
-## Character-only grid
+### Character-only grid
 
 Header: `Grid/Char.h`. Generated object types follow `MODULE_TYPED(Text, Char, Char8)`, `Char16` and `Char32`.
 
 The Char grid stores only characters. Its object methods include `Create(size)`, `Destroy`, `Resize(size)`, `Recreate(size)`, `Clone(source)`, `Clear`, `ReadCell(position, outCharacter)`, `WriteCell(position, character)`, `Fill(character)`, `FillRegion(region, character)`, `Read(region, destination)` and `Write`/`Write.Region`. `IsValid` checks the object state.
 
-## Composite text grid
+### Composite text grid
 
 Header: `Grid/Grid.h`. Generated object types are `MODULE_TYPED(Text, Grid, Char8)`, `Char16` and `Char32`.
 
@@ -257,7 +266,7 @@ A composite grid stores a character plane together with an attribute plane. Its 
 
 The grid owns its backing planes. A resize/recreate/destroy can invalidate previously borrowed cell or data pointers. Use the status return from all mutating operations.
 
-## Attribute plane and colors
+### Attribute plane and colors
 
 Header: `Grid/Attribute.h`.
 
@@ -269,7 +278,7 @@ The `Attribute` package exposes `Default`, `IsEmpty`, `IsValid`, `Create`, `Dest
 
 ---
 
-# Attributed text
+## Attributed text
 
 Header: `Attributed/Attributed.h`. Type: `MODULE_TYPE(Text, Attributed)`.
 
@@ -286,11 +295,11 @@ Attributed text stores UTF-8 content with associated attribute spans.
 | `RenderAnsi(outBuffer, capacity, outWritten)` | Renders ANSI escape sequences into a caller-owned buffer. |
 | `Text`, `Length`, `SpanCount`, `Spans` | Inspects the current contents. |
 
-The text and span arrays are managed by the Attributed object. The returned text/spans pointers are borrowed. `RenderAnsi` only produces a string; it does not print it or configure the terminal.
+`Attributed.h` disables the Text object function table; call its methods directly through `MODULE_FUNC(Text, Attributed, Method)` rather than `OBJECT_CALL`. The text and span arrays are managed by the Attributed object. The returned text/spans pointers are borrowed. `RenderAnsi` only produces a string; it does not print it or configure the terminal.
 
 ---
 
-# Error handling, ownership and safe use
+# Contracts and ownership rules
 
 - Buffer-writing encoders, formatters, grid operations and string operations return `OPSTATUS`; check it before reading outputs.
 - UTF-8 lengths are bytes; UTF-16 lengths are code units; code-point counts are neither.

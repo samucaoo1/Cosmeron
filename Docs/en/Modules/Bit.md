@@ -59,7 +59,7 @@ Mutation operations receive a pointer to the value and return `OPSTATUS`. `Check
 
 ### Masks
 
-`Mask.Set`, `Mask.Clear` and `Mask.Flip` modify all bits selected by the mask. `Mask.CheckAll` tests whether every requested bit is set; `Mask.CheckAny` tests whether at least one is set.
+`Mask.Set`, `Mask.Clear` and `Mask.Flip` are procedures: they modify all bits selected by the mask and silently do nothing when the value pointer is null. `Mask.CheckAll` tests whether every requested bit is set; `Mask.CheckAny` tests whether at least one is set. `Mask.Range` is fallible and reports an invalid output pointer or out-of-width/inverted endpoints through `OPSTATUS`.
 
 `Mask.Range(high, low, outMask)` creates a mask covering both endpoints. It rejects an inverted range and indexes outside the scalar width.
 
@@ -102,16 +102,16 @@ The generated object types are `MODULE_TYPE(Bitset128)`, `MODULE_TYPE(Bitset256)
 ~~~c
 MODULE_TYPE(Bitset128) permissions = {0};
 
-OPSTATUS status = OBJECT_CALL_0(&permissions, Clear);
+OPSTATUS status = MODULE_FUNC(Bitset128, Clear)(&permissions);
 if (status == STATUS_CONST(SUCCESS)) {
-    status = OBJECT_CALL(&permissions, Bit, Set, 7U);
+    status = MODULE_FUNC(Bitset128, Bit, Set)(&permissions, 7U);
 }
 
-bool hasPermission = OBJECT_CALL(&permissions, Bit, Test, 7U);
-size_t setCount = OBJECT_CALL_0(&permissions, Count);
+bool hasPermission = MODULE_FUNC(Bitset128, Bit, Test)(&permissions, 7U);
+size_t setCount = MODULE_FUNC(Bitset128, Count)(&permissions);
 ~~~
 
-Bitset operations that mutate state return `OPSTATUS`. The checked `Bit.Check` form writes a Boolean to an output parameter; the convenience `Bit.Test` form returns `bool` directly and evaluates to false for an invalid object or out-of-range index. `Find` methods return `NOT_FOUND` when no matching bit exists.
+`Bitset.h` deliberately disables its object function table, so call its generated methods directly with `MODULE_FUNC(Bitset128, ...)`; `OBJECT_CALL` is not available for these types. Bitset operations that mutate state return `OPSTATUS`. The checked `Bit.Check` form writes a Boolean to an output parameter; the convenience `Bit.Test` form returns `bool` directly and evaluates to false for an invalid object or out-of-range index. `Find` methods return `NOT_FOUND` when no matching bit exists.
 
 Range operations use a half-open interval `[startBit, endBit)`: the start is included and the end is excluded. The end may equal the bitset capacity.
 
@@ -124,11 +124,10 @@ Range operations use a half-open interval `[startBit, endBit)`: the start is inc
 - Range endpoints for scalar mask extraction/insertion are inclusive; Bitset range methods use half-open intervals.
 - `Bitset` capacity is fixed by the type suffix; it does not grow at runtime.
 - Invalid pointers and out-of-range bit indexes are reported by status-returning operations.
-- Both headers support function-table disabling through global and module-specific configuration macros. Define the configuration before including the declarations and keep it consistent across translation units.
+- `Bit.h` supports function-table configuration through its global and package-specific switches. `Bitset.h` unconditionally disables its function table in the current implementation, so its methods always use direct `MODULE_FUNC` calls.
 
 ~~~c
 #define BIT_DISABLE_FUNCTION_TABLE 1
-#define BITSET_DISABLE_FUNCTION_TABLE 1
 #include "Cosmeron/Core/Bit/Bit.h"
 #include "Cosmeron/Core/Bit/Bitset.h"
 ~~~

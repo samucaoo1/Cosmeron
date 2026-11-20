@@ -22,7 +22,9 @@ The aggregate includes all current packages:
 
 ---
 
-# Type specializations
+# Overview
+
+## Type specializations
 
 The public suffixes are part of generated names. Use the exact suffix rather than a guessed C alias.
 

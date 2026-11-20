@@ -28,7 +28,9 @@ Array and Linked templates are instantiated from the ordered-container type tabl
 
 ---
 
-# Calling convention and lifecycle
+# API reference
+
+## Calling convention and lifecycle
 
 A generated object type is named with `MODULE_TYPED(Module, Family, Suffix)`. Package-level functions are accessed with `MODULE_FUNC(Module, Family, Suffix, Function)`. After creation, object methods are called through `OBJECT_CALL` (or `OBJECT_CALL_0` for a method without arguments).
 
@@ -53,11 +55,11 @@ Most containers store elements by value. If the element type is a pointer, the c
 
 ---
 
-# Array containers
+## Array containers
 
 The Array aggregate is `Array/Array.h`.
 
-## Vector
+### Vector
 
 Header: `Array/Vector.h`.
 
@@ -74,7 +76,7 @@ Vector is a dynamically growing contiguous array. It is appropriate when indexed
 
 `At` returns an element pointer through an output parameter; `Get` copies an element into an output value. `Set` replaces an element. `SwapRemove` removes an element by moving the final element into its position, so it does not preserve the order of the remaining elements.
 
-## Queue
+### Queue
 
 Header: `Array/Queue.h`.
 
@@ -82,7 +84,7 @@ The array Queue is a FIFO structure backed by a dynamic array. It provides `Crea
 
 Use Queue for first-in/first-out work scheduling. `Peek` reads the next value without removing it; `Pop`/`Dequeue` removes the front value and writes it through the supplied output pointer.
 
-## Stack
+### Stack
 
 Header: `Array/Stack.h`.
 
@@ -90,7 +92,7 @@ The array Stack is LIFO. Its main methods are `Create`, `Reserve`, `ShrinkToFit`
 
 Use Stack for nested work, parsing, undo history and depth-first traversal. `Top` returns access to the stored element; `Peek` copies the value to an output parameter without removing it.
 
-## Ring
+### Ring
 
 Header: `Array/Ring.h`.
 
@@ -98,7 +100,7 @@ Ring is a fixed-capacity circular buffer. It provides `Create(capacity)`, `FromB
 
 The `Read`/`Write` operations and `GetReadSpan`/`GetWriteSpan` with `AdvanceRead`/`AdvanceWrite` expose contiguous portions of the circular buffer for bulk transfer. `Overwrite` can return a discarded element through an output pointer; use ordinary `Push` when existing data must not be discarded.
 
-## Span
+### Span
 
 Header: `Array/Span.h`.
 
@@ -106,7 +108,7 @@ Span is a non-owning view over an existing contiguous buffer. It provides `FromB
 
 Span does not allocate, reallocate or free the source buffer. It is useful for passing a bounded range to an API without copying; its lifetime must not exceed that of the underlying storage.
 
-## Priority Heap
+### Priority Heap
 
 Header: `Array/Heap.h`.
 
@@ -116,7 +118,7 @@ Use it for priority queues and repeated selection of the highest- or lowest-prio
 
 ---
 
-# Linked containers
+## Linked containers
 
 The Linked aggregate is `Linked/Linked.h`. Linked containers use separately allocated nodes and are suited to workloads where insertion and removal at known ends or positions matter more than contiguous storage.
 
@@ -135,11 +137,11 @@ The linked structures have the same lifecycle convention as array containers: cr
 
 ---
 
-# Hash containers
+## Hash containers
 
 The Hash aggregate is `Hash/Hash.h` and includes Set and Map. Both use hash-based lookup; they are not ordered containers.
 
-## Hash Set
+### Hash Set
 
 Header: `Hash/Set.h`.
 
@@ -147,7 +149,7 @@ A Set stores unique keys. Its interface includes `Create`, `Clear`, `Dispose`, `
 
 Use Set for membership tests and uniqueness. Key equality and hashing must be consistent: equal keys must produce the same hash value. Rehashing can invalidate iterators and pointers into the table.
 
-## Hash Map
+### Hash Map
 
 Header: `Hash/Map.h`.
 
@@ -172,7 +174,7 @@ if (status == STATUS_CONST(SUCCESS)) {
 
 ---
 
-# Trees
+## Trees
 
 The Tree aggregate is `Tree/Tree.h`. It includes Binary Search Tree (BST), AVL, Red-Black and B-Tree implementations. Each implementation has Set and Map variants generated from key and value type combinations.
 
@@ -189,7 +191,7 @@ A Set stores keys; a Map stores key/value pairs. Use the iterator type and order
 
 ---
 
-# Graph
+## Graph
 
 Header: `Graph/Graph.h`.
 
@@ -199,7 +201,7 @@ The current Graph API models directed edges. A bidirectional connection must be 
 
 ---
 
-# Iterators
+## Iterators
 
 The iterator aggregate is `Iterator/Iterator.h` and includes Stream, Contiguous, Circular, Forward and Bidirectional typed iterator templates. Their operations depend on the underlying traversal category; the shared concepts include `IsValid`, `HasNext`, `HasPrev`, `Remaining`, `Reset`, `Get`, `ConstGet`, `Value`, `Set`, `Next`, `Prev`, `StepNext`, `StepPrev`, `StepValue`, `StepPtr`, `Seek`, `Index` and `Advance`.
 
@@ -213,7 +215,7 @@ Iterators generally borrow the container or buffer. Destroying, rehashing, resiz
 
 ---
 
-# Dynamic Bitset
+## Dynamic Bitset
 
 Header: `Bitset/DynamicBitset.h`.
 
@@ -221,14 +223,14 @@ Header: `Bitset/DynamicBitset.h`.
 
 ~~~c
 MODULE_TYPE(Bitset, Dynamic) bits = {0};
-OPSTATUS status = OBJECT_CALL(&bits, Create, 128U);
+OPSTATUS status = MODULE_FUNC(Bitset, Dynamic, Create)(&bits, 128U);
 if (status == STATUS_CONST(SUCCESS)) {
-    status = OBJECT_CALL(&bits, Bit, Set, 7U);
-    (void)OBJECT_CALL_0(&bits, Dispose);
+    status = MODULE_FUNC(Bitset, Dynamic, Bit, Set)(&bits, 7U);
+    (void)MODULE_FUNC(Bitset, Dynamic, Dispose)(&bits);
 }
 ~~~
 
-The bitset owns its allocated limbs and must be disposed. A custom allocator must remain valid for the lifetime of the bitset.
+`DynamicBitset.h` disables its object function table, so invoke these methods directly with `MODULE_FUNC(Bitset, Dynamic, Method)` rather than `OBJECT_CALL`. The bitset owns its allocated limbs and must be disposed. A custom allocator must remain valid for the lifetime of the bitset.
 
 ---
 
@@ -247,7 +249,7 @@ The bitset owns its allocated limbs and must be disposed. A custom allocator mus
 | Vertices and directed edges | Graph |
 | Runtime-sized bit collection | Dynamic Bitset |
 
-# Notes
+# Contracts and notes
 
 - Use `MODULE_TYPED` for generated object types, `MODULE_FUNC` for package functions and `OBJECT_CALL` for object methods.
 - `Create` and fallible mutation methods return `OPSTATUS`; check it before accessing the object.

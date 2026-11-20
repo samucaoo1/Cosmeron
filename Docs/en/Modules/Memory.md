@@ -1,6 +1,6 @@
 # Memory
 
-The **Memory** module provides allocation, byte operations, allocator interfaces, arenas, pools, a fixed-width heap, bounded binary streams, a tracing collector, smart-pointer families and fixed-width memory blocks. Fallible operations return `OPSTATUS` and use caller-owned output parameters.
+The **Memory** module provides allocation, byte operations, allocator interfaces, arenas, pools, a fixed-width heap, bounded binary streams, a tracing collector, smart-pointer families and fixed-width memory blocks. Fallible operations return `OPSTATUS` and use caller-owned output parameters. `Arena`, `Pool`, `Heap` and `Stream` explicitly disable their object function tables. Use direct `MODULE_FUNC(Memory, Type, Method)` calls for Memory objects throughout this guide; the direct form remains valid regardless of whether a particular header enables a function table.
 
 ## Headers
 
@@ -27,7 +27,15 @@ The aggregate includes:
 
 ---
 
-# Raw allocation
+# Overview
+
+Memory covers several distinct allocation and storage strategies: raw allocation for individual blocks, byte operations for caller-owned spans, arenas and pools for scoped or fixed-size allocation, a page-based heap, bounded streams for binary I/O, and a tracing collector or smart pointers for managed ownership. Choose the narrowest facility that matches the lifetime and ownership model instead of treating every allocator as interchangeable.
+
+---
+
+# API reference
+
+## Raw allocation
 
 Header: `Alloc.h`. Package: `Memory_Alloc`.
 
@@ -59,7 +67,7 @@ if (status == STATUS_CONST(SUCCESS)) {
 
 ---
 
-# Byte operations
+## Byte operations
 
 Header: `Operations.h`. Package: `Memory_Operations`.
 
@@ -84,7 +92,7 @@ MODULE_FUNC(Memory, Operations, Move)(
 
 Choose `Copy` only for non-overlapping ranges; use `Move` when they can overlap. `Set` repeats a byte value and is not a typed array constructor. Use explicit typed initialization when the element representation is not a repeated byte pattern.
 
-## Swapping
+### Swapping
 
 Header: `Core/Algorithm/Swap.h`. This header declares its public API under the Memory module namespace.
 
@@ -98,7 +106,7 @@ Swap requires valid, non-overlapping ranges. Identical pointers and zero-sized r
 
 ---
 
-# Allocator interface
+## Allocator interface
 
 Header: `Allocator.h`.
 
@@ -108,7 +116,7 @@ Use an allocator when a component should accept caller-selected memory policy wi
 
 ---
 
-# Arena
+## Arena
 
 Header: `Arena.h`. Type: `MODULE_TYPE(Memory, Arena)`.
 
@@ -130,11 +138,12 @@ Arena allocation is useful for groups of short-lived objects that can be release
 ~~~c
 MODULE_TYPE(Memory, Arena) arena = {0};
 
-OPSTATUS status = OBJECT_CALL(&arena, Create, 4096U);
+OPSTATUS status = MODULE_FUNC(Memory, Arena, Create)(&arena, 4096U);
 if (status == STATUS_CONST(SUCCESS)) {
     void *memory = NULL;
-    status = OBJECT_CALL(&arena, Alloc, Bytes, &memory, 128U);
-    OBJECT_CALL_0(&arena, Destroy);
+    status = MODULE_FUNC(Memory, Arena, Alloc, Bytes)(
+        &arena, &memory, 128U);
+    (void)MODULE_FUNC(Memory, Arena, Destroy)(&arena);
 }
 ~~~
 
@@ -142,7 +151,7 @@ Memory returned by an arena remains valid until the arena is reset, restored pas
 
 ---
 
-# Pool
+## Pool
 
 Header: `Pool.h`. Type: `MODULE_TYPE(Memory, Pool)`.
 
@@ -163,7 +172,7 @@ Pool allocations have the configured element size and alignment contract. The po
 
 ---
 
-# Heap
+## Heap
 
 Header: `Heap.h`. Type: `MODULE_TYPE(Memory, Heap)`.
 
@@ -190,7 +199,7 @@ The Heap is a concrete allocator. Use `Allocator` when passing it into a generic
 
 ---
 
-# Binary Stream
+## Binary Stream
 
 Header: `Stream.h`. Type: `MODULE_TYPE(Memory, Stream)`.
 
@@ -210,9 +219,11 @@ A Stream is a bounded view over a caller-provided buffer. It supports read-only 
 MODULE_TYPE(Memory, Stream) stream = {0};
 uint32_t value = 0U;
 
-OPSTATUS status = OBJECT_CALL(&stream, Init, Read, input, inputSize);
+OPSTATUS status = MODULE_FUNC(Memory, Stream, Init, Read)(
+    &stream, input, inputSize);
 if (status == STATUS_CONST(SUCCESS)) {
-    status = OBJECT_CALL(&stream, Read, UInt32BE, &value);
+    status = MODULE_FUNC(Memory, Stream, Read, UInt32BE)(
+        &stream, &value);
 }
 ~~~
 
@@ -220,13 +231,13 @@ Endianness is selected by the operation name and is independent of host byte ord
 
 ---
 
-# Collector
+## Collector
 
 Header: `Collector.h`.
 
 The Collector combines Heap allocation with root tracking, tracing, pause/resume, finalizer support and a global convenience interface.
 
-## Instance collector
+### Instance collector
 
 Type: `MODULE_TYPE(Memory, Collector)`.
 
@@ -240,7 +251,7 @@ Type: `MODULE_TYPE(Memory, Collector)`.
 | `Pause()` / `Resume()` | Temporarily suspends or resumes collection. |
 | `AsAllocator()` | Exposes the collector through the allocator interface. |
 
-## Global collector
+### Global collector
 
 The `GlobalCollector` package provides `Startup(stackBottom)`, `Shutdown()`, `DefaultCollector()`, corresponding allocation/finalizer/root operations, `Collect`, `Pause`/`Resume`, `LiveBytes` and `Contains`.
 
@@ -248,7 +259,7 @@ The root API receives the **address of a root pointer variable**, not the addres
 
 ---
 
-# Smart-pointer families
+## Smart-pointer families
 
 Header: `Pointer/Pointer.h`.
 
@@ -263,13 +274,24 @@ The aggregate provides generated families for:
 | `AtomicWeak` | Atomic weak-reference operations. |
 | `Intrusive` | Reference counting stored in the user object's control fields. |
 
-The family templates expose creation/from-pointer, reset, clone/move, access, release/free, swap and reference-count/introspection operations according to their ownership model. Their type specializations must be instantiated using the family template's declared type table and lifecycle contract.
+The principal generated methods are:
+
+| Family | Construction and ownership | Access and state |
+| --- | --- | --- |
+| `Unique` | `FromPointer`, `Alloc`, `AllocZero`, `Reset`, `Move`, `Release`, `Free` | `IsValid`, `Get`, `GetMutable`, `Swap` |
+| `Shared` | `From.Pointer`, `From.Weak` (upgrade), `Alloc`, `Alloc.Zero`, `Reset`, `Reset.WithPointer`, `Free` | `Get`, `Get.Mutable`, `UseCount`, `Unique`, `Swap` |
+| `Weak` | `Clone`, `Move`, `Reset`, `Free` | `IsExpired`, `IsValid`, `UseCount`, `Swap` |
+| `AtomicShared` | Shared-like `From`, `Alloc`, `Reset`, `Free` operations | `Get`, `Get.Mutable`, `UseCount`, `Unique` |
+| `AtomicWeak` | Weak-like `Clone`, `Move`, `Reset`, `Free` operations | `IsExpired`, `IsValid`, `UseCount` |
+| `Intrusive` | `FromPointer`, `FromExistingPointer`, `Clone`, `Move`, `Reset`, `Release`, `Free` | `Get`, `GetMutable`, `UseCount`, `Unique`, `Swap` |
+
+The exact type suffix and instantiation parameters come from the pointer-family type tables and `.def` templates; do not assume every arbitrary C type has a built-in specialization. Each family has its own ownership contract, and `Free`/`Reset` are not interchangeable across families.
 
 A weak pointer does not own the object. Upgrade it to a Shared pointer before accessing the object, and check the returned status because the object may already have expired. Atomic reference counting does not make the pointed-to object itself thread-safe.
 
 ---
 
-# Fixed-width Block
+## Fixed-width Block
 
 Header: `Block.h` (include directly; not part of `Memory.h`).
 
@@ -277,7 +299,7 @@ Block generates compile-time-width objects backed by `uint64_t` limbs. It provid
 
 ---
 
-# Ownership and safety rules
+# Contracts and ownership rules
 
 - Every pointer returned by an allocator must be released through the same allocator family that created it.
 - `Alloc` and `Realloc` receive the address of a pointer variable; pass `&pointer`.

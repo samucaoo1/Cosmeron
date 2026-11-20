@@ -2,7 +2,7 @@
 
 The **Module** core provides Cosmeron's declarative C API system. It generates namespaced types, enums, constants, structs, objects, packages, callbacks, closures, templates and optional function tables from declarations in the headers.
 
-## Header
+## Headers
 
 ~~~c
 #include "Cosmeron/Core/Module/Module.h"
@@ -12,7 +12,9 @@ The aggregate header includes the namespace, declaration, object, package, callb
 
 ---
 
-# Architecture
+# Overview
+
+## Declaration model
 
 The declaration model is organized as:
 
@@ -32,9 +34,11 @@ A declaration is not a runtime class system. Objects and packages are generated 
 
 ---
 
-# Namespace and public naming
+# API reference
 
-## Namespace access
+## Namespace and public naming
+
+### Namespace access
 
 Header: `Namespace.h` (included by `Module.h`).
 
@@ -63,7 +67,7 @@ MODULE_ENUM(Algorithm, Comparison, Result) order;
 
 The actual identifier is produced by the configured library prefix and namespace rules. Application code should prefer these access macros to hard-coded expanded names.
 
-## Configuration
+### Configuration
 
 The namespace header defines the prefix and namespace policy macros used by the project. Configure them before including public module headers. Function-table policy is also a compile-time choice; a module, package or object may define a disable switch before its header is included.
 
@@ -73,11 +77,11 @@ Namespace configuration and public access macros are provided by `Core/Module/Na
 
 ---
 
-# Packages
+## Packages
 
 A package is the right construct for operations that do not need an object receiver.
 
-## Declaration
+### Declaration
 
 ~~~c
 MODULE(DOMAIN(Modules), Example,
@@ -100,7 +104,7 @@ The package declaration generates namespaced functions and, when enabled, a type
 
 Use the narrowest applicable category and keep fallible work under `OPERATION`.
 
-## Invocation
+### Invocation
 
 The canonical package function-table invocation macro is `PACKAGE_API`:
 
@@ -118,11 +122,11 @@ Package function tables are optional. If function tables are disabled, use the d
 
 ---
 
-# Objects
+## Objects
 
 An object combines a C struct with methods that receive a pointer to the instance as their first hidden receiver parameter.
 
-## Declaration
+### Declaration
 
 ~~~c
 MODULE(DOMAIN(Modules), Counter,
@@ -139,16 +143,16 @@ MODULE(DOMAIN(Modules), Counter,
 
 The receiver is supplied by the generated object API. A method declared with `CONST_` is read-only with respect to its receiver contract.
 
-## Invocation
+### Invocation
 
-The canonical object dispatch macro is `OBJECT_CALL`:
+The canonical object dispatch macro is `API`; `OBJECT_CALL` and `OBJECT_CALL_0` are compatibility aliases:
 
 ~~~c
 MODULE_TYPE(Counter, Counter) counter = {0};
 
-OBJECT_CALL_0(&counter, Reset);
-OPSTATUS status = OBJECT_CALL(&counter, Add, 5);
-int value = OBJECT_CALL_0(&counter, Value);
+API(&counter, Reset);
+OPSTATUS status = API(&counter, Add, 5);
+int value = API(&counter, Value);
 ~~~
 
 For a direct call without object function-table dispatch, use the generated namespaced method:
@@ -157,15 +161,15 @@ For a direct call without object function-table dispatch, use the generated name
 MODULE_FUNC(Counter, Counter, Add)(&counter, 5);
 ~~~
 
-Use `OBJECT_CALL` when the object has a valid function table and runtime dispatch is intended. Use direct `MODULE_FUNC` calls when the configuration removes function tables or when direct dispatch is desired. Never call a method on an uninitialized or invalid object.
+Use `API` when the object has a valid function table and runtime dispatch is intended. Use direct `MODULE_FUNC` calls when the configuration removes function tables or when direct dispatch is desired. Never call a method on an uninitialized or invalid object.
 
-## Inheritance and extensions
+### Inheritance and extensions
 
 The current Object declaration layer includes `OBJECT_EXTENDS` and typed casts such as `OBJECT_AS`. These are compile-time C layout/declaration facilities; they do not provide virtual inheritance or automatic lifetime management. Use them only when the base/derived layout and receiver contract are explicit.
 
 ---
 
-# Structs and internal data
+## Structs and internal data
 
 Use `STRUCT` for a public POD data type and `ISTRUCT` for an implementation detail. A struct has no generated receiver and does not gain method dispatch merely by being declared in a module.
 
@@ -173,15 +177,15 @@ For fixed-layout value types, prefer direct field initialization and ordinary as
 
 ---
 
-# Callbacks and closures
+## Callbacks and closures
 
-## Callback
+### Callback
 
 A callback is a function pointer with a declared signature. It does not inherently carry state.
 
 `Callback.h` provides `TCALLBACK(Name)` for the generated type, `CALLBACK_FUNC(Name)` for helper names and `CALLBACK_EMPTY` as the null callback value.
 
-## Closure
+### Closure
 
 A closure pairs a function pointer with a context pointer. It is suitable for callbacks that need to refer to caller-owned state without a global variable.
 
@@ -197,11 +201,11 @@ Closure declarations specify the return contract: `CLOSURE_FUNCTION`, `CLOSURE_P
 
 ---
 
-# Templates
+## Templates
 
 The canonical module template implementation uses a dual-mode `.def` file. A template can generate a struct, object or package specialization. It should be included from its public header and may be instantiated explicitly or from an X-macro type table.
 
-## Instantiating a specialization
+### Instantiating a specialization
 
 The common template helpers are:
 
@@ -219,13 +223,13 @@ A table row is an argument tuple. Keep its row order identical to the correspond
 
 The template engine also exposes lower-level declaration/implementation helpers, but public module headers should encapsulate those details. Consumers should use the module's documented template instantiation entry points rather than invoking internal implementation macros.
 
-## Dual-mode .def convention
+### Dual-mode .def convention
 
 A template's `.def` file defines the template macro and supports direct instantiation when the expected configuration macros are defined. The public header normally includes shared internal definitions, declares its package/object and includes the template definition. Do not include internal `Impl` or `Common.inc` files directly from application code.
 
 ---
 
-# Implementation and scopes
+## Implementation and scopes
 
 Non-inline implementations are emitted through explicit module implementation declarations. The current declaration system provides `MODULE_IMPLEMENT`, `OBJECT_IMPLEMENT_EX` and `PACKAGE_IMPLEMENT_EX`. Scope helpers such as `MODULE_SCOPE`, `OBJECT_SCOPE` and `PACKAGE_SCOPE` organize related implementations and end with their matching `*_SCOPE_END` macro.
 
@@ -233,12 +237,12 @@ A public header generally owns declarations and includes its implementation unit
 
 ---
 
-# Function tables
+## Function tables
 
 Function tables provide a typed dispatch path for packages and objects. They are optional compile-time output, not an independent virtual-method runtime.
 
 - Use `PACKAGE_API` to dispatch package functions through a package table.
-- Use `OBJECT_CALL` to dispatch object methods through the object's table.
+- Use `API` to dispatch object methods through the object's table (`OBJECT_CALL` is a compatibility alias).
 - Use `MODULE_FUNC` for direct symbol invocation.
 - Configure the relevant disable switches before including headers.
 - Keep the same configuration across translation units sharing the declarations.
@@ -247,7 +251,7 @@ Function-table disabling may change generated object layout. Do not mix objects 
 
 ---
 
-# Practical guidance
+## Practical guidance
 
 - Use `PACKAGE` for stateless operations and `OBJECT` only when state belongs to the instance.
 - Use `STRUCT` for POD values; it has no receiver or object function table.
