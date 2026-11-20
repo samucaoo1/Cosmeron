@@ -1,5 +1,4 @@
 <p align="center">
-  <img src="Docs/Assets/Brand/Cosmeron-Horizontal.png" alt="Cosmeron" width="600">
   <img src="Docs/Assets/Brand/Cosmeron_%20Universo%20Além.png" alt="Cosmeron — A Universe Beyond" width="100%">
 </p>
 
