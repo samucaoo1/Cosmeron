@@ -35,12 +35,12 @@ Cross-project technical conventions.
 
 - [Cosmeron Pattern](Reference/PATTERN.md)
 
-### [Module documentation archive](../../Roadmap/Docs/en/Modules/)
+### [Refactored Modules](Modules/)
 
-The module references currently in this repository predate the ongoing code
-refactoring. They have been moved to the [Roadmap archive](../../Roadmap/Docs/en/Modules/)
-so they remain available as historical material without being presented as
-documentation for the refactored implementation.
+Reference documentation for the refactored C11 DSL modules in `Codespace/Cosmeron/`:
+
+- **Core**: [Algorithm](Modules/Algorithm.md) · [Bit](Modules/Bit.md) · [Condition](Modules/Condition.md) · [Diagnostic](Modules/Diagnostic.md) · [Memory](Modules/Memory.md) · [Module](Modules/Module.md) · [Preprocessor](Modules/Preprocessor.md) · [Types](Modules/Types.md)
+- **Modules**: [Container](Modules/Container.md) · [Math](Modules/Math.md) · [Numeric](Modules/Numeric.md) · [Text](Modules/Text.md) · [Tuple](Modules/Tuple.md)
 
 ### [Translations](Translations/)
 
