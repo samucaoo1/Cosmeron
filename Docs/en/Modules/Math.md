@@ -1,12 +1,18 @@
 # Math
 
-The **Math** module provides checked integer arithmetic, clamped and saturating operations, scalar range utilities, and linear/quadratic equation solvers. The C11 API is defined by `static inline` functions generated for integer and floating-point specializations. This reference follows the format of `Bit.md` and describes only the operations currently implemented on the `audio-module` branch.
+The **Math** module provides checked integer arithmetic, clamped and saturating operations, scalar range utilities, and linear/quadratic equation solvers. The C11 API is defined by `static inline` functions generated for integer and floating-point specializations. This reference documents the Math APIs present in the `Alpha-Version` source tree.
 
-There is **no `Math.h` umbrella header** in the current tree. Include only the package headers required by your program:
+The aggregate `Math.h` header includes all Math packages. Include it for the complete API, or include individual package headers:
+
+```c
+#include "Cosmeron/Modules/Math/Math.h"
+```
+
+Or include individual packages:
 
 ```c
 #include "Cosmeron/Modules/Math/Arithmetic/Basic.h"
-#include "Cosmeron/Modules/Math/Arithmetic/Clamp.h"
+#include "Cosmeron/Modules/Math/Arithmetic/Clamped.h"
 #include "Cosmeron/Modules/Math/Value/Between.h"
 #include "Cosmeron/Modules/Math/Value/Clamp.h"
 #include "Cosmeron/Modules/Math/Value/MaxAndMin.h"
@@ -21,7 +27,7 @@ There is **no `Math.h` umbrella header** in the current tree. Include only the p
 | Package | Header | Purpose |
 | --- | --- | --- |
 | [Checked arithmetic](#arithmetic-basic-package) | `Arithmetic/Basic.h` | Checked integer arithmetic, including divide-by-zero and overflow detection. |
-| [Clamped and saturating arithmetic](#arithmetic-clamp-package) | `Arithmetic/Clamp.h` | Bounded and saturating integer arithmetic, returning values directly. |
+| [Clamped and saturating arithmetic](#arithmetic-clamp-package) | `Arithmetic/Clamped.h` | Bounded and saturating integer arithmetic, returning values directly. |
 | [Intervals and comparisons](#value-between-package) | `Value/Between.h` | Strict interval membership and five-state position classification. |
 | [Value clamping](#value-clamp-package) | `Value/Clamp.h` | Direct value restriction to an explicit numeric interval. |
 | [Minimum and maximum](#value-maxandmin-package) | `Value/MaxAndMin.h` | Binary extrema and variadic extrema with status/out-parameter conventions. |
@@ -422,7 +428,7 @@ OPSTATUS status = ARITHMETIC_TYPED_FUNC(Mod, I32)(-9, 4, &remainder);
 
 # Arithmetic Clamp package
 
-Header: `Cosmeron/Modules/Math/Arithmetic/Clamp.h`
+Header: `Cosmeron/Modules/Math/Arithmetic/Clamped.h`
 
 Bounded and saturating integer arithmetic, returning values directly.
 
@@ -920,7 +926,7 @@ A value of the selected numeric C type.
 
 ### Remarks
 
-Returns minimum for a value below it, maximum for a value above it, otherwise the input. **Unlike `Arithmetic/Clamp`, this function does not swap reversed bounds.** Use ordered bounds. Floating-point NaNs are not handled specially.
+Returns minimum for a value below it, maximum for a value above it, otherwise the input. **Unlike `Arithmetic/Clamped`, this function does not swap reversed bounds.** Use ordered bounds. Floating-point NaNs are not handled specially.
 
 ---
 
@@ -1440,7 +1446,7 @@ int main(void) {
 ## Saturating arithmetic and range classification
 
 ```c
-#include "Cosmeron/Modules/Math/Arithmetic/Clamp.h"
+#include "Cosmeron/Modules/Math/Arithmetic/Clamped.h"
 #include "Cosmeron/Modules/Math/Value/Between.h"
 
 int main(void) {

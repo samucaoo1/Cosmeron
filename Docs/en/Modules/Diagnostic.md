@@ -1,6 +1,6 @@
 # Diagnostic
 
-The **Diagnostic** module provides source-location context tracking, structured error formatting, and portable stacktrace capture.
+The **Diagnostic** module provides source-origin metadata, human-readable formatting for errors and contexts, and stack-trace capture. It belongs to **Core** and complements `Condition`: Condition stores error/status state, while Diagnostic describes where an event originated and how to present it.
 
 ```c
 #include "Cosmeron/Core/Diagnostic/Context.h"
@@ -10,104 +10,127 @@ The **Diagnostic** module provides source-location context tracking, structured 
 
 ---
 
-## Architecture & Design
+# Overview
 
-1. **Diagnostic Context (`Diagnostic_TContext`)**:
-   `MODULE_TYPE(Diagnostic, Context)` records origin metadata (`file`, `line`, `function`, `description`, and optional `userData`).
-2. **Formatting (`Diagnostic_Format`)**:
-   Formats `Condition_TError` and `Diagnostic_TContext` into caller-owned buffers without heap allocation, returning `STATUS_CONST(INSUFFICIENT_SPACE)` if truncated.
-3. **Stacktrace (`Diagnostic_Stacktrace`)**:
-   Captures execution frames where supported by the target platform.
+| Header | API | Purpose |
+| --- | --- | --- |
+| `Context.h` | `Diagnostic_Context` | Source file, line, function, description and user data |
+| `Format.h` | `Diagnostic_Format` | Formats an Error or Context into a caller-owned buffer |
+| `Stacktrace.h` | `Diagnostic_Stacktrace` | Captures and formats instruction addresses |
 
----
-
-## Context Reference (`Context.h`)
-
-### `Diagnostic_Context_Init`
-
-Initializes a `MODULE_TYPE(Diagnostic, Context)` instance.
-
-```c
-OPSTATUS Diagnostic_Context_Init(MODULE_TYPE(Diagnostic, Context) *self);
-```
-
-### `Diagnostic_Context_Create`
-
-Populates a context with source-location metadata.
-
-```c
-OPSTATUS Diagnostic_Context_Create(MODULE_TYPE(Diagnostic, Context) *self,
-                                   const char *file,
-                                   uint32_t line,
-                                   const char *function,
-                                   const char *description,
-                                   void *userData);
-```
-
-### Query & Reset Methods
-
-```c
-bool Diagnostic_Context_HasOrigin(const MODULE_TYPE(Diagnostic, Context) *self);
-const char *Diagnostic_Context_File(const MODULE_TYPE(Diagnostic, Context) *self);
-uint32_t Diagnostic_Context_Line(const MODULE_TYPE(Diagnostic, Context) *self);
-const char *Diagnostic_Context_Function(const MODULE_TYPE(Diagnostic, Context) *self);
-const char *Diagnostic_Context_Description(const MODULE_TYPE(Diagnostic, Context) *self);
-void *Diagnostic_Context_UserData(const MODULE_TYPE(Diagnostic, Context) *self);
-void Diagnostic_Context_Clear(MODULE_TYPE(Diagnostic, Context) *self);
-```
+Diagnostic does not own strings or user data stored in a Context. Formatting writes into buffers supplied by the caller; no global logger, terminal output or file sink is implied.
 
 ---
 
-## Format Reference (`Format.h`)
+# Context
 
-### `Diagnostic_Format_Simple`
+`MODULE_TYPE(Diagnostic, Context)` is a lightweight value object with `file`, `line`, `function`, `description` and `userData` fields.
 
-Formats an error as `[STATUS_NAME] message`.
-
-```c
-OPSTATUS Diagnostic_Format_Simple(const MODULE_TYPE(Condition, Error) *error,
-                                  char *buffer,
-                                  size_t bufferSize,
-                                  size_t *outWritten);
-```
-
-### `Diagnostic_Format_Context`
-
-Formats a context as `at file:line in func() - description` (or `<no origin>` if empty).
+Methods: `Create(file, line, function, description, userData)`, `Clear()`, `HasOrigin()`, `File()`, `Line()`, `Function()`, `Description()` and `UserData()`.
 
 ```c
-OPSTATUS Diagnostic_Format_Context(const MODULE_TYPE(Diagnostic, Context) *context,
-                                   char *buffer,
-                                   size_t bufferSize,
-                                   size_t *outWritten);
-```
+MODULE_TYPE(Diagnostic, Context) context = {0};
 
-### `Diagnostic_Format_Detailed`
+OPSTATUS status = API(&context, Create,
+                      __FILE__, (uint32_t)__LINE__, __func__,
+                      "Parsing a configuration file", NULL);
 
-Formats an error together with its diagnostic context.
-
----
-
-## Usage Example
-
-```c
-#include "Cosmeron/Core/Condition/Error.h"
-#include "Cosmeron/Core/Diagnostic/Context.h"
-#include "Cosmeron/Core/Diagnostic/Format.h"
-#include <stdio.h>
-
-int main(void) {
-  MODULE_TYPE(Diagnostic, Context) ctx = {0};
-  MODULE_FUNC(Diagnostic, Context, Init)(&ctx);
-  MODULE_FUNC(Diagnostic, Context, Create)(
-      &ctx, __FILE__, (uint32_t)__LINE__, __func__, "Loading user profile", NULL);
-
-  char buffer[256] = {0};
-  size_t written = 0U;
-  MODULE_FUNC(Diagnostic, Format, Context)(&ctx, buffer, sizeof(buffer), &written);
-  printf("%s\n", buffer);
-  return 0;
+if (status == STATUS_CONST(SUCCESS) && API(&context, HasOrigin)) {
+    const char *file = API(&context, File);
+    uint32_t line = API(&context, Line);
+    (void)file;
+    (void)line;
 }
 ```
 
-See [Examples/Core/Diagnostic.c](../../../Codespace/Examples/Core/Diagnostic.c).
+A Context is a value container; its pointer fields remain borrowed. Use string literals, static storage or storage whose lifetime is guaranteed to outlive the diagnostic record.
+
+---
+
+# Formatting
+
+`Diagnostic_Format` exposes four operations. Each takes a writable output buffer, its capacity and an `outWritten` pointer:
+
+| Operation | Input | Output |
+| --- | --- | --- |
+| `Simple(error, buffer, capacity, outWritten)` | `Condition_Error` | Compact error text |
+| `Detailed(error, buffer, capacity, outWritten)` | `Condition_Error` | Error text with diagnostic context |
+| `Chain(error, buffer, capacity, outWritten)` | `Condition_Error` | Error and its cause chain |
+| `Context(context, buffer, capacity, outWritten)` | `Diagnostic_Context` | Source-origin description |
+
+```c
+char message[256];
+size_t written = 0;
+
+OPSTATUS status = MODULE_FUNC(Diagnostic, Format, Detailed)(
+    &error, message, sizeof message, &written);
+
+if (status == STATUS_CONST(SUCCESS)) {
+    /* message contains written characters; written is not the capacity. */
+}
+```
+
+The formatter does not allocate a result string. Always pass the actual destination capacity and check the returned `OPSTATUS`; do not assume a truncated message is complete.
+
+---
+
+# Stacktrace
+
+`MODULE_TYPE(Diagnostic, Stacktrace)` stores a bounded array of instruction addresses. The default public maximum is 32 frames.
+
+| Method | Purpose |
+| --- | --- |
+| `Capture(skipFrames, maxFrames)` | Captures up to the requested number of frames after skipping leading frames |
+| `Clear()` | Resets the trace |
+| `FrameCount()` | Returns the captured frame count |
+| `FrameAt(index, outAddress)` | Copies an address to an output pointer |
+| `Format(buffer, capacity, outWritten)` | Formats captured addresses into a caller-provided buffer |
+
+```c
+MODULE_TYPE(Diagnostic, Stacktrace) trace = {0};
+
+OPSTATUS status = API(&trace, Capture, 0U, 16U);
+if (status == STATUS_CONST(SUCCESS)) {
+    size_t count = API(&trace, FrameCount);
+    void *address = NULL;
+
+    if (count > 0U)
+        status = API(&trace, FrameAt, 0U, &address);
+}
+
+API(&trace, Clear);
+```
+
+A captured frame is an address, not automatically a source-level function name. Symbol resolution and source-line lookup are separate responsibilities. The implementation has platform-specific capture paths: Windows uses the Windows API; Linux with glibc, macOS and BSD use `execinfo` where available. Other targets may not support capture; check the operation status.
+
+---
+
+# Integration with Condition
+
+A common pattern is to attach a Context to a Condition Error, then format it at the reporting boundary:
+
+```c
+MODULE_TYPE(Diagnostic, Context) origin = {0};
+MODULE_TYPE(Condition, Error) error = {0};
+
+API(&origin, Create, __FILE__, (uint32_t)__LINE__, __func__,
+    "Loading application settings", NULL);
+API(&error, Create, STATUS_CONST(NOT_FOUND), "Settings file was not found");
+API(&error, Set, Context, &origin);
+
+char buffer[256];
+size_t written = 0;
+OPSTATUS status = MODULE_FUNC(Diagnostic, Format, Detailed)(
+    &error, buffer, sizeof buffer, &written);
+```
+
+The Context is copied into the Error's embedded context by `Set.Context`; its string pointers remain borrowed. This keeps error state separate from presentation.
+
+---
+
+# Notes
+
+- All APIs are header-included and use caller-owned memory.
+- Formatting does not print to `stdout` or `stderr`.
+- Stack traces contain instruction addresses; symbol resolution is outside this module.
+- Treat strings and `userData` stored in a Context as borrowed references.

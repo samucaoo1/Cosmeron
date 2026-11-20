@@ -17,7 +17,7 @@ The packages in this module are:
 
 ## Comparison
 
-All comparison functions return `TComparisonResult` (`CMPOUT`).
+All comparison functions return `CMPOUT`.
 
 | Constant | Value | Meaning |
 | --- | ---: | --- |
@@ -26,12 +26,12 @@ All comparison functions return `TComparisonResult` (`CMPOUT`).
 | `COMPARISON_CONST(HIGHER)` | 1 | Left follows right |
 
 ```c
-COMPARISON_FUNC(Int)(3, 7);
+MODULE_FUNC(Algorithm, Comparison, Int)(3, 7);
 ```
 
 ## Repeat
 
-The Repeat package provides counted repetition over typed callbacks (`TCALLBACK`), byte buffers, primitive arrays, and custom types via universal templates (`TEMPLATE_REPEAT`).
+The Repeat package provides counted repetition over typed closures (`MODULE_CLOSURE`), byte buffers, primitive arrays, and custom types via universal templates (`TEMPLATE_REPEAT`).
 
 Two equivalent call forms are supported:
 
@@ -65,18 +65,17 @@ MODULE_CALL(Algorithm, Repeat, Int, (array, 42, 10));
 | [`LongDouble`](#longdouble) | Compares two `long double` values | No |
 | [`CString`](#cstring) | Compares two `const char *` values | No |
 | [`Bytes`](#bytes) | Lexicographic comparison of sized byte buffers | No |
-| [`Invoke`](#invoke) | Invokes a custom comparison callback | No |
 
 ### Repeat
 
 | Function | Description | Modifies input |
 | --- | --- | --- |
 | [`Procedure`](#procedure) | Repeats a nullary procedure `count` times | No |
-| [`IndexedProcedure`](#indexedprocedure) | Repeats a procedure with index `(0 .. count-1)` | No |
+| [`ProcedureIndexed`](#procedureindexed) | Repeats a procedure with index `(0 .. count-1)` | No |
 | [`Operation`](#operation) | Repeats a fallible operation with short-circuit on error | No |
-| [`IndexedOperation`](#indexedoperation) | Repeats a fallible operation with index and short-circuit | No |
+| [`OperationIndexed`](#operationindexed) | Repeats a fallible operation with index and short-circuit | No |
 | [`Predicate`](#predicate) | Repeats a predicate while returning `true` | No |
-| [`IndexedPredicate`](#indexedpredicate) | Repeats a predicate with index while returning `true` | No |
+| [`PredicateIndexed`](#predicateindexed) | Repeats a predicate with index while returning `true` | No |
 | [`RepeatBytes`](#repeatbytes) | Repeats a byte pattern `count` times into destination | Yes |
 | [`RepeatPrimitives`](#repeatprimitives) | Prefills a primitive array with a value `count` times | Yes |
 | [`RepeatCString`](#repeatcstring) | Prefills an array of C-strings with a pointer `count` times | Yes |
@@ -89,8 +88,8 @@ MODULE_CALL(Algorithm, Repeat, Int, (array, 42, 10));
 
 | Type | Description |
 | --- | --- |
-| `TComparisonResult` | Enumeration with LOWER, EQUAL, HIGHER |
-| `TCALLBACK(Comparison)` | Callback `CMPOUT (*)(const void *, const void *, void *)` |
+| `CMPOUT` | Enumeration with LOWER, EQUAL, HIGHER |
+| `TCLOSURE(Comparison)` | Callback `CMPOUT (*)(const void *, const void *, void *)` |
 
 Use `COMPARISON_CONST(NAME)` to access the namespaced comparison constants.
 
@@ -115,13 +114,13 @@ Compares two `int` values.
 #### Macro form
 
 ```c
-TComparisonResult result = COMPARISON_FUNC(Int)(left, right);
+CMPOUT result = MODULE_FUNC(Algorithm, Comparison, Int)(left, right);
 ```
 
 #### Direct form
 
 ```c
-TComparisonResult result = Comparison_Int(left, right);
+CMPOUT result = Comparison_Int(left, right);
 ```
 
 ---
@@ -151,7 +150,7 @@ Integer comparisons use relational operators, avoiding subtraction overflow.
 
 ```c
 int a = 5, b = 10;
-TComparisonResult result = COMPARISON_FUNC(Int)(a, b);
+CMPOUT result = MODULE_FUNC(Algorithm, Comparison, Int)(a, b);
 /* result == COMPARISON_CONST(LOWER) */
 ```
 
@@ -166,13 +165,13 @@ Compares two `float` values.
 #### Macro form
 
 ```c
-TComparisonResult result = COMPARISON_FUNC(Float)(left, right);
+CMPOUT result = MODULE_FUNC(Algorithm, Comparison, Float)(left, right);
 ```
 
 #### Direct form
 
 ```c
-TComparisonResult result = Comparison_Float(left, right);
+CMPOUT result = Comparison_Float(left, right);
 ```
 
 ---
@@ -202,7 +201,7 @@ Does not establish total order for NaNs.
 
 ```c
 float a = 2.5f, b = 1.0f;
-TComparisonResult result = COMPARISON_FUNC(Float)(a, b);
+CMPOUT result = MODULE_FUNC(Algorithm, Comparison, Float)(a, b);
 /* result == COMPARISON_CONST(HIGHER) */
 ```
 
@@ -217,13 +216,13 @@ Compares two `double` values.
 #### Macro form
 
 ```c
-TComparisonResult result = COMPARISON_FUNC(Double)(left, right);
+CMPOUT result = MODULE_FUNC(Algorithm, Comparison, Double)(left, right);
 ```
 
 #### Direct form
 
 ```c
-TComparisonResult result = Comparison_Double(left, right);
+CMPOUT result = Comparison_Double(left, right);
 ```
 
 ---
@@ -253,7 +252,7 @@ Follows standard IEEE-754 ordering.
 
 ```c
 double a = 3.14, b = 3.14;
-TComparisonResult result = COMPARISON_FUNC(Double)(a, b);
+CMPOUT result = MODULE_FUNC(Algorithm, Comparison, Double)(a, b);
 /* result == COMPARISON_CONST(EQUAL) */
 ```
 
@@ -268,13 +267,13 @@ Compares two `long double` values.
 #### Macro form
 
 ```c
-TComparisonResult result = COMPARISON_FUNC(LongDouble)(left, right);
+CMPOUT result = MODULE_FUNC(Algorithm, Comparison, LongDouble)(left, right);
 ```
 
 #### Direct form
 
 ```c
-TComparisonResult result = Comparison_LongDouble(left, right);
+CMPOUT result = Comparison_LongDouble(left, right);
 ```
 
 ---
@@ -304,7 +303,7 @@ Operates with extended precision.
 
 ```c
 long double a = 1.0L, b = 2.0L;
-TComparisonResult result = COMPARISON_FUNC(LongDouble)(a, b);
+CMPOUT result = MODULE_FUNC(Algorithm, Comparison, LongDouble)(a, b);
 /* result == COMPARISON_CONST(LOWER) */
 ```
 
@@ -319,13 +318,13 @@ Compares two null-terminated C strings.
 #### Macro form
 
 ```c
-TComparisonResult result = COMPARISON_FUNC(CString)(left, right);
+CMPOUT result = MODULE_FUNC(Algorithm, Comparison, CString)(left, right);
 ```
 
 #### Direct form
 
 ```c
-TComparisonResult result = Comparison_CString(left, right);
+CMPOUT result = Comparison_CString(left, right);
 ```
 
 ---
@@ -354,7 +353,7 @@ Compares lexicographically byte-by-byte using `strcmp`.
 ### Example
 
 ```c
-TComparisonResult result = COMPARISON_FUNC(CString)("apple", "banana");
+CMPOUT result = MODULE_FUNC(Algorithm, Comparison, CString)("apple", "banana");
 /* result == COMPARISON_CONST(LOWER) */
 ```
 
@@ -373,13 +372,13 @@ Lexicographically compares two memory buffers with explicit lengths.
 #### Macro form
 
 ```c
-TComparisonResult result = COMPARISON_FUNC(Bytes)(left, leftSize, right, rightSize);
+CMPOUT result = MODULE_FUNC(Algorithm, Comparison, Bytes)(left, leftSize, right, rightSize);
 ```
 
 #### Direct form
 
 ```c
-TComparisonResult result = Comparison_Bytes(left, leftSize, right, rightSize);
+CMPOUT result = Comparison_Bytes(left, leftSize, right, rightSize);
 ```
 
 ---
@@ -412,81 +411,49 @@ If common prefixes match, shorter lengths precede longer lengths.
 ```c
 const unsigned char b1[] = {1, 2};
 const unsigned char b2[] = {1, 3};
-TComparisonResult result = COMPARISON_FUNC(Bytes)(b1, sizeof(b1), b2, sizeof(b2));
+CMPOUT result = MODULE_FUNC(Algorithm, Comparison, Bytes)(b1, sizeof(b1), b2, sizeof(b2));
 /* result == COMPARISON_CONST(LOWER) */
 ```
 
 ---
 
-# Custom comparisons
+# Custom comparison closures
 
----
+A custom comparison is represented by a typed closure rather than an Algorithm package function. The `CLOSURE_COMPARISON` declaration supplies the three-way `CMPOUT` return contract and the closure stores a function pointer plus a borrowed context pointer. Invoke it with `CLOSURE_INVOKE`.
 
-# Invoke
-
-Invokes a comparator callback over two object pointers.
-
-### Syntax
-
-#### Macro form
-
-```c
-TComparisonResult result = CALLBACK_INVOKE(comparator, left, right);
-```
-
----
-
-### Parameters
-
-| Parameter | Explanation |
-| --- | --- |
-| `comparator` | `TCALLBACK(Comparison)` callback instance |
-| `left` | First object pointer |
-| `right` | Second object pointer |
-
----
-
-### Return value
-
-Returns comparator result unchanged.
-
----
-
-### Remarks
-
-Supplies caller-bound context into the comparator function automatically.
-
----
-
-### Example
-
-```c
-static CMPOUT CompareInt(const void *l, const void *r, void *ctx) {
-    (void)ctx;
-    return COMPARISON_FUNC(Int)(*(const int *)l, *(const int *)r);
+~~~c
+static CMPOUT compare_integer(const void *left, const void *right, void *context)
+{
+    (void)context;
+    return MODULE_FUNC(Algorithm, Comparison, Int)(
+        *(const int *)left, *(const int *)right);
 }
 
-int x = 4, y = 9;
-TCALLBACK(Comparison) cmp = CALLBACK_FUNC(Comparison_Bind)(CompareInt, NULL);
-TComparisonResult res = CALLBACK_INVOKE(cmp, &x, &y);
-```
+TCLOSURE(Comparison) comparator =
+    CLOSURE_FUNC(Comparison_Bind)(compare_integer, NULL);
+
+int left = 4, right = 9;
+CMPOUT result = CLOSURE_INVOKE(comparator, &left, &right);
+~~~
+
+Keep the context alive for as long as the closure may be invoked. Do not cast a callback with a different signature to the comparison closure type.
 
 ---
 
 # Repeat execution and loops
 
-The Repeat package provides counted loop execution over typed callbacks.
+The Repeat package provides counted loop execution over typed closures.
 
 ### Callback types
 
 | Callback Type | Invocation Signature | Purpose |
 | --- | --- | --- |
-| `TCALLBACK(NS(Algorithm_Repeat, Procedure))` | `void (*)(void *context)` | Action executed without index |
-| `TCALLBACK(NS(Algorithm_Repeat, IndexedProcedure))` | `void (*)(size_t index, void *context)` | Action executed with index `0 .. count - 1` |
-| `TCALLBACK(NS(Algorithm_Repeat, Operation))` | `OPSTATUS (*)(void *context)` | Fallible operation; halts on first failure |
-| `TCALLBACK(NS(Algorithm_Repeat, IndexedOperation))` | `OPSTATUS (*)(size_t index, void *context)` | Fallible indexed operation; halts on first failure |
-| `TCALLBACK(NS(Algorithm_Repeat, Predicate))` | `bool (*)(void *context)` | Evaluated while returning `true` |
-| `TCALLBACK(NS(Algorithm_Repeat, IndexedPredicate))` | `bool (*)(size_t index, void *context)` | Evaluated with index while returning `true` |
+| `MODULE_CLOSURE(Algorithm, Repeat, Procedure)` | `void (*)(void *context)` | Action executed without index |
+| `MODULE_CLOSURE(Algorithm, Repeat, ProcedureIndexed)` | `void (*)(size_t index, void *context)` | Action executed with index `0 .. count - 1` |
+| `MODULE_CLOSURE(Algorithm, Repeat, Operation)` | `OPSTATUS (*)(void *context)` | Fallible operation; halts on first failure |
+| `MODULE_CLOSURE(Algorithm, Repeat, OperationIndexed)` | `OPSTATUS (*)(size_t index, void *context)` | Fallible indexed operation; halts on first failure |
+| `MODULE_CLOSURE(Algorithm, Repeat, Predicate)` | `bool (*)(void *context)` | Evaluated while returning `true` |
+| `MODULE_CLOSURE(Algorithm, Repeat, PredicateIndexed)` | `bool (*)(size_t index, void *context)` | Evaluated with index while returning `true` |
 
 ---
 
@@ -515,7 +482,7 @@ MODULE_CALL(Algorithm, Repeat, Procedure, (count, action));
 | Parameter | Explanation |
 | --- | --- |
 | `count` | Number of times to execute the action |
-| `action` | `TCALLBACK(NS(Algorithm_Repeat, Procedure))` action callback |
+| `action` | `MODULE_CLOSURE(Algorithm, Repeat, Procedure)` action callback |
 
 ---
 
@@ -540,15 +507,15 @@ static void DoWork(void *ctx) {
 }
 
 int count = 0;
-TCALLBACK(NS(Algorithm_Repeat, Procedure)) cb =
-    CALLBACK_FUNC(NS(Algorithm_Repeat, Procedure_Bind))(DoWork, &count);
+MODULE_CLOSURE(Algorithm, Repeat, Procedure) cb =
+    MODULE_CLOSURE_FUNC(Algorithm, Repeat, Procedure, Bind)(DoWork, &count);
 Algorithm_Repeat_Procedure(5, cb);
 /* count == 5 */
 ```
 
 ---
 
-# IndexedProcedure
+# ProcedureIndexed
 
 Repeats an action `count` times, passing current iteration index `0 .. count - 1`.
 
@@ -557,13 +524,13 @@ Repeats an action `count` times, passing current iteration index `0 .. count - 1
 #### Direct form
 
 ```c
-Algorithm_Repeat_IndexedProcedure(count, action);
+Algorithm_Repeat_ProcedureIndexed(count, action);
 ```
 
 #### Declarative form
 
 ```c
-MODULE_CALL(Algorithm, Repeat, IndexedProcedure, (count, action));
+MODULE_CALL(Algorithm, Repeat, ProcedureIndexed, (count, action));
 ```
 
 ---
@@ -573,7 +540,7 @@ MODULE_CALL(Algorithm, Repeat, IndexedProcedure, (count, action));
 | Parameter | Explanation |
 | --- | --- |
 | `count` | Number of times to execute the action |
-| `action` | `TCALLBACK(NS(Algorithm_Repeat, IndexedProcedure))` indexed callback |
+| `action` | `MODULE_CLOSURE(Algorithm, Repeat, ProcedureIndexed)` indexed callback |
 
 ---
 
@@ -597,9 +564,9 @@ static void Accumulate(size_t index, void *ctx) {
 }
 
 size_t sum = 0;
-TCALLBACK(NS(Algorithm_Repeat, IndexedProcedure)) cb =
-    CALLBACK_FUNC(NS(Algorithm_Repeat, IndexedProcedure_Bind))(Accumulate, &sum);
-Algorithm_Repeat_IndexedProcedure(4, cb);
+MODULE_CLOSURE(Algorithm, Repeat, ProcedureIndexed) cb =
+    MODULE_CLOSURE_FUNC(Algorithm, Repeat, ProcedureIndexed, Bind)(Accumulate, &sum);
+Algorithm_Repeat_ProcedureIndexed(4, cb);
 /* sum == 0 + 1 + 2 + 3 = 6 */
 ```
 
@@ -630,7 +597,7 @@ OPSTATUS status = MODULE_CALL(Algorithm, Repeat, Operation, (count, operation));
 | Parameter | Explanation |
 | --- | --- |
 | `count` | Number of times to invoke the operation |
-| `operation` | `TCALLBACK(NS(Algorithm_Repeat, Operation))` operation callback |
+| `operation` | `MODULE_CLOSURE(Algorithm, Repeat, Operation)` operation callback |
 
 ---
 
@@ -657,15 +624,15 @@ static OPSTATUS Step(void *ctx) {
 }
 
 int left = 2;
-TCALLBACK(NS(Algorithm_Repeat, Operation)) cb =
-    CALLBACK_FUNC(NS(Algorithm_Repeat, Operation_Bind))(Step, &left);
+MODULE_CLOSURE(Algorithm, Repeat, Operation) cb =
+    MODULE_CLOSURE_FUNC(Algorithm, Repeat, Operation, Bind)(Step, &left);
 OPSTATUS s = Algorithm_Repeat_Operation(2, cb);
 /* s == STATUS_CONST(SUCCESS), left == 0 */
 ```
 
 ---
 
-# IndexedOperation
+# OperationIndexed
 
 Repeats an indexed fallible operation `count` times with short-circuit on failure.
 
@@ -674,13 +641,13 @@ Repeats an indexed fallible operation `count` times with short-circuit on failur
 #### Direct form
 
 ```c
-OPSTATUS status = Algorithm_Repeat_IndexedOperation(count, operation);
+OPSTATUS status = Algorithm_Repeat_OperationIndexed(count, operation);
 ```
 
 #### Declarative form
 
 ```c
-OPSTATUS status = MODULE_CALL(Algorithm, Repeat, IndexedOperation, (count, operation));
+OPSTATUS status = MODULE_CALL(Algorithm, Repeat, OperationIndexed, (count, operation));
 ```
 
 ---
@@ -690,7 +657,7 @@ OPSTATUS status = MODULE_CALL(Algorithm, Repeat, IndexedOperation, (count, opera
 | Parameter | Explanation |
 | --- | --- |
 | `count` | Number of times to invoke the operation |
-| `operation` | `TCALLBACK(NS(Algorithm_Repeat, IndexedOperation))` indexed operation callback |
+| `operation` | `MODULE_CLOSURE(Algorithm, Repeat, OperationIndexed)` indexed operation callback |
 
 ---
 
@@ -715,9 +682,9 @@ static OPSTATUS LimitAt(size_t index, void *ctx) {
 }
 
 size_t max = 3;
-TCALLBACK(NS(Algorithm_Repeat, IndexedOperation)) cb =
-    CALLBACK_FUNC(NS(Algorithm_Repeat, IndexedOperation_Bind))(LimitAt, &max);
-OPSTATUS s = Algorithm_Repeat_IndexedOperation(5, cb);
+MODULE_CLOSURE(Algorithm, Repeat, OperationIndexed) cb =
+    MODULE_CLOSURE_FUNC(Algorithm, Repeat, OperationIndexed, Bind)(LimitAt, &max);
+OPSTATUS s = Algorithm_Repeat_OperationIndexed(5, cb);
 /* s == STATUS_CONST(OUT_OF_RANGE) */
 ```
 
@@ -748,7 +715,7 @@ bool allTrue = MODULE_CALL(Algorithm, Repeat, Predicate, (count, predicate));
 | Parameter | Explanation |
 | --- | --- |
 | `count` | Number of times to evaluate the predicate |
-| `predicate` | `TCALLBACK(NS(Algorithm_Repeat, Predicate))` predicate callback |
+| `predicate` | `MODULE_CLOSURE(Algorithm, Repeat, Predicate)` predicate callback |
 
 ---
 
@@ -773,15 +740,15 @@ static bool CheckItem(void *ctx) {
 }
 
 int left = 3;
-TCALLBACK(NS(Algorithm_Repeat, Predicate)) cb =
-    CALLBACK_FUNC(NS(Algorithm_Repeat, Predicate_Bind))(CheckItem, &left);
+MODULE_CLOSURE(Algorithm, Repeat, Predicate) cb =
+    MODULE_CLOSURE_FUNC(Algorithm, Repeat, Predicate, Bind)(CheckItem, &left);
 bool ok = Algorithm_Repeat_Predicate(3, cb);
 /* ok == true */
 ```
 
 ---
 
-# IndexedPredicate
+# PredicateIndexed
 
 Repeats an indexed predicate `count` times, stopping if it returns `false`.
 
@@ -790,13 +757,13 @@ Repeats an indexed predicate `count` times, stopping if it returns `false`.
 #### Direct form
 
 ```c
-bool allTrue = Algorithm_Repeat_IndexedPredicate(count, predicate);
+bool allTrue = Algorithm_Repeat_PredicateIndexed(count, predicate);
 ```
 
 #### Declarative form
 
 ```c
-bool allTrue = MODULE_CALL(Algorithm, Repeat, IndexedPredicate, (count, predicate));
+bool allTrue = MODULE_CALL(Algorithm, Repeat, PredicateIndexed, (count, predicate));
 ```
 
 ---
@@ -806,7 +773,7 @@ bool allTrue = MODULE_CALL(Algorithm, Repeat, IndexedPredicate, (count, predicat
 | Parameter | Explanation |
 | --- | --- |
 | `count` | Number of times to evaluate the predicate |
-| `predicate` | `TCALLBACK(NS(Algorithm_Repeat, IndexedPredicate))` indexed predicate callback |
+| `predicate` | `MODULE_CLOSURE(Algorithm, Repeat, PredicateIndexed)` indexed predicate callback |
 
 ---
 
@@ -830,9 +797,9 @@ static bool BelowThreshold(size_t index, void *ctx) {
 }
 
 size_t limit = 10;
-TCALLBACK(NS(Algorithm_Repeat, IndexedPredicate)) cb =
-    CALLBACK_FUNC(NS(Algorithm_Repeat, IndexedPredicate_Bind))(BelowThreshold, &limit);
-bool ok = Algorithm_Repeat_IndexedPredicate(5, cb);
+MODULE_CLOSURE(Algorithm, Repeat, PredicateIndexed) cb =
+    MODULE_CLOSURE_FUNC(Algorithm, Repeat, PredicateIndexed, Bind)(BelowThreshold, &limit);
+bool ok = Algorithm_Repeat_PredicateIndexed(5, cb);
 /* ok == true */
 ```
 
@@ -1073,14 +1040,14 @@ static void AddIndex(size_t index, void *ctx) {
 
 int main(void) {
     /* 1. Comparison checks */
-    assert(COMPARISON_FUNC(Int)(2, 3) == COMPARISON_CONST(LOWER));
-    assert(COMPARISON_FUNC(Double)(3.0, 3.0) == COMPARISON_CONST(EQUAL));
+    assert(MODULE_FUNC(Algorithm, Comparison, Int)(2, 3) == COMPARISON_CONST(LOWER));
+    assert(MODULE_FUNC(Algorithm, Comparison, Double)(3.0, 3.0) == COMPARISON_CONST(EQUAL));
 
     /* 2. Repeat Procedure */
     size_t sum = 0;
-    TCALLBACK(NS(Algorithm_Repeat, IndexedProcedure)) cb =
-        CALLBACK_FUNC(NS(Algorithm_Repeat, IndexedProcedure_Bind))(AddIndex, &sum);
-    Algorithm_Repeat_IndexedProcedure(4, cb);
+    MODULE_CLOSURE(Algorithm, Repeat, ProcedureIndexed) cb =
+        MODULE_CLOSURE_FUNC(Algorithm, Repeat, ProcedureIndexed, Bind)(AddIndex, &sum);
+    Algorithm_Repeat_ProcedureIndexed(4, cb);
     assert(sum == 6); /* 0 + 1 + 2 + 3 */
 
     /* 3. Repeat Primitive */
@@ -1097,3 +1064,12 @@ int main(void) {
     return 0;
 }
 ```
+
+
+---
+
+# Result and callback contracts
+
+The three-way comparison result is `CMPOUT`: `LOWER`, `EQUAL` or `HIGHER`. The built-in comparison functions return these values; do not treat them as Boolean values. Repeat procedure closures return `void`, operation closures return `OPSTATUS` and stop on the first failure, and predicate closures return `bool` and stop when the predicate becomes false. Indexed forms receive a zero-based index from `0` to `count - 1`. A count of zero performs no invocation.
+
+Primitive and byte repetition functions fill caller-provided storage; they do not allocate the destination array or buffer.

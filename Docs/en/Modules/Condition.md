@@ -1,6 +1,6 @@
 # Condition
 
-The **Condition** module provides Cosmeron's canonical error-handling, operational status, scoped cleanup, panic, and structured exception primitives.
+The **Condition** module centralizes operation status codes, structured errors, scope-exit cleanup, panic reporting, and exception-style control flow. It belongs to **Core**. Ordinary recoverable failures use `OPSTATUS`; the optional `TRY`/`CATCH` layer is built on C's `setjmp`/`longjmp`.
 
 ```c
 #include "Cosmeron/Core/Condition/Status.h"
@@ -10,123 +10,172 @@ The **Condition** module provides Cosmeron's canonical error-handling, operation
 #include "Cosmeron/Core/Condition/Exception.h"
 ```
 
----
-
-## Architecture & Design
-
-1. **Operational Status (`OPSTATUS`)**:
-   Every fallible `OPERATION` returns `OPSTATUS`. Success is `STATUS_CONST(SUCCESS)`. Categories include generic, memory, I/O, parsing, and arithmetic errors.
-2. **Rich Error Object (`Condition_TError`)**:
-   `MODULE_TYPE(Condition, Error)` encapsulates an `OPSTATUS` code, a human-readable message, and query methods (`Is`, `IsSuccess`, `IsFailure`, `Category`, `IsCategory`).
-3. **Scoped Cleanup (`DEFER`)**:
-   `DEFER(func, context)` and `DEFER_SCOPE(action)` guarantee deterministic resource disposal on scope exit.
-4. **Panic & Exception**:
-   `Panic` handles unrecoverable contract violations with configurable handlers; `Exception` provides `setjmp`/`longjmp`-based structured frames.
+Include only the headers needed. `Exception.h` includes `Error.h` and `Panic.h`.
 
 ---
 
-## Status Reference (`Status.h`)
+# Overview
 
-### `Condition_Status_Name`
+| Header | Purpose | Principal interface |
+| --- | --- | --- |
+| `Status.h` | Operation results and status metadata | `OPSTATUS`, `STATUS_CONST` |
+| `Error.h` | Status plus message, context and cause | `MODULE_TYPE(Condition, Error)` |
+| `Defer.h` | Scope-exit cleanup | `DEFER_SCOPE`, `DEFER`, `DEFER_TRAITS` |
+| `Panic.h` | Contract violations and panic reporting | `PANIC`, `ASSERT`, `VERIFY`, `ENSURE` |
+| `Exception.h` | Try/catch/finally-style control flow | `TRY`, `CATCH`, `FINALLY`, `THROW` |
 
-Returns the symbolic name of an `OPSTATUS` code.
+# Status codes
 
-```c
-const char *Condition_Status_Name(OPSTATUS status);
-/* Macro form: MODULE_FUNC(Condition, Status, Name)(status) */
-```
+`OPSTATUS` is the library's common result type. Successful operations return `STATUS_CONST(SUCCESS)`. Status values are not Boolean values: callers should compare them with named constants or use the Status package.
 
-- **Parameters**: `status` — An `OPSTATUS` value.
-- **Return value**: Null-terminated constant string (e.g., `"SUCCESS"`, `"INVALID_ARGUMENT"`).
-
-### `Condition_Status_Message`
-
-Returns a human-readable description of an `OPSTATUS` code.
+The package exposes `IsSuccess`, `IsFailure`, `IsSpecial`, `CategoryOf`, `IsCategory`, `CategoryName`, `Name` and `Message`. `IsSpecial` identifies the nonterminal statuses `WOULD_BLOCK` and `INCOMPLETE_SEQUENCE`.
 
 ```c
-const char *Condition_Status_Message(OPSTATUS status);
-```
+OPSTATUS status = STATUS_CONST(OUT_OF_RANGE);
 
-### `Condition_Status_IsSuccess` / `Condition_Status_IsFailure`
-
-```c
-bool Condition_Status_IsSuccess(OPSTATUS status);
-bool Condition_Status_IsFailure(OPSTATUS status);
-```
-
----
-
-## Error Object Reference (`Error.h`)
-
-### `Condition_Error_Init`
-
-Initializes a `MODULE_TYPE(Condition, Error)` instance to `SUCCESS`.
-
-```c
-OPSTATUS Condition_Error_Init(MODULE_TYPE(Condition, Error) *self);
-```
-
-### `Condition_Error_Create`
-
-Populates an error object with a status code and custom message.
-
-```c
-OPSTATUS Condition_Error_Create(MODULE_TYPE(Condition, Error) *self,
-                                OPSTATUS code,
-                                const char *message);
-```
-
-### `Condition_Error_FromStatus`
-
-Populates an error object using the default message for `code`.
-
-```c
-OPSTATUS Condition_Error_FromStatus(MODULE_TYPE(Condition, Error) *self,
-                                    OPSTATUS code);
-```
-
-### Query Methods
-
-```c
-OPSTATUS Condition_Error_Code(const MODULE_TYPE(Condition, Error) *self);
-const char *Condition_Error_Message(const MODULE_TYPE(Condition, Error) *self);
-bool Condition_Error_Is(const MODULE_TYPE(Condition, Error) *self, OPSTATUS code);
-bool Condition_Error_IsSuccess(const MODULE_TYPE(Condition, Error) *self);
-bool Condition_Error_IsFailure(const MODULE_TYPE(Condition, Error) *self);
-void Condition_Error_Clear(MODULE_TYPE(Condition, Error) *self);
-```
-
----
-
-## Usage Example
-
-```c
-#include "Cosmeron/Core/Condition/Defer.h"
-#include "Cosmeron/Core/Condition/Error.h"
-#include "Cosmeron/Core/Condition/Status.h"
-#include <stdio.h>
-
-static void Cleanup(void *ctx) {
-  int *handle = (int *)ctx;
-  if (handle) *handle = 0;
-}
-
-int main(void) {
-  MODULE_TYPE(Condition, Error) err = {0};
-  MODULE_FUNC(Condition, Error, Init)(&err);
-  MODULE_FUNC(Condition, Error, Create)(&err, STATUS_CONST(INVALID_ARGUMENT), "Value must be positive");
-
-  printf("Error [%s]: %s\n",
-         MODULE_FUNC(Condition, Status, Name)(OBJECT_CALL_0(&err, Code)),
-         OBJECT_CALL_0(&err, Message));
-
-  int handle = 123;
-  {
-    DEFER(Cleanup, &handle);
-    /* handle is automatically cleaned up on scope exit */
-  }
-  return 0;
+if (MODULE_FUNC(Condition, Status, IsFailure)(status)) {
+    const char *name = MODULE_FUNC(Condition, Status, Name)(status);
+    const char *message = MODULE_FUNC(Condition, Status, Message)(status);
+    (void)name;
+    (void)message;
 }
 ```
 
-See [Examples/Core/Condition.c](../../../Codespace/Examples/Core/Condition.c).
+`STATUS_CONST(NAME)` accesses a status constant and `STATUS_CATEGORY_CONST(NAME)` accesses a category constant. A status is a compact outcome, not a complete diagnostic record.
+
+---
+
+# Structured errors
+
+`MODULE_TYPE(Condition, Error)` stores a status code, optional message pointer, embedded `Diagnostic::Context` and optional cause pointer.
+
+| Operation / observer | Purpose |
+| --- | --- |
+| `Create(code, message)` | Creates an error from a status and message |
+| `FromStatus(code)` | Uses the status' default message |
+| `Clear()` | Resets the object |
+| `Code()` / `Message()` | Reads status and message |
+| `Is(code)` | Compares the status |
+| `Is.Success()` / `Is.Failure()` | Tests the success state |
+| `Is.Category(category)` / `Category()` | Tests or reads the status category |
+| `Set.Context(context)` | Copies a diagnostic context |
+| `Set.Origin(file, line, function, description, userData)` | Sets source-origin fields |
+| `Set.Cause(cause)` | Attaches a causal error |
+| `Context()` / `HasContext()` | Reads/tests the context |
+| `Cause()` / `HasCause()` | Reads/tests the direct cause |
+| `RootCause()` / `Depth()` | Inspects the cause chain |
+
+```c
+MODULE_TYPE(Condition, Error) error = {0};
+
+OPSTATUS status = API(&error, Create,
+                      STATUS_CONST(OUT_OF_RANGE),
+                      "Requested index is outside the collection");
+
+if (status == STATUS_CONST(SUCCESS)) {
+    API(&error, Set, Origin, __FILE__, (uint32_t)__LINE__,
+        __func__, "Reading an element", NULL);
+    status = API(&error, Code);
+}
+```
+
+Message, context strings and user data are borrowed pointers. Keep their storage alive while the Error is used. A cause pointer is borrowed as well; do not attach a short-lived error to a longer-lived one.
+
+---
+
+# Deferred cleanup
+
+`Defer.h` provides portable loop-based scope macros and GCC/Clang cleanup-attribute macros.
+
+## `DEFER_SCOPE`
+
+Runs an exit statement when the generated scope finishes:
+
+```c
+DEFER_SCOPE(close_resource()) {
+    use_resource();
+}
+```
+
+Avoid jumping into or out of the generated loop with `goto`.
+
+## `DEFER_TRY_SCOPE`
+
+Combines the exit action with an exception frame:
+
+```c
+DEFER_TRY_SCOPE(release_temporary()) {
+    acquire_temporary();
+    do_work_that_may_throw();
+}
+```
+
+## `DEFER` and `DEFER_NAMED`
+
+On GCC and Clang, `DEFER(function, context)` registers a callback for scope exit. `DEFER_NAMED(variable, function, context)` gives the node an explicit identifier. `DEFER_CANCEL(variable)` disables a pending cleanup. `DEFER_TRAITS(traits, instance)` and `DEFER_TRAITS_NAMED(...)` register the Type Traits disposal operation.
+
+```c
+static void release_handle(void *context)
+{
+    Handle_Close((Handle *)context);
+}
+
+void process(Handle *handle)
+{
+    DEFER(release_handle, handle);
+    perform_work(handle);
+}
+```
+
+The Defer package also exposes `Cancel`, `IsActive` and `Execute`. The compiler-cleanup macros are only defined for GCC and Clang; use `DEFER_SCOPE` where that extension is unavailable.
+
+---
+
+# Panic and contracts
+
+Panic reports a failed assumption or contract that should not be treated as an ordinary recoverable status. `Panic_Info` carries the kind, message, expression, file, line and function. The package provides `SetHandler`, `GetHandler`, `ResetHandler`, `KindName`, `Trigger` and `Now`.
+
+Public macros capture source location: `PANIC(message)`, `ASSERT(condition)`, `VERIFY(condition)`, `ENSURE(condition)`, `UNREACHABLE()` and `PANIC_ASSERT(condition)`. `ASSERT` is a development assertion and is compiled out when `COSMERON_DISABLE_DEBUG_ASSERT` is defined; `VERIFY` and `ENSURE` are runtime checks. These macros do not return `OPSTATUS`.
+
+---
+
+# Exception-style control flow
+
+`Exception.h` manages `Exception_Frame` objects using `setjmp`/`longjmp`.
+
+```c
+TRY {
+    perform_operation();
+    if (failed)
+        THROW_STATUS(STATUS_CONST(OUT_OF_RANGE), "Invalid input");
+}
+CATCH {
+    const MODULE_TYPE(Condition, Error) *error = CURRENT_ERROR();
+    log_error(error);
+}
+FINALLY {
+    release_temporary_resources();
+}
+```
+
+`THROW(error)` throws an existing `Condition_Error`; `THROW_STATUS(status, message)` constructs one with the current source location. `CATCH` handles the active frame's error, `CURRENT_ERROR()` exposes it and `RETHROW()` propagates it. `FINALLY` is the final clause.
+
+The Exception package exposes `PushFrame`, `PopFrame`, `RegisterCleanup`, `Throw`, `ThrowStatus`, `Rethrow`, `CurrentError` and `HasActiveFrame`. Frame observers include `Error`, `Threw` and `Caught`; `SetCleanup` registers a cleanup closure.
+
+**C rule:** automatic local variables modified after `setjmp` may become indeterminate after `longjmp` unless declared `volatile`. Do not jump across functions that have returned. Use this facility only when its non-local control flow is intentional; normal recoverable failures should use `OPSTATUS`.
+
+---
+
+# Choosing the right mechanism
+
+| Situation | Use |
+| --- | --- |
+| Caller should decide how to recover | `OPSTATUS` |
+| Caller needs a message, origin or cause chain | `Condition_Error` |
+| A local resource needs scope-exit cleanup | `DEFER_SCOPE` or `DEFER` |
+| A contract or invariant is violated | `ASSERT`, `VERIFY`, `ENSURE` |
+| Code intentionally needs throw/catch control flow | `TRY`, `CATCH`, `FINALLY` |
+
+# Build and portability notes
+
+These interfaces are header-included C APIs. `DEFER_NAMED`, `DEFER`, `DEFER_TRAITS` and `DEFER_CANCEL` rely on GCC/Clang's `cleanup` attribute. Exception handling requires C's `setjmp` support. The status/error interface remains the ordinary portable path for recoverable failures.
