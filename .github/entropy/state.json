@@ -1,11 +1,11 @@
 {
-  "display": "359861αμ",
-  "total": 359861,
-  "symbol": "αμ",
+  "display": "757749γδ",
+  "total": 757749,
+  "symbol": "γδ",
   "unit": "H",
   "origin_commit": "ec09aa75034ed27793814e8f2f000c26c729138a",
-  "ref_commit": "5fe7253e58ebb17ed02b89029e96067ba75e26a2",
+  "ref_commit": "c3fc9cc6e2ee6ae335aa77c8e5710ff31e9595df",
   "initial_entropy": 340703,
-  "accumulated_change": 19158,
+  "accumulated_change": 417046,
   "provisional": false
 }
