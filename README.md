@@ -14,7 +14,7 @@
 ![Lines of Code](.github/badges/loc.svg)
 
 Cosmeron is a zero-dependency **C11** ecosystem and standard
-library built around a **declarative DSL** for safe, modular,
+library built around of **Cosmic DSL** for safe, modular,
 and portable systems programming—targeting native platforms
 (Linux, BSD, macOS, Windows) as well as **WebAssembly**
 (`WASI` / `Emscripten`).
@@ -74,7 +74,7 @@ language copies in [English](Docs/en/LICENSE.md),
 
 ---
 
-## The Declarative C11 DSL
+## Cosmic DSL - The brand new Declarative C11 DSL
 
 Cosmeron replaces ad-hoc boilerplate with a clean,
 type-safe declarative DSL in pure C11:
