@@ -1,6 +1,6 @@
 # Memory
 
-O módulo **Memory** fornece alocação de memória, operações com bytes, interfaces de alocadores, arenas, pools, um heap de largura fixa, streams binários limitados, um coletor por rastreamento, famílias de ponteiros inteligentes y bloques de memoria de ancho fijo. Las operaciones que pueden fallar retornam `OPSTATUS` y utilizam parámetros de salida propriedade do chamador. `Arena`, `Pool`, `Heap` y `Stream` desabilitan explícitamente sus function tables de objeto. Utilize llamadas directas `MODULE_FUNC(Memory, Type, Method)` para los objetos Memory en toda esta guía; esta forma directa sigue siendo válida independientemente de que un encabezado habilite una function table.
+O módulo **Memory** oferece alocação, operações com bytes, interfaces de alocadores, arenas, pools, um heap de largura fixa, streams binários limitados, um coletor por rastreamento, famílias de smart pointers e blocos de memória de largura fixa. Operações que podem falhar retornam `OPSTATUS` e utilizam parâmetros de saída pertencentes ao chamador. `Arena`, `Pool`, `Heap` e `Stream` desativam explicitamente suas tabelas de funções de objeto. Use chamadas diretas `MODULE_FUNC(Memory, Type, Method)` para os objetos Memory ao longo deste guia; a forma direta continua válida independentemente de um cabeçalho específico habilitar ou não uma tabela de funções.
 
 ## Cabeçalhos
 
@@ -8,48 +8,48 @@ O módulo **Memory** fornece alocação de memória, operações com bytes, inte
 #include "Cosmeron/Core/Memory/Memory.h"
 ~~~
 
-O cabeçalho agregadorr inclui:
+O cabeçalho agregador inclui:
 
-| Encabezado | Recurso |
+| Cabeçalho | Recurso |
 | --- | --- |
-| `Operations.h` | Copia, movimiento, alocação, puesta a cero e igualdade de trechos de bytes. |
-| `Alloc.h` | Asignación, redimensionamiento y liberación de memoria sin tipo. |
-| `Allocator.h` | Descriptor de alocador con borrado de tipo y capacidades. |
-| `../Algorithm/Swap.h` | Troca de bytes y arrays expuesto en el módulo Memory. |
-| `Arena.h` | Asignación lineal desde un buffer o una reserva de respaldo propia. |
+| `Operations.h` | Cópia, movimentação, preenchimento, zeragem e comparação de trechos de bytes. |
+| `Alloc.h` | Alocação, redimensionamento e liberação de memória bruta. |
+| `Allocator.h` | Descritor de alocador com apagamento de tipo e capacidades. |
+| `../Algorithm/Swap.h` | Troca de bytes e arrays exposta pelo módulo Memory. |
+| `Arena.h` | Alocação linear a partir de um buffer ou de uma alocação de apoio própria. |
 | `Pool.h` | Pool de elementos de tamanho fixo. |
-| `Heap.h` | Heap basado en páginas y clases de tamanho. |
-| `Stream.h` | Stream limitado de lectura/escritura con operaciones de bits y endian-aware. |
-| `Collector.h` | Recolector de basura por trazado y fachada global del collector. |
+| `Heap.h` | Heap baseado em páginas e classes de tamanho. |
+| `Stream.h` | Stream limitado de leitura/escrita com operações de bits e endianness. |
+| `Collector.h` | Coletor de lixo por rastreamento e fachada do coletor global. |
 | `Pointer/Pointer.h` | Wrappers de ponteiros unique, shared, weak, atomic e intrusive. |
 
-`Block.h` es un encabezado separado para bloques de memoria de ancho fijo y não está incluído por `Memory.h`; inclua-o directamente quando necessário.
+`Block.h` é um cabeçalho separado para blocos de memória de largura fixa e não é incluído por `Memory.h`; inclua-o diretamente quando necessário.
 
 ---
 
 # Visão geral
 
-Memory cubre várias estratégias distintas de alocação e armazenamento: alocação sem tipo para bloques individuales, operaciones de bytes para trechos propriedade do chamador, arenas y pools para alocação por ámbito o de tamanho fixo, un heap basado en páginas, streams limitados para E/S binaria y um coletor por rastreamento o smart pointers para propriedade administrada. Escolha o recurso mais específico que corresponda con el modelo de vida útil e propriedade, em vez de tratar todos los alocadores como intercambiables.
+Memory abrange diversas estratégias distintas de alocação e armazenamento: alocação bruta para blocos individuais, operações com bytes para trechos pertencentes ao chamador, arenas e pools para alocação por escopo ou de tamanho fixo, um heap baseado em páginas, streams limitados para E/S binária e um coletor por rastreamento ou smart pointers para propriedade gerenciada. Escolha o recurso mais específico que corresponda ao modelo de vida útil e propriedade, em vez de tratar todos os alocadores como intercambiáveis.
 
 ---
 
 # Referência da API
 
-## Alocação sem tipo
+## Alocação bruta
 
 Cabeçalho: `Alloc.h`. Pacote: `Memory_Alloc`.
 
-| Função | Firma | Descrição |
+| Função | Assinatura | Descrição |
 | --- | --- | --- |
-| `Bytes` | `(void *outPointerObject, size_t size)` | Aloca uma quantidade de bytes y escribe el ponteiro resultante mediante el parámetro de salida. |
-| `Array` | `(void *outPointerObject, size_t count, size_t elementSize)` | Aloca uma quantidade de elementos con multiplicação de tamanho verificada. |
-| `Zero.Bytes` | `(void *outPointerObject, size_t size)` | Asigna bytes inicializados com zero. |
-| `Zero.Array` | `(void *outPointerObject, size_t count, size_t elementSize)` | Asigna un array inicializado en cero. |
-| `Realloc.Bytes` | `(void *inoutPointerObject, size_t newSize)` | Redimensiona a alocação y atualiza o ponteiro. |
-| `Realloc.Array` | `(void *inoutPointerObject, size_t count, size_t elementSize)` | Redimensiona a alocação para una cantidad de elementos. |
-| `Free` | `(void *inoutPointerObject)` | Libera a alocação y limpia el ponteiro. |
+| `Bytes` | `(void *outPointerObject, size_t size)` | Aloca uma quantidade de bytes e grava o ponteiro resultante por meio do parâmetro de saída. |
+| `Array` | `(void *outPointerObject, size_t count, size_t elementSize)` | Aloca uma quantidade de elementos com verificação da multiplicação dos tamanhos. |
+| `Zero.Bytes` | `(void *outPointerObject, size_t size)` | Aloca bytes inicializados com zero. |
+| `Zero.Array` | `(void *outPointerObject, size_t count, size_t elementSize)` | Aloca um array inicializado com zero. |
+| `Realloc.Bytes` | `(void *inoutPointerObject, size_t newSize)` | Redimensiona a alocação e atualiza o ponteiro. |
+| `Realloc.Array` | `(void *inoutPointerObject, size_t count, size_t elementSize)` | Redimensiona a alocação para uma quantidade de elementos. |
+| `Free` | `(void *inoutPointerObject)` | Libera a alocação e limpa o ponteiro. |
 
-El primer argumento de las funções de alocação y realocação es la endereço de uma variável ponteiro, passada como `void *`. O alocador grava el nuevo ponteiro en esa variable. Não passe el ponteiro de la alocação en sí em vez de la dirección de la variable ponteiro.
+O primeiro argumento das funções de alocação e realocação é o endereço de uma variável ponteiro, passado como `void *`. O alocador grava o novo ponteiro nessa variável. Não passe o próprio ponteiro da alocação no lugar do endereço da variável ponteiro.
 
 ~~~c
 int *values = NULL;
@@ -58,12 +58,14 @@ OPSTATUS status = MODULE_FUNC(Memory, Alloc, Array)(
     &values, 16U, sizeof(*values));
 
 if (status == STATUS_CONST(SUCCESS)) {
-    /* use os valores */
+    /* use values */
     MODULE_FUNC(Memory, Alloc, Free)(&values);
 }
 ~~~
 
-`Memory_Free(pointerLvalue)` es una macro de conveniencia alrededor de `Memory_Alloc_Free` que recibe un lvalue de ponteiro. Es un auxiliar de limpeza no estilo de instrução; prefira a operação del pacote quando o status for necessário.
+`Memory_Free(pointerLvalue)` é uma macro de conveniência em torno de `Memory_Alloc_Free` que recebe um lvalue de ponteiro. É um auxiliar de limpeza no estilo de instrução; prefira a operação do pacote quando o status for necessário.
+
+---
 
 ## Operações com bytes
 
@@ -71,60 +73,67 @@ Cabeçalho: `Operations.h`. Pacote: `Memory_Operations`.
 
 | Função | Contrato |
 | --- | --- |
-| `Copy(destination, source, size)` | Copia un trecho de bytes; origem e destino não devem se sobrepor. |
-| `Copy.Array(destination, source, count, elementSize)` | Copia un array tras comprobar la multiplicación del tamanho. |
-| `Move(destination, source, size)` | Mueve un trecho de bytes y permite sobreposição. |
-| `Move.Array(destination, source, count, elementSize)` | Mueve un array tras comprobar la multiplicación del tamanho. |
-| `Set(destination, value, size)` | Rellena bytes con el byte menos significativo del valor inteiro. |
-| `Zero(destination, size)` | Pone a cero un trecho de bytes. |
-| `Zero.Array(destination, count, elementSize)` | Pone a cero un array tras comprobar la multiplicación del tamanho. |
-| `Equals(left, right, size)` | Retorna se los trechos de bytes son iguales. |
+| `Copy(destination, source, size)` | Copia um trecho de bytes; origem e destino não podem se sobrepor. |
+| `Copy.Array(destination, source, count, elementSize)` | Copia um array após verificar a multiplicação dos tamanhos. |
+| `Move(destination, source, size)` | Move um trecho de bytes e permite sobreposição. |
+| `Move.Array(destination, source, count, elementSize)` | Move um array após verificar a multiplicação dos tamanhos. |
+| `Set(destination, value, size)` | Preenche bytes com o byte menos significativo do valor inteiro. |
+| `Zero(destination, size)` | Define como zero um trecho de bytes. |
+| `Zero.Array(destination, count, elementSize)` | Zera um array após verificar a multiplicação dos tamanhos. |
+| `Equals(left, right, size)` | Retorna se os trechos de bytes são iguais. |
 
 ~~~c
-MODULE_FUNC(Memory, Operations, Copy)(destination, source, byteCount);
-MODULE_FUNC(Memory, Operations, Move)(destination, source, byteCount);
+MODULE_FUNC(Memory, Operations, Copy)(
+    destination, source, byteCount);
+
+MODULE_FUNC(Memory, Operations, Move)(
+    destination, source, byteCount);
 ~~~
 
-Escolha `Copy` solo para intervalos que no se solapan; utiliza `Move` cuando puedan solaparse. `Set` repite un valor de byte y no es un constructor de arrays tipados. Utilize inicialización tipada explícita cuando la representación del elemento no sea un patrón de bytes repetido.
+Use `Copy` somente para intervalos sem sobreposição; use `Move` quando eles puderem se sobrepor. `Set` repete um valor de byte e não é um construtor de arrays tipados. Utilize inicialização tipada explícita quando a representação do elemento não for um padrão de bytes repetido.
 
 ### Troca
 
-Cabeçalho: `Core/Algorithm/Swap.h`. Este encabezado declara su API pública bajo el namespace del módulo Memory.
+Cabeçalho: `Core/Algorithm/Swap.h`. Esse cabeçalho declara sua API pública no namespace do módulo Memory.
 
 | Função | Descrição |
 | --- | --- |
-| `Swap.Bytes(left, right, size)` | Intercambia dos intervalos de bytes que no se solapan. |
-| `Swap.Array(left, right, count, elementSize)` | Intercambia dos arrays con multiplicação de tamanho verificada. |
-| Especializaciones de template tipado | Generan procedimientos de intercambio de valores tipados para un tipo C seleccionado. |
+| `Swap.Bytes(left, right, size)` | Troca dois intervalos de bytes sem sobreposição. |
+| `Swap.Array(left, right, count, elementSize)` | Troca dois arrays com verificação da multiplicação dos tamanhos. |
+| Especializações de templates tipados | Geram procedimentos de troca de valores tipados para um tipo C selecionado. |
 
-Swap requiere intervalos válidos y no sobrepostos. La implementação trata los ponteiros idénticos y las solicitudes de tamanho cero como casos sin efecto. No sustituye a `Move` cuando hay sobreposição.
+Swap exige intervalos válidos e sem sobreposição. A implementação trata ponteiros idênticos e solicitações de tamanho zero como operações sem efeito. Não substitui `Move` quando há sobreposição.
+
+---
 
 ## Interface Allocator
 
 Cabeçalho: `Allocator.h`.
 
-`MODULE_TYPE(Memory, Allocator)` es un valor de alocador con borrado de tipo que contiene una tabla de operaciones, contexto y flags de capacidad. El pacote `Allocator` proporciona `Default`, `IsValid`, `Alloc` (incluido `Aligned`), `Calloc`, `Realloc` y `Free`.
+`MODULE_TYPE(Memory, Allocator)` é um valor de alocador com apagamento de tipo que contém uma tabela de operações, contexto e flags de capacidade. O pacote `Allocator` fornece `Default`, `IsValid`, `Alloc` (incluindo `Aligned`), `Calloc`, `Realloc` e `Free`.
 
-Utilize un alocador cuando un componente deba aceptar una política de memoria elegida por el chamador sin depender de una implementação concreta. El valor Allocator no posee el contexto externo detrás de sus ponteiros de función; ese contexto debe sobrevivir a su uso.
+Use um alocador quando um componente precisar aceitar uma política de memória escolhida pelo chamador sem depender de uma implementação concreta de alocador. O valor Allocator não é proprietário do contexto externo referenciado por seus ponteiros de função; esse contexto deve permanecer válido durante todo o seu uso.
+
+---
 
 ## Arena
 
 Cabeçalho: `Arena.h`. Tipo: `MODULE_TYPE(Memory, Arena)`.
 
-La alocação Arena es útil para grupos de objetos de vida corta que pueden liberarse juntos. La arena almacena un buffer, capacidad y deslocamento actual.
+A alocação por Arena é útil para grupos de objetos de vida curta que podem ser liberados em conjunto. A arena armazena um buffer, sua capacidade e o deslocamento atual.
 
 | Método | Descrição |
 | --- | --- |
-| `Create(capacity)` | Crea armazenamento de arena con la capacidad solicitada. |
-| `Create.Buffer(buffer, capacity)` | Inicializa una arena sobre armazenamento proporcionado por el chamador. |
-| `Alloc.Bytes`, `Alloc.Aligned` | Asigna bytes con alineación opcional. |
-| `Alloc.Array`, `Alloc.ArrayAligned` | Aloca uma quantidade de elementos con alineación opcional. |
-| `Save(outMark)` | Escribe el deslocamento actual en una marca de salida. |
-| `Restore(mark)` | Restaura un deslocamento registrado previamente. |
-| `Contains(pointer)` | Verifica si un ponteiro está dentro del buffer de la arena. |
-| `Reset()` | Restablece el deslocamento al inicio. |
-| `Destroy()` | Libera el armazenamento propio y limpia el estado de la arena. |
-| `AsAllocator()` | Retorna una interfaz de alocador respaldada por la arena. |
+| `Create(capacity)` | Cria o armazenamento da arena com a capacidade solicitada. |
+| `Create.Buffer(buffer, capacity)` | Inicializa uma arena sobre um armazenamento fornecido pelo chamador. |
+| `Alloc.Bytes`, `Alloc.Aligned` | Aloca bytes com alinhamento opcional. |
+| `Alloc.Array`, `Alloc.ArrayAligned` | Aloca uma quantidade de elementos com alinhamento opcional. |
+| `Save(outMark)` | Grava o deslocamento atual em uma marca de saída. |
+| `Restore(mark)` | Restaura um deslocamento registrado anteriormente. |
+| `Contains(pointer)` | Verifica se um ponteiro está dentro do buffer da arena. |
+| `Reset()` | Redefine o deslocamento para o início. |
+| `Destroy()` | Libera o armazenamento próprio e limpa o estado da arena. |
+| `AsAllocator()` | Retorna uma interface de alocador respaldada pela arena. |
 
 ~~~c
 MODULE_TYPE(Memory, Arena) arena = {0};
@@ -132,72 +141,79 @@ MODULE_TYPE(Memory, Arena) arena = {0};
 OPSTATUS status = MODULE_FUNC(Memory, Arena, Create)(&arena, 4096U);
 if (status == STATUS_CONST(SUCCESS)) {
     void *memory = NULL;
-    status = MODULE_FUNC(Memory, Arena, Alloc, Bytes)(&arena, &memory, 128U);
+    status = MODULE_FUNC(Memory, Arena, Alloc, Bytes)(
+        &arena, &memory, 128U);
     (void)MODULE_FUNC(Memory, Arena, Destroy)(&arena);
 }
 ~~~
 
-La memoria devuelta por una arena sigue siendo válida hasta que la arena se reinicia, se restaura más allá de la alocação, se destruye o su buffer de respaldo deja de ser válido. No liberes alocaciones individuales de arena con el alocador sin tipo.
+A memória retornada por uma arena permanece válida até que a arena seja reiniciada, restaurada para além da alocação, destruída ou que seu buffer de apoio se torne inválido por outro motivo. Não libere alocações individuais de arena com o alocador bruto.
+
+---
 
 ## Pool
 
 Cabeçalho: `Pool.h`. Tipo: `MODULE_TYPE(Memory, Pool)`.
 
-Un pool administra una cantidad fija de elementos del mismo tamanho.
+Um pool gerencia uma quantidade fixa de elementos de mesmo tamanho.
 
 | Método | Descrição |
 | --- | --- |
-| `Create(elementSize, elementCount)` | Crea armazenamento para un tamanho y cantidad de elementos fijos. |
-| `Create.Buffer(buffer, bufferSize, elementSize)` | Inicializa un pool sobre memoria propriedade do chamador. |
-| `Alloc(outPointer)` | Adquiere un elemento. |
-| `Free(pointer)` / `Free.Pointer(pointerLvalue)` | Retorna un elemento al pool. |
-| `Reset()` | Marca todos los elementos como disponibles de nuevo. |
-| `Destroy()` | Libera el armazenamento de respaldo propio. |
-| `Contains(pointer)` | Verifica si un ponteiro pertenece al pool. |
-| `AsAllocator()` | Expone el pool mediante la interfaz Allocator. |
+| `Create(elementSize, elementCount)` | Cria o armazenamento do pool para um tamanho e uma quantidade fixos de elementos. |
+| `Create.Buffer(buffer, bufferSize, elementSize)` | Inicializa um pool sobre memória pertencente ao chamador. |
+| `Alloc(outPointer)` | Adquire um elemento. |
+| `Free(pointer)` / `Free.Pointer(pointerLvalue)` | Devolve um elemento ao pool. |
+| `Reset()` | Marca todos os elementos como disponíveis novamente. |
+| `Destroy()` | Libera o armazenamento de apoio próprio. |
+| `Contains(pointer)` | Verifica se um ponteiro pertence ao pool. |
+| `AsAllocator()` | Expõe o pool por meio da interface Allocator. |
 
-Las alocaciones Pool tienen el tamanho y contrato de alineación configurados. El pool no realiza seguimiento de constructores/destructores de objetos definidos por el usuario; combínalo con traits de Types cuando se requiera un ciclo de vida no trivial.
+As alocações do Pool seguem o contrato configurado de tamanho e alinhamento dos elementos. O pool não acompanha construtores/destrutores de objetos definidos pelo usuário; combine-o com os traits de Types quando for necessário um ciclo de vida não trivial.
+
+---
 
 ## Heap
 
 Cabeçalho: `Heap.h`. Tipo: `MODULE_TYPE(Memory, Heap)`.
 
-Heap es un alocador basado en páginas y clases de tamanho. Expone creación/destrucción, políticas de alocação, liberación, bloqueo/recorrido de páginas y un adaptador genérico de alocador.
+Heap é um alocador baseado em páginas e classes de tamanho. Ele expõe criação/destruição, políticas de alocação, liberação, bloqueio e varredura de páginas e um adaptador genérico de alocador.
 
-La tabla de políticas actual inclui `MANUAL`, `CONSERVATIVE`, `TYPED`, `ATOMIC`, `IMMUTABLE`, `TRACED` y `PINNED`. Son valores de política de alocação, no garantías generales de sincronización para los objetos almacenados en el heap.
+A tabela atual de políticas inclui `MANUAL`, `CONSERVATIVE`, `TYPED`, `ATOMIC`, `IMMUTABLE`, `TRACED` e `PINNED`. Esses são valores de política de alocação, não garantias gerais de sincronização para os objetos armazenados no heap.
 
 | Método | Descrição |
 | --- | --- |
-| `Create(initialPages)` / `Destroy()` | Inicia o desmonta el estado del heap. |
-| `Alloc` | Asigna utilizamdo una política seleccionada y un descriptor de tipo opcional. |
-| `Alloc.Small` / `Alloc.Large` | Rutas explícitas de alocação pequeña/grande. |
-| `FreeCell(pointer)` | Libera una celda del heap. |
-| `BlacklistPage(pageIndex)` | Impide que una página participe en la alocação normal. |
-| `SweepPage(page, outIsPageEmpty)` | Recorre una página e informa si está vacía. |
-| `IsBlacklisted(pageIndex)` | Verifica si un índice de página está bloqueado. |
-| `LookupEntry(pointer)` | Busca la entrada del heap asociada a un ponteiro. |
-| `ResolvePointer(interiorPointer, outBasePointer, outSize, outPolicy)` | Resuelve un ponteiro interior a los metadatos de su alocação. |
-| `Contains(pointer)` | Verifica si un ponteiro pertenece a este heap. |
-| `LazySweepClass(sizeClassIndex)` | Realiza un recorrido diferido para una clase de tamanho. |
-| `AsAllocator()` | Retorna un adaptador Allocator. |
+| `Create(initialPages)` / `Destroy()` | Inicia ou encerra o estado do heap. |
+| `Alloc` | Aloca usando uma política selecionada e um descritor de tipo opcional. |
+| `Alloc.Small` / `Alloc.Large` | Caminhos explícitos para alocações pequenas/grandes. |
+| `FreeCell(pointer)` | Libera uma célula do heap. |
+| `BlacklistPage(pageIndex)` | Impede que uma página participe da alocação normal. |
+| `SweepPage(page, outIsPageEmpty)` | Varre uma página e informa se ela está vazia. |
+| `IsBlacklisted(pageIndex)` | Verifica se um índice de página está bloqueado. |
+| `LookupEntry(pointer)` | Procura a entrada do heap associada a um ponteiro. |
+| `ResolvePointer(interiorPointer, outBasePointer, outSize, outPolicy)` | Resolve um ponteiro interno para os metadados de sua alocação. |
+| `Contains(pointer)` | Verifica se um ponteiro pertence a esse heap. |
+| `LazySweepClass(sizeClassIndex)` | Executa uma varredura tardia para uma classe de tamanho. |
+| `AsAllocator()` | Retorna um adaptador Allocator. |
 
-Heap es un alocador concreto. Utilize `Allocator` al pasarlo a un componente genérico. Sigue los contratos de los métodos Heap para los parámetros de política y descriptor; las funções de alocação sem tipo no son intercambiables con la alocação administrada por Collector.
+Heap é um alocador concreto. Use `Allocator` ao passá-lo para um componente genérico. Siga os contratos dos métodos Heap para os parâmetros de política e descritor; as funções de alocação bruta não são intercambiáveis com a alocação gerenciada pelo Collector.
 
-## Stream binario
+---
+
+## Stream binário
 
 Cabeçalho: `Stream.h`. Tipo: `MODULE_TYPE(Memory, Stream)`.
 
-Un Stream es una vista limitada sobre un buffer proporcionado por el chamador. Admite inicialización de solo lectura y escritura, búsqueda de posición, saltos, alineación a byte, lecturas/escrituras tipadas, operaciones de inteiros con endianess y acceso a nivel de bit.
+Um Stream é uma visualização limitada sobre um buffer fornecido pelo chamador. Ele oferece inicialização somente para leitura ou com permissão de escrita, busca de posição, avanço, alinhamento em byte, leituras/escritas tipadas, operações com inteiros cientes de endianness e acesso em nível de bit.
 
 | Grupo | Métodos |
 | --- | --- |
-| Inicialización | `Init.Read(buffer, size)`, `Init.Write(buffer, capacity)` |
-| Posición | `Seek(offset, origin)`, `Skip(count)`, `Rewind()`, `AlignToByte()` |
+| Inicialização | `Init.Read(buffer, size)`, `Init.Write(buffer, capacity)` |
+| Posição | `Seek(offset, origin)`, `Skip(count)`, `Rewind()`, `AlignToByte()` |
 | Estado | `Remaining`, `RemainingBits`, `Position`, `BitPosition`, `Capacity`, `IsAtEnd`, `IsReadOnly`, `HasRemaining(count)`, `HasRemainingBits(bitCount)`, `Data`, `Current` |
 | Substream | `Slice(size, outSubStream)` |
 | Leitura | `Read.Slice`, `Read.Bytes`, `Read.Bits`, `Read.UInt8`/`Int8`, `UInt16LE`/`BE`, `Int16LE`/`BE`, `UInt32LE`/`BE`, `Int32LE`/`BE`, `UInt64LE`/`BE`, `Int64LE`/`BE` |
-| Inspección sin avanzar | `Peek.Bytes`, `Peek.UInt8` |
-| Escrita | `Write.Bytes`, `Write.Bits` y las variantes de inteiros/endianess correspondientes. |
+| Inspeção sem avanço | `Peek.Bytes`, `Peek.UInt8` |
+| Escrita | `Write.Bytes`, `Write.Bits` e as variantes correspondentes de inteiros/endianness. |
 
 ~~~c
 MODULE_TYPE(Memory, Stream) stream = {0};
@@ -206,95 +222,102 @@ uint32_t value = 0U;
 OPSTATUS status = MODULE_FUNC(Memory, Stream, Init, Read)(
     &stream, input, inputSize);
 if (status == STATUS_CONST(SUCCESS)) {
-    status = MODULE_FUNC(Memory, Stream, Read, UInt32BE)(&stream, &value);
+    status = MODULE_FUNC(Memory, Stream, Read, UInt32BE)(
+        &stream, &value);
 }
 ~~~
 
-La endianess se selecciona por el nombre de la operación y es independiente del orden de bytes del host. El stream nunca amplía su buffer de respaldo. Las lecturas y escrituras validan la posición actual, el tamanho solicitado y la capacidad disponible.
+A endianness é selecionada pelo nome da operação e é independente da ordem de bytes do host. O stream nunca aumenta o tamanho do buffer de apoio. Leituras e escritas validam a posição atual, o tamanho solicitado e a capacidade disponível.
+
+---
 
 ## Collector
 
 Cabeçalho: `Collector.h`.
 
-Collector combina alocação Heap con seguimiento de raíces, trazado, pausa/reanudación, soporte de finalizadores y una interfaz global de conveniencia.
+O Collector combina alocação Heap com rastreamento de raízes, rastreamento de referências, pausa/retomada, suporte a finalizadores e uma interface global de conveniência.
 
-### Collector por instancia
+### Collector por instância
 
 Tipo: `MODULE_TYPE(Memory, Collector)`.
 
 | Método | Descrição |
 | --- | --- |
-| `Create(initialHeapPages, stackBottom)` / `Destroy()` | Inicializa o destruye un collector independiente. |
-| `Alloc`, `Alloc.Typed`, `Alloc.Atomic` | Asigna armazenamento sin tipo, consciente de descriptores o atómico. |
-| `SetFinalizer(pointer, finalizer)` | Asocia un callback finalizador a una alocação. |
-| `PinRoot(rootPointerAddress)` / `UnpinRoot(rootPointerAddress)` | Registra o elimina el registro de la dirección de una ranura de ponteiro raíz. |
-| `Collect()` | Ejecuta un ciclo de coleta. |
-| `Pause()` / `Resume()` | Suspende o reanuda temporalmente la coleta. |
-| `AsAllocator()` | Expone Collector mediante la interfaz Allocator. |
+| `Create(initialHeapPages, stackBottom)` / `Destroy()` | Inicializa ou destrói um coletor independente. |
+| `Alloc`, `Alloc.Typed`, `Alloc.Atomic` | Aloca armazenamento bruto, ciente de descritores ou atômico. |
+| `SetFinalizer(pointer, finalizer)` | Associa um callback finalizador a uma alocação. |
+| `PinRoot(rootPointerAddress)` / `UnpinRoot(rootPointerAddress)` | Registra ou remove o registro do endereço de um slot de ponteiro raiz. |
+| `Collect()` | Executa um ciclo de coleta. |
+| `Pause()` / `Resume()` | Suspende ou retoma temporariamente a coleta. |
+| `AsAllocator()` | Expõe o coletor por meio da interface de alocador. |
 
 ### Collector global
 
-El pacote `GlobalCollector` proporciona `Startup(stackBottom)`, `Shutdown()`, `DefaultCollector()`, las operaciones correspondientes de alocação/finalizador/raíz, `Collect`, `Pause`/`Resume`, `LiveBytes` y `Contains`.
+O pacote `GlobalCollector` fornece `Startup(stackBottom)`, `Shutdown()`, `DefaultCollector()`, as operações correspondentes de alocação/finalizador/raiz, `Collect`, `Pause`/`Resume`, `LiveBytes` e `Contains`.
 
-La API de raíces recibe la **endereço de uma variável ponteiro raíz**, no la dirección de la alocação. Fija y libera la misma ranura raíz, y mantén esa ranura válida mientras esté registrada. El argumento stack-bottom debe coincidir con el contrato de límites de pila de la plataforma/thread. Los finalizadores pueden ejecutar código del usuario; la coleta no equivale a llamar a `free` para una única alocação.
+A API de raízes recebe o **endereço de uma variável ponteiro raiz**, não o endereço da alocação. Fixe e desafixe o mesmo slot raiz e mantenha esse slot válido enquanto estiver registrado. O argumento stack-bottom deve corresponder ao contrato de limites de pilha da plataforma/thread. Finalizadores podem executar código do usuário; a coleta não equivale a chamar `free` para uma única alocação.
+
+---
 
 ## Famílias de smart pointers
 
 Cabeçalho: `Pointer/Pointer.h`.
 
-El agregado proporciona famílias generadas para:
+O agregador fornece famílias geradas para:
 
-| Familia | Modelo de propriedade |
+| Família | Modelo de propriedade |
 | --- | --- |
-| `Unique` | Un único handle proprietário exclusivo. |
-| `Shared` | Propriedade compartida con conteo de referencias. |
-| `Weak` | Referencia no propietaria a un bloque de control Shared. |
-| `AtomicShared` | Operaciones de conteo de referencias Shared con actualizaciones atómicas del control. |
-| `AtomicWeak` | Operaciones de referencias débiles atómicas. |
-| `Intrusive` | Conteo de referencias almacenado en los campos de control del objeto del usuario. |
+| `Unique` | Um único identificador com propriedade exclusiva. |
+| `Shared` | Propriedade compartilhada com contagem de referências. |
+| `Weak` | Referência não proprietária a um bloco de controle Shared. |
+| `AtomicShared` | Operações de contagem de referências Shared com atualizações atômicas do controle. |
+| `AtomicWeak` | Operações atômicas de referências fracas. |
+| `Intrusive` | Contagem de referências armazenada nos campos de controle do objeto do usuário. |
 
-Los métodos generados principales son:
+Os principais métodos gerados são:
 
-| Familia | Construcción y propriedade | Acceso y estado |
+| Família | Construção e propriedade | Acesso e estado |
 | --- | --- | --- |
 | `Unique` | `FromPointer`, `Alloc`, `AllocZero`, `Reset`, `Move`, `Release`, `Free` | `IsValid`, `Get`, `GetMutable`, `Swap` |
-| `Shared` | `From.Pointer`, `From.Weak` (promoción), `Alloc`, `Alloc.Zero`, `Reset`, `Reset.WithPointer`, `Free` | `Get`, `Get.Mutable`, `UseCount`, `Unique`, `Swap` |
+| `Shared` | `From.Pointer`, `From.Weak` (promoção), `Alloc`, `Alloc.Zero`, `Reset`, `Reset.WithPointer`, `Free` | `Get`, `Get.Mutable`, `UseCount`, `Unique`, `Swap` |
 | `Weak` | `Clone`, `Move`, `Reset`, `Free` | `IsExpired`, `IsValid`, `UseCount`, `Swap` |
-| `AtomicShared` | Operaciones `From`, `Alloc`, `Reset`, `Free` similares a Shared | `Get`, `Get.Mutable`, `UseCount`, `Unique` |
-| `AtomicWeak` | Operaciones `Clone`, `Move`, `Reset`, `Free` similares a Weak | `IsExpired`, `IsValid`, `UseCount` |
+| `AtomicShared` | Operações `From`, `Alloc`, `Reset`, `Free` semelhantes às de Shared | `Get`, `Get.Mutable`, `UseCount`, `Unique` |
+| `AtomicWeak` | Operações `Clone`, `Move`, `Reset`, `Free` semelhantes às de Weak | `IsExpired`, `IsValid`, `UseCount` |
 | `Intrusive` | `FromPointer`, `FromExistingPointer`, `Clone`, `Move`, `Reset`, `Release`, `Free` | `Get`, `GetMutable`, `UseCount`, `Unique`, `Swap` |
 
-El sufijo exacto del tipo y los parámetros de instanciación proceden de las tablas de tipos de las famílias de ponteiros y de los templates `.def`; no presupongas que cualquier tipo C arbitrario tiene una especialización integrada. Cada familia tiene su propio contrato de propriedade, y `Free`/`Reset` no son intercambiables entre famílias.
+O sufixo exato do tipo e os parâmetros de instanciação vêm das tabelas de tipos das famílias de ponteiros e dos templates `.def`; não presuma que todo tipo C arbitrário tenha uma especialização integrada. Cada família possui seu próprio contrato de propriedade, e `Free`/`Reset` não são intercambiáveis entre famílias.
 
-Un ponteiro Weak no posee el objeto. Promuévelo a un ponteiro Shared antes de acceder al objeto y verifica el estado devuelto porque el objeto puede haber expirado. El conteo atómico de referencias no hace que el objeto apuntado sea seguro para threads.
-
-## Block de ancho fijo
-
-Cabeçalho: `Block.h` (incluir directamente; no forma parte de `Memory.h`).
-
-Block genera objetos de ancho fijado en compilación respaldados por limbs `uint64_t`. Proporciona limpiar/establecer todo, operaciones bit a bit `And`/`Or`/`Xor`/`Not`, deslocamentos, rotaciones, establecer/limpiar/invertir/comprobar bits, recuento de bits, predicados any/all/none e igualdad. Utilízalo para máscaras de ancho fijo y valores binarios que no requieren redimensionamiento dinámico.
+Um ponteiro Weak não é proprietário do objeto. Promova-o a um ponteiro Shared antes de acessar o objeto e verifique o status retornado, pois o objeto pode já ter expirado. A contagem atômica de referências não torna o próprio objeto apontado seguro para uso entre threads.
 
 ---
 
-# Contratos y reglas de propriedade
+## Block de largura fixa
 
-- Todo ponteiro devuelto por un alocador debe liberarse mediante la misma familia de alocadores que lo creó.
-- `Alloc` y `Realloc` reciben la endereço de uma variável ponteiro; pasa `&pointer`.
-- `Copy` requiere intervalos sin sobreposição; `Move` permite sobreposição.
-- Arena y Pool pueden exponer modos de buffer propriedade do chamador; no liberes esos bufferes mediante el alocador sin tipo.
-- Stream toma prestado su buffer y nunca lo posee ni lo amplía.
-- Las raíces de Collector son direcciones de ranuras de ponteiro, no direcciones de objetos sin procesar.
-- La semántica de propriedade de smart pointers depende de la familia; un ponteiro sin tipo devuelto por un accessor no implica transferencia de propriedade.
-- Verifica cada `OPSTATUS` antes de utilizar un ponteiro de salida o asumir que se adquirió un recurso.
+Cabeçalho: `Block.h` (inclua diretamente; não faz parte de `Memory.h`).
+
+Block gera objetos com largura definida em tempo de compilação, respaldados por limbs `uint64_t`. Oferece limpeza/definição de todos os bits, operações bit a bit `And`/`Or`/`Xor`/`Not`, deslocamentos, rotações, definição/limpeza/inversão/verificação de bits, contagem de bits, predicados any/all/none e igualdade. Use-o para máscaras de largura fixa e valores binários que não exigem redimensionamento dinâmico.
+
+---
+
+# Contratos e regras de propriedade
+
+- Todo ponteiro retornado por um alocador deve ser liberado pela mesma família de alocadores que o criou.
+- `Alloc` e `Realloc` recebem o endereço de uma variável ponteiro; passe `&pointer`.
+- `Copy` exige intervalos sem sobreposição; `Move` permite sobreposição.
+- Arena e Pool podem expor modos com buffers pertencentes ao chamador; não libere esses buffers pelo alocador bruto.
+- Um Stream toma emprestado seu buffer e nunca é proprietário dele nem o aumenta.
+- As raízes do Collector são endereços de slots de ponteiro, não endereços brutos de objetos.
+- A semântica de propriedade dos smart pointers é específica de cada família; um ponteiro bruto retornado por um accessor não implica transferência automática de propriedade.
+- Verifique cada `OPSTATUS` antes de utilizar um ponteiro de saída ou presumir que um recurso foi adquirido.
 
 ## Módulos relacionados
 
-- [Types](Types.md) — descriptores de ciclo de vida y operaciones con borrado de tipo.
-- [Condition](Condition.md) — convenciones de estado y error.
-- [Algorithm](Algorithm.md) — contratos de comparación e intercambio.
-- [Bit](Bit.md) — operaciones de bits y bitsets de tamanho fixo.
+- [Types](Types.md) — descritores de ciclo de vida e operações com apagamento de tipo.
+- [Condition](Condition.md) — convenções de status e erro.
+- [Algorithm](Algorithm.md) — contratos de comparação e troca.
+- [Bit](Bit.md) — operações de bits e bitsets de tamanho fixo.
 
-## Cabeçalhos de origen
+## Cabeçalhos de origem
 
 - `Codespace/Cosmeron/Core/Memory/Memory.h`
 - `Codespace/Cosmeron/Core/Memory/Alloc.h`

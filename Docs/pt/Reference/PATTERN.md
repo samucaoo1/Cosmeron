@@ -1,85 +1,116 @@
 # Padrão arquitetural e de código do Cosmeron
 
-Este documento descreve a arquitetura, as convenções de nomenclatura, as declarações e os padrões de implementação do ecossistema Cosmeron.
+Este documento é a **especificação canônica única** para a arquitetura, nomenclatura, declarações e padrões de implementação de todo o ecossistema Cosmeron.
 
-> **Filosofia central:** prefira construções nativas de C a macros do pré-processador. Use macros para vinculação de namespace, geração declarativa de código e processamento interno. Números mágicos e camadas obsoletas de compatibilidade são proibidos.
+> **Filosofia central:** prefira construções nativas de C a macros do pré-processador. Use macros somente para vinculação de namespace, geração declarativa de código e pré-processamento interno. Números mágicos e camadas obsoletas de compatibilidade são estritamente proibidos.
+
+---
 
 ## 1. Camadas e hierarquia arquitetural
 
 O Cosmeron organiza o código em quatro níveis declarativos:
 
 ```
-DOMAIN
-  └── MODULE
-        ├── PACKAGE
-        ├── STRUCT
-        └── OBJECT
-              ├── SPACE
-              └── VARIANT
+DOMAIN (Agrupamento arquitetural / de diretórios: Core, Container, Text, Security, IO)
+  └── MODULE (Unidade fundamental de compilação e semântica: Memory, File, Bit, Text)
+        ├── PACKAGE (Coleções estáticas de funções livres: Alloc, Operations, Swap)
+        ├── STRUCT (Contêineres POD sem self/vtable: Point, Range, Header)
+        └── OBJECT (Instâncias com estado, receptor 'self' e FunctionTable: Stream, Pool)
+              ├── SPACE (Subnamespaces / subtabelas aninhados: Transform, Codec)
+              └── VARIANT (Famílias planas de sobrecargas: Alloc, AllocAndFill, AllocZeroed)
 ```
 
-- **DOMAIN** agrupa módulos por área arquitetural ou diretório, como Core, Container, Text, Security e IO.
-- **MODULE** é a unidade fundamental de compilação e semântica, como Memory, File, Bit e Text. Um módulo pode existir sem DOMAIN; o domínio é apenas organizacional.
-- **PACKAGE** reúne funções livres, eventos, callbacks e subnamespaces estáticos. Não possui receptor `self`, estrutura de instância ou tipo prefixado com `T`.
-- **STRUCT** é um contêiner POD puro, sem ponteiro `api`, FunctionTable ou receptor. Gera um tipo público com prefixo `T` e aceita inicializadores designados de C.
-- **ISTRUCT** é um POD interno, nomeado sob `Module_Internal_`, sem prefixo `T`.
-- **INTERNAL / INTERNAL_EX** declaram infraestrutura e auxiliares internos, normalmente como funções `static inline`, sem custo de FunctionTable.
-- **OBJECT** representa uma instância com estado, campos, métodos vinculados a `self`, auxiliares de ciclo de vida e tipo público prefixado com `T`.
-- **SPACE** cria um subnamespace dentro de PACKAGE ou OBJECT.
-- **VARIANT** agrupa uma família plana de sobrecargas sob um prefixo comum.
+### 1.1 O papel semântico de `MODULE`
 
-### 1.1 Identidade do módulo
+- `MODULE` é a unidade fundamental de semântica e compilação da biblioteca (`Memory`, `Text`, `Algorithm`, `Sort`).
+- Um módulo não precisa de um domínio para possuir identidade semântica completa. `DOMAIN` existe exclusivamente como agrupamento organizacional.
+- As duas formas são igualmente válidas:
+  - Com domínio organizacional: `MODULE(DOMAIN(DomainName), ModuleName, ...)`
+  - Sem domínio: `MODULE(ModuleName, ...)`
+- Em ambos os casos, os símbolos C canônicos emitidos seguem o formato `[Library_]ModuleName_Entity`.
 
-As duas formas são válidas:
+### 1.2 Packages, structs e objects
 
-```c
-MODULE(DOMAIN(Core), Memory, ...);
-MODULE(Memory, ...);
-```
+- **`PACKAGE`**: coleção coesa e sem estado de funções livres, eventos, callbacks e subnamespaces. Não vincula um receptor `self`, não emite uma struct de instância nem um tipo com prefixo `T`.
+- **`STRUCT`**: struct POD (Plain Old Data) pura. Emite um tipo com namespace e prefixo `T` (`ModuleName_TStructName`), mas não possui custo adicional: nenhum ponteiro `api`, FunctionTable ou receptor `self`. É compatível com inicializadores designados de C (`.field = val`), passagem em registradores pela ABI e `memcpy`.
+- **`ISTRUCT`**: struct POD interna. Emite um tipo interno com namespace (`ModuleName_Internal_StructName`), sem o prefixo `T`, seguindo a convenção do Cosmeron para tipos internos. Não possui custo de FunctionTable.
+- **`INTERNAL` / `INTERNAL_EX`**: escopo declarativo interno para rotinas auxiliares e infraestrutura do módulo. Emite funções `static inline` puras, sem custo de FunctionTable.
+  - No nível do módulo: `INTERNAL(...)` emite `ModuleName_Internal_FuncName`.
+  - No nível de componente: `INTERNAL_EX(Comp, ...)` ou `INTERNAL(Comp, ...)` emite `ModuleName_Comp_Internal_FuncName`.
+  - Para invocar, use `MODULE_IFUNC(Mod, ...)` ou `MODULE_ICALL(Mod, ..., (args...))`.
+- **`OBJECT`**: tipo com estado, campos estruturados, auxiliares de ciclo de vida (`Init`), métodos vinculados ao receptor (`self`) e geração automática de tipo de usuário com prefixo `T` (`ModuleName_TObjectName`).
 
-Em ambos os casos, os símbolos C canônicos seguem o namespace do módulo, com o prefixo de biblioteca configurado quando aplicável.
+### 1.3 Subnamespaces (`SPACE`) e famílias de sobrecarga (`VARIANT`)
 
-### 1.2 SPACE e VARIANT
+- **`SPACE(SubName, ...)`**: declara um subnamespace aninhado dentro de um `PACKAGE` ou `OBJECT`. Emite símbolos aninhados (`Module_Package_SubName_Func`) e subtabelas aninhadas na `FunctionTable`.
+- **`VARIANT(FamilyName, ...)`**: declara uma família plana de sobrecargas que compartilham um prefixo de nome, sem tokens vazios brutos. A função-base omite o subnome (`FUNCTION(RET, PARAMS)`), enquanto as variantes acrescentam um sufixo (`FUNCTION(RET, Suffix, PARAMS)`).
 
-`SPACE(Name, ...)` cria símbolos e tabelas aninhados. `VARIANT(Family, ...)` agrupa operações relacionadas: a operação-base usa o nome da família e as variantes acrescentam um sufixo.
+---
 
-## 2. Nomenclatura e uso de maiúsculas
+## 2. Nomenclatura e convenções de maiúsculas
 
-Tudo deve permanecer no namespace do módulo/package sempre que C permitir. Exceções são limitadas a macros públicas de conveniência previamente aprovadas, `OPSTATUS` e aliases curtos de comparação terminados em `OUT`.
+Tudo no Cosmeron deve permanecer dentro do namespace do módulo/package sempre que C permitir. As únicas exceções são macros públicas de conveniência (que exigem aprovação prévia), `OPSTATUS` e aliases curtos de comparação `*OUT`.
+
+### 2.1 Tabela de convenções
 
 | Elemento | Convenção | Exemplo |
 |---|---|---|
-| Domain, Module, Package e Object | PascalCase | `Core`, `Memory`, `Repeat` |
-| Tipo público | PascalCase com `T` | `TVector_uint32`, `TMemoryPool` |
-| Enum de saída/tipo interno | PascalCase sem `T` | `ComparisonResult`, `SeekOrigin` |
-| Função/método | PascalCase | `Memory_Copy`, `Vector_Push` |
-| Constante/item de enum | SNAKE_CASE | `SUCCESS`, `OUT_OF_RANGE` |
-| Macro do pré-processador | SNAKE_CASE | `MODULE`, `PACKAGE_CALL` |
-| Macro interna | `COSMERON_MACRO_INTERNAL_*` | `COSMERON_MACRO_INTERNAL_PKG_CALL_0` |
-| Parâmetro, variável ou campo | camelCase | `destination`, `bufferCapacity` |
+| Token de Domain / Module / Package / Object | `PascalCase` | `Core`, `Memory`, `Algorithm`, `Repeat` |
+| Tipo de dados voltado ao usuário | `PascalCase` com `T` | `TVector_uint32`, `TMemoryPool`, `TString` |
+| Enum de saída / tipo interno | `PascalCase` sem `T` | `ComparisonResult` (`CMPOUT`), `SeekOrigin` |
+| Função / método | `PascalCase` | `Memory_Copy`, `Vector_Push`, `Repeat_Procedure` |
+| Constante / item de enum | `SNAKE_CASE` | `SUCCESS`, `OUT_OF_RANGE`, `LOWER` |
+| Macro do pré-processador | `SNAKE_CASE` | `MODULE`, `PACKAGE_CALL`, `MODULE_SCOPE` |
+| Macro interna do pré-processador | `COSMERON_MACRO_INTERNAL_*` | `COSMERON_MACRO_INTERNAL_PKG_CALL_0` |
+| Parâmetro / variável local / campo | `camelCase` | `destination`, `count`, `bufferCapacity` |
 
-### 2.1 Regra do prefixo T
+### 2.2 Regra do prefixo `T`
 
-Use `T` somente em tipos destinados ao uso direto pelo consumidor. Tipos de objetos gerados recebem o prefixo automaticamente. Enums de saída e tipos internos não usam `T`. Evite nomes genéricos ambíguos, como `TPool` e `TNode`; prefira nomes semânticos explícitos, como `TMemoryPool` e `TGraphNode`.
+- Use o prefixo `T` **somente** para tipos destinados ao uso direto pelo usuário (por exemplo, `TMemoryPool`, `TVector_uint32`).
+- Tipos de objetos gerados recebem automaticamente o prefixo `T` (`OBJECT(String)` emite `Text_TString`).
+- Enums de saída e tipos internos **não** usam `T` (por exemplo, `SeekOrigin`, `ComparisonResult`).
+- Evite nomes genéricos que possam colidir, como `TPool` ou `TNode`. Qualifique explicitamente o domínio semântico (`TMemoryPool`, `TGraphNode`).
 
-### 2.2 Macros de namespace
+### 2.3 Proibição estrita de boilerplate local de namespace em headers e macros semânticas O(1)
 
-Prefira as macros semânticas `MODULE_TYPE`, `MODULE_TYPED`, `MODULE_ENUM`, `MODULE_CONST`, `MODULE_FUNC`, `MODULE_NS` e `DOMAIN_NS` a concatenações manuais. `NS_JOIN` realiza a junção plana em tempo constante de expansão.
+- **Prefira `MODULE_*` a `NS` bruto**: use sempre macros semânticas (`MODULE_TYPE`, `MODULE_TYPED`, `MODULE_ENUM`, `MODULE_CONST`, `MODULE_FUNC`, `MODULE_NS`, `DOMAIN_NS`) em interações públicas e voltadas ao consumidor.
+- **Junção plana O(1) (`NS_JOIN`)**: concatenação rápida, não recursiva e de substituição única, com separador underscore (`_`), em O(1) etapas do pré-processador.
+  - `MODULE_NS(Modulo, Pacote)`: emite `[LIB_]Modulo_Pacote` em O(1).
+  - `MODULE_FUNC(Modulo, Pacote, Func)`: emite `[LIB_]Modulo_Pacote_Func` em O(1).
+  - `DOMAIN_NS(Domain, ...)`: emite `Domain_...` em O(1).
+- **Nenhum arquivo `.space`**: todos os arquivos `.space` legados foram removidos permanentemente.
+- **Nenhuma macro manual de namespace no nível do header**. Nunca defina:
+  ```c
+  /* PROIBIDO: */
+  #define FOO_NS(NAME)     ...
+  #define FOO_CNS(NAME)    ...
+  #define FOO_INS(NAME)    ...
+  #define FOO_CINS(NAME)   ...
+  #define FOO_TYPE(NAME)   ...
+  #define FOO_FUNC(NAME)   ...
+  #define FOO_CONST(NAME)  ...
+  #define FOO_MOD / FOO_CMOD
+  #define GNS2..GNS5 / CNS2..CNS5
+  ```
+- Use as macros canônicas `MODULE_*` ou `NS(...)` / `CNS(...)` de `Core/Module/Namespace.h`.
 
-Não crie arquivos `.space` nem macros de namespace locais em headers, como `FOO_NS`, `FOO_FUNC`, `FOO_TYPE`, `FOO_CONST`, `GNS2` ou `CNS2`. Use as macros canônicas de `Core/Module/Namespace.h`.
+### 2.4 Organização de arquivos e `Common.inc`
 
-### 2.3 Organização de arquivos e Common.inc
+- **Nenhum `Types.h` sintético**: tipos e enums ficam no header do recurso correspondente.
+- **`Common.inc`**: reservado **estritamente** à infraestrutura interna compartilhada de um módulo (helpers inline, cálculos e tipos internos compartilhados, como `Memory/Common.inc)), evitando duplicação de código entre packages na mesma pasta do módulo. A extensão `.inc` deixa explícito que se trata de uma inclusão interna, nunca destinada à inclusão direta por usuários.
 
-Não crie headers sintéticos `Types.h`: tipos e enums pertencem ao header do recurso correspondente. Reserve `Common.inc` exclusivamente para infraestrutura interna compartilhada dentro do módulo, evitando duplicação entre packages. O arquivo não deve ser incluído diretamente por consumidores.
+### 2.5 Configuração do namespace da biblioteca (`LIBRARY_NAMESPACE_CONFIG`)
 
-### 2.4 Configuração do namespace da biblioteca
+Os símbolos do Cosmeron podem receber uma marca ou ser configurados globalmente por `LIBRARY_NAMESPACE_CONFIG` ou por flags do compilador (`-DCOSMERON_NAMESPACE=...`, `-DCOSMERON_NAMESPACE_MODE=...`):
 
-`LIBRARY_NAMESPACE_CONFIG` ou flags de compilação podem configurar o prefixo dos símbolos:
+- `BARE`: `Text_TString`, `Text_String_Init`, `Status_SUCCESS` (sem prefixo da biblioteca).
+- `SHORT`: `Cos_Text_TString`, `Cos_Text_String_Init`.
+- `STANDARD`: `Cosmeron_Text_TString`, `Cosmeron_Text_String_Init` (padrão).
+- `FULL`: `Cosmeron_Core_Text_TString` (inclui o domínio no símbolo).
 
-- `BARE`: sem prefixo da biblioteca, por exemplo `Text_TString`;
-- `SHORT`: prefixo curto, por exemplo `Cos_Text_TString`;
-- `STANDARD`: prefixo padrão `Cosmeron_`;
-- `FULL`: inclui também o domínio, por exemplo `Cosmeron_Core_Text_TString`.
+Quando não configurada, `LIB_PREFIX(...)` é resolvida de forma limpa por meio de `NS(...)`.
+
+---
 
 ## 3. Contratos de funções e métodos
 
