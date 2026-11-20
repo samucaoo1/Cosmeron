@@ -1,0 +1,488 @@
+/* String.def - Dual Mode Engine (Zero Duplication) */
+
+#define COSMERON_INTERNAL_NO_AUTO_INSTANTIATE 1
+#include "../../../Core/Algorithm/Comparison.h"
+#include "../../../Core/Memory/Alloc.h"
+#include "../../../Core/Module/Module.h"
+#include "../Encoding/UTF8.h"
+#include "../Format/Format.h"
+#include "../Impl/Common.inc"
+#include "../View/View.def"
+#undef COSMERON_INTERNAL_NO_AUTO_INSTANTIATE
+
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+#ifndef TEMPLATE_Text_String
+#define TEMPLATE_Text_String(SUFFIX, TYPE)                                     \
+  TEMPLATE_WIDTH_OBJECT(Text, String, SUFFIX,                                        \
+      FIELDS(                                                                  \
+          TYPE *data;                                                          \
+          size_t size;                                                         \
+          size_t capacity;                                                     \
+      ),                                                                       \
+                                                                               \
+      OPERATION_INLINE(Reserve, (size_t requiredCapacity), {                   \
+        size_t newCapacity;                                                    \
+        OPSTATUS status;                                                       \
+        if (self == NULL)                                                      \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (requiredCapacity <= self->capacity)                                \
+          return STATUS_CONST(SUCCESS);                                        \
+        newCapacity = self->capacity == 0U                                     \
+                          ? CNS(Text, String, Internal, INITIAL_CAPACITY)      \
+                          : self->capacity;                                    \
+        while (newCapacity < requiredCapacity) {                               \
+          if (newCapacity >                                                    \
+              SIZE_MAX / CNS(Text, String, Internal, GROWTH_FACTOR)) {         \
+            newCapacity = requiredCapacity;                                    \
+            break;                                                             \
+          }                                                                    \
+          newCapacity *= CNS(Text, String, Internal, GROWTH_FACTOR);           \
+        }                                                                      \
+        if (self->data == NULL) {                                              \
+          void *allocated = NULL;                                              \
+          status = MODULE_FUNC(Memory, Alloc, Array)(&allocated, newCapacity,  \
+                                                     sizeof(TYPE));            \
+          if (status != STATUS_CONST(SUCCESS))                                 \
+            return status;                                                     \
+          self->data = (TYPE *)allocated;                                      \
+          self->data[0] = (TYPE)0;                                             \
+        } else {                                                               \
+          status = MODULE_FUNC(Memory, Alloc, ReallocArray)(                   \
+              &self->data, newCapacity, sizeof(TYPE));                         \
+          if (status != STATUS_CONST(SUCCESS))                                 \
+            return status;                                                     \
+        }                                                                      \
+        self->capacity = newCapacity;                                          \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Create, (size_t initialCapacity), {                     \
+        OPSTATUS status;                                                       \
+        if (self == NULL)                                                      \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Init)(self);             \
+        self->data = NULL;                                                     \
+        self->size = 0U;                                                       \
+        self->capacity = 0U;                                                   \
+        if (initialCapacity == 0U)                                             \
+          return STATUS_CONST(SUCCESS);                                        \
+        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Reserve)(                   \
+            self, initialCapacity + 1U);                                       \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        self->data[0] = (TYPE)0;                                               \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(AppendBuffer,                                           \
+                       (const TYPE *buffer, size_t count), {                   \
+        OPSTATUS status;                                                       \
+        if (self == NULL)                                                      \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (count == 0U)                                                       \
+          return STATUS_CONST(SUCCESS);                                        \
+        if (buffer == NULL)                                                    \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size > SIZE_MAX - count - 1U)                                \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Reserve)(                   \
+            self, self->size + count + 1U);                                    \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        memcpy(self->data + self->size, buffer, count * sizeof(TYPE));         \
+        self->size += count;                                                   \
+        self->data[self->size] = (TYPE)0;                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(FromBuffer,                                             \
+                       (const TYPE *buffer, size_t count), {                   \
+        OPSTATUS status;                                                       \
+        if (self == NULL || (count > 0U && buffer == NULL))                    \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Create)(self, count);       \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        return MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), AppendBuffer)(self, buffer,   \
+                                                               count);         \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(FromCStr, (const TYPE *cstr), {                         \
+        size_t len = 0U;                                                       \
+        OPSTATUS status;                                                       \
+        if (self == NULL)                                                      \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Init)(self);             \
+        self->data = NULL;                                                     \
+        self->size = 0U;                                                       \
+        self->capacity = 0U;                                                   \
+        if (cstr == NULL)                                                      \
+          return STATUS_CONST(SUCCESS);                                        \
+        while (cstr[len] != (TYPE)0)                                           \
+          len++;                                                               \
+        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Create)(self, len);         \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        if (len > 0U) {                                                        \
+          memcpy(self->data, cstr, len * sizeof(TYPE));                        \
+          self->size = len;                                                    \
+          self->data[len] = (TYPE)0;                                           \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Clone, (const MODULE_TYPE(Text, PP_OP_CAT2(String, SUFFIX)) *src), { \
+        OPSTATUS status;                                                       \
+        if (self == NULL || src == NULL || self == src)                        \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Create)(self, src->size);   \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        if (src->size > 0U && src->data != NULL) {                             \
+          memcpy(self->data, src->data, src->size * sizeof(TYPE));             \
+          self->size = src->size;                                              \
+          self->data[src->size] = (TYPE)0;                                     \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Destroy, (), {                                          \
+        if (self == NULL)                                                      \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->data != NULL)                                                \
+          Memory_Free(self->data);                               \
+        self->data = NULL;                                                     \
+        self->size = 0U;                                                       \
+        self->capacity = 0U;                                                   \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(size_t, Length, (), {                              \
+        return self != NULL ? self->size : 0U;                                 \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(size_t, Capacity, (), {                            \
+        return self != NULL ? self->capacity : 0U;                             \
+      }),                                                                      \
+                                                                               \
+      CONST_PREDICATE_INLINE(IsEmpty, (), {                                    \
+        return self == NULL || self->size == 0U;                               \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(const TYPE *, CStr, (), {                          \
+        static const TYPE empty = (TYPE)0;                                     \
+        if (self == NULL || self->data == NULL)                                \
+          return &empty;                                                       \
+        return self->data;                                                     \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Clear, (), {                                            \
+        if (self == NULL)                                                      \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        self->size = 0U;                                                       \
+        if (self->data != NULL)                                                \
+          self->data[0] = (TYPE)0;                                             \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(ShrinkToFit, (), {                                      \
+        size_t targetCap;                                                      \
+        OPSTATUS status;                                                       \
+        if (self == NULL)                                                      \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->data == NULL)                                                \
+          return STATUS_CONST(SUCCESS);                                        \
+        targetCap = self->size + 1U;                                           \
+        if (targetCap >= self->capacity)                                       \
+          return STATUS_CONST(SUCCESS);                                        \
+        status = MODULE_FUNC(Memory, Alloc, ReallocArray)(                     \
+            &self->data, targetCap, sizeof(TYPE));                             \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        self->capacity = targetCap;                                            \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(At, (size_t index, TYPE *outChar), {                    \
+        if (self == NULL || outChar == NULL)                                   \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (index >= self->size)                                               \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        *outChar = self->data[index];                                          \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(SetAt, (size_t index, TYPE value), {                    \
+        if (self == NULL)                                                      \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (index >= self->size)                                               \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        self->data[index] = value;                                             \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(PushBack, (TYPE value), {                               \
+        OPSTATUS status;                                                       \
+        if (self == NULL)                                                      \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size > SIZE_MAX - 2U)                                        \
+          return STATUS_CONST(ARITHMETIC_OVERFLOW);                            \
+        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Reserve)(                   \
+            self, self->size + 2U);                                            \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        self->data[self->size] = value;                                        \
+        self->size++;                                                          \
+        self->data[self->size] = (TYPE)0;                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(PopBack, (TYPE *outChar), {                             \
+        if (self == NULL)                                                      \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (self->size == 0U)                                                  \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        self->size--;                                                          \
+        if (outChar != NULL)                                                   \
+          *outChar = self->data[self->size];                                   \
+        self->data[self->size] = (TYPE)0;                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Append, (const TYPE *cstr), {                           \
+        size_t len = 0U;                                                       \
+        if (self == NULL || cstr == NULL)                                      \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        while (cstr[len] != (TYPE)0)                                           \
+          len++;                                                               \
+        return MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), AppendBuffer)(self, cstr,     \
+                                                               len);           \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(AppendString,                                           \
+                       (const MODULE_TYPE(Text, PP_OP_CAT2(String, SUFFIX)) *other), {    \
+        if (self == NULL || other == NULL)                                     \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (other->size == 0U)                                                 \
+          return STATUS_CONST(SUCCESS);                                        \
+        return MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), AppendBuffer)(                \
+            self, other->data, other->size);                                   \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Insert,                                                 \
+                       (size_t index, const TYPE *buffer, size_t count), {     \
+        OPSTATUS status;                                                       \
+        if (self == NULL || (count > 0U && buffer == NULL))                    \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (index > self->size)                                                \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        if (count == 0U)                                                       \
+          return STATUS_CONST(SUCCESS);                                        \
+        if (self->size >= SIZE_MAX || count > SIZE_MAX - self->size - 1U)      \
+          return STATUS_CONST(ARITHMETIC_OVERFLOW);                            \
+        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Reserve)(                   \
+            self, self->size + count + 1U);                                    \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        memmove(self->data + index + count, self->data + index,                \
+                (self->size - index + 1U) * sizeof(TYPE));                     \
+        memcpy(self->data + index, buffer, count * sizeof(TYPE));              \
+        self->size += count;                                                   \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(InsertChar, (size_t index, TYPE value), {               \
+        return MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Insert)(self, index, &value,  \
+                                                         1U);                  \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Erase, (size_t index, size_t count), {                  \
+        size_t actual;                                                         \
+        if (self == NULL)                                                      \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (index > self->size)                                                \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        if (count == 0U || index == self->size)                                \
+          return STATUS_CONST(SUCCESS);                                        \
+        actual = count < (self->size - index) ? count : (self->size - index);  \
+        memmove(self->data + index, self->data + index + actual,               \
+                (self->size - (index + actual) + 1U) * sizeof(TYPE));          \
+        self->size -= actual;                                                  \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+                                                                               \
+      CONST_COMPARISON_INLINE(Compare,                                         \
+                              (const MODULE_TYPE(Text, PP_OP_CAT2(String, SUFFIX)) *other), { \
+        size_t lenA = self != NULL ? self->size : 0U;                          \
+        size_t lenB = other != NULL ? other->size : 0U;                        \
+        size_t minLen = lenA < lenB ? lenA : lenB;                             \
+        for (size_t i = 0U; i < minLen; ++i) {                                 \
+          if (self->data[i] < other->data[i])                                  \
+            return COMPARISON_CONST(LOWER);                                    \
+          if (self->data[i] > other->data[i])                                  \
+            return COMPARISON_CONST(HIGHER);                                   \
+        }                                                                      \
+        if (lenA < lenB)                                                       \
+          return COMPARISON_CONST(LOWER);                                      \
+        if (lenA > lenB)                                                       \
+          return COMPARISON_CONST(HIGHER);                                     \
+        return COMPARISON_CONST(EQUAL);                                        \
+      }),                                                                      \
+                                                                               \
+      VARIANT(Equal,                                                           \
+        CONST_PREDICATE_INLINE(                                                \
+            (const MODULE_TYPE(Text, PP_OP_CAT2(String, SUFFIX)) *other), {               \
+          if (self == NULL || other == NULL)                                   \
+            return self == other;                                              \
+          if (self->size != other->size)                                       \
+            return false;                                                      \
+          if (self->size == 0U)                                                \
+            return true;                                                       \
+          return memcmp(self->data, other->data,                               \
+                        self->size * sizeof(TYPE)) == 0;                       \
+        }),                                                                    \
+        CONST_PREDICATE_INLINE(CStr, (const TYPE *cstr), {                     \
+          size_t len = 0U;                                                     \
+          if (self == NULL)                                                    \
+            return false;                                                      \
+          if (cstr == NULL)                                                    \
+            return self->size == 0U;                                           \
+          while (cstr[len] != (TYPE)0)                                         \
+            len++;                                                             \
+          if (self->size != len)                                               \
+            return false;                                                      \
+          if (len == 0U)                                                       \
+            return true;                                                       \
+          return memcmp(self->data, cstr, len * sizeof(TYPE)) == 0;            \
+        }),                                                                    \
+        CONST_PREDICATE_INLINE(View, (MODULE_TYPE(Text, PP_OP_CAT2(View, SUFFIX)) view), {\
+          if (self == NULL)                                                    \
+            return false;                                                      \
+          return MODULE_FUNC(Text, PP_OP_CAT2(View, SUFFIX), Equal)(                       \
+              MODULE_FUNC(Text, PP_OP_CAT2(View, SUFFIX), Create)(self->data, self->size), \
+              view);                                                           \
+        })                                                                     \
+      ),                                                                       \
+                                                                               \
+      OPERATION_INLINE(Substr,                                                 \
+                       (size_t start, size_t count,                            \
+                        MODULE_TYPE(Text, PP_OP_CAT2(String, SUFFIX)) *outSubstr), {      \
+        size_t actual;                                                         \
+        OPSTATUS status;                                                       \
+        if (self == NULL || outSubstr == NULL || self == outSubstr)            \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        if (start > self->size)                                                \
+          return STATUS_CONST(OUT_OF_RANGE);                                   \
+        actual = count < (self->size - start) ? count : (self->size - start);  \
+        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Create)(outSubstr, actual); \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        return MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), AppendBuffer)(                \
+            outSubstr, self->data + start, actual);                            \
+      }),                                                                      \
+                                                                               \
+      VARIANT(Find,                                                            \
+        OPERATION_INLINE((TYPE needle, size_t *outIndex), {                    \
+          if (self == NULL || outIndex == NULL)                                \
+            return STATUS_CONST(INVALID_ARGUMENT);                             \
+          for (size_t i = 0U; i < self->size; ++i) {                           \
+            if (self->data[i] == needle) {                                     \
+              *outIndex = i;                                                   \
+              return STATUS_CONST(SUCCESS);                                    \
+            }                                                                  \
+          }                                                                    \
+          return STATUS_CONST(NOT_FOUND);                                      \
+        }),                                                                    \
+        OPERATION_INLINE(Str, (const TYPE *needle, size_t *outIndex), {        \
+          size_t needleLen = 0U;                                               \
+          size_t limit;                                                        \
+          if (self == NULL || outIndex == NULL || needle == NULL)              \
+            return STATUS_CONST(INVALID_ARGUMENT);                             \
+          while (needle[needleLen] != (TYPE)0)                                 \
+            needleLen++;                                                       \
+          if (needleLen == 0U) {                                               \
+            *outIndex = 0U;                                                    \
+            return STATUS_CONST(SUCCESS);                                      \
+          }                                                                    \
+          if (needleLen > self->size)                                          \
+            return STATUS_CONST(NOT_FOUND);                                    \
+          limit = self->size - needleLen;                                      \
+          for (size_t i = 0U; i <= limit; ++i) {                               \
+            if (memcmp(self->data + i, needle, needleLen * sizeof(TYPE)) == 0) { \
+              *outIndex = i;                                                   \
+              return STATUS_CONST(SUCCESS);                                    \
+            }                                                                  \
+          }                                                                    \
+          return STATUS_CONST(NOT_FOUND);                                      \
+        })                                                                     \
+      ),                                                                       \
+                                                                               \
+      CONST_PREDICATE_INLINE(StartsWith, (const TYPE *prefix), {               \
+        size_t prefixLen = 0U;                                                 \
+        if (self == NULL || prefix == NULL)                                    \
+          return false;                                                        \
+        while (prefix[prefixLen] != (TYPE)0)                                   \
+          prefixLen++;                                                         \
+        if (prefixLen > self->size)                                            \
+          return false;                                                        \
+        if (prefixLen == 0U)                                                   \
+          return true;                                                         \
+        return memcmp(self->data, prefix, prefixLen * sizeof(TYPE)) == 0;      \
+      }),                                                                      \
+                                                                               \
+      CONST_PREDICATE_INLINE(EndsWith, (const TYPE *suffix), {                 \
+        size_t suffixLen = 0U;                                                 \
+        if (self == NULL || suffix == NULL)                                    \
+          return false;                                                        \
+        while (suffix[suffixLen] != (TYPE)0)                                   \
+          suffixLen++;                                                         \
+        if (suffixLen > self->size)                                            \
+          return false;                                                        \
+        if (suffixLen == 0U)                                                   \
+          return true;                                                         \
+        return memcmp(self->data + (self->size - suffixLen), suffix,           \
+                      suffixLen * sizeof(TYPE)) == 0;                          \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(MODULE_TYPE(Text, PP_OP_CAT2(View, SUFFIX)), View, (), {      \
+        if (self == NULL)                                                      \
+          return MODULE_FUNC(Text, PP_OP_CAT2(View, SUFFIX), Empty)();                     \
+        return MODULE_FUNC(Text, PP_OP_CAT2(View, SUFFIX), Create)(self->data,             \
+                                                       self->size);            \
+      }),                                                                      \
+                                                                               \
+      CONST_FUNCTION_INLINE(MODULE_TYPE(Text, PP_OP_CAT2(View, SUFFIX)), Slice,           \
+                            (size_t start, size_t count), {                    \
+        if (self == NULL)                                                      \
+          return MODULE_FUNC(Text, PP_OP_CAT2(View, SUFFIX), Empty)();                     \
+        return MODULE_FUNC(Text, PP_OP_CAT2(View, SUFFIX), Slice)(                         \
+            MODULE_FUNC(Text, PP_OP_CAT2(View, SUFFIX), Create)(self->data, self->size),   \
+            start, count);                                                     \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(FromView, (MODULE_TYPE(Text, PP_OP_CAT2(View, SUFFIX)) view), {    \
+        if (self == NULL)                                                      \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        return MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), AppendBuffer)(                \
+            self, view.data, view.size);                                       \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(AppendView, (MODULE_TYPE(Text, PP_OP_CAT2(View, SUFFIX)) view), {  \
+        return MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), AppendBuffer)(                \
+            self, view.data, view.size);                                       \
+      })                                                                       \
+  )
+#endif
+
+#if (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(TYPE)
+TEMPLATE_Text_String(SUFFIX, TYPE);
+#undef SUFFIX
+#undef TYPE
+#endif
+
+/* EOF */

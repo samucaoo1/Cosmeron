@@ -1,0 +1,314 @@
+/* Bitset.def - Dual Mode Engine (Zero Duplication) */
+
+#include "Impl/Common.inc"
+#include "../Types/Impl/Common.inc"
+
+#ifndef TEMPLATE_Bitset
+#define TEMPLATE_Bitset(SUFFIX, BIT_COUNT)                                \
+  TEMPLATE_WIDTH_OBJECT_ROOT(                                                  \
+      Bitset, SUFFIX,                                                          \
+      FIELDS(uint64_t limb[((size_t)(BIT_COUNT) +                              \
+                            (CNS(Bit, Internal, U64_BITS) - 1U)) /             \
+                           CNS(Bit, Internal, U64_BITS)];),                    \
+      OPERATION_INLINE(Clear, (),                                              \
+                       {                                                       \
+                         if (!self)                                            \
+                           return STATUS_CONST(INVALID_ARGUMENT);              \
+                         memset(self->limb, 0, sizeof(self->limb));            \
+                         return STATUS_CONST(SUCCESS);                         \
+                       }),                                                     \
+      OPERATION_INLINE(SetAll, (),                                             \
+                       {                                                       \
+                         if (!self)                                            \
+                           return STATUS_CONST(INVALID_ARGUMENT);              \
+                         memset(self->limb, CNS(Bit, Internal, BYTE_ALL_ONES), \
+                                sizeof(self->limb));                           \
+                         const size_t limbCount =                              \
+                             sizeof(self->limb) / sizeof(self->limb[0]);       \
+                         MODULE_IFUNC(Type, LimbsMaskTail)(                    \
+                             self->limb, limbCount, (BIT_COUNT));              \
+                         return STATUS_CONST(SUCCESS);                         \
+                       }),                                                     \
+      OPERATION_INLINE(And,                                                    \
+                       (const MODULE_TYPE(PP_OP_CAT2(Bitset, SUFFIX)) * source),    \
+                       {                                                       \
+                         if (!self || !source)                                 \
+                           return STATUS_CONST(INVALID_ARGUMENT);              \
+                         const size_t limbCount =                              \
+                             sizeof(self->limb) / sizeof(self->limb[0]);       \
+                         for (size_t i = 0U; i < limbCount; ++i)               \
+                           self->limb[i] &= source->limb[i];                   \
+                         return STATUS_CONST(SUCCESS);                         \
+                       }),                                                     \
+      OPERATION_INLINE(Or,                                                     \
+                       (const MODULE_TYPE(PP_OP_CAT2(Bitset, SUFFIX)) * source),    \
+                       {                                                       \
+                         if (!self || !source)                                 \
+                           return STATUS_CONST(INVALID_ARGUMENT);              \
+                         const size_t limbCount =                              \
+                             sizeof(self->limb) / sizeof(self->limb[0]);       \
+                         for (size_t i = 0U; i < limbCount; ++i)               \
+                           self->limb[i] |= source->limb[i];                   \
+                         MODULE_IFUNC(Type, LimbsMaskTail)(                    \
+                             self->limb, limbCount, (BIT_COUNT));              \
+                         return STATUS_CONST(SUCCESS);                         \
+                       }),                                                     \
+      OPERATION_INLINE(Xor,                                                    \
+                       (const MODULE_TYPE(PP_OP_CAT2(Bitset, SUFFIX)) * source),    \
+                       {                                                       \
+                         if (!self || !source)                                 \
+                           return STATUS_CONST(INVALID_ARGUMENT);              \
+                         const size_t limbCount =                              \
+                             sizeof(self->limb) / sizeof(self->limb[0]);       \
+                         for (size_t i = 0U; i < limbCount; ++i)               \
+                           self->limb[i] ^= source->limb[i];                   \
+                         MODULE_IFUNC(Type, LimbsMaskTail)(                    \
+                             self->limb, limbCount, (BIT_COUNT));              \
+                         return STATUS_CONST(SUCCESS);                         \
+                       }),                                                     \
+      OPERATION_INLINE(Not, (),                                                \
+                       {                                                       \
+                         if (!self)                                            \
+                           return STATUS_CONST(INVALID_ARGUMENT);              \
+                         const size_t limbCount =                              \
+                             sizeof(self->limb) / sizeof(self->limb[0]);       \
+                         for (size_t i = 0U; i < limbCount; ++i)               \
+                           self->limb[i] = ~self->limb[i];                     \
+                         MODULE_IFUNC(Type, LimbsMaskTail)(                    \
+                             self->limb, limbCount, (BIT_COUNT));              \
+                         return STATUS_CONST(SUCCESS);                         \
+                       }),                                                     \
+      OPERATION_INLINE(ShiftLeft, (size_t bitCount),                           \
+                       {                                                       \
+                         if (!self)                                            \
+                           return STATUS_CONST(INVALID_ARGUMENT);              \
+                         const size_t limbCount =                              \
+                             sizeof(self->limb) / sizeof(self->limb[0]);       \
+                         MODULE_IFUNC(Type, LimbsShiftLeft)(                   \
+                             self->limb, limbCount, (BIT_COUNT), bitCount);    \
+                         return STATUS_CONST(SUCCESS);                         \
+                       }),                                                     \
+      OPERATION_INLINE(ShiftRight, (size_t bitCount),                          \
+                       {                                                       \
+                         if (!self)                                            \
+                           return STATUS_CONST(INVALID_ARGUMENT);              \
+                         const size_t limbCount =                              \
+                             sizeof(self->limb) / sizeof(self->limb[0]);       \
+                         MODULE_IFUNC(Type, LimbsShiftRight)(                  \
+                             self->limb, limbCount, bitCount);                 \
+                         return STATUS_CONST(SUCCESS);                         \
+                       }),                                                     \
+      VARIANT(                                                                 \
+          Bit,                                                                 \
+          OPERATION_INLINE(Set, (size_t bit),                                  \
+                           {                                                   \
+                             if (!self)                                        \
+                               return STATUS_CONST(INVALID_ARGUMENT);          \
+                             if (bit >= (size_t)(BIT_COUNT))                   \
+                               return STATUS_CONST(OUT_OF_RANGE);              \
+                             const size_t limbBits =                           \
+                                 CNS(Bit, Internal, U64_BITS);                 \
+                             return MODULE_FUNC(Bit, 64, Set)(                 \
+                                 &self->limb[bit / limbBits],                  \
+                                 (uint8_t)(bit % limbBits));                   \
+                           }),                                                 \
+          OPERATION_INLINE(Clear, (size_t bit),                                \
+                           {                                                   \
+                             if (!self)                                        \
+                               return STATUS_CONST(INVALID_ARGUMENT);          \
+                             if (bit >= (size_t)(BIT_COUNT))                   \
+                               return STATUS_CONST(OUT_OF_RANGE);              \
+                             const size_t limbBits =                           \
+                                 CNS(Bit, Internal, U64_BITS);                 \
+                             return MODULE_FUNC(Bit, 64, Clear)(               \
+                                 &self->limb[bit / limbBits],                  \
+                                 (uint8_t)(bit % limbBits));                   \
+                           }),                                                 \
+          OPERATION_INLINE(Flip, (size_t bit),                                 \
+                           {                                                   \
+                             if (!self)                                        \
+                               return STATUS_CONST(INVALID_ARGUMENT);          \
+                             if (bit >= (size_t)(BIT_COUNT))                   \
+                               return STATUS_CONST(OUT_OF_RANGE);              \
+                             const size_t limbBits =                           \
+                                 CNS(Bit, Internal, U64_BITS);                 \
+                             return MODULE_FUNC(Bit, 64, Flip)(                \
+                                 &self->limb[bit / limbBits],                  \
+                                 (uint8_t)(bit % limbBits));                   \
+                           }),                                                 \
+          CONST_OPERATION_INLINE(Check, (size_t bit, bool *outResult),         \
+                                 {                                             \
+                                   if (!self || !outResult)                    \
+                                     return STATUS_CONST(INVALID_ARGUMENT);    \
+                                   if (bit >= (size_t)(BIT_COUNT))             \
+                                     return STATUS_CONST(OUT_OF_RANGE);        \
+                                   const size_t limbBits =                     \
+                                       CNS(Bit, Internal, U64_BITS);           \
+                                   *outResult = MODULE_FUNC(Bit, 64, Check)(   \
+                                       self->limb[bit / limbBits],             \
+                                       (uint8_t)(bit % limbBits));             \
+                                   return STATUS_CONST(SUCCESS);               \
+                                 }),                                           \
+          CONST_PREDICATE_INLINE(Test, (size_t bit),                           \
+                                 {                                             \
+                                   if (!self || bit >= (size_t)(BIT_COUNT))    \
+                                     return false;                             \
+                                   const size_t limbBits =                     \
+                                       CNS(Bit, Internal, U64_BITS);           \
+                                   return MODULE_FUNC(Bit, 64, Check)(         \
+                                       self->limb[bit / limbBits],             \
+                                       (uint8_t)(bit % limbBits));             \
+                                 })),                                          \
+      OPERATION_INLINE(                                                        \
+          SetRange, (size_t startBit, size_t endBit),                          \
+          {                                                                    \
+            if (!self)                                                         \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            if (startBit > endBit || endBit > (size_t)(BIT_COUNT))             \
+              return STATUS_CONST(OUT_OF_RANGE);                               \
+            MODULE_IFUNC(Type, LimbsSetRange)(self->limb, startBit, endBit);   \
+            return STATUS_CONST(SUCCESS);                                      \
+          }),                                                                  \
+      OPERATION_INLINE(                                                        \
+          ClearRange, (size_t startBit, size_t endBit),                        \
+          {                                                                    \
+            if (!self)                                                         \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            if (startBit > endBit || endBit > (size_t)(BIT_COUNT))             \
+              return STATUS_CONST(OUT_OF_RANGE);                               \
+            MODULE_IFUNC(Type, LimbsClearRange)(self->limb, startBit, endBit); \
+            return STATUS_CONST(SUCCESS);                                      \
+          }),                                                                  \
+      OPERATION_INLINE(                                                        \
+          FlipRange, (size_t startBit, size_t endBit),                         \
+          {                                                                    \
+            if (!self)                                                         \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            if (startBit > endBit || endBit > (size_t)(BIT_COUNT))             \
+              return STATUS_CONST(OUT_OF_RANGE);                               \
+            MODULE_IFUNC(Type, LimbsFlipRange)(self->limb, startBit, endBit);  \
+            return STATUS_CONST(SUCCESS);                                      \
+          }),                                                                  \
+      CONST_FUNCTION_INLINE(size_t, Count, (),                                 \
+                            {                                                  \
+                              if (!self)                                       \
+                                return 0U;                                     \
+                              const size_t limbCount =                         \
+                                  sizeof(self->limb) / sizeof(self->limb[0]);  \
+                              return MODULE_IFUNC(Type, LimbsPopcount)(        \
+                                  self->limb, limbCount);                      \
+                            }),                                                \
+      CONST_FUNCTION_INLINE(size_t, Capacity, (),                              \
+                            {                                                  \
+                              (void)self;                                      \
+                              return (size_t)(BIT_COUNT);                      \
+                            }),                                                \
+      CONST_PREDICATE_INLINE(Any, (),                                          \
+                             {                                                 \
+                               if (!self)                                      \
+                                 return false;                                 \
+                               const size_t limbCount =                        \
+                                   sizeof(self->limb) / sizeof(self->limb[0]); \
+                               return MODULE_IFUNC(Type, LimbsAny)(self->limb, \
+                                                                   limbCount); \
+                             }),                                               \
+      CONST_PREDICATE_INLINE(All, (),                                          \
+                             {                                                 \
+                               if (!self)                                      \
+                                 return false;                                 \
+                               const size_t limbCount =                        \
+                                   sizeof(self->limb) / sizeof(self->limb[0]); \
+                               return MODULE_IFUNC(Type, LimbsAll)(            \
+                                   self->limb, limbCount, (BIT_COUNT));        \
+                             }),                                               \
+      CONST_PREDICATE_INLINE(                                                  \
+          None, (),                                                            \
+          { return !MODULE_FUNC(PP_OP_CAT2(Bitset, SUFFIX), Any)(self); }),          \
+      CONST_PREDICATE_INLINE(                                                  \
+          Equal, (const MODULE_TYPE(PP_OP_CAT2(Bitset, SUFFIX)) * other),           \
+          {                                                                    \
+            if (!self || !other)                                               \
+              return self == other;                                            \
+            const size_t limbCount =                                           \
+                sizeof(self->limb) / sizeof(self->limb[0]);                    \
+            return MODULE_IFUNC(Type, LimbsEqual)(self->limb, other->limb,     \
+                                                  limbCount);                  \
+          }),                                                                  \
+      VARIANT(Is,                                                              \
+              CONST_PREDICATE_INLINE(                                          \
+                  Subset, (const MODULE_TYPE(PP_OP_CAT2(Bitset, SUFFIX)) * other),  \
+                  {                                                            \
+                    if (!self || !other)                                       \
+                      return false;                                            \
+                    const size_t limbCount =                                   \
+                        sizeof(self->limb) / sizeof(self->limb[0]);            \
+                    return MODULE_IFUNC(Type, LimbsIsSubset)(                  \
+                        self->limb, other->limb, limbCount);                   \
+                  }),                                                          \
+              CONST_PREDICATE_INLINE(                                          \
+                  Disjoint,                                                    \
+                  (const MODULE_TYPE(PP_OP_CAT2(Bitset, SUFFIX)) * other),          \
+                  {                                                            \
+                    if (!self || !other)                                       \
+                      return false;                                            \
+                    const size_t limbCount =                                   \
+                        sizeof(self->limb) / sizeof(self->limb[0]);            \
+                    return !MODULE_IFUNC(Type, LimbsIntersects)(               \
+                        self->limb, other->limb, limbCount);                   \
+                  })),                                                         \
+      CONST_PREDICATE_INLINE(                                                  \
+          Intersects, (const MODULE_TYPE(PP_OP_CAT2(Bitset, SUFFIX)) * other),      \
+          {                                                                    \
+            if (!self || !other)                                               \
+              return false;                                                    \
+            const size_t limbCount =                                           \
+                sizeof(self->limb) / sizeof(self->limb[0]);                    \
+            return MODULE_IFUNC(Type, LimbsIntersects)(                        \
+                self->limb, other->limb, limbCount);                           \
+          }),                                                                  \
+      VARIANT(                                                                 \
+          Find,                                                                \
+          CONST_OPERATION_INLINE(                                              \
+              FirstSet, (size_t *outBit),                                      \
+              {                                                                \
+                if (!self || !outBit)                                          \
+                  return STATUS_CONST(INVALID_ARGUMENT);                       \
+                const size_t limbCount =                                       \
+                    sizeof(self->limb) / sizeof(self->limb[0]);                \
+                return MODULE_IFUNC(Type, LimbsFindFirstSet)(                  \
+                           self->limb, limbCount, (BIT_COUNT), outBit)         \
+                           ? STATUS_CONST(SUCCESS)                             \
+                           : STATUS_CONST(NOT_FOUND);                          \
+              }),                                                              \
+          CONST_OPERATION_INLINE(                                              \
+              FirstZero, (size_t *outBit),                                     \
+              {                                                                \
+                if (!self || !outBit)                                          \
+                  return STATUS_CONST(INVALID_ARGUMENT);                       \
+                const size_t limbCount =                                       \
+                    sizeof(self->limb) / sizeof(self->limb[0]);                \
+                return MODULE_IFUNC(Type, LimbsFindFirstZero)(                 \
+                           self->limb, limbCount, (BIT_COUNT), outBit)         \
+                           ? STATUS_CONST(SUCCESS)                             \
+                           : STATUS_CONST(NOT_FOUND);                          \
+              }),                                                              \
+          CONST_OPERATION_INLINE(NextSet, (size_t startBit, size_t *outBit), { \
+            if (!self || !outBit)                                              \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            const size_t limbCount =                                           \
+                sizeof(self->limb) / sizeof(self->limb[0]);                    \
+            return MODULE_IFUNC(Type, LimbsFindNextSet)(                       \
+                       self->limb, limbCount, (BIT_COUNT), startBit, outBit)   \
+                       ? STATUS_CONST(SUCCESS)                                 \
+                       : STATUS_CONST(NOT_FOUND);                              \
+          })))
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(BIT_COUNT)
+TEMPLATE_Bitset(SUFFIX, BIT_COUNT);
+#undef SUFFIX
+#undef BIT_COUNT
+#endif
+
+/* EOF */

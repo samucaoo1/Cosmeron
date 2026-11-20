@@ -1,6 +1,10 @@
 #pragma once
 
-#include "../Module.space"
+#include "../Namespace.h"
+#include "../../Preprocessor/Detect/Detect.h"
+#include "../../Preprocessor/Foreach.h"
+#include "../../Preprocessor/Unroll.h"
+#include "../../Preprocessor/Sequence.h"
 
 /* ============================================================
  * Declarative Member Tuple Definition
@@ -8,6 +12,13 @@
  * ============================================================ */
 
 #define FIELDS(...) __VA_ARGS__
+
+#define COSMERON_INTERNAL_UNWRAP_FIELDS_HELPER(TAG, BODY) PP_UNWRAP BODY
+#define COSMERON_INTERNAL_UNWRAP_FIELDS_1(DECL)                                \
+  COSMERON_INTERNAL_UNWRAP_FIELDS_HELPER DECL
+#define COSMERON_INTERNAL_UNWRAP_FIELDS_0(DECL) DECL
+#define COSMERON_INTERNAL_UNWRAP_FIELDS(DECL)                                  \
+  PP_OP_CAT2(COSMERON_INTERNAL_UNWRAP_FIELDS_, PP_IS_PAREN(DECL))(DECL)
 
 /* ------------------------------------------------------------
  * 1. Operations (Fallible operation returning OPSTATUS)
@@ -70,8 +81,194 @@
   (1, 1, void, NAME, PARAMS, BODY)
 
 /* ------------------------------------------------------------
- * 5. Backward Compatibility Aliases
+ * 5. Comparisons (Three-way comparison returning CMPOUT)
  * ------------------------------------------------------------ */
+#define COMPARISON(NAME, PARAMS) \
+  (1, 0, CMPOUT, NAME, PARAMS, { return COMPARISON_CONST(EQUAL); })
+
+#define CONST_COMPARISON(NAME, PARAMS) \
+  COMPARISON(NAME, PARAMS)
+
+#define COMPARISON_INLINE(NAME, PARAMS, BODY) \
+  (1, 1, CMPOUT, NAME, PARAMS, BODY)
+
+#define CONST_COMPARISON_INLINE(NAME, PARAMS, BODY) \
+  COMPARISON_INLINE(NAME, PARAMS, BODY)
+
+#define MUTABLE_COMPARISON(NAME, PARAMS) \
+  (0, 0, CMPOUT, NAME, PARAMS, { return COMPARISON_CONST(EQUAL); })
+
+#define MUTABLE_COMPARISON_INLINE(NAME, PARAMS, BODY) \
+  (0, 1, CMPOUT, NAME, PARAMS, BODY)
+
+/* ------------------------------------------------------------
+ * 6. Declarative Callbacks and Closures in Modules
+ * ------------------------------------------------------------ */
+#define COSMERON_DECL_TAG_CALLBACK 115
+#define COSMERON_DECL_TAG_CLOSURE  116
+
+#undef CALLBACK
+#define CALLBACK(...) (COSMERON_DECL_TAG_CALLBACK, (__VA_ARGS__))
+
+#undef CLOSURE
+#define CLOSURE(...)  (COSMERON_DECL_TAG_CLOSURE, (__VA_ARGS__))
+
+/* ------------------------------------------------------------
+ * 7. Declarative Events in Modules
+ * ------------------------------------------------------------ */
+
+#ifndef COSMERON_MAYBE_UNUSED
+#if COMPILER_GCC || COMPILER_CLANG
+#define COSMERON_MAYBE_UNUSED __attribute__((unused))
+#else
+#define COSMERON_MAYBE_UNUSED
+#endif
+#endif
+
+#define COSMERON_EVENT_DEFAULT_CAPACITY 4
+
+#define COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)                                 \
+  ((CAP) <= 4 ? 4 : ((CAP) <= 8 ? 8 : ((CAP) <= 12 ? 12 : 16)))
+
+#define COSMERON_MACRO_INTERNAL_EV_INVOKE_EMPTY_1(CL, ARGS)                    \
+  CLOSURE_CALL(CL)
+#define COSMERON_MACRO_INTERNAL_EV_INVOKE_EMPTY_0(CL, ARGS)                    \
+  CLOSURE_CALL(CL, PP_UNWRAP ARGS)
+#define COSMERON_MACRO_INTERNAL_EV_INVOKE(CL, ARGS)                            \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_EV_INVOKE_EMPTY_,                         \
+             PP_IS_EMPTY_PARAMS(ARGS))(CL, ARGS)
+
+/* Automatic Parameter and Argument Extraction from Tuples ((Type, Name), ...) */
+#define COSMERON_MACRO_INTERNAL_EV_PARAM_I(T, N) T N
+#define COSMERON_MACRO_INTERNAL_EV_PARAM(pair) COSMERON_MACRO_INTERNAL_EV_PARAM_I pair
+
+#define COSMERON_MACRO_INTERNAL_EV_ARG_I(T, N) N
+#define COSMERON_MACRO_INTERNAL_EV_ARG(pair) COSMERON_MACRO_INTERNAL_EV_ARG_I pair
+
+#define COSMERON_MACRO_INTERNAL_EV_IS_TUPLE_EMPTY_1(PARAMS) 0
+#define COSMERON_MACRO_INTERNAL_EV_IS_TUPLE_EMPTY_0(PARAMS)                   \
+  PP_IS_PAREN(PP_SEQ_FIRST(PP_UNWRAP PARAMS))
+
+#define COSMERON_MACRO_INTERNAL_EV_IS_TUPLE(PARAMS)                           \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_EV_IS_TUPLE_EMPTY_,                       \
+             PP_IS_EMPTY_PARAMS(PARAMS))(PARAMS)
+
+#define COSMERON_MACRO_INTERNAL_EV_TUPLE_PARAMS(PARAMS)                       \
+  (PP_FOREACH_COMMA(COSMERON_MACRO_INTERNAL_EV_PARAM, PP_UNWRAP PARAMS))
+
+#define COSMERON_MACRO_INTERNAL_EV_TUPLE_ARGS(PARAMS)                         \
+  (PP_FOREACH_COMMA(COSMERON_MACRO_INTERNAL_EV_ARG, PP_UNWRAP PARAMS))
+
+/* EVENT_PROCEDURE (Infallible notification returning void) */
+#define COSMERON_INTERNAL_EV_PROC_2_1(NAME, PARAMS)                            \
+  (3, 4, void, NAME, COSMERON_MACRO_INTERNAL_EV_TUPLE_PARAMS(PARAMS),          \
+   COSMERON_MACRO_INTERNAL_EV_TUPLE_ARGS(PARAMS))
+
+#define COSMERON_INTERNAL_EV_PROC_2_0(NAME, PARAMS)                            \
+  (3, 4, void, NAME, PARAMS, ())
+
+#define COSMERON_INTERNAL_EV_PROC_2(NAME, PARAMS)                              \
+  PP_OP_CAT2(COSMERON_INTERNAL_EV_PROC_2_,                                     \
+             COSMERON_MACRO_INTERNAL_EV_IS_TUPLE(PARAMS))(NAME, PARAMS)
+
+#define COSMERON_INTERNAL_EV_PROC_3_TUPLE(NAME, PARAMS, CAP)                  \
+  (3, CAP, void, NAME, COSMERON_MACRO_INTERNAL_EV_TUPLE_PARAMS(PARAMS),        \
+   COSMERON_MACRO_INTERNAL_EV_TUPLE_ARGS(PARAMS))
+
+#define COSMERON_INTERNAL_EV_PROC_3_CLASSIC(NAME, PARAMS, ARGS)                \
+  (3, 4, void, NAME, PARAMS, ARGS)
+
+#define COSMERON_INTERNAL_EV_PROC_3_NULLARY(NAME, PARAMS, CAP)                \
+  (3, CAP, void, NAME, PARAMS, ())
+
+#define COSMERON_INTERNAL_EV_PROC_3_NOT_TUPLE_1(NAME, PARAMS, ARGS)           \
+  COSMERON_INTERNAL_EV_PROC_3_CLASSIC(NAME, PARAMS, ARGS)
+
+#define COSMERON_INTERNAL_EV_PROC_3_NOT_TUPLE_0(NAME, PARAMS, CAP)            \
+  COSMERON_INTERNAL_EV_PROC_3_NULLARY(NAME, PARAMS, CAP)
+
+#define COSMERON_INTERNAL_EV_PROC_3_BRANCH_NOT_TUPLE(NAME, PARAMS, THIRD)      \
+  PP_OP_CAT2(COSMERON_INTERNAL_EV_PROC_3_NOT_TUPLE_,                           \
+             PP_IS_PAREN(THIRD))(NAME, PARAMS, THIRD)
+
+#define COSMERON_INTERNAL_EV_PROC_3_DISPATCH_1(NAME, PARAMS, CAP)             \
+  COSMERON_INTERNAL_EV_PROC_3_TUPLE(NAME, PARAMS, CAP)
+
+#define COSMERON_INTERNAL_EV_PROC_3_DISPATCH_0(NAME, PARAMS, THIRD)           \
+  COSMERON_INTERNAL_EV_PROC_3_BRANCH_NOT_TUPLE(NAME, PARAMS, THIRD)
+
+#define COSMERON_INTERNAL_EV_PROC_3(NAME, PARAMS, THIRD)                      \
+  PP_OP_CAT2(COSMERON_INTERNAL_EV_PROC_3_DISPATCH_,                            \
+             COSMERON_MACRO_INTERNAL_EV_IS_TUPLE(PARAMS))(NAME, PARAMS, THIRD)
+
+#define COSMERON_INTERNAL_EV_PROC_4(NAME, PARAMS, ARGS, CAP)                  \
+  (3, CAP, void, NAME, PARAMS, ARGS)
+
+#define EVENT_PROCEDURE(...)                                                   \
+  PP_OP_CAT2(COSMERON_INTERNAL_EV_PROC_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+
+/* EVENT_OPERATION (Fallible event returning OPSTATUS with short-circuit) */
+#define COSMERON_INTERNAL_EV_OP_2_1(NAME, PARAMS)                              \
+  (4, 4, OPSTATUS, NAME, COSMERON_MACRO_INTERNAL_EV_TUPLE_PARAMS(PARAMS),      \
+   COSMERON_MACRO_INTERNAL_EV_TUPLE_ARGS(PARAMS))
+
+#define COSMERON_INTERNAL_EV_OP_2_0(NAME, PARAMS)                              \
+  (4, 4, OPSTATUS, NAME, PARAMS, ())
+
+#define COSMERON_INTERNAL_EV_OP_2(NAME, PARAMS)                                \
+  PP_OP_CAT2(COSMERON_INTERNAL_EV_OP_2_,                                       \
+             COSMERON_MACRO_INTERNAL_EV_IS_TUPLE(PARAMS))(NAME, PARAMS)
+
+#define COSMERON_INTERNAL_EV_OP_3_TUPLE(NAME, PARAMS, CAP)                    \
+  (4, CAP, OPSTATUS, NAME, COSMERON_MACRO_INTERNAL_EV_TUPLE_PARAMS(PARAMS),   \
+   COSMERON_MACRO_INTERNAL_EV_TUPLE_ARGS(PARAMS))
+
+#define COSMERON_INTERNAL_EV_OP_3_CLASSIC(NAME, PARAMS, ARGS)                  \
+  (4, 4, OPSTATUS, NAME, PARAMS, ARGS)
+
+#define COSMERON_INTERNAL_EV_OP_3_NULLARY(NAME, PARAMS, CAP)                  \
+  (4, CAP, OPSTATUS, NAME, PARAMS, ())
+
+#define COSMERON_INTERNAL_EV_OP_3_NOT_TUPLE_1(NAME, PARAMS, ARGS)             \
+  COSMERON_INTERNAL_EV_OP_3_CLASSIC(NAME, PARAMS, ARGS)
+
+#define COSMERON_INTERNAL_EV_OP_3_NOT_TUPLE_0(NAME, PARAMS, CAP)              \
+  COSMERON_INTERNAL_EV_OP_3_NULLARY(NAME, PARAMS, CAP)
+
+#define COSMERON_INTERNAL_EV_OP_3_BRANCH_NOT_TUPLE(NAME, PARAMS, THIRD)        \
+  PP_OP_CAT2(COSMERON_INTERNAL_EV_OP_3_NOT_TUPLE_,                             \
+             PP_IS_PAREN(THIRD))(NAME, PARAMS, THIRD)
+
+#define COSMERON_INTERNAL_EV_OP_3_DISPATCH_1(NAME, PARAMS, CAP)               \
+  COSMERON_INTERNAL_EV_OP_3_TUPLE(NAME, PARAMS, CAP)
+
+#define COSMERON_INTERNAL_EV_OP_3_DISPATCH_0(NAME, PARAMS, THIRD)             \
+  COSMERON_INTERNAL_EV_OP_3_BRANCH_NOT_TUPLE(NAME, PARAMS, THIRD)
+
+#define COSMERON_INTERNAL_EV_OP_3(NAME, PARAMS, THIRD)                        \
+  PP_OP_CAT2(COSMERON_INTERNAL_EV_OP_3_DISPATCH_,                              \
+             COSMERON_MACRO_INTERNAL_EV_IS_TUPLE(PARAMS))(NAME, PARAMS, THIRD)
+
+#define COSMERON_INTERNAL_EV_OP_4(NAME, PARAMS, ARGS, CAP)                    \
+  (4, CAP, OPSTATUS, NAME, PARAMS, ARGS)
+
+#define EVENT_OPERATION(...)                                                   \
+  PP_OP_CAT2(COSMERON_INTERNAL_EV_OP_, PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
+
+/* Reactive Field Mutator */
+#define OBJECT_MUTATE(self, CLASS, field, newValue, EVENT_NAME)                \
+  do {                                                                         \
+    if ((self)->field != (newValue)) {                                         \
+      __typeof__((self)->field) _cosmeron_old_val = (self)->field;             \
+      (self)->field = (newValue);                                              \
+      NS(CLASS, EVENT_NAME, Emit)((self), _cosmeron_old_val, (self)->field);   \
+    }                                                                          \
+  } while (0)
+
+/* ------------------------------------------------------------
+ * 7. Backward Compatibility Aliases (Bronze Standard / Deprecated)
+ * ------------------------------------------------------------ */
+/* Bronze Standard (Deprecated): Use FUNCTION / CONST_FUNCTION / *_INLINE */
 #define METHOD(RET, NAME, PARAMS) FUNCTION(RET, NAME, PARAMS)
 #define CONST_METHOD(RET, NAME, PARAMS) CONST_FUNCTION(RET, NAME, PARAMS)
 #define METHOD_CONST(RET, NAME, PARAMS) CONST_FUNCTION(RET, NAME, PARAMS)
@@ -82,7 +279,7 @@
 #define INLINE_FUNCTION(RET, NAME, PARAMS, BODY) FUNCTION_INLINE(RET, NAME, PARAMS, BODY)
 
 /* ------------------------------------------------------------
- * 6. Tuple Unwrapping Helpers
+ * 8. Tuple Unwrapping Helpers
  * ------------------------------------------------------------ */
 #define COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(GEN_MACRO, CTX, M) \
   COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER_E(GEN_MACRO, CTX, PP_UNWRAP M)
@@ -90,11 +287,11 @@
 #define COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER_E(GEN_MACRO, CTX, ...) \
   COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER_I(GEN_MACRO, CTX, __VA_ARGS__)
 
-#define COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER_I(GEN_MACRO, CTX, C, I, R, N, P, B) \
-  GEN_MACRO(CTX, C, I, R, N, P, B)
+#define COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER_I(GEN_MACRO, CTX, C, I, R, N, P, ...) \
+  GEN_MACRO(CTX, C, I, R, N, P, __VA_ARGS__)
 
 /* ------------------------------------------------------------
- * 7. Parameter Emission Helpers
+ * 9. Parameter Emission Helpers
  * ------------------------------------------------------------ */
 
 /* Object self type dispatch */
@@ -120,4 +317,16 @@
 #define COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(PARAMS) \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PKG_PARAMS_EMPTY_, \
              PP_IS_EMPTY_PARAMS(PARAMS))(PARAMS)
+
+/* ------------------------------------------------------------
+ * 10. Variant Name Resolver
+ * ------------------------------------------------------------ */
+#define PROBE_VAR_BASE__COSMERON_BASE_ ,
+#define COSMERON_IS_VAR_BASE(x) PP_ARG_COUNT(PP_OP_CAT2(PROBE_VAR_BASE_, x))
+
+#define COSMERON_VAR_RESOLVE_NAME_2(FAMILY, N) FAMILY
+#define COSMERON_VAR_RESOLVE_NAME_1(FAMILY, N) PP_OP_CAT2(FAMILY, N)
+#define COSMERON_VAR_RESOLVE_NAME(FAMILY, N) \
+  PP_OP_CAT2(COSMERON_VAR_RESOLVE_NAME_, COSMERON_IS_VAR_BASE(N))(FAMILY, N)
+
 /* EOF */

@@ -1,112 +1,162 @@
 #pragma once
 
-ARENA_CREATE_PROTOTYPE {
-  OPSTATUS status;
+MODULE_IMPLEMENT(DOMAIN(Core), Memory,
+  INTERNAL_EX(Arena,
+    OPERATION(AllocatorAlloc,
+              (void *context, size_t size, size_t alignment, void **outPtr), {
+      return MODULE_FUNC(Memory, Arena, AllocAligned)(
+          (MODULE_TYPE(Memory, Arena) *)context, outPtr, size, alignment);
+    }),
 
-  if (!arena)
-    return STATUS_CONST(INVALID_ARGUMENT);
+    PROCEDURE(AllocatorFree, (void *context, void *ptr, size_t size), {
+      (void)context;
+      (void)ptr;
+      (void)size;
+    })
+  ),
 
-  {
-    void *allocated = NULL;
-    status = ALLOC_FUNC(AllocBytes)(&allocated, capacity);
-    if (status != STATUS_CONST(SUCCESS))
+  OBJECT(Arena,
+    VARIANT(Create,
+      OPERATION((size_t capacity), {
+        void *allocated = NULL;
+        OPSTATUS status;
+
+        if (!self)
+          return STATUS_CONST(INVALID_ARGUMENT);
+
+        status = MODULE_FUNC(Memory, Alloc, Bytes)(&allocated, capacity);
+        if (status != STATUS_CONST(SUCCESS))
+          return status;
+
+        self->buffer = (uint8_t *)allocated;
+        self->capacity = capacity;
+        self->offset = 0U;
+        self->isOwned = true;
+        return STATUS_CONST(SUCCESS);
+      }),
+      OPERATION(Buffer, (void *buffer, size_t capacity), {
+        if (!self || (!buffer && capacity > 0U))
+          return STATUS_CONST(INVALID_ARGUMENT);
+
+        self->buffer = (uint8_t *)buffer;
+        self->capacity = capacity;
+        self->offset = 0U;
+        self->isOwned = false;
+        return STATUS_CONST(SUCCESS);
+      })
+    ),
+
+    VARIANT(Alloc,
+      OPERATION(Bytes, (void *outPointerObject, size_t size), {
+        return MODULE_FUNC(Memory, Arena, AllocAligned)(self, outPointerObject, size, MODULE_IFUNC(Memory, MaxAlignment)());
+      }),
+      OPERATION(Aligned, (void *outPointerObject, size_t size, size_t alignment), {
+        size_t padding;
+        size_t alignedOffset;
+        size_t maxAlign = MODULE_IFUNC(Memory, MaxAlignment)();
+
+        if (!self || !outPointerObject || alignment == 0U || alignment > maxAlign)
+          return STATUS_CONST(INVALID_ARGUMENT);
+
+        if (size == 0U) {
+          MODULE_IFUNC(Memory, WritePointer)(outPointerObject, NULL);
+          return STATUS_CONST(SUCCESS);
+        }
+
+        padding = (alignment - (self->offset % alignment)) % alignment;
+        if (self->offset > SIZE_MAX - padding)
+          return STATUS_CONST(ARITHMETIC_OVERFLOW);
+
+        alignedOffset = self->offset + padding;
+        if (alignedOffset > self->capacity || size > self->capacity - alignedOffset)
+          return STATUS_CONST(OUT_OF_RANGE);
+
+        MODULE_IFUNC(Memory, WritePointer)(outPointerObject, self->buffer + alignedOffset);
+        self->offset = alignedOffset + size;
+        return STATUS_CONST(SUCCESS);
+      }),
+      OPERATION(Array, (void *outPointerObject, size_t count, size_t elementSize), {
+        return MODULE_FUNC(Memory, Arena, AllocArrayAligned)(self, outPointerObject, count, elementSize, MODULE_IFUNC(Memory, MaxAlignment)());
+      }),
+      OPERATION(ArrayAligned, (void *outPointerObject, size_t count, size_t elementSize, size_t alignment), {
+        size_t size = 0U;
+        OPSTATUS status;
+
+        if (!self || !outPointerObject)
+          return STATUS_CONST(INVALID_ARGUMENT);
+
+        status = MODULE_IFUNC(Memory, CheckedMultiplySize)(count, elementSize, &size);
+        if (status != STATUS_CONST(SUCCESS))
+          return status;
+
+        return MODULE_FUNC(Memory, Arena, AllocAligned)(self, outPointerObject, size, alignment);
+      })
+    ),
+
+    CONST_OPERATION(Save, (size_t *outMark), {
+      if (!self || !outMark)
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      *outMark = self->offset;
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(Restore, (size_t mark), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      if (mark > self->capacity)
+        return STATUS_CONST(OUT_OF_RANGE);
+
+      self->offset = mark;
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(Reset, (), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      self->offset = 0U;
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(Destroy, (), {
+      OPSTATUS status = STATUS_CONST(SUCCESS);
+
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      if (self->buffer && self->isOwned) {
+        void *buf = self->buffer;
+        status = MODULE_FUNC(Memory, Alloc, Free)(&buf);
+      }
+
+      OBJECT_RESET_ZERO(Memory, Arena, self);
       return status;
-    arena->buffer = (unsigned char *)allocated;
-  }
+    }),
 
-  arena->capacity = capacity;
-  arena->offset = 0;
-  return STATUS_CONST(SUCCESS);
-}
+    CONST_PREDICATE(Contains, (const void *ptr), {
+      if (!self || !ptr || !self->buffer)
+        return false;
 
-ARENA_ALLOC_ALIGNED_PROTOTYPE {
-  size_t padding;
-  size_t alignedOffset;
+      const uint8_t *bytePtr = (const uint8_t *)ptr;
+      return (bytePtr >= self->buffer && bytePtr < self->buffer + self->offset);
+    }),
 
-  if (!arena || !out || alignment == 0 || alignment > COSMERON_MACRO_INTERNAL_ARENA_ALIGNMENT)
-    return STATUS_CONST(INVALID_ARGUMENT);
+    FUNCTION(MODULE_TYPE(Memory, Allocator), AsAllocator, (), {
+      static const MODULE_TYPE(Memory, Allocator_Ops) ops = {
+          .Alloc = MODULE_IFUNC(Memory, Arena, AllocatorAlloc),
+          .Realloc = NULL,
+          .Free = MODULE_IFUNC(Memory, Arena, AllocatorFree),
+          .capabilities = MODULE_CONST(Memory, BULK_RESET),
+      };
+      MODULE_TYPE(Memory, Allocator) alloc = {
+          .context = self,
+          .ops = &ops,
+      };
+      return alloc;
+    })
+  )
+);
 
-  if (size == 0) {
-    *out = NULL;
-    return STATUS_CONST(SUCCESS);
-  }
-
-  padding = (alignment - (arena->offset % alignment)) % alignment;
-
-  if (arena->offset > SIZE_MAX - padding)
-    return STATUS_CONST(ARITHMETIC_OVERFLOW);
-
-  alignedOffset = arena->offset + padding;
-
-  if (alignedOffset > arena->capacity ||
-      size > arena->capacity - alignedOffset)
-    return STATUS_CONST(OUT_OF_RANGE);
-
-  *out = arena->buffer + alignedOffset;
-  arena->offset = alignedOffset + size;
-  return STATUS_CONST(SUCCESS);
-}
-
-ARENA_ALLOC_BYTES_PROTOTYPE {
-  return ARENA_FUNC(AllocAligned)(arena, out, size, COSMERON_MACRO_INTERNAL_ARENA_ALIGNMENT);
-}
-
-ARENA_ALLOC_ARRAY_ALIGNED_PROTOTYPE {
-  size_t size = 0;
-  OPSTATUS status;
-
-  if (!out)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  status = MEMORY_INS(AllocArraySize)(count, elementSize, &size);
-  if (status != STATUS_CONST(SUCCESS))
-    return status;
-
-  return ARENA_FUNC(AllocAligned)(arena, out, size, alignment);
-}
-
-ARENA_ALLOC_ARRAY_PROTOTYPE {
-  return ARENA_FUNC(AllocArrayAligned)(arena, out, count, elementSize,
-                                        COSMERON_MACRO_INTERNAL_ARENA_ALIGNMENT);
-}
-
-ARENA_ALLOC_TYPED_PROTOTYPE {
-  void *allocated = NULL;
-  OPSTATUS status;
-
-  if (!outPointerObject)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  status = ARENA_FUNC(AllocArrayAligned)(
-      arena, &allocated, count, elementSize, alignment);
-  if (status != STATUS_CONST(SUCCESS))
-    return status;
-
-  memcpy(outPointerObject, &allocated, sizeof(allocated));
-  return STATUS_CONST(SUCCESS);
-}
-
-ARENA_RESET_PROTOTYPE {
-  if (!arena)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  arena->offset = 0;
-  return STATUS_CONST(SUCCESS);
-}
-
-ARENA_DESTROY_PROTOTYPE {
-  OPSTATUS status;
-
-  if (!arena)
-    return STATUS_CONST(INVALID_ARGUMENT);
-
-  {
-    void *buffer = arena->buffer;
-    status = ALLOC_FUNC(FreePointer)(&buffer);
-    arena->buffer = NULL;
-  }
-  arena->capacity = 0;
-  arena->offset = 0;
-  return status;
-}
 /* EOF */

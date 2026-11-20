@@ -1,0 +1,297 @@
+#pragma once
+
+#include "../Sort.space"
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(SORT_MOD), Bubble,
+    (void *data, size_t count, size_t elementSize, TCALLBACK(Comparison) compare)) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, CALLBACK_IS_VALID(compare));
+  if (s != STATUS_CONST(SUCCESS))
+    return s;
+  unsigned char *a = data;
+  for (size_t end = count; end > 1; --end) {
+    bool changed = false;
+    for (size_t i = 1; i < end; ++i) {
+      if (CALLBACK_INVOKE(compare, a + (i - 1) * elementSize,
+                          a + i * elementSize) == COMPARISON_CONST(HIGHER)) {
+        SORT_INS(Swap)(a + (i - 1) * elementSize, a + i * elementSize, elementSize);
+        changed = true;
+      }
+    }
+    if (!changed)
+      break;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(SORT_MOD), Cocktail,
+    (void *data, size_t count, size_t elementSize, TCALLBACK(Comparison) compare)) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, CALLBACK_IS_VALID(compare));
+  if (s != STATUS_CONST(SUCCESS))
+    return s;
+  unsigned char *a = data;
+  size_t lo = 0, hi = count;
+  while (hi > lo + 1) {
+    bool changed = false;
+    for (size_t i = lo + 1; i < hi; ++i) {
+      if (CALLBACK_INVOKE(compare, a + (i - 1) * elementSize,
+                          a + i * elementSize) == COMPARISON_CONST(HIGHER)) {
+        SORT_INS(Swap)(a + (i - 1) * elementSize, a + i * elementSize, elementSize);
+        changed = true;
+      }
+    }
+    if (!changed)
+      break;
+    --hi;
+    changed = false;
+    for (size_t i = hi; i > lo + 1; --i) {
+      if (CALLBACK_INVOKE(compare, a + (i - 2) * elementSize,
+                          a + (i - 1) * elementSize) == COMPARISON_CONST(HIGHER)) {
+        SORT_INS(Swap)(a + (i - 2) * elementSize, a + (i - 1) * elementSize, elementSize);
+        changed = true;
+      }
+    }
+    ++lo;
+    if (!changed)
+      break;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(SORT_MOD), Comb,
+    (void *data, size_t count, size_t elementSize, TCALLBACK(Comparison) compare)) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, CALLBACK_IS_VALID(compare));
+  if (s != STATUS_CONST(SUCCESS))
+    return s;
+  if (count < 2)
+    return STATUS_CONST(SUCCESS);
+  unsigned char *a = data;
+  size_t gap = count;
+  bool changed = true;
+  while (gap > 1 || changed) {
+    gap = (gap / 13u) * 10u + ((gap % 13u) * 10u) / 13u;
+    if (gap < 1)
+      gap = 1;
+    changed = false;
+    for (size_t i = 0; i < count - gap; ++i) {
+      if (CALLBACK_INVOKE(compare, a + i * elementSize,
+                          a + (i + gap) * elementSize) == COMPARISON_CONST(HIGHER)) {
+        SORT_INS(Swap)(a + i * elementSize, a + (i + gap) * elementSize,
+                       elementSize);
+        changed = true;
+      }
+    }
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(SORT_MOD), Gnome,
+    (void *data, size_t count, size_t elementSize, TCALLBACK(Comparison) compare)) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, CALLBACK_IS_VALID(compare));
+  if (s != STATUS_CONST(SUCCESS))
+    return s;
+  unsigned char *a = data;
+  size_t i = 1;
+  while (i < count) {
+    if (i == 0 ||
+        CALLBACK_INVOKE(compare, a + (i - 1) * elementSize,
+                        a + i * elementSize) != COMPARISON_CONST(HIGHER)) {
+      ++i;
+    } else {
+      SORT_INS(Swap)(a + (i - 1) * elementSize, a + i * elementSize, elementSize);
+      --i;
+    }
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(SORT_MOD), OddEven,
+    (void *data, size_t count, size_t elementSize, TCALLBACK(Comparison) compare)) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, CALLBACK_IS_VALID(compare));
+  if (s != STATUS_CONST(SUCCESS))
+    return s;
+  unsigned char *a = data;
+  bool changed = true;
+  while (changed) {
+    changed = false;
+    for (size_t pass = 0; pass < 2; ++pass) {
+      for (size_t i = pass; i < count && count - i > 1; i += 2) {
+        if (CALLBACK_INVOKE(compare, a + i * elementSize,
+                            a + (i + 1) * elementSize) == COMPARISON_CONST(HIGHER)) {
+          SORT_INS(Swap)(a + i * elementSize, a + (i + 1) * elementSize,
+                         elementSize);
+          changed = true;
+        }
+      }
+    }
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(SORT_MOD), Selection,
+    (void *data, size_t count, size_t elementSize, TCALLBACK(Comparison) compare)) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, CALLBACK_IS_VALID(compare));
+  if (s != STATUS_CONST(SUCCESS))
+    return s;
+  unsigned char *a = data;
+  for (size_t i = 0; i < count; ++i) {
+    size_t minIdx = i;
+    for (size_t j = i + 1; j < count; ++j) {
+      if (CALLBACK_INVOKE(compare, a + j * elementSize,
+                          a + minIdx * elementSize) == COMPARISON_CONST(LOWER))
+        minIdx = j;
+    }
+    SORT_INS(Swap)(a + i * elementSize, a + minIdx * elementSize, elementSize);
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(SORT_MOD), DoubleSelection,
+    (void *data, size_t count, size_t elementSize, TCALLBACK(Comparison) compare)) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, CALLBACK_IS_VALID(compare));
+  if (s != STATUS_CONST(SUCCESS))
+    return s;
+  unsigned char *a = data;
+  size_t lo = 0, hi = count;
+  while (hi > lo + 1) {
+    size_t minIdx = lo, maxIdx = lo;
+    for (size_t i = lo + 1; i < hi; ++i) {
+      if (CALLBACK_INVOKE(compare, a + i * elementSize,
+                          a + minIdx * elementSize) == COMPARISON_CONST(LOWER))
+        minIdx = i;
+      if (CALLBACK_INVOKE(compare, a + i * elementSize,
+                          a + maxIdx * elementSize) == COMPARISON_CONST(HIGHER))
+        maxIdx = i;
+    }
+    SORT_INS(Swap)(a + lo * elementSize, a + minIdx * elementSize, elementSize);
+    if (maxIdx == lo)
+      maxIdx = minIdx;
+    --hi;
+    SORT_INS(Swap)(a + hi * elementSize, a + maxIdx * elementSize, elementSize);
+    ++lo;
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(SORT_MOD), Shell,
+    (void *data, size_t count, size_t elementSize, TCALLBACK(Comparison) compare)) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, CALLBACK_IS_VALID(compare));
+  if (s != STATUS_CONST(SUCCESS))
+    return s;
+  unsigned char *a = data;
+  for (size_t gap = count / 2; gap > 0; gap /= 2) {
+    for (size_t i = gap; i < count; ++i) {
+      for (size_t j = i; j >= gap; j -= gap) {
+        if (CALLBACK_INVOKE(compare, a + (j - gap) * elementSize,
+                            a + j * elementSize) == COMPARISON_CONST(HIGHER)) {
+          SORT_INS(Swap)(a + (j - gap) * elementSize, a + j * elementSize,
+                         elementSize);
+        } else {
+          break;
+        }
+      }
+    }
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(SORT_MOD), Pancake,
+    (void *data, size_t count, size_t elementSize, TCALLBACK(Comparison) compare)) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, CALLBACK_IS_VALID(compare));
+  if (s != STATUS_CONST(SUCCESS))
+    return s;
+  unsigned char *a = data;
+  for (size_t curr = count; curr > 1; --curr) {
+    size_t maxIdx = 0;
+    for (size_t i = 1; i < curr; ++i) {
+      if (CALLBACK_INVOKE(compare, a + i * elementSize,
+                          a + maxIdx * elementSize) == COMPARISON_CONST(HIGHER))
+        maxIdx = i;
+    }
+    if (maxIdx != curr - 1) {
+      if (maxIdx > 0) {
+        for (size_t i = 0; i < (maxIdx + 1) / 2; ++i)
+          SORT_INS(Swap)(a + i * elementSize,
+                         a + (maxIdx - i) * elementSize, elementSize);
+      }
+      for (size_t i = 0; i < curr / 2; ++i)
+        SORT_INS(Swap)(a + i * elementSize,
+                       a + (curr - i - 1) * elementSize, elementSize);
+    }
+  }
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline void SORT_INS(QuickRange)(
+    unsigned char *a, size_t lo, size_t hi, size_t size,
+    TCALLBACK(Comparison) cmp) {
+  while (hi - lo > 1) {
+    size_t pivot = hi - 1;
+    size_t store = lo;
+    for (size_t i = lo; i < pivot; ++i) {
+      if (CALLBACK_INVOKE(cmp, a + i * size, a + pivot * size) ==
+          COMPARISON_CONST(LOWER)) {
+        SORT_INS(Swap)(a + store * size, a + i * size, size);
+        ++store;
+      }
+    }
+    SORT_INS(Swap)(a + store * size, a + pivot * size, size);
+    if (store - lo < hi - (store + 1)) {
+      SORT_INS(QuickRange)(a, lo, store, size, cmp);
+      lo = store + 1;
+    } else {
+      SORT_INS(QuickRange)(a, store + 1, hi, size, cmp);
+      hi = store;
+    }
+  }
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(SORT_MOD), Quick,
+    (void *data, size_t count, size_t elementSize, TCALLBACK(Comparison) compare)) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, CALLBACK_IS_VALID(compare));
+  if (s != STATUS_CONST(SUCCESS))
+    return s;
+  if (count > 1)
+    SORT_INS(QuickRange)(data, 0, count, elementSize, compare);
+  return STATUS_CONST(SUCCESS);
+}
+
+static inline void SORT_INS(QuickThreeWayRange)(
+    unsigned char *a, size_t lo, size_t hi, size_t size,
+    TCALLBACK(Comparison) cmp) {
+  while (hi - lo > 1) {
+    size_t pivot = hi - 1, lt = lo, i = lo, gt = pivot;
+    while (i < gt) {
+      CMPOUT order = CALLBACK_INVOKE(cmp, a + i * size, a + pivot * size);
+      if (order == COMPARISON_CONST(LOWER)) {
+        SORT_INS(Swap)(a + lt * size, a + i * size, size);
+        ++lt;
+        ++i;
+      } else if (order == COMPARISON_CONST(HIGHER)) {
+        --gt;
+        SORT_INS(Swap)(a + i * size, a + gt * size, size);
+      } else {
+        ++i;
+      }
+    }
+    SORT_INS(Swap)(a + gt * size, a + pivot * size, size);
+    if (lt - lo < hi - (gt + 1)) {
+      SORT_INS(QuickThreeWayRange)(a, lo, lt, size, cmp);
+      lo = gt + 1;
+    } else {
+      SORT_INS(QuickThreeWayRange)(a, gt + 1, hi, size, cmp);
+      hi = lt;
+    }
+  }
+}
+
+PACKAGE_OPERATION_IMPLEMENT_EX(LIB_PREFIX(SORT_MOD), QuickThreeWay,
+    (void *data, size_t count, size_t elementSize, TCALLBACK(Comparison) compare)) {
+  OPSTATUS s = SORT_INS(Validate)(data, count, elementSize, CALLBACK_IS_VALID(compare));
+  if (s != STATUS_CONST(SUCCESS))
+    return s;
+  if (count > 1)
+    SORT_INS(QuickThreeWayRange)(data, 0, count, elementSize, compare);
+  return STATUS_CONST(SUCCESS);
+}
+
+/* EOF */

@@ -1,0 +1,6 @@
+#pragma once
+
+#define STATUS_TABLE_MEMORY(X)                                                 \
+  X((OUT_OF_MEMORY, MEMORY, "Out of memory"))                                  \
+  X((INSUFFICIENT_SPACE, MEMORY, "Insufficient space"))
+/* EOF */

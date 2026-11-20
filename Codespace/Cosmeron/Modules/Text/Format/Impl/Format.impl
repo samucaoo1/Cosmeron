@@ -6,47 +6,52 @@
 #include <string.h>
 #include <wchar.h>
 
-enum {
-  TEXT_FORMAT_CONST(BASE_BINARY) = 2U,
-  TEXT_FORMAT_CONST(BASE_OCTAL) = 8U,
-  TEXT_FORMAT_CONST(BASE_DECIMAL) = 10U,
-  TEXT_FORMAT_CONST(BASE_HEXADECIMAL) = 16U,
-  TEXT_FORMAT_CONST(BASE_MAX) = 36U,
-  TEXT_FORMAT_CONST(BUFFER_CAPACITY) = 512U,
-  TEXT_FORMAT_CONST(DEFAULT_FLOAT_PRECISION) = 6U
-};
+#define TEXT_FORMAT_CONFIG_COL_NAME(NAME, VALUE) NAME
+#define TEXT_FORMAT_CONFIG_COL_VALUE(NAME, VALUE) VALUE
+#define TEXT_FORMAT_CONFIG_GET(FIELD, ROW)                                     \
+  PP_OP_CAT2(TEXT_FORMAT_CONFIG_COL_, FIELD) ROW
 
-typedef struct {
-  char *buffer;
-  size_t capacity;
-  size_t written;
-} TEXT_FORMAT_INS(Sink);
+#define TEXT_FORMAT_CONFIG_TABLE(X)                                            \
+  X((BASE_BINARY, 2U))                                                         \
+  X((BASE_OCTAL, 8U))                                                          \
+  X((BASE_DECIMAL, 10U))                                                       \
+  X((BASE_HEXADECIMAL, 16U))                                                   \
+  X((BASE_MAX, 36U))                                                           \
+  X((BUFFER_CAPACITY, 512U))                                                   \
+  X((DEFAULT_FLOAT_PRECISION, 6U))
 
-static inline void TEXT_FORMAT_INS(SinkPutChar)(TEXT_FORMAT_INS(Sink) *sink,
-                                               char ch) {
+IENUM_DEF(Text_Format, Config, TEXT_FORMAT_CONFIG_TABLE)
+
+ISTRUCT(Text_Format, Sink,
+        FIELDS(char *buffer; size_t capacity; size_t written;));
+
+MODULE_IMPLEMENT(DOMAIN(Modules), Text,
+  INTERNAL_EX(Format,
+PROCEDURE(SinkPutChar, (MODULE_ITYPE(Text, Format, Sink) *sink,
+                                               char ch), {
   if (sink->buffer != NULL && sink->capacity > 0U &&
       sink->written + 1U < sink->capacity) {
     sink->buffer[sink->written] = ch;
   }
   sink->written++;
-}
+}),
 
-static inline void TEXT_FORMAT_INS(SinkPutString)(TEXT_FORMAT_INS(Sink) *sink,
+PROCEDURE(SinkPutString, (MODULE_ITYPE(Text, Format, Sink) *sink,
                                                  const char *str,
-                                                 size_t length) {
+                                                 size_t length), {
   for (size_t i = 0U; i < length; ++i) {
-    TEXT_FORMAT_INS(SinkPutChar)(sink, str[i]);
+    MODULE_IFUNC(Text, Format, SinkPutChar)(sink, str[i]);
   }
-}
+}),
 
-static inline void TEXT_FORMAT_INS(SinkPutPadding)(TEXT_FORMAT_INS(Sink) *sink,
-                                                  char ch, size_t count) {
+PROCEDURE(SinkPutPadding, (MODULE_ITYPE(Text, Format, Sink) *sink,
+                                                  char ch, size_t count), {
   for (size_t i = 0U; i < count; ++i) {
-    TEXT_FORMAT_INS(SinkPutChar)(sink, ch);
+    MODULE_IFUNC(Text, Format, SinkPutChar)(sink, ch);
   }
-}
+}),
 
-static inline void TEXT_FORMAT_INS(SinkFinish)(TEXT_FORMAT_INS(Sink) *sink) {
+PROCEDURE(SinkFinish, (MODULE_ITYPE(Text, Format, Sink) *sink), {
   if (sink->buffer != NULL && sink->capacity > 0U) {
     if (sink->written < sink->capacity) {
       sink->buffer[sink->written] = '\0';
@@ -54,33 +59,42 @@ static inline void TEXT_FORMAT_INS(SinkFinish)(TEXT_FORMAT_INS(Sink) *sink) {
       sink->buffer[sink->capacity - 1U] = '\0';
     }
   }
-}
+}),
 
-static inline size_t TEXT_FORMAT_INS(StringLength)(const char *str) {
-  size_t len = 0U;
-  if (str == NULL) {
-    return 0U;
-  }
-  while (str[len] != '\0') {
-    len++;
-  }
-  return len;
-}
+FUNCTION(size_t, StringLength, (const char *str), {
+  return (str != NULL) ? strlen(str) : 0U;
+}),
 
-static inline bool TEXT_FORMAT_INS(IsDigit)(char c) {
+PROCEDURE(EmitRadixPrefix,
+          (unsigned base, bool uppercase, char firstDigit, char *prefix,
+           size_t *prefixLen), {
+  if (base == CNS(Text, Format, Internal, BASE_HEXADECIMAL)) {
+    prefix[(*prefixLen)++] = '0';
+    prefix[(*prefixLen)++] = uppercase ? 'X' : 'x';
+  } else if (base == CNS(Text, Format, Internal, BASE_BINARY)) {
+    prefix[(*prefixLen)++] = '0';
+    prefix[(*prefixLen)++] = uppercase ? 'B' : 'b';
+  } else if (base == CNS(Text, Format, Internal, BASE_OCTAL)) {
+    if (firstDigit != '0') {
+      prefix[(*prefixLen)++] = '0';
+    }
+  }
+}),
+
+PREDICATE(IsDigit, (char c), {
   return c >= '0' && c <= '9';
-}
+}),
 
-static inline bool TEXT_FORMAT_INS(IsAlpha)(char c) {
+PREDICATE(IsAlpha, (char c), {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-}
+}),
 
-static inline void TEXT_FORMAT_INS(FormatInteger)(
-    TEXT_FORMAT_INS(Sink) *sink, uintmax_t value, bool isSigned,
+PROCEDURE(FormatInteger, (
+    MODULE_ITYPE(Text, Format, Sink) *sink, uintmax_t value, bool isSigned,
     bool isNegative, unsigned base, bool uppercase, bool flagMinus,
     bool flagPlus, bool flagSpace, bool flagHash, bool flagZero, size_t width,
-    bool hasPrecision, size_t precision) {
-  char digitsBuffer[TEXT_FORMAT_CONST(BUFFER_CAPACITY)];
+    bool hasPrecision, size_t precision), {
+  char digitsBuffer[CNS(Text, Format, Internal, BUFFER_CAPACITY)];
   size_t digitsCount = 0U;
   const char *digitsMap = uppercase ? "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                     : "0123456789abcdefghijklmnopqrstuvwxyz";
@@ -110,17 +124,10 @@ static inline void TEXT_FORMAT_INS(FormatInteger)(
       prefix[prefixLen++] = ' ';
     }
   } else if (flagHash && value != 0U) {
-    if (base == TEXT_FORMAT_CONST(BASE_HEXADECIMAL)) {
-      prefix[prefixLen++] = '0';
-      prefix[prefixLen++] = uppercase ? 'X' : 'x';
-    } else if (base == TEXT_FORMAT_CONST(BASE_BINARY)) {
-      prefix[prefixLen++] = '0';
-      prefix[prefixLen++] = uppercase ? 'B' : 'b';
-    } else if (base == TEXT_FORMAT_CONST(BASE_OCTAL)) {
-      if (digitsCount == 0U || digitsBuffer[digitsCount - 1U] != '0') {
-        prefix[prefixLen++] = '0';
-      }
-    }
+    const char topDigit =
+        (digitsCount > 0U) ? digitsBuffer[digitsCount - 1U] : '\0';
+    MODULE_IFUNC(Text, Format, EmitRadixPrefix)(base, uppercase, topDigit,
+                                                prefix, &prefixLen);
   }
 
   size_t zeroPad = 0U;
@@ -135,29 +142,29 @@ static inline void TEXT_FORMAT_INS(FormatInteger)(
   size_t spacePad = (width > totalLen) ? (width - totalLen) : 0U;
 
   if (!flagMinus) {
-    TEXT_FORMAT_INS(SinkPutPadding)(sink, ' ', spacePad);
+    MODULE_IFUNC(Text, Format, SinkPutPadding)(sink, ' ', spacePad);
   }
 
   for (size_t i = 0U; i < prefixLen; ++i) {
-    TEXT_FORMAT_INS(SinkPutChar)(sink, prefix[i]);
+    MODULE_IFUNC(Text, Format, SinkPutChar)(sink, prefix[i]);
   }
 
-  TEXT_FORMAT_INS(SinkPutPadding)(sink, '0', zeroPad);
+  MODULE_IFUNC(Text, Format, SinkPutPadding)(sink, '0', zeroPad);
 
   for (size_t i = digitsCount; i > 0U; --i) {
-    TEXT_FORMAT_INS(SinkPutChar)(sink, digitsBuffer[i - 1U]);
+    MODULE_IFUNC(Text, Format, SinkPutChar)(sink, digitsBuffer[i - 1U]);
   }
 
   if (flagMinus) {
-    TEXT_FORMAT_INS(SinkPutPadding)(sink, ' ', spacePad);
+    MODULE_IFUNC(Text, Format, SinkPutPadding)(sink, ' ', spacePad);
   }
-}
+}),
 
-static inline void TEXT_FORMAT_INS(FormatFloat)(
-    TEXT_FORMAT_INS(Sink) *sink, double value, bool isLongDouble,
+PROCEDURE(FormatFloat, (
+    MODULE_ITYPE(Text, Format, Sink) *sink, double value, bool isLongDouble,
     long double ldValue, char specifier, bool flagMinus, bool flagPlus,
     bool flagSpace, bool flagHash, bool flagZero, size_t width,
-    bool hasPrecision, size_t precision) {
+    bool hasPrecision, size_t precision), {
   char formatSpec[64];
   size_t fmtLen = 0U;
   formatSpec[fmtLen++] = '%';
@@ -190,7 +197,7 @@ static inline void TEXT_FORMAT_INS(FormatFloat)(
   formatSpec[fmtLen++] = specifier;
   formatSpec[fmtLen] = '\0';
 
-  char tempBuf[TEXT_FORMAT_CONST(BUFFER_CAPACITY)];
+  char tempBuf[CNS(Text, Format, Internal, BUFFER_CAPACITY)];
   int formattedLen = 0;
   if (isLongDouble) {
     formattedLen = snprintf(tempBuf, sizeof(tempBuf), formatSpec, ldValue);
@@ -199,58 +206,46 @@ static inline void TEXT_FORMAT_INS(FormatFloat)(
   }
 
   if (formattedLen > 0) {
-    TEXT_FORMAT_INS(SinkPutString)(sink, tempBuf, (size_t)formattedLen);
+    MODULE_IFUNC(Text, Format, SinkPutString)(sink, tempBuf, (size_t)formattedLen);
   }
-}
+}),
 
-static inline void TEXT_FORMAT_INS(FormatString)(
-    TEXT_FORMAT_INS(Sink) *sink, const char *str, bool flagMinus, size_t width,
-    bool hasPrecision, size_t precision) {
+PROCEDURE(FormatString, (
+    MODULE_ITYPE(Text, Format, Sink) *sink, const char *str, bool flagMinus, size_t width,
+    bool hasPrecision, size_t precision), {
   if (str == NULL) {
     str = "(null)";
   }
-  size_t len = TEXT_FORMAT_INS(StringLength)(str);
+  size_t len = MODULE_IFUNC(Text, Format, StringLength)(str);
   if (hasPrecision && precision < len) {
     len = precision;
   }
   size_t pad = (width > len) ? (width - len) : 0U;
   if (!flagMinus) {
-    TEXT_FORMAT_INS(SinkPutPadding)(sink, ' ', pad);
+    MODULE_IFUNC(Text, Format, SinkPutPadding)(sink, ' ', pad);
   }
-  TEXT_FORMAT_INS(SinkPutString)(sink, str, len);
+  MODULE_IFUNC(Text, Format, SinkPutString)(sink, str, len);
   if (flagMinus) {
-    TEXT_FORMAT_INS(SinkPutPadding)(sink, ' ', pad);
+    MODULE_IFUNC(Text, Format, SinkPutPadding)(sink, ' ', pad);
   }
-}
+}),
 
-static inline void TEXT_FORMAT_INS(FormatChar)(TEXT_FORMAT_INS(Sink) *sink,
+PROCEDURE(FormatChar, (MODULE_ITYPE(Text, Format, Sink) *sink,
                                               char ch, bool flagMinus,
-                                              size_t width) {
+                                              size_t width), {
   size_t pad = (width > 1U) ? (width - 1U) : 0U;
   if (!flagMinus) {
-    TEXT_FORMAT_INS(SinkPutPadding)(sink, ' ', pad);
+    MODULE_IFUNC(Text, Format, SinkPutPadding)(sink, ' ', pad);
   }
-  TEXT_FORMAT_INS(SinkPutChar)(sink, ch);
+  MODULE_IFUNC(Text, Format, SinkPutChar)(sink, ch);
   if (flagMinus) {
-    TEXT_FORMAT_INS(SinkPutPadding)(sink, ' ', pad);
+    MODULE_IFUNC(Text, Format, SinkPutPadding)(sink, ' ', pad);
   }
-}
+}),
 
-typedef enum {
-  TEXT_FORMAT_INS(KIND_SIGNED),
-  TEXT_FORMAT_INS(KIND_UNSIGNED),
-  TEXT_FORMAT_INS(KIND_FLOAT)
-} TEXT_FORMAT_INS(ComponentKind);
-
-typedef union {
-  int64_t i64;
-  uint64_t u64;
-  double dbl;
-} TEXT_FORMAT_INS(ComponentValue);
-
-static inline void TEXT_FORMAT_INS(FormatSingleComponent)(
-    TEXT_FORMAT_INS(Sink) *sink, TEXT_FORMAT_INS(ComponentValue) val,
-    TEXT_FORMAT_INS(ComponentKind) kind, const char *spec, size_t specLen) {
+PROCEDURE(FormatSingleComponent, (
+    MODULE_ITYPE(Text, Format, Sink) *sink, MODULE_TYPE(Type, TaggedUnion) val,
+    const char *spec, size_t specLen), {
   char tempFmt[64];
   if (spec != NULL && specLen > 0U && specLen < sizeof(tempFmt) - 1U) {
     memcpy(tempFmt, spec, specLen);
@@ -266,22 +261,25 @@ static inline void TEXT_FORMAT_INS(FormatSingleComponent)(
   bool isUnsignedSpec = (lastChar == 'u' || lastChar == 'x' || lastChar == 'X' ||
                          lastChar == 'o' || lastChar == 'b' || lastChar == 'B');
 
-  char outBuf[TEXT_FORMAT_CONST(BUFFER_CAPACITY)];
+  char outBuf[CNS(Text, Format, Internal, BUFFER_CAPACITY)];
   int written = 0;
 
-  if (isFloatSpec || kind == TEXT_FORMAT_INS(KIND_FLOAT)) {
-    double d = (kind == TEXT_FORMAT_INS(KIND_FLOAT)) ? val.dbl : (double)val.i64;
+  if (isFloatSpec || val.tag == CNS(Type, Tag, Float64)) {
+    double d = 0.0;
+    MODULE_FUNC(Type, TaggedUnion, CoerceFloat64)(&val, &d);
     const char *fmt = (tempFmt[0] != '\0') ? tempFmt : "%g";
     written = snprintf(outBuf, sizeof(outBuf), fmt, d);
-  } else if (isUnsignedSpec || kind == TEXT_FORMAT_INS(KIND_UNSIGNED)) {
-    uint64_t u = (kind == TEXT_FORMAT_INS(KIND_UNSIGNED)) ? val.u64 : (uint64_t)val.i64;
+  } else if (isUnsignedSpec || val.tag == CNS(Type, Tag, UInt64)) {
+    uint64_t u = 0U;
+    MODULE_FUNC(Type, TaggedUnion, CoerceUInt64)(&val, &u);
     if (tempFmt[0] != '\0') {
       written = snprintf(outBuf, sizeof(outBuf), tempFmt, (unsigned long long)u);
     } else {
       written = snprintf(outBuf, sizeof(outBuf), "%" PRIu64, u);
     }
   } else {
-    int64_t i = val.i64;
+    int64_t i = 0;
+    MODULE_FUNC(Type, TaggedUnion, CoerceInt64)(&val, &i);
     if (tempFmt[0] != '\0') {
       written = snprintf(outBuf, sizeof(outBuf), tempFmt, (long long)i);
     } else {
@@ -290,16 +288,16 @@ static inline void TEXT_FORMAT_INS(FormatSingleComponent)(
   }
 
   if (written > 0) {
-    TEXT_FORMAT_INS(SinkPutString)(sink, outBuf, (size_t)written);
+    MODULE_IFUNC(Text, Format, SinkPutString)(sink, outBuf, (size_t)written);
   }
-}
+}),
 
-static inline void TEXT_FORMAT_INS(FormatStruct)(
-    TEXT_FORMAT_INS(Sink) *sink, const void *ptr, size_t compCount,
+PROCEDURE(FormatStruct, (
+    MODULE_ITYPE(Text, Format, Sink) *sink, const void *ptr, size_t compCount,
     const char *structName, size_t structNameLen, const char *subFormat,
-    size_t subFormatLen, bool flagMinus, size_t width) {
+    size_t subFormatLen, bool flagMinus, size_t width), {
   if (ptr == NULL) {
-    TEXT_FORMAT_INS(FormatString)(sink, "(null)", flagMinus, width, false, 0U);
+    MODULE_IFUNC(Text, Format, FormatString)(sink, "(null)", flagMinus, width, false, 0U);
     return;
   }
 
@@ -315,8 +313,6 @@ static inline void TEXT_FORMAT_INS(FormatStruct)(
       break;
     }
   }
-
-  TEXT_FORMAT_INS(ComponentKind) kind = TEXT_FORMAT_INS(KIND_SIGNED);
   bool isFloat = false;
   bool isUnsigned = false;
   bool isSize = false;
@@ -328,26 +324,20 @@ static inline void TEXT_FORMAT_INS(FormatStruct)(
     if (strcmp(suffixBuf, "double") == 0 || strcmp(suffixBuf, "float") == 0 ||
         strcmp(suffixBuf, "longdouble") == 0) {
       isFloat = true;
-      kind = TEXT_FORMAT_INS(KIND_FLOAT);
     } else if (strcmp(suffixBuf, "uint8") == 0) {
       isUnsigned = true;
       is8 = true;
-      kind = TEXT_FORMAT_INS(KIND_UNSIGNED);
     } else if (strcmp(suffixBuf, "uint16") == 0) {
       isUnsigned = true;
       is16 = true;
-      kind = TEXT_FORMAT_INS(KIND_UNSIGNED);
     } else if (strcmp(suffixBuf, "uint32") == 0) {
       isUnsigned = true;
-      kind = TEXT_FORMAT_INS(KIND_UNSIGNED);
     } else if (strcmp(suffixBuf, "uint64") == 0) {
       isUnsigned = true;
       is64 = true;
-      kind = TEXT_FORMAT_INS(KIND_UNSIGNED);
     } else if (strcmp(suffixBuf, "size") == 0) {
       isUnsigned = true;
       isSize = true;
-      kind = TEXT_FORMAT_INS(KIND_UNSIGNED);
     } else if (strcmp(suffixBuf, "int8") == 0) {
       is8 = true;
     } else if (strcmp(suffixBuf, "int16") == 0) {
@@ -361,7 +351,7 @@ static inline void TEXT_FORMAT_INS(FormatStruct)(
         size_t j = i + 1U;
         while (j < subFormatLen && (subFormat[j] == '-' || subFormat[j] == '+' ||
                                     subFormat[j] == ' ' || subFormat[j] == '#' ||
-                                    subFormat[j] == '0' || TEXT_FORMAT_INS(IsDigit)(subFormat[j]) ||
+                                    subFormat[j] == '0' || MODULE_IFUNC(Text, Format, IsDigit)(subFormat[j]) ||
                                     subFormat[j] == '.' || subFormat[j] == 'l' ||
                                     subFormat[j] == 'h' || subFormat[j] == 'z')) {
           j++;
@@ -371,65 +361,66 @@ static inline void TEXT_FORMAT_INS(FormatStruct)(
           if (spec == 'f' || spec == 'F' || spec == 'e' || spec == 'E' ||
               spec == 'g' || spec == 'G' || spec == 'a' || spec == 'A') {
             isFloat = true;
-            kind = TEXT_FORMAT_INS(KIND_FLOAT);
             break;
           }
           if (spec == 'u' || spec == 'x' || spec == 'X' || spec == 'o' ||
               spec == 'b' || spec == 'B') {
             isUnsigned = true;
-            kind = TEXT_FORMAT_INS(KIND_UNSIGNED);
           }
         }
       }
     }
   }
 
-  TEXT_FORMAT_INS(ComponentValue) components[5];
+  MODULE_TYPE(Type, TaggedUnion) components[5];
   for (size_t i = 0U; i < compCount && i < 5U; ++i) {
     if (isFloat) {
-      if (suffixBuf[0] != '\0' && strcmp(suffixBuf, "float") == 0) {
-        components[i].dbl = (double)((const float *)ptr)[i];
-      } else {
-        components[i].dbl = ((const double *)ptr)[i];
-      }
+      double val = (suffixBuf[0] != '\0' && strcmp(suffixBuf, "float") == 0)
+                       ? (double)((const float *)ptr)[i]
+                       : ((const double *)ptr)[i];
+      components[i] = MODULE_FUNC(Type, TaggedUnion, From_Float64)(val);
     } else if (isUnsigned) {
+      uint64_t val = 0U;
       if (is8) {
-        components[i].u64 = (uint64_t)((const uint8_t *)ptr)[i];
+        val = (uint64_t)((const uint8_t *)ptr)[i];
       } else if (is16) {
-        components[i].u64 = (uint64_t)((const uint16_t *)ptr)[i];
+        val = (uint64_t)((const uint16_t *)ptr)[i];
       } else if (is64) {
-        components[i].u64 = ((const uint64_t *)ptr)[i];
+        val = ((const uint64_t *)ptr)[i];
       } else if (isSize) {
-        components[i].u64 = (uint64_t)((const size_t *)ptr)[i];
+        val = (uint64_t)((const size_t *)ptr)[i];
       } else {
-        components[i].u64 = (uint64_t)((const uint32_t *)ptr)[i];
+        val = (uint64_t)((const uint32_t *)ptr)[i];
       }
+      components[i] = MODULE_FUNC(Type, TaggedUnion, From_UInt64)(val);
     } else {
+      int64_t val = 0;
       if (is8) {
-        components[i].i64 = (int64_t)((const int8_t *)ptr)[i];
+        val = (int64_t)((const int8_t *)ptr)[i];
       } else if (is16) {
-        components[i].i64 = (int64_t)((const int16_t *)ptr)[i];
+        val = (int64_t)((const int16_t *)ptr)[i];
       } else if (is64) {
-        components[i].i64 = ((const int64_t *)ptr)[i];
+        val = ((const int64_t *)ptr)[i];
       } else {
-        components[i].i64 = (int64_t)((const int32_t *)ptr)[i];
+        val = (int64_t)((const int32_t *)ptr)[i];
       }
+      components[i] = MODULE_FUNC(Type, TaggedUnion, From_Int64)(val);
     }
   }
 
-  char renderBuf[TEXT_FORMAT_CONST(BUFFER_CAPACITY)];
-  TEXT_FORMAT_INS(Sink) tempSink = {renderBuf, sizeof(renderBuf), 0U};
+  char renderBuf[CNS(Text, Format, Internal, BUFFER_CAPACITY)];
+  MODULE_ITYPE(Text, Format, Sink) tempSink = {renderBuf, sizeof(renderBuf), 0U};
 
   if (subFormat == NULL || subFormatLen == 0U) {
-    TEXT_FORMAT_INS(SinkPutChar)(&tempSink, '{');
+    MODULE_IFUNC(Text, Format, SinkPutChar)(&tempSink, '{');
     for (size_t i = 0U; i < compCount; ++i) {
       if (i > 0U) {
-        TEXT_FORMAT_INS(SinkPutString)(&tempSink, ", ", 2U);
+        MODULE_IFUNC(Text, Format, SinkPutString)(&tempSink, ", ", 2U);
       }
-      TEXT_FORMAT_INS(FormatSingleComponent)(&tempSink, components[i], kind,
+      MODULE_IFUNC(Text, Format, FormatSingleComponent)(&tempSink, components[i],
                                              NULL, 0U);
     }
-    TEXT_FORMAT_INS(SinkPutChar)(&tempSink, '}');
+    MODULE_IFUNC(Text, Format, SinkPutChar)(&tempSink, '}');
   } else {
     bool hasPercent = false;
     for (size_t i = 0U; i < subFormatLen; ++i) {
@@ -449,7 +440,7 @@ static inline void TEXT_FORMAT_INS(FormatStruct)(
           while (i < subFormatLen &&
                  (subFormat[i] == '-' || subFormat[i] == '+' ||
                   subFormat[i] == ' ' || subFormat[i] == '#' ||
-                  subFormat[i] == '0' || TEXT_FORMAT_INS(IsDigit)(subFormat[i]) ||
+                  subFormat[i] == '0' || MODULE_IFUNC(Text, Format, IsDigit)(subFormat[i]) ||
                   subFormat[i] == '.' || subFormat[i] == 'l' ||
                   subFormat[i] == 'h' || subFormat[i] == 'z' ||
                   subFormat[i] == 'j' || subFormat[i] == 't')) {
@@ -460,12 +451,12 @@ static inline void TEXT_FORMAT_INS(FormatStruct)(
           }
           size_t specLen = i - specStart;
           if (compIdx < compCount) {
-            TEXT_FORMAT_INS(FormatSingleComponent)(
-                &tempSink, components[compIdx++], kind, subFormat + specStart,
+            MODULE_IFUNC(Text, Format, FormatSingleComponent)(
+                &tempSink, components[compIdx++], subFormat + specStart,
                 specLen);
           }
         } else {
-          TEXT_FORMAT_INS(SinkPutChar)(&tempSink, subFormat[i]);
+          MODULE_IFUNC(Text, Format, SinkPutChar)(&tempSink, subFormat[i]);
           i++;
         }
       }
@@ -474,121 +465,116 @@ static inline void TEXT_FORMAT_INS(FormatStruct)(
         char c = subFormat[i];
         if (c == 'x' || c == 'a') {
           if (compCount > 0U) {
-            TEXT_FORMAT_INS(FormatSingleComponent)(&tempSink, components[0],
-                                                   kind, NULL, 0U);
+            MODULE_IFUNC(Text, Format, FormatSingleComponent)(&tempSink, components[0], NULL, 0U);
           }
         } else if (c == 'y' || c == 'b') {
           if (compCount > 1U) {
-            TEXT_FORMAT_INS(FormatSingleComponent)(&tempSink, components[1],
-                                                   kind, NULL, 0U);
+            MODULE_IFUNC(Text, Format, FormatSingleComponent)(&tempSink, components[1], NULL, 0U);
           }
         } else if (c == 'z' || c == 'c') {
           if (compCount > 2U) {
-            TEXT_FORMAT_INS(FormatSingleComponent)(&tempSink, components[2],
-                                                   kind, NULL, 0U);
+            MODULE_IFUNC(Text, Format, FormatSingleComponent)(&tempSink, components[2], NULL, 0U);
           }
         } else if (c == 'w' || c == 'd') {
           if (compCount > 3U) {
-            TEXT_FORMAT_INS(FormatSingleComponent)(&tempSink, components[3],
-                                                   kind, NULL, 0U);
+            MODULE_IFUNC(Text, Format, FormatSingleComponent)(&tempSink, components[3], NULL, 0U);
           }
         } else if (c == 'e') {
           if (compCount > 4U) {
-            TEXT_FORMAT_INS(FormatSingleComponent)(&tempSink, components[4],
-                                                   kind, NULL, 0U);
+            MODULE_IFUNC(Text, Format, FormatSingleComponent)(&tempSink, components[4], NULL, 0U);
           }
         } else {
-          TEXT_FORMAT_INS(SinkPutChar)(&tempSink, c);
+          MODULE_IFUNC(Text, Format, SinkPutChar)(&tempSink, c);
         }
       }
     }
   }
 
-  TEXT_FORMAT_INS(SinkFinish)(&tempSink);
+  MODULE_IFUNC(Text, Format, SinkFinish)(&tempSink);
 
   size_t resultLen = tempSink.written;
   size_t pad = (width > resultLen) ? (width - resultLen) : 0U;
 
   if (!flagMinus) {
-    TEXT_FORMAT_INS(SinkPutPadding)(sink, ' ', pad);
+    MODULE_IFUNC(Text, Format, SinkPutPadding)(sink, ' ', pad);
   }
-  TEXT_FORMAT_INS(SinkPutString)(sink, renderBuf, resultLen);
+  MODULE_IFUNC(Text, Format, SinkPutString)(sink, renderBuf, resultLen);
   if (flagMinus) {
-    TEXT_FORMAT_INS(SinkPutPadding)(sink, ' ', pad);
+    MODULE_IFUNC(Text, Format, SinkPutPadding)(sink, ' ', pad);
   }
-}
+}),
 
-static inline void TEXT_FORMAT_INS(FormatCosmeronType)(
-    TEXT_FORMAT_INS(Sink) *sink, const void *ptr, bool isBigint,
+PROCEDURE(FormatCosmeronType, (
+    MODULE_ITYPE(Text, Format, Sink) *sink, const void *ptr, bool isBigint,
     size_t bitWidth, const char *subFormat, size_t subFormatLen, bool flagMinus,
-    bool flagHash, bool flagZero, size_t width) {
+    bool flagHash, bool flagZero, size_t width), {
   if (ptr == NULL) {
-    TEXT_FORMAT_INS(FormatString)(sink, "(null)", flagMinus, width, false, 0U);
+    MODULE_IFUNC(Text, Format, FormatString)(sink, "(null)", flagMinus, width, false, 0U);
     return;
   }
 
-  unsigned base = TEXT_FORMAT_CONST(BASE_DECIMAL);
+  unsigned base = CNS(Text, Format, Internal, BASE_DECIMAL);
   bool uppercase = false;
 
   if (subFormat != NULL && subFormatLen > 0U) {
     if (subFormat[0] == 'x' || (subFormatLen == 2U && subFormat[0] == '1' && subFormat[1] == '6')) {
-      base = TEXT_FORMAT_CONST(BASE_HEXADECIMAL);
+      base = CNS(Text, Format, Internal, BASE_HEXADECIMAL);
       uppercase = false;
     } else if (subFormat[0] == 'X') {
-      base = TEXT_FORMAT_CONST(BASE_HEXADECIMAL);
+      base = CNS(Text, Format, Internal, BASE_HEXADECIMAL);
       uppercase = true;
     } else if (subFormat[0] == 'b' || (subFormatLen == 1U && subFormat[0] == '2')) {
-      base = TEXT_FORMAT_CONST(BASE_BINARY);
+      base = CNS(Text, Format, Internal, BASE_BINARY);
       uppercase = false;
     } else if (subFormat[0] == 'B') {
-      base = TEXT_FORMAT_CONST(BASE_BINARY);
+      base = CNS(Text, Format, Internal, BASE_BINARY);
       uppercase = true;
     } else if (subFormat[0] == 'o' || (subFormatLen == 1U && subFormat[0] == '8')) {
-      base = TEXT_FORMAT_CONST(BASE_OCTAL);
+      base = CNS(Text, Format, Internal, BASE_OCTAL);
     } else {
       unsigned parsedBase = 0U;
       for (size_t i = 0U; i < subFormatLen; ++i) {
-        if (TEXT_FORMAT_INS(IsDigit)(subFormat[i])) {
+        if (MODULE_IFUNC(Text, Format, IsDigit)(subFormat[i])) {
           parsedBase = parsedBase * 10U + (unsigned)(subFormat[i] - '0');
         }
       }
-      if (parsedBase >= TEXT_FORMAT_CONST(BASE_BINARY) &&
-          parsedBase <= TEXT_FORMAT_CONST(BASE_MAX)) {
+      if (parsedBase >= CNS(Text, Format, Internal, BASE_BINARY) &&
+          parsedBase <= CNS(Text, Format, Internal, BASE_MAX)) {
         base = parsedBase;
       }
     }
   }
 
-  char renderBuf[TEXT_FORMAT_CONST(BUFFER_CAPACITY)];
+  char renderBuf[CNS(Text, Format, Internal, BUFFER_CAPACITY)];
   OPSTATUS status = STATUS_CONST(SUCCESS);
 
   if (isBigint) {
     if (bitWidth == 256U) {
-      status = TBIGINT_FUNC(256, ToCStringBase)(
-          (const TBIGINT_TYPE(256) *)ptr, renderBuf, sizeof(renderBuf), base);
+      status = MODULE_FUNC(Numeric, Bigint256, ToCStringBase)(
+          (const MODULE_TYPE(Numeric, Bigint256) *)ptr, renderBuf, sizeof(renderBuf), base);
     } else if (bitWidth == 512U) {
-      status = TBIGINT_FUNC(512, ToCStringBase)(
-          (const TBIGINT_TYPE(512) *)ptr, renderBuf, sizeof(renderBuf), base);
+      status = MODULE_FUNC(Numeric, Bigint512, ToCStringBase)(
+          (const MODULE_TYPE(Numeric, Bigint512) *)ptr, renderBuf, sizeof(renderBuf), base);
     } else if (bitWidth == 1024U) {
-      status = TBIGINT_FUNC(1024, ToCStringBase)(
-          (const TBIGINT_TYPE(1024) *)ptr, renderBuf, sizeof(renderBuf), base);
+      status = MODULE_FUNC(Numeric, Bigint1024, ToCStringBase)(
+          (const MODULE_TYPE(Numeric, Bigint1024) *)ptr, renderBuf, sizeof(renderBuf), base);
     } else {
-      status = TBIGINT_FUNC(128, ToCStringBase)(
-          (const TBIGINT_TYPE(128) *)ptr, renderBuf, sizeof(renderBuf), base);
+      status = MODULE_FUNC(Numeric, Bigint128, ToCStringBase)(
+          (const MODULE_TYPE(Numeric, Bigint128) *)ptr, renderBuf, sizeof(renderBuf), base);
     }
   } else {
     if (bitWidth == 256U) {
-      status = TDECIMAL_FUNC(256, ToCStringBase)(
-          (const TDECIMAL_TYPE(256) *)ptr, renderBuf, sizeof(renderBuf), base);
+      status = MODULE_FUNC(Numeric, Decimal256, ToCStringBase)(
+          (const MODULE_TYPE(Numeric, Decimal256) *)ptr, renderBuf, sizeof(renderBuf), base);
     } else if (bitWidth == 512U) {
-      status = TDECIMAL_FUNC(512, ToCStringBase)(
-          (const TDECIMAL_TYPE(512) *)ptr, renderBuf, sizeof(renderBuf), base);
+      status = MODULE_FUNC(Numeric, Decimal512, ToCStringBase)(
+          (const MODULE_TYPE(Numeric, Decimal512) *)ptr, renderBuf, sizeof(renderBuf), base);
     } else if (bitWidth == 1024U) {
-      status = TDECIMAL_FUNC(1024, ToCStringBase)(
-          (const TDECIMAL_TYPE(1024) *)ptr, renderBuf, sizeof(renderBuf), base);
+      status = MODULE_FUNC(Numeric, Decimal1024, ToCStringBase)(
+          (const MODULE_TYPE(Numeric, Decimal1024) *)ptr, renderBuf, sizeof(renderBuf), base);
     } else {
-      status = TDECIMAL_FUNC(128, ToCStringBase)(
-          (const TDECIMAL_TYPE(128) *)ptr, renderBuf, sizeof(renderBuf), base);
+      status = MODULE_FUNC(Numeric, Decimal128, ToCStringBase)(
+          (const MODULE_TYPE(Numeric, Decimal128) *)ptr, renderBuf, sizeof(renderBuf), base);
     }
   }
 
@@ -596,9 +582,9 @@ static inline void TEXT_FORMAT_INS(FormatCosmeronType)(
     return;
   }
 
-  size_t digitsLen = TEXT_FORMAT_INS(StringLength)(renderBuf);
+  size_t digitsLen = MODULE_IFUNC(Text, Format, StringLength)(renderBuf);
 
-  if (base == TEXT_FORMAT_CONST(BASE_HEXADECIMAL) && !uppercase) {
+  if (base == CNS(Text, Format, Internal, BASE_HEXADECIMAL) && !uppercase) {
     for (size_t i = 0U; i < digitsLen; ++i) {
       if (renderBuf[i] >= 'A' && renderBuf[i] <= 'F') {
         renderBuf[i] = (char)(renderBuf[i] + ('a' - 'A'));
@@ -610,42 +596,37 @@ static inline void TEXT_FORMAT_INS(FormatCosmeronType)(
   size_t prefixLen = 0U;
 
   if (flagHash) {
-    if (base == TEXT_FORMAT_CONST(BASE_HEXADECIMAL)) {
-      prefix[prefixLen++] = '0';
-      prefix[prefixLen++] = uppercase ? 'X' : 'x';
-    } else if (base == TEXT_FORMAT_CONST(BASE_BINARY)) {
-      prefix[prefixLen++] = '0';
-      prefix[prefixLen++] = uppercase ? 'B' : 'b';
-    } else if (base == TEXT_FORMAT_CONST(BASE_OCTAL)) {
-      if (digitsLen == 0U || renderBuf[0] != '0') {
-        prefix[prefixLen++] = '0';
-      }
-    }
+    const char leadDigit = (digitsLen > 0U) ? renderBuf[0] : '\0';
+    MODULE_IFUNC(Text, Format, EmitRadixPrefix)(base, uppercase, leadDigit,
+                                                prefix, &prefixLen);
   }
 
   size_t totalLen = prefixLen + digitsLen;
   size_t pad = (width > totalLen) ? (width - totalLen) : 0U;
 
   if (!flagMinus && !flagZero) {
-    TEXT_FORMAT_INS(SinkPutPadding)(sink, ' ', pad);
+    MODULE_IFUNC(Text, Format, SinkPutPadding)(sink, ' ', pad);
   }
 
   for (size_t i = 0U; i < prefixLen; ++i) {
-    TEXT_FORMAT_INS(SinkPutChar)(sink, prefix[i]);
+    MODULE_IFUNC(Text, Format, SinkPutChar)(sink, prefix[i]);
   }
 
   if (!flagMinus && flagZero) {
-    TEXT_FORMAT_INS(SinkPutPadding)(sink, '0', pad);
+    MODULE_IFUNC(Text, Format, SinkPutPadding)(sink, '0', pad);
   }
 
-  TEXT_FORMAT_INS(SinkPutString)(sink, renderBuf, digitsLen);
+  MODULE_IFUNC(Text, Format, SinkPutString)(sink, renderBuf, digitsLen);
 
   if (flagMinus) {
-    TEXT_FORMAT_INS(SinkPutPadding)(sink, ' ', pad);
+    MODULE_IFUNC(Text, Format, SinkPutPadding)(sink, ' ', pad);
   }
-}
-
-TEXT_FORMAT_VARIADIC_PROTOTYPE {
+})
+  ),
+  PACKAGE(Format,
+    VARIANT(Variadic,
+      OPERATION((char *buffer, size_t capacity, size_t *outWritten,
+                 const char *format, va_list arguments), {
   if (format == NULL) {
     return STATUS_CONST(INVALID_ARGUMENT);
   }
@@ -653,18 +634,18 @@ TEXT_FORMAT_VARIADIC_PROTOTYPE {
     return STATUS_CONST(INVALID_ARGUMENT);
   }
 
-  TEXT_FORMAT_INS(Sink) sink = {buffer, capacity, 0U};
+  MODULE_ITYPE(Text, Format, Sink) sink = {buffer, capacity, 0U};
   const char *p = format;
 
   while (*p != '\0') {
     if (*p != '%') {
-      TEXT_FORMAT_INS(SinkPutChar)(&sink, *p++);
+      MODULE_IFUNC(Text, Format, SinkPutChar)(&sink, *p++);
       continue;
     }
 
     p++;
     if (*p == '%') {
-      TEXT_FORMAT_INS(SinkPutChar)(&sink, '%');
+      MODULE_IFUNC(Text, Format, SinkPutChar)(&sink, '%');
       p++;
       continue;
     }
@@ -703,7 +684,7 @@ TEXT_FORMAT_VARIADIC_PROTOTYPE {
         width = (size_t)w;
       }
     } else {
-      while (TEXT_FORMAT_INS(IsDigit)(*p)) {
+      while (MODULE_IFUNC(Text, Format, IsDigit)(*p)) {
         width = width * 10U + (size_t)(*p - '0');
         p++;
       }
@@ -724,7 +705,7 @@ TEXT_FORMAT_VARIADIC_PROTOTYPE {
           hasPrecision = false;
         }
       } else {
-        while (TEXT_FORMAT_INS(IsDigit)(*p)) {
+        while (MODULE_IFUNC(Text, Format, IsDigit)(*p)) {
           precision = precision * 10U + (size_t)(*p - '0');
           p++;
         }
@@ -771,14 +752,14 @@ TEXT_FORMAT_VARIADIC_PROTOTYPE {
       p += nameLen;
       if (*p == '_') {
         p++;
-        while (TEXT_FORMAT_INS(IsAlpha)(*p) || TEXT_FORMAT_INS(IsDigit)(*p)) {
+        while (MODULE_IFUNC(Text, Format, IsAlpha)(*p) || MODULE_IFUNC(Text, Format, IsDigit)(*p)) {
           p++;
         }
       }
       size_t totalNameLen = (size_t)(p - startName);
 
       const void *structPtr = va_arg(arguments, const void *);
-      TEXT_FORMAT_INS(FormatStruct)(&sink, structPtr, compCount, startName,
+      MODULE_IFUNC(Text, Format, FormatStruct)(&sink, structPtr, compCount, startName,
                                     totalNameLen, subFormat, subFormatLen,
                                     flagMinus, width);
       continue;
@@ -804,7 +785,7 @@ TEXT_FORMAT_VARIADIC_PROTOTYPE {
       }
 
       const void *typePtr = va_arg(arguments, const void *);
-      TEXT_FORMAT_INS(FormatCosmeronType)(&sink, typePtr, isBigint, bitWidth,
+      MODULE_IFUNC(Text, Format, FormatCosmeronType)(&sink, typePtr, isBigint, bitWidth,
                                           subFormat, subFormatLen, flagMinus,
                                           flagHash, flagZero, width);
       continue;
@@ -900,8 +881,8 @@ TEXT_FORMAT_VARIADIC_PROTOTYPE {
       }
       bool isNeg = (sval < 0);
       uintmax_t uval = isNeg ? (uintmax_t)(-(sval + 1)) + 1U : (uintmax_t)sval;
-      TEXT_FORMAT_INS(FormatInteger)(&sink, uval, true, isNeg,
-                                     TEXT_FORMAT_CONST(BASE_DECIMAL), false,
+      MODULE_IFUNC(Text, Format, FormatInteger)(&sink, uval, true, isNeg,
+                                     CNS(Text, Format, Internal, BASE_DECIMAL), false,
                                      flagMinus, flagPlus, flagSpace, false,
                                      flagZero, width, hasPrecision, precision);
       break;
@@ -931,23 +912,23 @@ TEXT_FORMAT_VARIADIC_PROTOTYPE {
         uval = (uintmax_t)va_arg(arguments, unsigned int);
       }
 
-      unsigned base = TEXT_FORMAT_CONST(BASE_DECIMAL);
+      unsigned base = CNS(Text, Format, Internal, BASE_DECIMAL);
       bool uppercase = false;
       if (spec == 'o') {
-        base = TEXT_FORMAT_CONST(BASE_OCTAL);
+        base = CNS(Text, Format, Internal, BASE_OCTAL);
       } else if (spec == 'x') {
-        base = TEXT_FORMAT_CONST(BASE_HEXADECIMAL);
+        base = CNS(Text, Format, Internal, BASE_HEXADECIMAL);
       } else if (spec == 'X') {
-        base = TEXT_FORMAT_CONST(BASE_HEXADECIMAL);
+        base = CNS(Text, Format, Internal, BASE_HEXADECIMAL);
         uppercase = true;
       } else if (spec == 'b') {
-        base = TEXT_FORMAT_CONST(BASE_BINARY);
+        base = CNS(Text, Format, Internal, BASE_BINARY);
       } else if (spec == 'B') {
-        base = TEXT_FORMAT_CONST(BASE_BINARY);
+        base = CNS(Text, Format, Internal, BASE_BINARY);
         uppercase = true;
       }
 
-      TEXT_FORMAT_INS(FormatInteger)(&sink, uval, false, false, base, uppercase,
+      MODULE_IFUNC(Text, Format, FormatInteger)(&sink, uval, false, false, base, uppercase,
                                      flagMinus, false, false, flagHash,
                                      flagZero, width, hasPrecision, precision);
       break;
@@ -957,21 +938,21 @@ TEXT_FORMAT_VARIADIC_PROTOTYPE {
         wint_t wc = (wint_t)va_arg(arguments, int);
         unsigned char utf8Buf[8];
         size_t utf8Units = 0U;
-        if (TEXT_UTF8_FUNC(Encode)((TEXT_TYPE(TChar32))wc, utf8Buf,
+        if (MODULE_FUNC(Text, UTF8, Encode)((MODULE_TYPE(Text, Char32))wc, utf8Buf,
                                    sizeof(utf8Buf),
                                    &utf8Units) == STATUS_CONST(SUCCESS)) {
           size_t pad = (width > utf8Units) ? (width - utf8Units) : 0U;
           if (!flagMinus) {
-            TEXT_FORMAT_INS(SinkPutPadding)(&sink, ' ', pad);
+            MODULE_IFUNC(Text, Format, SinkPutPadding)(&sink, ' ', pad);
           }
-          TEXT_FORMAT_INS(SinkPutString)(&sink, (const char *)utf8Buf, utf8Units);
+          MODULE_IFUNC(Text, Format, SinkPutString)(&sink, (const char *)utf8Buf, utf8Units);
           if (flagMinus) {
-            TEXT_FORMAT_INS(SinkPutPadding)(&sink, ' ', pad);
+            MODULE_IFUNC(Text, Format, SinkPutPadding)(&sink, ' ', pad);
           }
         }
       } else {
         char ch = (char)va_arg(arguments, int);
-        TEXT_FORMAT_INS(FormatChar)(&sink, ch, flagMinus, width);
+        MODULE_IFUNC(Text, Format, FormatChar)(&sink, ch, flagMinus, width);
       }
       break;
     }
@@ -979,16 +960,16 @@ TEXT_FORMAT_VARIADIC_PROTOTYPE {
       if (lenMod == LEN_L) {
         const wchar_t *wstr = va_arg(arguments, const wchar_t *);
         if (wstr == NULL) {
-          TEXT_FORMAT_INS(FormatString)(&sink, "(null)", flagMinus, width,
+          MODULE_IFUNC(Text, Format, FormatString)(&sink, "(null)", flagMinus, width,
                                         hasPrecision, precision);
         } else {
-          char tempBuf[TEXT_FORMAT_CONST(BUFFER_CAPACITY)];
+          char tempBuf[CNS(Text, Format, Internal, BUFFER_CAPACITY)];
           size_t pos = 0U;
           while (*wstr != L'\0' &&
-                 pos + 4U < TEXT_FORMAT_CONST(BUFFER_CAPACITY)) {
+                 pos + 4U < CNS(Text, Format, Internal, BUFFER_CAPACITY)) {
             unsigned char u8[8];
             size_t units = 0U;
-            if (TEXT_UTF8_FUNC(Encode)((TEXT_TYPE(TChar32))*wstr, u8,
+            if (MODULE_FUNC(Text, UTF8, Encode)((MODULE_TYPE(Text, Char32))*wstr, u8,
                                        sizeof(u8),
                                        &units) == STATUS_CONST(SUCCESS)) {
               for (size_t k = 0U; k < units; ++k) {
@@ -998,12 +979,12 @@ TEXT_FORMAT_VARIADIC_PROTOTYPE {
             wstr++;
           }
           tempBuf[pos] = '\0';
-          TEXT_FORMAT_INS(FormatString)(&sink, tempBuf, flagMinus, width,
+          MODULE_IFUNC(Text, Format, FormatString)(&sink, tempBuf, flagMinus, width,
                                         hasPrecision, precision);
         }
       } else {
         const char *str = va_arg(arguments, const char *);
-        TEXT_FORMAT_INS(FormatString)(&sink, str, flagMinus, width, hasPrecision,
+        MODULE_IFUNC(Text, Format, FormatString)(&sink, str, flagMinus, width, hasPrecision,
                                       precision);
       }
       break;
@@ -1011,12 +992,12 @@ TEXT_FORMAT_VARIADIC_PROTOTYPE {
     case 'p': {
       const void *ptr = va_arg(arguments, const void *);
       if (ptr == NULL) {
-        TEXT_FORMAT_INS(FormatString)(&sink, "(nil)", flagMinus, width, false,
+        MODULE_IFUNC(Text, Format, FormatString)(&sink, "(nil)", flagMinus, width, false,
                                       0U);
       } else {
-        TEXT_FORMAT_INS(FormatInteger)(
+        MODULE_IFUNC(Text, Format, FormatInteger)(
             &sink, (uintptr_t)ptr, false, false,
-            TEXT_FORMAT_CONST(BASE_HEXADECIMAL), false, flagMinus, false, false,
+            CNS(Text, Format, Internal, BASE_HEXADECIMAL), false, flagMinus, false, false,
             true, false, width, false, 0U);
       }
       break;
@@ -1054,24 +1035,24 @@ TEXT_FORMAT_VARIADIC_PROTOTYPE {
     case 'A': {
       if (lenMod == LEN_CAPITAL_L) {
         long double ld = va_arg(arguments, long double);
-        TEXT_FORMAT_INS(FormatFloat)(&sink, 0.0, true, ld, spec, flagMinus,
+        MODULE_IFUNC(Text, Format, FormatFloat)(&sink, 0.0, true, ld, spec, flagMinus,
                                      flagPlus, flagSpace, flagHash, flagZero,
                                      width, hasPrecision, precision);
       } else {
         double d = va_arg(arguments, double);
-        TEXT_FORMAT_INS(FormatFloat)(&sink, d, false, 0.0L, spec, flagMinus,
+        MODULE_IFUNC(Text, Format, FormatFloat)(&sink, d, false, 0.0L, spec, flagMinus,
                                      flagPlus, flagSpace, flagHash, flagZero,
                                      width, hasPrecision, precision);
       }
       break;
     }
     default:
-      TEXT_FORMAT_INS(SinkPutChar)(&sink, spec);
+      MODULE_IFUNC(Text, Format, SinkPutChar)(&sink, spec);
       break;
     }
   }
 
-  TEXT_FORMAT_INS(SinkFinish)(&sink);
+  MODULE_IFUNC(Text, Format, SinkFinish)(&sink);
 
   if (outWritten != NULL) {
     *outWritten = sink.written;
@@ -1082,27 +1063,16 @@ TEXT_FORMAT_VARIADIC_PROTOTYPE {
   }
 
   return STATUS_CONST(SUCCESS);
-}
+      }),
 
-TEXT_FORMAT_PROTOTYPE {
-  OPSTATUS status;
-  va_list args;
-  va_start(args, format);
-  status = TEXT_FORMAT_FUNC(Variadic)(buffer, capacity, outWritten, format, args);
-  va_end(args);
-  return status;
-}
+      OPERATION(Unsafe,
+                (char *buffer, size_t *outWritten, const char *format,
+                 va_list arguments), {
+        return MODULE_FUNC(Text, Format, Variadic)(buffer, SIZE_MAX, outWritten,
+                                                   format, arguments);
+      })
+    )
+  )
+);
 
-TEXT_FORMAT_UNSAFE_PROTOTYPE {
-  OPSTATUS status;
-  va_list args;
-  va_start(args, format);
-  status = TEXT_FORMAT_FUNC(Unsafe_Variadic)(buffer, outWritten, format, args);
-  va_end(args);
-  return status;
-}
-
-TEXT_FORMAT_UNSAFE_VARIADIC_PROTOTYPE {
-  return TEXT_FORMAT_FUNC(Variadic)(buffer, SIZE_MAX, outWritten, format,
-                                    arguments);
-}
+/* EOF */

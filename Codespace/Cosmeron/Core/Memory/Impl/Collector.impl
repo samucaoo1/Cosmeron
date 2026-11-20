@@ -1,0 +1,751 @@
+#pragma once
+
+static _Thread_local MODULE_TYPE(Memory, Collector)
+    MODULE_IFUNC(Memory, Collector, ThreadDefaultCollector);
+static _Thread_local bool
+    MODULE_IFUNC(Memory, Collector, ThreadDefaultInitialized) = false;
+
+/* ========================================================================== */
+/* TMemoryCollector & GlobalCollector Implementations                         */
+/* ========================================================================== */
+
+MODULE_IMPLEMENT(DOMAIN(Core), Memory,
+  INTERNAL_EX(Collector,
+    PROCEDURE(WorklistInit, (MODULE_ITYPE(Memory, CollectorWorklist) *wl), {
+      wl->head = NULL;
+      wl->freeChunks = NULL;
+      wl->totalPushed = 0U;
+      wl->overflow = false;
+    }),
+
+    PROCEDURE(FreeChunkList, (MODULE_ITYPE(Memory, CollectorWorklistChunk) *chunk), {
+      while (chunk) {
+        MODULE_ITYPE(Memory, CollectorWorklistChunk) *next = chunk->next;
+        void *raw = (void *)chunk;
+        MODULE_FUNC(Memory, Alloc, Free)(&raw);
+        chunk = next;
+      }
+    }),
+
+    PROCEDURE(WorklistDestroy, (MODULE_ITYPE(Memory, CollectorWorklist) *wl), {
+      MODULE_IFUNC(Memory, Collector, FreeChunkList)(wl->head);
+      MODULE_IFUNC(Memory, Collector, FreeChunkList)(wl->freeChunks);
+      wl->head = NULL;
+      wl->freeChunks = NULL;
+    }),
+
+    OPERATION(WorklistPush, (MODULE_ITYPE(Memory, CollectorWorklist) *wl, void *ptr), {
+      if (!ptr) {
+        return STATUS_CONST(SUCCESS);
+      }
+
+      MODULE_ITYPE(Memory, CollectorWorklistChunk) *chunk = wl->head;
+      if (!chunk || chunk->count == MODULE_CONST(Memory, WORKLIST_CHUNK_CAPACITY)) {
+        if (wl->freeChunks) {
+          chunk = wl->freeChunks;
+          wl->freeChunks = chunk->next;
+        } else {
+          void *raw = NULL;
+          OPSTATUS status = MODULE_FUNC(Memory, Alloc, Bytes)(
+              &raw, sizeof(MODULE_ITYPE(Memory, CollectorWorklistChunk)));
+          if (status != STATUS_CONST(SUCCESS) || !raw) {
+            wl->overflow = true;
+            return STATUS_CONST(OUT_OF_MEMORY);
+          }
+          chunk = (MODULE_ITYPE(Memory, CollectorWorklistChunk) *)raw;
+        }
+        chunk->count = 0U;
+        chunk->next = wl->head;
+        wl->head = chunk;
+      }
+
+      chunk->items[chunk->count++] = ptr;
+      wl->totalPushed++;
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    FUNCTION(void *, WorklistPop, (MODULE_ITYPE(Memory, CollectorWorklist) *wl), {
+      MODULE_ITYPE(Memory, CollectorWorklistChunk) *chunk = wl->head;
+      if (!chunk) {
+        return NULL;
+      }
+
+      void *item = chunk->items[--chunk->count];
+      if (chunk->count == 0U) {
+        wl->head = chunk->next;
+        chunk->next = wl->freeChunks;
+        wl->freeChunks = chunk;
+      }
+      return item;
+    }),
+
+    PROCEDURE(FreeFinalizerList,
+              (MODULE_ITYPE(Memory, CollectorFinalizerEntry) **head), {
+      MODULE_ITYPE(Memory, CollectorFinalizerEntry) *entry = *head;
+      while (entry) {
+        MODULE_ITYPE(Memory, CollectorFinalizerEntry) *next = entry->next;
+        void *raw = (void *)entry;
+        MODULE_FUNC(Memory, Alloc, Free)(&raw);
+        entry = next;
+      }
+      *head = NULL;
+    }),
+
+    PROCEDURE(MarkCell, (MODULE_TYPE(Memory, Collector) *self, void *ptr), {
+      if (!ptr) {
+        return;
+      }
+
+      void *basePtr = NULL;
+      size_t cellSize = 0U;
+      uint8_t policy = 0U;
+
+      if (!MODULE_FUNC(Memory, Heap, ResolvePointer)(&self->heap, ptr, &basePtr,
+                                                     &cellSize, &policy)) {
+        return;
+      }
+
+      void *entry = MODULE_FUNC(Memory, Heap, LookupEntry)(&self->heap, basePtr);
+      if (!entry) {
+        return;
+      }
+
+      const uint8_t isLarge = *(uint8_t *)entry;
+      if (isLarge) {
+        MODULE_ITYPE(Memory, HeapSpan) *span =
+            (MODULE_ITYPE(Memory, HeapSpan) *)entry;
+        if (!span->isMarked) {
+          span->isMarked = 1U;
+          if (span->policy != MODULE_CONST(MEMORY, HEAP, POLICY, ATOMIC)) {
+            MODULE_IFUNC(Memory, Collector, WorklistPush)(&self->worklist, span->data);
+          }
+        }
+        return;
+      }
+
+      MODULE_ITYPE(Memory, HeapPageHeader) *page =
+          (MODULE_ITYPE(Memory, HeapPageHeader) *)entry;
+      const size_t wordBits = sizeof(uint64_t) * 8U;
+      const uintptr_t offset = (uintptr_t)basePtr - (uintptr_t)page->payload;
+      const uint16_t cellIndex = (uint16_t)(offset / page->elementSize);
+      const size_t w = cellIndex / wordBits;
+      const uint64_t mask = 1ULL << (cellIndex % wordBits);
+
+      if ((page->markBitmap[w] & mask) == 0ULL) {
+        page->markBitmap[w] |= mask;
+        if (page->policy != MODULE_CONST(MEMORY, HEAP, POLICY, ATOMIC)) {
+          MODULE_IFUNC(Memory, Collector, WorklistPush)(&self->worklist, basePtr);
+        }
+      }
+    }),
+
+    PROCEDURE(ScanMemoryRange,
+              (MODULE_TYPE(Memory, Collector) *self, const void *start,
+               const void *end), {
+      uintptr_t low = (uintptr_t)start;
+      uintptr_t high = (uintptr_t)end;
+
+      if (low > high) {
+        uintptr_t tmp = low;
+        low = high;
+        high = tmp;
+      }
+
+      /* Align to void* boundary */
+      low = (low + sizeof(void *) - 1U) & ~(uintptr_t)(sizeof(void *) - 1U);
+
+      for (uintptr_t addr = low; addr + sizeof(void *) <= high;
+           addr += sizeof(void *)) {
+        void *val = *(void **)addr;
+        if (!val) {
+          continue;
+        }
+        const uintptr_t v = (uintptr_t)val;
+        if (v >= self->heap.minAddress && v < self->heap.maxAddress) {
+          void *base = NULL;
+          if (MODULE_FUNC(Memory, Heap, ResolvePointer)(&self->heap, val, &base,
+                                                        NULL, NULL)) {
+            MODULE_IFUNC(Memory, Collector, MarkCell)(self, base);
+          } else {
+            /* Address is within heap range but page is not allocated: blacklist it */
+            const uintptr_t pageIdx = v >> MODULE_CONST(MEMORY, HEAP, PAGE_SHIFT);
+            MODULE_FUNC(Memory, Heap, BlacklistPage)(&self->heap, pageIdx);
+          }
+        }
+      }
+    }),
+
+    PROCEDURE(ClearPageListMarks, (MODULE_ITYPE(Memory, HeapPageHeader) *page), {
+      while (page) {
+        memset(page->markBitmap, 0, sizeof(page->markBitmap));
+        page = page->next;
+      }
+    }),
+
+    PROCEDURE(TraceObject, (MODULE_TYPE(Memory, Collector) *self, void *item), {
+      void *base = NULL;
+      size_t sz = 0U;
+      uint8_t pol = 0U;
+      if (!MODULE_FUNC(Memory, Heap, ResolvePointer)(&self->heap, item, &base,
+                                                     &sz, &pol)) {
+        return;
+      }
+
+      if (pol == MODULE_CONST(MEMORY, HEAP, POLICY, TYPED)) {
+        void *ent = MODULE_FUNC(Memory, Heap, LookupEntry)(&self->heap, base);
+        const MODULE_TYPE(Memory, Collector_Descriptor) *desc = NULL;
+        if (ent) {
+          const uint8_t isL = *(uint8_t *)ent;
+          desc = isL ? (const MODULE_TYPE(Memory, Collector_Descriptor) *)
+                           ((MODULE_ITYPE(Memory, HeapSpan) *)ent)->descriptor
+                     : (const MODULE_TYPE(Memory, Collector_Descriptor) *)
+                           ((MODULE_ITYPE(Memory, HeapPageHeader) *)ent)->descriptor;
+        }
+        if (desc && desc->bitmap != 0ULL) {
+          uint64_t bm = desc->bitmap;
+          while (bm != 0ULL) {
+            const uint8_t bit = (uint8_t)__builtin_ctzll(bm);
+            const size_t off = (size_t)bit * sizeof(void *);
+            if (off + sizeof(void *) <= sz) {
+              void *child = *(void **)((uintptr_t)base + off);
+              if (child) {
+                MODULE_IFUNC(Memory, Collector, MarkCell)(self, child);
+              }
+            }
+            bm &= (bm - 1ULL);
+          }
+        }
+      } else if (pol == MODULE_CONST(MEMORY, HEAP, POLICY, CONSERVATIVE)) {
+        MODULE_IFUNC(Memory, Collector, ScanMemoryRange)(
+            self, base, (const void *)((uintptr_t)base + sz));
+      }
+    }),
+
+    PREDICATE(IsObjectMarked,
+              (MODULE_TYPE(Memory, Collector) *self, void *obj), {
+      void *base = NULL;
+      size_t sz = 0U;
+      uint8_t pol = 0U;
+      if (!MODULE_FUNC(Memory, Heap, ResolvePointer)(&self->heap, obj, &base,
+                                                     &sz, &pol)) {
+        return false;
+      }
+
+      void *ent = MODULE_FUNC(Memory, Heap, LookupEntry)(&self->heap, base);
+      if (!ent) {
+        return false;
+      }
+
+      const uint8_t isL = *(uint8_t *)ent;
+      if (isL) {
+        return ((MODULE_ITYPE(Memory, HeapSpan) *)ent)->isMarked != 0U;
+      }
+
+      const size_t wordBits = sizeof(uint64_t) * 8U;
+      MODULE_ITYPE(Memory, HeapPageHeader) *pg =
+          (MODULE_ITYPE(Memory, HeapPageHeader) *)ent;
+      const uint16_t cIdx =
+          (uint16_t)(((uintptr_t)base - (uintptr_t)pg->payload) / pg->elementSize);
+      return (pg->markBitmap[cIdx / wordBits] & (1ULL << (cIdx % wordBits))) !=
+             0ULL;
+    }),
+
+    PROCEDURE(UpdatePacingThreshold, (MODULE_TYPE(Memory, Collector) *self), {
+      const size_t allocated = self->totalAllocatedSinceCollect;
+      self->totalAllocatedSinceCollect = 0U;
+
+      const double percentBase = (double)MODULE_CONST(Memory, PERCENT_BASE);
+      const double minSurvival =
+          (double)MODULE_CONST(Memory, MIN_SURVIVAL_PERCENT) / percentBase;
+      double survivalRate =
+          allocated > 0U ? ((double)self->liveBytesAfterCollect / (double)allocated)
+                         : 1.0;
+      if (survivalRate < minSurvival) {
+        survivalRate = minSurvival;
+      }
+
+      const double minFactor =
+          (double)MODULE_CONST(Memory, MIN_PACING_PERCENT) / percentBase;
+      const double maxFactor =
+          (double)MODULE_CONST(Memory, MAX_PACING_PERCENT) / percentBase;
+      double factor =
+          (double)self->growthPercent / (survivalRate * percentBase);
+      if (factor < minFactor) {
+        factor = minFactor;
+      }
+      if (factor > maxFactor) {
+        factor = maxFactor;
+      }
+
+      self->nextThreshold =
+          (size_t)((double)self->liveBytesAfterCollect * (1.0 + factor));
+      if (self->nextThreshold < MODULE_CONST(Memory, DEFAULT_INITIAL_THRESHOLD)) {
+        self->nextThreshold = MODULE_CONST(Memory, DEFAULT_INITIAL_THRESHOLD);
+      }
+    }),
+
+    OPERATION(AllocatorAlloc,
+              (void *context, size_t size, size_t alignment, void **outPtr), {
+      (void)alignment;
+      return MODULE_FUNC(Memory, Collector, Alloc)(
+          (MODULE_TYPE(Memory, Collector) *)context, outPtr, size,
+          MODULE_CONST(MEMORY, HEAP, POLICY, CONSERVATIVE), NULL);
+    }),
+
+    PROCEDURE(AllocatorFree, (void *context, void *ptr, size_t size), {
+      (void)context;
+      (void)ptr;
+      (void)size;
+    })
+  ),
+
+  OBJECT(Collector,
+    OPERATION(Create, (size_t initialHeapPages, const void *stackBottom), {
+      if (!self) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+
+      OBJECT_RESET_ZERO(Memory, Collector, self);
+      OPSTATUS status =
+          MODULE_FUNC(Memory, Heap, Create)(&self->heap, initialHeapPages);
+      if (status != STATUS_CONST(SUCCESS)) {
+        return status;
+      }
+
+      MODULE_IFUNC(Memory, Collector, WorklistInit)(&self->worklist);
+      self->finalizers = NULL;
+      self->pendingFinalizers = NULL;
+      self->stackBottom = stackBottom;
+      self->nextThreshold = MODULE_CONST(Memory, DEFAULT_INITIAL_THRESHOLD);
+      self->liveBytesAfterCollect = 0U;
+      self->totalAllocatedSinceCollect = 0U;
+      self->growthPercent = MODULE_CONST(Memory, DEFAULT_GROWTH_PERCENT);
+      self->pauseDepth = 0U;
+      self->isInitialized = true;
+
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(Destroy, (), {
+      if (!self || !self->isInitialized) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+
+      MODULE_IFUNC(Memory, Collector, FreeFinalizerList)(&self->finalizers);
+      MODULE_IFUNC(Memory, Collector, FreeFinalizerList)(&self->pendingFinalizers);
+      MODULE_IFUNC(Memory, Collector, WorklistDestroy)(&self->worklist);
+      MODULE_FUNC(Memory, Heap, Destroy)(&self->heap);
+      self->isInitialized = false;
+
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    VARIANT(Alloc,
+      OPERATION(
+          (void *outPointerObject, size_t size, uint8_t policy,
+           const void *descriptor), {
+        if (!self || !outPointerObject || size == 0U) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+
+        if (!self->isInitialized) {
+          OPSTATUS initStat = MODULE_FUNC(Memory, Collector, Create)(
+              self, MODULE_CONST(Memory, DEFAULT_INITIAL_HEAP_PAGES), NULL);
+          if (initStat != STATUS_CONST(SUCCESS)) {
+            return initStat;
+          }
+        }
+
+        if (self->pauseDepth == 0U &&
+            self->totalAllocatedSinceCollect + size >= self->nextThreshold) {
+          MODULE_FUNC(Memory, Collector, Collect)(self);
+        }
+
+        OPSTATUS status = MODULE_FUNC(Memory, Heap, Alloc)(
+            &self->heap, outPointerObject, size, policy, descriptor);
+        if (status == STATUS_CONST(SUCCESS)) {
+          self->totalAllocatedSinceCollect += size;
+        }
+        return status;
+      }),
+
+      OPERATION(
+          Typed,
+          (void *outPointerObject,
+           const MODULE_TYPE(Memory, Collector_Descriptor) *descriptor), {
+        if (!descriptor || descriptor->size == 0U) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+
+        return MODULE_FUNC(Memory, Collector, Alloc)(
+            self, outPointerObject, descriptor->size,
+            MODULE_CONST(MEMORY, HEAP, POLICY, TYPED), descriptor);
+      }),
+
+      OPERATION(Atomic, (void *outPointerObject, size_t size), {
+        return MODULE_FUNC(Memory, Collector, Alloc)(
+            self, outPointerObject, size,
+            MODULE_CONST(MEMORY, HEAP, POLICY, ATOMIC), NULL);
+      })
+    ),
+
+    OPERATION(SetFinalizer,
+              (const void *ptr, MEMORY_COLLECTOR_FINALIZER_CALLBACK finalizer), {
+      if (!self || !ptr || !CLOSURE_IS_VALID(finalizer)) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+
+      void *raw = NULL;
+      OPSTATUS status = MODULE_FUNC(Memory, Alloc, Bytes)(
+          &raw, sizeof(MODULE_ITYPE(Memory, CollectorFinalizerEntry)));
+      if (status != STATUS_CONST(SUCCESS) || !raw) {
+        return STATUS_CONST(OUT_OF_MEMORY);
+      }
+
+      MODULE_ITYPE(Memory, CollectorFinalizerEntry) *entry =
+          (MODULE_ITYPE(Memory, CollectorFinalizerEntry) *)raw;
+      entry->object = (void *)(uintptr_t)ptr;
+      entry->callback = finalizer;
+      entry->next = self->finalizers;
+      self->finalizers = entry;
+
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(PinRoot, (const void *rootPointerAddress), {
+      if (!self || !rootPointerAddress) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+
+      for (size_t i = 0U; i < MODULE_CONST(Memory, MAX_ROOTS); ++i) {
+        if (self->roots[i].active &&
+            self->roots[i].pointerAddress == rootPointerAddress) {
+          return STATUS_CONST(SUCCESS);
+        }
+      }
+
+      for (size_t i = 0U; i < MODULE_CONST(Memory, MAX_ROOTS); ++i) {
+        if (!self->roots[i].active) {
+          self->roots[i].pointerAddress = rootPointerAddress;
+          self->roots[i].active = true;
+          return STATUS_CONST(SUCCESS);
+        }
+      }
+
+      return STATUS_CONST(OUT_OF_RANGE);
+    }),
+
+    OPERATION(UnpinRoot, (const void *rootPointerAddress), {
+      if (!self || !rootPointerAddress) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+
+      for (size_t i = 0U; i < MODULE_CONST(Memory, MAX_ROOTS); ++i) {
+        if (self->roots[i].active &&
+            self->roots[i].pointerAddress == rootPointerAddress) {
+          self->roots[i].active = false;
+          self->roots[i].pointerAddress = NULL;
+          return STATUS_CONST(SUCCESS);
+        }
+      }
+
+      return STATUS_CONST(INVALID_ARGUMENT);
+    }),
+
+    OPERATION(Collect, (), {
+      if (!self || !self->isInitialized || self->pauseDepth > 0U) {
+        return STATUS_CONST(SUCCESS);
+      }
+
+      /* Phase 1: Preparation (Sync & Flip) */
+      jmp_buf calleeRegisters;
+      setjmp(calleeRegisters);
+
+      for (size_t i = 0U; i < MODULE_CONST(MEMORY, HEAP, SIZE_CLASS_COUNT); ++i) {
+        MODULE_IFUNC(Memory, Collector, ClearPageListMarks)(
+            self->heap.classes[i].activePages);
+        MODULE_IFUNC(Memory, Collector, ClearPageListMarks)(
+            self->heap.classes[i].fullPages);
+      }
+      MODULE_ITYPE(Memory, HeapSpan) *span = self->heap.largeObjects;
+      while (span) {
+        span->isMarked = 0U;
+        span = span->next;
+      }
+
+      self->worklist.overflow = false;
+
+      /* Phase 2: Mark Roots */
+      volatile int stackAnchor = 0;
+      const void *stackTop = (const void *)&stackAnchor;
+      if (self->stackBottom) {
+        MODULE_IFUNC(Memory, Collector, ScanMemoryRange)(
+            self, stackTop, self->stackBottom);
+      }
+      MODULE_IFUNC(Memory, Collector, ScanMemoryRange)(
+          self, (const void *)&calleeRegisters,
+          (const void *)((uintptr_t)&calleeRegisters + sizeof(calleeRegisters)));
+
+      for (size_t i = 0U; i < MODULE_CONST(Memory, MAX_ROOTS); ++i) {
+        if (self->roots[i].active && self->roots[i].pointerAddress) {
+          void *rootVal = *(void **)self->roots[i].pointerAddress;
+          if (rootVal) {
+            MODULE_IFUNC(Memory, Collector, MarkCell)(self, rootVal);
+          }
+        }
+      }
+
+      /* Phase 3: Iterative Tracing */
+      const size_t wordBits = sizeof(uint64_t) * 8U;
+      while (true) {
+        void *item = MODULE_IFUNC(Memory, Collector, WorklistPop)(&self->worklist);
+        if (!item) {
+          if (self->worklist.overflow) {
+            self->worklist.overflow = false;
+            for (size_t i = 0U; i < MODULE_CONST(MEMORY, HEAP, SIZE_CLASS_COUNT);
+                 ++i) {
+              MODULE_ITYPE(Memory, HeapPageHeader) *p =
+                  self->heap.classes[i].activePages;
+              while (p) {
+                if (p->policy != MODULE_CONST(MEMORY, HEAP, POLICY, ATOMIC)) {
+                  for (size_t w = 0U;
+                       w < MODULE_CONST(MEMORY, HEAP, BITMAP_WORDS); ++w) {
+                    if (p->markBitmap[w] != 0ULL) {
+                      for (uint8_t b = 0U; b < wordBits; ++b) {
+                        if ((p->markBitmap[w] & (1ULL << b)) != 0ULL) {
+                          void *cell =
+                              p->payload + (((w * wordBits) + b) * p->elementSize);
+                          MODULE_IFUNC(Memory, Collector, ScanMemoryRange)(
+                              self, cell,
+                              (const void *)((uintptr_t)cell + p->elementSize));
+                        }
+                      }
+                    }
+                  }
+                }
+                p = p->next;
+              }
+            }
+            if (self->worklist.head != NULL) {
+              continue;
+            }
+          }
+          break;
+        }
+
+        MODULE_IFUNC(Memory, Collector, TraceObject)(self, item);
+      }
+
+      /* Phase 4: Finalization Enqueue (Pre-Sweep) */
+      MODULE_ITYPE(Memory, CollectorFinalizerEntry) **curr = &self->finalizers;
+      while (*curr) {
+        MODULE_ITYPE(Memory, CollectorFinalizerEntry) *entry = *curr;
+        void *obj = entry->object;
+
+        if (!MODULE_IFUNC(Memory, Collector, IsObjectMarked)(self, obj)) {
+          *curr = entry->next;
+          entry->next = self->pendingFinalizers;
+          self->pendingFinalizers = entry;
+
+          /* Resurrect object and its sub-graph for safe finalizer execution */
+          MODULE_IFUNC(Memory, Collector, MarkCell)(self, obj);
+          while (self->worklist.head) {
+            void *it = MODULE_IFUNC(Memory, Collector, WorklistPop)(&self->worklist);
+            if (it) {
+              MODULE_IFUNC(Memory, Collector, TraceObject)(self, it);
+            }
+          }
+        } else {
+          curr = &entry->next;
+        }
+      }
+
+      /* Phase 5: Sweep & Execute Finalizers */
+      for (size_t i = 0U; i < MODULE_CONST(MEMORY, HEAP, SIZE_CLASS_COUNT); ++i) {
+        MODULE_FUNC(Memory, Heap, LazySweepClass)(&self->heap, i);
+      }
+
+      MODULE_ITYPE(Memory, HeapSpan) **spanPtr = &self->heap.largeObjects;
+      while (*spanPtr) {
+        MODULE_ITYPE(Memory, HeapSpan) *s = *spanPtr;
+        if (!s->isMarked) {
+          *spanPtr = s->next;
+          if (s->next) {
+            s->next->prev = s->prev;
+          }
+          self->heap.liveBytes = (self->heap.liveBytes >= s->size)
+                                     ? (self->heap.liveBytes - s->size)
+                                     : 0U;
+          void *raw = s->rawBlock;
+          MODULE_FUNC(Memory, Alloc, Free)(&raw);
+        } else {
+          spanPtr = &s->next;
+        }
+      }
+
+      self->liveBytesAfterCollect = self->heap.liveBytes;
+      MODULE_IFUNC(Memory, Collector, UpdatePacingThreshold)(self);
+
+      /* Drain pending finalizers */
+      while (self->pendingFinalizers) {
+        MODULE_ITYPE(Memory, CollectorFinalizerEntry) *f =
+            self->pendingFinalizers;
+        self->pendingFinalizers = f->next;
+        CLOSURE_CALL(f->callback, f->object);
+        void *raw = (void *)f;
+        MODULE_FUNC(Memory, Alloc, Free)(&raw);
+      }
+
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    PROCEDURE(Pause, (), {
+      if (self) {
+        self->pauseDepth++;
+      }
+    }),
+
+    PROCEDURE(Resume, (), {
+      if (self && self->pauseDepth > 0U) {
+        self->pauseDepth--;
+      }
+    }),
+
+    CONST_PREDICATE(Contains, (const void *ptr), {
+      return self ? MODULE_FUNC(Memory, Heap, Contains)(&self->heap, ptr) : false;
+    }),
+
+    FUNCTION(MODULE_TYPE(Memory, Allocator), AsAllocator, (), {
+      static const MODULE_TYPE(Memory, Allocator_Ops) ops = {
+          .Alloc = MODULE_IFUNC(Memory, Collector, AllocatorAlloc),
+          .Realloc = NULL,
+          .Free = MODULE_IFUNC(Memory, Collector, AllocatorFree),
+          .capabilities = MODULE_CONST(Memory, NONE),
+      };
+      MODULE_TYPE(Memory, Allocator) alloc = {
+          .context = self,
+          .ops = &ops,
+      };
+      return alloc;
+    })
+  ),
+
+  PACKAGE(GlobalCollector,
+    OPERATION(Startup, (const void *stackBottom), {
+      if (MODULE_IFUNC(Memory, Collector, ThreadDefaultInitialized)) {
+        return STATUS_CONST(SUCCESS);
+      }
+
+      OPSTATUS status = MODULE_FUNC(Memory, Collector, Create)(
+          &MODULE_IFUNC(Memory, Collector, ThreadDefaultCollector),
+          MODULE_CONST(Memory, DEFAULT_INITIAL_HEAP_PAGES), stackBottom);
+      if (status == STATUS_CONST(SUCCESS)) {
+        MODULE_IFUNC(Memory, Collector, ThreadDefaultInitialized) = true;
+      }
+      return status;
+    }),
+
+    OPERATION(Shutdown, (), {
+      if (!MODULE_IFUNC(Memory, Collector, ThreadDefaultInitialized)) {
+        return STATUS_CONST(SUCCESS);
+      }
+
+      OPSTATUS status = MODULE_FUNC(Memory, Collector, Destroy)(
+          &MODULE_IFUNC(Memory, Collector, ThreadDefaultCollector));
+      MODULE_IFUNC(Memory, Collector, ThreadDefaultInitialized) = false;
+      return status;
+    }),
+
+    FUNCTION(MODULE_TYPE(Memory, Collector) *, DefaultCollector, (), {
+      if (!MODULE_IFUNC(Memory, Collector, ThreadDefaultInitialized)) {
+        volatile int anchor = 0;
+        MODULE_FUNC(Memory, Collector, Create)(
+            &MODULE_IFUNC(Memory, Collector, ThreadDefaultCollector),
+            MODULE_CONST(Memory, DEFAULT_INITIAL_HEAP_PAGES),
+            (const void *)&anchor);
+        MODULE_IFUNC(Memory, Collector, ThreadDefaultInitialized) = true;
+      }
+      return &MODULE_IFUNC(Memory, Collector, ThreadDefaultCollector);
+    }),
+
+    VARIANT(Alloc,
+      OPERATION((void *outPointerObject, size_t size), {
+        MODULE_TYPE(Memory, Collector) *collector =
+            MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
+        return MODULE_FUNC(Memory, Collector, Alloc)(
+            collector, outPointerObject, size,
+            MODULE_CONST(MEMORY, HEAP, POLICY, CONSERVATIVE), NULL);
+      }),
+
+      OPERATION(Typed,
+                (void *outPointerObject,
+                 const MODULE_TYPE(Memory, Collector_Descriptor) *descriptor), {
+        MODULE_TYPE(Memory, Collector) *collector =
+            MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
+        return MODULE_FUNC(Memory, Collector, AllocTyped)(
+            collector, outPointerObject, descriptor);
+      }),
+
+      OPERATION(Atomic, (void *outPointerObject, size_t size), {
+        MODULE_TYPE(Memory, Collector) *collector =
+            MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
+        return MODULE_FUNC(Memory, Collector, AllocAtomic)(
+            collector, outPointerObject, size);
+      })
+    ),
+
+    OPERATION(SetFinalizer,
+              (const void *ptr, MEMORY_COLLECTOR_FINALIZER_CALLBACK finalizer), {
+      MODULE_TYPE(Memory, Collector) *collector =
+          MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
+      return MODULE_FUNC(Memory, Collector, SetFinalizer)(collector, ptr,
+                                                          finalizer);
+    }),
+
+    OPERATION(PinRoot, (const void *rootPointerAddress), {
+      MODULE_TYPE(Memory, Collector) *collector =
+          MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
+      return MODULE_FUNC(Memory, Collector, PinRoot)(collector,
+                                                     rootPointerAddress);
+    }),
+
+    OPERATION(UnpinRoot, (const void *rootPointerAddress), {
+      MODULE_TYPE(Memory, Collector) *collector =
+          MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
+      return MODULE_FUNC(Memory, Collector, UnpinRoot)(collector,
+                                                       rootPointerAddress);
+    }),
+
+    OPERATION(Collect, (), {
+      MODULE_TYPE(Memory, Collector) *collector =
+          MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
+      return MODULE_FUNC(Memory, Collector, Collect)(collector);
+    }),
+
+    PROCEDURE(Pause, (), {
+      MODULE_TYPE(Memory, Collector) *collector =
+          MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
+      MODULE_FUNC(Memory, Collector, Pause)(collector);
+    }),
+
+    PROCEDURE(Resume, (), {
+      MODULE_TYPE(Memory, Collector) *collector =
+          MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
+      MODULE_FUNC(Memory, Collector, Resume)(collector);
+    }),
+
+    FUNCTION(size_t, LiveBytes, (), {
+      MODULE_TYPE(Memory, Collector) *collector =
+          MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
+      return MODULE_FUNC(Memory, Collector, LiveBytes)(collector);
+    }),
+
+    PREDICATE(Contains, (const void *ptr), {
+      MODULE_TYPE(Memory, Collector) *collector =
+          MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
+      return MODULE_FUNC(Memory, Collector, Contains)(collector, ptr);
+    })
+  )
+);
+
+/* EOF */

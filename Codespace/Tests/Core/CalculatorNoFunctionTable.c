@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <stdbool.h>
 
-#define CALCULATOR_TYPED(TYPE) GNS2(TCalculator, TYPE)
+#define CALCULATOR_TYPED(TYPE) NS(TCalculator, TYPE)
 
 #define TEMPLATE_TCALCULATOR(SUFFIX, TYPE)                                     \
   OBJECT(                                                                      \

@@ -1,56 +1,32 @@
 #pragma once
 
+#include "../Condition/Status.h"
+#include "../Module/Module.h"
 #include "../Preprocessor/Compiling.inc"
-#include "Memory.space"
+#include "Impl/Common.inc"
 
-#define ALLOC_FUNC(NAME) MEMORY_FUNC(NAME)
+/* ========================================================================== */
+/* Package Declaration: Memory_Alloc                                          */
+/* ========================================================================== */
 
-typedef union MEMORY_INS(MaxAlignment_InternalType_) {
-  long double longDoubleValue;
-  double doubleValue;
-  long long integerValue;
-  void *pointerValue;
-} MEMORY_INS(MaxAlignment_InternalType_);
+MODULE(DOMAIN(Core), Memory,
+    PACKAGE(Alloc,
+        OPERATION(Bytes, (void *outPointerObject, size_t size)),
+        OPERATION(Array, (void *outPointerObject, size_t count, size_t elementSize)),
+        VARIANT(Zero,
+            OPERATION(Bytes, (void *outPointerObject, size_t size)),
+            OPERATION(Array, (void *outPointerObject, size_t count, size_t elementSize))
+        ),
+        VARIANT(Realloc,
+            OPERATION(Bytes, (void *inoutPointerObject, size_t newSize)),
+            OPERATION(Array, (void *inoutPointerObject, size_t count, size_t elementSize))
+        ),
+        OPERATION(Free, (void *inoutPointerObject))
+    )
+);
 
-#define COSMERON_MACRO_INTERNAL_MEMORY_MAX_ALIGNMENT                          \
-  _Alignof(MEMORY_INS(MaxAlignment_InternalType_))
-
-#define ALLOC_BYTES_PROTOTYPE                                                  \
-  static inline OPSTATUS ALLOC_FUNC(AllocBytes)(void **out, size_t size)
-
-#define ALLOC_ARRAY_PROTOTYPE                                                  \
-  static inline OPSTATUS ALLOC_FUNC(AllocArray)(void **out, size_t count,      \
-                                                 size_t elementSize)
-
-#define REALLOC_BYTES_PROTOTYPE                                                \
-  static inline OPSTATUS ALLOC_FUNC(ReallocBytes)(void **ptr, size_t size)
-
-#define REALLOC_ARRAY_PROTOTYPE                                                \
-  static inline OPSTATUS ALLOC_FUNC(ReallocArray)(void **ptr, size_t count,    \
-                                                   size_t elementSize)
-
-#define FREE_POINTER_PROTOTYPE                                                 \
-  static inline OPSTATUS ALLOC_FUNC(FreePointer)(void **ptr)
-
-ALLOC_BYTES_PROTOTYPE;
-ALLOC_ARRAY_PROTOTYPE;
-REALLOC_BYTES_PROTOTYPE;
-REALLOC_ARRAY_PROTOTYPE;
-FREE_POINTER_PROTOTYPE;
-
-/*
- * Public free operation: the argument is the pointer lvalue itself, not its
- * address. This keeps the ergonomic contract explicit and clears the lvalue.
- *
- * Allocation/reallocation deliberately use the raw void* APIs above. Typed
- * callers allocate through a local void* temporary and publish the converted
- * pointer only after SUCCESS, avoiding invalid T** -> void** aliasing.
- */
-#define Memory_Free(pointerLvalue)                                             \
-  do {                                                                         \
-    free((void *)(pointerLvalue));                                             \
-    (pointerLvalue) = NULL;                                                    \
-  } while (0)
+#define Memory_Free(pointerLvalue) MODULE_FUNC(Memory, Alloc, Free)(&(pointerLvalue))
 
 #include "Impl/Alloc.impl"
+
 /* EOF */

@@ -1,0 +1,10 @@
+#pragma once
+
+#define PRIMITIVE_TYPE_TABLE_FLOAT(X)                                          \
+  X((float, Float32, F32, TFloat32, FLOAT, 32))                                \
+  X((double, Float64, F64, TFloat64, FLOAT, 64))                               \
+  X((float, Float, Float, TFloat, FLOAT, 32))                                  \
+  X((double, Double, Double, TDouble, FLOAT, 64))                              \
+  X((long double, LongDouble, LD, TLongDouble, FLOAT, 0))
+/* EOF */
+

@@ -1,0 +1,322 @@
+/* AVL.def - Dual Mode Engine (Zero Duplication) */
+
+#include "Impl/Common.inc"
+
+#ifndef COSMERON_MACRO_INTERNAL_TREE_AVL_CORE
+#define COSMERON_MACRO_INTERNAL_TREE_AVL_CORE(TARGET, NODE_TYPE, SUFFIX)       \
+  FUNCTION(int, HeightOf, (const NODE_TYPE *node), {                           \
+    return node ? node->height : 0;                                            \
+  }),                                                                          \
+                                                                               \
+  FUNCTION(size_t, NodeHeight, (const NODE_TYPE *node), {                      \
+    return node ? (size_t)node->height : 0U;                                   \
+  }),                                                                          \
+                                                                               \
+  PROCEDURE(UpdateHeight, (NODE_TYPE *node), {                                 \
+    if (!node)                                                                 \
+      return;                                                                  \
+    int lh = MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), HeightOf)(node->left);\
+    int rh =                                                                   \
+        MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), HeightOf)(node->right);   \
+    node->height = 1 + (lh > rh ? lh : rh);                                    \
+  }),                                                                          \
+                                                                               \
+  FUNCTION(int, BalanceFactor, (const NODE_TYPE *node), {                      \
+    if (!node)                                                                 \
+      return 0;                                                                \
+    return MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), HeightOf)(node->left) -\
+           MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), HeightOf)(node->right);\
+  }),                                                                          \
+                                                                               \
+  FUNCTION(NODE_TYPE *, RotateRight, (NODE_TYPE **root, NODE_TYPE *y), {       \
+    NODE_TYPE *x = y->left;                                                    \
+    NODE_TYPE *t2 = x->right;                                                  \
+    x->right = y;                                                              \
+    y->left = t2;                                                              \
+    x->parent = y->parent;                                                     \
+    y->parent = x;                                                             \
+    if (t2)                                                                    \
+      t2->parent = y;                                                          \
+    if (!x->parent)                                                            \
+      *root = x;                                                               \
+    else if (x->parent->left == y)                                             \
+      x->parent->left = x;                                                     \
+    else                                                                       \
+      x->parent->right = x;                                                    \
+    MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), UpdateHeight)(y);             \
+    MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), UpdateHeight)(x);             \
+    return x;                                                                  \
+  }),                                                                          \
+                                                                               \
+  FUNCTION(NODE_TYPE *, RotateLeft, (NODE_TYPE **root, NODE_TYPE *x), {        \
+    NODE_TYPE *y = x->right;                                                   \
+    NODE_TYPE *t2 = y->left;                                                   \
+    y->left = x;                                                               \
+    x->right = t2;                                                             \
+    y->parent = x->parent;                                                     \
+    x->parent = y;                                                             \
+    if (t2)                                                                    \
+      t2->parent = x;                                                          \
+    if (!y->parent)                                                            \
+      *root = y;                                                               \
+    else if (y->parent->left == x)                                             \
+      y->parent->left = y;                                                     \
+    else                                                                       \
+      y->parent->right = y;                                                    \
+    MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), UpdateHeight)(x);             \
+    MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), UpdateHeight)(y);             \
+    return y;                                                                  \
+  }),                                                                          \
+                                                                               \
+  PROCEDURE(Rebalance, (NODE_TYPE **root, NODE_TYPE *node), {                  \
+    while (node != NULL) {                                                     \
+      MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), UpdateHeight)(node);        \
+      int bf =                                                                 \
+          MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), BalanceFactor)(node);   \
+      if (bf > 1) {                                                            \
+        if (MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), BalanceFactor)(       \
+                node->left) < 0) {                                             \
+          MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), RotateLeft)(            \
+              root, node->left);                                               \
+        }                                                                      \
+        node = MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), RotateRight)(      \
+            root, node);                                                       \
+      } else if (bf < -1) {                                                    \
+        if (MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), BalanceFactor)(       \
+                node->right) > 0) {                                            \
+          MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), RotateRight)(           \
+              root, node->right);                                              \
+        }                                                                      \
+        node = MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), RotateLeft)(       \
+            root, node);                                                       \
+      }                                                                        \
+      node = node->parent;                                                     \
+    }                                                                          \
+  }),                                                                          \
+                                                                               \
+  PROCEDURE(RemoveNode, (NODE_TYPE **root, size_t *size, NODE_TYPE *z), {      \
+    NODE_TYPE *rebalanceStart = NULL;                                          \
+    if (!z->left) {                                                            \
+      rebalanceStart = z->parent;                                              \
+      MODULE_IFUNC(Tree, NS(TARGET, SUFFIX), Transplant)(root, z, z->right);   \
+    } else if (!z->right) {                                                    \
+      rebalanceStart = z->parent;                                              \
+      MODULE_IFUNC(Tree, NS(TARGET, SUFFIX), Transplant)(root, z, z->left);    \
+    } else {                                                                   \
+      NODE_TYPE *s =                                                           \
+          MODULE_IFUNC(Tree, NS(TARGET, SUFFIX), MinNode)(z->right);           \
+      if (s->parent != z) {                                                    \
+        rebalanceStart = s->parent;                                            \
+        MODULE_IFUNC(Tree, NS(TARGET, SUFFIX), Transplant)(root, s, s->right); \
+        s->right = z->right;                                                   \
+        s->right->parent = s;                                                  \
+      } else {                                                                 \
+        rebalanceStart = s;                                                    \
+      }                                                                        \
+      MODULE_IFUNC(Tree, NS(TARGET, SUFFIX), Transplant)(root, z, s);          \
+      s->left = z->left;                                                       \
+      s->left->parent = s;                                                     \
+    }                                                                          \
+    void *raw = (void *)z;                                                     \
+    MODULE_IFUNC(Tree, FreeNode)(&raw);                                        \
+    (*size)--;                                                                 \
+    MODULE_IFUNC(Tree, NS(TARGET, Algo, SUFFIX), Rebalance)(                   \
+        root, rebalanceStart);                                                 \
+  })
+#endif
+
+#ifndef TEMPLATE_Tree_AVL_Set
+#define TEMPLATE_Tree_AVL_Set(SUFFIX, KEY_TYPE)                                 \
+  TEMPLATE_ISTRUCT(Tree, AVL_SetNode, SUFFIX,                                   \
+      FIELDS(                                                                  \
+          struct MODULE_ITYPED(Tree, AVL_SetNode, SUFFIX) *parent;              \
+          struct MODULE_ITYPED(Tree, AVL_SetNode, SUFFIX) *left;                \
+          struct MODULE_ITYPED(Tree, AVL_SetNode, SUFFIX) *right;               \
+          int height;                                                          \
+          KEY_TYPE key;                                                        \
+      ));                                                                      \
+  CLOSURE_SCOPED_COMPARISON(NS(LIB_PREFIX(Tree), AVL_Set, SUFFIX), Comparator,  \
+                            (KEY_TYPE left, KEY_TYPE right))                   \
+  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Tree), AVL_Set, SUFFIX), Visitor,      \
+                           (const KEY_TYPE *key))                              \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_HELPERS(                                    \
+      AVL_Set, SUFFIX, struct MODULE_ITYPED(Tree, AVL_SetNode, SUFFIX),          \
+      KEY_TYPE, MODULE_CLOSURE(Tree, AVL_Set, SUFFIX, Comparator))              \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_SET_TRAVERSE(                               \
+      AVL_Set, SUFFIX, struct MODULE_ITYPED(Tree, AVL_SetNode, SUFFIX),          \
+      MODULE_CLOSURE(Tree, AVL_Set, SUFFIX, Visitor))                           \
+  INTERNAL_DEF_EX(                                                             \
+      Tree, NS(AVL_Set, Algo, SUFFIX),                                          \
+      COSMERON_MACRO_INTERNAL_TREE_AVL_CORE(                                   \
+          AVL_Set, struct MODULE_ITYPED(Tree, AVL_SetNode, SUFFIX), SUFFIX),     \
+                                                                               \
+      FUNCTION(struct MODULE_ITYPED(Tree, AVL_SetNode, SUFFIX) *, CreateNode,   \
+               (KEY_TYPE key), {                                               \
+                 void *raw = NULL;                                             \
+                 if (MODULE_IFUNC(Tree, AllocNode)(                            \
+                         &raw, sizeof(struct MODULE_ITYPED(Tree, AVL_SetNode,   \
+                                                            SUFFIX))) !=       \
+                     STATUS_CONST(SUCCESS)) {                                  \
+                   return NULL;                                                \
+                 }                                                             \
+                 struct MODULE_ITYPED(Tree, AVL_SetNode, SUFFIX) *node =        \
+                     (struct MODULE_ITYPED(Tree, AVL_SetNode, SUFFIX) *)raw;    \
+                 node->parent = NULL;                                          \
+                 node->left = NULL;                                            \
+                 node->right = NULL;                                           \
+                 node->height = 1;                                             \
+                 node->key = key;                                              \
+                 return node;                                                  \
+               }),                                                             \
+                                                                               \
+      OPERATION(InsertSet,                                                     \
+                (struct MODULE_ITYPED(Tree, AVL_SetNode, SUFFIX) **root,        \
+                 size_t *size,                                                 \
+                 MODULE_CLOSURE(Tree, AVL_Set, SUFFIX, Comparator) cmp,         \
+                 KEY_TYPE key),                                                \
+                {                                                              \
+                  struct MODULE_ITYPED(Tree, AVL_SetNode, SUFFIX) *cur = *root; \
+                  struct MODULE_ITYPED(Tree, AVL_SetNode, SUFFIX) *par = NULL;  \
+                  CMPOUT lastCmp = COMPARISON_CONST(EQUAL);                    \
+                  while (cur != NULL) {                                        \
+                    par = cur;                                                 \
+                    lastCmp = CLOSURE_CALL(cmp, key, cur->key);                \
+                    if (lastCmp < COMPARISON_CONST(EQUAL))                     \
+                      cur = cur->left;                                         \
+                    else if (lastCmp > COMPARISON_CONST(EQUAL))                \
+                      cur = cur->right;                                        \
+                    else                                                       \
+                      return STATUS_CONST(ALREADY_EXISTS);                     \
+                  }                                                            \
+                  struct MODULE_ITYPED(Tree, AVL_SetNode, SUFFIX) *node =       \
+                      MODULE_IFUNC(Tree, NS(AVL_Set, Algo, SUFFIX),             \
+                                   CreateNode)(key);                           \
+                  if (!node)                                                   \
+                    return STATUS_CONST(OUT_OF_MEMORY);                        \
+                  node->parent = par;                                          \
+                  if (!par)                                                    \
+                    *root = node;                                              \
+                  else if (lastCmp < COMPARISON_CONST(EQUAL))                  \
+                    par->left = node;                                          \
+                  else                                                         \
+                    par->right = node;                                         \
+                  (*size)++;                                                   \
+                  MODULE_IFUNC(Tree, NS(AVL_Set, Algo, SUFFIX), Rebalance)(     \
+                      root, par);                                              \
+                  return STATUS_CONST(SUCCESS);                                \
+                }))                                                            \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_SET_ITER(                                   \
+      AVL_Set, AVL_SetIter, SUFFIX,                                              \
+      struct MODULE_ITYPED(Tree, AVL_SetNode, SUFFIX), KEY_TYPE);               \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_SET_OBJECT(                                 \
+      AVL_Set, AVL_SetIter, SUFFIX,                                              \
+      struct MODULE_ITYPED(Tree, AVL_SetNode, SUFFIX), KEY_TYPE)
+#endif
+
+#ifndef TEMPLATE_Tree_AVL_Map
+#define TEMPLATE_Tree_AVL_Map(SUFFIX, KEY_TYPE, VALUE_TYPE)                     \
+  TEMPLATE_ISTRUCT(Tree, AVL_MapNode, SUFFIX,                                   \
+      FIELDS(                                                                  \
+          struct MODULE_ITYPED(Tree, AVL_MapNode, SUFFIX) *parent;              \
+          struct MODULE_ITYPED(Tree, AVL_MapNode, SUFFIX) *left;                \
+          struct MODULE_ITYPED(Tree, AVL_MapNode, SUFFIX) *right;               \
+          int height;                                                          \
+          KEY_TYPE key;                                                        \
+          VALUE_TYPE value;                                                    \
+      ));                                                                      \
+  CLOSURE_SCOPED_COMPARISON(NS(LIB_PREFIX(Tree), AVL_Map, SUFFIX), Comparator,  \
+                            (KEY_TYPE left, KEY_TYPE right))                   \
+  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Tree), AVL_Map, SUFFIX), Visitor,      \
+                           (KEY_TYPE key, VALUE_TYPE *value))                  \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_HELPERS(                                    \
+      AVL_Map, SUFFIX, struct MODULE_ITYPED(Tree, AVL_MapNode, SUFFIX),          \
+      KEY_TYPE, MODULE_CLOSURE(Tree, AVL_Map, SUFFIX, Comparator))              \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_MAP_TRAVERSE(                               \
+      AVL_Map, SUFFIX, struct MODULE_ITYPED(Tree, AVL_MapNode, SUFFIX),          \
+      MODULE_CLOSURE(Tree, AVL_Map, SUFFIX, Visitor))                           \
+  INTERNAL_DEF_EX(                                                             \
+      Tree, NS(AVL_Map, Algo, SUFFIX),                                          \
+      COSMERON_MACRO_INTERNAL_TREE_AVL_CORE(                                   \
+          AVL_Map, struct MODULE_ITYPED(Tree, AVL_MapNode, SUFFIX), SUFFIX),     \
+                                                                               \
+      FUNCTION(struct MODULE_ITYPED(Tree, AVL_MapNode, SUFFIX) *, CreateNode,   \
+               (KEY_TYPE key, VALUE_TYPE value), {                             \
+                 void *raw = NULL;                                             \
+                 if (MODULE_IFUNC(Tree, AllocNode)(                            \
+                         &raw, sizeof(struct MODULE_ITYPED(Tree, AVL_MapNode,   \
+                                                            SUFFIX))) !=       \
+                     STATUS_CONST(SUCCESS)) {                                  \
+                   return NULL;                                                \
+                 }                                                             \
+                 struct MODULE_ITYPED(Tree, AVL_MapNode, SUFFIX) *node =        \
+                     (struct MODULE_ITYPED(Tree, AVL_MapNode, SUFFIX) *)raw;    \
+                 node->parent = NULL;                                          \
+                 node->left = NULL;                                            \
+                 node->right = NULL;                                           \
+                 node->height = 1;                                             \
+                 node->key = key;                                              \
+                 node->value = value;                                          \
+                 return node;                                                  \
+               }),                                                             \
+                                                                               \
+      OPERATION(InsertMap,                                                     \
+                (struct MODULE_ITYPED(Tree, AVL_MapNode, SUFFIX) **root,        \
+                 size_t *size,                                                 \
+                 MODULE_CLOSURE(Tree, AVL_Map, SUFFIX, Comparator) cmp,         \
+                 KEY_TYPE key, VALUE_TYPE value, bool allowUpdate),            \
+                {                                                              \
+                  struct MODULE_ITYPED(Tree, AVL_MapNode, SUFFIX) *cur = *root; \
+                  struct MODULE_ITYPED(Tree, AVL_MapNode, SUFFIX) *par = NULL;  \
+                  CMPOUT lastCmp = COMPARISON_CONST(EQUAL);                    \
+                  while (cur != NULL) {                                        \
+                    par = cur;                                                 \
+                    lastCmp = CLOSURE_CALL(cmp, key, cur->key);                \
+                    if (lastCmp < COMPARISON_CONST(EQUAL))                     \
+                      cur = cur->left;                                         \
+                    else if (lastCmp > COMPARISON_CONST(EQUAL))                \
+                      cur = cur->right;                                        \
+                    else {                                                     \
+                      if (allowUpdate) {                                       \
+                        cur->value = value;                                    \
+                        return STATUS_CONST(SUCCESS);                          \
+                      }                                                        \
+                      return STATUS_CONST(ALREADY_EXISTS);                     \
+                    }                                                          \
+                  }                                                            \
+                  struct MODULE_ITYPED(Tree, AVL_MapNode, SUFFIX) *node =       \
+                      MODULE_IFUNC(Tree, NS(AVL_Map, Algo, SUFFIX),             \
+                                   CreateNode)(key, value);                    \
+                  if (!node)                                                   \
+                    return STATUS_CONST(OUT_OF_MEMORY);                        \
+                  node->parent = par;                                          \
+                  if (!par)                                                    \
+                    *root = node;                                              \
+                  else if (lastCmp < COMPARISON_CONST(EQUAL))                  \
+                    par->left = node;                                          \
+                  else                                                         \
+                    par->right = node;                                         \
+                  (*size)++;                                                   \
+                  MODULE_IFUNC(Tree, NS(AVL_Map, Algo, SUFFIX), Rebalance)(     \
+                      root, par);                                              \
+                  return STATUS_CONST(SUCCESS);                                \
+                }))                                                            \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_MAP_ITER(                                   \
+      AVL_Map, AVL_MapIter, SUFFIX,                                              \
+      struct MODULE_ITYPED(Tree, AVL_MapNode, SUFFIX), KEY_TYPE, VALUE_TYPE);   \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_MAP_OBJECT(                                 \
+      AVL_Map, AVL_MapIter, SUFFIX,                                              \
+      struct MODULE_ITYPED(Tree, AVL_MapNode, SUFFIX), KEY_TYPE, VALUE_TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(KEY_TYPE) && defined(VALUE_TYPE)
+  TEMPLATE_Tree_AVL_Map(SUFFIX, KEY_TYPE, VALUE_TYPE);
+  #undef SUFFIX
+  #undef KEY_TYPE
+  #undef VALUE_TYPE
+#elif (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(KEY_TYPE)
+  TEMPLATE_Tree_AVL_Set(SUFFIX, KEY_TYPE);
+  #undef SUFFIX
+  #undef KEY_TYPE
+#endif
+

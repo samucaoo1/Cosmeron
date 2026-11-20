@@ -3,7 +3,7 @@ CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L
 BUILD ?= .build
 LDLIBS ?= 
 
-TESTS := Struct Variants AllTypes IncludeAll
+TESTS := Struct Variants AllTypes IncludeAll NoFunctionTable
 
 all: run
 

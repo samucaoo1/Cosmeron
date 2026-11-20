@@ -2,189 +2,200 @@
 
 #include <stdint.h>
 
-static inline size_t MEMORY_INS(PoolAlignedChunkSize)(size_t elementSize) {
-  size_t nodeSize = sizeof(MEMORY_INS(PoolNode));
-  size_t maxAlign = COSMERON_MACRO_INTERNAL_MEMORY_MAX_ALIGNMENT;
-  size_t size = elementSize > nodeSize ? elementSize : nodeSize;
-  size_t rem = size % maxAlign;
-  if (rem != 0U) {
-    size += (maxAlign - rem);
-  }
-  return size;
-}
+/* ========================================================================== */
+/* TMemoryPool Method Implementations                                         */
+/* ========================================================================== */
 
-/* ============================================================
- * TMemoryPool Method Implementations
- * ============================================================ */
+MODULE_IMPLEMENT(DOMAIN(Core), Memory,
+  INTERNAL_EX(Pool,
+    FUNCTION(size_t, AlignedChunkSize, (size_t elementSize), {
+      size_t nodeSize = sizeof(MODULE_ITYPE(Memory, PoolNode));
+      size_t maxAlign = MODULE_IFUNC(Memory, MaxAlignment)();
+      size_t size = elementSize > nodeSize ? elementSize : nodeSize;
+      size_t rem = size % maxAlign;
+      if (rem != 0U) {
+        size += (maxAlign - rem);
+      }
+      return size;
+    }),
 
-OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Create, (size_t elementSize, size_t elementCount)) {
-  if (!self || elementSize == 0U || elementCount == 0U)
-    return STATUS_CONST(INVALID_ARGUMENT);
+    OPERATION(AllocatorAlloc,
+              (void *context, size_t size, size_t alignment, void **outPtr), {
+      (void)alignment;
+      MODULE_TYPE(Memory, Pool) *pool = (MODULE_TYPE(Memory, Pool) *)context;
+      if (!pool || size > pool->elementSize) {
+        return STATUS_CONST(OUT_OF_RANGE);
+      }
+      return MODULE_FUNC(Memory, Pool, Alloc)(pool, outPtr);
+    }),
 
-  size_t chunkSize = MEMORY_INS(PoolAlignedChunkSize)(elementSize);
-  if (elementCount > SIZE_MAX / chunkSize)
-    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+    PROCEDURE(AllocatorFree, (void *context, void *ptr, size_t size), {
+      (void)size;
+      MODULE_TYPE(Memory, Pool) *pool = (MODULE_TYPE(Memory, Pool) *)context;
+      if (pool && ptr) {
+        (void)MODULE_FUNC(Memory, Pool, Free)(pool, ptr);
+      }
+    }),
 
-  size_t totalBytes = chunkSize * elementCount;
-  void *buf = NULL;
-  OPSTATUS status = ALLOC_FUNC(AllocBytes)(&buf, totalBytes);
-  if (status != STATUS_CONST(SUCCESS))
-    return status;
+    PROCEDURE(InitState,
+              (MODULE_TYPE(Memory, Pool) *pool, void *buffer, size_t capacity,
+               size_t chunkSize, size_t elementCount, bool isOwned), {
+      pool->buffer = buffer;
+      pool->capacity = capacity;
+      pool->elementSize = chunkSize;
+      pool->elementCount = elementCount;
+      pool->allocatedCount = 0U;
+      pool->isOwned = isOwned;
+      pool->freeList = NULL;
 
-  self->buffer = buf;
-  self->capacity = totalBytes;
-  self->elementSize = chunkSize;
-  self->elementCount = elementCount;
-  self->allocatedCount = 0U;
-  self->isOwned = true;
-  self->freeList = NULL;
+      uint8_t *ptr = (uint8_t *)pool->buffer;
+      for (size_t i = 0U; i < elementCount; ++i) {
+        MODULE_ITYPE(Memory, PoolNode) *node =
+            (MODULE_ITYPE(Memory, PoolNode) *)(ptr + (i * chunkSize));
+        node->next = pool->freeList;
+        pool->freeList = node;
+      }
+    })
+  ),
 
-  uint8_t *ptr = (uint8_t *)self->buffer;
-  for (size_t i = 0U; i < elementCount; ++i) {
-    MEMORY_INS(PoolNode) *node = (MEMORY_INS(PoolNode) *)(ptr + (i * chunkSize));
-    node->next = self->freeList;
-    self->freeList = node;
-  }
+  OBJECT(Pool,
+    VARIANT(Create,
+      OPERATION((size_t elementSize, size_t elementCount), {
+        if (!self || elementSize == 0U || elementCount == 0U)
+          return STATUS_CONST(INVALID_ARGUMENT);
 
-  return STATUS_CONST(SUCCESS);
-}
+        size_t chunkSize = MODULE_IFUNC(Memory, Pool, AlignedChunkSize)(elementSize);
+        if (elementCount > SIZE_MAX / chunkSize)
+          return STATUS_CONST(ARITHMETIC_OVERFLOW);
 
-OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), CreateBuffer, (void *buffer, size_t bufferSize, size_t elementSize)) {
-  if (!self || !buffer || elementSize == 0U)
-    return STATUS_CONST(INVALID_ARGUMENT);
+        size_t totalBytes = chunkSize * elementCount;
+        void *buf = NULL;
+        OPSTATUS status = MODULE_FUNC(Memory, Alloc, Bytes)(&buf, totalBytes);
+        if (status != STATUS_CONST(SUCCESS))
+          return status;
 
-  size_t chunkSize = MEMORY_INS(PoolAlignedChunkSize)(elementSize);
-  size_t count = bufferSize / chunkSize;
-  if (count == 0U)
-    return STATUS_CONST(INVALID_ARGUMENT);
+        MODULE_IFUNC(Memory, Pool, InitState)(
+            self, buf, totalBytes, chunkSize, elementCount, true);
+        return STATUS_CONST(SUCCESS);
+      }),
+      OPERATION(Buffer, (void *buffer, size_t bufferSize, size_t elementSize), {
+        if (!self || !buffer || elementSize == 0U)
+          return STATUS_CONST(INVALID_ARGUMENT);
 
-  self->buffer = buffer;
-  self->capacity = count * chunkSize;
-  self->elementSize = chunkSize;
-  self->elementCount = count;
-  self->allocatedCount = 0U;
-  self->isOwned = false;
-  self->freeList = NULL;
+        size_t chunkSize = MODULE_IFUNC(Memory, Pool, AlignedChunkSize)(elementSize);
+        size_t count = bufferSize / chunkSize;
+        if (count == 0U)
+          return STATUS_CONST(INVALID_ARGUMENT);
 
-  uint8_t *ptr = (uint8_t *)self->buffer;
-  for (size_t i = 0U; i < count; ++i) {
-    MEMORY_INS(PoolNode) *node = (MEMORY_INS(PoolNode) *)(ptr + (i * chunkSize));
-    node->next = self->freeList;
-    self->freeList = node;
-  }
+        MODULE_IFUNC(Memory, Pool, InitState)(
+            self, buffer, count * chunkSize, chunkSize, count, false);
+        return STATUS_CONST(SUCCESS);
+      })
+    ),
 
-  return STATUS_CONST(SUCCESS);
-}
+    OPERATION(Alloc, (void *outPointerObject), {
+      if (!self || !outPointerObject)
+        return STATUS_CONST(INVALID_ARGUMENT);
 
-OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Alloc, (void **out)) {
-  if (!self || !out)
-    return STATUS_CONST(INVALID_ARGUMENT);
+      if (self->freeList == NULL) {
+        MODULE_IFUNC(Memory, WritePointer)(outPointerObject, NULL);
+        return STATUS_CONST(OUT_OF_MEMORY);
+      }
 
-  if (self->freeList == NULL) {
-    *out = NULL;
-    return STATUS_CONST(OUT_OF_MEMORY);
-  }
+      MODULE_ITYPE(Memory, PoolNode) *node = self->freeList;
+      self->freeList = node->next;
+      self->allocatedCount++;
 
-  MEMORY_INS(PoolNode) *node = self->freeList;
-  self->freeList = node->next;
-  self->allocatedCount++;
+      MODULE_IFUNC(Memory, WritePointer)(outPointerObject, node);
+      return STATUS_CONST(SUCCESS);
+    }),
 
-  *out = (void *)node;
-  return STATUS_CONST(SUCCESS);
-}
+    VARIANT(Free,
+      OPERATION((void *ptr), {
+        if (!MODULE_FUNC(Memory, Pool, Contains)(self, ptr))
+          return STATUS_CONST(INVALID_ARGUMENT);
 
-OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Free, (void *ptr)) {
-  if (!self || !ptr)
-    return STATUS_CONST(INVALID_ARGUMENT);
+        MODULE_ITYPE(Memory, PoolNode) *node = (MODULE_ITYPE(Memory, PoolNode) *)ptr;
+        node->next = self->freeList;
+        self->freeList = node;
+        if (self->allocatedCount > 0U)
+          self->allocatedCount--;
 
-  uint8_t *bytePtr = (uint8_t *)ptr;
-  uint8_t *base = (uint8_t *)self->buffer;
-  if (bytePtr < base || bytePtr >= base + self->capacity)
-    return STATUS_CONST(INVALID_ARGUMENT);
+        return STATUS_CONST(SUCCESS);
+      }),
+      OPERATION(Pointer, (void *inoutPointerObject), {
+        void *ptr = NULL;
+        OPSTATUS status;
 
-  size_t offset = (size_t)(bytePtr - base);
-  if (offset % self->elementSize != 0U)
-    return STATUS_CONST(INVALID_ARGUMENT);
+        if (!self || !inoutPointerObject)
+          return STATUS_CONST(INVALID_ARGUMENT);
 
-  MEMORY_INS(PoolNode) *node = (MEMORY_INS(PoolNode) *)ptr;
-  node->next = self->freeList;
-  self->freeList = node;
-  if (self->allocatedCount > 0U)
-    self->allocatedCount--;
+        ptr = MODULE_IFUNC(Memory, ReadPointer)(inoutPointerObject);
+        status = MODULE_FUNC(Memory, Pool, Free)(self, ptr);
+        if (status == STATUS_CONST(SUCCESS)) {
+          MODULE_IFUNC(Memory, WritePointer)(inoutPointerObject, NULL);
+        }
+        return status;
+      })
+    ),
 
-  return STATUS_CONST(SUCCESS);
-}
+    OPERATION(Reset, (), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
 
-OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Reset) {
-  if (!self)
-    return STATUS_CONST(INVALID_ARGUMENT);
+      if (self->buffer && self->elementSize > 0U) {
+        MODULE_IFUNC(Memory, Pool, InitState)(
+            self, self->buffer, self->capacity, self->elementSize,
+            self->elementCount, self->isOwned);
+      } else {
+        self->freeList = NULL;
+        self->allocatedCount = 0U;
+      }
 
-  self->freeList = NULL;
-  self->allocatedCount = 0U;
+      return STATUS_CONST(SUCCESS);
+    }),
 
-  if (self->buffer && self->elementSize > 0U) {
-    uint8_t *ptr = (uint8_t *)self->buffer;
-    for (size_t i = 0U; i < self->elementCount; ++i) {
-      MEMORY_INS(PoolNode) *node = (MEMORY_INS(PoolNode) *)(ptr + (i * self->elementSize));
-      node->next = self->freeList;
-      self->freeList = node;
-    }
-  }
+    OPERATION(Destroy, (), {
+      if (!self)
+        return STATUS_CONST(INVALID_ARGUMENT);
 
-  return STATUS_CONST(SUCCESS);
-}
+      if (self->buffer && self->isOwned) {
+        void *buf = self->buffer;
+        MODULE_FUNC(Memory, Alloc, Free)(&buf);
+      }
+      OBJECT_RESET_ZERO(Memory, Pool, self);
 
-OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Destroy) {
-  if (!self)
-    return STATUS_CONST(INVALID_ARGUMENT);
+      return STATUS_CONST(SUCCESS);
+    }),
 
-  if (self->buffer && self->isOwned) {
-    void *buf = self->buffer;
-    ALLOC_FUNC(FreePointer)(&buf);
-  }
-  self->buffer = NULL;
+    CONST_PREDICATE(Contains, (const void *ptr), {
+      if (!self || !ptr || !self->buffer)
+        return false;
 
-  self->capacity = 0U;
-  self->elementSize = 0U;
-  self->elementCount = 0U;
-  self->allocatedCount = 0U;
-  self->isOwned = false;
-  self->freeList = NULL;
+      const uint8_t *bytePtr = (const uint8_t *)ptr;
+      const uint8_t *base = (const uint8_t *)self->buffer;
+      if (bytePtr < base || bytePtr >= base + self->capacity)
+        return false;
 
-  return STATUS_CONST(SUCCESS);
-}
+      size_t offset = (size_t)(bytePtr - base);
+      return (offset % self->elementSize == 0U);
+    }),
 
-OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Capacity) {
-  return self ? self->elementCount : 0U;
-}
-
-OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Available) {
-  return self ? (self->elementCount - self->allocatedCount) : 0U;
-}
-
-OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Allocated) {
-  return self ? self->allocatedCount : 0U;
-}
-
-OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), ElementSize) {
-  return self ? self->elementSize : 0U;
-}
-
-OBJECT_PROTOTYPEEX(POOL_TYPE(TMemoryPool), Contains, (const void *ptr)) {
-  if (!self || !ptr || !self->buffer)
-    return false;
-
-  const uint8_t *bytePtr = (const uint8_t *)ptr;
-  const uint8_t *base = (const uint8_t *)self->buffer;
-  if (bytePtr < base || bytePtr >= base + self->capacity)
-    return false;
-
-  size_t offset = (size_t)(bytePtr - base);
-  return (offset % self->elementSize == 0U);
-}
-
-OBJECT_IMPLEMENT(POOL_TYPE(TMemoryPool));
-
-/* EOF */
+    FUNCTION(MODULE_TYPE(Memory, Allocator), AsAllocator, (), {
+      static const MODULE_TYPE(Memory, Allocator_Ops) ops = {
+          .Alloc = MODULE_IFUNC(Memory, Pool, AllocatorAlloc),
+          .Realloc = NULL,
+          .Free = MODULE_IFUNC(Memory, Pool, AllocatorFree),
+          .capabilities = MODULE_CONST(Memory, SUPPORTS_FREE) |
+                          MODULE_CONST(Memory, BULK_RESET),
+      };
+      MODULE_TYPE(Memory, Allocator) alloc = {
+          .context = self,
+          .ops = &ops,
+      };
+      return alloc;
+    })
+  )
+);
 
 /* EOF */

@@ -1,23 +1,30 @@
 #pragma once
 
-#include "../Text.space"
+#include <stdbool.h>
 
-#define TEXT_CODEPOINT_IS_VALID_PROTOTYPE                                     \
-  static inline bool TEXT_CODEPOINT_FUNC(IsValid)(TEXT_TYPE(TChar32) codepoint)
-#define TEXT_CODEPOINT_IS_SCALAR_PROTOTYPE                                    \
-  static inline bool TEXT_CODEPOINT_FUNC(IsScalar)(TEXT_TYPE(TChar32) codepoint)
-#define TEXT_CODEPOINT_IS_ASCII_PROTOTYPE                                     \
-  static inline bool TEXT_CODEPOINT_FUNC(IsASCII)(TEXT_TYPE(TChar32) codepoint)
-#define TEXT_CODEPOINT_IS_CONTROL_PROTOTYPE                                   \
-  static inline bool TEXT_CODEPOINT_FUNC(IsControl)(TEXT_TYPE(TChar32) codepoint)
-#define TEXT_CODEPOINT_IS_WHITESPACE_PROTOTYPE                                \
-  static inline bool TEXT_CODEPOINT_FUNC(IsWhitespace)(TEXT_TYPE(TChar32) codepoint)
+#include "../../../Core/Module/Module.h"
+#include "../Impl/Common.inc"
 
-TEXT_CODEPOINT_IS_VALID_PROTOTYPE;
-TEXT_CODEPOINT_IS_SCALAR_PROTOTYPE;
-TEXT_CODEPOINT_IS_ASCII_PROTOTYPE;
-TEXT_CODEPOINT_IS_CONTROL_PROTOTYPE;
-TEXT_CODEPOINT_IS_WHITESPACE_PROTOTYPE;
+#if defined(TEXT_DISABLE_FUNCTION_TABLE) && !defined(COSMERON_DISABLE_FT_Text)
+#define COSMERON_DISABLE_FT_Text 1
+#endif
+#if defined(TEXT_CODEPOINT_DISABLE_FUNCTION_TABLE) &&                          \
+    !defined(COSMERON_DISABLE_FT_Text_Codepoint)
+#define COSMERON_DISABLE_FT_Text_Codepoint 1
+#endif
+
+MODULE(DOMAIN(Modules), Text,
+    PACKAGE(Codepoint,
+        VARIANT(Is,
+                PREDICATE(Valid, (MODULE_TYPE(Text, Char32) codepoint)),
+                PREDICATE(Scalar, (MODULE_TYPE(Text, Char32) codepoint)),
+                PREDICATE(ASCII, (MODULE_TYPE(Text, Char32) codepoint)),
+                PREDICATE(Control, (MODULE_TYPE(Text, Char32) codepoint)),
+                PREDICATE(Whitespace, (MODULE_TYPE(Text, Char32) codepoint))
+        )
+    )
+);
 
 #include "Impl/Codepoint.impl"
+
 /* EOF */

@@ -1,200 +1,192 @@
 #pragma once
 
-/*
- * Typed, non-owning function/context pairs.
- *
- * Each declaration creates a distinct callback signature and uses the
- * Core/Module PACKAGE DSL to declare Bind, IsValid, and Invoke.
- *
- * PARAMETERS and ARGUMENTS are parenthesized tuples. The callback receives
- * void *context as its final parameter; Invoke forwards the stored context.
- *
- * The context is borrowed. Callback never allocates, copies, or releases it.
- * The caller must keep it alive and must not invoke an unbound callback.
- */
+#include "../../../Preprocessor/Arguments.h"
+#include "../../../Preprocessor/Boolean.h"
+#include "../../../Preprocessor/Detect/Detect.h"
+#include "../../../Preprocessor/Operations.h"
+#include "../../Namespace.h"
 
-#define CALLBACK_DECLARE(NAME, RETURN_TYPE, PARAMETERS, ARGUMENTS)             \
-  typedef RETURN_TYPE (*GNS2(CALLBACK_TYPE(NAME), Function))(                   \
-      PP_UNWRAP PARAMETERS, void *context);                                     \
-  typedef struct CALLBACK_TYPE(NAME) {                                          \
-    GNS2(CALLBACK_TYPE(NAME), Function) function;                               \
-    void *context;                                                              \
-  } CALLBACK_TYPE(NAME);                                                        \
-  PACKAGE(CALLBACK_TYPE(NAME),                                                  \
-      FUNCTION_INLINE(CALLBACK_TYPE(NAME), Bind,                                \
-          (GNS2(CALLBACK_TYPE(NAME), Function) function, void *context), {      \
-            CALLBACK_TYPE(NAME) callback;                                       \
-            callback.function = function;                                       \
-            callback.context = context;                                         \
-            return callback;                                                    \
-          }),                                                                   \
-      PREDICATE_INLINE(IsValid, (CALLBACK_TYPE(NAME) callback), {               \
-        return callback.function != NULL;                                       \
-      }),                                                                       \
-      FUNCTION_INLINE(RETURN_TYPE, Invoke,                                      \
-          (CALLBACK_TYPE(NAME) callback, PP_UNWRAP PARAMETERS), {               \
-            return callback.function(PP_UNWRAP ARGUMENTS, callback.context);   \
-          })                                                                    \
-  )
+#include <stdbool.h>
+#include <stddef.h>
 
-#define CALLBACK_DECLARE_PROCEDURE(NAME, PARAMETERS, ARGUMENTS)                \
-  typedef void (*GNS2(CALLBACK_TYPE(NAME), Function))(                          \
-      PP_UNWRAP PARAMETERS, void *context);                                     \
-  typedef struct CALLBACK_TYPE(NAME) {                                          \
-    GNS2(CALLBACK_TYPE(NAME), Function) function;                               \
-    void *context;                                                              \
-  } CALLBACK_TYPE(NAME);                                                        \
-  PACKAGE(CALLBACK_TYPE(NAME),                                                  \
-      FUNCTION_INLINE(CALLBACK_TYPE(NAME), Bind,                                \
-          (GNS2(CALLBACK_TYPE(NAME), Function) function, void *context), {      \
-            CALLBACK_TYPE(NAME) callback;                                       \
-            callback.function = function;                                       \
-            callback.context = context;                                         \
-            return callback;                                                    \
-          }),                                                                   \
-      PREDICATE_INLINE(IsValid, (CALLBACK_TYPE(NAME) callback), {               \
-        return callback.function != NULL;                                       \
-      }),                                                                       \
-      PROCEDURE_INLINE(Invoke, (CALLBACK_TYPE(NAME) callback,                   \
-                                PP_UNWRAP PARAMETERS), {                        \
-        callback.function(PP_UNWRAP ARGUMENTS, callback.context);               \
-      })                                                                        \
-  )
+#ifndef COSMERON_MAYBE_UNUSED
+#if COMPILER_GCC || COMPILER_CLANG
+#define COSMERON_MAYBE_UNUSED __attribute__((unused))
+#else
+#define COSMERON_MAYBE_UNUSED
+#endif
+#endif
 
-#define CALLBACK_DECLARE_NULLARY(NAME, RETURN_TYPE)                            \
-  typedef RETURN_TYPE (*GNS2(CALLBACK_TYPE(NAME), Function))(void *context);    \
-  typedef struct CALLBACK_TYPE(NAME) {                                          \
-    GNS2(CALLBACK_TYPE(NAME), Function) function;                               \
-    void *context;                                                              \
-  } CALLBACK_TYPE(NAME);                                                        \
-  PACKAGE(CALLBACK_TYPE(NAME),                                                  \
-      FUNCTION_INLINE(CALLBACK_TYPE(NAME), Bind,                                \
-          (GNS2(CALLBACK_TYPE(NAME), Function) function, void *context), {      \
-            CALLBACK_TYPE(NAME) callback;                                       \
-            callback.function = function;                                       \
-            callback.context = context;                                         \
-            return callback;                                                    \
-          }),                                                                   \
-      PREDICATE_INLINE(IsValid, (CALLBACK_TYPE(NAME) callback), {               \
-        return callback.function != NULL;                                       \
-      }),                                                                       \
-      FUNCTION_INLINE(RETURN_TYPE, Invoke, (CALLBACK_TYPE(NAME) callback), {    \
-        return callback.function(callback.context);                             \
-      })                                                                        \
-  )
+/* ========================================================================== */
+/* 1. Pure Stateless Callback Invocation & Validation Engine (8 Bytes)        */
+/* ========================================================================== */
 
-#define CALLBACK_DECLARE_NULLARY_PROCEDURE(NAME)                               \
-  typedef void (*GNS2(CALLBACK_TYPE(NAME), Function))(void *context);           \
-  typedef struct CALLBACK_TYPE(NAME) {                                          \
-    GNS2(CALLBACK_TYPE(NAME), Function) function;                               \
-    void *context;                                                              \
-  } CALLBACK_TYPE(NAME);                                                        \
-  PACKAGE(CALLBACK_TYPE(NAME),                                                  \
-      FUNCTION_INLINE(CALLBACK_TYPE(NAME), Bind,                                \
-          (GNS2(CALLBACK_TYPE(NAME), Function) function, void *context), {      \
-            CALLBACK_TYPE(NAME) callback;                                       \
-            callback.function = function;                                       \
-            callback.context = context;                                         \
-            return callback;                                                    \
-          }),                                                                   \
-      PREDICATE_INLINE(IsValid, (CALLBACK_TYPE(NAME) callback), {               \
-        return callback.function != NULL;                                       \
-      }),                                                                       \
-      PROCEDURE_INLINE(Invoke, (CALLBACK_TYPE(NAME) callback), {                \
-        callback.function(callback.context);                                    \
-      })                                                                        \
-  )
+#define COSMERON_MACRO_INTERNAL_CB_INVOKE_0(cb) ((cb)())
+#define COSMERON_MACRO_INTERNAL_CB_INVOKE_1(cb, ...) ((cb)(__VA_ARGS__))
 
-#define CALLBACK_DECLARE_OPERATION(NAME, PARAMETERS, ARGUMENTS)               \
-  typedef OPSTATUS (*GNS2(CALLBACK_TYPE(NAME), Function))(                      \
-      PP_UNWRAP PARAMETERS, void *context);                                     \
-  typedef struct CALLBACK_TYPE(NAME) {                                          \
-    GNS2(CALLBACK_TYPE(NAME), Function) function;                               \
-    void *context;                                                              \
-  } CALLBACK_TYPE(NAME);                                                        \
-  PACKAGE(CALLBACK_TYPE(NAME),                                                  \
-      FUNCTION_INLINE(CALLBACK_TYPE(NAME), Bind,                                \
-          (GNS2(CALLBACK_TYPE(NAME), Function) function, void *context), {      \
-            CALLBACK_TYPE(NAME) callback;                                       \
-            callback.function = function;                                       \
-            callback.context = context;                                         \
-            return callback;                                                    \
-          }),                                                                   \
-      PREDICATE_INLINE(IsValid, (CALLBACK_TYPE(NAME) callback), {               \
-        return callback.function != NULL;                                       \
-      }),                                                                       \
-      OPERATION_INLINE(Invoke, (CALLBACK_TYPE(NAME) callback,                   \
-                                PP_UNWRAP PARAMETERS), {                        \
-        return callback.function(PP_UNWRAP ARGUMENTS, callback.context);        \
-      })                                                                        \
-  )
+#define CALLBACK_INVOKE(...)                                                   \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CB_INVOKE_,                               \
+             PP_HAS_COMMA(__VA_ARGS__))(__VA_ARGS__)
 
-#define CALLBACK_DECLARE_PREDICATE(NAME, PARAMETERS, ARGUMENTS)                \
-  typedef bool (*GNS2(CALLBACK_TYPE(NAME), Function))(                          \
-      PP_UNWRAP PARAMETERS, void *context);                                     \
-  typedef struct CALLBACK_TYPE(NAME) {                                          \
-    GNS2(CALLBACK_TYPE(NAME), Function) function;                               \
-    void *context;                                                              \
-  } CALLBACK_TYPE(NAME);                                                        \
-  PACKAGE(CALLBACK_TYPE(NAME),                                                  \
-      FUNCTION_INLINE(CALLBACK_TYPE(NAME), Bind,                                \
-          (GNS2(CALLBACK_TYPE(NAME), Function) function, void *context), {      \
-            CALLBACK_TYPE(NAME) callback;                                       \
-            callback.function = function;                                       \
-            callback.context = context;                                         \
-            return callback;                                                    \
-          }),                                                                   \
-      PREDICATE_INLINE(IsValid, (CALLBACK_TYPE(NAME) callback), {               \
-        return callback.function != NULL;                                       \
-      }),                                                                       \
-      PREDICATE_INLINE(Invoke, (CALLBACK_TYPE(NAME) callback,                   \
-                                PP_UNWRAP PARAMETERS), {                        \
-        return callback.function(PP_UNWRAP ARGUMENTS, callback.context);        \
-      })                                                                        \
-  )
+#define CALLBACK_CALL(...) CALLBACK_INVOKE(__VA_ARGS__)
 
-#define CALLBACK_DECLARE_NULLARY_OPERATION(NAME)                               \
-  typedef OPSTATUS (*GNS2(CALLBACK_TYPE(NAME), Function))(void *context);       \
-  typedef struct CALLBACK_TYPE(NAME) {                                          \
-    GNS2(CALLBACK_TYPE(NAME), Function) function;                               \
-    void *context;                                                              \
-  } CALLBACK_TYPE(NAME);                                                        \
-  PACKAGE(CALLBACK_TYPE(NAME),                                                  \
-      FUNCTION_INLINE(CALLBACK_TYPE(NAME), Bind,                                \
-          (GNS2(CALLBACK_TYPE(NAME), Function) function, void *context), {      \
-            CALLBACK_TYPE(NAME) callback;                                       \
-            callback.function = function;                                       \
-            callback.context = context;                                         \
-            return callback;                                                    \
-          }),                                                                   \
-      PREDICATE_INLINE(IsValid, (CALLBACK_TYPE(NAME) callback), {               \
-        return callback.function != NULL;                                       \
-      }),                                                                       \
-      OPERATION_INLINE(Invoke, (CALLBACK_TYPE(NAME) callback), {                \
-        return callback.function(callback.context);                             \
-      })                                                                        \
-  )
+#define CALLBACK_IS_VALID(CB) ((CB) != NULL)
 
-#define CALLBACK_DECLARE_NULLARY_PREDICATE(NAME)                               \
-  typedef bool (*GNS2(CALLBACK_TYPE(NAME), Function))(void *context);           \
-  typedef struct CALLBACK_TYPE(NAME) {                                          \
-    GNS2(CALLBACK_TYPE(NAME), Function) function;                               \
-    void *context;                                                              \
-  } CALLBACK_TYPE(NAME);                                                        \
-  PACKAGE(CALLBACK_TYPE(NAME),                                                  \
-      FUNCTION_INLINE(CALLBACK_TYPE(NAME), Bind,                                \
-          (GNS2(CALLBACK_TYPE(NAME), Function) function, void *context), {      \
-            CALLBACK_TYPE(NAME) callback;                                       \
-            callback.function = function;                                       \
-            callback.context = context;                                         \
-            return callback;                                                    \
-          }),                                                                   \
-      PREDICATE_INLINE(IsValid, (CALLBACK_TYPE(NAME) callback), {               \
-        return callback.function != NULL;                                       \
-      }),                                                                       \
-      PREDICATE_INLINE(Invoke, (CALLBACK_TYPE(NAME) callback), {                \
-        return callback.function(callback.context);                             \
-      })                                                                        \
-  )
+/* ========================================================================== */
+/* 2. Parameter Emission Helpers for Stateless Callbacks                      */
+/* ========================================================================== */
+
+#define COSMERON_MACRO_INTERNAL_CB_PARAM_1(PARAMS) (void)
+#define COSMERON_MACRO_INTERNAL_CB_PARAM_0(PARAMS) PARAMS
+
+#define COSMERON_MACRO_INTERNAL_CB_PARAMS(PARAMS)                              \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CB_PARAM_,                                \
+             PP_IS_EMPTY_PARAMS(PARAMS))(PARAMS)
+
+/* ========================================================================== */
+/* 3. Core Callback Generation Templates (Scoped & Standalone)                */
+/* ========================================================================== */
+
+#define COSMERON_MACRO_INTERNAL_CB_SCOPED_BASE(SCOPE, NAME, RET, PARAMS)       \
+  typedef RET (*NS_JOIN(SCOPE, TCallback, NAME))                               \
+      COSMERON_MACRO_INTERNAL_CB_PARAMS(PARAMS);                               \
+  static inline COSMERON_MAYBE_UNUSED NS_JOIN(SCOPE, TCallback, NAME)          \
+      NS_JOIN(SCOPE, Callback, NAME, Bind)(                                    \
+          NS_JOIN(SCOPE, TCallback, NAME) function) {                          \
+    return function;                                                           \
+  }                                                                            \
+  static inline COSMERON_MAYBE_UNUSED NS_JOIN(SCOPE, TCallback, NAME)          \
+      NS_JOIN(SCOPE, Callback, NAME, Empty)(void) {                            \
+    return NULL;                                                               \
+  }                                                                            \
+  static inline COSMERON_MAYBE_UNUSED bool NS_JOIN(                            \
+      SCOPE, Callback, NAME, IsValid)(                                         \
+      NS_JOIN(SCOPE, TCallback, NAME) callback) {                              \
+    return callback != NULL;                                                   \
+  }
+
+#define COSMERON_MACRO_INTERNAL_CB_SCOPED_NULLARY_VAL_0(SCOPE, NAME, RET)
+#define COSMERON_MACRO_INTERNAL_CB_SCOPED_NULLARY_VAL_1(SCOPE, NAME, RET)      \
+  static inline COSMERON_MAYBE_UNUSED RET NS_JOIN(                             \
+      SCOPE, Callback, NAME, Invoke)(                                          \
+      NS_JOIN(SCOPE, TCallback, NAME) callback) {                              \
+    return callback();                                                         \
+  }
+
+#define COSMERON_MACRO_INTERNAL_CB_SCOPED_NULLARY_VOID_0(SCOPE, NAME)
+#define COSMERON_MACRO_INTERNAL_CB_SCOPED_NULLARY_VOID_1(SCOPE, NAME)          \
+  static inline COSMERON_MAYBE_UNUSED void NS_JOIN(                            \
+      SCOPE, Callback, NAME, Invoke)(                                          \
+      NS_JOIN(SCOPE, TCallback, NAME) callback) {                              \
+    callback();                                                                \
+  }
+
+#define COSMERON_MACRO_INTERNAL_PROBE_VOID_void ,
+#define COSMERON_MACRO_INTERNAL_CB_IS_VOID(r)                                  \
+  PP_HAS_COMMA(PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PROBE_VOID_, r))
+
+#define COSMERON_MACRO_INTERNAL_CB_SCOPED_GEN_0(SCOPE, NAME, RET, PARAMS)      \
+  COSMERON_MACRO_INTERNAL_CB_SCOPED_BASE(SCOPE, NAME, RET, PARAMS)             \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CB_SCOPED_NULLARY_VAL_,                   \
+             PP_IS_EMPTY_PARAMS(PARAMS))(SCOPE, NAME, RET)                     \
+  typedef int NS(_cosmeron_cb_scoped_semi, SCOPE, NAME, __LINE__);
+
+#define COSMERON_MACRO_INTERNAL_CB_SCOPED_GEN_1(SCOPE, NAME, RET, PARAMS)      \
+  COSMERON_MACRO_INTERNAL_CB_SCOPED_BASE(SCOPE, NAME, void, PARAMS)            \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CB_SCOPED_NULLARY_VOID_,                  \
+             PP_IS_EMPTY_PARAMS(PARAMS))(SCOPE, NAME)                          \
+  typedef int NS(_cosmeron_cb_scoped_semi, SCOPE, NAME, __LINE__);
+
+#define COSMERON_MACRO_INTERNAL_CB_SCOPED_GEN(SCOPE, NAME, RET, PARAMS)        \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CB_SCOPED_GEN_,                           \
+             COSMERON_MACRO_INTERNAL_CB_IS_VOID(RET))(SCOPE, NAME, RET, PARAMS)
+
+/* --- Standalone Root-Level Callback Generators --- */
+
+#define COSMERON_MACRO_INTERNAL_CB_ROOT_BASE(NAME, RET, PARAMS)                \
+  typedef RET (*TCALLBACK(NAME)) COSMERON_MACRO_INTERNAL_CB_PARAMS(PARAMS);    \
+  static inline COSMERON_MAYBE_UNUSED TCALLBACK(NAME)                          \
+      NS_JOIN(CALLBACK_FUNC(NAME), Bind)(TCALLBACK(NAME) function) {           \
+    return function;                                                           \
+  }                                                                            \
+  static inline COSMERON_MAYBE_UNUSED TCALLBACK(NAME)                          \
+      NS_JOIN(CALLBACK_FUNC(NAME), Empty)(void) {                              \
+    return NULL;                                                               \
+  }                                                                            \
+  static inline COSMERON_MAYBE_UNUSED bool NS_JOIN(                            \
+      CALLBACK_FUNC(NAME), IsValid)(TCALLBACK(NAME) callback) {                \
+    return callback != NULL;                                                   \
+  }
+
+#define COSMERON_MACRO_INTERNAL_CB_ROOT_NULLARY_VAL_0(NAME, RET)
+#define COSMERON_MACRO_INTERNAL_CB_ROOT_NULLARY_VAL_1(NAME, RET)               \
+  static inline COSMERON_MAYBE_UNUSED RET NS_JOIN(                             \
+      CALLBACK_FUNC(NAME), Invoke)(TCALLBACK(NAME) callback) {                 \
+    return callback();                                                         \
+  }
+
+#define COSMERON_MACRO_INTERNAL_CB_ROOT_NULLARY_VOID_0(NAME)
+#define COSMERON_MACRO_INTERNAL_CB_ROOT_NULLARY_VOID_1(NAME)                   \
+  static inline COSMERON_MAYBE_UNUSED void NS_JOIN(                            \
+      CALLBACK_FUNC(NAME), Invoke)(TCALLBACK(NAME) callback) {                 \
+    callback();                                                                \
+  }
+
+#define COSMERON_MACRO_INTERNAL_CB_GEN_VALUE(NAME, RET, PARAMS)                \
+  COSMERON_MACRO_INTERNAL_CB_ROOT_BASE(NAME, RET, PARAMS)                      \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CB_ROOT_NULLARY_VAL_,                     \
+             PP_IS_EMPTY_PARAMS(PARAMS))(NAME, RET)                            \
+  typedef int NS(_cosmeron_callback_semi, NAME, __LINE__)
+
+#define COSMERON_MACRO_INTERNAL_CB_GEN_VOID(NAME, PARAMS)                      \
+  COSMERON_MACRO_INTERNAL_CB_ROOT_BASE(NAME, void, PARAMS)                     \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CB_ROOT_NULLARY_VOID_,                    \
+             PP_IS_EMPTY_PARAMS(PARAMS))(NAME)                                 \
+  typedef int NS(_cosmeron_callback_semi, NAME, __LINE__)
+
+#define COSMERON_MACRO_INTERNAL_CB_GEN_DISPATCH_0(NAME, RET, PARAMS)           \
+  COSMERON_MACRO_INTERNAL_CB_GEN_VALUE(NAME, RET, PARAMS)
+
+#define COSMERON_MACRO_INTERNAL_CB_GEN_DISPATCH_1(NAME, RET, PARAMS)           \
+  COSMERON_MACRO_INTERNAL_CB_GEN_VOID(NAME, PARAMS)
+
+#define COSMERON_MACRO_INTERNAL_CB_GEN(NAME, RET, PARAMS)                      \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CB_GEN_DISPATCH_,                         \
+             COSMERON_MACRO_INTERNAL_CB_IS_VOID(RET))(NAME, RET, PARAMS)
+
+/* ========================================================================== */
+/* 4. Public Standalone Callback Descriptors                                  */
+/* ========================================================================== */
+
+#define CALLBACK_FUNCTION(RET, NAME, PARAMS)                                   \
+  COSMERON_MACRO_INTERNAL_CB_GEN(NAME, RET, PARAMS)
+
+#define CALLBACK_PROCEDURE(NAME, PARAMS)                                       \
+  COSMERON_MACRO_INTERNAL_CB_GEN_VOID(NAME, PARAMS)
+
+#define CALLBACK_OPERATION(NAME, PARAMS)                                       \
+  COSMERON_MACRO_INTERNAL_CB_GEN_VALUE(NAME, OPSTATUS, PARAMS)
+
+#define CALLBACK_PREDICATE(NAME, PARAMS)                                       \
+  COSMERON_MACRO_INTERNAL_CB_GEN_VALUE(NAME, bool, PARAMS)
+
+#define CALLBACK_COMPARISON(NAME, PARAMS)                                      \
+  COSMERON_MACRO_INTERNAL_CB_GEN_VALUE(NAME, CMPOUT, PARAMS)
+
+/* Scoped Callback Descriptors (for explicit Target/Module qualification) */
+#define CALLBACK_SCOPED_FUNCTION(SCOPE, RET, NAME, PARAMS)                     \
+  COSMERON_MACRO_INTERNAL_CB_SCOPED_GEN(SCOPE, NAME, RET, PARAMS)
+
+#define CALLBACK_SCOPED_PROCEDURE(SCOPE, NAME, PARAMS)                         \
+  COSMERON_MACRO_INTERNAL_CB_SCOPED_GEN(SCOPE, NAME, void, PARAMS)
+
+#define CALLBACK_SCOPED_OPERATION(SCOPE, NAME, PARAMS)                         \
+  COSMERON_MACRO_INTERNAL_CB_SCOPED_GEN(SCOPE, NAME, OPSTATUS, PARAMS)
+
+#define CALLBACK_SCOPED_PREDICATE(SCOPE, NAME, PARAMS)                         \
+  COSMERON_MACRO_INTERNAL_CB_SCOPED_GEN(SCOPE, NAME, bool, PARAMS)
+
+#define CALLBACK_SCOPED_COMPARISON(SCOPE, NAME, PARAMS)                        \
+  COSMERON_MACRO_INTERNAL_CB_SCOPED_GEN(SCOPE, NAME, CMPOUT, PARAMS)
 
 /* EOF */

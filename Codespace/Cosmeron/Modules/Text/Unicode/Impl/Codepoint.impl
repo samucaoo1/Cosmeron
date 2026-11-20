@@ -1,33 +1,89 @@
 #pragma once
 
-TEXT_CODEPOINT_IS_VALID_PROTOTYPE {
-  return (uint_least32_t)codepoint <= UINT32_C(0x10FFFF);
-}
+#define TEXT_CODEPOINT_INTERNAL_COL_NAME(NAME, VALUE) NAME
+#define TEXT_CODEPOINT_INTERNAL_COL_VALUE(NAME, VALUE) VALUE
+#define TEXT_CODEPOINT_INTERNAL_GET(FIELD, ROW)                                \
+  PP_OP_CAT2(TEXT_CODEPOINT_INTERNAL_COL_, FIELD) ROW
 
-TEXT_CODEPOINT_IS_SCALAR_PROTOTYPE {
-  uint_least32_t value = (uint_least32_t)codepoint;
-  return value <= UINT32_C(0x10FFFF) &&
-         !(value >= UINT32_C(0xD800) && value <= UINT32_C(0xDFFF));
-}
+#define TEXT_CODEPOINT_INTERNAL_TABLE(X)                                       \
+  X((MAX_VALID, 0x10FFFF))                                                     \
+  X((SURROGATE_MIN, 0xD800))                                                   \
+  X((SURROGATE_MAX, 0xDFFF))                                                   \
+  X((ASCII_MAX, 0x7F))                                                         \
+  X((C0_CONTROL_MAX, 0x1F))                                                    \
+  X((C1_CONTROL_MIN, 0x7F))                                                    \
+  X((C1_CONTROL_MAX, 0x9F))                                                    \
+  X((WS_TAB, 0x0009))                                                          \
+  X((WS_CR, 0x000D))                                                           \
+  X((WS_SPACE, 0x0020))                                                        \
+  X((WS_NEL, 0x0085))                                                          \
+  X((WS_NBSP, 0x00A0))                                                         \
+  X((WS_OGHAM, 0x1680))                                                        \
+  X((WS_EN_QUAD, 0x2000))                                                      \
+  X((WS_HAIR_SPACE, 0x200A))                                                   \
+  X((WS_LINE_SEP, 0x2028))                                                     \
+  X((WS_PARA_SEP, 0x2029))                                                     \
+  X((WS_NNBSP, 0x202F))                                                        \
+  X((WS_MMSP, 0x205F))                                                         \
+  X((WS_IDEOGRAPHIC, 0x3000))
 
-TEXT_CODEPOINT_IS_ASCII_PROTOTYPE {
-  return (uint_least32_t)codepoint <= UINT32_C(0x7F);
-}
+IENUM_DEF(Text_Codepoint, Bounds, TEXT_CODEPOINT_INTERNAL_TABLE)
 
-TEXT_CODEPOINT_IS_CONTROL_PROTOTYPE {
-  uint_least32_t value = (uint_least32_t)codepoint;
-  return value <= UINT32_C(0x1F) ||
-         (value >= UINT32_C(0x7F) && value <= UINT32_C(0x9F));
-}
+MODULE_IMPLEMENT(DOMAIN(Modules), Text,
+  PACKAGE(Codepoint,
+    VARIANT(Is,
+      PREDICATE(Valid, (MODULE_TYPE(Text, Char32) codepoint), {
+        return (uint_least32_t)codepoint <=
+               (uint_least32_t)CNS(Text, Codepoint, Internal, MAX_VALID);
+      }),
 
-TEXT_CODEPOINT_IS_WHITESPACE_PROTOTYPE {
-  uint_least32_t value = (uint_least32_t)codepoint;
-  return (value >= UINT32_C(0x0009) && value <= UINT32_C(0x000D)) ||
-         value == UINT32_C(0x0020) || value == UINT32_C(0x0085) ||
-         value == UINT32_C(0x00A0) || value == UINT32_C(0x1680) ||
-         (value >= UINT32_C(0x2000) && value <= UINT32_C(0x200A)) ||
-         value == UINT32_C(0x2028) || value == UINT32_C(0x2029) ||
-         value == UINT32_C(0x202F) || value == UINT32_C(0x205F) ||
-         value == UINT32_C(0x3000);
-}
+      PREDICATE(Scalar, (MODULE_TYPE(Text, Char32) codepoint), {
+        uint_least32_t value = (uint_least32_t)codepoint;
+        return value <= (uint_least32_t)CNS(Text, Codepoint, Internal, MAX_VALID) &&
+               !(value >= (uint_least32_t)CNS(Text, Codepoint, Internal,
+                                              SURROGATE_MIN) &&
+                 value <= (uint_least32_t)CNS(Text, Codepoint, Internal,
+                                              SURROGATE_MAX));
+      }),
+
+      PREDICATE(ASCII, (MODULE_TYPE(Text, Char32) codepoint), {
+        return (uint_least32_t)codepoint <=
+               (uint_least32_t)CNS(Text, Codepoint, Internal, ASCII_MAX);
+      }),
+
+      PREDICATE(Control, (MODULE_TYPE(Text, Char32) codepoint), {
+        uint_least32_t value = (uint_least32_t)codepoint;
+        return value <=
+                   (uint_least32_t)CNS(Text, Codepoint, Internal, C0_CONTROL_MAX) ||
+               (value >=
+                    (uint_least32_t)CNS(Text, Codepoint, Internal, C1_CONTROL_MIN) &&
+                value <=
+                    (uint_least32_t)CNS(Text, Codepoint, Internal, C1_CONTROL_MAX));
+      }),
+
+      PREDICATE(Whitespace, (MODULE_TYPE(Text, Char32) codepoint), {
+        uint_least32_t value = (uint_least32_t)codepoint;
+        return (value >= (uint_least32_t)CNS(Text, Codepoint, Internal, WS_TAB) &&
+                value <= (uint_least32_t)CNS(Text, Codepoint, Internal, WS_CR)) ||
+               value == (uint_least32_t)CNS(Text, Codepoint, Internal, WS_SPACE) ||
+               value == (uint_least32_t)CNS(Text, Codepoint, Internal, WS_NEL) ||
+               value == (uint_least32_t)CNS(Text, Codepoint, Internal, WS_NBSP) ||
+               value == (uint_least32_t)CNS(Text, Codepoint, Internal, WS_OGHAM) ||
+               (value >=
+                    (uint_least32_t)CNS(Text, Codepoint, Internal, WS_EN_QUAD) &&
+                value <=
+                    (uint_least32_t)CNS(Text, Codepoint, Internal, WS_HAIR_SPACE)) ||
+               value ==
+                   (uint_least32_t)CNS(Text, Codepoint, Internal, WS_LINE_SEP) ||
+               value ==
+                   (uint_least32_t)CNS(Text, Codepoint, Internal, WS_PARA_SEP) ||
+               value == (uint_least32_t)CNS(Text, Codepoint, Internal, WS_NNBSP) ||
+               value == (uint_least32_t)CNS(Text, Codepoint, Internal, WS_MMSP) ||
+               value ==
+                   (uint_least32_t)CNS(Text, Codepoint, Internal, WS_IDEOGRAPHIC);
+      })
+    )
+  )
+);
+
 /* EOF */

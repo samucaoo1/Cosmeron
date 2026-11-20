@@ -1,30 +1,12 @@
 name: 04 · Experimental
 
-# Forward-looking portability and research probes: OpenHarmony (OHOS),
-# Huawei HarmonyOS NEXT (HOS), ChromeOS (Crostini), OpenIndiana (Illumos),
-# Oracle Solaris, Android NDK, iOS cross-compilation and audio fidelity parity.
-#
-# Non-blocking workflow: results provide feasibility data and diagnostic logs;
-# failures are informational and do NOT block pull requests or merges.
+# Informational portability probes. These jobs do not block merges.
+# Compile-only and synthetic probes are explicitly not device certification.
 
 on:
   push:
-    branches:
-      - main
-      - audio-module
-    paths-ignore:
-      - '.github/badges/**'
-      - '.github/entropy/state.json'
-      - 'Docs/**'
-      - '*.md'
+    branches: [main, Alpha-Version, pattern-refactor, audio-module]
   pull_request:
-    branches:
-      - main
-    paths-ignore:
-      - '.github/badges/**'
-      - '.github/entropy/state.json'
-      - 'Docs/**'
-      - '*.md'
   schedule:
     - cron: '29 5 * * 1'
   workflow_dispatch:
@@ -33,233 +15,141 @@ permissions:
   contents: read
 
 concurrency:
-  group: experimental-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: experimental-restored-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  # =========================================================================
-  # 1. OpenHarmony (OHOS) Native SDK 6.0 ARM64
-  # =========================================================================
   openharmony:
-    name: Experimental / OpenHarmony (OHOS SDK 6.0)
+    name: Experimental / OpenHarmony SDK 6.0 (ARM64)
     runs-on: ubuntu-latest
     timeout-minutes: 60
     continue-on-error: true
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Install official native OpenHarmony SDK 6.0
+      - uses: actions/checkout@v7
+      - name: Install official OpenHarmony native SDK
         id: sdk
-        uses: openharmony-rs/setup-ohos-sdk@b312caf8a43bb836aa24c08f65f97e1f09a89cad
+        uses: openharmony-rs/setup-ohos-sdk@eb82b94ef522b07269679195c2512f22e922ef3b
         with:
           version: '6.0'
           components: native
           cache: 'true'
-      - name: Compile and link OHOS C11 multi-TU
+      - name: Cross-compile C11 and OS-backed probes
         env:
           OHOS_SDK: ${{ steps.sdk.outputs.ohos_sdk_native }}
           OHOS_ARCH: arm64-v8a
           OHOS_SYSTEM_PROBES: 'ON'
-        run: sh Tools/ohos/check-portability.sh
-      - name: Save target compiler diagnostics
+        run: sh .github/tools/ohos/check-portability.sh
+      - name: Upload target diagnostics
         if: ${{ always() }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
-          name: ohos-native-target-diagnostics
+          name: openharmony-sdk-diagnostics
           path: |
             .build-ohos/target-macros.txt
             .build-ohos/target-triple.txt
           if-no-files-found: ignore
 
-  # =========================================================================
-  # 2. Huawei HarmonyOS NEXT (HOS) ABI and Header Probes
-  # =========================================================================
   harmonyos-next:
-    name: Experimental / HarmonyOS NEXT (HOS compatibility)
+    name: Experimental / HarmonyOS NEXT boundary probe (synthetic)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     continue-on-error: true
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Verify POSIX, C11 and ArkTS native bridge boundary
+      - uses: actions/checkout@v7
+      - name: Check OHOS ABI overlay without claiming HarmonyOS NEXT support
         run: |
           set -eu
-          echo "### Probing Huawei HarmonyOS NEXT native C11 expectations ###"
-          # Check header-only macros for platform discrimination
-          gcc -std=c11 -Wall -Wextra -Wpedantic -Werror \
-            -I Codespace Tools/ohos/check-portability.sh >/dev/null 2>&1 || true
-          sh Tools/ohos/check-device.sh || true
-          echo "HarmonyOS NEXT probe logged."
+          cat > "$RUNNER_TEMP/harmonyos-next-probe.c" <<'EOF'
+          #include "Codespace/Cosmeron/Core/Preprocessor/Detect/Detect.h"
+          #if !OS_OHOS
+          #error "The synthetic OHOS ABI marker was not detected"
+          #endif
+          int main(void) { return OS_OHOS ? 0 : 1; }
+          EOF
+          gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -D__OHOS__=1 -I .             "$RUNNER_TEMP/harmonyos-next-probe.c" -o "$RUNNER_TEMP/hos-probe"
+          "$RUNNER_TEMP/hos-probe"
+          echo "Synthetic ABI macro probe passed; HarmonyOS NEXT SDK/runtime remains UNVERIFIED."
 
-  # =========================================================================
-  # 3. ChromeOS Crostini Linux container
-  # =========================================================================
   chromeos-crostini:
-    name: Experimental / ChromeOS (Crostini proxy)
+    name: Experimental / Crostini Linux userspace proxy (not Chromebook hardware)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     continue-on-error: true
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Run Crostini validation suite inside Debian container
+      - uses: actions/checkout@v7
+      - name: Run portable manifest in Debian container
         run: |
-          docker run --rm -v "$PWD:/workspace" -w /workspace debian:stable-slim \
-            /bin/sh -ec "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y gcc libc6-dev make python3; sh Tools/crostini/check.sh"
+          docker run --rm -v "$PWD:/workspace" -w /workspace debian:stable-slim             /bin/sh -ec 'apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y gcc libc6-dev && sh .github/scripts/test-portable-core.sh'
+      - name: Explain hardware verification boundary
+        run: |
+          echo "This is a Debian userspace proxy only. Real Crostini validation requires a Chromebook; see .github/tools/crostini/README.md." >> "$GITHUB_STEP_SUMMARY"
 
-  # =========================================================================
-  # 4. OpenIndiana (Illumos kernel) VM (disabled)
-  # =========================================================================
-  # openindiana:
-  #   name: Experimental / OpenIndiana (Illumos VM)
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 85
-  #   continue-on-error: true
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v7
-  #     - name: Run portable C11 suite inside OpenIndiana Hipster VM
-  #       uses: vmactions/openindiana-vm@74a06af3be38c265a2d99d1af520d66a057ff222
-  #       with:
-  #         usesh: true
-  #         prepare: |
-  #           pkg install --accept build-essential || pkg install --accept developer/gcc-11 || true
-  #         run: |
-  #           set -eu
-  #           export PATH="/usr/gnu/bin:/usr/bin:$PATH"
-  #           export CC="${CC:-gcc}"
-  #           sh .github/scripts/test-portable-core.sh
-  #           sh .github/scripts/test-bsd-native.sh
-
-  # =========================================================================
-  # 5. Oracle Solaris VM (disabled)
-  # =========================================================================
-  # solaris:
-  #   name: Experimental / Solaris (Oracle Solaris VM)
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 85
-  #   continue-on-error: true
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v7
-  #     - name: Run portable C11 suite inside Solaris VM
-  #       uses: vmactions/solaris-vm@87d3c436511cef802cd1637f86f73b1a97715c8c
-  #       with:
-  #         usesh: true
-  #         release: '11.4-gcc'
-  #         run: |
-  #           set -eu
-  #           export PATH="/usr/gcc/bin:/usr/bin:$PATH"
-  #           export CC="${CC:-gcc}"
-  #           sh .github/scripts/test-portable-core.sh
-  #           sh .github/scripts/test-bsd-native.sh
-
-  # =========================================================================
-  # 6. Android NDK cross-compilation (aarch64)
-  # =========================================================================
   android-ndk:
-    name: Experimental / Android (NDK Clang aarch64)
+    name: Experimental / Android NDK (aarch64)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     continue-on-error: true
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Cross-compile portable C11 suites for Android aarch64
+      - uses: actions/checkout@v7
+      - name: Cross-compile manifest suites for Android
+        shell: bash
         run: |
           set -eu
-          NDK_ROOT="${ANDROID_NDK_LATEST_HOME:-$ANDROID_NDK_HOME}"
+          NDK_ROOT="${ANDROID_NDK_LATEST_HOME:-${ANDROID_NDK_HOME:-}}"
           if [ -z "$NDK_ROOT" ] || [ ! -d "$NDK_ROOT" ]; then
-            echo "Searching for Android NDK..."
-            NDK_ROOT=$(ls -d /usr/local/lib/android/sdk/ndk/* 2>/dev/null | sort -V | tail -n 1 || true)
+            NDK_ROOT=$(find /usr/local/lib/android/sdk/ndk -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort -V | tail -n 1)
           fi
-          echo "Using Android NDK: $NDK_ROOT"
+          test -n "$NDK_ROOT"
           TOOLCHAIN="$NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin"
-          CLANG=$(ls "$TOOLCHAIN"/aarch64-linux-android*-clang | grep -v '++' | sort -V | tail -n 1)
-          echo "Target compiler: $CLANG"
+          CLANG=$(find "$TOOLCHAIN" -maxdepth 1 -name 'aarch64-linux-android*-clang' ! -name '*++' | sort -V | tail -n 1)
+          test -x "$CLANG"
           PORTABLE_RUN=0 CC="$CLANG" sh .github/scripts/test-portable-core.sh
-          file .build-portable/Core_Memory || true
+          file .build-portable/*
 
-  # =========================================================================
-  # 7. iOS cross-compilation (arm64 Apple SDK)
-  # =========================================================================
   ios-cross:
-    name: Experimental / iOS (Apple SDK arm64)
+    name: Experimental / iOS SDK (arm64 compile-only)
     runs-on: macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     continue-on-error: true
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Cross-compile portable C11 suites for iOS arm64
+      - uses: actions/checkout@v7
+      - name: Cross-compile manifest suites for iOS
         run: |
           set -eu
-          SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
-          echo "Using iPhoneOS SDK: $SDK_PATH"
-          CLANG="xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=15.0"
-          PORTABLE_RUN=0 CC="$CLANG" sh .github/scripts/test-portable-core.sh
-          file .build-portable/Core_Memory || true
+          xcrun --sdk iphoneos --show-sdk-path
+          PORTABLE_RUN=0 CC="xcrun --sdk iphoneos clang -arch arm64 -miphoneos-version-min=15.0"             sh .github/scripts/test-portable-core.sh
+          file .build-portable/*
 
-  # =========================================================================
-  # 8. Audio native parity fixtures & residual diagnostics
-  # =========================================================================
-  audio-parity:
-    name: Experimental / Audio (PCM parity & fixtures)
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    continue-on-error: true
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Install diagnostic encoder dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg
-      - name: Multi-tone MP3 self-consistency parity
-        run: |
-          cd Codespace/Tests/Audio
-          sh MP3ParityFixtures.sh
-
-  # =========================================================================
-  # 9. Redox OS (microkernel / relibc) compatibility probe
-  # =========================================================================
   redox-os:
-    name: Experimental / Redox OS (relibc probe)
+    name: Experimental / Redox OS macro probe (synthetic)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     continue-on-error: true
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Verify Redox OS and relibc macro discrimination
+      - uses: actions/checkout@v7
+      - name: Compile target-detection probe with Redox ABI markers
         run: |
           set -eu
-          echo "### Probing Redox OS native C11 expectations ###"
-          gcc -std=c11 -Wall -Wextra -Wpedantic -Werror \
+          cat > "$RUNNER_TEMP/redox-detect.c" <<'EOF'
+          #include "Codespace/Cosmeron/Core/Preprocessor/Detect/Detect.h"
+          #if !OS_REDOX || !OS_UNIX
+          #error "The synthetic Redox target markers were not detected"
+          #endif
+          int main(void) { return OS_REDOX && OS_UNIX ? 0 : 1; }
+          EOF
+          gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -I . \
             -U__linux__ -U__linux -U__gnu_linux__ -Ulinux -D__redox__=1 \
-            -D_POSIX_C_SOURCE=200809L \
-            Codespace/Tests/Core/Detect.c -o /dev/null
-          echo "Redox OS detection probe succeeded."
+            "$RUNNER_TEMP/redox-detect.c" -o "$RUNNER_TEMP/redox-detect"
+          "$RUNNER_TEMP/redox-detect"
+          echo "Synthetic Redox macro probe passed; relibc/toolchain/runtime remain UNVERIFIED."
 
-  # =========================================================================
-  # 10. Informational summary gate (non-blocking)
-  # =========================================================================
   gate:
-    name: Experimental / Summary
+    name: Experimental / Summary (non-blocking)
     if: ${{ always() }}
-    needs:
-      - openharmony
-      - harmonyos-next
-      - chromeos-crostini
-      - android-ndk
-      - ios-cross
-      - audio-parity
-      - redox-os
+    needs: [openharmony, harmonyos-next, chromeos-crostini, android-ndk, ios-cross, redox-os]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
       - name: Summarize experimental outcomes
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}

@@ -1,97 +1,79 @@
 #include "../../Cosmeron/Modules/Text/Text.h"
 
 #include <assert.h>
-
-static void test_palette_and_attributes(void) {
-  const TEXT_GRID_COLOR_TYPE(RGB) *palette =
-      TEXT_GRID_COLOR_FUNC(WindowsPalette)();
-  TEXT_GRID_ATTRIBUTE_TYPE(Cell) cell = TEXT_GRID_ATTRIBUTE_FUNC(Default)();
-  assert(TEXT_GRID_COLOR_RGB(0x12U, 0x34U, 0x56U) == UINT32_C(0x123456));
-  assert(TEXT_GRID_COLOR_RED(UINT32_C(0x123456)) == 0x12U);
-  assert(palette[TEXT_GRID_COLOR_CONST(WINDOWS_INDEX_BRIGHT_RED)] ==
-         TEXT_GRID_COLOR_CONST(WINDOWS_BRIGHT_RED));
-  assert((cell.flags & TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_FOREGROUND)) != 0U);
-  assert((cell.flags & TEXT_GRID_ATTRIBUTE_CONST(DEFAULT_BACKGROUND)) != 0U);
-  assert(cell.underline == TEXT_GRID_UNDERLINE_CONST(NONE));
-}
-
-static void test_char_variants(void) {
-  TEXT_GRID_CHAR_TYPE(char) bytes = {0};
-  TEXT_GRID_CHAR_TYPE(char16) words = {0};
-  TDUAL_TYPE(uint16) size = {.col = 2U, .row = 2U};
-  assert(TEXT_GRID_CHAR_FUNC(char, Create)(&bytes, size) == STATUS_CONST(SUCCESS));
-  assert(TEXT_GRID_CHAR_FUNC(char16, Create)(&words, size) ==
-         STATUS_CONST(SUCCESS));
-  assert(bytes.data[3] == '\0' && words.data[3] == u'\0');
-  assert(TEXT_GRID_CHAR_FUNC(char, Destroy)(&bytes) == STATUS_CONST(SUCCESS));
-  assert(TEXT_GRID_CHAR_FUNC(char16, Destroy)(&words) == STATUS_CONST(SUCCESS));
-}
-
-static void test_grid_operations(void) {
-  TEXT_GRID_TYPE(char32) grid = {0};
-  TEXT_GRID_TYPE(char32) region = {0};
-  TEXT_GRID_ATTRIBUTE_TYPE(Cell) red = TEXT_GRID_ATTRIBUTE_FUNC(Default)();
-  TEXT_GRID_ATTRIBUTE_TYPE(Cell) transparent =
-      TEXT_GRID_ATTRIBUTE_FUNC(Default)();
-  TDUAL_TYPE(uint16) position = {.x = 1U, .y = 1U};
-  TQUAD_TYPE(uint16) rectangle = {
-      .left = 1U, .right = 2U, .top = 1U, .bottom = 2U};
-  TEXT_TYPE(TChar32) character;
-  TEXT_GRID_ATTRIBUTE_TYPE(Cell) attribute;
-
-  red.foreground = TEXT_GRID_COLOR_CONST(WINDOWS_BRIGHT_RED);
-  red.background = TEXT_GRID_COLOR_CONST(WINDOWS_DARK_BLUE);
-  red.flags = TEXT_GRID_ATTRIBUTE_CONST(BOLD);
-  red.underline = TEXT_GRID_UNDERLINE_CONST(DOUBLE);
-
-  assert(TEXT_GRID_FUNC(char32, Create)(
-             &grid, (TDUAL_TYPE(uint16)){.col = 4U, .row = 3U}) ==
-         STATUS_CONST(SUCCESS));
-  assert(TEXT_GRID_FUNC(char32, IsValid)(&grid));
-  assert(grid.chars.data[0] == U'\0');
-
-  assert(TEXT_GRID_FUNC(char32, WriteCell)(&grid, position, ((TEXT_TYPE(TChar32))UINT32_C(0x754C)), red) ==
-         STATUS_CONST(SUCCESS));
-  assert(TEXT_GRID_FUNC(char32, ReadCell)(&grid, position, &character,
-                                          &attribute) == STATUS_CONST(SUCCESS));
-  assert(character == ((TEXT_TYPE(TChar32))UINT32_C(0x754C)) && attribute.foreground == red.foreground);
-
-  assert(TEXT_GRID_FUNC(char32, FillRegion)(&grid, rectangle, U'X', red) ==
-         STATUS_CONST(SUCCESS));
-  assert(TEXT_GRID_FUNC(char32, Read)(&grid, rectangle, &region) ==
-         STATUS_CONST(SUCCESS));
-  assert(region.chars.size.col == 2U && region.chars.size.row == 2U);
-  assert(region.chars.data[3] == U'X');
-
-  assert(TEXT_GRID_FUNC(char32, Write)(
-             &grid, (TDUAL_TYPE(uint16)){.x = 0U, .y = 0U}, &region) ==
-         STATUS_CONST(SUCCESS));
-  assert(grid.chars.data[0] == U'X');
-
-  transparent.foreground = TEXT_GRID_COLOR_CONST(WINDOWS_WHITE);
-  transparent.background = TEXT_GRID_COLOR_CONST(WINDOWS_BRIGHT_GREEN);
-  transparent.flags = TEXT_GRID_ATTRIBUTE_CONST(TRANSPARENT_BACKGROUND);
-  assert(TEXT_GRID_FUNC(char32, Fill)(&region, U'Z', transparent) ==
-         STATUS_CONST(SUCCESS));
-  assert(TEXT_GRID_FUNC(char32, Blit)(
-             &grid, (TDUAL_TYPE(uint16)){.x = 0U, .y = 0U}, &region) ==
-         STATUS_CONST(SUCCESS));
-  assert(grid.chars.data[0] == U'Z');
-  assert(grid.attributes.data[0].background == red.background);
-
-  assert(TEXT_GRID_FUNC(char32, Resize)(
-             &grid, (TDUAL_TYPE(uint16)){.col = 5U, .row = 4U}) ==
-         STATUS_CONST(SUCCESS));
-  assert(grid.chars.data[0] == U'Z');
-  assert(grid.chars.data[19] == U'\0');
-  assert(TEXT_GRID_FUNC(char32, Destroy)(&region) == STATUS_CONST(SUCCESS));
-  assert(TEXT_GRID_FUNC(char32, Destroy)(&grid) == STATUS_CONST(SUCCESS));
-  assert(TEXT_GRID_FUNC(char32, IsEmpty)(&grid));
-}
+#include <stdio.h>
+#include <string.h>
 
 int main(void) {
-  test_palette_and_attributes();
-  test_char_variants();
-  test_grid_operations();
+  /* 1. Unicode Codepoint & Width */
+  assert(MODULE_FUNC(Text, Codepoint, IsValid)(0x1F600U));
+  assert(!MODULE_FUNC(Text, Codepoint, IsScalar)(0xD800U));
+  assert(MODULE_FUNC(Text, Codepoint, IsASCII)('A'));
+  int cpWidth = 0;
+  assert(MODULE_FUNC(Text, Width, Codepoint)('A', &cpWidth) ==
+         STATUS_CONST(SUCCESS));
+  assert(cpWidth == 1);
+
+  /* 2. CString */
+  assert(MODULE_FUNC(Text, CString, Length)("Cosmeron") == 8U);
+  assert(MODULE_FUNC(Text, CString, IsAscii)("Cosmeron"));
+
+  /* 3. View */
+  MODULE_TYPE(Text, View8) view =
+      MODULE_FUNC(Text, View8, FromCStr)("Hello");
+  assert(MODULE_FUNC(Text, View8, Length)(view) == 5U);
+  assert(MODULE_FUNC(Text, View8, StartsWith)(
+      view, MODULE_FUNC(Text, View8, FromCStr)("He")));
+
+  /* 4. Builder & String8 */
+  MODULE_TYPE(Text, Builder) builder;
+  assert(MODULE_FUNC(Text, Builder, Create)(&builder, 16U) ==
+         STATUS_CONST(SUCCESS));
+  assert(MODULE_FUNC(Text, Builder, AppendCStr)(&builder, "Cos") ==
+         STATUS_CONST(SUCCESS));
+  assert(MODULE_FUNC(Text, Builder, AppendCStr)(&builder, "meron") ==
+         STATUS_CONST(SUCCESS));
+  assert(strcmp(MODULE_FUNC(Text, Builder, CStr)(&builder), "Cosmeron") == 0);
+
+  MODULE_TYPE(Text, String8) str8;
+  assert(MODULE_FUNC(Text, Builder, BuildString)(&builder, &str8) ==
+         STATUS_CONST(SUCCESS));
+  assert(MODULE_FUNC(Text, String8, Validate)(&str8));
+  assert(MODULE_FUNC(Text, String8, AppendCodepoint)(&str8, '!') ==
+         STATUS_CONST(SUCCESS));
+  size_t cpCount = 0U;
+  assert(MODULE_FUNC(Text, String8, CountCodepoints)(&str8, &cpCount) ==
+         STATUS_CONST(SUCCESS));
+  assert(cpCount == 9U);
+  assert(strcmp(MODULE_FUNC(Text, String8, CStr)(&str8), "Cosmeron!") == 0);
+  assert(MODULE_FUNC(Text, String8, Destroy)(&str8) == STATUS_CONST(SUCCESS));
+  assert(MODULE_FUNC(Text, Builder, Destroy)(&builder) ==
+         STATUS_CONST(SUCCESS));
+
+  /* 5. Attributed (TText_Attributed) */
+  MODULE_TYPE(Text, Attributed) attr;
+  assert(MODULE_FUNC(Text, Attributed, Create)(&attr, 16U) ==
+         STATUS_CONST(SUCCESS));
+  assert(MODULE_FUNC(Text, Attributed, SetText)(&attr, "Hi", 2U) ==
+         STATUS_CONST(SUCCESS));
+  assert(strcmp(MODULE_FUNC(Text, Attributed, Text)(&attr), "Hi") == 0);
+  assert(MODULE_FUNC(Text, Attributed, Destroy)(&attr) ==
+         STATUS_CONST(SUCCESS));
+
+  /* 6. Format with %TBigint128 & %TDecimal128 */
+  MODULE_TYPE(Numeric, Bigint128) bi = {0};
+  MODULE_FUNC(Numeric, Bigint128, Init)(&bi);
+  bi.limb[0] = 42ULL;
+  MODULE_TYPE(Numeric, Decimal128) dec = {0};
+  MODULE_FUNC(Numeric, Decimal128, Init)(&dec);
+  dec.limb[0] = 99ULL;
+  char fmtBuf[64] = {0};
+  size_t fmtWritten = 0U;
+  assert(MODULE_FUNC(Text, Format, Buffer)(
+             fmtBuf, sizeof(fmtBuf), &fmtWritten, "%TBigint128:%TDecimal128",
+             &bi, &dec) == STATUS_CONST(SUCCESS));
+  assert(strcmp(fmtBuf, "42:99") == 0);
+
+  printf("Text tests passed!\n");
   return 0;
 }

@@ -1,82 +1,94 @@
 #pragma once
 
-MEMORY_COPY_PROTOTYPE {
-  if (size == 0)
-    return STATUS_CONST(SUCCESS);
-  if (!destination || !source)
-    return STATUS_CONST(INVALID_ARGUMENT);
+MODULE_IMPLEMENT(DOMAIN(Core), Memory,
+  PACKAGE(Operations,
+    VARIANT(Copy,
+      OPERATION((void *destination, const void *source, size_t size), {
+        if (size == 0U)
+          return STATUS_CONST(SUCCESS);
+        if (!destination || !source)
+          return STATUS_CONST(INVALID_ARGUMENT);
+        if (destination == source)
+          return STATUS_CONST(SUCCESS);
 
-  memcpy(destination, source, size);
-  return STATUS_CONST(SUCCESS);
-}
+        {
+          uintptr_t destAddr = (uintptr_t)destination;
+          uintptr_t srcAddr = (uintptr_t)source;
+          if (size > (size_t)(UINTPTR_MAX - destAddr) ||
+              size > (size_t)(UINTPTR_MAX - srcAddr))
+            return STATUS_CONST(OUT_OF_RANGE);
+          if (destAddr < srcAddr + size && srcAddr < destAddr + size)
+            return STATUS_CONST(INVALID_ARGUMENT);
+        }
 
-MEMORY_MOVE_PROTOTYPE {
-  if (size == 0)
-    return STATUS_CONST(SUCCESS);
-  if (!destination || !source)
-    return STATUS_CONST(INVALID_ARGUMENT);
+        memcpy(destination, source, size);
+        return STATUS_CONST(SUCCESS);
+      }),
+      OPERATION(Array, (void *destination, const void *source, size_t count, size_t elementSize), {
+        size_t size = 0U;
+        OPSTATUS status = MODULE_IFUNC(Memory, CheckedMultiplySize)(count, elementSize, &size);
+        if (status != STATUS_CONST(SUCCESS))
+          return status;
 
-  memmove(destination, source, size);
-  return STATUS_CONST(SUCCESS);
-}
+        return MODULE_FUNC(Memory, Operations, Copy)(destination, source, size);
+      })
+    ),
 
-MEMORY_SET_PROTOTYPE {
-  if (size == 0)
-    return STATUS_CONST(SUCCESS);
-  if (!destination)
-    return STATUS_CONST(INVALID_ARGUMENT);
+    VARIANT(Move,
+      OPERATION((void *destination, const void *source, size_t size), {
+        if (size == 0U)
+          return STATUS_CONST(SUCCESS);
+        if (!destination || !source)
+          return STATUS_CONST(INVALID_ARGUMENT);
 
-  memset(destination, value, size);
-  return STATUS_CONST(SUCCESS);
-}
+        memmove(destination, source, size);
+        return STATUS_CONST(SUCCESS);
+      }),
+      OPERATION(Array, (void *destination, const void *source, size_t count, size_t elementSize), {
+        size_t size = 0U;
+        OPSTATUS status = MODULE_IFUNC(Memory, CheckedMultiplySize)(count, elementSize, &size);
+        if (status != STATUS_CONST(SUCCESS))
+          return status;
 
-MEMORY_ZERO_PROTOTYPE {
-  return MEMORY_FUNC(Set)(destination, 0, size);
-}
+        return MODULE_FUNC(Memory, Operations, Move)(destination, source, size);
+      })
+    ),
 
-static inline OPSTATUS MEMORY_INS(OperationArraySize)(size_t count,
-                                                          size_t elementSize,
-                                                          size_t *outSize) {
-  if (!outSize)
-    return STATUS_CONST(INVALID_ARGUMENT);
+    OPERATION(Set, (void *destination, int value, size_t size), {
+      if (size == 0U)
+        return STATUS_CONST(SUCCESS);
+      if (!destination)
+        return STATUS_CONST(INVALID_ARGUMENT);
 
-  if (elementSize != 0 && count > SIZE_MAX / elementSize)
-    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+      memset(destination, value, size);
+      return STATUS_CONST(SUCCESS);
+    }),
 
-  *outSize = count * elementSize;
-  return STATUS_CONST(SUCCESS);
-}
+    VARIANT(Zero,
+      OPERATION((void *destination, size_t size), {
+        return MODULE_FUNC(Memory, Operations, Set)(destination, 0, size);
+      }),
+      OPERATION(Array, (void *destination, size_t count, size_t elementSize), {
+        size_t size = 0U;
+        OPSTATUS status = MODULE_IFUNC(Memory, CheckedMultiplySize)(count, elementSize, &size);
+        if (status != STATUS_CONST(SUCCESS))
+          return status;
 
-MEMORY_COPY_ARRAY_PROTOTYPE {
-  size_t size = 0;
-  OPSTATUS status =
-      MEMORY_INS(OperationArraySize)(count, elementSize, &size);
+        return MODULE_FUNC(Memory, Operations, Zero)(destination, size);
+      })
+    ),
 
-  if (status != STATUS_CONST(SUCCESS))
-    return status;
+    PREDICATE(Equals, (const void *left, const void *right, size_t size), {
+      if (size == 0U)
+        return true;
+      if (!left || !right)
+        return false;
+      if (left == right)
+        return true;
 
-  return MEMORY_FUNC(Copy)(destination, source, size);
-}
+      return memcmp(left, right, size) == 0;
+    })
+  )
+);
 
-MEMORY_MOVE_ARRAY_PROTOTYPE {
-  size_t size = 0;
-  OPSTATUS status =
-      MEMORY_INS(OperationArraySize)(count, elementSize, &size);
-
-  if (status != STATUS_CONST(SUCCESS))
-    return status;
-
-  return MEMORY_FUNC(Move)(destination, source, size);
-}
-
-MEMORY_ZERO_ARRAY_PROTOTYPE {
-  size_t size = 0;
-  OPSTATUS status =
-      MEMORY_INS(OperationArraySize)(count, elementSize, &size);
-
-  if (status != STATUS_CONST(SUCCESS))
-    return status;
-
-  return MEMORY_FUNC(Zero)(destination, size);
-}
 /* EOF */

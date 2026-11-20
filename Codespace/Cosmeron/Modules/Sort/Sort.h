@@ -1,9 +1,0 @@
-#pragma once
-#include "Sort.space"
-#include "Array.h"
-#include "Integer.h"
-#include "Utility.h"
-#include "Typed.h"
-#include "Classical.h"
-#include "Esoteric.h"
-#include "FunctionTable/Sort.inc"

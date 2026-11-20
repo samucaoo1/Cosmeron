@@ -1,0 +1,20 @@
+#pragma once
+
+#define TYPE_CATEGORY_COL_NAME(NAME, DESC) NAME
+#define TYPE_CATEGORY_COL_DESC(NAME, DESC) DESC
+
+#define TYPE_CATEGORY_GET(FIELD, ROW)                                          \
+  PP_OP_CAT2(TYPE_CATEGORY_COL_, FIELD) ROW
+
+#define TYPE_CATEGORY_TABLE(X)                                                 \
+  X((BOOL, "Boolean"))                                                         \
+  X((INT, "Signed integer"))                                                   \
+  X((UINT, "Unsigned integer"))                                                 \
+  X((CHAR, "Character"))                                                       \
+  X((FLOAT, "Floating-point"))                                                 \
+  X((PTR, "Architecture pointer or integer"))                                  \
+  X((EXTENDED_NUMERIC, "Extended or arbitrary-precision numeric"))              \
+  X((COMPOSITE, "Composite structure or value type"))                          \
+  X((OBJECT, "Managed or stateful object"))
+/* EOF */
+

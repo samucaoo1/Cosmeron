@@ -1,16 +1,14 @@
-#include "../../Cosmeron/Modules/Type/Fundamental.h"
-#include "../../Cosmeron/Modules/Type/TBigint.h"
-#include "../../Cosmeron/Modules/Type/TBlock.h"
-#include "../../Cosmeron/Modules/Type/TDecimal.h"
-#include "../../Cosmeron/Modules/Type/Tag.h"
+#include "../../Cosmeron/Core/Types/Primitive.h"
+#include "../../Cosmeron/Core/Types/ByteTag.h"
+#include "../../Cosmeron/Core/Types/Optional.h"
+#include "../../Cosmeron/Core/Types/Result.h"
+#include "../../Cosmeron/Core/Types/Any.h"
+#include "../../Cosmeron/Core/Types/Traits.h"
+#include "../../Cosmeron/Core/Types/TaggedUnion.h"
+#include "../../Cosmeron/Core/Memory/Block.h"
+#include "../../Cosmeron/Core/Bit/Bitset.h"
+#include "../../Cosmeron/Modules/Numeric/Bigint.h"
+#include "../../Cosmeron/Modules/Numeric/Decimal.h"
 
-int main(void) {
-  TYPE_NS(TInt8) signedValue = 0;
-  TYPE_NS(TUInt64) unsignedValue = 0U;
-  TYPE_NS(TFloat32) realValue = 0.0f;
-  TYPE_NS(TChar32) character = 0U;
-  TYPE_NS(TTag) tag = {0};
+int main(void) { return 0; }
 
-  return signedValue != 0 || unsignedValue != 0U || realValue != 0.0f ||
-         character != 0U || tag.value != 0U;
-}

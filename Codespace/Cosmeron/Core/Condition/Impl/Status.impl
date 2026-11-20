@@ -1,0 +1,60 @@
+#pragma once
+
+#define COSMERON_MACRO_INTERNAL_STATUS_CATEGORY_CASE(ROW)                      \
+  case STATUS_CONST(STATUS_GET(NAME, ROW)):                                    \
+    return STATUS_CATEGORY_CONST(STATUS_GET(CATEGORY, ROW));
+
+#define COSMERON_MACRO_INTERNAL_STATUS_CAT_NAME_CASE(ROW)                      \
+  case STATUS_CATEGORY_CONST(STATUS_CATEGORY_GET(NAME, ROW)):                  \
+    return STATUS_CATEGORY_GET(MESSAGE, ROW);
+
+#define COSMERON_MACRO_INTERNAL_STATUS_NAME_CASE(ROW)                          \
+  case STATUS_CONST(STATUS_GET(NAME, ROW)):                                    \
+    return PP_OP_STRING(STATUS_GET(NAME, ROW));
+
+#define COSMERON_MACRO_INTERNAL_STATUS_MESSAGE_CASE(ROW)                       \
+  case STATUS_CONST(STATUS_GET(NAME, ROW)):                                    \
+    return STATUS_GET(MESSAGE, ROW);
+
+MODULE_IMPLEMENT(DOMAIN(Core), Condition,
+  PACKAGE(Status,
+    FUNCTION(MODULE_ENUM(Condition, Status, Category), CategoryOf, (OPSTATUS status), {
+      switch (status) {
+        STATUS_TABLE(COSMERON_MACRO_INTERNAL_STATUS_CATEGORY_CASE)
+        default:
+          return STATUS_CATEGORY_CONST(GENERIC);
+      }
+    }),
+
+    FUNCTION(const char *, CategoryName, (MODULE_ENUM(Condition, Status, Category) category), {
+      switch (category) {
+        STATUS_CATEGORY_TABLE(COSMERON_MACRO_INTERNAL_STATUS_CAT_NAME_CASE)
+        default:
+          return "Unknown";
+      }
+    }),
+
+    FUNCTION(const char *, Name, (OPSTATUS status), {
+      switch (status) {
+        STATUS_TABLE(COSMERON_MACRO_INTERNAL_STATUS_NAME_CASE)
+        default:
+          return "UNKNOWN";
+      }
+    }),
+
+    FUNCTION(const char *, Message, (OPSTATUS status), {
+      switch (status) {
+        STATUS_TABLE(COSMERON_MACRO_INTERNAL_STATUS_MESSAGE_CASE)
+        default:
+          return "Unknown status";
+      }
+    })
+  )
+);
+
+#undef COSMERON_MACRO_INTERNAL_STATUS_CATEGORY_CASE
+#undef COSMERON_MACRO_INTERNAL_STATUS_CAT_NAME_CASE
+#undef COSMERON_MACRO_INTERNAL_STATUS_NAME_CASE
+#undef COSMERON_MACRO_INTERNAL_STATUS_MESSAGE_CASE
+
+/* EOF */

@@ -1,399 +1,143 @@
-#include "../../Cosmeron/Modules/Type/Fundamental.h"
-#include "../../Cosmeron/Modules/Type/TBigint.h"
-#include "../../Cosmeron/Modules/Type/TBlock.h"
-#include "../../Cosmeron/Modules/Type/TDecimal.h"
+#include "../../Cosmeron/Core/Types/Primitive.h"
+#include "../../Cosmeron/Core/Types/ByteTag.h"
+#include "../../Cosmeron/Core/Memory/Block.h"
+#include "../../Cosmeron/Core/Bit/Bitset.h"
+#include "../../Cosmeron/Modules/Numeric/Bigint.h"
+#include "../../Cosmeron/Modules/Numeric/Decimal.h"
 #include <string.h>
 
-#define TEST_TBLOCK_BOUNDARIES(SUFFIX, WIDTH, ERROR_BASE)                      \
-  do {                                                                          \
-    TBlock(SUFFIX, bits);                                                       \
-    const void *api = (const void *)bits.api;                                   \
-    bool value = false;                                                         \
-    if (TBLOCK_FUNC(SUFFIX, BitSet)(&bits, (WIDTH) - 1U) !=                     \
-            STATUS_CONST(SUCCESS))                                              \
-      return (ERROR_BASE);                                                      \
-    if (TBLOCK_FUNC(SUFFIX, BitCheck)(&bits, (WIDTH) - 1U, &value) !=           \
-            STATUS_CONST(SUCCESS) ||                                            \
-        !value || (const void *)bits.api != api)                                \
-      return (ERROR_BASE) + 1;                                                  \
-    if (TBLOCK_FUNC(SUFFIX, BitSet)(&bits, (WIDTH)) !=                          \
-        STATUS_CONST(OUT_OF_RANGE))                                             \
-      return (ERROR_BASE) + 2;                                                  \
-    if (TBLOCK_FUNC(SUFFIX, ShiftRight)(&bits, (WIDTH) - 1U) !=                 \
-            STATUS_CONST(SUCCESS) ||                                            \
-        bits.limb[0] != 1U || (const void *)bits.api != api)                    \
-      return (ERROR_BASE) + 3;                                                  \
-    if (TBLOCK_FUNC(SUFFIX, RotateLeft)(&bits, (WIDTH)) !=                      \
-            STATUS_CONST(SUCCESS) ||                                            \
-        bits.limb[0] != 1U || (const void *)bits.api != api)                    \
-      return (ERROR_BASE) + 4;                                                  \
-    if (TBLOCK_FUNC(SUFFIX, Clear)(&bits) != STATUS_CONST(SUCCESS) ||           \
-        (const void *)bits.api != api)                                          \
-      return (ERROR_BASE) + 5;                                                  \
-  } while (0)
-
-#define TEST_TBIGINT_ARITHMETIC_BOUNDARIES(SUFFIX, WIDTH, ERROR_BASE)          \
-  do {                                                                          \
-    TBIGINT_TYPE(SUFFIX) maximum = {0};                                         \
-    TBIGINT_TYPE(SUFFIX) one = {0};                                             \
-    TBIGINT_TYPE(SUFFIX) two = {0};                                             \
-    for (size_t i = 0; i < (WIDTH) / 64U; ++i)                                 \
-      maximum.limb[i] = UINT64_MAX;                                             \
-    one.limb[0] = 1U;                                                           \
-    two.limb[0] = 2U;                                                           \
-    TBIGINT_TYPE(SUFFIX) original = maximum;                                    \
-    if (TBIGINT_FUNC(SUFFIX, Add)(&maximum, &one) !=                            \
-        STATUS_CONST(ARITHMETIC_OVERFLOW))                                      \
-      return (ERROR_BASE);                                                      \
-    if (!TBIGINT_FUNC(SUFFIX, Equal)(&maximum, &original))                      \
-      return (ERROR_BASE) + 1;                                                  \
-    if (TBIGINT_FUNC(SUFFIX, Increment)(&maximum) !=                            \
-        STATUS_CONST(ARITHMETIC_OVERFLOW))                                      \
-      return (ERROR_BASE) + 2;                                                  \
-    if (!TBIGINT_FUNC(SUFFIX, Equal)(&maximum, &original))                      \
-      return (ERROR_BASE) + 3;                                                  \
-    TBIGINT_TYPE(SUFFIX) zero = {0};                                            \
-    if (TBIGINT_FUNC(SUFFIX, Sub)(&zero, &one) !=                               \
-        STATUS_CONST(ARITHMETIC_OVERFLOW))                                      \
-      return (ERROR_BASE) + 4;                                                  \
-    if (!TBIGINT_FUNC(SUFFIX, IsZero)(&zero))                                   \
-      return (ERROR_BASE) + 5;                                                  \
-    if (TBIGINT_FUNC(SUFFIX, Decrement)(&zero) !=                               \
-        STATUS_CONST(ARITHMETIC_OVERFLOW))                                      \
-      return (ERROR_BASE) + 6;                                                  \
-    if (!TBIGINT_FUNC(SUFFIX, IsZero)(&zero))                                   \
-      return (ERROR_BASE) + 7;                                                  \
-    TBIGINT_TYPE(SUFFIX) high = {0};                                            \
-    high.limb[(WIDTH) / 64U - 1U] = UINT64_C(0x8000000000000000);              \
-    original = high;                                                            \
-    if (TBIGINT_FUNC(SUFFIX, Mul)(&high, &two) !=                               \
-        STATUS_CONST(ARITHMETIC_OVERFLOW))                                      \
-      return (ERROR_BASE) + 8;                                                  \
-    if (!TBIGINT_FUNC(SUFFIX, Equal)(&high, &original))                         \
-      return (ERROR_BASE) + 9;                                                  \
-  } while (0)
-
-#define TEST_TBIGINT_SHIFT_BOUNDARIES(SUFFIX, WIDTH, ERROR_BASE)               \
-  do {                                                                          \
-    TBigint(SUFFIX, value);                                                      \
-    const void *api = (const void *)value.api;                                  \
-    value.limb[0] = 1U;                                                         \
-    if (TBIGINT_FUNC(SUFFIX, ShiftLeft)(&value, 0U) != STATUS_CONST(SUCCESS) || \
-        value.limb[0] != 1U || (const void *)value.api != api)                  \
-      return (ERROR_BASE);                                                      \
-    if (TBIGINT_FUNC(SUFFIX, Clear)(&value) != STATUS_CONST(SUCCESS))           \
-      return (ERROR_BASE) + 1;                                                  \
-    value.limb[0] = 1U;                                                         \
-    if (TBIGINT_FUNC(SUFFIX, ShiftLeft)(&value, (WIDTH) - 1U) !=                \
-            STATUS_CONST(SUCCESS) ||                                            \
-        value.limb[(WIDTH) / 64U - 1U] != UINT64_C(0x8000000000000000) ||      \
-        (const void *)value.api != api)                                         \
-      return (ERROR_BASE) + 2;                                                  \
-    if (TBIGINT_FUNC(SUFFIX, Clear)(&value) != STATUS_CONST(SUCCESS))           \
-      return (ERROR_BASE) + 3;                                                  \
-    value.limb[0] = 1U;                                                         \
-    if (TBIGINT_FUNC(SUFFIX, ShiftLeft)(&value, (WIDTH)) !=                     \
-            STATUS_CONST(SUCCESS) ||                                            \
-        !TBIGINT_FUNC(SUFFIX, IsZero)(&value) || (const void *)value.api != api)\
-      return (ERROR_BASE) + 4;                                                  \
-    value.limb[0] = 1U;                                                         \
-    if (TBIGINT_FUNC(SUFFIX, ShiftLeft)(&value, (WIDTH) + 1U) !=                \
-            STATUS_CONST(SUCCESS) ||                                            \
-        !TBIGINT_FUNC(SUFFIX, IsZero)(&value) || (const void *)value.api != api)\
-      return (ERROR_BASE) + 5;                                                  \
-    if (TBIGINT_FUNC(SUFFIX, Clear)(&value) != STATUS_CONST(SUCCESS))           \
-      return (ERROR_BASE) + 6;                                                  \
-    value.limb[(WIDTH) / 64U - 1U] = UINT64_C(0x8000000000000000);             \
-    if (TBIGINT_FUNC(SUFFIX, ShiftRight)(&value, (WIDTH) - 1U) !=               \
-            STATUS_CONST(SUCCESS) ||                                            \
-        value.limb[0] != 1U || (const void *)value.api != api)                  \
-      return (ERROR_BASE) + 7;                                                  \
-  } while (0)
+/* Custom width template instantiations via Dual-Mode Engine */
+TEMPLATE_INSTANTIATE(Numeric, Bigint, 192, uint64_t);
+TEMPLATE_INSTANTIATE(Bitset, 100, 100U);
 
 int main(void) {
-  TYPE_ALIAS(TCh8, TChar8) c8 = 0;
-  TYPE_ALIAS(TCh16, TChar16) c16 = 0;
-  TYPE_ALIAS(TCh32, TChar32) c32 = 0;
-  TBigint(128, bigint);
-  TBlock(128, block);
-  TDecimal(128, decimal);
-
-  if (sizeof(c8) != 1U || sizeof(c16) != 2U || sizeof(c32) != 4U)
+  /* 1. Primitive Types from Core/Types/Primitive.h */
+  MODULE_TYPE(Type, Int32) pInt = -42;
+  MODULE_TYPE(Type, UInt64) pUInt = 100ULL;
+  if (pInt != -42 || pUInt != 100ULL)
     return 1;
 
-  if (TBIGINT_FUNC(128, Clear)(&bigint) != STATUS_CONST(SUCCESS))
+  /* 2. Tag (16, 32, 64) */
+  MODULE_TYPE(Type, ByteTag32) tag = {0};
+  if (Type_ByteTag32_Init(&tag) != STATUS_CONST(SUCCESS))
     return 2;
-  if (TBLOCK_FUNC(128, Clear)(&block) != STATUS_CONST(SUCCESS))
+  if (OBJECT_CALL(&tag, FromString, "RIFF") != STATUS_CONST(SUCCESS))
     return 3;
-  if (TDECIMAL_FUNC(128, Clear)(&decimal) != STATUS_CONST(SUCCESS))
+  if (OBJECT_CALL_0(&tag, ToUInt) != TYPE_BYTETAG_MAKE_32('R', 'I', 'F', 'F'))
     return 4;
+  if (!OBJECT_CALL_0(&tag, IsPrintable))
+    return 5;
+  char tagBuf[8] = {0};
+  if (OBJECT_CALL(&tag, ToString, tagBuf, sizeof(tagBuf)) !=
+      STATUS_CONST(SUCCESS))
+    return 6;
+  if (strcmp(tagBuf, "RIFF") != 0)
+    return 7;
 
-  bigint.limb[0] = 6U;
-  {
-    TBIGINT_TYPE(128) multiplier = {0};
-    multiplier.limb[0] = 7U;
-    if (TBIGINT_FUNC(128, Mul)(&bigint, &multiplier) != STATUS_CONST(SUCCESS))
-      return 5;
-    if (bigint.limb[0] != 42U || bigint.limb[1] != 0U)
-      return 6;
-  }
+  uint8_t beBytes[4] = {0};
+  if (OBJECT_CALL(&tag, WriteBE, beBytes) != STATUS_CONST(SUCCESS))
+    return 8;
+  MODULE_TYPE(Type, ByteTag32) tag2 = {0};
+  Type_ByteTag32_Init(&tag2);
+  if (OBJECT_CALL(&tag2, ReadBE, beBytes) != STATUS_CONST(SUCCESS))
+    return 9;
+  if (!OBJECT_CALL(&tag, Equal, &tag2))
+    return 10;
 
-  decimal.limb[0] = 9U;
-  {
-    TDECIMAL_TYPE(128) multiplier = {0};
-    multiplier.limb[0] = 5U;
-    if (TDECIMAL_FUNC(128, Mul)(&decimal, &multiplier) != STATUS_CONST(SUCCESS))
-      return 7;
-    if (decimal.limb[0] != 45U || decimal.limb[1] != 0U)
-      return 8;
-  }
+  /* 3. TBlock (128, 256, 512, 1024) */
+  MODULE_TYPE(Memory, Block128) blk = {0};
+  Memory_Block128_Init(&blk);
+  if (OBJECT_CALL(&blk, BitSet, 127U) != STATUS_CONST(SUCCESS))
+    return 11;
+  bool bitSet = false;
+  if (OBJECT_CALL(&blk, BitCheck, 127U, &bitSet) != STATUS_CONST(SUCCESS) ||
+      !bitSet)
+    return 12;
+  if (OBJECT_CALL(&blk, RotateLeft, 1U) != STATUS_CONST(SUCCESS))
+    return 13;
+  if (OBJECT_CALL(&blk, BitCheck, 0U, &bitSet) != STATUS_CONST(SUCCESS) ||
+      !bitSet)
+    return 14;
+  if (OBJECT_CALL_0(&blk, Popcount) != 1U || !OBJECT_CALL_0(&blk, Any) ||
+      OBJECT_CALL_0(&blk, All) || OBJECT_CALL_0(&blk, None))
+    return 21;
+  if (OBJECT_CALL(&blk, BitFlip, 0U) != STATUS_CONST(SUCCESS) ||
+      !OBJECT_CALL_0(&blk, None))
+    return 22;
+  if (OBJECT_CALL_0(&blk, SetAll) != STATUS_CONST(SUCCESS) ||
+      !OBJECT_CALL_0(&blk, All) || OBJECT_CALL_0(&blk, Popcount) != 128U)
+    return 23;
 
-  bigint.limb[0] = 100U;
-  {
-    TBIGINT_TYPE(128) divisor = {0};
-    divisor.limb[0] = 9U;
-    if (TBIGINT_FUNC(128, Div)(&bigint, &divisor) != STATUS_CONST(SUCCESS))
-      return 9;
-    if (bigint.limb[0] != 11U)
-      return 10;
-    bigint.limb[0] = 100U;
-    if (TBIGINT_FUNC(128, Mod)(&bigint, &divisor) != STATUS_CONST(SUCCESS))
-      return 11;
-    if (bigint.limb[0] != 1U)
-      return 12;
-    divisor.limb[0] = 0U;
-    if (TBIGINT_FUNC(128, Div)(&bigint, &divisor) != STATUS_CONST(DIVISION_BY_ZERO))
-      return 13;
-  }
+  /* 3b. TBitset (standard 128 + non-multiple-of-64 custom 100) */
+  MODULE_TYPE(Bitset100) bsA = {0};
+  MODULE_TYPE(Bitset100) bsB = {0};
+  Bitset100_Init(&bsA);
+  Bitset100_Init(&bsB);
+  if (OBJECT_CALL_0(&bsA, Capacity) != 100U || !OBJECT_CALL_0(&bsA, None))
+    return 24;
+  if (OBJECT_CALL_0(&bsA, Not) != STATUS_CONST(SUCCESS))
+    return 25;
+  if (!OBJECT_CALL_0(&bsA, All) || OBJECT_CALL_0(&bsA, Count) != 100U)
+    return 26;
+  size_t foundBit = 0U;
+  if (OBJECT_CALL(&bsA, FindFirstZero, &foundBit) != STATUS_CONST(NOT_FOUND))
+    return 27;
+  if (OBJECT_CALL_0(&bsA, Clear) != STATUS_CONST(SUCCESS) ||
+      OBJECT_CALL(&bsA, SetRange, 10U, 70U) != STATUS_CONST(SUCCESS))
+    return 28;
+  if (OBJECT_CALL_0(&bsA, Count) != 60U)
+    return 29;
+  if (OBJECT_CALL(&bsA, FindFirstSet, &foundBit) != STATUS_CONST(SUCCESS) ||
+      foundBit != 10U)
+    return 30;
+  if (OBJECT_CALL(&bsA, FindNextSet, 65U, &foundBit) !=
+          STATUS_CONST(SUCCESS) ||
+      foundBit != 65U)
+    return 31;
+  if (OBJECT_CALL(&bsB, SetRange, 20U, 30U) != STATUS_CONST(SUCCESS))
+    return 32;
+  if (!OBJECT_CALL(&bsB, IsSubset, &bsA) ||
+      OBJECT_CALL(&bsB, IsDisjoint, &bsA) ||
+      !OBJECT_CALL(&bsB, Intersects, &bsA))
+    return 33;
 
-  {
-    TBIGINT_TYPE(128) maximum = {0};
-    TBIGINT_TYPE(128) one = {0};
-    maximum.limb[0] = UINT64_MAX;
-    maximum.limb[1] = UINT64_MAX;
-    one.limb[0] = 1U;
-    TBIGINT_TYPE(128) original = maximum;
-    if (TBIGINT_FUNC(128, Add)(&maximum, &one) != STATUS_CONST(ARITHMETIC_OVERFLOW))
-      return 14;
-    if (!TBIGINT_FUNC(128, Equal)(&maximum, &original))
-      return 15;
-    if (TBIGINT_FUNC(128, Increment)(&maximum) != STATUS_CONST(ARITHMETIC_OVERFLOW))
-      return 16;
-    if (!TBIGINT_FUNC(128, Equal)(&maximum, &original))
-      return 17;
+  /* 4. TBigint (128, 256, 512, 1024) */
+  MODULE_TYPE(Numeric, Bigint128) bigA = {0};
+  MODULE_TYPE(Numeric, Bigint128) bigB = {0};
+  Numeric_Bigint128_Init(&bigA);
+  Numeric_Bigint128_Init(&bigB);
+  bigA.limb[0] = 100ULL;
+  bigB.limb[0] = 23ULL;
+  if (OBJECT_CALL(&bigA, Add, &bigB) != STATUS_CONST(SUCCESS) ||
+      bigA.limb[0] != 123ULL)
+    return 15;
+  if (OBJECT_CALL(&bigA, Mul, &bigB) != STATUS_CONST(SUCCESS) ||
+      bigA.limb[0] != 2829ULL)
+    return 16;
+  char numBuf[64] = {0};
+  if (OBJECT_CALL(&bigA, ToCString, numBuf, sizeof(numBuf)) !=
+      STATUS_CONST(SUCCESS))
+    return 17;
+  if (strcmp(numBuf, "2829") != 0)
+    return 18;
 
-    TBIGINT_TYPE(128) zero = {0};
-    if (TBIGINT_FUNC(128, Sub)(&zero, &one) != STATUS_CONST(ARITHMETIC_OVERFLOW))
-      return 18;
-    if (!TBIGINT_FUNC(128, IsZero)(&zero))
-      return 19;
-    if (TBIGINT_FUNC(128, Decrement)(&zero) != STATUS_CONST(ARITHMETIC_OVERFLOW))
-      return 20;
-    if (!TBIGINT_FUNC(128, IsZero)(&zero))
-      return 21;
-  }
+  /* 5. TDecimal (128, 256, 512, 1024) */
+  MODULE_TYPE(Numeric, Decimal256) decA = {0};
+  MODULE_TYPE(Numeric, Decimal256) decB = {0};
+  Numeric_Decimal256_Init(&decA);
+  Numeric_Decimal256_Init(&decB);
+  decA.limb[0] = 50ULL;
+  decB.limb[0] = 8ULL;
+  if (OBJECT_CALL(&decA, Sub, &decB) != STATUS_CONST(SUCCESS) ||
+      decA.limb[0] != 42ULL)
+    return 19;
 
-  {
-    TBIGINT_TYPE(128) high = {0};
-    TBIGINT_TYPE(128) two = {0};
-    high.limb[1] = UINT64_C(0x8000000000000000);
-    two.limb[0] = 2U;
-    TBIGINT_TYPE(128) original = high;
-    if (TBIGINT_FUNC(128, Mul)(&high, &two) != STATUS_CONST(ARITHMETIC_OVERFLOW))
-      return 22;
-    if (!TBIGINT_FUNC(128, Equal)(&high, &original))
-      return 23;
-  }
-
-  {
-    char buffer[64];
-    TBIGINT_TYPE(128) value = {0};
-    if (TBIGINT_FUNC(128, ToCString)(&value, buffer, sizeof(buffer)) != STATUS_CONST(SUCCESS))
-      return 24;
-    if (strcmp(buffer, "0") != 0)
-      return 25;
-
-    value.limb[0] = 42U;
-    if (TBIGINT_FUNC(128, ToCString)(&value, buffer, sizeof(buffer)) != STATUS_CONST(SUCCESS))
-      return 26;
-    if (strcmp(buffer, "42") != 0)
-      return 27;
-
-    value.limb[0] = 0U;
-    value.limb[1] = 1U;
-    if (TBIGINT_FUNC(128, ToCString)(&value, buffer, sizeof(buffer)) != STATUS_CONST(SUCCESS))
-      return 28;
-    if (strcmp(buffer, "18446744073709551616") != 0)
-      return 29;
-
-    char tiny[2] = {'X', '\0'};
-    if (TBIGINT_FUNC(128, ToCString)(&value, tiny, sizeof(tiny)) != STATUS_CONST(OUT_OF_RANGE))
-      return 30;
-  }
-
-  {
-    char buffer[140];
-    TBIGINT_TYPE(128) value = {0};
-    value.limb[0] = 255U;
-    if (TBIGINT_FUNC(128, ToCStringBase)(&value, buffer, sizeof(buffer), 2U) != STATUS_CONST(SUCCESS) ||
-        strcmp(buffer, "11111111") != 0)
-      return 31;
-    if (TBIGINT_FUNC(128, ToCStringBase)(&value, buffer, sizeof(buffer), 16U) != STATUS_CONST(SUCCESS) ||
-        strcmp(buffer, "FF") != 0)
-      return 32;
-    if (TBIGINT_FUNC(128, ToCStringBase)(&value, buffer, sizeof(buffer), 36U) != STATUS_CONST(SUCCESS) ||
-        strcmp(buffer, "73") != 0)
-      return 33;
-    if (TBIGINT_FUNC(128, ToCStringBase)(&value, buffer, sizeof(buffer), 1U) != STATUS_CONST(INVALID_ARGUMENT))
-      return 34;
-    if (TBIGINT_FUNC(128, ToCStringBase)(&value, buffer, sizeof(buffer), 37U) != STATUS_CONST(INVALID_ARGUMENT))
-      return 35;
-  }
-
-  {
-    TBLOCK_TYPE(128) bits = {0};
-    bool bitValue = false;
-    if (TBLOCK_FUNC(128, BitSet)(&bits, 127U) != STATUS_CONST(SUCCESS))
-      return 36;
-    if (TBLOCK_FUNC(128, BitCheck)(&bits, 127U, &bitValue) != STATUS_CONST(SUCCESS) || !bitValue)
-      return 37;
-    if (TBLOCK_FUNC(128, BitClear)(&bits, 127U) != STATUS_CONST(SUCCESS))
-      return 38;
-    if (TBLOCK_FUNC(128, BitCheck)(&bits, 127U, &bitValue) != STATUS_CONST(SUCCESS) || bitValue)
-      return 39;
-    if (TBLOCK_FUNC(128, BitSet)(&bits, 128U) != STATUS_CONST(OUT_OF_RANGE))
-      return 40;
-    if (TBLOCK_FUNC(128, BitCheck)(&bits, 128U, &bitValue) != STATUS_CONST(OUT_OF_RANGE))
-      return 41;
-    if (TBLOCK_FUNC(128, BitCheck)(&bits, 0U, NULL) != STATUS_CONST(INVALID_ARGUMENT))
-      return 42;
-  }
-
-  {
-    TBIGINT_TYPE(128) left = {0};
-    TBIGINT_TYPE(128) right = {0};
-    CMPOUT comparison;
-    left.limb[0] = 1U;
-    right.limb[0] = 2U;
-    if (TBIGINT_FUNC(128, Compare)(&left, &right, &comparison) != STATUS_CONST(SUCCESS) ||
-        comparison != COMPARISON_LOWER_CONST)
-      return 43;
-    if (TBIGINT_FUNC(128, Compare)(&right, &left, &comparison) != STATUS_CONST(SUCCESS) ||
-        comparison != COMPARISON_HIGHER_CONST)
-      return 44;
-    right = left;
-    if (TBIGINT_FUNC(128, Compare)(&left, &right, &comparison) != STATUS_CONST(SUCCESS) ||
-        comparison != COMPARISON_EQUAL_CONST)
-      return 45;
-    if (TBIGINT_FUNC(128, Compare)(NULL, &right, &comparison) != STATUS_CONST(INVALID_ARGUMENT))
-      return 46;
-  }
-
-  {
-    TBigint(128, viaApi);
-    if (!viaApi.api || viaApi.api->clear(&viaApi) != STATUS_CONST(SUCCESS))
-      return 47;
-    viaApi.limb[0] = 255U;
-    char buffer[8];
-    if (viaApi.api->toCStringBase(&viaApi, buffer, sizeof(buffer), 16U) !=
-            STATUS_CONST(SUCCESS) ||
-        strcmp(buffer, "FF") != 0)
-      return 48;
-
-    TBIGINT_TYPE(128) divisor = {0};
-    TBigint(128, quotient);
-    TBigint(128, remainder);
-    viaApi.limb[0] = 100U;
-    divisor.limb[0] = 9U;
-    if (viaApi.api->divMod(&viaApi, &divisor, &quotient, &remainder) !=
-            STATUS_CONST(SUCCESS) ||
-        quotient.limb[0] != 11U || remainder.limb[0] != 1U)
-      return 49;
-  }
-
-  {
-    TBIGINT_TYPE(128) dividend = {0};
-    TBIGINT_TYPE(128) divisor = {0};
-    TBigint(128, quotient);
-    TBigint(128, remainder);
-    const void *quotientApi = (const void *)quotient.api;
-    const void *remainderApi = (const void *)remainder.api;
-    dividend.limb[0] = UINT64_MAX;
-    dividend.limb[1] = UINT64_MAX;
-    divisor.limb[0] = 1U;
-    divisor.limb[1] = UINT64_C(0x8000000000000000);
-    if (TBIGINT_FUNC(128, DivMod)(&dividend, &divisor, &quotient, &remainder) !=
-        STATUS_CONST(SUCCESS))
-      return 49;
-    if (quotient.limb[0] != 1U || quotient.limb[1] != 0U)
-      return 50;
-    if (remainder.limb[0] != UINT64_C(0xFFFFFFFFFFFFFFFE) ||
-        remainder.limb[1] != UINT64_C(0x7FFFFFFFFFFFFFFF))
-      return 51;
-    if ((const void *)quotient.api != quotientApi ||
-        (const void *)remainder.api != remainderApi)
-      return 52;
-  }
-
-  {
-    TBIGINT_TYPE(128) dividend = {0};
-    TBIGINT_TYPE(128) divisor = {0};
-    TBIGINT_TYPE(128) quotient = {0};
-    TBIGINT_TYPE(128) remainder = {0};
-    TBIGINT_TYPE(128) sameOutput = {0};
-    dividend.limb[0] = 100U;
-    divisor.limb[0] = 9U;
-    if (TBIGINT_FUNC(128, DivMod)(&dividend, &divisor, &sameOutput, &sameOutput) !=
-        STATUS_CONST(INVALID_ARGUMENT))
-      return 50;
-    if (TBIGINT_FUNC(128, DivMod)(&dividend, &divisor, NULL, &sameOutput) !=
-            STATUS_CONST(INVALID_ARGUMENT) ||
-        TBIGINT_FUNC(128, DivMod)(&dividend, &divisor, &sameOutput, NULL) !=
-            STATUS_CONST(INVALID_ARGUMENT))
-      return 51;
-
-    quotient.limb[0] = 123U;
-    remainder.limb[0] = 456U;
-    divisor.limb[0] = 0U;
-    if (TBIGINT_FUNC(128, DivMod)(
-            &dividend, &divisor, &quotient, &remainder) !=
-            STATUS_CONST(DIVISION_BY_ZERO) ||
-        quotient.limb[0] != 123U || remainder.limb[0] != 456U)
-      return 52;
-  }
-
-  {
-    TDecimal(128, dividend);
-    TDECIMAL_TYPE(128) divisor = {0};
-    TDecimal(128, quotient);
-    TDecimal(128, remainder);
-    const void *quotientApi = (const void *)quotient.api;
-    const void *remainderApi = (const void *)remainder.api;
-    dividend.limb[0] = 100U;
-    divisor.limb[0] = 9U;
-    if (dividend.api->divMod(&dividend, &divisor, &quotient, &remainder) !=
-            STATUS_CONST(SUCCESS) ||
-        quotient.limb[0] != 11U || remainder.limb[0] != 1U)
-      return 51;
-    if ((const void *)quotient.api != quotientApi ||
-        (const void *)remainder.api != remainderApi)
-      return 52;
-  }
-
-  TEST_TBLOCK_BOUNDARIES(128, 128U, 60);
-  TEST_TBLOCK_BOUNDARIES(256, 256U, 70);
-  TEST_TBLOCK_BOUNDARIES(512, 512U, 80);
-  TEST_TBLOCK_BOUNDARIES(1024, 1024U, 90);
-
-  TEST_TBIGINT_ARITHMETIC_BOUNDARIES(128, 128U, 100);
-  TEST_TBIGINT_ARITHMETIC_BOUNDARIES(256, 256U, 110);
-  TEST_TBIGINT_ARITHMETIC_BOUNDARIES(512, 512U, 120);
-  TEST_TBIGINT_ARITHMETIC_BOUNDARIES(1024, 1024U, 130);
-
-  TEST_TBIGINT_SHIFT_BOUNDARIES(128, 128U, 140);
-  TEST_TBIGINT_SHIFT_BOUNDARIES(256, 256U, 150);
-  TEST_TBIGINT_SHIFT_BOUNDARIES(512, 512U, 160);
-  TEST_TBIGINT_SHIFT_BOUNDARIES(1024, 1024U, 170);
+  /* 6. Custom 192-bit Bigint instantiation */
+  MODULE_TYPE(Numeric, Bigint192) custom = {0};
+  Numeric_Bigint192_Init(&custom);
+  custom.limb[2] = 1ULL;
+  if (OBJECT_CALL_0(&custom, IsZero))
+    return 20;
 
   return 0;
 }

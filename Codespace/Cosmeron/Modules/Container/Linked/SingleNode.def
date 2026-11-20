@@ -1,0 +1,25 @@
+/* SingleNode.def - Dual Mode Engine (Zero Duplication) */
+
+#include "../../../Core/Condition/Status.h"
+#include "../../../Core/Module/Module.h"
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#ifndef TEMPLATE_Linked_SingleNode
+#define TEMPLATE_Linked_SingleNode(SUFFIX, TYPE)                               \
+  FORWARD_TEMPLATE_STRUCT(Linked, SingleNode, SUFFIX);                         \
+  struct MODULE_TYPED(Linked, SingleNode, SUFFIX) {                            \
+    TYPE value;                                                                \
+    struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *next;                     \
+  }
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Linked_SingleNode(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif
+

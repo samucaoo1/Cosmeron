@@ -1,28 +1,82 @@
-# Cosmeron GitHub Actions Architecture
+# Cosmeron GitHub Actions
 
-The continuous integration architecture consists of exactly five modular workflows:
+The CI uses five workflows. The selected portable C test suites have one
+source of truth: `.github/tests.txt`. Platform and compiler runners use
+that manifest wherever the target supports execution or cross-compilation.
 
-| # | Workflow | Purpose | Trigger | Required Gate |
-|---|---|---|---|---|
-| 01 | [Simple Test](workflows/01-simple-test.yml) | Fast feedback: strict portable C11 suite (GCC & Clang), standalone public headers, doc examples, tooling tests and actionlint | Every push & PR | `Simple Test / Gate` |
-| 02 | [Security](workflows/02-security.yml) | CodeQL (C/C++, Python, Actions), ASan + UBSan across all modules, TSan (Concurrency), decoder sanitizers (Compression, FLAC, MP3), stream fuzzing, and public-repository privacy scan | Push to main, PR to main, weekly, manual | `Security / Gate` |
-| 03 | [By Operating System](workflows/03-by-operating-system.yml) | Linux base distros (Debian, Ubuntu, Fedora, Arch, Void glibc/musl, Alpine, openSUSE, Gentoo, 32-bit, Nix + NixOS VM), BSD family (FreeBSD, OpenBSD, NetBSD, DragonFly BSD), Windows 10 & 11 (MinGW + MSVC), macOS (Apple Silicon + Intel) | Push to main/feature branches, PR to main, weekly, manual | `By Operating System / Gate` |
-| 04 | [Experimental](workflows/04-experimental.yml) | Feasibility research & diagnostic probes: OpenHarmony (OHOS SDK 6.0 ARM64), HarmonyOS NEXT (HOS), ChromeOS (Crostini proxy), OpenIndiana (Illumos VM), Oracle Solaris VM, Android NDK (aarch64), iOS (arm64) and audio parity | Push, PR, weekly, manual (non-blocking) | `Experimental / Summary` (informational) |
-| 05 | [Cosmeron](workflows/05-cosmeron.yml) | Entropy calculation ($H$), badge generation (C11, platforms, security, dependencies, entropy) and automated publishing via PR squash-merge | Push to main touching code/entropy/badges | N/A (automation) |
+| # | Workflow | Responsibility | Gate |
+|---|---|---|---|
+| 01 | [CI](workflows/01-simple-test.yml) | GCC/Clang portable C11 suites, standalone public headers and repository tooling | `CI / Gate` |
+| 02 | [Platform Compatibility](workflows/03-by-operating-system.yml) | Linux distributions, Nix/NixOS, BSD family, macOS ARM64/Intel, Windows MinGW/MSVC | `Platform Compatibility / Gate` |
+| 03 | [Security](workflows/02-security.yml) | CodeQL, repository privacy, ASan and UBSan over manifest suites | `Security / Gate` |
+| 04 | [Experimental](workflows/04-experimental.yml) | OpenHarmony SDK, HarmonyOS NEXT boundary probe, Crostini proxy, Android NDK, iOS SDK and Redox macro probe | Informational |
+| 05 | [Maintenance](workflows/04-maintenance.yml) | LOC report, entropy calculation and badge artifacts | Informational |
 
-## Reading Workflow Results
+## Portable test selection
 
-- **01 (Simple Test):** Verifies the portable C11 core, header standalone compilability and repository tooling in minutes on a standard Ubuntu host.
-- **02 (Security):** Enforces static analysis, memory safety, concurrency contention safety and fuzzing invariants. Also runs `.github/scripts/check-privacy.py` to ensure local developer paths are never committed.
-- **03 (By Operating System):** Each Linux distribution runs its native container image (its own libc and toolchain). BSDs boot native VM guests via `vmactions`. Windows exercises both MSVC (`cl.exe`) and MinGW (`gcc.exe`). macOS tests both ARM64 and Intel architectures.
-- **04 (Experimental):** Results are non-blocking (`continue-on-error: true` and non-strict gate). They provide diagnostics and tracking for emerging or niche platform targets.
-- **05 (Cosmeron):** Generates official SVG badges in `.github/badges/` and updates `.github/entropy/state.json`.
+`.github/tests.txt` is the single inventory of portable test suites.
 
-## Branch Protection
+- POSIX and Unix-like targets: `.github/scripts/test-portable-core.sh`
+- MSVC: `.github/scripts/test-msvc.ps1`
+- Nix: `flake.nix` invokes the same portable runner
+- OpenHarmony: `.github/tools/ohos/CMakeLists.txt` reads the same manifest for cross-compilation
 
-Configure the following status checks as required in repository settings:
-1. `Simple Test / Gate`
-2. `Security / Gate`
-3. `By Operating System / Gate`
+Do not add a second copy of the portable test inventory to workflow files,
+container commands, Nix expressions, or platform-specific scripts. Add or
+remove a portable suite only in `.github/tests.txt`; every consumer must read
+that file and fail when an entry is malformed or its source is missing.
 
-The old consolidated checks (`CI / Gate`, `Compatibility / Summary`) are replaced by these three gates.
+The standalone public-header check is intentionally a different test class:
+it discovers all public `*.h` files from the source tree. The Linux/OS/compiler
+matrices describe execution environments, not test-suite inventories. Their
+entries must not duplicate test names or test paths.
+
+## Platform coverage
+
+### Required platform workflow
+
+- Linux container userspaces: Debian, Ubuntu (GCC and Clang), Fedora, Arch,
+  Void glibc, Void musl, Alpine/musl, openSUSE Tumbleweed and Gentoo.
+- Nix flake toolchain on x86_64-linux; real NixOS QEMU guest VM on schedule
+  or explicit workflow dispatch.
+- FreeBSD, OpenBSD, NetBSD and DragonFly BSD native VM guests.
+- macOS Apple Silicon and Intel runners.
+- Windows 2022 and latest hosted runner images, each with MinGW and MSVC.
+  GitHub-hosted Windows runners are Server images, not consumer Windows
+  10/11 installations; this matrix does not certify those desktop editions.
+
+All required platform jobs use the current manifest. The NixOS VM is
+schedule/opt-in and is the only permitted skipped job in the required gate.
+
+### Experimental workflow (non-blocking)
+
+- OpenHarmony SDK 6.0: cross-compilation and multi-translation-unit link;
+  this is not device/runtime certification.
+- HarmonyOS NEXT: synthetic ABI-boundary probe only; no official HOS SDK
+  is provisioned, so target compatibility remains unverified.
+- Crostini: Debian userspace proxy only. Actual ChromeOS/Crostini testing
+  requires a physical Chromebook and the procedure in
+  `.github/tools/crostini/README.md`.
+- Android NDK: aarch64 cross-compilation; binaries are not executed.
+- iOS: arm64 SDK cross-compilation; binaries are not executed.
+- Redox: synthetic target-detection macro probe; no Redox kernel/relibc
+  runtime or native toolchain is provisioned.
+
+Experimental failures are diagnostic and never block merges. Synthetic
+probes, cross-compilation, and Linux userspace proxies must not be described
+as native device/OS runtime certification.
+
+## Scope and branch protection
+
+The workflows validate the repository's current manifest and explicit
+platform probes. They do not assume every module has been refactored or
+has a complete test suite. Hardware access, audio output, input devices,
+and physical-device permissions require separate manual evidence.
+
+Configure these required status checks:
+
+1. `CI / Gate`
+2. `Platform Compatibility / Gate`
+3. `Security / Gate`
+
+Experimental and Maintenance workflows are informational.

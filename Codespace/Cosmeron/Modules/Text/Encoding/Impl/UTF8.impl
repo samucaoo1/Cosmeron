@@ -1,143 +1,202 @@
 #pragma once
 
-TEXT_UTF8_ENCODED_LENGTH_PROTOTYPE {
-  uint_least32_t value = (uint_least32_t)codepoint;
+#define TEXT_UTF8_CONST_COL_NAME(NAME, VALUE) NAME
+#define TEXT_UTF8_CONST_COL_VALUE(NAME, VALUE) VALUE
+#define TEXT_UTF8_CONST_GET(FIELD, ROW)                                        \
+  PP_OP_CAT2(TEXT_UTF8_CONST_COL_, FIELD) ROW
 
-  if (outUnits == NULL)
-    return STATUS_CONST(INVALID_ARGUMENT);
-  if (!TEXT_CODEPOINT_FUNC(IsScalar)(codepoint))
-    return STATUS_CONST(INVALID_SEQUENCE);
+#define TEXT_UTF8_CONST_TABLE(X)                                               \
+  X((MAX_1BYTE, 0x7FU))                                                        \
+  X((MAX_2BYTE, 0x7FFU))                                                       \
+  X((MAX_3BYTE, 0xFFFFU))                                                      \
+  X((MIN_2BYTE, 0x80U))                                                        \
+  X((MIN_3BYTE, 0x800U))                                                       \
+  X((MIN_4BYTE, 0x10000U))                                                     \
+  X((LEAD_2_PREFIX, 0xC0U))                                                    \
+  X((LEAD_2_MIN, 0xC2U))                                                       \
+  X((LEAD_2_MAX, 0xDFU))                                                       \
+  X((LEAD_3_PREFIX, 0xE0U))                                                    \
+  X((LEAD_3_MAX, 0xEFU))                                                       \
+  X((LEAD_4_PREFIX, 0xF0U))                                                    \
+  X((LEAD_4_MAX, 0xF4U))                                                       \
+  X((CONT_PREFIX, 0x80U))                                                      \
+  X((CONT_TYPE_MASK, 0xC0U))                                                   \
+  X((CONT_DATA_MASK, 0x3FU))                                                   \
+  X((LEAD_2_MASK, 0x1FU))                                                      \
+  X((LEAD_3_MASK, 0x0FU))                                                      \
+  X((LEAD_4_MASK, 0x07U))                                                      \
+  X((CONT_BITS, 6U))
 
-  if (value <= UINT32_C(0x7F))
-    *outUnits = 1U;
-  else if (value <= UINT32_C(0x7FF))
-    *outUnits = 2U;
-  else if (value <= UINT32_C(0xFFFF))
-    *outUnits = 3U;
-  else
-    *outUnits = 4U;
+MODULE(DOMAIN(Modules), Text,
+  INTERNAL_EX(UTF8,
+    ENUM_EX(Const, TEXT_UTF8_CONST_TABLE, PLAIN)
+  )
+);
 
-  return STATUS_CONST(SUCCESS);
-}
+MODULE_IMPLEMENT(DOMAIN(Modules), Text,
+  PACKAGE(UTF8,
+    OPERATION(EncodedLength,
+              (MODULE_TYPE(Text, Char32) codepoint, size_t *outUnits), {
+      if (outUnits == NULL) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      if (!MODULE_FUNC(Text, Codepoint, IsScalar)(codepoint)) {
+        return STATUS_CONST(INVALID_SEQUENCE);
+      }
 
-TEXT_UTF8_ENCODE_PROTOTYPE {
-  uint_least32_t value = (uint_least32_t)codepoint;
-  size_t length = 0U;
-  OPSTATUS status;
+      const uint_least32_t value = (uint_least32_t)codepoint;
+      if (value <= CNS(Text, UTF8, Internal, MAX_1BYTE)) {
+        *outUnits = 1U;
+      } else if (value <= CNS(Text, UTF8, Internal, MAX_2BYTE)) {
+        *outUnits = 2U;
+      } else if (value <= CNS(Text, UTF8, Internal, MAX_3BYTE)) {
+        *outUnits = 3U;
+      } else {
+        *outUnits = 4U;
+      }
 
-  if (output == NULL || outUnits == NULL)
-    return STATUS_CONST(INVALID_ARGUMENT);
+      return STATUS_CONST(SUCCESS);
+    }),
 
-  status = TEXT_UTF8_FUNC(EncodedLength)(codepoint, &length);
-  if (status != STATUS_CONST(SUCCESS))
-    return status;
-  if (capacity < length)
-    return STATUS_CONST(INSUFFICIENT_SPACE);
+    OPERATION(Encode,
+              (MODULE_TYPE(Text, Char32) codepoint, unsigned char *output,
+               size_t capacity, size_t *outUnits), {
+      if (output == NULL || outUnits == NULL) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
 
-  if (length == 1U) {
-    output[0] = (unsigned char)value;
-  } else if (length == 2U) {
-    output[0] = (unsigned char)(UINT32_C(0xC0) | (value >> 6U));
-    output[1] = (unsigned char)(UINT32_C(0x80) | (value & UINT32_C(0x3F)));
-  } else if (length == 3U) {
-    output[0] = (unsigned char)(UINT32_C(0xE0) | (value >> 12U));
-    output[1] =
-        (unsigned char)(UINT32_C(0x80) | ((value >> 6U) & UINT32_C(0x3F)));
-    output[2] = (unsigned char)(UINT32_C(0x80) | (value & UINT32_C(0x3F)));
-  } else {
-    output[0] = (unsigned char)(UINT32_C(0xF0) | (value >> 18U));
-    output[1] =
-        (unsigned char)(UINT32_C(0x80) | ((value >> 12U) & UINT32_C(0x3F)));
-    output[2] =
-        (unsigned char)(UINT32_C(0x80) | ((value >> 6U) & UINT32_C(0x3F)));
-    output[3] = (unsigned char)(UINT32_C(0x80) | (value & UINT32_C(0x3F)));
-  }
+      size_t length = 0U;
+      const OPSTATUS status =
+          MODULE_FUNC(Text, UTF8, EncodedLength)(codepoint, &length);
+      if (status != STATUS_CONST(SUCCESS)) {
+        return status;
+      }
+      if (capacity < length) {
+        return STATUS_CONST(INSUFFICIENT_SPACE);
+      }
 
-  *outUnits = length;
-  return STATUS_CONST(SUCCESS);
-}
+      uint_least32_t value = (uint_least32_t)codepoint;
+      if (length == 1U) {
+        output[0] = (unsigned char)value;
+      } else {
+        for (size_t i = length - 1U; i >= 1U; --i) {
+          output[i] = (unsigned char)(CNS(Text, UTF8, Internal, CONT_PREFIX) |
+                                      (value & CNS(Text, UTF8, Internal,
+                                                   CONT_DATA_MASK)));
+          value >>= CNS(Text, UTF8, Internal, CONT_BITS);
+        }
+        const uint_least32_t leadPrefix =
+            (length == 2U)
+                ? CNS(Text, UTF8, Internal, LEAD_2_PREFIX)
+                : ((length == 3U) ? CNS(Text, UTF8, Internal, LEAD_3_PREFIX)
+                                  : CNS(Text, UTF8, Internal, LEAD_4_PREFIX));
+        output[0] = (unsigned char)(leadPrefix | value);
+      }
 
-TEXT_UTF8_DECODE_PROTOTYPE {
-  uint_least32_t value;
-  uint_least32_t minimum;
-  size_t length;
-  size_t index;
+      *outUnits = length;
+      return STATUS_CONST(SUCCESS);
+    }),
 
-  if (input == NULL || outCodepoint == NULL || outUnits == NULL)
-    return STATUS_CONST(INVALID_ARGUMENT);
-  if (size == 0U)
-    return STATUS_CONST(INCOMPLETE_SEQUENCE);
+    OPERATION(Decode,
+              (const unsigned char *input, size_t size,
+               MODULE_TYPE(Text, Char32) *outCodepoint, size_t *outUnits), {
+      if (input == NULL || outCodepoint == NULL || outUnits == NULL) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      if (size == 0U) {
+        return STATUS_CONST(INCOMPLETE_SEQUENCE);
+      }
 
-  if (input[0] <= 0x7FU) {
-    *outCodepoint = (TEXT_TYPE(TChar32))input[0];
-    *outUnits = 1U;
-    return STATUS_CONST(SUCCESS);
-  }
+      if (input[0] <= CNS(Text, UTF8, Internal, MAX_1BYTE)) {
+        *outCodepoint = (MODULE_TYPE(Text, Char32))input[0];
+        *outUnits = 1U;
+        return STATUS_CONST(SUCCESS);
+      }
 
-  if (input[0] >= 0xC2U && input[0] <= 0xDFU) {
-    value = input[0] & 0x1FU;
-    length = 2U;
-    minimum = UINT32_C(0x80);
-  } else if (input[0] >= 0xE0U && input[0] <= 0xEFU) {
-    value = input[0] & 0x0FU;
-    length = 3U;
-    minimum = UINT32_C(0x800);
-  } else if (input[0] >= 0xF0U && input[0] <= 0xF4U) {
-    value = input[0] & 0x07U;
-    length = 4U;
-    minimum = UINT32_C(0x10000);
-  } else {
-    return STATUS_CONST(INVALID_SEQUENCE);
-  }
+      uint_least32_t value = 0U;
+      uint_least32_t minimum = 0U;
+      size_t length = 0U;
 
-  if (size < length)
-    return STATUS_CONST(INCOMPLETE_SEQUENCE);
+      if (input[0] >= CNS(Text, UTF8, Internal, LEAD_2_MIN) &&
+          input[0] <= CNS(Text, UTF8, Internal, LEAD_2_MAX)) {
+        value = input[0] & CNS(Text, UTF8, Internal, LEAD_2_MASK);
+        length = 2U;
+        minimum = CNS(Text, UTF8, Internal, MIN_2BYTE);
+      } else if (input[0] >= CNS(Text, UTF8, Internal, LEAD_3_PREFIX) &&
+                 input[0] <= CNS(Text, UTF8, Internal, LEAD_3_MAX)) {
+        value = input[0] & CNS(Text, UTF8, Internal, LEAD_3_MASK);
+        length = 3U;
+        minimum = CNS(Text, UTF8, Internal, MIN_3BYTE);
+      } else if (input[0] >= CNS(Text, UTF8, Internal, LEAD_4_PREFIX) &&
+                 input[0] <= CNS(Text, UTF8, Internal, LEAD_4_MAX)) {
+        value = input[0] & CNS(Text, UTF8, Internal, LEAD_4_MASK);
+        length = 4U;
+        minimum = CNS(Text, UTF8, Internal, MIN_4BYTE);
+      } else {
+        return STATUS_CONST(INVALID_SEQUENCE);
+      }
 
-  for (index = 1U; index < length; ++index) {
-    if ((input[index] & 0xC0U) != 0x80U)
-      return STATUS_CONST(INVALID_SEQUENCE);
-    value = (value << 6U) | (input[index] & 0x3FU);
-  }
+      if (size < length) {
+        return STATUS_CONST(INCOMPLETE_SEQUENCE);
+      }
 
-  if (value < minimum ||
-      !TEXT_CODEPOINT_FUNC(IsScalar)((TEXT_TYPE(TChar32))value))
-    return STATUS_CONST(INVALID_SEQUENCE);
+      for (size_t index = 1U; index < length; ++index) {
+        if ((input[index] & CNS(Text, UTF8, Internal, CONT_TYPE_MASK)) !=
+            CNS(Text, UTF8, Internal, CONT_PREFIX)) {
+          return STATUS_CONST(INVALID_SEQUENCE);
+        }
+        value = (value << CNS(Text, UTF8, Internal, CONT_BITS)) |
+                (input[index] & CNS(Text, UTF8, Internal, CONT_DATA_MASK));
+      }
 
-  *outCodepoint = (TEXT_TYPE(TChar32))value;
-  *outUnits = length;
-  return STATUS_CONST(SUCCESS);
-}
+      if (value < minimum ||
+          !MODULE_FUNC(Text, Codepoint,
+                       IsScalar)((MODULE_TYPE(Text, Char32))value)) {
+        return STATUS_CONST(INVALID_SEQUENCE);
+      }
 
-TEXT_UTF8_COUNT_PROTOTYPE {
-  size_t offset = 0U;
-  size_t count = 0U;
+      *outCodepoint = (MODULE_TYPE(Text, Char32))value;
+      *outUnits = length;
+      return STATUS_CONST(SUCCESS);
+    }),
 
-  if (outCodepoints == NULL || outUnits == NULL)
-    return STATUS_CONST(INVALID_ARGUMENT);
-  if (input == NULL && size != 0U)
-    return STATUS_CONST(INVALID_ARGUMENT);
+    OPERATION(Count,
+              (const unsigned char *input, size_t size, size_t *outCodepoints,
+               size_t *outUnits), {
+      if (outCodepoints == NULL || outUnits == NULL) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      if (input == NULL && size != 0U) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
 
-  while (offset < size) {
-    TEXT_TYPE(TChar32) codepoint;
-    size_t units;
-    OPSTATUS status =
-        TEXT_UTF8_FUNC(Decode)(input + offset, size - offset, &codepoint, &units);
-    (void)codepoint;
-    if (status != STATUS_CONST(SUCCESS))
-      return status;
-    offset += units;
-    ++count;
-  }
+      size_t offset = 0U;
+      size_t count = 0U;
+      while (offset < size) {
+        MODULE_TYPE(Text, Char32) codepoint = 0;
+        size_t units = 0U;
+        const OPSTATUS status = MODULE_FUNC(Text, UTF8, Decode)(
+            input + offset, size - offset, &codepoint, &units);
+        (void)codepoint;
+        if (status != STATUS_CONST(SUCCESS)) {
+          return status;
+        }
+        offset += units;
+        ++count;
+      }
 
-  *outCodepoints = count;
-  *outUnits = offset;
-  return STATUS_CONST(SUCCESS);
-}
+      *outCodepoints = count;
+      *outUnits = offset;
+      return STATUS_CONST(SUCCESS);
+    }),
 
-TEXT_UTF8_VALIDATE_PROTOTYPE {
-  size_t codepoints;
-  size_t units;
-  return TEXT_UTF8_FUNC(Count)(input, size, &codepoints, &units) ==
-         STATUS_CONST(SUCCESS);
-}
+    PREDICATE(Validate, (const unsigned char *input, size_t size), {
+      size_t codepoints = 0U;
+      size_t units = 0U;
+      return MODULE_FUNC(Text, UTF8, Count)(input, size, &codepoints,
+                                            &units) == STATUS_CONST(SUCCESS);
+    })
+  )
+);
+
 /* EOF */

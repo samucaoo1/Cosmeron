@@ -1,39 +1,60 @@
 #pragma once
 
-#include "../Module/Object.h"
+#include "../Condition/Status.h"
+#include "../Module/Module.h"
 #include "../Preprocessor/Compiling.inc"
 #include "Alloc.h"
-#include "Memory.space"
+#include "Allocator.h"
+#include "Impl/Common.inc"
 
-#define POOL_NS(NAME) GNS2(MEMORY_NS(Pool), NAME)
-#define POOL_CNS(NAME) CNS3(LIB_PREFIX_CONST(MEMORY_CMOD), POOL, NAME)
+/* ========================================================================== */
+/* Declarative Module: Memory (Internal PoolNode Struct & TMemoryPool Object) */
+/* ========================================================================== */
 
-#define POOL_TYPE(NAME) POOL_NS(NAME)
-#define POOL_FUNC(NAME) GNS2(POOL_TYPE(TMemoryPool), NAME)
-#define POOL_CONST(NAME) POOL_CNS(NAME)
+#if defined(MEMORY_DISABLE_FUNCTION_TABLE) &&                                  \
+    !defined(COSMERON_DISABLE_FT_Memory)
+#define COSMERON_DISABLE_FT_Memory 1
+#endif
+#if defined(MEMORY_POOL_DISABLE_FUNCTION_TABLE) &&                             \
+    !defined(COSMERON_DISABLE_FT_Memory_Pool)
+#define COSMERON_DISABLE_FT_Memory_Pool 1
+#endif
 
-/* Forward declaration for typed node */
-typedef struct MEMORY_INS(PoolNode) {
-  struct MEMORY_INS(PoolNode) * next;
-} MEMORY_INS(PoolNode);
-
-/* Object-oriented Memory Pool structure definition with canonical namespace */
-OBJECT(POOL_TYPE(TMemoryPool),
-       FIELDS(void *buffer; size_t capacity; size_t elementSize;
-              size_t elementCount; size_t allocatedCount; bool isOwned;
-              MEMORY_INS(PoolNode) * freeList;),
-       METHOD(OPSTATUS, Create, (size_t elementSize, size_t elementCount)),
-       METHOD(OPSTATUS, CreateBuffer,
-              (void *buffer, size_t bufferSize, size_t elementSize)),
-       METHOD(OPSTATUS, Alloc, (void **out)),
-       METHOD(OPSTATUS, Free, (void *ptr)), METHOD(OPSTATUS, Reset, ()),
-       METHOD(OPSTATUS, Destroy, ()), CONST_METHOD(size_t, Capacity, ()),
-       CONST_METHOD(size_t, Available, ()), CONST_METHOD(size_t, Allocated, ()),
-       CONST_METHOD(size_t, ElementSize, ()),
-       CONST_METHOD(bool, Contains, (const void *ptr)));
-
-/* User-facing canonical type */
-typedef POOL_TYPE(TMemoryPool) TMemoryPool;
+MODULE(DOMAIN(Core), Memory,
+    ISTRUCT(PoolNode,
+        FIELDS(
+            struct MODULE_ITYPE(Memory, PoolNode) *next;
+        )
+    ),
+    OBJECT(Pool,
+        FIELDS(
+            void *buffer;
+            size_t capacity;
+            size_t elementSize;
+            size_t elementCount;
+            size_t allocatedCount;
+            bool isOwned;
+            MODULE_ITYPE(Memory, PoolNode) *freeList;
+        ),
+        VARIANT(Create,
+            OPERATION((size_t elementSize, size_t elementCount)),
+            OPERATION(Buffer, (void *buffer, size_t bufferSize, size_t elementSize))
+        ),
+        OPERATION(Alloc, (void *outPointerObject)),
+        VARIANT(Free,
+            OPERATION((void *ptr)),
+            OPERATION(Pointer, (void *inoutPointerObject))
+        ),
+        OPERATION(Reset, ()),
+        OPERATION(Destroy, ()),
+        CONST_FUNCTION_INLINE(size_t, Capacity, (), { return self ? self->elementCount : 0U; }),
+        CONST_FUNCTION_INLINE(size_t, Available, (), { return self ? (self->elementCount - self->allocatedCount) : 0U; }),
+        CONST_FUNCTION_INLINE(size_t, Allocated, (), { return self ? self->allocatedCount : 0U; }),
+        CONST_FUNCTION_INLINE(size_t, ElementSize, (), { return self ? self->elementSize : 0U; }),
+        CONST_PREDICATE(Contains, (const void *ptr)),
+        FUNCTION(MODULE_TYPE(Memory, Allocator), AsAllocator, ())
+    )
+);
 
 #include "Impl/Pool.impl"
 

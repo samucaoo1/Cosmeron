@@ -1,0 +1,17 @@
+#pragma once
+
+#define STATUS_CATEGORY_COL_NAME(NAME, MESSAGE) NAME
+#define STATUS_CATEGORY_COL_MESSAGE(NAME, MESSAGE) MESSAGE
+
+#define STATUS_CATEGORY_GET(FIELD, ROW)                                        \
+  PP_OP_CAT2(STATUS_CATEGORY_COL_, FIELD) ROW
+
+#define STATUS_CATEGORY_TABLE(X)                                               \
+  X((SUCCESS, "Success"))                                                      \
+  X((GENERIC, "Generic"))                                                      \
+  X((MEMORY, "Memory"))                                                        \
+  X((CONCURRENCY, "Concurrency"))                                              \
+  X((ARITHMETIC, "Arithmetic"))                                                 \
+  X((SEQUENCE, "Sequence"))
+/* EOF */
+

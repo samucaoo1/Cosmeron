@@ -1,0 +1,10 @@
+#ifndef COSMERON_CONTAINER_ITERATOR_CIRCULAR_H
+#define COSMERON_CONTAINER_ITERATOR_CIRCULAR_H
+
+#include "Impl/Common.inc"
+#include "Stream.h"
+#include "Circular.def"
+
+TEMPLATE_INSTANTIATE_TABLE(Iterator, Circular, CONTAINER_ORDERED_TYPE_TABLE);
+
+#endif /* COSMERON_CONTAINER_ITERATOR_CIRCULAR_H */

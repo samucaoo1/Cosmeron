@@ -1,0 +1,94 @@
+/* Fixed.def - Dual Mode Engine (Zero Duplication) */
+
+#include "Impl/Common.inc"
+
+#ifndef TEMPLATE_Numeric_Fixed
+#define TEMPLATE_Numeric_Fixed(SUFFIX, TYPE, WIDE_TYPE, FRAC_BITS)             \
+  TEMPLATE_STRUCT(Numeric, Fixed, SUFFIX,                                      \
+      FIELDS(                                                                  \
+          TYPE raw;                                                            \
+      )                                                                        \
+  );                                                                           \
+  TEMPLATE_PACKAGE(Numeric, Fixed, SUFFIX,                                     \
+      VARIANT(From,                                                            \
+          FUNCTION_INLINE(MODULE_TYPED(Numeric, Fixed, SUFFIX), Raw,           \
+                          (TYPE raw), {                                        \
+            MODULE_TYPED(Numeric, Fixed, SUFFIX) f = {.raw = raw};             \
+            return f;                                                          \
+          }),                                                                  \
+          FUNCTION_INLINE(MODULE_TYPED(Numeric, Fixed, SUFFIX), Int,           \
+                          (TYPE value), {                                      \
+            return MODULE_FUNC(Numeric, Fixed, SUFFIX, FromRaw)(               \
+                (TYPE)((WIDE_TYPE)value << (FRAC_BITS)));                      \
+          }),                                                                  \
+          FUNCTION_INLINE(MODULE_TYPED(Numeric, Fixed, SUFFIX), Float64,       \
+                          (double value), {                                    \
+            const double scale = (double)((WIDE_TYPE)1 << (FRAC_BITS));        \
+            return MODULE_FUNC(Numeric, Fixed, SUFFIX, FromRaw)(               \
+                (TYPE)(value * scale + (value >= 0.0 ? 0.5 : -0.5)));          \
+          })                                                                   \
+      ),                                                                       \
+      VARIANT(To,                                                              \
+          FUNCTION_INLINE(TYPE, Int,                                           \
+                          (MODULE_TYPED(Numeric, Fixed, SUFFIX) value), {      \
+            return (TYPE)(value.raw >> (FRAC_BITS));                           \
+          }),                                                                  \
+          FUNCTION_INLINE(double, Float64,                                     \
+                          (MODULE_TYPED(Numeric, Fixed, SUFFIX) value), {      \
+            const double scale = (double)((WIDE_TYPE)1 << (FRAC_BITS));        \
+            return (double)value.raw / scale;                                  \
+          })                                                                   \
+      ),                                                                       \
+      FUNCTION_INLINE(MODULE_TYPED(Numeric, Fixed, SUFFIX), Add,               \
+                      (MODULE_TYPED(Numeric, Fixed, SUFFIX) a,                 \
+                       MODULE_TYPED(Numeric, Fixed, SUFFIX) b), {              \
+        return MODULE_FUNC(Numeric, Fixed, SUFFIX, FromRaw)(                   \
+            (TYPE)(a.raw + b.raw));                                            \
+      }),                                                                      \
+      FUNCTION_INLINE(MODULE_TYPED(Numeric, Fixed, SUFFIX), Sub,               \
+                      (MODULE_TYPED(Numeric, Fixed, SUFFIX) a,                 \
+                       MODULE_TYPED(Numeric, Fixed, SUFFIX) b), {              \
+        return MODULE_FUNC(Numeric, Fixed, SUFFIX, FromRaw)(                   \
+            (TYPE)(a.raw - b.raw));                                            \
+      }),                                                                      \
+      FUNCTION_INLINE(MODULE_TYPED(Numeric, Fixed, SUFFIX), Mul,               \
+                      (MODULE_TYPED(Numeric, Fixed, SUFFIX) a,                 \
+                       MODULE_TYPED(Numeric, Fixed, SUFFIX) b), {              \
+        const WIDE_TYPE prod =                                                 \
+            ((WIDE_TYPE)a.raw * (WIDE_TYPE)b.raw) >> (FRAC_BITS);              \
+        return MODULE_FUNC(Numeric, Fixed, SUFFIX, FromRaw)((TYPE)prod);       \
+      }),                                                                      \
+      OPERATION_INLINE(Div,                                                    \
+                       (MODULE_TYPED(Numeric, Fixed, SUFFIX) a,                \
+                        MODULE_TYPED(Numeric, Fixed, SUFFIX) b,                \
+                        MODULE_TYPED(Numeric, Fixed, SUFFIX) *outValue), {     \
+        if (!outValue || b.raw == (TYPE)0) {                                   \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        }                                                                      \
+        const WIDE_TYPE num = ((WIDE_TYPE)a.raw << (FRAC_BITS));               \
+        *outValue = MODULE_FUNC(Numeric, Fixed, SUFFIX, FromRaw)(              \
+            (TYPE)(num / (WIDE_TYPE)b.raw));                                   \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      COMPARISON_INLINE(Compare,                                               \
+                        (MODULE_TYPED(Numeric, Fixed, SUFFIX) a,               \
+                         MODULE_TYPED(Numeric, Fixed, SUFFIX) b), {            \
+        if (a.raw < b.raw) {                                                   \
+          return COMPARISON_CONST(LOWER);                                      \
+        }                                                                      \
+        if (a.raw > b.raw) {                                                   \
+          return COMPARISON_CONST(HIGHER);                                     \
+        }                                                                      \
+        return COMPARISON_CONST(EQUAL);                                        \
+      })                                                                       \
+  )
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(TYPE) && defined(WIDE_TYPE) && defined(FRAC_BITS)
+  TEMPLATE_Numeric_Fixed(SUFFIX, TYPE, WIDE_TYPE, FRAC_BITS);
+  #undef SUFFIX
+  #undef TYPE
+  #undef WIDE_TYPE
+  #undef FRAC_BITS
+#endif

@@ -1,0 +1,136 @@
+#pragma once
+
+MODULE_IMPLEMENT(DOMAIN(Core), Condition,
+  INTERNAL_EX(Error,
+    FUNCTION(const MODULE_TYPE(Condition, Error) *, WalkChain,
+                   (const MODULE_TYPE(Condition, Error) * root,
+                    size_t *outDepth), {
+      const MODULE_TYPE(Condition, Error) *curr = root;
+      size_t depth = 1U;
+      while (curr->cause != NULL &&
+             depth <= MODULE_CONST(Condition, Error, MAX_CHAIN_DEPTH)) {
+        if (curr->cause == root) {
+          break;
+        }
+        curr = curr->cause;
+        depth++;
+      }
+      if (outDepth != NULL) {
+        *outDepth = depth;
+      }
+      return curr;
+    })
+  ),
+
+  OBJECT(Error,
+    OPERATION(Create, (OPSTATUS code, const char *message), {
+      if (!self) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      MODULE_FUNC(Condition, Error, Init)(self);
+      self->code = code;
+      self->message = message;
+      MODULE_FUNC(Diagnostic, Context, Clear)(&self->context);
+      self->cause = NULL;
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(FromStatus, (OPSTATUS code), {
+      return MODULE_FUNC(Condition, Error, Create)(self, code, NULL);
+    }),
+
+    PROCEDURE(Clear, (), {
+      if (!self) {
+        return;
+      }
+      self->code = STATUS_CONST(SUCCESS);
+      self->message = NULL;
+      MODULE_FUNC(Diagnostic, Context, Clear)(&self->context);
+      self->cause = NULL;
+    }),
+
+    CONST_FUNCTION(const char *, Message, (), {
+      if (!self) {
+        return "Unknown error (null pointer)";
+      }
+      if (self->message) {
+        return self->message;
+      }
+      return MODULE_FUNC(Condition, Status, Message)(self->code);
+    }),
+
+    VARIANT(Set,
+      OPERATION(Context, (const MODULE_TYPE(Diagnostic, Context) * context), {
+        if (!self) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+        if (context) {
+          self->context = *context;
+        } else {
+          MODULE_FUNC(Diagnostic, Context, Clear)(&self->context);
+        }
+        return STATUS_CONST(SUCCESS);
+      }),
+
+      OPERATION(Origin,
+                (const char *file, uint32_t line,
+                 const char *function, const char *description,
+                 const void *userData), {
+        if (!self) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+        return MODULE_FUNC(Diagnostic, Context, Create)(&self->context, file, line,
+                                                        function, description,
+                                                        userData);
+      }),
+
+      OPERATION(Cause, (const MODULE_TYPE(Condition, Error) * cause), {
+        if (!self) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+
+        if (cause == NULL) {
+          self->cause = NULL;
+          return STATUS_CONST(SUCCESS);
+        }
+
+        /* Traverse cause chain to detect cycle or depth overflow */
+        const MODULE_TYPE(Condition, Error) *curr = cause;
+        size_t count = 0U;
+        while (curr != NULL) {
+          if (curr == self) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+
+          count++;
+          if (count > MODULE_CONST(Condition, Error, MAX_CHAIN_DEPTH)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+
+          curr = curr->cause;
+        }
+
+        self->cause = cause;
+        return STATUS_CONST(SUCCESS);
+      })
+    ),
+
+    CONST_FUNCTION(const MODULE_TYPE(Condition, Error) *, RootCause, (), {
+      if (!self) {
+        return NULL;
+      }
+      return MODULE_IFUNC(Condition, Error, WalkChain)(self, NULL);
+    }),
+
+    CONST_FUNCTION(size_t, Depth, (), {
+      if (!self) {
+        return 0U;
+      }
+      size_t depth = 0U;
+      MODULE_IFUNC(Condition, Error, WalkChain)(self, &depth);
+      return depth;
+    })
+  )
+);
+
+/* EOF */

@@ -1,0 +1,591 @@
+#pragma once
+
+#include <string.h>
+
+/* ========================================================================== */
+/* 1. Internal Helpers & Primitive Trait Adapter Generation                   */
+/* ========================================================================== */
+
+#define COSMERON_MACRO_INTERNAL_TRAIT_PRIMITIVE_INTERNAL_FN(ROW)               \
+  COMPARISON(PP_OP_CAT2(Compare_, PRIMITIVE_TYPE_GET(NAME, ROW)),              \
+             (const void *left, const void *right), {                          \
+               if (left == right) {                                            \
+                 return COMPARISON_CONST(EQUAL);                               \
+               }                                                               \
+               if (!left) {                                                    \
+                 return COMPARISON_CONST(LOWER);                               \
+               }                                                               \
+               if (!right) {                                                   \
+                 return COMPARISON_CONST(HIGHER);                              \
+               }                                                               \
+               return MODULE_FUNC(Algorithm, Comparison,                       \
+                                  PRIMITIVE_TYPE_GET(NAME, ROW))(              \
+                   *(const PRIMITIVE_TYPE_GET(C_TYPE, ROW) *)left,               \
+                   *(const PRIMITIVE_TYPE_GET(C_TYPE, ROW) *)right);             \
+             }),                                                               \
+  FUNCTION(size_t, PP_OP_CAT2(Hash_, PRIMITIVE_TYPE_GET(NAME, ROW)),           \
+           (const void *instance), {                                           \
+             if (!instance) {                                                  \
+               return 0U;                                                      \
+             }                                                                 \
+             return MODULE_IFUNC(Type, Traits, Fnv1aBytes)(                    \
+                 instance, sizeof(PRIMITIVE_TYPE_GET(C_TYPE, ROW)));             \
+           }),
+
+#if PROCESSOR_X64 || PROCESSOR_ARM64 || PROCESSOR_PPC64 ||                     \
+    PROCESSOR_LOONGARCH64 || PROCESSOR_S390X
+static const size_t MODULE_IFUNC(Type, Traits, FnvOffset) =
+    (size_t)14695981039346656037ULL;
+static const size_t MODULE_IFUNC(Type, Traits, FnvPrime) =
+    (size_t)1099511628211ULL;
+#else
+static const size_t MODULE_IFUNC(Type, Traits, FnvOffset) =
+    (size_t)2166136261UL;
+static const size_t MODULE_IFUNC(Type, Traits, FnvPrime) =
+    (size_t)16777619UL;
+#endif
+
+MODULE(DOMAIN(Core), Type,
+  INTERNAL_EX(Traits,
+    FUNCTION(size_t, Fnv1aBytes, (const void *data, size_t size), {
+      if (!data || size == 0U) {
+        return 0U;
+      }
+      size_t hash = MODULE_IFUNC(Type, Traits, FnvOffset);
+      const size_t prime = MODULE_IFUNC(Type, Traits, FnvPrime);
+      const unsigned char *bytes = (const unsigned char *)data;
+      for (size_t i = 0U; i < size; ++i) {
+        hash ^= (size_t)bytes[i];
+        hash *= prime;
+      }
+      return hash;
+    }),
+
+    COMPARISON(Compare_CString, (const void *left, const void *right), {
+      if (left == right) {
+        return COMPARISON_CONST(EQUAL);
+      }
+      if (!left) {
+        return COMPARISON_CONST(LOWER);
+      }
+      if (!right) {
+        return COMPARISON_CONST(HIGHER);
+      }
+      const char *const *leftStr = (const char *const *)left;
+      const char *const *rightStr = (const char *const *)right;
+      return MODULE_FUNC(Algorithm, Comparison, CString)(*leftStr, *rightStr);
+    }),
+
+    FUNCTION(size_t, Hash_CString, (const void *instance), {
+      if (!instance) {
+        return 0U;
+      }
+      const char *const *strPtr = (const char *const *)instance;
+      if (!*strPtr) {
+        return 0U;
+      }
+      return MODULE_IFUNC(Type, Traits, Fnv1aBytes)(*strPtr, strlen(*strPtr));
+    }),
+
+    PRIMITIVE_TYPE_TABLE(COSMERON_MACRO_INTERNAL_TRAIT_PRIMITIVE_INTERNAL_FN)
+
+    OPERATION(CheckedMultiplySize,
+              (size_t count, size_t elementSize, size_t *outTotal), {
+      if (!outTotal) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      if (elementSize != 0U && count > SIZE_MAX / elementSize) {
+        return STATUS_CONST(ARITHMETIC_OVERFLOW);
+      }
+      *outTotal = count * elementSize;
+      return STATUS_CONST(SUCCESS);
+    })
+  )
+);
+
+#undef COSMERON_MACRO_INTERNAL_TRAIT_PRIMITIVE_INTERNAL_FN
+
+/* ========================================================================== */
+/* 2. Package Implementation: Type_Traits                                     */
+/* ========================================================================== */
+
+#define COSMERON_MACRO_INTERNAL_TRAIT_FLAG_BOOL()                              \
+  (MODULE_CONST(Type, TraitFlag, TRIVIAL_COPY) |                               \
+   MODULE_CONST(Type, TraitFlag, TRIVIAL_COMPARE))
+#define COSMERON_MACRO_INTERNAL_TRAIT_FLAG_INT()                               \
+  (MODULE_CONST(Type, TraitFlag, TRIVIAL_COPY) |                               \
+   MODULE_CONST(Type, TraitFlag, TRIVIAL_COMPARE) |                            \
+   MODULE_CONST(Type, TraitFlag, IS_NUMERIC) |                                 \
+   MODULE_CONST(Type, TraitFlag, IS_SIGNED) |                                  \
+   MODULE_CONST(Type, TraitFlag, IS_INTEGER))
+#define COSMERON_MACRO_INTERNAL_TRAIT_FLAG_UINT()                              \
+  (MODULE_CONST(Type, TraitFlag, TRIVIAL_COPY) |                               \
+   MODULE_CONST(Type, TraitFlag, TRIVIAL_COMPARE) |                            \
+   MODULE_CONST(Type, TraitFlag, IS_NUMERIC) |                                 \
+   MODULE_CONST(Type, TraitFlag, IS_INTEGER))
+#define COSMERON_MACRO_INTERNAL_TRAIT_FLAG_CHAR()                              \
+  (MODULE_CONST(Type, TraitFlag, TRIVIAL_COPY) |                               \
+   MODULE_CONST(Type, TraitFlag, TRIVIAL_COMPARE))
+#define COSMERON_MACRO_INTERNAL_TRAIT_FLAG_FLOAT()                             \
+  (MODULE_CONST(Type, TraitFlag, TRIVIAL_COPY) |                               \
+   MODULE_CONST(Type, TraitFlag, IS_NUMERIC) |                                 \
+   MODULE_CONST(Type, TraitFlag, IS_SIGNED) |                                  \
+   MODULE_CONST(Type, TraitFlag, IS_FLOAT))
+#define COSMERON_MACRO_INTERNAL_TRAIT_FLAG_PTR()                               \
+  (MODULE_CONST(Type, TraitFlag, TRIVIAL_COPY) |                               \
+   MODULE_CONST(Type, TraitFlag, TRIVIAL_COMPARE))
+
+#define COSMERON_MACRO_INTERNAL_TRAIT_CAT_FLAGS(CAT)                           \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_TRAIT_FLAG_, CAT)()
+
+#define COSMERON_MACRO_INTERNAL_TRAIT_PRIMITIVE_GETTER_IMPL(ROW)               \
+  FUNCTION(const MODULE_TYPE(Type, Traits) *,                                  \
+           PRIMITIVE_TYPE_GET(NAME, ROW), (void), {                            \
+    static const MODULE_TYPE(Type, Traits) descriptor = {                      \
+        .name = PP_OP_STRING(PRIMITIVE_TYPE_GET(T_NAME, ROW)),                 \
+        .size = sizeof(PRIMITIVE_TYPE_GET(C_TYPE, ROW)),                         \
+        .alignment = _Alignof(PRIMITIVE_TYPE_GET(C_TYPE, ROW)),                  \
+        .category =                                                            \
+            MODULE_CONST(Type, Category, PRIMITIVE_TYPE_GET(CATEGORY, ROW)),   \
+        .flags = COSMERON_MACRO_INTERNAL_TRAIT_CAT_FLAGS(                      \
+            PRIMITIVE_TYPE_GET(CATEGORY, ROW)),                                \
+        .init = NULL,                                                          \
+        .dispose = NULL,                                                       \
+        .copy = NULL,                                                          \
+        .move = NULL,                                                          \
+        .compare = MODULE_IFUNC(Type, Traits,                                  \
+                                PP_OP_CAT2(Compare_,                           \
+                                           PRIMITIVE_TYPE_GET(NAME, ROW))),    \
+        .hash = MODULE_IFUNC(Type, Traits,                                     \
+                             PP_OP_CAT2(Hash_,                                 \
+                                        PRIMITIVE_TYPE_GET(NAME, ROW)))};      \
+    return &descriptor;                                                        \
+  }),
+
+MODULE_IMPLEMENT(DOMAIN(Core), Type,
+  PACKAGE(Traits,
+    VARIANT(Is,
+      PREDICATE(Valid, (const MODULE_TYPE(Type, Traits) * traits), {
+        return traits != NULL && traits->name != NULL && traits->size > 0U &&
+               traits->alignment > 0U;
+      }),
+
+      PREDICATE(Equal, (const MODULE_TYPE(Type, Traits) * left,
+                        const MODULE_TYPE(Type, Traits) * right), {
+        if (!left || !right) {
+          return false;
+        }
+        return left == right;
+      }),
+
+      PREDICATE(Trivial, (const MODULE_TYPE(Type, Traits) * traits), {
+        if (!traits) {
+          return false;
+        }
+        const uint32_t required =
+            MODULE_CONST(Type, TraitFlag, TRIVIAL_COPY);
+        const uint32_t forbidden =
+            MODULE_CONST(Type, TraitFlag, NEEDS_DISPOSE) |
+            MODULE_CONST(Type, TraitFlag, IS_DYNAMIC);
+        return ((traits->flags & required) == required) &&
+               ((traits->flags & forbidden) == 0U) &&
+               (traits->init == NULL) && (traits->dispose == NULL);
+      }),
+
+      PREDICATE(TrivialCopy, (const MODULE_TYPE(Type, Traits) * traits), {
+        return MODULE_FUNC(Type, Traits, HasFlags)(
+            traits, MODULE_CONST(Type, TraitFlag, TRIVIAL_COPY));
+      }),
+
+      PREDICATE(TrivialCompare, (const MODULE_TYPE(Type, Traits) * traits), {
+        return MODULE_FUNC(Type, Traits, HasFlags)(
+            traits, MODULE_CONST(Type, TraitFlag, TRIVIAL_COMPARE));
+      }),
+
+      PREDICATE(Numeric, (const MODULE_TYPE(Type, Traits) * traits), {
+        return MODULE_FUNC(Type, Traits, HasFlags)(
+            traits, MODULE_CONST(Type, TraitFlag, IS_NUMERIC));
+      }),
+
+      PREDICATE(Signed, (const MODULE_TYPE(Type, Traits) * traits), {
+        return MODULE_FUNC(Type, Traits, HasFlags)(
+            traits, MODULE_CONST(Type, TraitFlag, IS_SIGNED));
+      }),
+
+      PREDICATE(Integer, (const MODULE_TYPE(Type, Traits) * traits), {
+        return MODULE_FUNC(Type, Traits, HasFlags)(
+            traits, MODULE_CONST(Type, TraitFlag, IS_INTEGER));
+      }),
+
+      PREDICATE(Float, (const MODULE_TYPE(Type, Traits) * traits), {
+        return MODULE_FUNC(Type, Traits, HasFlags)(
+            traits, MODULE_CONST(Type, TraitFlag, IS_FLOAT));
+      }),
+
+      PREDICATE(Dynamic, (const MODULE_TYPE(Type, Traits) * traits), {
+        return MODULE_FUNC(Type, Traits, HasFlags)(
+            traits, MODULE_CONST(Type, TraitFlag, IS_DYNAMIC));
+      })
+    ),
+
+    PREDICATE(HasFlags, (const MODULE_TYPE(Type, Traits) * traits,
+                         uint32_t mask), {
+      if (!traits || mask == 0U) {
+        return false;
+      }
+      return (traits->flags & mask) == mask;
+    }),
+
+    PREDICATE(NeedsDispose, (const MODULE_TYPE(Type, Traits) * traits), {
+      if (!traits) {
+        return false;
+      }
+      return (traits->dispose != NULL) ||
+             MODULE_FUNC(Type, Traits, HasFlags)(
+                 traits, MODULE_CONST(Type, TraitFlag, NEEDS_DISPOSE));
+    }),
+
+    VARIANT(Init,
+      OPERATION((const MODULE_TYPE(Type, Traits) * traits, void *instance), {
+        if (!MODULE_FUNC(Type, Traits, IsValid)(traits) || !instance) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+        if (traits->init) {
+          return traits->init(instance);
+        }
+        memset(instance, 0, traits->size);
+        return STATUS_CONST(SUCCESS);
+      }),
+
+      OPERATION(Array, (const MODULE_TYPE(Type, Traits) * traits,
+                        void *array, size_t count), {
+        if (!MODULE_FUNC(Type, Traits, IsValid)(traits)) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+        if (count == 0U) {
+          return STATUS_CONST(SUCCESS);
+        }
+        if (!array) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+
+        size_t totalBytes = 0U;
+        OPSTATUS status = MODULE_IFUNC(Type, Traits, CheckedMultiplySize)(
+            count, traits->size, &totalBytes);
+        if (status != STATUS_CONST(SUCCESS)) {
+          return status;
+        }
+
+        if (!traits->init) {
+          memset(array, 0, totalBytes);
+          return STATUS_CONST(SUCCESS);
+        }
+
+        unsigned char *cursor = (unsigned char *)array;
+        for (size_t i = 0U; i < count; ++i) {
+          status = traits->init(cursor + (i * traits->size));
+          if (status != STATUS_CONST(SUCCESS)) {
+            MODULE_FUNC(Type, Traits, DisposeArray)(traits, array, i);
+            return status;
+          }
+        }
+        return STATUS_CONST(SUCCESS);
+      })
+    ),
+
+    VARIANT(Dispose,
+      PROCEDURE((const MODULE_TYPE(Type, Traits) * traits, void *instance), {
+        if (!traits || !instance) {
+          return;
+        }
+        if (traits->dispose) {
+          traits->dispose(instance);
+        }
+      }),
+
+      PROCEDURE(Array, (const MODULE_TYPE(Type, Traits) * traits,
+                        void *array, size_t count), {
+        if (!traits || !array || count == 0U || !traits->dispose) {
+          return;
+        }
+        unsigned char *cursor = (unsigned char *)array;
+        for (size_t i = 0U; i < count; ++i) {
+          traits->dispose(cursor + (i * traits->size));
+        }
+      })
+    ),
+
+    VARIANT(Copy,
+      OPERATION((const MODULE_TYPE(Type, Traits) * traits,
+                 void *destination, const void *source), {
+        if (!MODULE_FUNC(Type, Traits, IsValid)(traits) || !destination ||
+            !source) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+        if (destination == source) {
+          return STATUS_CONST(SUCCESS);
+        }
+
+        if (traits->copy) {
+          return traits->copy(destination, source);
+        }
+
+        if (MODULE_FUNC(Type, Traits, IsTrivialCopy)(traits)) {
+          memcpy(destination, source, traits->size);
+          return STATUS_CONST(SUCCESS);
+        }
+
+        return STATUS_CONST(NOT_SUPPORTED);
+      }),
+
+      OPERATION(Array, (const MODULE_TYPE(Type, Traits) * traits,
+                        void *destination, const void *source, size_t count), {
+        if (!MODULE_FUNC(Type, Traits, IsValid)(traits)) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+        if (count == 0U) {
+          return STATUS_CONST(SUCCESS);
+        }
+        if (!destination || !source) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+        if (destination == source) {
+          return STATUS_CONST(SUCCESS);
+        }
+
+        size_t totalBytes = 0U;
+        OPSTATUS status = MODULE_IFUNC(Type, Traits, CheckedMultiplySize)(
+            count, traits->size, &totalBytes);
+        if (status != STATUS_CONST(SUCCESS)) {
+          return status;
+        }
+
+        if (!traits->copy &&
+            MODULE_FUNC(Type, Traits, IsTrivialCopy)(traits)) {
+          memcpy(destination, source, totalBytes);
+          return STATUS_CONST(SUCCESS);
+        }
+
+        if (!traits->copy) {
+          return STATUS_CONST(NOT_SUPPORTED);
+        }
+
+        unsigned char *destCursor = (unsigned char *)destination;
+        const unsigned char *srcCursor = (const unsigned char *)source;
+        for (size_t i = 0U; i < count; ++i) {
+          status = traits->copy(destCursor + (i * traits->size),
+                                srcCursor + (i * traits->size));
+          if (status != STATUS_CONST(SUCCESS)) {
+            MODULE_FUNC(Type, Traits, DisposeArray)(traits, destination, i);
+            return status;
+          }
+        }
+        return STATUS_CONST(SUCCESS);
+      })
+    ),
+
+    VARIANT(Move,
+      OPERATION((const MODULE_TYPE(Type, Traits) * traits,
+                 void *destination, void *source), {
+        if (!MODULE_FUNC(Type, Traits, IsValid)(traits) || !destination ||
+            !source) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+        if (destination == source) {
+          return STATUS_CONST(SUCCESS);
+        }
+
+        if (traits->move) {
+          traits->move(destination, source);
+          return STATUS_CONST(SUCCESS);
+        }
+
+        if (MODULE_FUNC(Type, Traits, IsTrivialCopy)(traits)) {
+          memmove(destination, source, traits->size);
+          return STATUS_CONST(SUCCESS);
+        }
+
+        /* Fallback: shallow transfer + zero source if no custom move hook */
+        memcpy(destination, source, traits->size);
+        memset(source, 0, traits->size);
+        return STATUS_CONST(SUCCESS);
+      }),
+
+      OPERATION(Array, (const MODULE_TYPE(Type, Traits) * traits,
+                        void *destination, void *source, size_t count), {
+        if (!MODULE_FUNC(Type, Traits, IsValid)(traits)) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+        if (count == 0U) {
+          return STATUS_CONST(SUCCESS);
+        }
+        if (!destination || !source) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+        if (destination == source) {
+          return STATUS_CONST(SUCCESS);
+        }
+
+        size_t totalBytes = 0U;
+        OPSTATUS status = MODULE_IFUNC(Type, Traits, CheckedMultiplySize)(
+            count, traits->size, &totalBytes);
+        if (status != STATUS_CONST(SUCCESS)) {
+          return status;
+        }
+
+        if (!traits->move &&
+            MODULE_FUNC(Type, Traits, IsTrivialCopy)(traits)) {
+          memmove(destination, source, totalBytes);
+          return STATUS_CONST(SUCCESS);
+        }
+
+        unsigned char *destCursor = (unsigned char *)destination;
+        unsigned char *srcCursor = (unsigned char *)source;
+        for (size_t i = 0U; i < count; ++i) {
+          status = MODULE_FUNC(Type, Traits, Move)(
+              traits, destCursor + (i * traits->size),
+              srcCursor + (i * traits->size));
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+        }
+        return STATUS_CONST(SUCCESS);
+      })
+    ),
+
+    OPERATION(Swap, (const MODULE_TYPE(Type, Traits) * traits,
+                     void *left, void *right), {
+      if (!MODULE_FUNC(Type, Traits, IsValid)(traits) || !left || !right) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      if (left == right) {
+        return STATUS_CONST(SUCCESS);
+      }
+
+      unsigned char temporary[MODULE_CONST(Type, Traits, SWAP_BUFFER_SIZE)];
+      if (traits->move &&
+          traits->size <= MODULE_CONST(Type, Traits, SWAP_BUFFER_SIZE)) {
+        traits->move(temporary, left);
+        traits->move(left, right);
+        traits->move(right, temporary);
+        return STATUS_CONST(SUCCESS);
+      }
+
+      unsigned char *leftBytes = (unsigned char *)left;
+      unsigned char *rightBytes = (unsigned char *)right;
+      size_t remaining = traits->size;
+      while (remaining > 0U) {
+        const size_t chunk =
+            remaining > MODULE_CONST(Type, Traits, SWAP_BUFFER_SIZE)
+                ? MODULE_CONST(Type, Traits, SWAP_BUFFER_SIZE)
+                : remaining;
+        memcpy(temporary, leftBytes, chunk);
+        memcpy(leftBytes, rightBytes, chunk);
+        memcpy(rightBytes, temporary, chunk);
+        leftBytes += chunk;
+        rightBytes += chunk;
+        remaining -= chunk;
+      }
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    COMPARISON(Compare, (const MODULE_TYPE(Type, Traits) * traits,
+                         const void *left, const void *right), {
+      if (left == right) {
+        return COMPARISON_CONST(EQUAL);
+      }
+      if (!left) {
+        return COMPARISON_CONST(LOWER);
+      }
+      if (!right) {
+        return COMPARISON_CONST(HIGHER);
+      }
+      if (!MODULE_FUNC(Type, Traits, IsValid)(traits)) {
+        return COMPARISON_CONST(EQUAL);
+      }
+
+      if (traits->compare) {
+        return traits->compare(left, right);
+      }
+
+      if (MODULE_FUNC(Type, Traits, IsTrivialCompare)(traits)) {
+        return MODULE_FUNC(Algorithm, Comparison, Bytes)(
+            left, traits->size, right, traits->size);
+      }
+
+      return COMPARISON_CONST(EQUAL);
+    }),
+
+    PREDICATE(Equals, (const MODULE_TYPE(Type, Traits) * traits,
+                       const void *left, const void *right), {
+      if (!MODULE_FUNC(Type, Traits, IsValid)(traits)) {
+        return false;
+      }
+      if (left == right) {
+        return left != NULL;
+      }
+      if (!left || !right) {
+        return false;
+      }
+
+      if (traits->compare) {
+        return traits->compare(left, right) == COMPARISON_CONST(EQUAL);
+      }
+
+      if (MODULE_FUNC(Type, Traits, IsTrivialCompare)(traits)) {
+        return memcmp(left, right, traits->size) == 0;
+      }
+
+      return false;
+    }),
+
+    VARIANT(Hash,
+      FUNCTION(size_t, , (const MODULE_TYPE(Type, Traits) * traits,
+                          const void *instance), {
+        if (!MODULE_FUNC(Type, Traits, IsValid)(traits) || !instance) {
+          return 0U;
+        }
+        if (traits->hash) {
+          return traits->hash(instance);
+        }
+        if (MODULE_FUNC(Type, Traits, IsTrivialCompare)(traits)) {
+          return MODULE_IFUNC(Type, Traits, Fnv1aBytes)(instance, traits->size);
+        }
+        return 0U;
+      }),
+
+      FUNCTION(size_t, Bytes, (const void *data, size_t size), {
+        return MODULE_IFUNC(Type, Traits, Fnv1aBytes)(data, size);
+      })
+    ),
+
+    PRIMITIVE_TYPE_TABLE(COSMERON_MACRO_INTERNAL_TRAIT_PRIMITIVE_GETTER_IMPL)
+
+    FUNCTION(const MODULE_TYPE(Type, Traits) *, CString, (void), {
+      static const MODULE_TYPE(Type, Traits) descriptor = {
+          .name = "CString",
+          .size = sizeof(const char *),
+          .alignment = _Alignof(const char *),
+          .category = MODULE_CONST(Type, Category, PTR),
+          .flags = MODULE_CONST(Type, TraitFlag, TRIVIAL_COPY),
+          .init = NULL,
+          .dispose = NULL,
+          .copy = NULL,
+          .move = NULL,
+          .compare = MODULE_IFUNC(Type, Traits, Compare_CString),
+          .hash = MODULE_IFUNC(Type, Traits, Hash_CString)};
+      return &descriptor;
+    })
+  )
+);
+
+#undef COSMERON_MACRO_INTERNAL_TRAIT_PRIMITIVE_GETTER_IMPL
+#undef COSMERON_MACRO_INTERNAL_TRAIT_CAT_FLAGS
+#undef COSMERON_MACRO_INTERNAL_TRAIT_FLAG_BOOL
+#undef COSMERON_MACRO_INTERNAL_TRAIT_FLAG_INT
+#undef COSMERON_MACRO_INTERNAL_TRAIT_FLAG_UINT
+#undef COSMERON_MACRO_INTERNAL_TRAIT_FLAG_CHAR
+#undef COSMERON_MACRO_INTERNAL_TRAIT_FLAG_FLOAT
+#undef COSMERON_MACRO_INTERNAL_TRAIT_FLAG_PTR
+
+/* EOF */

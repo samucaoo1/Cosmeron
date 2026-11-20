@@ -1,9 +1,9 @@
 CC ?= cc
 CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L
 BUILD ?= .build
-LDLIBS ?= 
+LDLIBS ?=
 
-TESTS := Type TypeNoFunctionTable AllFunctions IncludeAll FundamentalSmall Tag
+TESTS := Type IncludeAll NoFunctionTable
 
 all: run
 
@@ -22,3 +22,4 @@ clean:
 	rm -rf $(BUILD)
 
 .PHONY: all build run clean
+

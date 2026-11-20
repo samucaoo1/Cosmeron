@@ -1,7 +1,4 @@
-#include "../../Cosmeron/Core/Preprocessor/Detect/Compiler.h"
-#include "../../Cosmeron/Core/Preprocessor/Detect/OperationSystem.h"
-#include "../../Cosmeron/Core/Preprocessor/Detect/Processor.h"
-#include "../../Cosmeron/Core/Preprocessor/Detect/Library.h"
+#include "../../Cosmeron/Core/Preprocessor/Detect.h"
 
 #if (COMPILER_CLANG + COMPILER_GCC + COMPILER_MSVC + COMPILER_INTEL) > 1
 #error "Primary compiler-family detection must be mutually exclusive."
@@ -14,7 +11,8 @@
 #endif
 
 #if (PROCESSOR_X86 + PROCESSOR_X64 + PROCESSOR_ARM + PROCESSOR_ARM64 +        \
-     PROCESSOR_RISCV) > 1
+     PROCESSOR_RISCV + PROCESSOR_WASM + PROCESSOR_PPC + PROCESSOR_PPC64 +     \
+     PROCESSOR_MIPS + PROCESSOR_LOONGARCH64 + PROCESSOR_S390X) > 1
 #error "Processor detection must identify at most one architecture."
 #endif
 
@@ -38,7 +36,8 @@
 
 #if PROCESSOR_KNOWN !=                                                       \
     (PROCESSOR_X86 || PROCESSOR_X64 || PROCESSOR_ARM || PROCESSOR_ARM64 ||   \
-     PROCESSOR_RISCV)
+     PROCESSOR_RISCV || PROCESSOR_WASM || PROCESSOR_PPC || PROCESSOR_PPC64 || \
+     PROCESSOR_MIPS || PROCESSOR_LOONGARCH64 || PROCESSOR_S390X)
 #error "PROCESSOR_KNOWN must describe, not constrain, processor detection."
 #endif
 
@@ -94,6 +93,12 @@ int main(void) {
       !DETECT_BOOLEAN_VALUE(PROCESSOR_ARM) ||
       !DETECT_BOOLEAN_VALUE(PROCESSOR_ARM64) ||
       !DETECT_BOOLEAN_VALUE(PROCESSOR_RISCV) ||
+      !DETECT_BOOLEAN_VALUE(PROCESSOR_WASM) ||
+      !DETECT_BOOLEAN_VALUE(PROCESSOR_PPC) ||
+      !DETECT_BOOLEAN_VALUE(PROCESSOR_PPC64) ||
+      !DETECT_BOOLEAN_VALUE(PROCESSOR_MIPS) ||
+      !DETECT_BOOLEAN_VALUE(PROCESSOR_LOONGARCH64) ||
+      !DETECT_BOOLEAN_VALUE(PROCESSOR_S390X) ||
       !DETECT_BOOLEAN_VALUE(PROCESSOR_KNOWN))
     return 3;
 

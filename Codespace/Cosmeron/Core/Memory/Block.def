@@ -1,0 +1,254 @@
+/* Block.def - Dual Mode Engine (Zero Duplication) */
+
+#include "Impl/Common.inc"
+#include "../Types/Impl/Common.inc"
+
+#ifndef TEMPLATE_Memory_Block
+#define TEMPLATE_Memory_Block(SUFFIX, TYPE)                                      \
+  TEMPLATE_WIDTH_OBJECT(Memory, Block, SUFFIX,                                         \
+      FIELDS(                                                                  \
+          union {                                                              \
+            TYPE limb[((SUFFIX) / CNS(Bit, Internal, U64_BITS))];              \
+            uint8_t byte[((SUFFIX) / CNS(Bit, Internal, BITS_PER_BYTE))];      \
+          };                                                                   \
+      ),                                                                       \
+      OPERATION_INLINE(Clear, (), {                                            \
+        if (!self) {                                                           \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        }                                                                      \
+        memset(self->byte, 0, sizeof(self->byte));                             \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      OPERATION_INLINE(SetAll, (), {                                           \
+        if (!self) {                                                           \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        }                                                                      \
+        memset(self->byte, CNS(Bit, Internal, BYTE_ALL_ONES),                  \
+               sizeof(self->byte));                                            \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      OPERATION_INLINE(And, (const MODULE_TYPE(Memory, PP_OP_CAT2(Block, SUFFIX)) *source), {\
+        if (!self || !source) {                                                \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        }                                                                      \
+        const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);   \
+        for (size_t i = 0U; i < limbCount; ++i) {                              \
+          self->limb[i] &= source->limb[i];                                    \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      OPERATION_INLINE(Or, (const MODULE_TYPE(Memory, PP_OP_CAT2(Block, SUFFIX)) *source), {\
+        if (!self || !source) {                                                \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        }                                                                      \
+        const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);   \
+        for (size_t i = 0U; i < limbCount; ++i) {                              \
+          self->limb[i] |= source->limb[i];                                    \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      OPERATION_INLINE(Xor, (const MODULE_TYPE(Memory, PP_OP_CAT2(Block, SUFFIX)) *source), {\
+        if (!self || !source) {                                                \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        }                                                                      \
+        const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);   \
+        for (size_t i = 0U; i < limbCount; ++i) {                              \
+          self->limb[i] ^= source->limb[i];                                    \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      OPERATION_INLINE(Not, (), {                                              \
+        if (!self) {                                                           \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        }                                                                      \
+        const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);   \
+        for (size_t i = 0U; i < limbCount; ++i) {                              \
+          self->limb[i] = ~self->limb[i];                                      \
+        }                                                                      \
+        return STATUS_CONST(SUCCESS);                                          \
+      }),                                                                      \
+      VARIANT(Shift,                                                           \
+          OPERATION_INLINE(Left, (unsigned bitCount), {                        \
+            if (!self) {                                                       \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            }                                                                  \
+            const size_t limbCount =                                           \
+                sizeof(self->limb) / sizeof(self->limb[0]);                    \
+            const size_t totalBits =                                           \
+                limbCount * CNS(Bit, Internal, U64_BITS);                      \
+            MODULE_IFUNC(Type, LimbsShiftLeft)(                                \
+                (uint64_t *)self->limb, limbCount, totalBits,                  \
+                (size_t)bitCount);                                             \
+            return STATUS_CONST(SUCCESS);                                      \
+          }),                                                                  \
+          OPERATION_INLINE(Right, (unsigned bitCount), {                       \
+            if (!self) {                                                       \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            }                                                                  \
+            const size_t limbCount =                                           \
+                sizeof(self->limb) / sizeof(self->limb[0]);                    \
+            MODULE_IFUNC(Type, LimbsShiftRight)(                               \
+                (uint64_t *)self->limb, limbCount, (size_t)bitCount);          \
+            return STATUS_CONST(SUCCESS);                                      \
+          })                                                                   \
+      ),                                                                       \
+      VARIANT(Rotate,                                                          \
+          OPERATION_INLINE(Left, (unsigned shift), {                           \
+            if (!self) {                                                       \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            }                                                                  \
+            const size_t limbCount =                                           \
+                sizeof(self->limb) / sizeof(self->limb[0]);                    \
+            const size_t totalBits =                                           \
+                limbCount * CNS(Bit, Internal, U64_BITS);                      \
+            if (totalBits > (size_t)UINT_MAX) {                                \
+              return STATUS_CONST(OUT_OF_RANGE);                               \
+            }                                                                  \
+            const unsigned totalBitsValue = (unsigned)totalBits;               \
+            if (shift == 0U || shift % totalBitsValue == 0U) {                 \
+              return STATUS_CONST(SUCCESS);                                    \
+            }                                                                  \
+            shift %= totalBitsValue;                                           \
+            MODULE_TYPE(Memory, PP_OP_CAT2(Block, SUFFIX)) temp = *self;                    \
+            MODULE_FUNC(Memory, PP_OP_CAT2(Block, SUFFIX), ShiftLeft)(self, shift);          \
+            MODULE_FUNC(Memory, PP_OP_CAT2(Block, SUFFIX), ShiftRight)(                      \
+                &temp, totalBitsValue - shift);                                \
+            for (size_t i = 0U; i < limbCount; ++i) {                          \
+              self->limb[i] |= temp.limb[i];                                   \
+            }                                                                  \
+            return STATUS_CONST(SUCCESS);                                      \
+          }),                                                                  \
+          OPERATION_INLINE(Right, (unsigned shift), {                          \
+            if (!self) {                                                       \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            }                                                                  \
+            const size_t limbCount =                                           \
+                sizeof(self->limb) / sizeof(self->limb[0]);                    \
+            const size_t totalBits =                                           \
+                limbCount * CNS(Bit, Internal, U64_BITS);                      \
+            if (totalBits > (size_t)UINT_MAX) {                                \
+              return STATUS_CONST(OUT_OF_RANGE);                               \
+            }                                                                  \
+            const unsigned totalBitsValue = (unsigned)totalBits;               \
+            if (shift == 0U || shift % totalBitsValue == 0U) {                 \
+              return STATUS_CONST(SUCCESS);                                    \
+            }                                                                  \
+            shift %= totalBitsValue;                                           \
+            MODULE_TYPE(Memory, PP_OP_CAT2(Block, SUFFIX)) temp = *self;                    \
+            MODULE_FUNC(Memory, PP_OP_CAT2(Block, SUFFIX), ShiftRight)(self, shift);         \
+            MODULE_FUNC(Memory, PP_OP_CAT2(Block, SUFFIX), ShiftLeft)(                       \
+                &temp, totalBitsValue - shift);                                \
+            for (size_t i = 0U; i < limbCount; ++i) {                          \
+              self->limb[i] |= temp.limb[i];                                   \
+            }                                                                  \
+            return STATUS_CONST(SUCCESS);                                      \
+          })                                                                   \
+      ),                                                                       \
+      VARIANT(Bit,                                                             \
+          OPERATION_INLINE(Set, (uint32_t bit), {                              \
+            if (!self) {                                                       \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            }                                                                  \
+            const size_t bitsPerLimb =                                         \
+                sizeof(self->limb[0]) * CNS(Bit, Internal, BITS_PER_BYTE);     \
+            const size_t limbIndex = bit / bitsPerLimb;                        \
+            const uint8_t intraBit = (uint8_t)(bit % bitsPerLimb);             \
+            if (limbIndex >= sizeof(self->limb) / sizeof(self->limb[0])) {     \
+              return STATUS_CONST(OUT_OF_RANGE);                               \
+            }                                                                  \
+            return MODULE_FUNC(Bit, 64, Set)(                                  \
+                (uint64_t *)&self->limb[limbIndex], intraBit);                 \
+          }),                                                                  \
+          OPERATION_INLINE(Clear, (uint32_t bit), {                            \
+            if (!self) {                                                       \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            }                                                                  \
+            const size_t bitsPerLimb =                                         \
+                sizeof(self->limb[0]) * CNS(Bit, Internal, BITS_PER_BYTE);     \
+            const size_t limbIndex = bit / bitsPerLimb;                        \
+            const uint8_t intraBit = (uint8_t)(bit % bitsPerLimb);             \
+            if (limbIndex >= sizeof(self->limb) / sizeof(self->limb[0])) {     \
+              return STATUS_CONST(OUT_OF_RANGE);                               \
+            }                                                                  \
+            return MODULE_FUNC(Bit, 64, Clear)(                                \
+                (uint64_t *)&self->limb[limbIndex], intraBit);                 \
+          }),                                                                  \
+          OPERATION_INLINE(Flip, (uint32_t bit), {                             \
+            if (!self) {                                                       \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            }                                                                  \
+            const size_t bitsPerLimb =                                         \
+                sizeof(self->limb[0]) * CNS(Bit, Internal, BITS_PER_BYTE);     \
+            const size_t limbIndex = bit / bitsPerLimb;                        \
+            const uint8_t intraBit = (uint8_t)(bit % bitsPerLimb);             \
+            if (limbIndex >= sizeof(self->limb) / sizeof(self->limb[0])) {     \
+              return STATUS_CONST(OUT_OF_RANGE);                               \
+            }                                                                  \
+            return MODULE_FUNC(Bit, 64, Flip)(                                 \
+                (uint64_t *)&self->limb[limbIndex], intraBit);                 \
+          }),                                                                  \
+          CONST_OPERATION_INLINE(Check, (uint32_t bit, bool *outResult), {     \
+            if (!self || !outResult) {                                         \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            }                                                                  \
+            const size_t bitsPerLimb =                                         \
+                sizeof(self->limb[0]) * CNS(Bit, Internal, BITS_PER_BYTE);     \
+            const size_t limbIndex = bit / bitsPerLimb;                        \
+            const uint8_t intraBit = (uint8_t)(bit % bitsPerLimb);             \
+            if (limbIndex >= sizeof(self->limb) / sizeof(self->limb[0])) {     \
+              return STATUS_CONST(OUT_OF_RANGE);                               \
+            }                                                                  \
+            *outResult = MODULE_FUNC(Bit, 64, Check)(                          \
+                (uint64_t)self->limb[limbIndex], intraBit);                    \
+            return STATUS_CONST(SUCCESS);                                      \
+          })                                                                   \
+      ),                                                                       \
+      CONST_FUNCTION_INLINE(size_t, Popcount, (), {                            \
+        if (!self) {                                                           \
+          return 0U;                                                           \
+        }                                                                      \
+        const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);   \
+        return MODULE_IFUNC(Type, LimbsPopcount)(                              \
+            (const uint64_t *)self->limb, limbCount);                          \
+      }),                                                                      \
+      CONST_PREDICATE_INLINE(Any, (), {                                        \
+        if (!self) {                                                           \
+          return false;                                                        \
+        }                                                                      \
+        const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);   \
+        return MODULE_IFUNC(Type, LimbsAny)((const uint64_t *)self->limb,      \
+                                            limbCount);                        \
+      }),                                                                      \
+      CONST_PREDICATE_INLINE(All, (), {                                        \
+        if (!self) {                                                           \
+          return false;                                                        \
+        }                                                                      \
+        const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);   \
+        return MODULE_IFUNC(Type, LimbsAll)(                                   \
+            (const uint64_t *)self->limb, limbCount,                           \
+            limbCount * CNS(Bit, Internal, U64_BITS));                         \
+      }),                                                                      \
+      CONST_PREDICATE_INLINE(None, (), {                                       \
+        return !MODULE_FUNC(Memory, PP_OP_CAT2(Block, SUFFIX), Any)(self);                   \
+      }),                                                                      \
+      CONST_PREDICATE_INLINE(Equal,                                            \
+                             (const MODULE_TYPE(Memory, PP_OP_CAT2(Block, SUFFIX)) *other), {\
+        if (!self || !other) {                                                 \
+          return self == other;                                                \
+        }                                                                      \
+        const size_t limbCount = sizeof(self->limb) / sizeof(self->limb[0]);   \
+        return MODULE_IFUNC(Type, LimbsEqual)((const uint64_t *)self->limb,    \
+                                              (const uint64_t *)other->limb,   \
+                                              limbCount);                      \
+      })                                                                       \
+  )
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Memory_Block(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif
+
+/* EOF */

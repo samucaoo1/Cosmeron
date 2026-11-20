@@ -1,35 +1,15 @@
-name: 03 · By Operating System
-
-# Comprehensive cross-OS matrix: Linux "base" distributions (Debian, Ubuntu,
-# Fedora, Arch, Void glibc/musl, Alpine, openSUSE, Gentoo, Nix + NixOS VM),
-# the BSD family (FreeBSD, OpenBSD, NetBSD, DragonFly BSD), Windows 10 & 11
-# (MinGW + MSVC) and macOS (Apple Silicon + Intel).
+name: 02 · Platform Compatibility
 
 on:
   push:
-    branches:
-      - main
-      - pattern-refactor
-      - audio-module
-    paths-ignore:
-      - '.github/badges/**'
-      - '.github/entropy/state.json'
-      - 'Docs/**'
-      - '*.md'
+    branches: [main, Alpha-Version, pattern-refactor, audio-module]
   pull_request:
-    branches:
-      - main
-    paths-ignore:
-      - '.github/badges/**'
-      - '.github/entropy/state.json'
-      - 'Docs/**'
-      - '*.md'
   schedule:
     - cron: '17 4 * * 1'
   workflow_dispatch:
     inputs:
       nixos_vm:
-        description: 'Run real NixOS QEMU guest VM'
+        description: 'Run the real NixOS QEMU guest VM'
         type: boolean
         required: false
         default: false
@@ -38,376 +18,202 @@ permissions:
   contents: read
 
 concurrency:
-  group: os-matrix-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: platforms-restored-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  # =========================================================================
-  # 1. Linux base distributions (native container userspaces)
-  # =========================================================================
-  linux-distros:
+  linux:
     name: Linux / ${{ matrix.name }}
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: Debian
             image: debian:stable-slim
-            install: apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y gcc libc6-dev
-          - name: Ubuntu
+            setup: apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y gcc libc6-dev
+          - name: Ubuntu GCC
             image: ubuntu:latest
-            install: apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y gcc libc6-dev
+            setup: apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y gcc libc6-dev
+          - name: Ubuntu Clang
+            image: ubuntu:latest
+            setup: apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y clang libc6-dev
+            cc: clang
           - name: Fedora
             image: quay.io/fedora/fedora:latest
-            install: dnf -y install gcc
-          - name: Arch Linux
+            setup: dnf -y install gcc glibc-devel
+          - name: Arch
             image: archlinux:base-devel
-            install: pacman -Syu --noconfirm --needed gcc
-          - name: Void Linux glibc
+            setup: pacman -Syu --noconfirm --needed gcc
+          - name: Void glibc
             image: ghcr.io/void-linux/void-glibc:latest
-            install: xbps-install -Sy -y gcc
-          - name: Void Linux musl
+            setup: xbps-install -Sy -y gcc
+          - name: Void musl
             image: ghcr.io/void-linux/void-musl:latest
-            install: xbps-install -Sy -y gcc
-          - name: Alpine Linux
+            setup: xbps-install -Sy -y gcc
+          - name: Alpine musl
             image: alpine:latest
-            install: apk update && apk add gcc musl-dev linux-headers
-          - name: openSUSE
+            setup: apk add --no-cache gcc musl-dev linux-headers
+          - name: openSUSE Tumbleweed
             image: registry.opensuse.org/opensuse/tumbleweed:latest
-            install: zypper -n install gcc
-          - name: Gentoo Linux
+            setup: zypper --non-interactive refresh && zypper --non-interactive install gcc glibc-devel
+          - name: Gentoo
             image: gentoo/stage3:latest
-            install: "true"
+            setup: gcc --version
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Run portable, codec, native and input suites inside ${{ matrix.name }}
+      - uses: actions/checkout@v7
+      - name: Install compiler and run manifest suites in ${{ matrix.name }}
         env:
           IMAGE: ${{ matrix.image }}
-          SETUP: ${{ matrix.install }}
+          SETUP: ${{ matrix.setup }}
+          CC: ${{ matrix.cc || 'gcc' }}
         run: |
-          docker run --rm -v "$PWD:/workspace" -w /workspace "$IMAGE" \
-            /bin/sh -ec "$SETUP; export CC=gcc; sh .github/scripts/test-linux-distro.sh"
+          docker run --rm -e SETUP -e CC -v "$PWD:/workspace" -w /workspace "$IMAGE" /bin/sh -ec '
+            eval "$SETUP"
+            command -v "$CC"
+            "$CC" --version
+            CC="$CC" sh .github/scripts/test-portable-core.sh
+          '
 
-  # =========================================================================
-  # 2. Linux native host suites (all make modules, X11 GUI and 32-bit libc)
-  # =========================================================================
-  linux-host:
-    name: Linux / Host / ${{ matrix.cc }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
-    strategy:
-      fail-fast: false
-      matrix:
-        cc: [gcc, clang]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Run all module make suites
-        env:
-          CC: ${{ matrix.cc }}
-        run: sh .github/scripts/test-make-suites.sh
-      - name: Native GUI / X11
-        if: matrix.cc == 'gcc'
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y libx11-dev xvfb
-          CC=${{ matrix.cc }} sh .github/scripts/test-gui-native.sh
-
-  linux-32bit:
-    name: Linux / GCC / 32-bit multilib
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Install 32-bit libc
-        run: sudo apt-get update && sudo apt-get install -y gcc-multilib libc6-dev-i386
-      - name: Run make suites with 32-bit flags
-        env:
-          CC: gcc
-          SUITE_TAG: 32
-          SUITE_CFLAGS: -m32 -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L
-          SUITE_SKIP: Audio
-        run: sh .github/scripts/test-make-suites.sh
-
-  # =========================================================================
-  # 3. Nix toolchain and real NixOS QEMU VM
-  # =========================================================================
   nix-toolchain:
-    name: Nix / Toolchain package (x86_64-linux)
+    name: Nix / Flake toolchain (x86_64-linux)
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
       - name: Install Nix
-        uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31
-      - name: Build locked Nix packages (strict C11)
+        uses: cachix/install-nix-action@b85815f71a6de0ddee80b8a80a98d43f4bcc66c7 # v31
+      - name: Build the portable test package
         run: |
-          nix --extra-experimental-features 'nix-command flakes' \
-            build '.#checks.x86_64-linux.portable' -L --no-write-lock-file
-          nix --extra-experimental-features 'nix-command flakes' \
-            build '.#checks.x86_64-linux.native' -L --no-write-lock-file
+          nix --extra-experimental-features 'nix-command flakes'             build '.#checks.x86_64-linux.portable' -L --no-write-lock-file
 
   nixos-vm:
     name: NixOS / Real QEMU guest VM
-    if: ${{ github.event_name == 'schedule' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[portability-probe]')) || (github.event_name == 'workflow_dispatch' && inputs.nixos_vm) }}
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.nixos_vm) }}
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 100
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
       - name: Install Nix
-        uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31
-      - name: Boot NixOS VM and run packaged C11 test binaries
+        uses: cachix/install-nix-action@b85815f71a6de0ddee80b8a80a98d43f4bcc66c7 # v31
+      - name: Boot NixOS VM and execute the packaged C11 suites
         run: |
-          nix --extra-experimental-features 'nix-command flakes' \
-            build '.#nixos-vm' -L --no-write-lock-file
+          nix --extra-experimental-features 'nix-command flakes'             build '.#nixos-vm' -L --no-write-lock-file
 
-  # =========================================================================
-  # 4. BSD family (native VMs)
-  # =========================================================================
   freebsd:
-    name: BSD / FreeBSD (Clang C11)
+    name: BSD / FreeBSD
     runs-on: ubuntu-latest
     timeout-minutes: 85
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Run FreeBSD VM suites
-        id: tests
-        uses: vmactions/freebsd-vm@c46abacb49f09938ca4e1702d15d836285d694cc
+      - uses: actions/checkout@v7
+      - uses: vmactions/freebsd-vm@c46abacb49f09938ca4e1702d15d836285d694cc
         with:
           usesh: true
           run: |
             set -eu
             sh .github/scripts/test-portable-core.sh
-            sh .github/scripts/test-bsd-native.sh
-            sh .github/scripts/test-bsd-extended.sh
-            sh .github/scripts/test-input-posix.sh
-            sh .github/scripts/test-bsd-media.sh
-      - name: Report FreeBSD coverage
-        if: ${{ always() }}
-        shell: bash
-        run: |
-          if [ -f .build-bsd-extended/coverage.md ]; then
-            cat .build-bsd-extended/coverage.md >> "$GITHUB_STEP_SUMMARY"
-          fi
 
   openbsd:
-    name: BSD / OpenBSD (C11)
+    name: BSD / OpenBSD
     runs-on: ubuntu-latest
     timeout-minutes: 85
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Run OpenBSD VM suites
-        uses: vmactions/openbsd-vm@f1ca8bc8ecc5b6ef7218e5b914836e067e1546d3
+      - uses: actions/checkout@v7
+      - uses: vmactions/openbsd-vm@5f7b2c933b8846a138361d6843c52af4bef5d945
         with:
           usesh: true
           run: |
             set -eu
             sh .github/scripts/test-portable-core.sh
-            sh .github/scripts/test-bsd-native.sh
-            sh .github/scripts/test-bsd-extended.sh
-            sh .github/scripts/test-input-posix.sh
-            sh .github/scripts/test-bsd-media.sh
-      - name: Report OpenBSD coverage
-        if: ${{ always() }}
-        shell: bash
-        run: |
-          if [ -f .build-bsd-extended/coverage.md ]; then
-            cat .build-bsd-extended/coverage.md >> "$GITHUB_STEP_SUMMARY"
-          fi
 
   netbsd:
-    name: BSD / NetBSD (C11)
+    name: BSD / NetBSD
     runs-on: ubuntu-latest
     timeout-minutes: 85
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Run NetBSD VM suites
-        uses: vmactions/netbsd-vm@5957cf330aef2e6ddc63c604364c99ce2e02b91d
+      - uses: actions/checkout@v7
+      - uses: vmactions/netbsd-vm@c8a0d7ddb84619a7a8cc4e652efa7950b3fd9f92
         with:
           usesh: true
           run: |
             set -eu
             sh .github/scripts/test-portable-core.sh
-            sh .github/scripts/test-bsd-native.sh
-            sh .github/scripts/test-bsd-extended.sh
-            sh .github/scripts/test-input-posix.sh
-            sh .github/scripts/test-bsd-media.sh
-      - name: Report NetBSD coverage
-        if: ${{ always() }}
-        shell: bash
-        run: |
-          if [ -f .build-bsd-extended/coverage.md ]; then
-            cat .build-bsd-extended/coverage.md >> "$GITHUB_STEP_SUMMARY"
-          fi
 
   dragonflybsd:
-    name: BSD / DragonFly BSD (C11)
+    name: BSD / DragonFly BSD
     runs-on: ubuntu-latest
     timeout-minutes: 85
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Run DragonFly BSD VM suites
-        uses: vmactions/dragonflybsd-vm@4ab776fa9f914fbea72f13715b451e77e7ef5c41
+      - uses: actions/checkout@v7
+      - uses: vmactions/dragonflybsd-vm@4ab776fa9f914fbea72f13715b451e77e7ef5c41
         with:
           usesh: true
           run: |
             set -eu
             sh .github/scripts/test-portable-core.sh
-            sh .github/scripts/test-bsd-native.sh
-            sh .github/scripts/test-bsd-extended.sh
-            sh .github/scripts/test-input-posix.sh
-            sh .github/scripts/test-bsd-media.sh
-      - name: Report DragonFly coverage
-        if: ${{ always() }}
-        shell: bash
-        run: |
-          if [ -f .build-bsd-extended/coverage.md ]; then
-            cat .build-bsd-extended/coverage.md >> "$GITHUB_STEP_SUMMARY"
-          fi
 
-  # =========================================================================
-  # 5. Windows 10 & Windows 11 (MinGW & MSVC)
-  # =========================================================================
-  windows-10:
-    name: Windows 10 / ${{ matrix.toolchain }}
-    runs-on: windows-2022
-    timeout-minutes: 30
+  macos:
+    name: macOS / ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
-        toolchain: [mingw, msvc]
+        include:
+          - name: Apple Silicon (ARM64)
+            runner: macos-latest
+          - name: Intel (x86_64)
+            runner: macos-15-intel
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+      - name: Run manifest suites with Apple Clang
+        run: CC=clang sh .github/scripts/test-portable-core.sh
 
-      - name: MinGW GCC suites
-        if: matrix.toolchain == 'mingw'
-        shell: bash
-        run: |
-          sh .github/scripts/test-portable-core.sh
-          for src in Codespace/Tests/Sort.c Codespace/Tests/SortCatalog.c; do
-            gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -I Codespace "$src" -o sort-test.exe
-            ./sort-test.exe
-          done
-
-      - name: Set up MSVC
-        if: matrix.toolchain == 'msvc'
-        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
-
-      - name: MSVC suites
-        if: matrix.toolchain == 'msvc'
-        shell: pwsh
-        run: |
-          .github/scripts/test-msvc.ps1
-          foreach ($src in @("Codespace/Tests/Sort.c", "Codespace/Tests/SortCatalog.c")) {
-            cl /nologo /W4 /WX /TC /I Codespace $src /Fe:sort-test.exe
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            .\sort-test.exe
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
-
-  windows-11:
-    name: Windows 11 / ${{ matrix.toolchain }}
-    runs-on: windows-latest
-    timeout-minutes: 30
+  windows:
+    name: Windows / ${{ matrix.os }} / ${{ matrix.compiler }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
-        toolchain: [mingw, msvc]
+        include:
+          - os: Windows 10 / Server 2022 image
+            runner: windows-2022
+            compiler: MinGW
+          - os: Windows 10 / Server 2022 image
+            runner: windows-2022
+            compiler: MSVC
+          - os: Windows 11 / latest image
+            runner: windows-latest
+            compiler: MinGW
+          - os: Windows 11 / latest image
+            runner: windows-latest
+            compiler: MSVC
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: MinGW GCC suites
-        if: matrix.toolchain == 'mingw'
+      - uses: actions/checkout@v7
+      - name: Run manifest suites with MinGW
+        if: matrix.compiler == 'MinGW'
         shell: bash
-        run: |
-          sh .github/scripts/test-portable-core.sh
-          for src in Codespace/Tests/Sort.c Codespace/Tests/SortCatalog.c; do
-            gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -I Codespace "$src" -o sort-test.exe
-            ./sort-test.exe
-          done
-
-      - name: Set up MSVC
-        if: matrix.toolchain == 'msvc'
-        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
-
-      - name: MSVC suites
-        if: matrix.toolchain == 'msvc'
+        run: sh .github/scripts/test-portable-core.sh
+      - name: Configure MSVC
+        if: matrix.compiler == 'MSVC'
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756
+      - name: Run manifest suites with MSVC
+        if: matrix.compiler == 'MSVC'
         shell: pwsh
-        run: |
-          .github/scripts/test-msvc.ps1
-          foreach ($src in @("Codespace/Tests/Sort.c", "Codespace/Tests/SortCatalog.c")) {
-            cl /nologo /W4 /WX /TC /I Codespace $src /Fe:sort-test.exe
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            .\sort-test.exe
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
+        run: .github/scripts/test-msvc.ps1
 
-  # =========================================================================
-  # 6. macOS (Apple Silicon + Intel)
-  # =========================================================================
-  macos-apple-silicon:
-    name: macOS / Apple Silicon (ARM64)
-    runs-on: macos-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Run module make suites with Clang
-        env:
-          CC: clang
-        run: sh .github/scripts/test-make-suites.sh
-
-  macos-intel:
-    name: macOS / Intel (x86_64)
-    runs-on: macos-15-intel
-    timeout-minutes: 30
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Run module make suites with Clang
-        env:
-          CC: clang
-        run: sh .github/scripts/test-make-suites.sh
-
-  # =========================================================================
-  # 7. Aggregated gate
-  # =========================================================================
   gate:
-    name: By Operating System / Gate
+    name: Platform Compatibility / Gate
     if: ${{ always() }}
-    needs:
-      - linux-distros
-      - linux-host
-      - linux-32bit
-      - nix-toolchain
-      - nixos-vm
-      - freebsd
-      - openbsd
-      - netbsd
-      - dragonflybsd
-      - windows-10
-      - windows-11
-      - macos-apple-silicon
-      - macos-intel
+    needs: [linux, nix-toolchain, nixos-vm, freebsd, openbsd, netbsd, dragonflybsd, macos, windows]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Summary and required checks
+      - uses: actions/checkout@v7
+      - name: Required checks
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
-          REPORT_TITLE: By Operating System
+          REPORT_TITLE: Platform Compatibility
           ALLOW_SKIPPED: nixos-vm
         run: python3 .github/scripts/report-results.py

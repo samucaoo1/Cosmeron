@@ -1,0 +1,259 @@
+/* BST.def - Dual Mode Engine (Zero Duplication) */
+
+#include "Impl/Common.inc"
+
+#ifndef TEMPLATE_Tree_BST_Set
+#define TEMPLATE_Tree_BST_Set(SUFFIX, KEY_TYPE)                                 \
+  TEMPLATE_ISTRUCT(Tree, BST_SetNode, SUFFIX,                                   \
+      FIELDS(                                                                  \
+          struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX) *parent;              \
+          struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX) *left;                \
+          struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX) *right;               \
+          KEY_TYPE key;                                                        \
+      ));                                                                      \
+  CLOSURE_SCOPED_COMPARISON(NS(LIB_PREFIX(Tree), BST_Set, SUFFIX), Comparator,  \
+                            (KEY_TYPE left, KEY_TYPE right))                   \
+  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Tree), BST_Set, SUFFIX), Visitor,      \
+                           (const KEY_TYPE *key))                              \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_HELPERS(                                    \
+      BST_Set, SUFFIX, struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX),          \
+      KEY_TYPE, MODULE_CLOSURE(Tree, BST_Set, SUFFIX, Comparator))              \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_SET_TRAVERSE(                               \
+      BST_Set, SUFFIX, struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX),          \
+      MODULE_CLOSURE(Tree, BST_Set, SUFFIX, Visitor))                           \
+  INTERNAL_DEF_EX(                                                             \
+      Tree, NS(BST_Set, Algo, SUFFIX),                                          \
+      FUNCTION(struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX) *, CreateNode,   \
+               (KEY_TYPE key), {                                               \
+                 void *raw = NULL;                                             \
+                 if (MODULE_IFUNC(Tree, AllocNode)(                            \
+                         &raw, sizeof(struct MODULE_ITYPED(Tree, BST_SetNode,   \
+                                                            SUFFIX))) !=       \
+                     STATUS_CONST(SUCCESS)) {                                  \
+                   return NULL;                                                \
+                 }                                                             \
+                 struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX) *node =        \
+                     (struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX) *)raw;    \
+                 node->parent = NULL;                                          \
+                 node->left = NULL;                                            \
+                 node->right = NULL;                                           \
+                 node->key = key;                                              \
+                 return node;                                                  \
+               }),                                                             \
+                                                                               \
+      OPERATION(InsertSet,                                                     \
+                (struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX) **root,        \
+                 size_t *size,                                                 \
+                 MODULE_CLOSURE(Tree, BST_Set, SUFFIX, Comparator) cmp,         \
+                 KEY_TYPE key),                                                \
+                {                                                              \
+                  struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX) *cur = *root; \
+                  struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX) *par = NULL;  \
+                  CMPOUT lastCmp = COMPARISON_CONST(EQUAL);                    \
+                  while (cur != NULL) {                                        \
+                    par = cur;                                                 \
+                    lastCmp = CLOSURE_CALL(cmp, key, cur->key);                \
+                    if (lastCmp < COMPARISON_CONST(EQUAL))                     \
+                      cur = cur->left;                                         \
+                    else if (lastCmp > COMPARISON_CONST(EQUAL))                \
+                      cur = cur->right;                                        \
+                    else                                                       \
+                      return STATUS_CONST(ALREADY_EXISTS);                     \
+                  }                                                            \
+                  struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX) *node =       \
+                      MODULE_IFUNC(Tree, NS(BST_Set, Algo, SUFFIX),             \
+                                   CreateNode)(key);                           \
+                  if (!node)                                                   \
+                    return STATUS_CONST(OUT_OF_MEMORY);                        \
+                  node->parent = par;                                          \
+                  if (!par)                                                    \
+                    *root = node;                                              \
+                  else if (lastCmp < COMPARISON_CONST(EQUAL))                  \
+                    par->left = node;                                          \
+                  else                                                         \
+                    par->right = node;                                         \
+                  (*size)++;                                                   \
+                  return STATUS_CONST(SUCCESS);                                \
+                }),                                                            \
+                                                                               \
+      PROCEDURE(RemoveNode,                                                    \
+                (struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX) **root,        \
+                 size_t *size,                                                 \
+                 struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX) *z),           \
+                {                                                              \
+                  if (!z->left) {                                              \
+                    MODULE_IFUNC(Tree, NS(BST_Set, SUFFIX), Transplant)(        \
+                        root, z, z->right);                                    \
+                  } else if (!z->right) {                                      \
+                    MODULE_IFUNC(Tree, NS(BST_Set, SUFFIX), Transplant)(        \
+                        root, z, z->left);                                     \
+                  } else {                                                     \
+                    struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX) *s =        \
+                        MODULE_IFUNC(Tree, NS(BST_Set, SUFFIX), MinNode)(       \
+                            z->right);                                         \
+                    if (s->parent != z) {                                      \
+                      MODULE_IFUNC(Tree, NS(BST_Set, SUFFIX), Transplant)(      \
+                          root, s, s->right);                                  \
+                      s->right = z->right;                                     \
+                      s->right->parent = s;                                    \
+                    }                                                          \
+                    MODULE_IFUNC(Tree, NS(BST_Set, SUFFIX), Transplant)(        \
+                        root, z, s);                                           \
+                    s->left = z->left;                                         \
+                    s->left->parent = s;                                       \
+                  }                                                            \
+                  void *raw = (void *)z;                                       \
+                  MODULE_IFUNC(Tree, FreeNode)(&raw);                          \
+                  (*size)--;                                                   \
+                }),                                                            \
+                                                                               \
+      FUNCTION(size_t, NodeHeight,                                             \
+               (const struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX) *node), { \
+                 return MODULE_IFUNC(Tree, NS(BST_Set, SUFFIX),                 \
+                                     ComputeHeight)(node);                     \
+               }))                                                             \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_SET_ITER(                                   \
+      BST_Set, BST_SetIter, SUFFIX,                                              \
+      struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX), KEY_TYPE);               \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_SET_OBJECT(                                 \
+      BST_Set, BST_SetIter, SUFFIX,                                              \
+      struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX), KEY_TYPE)
+#endif
+
+#ifndef TEMPLATE_Tree_BST_Map
+#define TEMPLATE_Tree_BST_Map(SUFFIX, KEY_TYPE, VALUE_TYPE)                     \
+  TEMPLATE_ISTRUCT(Tree, BST_MapNode, SUFFIX,                                   \
+      FIELDS(                                                                  \
+          struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX) *parent;              \
+          struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX) *left;                \
+          struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX) *right;               \
+          KEY_TYPE key;                                                        \
+          VALUE_TYPE value;                                                    \
+      ));                                                                      \
+  CLOSURE_SCOPED_COMPARISON(NS(LIB_PREFIX(Tree), BST_Map, SUFFIX), Comparator,  \
+                            (KEY_TYPE left, KEY_TYPE right))                   \
+  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Tree), BST_Map, SUFFIX), Visitor,      \
+                           (KEY_TYPE key, VALUE_TYPE *value))                  \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_HELPERS(                                    \
+      BST_Map, SUFFIX, struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX),          \
+      KEY_TYPE, MODULE_CLOSURE(Tree, BST_Map, SUFFIX, Comparator))              \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_MAP_TRAVERSE(                               \
+      BST_Map, SUFFIX, struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX),          \
+      MODULE_CLOSURE(Tree, BST_Map, SUFFIX, Visitor))                           \
+  INTERNAL_DEF_EX(                                                             \
+      Tree, NS(BST_Map, Algo, SUFFIX),                                          \
+      FUNCTION(struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX) *, CreateNode,   \
+               (KEY_TYPE key, VALUE_TYPE value), {                             \
+                 void *raw = NULL;                                             \
+                 if (MODULE_IFUNC(Tree, AllocNode)(                            \
+                         &raw, sizeof(struct MODULE_ITYPED(Tree, BST_MapNode,   \
+                                                            SUFFIX))) !=       \
+                     STATUS_CONST(SUCCESS)) {                                  \
+                   return NULL;                                                \
+                 }                                                             \
+                 struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX) *node =        \
+                     (struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX) *)raw;    \
+                 node->parent = NULL;                                          \
+                 node->left = NULL;                                            \
+                 node->right = NULL;                                           \
+                 node->key = key;                                              \
+                 node->value = value;                                          \
+                 return node;                                                  \
+               }),                                                             \
+                                                                               \
+      OPERATION(InsertMap,                                                     \
+                (struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX) **root,        \
+                 size_t *size,                                                 \
+                 MODULE_CLOSURE(Tree, BST_Map, SUFFIX, Comparator) cmp,         \
+                 KEY_TYPE key, VALUE_TYPE value, bool allowUpdate),            \
+                {                                                              \
+                  struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX) *cur = *root; \
+                  struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX) *par = NULL;  \
+                  CMPOUT lastCmp = COMPARISON_CONST(EQUAL);                    \
+                  while (cur != NULL) {                                        \
+                    par = cur;                                                 \
+                    lastCmp = CLOSURE_CALL(cmp, key, cur->key);                \
+                    if (lastCmp < COMPARISON_CONST(EQUAL))                     \
+                      cur = cur->left;                                         \
+                    else if (lastCmp > COMPARISON_CONST(EQUAL))                \
+                      cur = cur->right;                                        \
+                    else {                                                     \
+                      if (allowUpdate) {                                       \
+                        cur->value = value;                                    \
+                        return STATUS_CONST(SUCCESS);                          \
+                      }                                                        \
+                      return STATUS_CONST(ALREADY_EXISTS);                     \
+                    }                                                          \
+                  }                                                            \
+                  struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX) *node =       \
+                      MODULE_IFUNC(Tree, NS(BST_Map, Algo, SUFFIX),             \
+                                   CreateNode)(key, value);                    \
+                  if (!node)                                                   \
+                    return STATUS_CONST(OUT_OF_MEMORY);                        \
+                  node->parent = par;                                          \
+                  if (!par)                                                    \
+                    *root = node;                                              \
+                  else if (lastCmp < COMPARISON_CONST(EQUAL))                  \
+                    par->left = node;                                          \
+                  else                                                         \
+                    par->right = node;                                         \
+                  (*size)++;                                                   \
+                  return STATUS_CONST(SUCCESS);                                \
+                }),                                                            \
+                                                                               \
+      PROCEDURE(RemoveNode,                                                    \
+                (struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX) **root,        \
+                 size_t *size,                                                 \
+                 struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX) *z),           \
+                {                                                              \
+                  if (!z->left) {                                              \
+                    MODULE_IFUNC(Tree, NS(BST_Map, SUFFIX), Transplant)(        \
+                        root, z, z->right);                                    \
+                  } else if (!z->right) {                                      \
+                    MODULE_IFUNC(Tree, NS(BST_Map, SUFFIX), Transplant)(        \
+                        root, z, z->left);                                     \
+                  } else {                                                     \
+                    struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX) *s =        \
+                        MODULE_IFUNC(Tree, NS(BST_Map, SUFFIX), MinNode)(       \
+                            z->right);                                         \
+                    if (s->parent != z) {                                      \
+                      MODULE_IFUNC(Tree, NS(BST_Map, SUFFIX), Transplant)(      \
+                          root, s, s->right);                                  \
+                      s->right = z->right;                                     \
+                      s->right->parent = s;                                    \
+                    }                                                          \
+                    MODULE_IFUNC(Tree, NS(BST_Map, SUFFIX), Transplant)(        \
+                        root, z, s);                                           \
+                    s->left = z->left;                                         \
+                    s->left->parent = s;                                       \
+                  }                                                            \
+                  void *raw = (void *)z;                                       \
+                  MODULE_IFUNC(Tree, FreeNode)(&raw);                          \
+                  (*size)--;                                                   \
+                }),                                                            \
+                                                                               \
+      FUNCTION(size_t, NodeHeight,                                             \
+               (const struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX) *node), { \
+                 return MODULE_IFUNC(Tree, NS(BST_Map, SUFFIX),                 \
+                                     ComputeHeight)(node);                     \
+               }))                                                             \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_MAP_ITER(                                   \
+      BST_Map, BST_MapIter, SUFFIX,                                              \
+      struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX), KEY_TYPE, VALUE_TYPE);   \
+  COSMERON_MACRO_INTERNAL_TREE_BIN_MAP_OBJECT(                                 \
+      BST_Map, BST_MapIter, SUFFIX,                                              \
+      struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX), KEY_TYPE, VALUE_TYPE)
+#endif
+
+/* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
+#if (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(KEY_TYPE) && defined(VALUE_TYPE)
+  TEMPLATE_Tree_BST_Map(SUFFIX, KEY_TYPE, VALUE_TYPE);
+  #undef SUFFIX
+  #undef KEY_TYPE
+  #undef VALUE_TYPE
+#elif (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(KEY_TYPE)
+  TEMPLATE_Tree_BST_Set(SUFFIX, KEY_TYPE);
+  #undef SUFFIX
+  #undef KEY_TYPE
+#endif
+

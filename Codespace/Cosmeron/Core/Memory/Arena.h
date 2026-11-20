@@ -1,69 +1,57 @@
 #pragma once
 
+#include "../Condition/Status.h"
+#include "../Module/Module.h"
 #include "../Preprocessor/Compiling.inc"
-#include "Memory.space"
 #include "Alloc.h"
-#include <string.h>
+#include "Allocator.h"
+#include "Impl/Common.inc"
 
-#define ARENA_NS(NAME) GNS2(MEMORY_NS(Arena), NAME)
-#define ARENA_CNS(NAME) CNS3(LIB_PREFIX_CONST(MEMORY_CMOD), ARENA, NAME)
+/* ========================================================================== */
+/* Object Declaration: Memory_Arena                                           */
+/* ========================================================================== */
 
-#define ARENA_TYPE(NAME) ARENA_NS(NAME)
-#define ARENA_FUNC(NAME) ARENA_NS(NAME)
-#define ARENA_CONST(NAME) ARENA_CNS(NAME)
+#if defined(MEMORY_DISABLE_FUNCTION_TABLE) &&                                  \
+    !defined(COSMERON_DISABLE_FT_Memory)
+#define COSMERON_DISABLE_FT_Memory 1
+#endif
+#if defined(MEMORY_ARENA_DISABLE_FUNCTION_TABLE) &&                            \
+    !defined(COSMERON_DISABLE_FT_Memory_Arena)
+#define COSMERON_DISABLE_FT_Memory_Arena 1
+#endif
 
-#define COSMERON_MACRO_INTERNAL_ARENA_ALIGNMENT                               \
-  COSMERON_MACRO_INTERNAL_MEMORY_MAX_ALIGNMENT
-
-typedef struct ARENA_TYPE(TArena) {
-  unsigned char *buffer;
-  size_t capacity;
-  size_t offset;
-} ARENA_TYPE(TArena);
-
-#define ARENA_CREATE_PROTOTYPE                                                 \
-  static inline OPSTATUS ARENA_FUNC(Create)(ARENA_TYPE(TArena) *arena, size_t capacity)
-
-#define ARENA_ALLOC_BYTES_PROTOTYPE                                                  \
-  static inline OPSTATUS ARENA_FUNC(AllocBytes)(ARENA_TYPE(TArena) *arena, void **out,           \
-                                            size_t size)
-
-#define ARENA_ALLOC_ALIGNED_PROTOTYPE                                          \
-  static inline OPSTATUS ARENA_FUNC(AllocAligned)(ARENA_TYPE(TArena) *arena, void **out,    \
-                                                   size_t size, size_t alignment)
-
-#define ARENA_ALLOC_ARRAY_PROTOTYPE                                            \
-  static inline OPSTATUS ARENA_FUNC(AllocArray)(ARENA_TYPE(TArena) *arena, void **out,     \
-                                                 size_t count, size_t elementSize)
-
-#define ARENA_ALLOC_ARRAY_ALIGNED_PROTOTYPE                                    \
-  static inline OPSTATUS ARENA_FUNC(AllocArrayAligned)(                        \
-      ARENA_TYPE(TArena) *arena, void **out, size_t count, size_t elementSize,             \
-      size_t alignment)
-
-#define ARENA_ALLOC_TYPED_PROTOTYPE                                           \
-  static inline OPSTATUS ARENA_FUNC(AllocTyped)(                               \
-      ARENA_TYPE(TArena) *arena, void *outPointerObject, size_t count,                     \
-      size_t elementSize, size_t alignment)
-
-#define ARENA_RESET_PROTOTYPE                                                  \
-  static inline OPSTATUS ARENA_FUNC(Reset)(ARENA_TYPE(TArena) *arena)
-
-#define ARENA_DESTROY_PROTOTYPE                                                \
-  static inline OPSTATUS ARENA_FUNC(Destroy)(ARENA_TYPE(TArena) *arena)
-
-ARENA_CREATE_PROTOTYPE;
-ARENA_ALLOC_BYTES_PROTOTYPE;
-ARENA_ALLOC_ALIGNED_PROTOTYPE;
-ARENA_ALLOC_ARRAY_PROTOTYPE;
-ARENA_ALLOC_ARRAY_ALIGNED_PROTOTYPE;
-ARENA_ALLOC_TYPED_PROTOTYPE;
-ARENA_RESET_PROTOTYPE;
-ARENA_DESTROY_PROTOTYPE;
-
-#define Memory_Arena_Alloc(arena, type, out, count)                            \
-  ARENA_FUNC(AllocTyped)((arena), (void *)(out), (count), sizeof(type),        \
-                          _Alignof(type))
+MODULE(DOMAIN(Core), Memory,
+    OBJECT(Arena,
+        FIELDS(
+            uint8_t *buffer;
+            size_t capacity;
+            size_t offset;
+            bool isOwned;
+        ),
+        VARIANT(Create,
+            OPERATION((size_t capacity)),
+            OPERATION(Buffer, (void *buffer, size_t capacity))
+        ),
+        VARIANT(Alloc,
+            OPERATION(Bytes, (void *outPointerObject, size_t size)),
+            OPERATION(Aligned, (void *outPointerObject, size_t size, size_t alignment)),
+            OPERATION(Array, (void *outPointerObject, size_t count, size_t elementSize)),
+            OPERATION(ArrayAligned, (void *outPointerObject, size_t count, size_t elementSize, size_t alignment))
+        ),
+        CONST_OPERATION(Save, (size_t *outMark)),
+        OPERATION(Restore, (size_t mark)),
+        OPERATION(Reset, ()),
+        OPERATION(Destroy, ()),
+        CONST_FUNCTION_INLINE(size_t, Capacity, (), { return self ? self->capacity : 0U; }),
+        CONST_FUNCTION_INLINE(size_t, Used, (), { return self ? self->offset : 0U; }),
+        CONST_FUNCTION_INLINE(size_t, Remaining, (), {
+          return (self && self->offset <= self->capacity) ? (self->capacity - self->offset) : 0U;
+        }),
+        CONST_PREDICATE(Contains, (const void *ptr)),
+        FUNCTION(MODULE_TYPE(Memory, Allocator), AsAllocator, ())
+    )
+);
 
 #include "Impl/Arena.impl"
+
 /* EOF */

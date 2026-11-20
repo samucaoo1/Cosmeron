@@ -1,0 +1,55 @@
+#pragma once
+
+#include "../Condition/Status.h"
+#include "../Module/Module.h"
+#include "../Preprocessor/Compiling.inc"
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#if defined(DIAGNOSTIC_DISABLE_FUNCTION_TABLE) &&                              \
+    !defined(COSMERON_DISABLE_FT_Diagnostic)
+#define COSMERON_DISABLE_FT_Diagnostic 1
+#endif
+#if defined(DIAGNOSTIC_CONTEXT_DISABLE_FUNCTION_TABLE) &&                      \
+    !defined(COSMERON_DISABLE_FT_Diagnostic_Context)
+#define COSMERON_DISABLE_FT_Diagnostic_Context 1
+#endif
+
+MODULE(DOMAIN(Core), Diagnostic,
+    OBJECT(Context,
+        FIELDS(
+            const char *file;
+            uint32_t line;
+            const char *function;
+            const char *description;
+            const void *userData;
+        ),
+        OPERATION(Create, (const char *file, uint32_t line, const char *function,
+                           const char *description, const void *userData)),
+        PROCEDURE(Clear, ()),
+        CONST_PREDICATE_INLINE(HasOrigin, (), {
+          return self && self->file != NULL;
+        }),
+        CONST_FUNCTION_INLINE(const char *, File, (), {
+          return self ? self->file : NULL;
+        }),
+        CONST_FUNCTION_INLINE(uint32_t, Line, (), {
+          return self ? self->line : 0U;
+        }),
+        CONST_FUNCTION_INLINE(const char *, Function, (), {
+          return self ? self->function : NULL;
+        }),
+        CONST_FUNCTION_INLINE(const char *, Description, (), {
+          return self ? self->description : NULL;
+        }),
+        CONST_FUNCTION_INLINE(const void *, UserData, (), {
+          return self ? self->userData : NULL;
+        })
+    )
+);
+
+#include "Impl/Context.impl"
+
+/* EOF */

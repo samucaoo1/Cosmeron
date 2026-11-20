@@ -1,112 +1,202 @@
-/* Compile with: cc -std=c11 -Wall -Wextra -pedantic -I Codespace
- * Codespace/Tests/Core/Callback.c -o callback-test && ./callback-test */
+/* Compile with:
+ * gcc -std=c11 -Wall -Wextra -Werror -pedantic -I Codespace Codespace/PendingRefactoring/Tests/Core/Callback.c -o /tmp/test_callback && /tmp/test_callback
+ */
+#include "Cosmeron/Core/Algorithm/Comparison.h"
+#include "Cosmeron/Core/Outcome/Status.h"
 #include "Cosmeron/Core/Module/Callback/Callback.h"
+#include "Cosmeron/Core/Module/Module.h"
 #include <assert.h>
+#include <stdbool.h>
 
-CALLBACK_DECLARE(Scale, int, (int value), (value))
-CALLBACK_DECLARE(AddOffset, int, (int left, int right), (left, right))
-CALLBACK_DECLARE_PROCEDURE(Notify, (int code), (code))
-CALLBACK_DECLARE_NULLARY(ReadValue, int)
-CALLBACK_DECLARE_NULLARY_PROCEDURE(ResetValue)
+/* ========================================================================== */
+/* 1. Standalone Pure Callbacks                                               */
+/* ========================================================================== */
 
-CALLBACK_DECLARE_OPERATION(Commit, (int value), (value))
-CALLBACK_DECLARE_PREDICATE(IsPositive, (int value), (value))
-CALLBACK_DECLARE_NULLARY_OPERATION(Flush)
-CALLBACK_DECLARE_NULLARY_PREDICATE(IsEnabled)
+CALLBACK_FUNCTION(int, Scale, (int value));
+CALLBACK_FUNCTION(int, AddOffset, (int left, int right));
+CALLBACK_PROCEDURE(Notify, (int code));
+CALLBACK_FUNCTION(int, ReadValue, ());
+CALLBACK_PROCEDURE(ResetValue, ());
 
-static OPSTATUS CommitValue(int value, void *context) {
-  *(int *)context += value;
+CALLBACK_OPERATION(Commit, (int value));
+CALLBACK_PREDICATE(IsPositive, (int value));
+CALLBACK_OPERATION(Flush, ());
+CALLBACK_PREDICATE(IsEnabled, ());
+CALLBACK_COMPARISON(CompareInts, (int left, int right));
+
+/* ========================================================================== */
+/* 2. Declarative Module with Callbacks                                       */
+/* ========================================================================== */
+
+MODULE(DOMAIN(Core), TestCallbackModule,
+  CALLBACK(
+    FUNCTION(int, DoubleVal, (int x)),
+    PROCEDURE(LogCode, (int code))
+  ),
+  PACKAGE(TestPkg,
+    CALLBACK(
+      OPERATION(OnEvent, (int code))
+    )
+  ),
+  OBJECT(TestObj,
+    FIELDS(
+      int id;
+    ),
+    CALLBACK(
+      PREDICATE(Filter, (int value))
+    )
+  )
+);
+
+/* ========================================================================== */
+/* Stateless Target Functions                                                 */
+/* ========================================================================== */
+
+static int ScaleValue(int value) {
+  return value * 3;
+}
+
+static int AddOffsetValue(int left, int right) {
+  return left + right + 5;
+}
+
+static int g_notified = 0;
+static void NotifyValue(int code) {
+  g_notified = code;
+}
+
+static int ReadDirect(void) {
+  return 42;
+}
+
+static void ResetDirect(void) {
+  g_notified = 0;
+}
+
+static OPSTATUS CommitValue(int value) {
   return value >= 0 ? STATUS_CONST(SUCCESS) : STATUS_CONST(INVALID_ARGUMENT);
 }
 
-static bool PositiveValue(int value, void *context) {
-  return value > *(int *)context;
+static bool PositiveValue(int value) {
+  return value > 0;
 }
 
-static OPSTATUS FlushContext(void *context) {
-  *(int *)context = 0;
+static OPSTATUS FlushDirect(void) {
+  g_notified = 0;
   return STATUS_CONST(SUCCESS);
 }
 
-static bool EnabledContext(void *context) {
-  return *(bool *)context;
+static bool EnabledDirect(void) {
+  return true;
 }
 
-static int ScaleValue(int value, void *context) {
-  return value * *(int *)context;
+static CMPOUT CompareIntsValue(int left, int right) {
+  if (left < right) return COMPARISON_CONST(LOWER);
+  if (left > right) return COMPARISON_CONST(HIGHER);
+  return COMPARISON_CONST(EQUAL);
 }
 
-static int AddOffsetValue(int left, int right, void *context) {
-  return left + right + *(int *)context;
+static int DoubleValueFn(int x) {
+  return x * 2;
 }
 
-static void NotifyValue(int code, void *context) {
-  *(int *)context = code;
+static void LogCodeFn(int code) {
+  g_notified = code;
 }
 
-static int ReadContext(void *context) {
-  return *(int *)context;
+static OPSTATUS EventValue(int code) {
+  g_notified = code * 2;
+  return STATUS_CONST(SUCCESS);
 }
 
-static void ResetContext(void *context) {
-  *(int *)context = 0;
+static bool FilterValue(int value) {
+  return (value % 2) == 0;
 }
+
+/* ========================================================================== */
+/* Main Test Runner                                                           */
+/* ========================================================================== */
 
 int main(void) {
-  int factor = 3;
-  CALLBACK_TYPE(Scale) scale =
-      CALLBACK_FUNC(Scale_Bind)(ScaleValue, &factor);
-  assert(CALLBACK_FUNC(Scale_IsValid)(scale));
-  assert(CALLBACK_FUNC(Scale_Invoke)(scale, 4) == 12);
+  /* 1. Verify sizeof pure callbacks is exactly sizeof(void *) = 8 bytes */
+  assert(sizeof(TCALLBACK(Scale)) == sizeof(void *));
+  assert(sizeof(TCALLBACK(AddOffset)) == sizeof(void *));
+  assert(sizeof(TCALLBACK(Notify)) == sizeof(void *));
+  assert(sizeof(TCALLBACK(ReadValue)) == sizeof(void *));
+  assert(sizeof(TCALLBACK(ResetValue)) == sizeof(void *));
+  assert(sizeof(TCALLBACK(Commit)) == sizeof(void *));
+  assert(sizeof(TCALLBACK(IsPositive)) == sizeof(void *));
+  assert(sizeof(TCALLBACK(Flush)) == sizeof(void *));
+  assert(sizeof(TCALLBACK(IsEnabled)) == sizeof(void *));
+  assert(sizeof(TCALLBACK(CompareInts)) == sizeof(void *));
 
-  int offset = 5;
-  CALLBACK_TYPE(AddOffset) add =
-      CALLBACK_FUNC(AddOffset_Bind)(AddOffsetValue, &offset);
-  assert(CALLBACK_FUNC(AddOffset_IsValid)(add));
-  assert(CALLBACK_FUNC(AddOffset_Invoke)(add, 2, 7) == 14);
+  /* 2. Direct assignment and invocation */
+  TCALLBACK(Scale) scale = ScaleValue;
+  assert(CALLBACK_IS_VALID(scale));
+  assert(CALLBACK_INVOKE(scale, 4) == 12);
+  assert(CALLBACK_CALL(scale, 4) == 12);
+  assert(scale(4) == 12);
 
-  int received = -1;
-  CALLBACK_TYPE(Notify) notify =
-      CALLBACK_FUNC(Notify_Bind)(NotifyValue, &received);
-  CALLBACK_FUNC(Notify_Invoke)(notify, 42);
-  assert(received == 42);
+  TCALLBACK(AddOffset) add = AddOffsetValue;
+  assert(CALLBACK_IS_VALID(add));
+  assert(CALLBACK_INVOKE(add, 2, 7) == 14);
+  assert(CALLBACK_CALL(add, 2, 7) == 14);
 
-  CALLBACK_TYPE(ReadValue) read =
-      CALLBACK_FUNC(ReadValue_Bind)(ReadContext, &factor);
-  assert(CALLBACK_FUNC(ReadValue_Invoke)(read) == 3);
+  TCALLBACK(Notify) notify = NotifyValue;
+  CALLBACK_CALL(notify, 42);
+  assert(g_notified == 42);
 
-  int value = 9;
-  CALLBACK_TYPE(ResetValue) reset =
-      CALLBACK_FUNC(ResetValue_Bind)(ResetContext, &value);
-  CALLBACK_FUNC(ResetValue_Invoke)(reset);
-  assert(value == 0);
+  TCALLBACK(ReadValue) read = ReadDirect;
+  assert(CALLBACK_INVOKE(read) == 42);
+  assert(CALLBACK_CALL(read) == 42);
 
-  CALLBACK_TYPE(Scale) invalid =
-      CALLBACK_FUNC(Scale_Bind)(NULL, NULL);
-  assert(!CALLBACK_FUNC(Scale_IsValid)(invalid));
+  TCALLBACK(ResetValue) reset = ResetDirect;
+  CALLBACK_CALL(reset);
+  assert(g_notified == 0);
 
-  int committed = 10;
-  CALLBACK_TYPE(Commit) commit = CALLBACK_FUNC(Commit_Bind)(CommitValue, &committed);
-  assert(CALLBACK_FUNC(Commit_IsValid)(commit));
-  assert(CALLBACK_FUNC(Commit_Invoke)(commit, 7) == STATUS_CONST(SUCCESS));
-  assert(committed == 17);
-  assert(CALLBACK_FUNC(Commit_Invoke)(commit, -1) == STATUS_CONST(INVALID_ARGUMENT));
+  TCALLBACK(Scale) invalid = CALLBACK_EMPTY;
+  assert(!CALLBACK_IS_VALID(invalid));
 
-  int threshold = 4;
-  CALLBACK_TYPE(IsPositive) positive =
-      CALLBACK_FUNC(IsPositive_Bind)(PositiveValue, &threshold);
-  assert(CALLBACK_FUNC(IsPositive_Invoke)(positive, 5));
-  assert(!CALLBACK_FUNC(IsPositive_Invoke)(positive, 4));
+  TCALLBACK(Commit) commit = CommitValue;
+  assert(CALLBACK_IS_VALID(commit));
+  assert(CALLBACK_INVOKE(commit, 7) == STATUS_CONST(SUCCESS));
+  assert(CALLBACK_INVOKE(commit, -1) == STATUS_CONST(INVALID_ARGUMENT));
 
-  CALLBACK_TYPE(Flush) flush = CALLBACK_FUNC(Flush_Bind)(FlushContext, &committed);
-  assert(CALLBACK_FUNC(Flush_Invoke)(flush) == STATUS_CONST(SUCCESS));
-  assert(committed == 0);
+  TCALLBACK(IsPositive) positive = PositiveValue;
+  assert(CALLBACK_INVOKE(positive, 5));
+  assert(!CALLBACK_INVOKE(positive, -2));
 
-  bool enabledValue = true;
-  CALLBACK_TYPE(IsEnabled) enabled =
-      CALLBACK_FUNC(IsEnabled_Bind)(EnabledContext, &enabledValue);
-  assert(CALLBACK_FUNC(IsEnabled_Invoke)(enabled));
-  enabledValue = false;
-  assert(!CALLBACK_FUNC(IsEnabled_Invoke)(enabled));
+  TCALLBACK(Flush) flush = FlushDirect;
+  g_notified = 99;
+  assert(CALLBACK_INVOKE(flush) == STATUS_CONST(SUCCESS));
+  assert(g_notified == 0);
+
+  TCALLBACK(IsEnabled) enabled = EnabledDirect;
+  assert(CALLBACK_INVOKE(enabled));
+
+  TCALLBACK(CompareInts) cmp = CompareIntsValue;
+  assert(CALLBACK_IS_VALID(cmp));
+  assert(CALLBACK_INVOKE(cmp, 3, 5) == COMPARISON_CONST(LOWER));
+  assert(CALLBACK_INVOKE(cmp, 5, 5) == COMPARISON_CONST(EQUAL));
+  assert(CALLBACK_INVOKE(cmp, 8, 2) == COMPARISON_CONST(HIGHER));
+
+  /* 3. Scoped Callbacks in MODULE, PACKAGE, OBJECT */
+  MODULE_CALLBACK(TestCallbackModule, DoubleVal) dbl = DoubleValueFn;
+  assert(dbl(15) == 30);
+
+  MODULE_CALLBACK(TestCallbackModule, LogCode) logFn = LogCodeFn;
+  logFn(88);
+  assert(g_notified == 88);
+
+  MODULE_CALLBACK(TestCallbackModule, TestPkg, OnEvent) pkgCb = EventValue;
+  assert(CALLBACK_IS_VALID(pkgCb));
+  assert(CALLBACK_INVOKE(pkgCb, 21) == STATUS_CONST(SUCCESS));
+  assert(g_notified == 42);
+
+  MODULE_CALLBACK(TestCallbackModule, TestObj, Filter) objCb = FilterValue;
+  assert(CALLBACK_IS_VALID(objCb));
+  assert(CALLBACK_INVOKE(objCb, 4) == true);
+  assert(CALLBACK_INVOKE(objCb, 7) == false);
+
   return 0;
 }

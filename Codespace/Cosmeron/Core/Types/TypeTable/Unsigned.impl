@@ -1,0 +1,9 @@
+#pragma once
+
+#define PRIMITIVE_TYPE_TABLE_UNSIGNED(X)                                       \
+  X((uint8_t, UInt8, U8, TUInt8, UINT, 8))                                     \
+  X((uint16_t, UInt16, U16, TUInt16, UINT, 16))                                \
+  X((uint32_t, UInt32, U32, TUInt32, UINT, 32))                                \
+  X((uint64_t, UInt64, U64, TUInt64, UINT, 64))
+/* EOF */
+

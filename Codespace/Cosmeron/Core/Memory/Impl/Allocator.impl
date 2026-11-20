@@ -1,0 +1,179 @@
+#pragma once
+
+/* ========================================================================== */
+/* TMemoryAllocator Implementation                                            */
+/* ========================================================================== */
+
+MODULE_IMPLEMENT(DOMAIN(Core), Memory,
+  INTERNAL_EX(Allocator,
+    OPERATION(SystemAlloc,
+              (void *context, size_t size, size_t alignment, void **outPtr), {
+      (void)context;
+      (void)alignment;
+      if (!outPtr) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      return MODULE_FUNC(Memory, Alloc, Bytes)(outPtr, size);
+    }),
+
+    OPERATION(SystemRealloc,
+              (void *context, void *ptr, size_t oldSize, size_t newSize,
+               size_t alignment, void **outPtr), {
+      (void)context;
+      (void)oldSize;
+      (void)alignment;
+      if (!outPtr) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      void *nextPtr = ptr;
+      OPSTATUS status = MODULE_FUNC(Memory, Alloc, ReallocBytes)(&nextPtr, newSize);
+      if (status == STATUS_CONST(SUCCESS)) {
+        *outPtr = nextPtr;
+      }
+      return status;
+    }),
+
+    PROCEDURE(SystemFree, (void *context, void *ptr, size_t size), {
+      (void)context;
+      (void)size;
+      if (ptr) {
+        void *target = ptr;
+        (void)MODULE_FUNC(Memory, Alloc, Free)(&target);
+      }
+    }),
+
+    FUNCTION(const MODULE_TYPE(Memory, Allocator_Ops) *, SystemOps, (void), {
+      static const MODULE_TYPE(Memory, Allocator_Ops) ops = {
+          .Alloc = MODULE_IFUNC(Memory, Allocator, SystemAlloc),
+          .Realloc = MODULE_IFUNC(Memory, Allocator, SystemRealloc),
+          .Free = MODULE_IFUNC(Memory, Allocator, SystemFree),
+          .capabilities = MODULE_CONST(Memory, SUPPORTS_REALLOC) |
+                          MODULE_CONST(Memory, SUPPORTS_FREE),
+      };
+      return &ops;
+    }),
+
+    FUNCTION(const MODULE_TYPE(Memory, Allocator) *, ResolveAllocator,
+             (const MODULE_TYPE(Memory, Allocator) *self,
+              MODULE_TYPE(Memory, Allocator) *fallback), {
+      if (self) {
+        return self;
+      }
+      *fallback = MODULE_FUNC(Memory, Allocator, Default)();
+      return fallback;
+    })
+  ),
+
+  PACKAGE(Allocator,
+    FUNCTION(MODULE_TYPE(Memory, Allocator), Default, (void), {
+      MODULE_TYPE(Memory, Allocator) alloc = {
+          .context = NULL,
+          .ops = MODULE_IFUNC(Memory, Allocator, SystemOps)(),
+      };
+      return alloc;
+    }),
+
+    PREDICATE(IsValid, (const MODULE_TYPE(Memory, Allocator) *self), {
+      return self != NULL && self->ops != NULL && self->ops->Alloc != NULL;
+    }),
+
+    VARIANT(Alloc,
+      OPERATION(
+          (const MODULE_TYPE(Memory, Allocator) *self, size_t size,
+           void **outPtr), {
+        return MODULE_FUNC(Memory, Allocator, AllocAligned)(
+            self, size, MODULE_IFUNC(Memory, MaxAlignment)(), outPtr);
+      }),
+
+      OPERATION(Aligned,
+                (const MODULE_TYPE(Memory, Allocator) *self, size_t size,
+                 size_t alignment, void **outPtr), {
+        if (!outPtr || size == 0U || alignment == 0U ||
+            (alignment & (alignment - 1U)) != 0U) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+        MODULE_TYPE(Memory, Allocator) fallback;
+        const MODULE_TYPE(Memory, Allocator) *resolved =
+            MODULE_IFUNC(Memory, Allocator, ResolveAllocator)(self, &fallback);
+        if (!resolved->ops || !resolved->ops->Alloc) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+        return resolved->ops->Alloc(resolved->context, size, alignment, outPtr);
+      })
+    ),
+
+    OPERATION(Calloc,
+              (const MODULE_TYPE(Memory, Allocator) *self, size_t count,
+               size_t elementSize, void **outPtr), {
+      if (!outPtr || count == 0U || elementSize == 0U) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      size_t totalSize = 0U;
+      if (MODULE_IFUNC(Memory, CheckedMultiplySize)(count, elementSize,
+                                                    &totalSize) !=
+          STATUS_CONST(SUCCESS)) {
+        return STATUS_CONST(OUT_OF_RANGE);
+      }
+      void *ptr = NULL;
+      OPSTATUS status = MODULE_FUNC(Memory, Allocator, AllocAligned)(
+          self, totalSize, MODULE_IFUNC(Memory, MaxAlignment)(), &ptr);
+      if (status != STATUS_CONST(SUCCESS)) {
+        return status;
+      }
+      memset(ptr, 0, totalSize);
+      *outPtr = ptr;
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(Realloc,
+              (const MODULE_TYPE(Memory, Allocator) *self, void *ptr,
+               size_t oldSize, size_t newSize, void **outPtr), {
+      if (!outPtr || newSize == 0U) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      MODULE_TYPE(Memory, Allocator) fallback;
+      const MODULE_TYPE(Memory, Allocator) *resolved =
+          MODULE_IFUNC(Memory, Allocator, ResolveAllocator)(self, &fallback);
+      if (!resolved->ops || !resolved->ops->Alloc) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      if (resolved->ops->Realloc) {
+        return resolved->ops->Realloc(resolved->context, ptr, oldSize, newSize,
+                                      MODULE_IFUNC(Memory, MaxAlignment)(),
+                                      outPtr);
+      }
+      void *nextPtr = NULL;
+      OPSTATUS status = resolved->ops->Alloc(
+          resolved->context, newSize, MODULE_IFUNC(Memory, MaxAlignment)(),
+          &nextPtr);
+      if (status != STATUS_CONST(SUCCESS)) {
+        return status;
+      }
+      if (ptr && oldSize > 0U) {
+        size_t copySize = oldSize < newSize ? oldSize : newSize;
+        memcpy(nextPtr, ptr, copySize);
+        if (resolved->ops->Free) {
+          resolved->ops->Free(resolved->context, ptr, oldSize);
+        }
+      }
+      *outPtr = nextPtr;
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    PROCEDURE(Free,
+              (const MODULE_TYPE(Memory, Allocator) *self, void *ptr,
+               size_t size), {
+      if (!ptr) {
+        return;
+      }
+      MODULE_TYPE(Memory, Allocator) fallback;
+      const MODULE_TYPE(Memory, Allocator) *resolved =
+          MODULE_IFUNC(Memory, Allocator, ResolveAllocator)(self, &fallback);
+      if (resolved->ops && resolved->ops->Free) {
+        resolved->ops->Free(resolved->context, ptr, size);
+      }
+    })
+  )
+);
+
+/* EOF */
