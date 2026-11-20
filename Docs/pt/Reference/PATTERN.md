@@ -359,3 +359,74 @@ Todo código dependente do ambiente deve incluir `Core/Preprocessor/Detect.h` ou
 
 - `Codespace/Cosmeron/Core/Module/Namespace.h`
 - `Codespace/Cosmeron/Core/Preprocessor/Detect.h`
+
+
+---
+
+## Complemento de especificação: detalhes de templates, closures e enums
+
+### Arquivos de definição de templates em modo duplo
+
+O arquivo `.def` é a única fonte de verdade do template. O corpo declarativo deve ser escrito uma única vez, usando a DSL canônica (`TEMPLATE_STRUCT`, `TEMPLATE_PACKAGE` ou `TEMPLATE_OBJECT`). Há dois modos de uso:
+
+1. **Exportação de macro (principal e recomendado):** o arquivo é incluído sem parâmetros previamente definidos e exporta `TEMPLATE_<Module>_<Target>`. A macro pode ser instanciada sob demanda por `TEMPLATE_INSTANTIATE(Module, Target, Suffix, ConcreteType, ...)` ou em lote por `TEMPLATE_INSTANTIATE_TABLE(Module, Target, TYPE_TABLE)`.
+2. **Instanciação por inclusão direta:** o consumidor define os parâmetros (por exemplo, `SUFFIX` e `TYPE`) antes de incluir o arquivo. O próprio `.def` instancia o template e executa `#undef` nos parâmetros, restaurando um ambiente limpo.
+
+Exemplo de definição:
+
+```c
+#ifndef TEMPLATE_Struct_Triple
+#define TEMPLATE_Struct_Triple(SUFFIX, TYPE) \\
+  TEMPLATE_STRUCT(Struct, Triple, SUFFIX, FIELDS( \\
+      union { \\
+        struct { TYPE first; TYPE second; TYPE third; }; \\
+        TYPE values[3]; \\
+      }; \\
+  ))
+#endif
+
+#if defined(SUFFIX) && defined(TYPE)
+  TEMPLATE_Struct_Triple(SUFFIX, TYPE);
+  #undef SUFFIX
+  #undef TYPE
+#endif
+```
+
+A ordem dos parâmetros é uniforme: primeiro o identificador `SUFFIX`, depois os tipos de dados e, por último, metadados estáticos, como capacidade ou política. Exemplos de aridade: `(SUFFIX, TYPE)`, `(SUFFIX, FIRST_TYPE, SECOND_TYPE)`, `(SUFFIX, TYPE, CAPACITY)` e `(SUFFIX, KEY_TYPE, VALUE_TYPE, CAPACITY)`. Tabelas X-macro devem ser desempacotadas diretamente com `PP_UNWRAP ROW`, sem macros intermediárias de ligação.
+
+Structs POD e templates cujos métodos são inline são autocontidos. O mecanismo de templates não exige macros stub `_IMPLEMENT`; arquivos `.impl` só são necessários quando houver membros não inline.
+
+### Padrão de referência para templates de módulo
+
+Quando um template de módulo gera packages ou objects parametrizados diretamente no namespace do módulo:
+
+1. Use `MODULE_TEMPLATE` no `.def`, em vez de uma declaração fixa `MODULE`, para identificar explicitamente uma definição-template.
+2. Coloque algoritmos independentes de tipo e largura em `INTERNAL(...)`, dentro de `Impl/Common.inc`. Essas funções auxiliares não devem gerar FunctionTable.
+3. Declare constantes numéricas internas por tabela X-macro e `ENUM`; evite `#define` numérico bruto e números mágicos. Máscaras de 64 bits devem ser constantes nomeadas dentro dos auxiliares `INTERNAL`.
+4. Agrupe famílias relacionadas em blocos `VARIANT`, por exemplo operações de máscara, contagem de bits, logaritmo, índice e rotação.
+
+### Layout e despacho de closures
+
+Uma closure contextual combina um ponteiro de função e um contexto emprestado opcional em uma estrutura POD de dois ponteiros (`sizeof == 2 * sizeof(void *)`). O membro de função pode compartilhar uma união com o callback puro correspondente.
+
+- `CLOSURE_FUNC(Name_Bind)(fn, ctx)` associa uma função que recebe `void *context` como último argumento.
+- `CLOSURE_FUNC(Name_FromCallback)(cb)` converte um callback puro sem criar wrapper.
+- `CLOSURE_CALL(cl, args...)` verifica o contexto: se for nulo, chama o callback diretamente; caso contrário, remove o sentinela de contexto nulo e chama a função contextual com o contexto ao final dos argumentos.
+- `CLOSURE_ADAPT_OBJECT_METHOD` adapta um método que recebe `CLASS *self` para a assinatura de closure.
+- `CLOSURE_AS_CLOSURE(METHOD_FUNC, self)` cria uma closure pronta a partir de uma instância de object.
+
+### Eventos declarativos
+
+`EVENT_PROCEDURE` e `EVENT_OPERATION` implementam notificação observador de um para muitos sem alocação dinâmica, usando `TCLOSURE`. Os slots são embutidos em structs ou packages. A emissão cria um snapshot local dos listeners ativos antes da chamada, protegendo a iteração contra reentrância. `OBJECT_MUTATE(self, ClassName, fieldName, newValue, EventName)` atualiza um campo e emite o evento quando o valor realmente muda.
+
+### Despacho de enums
+
+O padrão Row-Tuple permite extrair colunas de cada linha X-macro. Os presets de dispatch são:
+
+- `PLAIN` ou `NAME_VALUE`: emite constante qualificada com nome e valor explícito.
+- `QUALIFIED`: inclui também o nome do enum, evitando colisões entre itens homônimos.
+- `NAME_ONLY`: emite apenas o nome e deixa o compilador C incrementar os valores.
+- `QUALIFIED_NAME`: emite o nome qualificado, sem valor explícito.
+- Dispatch personalizado: recebe `DISPATCH(TARGET, ENUM_NAME, ROW)` e pode transformar a linha, por exemplo em máscaras de bits.
+
+Declarações fora de `MODULE` usam `ENUM_DEF` ou `ENUM_DEF_EX`, recebendo o namespace-alvo, o nome do enum, a tabela e, na forma estendida, o preset de dispatch.
