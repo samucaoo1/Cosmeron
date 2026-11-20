@@ -1,5 +1,7 @@
 /* Clamp.def - Dual Mode Engine (Zero Duplication) */
 
+#include "../Impl/Common.inc"
+
 #ifndef TEMPLATE_Math_Clamp
 #define TEMPLATE_Math_Clamp(SUFFIX, TYPE)                                      \
   TEMPLATE_PACKAGE(Math, Clamp, SUFFIX,                                        \
@@ -21,7 +23,7 @@
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
-#if defined(SUFFIX) && defined(TYPE)
+#if (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(TYPE)
   TEMPLATE_Math_Clamp(SUFFIX, TYPE);
   #undef SUFFIX
   #undef TYPE

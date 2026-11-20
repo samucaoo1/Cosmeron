@@ -6,6 +6,11 @@
     !defined(COSMERON_DISABLE_FT_Container_Linked)
 #define COSMERON_DISABLE_FT_Container_Linked 1
 #endif
+#if (defined(CONTAINER_DISABLE_FUNCTION_TABLE) ||                               \
+     defined(LINKED_DISABLE_FUNCTION_TABLE)) &&                                \
+    !defined(COSMERON_DISABLE_FT_Linked)
+#define COSMERON_DISABLE_FT_Linked 1
+#endif
 
 #include "../../../../Core/Memory/Allocator.h"
 #include "../../../../Core/Module/Module.h"
@@ -13,9 +18,14 @@
 #include "../../../../Core/Preprocessor/Compiling.inc"
 #include "../../../../Core/Preprocessor/Operations.h"
 #include "../../../../Core/Types/Primitive.h"
-#include "../../Iterator/Iterator.h"
-#include "../TSingleNode.h"
-#include "../TDoubleNode.h"
+#include "../../Iterator/Impl/Common.inc"
+#define COSMERON_INTERNAL_IN_COMMON_INC 1
+#include "../SingleNode.def"
+#include "../DoubleNode.def"
+#include "../../Iterator/Stream.def"
+#include "../../Iterator/Forward.def"
+#include "../../Iterator/Bidirectional.def"
+#undef COSMERON_INTERNAL_IN_COMMON_INC
 
 #include <stdbool.h>
 #include <stddef.h>

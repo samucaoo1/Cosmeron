@@ -25,6 +25,15 @@
 /* Object Declaration: Condition_Error                                        */
 /* ========================================================================== */
 
+#if defined(CONDITION_DISABLE_FUNCTION_TABLE) &&                               \
+    !defined(COSMERON_DISABLE_FT_Condition)
+#define COSMERON_DISABLE_FT_Condition 1
+#endif
+#if defined(CONDITION_ERROR_DISABLE_FUNCTION_TABLE) &&                         \
+    !defined(COSMERON_DISABLE_FT_Condition_Error)
+#define COSMERON_DISABLE_FT_Condition_Error 1
+#endif
+
 MODULE(DOMAIN(Core), Condition,
     OBJECT(Error,
         FIELDS(
@@ -59,10 +68,13 @@ MODULE(DOMAIN(Core), Condition,
           return self ? MODULE_FUNC(Condition, Status, CategoryOf)(self->code)
                       : STATUS_CATEGORY_CONST(GENERIC);
         }),
-        OPERATION(SetContext, (const MODULE_TYPE(Diagnostic, Context) * context)),
-        OPERATION(SetOrigin, (const char *file, uint32_t line,
-                              const char *function, const char *description,
-                              const void *userData)),
+        VARIANT(Set,
+            OPERATION(Context, (const MODULE_TYPE(Diagnostic, Context) * context)),
+            OPERATION(Origin, (const char *file, uint32_t line,
+                               const char *function, const char *description,
+                               const void *userData)),
+            OPERATION(Cause, (const MODULE_TYPE(Condition, Error) * cause))
+        ),
         CONST_FUNCTION_INLINE(const MODULE_TYPE(Diagnostic, Context) *, Context, (), {
           return self ? &self->context : NULL;
         }),
@@ -70,7 +82,6 @@ MODULE(DOMAIN(Core), Condition,
           return self ? MODULE_FUNC(Diagnostic, Context, HasOrigin)(&self->context)
                       : false;
         }),
-        OPERATION(SetCause, (const MODULE_TYPE(Condition, Error) * cause)),
         CONST_PREDICATE_INLINE(HasCause, (), {
           return self && self->cause != NULL;
         }),

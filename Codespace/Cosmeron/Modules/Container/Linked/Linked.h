@@ -2,14 +2,14 @@
 #define COSMERON_CONTAINER_LINKED_H
 
 #include "Impl/Common.inc"
-#include "TSingleNode.h"
-#include "TDoubleNode.h"
-#include "TForward.h"
-#include "TList.h"
-#include "TDeque.h"
-#include "TStack.h"
-#include "TQueue.h"
-#include "TRing.h"
+#include "SingleNode.h"
+#include "DoubleNode.h"
+#include "Forward.h"
+#include "List.h"
+#include "Deque.h"
+#include "Stack.h"
+#include "Queue.h"
+#include "Ring.h"
 
 #endif /* COSMERON_CONTAINER_LINKED_H */
 

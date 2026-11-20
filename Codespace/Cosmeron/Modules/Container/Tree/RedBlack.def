@@ -1,5 +1,7 @@
 /* RedBlack.def - Dual Mode Engine (Zero Duplication) */
 
+#include "Impl/Common.inc"
+
 #ifndef COSMERON_MACRO_INTERNAL_TREE_RB_CORE
 #define COSMERON_MACRO_INTERNAL_TREE_RB_CORE(TARGET, NODE_TYPE, SUFFIX)        \
   PREDICATE(IsRed, (const NODE_TYPE *node), {                                  \
@@ -212,42 +214,42 @@
   })
 #endif
 
-#ifndef TEMPLATE_Tree_RBSet
-#define TEMPLATE_Tree_RBSet(SUFFIX, KEY_TYPE)                                  \
-  TEMPLATE_ISTRUCT(Tree, RBSetNode, SUFFIX,                                    \
+#ifndef TEMPLATE_Tree_RedBlack_Set
+#define TEMPLATE_Tree_RedBlack_Set(SUFFIX, KEY_TYPE)                                  \
+  TEMPLATE_ISTRUCT(Tree, RedBlack_SetNode, SUFFIX,                                    \
       FIELDS(                                                                  \
-          struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX) *parent;               \
-          struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX) *left;                 \
-          struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX) *right;                \
+          struct MODULE_ITYPED(Tree, RedBlack_SetNode, SUFFIX) *parent;               \
+          struct MODULE_ITYPED(Tree, RedBlack_SetNode, SUFFIX) *left;                 \
+          struct MODULE_ITYPED(Tree, RedBlack_SetNode, SUFFIX) *right;                \
           MODULE_ENUM(Tree, RBColor) color;                                    \
           KEY_TYPE key;                                                        \
       ));                                                                      \
-  CLOSURE_SCOPED_COMPARISON(NS(LIB_PREFIX(Tree), RBSet, SUFFIX), Comparator,   \
+  CLOSURE_SCOPED_COMPARISON(NS(LIB_PREFIX(Tree), RedBlack_Set, SUFFIX), Comparator,   \
                             (KEY_TYPE left, KEY_TYPE right))                   \
-  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Tree), RBSet, SUFFIX), Visitor,       \
+  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Tree), RedBlack_Set, SUFFIX), Visitor,       \
                            (const KEY_TYPE *key))                              \
   COSMERON_MACRO_INTERNAL_TREE_BIN_HELPERS(                                    \
-      RBSet, SUFFIX, struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX), KEY_TYPE,  \
-      MODULE_CLOSURE(Tree, RBSet, SUFFIX, Comparator))                         \
+      RedBlack_Set, SUFFIX, struct MODULE_ITYPED(Tree, RedBlack_SetNode, SUFFIX), KEY_TYPE,  \
+      MODULE_CLOSURE(Tree, RedBlack_Set, SUFFIX, Comparator))                         \
   COSMERON_MACRO_INTERNAL_TREE_BIN_SET_TRAVERSE(                               \
-      RBSet, SUFFIX, struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX),            \
-      MODULE_CLOSURE(Tree, RBSet, SUFFIX, Visitor))                            \
+      RedBlack_Set, SUFFIX, struct MODULE_ITYPED(Tree, RedBlack_SetNode, SUFFIX),            \
+      MODULE_CLOSURE(Tree, RedBlack_Set, SUFFIX, Visitor))                            \
   INTERNAL_DEF_EX(                                                             \
-      Tree, NS(RBSet, Algo, SUFFIX),                                           \
+      Tree, NS(RedBlack_Set, Algo, SUFFIX),                                           \
       COSMERON_MACRO_INTERNAL_TREE_RB_CORE(                                    \
-          RBSet, struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX), SUFFIX),       \
+          RedBlack_Set, struct MODULE_ITYPED(Tree, RedBlack_SetNode, SUFFIX), SUFFIX),       \
                                                                                \
-      FUNCTION(struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX) *, CreateNode,    \
+      FUNCTION(struct MODULE_ITYPED(Tree, RedBlack_SetNode, SUFFIX) *, CreateNode,    \
                (KEY_TYPE key), {                                               \
                  void *raw = NULL;                                             \
                  if (MODULE_IFUNC(Tree, AllocNode)(                            \
-                         &raw, sizeof(struct MODULE_ITYPED(Tree, RBSetNode,    \
+                         &raw, sizeof(struct MODULE_ITYPED(Tree, RedBlack_SetNode,    \
                                                             SUFFIX))) !=       \
                      STATUS_CONST(SUCCESS)) {                                  \
                    return NULL;                                                \
                  }                                                             \
-                 struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX) *node =         \
-                     (struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX) *)raw;     \
+                 struct MODULE_ITYPED(Tree, RedBlack_SetNode, SUFFIX) *node =         \
+                     (struct MODULE_ITYPED(Tree, RedBlack_SetNode, SUFFIX) *)raw;     \
                  node->parent = NULL;                                          \
                  node->left = NULL;                                            \
                  node->right = NULL;                                           \
@@ -257,13 +259,13 @@
                }),                                                             \
                                                                                \
       OPERATION(InsertSet,                                                     \
-                (struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX) **root,         \
+                (struct MODULE_ITYPED(Tree, RedBlack_SetNode, SUFFIX) **root,         \
                  size_t *size,                                                 \
-                 MODULE_CLOSURE(Tree, RBSet, SUFFIX, Comparator) cmp,          \
+                 MODULE_CLOSURE(Tree, RedBlack_Set, SUFFIX, Comparator) cmp,          \
                  KEY_TYPE key),                                                \
                 {                                                              \
-                  struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX) *cur = *root;  \
-                  struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX) *par = NULL;   \
+                  struct MODULE_ITYPED(Tree, RedBlack_SetNode, SUFFIX) *cur = *root;  \
+                  struct MODULE_ITYPED(Tree, RedBlack_SetNode, SUFFIX) *par = NULL;   \
                   CMPOUT lastCmp = COMPARISON_CONST(EQUAL);                    \
                   while (cur != NULL) {                                        \
                     par = cur;                                                 \
@@ -275,8 +277,8 @@
                     else                                                       \
                       return STATUS_CONST(ALREADY_EXISTS);                     \
                   }                                                            \
-                  struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX) *node =        \
-                      MODULE_IFUNC(Tree, NS(RBSet, Algo, SUFFIX),              \
+                  struct MODULE_ITYPED(Tree, RedBlack_SetNode, SUFFIX) *node =        \
+                      MODULE_IFUNC(Tree, NS(RedBlack_Set, Algo, SUFFIX),              \
                                    CreateNode)(key);                           \
                   if (!node)                                                   \
                     return STATUS_CONST(OUT_OF_MEMORY);                        \
@@ -288,55 +290,55 @@
                   else                                                         \
                     par->right = node;                                         \
                   (*size)++;                                                   \
-                  MODULE_IFUNC(Tree, NS(RBSet, Algo, SUFFIX), InsertFixup)(    \
+                  MODULE_IFUNC(Tree, NS(RedBlack_Set, Algo, SUFFIX), InsertFixup)(    \
                       root, node);                                             \
                   return STATUS_CONST(SUCCESS);                                \
                 }))                                                            \
   COSMERON_MACRO_INTERNAL_TREE_BIN_SET_ITER(                                   \
-      RBSet, RBSetIter, SUFFIX,                                                \
-      struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX), KEY_TYPE);                \
+      RedBlack_Set, RedBlack_SetIter, SUFFIX,                                                \
+      struct MODULE_ITYPED(Tree, RedBlack_SetNode, SUFFIX), KEY_TYPE);                \
   COSMERON_MACRO_INTERNAL_TREE_BIN_SET_OBJECT(                                 \
-      RBSet, RBSetIter, SUFFIX,                                                \
-      struct MODULE_ITYPED(Tree, RBSetNode, SUFFIX), KEY_TYPE)
+      RedBlack_Set, RedBlack_SetIter, SUFFIX,                                                \
+      struct MODULE_ITYPED(Tree, RedBlack_SetNode, SUFFIX), KEY_TYPE)
 #endif
 
-#ifndef TEMPLATE_Tree_RBMap
-#define TEMPLATE_Tree_RBMap(SUFFIX, KEY_TYPE, VALUE_TYPE)                      \
-  TEMPLATE_ISTRUCT(Tree, RBMapNode, SUFFIX,                                    \
+#ifndef TEMPLATE_Tree_RedBlack_Map
+#define TEMPLATE_Tree_RedBlack_Map(SUFFIX, KEY_TYPE, VALUE_TYPE)                      \
+  TEMPLATE_ISTRUCT(Tree, RedBlack_MapNode, SUFFIX,                                    \
       FIELDS(                                                                  \
-          struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX) *parent;               \
-          struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX) *left;                 \
-          struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX) *right;                \
+          struct MODULE_ITYPED(Tree, RedBlack_MapNode, SUFFIX) *parent;               \
+          struct MODULE_ITYPED(Tree, RedBlack_MapNode, SUFFIX) *left;                 \
+          struct MODULE_ITYPED(Tree, RedBlack_MapNode, SUFFIX) *right;                \
           MODULE_ENUM(Tree, RBColor) color;                                    \
           KEY_TYPE key;                                                        \
           VALUE_TYPE value;                                                    \
       ));                                                                      \
-  CLOSURE_SCOPED_COMPARISON(NS(LIB_PREFIX(Tree), RBMap, SUFFIX), Comparator,   \
+  CLOSURE_SCOPED_COMPARISON(NS(LIB_PREFIX(Tree), RedBlack_Map, SUFFIX), Comparator,   \
                             (KEY_TYPE left, KEY_TYPE right))                   \
-  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Tree), RBMap, SUFFIX), Visitor,       \
+  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Tree), RedBlack_Map, SUFFIX), Visitor,       \
                            (KEY_TYPE key, VALUE_TYPE *value))                  \
   COSMERON_MACRO_INTERNAL_TREE_BIN_HELPERS(                                    \
-      RBMap, SUFFIX, struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX), KEY_TYPE,  \
-      MODULE_CLOSURE(Tree, RBMap, SUFFIX, Comparator))                         \
+      RedBlack_Map, SUFFIX, struct MODULE_ITYPED(Tree, RedBlack_MapNode, SUFFIX), KEY_TYPE,  \
+      MODULE_CLOSURE(Tree, RedBlack_Map, SUFFIX, Comparator))                         \
   COSMERON_MACRO_INTERNAL_TREE_BIN_MAP_TRAVERSE(                               \
-      RBMap, SUFFIX, struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX),            \
-      MODULE_CLOSURE(Tree, RBMap, SUFFIX, Visitor))                            \
+      RedBlack_Map, SUFFIX, struct MODULE_ITYPED(Tree, RedBlack_MapNode, SUFFIX),            \
+      MODULE_CLOSURE(Tree, RedBlack_Map, SUFFIX, Visitor))                            \
   INTERNAL_DEF_EX(                                                             \
-      Tree, NS(RBMap, Algo, SUFFIX),                                           \
+      Tree, NS(RedBlack_Map, Algo, SUFFIX),                                           \
       COSMERON_MACRO_INTERNAL_TREE_RB_CORE(                                    \
-          RBMap, struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX), SUFFIX),       \
+          RedBlack_Map, struct MODULE_ITYPED(Tree, RedBlack_MapNode, SUFFIX), SUFFIX),       \
                                                                                \
-      FUNCTION(struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX) *, CreateNode,    \
+      FUNCTION(struct MODULE_ITYPED(Tree, RedBlack_MapNode, SUFFIX) *, CreateNode,    \
                (KEY_TYPE key, VALUE_TYPE value), {                             \
                  void *raw = NULL;                                             \
                  if (MODULE_IFUNC(Tree, AllocNode)(                            \
-                         &raw, sizeof(struct MODULE_ITYPED(Tree, RBMapNode,    \
+                         &raw, sizeof(struct MODULE_ITYPED(Tree, RedBlack_MapNode,    \
                                                             SUFFIX))) !=       \
                      STATUS_CONST(SUCCESS)) {                                  \
                    return NULL;                                                \
                  }                                                             \
-                 struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX) *node =         \
-                     (struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX) *)raw;     \
+                 struct MODULE_ITYPED(Tree, RedBlack_MapNode, SUFFIX) *node =         \
+                     (struct MODULE_ITYPED(Tree, RedBlack_MapNode, SUFFIX) *)raw;     \
                  node->parent = NULL;                                          \
                  node->left = NULL;                                            \
                  node->right = NULL;                                           \
@@ -347,13 +349,13 @@
                }),                                                             \
                                                                                \
       OPERATION(InsertMap,                                                     \
-                (struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX) **root,         \
+                (struct MODULE_ITYPED(Tree, RedBlack_MapNode, SUFFIX) **root,         \
                  size_t *size,                                                 \
-                 MODULE_CLOSURE(Tree, RBMap, SUFFIX, Comparator) cmp,          \
+                 MODULE_CLOSURE(Tree, RedBlack_Map, SUFFIX, Comparator) cmp,          \
                  KEY_TYPE key, VALUE_TYPE value, bool allowUpdate),            \
                 {                                                              \
-                  struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX) *cur = *root;  \
-                  struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX) *par = NULL;   \
+                  struct MODULE_ITYPED(Tree, RedBlack_MapNode, SUFFIX) *cur = *root;  \
+                  struct MODULE_ITYPED(Tree, RedBlack_MapNode, SUFFIX) *par = NULL;   \
                   CMPOUT lastCmp = COMPARISON_CONST(EQUAL);                    \
                   while (cur != NULL) {                                        \
                     par = cur;                                                 \
@@ -370,8 +372,8 @@
                       return STATUS_CONST(ALREADY_EXISTS);                     \
                     }                                                          \
                   }                                                            \
-                  struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX) *node =        \
-                      MODULE_IFUNC(Tree, NS(RBMap, Algo, SUFFIX),              \
+                  struct MODULE_ITYPED(Tree, RedBlack_MapNode, SUFFIX) *node =        \
+                      MODULE_IFUNC(Tree, NS(RedBlack_Map, Algo, SUFFIX),              \
                                    CreateNode)(key, value);                    \
                   if (!node)                                                   \
                     return STATUS_CONST(OUT_OF_MEMORY);                        \
@@ -383,26 +385,26 @@
                   else                                                         \
                     par->right = node;                                         \
                   (*size)++;                                                   \
-                  MODULE_IFUNC(Tree, NS(RBMap, Algo, SUFFIX), InsertFixup)(    \
+                  MODULE_IFUNC(Tree, NS(RedBlack_Map, Algo, SUFFIX), InsertFixup)(    \
                       root, node);                                             \
                   return STATUS_CONST(SUCCESS);                                \
                 }))                                                            \
   COSMERON_MACRO_INTERNAL_TREE_BIN_MAP_ITER(                                   \
-      RBMap, RBMapIter, SUFFIX,                                                \
-      struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX), KEY_TYPE, VALUE_TYPE);    \
+      RedBlack_Map, RedBlack_MapIter, SUFFIX,                                                \
+      struct MODULE_ITYPED(Tree, RedBlack_MapNode, SUFFIX), KEY_TYPE, VALUE_TYPE);    \
   COSMERON_MACRO_INTERNAL_TREE_BIN_MAP_OBJECT(                                 \
-      RBMap, RBMapIter, SUFFIX,                                                \
-      struct MODULE_ITYPED(Tree, RBMapNode, SUFFIX), KEY_TYPE, VALUE_TYPE)
+      RedBlack_Map, RedBlack_MapIter, SUFFIX,                                                \
+      struct MODULE_ITYPED(Tree, RedBlack_MapNode, SUFFIX), KEY_TYPE, VALUE_TYPE)
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
-#if defined(SUFFIX) && defined(KEY_TYPE) && defined(VALUE_TYPE)
-  TEMPLATE_Tree_RBMap(SUFFIX, KEY_TYPE, VALUE_TYPE);
+#if (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(KEY_TYPE) && defined(VALUE_TYPE)
+  TEMPLATE_Tree_RedBlack_Map(SUFFIX, KEY_TYPE, VALUE_TYPE);
   #undef SUFFIX
   #undef KEY_TYPE
   #undef VALUE_TYPE
-#elif defined(SUFFIX) && defined(KEY_TYPE)
-  TEMPLATE_Tree_RBSet(SUFFIX, KEY_TYPE);
+#elif (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(KEY_TYPE)
+  TEMPLATE_Tree_RedBlack_Set(SUFFIX, KEY_TYPE);
   #undef SUFFIX
   #undef KEY_TYPE
 #endif

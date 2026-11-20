@@ -20,6 +20,15 @@
 /* 2. Package Declaration: Memory_Swap                                        */
 /* ========================================================================== */
 
+#if defined(MEMORY_DISABLE_FUNCTION_TABLE) &&                                  \
+    !defined(COSMERON_DISABLE_FT_Memory)
+#define COSMERON_DISABLE_FT_Memory 1
+#endif
+#if defined(MEMORY_SWAP_DISABLE_FUNCTION_TABLE) &&                             \
+    !defined(COSMERON_DISABLE_FT_Memory_Swap)
+#define COSMERON_DISABLE_FT_Memory_Swap 1
+#endif
+
 MODULE(DOMAIN(Core), Memory,
        PACKAGE(Swap, ENUM(Config, SWAP_CONFIG_TABLE),
                OPERATION(Bytes, (void *left, void *right, size_t size)),

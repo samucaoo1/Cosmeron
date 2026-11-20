@@ -6,6 +6,11 @@
     !defined(COSMERON_DISABLE_FT_Container_Tree)
 #define COSMERON_DISABLE_FT_Container_Tree 1
 #endif
+#if (defined(CONTAINER_DISABLE_FUNCTION_TABLE) ||                               \
+     defined(TREE_DISABLE_FUNCTION_TABLE)) &&                                  \
+    !defined(COSMERON_DISABLE_FT_Tree)
+#define COSMERON_DISABLE_FT_Tree 1
+#endif
 
 #include "../../../../Core/Algorithm/Comparison.h"
 #include "../../../../Core/Memory/Allocator.h"
@@ -14,7 +19,7 @@
 #include "../../../../Core/Preprocessor/Compiling.inc"
 #include "../../../../Core/Preprocessor/Operations.h"
 #include "../../../../Core/Types/Primitive.h"
-#include "../../Iterator/Iterator.h"
+#include "../../Impl/Common.inc"
 
 #include <stdbool.h>
 #include <stddef.h>

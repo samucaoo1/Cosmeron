@@ -1187,6 +1187,28 @@
       NS(LIB_PREFIX(NAME), SUFFIX), MODULE_TYPED(NAME, SUFFIX), FIELDS_DECL,   \
       __VA_ARGS__)
 
+#define COSMERON_INTERNAL_TPL_WOBJ_DEF(MOD, NAME, GLUED, FIELDS_DECL, ...)     \
+  COSMERON_INTERNAL_TPL_OBJ_DEF_EX(                                            \
+      PP_BOOL_OR(COSMERON_INTERNAL_OBJ_FT_DISABLED(MOD, NAME, (__VA_ARGS__)),  \
+                 COSMERON_INTERNAL_OBJ_FT_DISABLED(MOD, GLUED, (__VA_ARGS__))),\
+      NS(LIB_PREFIX(MOD), GLUED), MODULE_TYPE(MOD, GLUED), FIELDS_DECL,        \
+      __VA_ARGS__)
+
+#define TEMPLATE_WIDTH_OBJECT(MOD, NAME, SUFFIX, FIELDS_DECL, ...)             \
+  COSMERON_INTERNAL_TPL_WOBJ_DEF(MOD, NAME, PP_OP_CAT2(NAME, SUFFIX),          \
+                                 FIELDS_DECL, __VA_ARGS__)
+
+#define COSMERON_INTERNAL_TPL_WOBJ_ROOT(NAME, GLUED, FIELDS_DECL, ...)         \
+  COSMERON_INTERNAL_TPL_OBJ_DEF_EX(                                            \
+      PP_BOOL_OR(                                                              \
+          COSMERON_INTERNAL_STANDALONE_OBJ_FT_DISABLED(NAME, (__VA_ARGS__)),   \
+          COSMERON_INTERNAL_STANDALONE_OBJ_FT_DISABLED(GLUED, (__VA_ARGS__))), \
+      LIB_PREFIX(GLUED), MODULE_TYPE(GLUED), FIELDS_DECL, __VA_ARGS__)
+
+#define TEMPLATE_WIDTH_OBJECT_ROOT(NAME, SUFFIX, FIELDS_DECL, ...)             \
+  COSMERON_INTERNAL_TPL_WOBJ_ROOT(NAME, PP_OP_CAT2(NAME, SUFFIX), FIELDS_DECL, \
+                                  __VA_ARGS__)
+
 /* ============================================================
  * 2.5 INTERNAL Emitter
  * ============================================================ */
@@ -1203,42 +1225,57 @@
       COSMERON_INTERNAL_TARGET(MOD, HAS_NAME, NAME), METHODS)                 \
   typedef int NS(_cosmeron_decl_internal_semi, MOD, HAS_NAME, NAME, __LINE__);
 
-#define COSMERON_INTERNAL_TPL_PKG_DEF_WITH_FT(MOD, NAME, SUFFIX, ...)          \
-  typedef struct NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable)              \
-      NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable);                        \
-  COSMERON_INTERNAL_PKG_GEN_ENUMS(                                             \
-      NS(LIB_PREFIX(MOD), NAME, SUFFIX), (__VA_ARGS__))                        \
-  COSMERON_INTERNAL_PKG_GEN_MEMBERS(                                           \
-      NS(LIB_PREFIX(MOD), NAME, SUFFIX), (__VA_ARGS__))                        \
-  struct NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable) {                    \
+#define COSMERON_INTERNAL_TPL_PKG_DEF_WITH_FT_EX(PKG_NS, SEMI_TAG, ...)        \
+  typedef struct NS(PKG_NS, FunctionTable) NS(PKG_NS, FunctionTable);          \
+  COSMERON_INTERNAL_PKG_GEN_ENUMS(PKG_NS, (__VA_ARGS__))                       \
+  COSMERON_INTERNAL_PKG_GEN_MEMBERS(PKG_NS, (__VA_ARGS__))                     \
+  struct NS(PKG_NS, FunctionTable) {                                           \
     int _reserved;                                                             \
-    PP_FOREACH_D2_CTX(COSMERON_MACRO_INTERNAL_PKG_FT_FIELD,                    \
-                      NS(LIB_PREFIX(MOD), NAME, SUFFIX), __VA_ARGS__)          \
+    PP_FOREACH_D2_CTX(COSMERON_MACRO_INTERNAL_PKG_FT_FIELD, PKG_NS,            \
+                      __VA_ARGS__)                                             \
   };                                                                           \
   static inline COSMERON_MAYBE_UNUSED                                          \
-  const struct NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable) *              \
-  NS(LIB_PREFIX(MOD), NAME, SUFFIX, GetFunctionTable)(void) {                  \
+  const struct NS(PKG_NS, FunctionTable) *                                     \
+  NS(PKG_NS, GetFunctionTable)(void) {                                         \
     static const COSMERON_MAYBE_UNUSED                                         \
-    struct NS(LIB_PREFIX(MOD), NAME, SUFFIX, FunctionTable) table = {          \
+    struct NS(PKG_NS, FunctionTable) table = {                                 \
         ._reserved = 0,                                                        \
-        PP_FOREACH_D2_CTX(COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY,                \
-                          NS(LIB_PREFIX(MOD), NAME, SUFFIX), __VA_ARGS__)      \
+        PP_FOREACH_D2_CTX(COSMERON_MACRO_INTERNAL_PKG_FT_ENTRY, PKG_NS,        \
+                          __VA_ARGS__)                                         \
     };                                                                         \
     return &table;                                                             \
   }                                                                            \
-  typedef int NS(_cosmeron_tpl_pkg_semi, MOD, NAME, SUFFIX, __LINE__)
+  typedef int NS(_cosmeron_tpl_pkg_semi, SEMI_TAG, __LINE__)
+
+#define COSMERON_INTERNAL_TPL_PKG_DEF_NO_FT_EX(PKG_NS, SEMI_TAG, ...)          \
+  COSMERON_INTERNAL_PKG_GEN_ENUMS(PKG_NS, (__VA_ARGS__))                       \
+  COSMERON_INTERNAL_PKG_GEN_MEMBERS(PKG_NS, (__VA_ARGS__))                     \
+  typedef int NS(_cosmeron_tpl_pkg_semi, SEMI_TAG, __LINE__)
+
+#define COSMERON_INTERNAL_TPL_PKG_DEF_WITH_FT(MOD, NAME, SUFFIX, ...)          \
+  COSMERON_INTERNAL_TPL_PKG_DEF_WITH_FT_EX(                                    \
+      NS(LIB_PREFIX(MOD), NAME, SUFFIX), NS(MOD, NAME, SUFFIX), __VA_ARGS__)
 
 #define COSMERON_INTERNAL_TPL_PKG_DEF_NO_FT(MOD, NAME, SUFFIX, ...)            \
-  COSMERON_INTERNAL_PKG_GEN_ENUMS(                                             \
-      NS(LIB_PREFIX(MOD), NAME, SUFFIX), (__VA_ARGS__))                        \
-  COSMERON_INTERNAL_PKG_GEN_MEMBERS(                                           \
-      NS(LIB_PREFIX(MOD), NAME, SUFFIX), (__VA_ARGS__))                        \
-  typedef int NS(_cosmeron_tpl_pkg_semi, MOD, NAME, SUFFIX, __LINE__)
+  COSMERON_INTERNAL_TPL_PKG_DEF_NO_FT_EX(                                      \
+      NS(LIB_PREFIX(MOD), NAME, SUFFIX), NS(MOD, NAME, SUFFIX), __VA_ARGS__)
 
 #define TEMPLATE_PACKAGE_DEF(MOD, NAME, SUFFIX, ...)                           \
   PP_IIF(COSMERON_INTERNAL_PKG_FT_DISABLED(MOD, NAME, (__VA_ARGS__)),          \
          COSMERON_INTERNAL_TPL_PKG_DEF_NO_FT,                                  \
          COSMERON_INTERNAL_TPL_PKG_DEF_WITH_FT)(MOD, NAME, SUFFIX, __VA_ARGS__)
+
+#define COSMERON_INTERNAL_TPL_WPKG_DEF(MOD, NAME, GLUED, ...)                  \
+  PP_IIF(PP_BOOL_OR(                                                           \
+             COSMERON_INTERNAL_PKG_FT_DISABLED(MOD, NAME, (__VA_ARGS__)),      \
+             COSMERON_INTERNAL_PKG_FT_DISABLED(MOD, GLUED, (__VA_ARGS__))),    \
+         COSMERON_INTERNAL_TPL_PKG_DEF_NO_FT_EX,                               \
+         COSMERON_INTERNAL_TPL_PKG_DEF_WITH_FT_EX)(                            \
+      NS(LIB_PREFIX(MOD), GLUED), NS(MOD, GLUED), __VA_ARGS__)
+
+#define TEMPLATE_WIDTH_PACKAGE(MOD, NAME, SUFFIX, ...)                         \
+  COSMERON_INTERNAL_TPL_WPKG_DEF(MOD, NAME, PP_OP_CAT2(NAME, SUFFIX),          \
+                                 __VA_ARGS__)
 
 /* ============================================================
  * 2.5 INTERNAL Emitter
@@ -1291,6 +1328,14 @@
     COSMERON_INTERNAL_UNWRAP_FIELDS(FIELDS_DECL)                               \
   };                                                                           \
   typedef int NS(_cosmeron_tpl_struct_semi, MOD, NAME, SUFFIX, __LINE__)
+
+#define TEMPLATE_WIDTH_STRUCT(MOD, NAME, SUFFIX, FIELDS_DECL)                  \
+  typedef struct MODULE_TYPE(MOD, PP_OP_CAT2(NAME, SUFFIX))                    \
+      MODULE_TYPE(MOD, PP_OP_CAT2(NAME, SUFFIX));                              \
+  struct MODULE_TYPE(MOD, PP_OP_CAT2(NAME, SUFFIX)) {                          \
+    COSMERON_INTERNAL_UNWRAP_FIELDS(FIELDS_DECL)                               \
+  };                                                                           \
+  typedef int NS(_cosmeron_tpl_wstruct_semi, MOD, NAME, SUFFIX, __LINE__)
 
 #define COSMERON_EMIT_DECL_111(MOD, TAG, NAME, ARGS, FIELDS_DECL)             \
   _Static_assert(0, "Declaring TEMPLATE_STRUCT inside MODULE(...) is prohibited. Define templates in canonical .def files.");

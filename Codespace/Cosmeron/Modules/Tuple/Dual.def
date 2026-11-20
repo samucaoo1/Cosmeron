@@ -1,5 +1,7 @@
 /* Dual.def - Dual Mode Engine (Zero Duplication) */
 
+#include "Impl/Common.inc"
+
 #ifndef TEMPLATE_Tuple_Dual
 #define TEMPLATE_Tuple_Dual(SUFFIX, TYPE)                                      \
   TEMPLATE_STRUCT(Tuple, Dual, SUFFIX,                                         \
@@ -43,8 +45,10 @@
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
-#if defined(SUFFIX) && defined(TYPE)
+#if (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(TYPE)
   TEMPLATE_Tuple_Dual(SUFFIX, TYPE);
   #undef SUFFIX
   #undef TYPE
 #endif
+
+/* EOF */

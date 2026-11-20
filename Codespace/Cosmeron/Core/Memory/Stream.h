@@ -29,6 +29,28 @@
 /* 2. Declarative TMemoryStream Object                                        */
 /* ========================================================================== */
 
+#if defined(MEMORY_DISABLE_FUNCTION_TABLE) &&                                  \
+    !defined(COSMERON_DISABLE_FT_Memory)
+#define COSMERON_DISABLE_FT_Memory 1
+#endif
+#if defined(MEMORY_STREAM_DISABLE_FUNCTION_TABLE) &&                           \
+    !defined(COSMERON_DISABLE_FT_Memory_Stream)
+#define COSMERON_DISABLE_FT_Memory_Stream 1
+#endif
+
+#define MEMORY_STREAM_INTERNAL_COL_NAME(NAME, VALUE) NAME
+#define MEMORY_STREAM_INTERNAL_COL_VALUE(NAME, VALUE) VALUE
+#define MEMORY_STREAM_INTERNAL_GET(FIELD, ROW)                                 \
+  PP_OP_CAT2(MEMORY_STREAM_INTERNAL_COL_, FIELD) ROW
+
+#define MEMORY_STREAM_INTERNAL_TABLE(X)                                        \
+  X((BITS_PER_BYTE, 8U))                                                       \
+  X((MSB_BIT_INDEX, 7U))                                                       \
+  X((MAX_BIT_COUNT, 64U))                                                      \
+  X((BYTE_MASK, 0xFFU))
+
+IENUM_DEF(Memory_Stream, Config, MEMORY_STREAM_INTERNAL_TABLE)
+
 MODULE(DOMAIN(Core), Memory,
     OBJECT(Stream,
         FIELDS(
@@ -50,7 +72,8 @@ MODULE(DOMAIN(Core), Memory,
         CONST_FUNCTION_INLINE(size_t, RemainingBits, (), {
           if (!self || self->offset >= self->capacity) return 0U;
           size_t bytes = self->capacity - self->offset;
-          return (bytes * 8U) - (size_t)self->bitOffset;
+          return (bytes * (size_t)CNS(Memory, Stream, Internal, BITS_PER_BYTE)) -
+                 (size_t)self->bitOffset;
         }),
         CONST_FUNCTION_INLINE(size_t, Position, (), {
           return self ? self->offset : 0U;
@@ -72,7 +95,10 @@ MODULE(DOMAIN(Core), Memory,
         }),
         CONST_PREDICATE_INLINE(HasRemainingBits, (size_t bitCount), {
           if (!self || self->offset >= self->capacity) return false;
-          size_t bits = ((self->capacity - self->offset) * 8U) - (size_t)self->bitOffset;
+          size_t bits =
+              ((self->capacity - self->offset) *
+               (size_t)CNS(Memory, Stream, Internal, BITS_PER_BYTE)) -
+              (size_t)self->bitOffset;
           return bits >= bitCount;
         }),
         CONST_FUNCTION_INLINE(const void *, Data, (), {

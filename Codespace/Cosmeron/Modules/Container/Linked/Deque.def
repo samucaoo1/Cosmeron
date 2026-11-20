@@ -1,5 +1,7 @@
 /* Deque.def - Dual Mode Engine (Zero Duplication) */
 
+#include "Impl/Common.inc"
+
 #ifndef TEMPLATE_Linked_Deque
 #define TEMPLATE_Linked_Deque(SUFFIX, TYPE)                                    \
   TEMPLATE_OBJECT(Linked, Deque, SUFFIX,                                       \
@@ -221,7 +223,7 @@
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
-#if defined(SUFFIX) && defined(TYPE)
+#if (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(TYPE)
   TEMPLATE_Linked_Deque(SUFFIX, TYPE);
   #undef SUFFIX
   #undef TYPE

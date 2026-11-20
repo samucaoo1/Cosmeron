@@ -3,24 +3,30 @@
 #include <ctype.h>
 #include <string.h>
 
-static inline bool MODULE_INS(Text, CString, IsDefaultSpace)(char c) {
-  return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\v' ||
-         c == '\f';
-}
+#define TEXT_CSTRING_INTERNAL_TABLE(X) X((ASCII_MAX, 127U))
 
-static inline bool MODULE_INS(Text, CString, CharInSet)(char c, const char *set) {
-  if (set == NULL) {
-    return MODULE_INS(Text, CString, IsDefaultSpace)(c);
-  }
-  for (size_t i = 0U; set[i] != '\0'; ++i) {
-    if (set[i] == c) {
-      return true;
-    }
-  }
-  return false;
-}
+IENUM_DEF(Text_CString, Config, TEXT_CSTRING_INTERNAL_TABLE)
 
 MODULE_IMPLEMENT(DOMAIN(Modules), Text,
+  INTERNAL_EX(CString,
+    PREDICATE(IsDefaultSpace, (char c), {
+      return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\v' ||
+             c == '\f';
+    }),
+
+    PREDICATE(CharInSet, (char c, const char *set), {
+      if (set == NULL) {
+        return MODULE_IFUNC(Text, CString, IsDefaultSpace)(c);
+      }
+      for (size_t i = 0U; set[i] != '\0'; ++i) {
+        if (set[i] == c) {
+          return true;
+        }
+      }
+      return false;
+    })
+  ),
+
   PACKAGE(CString,
 FUNCTION(size_t, Length, (const char *str), {
   if (str == NULL) {
@@ -54,7 +60,7 @@ FUNCTION(bool, IsAscii, (const char *str), {
     return false;
   }
   for (size_t i = 0U; str[i] != '\0'; ++i) {
-    if ((unsigned char)str[i] > 127U) {
+    if ((unsigned char)str[i] > CNS(Text, CString, Internal, ASCII_MAX)) {
       return false;
     }
   }
@@ -67,7 +73,7 @@ FUNCTION(bool, IsAsciiBounded,
     return false;
   }
   for (size_t i = 0U; i < maxLen && str[i] != '\0'; ++i) {
-    if ((unsigned char)str[i] > 127U) {
+    if ((unsigned char)str[i] > CNS(Text, CString, Internal, ASCII_MAX)) {
       return false;
     }
   }
@@ -566,7 +572,7 @@ FUNCTION(OPSTATUS, Span,
   }
   size_t count = 0U;
   while (str[count] != '\0') {
-    if (!MODULE_INS(Text, CString, CharInSet)(str[count], accept)) {
+    if (!MODULE_IFUNC(Text, CString, CharInSet)(str[count], accept)) {
       break;
     }
     count++;
@@ -582,7 +588,7 @@ FUNCTION(OPSTATUS, ComplementSpan,
   }
   size_t count = 0U;
   while (str[count] != '\0') {
-    if (MODULE_INS(Text, CString, CharInSet)(str[count], reject)) {
+    if (MODULE_IFUNC(Text, CString, CharInSet)(str[count], reject)) {
       break;
     }
     count++;
@@ -599,7 +605,7 @@ FUNCTION(OPSTATUS, TrimStart,
   }
   size_t start = 0U;
   while (str[start] != '\0' &&
-         MODULE_INS(Text, CString, CharInSet)(str[start], charsToTrim)) {
+         MODULE_IFUNC(Text, CString, CharInSet)(str[start], charsToTrim)) {
     start++;
   }
   return Text_CString_Copy(output, capacity, str + start, outLength);
@@ -612,7 +618,7 @@ FUNCTION(OPSTATUS, TrimEnd,
     return STATUS_CONST(INVALID_ARGUMENT);
   }
   size_t len = Text_CString_Length(str);
-  while (len > 0U && MODULE_INS(Text, CString, CharInSet)(str[len - 1U], charsToTrim)) {
+  while (len > 0U && MODULE_IFUNC(Text, CString, CharInSet)(str[len - 1U], charsToTrim)) {
     len--;
   }
   return Text_CString_CopyBounded(output, capacity, str, len, outLength);
@@ -626,12 +632,12 @@ FUNCTION(OPSTATUS, Trim,
   }
   size_t start = 0U;
   while (str[start] != '\0' &&
-         MODULE_INS(Text, CString, CharInSet)(str[start], charsToTrim)) {
+         MODULE_IFUNC(Text, CString, CharInSet)(str[start], charsToTrim)) {
     start++;
   }
   size_t len = Text_CString_Length(str);
   while (len > start &&
-         MODULE_INS(Text, CString, CharInSet)(str[len - 1U], charsToTrim)) {
+         MODULE_IFUNC(Text, CString, CharInSet)(str[len - 1U], charsToTrim)) {
     len--;
   }
   size_t trimmedLen = len - start;

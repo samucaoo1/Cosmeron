@@ -8,6 +8,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#if defined(DIAGNOSTIC_DISABLE_FUNCTION_TABLE) &&                              \
+    !defined(COSMERON_DISABLE_FT_Diagnostic)
+#define COSMERON_DISABLE_FT_Diagnostic 1
+#endif
+#if defined(DIAGNOSTIC_CONTEXT_DISABLE_FUNCTION_TABLE) &&                      \
+    !defined(COSMERON_DISABLE_FT_Diagnostic_Context)
+#define COSMERON_DISABLE_FT_Diagnostic_Context 1
+#endif
+
 MODULE(DOMAIN(Core), Diagnostic,
     OBJECT(Context,
         FIELDS(

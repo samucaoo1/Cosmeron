@@ -6,12 +6,61 @@
 #include <stdio.h>
 #include <string.h>
 
+#define TEXT_FORMAT_BYTES_HUMAN_INTERNAL_COL_NAME(NAME, VALUE) NAME
+#define TEXT_FORMAT_BYTES_HUMAN_INTERNAL_COL_VALUE(NAME, VALUE) VALUE
+#define TEXT_FORMAT_BYTES_HUMAN_INTERNAL_GET(FIELD, ROW)                       \
+  PP_OP_CAT2(TEXT_FORMAT_BYTES_HUMAN_INTERNAL_COL_, FIELD) ROW
+
 #define TEXT_FORMAT_BYTES_HUMAN_INTERNAL_TABLE(X)                              \
-  X((UNIT_COUNT, 7U))
+  X((UNIT_COUNT, 7U))                                                          \
+  X((MAX_FRAC_DIGITS, 9U))                                                     \
+  X((DECIMAL_BASE, 10U))
 
 IENUM_DEF(Text_Format, BytesHumanConfig, TEXT_FORMAT_BYTES_HUMAN_INTERNAL_TABLE)
 
 MODULE_IMPLEMENT(DOMAIN(Modules), Text,
+  INTERNAL_EX(BytesHuman,
+    OPERATION(ResolveUnitMultiplier,
+              (const char *unitBuf, size_t unitLen, uint64_t *outMultiplier), {
+      if (unitLen == 0U || strcmp(unitBuf, "b") == 0) {
+        *outMultiplier = 1ULL;
+        return STATUS_CONST(SUCCESS);
+      }
+
+      static const char *const iecNames[CNS(Text, Format, Internal, UNIT_COUNT)] = {
+          "b", "kib", "mib", "gib", "tib", "pib", "eib"
+      };
+      static const char *const siNames[CNS(Text, Format, Internal, UNIT_COUNT)] = {
+          "b", "kb", "mb", "gb", "tb", "pb", "eb"
+      };
+      static const char shortLetters[CNS(Text, Format, Internal, UNIT_COUNT)] = {
+          'b', 'k', 'm', 'g', 't', 'p', 'e'
+      };
+
+      uint64_t iecMul = 1ULL;
+      uint64_t siMul = 1ULL;
+      const uint64_t iecBase = (uint64_t)CNS(Text, Format, BYTES_IEC_BASE);
+      const uint64_t siBase = (uint64_t)CNS(Text, Format, BYTES_SI_BASE);
+
+      for (size_t i = 1U; i < (size_t)CNS(Text, Format, Internal, UNIT_COUNT);
+           ++i) {
+        iecMul *= iecBase;
+        siMul *= siBase;
+        if ((unitLen == 1U && unitBuf[0] == shortLetters[i]) ||
+            strcmp(unitBuf, iecNames[i]) == 0) {
+          *outMultiplier = iecMul;
+          return STATUS_CONST(SUCCESS);
+        }
+        if (strcmp(unitBuf, siNames[i]) == 0) {
+          *outMultiplier = siMul;
+          return STATUS_CONST(SUCCESS);
+        }
+      }
+
+      return STATUS_CONST(INVALID_ARGUMENT);
+    })
+  ),
+
   PACKAGE(BytesHuman,
     VARIANT(Format,
       OPERATION((char *buffer, size_t capacity, size_t *outWritten,
@@ -40,12 +89,11 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
             "B", "KB", "MB", "GB", "TB", "PB", "EB"
         };
 
-        const char *const *units = (unitStandard == CNS(Text, Format, BYTE_UNIT_IEC))
-                                       ? iecUnits
-                                       : siUnits;
-        const double base = (unitStandard == CNS(Text, Format, BYTE_UNIT_IEC))
-                                ? (double)CNS(Text, Format, BYTES_IEC_BASE)
-                                : (double)CNS(Text, Format, BYTES_SI_BASE);
+        const bool isIec = (unitStandard == CNS(Text, Format, BYTE_UNIT_IEC));
+        const char *const *units = isIec ? iecUnits : siUnits;
+        const double base =
+            isIec ? (double)CNS(Text, Format, BYTES_IEC_BASE)
+                  : (double)CNS(Text, Format, BYTES_SI_BASE);
 
         if (precision > CNS(Text, Format, BYTES_MAX_PRECISION)) {
           precision = CNS(Text, Format, BYTES_MAX_PRECISION);
@@ -57,11 +105,13 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
         } else {
           double value = (double)bytes;
           size_t unitIndex = 0U;
-          while (value >= base && unitIndex + 1U < (size_t)CNS(Text, Format, Internal, UNIT_COUNT)) {
+          while (value >= base &&
+                 unitIndex + 1U < (size_t)CNS(Text, Format, Internal, UNIT_COUNT)) {
             value /= base;
             unitIndex++;
           }
-          written = snprintf(buffer, capacity, "%.*f %s", (int)precision, value, units[unitIndex]);
+          written = snprintf(buffer, capacity, "%.*f %s", (int)precision, value,
+                             units[unitIndex]);
         }
 
         if (written < 0 || (size_t)written >= capacity) {
@@ -90,13 +140,15 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
         return STATUS_CONST(INVALID_ARGUMENT);
       }
 
+      const uint64_t decBase =
+          (uint64_t)CNS(Text, Format, Internal, DECIMAL_BASE);
       uint64_t intPart = 0U;
       while (*p != '\0' && isdigit((unsigned char)*p)) {
-        uint64_t digit = (uint64_t)(*p - '0');
-        if (intPart > (UINT64_MAX - digit) / 10ULL) {
+        const uint64_t digit = (uint64_t)(*p - '0');
+        if (intPart > (UINT64_MAX - digit) / decBase) {
           return STATUS_CONST(ARITHMETIC_OVERFLOW);
         }
-        intPart = intPart * 10ULL + digit;
+        intPart = intPart * decBase + digit;
         p++;
       }
 
@@ -104,13 +156,12 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
       uint64_t fracScale = 1U;
       if (*p == '.' || *p == ',') {
         p++;
-        enum { MAX_FRAC_DIGITS = 9U };
         size_t fracDigits = 0U;
         while (*p != '\0' && isdigit((unsigned char)*p)) {
-          if (fracDigits < (size_t)MAX_FRAC_DIGITS) {
-            uint64_t digit = (uint64_t)(*p - '0');
-            fracPart = fracPart * 10ULL + digit;
-            fracScale *= 10ULL;
+          if (fracDigits < (size_t)CNS(Text, Format, Internal, MAX_FRAC_DIGITS)) {
+            const uint64_t digit = (uint64_t)(*p - '0');
+            fracPart = fracPart * decBase + digit;
+            fracScale *= decBase;
             fracDigits++;
           }
           p++;
@@ -141,34 +192,10 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
       }
 
       uint64_t multiplier = 1ULL;
-      if (unitLen == 0U || strcmp(unitBuf, "b") == 0) {
-        multiplier = 1ULL;
-      } else if (strcmp(unitBuf, "k") == 0 || strcmp(unitBuf, "kib") == 0) {
-        multiplier = 1024ULL;
-      } else if (strcmp(unitBuf, "kb") == 0) {
-        multiplier = 1000ULL;
-      } else if (strcmp(unitBuf, "m") == 0 || strcmp(unitBuf, "mib") == 0) {
-        multiplier = 1024ULL * 1024ULL;
-      } else if (strcmp(unitBuf, "mb") == 0) {
-        multiplier = 1000ULL * 1000ULL;
-      } else if (strcmp(unitBuf, "g") == 0 || strcmp(unitBuf, "gib") == 0) {
-        multiplier = 1024ULL * 1024ULL * 1024ULL;
-      } else if (strcmp(unitBuf, "gb") == 0) {
-        multiplier = 1000ULL * 1000ULL * 1000ULL;
-      } else if (strcmp(unitBuf, "t") == 0 || strcmp(unitBuf, "tib") == 0) {
-        multiplier = 1024ULL * 1024ULL * 1024ULL * 1024ULL;
-      } else if (strcmp(unitBuf, "tb") == 0) {
-        multiplier = 1000ULL * 1000ULL * 1000ULL * 1000ULL;
-      } else if (strcmp(unitBuf, "p") == 0 || strcmp(unitBuf, "pib") == 0) {
-        multiplier = 1024ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL;
-      } else if (strcmp(unitBuf, "pb") == 0) {
-        multiplier = 1000ULL * 1000ULL * 1000ULL * 1000ULL * 1000ULL;
-      } else if (strcmp(unitBuf, "e") == 0 || strcmp(unitBuf, "eib") == 0) {
-        multiplier = 1024ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL;
-      } else if (strcmp(unitBuf, "eb") == 0) {
-        multiplier = 1000ULL * 1000ULL * 1000ULL * 1000ULL * 1000ULL * 1000ULL;
-      } else {
-        return STATUS_CONST(INVALID_ARGUMENT);
+      const OPSTATUS unitStatus = MODULE_IFUNC(
+          Text, BytesHuman, ResolveUnitMultiplier)(unitBuf, unitLen, &multiplier);
+      if (unitStatus != STATUS_CONST(SUCCESS)) {
+        return unitStatus;
       }
 
       if (multiplier > 0ULL && intPart > UINT64_MAX / multiplier) {
@@ -177,7 +204,7 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
       uint64_t total = intPart * multiplier;
 
       if (fracScale > 1ULL) {
-        uint64_t fracBytes = (fracPart * multiplier) / fracScale;
+        const uint64_t fracBytes = (fracPart * multiplier) / fracScale;
         if (total > UINT64_MAX - fracBytes) {
           return STATUS_CONST(ARITHMETIC_OVERFLOW);
         }
@@ -189,3 +216,5 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
     })
   )
 );
+
+/* EOF */

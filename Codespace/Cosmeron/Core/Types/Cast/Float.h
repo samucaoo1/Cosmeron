@@ -15,6 +15,14 @@
 /* Package Declaration: Cast_Float                                            */
 /* ========================================================================== */
 
+#if defined(CAST_DISABLE_FUNCTION_TABLE) && !defined(COSMERON_DISABLE_FT_Cast)
+#define COSMERON_DISABLE_FT_Cast 1
+#endif
+#if defined(CAST_FLOAT_DISABLE_FUNCTION_TABLE) &&                              \
+    !defined(COSMERON_DISABLE_FT_Cast_Float)
+#define COSMERON_DISABLE_FT_Cast_Float 1
+#endif
+
 MODULE(DOMAIN(Core), Cast,
     PACKAGE(Float,
         /* 1. Float (32-bit) conversions */

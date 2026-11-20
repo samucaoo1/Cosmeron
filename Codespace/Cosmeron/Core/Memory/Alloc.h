@@ -12,11 +12,15 @@
 MODULE(DOMAIN(Core), Memory,
     PACKAGE(Alloc,
         OPERATION(Bytes, (void *outPointerObject, size_t size)),
-        OPERATION(ZeroBytes, (void *outPointerObject, size_t size)),
         OPERATION(Array, (void *outPointerObject, size_t count, size_t elementSize)),
-        OPERATION(ZeroArray, (void *outPointerObject, size_t count, size_t elementSize)),
-        OPERATION(ReallocBytes, (void *inoutPointerObject, size_t newSize)),
-        OPERATION(ReallocArray, (void *inoutPointerObject, size_t count, size_t elementSize)),
+        VARIANT(Zero,
+            OPERATION(Bytes, (void *outPointerObject, size_t size)),
+            OPERATION(Array, (void *outPointerObject, size_t count, size_t elementSize))
+        ),
+        VARIANT(Realloc,
+            OPERATION(Bytes, (void *inoutPointerObject, size_t newSize)),
+            OPERATION(Array, (void *inoutPointerObject, size_t count, size_t elementSize))
+        ),
         OPERATION(Free, (void *inoutPointerObject))
     )
 );
@@ -26,4 +30,3 @@ MODULE(DOMAIN(Core), Memory,
 #include "Impl/Alloc.impl"
 
 /* EOF */
-

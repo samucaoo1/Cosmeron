@@ -6,6 +6,11 @@
 #include <string.h>
 #include <wchar.h>
 
+#define TEXT_FORMAT_CONFIG_COL_NAME(NAME, VALUE) NAME
+#define TEXT_FORMAT_CONFIG_COL_VALUE(NAME, VALUE) VALUE
+#define TEXT_FORMAT_CONFIG_GET(FIELD, ROW)                                     \
+  PP_OP_CAT2(TEXT_FORMAT_CONFIG_COL_, FIELD) ROW
+
 #define TEXT_FORMAT_CONFIG_TABLE(X)                                            \
   X((BASE_BINARY, 2U))                                                         \
   X((BASE_OCTAL, 8U))                                                          \
@@ -57,14 +62,23 @@ PROCEDURE(SinkFinish, (MODULE_ITYPE(Text, Format, Sink) *sink), {
 }),
 
 FUNCTION(size_t, StringLength, (const char *str), {
-  size_t len = 0U;
-  if (str == NULL) {
-    return 0U;
+  return (str != NULL) ? strlen(str) : 0U;
+}),
+
+PROCEDURE(EmitRadixPrefix,
+          (unsigned base, bool uppercase, char firstDigit, char *prefix,
+           size_t *prefixLen), {
+  if (base == CNS(Text, Format, Internal, BASE_HEXADECIMAL)) {
+    prefix[(*prefixLen)++] = '0';
+    prefix[(*prefixLen)++] = uppercase ? 'X' : 'x';
+  } else if (base == CNS(Text, Format, Internal, BASE_BINARY)) {
+    prefix[(*prefixLen)++] = '0';
+    prefix[(*prefixLen)++] = uppercase ? 'B' : 'b';
+  } else if (base == CNS(Text, Format, Internal, BASE_OCTAL)) {
+    if (firstDigit != '0') {
+      prefix[(*prefixLen)++] = '0';
+    }
   }
-  while (str[len] != '\0') {
-    len++;
-  }
-  return len;
 }),
 
 PREDICATE(IsDigit, (char c), {
@@ -110,17 +124,10 @@ PROCEDURE(FormatInteger, (
       prefix[prefixLen++] = ' ';
     }
   } else if (flagHash && value != 0U) {
-    if (base == CNS(Text, Format, Internal, BASE_HEXADECIMAL)) {
-      prefix[prefixLen++] = '0';
-      prefix[prefixLen++] = uppercase ? 'X' : 'x';
-    } else if (base == CNS(Text, Format, Internal, BASE_BINARY)) {
-      prefix[prefixLen++] = '0';
-      prefix[prefixLen++] = uppercase ? 'B' : 'b';
-    } else if (base == CNS(Text, Format, Internal, BASE_OCTAL)) {
-      if (digitsCount == 0U || digitsBuffer[digitsCount - 1U] != '0') {
-        prefix[prefixLen++] = '0';
-      }
-    }
+    const char topDigit =
+        (digitsCount > 0U) ? digitsBuffer[digitsCount - 1U] : '\0';
+    MODULE_IFUNC(Text, Format, EmitRadixPrefix)(base, uppercase, topDigit,
+                                                prefix, &prefixLen);
   }
 
   size_t zeroPad = 0U;
@@ -543,31 +550,31 @@ PROCEDURE(FormatCosmeronType, (
 
   if (isBigint) {
     if (bitWidth == 256U) {
-      status = MODULE_FUNC(Numeric, Bigint, 256, ToCStringBase)(
-          (const MODULE_TYPED(Numeric, Bigint, 256) *)ptr, renderBuf, sizeof(renderBuf), base);
+      status = MODULE_FUNC(Numeric, Bigint256, ToCStringBase)(
+          (const MODULE_TYPE(Numeric, Bigint256) *)ptr, renderBuf, sizeof(renderBuf), base);
     } else if (bitWidth == 512U) {
-      status = MODULE_FUNC(Numeric, Bigint, 512, ToCStringBase)(
-          (const MODULE_TYPED(Numeric, Bigint, 512) *)ptr, renderBuf, sizeof(renderBuf), base);
+      status = MODULE_FUNC(Numeric, Bigint512, ToCStringBase)(
+          (const MODULE_TYPE(Numeric, Bigint512) *)ptr, renderBuf, sizeof(renderBuf), base);
     } else if (bitWidth == 1024U) {
-      status = MODULE_FUNC(Numeric, Bigint, 1024, ToCStringBase)(
-          (const MODULE_TYPED(Numeric, Bigint, 1024) *)ptr, renderBuf, sizeof(renderBuf), base);
+      status = MODULE_FUNC(Numeric, Bigint1024, ToCStringBase)(
+          (const MODULE_TYPE(Numeric, Bigint1024) *)ptr, renderBuf, sizeof(renderBuf), base);
     } else {
-      status = MODULE_FUNC(Numeric, Bigint, 128, ToCStringBase)(
-          (const MODULE_TYPED(Numeric, Bigint, 128) *)ptr, renderBuf, sizeof(renderBuf), base);
+      status = MODULE_FUNC(Numeric, Bigint128, ToCStringBase)(
+          (const MODULE_TYPE(Numeric, Bigint128) *)ptr, renderBuf, sizeof(renderBuf), base);
     }
   } else {
     if (bitWidth == 256U) {
-      status = MODULE_FUNC(Numeric, Decimal, 256, ToCStringBase)(
-          (const MODULE_TYPED(Numeric, Decimal, 256) *)ptr, renderBuf, sizeof(renderBuf), base);
+      status = MODULE_FUNC(Numeric, Decimal256, ToCStringBase)(
+          (const MODULE_TYPE(Numeric, Decimal256) *)ptr, renderBuf, sizeof(renderBuf), base);
     } else if (bitWidth == 512U) {
-      status = MODULE_FUNC(Numeric, Decimal, 512, ToCStringBase)(
-          (const MODULE_TYPED(Numeric, Decimal, 512) *)ptr, renderBuf, sizeof(renderBuf), base);
+      status = MODULE_FUNC(Numeric, Decimal512, ToCStringBase)(
+          (const MODULE_TYPE(Numeric, Decimal512) *)ptr, renderBuf, sizeof(renderBuf), base);
     } else if (bitWidth == 1024U) {
-      status = MODULE_FUNC(Numeric, Decimal, 1024, ToCStringBase)(
-          (const MODULE_TYPED(Numeric, Decimal, 1024) *)ptr, renderBuf, sizeof(renderBuf), base);
+      status = MODULE_FUNC(Numeric, Decimal1024, ToCStringBase)(
+          (const MODULE_TYPE(Numeric, Decimal1024) *)ptr, renderBuf, sizeof(renderBuf), base);
     } else {
-      status = MODULE_FUNC(Numeric, Decimal, 128, ToCStringBase)(
-          (const MODULE_TYPED(Numeric, Decimal, 128) *)ptr, renderBuf, sizeof(renderBuf), base);
+      status = MODULE_FUNC(Numeric, Decimal128, ToCStringBase)(
+          (const MODULE_TYPE(Numeric, Decimal128) *)ptr, renderBuf, sizeof(renderBuf), base);
     }
   }
 
@@ -589,17 +596,9 @@ PROCEDURE(FormatCosmeronType, (
   size_t prefixLen = 0U;
 
   if (flagHash) {
-    if (base == CNS(Text, Format, Internal, BASE_HEXADECIMAL)) {
-      prefix[prefixLen++] = '0';
-      prefix[prefixLen++] = uppercase ? 'X' : 'x';
-    } else if (base == CNS(Text, Format, Internal, BASE_BINARY)) {
-      prefix[prefixLen++] = '0';
-      prefix[prefixLen++] = uppercase ? 'B' : 'b';
-    } else if (base == CNS(Text, Format, Internal, BASE_OCTAL)) {
-      if (digitsLen == 0U || renderBuf[0] != '0') {
-        prefix[prefixLen++] = '0';
-      }
-    }
+    const char leadDigit = (digitsLen > 0U) ? renderBuf[0] : '\0';
+    MODULE_IFUNC(Text, Format, EmitRadixPrefix)(base, uppercase, leadDigit,
+                                                prefix, &prefixLen);
   }
 
   size_t totalLen = prefixLen + digitsLen;
@@ -1075,3 +1074,5 @@ PROCEDURE(FormatCosmeronType, (
     )
   )
 );
+
+/* EOF */

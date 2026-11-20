@@ -1,5 +1,11 @@
 /* Forward.def - Dual Mode Engine (Zero Duplication) */
 
+#include "Impl/Common.inc"
+#define COSMERON_INTERNAL_NO_AUTO_INSTANTIATE 1
+#include "../Linked/SingleNode.def"
+#include "Stream.def"
+#undef COSMERON_INTERNAL_NO_AUTO_INSTANTIATE
+
 #ifndef TEMPLATE_Iterator_Forward
 #define TEMPLATE_Iterator_Forward(SUFFIX, TYPE)                                \
   static OPSTATUS NS(Iterator, Forward, SUFFIX, StreamNext)(void *state, TYPE *outValue); \
@@ -192,7 +198,7 @@
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
-#if defined(SUFFIX) && defined(TYPE)
+#if (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(TYPE)
   TEMPLATE_Iterator_Forward(SUFFIX, TYPE);
   #undef SUFFIX
   #undef TYPE

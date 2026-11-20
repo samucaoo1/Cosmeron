@@ -21,3 +21,5 @@ MODULE(DOMAIN(Modules), Text,
 );
 
 #include "Impl/UTF16.impl"
+
+/* EOF */

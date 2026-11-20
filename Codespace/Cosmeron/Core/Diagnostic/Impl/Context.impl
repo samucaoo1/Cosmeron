@@ -20,11 +20,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Diagnostic,
     PROCEDURE(Clear, (), {
       if (!self)
         return;
-      self->file = NULL;
-      self->line = 0U;
-      self->function = NULL;
-      self->description = NULL;
-      self->userData = NULL;
+      OBJECT_RESET_ZERO(Diagnostic, Context, self);
     })
   )
 );

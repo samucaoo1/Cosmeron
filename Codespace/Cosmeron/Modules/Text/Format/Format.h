@@ -3,19 +3,27 @@
 #include "../../../Core/Condition/Status.h"
 #include "../../../Core/Module/Module.h"
 #include "../../../Core/Types/TaggedUnion.h"
-#include "../../Tuple/TDual.h"
-#include "../../Tuple/TPair.h"
-#include "../../Tuple/TPenta.h"
-#include "../../Tuple/TQuad.h"
-#include "../../Tuple/TTriple.h"
-#include "../../Numeric/TBigint.h"
-#include "../../Numeric/TDecimal.h"
+#include "../../Tuple/Dual.h"
+#include "../../Tuple/Pair.h"
+#include "../../Tuple/Penta.h"
+#include "../../Tuple/Quad.h"
+#include "../../Tuple/Triple.h"
+#include "../../Numeric/Bigint.h"
+#include "../../Numeric/Decimal.h"
 #include "../Encoding/UTF8.h"
 
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+#if defined(TEXT_DISABLE_FUNCTION_TABLE) && !defined(COSMERON_DISABLE_FT_Text)
+#define COSMERON_DISABLE_FT_Text 1
+#endif
+#if defined(TEXT_FORMAT_DISABLE_FUNCTION_TABLE) &&                             \
+    !defined(COSMERON_DISABLE_FT_Text_Format)
+#define COSMERON_DISABLE_FT_Text_Format 1
+#endif
 
 MODULE(DOMAIN(Modules), Text,
     PACKAGE(Format,
@@ -51,3 +59,5 @@ MODULE(DOMAIN(Modules), Text,
 
 #include "Impl/Format.impl"
 #include "BytesHuman.h"
+
+/* EOF */

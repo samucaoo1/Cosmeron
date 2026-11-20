@@ -3,6 +3,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define CONDITION_PANIC_INTERNAL_COL_NAME(NAME, VALUE) NAME
+#define CONDITION_PANIC_INTERNAL_COL_VALUE(NAME, VALUE) VALUE
+#define CONDITION_PANIC_INTERNAL_GET(FIELD, ROW)                               \
+  PP_OP_CAT2(CONDITION_PANIC_INTERNAL_COL_, FIELD) ROW
+
+#define CONDITION_PANIC_INTERNAL_TABLE(X)                                      \
+  X((STACKTRACE_SKIP_FRAMES, 1U))                                              \
+  X((STACKTRACE_MAX_FRAMES, 16U))                                              \
+  X((STACKTRACE_BUFFER_SIZE, 1024U))
+
+IENUM_DEF(Condition_Panic, Config, CONDITION_PANIC_INTERNAL_TABLE)
+
+#define COSMERON_MACRO_INTERNAL_PANIC_KIND_CASE(ROW)                           \
+  case MODULE_CONST(Condition, PANIC_KIND_GET(NAME, ROW)):                     \
+    return PP_OP_STRING(PANIC_KIND_GET(NAME, ROW));
+
 static _Thread_local MODULE_CLOSURE(Condition, Panic, Handler)
     MODULE_IFUNC(Condition, Panic_CustomHandler) = CLOSURE_EMPTY;
 
@@ -10,15 +26,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Condition,
   PACKAGE(Panic,
     FUNCTION(const char *, KindName, (MODULE_ENUM(Condition, PanicKind) kind), {
       switch (kind) {
-      case MODULE_CONST(Condition, ASSERT):
-        return "ASSERT";
-      case MODULE_CONST(Condition, VERIFY):
-        return "VERIFY";
-      case MODULE_CONST(Condition, ENSURE):
-        return "ENSURE";
-      case MODULE_CONST(Condition, UNREACHABLE):
-        return "UNREACHABLE";
-      case MODULE_CONST(Condition, PANIC):
+      PANIC_KIND_TABLE(COSMERON_MACRO_INTERNAL_PANIC_KIND_CASE)
       default:
         return "PANIC";
       }
@@ -42,7 +50,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Condition,
               (MODULE_ENUM(Condition, PanicKind) kind, const char *message,
                const char *expression, const char *file, uint32_t line,
                const char *function), {
-      MODULE_TYPE(Condition, PanicInfo) info;
+      MODULE_TYPE(Condition, Panic_Info) info;
       info.kind = kind;
       info.message = message;
       info.expression = expression;
@@ -67,9 +75,12 @@ MODULE_IMPLEMENT(DOMAIN(Core), Condition,
 
       MODULE_TYPE(Diagnostic, Stacktrace) st;
       MODULE_FUNC(Diagnostic, Stacktrace, Init)(&st);
-      if (OBJECT_CALL(&st, Capture, 1U, 16U) == STATUS_CONST(SUCCESS) &&
+      if (OBJECT_CALL(&st, Capture,
+                      CNS(Condition, Panic, Internal, STACKTRACE_SKIP_FRAMES),
+                      CNS(Condition, Panic, Internal, STACKTRACE_MAX_FRAMES)) ==
+              STATUS_CONST(SUCCESS) &&
           OBJECT_CALL_0(&st, FrameCount) > 0U) {
-        char stBuffer[1024];
+        char stBuffer[CNS(Condition, Panic, Internal, STACKTRACE_BUFFER_SIZE)];
         size_t written = 0U;
         if (OBJECT_CALL(&st, Format, stBuffer, sizeof(stBuffer), &written) ==
             STATUS_CONST(SUCCESS)) {
@@ -86,6 +97,8 @@ MODULE_IMPLEMENT(DOMAIN(Core), Condition,
     })
   )
 );
+
+#undef COSMERON_MACRO_INTERNAL_PANIC_KIND_CASE
 
 /* EOF */
 

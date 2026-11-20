@@ -1,9 +1,9 @@
 #pragma once
 
-#include "TBigint.h"
-#include "TComplex.h"
-#include "TDecimal.h"
-#include "TFixed.h"
-#include "TRational.h"
+#include "Bigint.h"
+#include "Complex.h"
+#include "Decimal.h"
+#include "Fixed.h"
+#include "Rational.h"
 
 /* EOF */

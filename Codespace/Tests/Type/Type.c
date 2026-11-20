@@ -1,23 +1,29 @@
-#include "../../Cosmeron/Modules/Type/Type.h"
+#include "../../Cosmeron/Core/Types/Primitive.h"
+#include "../../Cosmeron/Core/Types/ByteTag.h"
+#include "../../Cosmeron/Core/Memory/Block.h"
+#include "../../Cosmeron/Core/Bit/Bitset.h"
+#include "../../Cosmeron/Modules/Numeric/Bigint.h"
+#include "../../Cosmeron/Modules/Numeric/Decimal.h"
+#include <string.h>
 
 /* Custom width template instantiations via Dual-Mode Engine */
-TEMPLATE_IMPLEMENT(Type_Bigint, 192, uint64_t);
-TEMPLATE_IMPLEMENT(Type_Bitset, 100, 100U);
+TEMPLATE_INSTANTIATE(Numeric, Bigint, 192, uint64_t);
+TEMPLATE_INSTANTIATE(Bitset, 100, 100U);
 
 int main(void) {
-  /* 1. Primitive Types from Core/Primitive/Types.h */
-  MODULE_TYPE(Primitive, Int32) pInt = -42;
-  MODULE_TYPE(Primitive, UInt64) pUInt = 100ULL;
+  /* 1. Primitive Types from Core/Types/Primitive.h */
+  MODULE_TYPE(Type, Int32) pInt = -42;
+  MODULE_TYPE(Type, UInt64) pUInt = 100ULL;
   if (pInt != -42 || pUInt != 100ULL)
     return 1;
 
   /* 2. Tag (16, 32, 64) */
-  MODULE_TYPED(Type, Tag, 32) tag = {0};
-  if (Type_Tag_32_Init(&tag) != STATUS_CONST(SUCCESS))
+  MODULE_TYPE(Type, ByteTag32) tag = {0};
+  if (Type_ByteTag32_Init(&tag) != STATUS_CONST(SUCCESS))
     return 2;
   if (OBJECT_CALL(&tag, FromString, "RIFF") != STATUS_CONST(SUCCESS))
     return 3;
-  if (OBJECT_CALL_0(&tag, ToUInt) != TYPE_TAG_MAKE_32('R', 'I', 'F', 'F'))
+  if (OBJECT_CALL_0(&tag, ToUInt) != TYPE_BYTETAG_MAKE_32('R', 'I', 'F', 'F'))
     return 4;
   if (!OBJECT_CALL_0(&tag, IsPrintable))
     return 5;
@@ -31,16 +37,16 @@ int main(void) {
   uint8_t beBytes[4] = {0};
   if (OBJECT_CALL(&tag, WriteBE, beBytes) != STATUS_CONST(SUCCESS))
     return 8;
-  MODULE_TYPED(Type, Tag, 32) tag2 = {0};
-  Type_Tag_32_Init(&tag2);
+  MODULE_TYPE(Type, ByteTag32) tag2 = {0};
+  Type_ByteTag32_Init(&tag2);
   if (OBJECT_CALL(&tag2, ReadBE, beBytes) != STATUS_CONST(SUCCESS))
     return 9;
   if (!OBJECT_CALL(&tag, Equal, &tag2))
     return 10;
 
   /* 3. TBlock (128, 256, 512, 1024) */
-  MODULE_TYPED(Type, Block, 128) blk = {0};
-  Type_Block_128_Init(&blk);
+  MODULE_TYPE(Memory, Block128) blk = {0};
+  Memory_Block128_Init(&blk);
   if (OBJECT_CALL(&blk, BitSet, 127U) != STATUS_CONST(SUCCESS))
     return 11;
   bool bitSet = false;
@@ -63,10 +69,10 @@ int main(void) {
     return 23;
 
   /* 3b. TBitset (standard 128 + non-multiple-of-64 custom 100) */
-  MODULE_TYPED(Type, Bitset, 100) bsA = {0};
-  MODULE_TYPED(Type, Bitset, 100) bsB = {0};
-  Type_Bitset_100_Init(&bsA);
-  Type_Bitset_100_Init(&bsB);
+  MODULE_TYPE(Bitset100) bsA = {0};
+  MODULE_TYPE(Bitset100) bsB = {0};
+  Bitset100_Init(&bsA);
+  Bitset100_Init(&bsB);
   if (OBJECT_CALL_0(&bsA, Capacity) != 100U || !OBJECT_CALL_0(&bsA, None))
     return 24;
   if (OBJECT_CALL_0(&bsA, Not) != STATUS_CONST(SUCCESS))
@@ -96,10 +102,10 @@ int main(void) {
     return 33;
 
   /* 4. TBigint (128, 256, 512, 1024) */
-  MODULE_TYPED(Type, Bigint, 128) bigA = {0};
-  MODULE_TYPED(Type, Bigint, 128) bigB = {0};
-  Type_Bigint_128_Init(&bigA);
-  Type_Bigint_128_Init(&bigB);
+  MODULE_TYPE(Numeric, Bigint128) bigA = {0};
+  MODULE_TYPE(Numeric, Bigint128) bigB = {0};
+  Numeric_Bigint128_Init(&bigA);
+  Numeric_Bigint128_Init(&bigB);
   bigA.limb[0] = 100ULL;
   bigB.limb[0] = 23ULL;
   if (OBJECT_CALL(&bigA, Add, &bigB) != STATUS_CONST(SUCCESS) ||
@@ -116,10 +122,10 @@ int main(void) {
     return 18;
 
   /* 5. TDecimal (128, 256, 512, 1024) */
-  MODULE_TYPED(Type, Decimal, 256) decA = {0};
-  MODULE_TYPED(Type, Decimal, 256) decB = {0};
-  Type_Decimal_256_Init(&decA);
-  Type_Decimal_256_Init(&decB);
+  MODULE_TYPE(Numeric, Decimal256) decA = {0};
+  MODULE_TYPE(Numeric, Decimal256) decB = {0};
+  Numeric_Decimal256_Init(&decA);
+  Numeric_Decimal256_Init(&decB);
   decA.limb[0] = 50ULL;
   decB.limb[0] = 8ULL;
   if (OBJECT_CALL(&decA, Sub, &decB) != STATUS_CONST(SUCCESS) ||
@@ -127,8 +133,8 @@ int main(void) {
     return 19;
 
   /* 6. Custom 192-bit Bigint instantiation */
-  MODULE_TYPED(Type, Bigint, 192) custom = {0};
-  Type_Bigint_192_Init(&custom);
+  MODULE_TYPE(Numeric, Bigint192) custom = {0};
+  Numeric_Bigint192_Init(&custom);
   custom.limb[2] = 1ULL;
   if (OBJECT_CALL_0(&custom, IsZero))
     return 20;

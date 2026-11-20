@@ -39,12 +39,44 @@
   X((Int32, int32_t))                                                          \
   X((Int64, int64_t))
 
+#define NUMERIC_CONFIG_COL_NAME(NAME, VALUE) NAME
+#define NUMERIC_CONFIG_COL_VALUE(NAME, VALUE) VALUE
+#define NUMERIC_CONFIG_GET(FIELD, ROW)                                         \
+  PP_OP_CAT2(NUMERIC_CONFIG_COL_, FIELD) ROW
+
+#define NUMERIC_CONFIG_TABLE(X)                                                \
+  X((BITS_PER_BYTE, 8U))                                                       \
+  X((U64_BITS, 64U))                                                           \
+  X((DEFAULT_BASE, 10U))                                                       \
+  X((MAX_SQRT_ITERATIONS, 64U))
+
 /* ==========================================================================
  * Shared Multi-Limb Internal Infrastructure (Zero FunctionTable Overhead)
  * ========================================================================== */
 
+MODULE(DOMAIN(Modules), Numeric,
+  INTERNAL(
+    ENUM_EX(Config, NUMERIC_CONFIG_TABLE, PLAIN)
+  )
+);
+
 MODULE_IMPLEMENT(DOMAIN(Modules), Numeric,
   INTERNAL(
+    FUNCTION(int64_t, Gcd64, (int64_t a, int64_t b), {
+      if (a < 0) {
+        a = -a;
+      }
+      if (b < 0) {
+        b = -b;
+      }
+      while (b != 0) {
+        const int64_t t = a % b;
+        a = b;
+        b = t;
+      }
+      return a == 0 ? 1 : a;
+    }),
+
     PROCEDURE(LimbClear, (uint64_t *limbs, size_t limbCount), {
       memset(limbs, 0, limbCount * sizeof(uint64_t));
     }),
@@ -414,5 +446,9 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Numeric,
     })
   )
 );
+
+#ifndef TEMPLATE_Numeric
+#define TEMPLATE_Numeric(TARGET, ...) NS(TEMPLATE_Numeric, TARGET)(__VA_ARGS__)
+#endif
 
 /* EOF */

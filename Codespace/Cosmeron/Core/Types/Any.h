@@ -24,7 +24,10 @@
   PP_OP_CAT2(TYPE_ANY_CONFIG_COL_, FIELD) ROW
 
 #define TYPE_ANY_CONFIG_TABLE(X)                                          \
-  X((SBO_CAPACITY, 16))
+  X((SBO_CAPACITY, 16U))                                                       \
+  X((MAX_SBO_CAPACITY, 256U))
+
+ENUM_DEF_EX(MODULE_NS(Type, Any), Config, TYPE_ANY_CONFIG_TABLE, PLAIN)
 
 #define TYPE_ANY_SIZE_COL_NAME(NAME, SBO_BYTES)      NAME
 #define TYPE_ANY_SIZE_COL_SBO_BYTES(NAME, SBO_BYTES) SBO_BYTES
@@ -44,10 +47,10 @@
 #define COSMERON_MACRO_INTERNAL_ANY_PRIMITIVE_API(ROW)                         \
   OPERATION(PP_OP_CAT2(Set_, PRIMITIVE_TYPE_GET(NAME, ROW)),                   \
             (MODULE_TYPE(Type, Any) * self,                               \
-             PRIMITIVE_TYPE_GET(TYPE, ROW) value)),                            \
+             PRIMITIVE_TYPE_GET(C_TYPE, ROW) value)),                            \
   OPERATION(PP_OP_CAT2(Get_, PRIMITIVE_TYPE_GET(NAME, ROW)),                   \
             (const MODULE_TYPE(Type, Any) * self,                         \
-             PRIMITIVE_TYPE_GET(TYPE, ROW) * outValue)),
+             PRIMITIVE_TYPE_GET(C_TYPE, ROW) * outValue)),
 
 MODULE(DOMAIN(Core), Type,
     /* 2.1 Internal SBO / Heap Storage Union (Default 16B) */
@@ -56,7 +59,7 @@ MODULE(DOMAIN(Core), Type,
             union {
                 void *heapPointer;
                 max_align_t alignDummy;
-                unsigned char inlineBytes[16];
+                unsigned char inlineBytes[MODULE_CONST(Type, Any, SBO_CAPACITY)];
             } as;
         )
     ),
@@ -146,8 +149,6 @@ MODULE(DOMAIN(Core), Type,
 
     /* 2.4 Package: Type_Any */
     PACKAGE(Any,
-        ENUM(Config, TYPE_ANY_CONFIG_TABLE),
-
         /* Lifecycle */
         PROCEDURE(Init, (MODULE_TYPE(Type, Any) * self)),
         PROCEDURE(Reset, (MODULE_TYPE(Type, Any) * self)),
@@ -169,10 +170,12 @@ MODULE(DOMAIN(Core), Type,
 
         /* Introspection */
         PREDICATE(HasValue, (const MODULE_TYPE(Type, Any) * self)),
-        PREDICATE(IsEmpty, (const MODULE_TYPE(Type, Any) * self)),
-        PREDICATE(IsInline, (const MODULE_TYPE(Type, Any) * self)),
-        PREDICATE(IsType, (const MODULE_TYPE(Type, Any) * self,
-                           const MODULE_TYPE(Type, Traits) * expectedTraits)),
+        VARIANT(Is,
+            PREDICATE(Empty, (const MODULE_TYPE(Type, Any) * self)),
+            PREDICATE(Inline, (const MODULE_TYPE(Type, Any) * self)),
+            PREDICATE(Type, (const MODULE_TYPE(Type, Any) * self,
+                             const MODULE_TYPE(Type, Traits) * expectedTraits))
+        ),
         FUNCTION(const MODULE_TYPE(Type, Traits) *, TraitsOf,
                  (const MODULE_TYPE(Type, Any) * self)),
         FUNCTION(size_t, Capacity, (void)),
@@ -185,13 +188,15 @@ MODULE(DOMAIN(Core), Type,
         OPERATION(Get, (const MODULE_TYPE(Type, Any) * self,
                         const MODULE_TYPE(Type, Traits) * expectedTraits,
                         void *outValue)),
-        OPERATION(Borrow, (const MODULE_TYPE(Type, Any) * self,
-                           const MODULE_TYPE(Type, Traits) * expectedTraits,
-                           const void **outPointer)),
-        OPERATION(BorrowMutable,
-                  (MODULE_TYPE(Type, Any) * self,
-                   const MODULE_TYPE(Type, Traits) * expectedTraits,
-                   void **outPointer)),
+        VARIANT(Borrow,
+            OPERATION((const MODULE_TYPE(Type, Any) * self,
+                       const MODULE_TYPE(Type, Traits) * expectedTraits,
+                       const void **outPointer)),
+            OPERATION(Mutable,
+                      (MODULE_TYPE(Type, Any) * self,
+                       const MODULE_TYPE(Type, Traits) * expectedTraits,
+                       void **outPointer))
+        ),
 
         /* Typed Primitive Shortcuts */
         PRIMITIVE_TYPE_TABLE(COSMERON_MACRO_INTERNAL_ANY_PRIMITIVE_API)

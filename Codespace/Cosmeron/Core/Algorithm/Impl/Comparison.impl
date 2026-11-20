@@ -2,10 +2,19 @@
 
 #include <string.h>
 
+#define ALGORITHM_COMPARISON_INTERNAL_COL_NAME(NAME, VALUE) NAME
+#define ALGORITHM_COMPARISON_INTERNAL_COL_VALUE(NAME, VALUE) VALUE
+#define ALGORITHM_COMPARISON_INTERNAL_GET(FIELD, ROW)                          \
+  PP_OP_CAT2(ALGORITHM_COMPARISON_INTERNAL_COL_, FIELD) ROW
+
+#define ALGORITHM_COMPARISON_INTERNAL_TABLE(X) X((COMPLEX_PART_COUNT, 2U))
+
+IENUM_DEF(Algorithm_Comparison, Config, ALGORITHM_COMPARISON_INTERNAL_TABLE)
+
 #define COSMERON_MACRO_INTERNAL_COMPARISON_PRIMITIVE_IMPL(ROW)                 \
   FUNCTION(CMPOUT, PRIMITIVE_TYPE_GET(NAME, ROW),                              \
-           (PRIMITIVE_TYPE_GET(TYPE, ROW) left,                                \
-            PRIMITIVE_TYPE_GET(TYPE, ROW) right), {                            \
+           (PRIMITIVE_TYPE_GET(C_TYPE, ROW) left,                                \
+            PRIMITIVE_TYPE_GET(C_TYPE, ROW) right), {                            \
     bool leftNan = (left != left);                                             \
     bool rightNan = (right != right);                                          \
     if (leftNan || rightNan) {                                                 \
@@ -23,9 +32,11 @@
   FUNCTION(CMPOUT, NAME_VAL, (COMPLEX_TYPE left, COMPLEX_TYPE right), {        \
     union {                                                                    \
       COMPLEX_TYPE value;                                                      \
-      REAL_TYPE parts[2];                                                      \
+      REAL_TYPE parts[CNS(Algorithm, Comparison, Internal, COMPLEX_PART_COUNT)]; \
     } lhs = {.value = left}, rhs = {.value = right};                           \
-    for (size_t i = 0U; i < 2U; ++i) {                                         \
+    for (size_t i = 0U;                                                        \
+         i < (size_t)CNS(Algorithm, Comparison, Internal, COMPLEX_PART_COUNT); \
+         ++i) {                                                                \
       bool leftNan = (lhs.parts[i] != lhs.parts[i]);                           \
       bool rightNan = (rhs.parts[i] != rhs.parts[i]);                         \
       if (leftNan || rightNan) {                                               \
@@ -51,6 +62,22 @@
 #endif
 
 MODULE_IMPLEMENT(DOMAIN(Core), Algorithm,
+  INTERNAL_EX(Comparison,
+    FUNCTION(CMPOUT, FromInt, (int value), {
+      return value < 0
+                 ? COMPARISON_CONST(LOWER)
+                 : (value > 0 ? COMPARISON_CONST(HIGHER)
+                              : COMPARISON_CONST(EQUAL));
+    }),
+
+    FUNCTION(CMPOUT, CompareSize, (size_t left, size_t right), {
+      return left < right
+                 ? COMPARISON_CONST(LOWER)
+                 : (left > right ? COMPARISON_CONST(HIGHER)
+                                 : COMPARISON_CONST(EQUAL));
+    })
+  ),
+
   PACKAGE(Comparison,
     PRIMITIVE_TYPE_TABLE_ORDERED(COSMERON_MACRO_INTERNAL_COMPARISON_PRIMITIVE_IMPL)
     COSMERON_MACRO_INTERNAL_COMPARISON_COMPLEX_ALL()
@@ -61,11 +88,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Algorithm,
         return COMPARISON_CONST(LOWER);
       if (!right)
         return COMPARISON_CONST(HIGHER);
-      int result = strcmp(left, right);
-      return result < 0                                                        \
-                 ? COMPARISON_CONST(LOWER)                                     \
-                 : (result > 0 ? COMPARISON_CONST(HIGHER)                      \
-                               : COMPARISON_CONST(EQUAL));                     \
+      return MODULE_IFUNC(Algorithm, Comparison, FromInt)(strcmp(left, right));
     }),
 
     FUNCTION(CMPOUT, Bytes,
@@ -74,10 +97,8 @@ MODULE_IMPLEMENT(DOMAIN(Core), Algorithm,
       if (left == right && leftSize == rightSize)
         return COMPARISON_CONST(EQUAL);
       if (!left && !right)
-        return leftSize < rightSize ? COMPARISON_CONST(LOWER)                  \
-                                    : (leftSize > rightSize                    \
-                                           ? COMPARISON_CONST(HIGHER)          \
-                                           : COMPARISON_CONST(EQUAL));         \
+        return MODULE_IFUNC(Algorithm, Comparison, CompareSize)(leftSize,
+                                                                rightSize);
       if (!left)
         return COMPARISON_CONST(LOWER);
       if (!right)
@@ -86,16 +107,11 @@ MODULE_IMPLEMENT(DOMAIN(Core), Algorithm,
       size_t minimumSize = leftSize < rightSize ? leftSize : rightSize;
       int result = minimumSize > 0U ? memcmp(left, right, minimumSize) : 0;
 
-      if (result < 0)
-        return COMPARISON_CONST(LOWER);
-      if (result > 0)
-        return COMPARISON_CONST(HIGHER);
-      if (leftSize < rightSize)
-        return COMPARISON_CONST(LOWER);
-      if (leftSize > rightSize)
-        return COMPARISON_CONST(HIGHER);
+      if (result != 0)
+        return MODULE_IFUNC(Algorithm, Comparison, FromInt)(result);
 
-      return COMPARISON_CONST(EQUAL);
+      return MODULE_IFUNC(Algorithm, Comparison, CompareSize)(leftSize,
+                                                              rightSize);
     })
   )
 );

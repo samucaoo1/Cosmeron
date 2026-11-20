@@ -1,5 +1,10 @@
 /* Span.def - Dual Mode Engine (Zero Duplication) */
 
+#include "Impl/Common.inc"
+#define COSMERON_INTERNAL_NO_AUTO_INSTANTIATE 1
+#include "Vector.def"
+#undef COSMERON_INTERNAL_NO_AUTO_INSTANTIATE
+
 #ifndef TEMPLATE_Array_Span
 #define TEMPLATE_Array_Span(SUFFIX, TYPE)                                      \
   TEMPLATE_OBJECT(Array, Span, SUFFIX,                                         \
@@ -224,7 +229,7 @@
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
-#if defined(SUFFIX) && defined(TYPE)
+#if (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(TYPE)
   TEMPLATE_Array_Span(SUFFIX, TYPE);
   #undef SUFFIX
   #undef TYPE

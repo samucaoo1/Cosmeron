@@ -18,8 +18,8 @@ INTERNAL_DEF(
     }))
 
 static void NS(GraphTest, BasicAndTraversals)(void) {
-  MODULE_TYPED(Graph, Graph, Int32_Int32) g;
-  assert(MODULE_FUNC(Graph, Graph, Int32_Int32, Create)(&g) ==
+  MODULE_TYPED(Graph, Int32_Int32) g;
+  assert(MODULE_FUNC(Graph, Int32_Int32, Create)(&g) ==
          STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL_0(&g, IsEmpty));
 
@@ -43,8 +43,8 @@ static void NS(GraphTest, BasicAndTraversals)(void) {
   assert(*w == 20);
 
   /* Optional Vertex & Edge Iterators */
-  MODULE_TYPED(Graph, GraphVertexIter, Int32_Int32) vit;
-  MODULE_TYPED(Graph, GraphVertexIter, Int32_Int32) vend;
+  MODULE_TYPED(Graph, VertexIter, Int32_Int32) vit;
+  MODULE_TYPED(Graph, VertexIter, Int32_Int32) vend;
   assert(OBJECT_CALL(&g, BeginVertices, &vit) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&g, EndVertices, &vend) == STATUS_CONST(SUCCESS));
   int32_t vsum = 0;
@@ -55,13 +55,13 @@ static void NS(GraphTest, BasicAndTraversals)(void) {
   }
   assert(vsum == 1000);
 
-  MODULE_TYPED(Graph, GraphEdgeIter, Int32_Int32) eit;
-  MODULE_TYPED(Graph, GraphEdgeIter, Int32_Int32) eend;
+  MODULE_TYPED(Graph, EdgeIter, Int32_Int32) eit;
+  MODULE_TYPED(Graph, EdgeIter, Int32_Int32) eend;
   assert(OBJECT_CALL(&g, BeginEdges, v0, &eit) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&g, EndEdges, v0, &eend) == STATUS_CONST(SUCCESS));
   int32_t esum = 0;
   while (!OBJECT_CALL(&eit, Equals, &eend)) {
-    MODULE_TYPED(Graph, GraphEdge, Int32_Int32) *e = NULL;
+    MODULE_TYPED(Graph, Edge, Int32_Int32) *e = NULL;
     assert(OBJECT_CALL(&eit, Next, &e) == STATUS_CONST(SUCCESS));
     esum += e->weight;
   }
@@ -69,8 +69,8 @@ static void NS(GraphTest, BasicAndTraversals)(void) {
 
   /* BFS & DFS */
   NS(GraphTest, VisitLog) bfsLog = {{0}, 0U};
-  MODULE_CLOSURE(Graph, Graph, Int32_Int32, Visitor) bfsVisitor =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Graph, Graph, Int32_Int32, Visitor), Bind)(
+  MODULE_CLOSURE(Graph, Int32_Int32, Visitor) bfsVisitor =
+      NS_JOIN(MODULE_CLOSURE_FUNC(Graph, Int32_Int32, Visitor), Bind)(
           MODULE_IFUNC(GraphTest, RecordVisit), &bfsLog);
   assert(OBJECT_CALL(&g, BFS, v0, bfsVisitor) == STATUS_CONST(SUCCESS));
   assert(bfsLog.count == 4U);
@@ -78,8 +78,8 @@ static void NS(GraphTest, BasicAndTraversals)(void) {
          bfsLog.order[2] == 300 && bfsLog.order[3] == 400);
 
   NS(GraphTest, VisitLog) dfsLog = {{0}, 0U};
-  MODULE_CLOSURE(Graph, Graph, Int32_Int32, Visitor) dfsVisitor =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Graph, Graph, Int32_Int32, Visitor), Bind)(
+  MODULE_CLOSURE(Graph, Int32_Int32, Visitor) dfsVisitor =
+      NS_JOIN(MODULE_CLOSURE_FUNC(Graph, Int32_Int32, Visitor), Bind)(
           MODULE_IFUNC(GraphTest, RecordVisit), &dfsLog);
   assert(OBJECT_CALL(&g, DFS, v0, dfsVisitor) == STATUS_CONST(SUCCESS));
   assert(dfsLog.count == 4U);

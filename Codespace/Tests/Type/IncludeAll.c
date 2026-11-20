@@ -1,9 +1,14 @@
-#include "../../Cosmeron/Modules/Type/Type.h"
-#include "../../Cosmeron/Modules/Type/Tag.h"
-#include "../../Cosmeron/Modules/Type/TBlock.h"
-#include "../../Cosmeron/Modules/Type/TBitset.h"
-#include "../../Cosmeron/Modules/Type/TBigint.h"
-#include "../../Cosmeron/Modules/Type/TDecimal.h"
+#include "../../Cosmeron/Core/Types/Primitive.h"
+#include "../../Cosmeron/Core/Types/ByteTag.h"
+#include "../../Cosmeron/Core/Types/Optional.h"
+#include "../../Cosmeron/Core/Types/Result.h"
+#include "../../Cosmeron/Core/Types/Any.h"
+#include "../../Cosmeron/Core/Types/Traits.h"
+#include "../../Cosmeron/Core/Types/TaggedUnion.h"
+#include "../../Cosmeron/Core/Memory/Block.h"
+#include "../../Cosmeron/Core/Bit/Bitset.h"
+#include "../../Cosmeron/Modules/Numeric/Bigint.h"
+#include "../../Cosmeron/Modules/Numeric/Decimal.h"
 
 int main(void) { return 0; }
 

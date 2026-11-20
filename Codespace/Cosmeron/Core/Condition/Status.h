@@ -45,6 +45,15 @@ typedef MODULE_ENUM(Condition, Status) OPSTATUS;
 /* 4. Declarative Package: Condition_Status                                   */
 /* ========================================================================== */
 
+#if defined(CONDITION_DISABLE_FUNCTION_TABLE) &&                               \
+    !defined(COSMERON_DISABLE_FT_Condition)
+#define COSMERON_DISABLE_FT_Condition 1
+#endif
+#if defined(CONDITION_STATUS_DISABLE_FUNCTION_TABLE) &&                        \
+    !defined(COSMERON_DISABLE_FT_Condition_Status)
+#define COSMERON_DISABLE_FT_Condition_Status 1
+#endif
+
 MODULE(DOMAIN(Core), Condition,
     PACKAGE(Status,
         PREDICATE_INLINE(IsSuccess, (OPSTATUS status), {

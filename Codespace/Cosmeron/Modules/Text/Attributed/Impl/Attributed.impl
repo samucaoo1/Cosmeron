@@ -8,24 +8,35 @@
 
 MODULE_IMPLEMENT(DOMAIN(Modules), Text,
   INTERNAL_EX(Attributed,
-    OPERATION(EnsureTextCapacity,
-              (MODULE_TYPE(Text, AttributedText) * self, size_t needed), {
-      if (self->capacity >= needed)
-        return STATUS_CONST(SUCCESS);
-
-      size_t newCap = (self->capacity == 0U) ? 16U : self->capacity;
+    FUNCTION(size_t, NextCapacity,
+             (size_t current, size_t initial, size_t needed), {
+      size_t newCap = (current == 0U) ? initial : current;
+      const size_t growth =
+          MODULE_CONST(Text, Attributed, GROWTH_FACTOR);
       while (newCap < needed) {
-        if (newCap > SIZE_MAX / 2U) {
-          newCap = needed;
-          break;
+        if (newCap > SIZE_MAX / growth) {
+          return needed;
         }
-        newCap *= 2U;
+        newCap *= growth;
+      }
+      return newCap;
+    }),
+
+    OPERATION(EnsureTextCapacity,
+              (MODULE_TYPE(Text, Attributed) *self, size_t needed), {
+      if (self->capacity >= needed) {
+        return STATUS_CONST(SUCCESS);
       }
 
+      const size_t newCap = MODULE_IFUNC(Text, Attributed, NextCapacity)(
+          self->capacity,
+          MODULE_CONST(Text, Attributed, INITIAL_TEXT_CAPACITY), needed);
       void *temp = self->text;
-      OPSTATUS status = MODULE_FUNC(Memory, Alloc, ReallocBytes)(&temp, newCap + 1U);
-      if (status != STATUS_CONST(SUCCESS))
+      OPSTATUS status =
+          MODULE_FUNC(Memory, Alloc, ReallocBytes)(&temp, newCap + 1U);
+      if (status != STATUS_CONST(SUCCESS)) {
         return status;
+      }
 
       self->text = (char *)temp;
       self->capacity = newCap;
@@ -33,48 +44,67 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
     }),
 
     OPERATION(EnsureSpanCapacity,
-              (MODULE_TYPE(Text, AttributedText) * self, size_t needed), {
-      if (self->spanCapacity >= needed)
+              (MODULE_TYPE(Text, Attributed) *self, size_t needed), {
+      if (self->spanCapacity >= needed) {
         return STATUS_CONST(SUCCESS);
-
-      size_t newCap = (self->spanCapacity == 0U) ? 4U : self->spanCapacity;
-      while (newCap < needed) {
-        if (newCap > SIZE_MAX / 2U) {
-          newCap = needed;
-          break;
-        }
-        newCap *= 2U;
       }
 
+      const size_t newCap = MODULE_IFUNC(Text, Attributed, NextCapacity)(
+          self->spanCapacity,
+          MODULE_CONST(Text, Attributed, INITIAL_SPAN_CAPACITY), needed);
       void *temp = self->spans;
       OPSTATUS status = MODULE_FUNC(Memory, Alloc, ReallocArray)(
           &temp, newCap, sizeof(MODULE_TYPE(Text, Attributed, Span)));
-      if (status != STATUS_CONST(SUCCESS))
+      if (status != STATUS_CONST(SUCCESS)) {
         return status;
+      }
 
       self->spans = (MODULE_TYPE(Text, Attributed, Span) *)temp;
       self->spanCapacity = newCap;
       return STATUS_CONST(SUCCESS);
+    }),
+
+    PROCEDURE(AppendLiteral,
+              (char *outBuffer, size_t bufferCapacity, size_t *written,
+               const char *literal), {
+      const size_t remaining =
+          (bufferCapacity > *written) ? (bufferCapacity - *written) : 0U;
+      const int n = snprintf(outBuffer + *written, remaining, "%s", literal);
+      if (n > 0) {
+        *written += (size_t)n;
+      }
+    }),
+
+    PROCEDURE(AppendAnsiRgb,
+              (char *outBuffer, size_t bufferCapacity, size_t *written,
+               unsigned sgrPrefix, uint32_t color), {
+      const uint8_t r = MODULE_FUNC(Text, Grid_Color, Red)(color);
+      const uint8_t g = MODULE_FUNC(Text, Grid_Color, Green)(color);
+      const uint8_t b = MODULE_FUNC(Text, Grid_Color, Blue)(color);
+      const size_t remaining =
+          (bufferCapacity > *written) ? (bufferCapacity - *written) : 0U;
+      const int n = snprintf(outBuffer + *written, remaining,
+                             "\033[%u;2;%u;%u;%um", sgrPrefix, r, g, b);
+      if (n > 0) {
+        *written += (size_t)n;
+      }
     })
   ),
 
-  OBJECT(AttributedText,
+  OBJECT(Attributed,
     OPERATION(Create, (size_t initialCapacity), {
-      if (!self)
+      if (!self) {
         return STATUS_CONST(INVALID_ARGUMENT);
+      }
 
-      self->text = NULL;
-      self->length = 0U;
-      self->capacity = 0U;
-      self->spans = NULL;
-      self->spanCount = 0U;
-      self->spanCapacity = 0U;
+      OBJECT_RESET_ZERO(Text, Attributed, self);
 
       if (initialCapacity > 0U) {
         OPSTATUS status = MODULE_IFUNC(Text, Attributed, EnsureTextCapacity)(
             self, initialCapacity);
-        if (status != STATUS_CONST(SUCCESS))
+        if (status != STATUS_CONST(SUCCESS)) {
           return status;
+        }
         self->text[0] = '\0';
       }
 
@@ -82,46 +112,49 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
     }),
 
     OPERATION(Destroy, (), {
-      if (!self)
+      if (!self) {
         return STATUS_CONST(INVALID_ARGUMENT);
-
-      if (self->text != NULL) {
-        void *temp = self->text;
-        MODULE_FUNC(Memory, Alloc, Free)(&temp);
-        self->text = NULL;
       }
 
+      if (self->text != NULL) {
+        Memory_Free(self->text);
+      }
       if (self->spans != NULL) {
-        void *temp = self->spans;
-        MODULE_FUNC(Memory, Alloc, Free)(&temp);
-        self->spans = NULL;
+        Memory_Free(self->spans);
       }
 
-      self->length = 0U;
-      self->capacity = 0U;
-      self->spanCount = 0U;
-      self->spanCapacity = 0U;
+      OBJECT_RESET_ZERO(Text, Attributed, self);
       return STATUS_CONST(SUCCESS);
     }),
 
-    OPERATION(Clear, (), {
-      if (!self)
-        return STATUS_CONST(INVALID_ARGUMENT);
+    VARIANT(Clear,
+      OPERATION((), {
+        if (!self) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
 
-      self->length = 0U;
-      if (self->text != NULL) {
-        self->text[0] = '\0';
-      }
-      self->spanCount = 0U;
-      return STATUS_CONST(SUCCESS);
-    }),
+        self->length = 0U;
+        if (self->text != NULL) {
+          self->text[0] = '\0';
+        }
+        self->spanCount = 0U;
+        return STATUS_CONST(SUCCESS);
+      }),
+
+      OPERATION(Spans, (), {
+        if (!self) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+
+        self->spanCount = 0U;
+        return STATUS_CONST(SUCCESS);
+      })
+    ),
 
     OPERATION(SetText, (const char *text, size_t length), {
-      if (!self)
+      if (!self || (!text && length > 0U)) {
         return STATUS_CONST(INVALID_ARGUMENT);
-
-      if (!text && length > 0U)
-        return STATUS_CONST(INVALID_ARGUMENT);
+      }
 
       if (length == 0U) {
         self->length = 0U;
@@ -131,10 +164,11 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
         return STATUS_CONST(SUCCESS);
       }
 
-      OPSTATUS status = MODULE_IFUNC(Text, Attributed, EnsureTextCapacity)(
-          self, length);
-      if (status != STATUS_CONST(SUCCESS))
+      OPSTATUS status =
+          MODULE_IFUNC(Text, Attributed, EnsureTextCapacity)(self, length);
+      if (status != STATUS_CONST(SUCCESS)) {
         return status;
+      }
 
       memcpy(self->text, text, length);
       self->text[length] = '\0';
@@ -143,20 +177,24 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
     }),
 
     OPERATION(AppendText, (const char *text, size_t length), {
-      if (!self)
+      if (!self || (!text && length > 0U)) {
         return STATUS_CONST(INVALID_ARGUMENT);
+      }
 
-      if (!text && length > 0U)
-        return STATUS_CONST(INVALID_ARGUMENT);
-
-      if (length == 0U)
+      if (length == 0U) {
         return STATUS_CONST(SUCCESS);
+      }
 
-      size_t newLen = self->length + length;
-      OPSTATUS status = MODULE_IFUNC(Text, Attributed, EnsureTextCapacity)(
-          self, newLen);
-      if (status != STATUS_CONST(SUCCESS))
+      if (length > SIZE_MAX - self->length) {
+        return STATUS_CONST(OUT_OF_RANGE);
+      }
+
+      const size_t newLen = self->length + length;
+      OPSTATUS status =
+          MODULE_IFUNC(Text, Attributed, EnsureTextCapacity)(self, newLen);
+      if (status != STATUS_CONST(SUCCESS)) {
         return status;
+      }
 
       memcpy(self->text + self->length, text, length);
       self->text[newLen] = '\0';
@@ -167,16 +205,19 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
     OPERATION(AddSpan,
               (size_t start, size_t length,
                MODULE_TYPE(Text, Attribute, Cell) attribute), {
-      if (!self)
+      if (!self) {
         return STATUS_CONST(INVALID_ARGUMENT);
+      }
 
-      if (length == 0U)
+      if (length == 0U) {
         return STATUS_CONST(SUCCESS);
+      }
 
       OPSTATUS status = MODULE_IFUNC(Text, Attributed, EnsureSpanCapacity)(
           self, self->spanCount + 1U);
-      if (status != STATUS_CONST(SUCCESS))
+      if (status != STATUS_CONST(SUCCESS)) {
         return status;
+      }
 
       self->spans[self->spanCount].start = start;
       self->spans[self->spanCount].length = length;
@@ -185,22 +226,16 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
       return STATUS_CONST(SUCCESS);
     }),
 
-    OPERATION(ClearSpans, (), {
-      if (!self)
-        return STATUS_CONST(INVALID_ARGUMENT);
-
-      self->spanCount = 0U;
-      return STATUS_CONST(SUCCESS);
-    }),
-
     CONST_OPERATION(GetAttributeAt,
                     (size_t index,
-                     MODULE_TYPE(Text, Attribute, Cell) * outAttribute), {
-      if (!self || !outAttribute)
+                     MODULE_TYPE(Text, Attribute, Cell) *outAttribute), {
+      if (!self || !outAttribute) {
         return STATUS_CONST(INVALID_ARGUMENT);
+      }
 
-      if (index >= self->length)
+      if (index >= self->length) {
         return STATUS_CONST(OUT_OF_RANGE);
+      }
 
       memset(outAttribute, 0, sizeof(*outAttribute));
 
@@ -226,8 +261,9 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
     CONST_OPERATION(RenderAnsi,
                     (char *outBuffer, size_t bufferCapacity,
                      size_t *outWritten), {
-      if (!self || !outBuffer || !outWritten || bufferCapacity == 0U)
+      if (!self || !outBuffer || !outWritten || bufferCapacity == 0U) {
         return STATUS_CONST(INVALID_ARGUMENT);
+      }
 
       *outWritten = 0U;
       if (self->length == 0U) {
@@ -235,6 +271,8 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
         return STATUS_CONST(SUCCESS);
       }
 
+      const unsigned sgrFgPrefix = 38U;
+      const unsigned sgrBgPrefix = 48U;
       size_t written = 0U;
       MODULE_TYPE(Text, Attribute, Cell) activeAttr;
       memset(&activeAttr, 0, sizeof(activeAttr));
@@ -243,65 +281,48 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
       for (size_t i = 0U; i < self->length; ++i) {
         MODULE_TYPE(Text, Attribute, Cell) currentAttr;
         OPSTATUS status = OBJECT_CALL(self, GetAttributeAt, i, &currentAttr);
-        if (status != STATUS_CONST(SUCCESS))
+        if (status != STATUS_CONST(SUCCESS)) {
           return status;
+        }
 
-        bool attrChanged = (i == 0U) ||
-                           (memcmp(&currentAttr, &activeAttr, sizeof(currentAttr)) != 0);
+        const bool attrChanged =
+            (i == 0U) ||
+            (memcmp(&currentAttr, &activeAttr, sizeof(currentAttr)) != 0);
 
         if (attrChanged) {
-          /* Reset prior formatting if needed */
           if (hadStyle) {
-            int n = snprintf(outBuffer + written,
-                             bufferCapacity > written ? bufferCapacity - written : 0U,
-                             "\033[0m");
-            if (n > 0)
-              written += (size_t)n;
+            MODULE_IFUNC(Text, Attributed, AppendLiteral)(
+                outBuffer, bufferCapacity, &written, "\033[0m");
             hadStyle = false;
           }
 
-          /* Check if current has styling */
-          bool hasStyle = (currentAttr.foreground != 0U) ||
-                          (currentAttr.background != 0U) ||
-                          (currentAttr.flags != 0U) ||
-                          (currentAttr.underline != 0U);
+          const bool hasStyle = (currentAttr.foreground != 0U) ||
+                                (currentAttr.background != 0U) ||
+                                (currentAttr.flags != 0U) ||
+                                (currentAttr.underline != 0U);
 
           if (hasStyle) {
             if (currentAttr.flags & CNS(Text, Attribute, BOLD)) {
-              int n = snprintf(outBuffer + written,
-                               bufferCapacity > written ? bufferCapacity - written : 0U,
-                               "\033[1m");
-              if (n > 0) written += (size_t)n;
+              MODULE_IFUNC(Text, Attributed, AppendLiteral)(
+                  outBuffer, bufferCapacity, &written, "\033[1m");
             }
             if (currentAttr.flags & CNS(Text, Attribute, ITALIC)) {
-              int n = snprintf(outBuffer + written,
-                               bufferCapacity > written ? bufferCapacity - written : 0U,
-                               "\033[3m");
-              if (n > 0) written += (size_t)n;
+              MODULE_IFUNC(Text, Attributed, AppendLiteral)(
+                  outBuffer, bufferCapacity, &written, "\033[3m");
             }
             if (currentAttr.underline != 0U) {
-              int n = snprintf(outBuffer + written,
-                               bufferCapacity > written ? bufferCapacity - written : 0U,
-                               "\033[4m");
-              if (n > 0) written += (size_t)n;
+              MODULE_IFUNC(Text, Attributed, AppendLiteral)(
+                  outBuffer, bufferCapacity, &written, "\033[4m");
             }
             if (currentAttr.foreground != 0U) {
-              uint8_t r = MODULE_FUNC(Text, Grid_Color, Red)(currentAttr.foreground);
-              uint8_t g = MODULE_FUNC(Text, Grid_Color, Green)(currentAttr.foreground);
-              uint8_t b = MODULE_FUNC(Text, Grid_Color, Blue)(currentAttr.foreground);
-              int n = snprintf(outBuffer + written,
-                               bufferCapacity > written ? bufferCapacity - written : 0U,
-                               "\033[38;2;%u;%u;%um", r, g, b);
-              if (n > 0) written += (size_t)n;
+              MODULE_IFUNC(Text, Attributed, AppendAnsiRgb)(
+                  outBuffer, bufferCapacity, &written, sgrFgPrefix,
+                  currentAttr.foreground);
             }
             if (currentAttr.background != 0U) {
-              uint8_t r = MODULE_FUNC(Text, Grid_Color, Red)(currentAttr.background);
-              uint8_t g = MODULE_FUNC(Text, Grid_Color, Green)(currentAttr.background);
-              uint8_t b = MODULE_FUNC(Text, Grid_Color, Blue)(currentAttr.background);
-              int n = snprintf(outBuffer + written,
-                               bufferCapacity > written ? bufferCapacity - written : 0U,
-                               "\033[48;2;%u;%u;%um", r, g, b);
-              if (n > 0) written += (size_t)n;
+              MODULE_IFUNC(Text, Attributed, AppendAnsiRgb)(
+                  outBuffer, bufferCapacity, &written, sgrBgPrefix,
+                  currentAttr.background);
             }
             hadStyle = true;
           }
@@ -316,11 +337,8 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
       }
 
       if (hadStyle) {
-        int n = snprintf(outBuffer + written,
-                         bufferCapacity > written ? bufferCapacity - written : 0U,
-                         "\033[0m");
-        if (n > 0)
-          written += (size_t)n;
+        MODULE_IFUNC(Text, Attributed, AppendLiteral)(
+            outBuffer, bufferCapacity, &written, "\033[0m");
       }
 
       if (written < bufferCapacity) {
@@ -330,22 +348,6 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
       }
 
       return STATUS_CONST(INSUFFICIENT_SPACE);
-    }),
-
-    CONST_FUNCTION(const char *, Text, (), {
-      return (self && self->text) ? self->text : "";
-    }),
-
-    CONST_FUNCTION(size_t, Length, (), {
-      return self ? self->length : 0U;
-    }),
-
-    CONST_FUNCTION(size_t, SpanCount, (), {
-      return self ? self->spanCount : 0U;
-    }),
-
-    CONST_FUNCTION(const MODULE_TYPE(Text, Attributed, Span) *, Spans, (), {
-      return self ? self->spans : NULL;
     })
   )
 );

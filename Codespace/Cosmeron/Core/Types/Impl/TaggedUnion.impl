@@ -10,57 +10,87 @@
 
 MODULE(DOMAIN(Core), Type,
   INTERNAL_EX(TaggedUnion,
-    COMPARISON(Compare_ByteSlice, (const void *left, const void *right), {
-      const MODULE_TYPE(Type, ByteSlice) *a =
-          (const MODULE_TYPE(Type, ByteSlice) *)left;
-      const MODULE_TYPE(Type, ByteSlice) *b =
-          (const MODULE_TYPE(Type, ByteSlice) *)right;
-      return MODULE_FUNC(Algorithm, Comparison, Bytes)(
-          a->data, a->size, b->data, b->size);
+    VARIANT(Compare_,
+      COMPARISON(ByteSlice, (const void *left, const void *right), {
+        const MODULE_TYPE(Type, ByteSlice) *a =
+            (const MODULE_TYPE(Type, ByteSlice) *)left;
+        const MODULE_TYPE(Type, ByteSlice) *b =
+            (const MODULE_TYPE(Type, ByteSlice) *)right;
+        return MODULE_FUNC(Algorithm, Comparison, Bytes)(
+            a->data, a->size, b->data, b->size);
+      }),
+
+      COMPARISON(RawPointer, (const void *left, const void *right), {
+        const void *const *a = (const void *const *)left;
+        const void *const *b = (const void *const *)right;
+        const uintptr_t ua = (uintptr_t)(*a);
+        const uintptr_t ub = (uintptr_t)(*b);
+        if (ua < ub) {
+          return COMPARISON_CONST(LOWER);
+        }
+        if (ua > ub) {
+          return COMPARISON_CONST(HIGHER);
+        }
+        return COMPARISON_CONST(EQUAL);
+      }),
+
+      COMPARISON(Self, (const void *left, const void *right), {
+        return MODULE_FUNC(Type, TaggedUnion, Compare)(
+            (const MODULE_TYPE(Type, TaggedUnion) *)left,
+            (const MODULE_TYPE(Type, TaggedUnion) *)right);
+      })
+    ),
+
+    VARIANT(Hash_,
+      FUNCTION(size_t, ByteSlice, (const void *instance), {
+        if (!instance) {
+          return 0U;
+        }
+        const MODULE_TYPE(Type, ByteSlice) *slice =
+            (const MODULE_TYPE(Type, ByteSlice) *)instance;
+        return MODULE_FUNC(Type, Traits, HashBytes)(slice->data, slice->size);
+      }),
+
+      FUNCTION(size_t, RawPointer, (const void *instance), {
+        if (!instance) {
+          return 0U;
+        }
+        return MODULE_FUNC(Type, Traits, HashBytes)(instance, sizeof(void *));
+      }),
+
+      FUNCTION(size_t, Self, (const void *instance), {
+        return MODULE_FUNC(Type, TaggedUnion, Hash)(
+            (const MODULE_TYPE(Type, TaggedUnion) *)instance);
+      })
+    ),
+
+    OPERATION(CoerceDoubleToInt64, (double v, int64_t *outValue), {
+      const double int64UpperBound = 9223372036854775808.0;
+      if (!isfinite(v)) {
+        return STATUS_CONST(OUT_OF_RANGE);
+      }
+      if (v < (double)INT64_MIN || v >= int64UpperBound) {
+        return STATUS_CONST(ARITHMETIC_OVERFLOW);
+      }
+      *outValue = (int64_t)v;
+      return STATUS_CONST(SUCCESS);
     }),
 
-    FUNCTION(size_t, Hash_ByteSlice, (const void *instance), {
-      if (!instance)
-        return 0U;
-      const MODULE_TYPE(Type, ByteSlice) *slice =
-          (const MODULE_TYPE(Type, ByteSlice) *)instance;
-      return MODULE_FUNC(Type, Traits, HashBytes)(slice->data,
-                                                       slice->size);
-    }),
-
-    COMPARISON(Compare_RawPointer, (const void *left, const void *right), {
-      const void *const *a = (const void *const *)left;
-      const void *const *b = (const void *const *)right;
-      uintptr_t ua = (uintptr_t)(*a);
-      uintptr_t ub = (uintptr_t)(*b);
-      if (ua < ub)
-        return COMPARISON_CONST(LOWER);
-      if (ua > ub)
-        return COMPARISON_CONST(HIGHER);
-      return COMPARISON_CONST(EQUAL);
-    }),
-
-    FUNCTION(size_t, Hash_RawPointer, (const void *instance), {
-      if (!instance)
-        return 0U;
-      return MODULE_FUNC(Type, Traits, HashBytes)(instance,
-                                                       sizeof(void *));
-    }),
-
-    COMPARISON(Compare_Self, (const void *left, const void *right), {
-      return MODULE_FUNC(Type, TaggedUnion, Compare)(
-          (const MODULE_TYPE(Type, TaggedUnion) *)left,
-          (const MODULE_TYPE(Type, TaggedUnion) *)right);
-    }),
-
-    FUNCTION(size_t, Hash_Self, (const void *instance), {
-      return MODULE_FUNC(Type, TaggedUnion, Hash)(
-          (const MODULE_TYPE(Type, TaggedUnion) *)instance);
+    OPERATION(CoerceDoubleToUInt64, (double v, uint64_t *outValue), {
+      const double uint64UpperBound = 18446744073709551616.0;
+      if (!isfinite(v)) {
+        return STATUS_CONST(OUT_OF_RANGE);
+      }
+      if (v < 0.0 || v >= uint64UpperBound) {
+        return STATUS_CONST(ARITHMETIC_OVERFLOW);
+      }
+      *outValue = (uint64_t)v;
+      return STATUS_CONST(SUCCESS);
     }),
 
     FUNCTION(const MODULE_TYPE(Type, Traits) *, ByteSliceTraits, (void), {
       static const MODULE_TYPE(Type, Traits) descriptor = {
-          .name = "Primitive_TByteSlice",
+          .name = "Type_TByteSlice",
           .size = sizeof(MODULE_TYPE(Type, ByteSlice)),
           .alignment = _Alignof(MODULE_TYPE(Type, ByteSlice)),
           .category = MODULE_CONST(Type, Category, COMPOSITE),
@@ -100,7 +130,7 @@ MODULE(DOMAIN(Core), Type,
 #define COSMERON_MACRO_INTERNAL_TU_PRIMITIVE_IMPL(ROW)                         \
   OPERATION(PP_OP_CAT2(Set_, PRIMITIVE_TYPE_GET(NAME, ROW)),                   \
             (MODULE_TYPE(Type, TaggedUnion) * self,                       \
-             PRIMITIVE_TYPE_GET(TYPE, ROW) value), {                           \
+             PRIMITIVE_TYPE_GET(C_TYPE, ROW) value), {                           \
     if (!self)                                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     memset(self, 0, sizeof(*self));                                            \
@@ -110,7 +140,7 @@ MODULE(DOMAIN(Core), Type,
   }),                                                                          \
   FUNCTION(MODULE_TYPE(Type, TaggedUnion),                                \
            PP_OP_CAT2(From_, PRIMITIVE_TYPE_GET(NAME, ROW)),                   \
-           (PRIMITIVE_TYPE_GET(TYPE, ROW) value), {                            \
+           (PRIMITIVE_TYPE_GET(C_TYPE, ROW) value), {                            \
     MODULE_TYPE(Type, TaggedUnion) result;                                \
     memset(&result, 0, sizeof(result));                                        \
     result.tag = MODULE_CONST(Type, Tag, PRIMITIVE_TYPE_GET(NAME, ROW));  \
@@ -119,7 +149,7 @@ MODULE(DOMAIN(Core), Type,
   }),                                                                          \
   OPERATION(PP_OP_CAT2(Get_, PRIMITIVE_TYPE_GET(NAME, ROW)),                   \
             (const MODULE_TYPE(Type, TaggedUnion) * self,                 \
-             PRIMITIVE_TYPE_GET(TYPE, ROW) * outValue), {                      \
+             PRIMITIVE_TYPE_GET(C_TYPE, ROW) * outValue), {                      \
     if (!self || !outValue)                                                    \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (self->tag !=                                                           \
@@ -152,7 +182,7 @@ MODULE(DOMAIN(Core), Type,
         right->value.as.PRIMITIVE_TYPE_GET(NAME, ROW));
 
 /* ========================================================================== */
-/* 3. Package Implementation: Primitive_TaggedUnion                           */
+/* 3. Package Implementation: Type_TaggedUnion                                */
 /* ========================================================================== */
 
 MODULE_IMPLEMENT(DOMAIN(Core), Type,
@@ -263,349 +293,359 @@ MODULE_IMPLEMENT(DOMAIN(Core), Type,
       return STATUS_CONST(SUCCESS);
     }),
 
-    OPERATION(CoerceInt64, (const MODULE_TYPE(Type, TaggedUnion) * self,
-                            int64_t *outValue), {
-      if (!self || !outValue)
-        return STATUS_CONST(INVALID_ARGUMENT);
-
-      switch (self->tag) {
-        case MODULE_CONST(Type, Tag, Boolean):
-          *outValue = self->value.as.Boolean ? 1 : 0;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Int8):
-          *outValue = (int64_t)self->value.as.Int8;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Int16):
-          *outValue = (int64_t)self->value.as.Int16;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Int32):
-          *outValue = (int64_t)self->value.as.Int32;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Int64):
-          *outValue = self->value.as.Int64;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Int):
-          *outValue = (int64_t)self->value.as.Int;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, PtrDiff):
-          *outValue = (int64_t)self->value.as.PtrDiff;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, IntPtr):
-          *outValue = (int64_t)self->value.as.IntPtr;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, UInt8):
-          *outValue = (int64_t)self->value.as.UInt8;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, UInt16):
-          *outValue = (int64_t)self->value.as.UInt16;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, UInt32):
-          *outValue = (int64_t)self->value.as.UInt32;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, UInt64):
-          if (self->value.as.UInt64 > (uint64_t)INT64_MAX)
-            return STATUS_CONST(ARITHMETIC_OVERFLOW);
-          *outValue = (int64_t)self->value.as.UInt64;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, UInt):
-          if ((uint64_t)self->value.as.UInt > (uint64_t)INT64_MAX)
-            return STATUS_CONST(ARITHMETIC_OVERFLOW);
-          *outValue = (int64_t)self->value.as.UInt;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Size):
-          if ((uint64_t)self->value.as.Size > (uint64_t)INT64_MAX)
-            return STATUS_CONST(ARITHMETIC_OVERFLOW);
-          *outValue = (int64_t)self->value.as.Size;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, UIntPtr):
-          if ((uint64_t)self->value.as.UIntPtr > (uint64_t)INT64_MAX)
-            return STATUS_CONST(ARITHMETIC_OVERFLOW);
-          *outValue = (int64_t)self->value.as.UIntPtr;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Char):
-          *outValue = (int64_t)self->value.as.Char;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Char8):
-          *outValue = (int64_t)self->value.as.Char8;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Char16):
-          *outValue = (int64_t)self->value.as.Char16;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Char32):
-          *outValue = (int64_t)self->value.as.Char32;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Float32):
-        case MODULE_CONST(Type, Tag, Float): {
-          double v = (self->tag == MODULE_CONST(Type, Tag, Float32))
-                         ? (double)self->value.as.Float32
-                         : (double)self->value.as.Float;
-          if (!isfinite(v))
-            return STATUS_CONST(OUT_OF_RANGE);
-          if (v < (double)INT64_MIN || v >= 9223372036854775808.0)
-            return STATUS_CONST(ARITHMETIC_OVERFLOW);
-          *outValue = (int64_t)v;
-          return STATUS_CONST(SUCCESS);
+    VARIANT(Coerce,
+      OPERATION(Int64, (const MODULE_TYPE(Type, TaggedUnion) * self,
+                        int64_t *outValue), {
+        if (!self || !outValue) {
+          return STATUS_CONST(INVALID_ARGUMENT);
         }
-        case MODULE_CONST(Type, Tag, Float64):
-        case MODULE_CONST(Type, Tag, Double): {
-          double v = (self->tag == MODULE_CONST(Type, Tag, Float64))
-                         ? self->value.as.Float64
-                         : self->value.as.Double;
-          if (!isfinite(v))
-            return STATUS_CONST(OUT_OF_RANGE);
-          if (v < (double)INT64_MIN || v >= 9223372036854775808.0)
-            return STATUS_CONST(ARITHMETIC_OVERFLOW);
-          *outValue = (int64_t)v;
-          return STATUS_CONST(SUCCESS);
+
+        switch (self->tag) {
+          case MODULE_CONST(Type, Tag, Boolean):
+            *outValue = self->value.as.Boolean ? 1 : 0;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Int8):
+            *outValue = (int64_t)self->value.as.Int8;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Int16):
+            *outValue = (int64_t)self->value.as.Int16;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Int32):
+            *outValue = (int64_t)self->value.as.Int32;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Int64):
+            *outValue = self->value.as.Int64;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Int):
+            *outValue = (int64_t)self->value.as.Int;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, PtrDiff):
+            *outValue = (int64_t)self->value.as.PtrDiff;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, IntPtr):
+            *outValue = (int64_t)self->value.as.IntPtr;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, UInt8):
+            *outValue = (int64_t)self->value.as.UInt8;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, UInt16):
+            *outValue = (int64_t)self->value.as.UInt16;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, UInt32):
+            *outValue = (int64_t)self->value.as.UInt32;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, UInt64):
+            if (self->value.as.UInt64 > (uint64_t)INT64_MAX) {
+              return STATUS_CONST(ARITHMETIC_OVERFLOW);
+            }
+            *outValue = (int64_t)self->value.as.UInt64;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, UInt):
+            if ((uint64_t)self->value.as.UInt > (uint64_t)INT64_MAX) {
+              return STATUS_CONST(ARITHMETIC_OVERFLOW);
+            }
+            *outValue = (int64_t)self->value.as.UInt;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Size):
+            if ((uint64_t)self->value.as.Size > (uint64_t)INT64_MAX) {
+              return STATUS_CONST(ARITHMETIC_OVERFLOW);
+            }
+            *outValue = (int64_t)self->value.as.Size;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, UIntPtr):
+            if ((uint64_t)self->value.as.UIntPtr > (uint64_t)INT64_MAX) {
+              return STATUS_CONST(ARITHMETIC_OVERFLOW);
+            }
+            *outValue = (int64_t)self->value.as.UIntPtr;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Char):
+            *outValue = (int64_t)self->value.as.Char;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Char8):
+            *outValue = (int64_t)self->value.as.Char8;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Char16):
+            *outValue = (int64_t)self->value.as.Char16;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Char32):
+            *outValue = (int64_t)self->value.as.Char32;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Float32):
+          case MODULE_CONST(Type, Tag, Float): {
+            const double v = (self->tag == MODULE_CONST(Type, Tag, Float32))
+                                 ? (double)self->value.as.Float32
+                                 : (double)self->value.as.Float;
+            return MODULE_IFUNC(Type, TaggedUnion, CoerceDoubleToInt64)(
+                v, outValue);
+          }
+          case MODULE_CONST(Type, Tag, Float64):
+          case MODULE_CONST(Type, Tag, Double): {
+            const double v = (self->tag == MODULE_CONST(Type, Tag, Float64))
+                                 ? self->value.as.Float64
+                                 : self->value.as.Double;
+            return MODULE_IFUNC(Type, TaggedUnion, CoerceDoubleToInt64)(
+                v, outValue);
+          }
+          case MODULE_CONST(Type, Tag, LongDouble): {
+            const long double v = self->value.as.LongDouble;
+            const long double int64UpperBound = 9223372036854775808.0L;
+            if (!isfinite(v)) {
+              return STATUS_CONST(OUT_OF_RANGE);
+            }
+            if (v < (long double)INT64_MIN || v >= int64UpperBound) {
+              return STATUS_CONST(ARITHMETIC_OVERFLOW);
+            }
+            *outValue = (int64_t)v;
+            return STATUS_CONST(SUCCESS);
+          }
+          default:
+            return STATUS_CONST(NOT_SUPPORTED);
         }
-        case MODULE_CONST(Type, Tag, LongDouble): {
-          long double v = self->value.as.LongDouble;
-          if (!isfinite(v))
-            return STATUS_CONST(OUT_OF_RANGE);
-          if (v < (long double)INT64_MIN || v >= 9223372036854775808.0L)
-            return STATUS_CONST(ARITHMETIC_OVERFLOW);
-          *outValue = (int64_t)v;
-          return STATUS_CONST(SUCCESS);
+      }),
+
+      OPERATION(UInt64, (const MODULE_TYPE(Type, TaggedUnion) * self,
+                         uint64_t *outValue), {
+        if (!self || !outValue) {
+          return STATUS_CONST(INVALID_ARGUMENT);
         }
-        default:
-          return STATUS_CONST(NOT_SUPPORTED);
-      }
-    }),
 
-    OPERATION(CoerceUInt64, (const MODULE_TYPE(Type, TaggedUnion) * self,
-                             uint64_t *outValue), {
-      if (!self || !outValue)
-        return STATUS_CONST(INVALID_ARGUMENT);
-
-      switch (self->tag) {
-        case MODULE_CONST(Type, Tag, Boolean):
-          *outValue = self->value.as.Boolean ? 1U : 0U;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Int8):
-          if (self->value.as.Int8 < 0)
-            return STATUS_CONST(ARITHMETIC_OVERFLOW);
-          *outValue = (uint64_t)self->value.as.Int8;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Int16):
-          if (self->value.as.Int16 < 0)
-            return STATUS_CONST(ARITHMETIC_OVERFLOW);
-          *outValue = (uint64_t)self->value.as.Int16;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Int32):
-          if (self->value.as.Int32 < 0)
-            return STATUS_CONST(ARITHMETIC_OVERFLOW);
-          *outValue = (uint64_t)self->value.as.Int32;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Int64):
-          if (self->value.as.Int64 < 0)
-            return STATUS_CONST(ARITHMETIC_OVERFLOW);
-          *outValue = (uint64_t)self->value.as.Int64;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Int):
-          if (self->value.as.Int < 0)
-            return STATUS_CONST(ARITHMETIC_OVERFLOW);
-          *outValue = (uint64_t)self->value.as.Int;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, PtrDiff):
-          if (self->value.as.PtrDiff < 0)
-            return STATUS_CONST(ARITHMETIC_OVERFLOW);
-          *outValue = (uint64_t)self->value.as.PtrDiff;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, IntPtr):
-          if (self->value.as.IntPtr < 0)
-            return STATUS_CONST(ARITHMETIC_OVERFLOW);
-          *outValue = (uint64_t)self->value.as.IntPtr;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, UInt8):
-          *outValue = (uint64_t)self->value.as.UInt8;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, UInt16):
-          *outValue = (uint64_t)self->value.as.UInt16;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, UInt32):
-          *outValue = (uint64_t)self->value.as.UInt32;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, UInt64):
-          *outValue = self->value.as.UInt64;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, UInt):
-          *outValue = (uint64_t)self->value.as.UInt;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Size):
-          *outValue = (uint64_t)self->value.as.Size;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, UIntPtr):
-          *outValue = (uint64_t)self->value.as.UIntPtr;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Char):
-          if (self->value.as.Char < 0)
-            return STATUS_CONST(ARITHMETIC_OVERFLOW);
-          *outValue = (uint64_t)self->value.as.Char;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Char8):
-          *outValue = (uint64_t)self->value.as.Char8;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Char16):
-          *outValue = (uint64_t)self->value.as.Char16;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Char32):
-          *outValue = (uint64_t)self->value.as.Char32;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Float32):
-        case MODULE_CONST(Type, Tag, Float): {
-          double v = (self->tag == MODULE_CONST(Type, Tag, Float32))
-                         ? (double)self->value.as.Float32
-                         : (double)self->value.as.Float;
-          if (!isfinite(v))
-            return STATUS_CONST(OUT_OF_RANGE);
-          if (v < 0.0 || v >= 18446744073709551616.0)
-            return STATUS_CONST(ARITHMETIC_OVERFLOW);
-          *outValue = (uint64_t)v;
-          return STATUS_CONST(SUCCESS);
+        switch (self->tag) {
+          case MODULE_CONST(Type, Tag, Boolean):
+            *outValue = self->value.as.Boolean ? 1U : 0U;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Int8):
+            if (self->value.as.Int8 < 0) {
+              return STATUS_CONST(ARITHMETIC_OVERFLOW);
+            }
+            *outValue = (uint64_t)self->value.as.Int8;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Int16):
+            if (self->value.as.Int16 < 0) {
+              return STATUS_CONST(ARITHMETIC_OVERFLOW);
+            }
+            *outValue = (uint64_t)self->value.as.Int16;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Int32):
+            if (self->value.as.Int32 < 0) {
+              return STATUS_CONST(ARITHMETIC_OVERFLOW);
+            }
+            *outValue = (uint64_t)self->value.as.Int32;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Int64):
+            if (self->value.as.Int64 < 0) {
+              return STATUS_CONST(ARITHMETIC_OVERFLOW);
+            }
+            *outValue = (uint64_t)self->value.as.Int64;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Int):
+            if (self->value.as.Int < 0) {
+              return STATUS_CONST(ARITHMETIC_OVERFLOW);
+            }
+            *outValue = (uint64_t)self->value.as.Int;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, PtrDiff):
+            if (self->value.as.PtrDiff < 0) {
+              return STATUS_CONST(ARITHMETIC_OVERFLOW);
+            }
+            *outValue = (uint64_t)self->value.as.PtrDiff;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, IntPtr):
+            if (self->value.as.IntPtr < 0) {
+              return STATUS_CONST(ARITHMETIC_OVERFLOW);
+            }
+            *outValue = (uint64_t)self->value.as.IntPtr;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, UInt8):
+            *outValue = (uint64_t)self->value.as.UInt8;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, UInt16):
+            *outValue = (uint64_t)self->value.as.UInt16;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, UInt32):
+            *outValue = (uint64_t)self->value.as.UInt32;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, UInt64):
+            *outValue = self->value.as.UInt64;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, UInt):
+            *outValue = (uint64_t)self->value.as.UInt;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Size):
+            *outValue = (uint64_t)self->value.as.Size;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, UIntPtr):
+            *outValue = (uint64_t)self->value.as.UIntPtr;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Char):
+            if (self->value.as.Char < 0) {
+              return STATUS_CONST(ARITHMETIC_OVERFLOW);
+            }
+            *outValue = (uint64_t)self->value.as.Char;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Char8):
+            *outValue = (uint64_t)self->value.as.Char8;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Char16):
+            *outValue = (uint64_t)self->value.as.Char16;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Char32):
+            *outValue = (uint64_t)self->value.as.Char32;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Float32):
+          case MODULE_CONST(Type, Tag, Float): {
+            const double v = (self->tag == MODULE_CONST(Type, Tag, Float32))
+                                 ? (double)self->value.as.Float32
+                                 : (double)self->value.as.Float;
+            return MODULE_IFUNC(Type, TaggedUnion, CoerceDoubleToUInt64)(
+                v, outValue);
+          }
+          case MODULE_CONST(Type, Tag, Float64):
+          case MODULE_CONST(Type, Tag, Double): {
+            const double v = (self->tag == MODULE_CONST(Type, Tag, Float64))
+                                 ? self->value.as.Float64
+                                 : self->value.as.Double;
+            return MODULE_IFUNC(Type, TaggedUnion, CoerceDoubleToUInt64)(
+                v, outValue);
+          }
+          case MODULE_CONST(Type, Tag, LongDouble): {
+            const long double v = self->value.as.LongDouble;
+            const long double uint64UpperBound = 18446744073709551616.0L;
+            if (!isfinite(v)) {
+              return STATUS_CONST(OUT_OF_RANGE);
+            }
+            if (v < 0.0L || v >= uint64UpperBound) {
+              return STATUS_CONST(ARITHMETIC_OVERFLOW);
+            }
+            *outValue = (uint64_t)v;
+            return STATUS_CONST(SUCCESS);
+          }
+          default:
+            return STATUS_CONST(NOT_SUPPORTED);
         }
-        case MODULE_CONST(Type, Tag, Float64):
-        case MODULE_CONST(Type, Tag, Double): {
-          double v = (self->tag == MODULE_CONST(Type, Tag, Float64))
-                         ? self->value.as.Float64
-                         : self->value.as.Double;
-          if (!isfinite(v))
-            return STATUS_CONST(OUT_OF_RANGE);
-          if (v < 0.0 || v >= 18446744073709551616.0)
-            return STATUS_CONST(ARITHMETIC_OVERFLOW);
-          *outValue = (uint64_t)v;
-          return STATUS_CONST(SUCCESS);
+      }),
+
+      OPERATION(Float64, (const MODULE_TYPE(Type, TaggedUnion) * self,
+                          double *outValue), {
+        if (!self || !outValue) {
+          return STATUS_CONST(INVALID_ARGUMENT);
         }
-        case MODULE_CONST(Type, Tag, LongDouble): {
-          long double v = self->value.as.LongDouble;
-          if (!isfinite(v))
-            return STATUS_CONST(OUT_OF_RANGE);
-          if (v < 0.0L || v >= 18446744073709551616.0L)
-            return STATUS_CONST(ARITHMETIC_OVERFLOW);
-          *outValue = (uint64_t)v;
-          return STATUS_CONST(SUCCESS);
+
+        switch (self->tag) {
+          case MODULE_CONST(Type, Tag, Boolean):
+            *outValue = self->value.as.Boolean ? 1.0 : 0.0;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Int8):
+            *outValue = (double)self->value.as.Int8;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Int16):
+            *outValue = (double)self->value.as.Int16;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Int32):
+            *outValue = (double)self->value.as.Int32;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Int64):
+            *outValue = (double)self->value.as.Int64;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Int):
+            *outValue = (double)self->value.as.Int;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, PtrDiff):
+            *outValue = (double)self->value.as.PtrDiff;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, IntPtr):
+            *outValue = (double)self->value.as.IntPtr;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, UInt8):
+            *outValue = (double)self->value.as.UInt8;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, UInt16):
+            *outValue = (double)self->value.as.UInt16;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, UInt32):
+            *outValue = (double)self->value.as.UInt32;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, UInt64):
+            *outValue = (double)self->value.as.UInt64;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, UInt):
+            *outValue = (double)self->value.as.UInt;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Size):
+            *outValue = (double)self->value.as.Size;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, UIntPtr):
+            *outValue = (double)self->value.as.UIntPtr;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Char):
+            *outValue = (double)self->value.as.Char;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Char8):
+            *outValue = (double)self->value.as.Char8;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Char16):
+            *outValue = (double)self->value.as.Char16;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Char32):
+            *outValue = (double)self->value.as.Char32;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Float32):
+            *outValue = (double)self->value.as.Float32;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Float):
+            *outValue = (double)self->value.as.Float;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Float64):
+            *outValue = self->value.as.Float64;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, Double):
+            *outValue = self->value.as.Double;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Type, Tag, LongDouble):
+            *outValue = (double)self->value.as.LongDouble;
+            return STATUS_CONST(SUCCESS);
+          default:
+            return STATUS_CONST(NOT_SUPPORTED);
         }
-        default:
-          return STATUS_CONST(NOT_SUPPORTED);
-      }
-    }),
+      })
+    ),
 
-    OPERATION(CoerceFloat64, (const MODULE_TYPE(Type, TaggedUnion) * self,
-                              double *outValue), {
-      if (!self || !outValue)
-        return STATUS_CONST(INVALID_ARGUMENT);
+    VARIANT(Is,
+      PREDICATE(Empty, (const MODULE_TYPE(Type, TaggedUnion) * self), {
+        return !self || self->tag == MODULE_CONST(Type, Tag, NONE);
+      }),
 
-      switch (self->tag) {
-        case MODULE_CONST(Type, Tag, Boolean):
-          *outValue = self->value.as.Boolean ? 1.0 : 0.0;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Int8):
-          *outValue = (double)self->value.as.Int8;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Int16):
-          *outValue = (double)self->value.as.Int16;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Int32):
-          *outValue = (double)self->value.as.Int32;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Int64):
-          *outValue = (double)self->value.as.Int64;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Int):
-          *outValue = (double)self->value.as.Int;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, PtrDiff):
-          *outValue = (double)self->value.as.PtrDiff;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, IntPtr):
-          *outValue = (double)self->value.as.IntPtr;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, UInt8):
-          *outValue = (double)self->value.as.UInt8;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, UInt16):
-          *outValue = (double)self->value.as.UInt16;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, UInt32):
-          *outValue = (double)self->value.as.UInt32;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, UInt64):
-          *outValue = (double)self->value.as.UInt64;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, UInt):
-          *outValue = (double)self->value.as.UInt;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Size):
-          *outValue = (double)self->value.as.Size;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, UIntPtr):
-          *outValue = (double)self->value.as.UIntPtr;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Char):
-          *outValue = (double)self->value.as.Char;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Char8):
-          *outValue = (double)self->value.as.Char8;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Char16):
-          *outValue = (double)self->value.as.Char16;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Char32):
-          *outValue = (double)self->value.as.Char32;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Float32):
-          *outValue = (double)self->value.as.Float32;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Float):
-          *outValue = (double)self->value.as.Float;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Float64):
-          *outValue = self->value.as.Float64;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, Double):
-          *outValue = self->value.as.Double;
-          return STATUS_CONST(SUCCESS);
-        case MODULE_CONST(Type, Tag, LongDouble):
-          *outValue = (double)self->value.as.LongDouble;
-          return STATUS_CONST(SUCCESS);
-        default:
-          return STATUS_CONST(NOT_SUPPORTED);
-      }
-    }),
-
-    PREDICATE(IsEmpty, (const MODULE_TYPE(Type, TaggedUnion) * self), {
-      return !self || self->tag == MODULE_CONST(Type, Tag, NONE);
-    }),
-
-    PREDICATE(IsTag, (const MODULE_TYPE(Type, TaggedUnion) * self,
+      PREDICATE(Tag, (const MODULE_TYPE(Type, TaggedUnion) * self,
                       MODULE_ENUM(Type, Tag) tag), {
-      if (!self)
-        return tag == MODULE_CONST(Type, Tag, NONE);
-      return self->tag == tag;
-    }),
+        if (!self) {
+          return tag == MODULE_CONST(Type, Tag, NONE);
+        }
+        return self->tag == tag;
+      }),
 
-    PREDICATE(IsNumeric, (const MODULE_TYPE(Type, TaggedUnion) * self), {
-      const MODULE_TYPE(Type, Traits) *traits =
-          MODULE_FUNC(Type, TaggedUnion, TraitsOf)(self);
-      return MODULE_FUNC(Type, Traits, IsNumeric)(traits);
-    }),
+      PREDICATE(Numeric, (const MODULE_TYPE(Type, TaggedUnion) * self), {
+        const MODULE_TYPE(Type, Traits) *traits =
+            MODULE_FUNC(Type, TaggedUnion, TraitsOf)(self);
+        return MODULE_FUNC(Type, Traits, IsNumeric)(traits);
+      }),
 
-    PREDICATE(IsInteger, (const MODULE_TYPE(Type, TaggedUnion) * self), {
-      const MODULE_TYPE(Type, Traits) *traits =
-          MODULE_FUNC(Type, TaggedUnion, TraitsOf)(self);
-      return MODULE_FUNC(Type, Traits, IsInteger)(traits);
-    }),
+      PREDICATE(Integer, (const MODULE_TYPE(Type, TaggedUnion) * self), {
+        const MODULE_TYPE(Type, Traits) *traits =
+            MODULE_FUNC(Type, TaggedUnion, TraitsOf)(self);
+        return MODULE_FUNC(Type, Traits, IsInteger)(traits);
+      }),
 
-    PREDICATE(IsSigned, (const MODULE_TYPE(Type, TaggedUnion) * self), {
-      const MODULE_TYPE(Type, Traits) *traits =
-          MODULE_FUNC(Type, TaggedUnion, TraitsOf)(self);
-      return MODULE_FUNC(Type, Traits, IsSigned)(traits);
-    }),
+      PREDICATE(Signed, (const MODULE_TYPE(Type, TaggedUnion) * self), {
+        const MODULE_TYPE(Type, Traits) *traits =
+            MODULE_FUNC(Type, TaggedUnion, TraitsOf)(self);
+        return MODULE_FUNC(Type, Traits, IsSigned)(traits);
+      }),
 
-    PREDICATE(IsFloat, (const MODULE_TYPE(Type, TaggedUnion) * self), {
-      const MODULE_TYPE(Type, Traits) *traits =
-          MODULE_FUNC(Type, TaggedUnion, TraitsOf)(self);
-      return MODULE_FUNC(Type, Traits, IsFloat)(traits);
-    }),
+      PREDICATE(Float, (const MODULE_TYPE(Type, TaggedUnion) * self), {
+        const MODULE_TYPE(Type, Traits) *traits =
+            MODULE_FUNC(Type, TaggedUnion, TraitsOf)(self);
+        return MODULE_FUNC(Type, Traits, IsFloat)(traits);
+      })
+    ),
 
     FUNCTION(const char *, TagName, (MODULE_ENUM(Type, Tag) tag), {
       switch (tag) {
@@ -710,13 +750,17 @@ MODULE_IMPLEMENT(DOMAIN(Core), Type,
           MODULE_FUNC(Type, TaggedUnion, TraitsOf)(self);
       const void *payload =
           MODULE_FUNC(Type, TaggedUnion, PayloadPointer)(self);
-      size_t valHash = MODULE_FUNC(Type, Traits, Hash)(traits, payload);
-      return tagHash ^ (valHash + 0x9e3779b9U + (tagHash << 6U) + (tagHash >> 2U));
+      const size_t valHash = MODULE_FUNC(Type, Traits, Hash)(traits, payload);
+      const size_t goldenRatio = 0x9e3779b9U;
+      const size_t mixShiftLeft = 6U;
+      const size_t mixShiftRight = 2U;
+      return tagHash ^ (valHash + goldenRatio + (tagHash << mixShiftLeft) +
+                        (tagHash >> mixShiftRight));
     }),
 
     FUNCTION(const MODULE_TYPE(Type, Traits) *, Traits, (void), {
       static const MODULE_TYPE(Type, Traits) descriptor = {
-          .name = "Primitive_TTaggedUnion",
+          .name = "Type_TTaggedUnion",
           .size = sizeof(MODULE_TYPE(Type, TaggedUnion)),
           .alignment = _Alignof(MODULE_TYPE(Type, TaggedUnion)),
           .category = MODULE_CONST(Type, Category, COMPOSITE),

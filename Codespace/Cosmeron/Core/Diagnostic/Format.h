@@ -12,6 +12,15 @@
 /* Declarative Package: Diagnostic_Format                                     */
 /* ========================================================================== */
 
+#if defined(DIAGNOSTIC_DISABLE_FUNCTION_TABLE) &&                              \
+    !defined(COSMERON_DISABLE_FT_Diagnostic)
+#define COSMERON_DISABLE_FT_Diagnostic 1
+#endif
+#if defined(DIAGNOSTIC_FORMAT_DISABLE_FUNCTION_TABLE) &&                       \
+    !defined(COSMERON_DISABLE_FT_Diagnostic_Format)
+#define COSMERON_DISABLE_FT_Diagnostic_Format 1
+#endif
+
 MODULE(DOMAIN(Core), Diagnostic,
     PACKAGE(Format,
         OPERATION(Simple,

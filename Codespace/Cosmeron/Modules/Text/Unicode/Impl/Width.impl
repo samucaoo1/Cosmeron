@@ -1,5 +1,17 @@
 #pragma once
 
+#define TEXT_WIDTH_INTERNAL_COL_NAME(NAME, VALUE) NAME
+#define TEXT_WIDTH_INTERNAL_COL_VALUE(NAME, VALUE) VALUE
+#define TEXT_WIDTH_INTERNAL_GET(FIELD, ROW)                                    \
+  PP_OP_CAT2(TEXT_WIDTH_INTERNAL_COL_, FIELD) ROW
+
+#define TEXT_WIDTH_INTERNAL_TABLE(X)                                           \
+  X((ZERO, 0))                                                                 \
+  X((NARROW, 1))                                                               \
+  X((WIDE, 2))
+
+IENUM_DEF(Text_Width, Value, TEXT_WIDTH_INTERNAL_TABLE)
+
 ISTRUCT(Text_Width, Interval,
         FIELDS(uint_least32_t first; uint_least32_t last;));
 
@@ -68,15 +80,15 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
       if (value == 0U ||
           MODULE_IFUNC(Text, Width, InIntervals)(
               value, zeroWidth, sizeof(zeroWidth) / sizeof(zeroWidth[0]))) {
-        *outWidth = 0;
+        *outWidth = (int)CNS(Text, Width, Internal, ZERO);
         return STATUS_CONST(SUCCESS);
       }
 
       *outWidth =
           MODULE_IFUNC(Text, Width, InIntervals)(
               value, wide, sizeof(wide) / sizeof(wide[0]))
-              ? 2
-              : 1;
+              ? (int)CNS(Text, Width, Internal, WIDE)
+              : (int)CNS(Text, Width, Internal, NARROW);
       return STATUS_CONST(SUCCESS);
     }),
 

@@ -6,6 +6,11 @@
     !defined(COSMERON_DISABLE_FT_Container_Graph)
 #define COSMERON_DISABLE_FT_Container_Graph 1
 #endif
+#if (defined(CONTAINER_DISABLE_FUNCTION_TABLE) ||                               \
+     defined(GRAPH_DISABLE_FUNCTION_TABLE)) &&                                 \
+    !defined(COSMERON_DISABLE_FT_Graph)
+#define COSMERON_DISABLE_FT_Graph 1
+#endif
 
 #include "../../../../Core/Memory/Allocator.h"
 #include "../../../../Core/Module/Module.h"
@@ -13,7 +18,7 @@
 #include "../../../../Core/Preprocessor/Compiling.inc"
 #include "../../../../Core/Preprocessor/Operations.h"
 #include "../../../../Core/Types/Primitive.h"
-#include "../../Iterator/Iterator.h"
+#include "../../Impl/Common.inc"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -52,6 +57,8 @@ MODULE(DOMAIN(Container), Graph,
               (void **inoutPtr, size_t newCount, size_t elemSize), {
                 if (!inoutPtr || newCount == 0U || elemSize == 0U)
                   return STATUS_CONST(INVALID_ARGUMENT);
+                if (newCount > SIZE_MAX / elemSize)
+                  return STATUS_CONST(OUT_OF_RANGE);
                 return MODULE_FUNC(Memory, Allocator, Realloc)(NULL, *inoutPtr, 0U, newCount * elemSize, inoutPtr);
               }),
 
@@ -59,6 +66,37 @@ MODULE(DOMAIN(Container), Graph,
       if (inoutPtr && *inoutPtr) {
         MODULE_FUNC(Memory, Allocator, Free)(NULL, *inoutPtr, 0U);
       }
+    }),
+
+    OPERATION(AllocTraversalBuffers,
+              (size_t vertexCount, bool **outVisited, size_t **outWork), {
+      if (!outVisited || !outWork || vertexCount == 0U)
+        return STATUS_CONST(INVALID_ARGUMENT);
+      void *visitedRaw = NULL;
+      void *workRaw = NULL;
+      OPSTATUS status = MODULE_IFUNC(Graph, AllocBuffer)(
+          &visitedRaw, vertexCount, sizeof(bool));
+      if (status != STATUS_CONST(SUCCESS))
+        return status;
+      status = MODULE_IFUNC(Graph, AllocBuffer)(
+          &workRaw, vertexCount, sizeof(size_t));
+      if (status != STATUS_CONST(SUCCESS)) {
+        MODULE_IFUNC(Graph, FreeBuffer)(&visitedRaw);
+        return status;
+      }
+      bool *visited = (bool *)visitedRaw;
+      for (size_t i = 0U; i < vertexCount; i++)
+        visited[i] = false;
+      *outVisited = visited;
+      *outWork = (size_t *)workRaw;
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    PROCEDURE(FreeTraversalBuffers, (bool *visited, size_t *work), {
+      void *visitedRaw = (void *)visited;
+      void *workRaw = (void *)work;
+      MODULE_IFUNC(Graph, FreeBuffer)(&workRaw);
+      MODULE_IFUNC(Graph, FreeBuffer)(&visitedRaw);
     })
   )
 );

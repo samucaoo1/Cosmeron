@@ -6,6 +6,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define TEXT_FORMAT_BYTES_HUMAN_COL_NAME(NAME, VALUE) NAME
+#define TEXT_FORMAT_BYTES_HUMAN_COL_VALUE(NAME, VALUE) VALUE
+#define TEXT_FORMAT_BYTES_HUMAN_GET(FIELD, ROW)                                \
+  PP_OP_CAT2(TEXT_FORMAT_BYTES_HUMAN_COL_, FIELD) ROW
+
 #define TEXT_FORMAT_BYTES_HUMAN_TABLE(X)                                       \
   X((BYTE_UNIT_IEC, 0U))                                                       \
   X((BYTE_UNIT_SI, 1U))                                                        \
@@ -39,3 +44,5 @@ MODULE(DOMAIN(Modules), Text,
 );
 
 #include "Impl/BytesHuman.impl"
+
+/* EOF */

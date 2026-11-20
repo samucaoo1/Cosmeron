@@ -53,4 +53,8 @@
   X((UIntPtr, uintptr_t))                                                      \
   TUPLE_COMPLEX_TYPE_ROWS(X)
 
+#ifndef TEMPLATE_Tuple
+#define TEMPLATE_Tuple(TARGET, ...) NS(TEMPLATE_Tuple, TARGET)(__VA_ARGS__)
+#endif
+
 /* EOF */

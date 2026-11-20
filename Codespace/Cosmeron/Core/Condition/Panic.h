@@ -27,12 +27,21 @@
   X((UNREACHABLE, "Unreachable code path executed"))
 
 /* ========================================================================== */
-/* 2. Declarative Module: Condition (PanicKind, PanicInfo & Panic Package)    */
+/* 2. Declarative Module: Condition (PanicKind, Panic_Info & Panic Package)    */
 /* ========================================================================== */
+
+#if defined(CONDITION_DISABLE_FUNCTION_TABLE) &&                               \
+    !defined(COSMERON_DISABLE_FT_Condition)
+#define COSMERON_DISABLE_FT_Condition 1
+#endif
+#if defined(CONDITION_PANIC_DISABLE_FUNCTION_TABLE) &&                         \
+    !defined(COSMERON_DISABLE_FT_Condition_Panic)
+#define COSMERON_DISABLE_FT_Condition_Panic 1
+#endif
 
 MODULE(DOMAIN(Core), Condition,
     ENUM_EX(PanicKind, PANIC_KIND_TABLE, NAME_ONLY),
-    STRUCT(PanicInfo,
+    STRUCT(Panic_Info,
         FIELDS(
             MODULE_ENUM(Condition, PanicKind) kind;
             const char *message;
@@ -44,7 +53,7 @@ MODULE(DOMAIN(Core), Condition,
     ),
     PACKAGE(Panic,
         CLOSURE(
-            PROCEDURE(Handler, (const MODULE_TYPE(Condition, PanicInfo) *info))
+            PROCEDURE(Handler, (const MODULE_TYPE(Condition, Panic_Info) *info))
         ),
         PROCEDURE(SetHandler, (MODULE_CLOSURE(Condition, Panic, Handler) handler)),
         FUNCTION(MODULE_CLOSURE(Condition, Panic, Handler), GetHandler, ()),
@@ -61,6 +70,15 @@ MODULE(DOMAIN(Core), Condition,
 /* 3. Public Contract Macros                                                  */
 /* ========================================================================== */
 
+#define COSMERON_MACRO_INTERNAL_PANIC_CHECK(KIND, PREFIX, CONDITION)           \
+  do {                                                                         \
+    if (!(CONDITION)) {                                                        \
+      MODULE_FUNC(Condition, Panic, Trigger)(                                  \
+          MODULE_CONST(Condition, KIND), PREFIX #CONDITION, #CONDITION,        \
+          __FILE__, (uint32_t)__LINE__, __func__);                             \
+    }                                                                          \
+  } while (0)
+
 #define PANIC(message) \
   MODULE_FUNC(Condition, Panic, Trigger)( \
       MODULE_CONST(Condition, PANIC), (message), NULL, __FILE__, \
@@ -70,35 +88,15 @@ MODULE(DOMAIN(Core), Condition,
 #define ASSERT(condition) ((void)sizeof(condition))
 #else
 #define ASSERT(condition) \
-  do { \
-    if (!(condition)) { \
-      MODULE_FUNC(Condition, Panic, Trigger)( \
-          MODULE_CONST(Condition, ASSERT), \
-          "Assertion failed: " #condition, #condition, \
-          __FILE__, (uint32_t)__LINE__, __func__); \
-    } \
-  } while (0)
+  COSMERON_MACRO_INTERNAL_PANIC_CHECK(ASSERT, "Assertion failed: ", condition)
 #endif
 
 #define VERIFY(condition) \
-  do { \
-    if (!(condition)) { \
-      MODULE_FUNC(Condition, Panic, Trigger)( \
-          MODULE_CONST(Condition, VERIFY), \
-          "Verification failed: " #condition, #condition, \
-          __FILE__, (uint32_t)__LINE__, __func__); \
-    } \
-  } while (0)
+  COSMERON_MACRO_INTERNAL_PANIC_CHECK(VERIFY, "Verification failed: ", condition)
 
 #define ENSURE(condition) \
-  do { \
-    if (!(condition)) { \
-      MODULE_FUNC(Condition, Panic, Trigger)( \
-          MODULE_CONST(Condition, ENSURE), \
-          "Precondition contract failed: " #condition, \
-          #condition, __FILE__, (uint32_t)__LINE__, __func__); \
-    } \
-  } while (0)
+  COSMERON_MACRO_INTERNAL_PANIC_CHECK(                                         \
+      ENSURE, "Precondition contract failed: ", condition)
 
 #define UNREACHABLE() \
   do { \

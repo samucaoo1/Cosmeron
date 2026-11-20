@@ -1,5 +1,7 @@
 /* Stack.def - Dual Mode Engine (Zero Duplication) */
 
+#include "Impl/Common.inc"
+
 #ifndef TEMPLATE_Linked_Stack
 #define TEMPLATE_Linked_Stack(SUFFIX, TYPE)                                    \
   TEMPLATE_OBJECT(Linked, Stack, SUFFIX,                                       \
@@ -146,7 +148,7 @@
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
-#if defined(SUFFIX) && defined(TYPE)
+#if (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(TYPE)
   TEMPLATE_Linked_Stack(SUFFIX, TYPE);
   #undef SUFFIX
   #undef TYPE

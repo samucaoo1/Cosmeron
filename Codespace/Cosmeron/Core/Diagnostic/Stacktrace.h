@@ -23,6 +23,15 @@
 /* 2. Declarative Object: Diagnostic_Stacktrace                               */
 /* ========================================================================== */
 
+#if defined(DIAGNOSTIC_DISABLE_FUNCTION_TABLE) &&                              \
+    !defined(COSMERON_DISABLE_FT_Diagnostic)
+#define COSMERON_DISABLE_FT_Diagnostic 1
+#endif
+#if defined(DIAGNOSTIC_STACKTRACE_DISABLE_FUNCTION_TABLE) &&                   \
+    !defined(COSMERON_DISABLE_FT_Diagnostic_Stacktrace)
+#define COSMERON_DISABLE_FT_Diagnostic_Stacktrace 1
+#endif
+
 MODULE(DOMAIN(Core), Diagnostic,
     OBJECT(Stacktrace,
         FIELDS(

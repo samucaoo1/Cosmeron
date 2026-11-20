@@ -6,6 +6,11 @@
     !defined(COSMERON_DISABLE_FT_Container_Iterator)
 #define COSMERON_DISABLE_FT_Container_Iterator 1
 #endif
+#if (defined(CONTAINER_DISABLE_FUNCTION_TABLE) ||                               \
+     defined(ITERATOR_DISABLE_FUNCTION_TABLE)) &&                              \
+    !defined(COSMERON_DISABLE_FT_Iterator)
+#define COSMERON_DISABLE_FT_Iterator 1
+#endif
 
 #include "../../../../Core/Algorithm/Comparison.h"
 #include "../../../../Core/Module/Module.h"

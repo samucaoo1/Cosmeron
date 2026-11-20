@@ -1,5 +1,7 @@
 /* BTree.def - Dual Mode Engine (Zero Duplication) */
 
+#include "Impl/Common.inc"
+
 #ifndef COSMERON_MACRO_INTERNAL_TREE_BTREE_NAV
 #define COSMERON_MACRO_INTERNAL_TREE_BTREE_NAV(TARGET, SUFFIX, NODE_TYPE,      \
                                                KEY_TYPE, COMP_CLOSURE_TYPE)    \
@@ -206,38 +208,38 @@
             })
 #endif
 
-#ifndef TEMPLATE_Tree_BTreeSetDegree
-#define TEMPLATE_Tree_BTreeSetDegree(SUFFIX, KEY_TYPE, DEGREE)                 \
-  TEMPLATE_ISTRUCT(Tree, BTreeSetNode, SUFFIX,                                 \
+#ifndef TEMPLATE_Tree_B_SetDegree
+#define TEMPLATE_Tree_B_SetDegree(SUFFIX, KEY_TYPE, DEGREE)                 \
+  TEMPLATE_ISTRUCT(Tree, B_SetNode, SUFFIX,                                 \
       FIELDS(                                                                  \
           size_t numKeys;                                                      \
           bool isLeaf;                                                         \
-          struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *parent;            \
+          struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *parent;            \
           KEY_TYPE keys[2U * (DEGREE) - 1U];                                   \
-          struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX)                     \
+          struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX)                     \
               *children[2U * (DEGREE)];                                        \
       ));                                                                      \
-  CLOSURE_SCOPED_COMPARISON(NS(LIB_PREFIX(Tree), BTreeSet, SUFFIX),            \
+  CLOSURE_SCOPED_COMPARISON(NS(LIB_PREFIX(Tree), B_Set, SUFFIX),            \
                             Comparator, (KEY_TYPE left, KEY_TYPE right))       \
-  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Tree), BTreeSet, SUFFIX), Visitor,    \
+  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Tree), B_Set, SUFFIX), Visitor,    \
                            (const KEY_TYPE *key))                              \
   INTERNAL_DEF_EX(                                                             \
-      Tree, NS(BTreeSet, SUFFIX),                                              \
+      Tree, NS(B_Set, SUFFIX),                                              \
       COSMERON_MACRO_INTERNAL_TREE_BTREE_NAV(                                  \
-          BTreeSet, SUFFIX, struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX),  \
-          KEY_TYPE, MODULE_CLOSURE(Tree, BTreeSet, SUFFIX, Comparator)),       \
+          B_Set, SUFFIX, struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX),  \
+          KEY_TYPE, MODULE_CLOSURE(Tree, B_Set, SUFFIX, Comparator)),       \
                                                                                \
-      FUNCTION(struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *, CreateNode, \
+      FUNCTION(struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *, CreateNode, \
                (bool isLeaf), {                                                \
                  void *raw = NULL;                                             \
                  if (MODULE_IFUNC(Tree, AllocNode)(                            \
-                         &raw, sizeof(struct MODULE_ITYPED(Tree, BTreeSetNode, \
+                         &raw, sizeof(struct MODULE_ITYPED(Tree, B_SetNode, \
                                                             SUFFIX))) !=       \
                      STATUS_CONST(SUCCESS)) {                                  \
                    return NULL;                                                \
                  }                                                             \
-                 struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *node =      \
-                     (struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *)raw;  \
+                 struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *node =      \
+                     (struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *)raw;  \
                  node->numKeys = 0U;                                           \
                  node->isLeaf = isLeaf;                                        \
                  node->parent = NULL;                                          \
@@ -247,13 +249,13 @@
                }),                                                             \
                                                                                \
       OPERATION(SplitChild,                                                    \
-                (struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *parent,     \
+                (struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *parent,     \
                  size_t idx),                                                  \
                 {                                                              \
-                  struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *y =        \
+                  struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *y =        \
                       parent->children[idx];                                   \
-                  struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *z =        \
-                      MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), CreateNode)(    \
+                  struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *z =        \
+                      MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), CreateNode)(    \
                           y->isLeaf);                                          \
                   if (!z)                                                      \
                     return STATUS_CONST(OUT_OF_MEMORY);                        \
@@ -282,8 +284,8 @@
                 }),                                                            \
                                                                                \
       OPERATION(InsertNonFull,                                                 \
-                (struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *node,       \
-                 MODULE_CLOSURE(Tree, BTreeSet, SUFFIX, Comparator) cmp,       \
+                (struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *node,       \
+                 MODULE_CLOSURE(Tree, B_Set, SUFFIX, Comparator) cmp,       \
                  KEY_TYPE key),                                                \
                 {                                                              \
                   size_t i = node->numKeys;                                    \
@@ -304,7 +306,7 @@
                     i--;                                                       \
                   }                                                            \
                   if (node->children[i]->numKeys == 2U * (size_t)(DEGREE) - 1U){\
-                    OPSTATUS status = MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), \
+                    OPSTATUS status = MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), \
                                                    SplitChild)(node, i);       \
                     if (status != STATUS_CONST(SUCCESS))                       \
                       return status;                                           \
@@ -313,18 +315,18 @@
                       i++;                                                     \
                     }                                                          \
                   }                                                            \
-                  return MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX),              \
+                  return MODULE_IFUNC(Tree, NS(B_Set, SUFFIX),              \
                                       InsertNonFull)(node->children[i], cmp,   \
                                                      key);                     \
                 }),                                                            \
                                                                                \
       PROCEDURE(Merge,                                                         \
-                (struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *node,       \
+                (struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *node,       \
                  size_t idx),                                                  \
                 {                                                              \
-                  struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *child =    \
+                  struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *child =    \
                       node->children[idx];                                     \
-                  struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *sibling =  \
+                  struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *sibling =  \
                       node->children[idx + 1U];                                \
                   size_t t = (size_t)(DEGREE);                                 \
                   child->keys[t - 1U] = node->keys[idx];                       \
@@ -348,12 +350,12 @@
                 }),                                                            \
                                                                                \
       PROCEDURE(BorrowFromPrev,                                                \
-                (struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *node,       \
+                (struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *node,       \
                  size_t idx),                                                  \
                 {                                                              \
-                  struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *child =    \
+                  struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *child =    \
                       node->children[idx];                                     \
-                  struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *sibling =  \
+                  struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *sibling =  \
                       node->children[idx - 1U];                                \
                   for (size_t i = child->numKeys; i > 0U; i--)                 \
                     child->keys[i] = child->keys[i - 1U];                      \
@@ -373,12 +375,12 @@
                 }),                                                            \
                                                                                \
       PROCEDURE(BorrowFromNext,                                                \
-                (struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *node,       \
+                (struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *node,       \
                  size_t idx),                                                  \
                 {                                                              \
-                  struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *child =    \
+                  struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *child =    \
                       node->children[idx];                                     \
-                  struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *sibling =  \
+                  struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *sibling =  \
                       node->children[idx + 1U];                                \
                   child->keys[child->numKeys] = node->keys[idx];               \
                   if (!child->isLeaf) {                                        \
@@ -399,30 +401,30 @@
                 }),                                                            \
                                                                                \
       PROCEDURE(Fill,                                                          \
-                (struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *node,       \
+                (struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *node,       \
                  size_t idx),                                                  \
                 {                                                              \
                   size_t t = (size_t)(DEGREE);                                 \
                   if (idx != 0U && node->children[idx - 1U]->numKeys >= t) {   \
-                    MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX),                   \
+                    MODULE_IFUNC(Tree, NS(B_Set, SUFFIX),                   \
                                  BorrowFromPrev)(node, idx);                   \
                   } else if (idx != node->numKeys &&                           \
                              node->children[idx + 1U]->numKeys >= t) {         \
-                    MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX),                   \
+                    MODULE_IFUNC(Tree, NS(B_Set, SUFFIX),                   \
                                  BorrowFromNext)(node, idx);                   \
                   } else {                                                     \
                     if (idx != node->numKeys)                                  \
-                      MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), Merge)(node,    \
+                      MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), Merge)(node,    \
                                                                       idx);    \
                     else                                                       \
-                      MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), Merge)(         \
+                      MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), Merge)(         \
                           node, idx - 1U);                                     \
                   }                                                            \
                 }),                                                            \
                                                                                \
       OPERATION(RemoveFromNode,                                                \
-                (struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *node,       \
-                 MODULE_CLOSURE(Tree, BTreeSet, SUFFIX, Comparator) cmp,       \
+                (struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *node,       \
+                 MODULE_CLOSURE(Tree, B_Set, SUFFIX, Comparator) cmp,       \
                  KEY_TYPE key),                                                \
                 {                                                              \
                   size_t idx = 0U;                                             \
@@ -442,32 +444,32 @@
                     }                                                          \
                     size_t t = (size_t)(DEGREE);                               \
                     if (node->children[idx]->numKeys >= t) {                   \
-                      struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *pred = \
+                      struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *pred = \
                           NULL;                                                \
                       size_t predIdx = 0U;                                     \
-                      MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), LastInSubtree)( \
+                      MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), LastInSubtree)( \
                           node->children[idx], &pred, &predIdx);               \
                       KEY_TYPE predKey = pred->keys[predIdx];                  \
                       node->keys[idx] = predKey;                               \
-                      return MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX),          \
+                      return MODULE_IFUNC(Tree, NS(B_Set, SUFFIX),          \
                                           RemoveFromNode)(node->children[idx], \
                                                           cmp, predKey);       \
                     } else if (node->children[idx + 1U]->numKeys >= t) {       \
-                      struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *succ = \
+                      struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *succ = \
                           NULL;                                                \
                       size_t succIdx = 0U;                                     \
-                      MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX),                 \
+                      MODULE_IFUNC(Tree, NS(B_Set, SUFFIX),                 \
                                    FirstInSubtree)(node->children[idx + 1U],   \
                                                    &succ, &succIdx);           \
                       KEY_TYPE succKey = succ->keys[succIdx];                  \
                       node->keys[idx] = succKey;                               \
-                      return MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX),          \
+                      return MODULE_IFUNC(Tree, NS(B_Set, SUFFIX),          \
                                           RemoveFromNode)(                     \
                           node->children[idx + 1U], cmp, succKey);             \
                     } else {                                                   \
-                      MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), Merge)(node,    \
+                      MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), Merge)(node,    \
                                                                       idx);    \
-                      return MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX),          \
+                      return MODULE_IFUNC(Tree, NS(B_Set, SUFFIX),          \
                                           RemoveFromNode)(node->children[idx], \
                                                           cmp, key);           \
                     }                                                          \
@@ -477,21 +479,21 @@
                     bool flag = (idx == node->numKeys);                        \
                     size_t t = (size_t)(DEGREE);                               \
                     if (node->children[idx]->numKeys < t)                      \
-                      MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), Fill)(node,     \
+                      MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), Fill)(node,     \
                                                                      idx);     \
                     if (flag && idx > node->numKeys)                           \
-                      return MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX),          \
+                      return MODULE_IFUNC(Tree, NS(B_Set, SUFFIX),          \
                                           RemoveFromNode)(                     \
                           node->children[idx - 1U], cmp, key);                 \
-                    return MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX),            \
+                    return MODULE_IFUNC(Tree, NS(B_Set, SUFFIX),            \
                                         RemoveFromNode)(node->children[idx],   \
                                                         cmp, key);             \
                   }                                                            \
                 }),                                                            \
                                                                                \
       PROCEDURE(PreOrder,                                                      \
-                (struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *node,       \
-                 MODULE_CLOSURE(Tree, BTreeSet, SUFFIX, Visitor) visitor),     \
+                (struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *node,       \
+                 MODULE_CLOSURE(Tree, B_Set, SUFFIX, Visitor) visitor),     \
                 {                                                              \
                   if (!node)                                                   \
                     return;                                                    \
@@ -499,40 +501,40 @@
                     CLOSURE_CALL(visitor, &node->keys[i]);                     \
                   if (!node->isLeaf) {                                         \
                     for (size_t i = 0U; i <= node->numKeys; i++) {             \
-                      MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), PreOrder)(      \
+                      MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), PreOrder)(      \
                           node->children[i], visitor);                         \
                     }                                                          \
                   }                                                            \
                 }),                                                            \
                                                                                \
       PROCEDURE(InOrder,                                                       \
-                (struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *node,       \
-                 MODULE_CLOSURE(Tree, BTreeSet, SUFFIX, Visitor) visitor),     \
+                (struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *node,       \
+                 MODULE_CLOSURE(Tree, B_Set, SUFFIX, Visitor) visitor),     \
                 {                                                              \
                   if (!node)                                                   \
                     return;                                                    \
                   for (size_t i = 0U; i < node->numKeys; i++) {                \
                     if (!node->isLeaf) {                                       \
-                      MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), InOrder)(       \
+                      MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), InOrder)(       \
                           node->children[i], visitor);                         \
                     }                                                          \
                     CLOSURE_CALL(visitor, &node->keys[i]);                     \
                   }                                                            \
                   if (!node->isLeaf) {                                         \
-                    MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), InOrder)(         \
+                    MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), InOrder)(         \
                         node->children[node->numKeys], visitor);               \
                   }                                                            \
                 }),                                                            \
                                                                                \
       PROCEDURE(PostOrder,                                                     \
-                (struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *node,       \
-                 MODULE_CLOSURE(Tree, BTreeSet, SUFFIX, Visitor) visitor),     \
+                (struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *node,       \
+                 MODULE_CLOSURE(Tree, B_Set, SUFFIX, Visitor) visitor),     \
                 {                                                              \
                   if (!node)                                                   \
                     return;                                                    \
                   if (!node->isLeaf) {                                         \
                     for (size_t i = 0U; i <= node->numKeys; i++) {             \
-                      MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), PostOrder)(     \
+                      MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), PostOrder)(     \
                           node->children[i], visitor);                         \
                     }                                                          \
                   }                                                            \
@@ -540,10 +542,10 @@
                     CLOSURE_CALL(visitor, &node->keys[i]);                     \
                 }))                                                            \
                                                                                \
-  TEMPLATE_OBJECT(Tree, BTreeSetIter, SUFFIX,                                  \
+  TEMPLATE_OBJECT(Tree, B_SetIter, SUFFIX,                                  \
       FIELDS(                                                                  \
-          struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *root;              \
-          struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *node;              \
+          struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *root;              \
+          struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *node;              \
           size_t index;                                                        \
           bool reverse;                                                        \
       ),                                                                       \
@@ -552,13 +554,13 @@
                                                                                \
       OPERATION_INLINE(                                                        \
           FromPos,                                                             \
-          (struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *root,             \
-           struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *node,             \
+          (struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *root,             \
+           struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *node,             \
            size_t index, bool reverse),                                        \
           {                                                                    \
             if (!self)                                                         \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            MODULE_FUNC(Tree, BTreeSetIter, SUFFIX, Init)(self);               \
+            MODULE_FUNC(Tree, B_SetIter, SUFFIX, Init)(self);               \
             self->root = root;                                                 \
             self->node = node;                                                 \
             self->index = index;                                               \
@@ -579,12 +581,12 @@
         if (!self)                                                             \
           return false;                                                        \
         if (self->node != NULL) {                                              \
-          struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *n = self->node;    \
+          struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *n = self->node;    \
           size_t i = self->index;                                              \
           if (self->reverse)                                                   \
-            MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), InOrderNext)(&n, &i);     \
+            MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), InOrderNext)(&n, &i);     \
           else                                                                 \
-            MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), InOrderPrev)(&n, &i);     \
+            MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), InOrderPrev)(&n, &i);     \
           return n != NULL;                                                    \
         }                                                                      \
         return self->root != NULL;                                             \
@@ -594,10 +596,10 @@
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
         if (self->reverse) {                                                   \
-          MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), LastInSubtree)(             \
+          MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), LastInSubtree)(             \
               self->root, &self->node, &self->index);                          \
         } else {                                                               \
-          MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), FirstInSubtree)(            \
+          MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), FirstInSubtree)(            \
               self->root, &self->node, &self->index);                          \
         }                                                                      \
         return STATUS_CONST(SUCCESS);                                          \
@@ -613,11 +615,11 @@
       }),                                                                      \
                                                                                \
       CONST_OPERATION_INLINE(ConstGet, (const KEY_TYPE **outKey), {            \
-        return MODULE_FUNC(Tree, BTreeSetIter, SUFFIX, Get)(self, outKey);     \
+        return MODULE_FUNC(Tree, B_SetIter, SUFFIX, Get)(self, outKey);     \
       }),                                                                      \
                                                                                \
       CONST_OPERATION_INLINE(Key, (const KEY_TYPE **outKey), {                 \
-        return MODULE_FUNC(Tree, BTreeSetIter, SUFFIX, Get)(self, outKey);     \
+        return MODULE_FUNC(Tree, B_SetIter, SUFFIX, Get)(self, outKey);     \
       }),                                                                      \
                                                                                \
       CONST_OPERATION_INLINE(Value, (KEY_TYPE *outKey), {                      \
@@ -635,10 +637,10 @@
         if (!self->node)                                                       \
           return STATUS_CONST(OUT_OF_RANGE);                                   \
         if (self->reverse) {                                                   \
-          MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), InOrderPrev)(               \
+          MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), InOrderPrev)(               \
               &self->node, &self->index);                                      \
         } else {                                                               \
-          MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), InOrderNext)(               \
+          MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), InOrderNext)(               \
               &self->node, &self->index);                                      \
         }                                                                      \
         return STATUS_CONST(SUCCESS);                                          \
@@ -651,20 +653,20 @@
           if (!self->root)                                                     \
             return STATUS_CONST(OUT_OF_RANGE);                                 \
           if (self->reverse) {                                                 \
-            MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), FirstInSubtree)(          \
+            MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), FirstInSubtree)(          \
                 self->root, &self->node, &self->index);                        \
           } else {                                                             \
-            MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), LastInSubtree)(           \
+            MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), LastInSubtree)(           \
                 self->root, &self->node, &self->index);                        \
           }                                                                    \
           return STATUS_CONST(SUCCESS);                                        \
         }                                                                      \
-        struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *n = self->node;      \
+        struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *n = self->node;      \
         size_t i = self->index;                                                \
         if (self->reverse)                                                     \
-          MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), InOrderNext)(&n, &i);       \
+          MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), InOrderNext)(&n, &i);       \
         else                                                                   \
-          MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), InOrderPrev)(&n, &i);       \
+          MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), InOrderPrev)(&n, &i);       \
         if (!n)                                                                \
           return STATUS_CONST(OUT_OF_RANGE);                                   \
         self->node = n;                                                        \
@@ -679,12 +681,12 @@
           return STATUS_CONST(OUT_OF_RANGE);                                   \
         if (outKey)                                                            \
           *outKey = &self->node->keys[self->index];                            \
-        return MODULE_FUNC(Tree, BTreeSetIter, SUFFIX, StepNext)(self);        \
+        return MODULE_FUNC(Tree, B_SetIter, SUFFIX, StepNext)(self);        \
       }),                                                                      \
                                                                                \
       OPERATION_INLINE(Prev, (const KEY_TYPE **outKey), {                      \
         OPSTATUS status =                                                      \
-            MODULE_FUNC(Tree, BTreeSetIter, SUFFIX, StepPrev)(self);           \
+            MODULE_FUNC(Tree, B_SetIter, SUFFIX, StepPrev)(self);           \
         if (status != STATUS_CONST(SUCCESS))                                   \
           return status;                                                       \
         if (outKey)                                                            \
@@ -694,7 +696,7 @@
                                                                                \
       CONST_PREDICATE_INLINE(                                                  \
           Equals,                                                              \
-          (const struct MODULE_TYPED(Tree, BTreeSetIter, SUFFIX) *other), {    \
+          (const struct MODULE_TYPED(Tree, B_SetIter, SUFFIX) *other), {    \
             if (!self || !other)                                               \
               return false;                                                    \
             return self->node == other->node && self->index == other->index && \
@@ -703,23 +705,23 @@
                                                                                \
       OPERATION_INLINE(                                                        \
           ForEach,                                                             \
-          (MODULE_CLOSURE(Tree, BTreeSetIter, SUFFIX, Visitor) visitor), {     \
+          (MODULE_CLOSURE(Tree, B_SetIter, SUFFIX, Visitor) visitor), {     \
             if (!self || !CLOSURE_IS_VALID(visitor))                           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             while (self->node != NULL) {                                       \
               CLOSURE_CALL(visitor, &self->node->keys[self->index]);           \
-              MODULE_FUNC(Tree, BTreeSetIter, SUFFIX, StepNext)(self);         \
+              MODULE_FUNC(Tree, B_SetIter, SUFFIX, StepNext)(self);         \
             }                                                                  \
             return STATUS_CONST(SUCCESS);                                      \
           })                                                                   \
   );                                                                           \
                                                                                \
-  TEMPLATE_OBJECT(Tree, BTreeSet, SUFFIX,                                      \
+  TEMPLATE_OBJECT(Tree, B_Set, SUFFIX,                                      \
       FIELDS(                                                                  \
-          struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *root;              \
+          struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *root;              \
           size_t size;                                                         \
           size_t degree;                                                       \
-          MODULE_CLOSURE(Tree, BTreeSet, SUFFIX, Comparator) compare;          \
+          MODULE_CLOSURE(Tree, B_Set, SUFFIX, Comparator) compare;          \
       ),                                                                       \
                                                                                \
       OPERATION_INLINE(                                                        \
@@ -729,33 +731,33 @@
           {                                                                    \
             if (!self)                                                         \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            MODULE_FUNC(Tree, BTreeSet, SUFFIX, Init)(self);                   \
+            MODULE_FUNC(Tree, B_Set, SUFFIX, Init)(self);                   \
             self->root = NULL;                                                 \
             self->size = 0U;                                                   \
             self->degree = (size_t)(DEGREE);                                   \
             if (compareFn) {                                                   \
               self->compare = NS_JOIN(                                         \
-                  MODULE_CLOSURE_FUNC(Tree, BTreeSet, SUFFIX, Comparator),     \
+                  MODULE_CLOSURE_FUNC(Tree, B_Set, SUFFIX, Comparator),     \
                   Bind)(compareFn, context);                                   \
             } else {                                                           \
               self->compare = NS_JOIN(                                         \
-                  MODULE_CLOSURE_FUNC(Tree, BTreeSet, SUFFIX, Comparator),     \
+                  MODULE_CLOSURE_FUNC(Tree, B_Set, SUFFIX, Comparator),     \
                   Bind)(                                                       \
-                  MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), DefaultCompare),    \
+                  MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), DefaultCompare),    \
                   NULL);                                                       \
             }                                                                  \
             return STATUS_CONST(SUCCESS);                                      \
           }),                                                                  \
                                                                                \
       OPERATION_INLINE(Create, (), {                                           \
-        return MODULE_FUNC(Tree, BTreeSet, SUFFIX, CreateWithComparator)(      \
+        return MODULE_FUNC(Tree, B_Set, SUFFIX, CreateWithComparator)(      \
             self, NULL, NULL);                                                 \
       }),                                                                      \
                                                                                \
       PROCEDURE_INLINE(Clear, (), {                                            \
         if (!self)                                                             \
           return;                                                              \
-        MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), DestroyNodes)(self->root);    \
+        MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), DestroyNodes)(self->root);    \
         self->root = NULL;                                                     \
         self->size = 0U;                                                       \
       }),                                                                      \
@@ -763,23 +765,23 @@
       OPERATION_INLINE(Dispose, (), {                                          \
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        MODULE_FUNC(Tree, BTreeSet, SUFFIX, Clear)(self);                      \
+        MODULE_FUNC(Tree, B_Set, SUFFIX, Clear)(self);                      \
         return STATUS_CONST(SUCCESS);                                          \
       }),                                                                      \
                                                                                \
       PROCEDURE_INLINE(Destroy, (), {                                          \
-        (void)MODULE_FUNC(Tree, BTreeSet, SUFFIX, Dispose)(self);              \
+        (void)MODULE_FUNC(Tree, B_Set, SUFFIX, Dispose)(self);              \
       }),                                                                      \
                                                                                \
       OPERATION_INLINE(Insert, (KEY_TYPE key), {                               \
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        if (MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), FindPos)(                 \
+        if (MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), FindPos)(                 \
                 self->root, self->compare, key, NULL, NULL)) {                 \
           return STATUS_CONST(ALREADY_EXISTS);                                 \
         }                                                                      \
         if (!self->root) {                                                     \
-          self->root = MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX),                \
+          self->root = MODULE_IFUNC(Tree, NS(B_Set, SUFFIX),                \
                                     CreateNode)(true);                         \
           if (!self->root)                                                     \
             return STATUS_CONST(OUT_OF_MEMORY);                                \
@@ -789,13 +791,13 @@
           return STATUS_CONST(SUCCESS);                                        \
         }                                                                      \
         if (self->root->numKeys == 2U * (size_t)(DEGREE) - 1U) {               \
-          struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *newRoot =          \
-              MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), CreateNode)(false);     \
+          struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *newRoot =          \
+              MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), CreateNode)(false);     \
           if (!newRoot)                                                        \
             return STATUS_CONST(OUT_OF_MEMORY);                                \
           newRoot->children[0U] = self->root;                                  \
           self->root->parent = newRoot;                                        \
-          OPSTATUS status = MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX),           \
+          OPSTATUS status = MODULE_IFUNC(Tree, NS(B_Set, SUFFIX),           \
                                          SplitChild)(newRoot, 0U);             \
           if (status != STATUS_CONST(SUCCESS)) {                               \
             self->root->parent = NULL;                                         \
@@ -809,13 +811,13 @@
                COMPARISON_CONST(EQUAL))                                        \
                   ? 1U                                                         \
                   : 0U;                                                        \
-          status = MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), InsertNonFull)(    \
+          status = MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), InsertNonFull)(    \
               newRoot->children[childIdx], self->compare, key);                \
           if (status == STATUS_CONST(SUCCESS))                                 \
             self->size++;                                                      \
           return status;                                                       \
         }                                                                      \
-        OPSTATUS status = MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX),             \
+        OPSTATUS status = MODULE_IFUNC(Tree, NS(B_Set, SUFFIX),             \
                                        InsertNonFull)(self->root,              \
                                                       self->compare, key);     \
         if (status == STATUS_CONST(SUCCESS))                                   \
@@ -828,14 +830,14 @@
           return STATUS_CONST(INVALID_ARGUMENT);                               \
         if (!self->root)                                                       \
           return STATUS_CONST(NOT_FOUND);                                      \
-        OPSTATUS status = MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX),             \
+        OPSTATUS status = MODULE_IFUNC(Tree, NS(B_Set, SUFFIX),             \
                                        RemoveFromNode)(self->root,             \
                                                        self->compare, key);    \
         if (status != STATUS_CONST(SUCCESS))                                   \
           return status;                                                       \
         self->size--;                                                          \
         if (self->root->numKeys == 0U) {                                       \
-          struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *oldRoot =          \
+          struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *oldRoot =          \
               self->root;                                                      \
           if (oldRoot->isLeaf) {                                               \
             self->root = NULL;                                                 \
@@ -852,42 +854,42 @@
                                                                                \
       OPERATION_INLINE(                                                        \
           EraseIter,                                                           \
-          (struct MODULE_TYPED(Tree, BTreeSetIter, SUFFIX) *iter), {           \
+          (struct MODULE_TYPED(Tree, B_SetIter, SUFFIX) *iter), {           \
             if (!self || !iter || !iter->node ||                               \
                 iter->index >= iter->node->numKeys) {                          \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             }                                                                  \
             KEY_TYPE targetKey = iter->node->keys[iter->index];                \
             bool wasReverse = iter->reverse;                                   \
-            struct MODULE_TYPED(Tree, BTreeSetIter, SUFFIX) probe = *iter;     \
-            MODULE_FUNC(Tree, BTreeSetIter, SUFFIX, StepNext)(&probe);         \
+            struct MODULE_TYPED(Tree, B_SetIter, SUFFIX) probe = *iter;     \
+            MODULE_FUNC(Tree, B_SetIter, SUFFIX, StepNext)(&probe);         \
             bool hasNext = (probe.node != NULL);                               \
             KEY_TYPE nextKey = targetKey;                                      \
             if (hasNext)                                                       \
               nextKey = probe.node->keys[probe.index];                         \
             OPSTATUS status =                                                  \
-                MODULE_FUNC(Tree, BTreeSet, SUFFIX, Remove)(self, targetKey);  \
+                MODULE_FUNC(Tree, B_Set, SUFFIX, Remove)(self, targetKey);  \
             if (status != STATUS_CONST(SUCCESS))                               \
               return status;                                                   \
             if (hasNext) {                                                     \
-              struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *nextNode =     \
+              struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *nextNode =     \
                   NULL;                                                        \
               size_t nextIdx = 0U;                                             \
-              MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), FindPos)(               \
+              MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), FindPos)(               \
                   self->root, self->compare, nextKey, &nextNode, &nextIdx);    \
-              return MODULE_FUNC(Tree, BTreeSetIter, SUFFIX, FromPos)(         \
+              return MODULE_FUNC(Tree, B_SetIter, SUFFIX, FromPos)(         \
                   iter, self->root, nextNode, nextIdx, wasReverse);            \
             }                                                                  \
-            return MODULE_FUNC(Tree, BTreeSetIter, SUFFIX, FromPos)(           \
+            return MODULE_FUNC(Tree, B_SetIter, SUFFIX, FromPos)(           \
                 iter, self->root, NULL, 0U, wasReverse);                       \
           }),                                                                  \
                                                                                \
       CONST_OPERATION_INLINE(Find, (KEY_TYPE key, const KEY_TYPE **outKey), {  \
         if (!self || !outKey)                                                  \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *node = NULL;         \
+        struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *node = NULL;         \
         size_t idx = 0U;                                                       \
-        if (!MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), FindPos)(                \
+        if (!MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), FindPos)(                \
                 self->root, self->compare, key, &node, &idx)) {                \
           return STATUS_CONST(NOT_FOUND);                                      \
         }                                                                      \
@@ -898,7 +900,7 @@
       CONST_PREDICATE_INLINE(Contains, (KEY_TYPE key), {                       \
         if (!self)                                                             \
           return false;                                                        \
-        return MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), FindPos)(              \
+        return MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), FindPos)(              \
             self->root, self->compare, key, NULL, NULL);                       \
       }),                                                                      \
                                                                                \
@@ -907,9 +909,9 @@
           return STATUS_CONST(INVALID_ARGUMENT);                               \
         if (!self->root)                                                       \
           return STATUS_CONST(NOT_FOUND);                                      \
-        struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *node = NULL;         \
+        struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *node = NULL;         \
         size_t idx = 0U;                                                       \
-        MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), FirstInSubtree)(              \
+        MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), FirstInSubtree)(              \
             self->root, &node, &idx);                                          \
         *outKey = &node->keys[idx];                                            \
         return STATUS_CONST(SUCCESS);                                          \
@@ -920,9 +922,9 @@
           return STATUS_CONST(INVALID_ARGUMENT);                               \
         if (!self->root)                                                       \
           return STATUS_CONST(NOT_FOUND);                                      \
-        struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *node = NULL;         \
+        struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *node = NULL;         \
         size_t idx = 0U;                                                       \
-        MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), LastInSubtree)(               \
+        MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), LastInSubtree)(               \
             self->root, &node, &idx);                                          \
         *outKey = &node->keys[idx];                                            \
         return STATUS_CONST(SUCCESS);                                          \
@@ -947,63 +949,63 @@
       CONST_FUNCTION_INLINE(size_t, Height, (), {                              \
         if (!self)                                                             \
           return 0U;                                                           \
-        return MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), ComputeHeight)(        \
+        return MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), ComputeHeight)(        \
             self->root);                                                       \
       }),                                                                      \
                                                                                \
       CONST_OPERATION_INLINE(                                                  \
-          Begin, (struct MODULE_TYPED(Tree, BTreeSetIter, SUFFIX) *outIter), { \
+          Begin, (struct MODULE_TYPED(Tree, B_SetIter, SUFFIX) *outIter), { \
             if (!self || !outIter)                                             \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *node = NULL;     \
+            struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *node = NULL;     \
             size_t idx = 0U;                                                   \
-            MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), FirstInSubtree)(          \
+            MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), FirstInSubtree)(          \
                 self->root, &node, &idx);                                      \
-            return MODULE_FUNC(Tree, BTreeSetIter, SUFFIX, FromPos)(           \
+            return MODULE_FUNC(Tree, B_SetIter, SUFFIX, FromPos)(           \
                 outIter, self->root, node, idx, false);                        \
           }),                                                                  \
                                                                                \
       CONST_OPERATION_INLINE(                                                  \
-          End, (struct MODULE_TYPED(Tree, BTreeSetIter, SUFFIX) *outIter), {   \
+          End, (struct MODULE_TYPED(Tree, B_SetIter, SUFFIX) *outIter), {   \
             if (!self || !outIter)                                             \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            return MODULE_FUNC(Tree, BTreeSetIter, SUFFIX, FromPos)(           \
+            return MODULE_FUNC(Tree, B_SetIter, SUFFIX, FromPos)(           \
                 outIter, self->root, NULL, 0U, false);                         \
           }),                                                                  \
                                                                                \
       CONST_OPERATION_INLINE(                                                  \
           RBegin,                                                              \
-          (struct MODULE_TYPED(Tree, BTreeSetIter, SUFFIX) *outIter), {        \
+          (struct MODULE_TYPED(Tree, B_SetIter, SUFFIX) *outIter), {        \
             if (!self || !outIter)                                             \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *node = NULL;     \
+            struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *node = NULL;     \
             size_t idx = 0U;                                                   \
-            MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), LastInSubtree)(           \
+            MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), LastInSubtree)(           \
                 self->root, &node, &idx);                                      \
-            return MODULE_FUNC(Tree, BTreeSetIter, SUFFIX, FromPos)(           \
+            return MODULE_FUNC(Tree, B_SetIter, SUFFIX, FromPos)(           \
                 outIter, self->root, node, idx, true);                         \
           }),                                                                  \
                                                                                \
       CONST_OPERATION_INLINE(                                                  \
-          REnd, (struct MODULE_TYPED(Tree, BTreeSetIter, SUFFIX) *outIter), {  \
+          REnd, (struct MODULE_TYPED(Tree, B_SetIter, SUFFIX) *outIter), {  \
             if (!self || !outIter)                                             \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            return MODULE_FUNC(Tree, BTreeSetIter, SUFFIX, FromPos)(           \
+            return MODULE_FUNC(Tree, B_SetIter, SUFFIX, FromPos)(           \
                 outIter, self->root, NULL, 0U, true);                          \
           }),                                                                  \
                                                                                \
       CONST_OPERATION_INLINE(                                                  \
           FindIter,                                                            \
           (KEY_TYPE key,                                                       \
-           struct MODULE_TYPED(Tree, BTreeSetIter, SUFFIX) *outIter),          \
+           struct MODULE_TYPED(Tree, B_SetIter, SUFFIX) *outIter),          \
           {                                                                    \
             if (!self || !outIter)                                             \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *node = NULL;     \
+            struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *node = NULL;     \
             size_t idx = 0U;                                                   \
-            bool found = MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), FindPos)(    \
+            bool found = MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), FindPos)(    \
                 self->root, self->compare, key, &node, &idx);                  \
-            MODULE_FUNC(Tree, BTreeSetIter, SUFFIX, FromPos)(                  \
+            MODULE_FUNC(Tree, B_SetIter, SUFFIX, FromPos)(                  \
                 outIter, self->root, node, idx, false);                        \
             return found ? STATUS_CONST(SUCCESS) : STATUS_CONST(NOT_FOUND);    \
           }),                                                                  \
@@ -1011,51 +1013,51 @@
       CONST_OPERATION_INLINE(                                                  \
           LowerBound,                                                          \
           (KEY_TYPE key,                                                       \
-           struct MODULE_TYPED(Tree, BTreeSetIter, SUFFIX) *outIter),          \
+           struct MODULE_TYPED(Tree, B_SetIter, SUFFIX) *outIter),          \
           {                                                                    \
             if (!self || !outIter)                                             \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *node = NULL;     \
+            struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *node = NULL;     \
             size_t idx = 0U;                                                   \
-            MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), LowerBoundPos)(           \
+            MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), LowerBoundPos)(           \
                 self->root, self->compare, key, &node, &idx);                  \
-            return MODULE_FUNC(Tree, BTreeSetIter, SUFFIX, FromPos)(           \
+            return MODULE_FUNC(Tree, B_SetIter, SUFFIX, FromPos)(           \
                 outIter, self->root, node, idx, false);                        \
           }),                                                                  \
                                                                                \
       CONST_OPERATION_INLINE(                                                  \
           UpperBound,                                                          \
           (KEY_TYPE key,                                                       \
-           struct MODULE_TYPED(Tree, BTreeSetIter, SUFFIX) *outIter),          \
+           struct MODULE_TYPED(Tree, B_SetIter, SUFFIX) *outIter),          \
           {                                                                    \
             if (!self || !outIter)                                             \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            struct MODULE_ITYPED(Tree, BTreeSetNode, SUFFIX) *node = NULL;     \
+            struct MODULE_ITYPED(Tree, B_SetNode, SUFFIX) *node = NULL;     \
             size_t idx = 0U;                                                   \
-            MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), UpperBoundPos)(           \
+            MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), UpperBoundPos)(           \
                 self->root, self->compare, key, &node, &idx);                  \
-            return MODULE_FUNC(Tree, BTreeSetIter, SUFFIX, FromPos)(           \
+            return MODULE_FUNC(Tree, B_SetIter, SUFFIX, FromPos)(           \
                 outIter, self->root, node, idx, false);                        \
           }),                                                                  \
                                                                                \
       CONST_OPERATION_INLINE(                                                  \
           ForEach,                                                             \
           (MODULE_ENUM(Tree, Traversal) order,                                 \
-           MODULE_CLOSURE(Tree, BTreeSet, SUFFIX, Visitor) visitor),           \
+           MODULE_CLOSURE(Tree, B_Set, SUFFIX, Visitor) visitor),           \
           {                                                                    \
             if (!self || !CLOSURE_IS_VALID(visitor))                           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             switch (order) {                                                   \
             case Tree_Traversal_IN_ORDER:                                      \
-              MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), InOrder)(self->root,    \
+              MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), InOrder)(self->root,    \
                                                                 visitor);      \
               return STATUS_CONST(SUCCESS);                                    \
             case Tree_Traversal_PRE_ORDER:                                     \
-              MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), PreOrder)(self->root,   \
+              MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), PreOrder)(self->root,   \
                                                                  visitor);     \
               return STATUS_CONST(SUCCESS);                                    \
             case Tree_Traversal_POST_ORDER:                                    \
-              MODULE_IFUNC(Tree, NS(BTreeSet, SUFFIX), PostOrder)(self->root,  \
+              MODULE_IFUNC(Tree, NS(B_Set, SUFFIX), PostOrder)(self->root,  \
                                                                   visitor);    \
               return STATUS_CONST(SUCCESS);                                    \
             default:                                                           \
@@ -1065,44 +1067,44 @@
   )
 #endif
 
-#ifndef TEMPLATE_Tree_BTreeSet
-#define TEMPLATE_Tree_BTreeSet(SUFFIX, KEY_TYPE)                               \
-  TEMPLATE_Tree_BTreeSetDegree(SUFFIX, KEY_TYPE, BTREE_DEFAULT_DEGREE)
+#ifndef TEMPLATE_Tree_B_Set
+#define TEMPLATE_Tree_B_Set(SUFFIX, KEY_TYPE)                               \
+  TEMPLATE_Tree_B_SetDegree(SUFFIX, KEY_TYPE, BTREE_DEFAULT_DEGREE)
 #endif
 
-#ifndef TEMPLATE_Tree_BTreeMapDegree
-#define TEMPLATE_Tree_BTreeMapDegree(SUFFIX, KEY_TYPE, VALUE_TYPE, DEGREE)     \
-  TEMPLATE_ISTRUCT(Tree, BTreeMapNode, SUFFIX,                                 \
+#ifndef TEMPLATE_Tree_B_MapDegree
+#define TEMPLATE_Tree_B_MapDegree(SUFFIX, KEY_TYPE, VALUE_TYPE, DEGREE)     \
+  TEMPLATE_ISTRUCT(Tree, B_MapNode, SUFFIX,                                 \
       FIELDS(                                                                  \
           size_t numKeys;                                                      \
           bool isLeaf;                                                         \
-          struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *parent;            \
+          struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *parent;            \
           KEY_TYPE keys[2U * (DEGREE) - 1U];                                   \
           VALUE_TYPE values[2U * (DEGREE) - 1U];                               \
-          struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX)                     \
+          struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX)                     \
               *children[2U * (DEGREE)];                                        \
       ));                                                                      \
-  CLOSURE_SCOPED_COMPARISON(NS(LIB_PREFIX(Tree), BTreeMap, SUFFIX),            \
+  CLOSURE_SCOPED_COMPARISON(NS(LIB_PREFIX(Tree), B_Map, SUFFIX),            \
                             Comparator, (KEY_TYPE left, KEY_TYPE right))       \
-  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Tree), BTreeMap, SUFFIX), Visitor,    \
+  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Tree), B_Map, SUFFIX), Visitor,    \
                            (KEY_TYPE key, VALUE_TYPE *value))                  \
   INTERNAL_DEF_EX(                                                             \
-      Tree, NS(BTreeMap, SUFFIX),                                              \
+      Tree, NS(B_Map, SUFFIX),                                              \
       COSMERON_MACRO_INTERNAL_TREE_BTREE_NAV(                                  \
-          BTreeMap, SUFFIX, struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX),  \
-          KEY_TYPE, MODULE_CLOSURE(Tree, BTreeMap, SUFFIX, Comparator)),       \
+          B_Map, SUFFIX, struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX),  \
+          KEY_TYPE, MODULE_CLOSURE(Tree, B_Map, SUFFIX, Comparator)),       \
                                                                                \
-      FUNCTION(struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *, CreateNode, \
+      FUNCTION(struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *, CreateNode, \
                (bool isLeaf), {                                                \
                  void *raw = NULL;                                             \
                  if (MODULE_IFUNC(Tree, AllocNode)(                            \
-                         &raw, sizeof(struct MODULE_ITYPED(Tree, BTreeMapNode, \
+                         &raw, sizeof(struct MODULE_ITYPED(Tree, B_MapNode, \
                                                             SUFFIX))) !=       \
                      STATUS_CONST(SUCCESS)) {                                  \
                    return NULL;                                                \
                  }                                                             \
-                 struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *node =      \
-                     (struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *)raw;  \
+                 struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *node =      \
+                     (struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *)raw;  \
                  node->numKeys = 0U;                                           \
                  node->isLeaf = isLeaf;                                        \
                  node->parent = NULL;                                          \
@@ -1112,13 +1114,13 @@
                }),                                                             \
                                                                                \
       OPERATION(SplitChild,                                                    \
-                (struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *parent,     \
+                (struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *parent,     \
                  size_t idx),                                                  \
                 {                                                              \
-                  struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *y =        \
+                  struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *y =        \
                       parent->children[idx];                                   \
-                  struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *z =        \
-                      MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), CreateNode)(    \
+                  struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *z =        \
+                      MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), CreateNode)(    \
                           y->isLeaf);                                          \
                   if (!z)                                                      \
                     return STATUS_CONST(OUT_OF_MEMORY);                        \
@@ -1152,8 +1154,8 @@
                 }),                                                            \
                                                                                \
       OPERATION(InsertNonFull,                                                 \
-                (struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *node,       \
-                 MODULE_CLOSURE(Tree, BTreeMap, SUFFIX, Comparator) cmp,       \
+                (struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *node,       \
+                 MODULE_CLOSURE(Tree, B_Map, SUFFIX, Comparator) cmp,       \
                  KEY_TYPE key, VALUE_TYPE value),                              \
                 {                                                              \
                   size_t i = node->numKeys;                                    \
@@ -1176,7 +1178,7 @@
                     i--;                                                       \
                   }                                                            \
                   if (node->children[i]->numKeys == 2U * (size_t)(DEGREE) - 1U){\
-                    OPSTATUS status = MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), \
+                    OPSTATUS status = MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), \
                                                    SplitChild)(node, i);       \
                     if (status != STATUS_CONST(SUCCESS))                       \
                       return status;                                           \
@@ -1185,18 +1187,18 @@
                       i++;                                                     \
                     }                                                          \
                   }                                                            \
-                  return MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX),              \
+                  return MODULE_IFUNC(Tree, NS(B_Map, SUFFIX),              \
                                       InsertNonFull)(node->children[i], cmp,   \
                                                      key, value);              \
                 }),                                                            \
                                                                                \
       PROCEDURE(Merge,                                                         \
-                (struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *node,       \
+                (struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *node,       \
                  size_t idx),                                                  \
                 {                                                              \
-                  struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *child =    \
+                  struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *child =    \
                       node->children[idx];                                     \
-                  struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *sibling =  \
+                  struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *sibling =  \
                       node->children[idx + 1U];                                \
                   size_t t = (size_t)(DEGREE);                                 \
                   child->keys[t - 1U] = node->keys[idx];                       \
@@ -1225,12 +1227,12 @@
                 }),                                                            \
                                                                                \
       PROCEDURE(BorrowFromPrev,                                                \
-                (struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *node,       \
+                (struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *node,       \
                  size_t idx),                                                  \
                 {                                                              \
-                  struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *child =    \
+                  struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *child =    \
                       node->children[idx];                                     \
-                  struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *sibling =  \
+                  struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *sibling =  \
                       node->children[idx - 1U];                                \
                   for (size_t i = child->numKeys; i > 0U; i--) {               \
                     child->keys[i] = child->keys[i - 1U];                      \
@@ -1255,12 +1257,12 @@
                 }),                                                            \
                                                                                \
       PROCEDURE(BorrowFromNext,                                                \
-                (struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *node,       \
+                (struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *node,       \
                  size_t idx),                                                  \
                 {                                                              \
-                  struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *child =    \
+                  struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *child =    \
                       node->children[idx];                                     \
-                  struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *sibling =  \
+                  struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *sibling =  \
                       node->children[idx + 1U];                                \
                   child->keys[child->numKeys] = node->keys[idx];               \
                   child->values[child->numKeys] = node->values[idx];           \
@@ -1285,30 +1287,30 @@
                 }),                                                            \
                                                                                \
       PROCEDURE(Fill,                                                          \
-                (struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *node,       \
+                (struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *node,       \
                  size_t idx),                                                  \
                 {                                                              \
                   size_t t = (size_t)(DEGREE);                                 \
                   if (idx != 0U && node->children[idx - 1U]->numKeys >= t) {   \
-                    MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX),                   \
+                    MODULE_IFUNC(Tree, NS(B_Map, SUFFIX),                   \
                                  BorrowFromPrev)(node, idx);                   \
                   } else if (idx != node->numKeys &&                           \
                              node->children[idx + 1U]->numKeys >= t) {         \
-                    MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX),                   \
+                    MODULE_IFUNC(Tree, NS(B_Map, SUFFIX),                   \
                                  BorrowFromNext)(node, idx);                   \
                   } else {                                                     \
                     if (idx != node->numKeys)                                  \
-                      MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), Merge)(node,    \
+                      MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), Merge)(node,    \
                                                                       idx);    \
                     else                                                       \
-                      MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), Merge)(         \
+                      MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), Merge)(         \
                           node, idx - 1U);                                     \
                   }                                                            \
                 }),                                                            \
                                                                                \
       OPERATION(RemoveFromNode,                                                \
-                (struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *node,       \
-                 MODULE_CLOSURE(Tree, BTreeMap, SUFFIX, Comparator) cmp,       \
+                (struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *node,       \
+                 MODULE_CLOSURE(Tree, B_Map, SUFFIX, Comparator) cmp,       \
                  KEY_TYPE key),                                                \
                 {                                                              \
                   size_t idx = 0U;                                             \
@@ -1330,36 +1332,36 @@
                     }                                                          \
                     size_t t = (size_t)(DEGREE);                               \
                     if (node->children[idx]->numKeys >= t) {                   \
-                      struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *pred = \
+                      struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *pred = \
                           NULL;                                                \
                       size_t predIdx = 0U;                                     \
-                      MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), LastInSubtree)( \
+                      MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), LastInSubtree)( \
                           node->children[idx], &pred, &predIdx);               \
                       KEY_TYPE predKey = pred->keys[predIdx];                  \
                       VALUE_TYPE predVal = pred->values[predIdx];              \
                       node->keys[idx] = predKey;                               \
                       node->values[idx] = predVal;                             \
-                      return MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX),          \
+                      return MODULE_IFUNC(Tree, NS(B_Map, SUFFIX),          \
                                           RemoveFromNode)(node->children[idx], \
                                                           cmp, predKey);       \
                     } else if (node->children[idx + 1U]->numKeys >= t) {       \
-                      struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *succ = \
+                      struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *succ = \
                           NULL;                                                \
                       size_t succIdx = 0U;                                     \
-                      MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX),                 \
+                      MODULE_IFUNC(Tree, NS(B_Map, SUFFIX),                 \
                                    FirstInSubtree)(node->children[idx + 1U],   \
                                                    &succ, &succIdx);           \
                       KEY_TYPE succKey = succ->keys[succIdx];                  \
                       VALUE_TYPE succVal = succ->values[succIdx];              \
                       node->keys[idx] = succKey;                               \
                       node->values[idx] = succVal;                             \
-                      return MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX),          \
+                      return MODULE_IFUNC(Tree, NS(B_Map, SUFFIX),          \
                                           RemoveFromNode)(                     \
                           node->children[idx + 1U], cmp, succKey);             \
                     } else {                                                   \
-                      MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), Merge)(node,    \
+                      MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), Merge)(node,    \
                                                                       idx);    \
-                      return MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX),          \
+                      return MODULE_IFUNC(Tree, NS(B_Map, SUFFIX),          \
                                           RemoveFromNode)(node->children[idx], \
                                                           cmp, key);           \
                     }                                                          \
@@ -1369,21 +1371,21 @@
                     bool flag = (idx == node->numKeys);                        \
                     size_t t = (size_t)(DEGREE);                               \
                     if (node->children[idx]->numKeys < t)                      \
-                      MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), Fill)(node,     \
+                      MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), Fill)(node,     \
                                                                      idx);     \
                     if (flag && idx > node->numKeys)                           \
-                      return MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX),          \
+                      return MODULE_IFUNC(Tree, NS(B_Map, SUFFIX),          \
                                           RemoveFromNode)(                     \
                           node->children[idx - 1U], cmp, key);                 \
-                    return MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX),            \
+                    return MODULE_IFUNC(Tree, NS(B_Map, SUFFIX),            \
                                         RemoveFromNode)(node->children[idx],   \
                                                         cmp, key);             \
                   }                                                            \
                 }),                                                            \
                                                                                \
       PROCEDURE(PreOrder,                                                      \
-                (struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *node,       \
-                 MODULE_CLOSURE(Tree, BTreeMap, SUFFIX, Visitor) visitor),     \
+                (struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *node,       \
+                 MODULE_CLOSURE(Tree, B_Map, SUFFIX, Visitor) visitor),     \
                 {                                                              \
                   if (!node)                                                   \
                     return;                                                    \
@@ -1391,40 +1393,40 @@
                     CLOSURE_CALL(visitor, node->keys[i], &node->values[i]);    \
                   if (!node->isLeaf) {                                         \
                     for (size_t i = 0U; i <= node->numKeys; i++) {             \
-                      MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), PreOrder)(      \
+                      MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), PreOrder)(      \
                           node->children[i], visitor);                         \
                     }                                                          \
                   }                                                            \
                 }),                                                            \
                                                                                \
       PROCEDURE(InOrder,                                                       \
-                (struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *node,       \
-                 MODULE_CLOSURE(Tree, BTreeMap, SUFFIX, Visitor) visitor),     \
+                (struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *node,       \
+                 MODULE_CLOSURE(Tree, B_Map, SUFFIX, Visitor) visitor),     \
                 {                                                              \
                   if (!node)                                                   \
                     return;                                                    \
                   for (size_t i = 0U; i < node->numKeys; i++) {                \
                     if (!node->isLeaf) {                                       \
-                      MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), InOrder)(       \
+                      MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), InOrder)(       \
                           node->children[i], visitor);                         \
                     }                                                          \
                     CLOSURE_CALL(visitor, node->keys[i], &node->values[i]);    \
                   }                                                            \
                   if (!node->isLeaf) {                                         \
-                    MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), InOrder)(         \
+                    MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), InOrder)(         \
                         node->children[node->numKeys], visitor);               \
                   }                                                            \
                 }),                                                            \
                                                                                \
       PROCEDURE(PostOrder,                                                     \
-                (struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *node,       \
-                 MODULE_CLOSURE(Tree, BTreeMap, SUFFIX, Visitor) visitor),     \
+                (struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *node,       \
+                 MODULE_CLOSURE(Tree, B_Map, SUFFIX, Visitor) visitor),     \
                 {                                                              \
                   if (!node)                                                   \
                     return;                                                    \
                   if (!node->isLeaf) {                                         \
                     for (size_t i = 0U; i <= node->numKeys; i++) {             \
-                      MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), PostOrder)(     \
+                      MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), PostOrder)(     \
                           node->children[i], visitor);                         \
                     }                                                          \
                   }                                                            \
@@ -1432,10 +1434,10 @@
                     CLOSURE_CALL(visitor, node->keys[i], &node->values[i]);    \
                 }))                                                            \
                                                                                \
-  TEMPLATE_OBJECT(Tree, BTreeMapIter, SUFFIX,                                  \
+  TEMPLATE_OBJECT(Tree, B_MapIter, SUFFIX,                                  \
       FIELDS(                                                                  \
-          struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *root;              \
-          struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *node;              \
+          struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *root;              \
+          struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *node;              \
           size_t index;                                                        \
           bool reverse;                                                        \
       ),                                                                       \
@@ -1444,13 +1446,13 @@
                                                                                \
       OPERATION_INLINE(                                                        \
           FromPos,                                                             \
-          (struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *root,             \
-           struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *node,             \
+          (struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *root,             \
+           struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *node,             \
            size_t index, bool reverse),                                        \
           {                                                                    \
             if (!self)                                                         \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            MODULE_FUNC(Tree, BTreeMapIter, SUFFIX, Init)(self);               \
+            MODULE_FUNC(Tree, B_MapIter, SUFFIX, Init)(self);               \
             self->root = root;                                                 \
             self->node = node;                                                 \
             self->index = index;                                               \
@@ -1471,12 +1473,12 @@
         if (!self)                                                             \
           return false;                                                        \
         if (self->node != NULL) {                                              \
-          struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *n = self->node;    \
+          struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *n = self->node;    \
           size_t i = self->index;                                              \
           if (self->reverse)                                                   \
-            MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), InOrderNext)(&n, &i);     \
+            MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), InOrderNext)(&n, &i);     \
           else                                                                 \
-            MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), InOrderPrev)(&n, &i);     \
+            MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), InOrderPrev)(&n, &i);     \
           return n != NULL;                                                    \
         }                                                                      \
         return self->root != NULL;                                             \
@@ -1486,10 +1488,10 @@
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
         if (self->reverse) {                                                   \
-          MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), LastInSubtree)(             \
+          MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), LastInSubtree)(             \
               self->root, &self->node, &self->index);                          \
         } else {                                                               \
-          MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), FirstInSubtree)(            \
+          MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), FirstInSubtree)(            \
               self->root, &self->node, &self->index);                          \
         }                                                                      \
         return STATUS_CONST(SUCCESS);                                          \
@@ -1537,10 +1539,10 @@
         if (!self->node)                                                       \
           return STATUS_CONST(OUT_OF_RANGE);                                   \
         if (self->reverse) {                                                   \
-          MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), InOrderPrev)(               \
+          MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), InOrderPrev)(               \
               &self->node, &self->index);                                      \
         } else {                                                               \
-          MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), InOrderNext)(               \
+          MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), InOrderNext)(               \
               &self->node, &self->index);                                      \
         }                                                                      \
         return STATUS_CONST(SUCCESS);                                          \
@@ -1553,20 +1555,20 @@
           if (!self->root)                                                     \
             return STATUS_CONST(OUT_OF_RANGE);                                 \
           if (self->reverse) {                                                 \
-            MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), FirstInSubtree)(          \
+            MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), FirstInSubtree)(          \
                 self->root, &self->node, &self->index);                        \
           } else {                                                             \
-            MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), LastInSubtree)(           \
+            MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), LastInSubtree)(           \
                 self->root, &self->node, &self->index);                        \
           }                                                                    \
           return STATUS_CONST(SUCCESS);                                        \
         }                                                                      \
-        struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *n = self->node;      \
+        struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *n = self->node;      \
         size_t i = self->index;                                                \
         if (self->reverse)                                                     \
-          MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), InOrderNext)(&n, &i);       \
+          MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), InOrderNext)(&n, &i);       \
         else                                                                   \
-          MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), InOrderPrev)(&n, &i);       \
+          MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), InOrderPrev)(&n, &i);       \
         if (!n)                                                                \
           return STATUS_CONST(OUT_OF_RANGE);                                   \
         self->node = n;                                                        \
@@ -1581,12 +1583,12 @@
           return STATUS_CONST(OUT_OF_RANGE);                                   \
         if (outValue)                                                          \
           *outValue = &self->node->values[self->index];                        \
-        return MODULE_FUNC(Tree, BTreeMapIter, SUFFIX, StepNext)(self);        \
+        return MODULE_FUNC(Tree, B_MapIter, SUFFIX, StepNext)(self);        \
       }),                                                                      \
                                                                                \
       OPERATION_INLINE(Prev, (VALUE_TYPE **outValue), {                        \
         OPSTATUS status =                                                      \
-            MODULE_FUNC(Tree, BTreeMapIter, SUFFIX, StepPrev)(self);           \
+            MODULE_FUNC(Tree, B_MapIter, SUFFIX, StepPrev)(self);           \
         if (status != STATUS_CONST(SUCCESS))                                   \
           return status;                                                       \
         if (outValue)                                                          \
@@ -1596,7 +1598,7 @@
                                                                                \
       CONST_PREDICATE_INLINE(                                                  \
           Equals,                                                              \
-          (const struct MODULE_TYPED(Tree, BTreeMapIter, SUFFIX) *other), {    \
+          (const struct MODULE_TYPED(Tree, B_MapIter, SUFFIX) *other), {    \
             if (!self || !other)                                               \
               return false;                                                    \
             return self->node == other->node && self->index == other->index && \
@@ -1605,24 +1607,24 @@
                                                                                \
       OPERATION_INLINE(                                                        \
           ForEach,                                                             \
-          (MODULE_CLOSURE(Tree, BTreeMapIter, SUFFIX, Visitor) visitor), {     \
+          (MODULE_CLOSURE(Tree, B_MapIter, SUFFIX, Visitor) visitor), {     \
             if (!self || !CLOSURE_IS_VALID(visitor))                           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             while (self->node != NULL) {                                       \
               CLOSURE_CALL(visitor, self->node->keys[self->index],             \
                            &self->node->values[self->index]);                  \
-              MODULE_FUNC(Tree, BTreeMapIter, SUFFIX, StepNext)(self);         \
+              MODULE_FUNC(Tree, B_MapIter, SUFFIX, StepNext)(self);         \
             }                                                                  \
             return STATUS_CONST(SUCCESS);                                      \
           })                                                                   \
   );                                                                           \
                                                                                \
-  TEMPLATE_OBJECT(Tree, BTreeMap, SUFFIX,                                      \
+  TEMPLATE_OBJECT(Tree, B_Map, SUFFIX,                                      \
       FIELDS(                                                                  \
-          struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *root;              \
+          struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *root;              \
           size_t size;                                                         \
           size_t degree;                                                       \
-          MODULE_CLOSURE(Tree, BTreeMap, SUFFIX, Comparator) compare;          \
+          MODULE_CLOSURE(Tree, B_Map, SUFFIX, Comparator) compare;          \
       ),                                                                       \
                                                                                \
       OPERATION_INLINE(                                                        \
@@ -1632,33 +1634,33 @@
           {                                                                    \
             if (!self)                                                         \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            MODULE_FUNC(Tree, BTreeMap, SUFFIX, Init)(self);                   \
+            MODULE_FUNC(Tree, B_Map, SUFFIX, Init)(self);                   \
             self->root = NULL;                                                 \
             self->size = 0U;                                                   \
             self->degree = (size_t)(DEGREE);                                   \
             if (compareFn) {                                                   \
               self->compare = NS_JOIN(                                         \
-                  MODULE_CLOSURE_FUNC(Tree, BTreeMap, SUFFIX, Comparator),     \
+                  MODULE_CLOSURE_FUNC(Tree, B_Map, SUFFIX, Comparator),     \
                   Bind)(compareFn, context);                                   \
             } else {                                                           \
               self->compare = NS_JOIN(                                         \
-                  MODULE_CLOSURE_FUNC(Tree, BTreeMap, SUFFIX, Comparator),     \
+                  MODULE_CLOSURE_FUNC(Tree, B_Map, SUFFIX, Comparator),     \
                   Bind)(                                                       \
-                  MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), DefaultCompare),    \
+                  MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), DefaultCompare),    \
                   NULL);                                                       \
             }                                                                  \
             return STATUS_CONST(SUCCESS);                                      \
           }),                                                                  \
                                                                                \
       OPERATION_INLINE(Create, (), {                                           \
-        return MODULE_FUNC(Tree, BTreeMap, SUFFIX, CreateWithComparator)(      \
+        return MODULE_FUNC(Tree, B_Map, SUFFIX, CreateWithComparator)(      \
             self, NULL, NULL);                                                 \
       }),                                                                      \
                                                                                \
       PROCEDURE_INLINE(Clear, (), {                                            \
         if (!self)                                                             \
           return;                                                              \
-        MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), DestroyNodes)(self->root);    \
+        MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), DestroyNodes)(self->root);    \
         self->root = NULL;                                                     \
         self->size = 0U;                                                       \
       }),                                                                      \
@@ -1666,23 +1668,23 @@
       OPERATION_INLINE(Dispose, (), {                                          \
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        MODULE_FUNC(Tree, BTreeMap, SUFFIX, Clear)(self);                      \
+        MODULE_FUNC(Tree, B_Map, SUFFIX, Clear)(self);                      \
         return STATUS_CONST(SUCCESS);                                          \
       }),                                                                      \
                                                                                \
       PROCEDURE_INLINE(Destroy, (), {                                          \
-        (void)MODULE_FUNC(Tree, BTreeMap, SUFFIX, Dispose)(self);              \
+        (void)MODULE_FUNC(Tree, B_Map, SUFFIX, Dispose)(self);              \
       }),                                                                      \
                                                                                \
       OPERATION_INLINE(Insert, (KEY_TYPE key, VALUE_TYPE value), {             \
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        if (MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), FindPos)(                 \
+        if (MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), FindPos)(                 \
                 self->root, self->compare, key, NULL, NULL)) {                 \
           return STATUS_CONST(ALREADY_EXISTS);                                 \
         }                                                                      \
         if (!self->root) {                                                     \
-          self->root = MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX),                \
+          self->root = MODULE_IFUNC(Tree, NS(B_Map, SUFFIX),                \
                                     CreateNode)(true);                         \
           if (!self->root)                                                     \
             return STATUS_CONST(OUT_OF_MEMORY);                                \
@@ -1693,13 +1695,13 @@
           return STATUS_CONST(SUCCESS);                                        \
         }                                                                      \
         if (self->root->numKeys == 2U * (size_t)(DEGREE) - 1U) {               \
-          struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *newRoot =          \
-              MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), CreateNode)(false);     \
+          struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *newRoot =          \
+              MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), CreateNode)(false);     \
           if (!newRoot)                                                        \
             return STATUS_CONST(OUT_OF_MEMORY);                                \
           newRoot->children[0U] = self->root;                                  \
           self->root->parent = newRoot;                                        \
-          OPSTATUS status = MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX),           \
+          OPSTATUS status = MODULE_IFUNC(Tree, NS(B_Map, SUFFIX),           \
                                          SplitChild)(newRoot, 0U);             \
           if (status != STATUS_CONST(SUCCESS)) {                               \
             self->root->parent = NULL;                                         \
@@ -1713,13 +1715,13 @@
                COMPARISON_CONST(EQUAL))                                        \
                   ? 1U                                                         \
                   : 0U;                                                        \
-          status = MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), InsertNonFull)(    \
+          status = MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), InsertNonFull)(    \
               newRoot->children[childIdx], self->compare, key, value);         \
           if (status == STATUS_CONST(SUCCESS))                                 \
             self->size++;                                                      \
           return status;                                                       \
         }                                                                      \
-        OPSTATUS status = MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX),             \
+        OPSTATUS status = MODULE_IFUNC(Tree, NS(B_Map, SUFFIX),             \
                                        InsertNonFull)(self->root,              \
                                                       self->compare, key,      \
                                                       value);                  \
@@ -1731,14 +1733,14 @@
       OPERATION_INLINE(Upsert, (KEY_TYPE key, VALUE_TYPE value), {             \
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *node = NULL;         \
+        struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *node = NULL;         \
         size_t idx = 0U;                                                       \
-        if (MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), FindPos)(                 \
+        if (MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), FindPos)(                 \
                 self->root, self->compare, key, &node, &idx)) {                \
           node->values[idx] = value;                                           \
           return STATUS_CONST(SUCCESS);                                        \
         }                                                                      \
-        return MODULE_FUNC(Tree, BTreeMap, SUFFIX, Insert)(self, key, value);  \
+        return MODULE_FUNC(Tree, B_Map, SUFFIX, Insert)(self, key, value);  \
       }),                                                                      \
                                                                                \
       OPERATION_INLINE(Remove, (KEY_TYPE key), {                               \
@@ -1746,14 +1748,14 @@
           return STATUS_CONST(INVALID_ARGUMENT);                               \
         if (!self->root)                                                       \
           return STATUS_CONST(NOT_FOUND);                                      \
-        OPSTATUS status = MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX),             \
+        OPSTATUS status = MODULE_IFUNC(Tree, NS(B_Map, SUFFIX),             \
                                        RemoveFromNode)(self->root,             \
                                                        self->compare, key);    \
         if (status != STATUS_CONST(SUCCESS))                                   \
           return status;                                                       \
         self->size--;                                                          \
         if (self->root->numKeys == 0U) {                                       \
-          struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *oldRoot =          \
+          struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *oldRoot =          \
               self->root;                                                      \
           if (oldRoot->isLeaf) {                                               \
             self->root = NULL;                                                 \
@@ -1770,42 +1772,42 @@
                                                                                \
       OPERATION_INLINE(                                                        \
           EraseIter,                                                           \
-          (struct MODULE_TYPED(Tree, BTreeMapIter, SUFFIX) *iter), {           \
+          (struct MODULE_TYPED(Tree, B_MapIter, SUFFIX) *iter), {           \
             if (!self || !iter || !iter->node ||                               \
                 iter->index >= iter->node->numKeys) {                          \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             }                                                                  \
             KEY_TYPE targetKey = iter->node->keys[iter->index];                \
             bool wasReverse = iter->reverse;                                   \
-            struct MODULE_TYPED(Tree, BTreeMapIter, SUFFIX) probe = *iter;     \
-            MODULE_FUNC(Tree, BTreeMapIter, SUFFIX, StepNext)(&probe);         \
+            struct MODULE_TYPED(Tree, B_MapIter, SUFFIX) probe = *iter;     \
+            MODULE_FUNC(Tree, B_MapIter, SUFFIX, StepNext)(&probe);         \
             bool hasNext = (probe.node != NULL);                               \
             KEY_TYPE nextKey = targetKey;                                      \
             if (hasNext)                                                       \
               nextKey = probe.node->keys[probe.index];                         \
             OPSTATUS status =                                                  \
-                MODULE_FUNC(Tree, BTreeMap, SUFFIX, Remove)(self, targetKey);  \
+                MODULE_FUNC(Tree, B_Map, SUFFIX, Remove)(self, targetKey);  \
             if (status != STATUS_CONST(SUCCESS))                               \
               return status;                                                   \
             if (hasNext) {                                                     \
-              struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *nextNode =     \
+              struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *nextNode =     \
                   NULL;                                                        \
               size_t nextIdx = 0U;                                             \
-              MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), FindPos)(               \
+              MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), FindPos)(               \
                   self->root, self->compare, nextKey, &nextNode, &nextIdx);    \
-              return MODULE_FUNC(Tree, BTreeMapIter, SUFFIX, FromPos)(         \
+              return MODULE_FUNC(Tree, B_MapIter, SUFFIX, FromPos)(         \
                   iter, self->root, nextNode, nextIdx, wasReverse);            \
             }                                                                  \
-            return MODULE_FUNC(Tree, BTreeMapIter, SUFFIX, FromPos)(           \
+            return MODULE_FUNC(Tree, B_MapIter, SUFFIX, FromPos)(           \
                 iter, self->root, NULL, 0U, wasReverse);                       \
           }),                                                                  \
                                                                                \
       OPERATION_INLINE(Find, (KEY_TYPE key, VALUE_TYPE **outValue), {          \
         if (!self || !outValue)                                                \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *node = NULL;         \
+        struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *node = NULL;         \
         size_t idx = 0U;                                                       \
-        if (!MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), FindPos)(                \
+        if (!MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), FindPos)(                \
                 self->root, self->compare, key, &node, &idx)) {                \
           return STATUS_CONST(NOT_FOUND);                                      \
         }                                                                      \
@@ -1817,9 +1819,9 @@
           ConstFind, (KEY_TYPE key, const VALUE_TYPE **outValue), {            \
             if (!self || !outValue)                                            \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *node = NULL;     \
+            struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *node = NULL;     \
             size_t idx = 0U;                                                   \
-            if (!MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), FindPos)(            \
+            if (!MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), FindPos)(            \
                     self->root, self->compare, key, &node, &idx)) {            \
               return STATUS_CONST(NOT_FOUND);                                  \
             }                                                                  \
@@ -1830,7 +1832,7 @@
       CONST_PREDICATE_INLINE(Contains, (KEY_TYPE key), {                       \
         if (!self)                                                             \
           return false;                                                        \
-        return MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), FindPos)(              \
+        return MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), FindPos)(              \
             self->root, self->compare, key, NULL, NULL);                       \
       }),                                                                      \
                                                                                \
@@ -1839,9 +1841,9 @@
           return STATUS_CONST(INVALID_ARGUMENT);                               \
         if (!self->root)                                                       \
           return STATUS_CONST(NOT_FOUND);                                      \
-        struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *node = NULL;         \
+        struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *node = NULL;         \
         size_t idx = 0U;                                                       \
-        MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), FirstInSubtree)(              \
+        MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), FirstInSubtree)(              \
             self->root, &node, &idx);                                          \
         *outKey = &node->keys[idx];                                            \
         return STATUS_CONST(SUCCESS);                                          \
@@ -1852,9 +1854,9 @@
           return STATUS_CONST(INVALID_ARGUMENT);                               \
         if (!self->root)                                                       \
           return STATUS_CONST(NOT_FOUND);                                      \
-        struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *node = NULL;         \
+        struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *node = NULL;         \
         size_t idx = 0U;                                                       \
-        MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), LastInSubtree)(               \
+        MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), LastInSubtree)(               \
             self->root, &node, &idx);                                          \
         *outKey = &node->keys[idx];                                            \
         return STATUS_CONST(SUCCESS);                                          \
@@ -1879,63 +1881,63 @@
       CONST_FUNCTION_INLINE(size_t, Height, (), {                              \
         if (!self)                                                             \
           return 0U;                                                           \
-        return MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), ComputeHeight)(        \
+        return MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), ComputeHeight)(        \
             self->root);                                                       \
       }),                                                                      \
                                                                                \
       OPERATION_INLINE(                                                        \
-          Begin, (struct MODULE_TYPED(Tree, BTreeMapIter, SUFFIX) *outIter), { \
+          Begin, (struct MODULE_TYPED(Tree, B_MapIter, SUFFIX) *outIter), { \
             if (!self || !outIter)                                             \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *node = NULL;     \
+            struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *node = NULL;     \
             size_t idx = 0U;                                                   \
-            MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), FirstInSubtree)(          \
+            MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), FirstInSubtree)(          \
                 self->root, &node, &idx);                                      \
-            return MODULE_FUNC(Tree, BTreeMapIter, SUFFIX, FromPos)(           \
+            return MODULE_FUNC(Tree, B_MapIter, SUFFIX, FromPos)(           \
                 outIter, self->root, node, idx, false);                        \
           }),                                                                  \
                                                                                \
       OPERATION_INLINE(                                                        \
-          End, (struct MODULE_TYPED(Tree, BTreeMapIter, SUFFIX) *outIter), {   \
+          End, (struct MODULE_TYPED(Tree, B_MapIter, SUFFIX) *outIter), {   \
             if (!self || !outIter)                                             \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            return MODULE_FUNC(Tree, BTreeMapIter, SUFFIX, FromPos)(           \
+            return MODULE_FUNC(Tree, B_MapIter, SUFFIX, FromPos)(           \
                 outIter, self->root, NULL, 0U, false);                         \
           }),                                                                  \
                                                                                \
       OPERATION_INLINE(                                                        \
           RBegin,                                                              \
-          (struct MODULE_TYPED(Tree, BTreeMapIter, SUFFIX) *outIter), {        \
+          (struct MODULE_TYPED(Tree, B_MapIter, SUFFIX) *outIter), {        \
             if (!self || !outIter)                                             \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *node = NULL;     \
+            struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *node = NULL;     \
             size_t idx = 0U;                                                   \
-            MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), LastInSubtree)(           \
+            MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), LastInSubtree)(           \
                 self->root, &node, &idx);                                      \
-            return MODULE_FUNC(Tree, BTreeMapIter, SUFFIX, FromPos)(           \
+            return MODULE_FUNC(Tree, B_MapIter, SUFFIX, FromPos)(           \
                 outIter, self->root, node, idx, true);                         \
           }),                                                                  \
                                                                                \
       OPERATION_INLINE(                                                        \
-          REnd, (struct MODULE_TYPED(Tree, BTreeMapIter, SUFFIX) *outIter), {  \
+          REnd, (struct MODULE_TYPED(Tree, B_MapIter, SUFFIX) *outIter), {  \
             if (!self || !outIter)                                             \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            return MODULE_FUNC(Tree, BTreeMapIter, SUFFIX, FromPos)(           \
+            return MODULE_FUNC(Tree, B_MapIter, SUFFIX, FromPos)(           \
                 outIter, self->root, NULL, 0U, true);                          \
           }),                                                                  \
                                                                                \
       OPERATION_INLINE(                                                        \
           FindIter,                                                            \
           (KEY_TYPE key,                                                       \
-           struct MODULE_TYPED(Tree, BTreeMapIter, SUFFIX) *outIter),          \
+           struct MODULE_TYPED(Tree, B_MapIter, SUFFIX) *outIter),          \
           {                                                                    \
             if (!self || !outIter)                                             \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *node = NULL;     \
+            struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *node = NULL;     \
             size_t idx = 0U;                                                   \
-            bool found = MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), FindPos)(    \
+            bool found = MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), FindPos)(    \
                 self->root, self->compare, key, &node, &idx);                  \
-            MODULE_FUNC(Tree, BTreeMapIter, SUFFIX, FromPos)(                  \
+            MODULE_FUNC(Tree, B_MapIter, SUFFIX, FromPos)(                  \
                 outIter, self->root, node, idx, false);                        \
             return found ? STATUS_CONST(SUCCESS) : STATUS_CONST(NOT_FOUND);    \
           }),                                                                  \
@@ -1943,51 +1945,51 @@
       OPERATION_INLINE(                                                        \
           LowerBound,                                                          \
           (KEY_TYPE key,                                                       \
-           struct MODULE_TYPED(Tree, BTreeMapIter, SUFFIX) *outIter),          \
+           struct MODULE_TYPED(Tree, B_MapIter, SUFFIX) *outIter),          \
           {                                                                    \
             if (!self || !outIter)                                             \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *node = NULL;     \
+            struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *node = NULL;     \
             size_t idx = 0U;                                                   \
-            MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), LowerBoundPos)(           \
+            MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), LowerBoundPos)(           \
                 self->root, self->compare, key, &node, &idx);                  \
-            return MODULE_FUNC(Tree, BTreeMapIter, SUFFIX, FromPos)(           \
+            return MODULE_FUNC(Tree, B_MapIter, SUFFIX, FromPos)(           \
                 outIter, self->root, node, idx, false);                        \
           }),                                                                  \
                                                                                \
       OPERATION_INLINE(                                                        \
           UpperBound,                                                          \
           (KEY_TYPE key,                                                       \
-           struct MODULE_TYPED(Tree, BTreeMapIter, SUFFIX) *outIter),          \
+           struct MODULE_TYPED(Tree, B_MapIter, SUFFIX) *outIter),          \
           {                                                                    \
             if (!self || !outIter)                                             \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            struct MODULE_ITYPED(Tree, BTreeMapNode, SUFFIX) *node = NULL;     \
+            struct MODULE_ITYPED(Tree, B_MapNode, SUFFIX) *node = NULL;     \
             size_t idx = 0U;                                                   \
-            MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), UpperBoundPos)(           \
+            MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), UpperBoundPos)(           \
                 self->root, self->compare, key, &node, &idx);                  \
-            return MODULE_FUNC(Tree, BTreeMapIter, SUFFIX, FromPos)(           \
+            return MODULE_FUNC(Tree, B_MapIter, SUFFIX, FromPos)(           \
                 outIter, self->root, node, idx, false);                        \
           }),                                                                  \
                                                                                \
       OPERATION_INLINE(                                                        \
           ForEach,                                                             \
           (MODULE_ENUM(Tree, Traversal) order,                                 \
-           MODULE_CLOSURE(Tree, BTreeMap, SUFFIX, Visitor) visitor),           \
+           MODULE_CLOSURE(Tree, B_Map, SUFFIX, Visitor) visitor),           \
           {                                                                    \
             if (!self || !CLOSURE_IS_VALID(visitor))                           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             switch (order) {                                                   \
             case Tree_Traversal_IN_ORDER:                                      \
-              MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), InOrder)(self->root,    \
+              MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), InOrder)(self->root,    \
                                                                 visitor);      \
               return STATUS_CONST(SUCCESS);                                    \
             case Tree_Traversal_PRE_ORDER:                                     \
-              MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), PreOrder)(self->root,   \
+              MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), PreOrder)(self->root,   \
                                                                  visitor);     \
               return STATUS_CONST(SUCCESS);                                    \
             case Tree_Traversal_POST_ORDER:                                    \
-              MODULE_IFUNC(Tree, NS(BTreeMap, SUFFIX), PostOrder)(self->root,  \
+              MODULE_IFUNC(Tree, NS(B_Map, SUFFIX), PostOrder)(self->root,  \
                                                                   visitor);    \
               return STATUS_CONST(SUCCESS);                                    \
             default:                                                           \
@@ -1997,31 +1999,31 @@
   )
 #endif
 
-#ifndef TEMPLATE_Tree_BTreeMap
-#define TEMPLATE_Tree_BTreeMap(SUFFIX, KEY_TYPE, VALUE_TYPE)                   \
-  TEMPLATE_Tree_BTreeMapDegree(SUFFIX, KEY_TYPE, VALUE_TYPE,                   \
+#ifndef TEMPLATE_Tree_B_Map
+#define TEMPLATE_Tree_B_Map(SUFFIX, KEY_TYPE, VALUE_TYPE)                   \
+  TEMPLATE_Tree_B_MapDegree(SUFFIX, KEY_TYPE, VALUE_TYPE,                   \
                                BTREE_DEFAULT_DEGREE)
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
-#if defined(SUFFIX) && defined(KEY_TYPE) && defined(VALUE_TYPE) && defined(DEGREE)
-  TEMPLATE_Tree_BTreeMapDegree(SUFFIX, KEY_TYPE, VALUE_TYPE, DEGREE);
+#if (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(KEY_TYPE) && defined(VALUE_TYPE) && defined(DEGREE)
+  TEMPLATE_Tree_B_MapDegree(SUFFIX, KEY_TYPE, VALUE_TYPE, DEGREE);
   #undef SUFFIX
   #undef KEY_TYPE
   #undef VALUE_TYPE
   #undef DEGREE
-#elif defined(SUFFIX) && defined(KEY_TYPE) && defined(VALUE_TYPE)
-  TEMPLATE_Tree_BTreeMap(SUFFIX, KEY_TYPE, VALUE_TYPE);
+#elif (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(KEY_TYPE) && defined(VALUE_TYPE)
+  TEMPLATE_Tree_B_Map(SUFFIX, KEY_TYPE, VALUE_TYPE);
   #undef SUFFIX
   #undef KEY_TYPE
   #undef VALUE_TYPE
-#elif defined(SUFFIX) && defined(KEY_TYPE) && defined(DEGREE)
-  TEMPLATE_Tree_BTreeSetDegree(SUFFIX, KEY_TYPE, DEGREE);
+#elif (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(KEY_TYPE) && defined(DEGREE)
+  TEMPLATE_Tree_B_SetDegree(SUFFIX, KEY_TYPE, DEGREE);
   #undef SUFFIX
   #undef KEY_TYPE
   #undef DEGREE
-#elif defined(SUFFIX) && defined(KEY_TYPE)
-  TEMPLATE_Tree_BTreeSet(SUFFIX, KEY_TYPE);
+#elif (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(KEY_TYPE)
+  TEMPLATE_Tree_B_Set(SUFFIX, KEY_TYPE);
   #undef SUFFIX
   #undef KEY_TYPE
 #endif

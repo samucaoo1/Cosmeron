@@ -14,6 +14,15 @@
 /* 1. Declarative Module: Condition (DeferNode, DeferTraitsTarget, Package)   */
 /* ========================================================================== */
 
+#if defined(CONDITION_DISABLE_FUNCTION_TABLE) &&                               \
+    !defined(COSMERON_DISABLE_FT_Condition)
+#define COSMERON_DISABLE_FT_Condition 1
+#endif
+#if defined(CONDITION_DEFER_DISABLE_FUNCTION_TABLE) &&                         \
+    !defined(COSMERON_DISABLE_FT_Condition_Defer)
+#define COSMERON_DISABLE_FT_Condition_Defer 1
+#endif
+
 MODULE(
     DOMAIN(Core), Condition, CLOSURE(PROCEDURE(DeferAction, ())),
 
@@ -124,7 +133,7 @@ MODULE(
 
 #define COSMERON_MACRO_INTERNAL_DEFER_TRY_SCOPE_IMPL(FRAME_VAR, STEP_VAR,      \
                                                      ONCE_VAR, EXIT_ACTION)    \
-  for (MODULE_TYPE(Condition, ExceptionFrame) FRAME_VAR = {0};                 \
+  for (MODULE_TYPE(Condition, Exception_Frame) FRAME_VAR = {0};                 \
        FRAME_VAR.step == 0;                                                    \
        MODULE_IFUNC(Condition, Exception, Finish)(&FRAME_VAR))                 \
     for (int STEP_VAR = MODULE_IFUNC(Condition, Exception, Begin)(             \

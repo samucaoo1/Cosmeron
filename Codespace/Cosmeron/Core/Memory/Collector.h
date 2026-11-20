@@ -1,11 +1,9 @@
 #pragma once
 
 #include "../Condition/Status.h"
-#include "../Module/Callback/Callback.h"
 #include "../Module/Closure/Closure.h"
 #include "../Module/Module.h"
 #include "../Preprocessor/Compiling.inc"
-#include "../Preprocessor/Detect/Detect.h"
 #include "Alloc.h"
 #include "Allocator.h"
 #include "Heap.h"
@@ -27,23 +25,20 @@
   PP_OP_CAT2(MEMORY_COLLECTOR_CONFIG_COL_, FIELD) ROW
 
 #define MEMORY_COLLECTOR_CONFIG_TABLE(X)                                       \
+  X((DEFAULT_INITIAL_HEAP_PAGES, 4U))                                          \
   X((DEFAULT_INITIAL_THRESHOLD, 65536U))                                       \
   X((DEFAULT_GROWTH_PERCENT, 200U))                                            \
   X((MIN_PACING_PERCENT, 25U))                                                 \
   X((MAX_PACING_PERCENT, 400U))                                                \
+  X((MIN_SURVIVAL_PERCENT, 10U))                                               \
+  X((PERCENT_BASE, 100U))                                                      \
   X((MAX_ROOTS, 128U))                                                         \
   X((WORKLIST_CHUNK_CAPACITY, 512U))
-
-ENUM_DEF_EX(MODULE_NS(Memory, Collector), Config,
-            MEMORY_COLLECTOR_CONFIG_TABLE, PLAIN)
 
 CLOSURE_PROCEDURE(
     MODULE_INS(Memory, CollectorFinalizer),
     (void *ptr)
 );
-
-#define MEMORY_COLLECTOR_FINALIZER_CLOSURE                                     \
-  TCLOSURE(MODULE_INS(Memory, CollectorFinalizer))
 
 #define MEMORY_COLLECTOR_FINALIZER_CALLBACK                                    \
   TCLOSURE(MODULE_INS(Memory, CollectorFinalizer))
@@ -55,7 +50,7 @@ CLOSURE_PROCEDURE(
   (1ULL << (offsetof(TYPE, FIELD) / sizeof(void *)))
 
 #define MEMORY_COLLECTOR_DESCRIPTOR_DEF(NAME, TYPE, ...)                       \
-  static const MODULE_TYPE(Memory, CollectorDescriptor) NAME = {               \
+  static const MODULE_TYPE(Memory, Collector_Descriptor) NAME = {               \
       .size = sizeof(TYPE),                                                    \
       .bitmap = (0ULL | __VA_ARGS__)                                           \
   }
@@ -65,7 +60,8 @@ CLOSURE_PROCEDURE(
 /* ========================================================================== */
 
 MODULE(DOMAIN(Core), Memory,
-    STRUCT(CollectorDescriptor,
+    ENUM_EX(CollectorConfig, MEMORY_COLLECTOR_CONFIG_TABLE, PLAIN),
+    STRUCT(Collector_Descriptor,
         FIELDS(
             size_t size;
             uint64_t bitmap;
@@ -73,7 +69,7 @@ MODULE(DOMAIN(Core), Memory,
     ),
     ISTRUCT(CollectorWorklistChunk,
         FIELDS(
-            void *items[MODULE_CONST(Memory, Collector, WORKLIST_CHUNK_CAPACITY)];
+            void *items[MODULE_CONST(Memory, WORKLIST_CHUNK_CAPACITY)];
             size_t count;
             struct MODULE_ITYPE(Memory, CollectorWorklistChunk) *next;
         )
@@ -105,7 +101,7 @@ MODULE(DOMAIN(Core), Memory,
             MODULE_ITYPE(Memory, CollectorWorklist) worklist;
             MODULE_ITYPE(Memory, CollectorFinalizerEntry) *finalizers;
             MODULE_ITYPE(Memory, CollectorFinalizerEntry) *pendingFinalizers;
-            MODULE_ITYPE(Memory, CollectorRootEntry) roots[MODULE_CONST(Memory, Collector, MAX_ROOTS)];
+            MODULE_ITYPE(Memory, CollectorRootEntry) roots[MODULE_CONST(Memory, MAX_ROOTS)];
             const void *stackBottom;
             size_t nextThreshold;
             size_t liveBytesAfterCollect;
@@ -116,9 +112,11 @@ MODULE(DOMAIN(Core), Memory,
         ),
         OPERATION(Create, (size_t initialHeapPages, const void *stackBottom)),
         OPERATION(Destroy, ()),
-        OPERATION(Alloc, (void *outPointerObject, size_t size, uint8_t policy, const void *descriptor)),
-        OPERATION(AllocTyped, (void *outPointerObject, const MODULE_TYPE(Memory, CollectorDescriptor) *descriptor)),
-        OPERATION(AllocAtomic, (void *outPointerObject, size_t size)),
+        VARIANT(Alloc,
+            OPERATION((void *outPointerObject, size_t size, uint8_t policy, const void *descriptor)),
+            OPERATION(Typed, (void *outPointerObject, const MODULE_TYPE(Memory, Collector_Descriptor) *descriptor)),
+            OPERATION(Atomic, (void *outPointerObject, size_t size))
+        ),
         OPERATION(SetFinalizer, (const void *ptr, MEMORY_COLLECTOR_FINALIZER_CALLBACK finalizer)),
         OPERATION(PinRoot, (const void *rootPointerAddress)),
         OPERATION(UnpinRoot, (const void *rootPointerAddress)),
@@ -135,9 +133,11 @@ MODULE(DOMAIN(Core), Memory,
         OPERATION(Startup, (const void *stackBottom)),
         OPERATION(Shutdown, ()),
         FUNCTION(MODULE_TYPE(Memory, Collector) *, DefaultCollector, ()),
-        OPERATION(Alloc, (void *outPointerObject, size_t size)),
-        OPERATION(AllocTyped, (void *outPointerObject, const MODULE_TYPE(Memory, CollectorDescriptor) *descriptor)),
-        OPERATION(AllocAtomic, (void *outPointerObject, size_t size)),
+        VARIANT(Alloc,
+            OPERATION((void *outPointerObject, size_t size)),
+            OPERATION(Typed, (void *outPointerObject, const MODULE_TYPE(Memory, Collector_Descriptor) *descriptor)),
+            OPERATION(Atomic, (void *outPointerObject, size_t size))
+        ),
         OPERATION(SetFinalizer, (const void *ptr, MEMORY_COLLECTOR_FINALIZER_CALLBACK finalizer)),
         OPERATION(PinRoot, (const void *rootPointerAddress)),
         OPERATION(UnpinRoot, (const void *rootPointerAddress)),

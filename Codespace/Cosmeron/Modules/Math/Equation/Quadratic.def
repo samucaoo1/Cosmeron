@@ -1,5 +1,10 @@
 /* Quadratic.def - Dual Mode Engine (Zero Duplication) */
 
+#include "../Impl/Common.inc"
+#define COSMERON_INTERNAL_NO_AUTO_INSTANTIATE 1
+#include "Linear.def"
+#undef COSMERON_INTERNAL_NO_AUTO_INSTANTIATE
+
 #ifndef TEMPLATE_Math_QuadraticEquation
 #define TEMPLATE_Math_QuadraticEquation(SUFFIX, TYPE)                          \
   TEMPLATE_PACKAGE(Math, QuadraticEquation, SUFFIX,                            \
@@ -8,7 +13,8 @@
           return (TYPE)0;                                                      \
         }                                                                      \
         TYPE guess = x > (TYPE)1 ? x * (TYPE)0.5 : (TYPE)1;                    \
-        for (int i = 0; i < 64; ++i) {                                         \
+        for (size_t i = 0U;                                                    \
+             i < CNS(Math, Equation, Internal, MAX_SQRT_ITERATIONS); ++i) {    \
           const TYPE next = (TYPE)0.5 * (guess + x / guess);                   \
           if (next == guess) {                                                 \
             break;                                                             \
@@ -48,16 +54,17 @@
         }                                                                      \
         const TYPE sq =                                                        \
             MODULE_FUNC(Math, QuadraticEquation, SUFFIX, Sqrt)(d);             \
+        const TYPE twoA = (TYPE)2 * a;                                         \
         *outSolution = MODULE_CONST(Math, TWO);                                \
-        *outResult1 = (-b - sq) / ((TYPE)2 * a);                               \
-        *outResult2 = (-b + sq) / ((TYPE)2 * a);                               \
+        *outResult1 = (-b - sq) / twoA;                                        \
+        *outResult2 = (-b + sq) / twoA;                                        \
         return STATUS_CONST(SUCCESS);                                          \
       })                                                                       \
   )
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
-#if defined(SUFFIX) && defined(TYPE)
+#if (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(TYPE)
   TEMPLATE_Math_QuadraticEquation(SUFFIX, TYPE);
   #undef SUFFIX
   #undef TYPE

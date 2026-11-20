@@ -9,6 +9,15 @@
 /* Package Declaration: Memory_Operations                                     */
 /* ========================================================================== */
 
+#if defined(MEMORY_DISABLE_FUNCTION_TABLE) &&                                  \
+    !defined(COSMERON_DISABLE_FT_Memory)
+#define COSMERON_DISABLE_FT_Memory 1
+#endif
+#if defined(MEMORY_OPERATIONS_DISABLE_FUNCTION_TABLE) &&                       \
+    !defined(COSMERON_DISABLE_FT_Memory_Operations)
+#define COSMERON_DISABLE_FT_Memory_Operations 1
+#endif
+
 MODULE(DOMAIN(Core), Memory,
     PACKAGE(Operations,
         VARIANT(Copy,

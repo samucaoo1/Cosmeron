@@ -166,7 +166,7 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
         return MODULE_FUNC(Text, Builder, AppendBuffer)(self, cstr, len);
       }),
 
-      OPERATION(View, (MODULE_TYPE(Text, View, 8) view), {
+      OPERATION(View, (MODULE_TYPE(Text, View8) view), {
         if (!self)
           return STATUS_CONST(INVALID_ARGUMENT);
 
@@ -180,7 +180,7 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
         if (!self)
           return STATUS_CONST(INVALID_ARGUMENT);
 
-        uint8_t utf8Bytes[4];
+        uint8_t utf8Bytes[CNS(Text, Builder, Internal, UTF8_MAX_BYTES)];
         size_t outSize = 0U;
         OPSTATUS status = MODULE_FUNC(Text, UTF8, Encode)(
             codepoint, utf8Bytes, sizeof(utf8Bytes), &outSize);
@@ -230,18 +230,18 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
       })
     ),
 
-    OPERATION(BuildString, (MODULE_TYPE(Text, String, 8) *outString), {
+    OPERATION(BuildString, (MODULE_TYPE(Text, String8) *outString), {
       if (!self || !outString)
         return STATUS_CONST(INVALID_ARGUMENT);
 
-      OPSTATUS status = MODULE_FUNC(Text, String, 8, Init)(outString);
+      OPSTATUS status = MODULE_FUNC(Text, String8, Init)(outString);
       if (status != STATUS_CONST(SUCCESS))
         return status;
 
       if (self->size == 0U)
         return STATUS_CONST(SUCCESS);
 
-      return MODULE_FUNC(Text, String, 8, FromBuffer)(
+      return MODULE_FUNC(Text, String8, FromBuffer)(
           outString, self->buffer, self->size);
     }),
 
@@ -263,10 +263,10 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
       return self->buffer;
     }),
 
-    CONST_FUNCTION(MODULE_TYPED(Text, View, 8), View, (), {
+    CONST_FUNCTION(MODULE_TYPE(Text, View8), View, (), {
       if (!self || !self->buffer)
-        return MODULE_FUNC(Text, View, 8, Empty)();
-      return MODULE_FUNC(Text, View, 8, Create)(self->buffer, self->size);
+        return MODULE_FUNC(Text, View8, Empty)();
+      return MODULE_FUNC(Text, View8, Create)(self->buffer, self->size);
     })
   )
 );

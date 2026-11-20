@@ -125,3 +125,5 @@ MODULE(DOMAIN(Modules), Text,
 );
 
 #include "Impl/CString.impl"
+
+/* EOF */

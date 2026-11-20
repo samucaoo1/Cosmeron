@@ -2,7 +2,7 @@
 
 MODULE_IMPLEMENT(DOMAIN(Modules), Text,
   PACKAGE(View8,
-    PREDICATE(Validate, (MODULE_TYPED(Text, View, 8) view), {
+    PREDICATE(Validate, (MODULE_TYPE(Text, View8) view), {
       if (view.size == 0U) return true;
       if (view.data == NULL) return false;
       return MODULE_FUNC(Text, UTF8, Validate)((const unsigned char *)view.data,
@@ -10,7 +10,7 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
     }),
 
     OPERATION(CountCodepoints,
-              (MODULE_TYPED(Text, View, 8) view, size_t *outCount), {
+              (MODULE_TYPE(Text, View8) view, size_t *outCount), {
       if (outCount == NULL) return STATUS_CONST(INVALID_ARGUMENT);
       if (view.size == 0U) {
         *outCount = 0U;
@@ -23,7 +23,7 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
     }),
 
     OPERATION(NextCodepoint,
-              (MODULE_TYPED(Text, View, 8) *view,
+              (MODULE_TYPE(Text, View8) *view,
                MODULE_TYPE(Text, Char32) *outCodepoint), {
       if (view == NULL || outCodepoint == NULL) {
         return STATUS_CONST(INVALID_ARGUMENT);
@@ -43,14 +43,14 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
     }),
 
     VARIANT(Trim,
-      FUNCTION(MODULE_TYPED(Text, View, 8),
-               (MODULE_TYPED(Text, View, 8) view), {
+      FUNCTION(MODULE_TYPE(Text, View8),
+               (MODULE_TYPE(Text, View8) view), {
         return MODULE_FUNC(Text, View8, TrimLeft)(
             MODULE_FUNC(Text, View8, TrimRight)(view));
       }),
 
-      FUNCTION(MODULE_TYPED(Text, View, 8), Left,
-               (MODULE_TYPED(Text, View, 8) view), {
+      FUNCTION(MODULE_TYPE(Text, View8), Left,
+               (MODULE_TYPE(Text, View8) view), {
         if (view.data == NULL || view.size == 0U) {
           return view;
         }
@@ -69,11 +69,11 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
           ptr += units;
           remaining -= units;
         }
-        return MODULE_FUNC(Text, View, 8, Create)((const char *)ptr, remaining);
+        return MODULE_FUNC(Text, View8, Create)((const char *)ptr, remaining);
       }),
 
-      FUNCTION(MODULE_TYPED(Text, View, 8), Right,
-               (MODULE_TYPED(Text, View, 8) view), {
+      FUNCTION(MODULE_TYPE(Text, View8), Right,
+               (MODULE_TYPE(Text, View8) view), {
         if (view.data == NULL || view.size == 0U) {
           return view;
         }
@@ -81,8 +81,12 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
         size_t end = view.size;
         while (end > 0U) {
           size_t cpStart = end - 1U;
-          while (cpStart > 0U && (bytes[cpStart] & 0xC0U) == 0x80U &&
-                 (end - cpStart) < 4U) {
+          while (cpStart > 0U &&
+                 (bytes[cpStart] &
+                  (unsigned char)CNS(Text, View, Internal, UTF8_CONT_MASK)) ==
+                     (unsigned char)CNS(Text, View, Internal, UTF8_CONT_TAG) &&
+                 (end - cpStart) <
+                     (size_t)CNS(Text, View, Internal, UTF8_MAX_BYTES)) {
             --cpStart;
           }
           MODULE_TYPE(Text, Char32) cp = 0U;
@@ -97,13 +101,13 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
           }
           end = cpStart;
         }
-        return MODULE_FUNC(Text, View, 8, Create)(view.data, end);
+        return MODULE_FUNC(Text, View8, Create)(view.data, end);
       })
     ),
 
     OPERATION(SliceCodepoints,
-              (MODULE_TYPED(Text, View, 8) view, size_t codepointStart,
-               size_t codepointCount, MODULE_TYPED(Text, View, 8) *outView), {
+              (MODULE_TYPE(Text, View8) view, size_t codepointStart,
+               size_t codepointCount, MODULE_TYPE(Text, View8) *outView), {
       if (outView == NULL) {
         return STATUS_CONST(INVALID_ARGUMENT);
       }
@@ -111,7 +115,7 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
         return STATUS_CONST(INVALID_ARGUMENT);
       }
       if (codepointCount == 0U) {
-        *outView = MODULE_FUNC(Text, View, 8, Empty)();
+        *outView = MODULE_FUNC(Text, View8, Empty)();
         return STATUS_CONST(SUCCESS);
       }
 
@@ -126,8 +130,9 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
           byteStart = offset;
           startFound = true;
         }
-        if (startFound && currentCodepoint == codepointStart + codepointCount) {
-          *outView = MODULE_FUNC(Text, View, 8, Create)(
+        if (startFound &&
+            (currentCodepoint - codepointStart) == codepointCount) {
+          *outView = MODULE_FUNC(Text, View8, Create)(
               view.data + byteStart, offset - byteStart);
           return STATUS_CONST(SUCCESS);
         }
@@ -151,9 +156,11 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
         return STATUS_CONST(OUT_OF_RANGE);
       }
 
-      *outView = MODULE_FUNC(Text, View, 8, Create)(
+      *outView = MODULE_FUNC(Text, View8, Create)(
           view.data + byteStart, offset - byteStart);
       return STATUS_CONST(SUCCESS);
     })
   )
 );
+
+/* EOF */

@@ -241,10 +241,9 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
           !MODULE_IFUNC(Text, Attribute, GridAttributeSizeValid)(size))
         return STATUS_CONST(INVALID_ARGUMENT);
       status = MODULE_FUNC(Text, Attribute, Create)(&temporary, size);
-      if (status != STATUS_CONST(SUCCESS))
-        return status == STATUS_CONST(OUT_OF_MEMORY)
-                   ? STATUS_CONST(OUT_OF_MEMORY)
-                   : status;
+      if (status != STATUS_CONST(SUCCESS)) {
+        return status;
+      }
       width = grid->size.col < size.col ? grid->size.col : size.col;
       height = grid->size.row < size.row ? grid->size.row : size.row;
       for (y = 0U; y < height; ++y)
@@ -264,10 +263,9 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
       if (!MODULE_FUNC(Text, Attribute, IsValid)(grid))
         return STATUS_CONST(INVALID_ARGUMENT);
       status = MODULE_FUNC(Text, Attribute, Create)(&temporary, size);
-      if (status != STATUS_CONST(SUCCESS))
-        return status == STATUS_CONST(OUT_OF_MEMORY)
-                   ? STATUS_CONST(OUT_OF_MEMORY)
-                   : status;
+      if (status != STATUS_CONST(SUCCESS)) {
+        return status;
+      }
       MODULE_FUNC(Text, Attribute, Destroy)(grid);
       *grid = temporary;
       return STATUS_CONST(SUCCESS);
@@ -295,3 +293,5 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
     })
   )
 );
+
+/* EOF */

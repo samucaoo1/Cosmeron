@@ -26,10 +26,8 @@ MODULE_IMPLEMENT(
                 if (size > (size_t)(UINTPTR_MAX - leftAddress) ||
                     size > (size_t)(UINTPTR_MAX - rightAddress))
                   return STATUS_CONST(OUT_OF_RANGE);
-                if ((leftAddress < rightAddress &&
-                     leftAddress + size > rightAddress) ||
-                    (rightAddress < leftAddress &&
-                     rightAddress + size > leftAddress))
+                if (leftAddress < rightAddress + size &&
+                    rightAddress < leftAddress + size)
                   return STATUS_CONST(INVALID_ARGUMENT);
               }
 

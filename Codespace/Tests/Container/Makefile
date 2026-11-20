@@ -3,7 +3,7 @@ CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L
 BUILD ?= .build
 LDLIBS ?=
 
-TESTS := DynamicBitset Iterator Array Linked Tree Hash Graph IncludeAll NoFunctionTable
+TESTS := DynamicBitset Iterator Array Linked Tree Hash Graph IncludeAll NoFunctionTable StandaloneDef
 
 all: run
 

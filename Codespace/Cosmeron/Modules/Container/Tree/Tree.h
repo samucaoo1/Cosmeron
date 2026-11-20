@@ -2,10 +2,10 @@
 #define COSMERON_CONTAINER_TREE_TREE_H
 
 #include "Impl/Common.inc"
-#include "TBST.h"
-#include "TAVL.h"
-#include "TRedBlack.h"
-#include "TBTree.h"
+#include "BST.h"
+#include "AVL.h"
+#include "RedBlack.h"
+#include "BTree.h"
 
 #endif /* COSMERON_CONTAINER_TREE_TREE_H */
 

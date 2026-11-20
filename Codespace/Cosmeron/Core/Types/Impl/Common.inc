@@ -332,4 +332,93 @@ MODULE(Type,
   )
 );
 
+/* ========================================================================== */
+/* ByteTag Internal Constants & Shared Helpers (Zero FunctionTable Overhead)  */
+/* ========================================================================== */
+
+#define TYPE_BYTETAG_CONST_COL_NAME(NAME, VALUE) NAME
+#define TYPE_BYTETAG_CONST_COL_VALUE(NAME, VALUE) VALUE
+#define TYPE_BYTETAG_CONST_GET(FIELD, ROW)                                     \
+  PP_OP_CAT2(TYPE_BYTETAG_CONST_COL_, FIELD) ROW
+
+#define TYPE_BYTETAG_CONST_TABLE(X)                                            \
+  X((ASCII_PRINTABLE_MIN, 0x20U))                                              \
+  X((ASCII_PRINTABLE_MAX, 0x7EU))
+
+MODULE(DOMAIN(Core), Type,
+  INTERNAL_EX(ByteTag,
+    ENUM_EX(Const, TYPE_BYTETAG_CONST_TABLE, PLAIN),
+
+    PROCEDURE(UnpackText, (uint64_t value, size_t byteCount, char *outText), {
+      const size_t bitsPerByte = CNS(Bit, Internal, BITS_PER_BYTE);
+      for (size_t i = 0U; i < byteCount; ++i) {
+        const size_t shift = (byteCount - 1U - i) * bitsPerByte;
+        outText[i] =
+            (char)((value >> shift) & CNS(Bit, Internal, BYTE_ALL_ONES));
+      }
+      outText[byteCount] = '\0';
+    }),
+
+    FUNCTION(uint64_t, PackBE,
+             (const uint8_t *src, size_t available, size_t byteCount,
+              char padChar, char *outText), {
+      const size_t bitsPerByte = CNS(Bit, Internal, BITS_PER_BYTE);
+      uint64_t val = 0U;
+      for (size_t i = 0U; i < byteCount; ++i) {
+        const char c = (src && i < available) ? (char)src[i] : padChar;
+        outText[i] = c;
+        const size_t shift = (byteCount - 1U - i) * bitsPerByte;
+        val |= ((uint64_t)(uint8_t)c) << shift;
+      }
+      outText[byteCount] = '\0';
+      return val;
+    }),
+
+    FUNCTION(uint64_t, PackLE, (const uint8_t *src, size_t byteCount), {
+      const size_t bitsPerByte = CNS(Bit, Internal, BITS_PER_BYTE);
+      uint64_t val = 0U;
+      for (size_t i = 0U; i < byteCount; ++i) {
+        const size_t shift = i * bitsPerByte;
+        val |= ((uint64_t)src[i]) << shift;
+      }
+      return val;
+    }),
+
+    PROCEDURE(WriteBytes,
+              (uint64_t value, size_t byteCount, void *dest, bool bigEndian), {
+      const size_t bitsPerByte = CNS(Bit, Internal, BITS_PER_BYTE);
+      uint8_t *outBytes = (uint8_t *)dest;
+      for (size_t i = 0U; i < byteCount; ++i) {
+        const size_t shift =
+            (bigEndian ? (byteCount - 1U - i) : i) * bitsPerByte;
+        outBytes[i] =
+            (uint8_t)((value >> shift) & CNS(Bit, Internal, BYTE_ALL_ONES));
+      }
+    }),
+
+    PROCEDURE(FormatPrintable,
+              (const char *text, size_t byteCount, char *dest), {
+      for (size_t i = 0U; i < byteCount; ++i) {
+        const uint8_t c = (uint8_t)text[i];
+        dest[i] = (c >= CNS(Type, ByteTag, Internal, ASCII_PRINTABLE_MIN) &&
+                   c <= CNS(Type, ByteTag, Internal, ASCII_PRINTABLE_MAX))
+                      ? (char)c
+                      : '.';
+      }
+      dest[byteCount] = '\0';
+    }),
+
+    PREDICATE(IsPrintableText, (const char *text, size_t byteCount), {
+      for (size_t i = 0U; i < byteCount; ++i) {
+        const uint8_t c = (uint8_t)text[i];
+        if (c < CNS(Type, ByteTag, Internal, ASCII_PRINTABLE_MIN) ||
+            c > CNS(Type, ByteTag, Internal, ASCII_PRINTABLE_MAX)) {
+          return false;
+        }
+      }
+      return true;
+    })
+  )
+);
+
 /* EOF */

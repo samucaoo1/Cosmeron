@@ -2,8 +2,8 @@
 #include <assert.h>
 #include <stdio.h>
 
-/* Custom BTreeSet degree instantiation */
-TEMPLATE_INSTANTIATE(Tree, BTreeSetDegree, Int32_Deg4, int32_t, 4U);
+/* Custom B_Set degree instantiation */
+TEMPLATE_INSTANTIATE(Tree, B_SetDegree, Int32_Deg4, int32_t, 4U);
 
 /* Internal test helpers (strictly namespaced) */
 INTERNAL_DEF(
@@ -36,8 +36,8 @@ INTERNAL_DEF(
     }))
 
 static void NS(TreeTest, BSTSetAndIter)(void) {
-  MODULE_TYPED(Tree, BSTSet, Int32) set;
-  assert(MODULE_FUNC(Tree, BSTSet, Int32, Create)(&set) ==
+  MODULE_TYPED(Tree, BST_Set, Int32) set;
+  assert(MODULE_FUNC(Tree, BST_Set, Int32, Create)(&set) ==
          STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL_0(&set, IsEmpty));
 
@@ -55,8 +55,8 @@ static void NS(TreeTest, BSTSetAndIter)(void) {
   assert(*minKey == 10 && *maxKey == 80);
 
   /* Optional Iterator: Begin -> End */
-  MODULE_TYPED(Tree, BSTSetIter, Int32) it;
-  MODULE_TYPED(Tree, BSTSetIter, Int32) end;
+  MODULE_TYPED(Tree, BST_SetIter, Int32) it;
+  MODULE_TYPED(Tree, BST_SetIter, Int32) end;
   assert(OBJECT_CALL(&set, Begin, &it) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&set, End, &end) == STATUS_CONST(SUCCESS));
 
@@ -75,8 +75,8 @@ static void NS(TreeTest, BSTSetAndIter)(void) {
   assert(*lastKey == 80);
 
   /* Range query: LowerBound / UpperBound */
-  MODULE_TYPED(Tree, BSTSetIter, Int32) lb;
-  MODULE_TYPED(Tree, BSTSetIter, Int32) ub;
+  MODULE_TYPED(Tree, BST_SetIter, Int32) lb;
+  MODULE_TYPED(Tree, BST_SetIter, Int32) ub;
   assert(OBJECT_CALL(&set, LowerBound, 25, &lb) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&set, UpperBound, 60, &ub) == STATUS_CONST(SUCCESS));
   int64_t rangeSum = 0;
@@ -97,8 +97,8 @@ static void NS(TreeTest, BSTSetAndIter)(void) {
 
   /* ForEach PreOrder & InOrder */
   int64_t total = 0;
-  MODULE_CLOSURE(Tree, BSTSet, Int32, Visitor) visitor =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Tree, BSTSet, Int32, Visitor), Bind)(
+  MODULE_CLOSURE(Tree, BST_Set, Int32, Visitor) visitor =
+      NS_JOIN(MODULE_CLOSURE_FUNC(Tree, BST_Set, Int32, Visitor), Bind)(
           MODULE_IFUNC(TreeTest, SumSetKey), &total);
   assert(OBJECT_CALL(&set, ForEach, Tree_Traversal_IN_ORDER, visitor) ==
          STATUS_CONST(SUCCESS));
@@ -108,8 +108,8 @@ static void NS(TreeTest, BSTSetAndIter)(void) {
 }
 
 static void NS(TreeTest, AVLBalanceAndMap)(void) {
-  MODULE_TYPED(Tree, AVLSet, Int32) avl;
-  assert(MODULE_FUNC(Tree, AVLSet, Int32, Create)(&avl) ==
+  MODULE_TYPED(Tree, AVL_Set, Int32) avl;
+  assert(MODULE_FUNC(Tree, AVL_Set, Int32, Create)(&avl) ==
          STATUS_CONST(SUCCESS));
 
   for (int32_t i = 1; i <= 31; i++) {
@@ -125,9 +125,9 @@ static void NS(TreeTest, AVLBalanceAndMap)(void) {
   assert(OBJECT_CALL_0(&avl, Height) <= 5U);
   OBJECT_CALL_0(&avl, Destroy);
 
-  /* AVLMap with custom descending comparator */
-  MODULE_TYPED(Tree, AVLMap, Int32_Int32) map;
-  assert(MODULE_FUNC(Tree, AVLMap, Int32_Int32, CreateWithComparator)(
+  /* AVL_Map with custom descending comparator */
+  MODULE_TYPED(Tree, AVL_Map, Int32_Int32) map;
+  assert(MODULE_FUNC(Tree, AVL_Map, Int32_Int32, CreateWithComparator)(
              &map, MODULE_IFUNC(TreeTest, DescInt32), NULL) ==
          STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&map, Insert, 1, 100) == STATUS_CONST(SUCCESS));
@@ -138,14 +138,14 @@ static void NS(TreeTest, AVLBalanceAndMap)(void) {
   assert(OBJECT_CALL(&map, Find, 2, &v) == STATUS_CONST(SUCCESS));
   assert(*v == 250);
 
-  MODULE_TYPED(Tree, AVLMapIter, Int32_Int32) mit;
+  MODULE_TYPED(Tree, AVL_MapIter, Int32_Int32) mit;
   assert(OBJECT_CALL(&map, Begin, &mit) == STATUS_CONST(SUCCESS));
   const int32_t *firstKey = NULL;
   assert(OBJECT_CALL(&mit, Key, &firstKey) == STATUS_CONST(SUCCESS));
   assert(*firstKey == 2); /* Descending order */
 
-  MODULE_CLOSURE(Tree, AVLMap, Int32_Int32, Visitor) mv =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Tree, AVLMap, Int32_Int32, Visitor), Bind)(
+  MODULE_CLOSURE(Tree, AVL_Map, Int32_Int32, Visitor) mv =
+      NS_JOIN(MODULE_CLOSURE_FUNC(Tree, AVL_Map, Int32_Int32, Visitor), Bind)(
           MODULE_IFUNC(TreeTest, DoubleMapVal), NULL);
   assert(OBJECT_CALL(&map, ForEach, Tree_Traversal_IN_ORDER, mv) ==
          STATUS_CONST(SUCCESS));
@@ -155,8 +155,8 @@ static void NS(TreeTest, AVLBalanceAndMap)(void) {
 }
 
 static void NS(TreeTest, RedBlackSetAndMap)(void) {
-  MODULE_TYPED(Tree, RBSet, Int32) rb;
-  assert(MODULE_FUNC(Tree, RBSet, Int32, Create)(&rb) ==
+  MODULE_TYPED(Tree, RedBlack_Set, Int32) rb;
+  assert(MODULE_FUNC(Tree, RedBlack_Set, Int32, Create)(&rb) ==
          STATUS_CONST(SUCCESS));
 
   for (int32_t i = 1; i <= 31; i++) {
@@ -165,7 +165,7 @@ static void NS(TreeTest, RedBlackSetAndMap)(void) {
   assert(OBJECT_CALL_0(&rb, Size) == 31U);
   assert(OBJECT_CALL_0(&rb, Height) <= 10U);
 
-  MODULE_TYPED(Tree, RBSetIter, Int32) rit;
+  MODULE_TYPED(Tree, RedBlack_SetIter, Int32) rit;
   assert(OBJECT_CALL(&rb, RBegin, &rit) == STATUS_CONST(SUCCESS));
   const int32_t *k = NULL;
   assert(OBJECT_CALL(&rit, Next, &k) == STATUS_CONST(SUCCESS));
@@ -179,8 +179,8 @@ static void NS(TreeTest, RedBlackSetAndMap)(void) {
   assert(OBJECT_CALL_0(&rb, Size) == 15U);
   OBJECT_CALL_0(&rb, Destroy);
 
-  MODULE_TYPED(Tree, RBMap, Int32_Float64) rbm;
-  assert(MODULE_FUNC(Tree, RBMap, Int32_Float64, Create)(&rbm) ==
+  MODULE_TYPED(Tree, RedBlack_Map, Int32_Float64) rbm;
+  assert(MODULE_FUNC(Tree, RedBlack_Map, Int32_Float64, Create)(&rbm) ==
          STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&rbm, Insert, 10, 1.5) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&rbm, Upsert, 10, 2.5) == STATUS_CONST(SUCCESS));
@@ -191,8 +191,8 @@ static void NS(TreeTest, RedBlackSetAndMap)(void) {
 }
 
 static void NS(TreeTest, BTreeSetAndMap)(void) {
-  MODULE_TYPED(Tree, BTreeSet, Int32_Deg4) bt;
-  assert(MODULE_FUNC(Tree, BTreeSet, Int32_Deg4, Create)(&bt) ==
+  MODULE_TYPED(Tree, B_Set, Int32_Deg4) bt;
+  assert(MODULE_FUNC(Tree, B_Set, Int32_Deg4, Create)(&bt) ==
          STATUS_CONST(SUCCESS));
 
   for (int32_t i = 1; i <= 40; i++) {
@@ -200,8 +200,8 @@ static void NS(TreeTest, BTreeSetAndMap)(void) {
   }
   assert(OBJECT_CALL_0(&bt, Size) == 40U);
 
-  MODULE_TYPED(Tree, BTreeSetIter, Int32_Deg4) it;
-  MODULE_TYPED(Tree, BTreeSetIter, Int32_Deg4) end;
+  MODULE_TYPED(Tree, B_SetIter, Int32_Deg4) it;
+  MODULE_TYPED(Tree, B_SetIter, Int32_Deg4) end;
   assert(OBJECT_CALL(&bt, Begin, &it) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&bt, End, &end) == STATUS_CONST(SUCCESS));
   int32_t expected = 1;
@@ -227,9 +227,9 @@ static void NS(TreeTest, BTreeSetAndMap)(void) {
   assert(OBJECT_CALL_0(&bt, IsEmpty));
   OBJECT_CALL_0(&bt, Destroy);
 
-  /* BTreeMap */
-  MODULE_TYPED(Tree, BTreeMap, Int32_Int32) btm;
-  assert(MODULE_FUNC(Tree, BTreeMap, Int32_Int32, Create)(&btm) ==
+  /* B_Map */
+  MODULE_TYPED(Tree, B_Map, Int32_Int32) btm;
+  assert(MODULE_FUNC(Tree, B_Map, Int32_Int32, Create)(&btm) ==
          STATUS_CONST(SUCCESS));
   for (int32_t i = 1; i <= 20; i++) {
     assert(OBJECT_CALL(&btm, Insert, i, i * 10) == STATUS_CONST(SUCCESS));

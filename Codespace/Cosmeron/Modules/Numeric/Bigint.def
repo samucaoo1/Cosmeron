@@ -1,26 +1,30 @@
 /* Bigint.def - Dual Mode Engine (Zero Duplication) */
 
+#include "Impl/Common.inc"
+
 #ifndef TEMPLATE_Numeric_Bigint
 #define TEMPLATE_Numeric_Bigint(SUFFIX, TYPE)                                  \
-  TEMPLATE_OBJECT(Numeric, Bigint, SUFFIX,                                     \
+  TEMPLATE_WIDTH_OBJECT(Numeric, Bigint, SUFFIX,                                     \
       FIELDS(                                                                  \
           union {                                                              \
-            TYPE limb[((SUFFIX) / 64U)];                                       \
-            uint8_t byte[((SUFFIX) / 8U)];                                     \
+            TYPE limb[((SUFFIX) / CNS(Numeric, Internal, U64_BITS))];          \
+            uint8_t byte[((SUFFIX) / CNS(Numeric, Internal, BITS_PER_BYTE))];  \
           };                                                                   \
       ),                                                                       \
       OPERATION_INLINE(Clear, (), {                                            \
-        if (!self)                                                             \
+        if (!self) {                                                           \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
+        }                                                                      \
         MODULE_IFUNC(Numeric, LimbClear)(                                      \
             self->limb, sizeof(self->limb) / sizeof(self->limb[0]));           \
         return STATUS_CONST(SUCCESS);                                          \
       }),                                                                      \
       OPERATION_INLINE(Add,                                                    \
-                       (const MODULE_TYPED(Numeric, Bigint, SUFFIX) *source), { \
-        if (!self || !source)                                                  \
+                       (const MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) *source), {\
+        if (!self || !source) {                                                \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        MODULE_TYPED(Numeric, Bigint, SUFFIX) resultValue = *self;             \
+        }                                                                      \
+        MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) resultValue = *self;             \
         const OPSTATUS status = MODULE_IFUNC(Numeric, LimbAdd)(                \
             resultValue.limb, source->limb,                                    \
             sizeof(self->limb) / sizeof(self->limb[0]));                       \
@@ -30,10 +34,11 @@
         return status;                                                         \
       }),                                                                      \
       OPERATION_INLINE(Sub,                                                    \
-                       (const MODULE_TYPED(Numeric, Bigint, SUFFIX) *source), { \
-        if (!self || !source)                                                  \
+                       (const MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) *source), {\
+        if (!self || !source) {                                                \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        MODULE_TYPED(Numeric, Bigint, SUFFIX) resultValue = *self;             \
+        }                                                                      \
+        MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) resultValue = *self;             \
         const OPSTATUS status = MODULE_IFUNC(Numeric, LimbSub)(                \
             resultValue.limb, source->limb,                                    \
             sizeof(self->limb) / sizeof(self->limb[0]));                       \
@@ -43,12 +48,13 @@
         return status;                                                         \
       }),                                                                      \
       OPERATION_INLINE(Mul,                                                    \
-                       (const MODULE_TYPED(Numeric, Bigint, SUFFIX) *source), { \
-        if (!self || !source)                                                  \
+                       (const MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) *source), {\
+        if (!self || !source) {                                                \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        MODULE_TYPED(Numeric, Bigint, SUFFIX) left = *self;                    \
-        MODULE_TYPED(Numeric, Bigint, SUFFIX) result = {0};                    \
-        MODULE_TYPED(Numeric, Bigint, SUFFIX) shifted = {0};                   \
+        }                                                                      \
+        MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) left = *self;                    \
+        MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) result = {0};                    \
+        MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) shifted = {0};                   \
         const OPSTATUS status = MODULE_IFUNC(Numeric, LimbMul)(                \
             left.limb, source->limb, result.limb, shifted.limb,                \
             sizeof(self->limb) / sizeof(self->limb[0]));                       \
@@ -59,11 +65,12 @@
       }),                                                                      \
       VARIANT(Div,                                                             \
           OPERATION_INLINE(,                                                   \
-              (const MODULE_TYPED(Numeric, Bigint, SUFFIX) *divisor), {        \
-            if (!self || !divisor)                                             \
+              (const MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) *divisor), {        \
+            if (!self || !divisor) {                                           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            MODULE_TYPED(Numeric, Bigint, SUFFIX) quotient = {0};              \
-            MODULE_TYPED(Numeric, Bigint, SUFFIX) remainder = {0};             \
+            }                                                                  \
+            MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) quotient = {0};              \
+            MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) remainder = {0};             \
             const OPSTATUS status = MODULE_IFUNC(Numeric, LimbDivMod)(         \
                 self->limb, divisor->limb, quotient.limb, remainder.limb,      \
                 sizeof(self->limb) / sizeof(self->limb[0]));                   \
@@ -73,12 +80,13 @@
             return status;                                                     \
           }),                                                                  \
           CONST_OPERATION_INLINE(Mod,                                          \
-              (const MODULE_TYPED(Numeric, Bigint, SUFFIX) *divisor,           \
-               MODULE_TYPED(Numeric, Bigint, SUFFIX) *outQuotient,             \
-               MODULE_TYPED(Numeric, Bigint, SUFFIX) *outRemainder), {         \
+              (const MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) *divisor,           \
+               MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) *outQuotient,             \
+               MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) *outRemainder), {         \
             if (!self || !divisor || !outQuotient || !outRemainder ||          \
-                outQuotient == outRemainder)                                   \
+                outQuotient == outRemainder) {                                 \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
+            }                                                                  \
             return MODULE_IFUNC(Numeric, LimbDivMod)(                          \
                 self->limb, divisor->limb, outQuotient->limb,                  \
                 outRemainder->limb,                                            \
@@ -86,11 +94,12 @@
           })                                                                   \
       ),                                                                       \
       OPERATION_INLINE(Mod,                                                    \
-                       (const MODULE_TYPED(Numeric, Bigint, SUFFIX) *divisor), { \
-        if (!self || !divisor)                                                 \
+                       (const MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) *divisor), {\
+        if (!self || !divisor) {                                               \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        MODULE_TYPED(Numeric, Bigint, SUFFIX) quotient = {0};                  \
-        MODULE_TYPED(Numeric, Bigint, SUFFIX) remainder = {0};                 \
+        }                                                                      \
+        MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) quotient = {0};                  \
+        MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) remainder = {0};                 \
         const OPSTATUS status = MODULE_IFUNC(Numeric, LimbDivMod)(             \
             self->limb, divisor->limb, quotient.limb, remainder.limb,          \
             sizeof(self->limb) / sizeof(self->limb[0]));                       \
@@ -100,9 +109,10 @@
         return status;                                                         \
       }),                                                                      \
       OPERATION_INLINE(Increment, (), {                                        \
-        if (!self)                                                             \
+        if (!self) {                                                           \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        MODULE_TYPED(Numeric, Bigint, SUFFIX) resultValue = *self;             \
+        }                                                                      \
+        MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) resultValue = *self;             \
         const OPSTATUS status = MODULE_IFUNC(Numeric, LimbIncrement)(          \
             resultValue.limb, sizeof(self->limb) / sizeof(self->limb[0]));     \
         if (status == STATUS_CONST(SUCCESS)) {                                 \
@@ -111,9 +121,10 @@
         return status;                                                         \
       }),                                                                      \
       OPERATION_INLINE(Decrement, (), {                                        \
-        if (!self)                                                             \
+        if (!self) {                                                           \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        MODULE_TYPED(Numeric, Bigint, SUFFIX) resultValue = *self;             \
+        }                                                                      \
+        MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) resultValue = *self;             \
         const OPSTATUS status = MODULE_IFUNC(Numeric, LimbDecrement)(          \
             resultValue.limb, sizeof(self->limb) / sizeof(self->limb[0]));     \
         if (status == STATUS_CONST(SUCCESS)) {                                 \
@@ -122,180 +133,205 @@
         return status;                                                         \
       }),                                                                      \
       OPERATION_INLINE(And,                                                    \
-                       (const MODULE_TYPED(Numeric, Bigint, SUFFIX) *source), { \
-        if (!self || !source)                                                  \
+                       (const MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) *source), {\
+        if (!self || !source) {                                                \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
+        }                                                                      \
         MODULE_IFUNC(Numeric, LimbAnd)(                                        \
             self->limb, source->limb,                                          \
             sizeof(self->limb) / sizeof(self->limb[0]));                       \
         return STATUS_CONST(SUCCESS);                                          \
       }),                                                                      \
       OPERATION_INLINE(Or,                                                     \
-                       (const MODULE_TYPED(Numeric, Bigint, SUFFIX) *source), { \
-        if (!self || !source)                                                  \
+                       (const MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) *source), {\
+        if (!self || !source) {                                                \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
+        }                                                                      \
         MODULE_IFUNC(Numeric, LimbOr)(                                         \
             self->limb, source->limb,                                          \
             sizeof(self->limb) / sizeof(self->limb[0]));                       \
         return STATUS_CONST(SUCCESS);                                          \
       }),                                                                      \
       OPERATION_INLINE(Xor,                                                    \
-                       (const MODULE_TYPED(Numeric, Bigint, SUFFIX) *source), { \
-        if (!self || !source)                                                  \
+                       (const MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) *source), {\
+        if (!self || !source) {                                                \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
+        }                                                                      \
         MODULE_IFUNC(Numeric, LimbXor)(                                        \
             self->limb, source->limb,                                          \
             sizeof(self->limb) / sizeof(self->limb[0]));                       \
         return STATUS_CONST(SUCCESS);                                          \
       }),                                                                      \
       OPERATION_INLINE(Not, (), {                                              \
-        if (!self)                                                             \
+        if (!self) {                                                           \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
+        }                                                                      \
         MODULE_IFUNC(Numeric, LimbNot)(                                        \
             self->limb, sizeof(self->limb) / sizeof(self->limb[0]));           \
         return STATUS_CONST(SUCCESS);                                          \
       }),                                                                      \
-      OPERATION_INLINE(ShiftLeft, (unsigned bitCount), {                       \
-        if (!self)                                                             \
-          return STATUS_CONST(INVALID_ARGUMENT);                               \
-        MODULE_IFUNC(Numeric, LimbShiftLeft)(                                  \
-            self->limb, sizeof(self->limb) / sizeof(self->limb[0]), bitCount); \
-        return STATUS_CONST(SUCCESS);                                          \
-      }),                                                                      \
-      OPERATION_INLINE(ShiftRight, (unsigned bitCount), {                      \
-        if (!self)                                                             \
-          return STATUS_CONST(INVALID_ARGUMENT);                               \
-        MODULE_IFUNC(Numeric, LimbShiftRight)(                                 \
-            self->limb, sizeof(self->limb) / sizeof(self->limb[0]), bitCount); \
-        return STATUS_CONST(SUCCESS);                                          \
-      }),                                                                      \
-      OPERATION_INLINE(RotateLeft, (unsigned shift), {                         \
-        if (!self)                                                             \
-          return STATUS_CONST(INVALID_ARGUMENT);                               \
-        MODULE_TYPED(Numeric, Bigint, SUFFIX) scratch = {0};                   \
-        return MODULE_IFUNC(Numeric, LimbRotateLeft)(                          \
-            self->limb, scratch.limb,                                          \
-            sizeof(self->limb) / sizeof(self->limb[0]), shift);                \
-      }),                                                                      \
-      OPERATION_INLINE(RotateRight, (unsigned shift), {                        \
-        if (!self)                                                             \
-          return STATUS_CONST(INVALID_ARGUMENT);                               \
-        MODULE_TYPED(Numeric, Bigint, SUFFIX) scratch = {0};                   \
-        return MODULE_IFUNC(Numeric, LimbRotateRight)(                         \
-            self->limb, scratch.limb,                                          \
-            sizeof(self->limb) / sizeof(self->limb[0]), shift);                \
-      }),                                                                      \
-      OPERATION_INLINE(BitSet, (uint32_t bit), {                               \
-        if (!self)                                                             \
-          return STATUS_CONST(INVALID_ARGUMENT);                               \
-        return MODULE_IFUNC(Numeric, LimbBitSet)(                              \
-            self->limb, sizeof(self->limb) / sizeof(self->limb[0]), bit);      \
-      }),                                                                      \
-      OPERATION_INLINE(BitClear, (uint32_t bit), {                             \
-        if (!self)                                                             \
-          return STATUS_CONST(INVALID_ARGUMENT);                               \
-        return MODULE_IFUNC(Numeric, LimbBitClear)(                            \
-            self->limb, sizeof(self->limb) / sizeof(self->limb[0]), bit);      \
-      }),                                                                      \
-      CONST_OPERATION_INLINE(BitCheck, (uint32_t bit, bool *outResult), {      \
-        if (!self || !outResult)                                               \
-          return STATUS_CONST(INVALID_ARGUMENT);                               \
-        return MODULE_IFUNC(Numeric, LimbBitCheck)(                            \
-            self->limb, sizeof(self->limb) / sizeof(self->limb[0]), bit,       \
-            outResult);                                                        \
-      }),                                                                      \
+      VARIANT(Shift,                                                           \
+          OPERATION_INLINE(Left, (unsigned bitCount), {                        \
+            if (!self) {                                                       \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            }                                                                  \
+            MODULE_IFUNC(Numeric, LimbShiftLeft)(                              \
+                self->limb, sizeof(self->limb) / sizeof(self->limb[0]),        \
+                bitCount);                                                     \
+            return STATUS_CONST(SUCCESS);                                      \
+          }),                                                                  \
+          OPERATION_INLINE(Right, (unsigned bitCount), {                       \
+            if (!self) {                                                       \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            }                                                                  \
+            MODULE_IFUNC(Numeric, LimbShiftRight)(                             \
+                self->limb, sizeof(self->limb) / sizeof(self->limb[0]),        \
+                bitCount);                                                     \
+            return STATUS_CONST(SUCCESS);                                      \
+          })                                                                   \
+      ),                                                                       \
+      VARIANT(Rotate,                                                          \
+          OPERATION_INLINE(Left, (unsigned shift), {                           \
+            if (!self) {                                                       \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            }                                                                  \
+            MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) scratch = {0};               \
+            return MODULE_IFUNC(Numeric, LimbRotateLeft)(                      \
+                self->limb, scratch.limb,                                      \
+                sizeof(self->limb) / sizeof(self->limb[0]), shift);            \
+          }),                                                                  \
+          OPERATION_INLINE(Right, (unsigned shift), {                          \
+            if (!self) {                                                       \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            }                                                                  \
+            MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) scratch = {0};               \
+            return MODULE_IFUNC(Numeric, LimbRotateRight)(                     \
+                self->limb, scratch.limb,                                      \
+                sizeof(self->limb) / sizeof(self->limb[0]), shift);            \
+          })                                                                   \
+      ),                                                                       \
+      VARIANT(Bit,                                                             \
+          OPERATION_INLINE(Set, (uint32_t bit), {                              \
+            if (!self) {                                                       \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            }                                                                  \
+            return MODULE_IFUNC(Numeric, LimbBitSet)(                          \
+                self->limb, sizeof(self->limb) / sizeof(self->limb[0]), bit);  \
+          }),                                                                  \
+          OPERATION_INLINE(Clear, (uint32_t bit), {                            \
+            if (!self) {                                                       \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            }                                                                  \
+            return MODULE_IFUNC(Numeric, LimbBitClear)(                        \
+                self->limb, sizeof(self->limb) / sizeof(self->limb[0]), bit);  \
+          }),                                                                  \
+          CONST_OPERATION_INLINE(Check, (uint32_t bit, bool *outResult), {     \
+            if (!self || !outResult) {                                         \
+              return STATUS_CONST(INVALID_ARGUMENT);                           \
+            }                                                                  \
+            return MODULE_IFUNC(Numeric, LimbBitCheck)(                        \
+                self->limb, sizeof(self->limb) / sizeof(self->limb[0]), bit,   \
+                outResult);                                                    \
+          })                                                                   \
+      ),                                                                       \
       CONST_OPERATION_INLINE(Compare,                                          \
-                             (const MODULE_TYPED(Numeric, Bigint, SUFFIX) *other, \
+                             (const MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) *other,\
                               CMPOUT *result), {                               \
-        if (!self || !other || !result)                                        \
+        if (!self || !other || !result) {                                      \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
+        }                                                                      \
         *result = MODULE_IFUNC(Numeric, LimbCompare)(                          \
             self->limb, other->limb,                                           \
             sizeof(self->limb) / sizeof(self->limb[0]));                       \
         return STATUS_CONST(SUCCESS);                                          \
       }),                                                                      \
       CONST_PREDICATE_INLINE(Equal,                                            \
-                             (const MODULE_TYPED(Numeric, Bigint, SUFFIX) *other), { \
-        if (!self || !other)                                                   \
+                             (const MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) *other), {\
+        if (!self || !other) {                                                 \
           return false;                                                        \
+        }                                                                      \
         return MODULE_IFUNC(Numeric, LimbEqual)(                               \
             self->limb, other->limb,                                           \
             sizeof(self->limb) / sizeof(self->limb[0]));                       \
       }),                                                                      \
       CONST_PREDICATE_INLINE(NotEqual,                                         \
-                             (const MODULE_TYPED(Numeric, Bigint, SUFFIX) *other), { \
-        if (!self || !other)                                                   \
+                             (const MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) *other), {\
+        if (!self || !other) {                                                 \
           return false;                                                        \
+        }                                                                      \
         return !MODULE_IFUNC(Numeric, LimbEqual)(                              \
             self->limb, other->limb,                                           \
             sizeof(self->limb) / sizeof(self->limb[0]));                       \
       }),                                                                      \
       CONST_PREDICATE_INLINE(LessThan,                                         \
-                             (const MODULE_TYPED(Numeric, Bigint, SUFFIX) *other), { \
-        if (!self || !other)                                                   \
+                             (const MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) *other), {\
+        if (!self || !other) {                                                 \
           return false;                                                        \
+        }                                                                      \
         return MODULE_IFUNC(Numeric, LimbCompare)(                             \
                    self->limb, other->limb,                                    \
                    sizeof(self->limb) / sizeof(self->limb[0])) ==              \
                COMPARISON_CONST(LOWER);                                        \
       }),                                                                      \
       CONST_PREDICATE_INLINE(GreaterThan,                                      \
-                             (const MODULE_TYPED(Numeric, Bigint, SUFFIX) *other), { \
-        if (!self || !other)                                                   \
+                             (const MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) *other), {\
+        if (!self || !other) {                                                 \
           return false;                                                        \
+        }                                                                      \
         return MODULE_IFUNC(Numeric, LimbCompare)(                             \
                    self->limb, other->limb,                                    \
                    sizeof(self->limb) / sizeof(self->limb[0])) ==              \
                COMPARISON_CONST(HIGHER);                                       \
       }),                                                                      \
       CONST_PREDICATE_INLINE(LessOrEqual,                                      \
-                             (const MODULE_TYPED(Numeric, Bigint, SUFFIX) *other), { \
-        if (!self || !other)                                                   \
+                             (const MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) *other), {\
+        if (!self || !other) {                                                 \
           return false;                                                        \
+        }                                                                      \
         return MODULE_IFUNC(Numeric, LimbCompare)(                             \
                    self->limb, other->limb,                                    \
                    sizeof(self->limb) / sizeof(self->limb[0])) !=              \
                COMPARISON_CONST(HIGHER);                                       \
       }),                                                                      \
       CONST_PREDICATE_INLINE(GreaterOrEqual,                                   \
-                             (const MODULE_TYPED(Numeric, Bigint, SUFFIX) *other), { \
-        if (!self || !other)                                                   \
+                             (const MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) *other), {\
+        if (!self || !other) {                                                 \
           return false;                                                        \
+        }                                                                      \
         return MODULE_IFUNC(Numeric, LimbCompare)(                             \
                    self->limb, other->limb,                                    \
                    sizeof(self->limb) / sizeof(self->limb[0])) !=              \
                COMPARISON_CONST(LOWER);                                        \
       }),                                                                      \
       CONST_PREDICATE_INLINE(IsZero, (), {                                     \
-        if (!self)                                                             \
+        if (!self) {                                                           \
           return false;                                                        \
+        }                                                                      \
         return MODULE_IFUNC(Numeric, LimbIsZero)(                              \
             self->limb, sizeof(self->limb) / sizeof(self->limb[0]));           \
       }),                                                                      \
       VARIANT(ToCString,                                                       \
-          CONST_OPERATION_INLINE(, (char *buffer, size_t bufferSize), {        \
-            if (!self || !buffer)                                              \
-              return STATUS_CONST(INVALID_ARGUMENT);                           \
-            MODULE_TYPED(Numeric, Bigint, SUFFIX) scratch = *self;             \
-            return MODULE_IFUNC(Numeric, LimbToCStringBase)(                   \
-                scratch.limb, sizeof(self->limb) / sizeof(self->limb[0]),      \
-                buffer, bufferSize, 10U);                                      \
-          }),                                                                  \
           CONST_OPERATION_INLINE(Base,                                         \
               (char *buffer, size_t bufferSize, unsigned base), {              \
-            if (!self || !buffer)                                              \
+            if (!self || !buffer) {                                            \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
-            MODULE_TYPED(Numeric, Bigint, SUFFIX) scratch = *self;             \
+            }                                                                  \
+            MODULE_TYPE(Numeric, PP_OP_CAT2(Bigint, SUFFIX)) scratch = *self;             \
             return MODULE_IFUNC(Numeric, LimbToCStringBase)(                   \
                 scratch.limb, sizeof(self->limb) / sizeof(self->limb[0]),      \
                 buffer, bufferSize, base);                                     \
+          }),                                                                  \
+          CONST_OPERATION_INLINE(, (char *buffer, size_t bufferSize), {        \
+            return MODULE_FUNC(Numeric, PP_OP_CAT2(Bigint, SUFFIX), ToCStringBase)(        \
+                self, buffer, bufferSize,                                      \
+                CNS(Numeric, Internal, DEFAULT_BASE));                         \
           })                                                                   \
       )                                                                        \
   )
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
-#if defined(SUFFIX) && defined(TYPE)
+#if (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(TYPE)
   TEMPLATE_Numeric_Bigint(SUFFIX, TYPE);
   #undef SUFFIX
   #undef TYPE

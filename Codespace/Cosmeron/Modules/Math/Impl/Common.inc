@@ -30,9 +30,143 @@
   X((INFINITE, 3))                                                             \
   X((COMPLEX, 4))
 
+#define MATH_EQUATION_CONFIG_TABLE(X)                                          \
+  X((MAX_SQRT_ITERATIONS, 64U))
+
 MODULE(DOMAIN(Modules), Math,
     ENUM(RangeResult, MATH_RANGE_RESULT_TABLE),
-    ENUM(Solution, MATH_SOLUTION_TABLE)
+    ENUM(Solution, MATH_SOLUTION_TABLE),
+
+    INTERNAL_EX(Equation,
+        ENUM_EX(Config, MATH_EQUATION_CONFIG_TABLE, PLAIN)
+    ),
+
+    INTERNAL_EX(Arithmetic,
+        VARIANT(Signed,
+            OPERATION(Add, (int64_t a, int64_t b, int64_t minVal,
+                            int64_t maxVal, int64_t *outResult), {
+              if (!outResult) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              if ((b > 0 && a > maxVal - b) || (b < 0 && a < minVal - b)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              *outResult = a + b;
+              return STATUS_CONST(SUCCESS);
+            }),
+
+            OPERATION(Sub, (int64_t a, int64_t b, int64_t minVal,
+                            int64_t maxVal, int64_t *outResult), {
+              if (!outResult) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              if ((b < 0 && a > maxVal + b) || (b > 0 && a < minVal + b)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              *outResult = a - b;
+              return STATUS_CONST(SUCCESS);
+            }),
+
+            OPERATION(Mul, (int64_t a, int64_t b, int64_t minVal,
+                            int64_t maxVal, int64_t *outResult), {
+              if (!outResult) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              if (a == 0 || b == 0) {
+                *outResult = 0;
+                return STATUS_CONST(SUCCESS);
+              }
+              if (a > 0) {
+                if (b > 0 ? (a > maxVal / b) : (b < minVal / a)) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+              } else {
+                if (b > 0 ? (a < minVal / b) : (b < maxVal / a)) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+              }
+              *outResult = a * b;
+              return STATUS_CONST(SUCCESS);
+            }),
+
+            OPERATION(Div, (int64_t a, int64_t b, int64_t minVal,
+                            int64_t *outResult), {
+              if (!outResult || b == 0) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              if (a == minVal && b == -1) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              *outResult = a / b;
+              return STATUS_CONST(SUCCESS);
+            }),
+
+            OPERATION(Mod, (int64_t a, int64_t b, int64_t minVal,
+                            int64_t *outResult), {
+              if (!outResult || b == 0) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              if (a == minVal && b == -1) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              *outResult = a % b;
+              return STATUS_CONST(SUCCESS);
+            })
+        ),
+
+        VARIANT(Unsigned,
+            OPERATION(Add, (uint64_t a, uint64_t b, uint64_t maxVal,
+                            uint64_t *outResult), {
+              if (!outResult) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              if (a > maxVal - b) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              *outResult = a + b;
+              return STATUS_CONST(SUCCESS);
+            }),
+
+            OPERATION(Sub, (uint64_t a, uint64_t b, uint64_t *outResult), {
+              if (!outResult) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              if (a < b) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              *outResult = a - b;
+              return STATUS_CONST(SUCCESS);
+            }),
+
+            OPERATION(Mul, (uint64_t a, uint64_t b, uint64_t maxVal,
+                            uint64_t *outResult), {
+              if (!outResult) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              if (a != 0U && b > maxVal / a) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              *outResult = a * b;
+              return STATUS_CONST(SUCCESS);
+            }),
+
+            OPERATION(Div, (uint64_t a, uint64_t b, uint64_t *outResult), {
+              if (!outResult || b == 0U) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              *outResult = a / b;
+              return STATUS_CONST(SUCCESS);
+            }),
+
+            OPERATION(Mod, (uint64_t a, uint64_t b, uint64_t *outResult), {
+              if (!outResult || b == 0U) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              *outResult = a % b;
+              return STATUS_CONST(SUCCESS);
+            })
+        )
+    )
 );
 
 /* ==========================================================================
@@ -76,5 +210,9 @@ MODULE(DOMAIN(Modules), Math,
   X((Float32, float))                                                          \
   X((Float64, double))                                                         \
   X((Float128, long double))
+
+#ifndef TEMPLATE_Math
+#define TEMPLATE_Math(TARGET, ...) NS(TEMPLATE_Math, TARGET)(__VA_ARGS__)
+#endif
 
 /* EOF */

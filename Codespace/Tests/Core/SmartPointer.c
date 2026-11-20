@@ -1,22 +1,22 @@
-#include "../../Cosmeron/Core/Memory/SmartPointer.h"
+#include "../../Cosmeron/Core/Memory/Pointer/Pointer.h"
 #include <assert.h>
 #include <stdint.h>
 
-TEMPLATE_Memory_UniquePtr(int, int);
-TEMPLATE_Memory_WeakPtr(int, int);
-TEMPLATE_Memory_SharedPtr(int, int);
-TEMPLATE_Memory_WeakPtrAtomic(int, int);
-TEMPLATE_Memory_SharedPtrAtomic(int, int);
+TEMPLATE_Pointer_Unique(int, int);
+TEMPLATE_Pointer_Weak(int, int);
+TEMPLATE_Pointer_Shared(int, int);
+TEMPLATE_Pointer_AtomicWeak(int, int);
+TEMPLATE_Pointer_AtomicShared(int, int);
 
 struct TestIntrusiveNode {
   size_t refCount;
   int value;
 };
-TEMPLATE_Memory_IntrusivePtr(TestNode, struct TestIntrusiveNode);
+TEMPLATE_Pointer_Intrusive(TestNode, struct TestIntrusiveNode);
 
 static void Test_UniquePtr(void) {
-  Memory_TUniquePtr_int u1;
-  MODULE_FUNC(Memory, UniquePtr, int, Init)(&u1);
+  MODULE_TYPED(Pointer, Unique, int) u1 = {0};
+  MODULE_FUNC(Pointer, Unique, int, Init)(&u1);
   assert(!OBJECT_CALL_0(&u1, IsValid));
 
   /* Alloc */
@@ -36,8 +36,8 @@ static void Test_UniquePtr(void) {
   assert(*OBJECT_CALL_0(&u1, Get) == 0);
 
   /* Move */
-  Memory_TUniquePtr_int u2;
-  MODULE_FUNC(Memory, UniquePtr, int, Init)(&u2);
+  MODULE_TYPED(Pointer, Unique, int) u2 = {0};
+  MODULE_FUNC(Pointer, Unique, int, Init)(&u2);
   assert(OBJECT_CALL(&u2, Move, &u1) == STATUS_CONST(SUCCESS));
   assert(!OBJECT_CALL_0(&u1, IsValid));
   assert(OBJECT_CALL_0(&u2, IsValid));
@@ -58,8 +58,8 @@ static void Test_UniquePtr(void) {
 }
 
 static void Test_SharedPtrAndWeakPtr(void) {
-  Memory_TSharedPtr_int s1;
-  MODULE_FUNC(Memory, SharedPtr, int, Init)(&s1);
+  MODULE_TYPED(Pointer, Shared, int) s1 = {0};
+  MODULE_FUNC(Pointer, Shared, int, Init)(&s1);
 
   /* Alloc */
   assert(OBJECT_CALL(&s1, Alloc, 100) == STATUS_CONST(SUCCESS));
@@ -68,14 +68,14 @@ static void Test_SharedPtrAndWeakPtr(void) {
   assert(*OBJECT_CALL_0(&s1, Get) == 100);
 
   /* Clone */
-  Memory_TSharedPtr_int s2;
+  MODULE_TYPED(Pointer, Shared, int) s2 = {0};
   assert(OBJECT_CALL(&s1, Clone, &s2) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL_0(&s1, UseCount) == 2);
   assert(OBJECT_CALL_0(&s2, UseCount) == 2);
   assert(*OBJECT_CALL_0(&s2, Get) == 100);
 
   /* WeakPtr Downgrade & Upgrade */
-  Memory_TWeakPtr_int w1;
+  MODULE_TYPED(Pointer, Weak, int) w1 = {0};
   assert(OBJECT_CALL(&s1, Downgrade, &w1) == STATUS_CONST(SUCCESS));
   assert(!OBJECT_CALL_0(&w1, IsExpired));
   assert(OBJECT_CALL_0(&w1, UseCount) == 2);
@@ -87,7 +87,7 @@ static void Test_SharedPtrAndWeakPtr(void) {
   assert(OBJECT_CALL_0(&w1, UseCount) == 1);
 
   /* Upgrade from weak */
-  Memory_TSharedPtr_int s3;
+  MODULE_TYPED(Pointer, Shared, int) s3 = {0};
   assert(OBJECT_CALL(&w1, Upgrade, &s3) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL_0(&s3, UseCount) == 2);
 
@@ -100,15 +100,15 @@ static void Test_SharedPtrAndWeakPtr(void) {
 }
 
 static void Test_SharedPtrAtomic(void) {
-  Memory_TSharedPtrAtomic_int sa1;
-  MODULE_FUNC(Memory, SharedPtrAtomic, int, Init)(&sa1);
+  MODULE_TYPED(Pointer, AtomicShared, int) sa1 = {0};
+  MODULE_FUNC(Pointer, AtomicShared, int, Init)(&sa1);
 
   assert(OBJECT_CALL(&sa1, Alloc, 999) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL_0(&sa1, IsValid));
   assert(OBJECT_CALL_0(&sa1, UseCount) == 1);
   assert(*OBJECT_CALL_0(&sa1, Get) == 999);
 
-  Memory_TSharedPtrAtomic_int sa2;
+  MODULE_TYPED(Pointer, AtomicShared, int) sa2 = {0};
   assert(OBJECT_CALL(&sa1, Clone, &sa2) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL_0(&sa1, UseCount) == 2);
 
@@ -124,12 +124,12 @@ static void Test_IntrusivePtr(void) {
   node->refCount = 0;
   node->value = 555;
 
-  Memory_TIntrusivePtr_TestNode ip1;
-  MODULE_FUNC(Memory, IntrusivePtr, TestNode, Init)(&ip1);
+  MODULE_TYPED(Pointer, Intrusive, TestNode) ip1 = {0};
+  MODULE_FUNC(Pointer, Intrusive, TestNode, Init)(&ip1);
   assert(OBJECT_CALL(&ip1, FromPointer, node) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL_0(&ip1, UseCount) == 1);
 
-  Memory_TIntrusivePtr_TestNode ip2;
+  MODULE_TYPED(Pointer, Intrusive, TestNode) ip2 = {0};
   assert(OBJECT_CALL(&ip1, Clone, &ip2) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL_0(&ip1, UseCount) == 2);
 

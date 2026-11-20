@@ -129,13 +129,9 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
       if (self->buffer && self->isOwned) {
         void *buf = self->buffer;
         status = MODULE_FUNC(Memory, Alloc, Free)(&buf);
-        self->buffer = NULL;
       }
 
-      self->buffer = NULL;
-      self->capacity = 0U;
-      self->offset = 0U;
-      self->isOwned = false;
+      OBJECT_RESET_ZERO(Memory, Arena, self);
       return status;
     }),
 
@@ -148,7 +144,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
     }),
 
     FUNCTION(MODULE_TYPE(Memory, Allocator), AsAllocator, (), {
-      static const MODULE_TYPE(Memory, AllocatorOps) ops = {
+      static const MODULE_TYPE(Memory, Allocator_Ops) ops = {
           .Alloc = MODULE_IFUNC(Memory, Arena, AllocatorAlloc),
           .Realloc = NULL,
           .Free = MODULE_IFUNC(Memory, Arena, AllocatorFree),

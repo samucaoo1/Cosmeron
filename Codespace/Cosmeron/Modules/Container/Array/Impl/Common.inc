@@ -16,7 +16,12 @@
 #include "../../../../Core/Preprocessor/Compiling.inc"
 #include "../../../../Core/Preprocessor/Operations.h"
 #include "../../../../Core/Types/Primitive.h"
-#include "../../Iterator/Iterator.h"
+#include "../../Iterator/Impl/Common.inc"
+#define COSMERON_INTERNAL_IN_COMMON_INC 1
+#include "../../Iterator/Stream.def"
+#include "../../Iterator/Contiguous.def"
+#include "../../Iterator/Circular.def"
+#undef COSMERON_INTERNAL_IN_COMMON_INC
 
 #include <limits.h>
 #include <stdbool.h>

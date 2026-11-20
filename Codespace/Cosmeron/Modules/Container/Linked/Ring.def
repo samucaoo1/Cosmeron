@@ -1,5 +1,7 @@
 /* Ring.def - Dual Mode Engine (Zero Duplication) */
 
+#include "Impl/Common.inc"
+
 #ifndef TEMPLATE_Linked_Ring
 #define TEMPLATE_Linked_Ring(SUFFIX, TYPE)                                     \
   TEMPLATE_OBJECT(Linked, Ring, SUFFIX,                                        \
@@ -88,12 +90,7 @@
             curr = next;                                                       \
           }                                                                    \
         }                                                                      \
-        self->head = NULL;                                                     \
-        self->tail = NULL;                                                     \
-        self->back = NULL;                                                     \
-        self->size = 0U;                                                       \
-        self->capacity = 0U;                                                   \
-        self->ownsNodes = false;                                               \
+        OBJECT_RESET_ZERO(Linked, NS(Ring, SUFFIX), self);                     \
         return STATUS_CONST(SUCCESS);                                          \
       }),                                                                      \
                                                                                \
@@ -271,7 +268,7 @@
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
-#if defined(SUFFIX) && defined(TYPE)
+#if (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(TYPE)
   TEMPLATE_Linked_Ring(SUFFIX, TYPE);
   #undef SUFFIX
   #undef TYPE

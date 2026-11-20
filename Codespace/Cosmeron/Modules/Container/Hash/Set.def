@@ -1,5 +1,7 @@
 /* Set.def - Dual Mode Engine (Zero Duplication) */
 
+#include "Impl/Common.inc"
+
 #ifndef TEMPLATE_Hash_Set
 #define TEMPLATE_Hash_Set(SUFFIX, KEY_TYPE)                                \
   TEMPLATE_ISTRUCT(Hash, SetBucket, SUFFIX,                                \
@@ -254,11 +256,8 @@
         if (self->buckets) {                                                   \
           void *raw = (void *)self->buckets;                                   \
           MODULE_IFUNC(Hash, FreeBuckets)(&raw);                               \
-          self->buckets = NULL;                                                \
         }                                                                      \
-        self->capacity = 0U;                                                   \
-        self->size = 0U;                                                       \
-        self->deleted = 0U;                                                    \
+        OBJECT_RESET_ZERO(Hash, NS(Set, SUFFIX), self);                        \
         return STATUS_CONST(SUCCESS);                                          \
       }),                                                                      \
                                                                                \
@@ -471,8 +470,10 @@
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
-#if defined(SUFFIX) && defined(KEY_TYPE)
+#if (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(KEY_TYPE)
   TEMPLATE_Hash_Set(SUFFIX, KEY_TYPE);
   #undef SUFFIX
   #undef KEY_TYPE
 #endif
+
+/* EOF */

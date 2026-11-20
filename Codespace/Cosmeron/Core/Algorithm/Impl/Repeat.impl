@@ -6,22 +6,24 @@
 /* 1. Primitive Value Repetition Macro                                        */
 /* ========================================================================== */
 
-#define COSMERON_MACRO_INTERNAL_REPEAT_PRIMITIVE_IMPL(ROW)                     \
-  OPERATION(                                                                   \
-      PRIMITIVE_TYPE_GET(NAME, ROW),                                           \
-      (PRIMITIVE_TYPE_GET(TYPE, ROW) * destination,                            \
-       PRIMITIVE_TYPE_GET(TYPE, ROW) value, size_t count), {                  \
+#define COSMERON_MACRO_INTERNAL_REPEAT_FILL_IMPL(NAME_VAL, VAL_TYPE)           \
+  OPERATION(NAME_VAL,                                                          \
+            (VAL_TYPE * destination, VAL_TYPE value, size_t count), {          \
     if (count == 0U)                                                           \
       return STATUS_CONST(SUCCESS);                                            \
     if (!destination)                                                          \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    if (count > SIZE_MAX / sizeof(PRIMITIVE_TYPE_GET(TYPE, ROW)))              \
+    if (count > SIZE_MAX / sizeof(VAL_TYPE))                                   \
       return STATUS_CONST(ARITHMETIC_OVERFLOW);                                \
     for (size_t i = 0U; i < count; ++i) {                                      \
       destination[i] = value;                                                  \
     }                                                                          \
     return STATUS_CONST(SUCCESS);                                              \
-  }),
+  })
+
+#define COSMERON_MACRO_INTERNAL_REPEAT_PRIMITIVE_IMPL(ROW)                     \
+  COSMERON_MACRO_INTERNAL_REPEAT_FILL_IMPL(PRIMITIVE_TYPE_GET(NAME, ROW),      \
+                                           PRIMITIVE_TYPE_GET(C_TYPE, ROW)),
 
 /* ========================================================================== */
 /* 2. Declarative Implementation: Algorithm_Repeat                            */
@@ -136,10 +138,8 @@ MODULE_IMPLEMENT(DOMAIN(Core), Algorithm,
             patternSize > (size_t)(UINTPTR_MAX - patternAddress))
           return STATUS_CONST(OUT_OF_RANGE);
 
-        if ((destAddress < patternAddress &&
-             destAddress + totalSize > patternAddress) ||
-            (patternAddress < destAddress &&
-             patternAddress + patternSize > destAddress))
+        if (destAddress < patternAddress + patternSize &&
+            patternAddress < destAddress + totalSize)
           return STATUS_CONST(INVALID_ARGUMENT);
       }
 
@@ -155,25 +155,11 @@ MODULE_IMPLEMENT(DOMAIN(Core), Algorithm,
 
     PRIMITIVE_TYPE_TABLE(COSMERON_MACRO_INTERNAL_REPEAT_PRIMITIVE_IMPL)
 
-    OPERATION(CString,
-              (const char **destination, const char *value,
-               size_t count), {
-      if (count == 0U)
-        return STATUS_CONST(SUCCESS);
-      if (!destination)
-        return STATUS_CONST(INVALID_ARGUMENT);
-      if (count > SIZE_MAX / sizeof(const char *))
-        return STATUS_CONST(ARITHMETIC_OVERFLOW);
-
-      for (size_t i = 0U; i < count; ++i) {
-        destination[i] = value;
-      }
-
-      return STATUS_CONST(SUCCESS);
-    })
+    COSMERON_MACRO_INTERNAL_REPEAT_FILL_IMPL(CString, const char *)
   )
 );
 
+#undef COSMERON_MACRO_INTERNAL_REPEAT_FILL_IMPL
 #undef COSMERON_MACRO_INTERNAL_REPEAT_PRIMITIVE_IMPL
 
 /* EOF */

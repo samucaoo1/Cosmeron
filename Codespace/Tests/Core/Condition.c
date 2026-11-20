@@ -2,7 +2,7 @@
 #include "../../Cosmeron/Core/Condition/Panic.h"
 #include "../../Cosmeron/Core/Condition/Exception.h"
 #include "../../Cosmeron/Core/Diagnostic/Context.h"
-#include "../../Cosmeron/Core/Outcome/Status.h"
+#include "../../Cosmeron/Core/Condition/Status.h"
 
 #include <assert.h>
 #include <string.h>
@@ -14,7 +14,7 @@ typedef struct {
   char lastExpression[256];
 } TestPanicState;
 
-static void test_panic_handler(const MODULE_TYPE(Condition, PanicInfo) *info, void *context) {
+static void test_panic_handler(const MODULE_TYPE(Condition, Panic_Info) *info, void *context) {
   TestPanicState *state = (TestPanicState *)context;
   state->triggered = true;
   state->lastKind = info->kind;
@@ -278,7 +278,7 @@ int main(void) {
 
   TRY {
     tryRan = true;
-    TCALLBACK(MODULE_NS(Condition, ExceptionFrame, Cleanup)) cleanupCb = {
+    TCALLBACK(MODULE_NS(Condition, Exception_Frame, Cleanup)) cleanupCb = {
         .function = test_cleanup_handler,
         .context = &cleanupRan
     };

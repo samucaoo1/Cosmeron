@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
-/* Custom string-keyed HashMap instantiation */
-TEMPLATE_INSTANTIATE(Hash, HashMap, Str_Int32, const char *, int32_t);
+/* Custom string-keyed Map instantiation */
+TEMPLATE_INSTANTIATE(Hash, Map, Str_Int32, const char *, int32_t);
 
 INTERNAL_DEF(
     HashTest,
@@ -35,8 +35,8 @@ INTERNAL_DEF(
     }))
 
 static void NS(HashTest, SetAndIter)(void) {
-  MODULE_TYPED(Hash, HashSet, Int32) set;
-  assert(MODULE_FUNC(Hash, HashSet, Int32, Create)(&set) ==
+  MODULE_TYPED(Hash, Set, Int32) set;
+  assert(MODULE_FUNC(Hash, Set, Int32, Create)(&set) ==
          STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL_0(&set, IsEmpty));
 
@@ -54,8 +54,8 @@ static void NS(HashTest, SetAndIter)(void) {
   assert(OBJECT_CALL_0(&set, Size) == 49U);
 
   /* Optional Iterator: Begin -> End & EraseIter */
-  MODULE_TYPED(Hash, HashSetIter, Int32) it;
-  MODULE_TYPED(Hash, HashSetIter, Int32) end;
+  MODULE_TYPED(Hash, SetIter, Int32) it;
+  MODULE_TYPED(Hash, SetIter, Int32) end;
   assert(OBJECT_CALL(&set, FindIter, 20, &it) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL_0(&it, IsValid));
   assert(OBJECT_CALL(&set, EraseIter, &it) == STATUS_CONST(SUCCESS));
@@ -75,8 +75,8 @@ static void NS(HashTest, SetAndIter)(void) {
   assert(count == 48U);
 
   int64_t forEachSum = 0;
-  MODULE_CLOSURE(Hash, HashSet, Int32, Visitor) visitor =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Hash, HashSet, Int32, Visitor), Bind)(
+  MODULE_CLOSURE(Hash, Set, Int32, Visitor) visitor =
+      NS_JOIN(MODULE_CLOSURE_FUNC(Hash, Set, Int32, Visitor), Bind)(
           MODULE_IFUNC(HashTest, SumSet), &forEachSum);
   assert(OBJECT_CALL(&set, ForEach, visitor) == STATUS_CONST(SUCCESS));
   assert(forEachSum == iterSum);
@@ -85,8 +85,8 @@ static void NS(HashTest, SetAndIter)(void) {
 }
 
 static void NS(HashTest, MapAndCustomHash)(void) {
-  MODULE_TYPED(Hash, HashMap, Int32_Int32) map;
-  assert(MODULE_FUNC(Hash, HashMap, Int32_Int32, Create)(&map) ==
+  MODULE_TYPED(Hash, Map, Int32_Int32) map;
+  assert(MODULE_FUNC(Hash, Map, Int32_Int32, Create)(&map) ==
          STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&map, Reserve, 32U) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL_0(&map, Capacity) >= 32U);
@@ -100,14 +100,14 @@ static void NS(HashTest, MapAndCustomHash)(void) {
   assert(OBJECT_CALL(&map, Find, 1, &val) == STATUS_CONST(SUCCESS));
   assert(*val == 20);
 
-  MODULE_CLOSURE(Hash, HashMap, Int32_Int32, Visitor) mv =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Hash, HashMap, Int32_Int32, Visitor), Bind)(
+  MODULE_CLOSURE(Hash, Map, Int32_Int32, Visitor) mv =
+      NS_JOIN(MODULE_CLOSURE_FUNC(Hash, Map, Int32_Int32, Visitor), Bind)(
           MODULE_IFUNC(HashTest, AddOneMap), NULL);
   assert(OBJECT_CALL(&map, ForEach, mv) == STATUS_CONST(SUCCESS));
   assert(*val == 21);
 
   /* Mutate value via iterator */
-  MODULE_TYPED(Hash, HashMapIter, Int32_Int32) mit;
+  MODULE_TYPED(Hash, MapIter, Int32_Int32) mit;
   assert(OBJECT_CALL(&map, FindIter, 2, &mit) == STATUS_CONST(SUCCESS));
   const int32_t *k = NULL;
   int32_t *mvPtr = NULL;
@@ -121,9 +121,9 @@ static void NS(HashTest, MapAndCustomHash)(void) {
 
   OBJECT_CALL_0(&map, Destroy);
 
-  /* String-keyed HashMap using CreateWithHash */
-  MODULE_TYPED(Hash, HashMap, Str_Int32) smap;
-  assert(MODULE_FUNC(Hash, HashMap, Str_Int32, CreateWithHash)(
+  /* String-keyed Map using CreateWithHash */
+  MODULE_TYPED(Hash, Map, Str_Int32) smap;
+  assert(MODULE_FUNC(Hash, Map, Str_Int32, CreateWithHash)(
              &smap, MODULE_IFUNC(HashTest, StrHash),
              MODULE_IFUNC(HashTest, StrEquals), NULL) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&smap, Insert, "alpha", 1) == STATUS_CONST(SUCCESS));

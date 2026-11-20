@@ -112,6 +112,7 @@
  * ============================================================ */
 
 /* 1. MODULE_TYPE: Generates user type with automatic 'T' prefix on 1st token */
+#define COSMERON_INTERNAL_MOD_TYPE_1(OBJ) LIB_PREFIX(PP_OP_CAT2(T, OBJ))
 #define COSMERON_INTERNAL_MOD_TYPE_2(MOD, OBJ)                                 \
   LIB_PREFIX(PP_OP_CAT4(T, MOD, _, OBJ))
 #define COSMERON_INTERNAL_MOD_TYPE_3(MOD, PKG, OBJ)                            \
@@ -196,19 +197,18 @@
              PP_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__)
 
 /* 7. Forward Declarations */
-#define FORWARD_OBJECT(MOD, NAME)                                              \
-  typedef struct MODULE_TYPE(MOD, NAME) MODULE_TYPE(MOD, NAME)
+#define FORWARD_OBJECT(...)                                                    \
+  typedef struct MODULE_TYPE(__VA_ARGS__) MODULE_TYPE(__VA_ARGS__)
 
-#define FORWARD_STRUCT(MOD, NAME) FORWARD_OBJECT(MOD, NAME)
+#define FORWARD_STRUCT(...) FORWARD_OBJECT(__VA_ARGS__)
 
 #define FORWARD_CLOSURE(...)                                                   \
   typedef struct MODULE_CLOSURE(__VA_ARGS__) MODULE_CLOSURE(__VA_ARGS__)
 
-#define FORWARD_TEMPLATE_OBJECT(MOD, NAME, SUFFIX)                             \
-  typedef struct MODULE_TYPED(MOD, NAME, SUFFIX) MODULE_TYPED(MOD, NAME, SUFFIX)
+#define FORWARD_TEMPLATE_OBJECT(...)                                           \
+  typedef struct MODULE_TYPED(__VA_ARGS__) MODULE_TYPED(__VA_ARGS__)
 
-#define FORWARD_TEMPLATE_STRUCT(MOD, NAME, SUFFIX)                             \
-  FORWARD_TEMPLATE_OBJECT(MOD, NAME, SUFFIX)
+#define FORWARD_TEMPLATE_STRUCT(...) FORWARD_TEMPLATE_OBJECT(__VA_ARGS__)
 
 #define FORWARD_ISTRUCT(MOD, NAME)                                             \
   typedef struct MODULE_ITYPE(MOD, NAME) MODULE_ITYPE(MOD, NAME)

@@ -7,7 +7,7 @@
 /* 1. Scalar Endian Serialization Implementation Macros                       */
 /* ========================================================================== */
 
-#define STREAM_IMPL_READ_SCALAR_LE_BE(UTYPE, ITYPE, SUFFIX)                   \
+#define COSMERON_MACRO_INTERNAL_STREAM_READ_SCALAR(UTYPE, ITYPE, SUFFIX)       \
   OPERATION(PP_OP_CAT2(UInt, PP_OP_CAT2(SUFFIX, LE)), (UTYPE *outValue), {    \
     const uint8_t *b;                                                          \
     if (!self || !outValue) return STATUS_CONST(INVALID_ARGUMENT);             \
@@ -16,7 +16,8 @@
     b = self->data + self->offset;                                             \
     *outValue = 0U;                                                            \
     for (size_t i = 0U; i < sizeof(UTYPE); ++i) {                              \
-      *outValue |= ((UTYPE)b[i]) << (i * 8U);                                  \
+      *outValue |= ((UTYPE)b[i]) <<                                            \
+                   (i * (size_t)CNS(Memory, Stream, Internal, BITS_PER_BYTE)); \
     }                                                                          \
     self->offset += sizeof(UTYPE);                                             \
     return STATUS_CONST(SUCCESS);                                              \
@@ -29,7 +30,8 @@
     b = self->data + self->offset;                                             \
     *outValue = 0U;                                                            \
     for (size_t i = 0U; i < sizeof(UTYPE); ++i) {                              \
-      *outValue = (*outValue << 8U) | (UTYPE)b[i];                             \
+      *outValue = (*outValue << CNS(Memory, Stream, Internal, BITS_PER_BYTE)) |\
+                  (UTYPE)b[i];                                                 \
     }                                                                          \
     self->offset += sizeof(UTYPE);                                             \
     return STATUS_CONST(SUCCESS);                                              \
@@ -47,7 +49,7 @@
     return status;                                                             \
   })
 
-#define STREAM_IMPL_WRITE_SCALAR_LE_BE(UTYPE, ITYPE, SUFFIX)                  \
+#define COSMERON_MACRO_INTERNAL_STREAM_WRITE_SCALAR(UTYPE, ITYPE, SUFFIX)      \
   OPERATION(PP_OP_CAT2(UInt, PP_OP_CAT2(SUFFIX, LE)), (UTYPE value), {        \
     uint8_t *b;                                                                \
     if (!self) return STATUS_CONST(INVALID_ARGUMENT);                          \
@@ -56,7 +58,9 @@
     if (MODULE_FUNC(Memory, Stream, Remaining)(self) < sizeof(UTYPE)) return STATUS_CONST(INSUFFICIENT_SPACE); \
     b = self->data + self->offset;                                             \
     for (size_t i = 0U; i < sizeof(UTYPE); ++i) {                              \
-      b[i] = (uint8_t)((value >> (i * 8U)) & 0xFFU);                           \
+      b[i] = (uint8_t)((value >> (i * (size_t)CNS(Memory, Stream, Internal,    \
+                                                  BITS_PER_BYTE))) &           \
+                       (UTYPE)CNS(Memory, Stream, Internal, BYTE_MASK));       \
     }                                                                          \
     self->offset += sizeof(UTYPE);                                             \
     return STATUS_CONST(SUCCESS);                                              \
@@ -69,8 +73,10 @@
     if (MODULE_FUNC(Memory, Stream, Remaining)(self) < sizeof(UTYPE)) return STATUS_CONST(INSUFFICIENT_SPACE); \
     b = self->data + self->offset;                                             \
     for (size_t i = 0U; i < sizeof(UTYPE); ++i) {                              \
-      size_t shift = (sizeof(UTYPE) - 1U - i) * 8U;                            \
-      b[i] = (uint8_t)((value >> shift) & 0xFFU);                              \
+      size_t shift = (sizeof(UTYPE) - 1U - i) *                                \
+                     (size_t)CNS(Memory, Stream, Internal, BITS_PER_BYTE);     \
+      b[i] = (uint8_t)((value >> shift) &                                      \
+                       (UTYPE)CNS(Memory, Stream, Internal, BYTE_MASK));       \
     }                                                                          \
     self->offset += sizeof(UTYPE);                                             \
     return STATUS_CONST(SUCCESS);                                              \
@@ -87,29 +93,31 @@
 /* ========================================================================== */
 
 MODULE_IMPLEMENT(DOMAIN(Core), Memory,
+  INTERNAL_EX(Stream,
+    OPERATION(InitState,
+              (MODULE_TYPE(Memory, Stream) *stream, void *buffer,
+               size_t capacity, bool isReadOnly), {
+      if (!stream || (!buffer && capacity > 0U))
+        return STATUS_CONST(INVALID_ARGUMENT);
+
+      stream->data = (uint8_t *)buffer;
+      stream->capacity = capacity;
+      stream->offset = 0U;
+      stream->bitOffset = 0U;
+      stream->isReadOnly = isReadOnly;
+      return STATUS_CONST(SUCCESS);
+    })
+  ),
+
   OBJECT(Stream,
     VARIANT(Init,
       OPERATION(Read, (const void *buffer, size_t size), {
-        if (!self || (!buffer && size > 0U))
-          return STATUS_CONST(INVALID_ARGUMENT);
-
-        self->data = (uint8_t *)(uintptr_t)buffer;
-        self->capacity = size;
-        self->offset = 0U;
-        self->bitOffset = 0U;
-        self->isReadOnly = true;
-        return STATUS_CONST(SUCCESS);
+        return MODULE_IFUNC(Memory, Stream, InitState)(
+            self, (void *)(uintptr_t)buffer, size, true);
       }),
       OPERATION(Write, (void *buffer, size_t capacity), {
-        if (!self || (!buffer && capacity > 0U))
-          return STATUS_CONST(INVALID_ARGUMENT);
-
-        self->data = (uint8_t *)buffer;
-        self->capacity = capacity;
-        self->offset = 0U;
-        self->bitOffset = 0U;
-        self->isReadOnly = false;
-        return STATUS_CONST(SUCCESS);
+        return MODULE_IFUNC(Memory, Stream, InitState)(
+            self, buffer, capacity, false);
       })
     ),
 
@@ -128,10 +136,10 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
 
       case MODULE_CONST(Memory, Stream, SEEK_CURRENT):
         if (offset < 0) {
-          size_t backward = (size_t)(-offset);
-          if (backward > self->offset)
+          uint64_t backward = -(uint64_t)offset;
+          if (backward > (uint64_t)self->offset)
             return STATUS_CONST(OUT_OF_RANGE);
-          self->offset -= backward;
+          self->offset -= (size_t)backward;
         } else {
           size_t forward = (size_t)offset;
           if (forward > self->capacity - self->offset)
@@ -144,10 +152,10 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
         if (offset > 0)
           return STATUS_CONST(OUT_OF_RANGE);
         {
-          size_t backward = (size_t)(-offset);
-          if (backward > self->capacity)
+          uint64_t backward = -(uint64_t)offset;
+          if (backward > (uint64_t)self->capacity)
             return STATUS_CONST(OUT_OF_RANGE);
-          self->offset = self->capacity - backward;
+          self->offset = self->capacity - (size_t)backward;
         }
         return STATUS_CONST(SUCCESS);
 
@@ -244,17 +252,23 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
       OPERATION(Bits, (uint8_t bitCount, uint64_t *outValue), {
         uint64_t result = 0U;
 
-        if (!self || !outValue || bitCount > 64U)
+        if (!self || !outValue ||
+            bitCount > (uint8_t)CNS(Memory, Stream, Internal, MAX_BIT_COUNT))
           return STATUS_CONST(INVALID_ARGUMENT);
 
         if (!MODULE_FUNC(Memory, Stream, HasRemainingBits)(self, (size_t)bitCount))
           return STATUS_CONST(OUT_OF_RANGE);
 
         for (uint8_t i = 0U; i < bitCount; ++i) {
-          uint8_t bit = (uint8_t)((self->data[self->offset] >> (7U - self->bitOffset)) & 1U);
+          uint8_t bit = (uint8_t)((self->data[self->offset] >>
+                                   ((uint8_t)CNS(Memory, Stream, Internal,
+                                                 MSB_BIT_INDEX) -
+                                    self->bitOffset)) &
+                                  1U);
           result = (result << 1U) | bit;
           self->bitOffset++;
-          if (self->bitOffset == 8U) {
+          if (self->bitOffset ==
+              (uint8_t)CNS(Memory, Stream, Internal, BITS_PER_BYTE)) {
             self->bitOffset = 0U;
             self->offset++;
           }
@@ -272,9 +286,9 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
         return MODULE_FUNC(Memory, Stream, ReadBytes)(self, outValue, sizeof(int8_t));
       }),
 
-      STREAM_IMPL_READ_SCALAR_LE_BE(uint16_t, int16_t, 16),
-      STREAM_IMPL_READ_SCALAR_LE_BE(uint32_t, int32_t, 32),
-      STREAM_IMPL_READ_SCALAR_LE_BE(uint64_t, int64_t, 64)
+      COSMERON_MACRO_INTERNAL_STREAM_READ_SCALAR(uint16_t, int16_t, 16),
+      COSMERON_MACRO_INTERNAL_STREAM_READ_SCALAR(uint32_t, int32_t, 32),
+      COSMERON_MACRO_INTERNAL_STREAM_READ_SCALAR(uint64_t, int64_t, 64)
     ),
 
     VARIANT(Peek,
@@ -320,7 +334,8 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
       }),
 
       OPERATION(Bits, (uint64_t value, uint8_t bitCount), {
-        if (!self || bitCount > 64U)
+        if (!self ||
+            bitCount > (uint8_t)CNS(Memory, Stream, Internal, MAX_BIT_COUNT))
           return STATUS_CONST(INVALID_ARGUMENT);
 
         if (self->isReadOnly)
@@ -334,9 +349,13 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
           if (self->bitOffset == 0U) {
             self->data[self->offset] = 0U;
           }
-          self->data[self->offset] |= (uint8_t)(bit << (7U - self->bitOffset));
+          self->data[self->offset] |=
+              (uint8_t)(bit << ((uint8_t)CNS(Memory, Stream, Internal,
+                                             MSB_BIT_INDEX) -
+                                self->bitOffset));
           self->bitOffset++;
-          if (self->bitOffset == 8U) {
+          if (self->bitOffset ==
+              (uint8_t)CNS(Memory, Stream, Internal, BITS_PER_BYTE)) {
             self->bitOffset = 0U;
             self->offset++;
           }
@@ -353,13 +372,13 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
         return MODULE_FUNC(Memory, Stream, WriteBytes)(self, &value, sizeof(int8_t));
       }),
 
-      STREAM_IMPL_WRITE_SCALAR_LE_BE(uint16_t, int16_t, 16),
-      STREAM_IMPL_WRITE_SCALAR_LE_BE(uint32_t, int32_t, 32),
-      STREAM_IMPL_WRITE_SCALAR_LE_BE(uint64_t, int64_t, 64)
+      COSMERON_MACRO_INTERNAL_STREAM_WRITE_SCALAR(uint16_t, int16_t, 16),
+      COSMERON_MACRO_INTERNAL_STREAM_WRITE_SCALAR(uint32_t, int32_t, 32),
+      COSMERON_MACRO_INTERNAL_STREAM_WRITE_SCALAR(uint64_t, int64_t, 64)
     )
   )
 );
 
-#undef STREAM_IMPL_READ_SCALAR_LE_BE
-#undef STREAM_IMPL_WRITE_SCALAR_LE_BE
+#undef COSMERON_MACRO_INTERNAL_STREAM_READ_SCALAR
+#undef COSMERON_MACRO_INTERNAL_STREAM_WRITE_SCALAR
 /* EOF */

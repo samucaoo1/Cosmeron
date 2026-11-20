@@ -75,6 +75,15 @@ ENUM_DEF_EX(MODULE_NS(Memory, Heap), Config, HEAP_CONFIG_TABLE, HEAP_CONFIG_DISP
 /* 2. Declarative Module, Internal BiBOP Structures and TMemoryHeap Object     */
 /* ========================================================================== */
 
+#if defined(MEMORY_DISABLE_FUNCTION_TABLE) &&                                  \
+    !defined(COSMERON_DISABLE_FT_Memory)
+#define COSMERON_DISABLE_FT_Memory 1
+#endif
+#if defined(MEMORY_HEAP_DISABLE_FUNCTION_TABLE) &&                             \
+    !defined(COSMERON_DISABLE_FT_Memory_Heap)
+#define COSMERON_DISABLE_FT_Memory_Heap 1
+#endif
+
 MODULE(DOMAIN(Core), Memory,
     ISTRUCT(HeapPageHeader,
         FIELDS(
@@ -93,7 +102,11 @@ MODULE(DOMAIN(Core), Memory,
             const void *descriptor;
             uint64_t allocBitmap[MODULE_CONST(MEMORY, HEAP, BITMAP_WORDS)];
             uint64_t markBitmap[MODULE_CONST(MEMORY, HEAP, BITMAP_WORDS)];
-            uint8_t _padding[128 - (4 * sizeof(void *) + 8 * sizeof(uint64_t) + 16)];
+            uint8_t _padding[MODULE_CONST(MEMORY, HEAP, PAGE_HEADER_SIZE) -
+                             (4U * sizeof(void *) +
+                              (2U * MODULE_CONST(MEMORY, HEAP, BITMAP_WORDS)) *
+                                  sizeof(uint64_t) +
+                              16U)];
             uint8_t payload[];
         )
     ),

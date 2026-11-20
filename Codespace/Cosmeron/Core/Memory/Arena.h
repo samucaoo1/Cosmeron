@@ -11,6 +11,15 @@
 /* Object Declaration: Memory_Arena                                           */
 /* ========================================================================== */
 
+#if defined(MEMORY_DISABLE_FUNCTION_TABLE) &&                                  \
+    !defined(COSMERON_DISABLE_FT_Memory)
+#define COSMERON_DISABLE_FT_Memory 1
+#endif
+#if defined(MEMORY_ARENA_DISABLE_FUNCTION_TABLE) &&                            \
+    !defined(COSMERON_DISABLE_FT_Memory_Arena)
+#define COSMERON_DISABLE_FT_Memory_Arena 1
+#endif
+
 MODULE(DOMAIN(Core), Memory,
     OBJECT(Arena,
         FIELDS(

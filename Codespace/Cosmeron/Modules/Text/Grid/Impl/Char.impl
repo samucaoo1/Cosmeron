@@ -3,75 +3,50 @@
 #include "../../../../Core/Memory/Alloc.h"
 #include <string.h>
 
-static inline bool MODULE_ITYPE(Text, GridCharSizeValid)(
-    MODULE_TYPED(Tuple, Dual, UInt16) size) {
-  return (size.col == 0U) == (size.row == 0U);
-}
+MODULE_IMPLEMENT(DOMAIN(Modules), Text,
+  INTERNAL_EX(Char,
+    PREDICATE(SizeValid, (MODULE_TYPED(Tuple, Dual, UInt16) size), {
+      return (size.col == 0U) == (size.row == 0U);
+    }),
 
-static inline bool MODULE_ITYPE(Text, GridCharValid)(
-    const void *data, MODULE_TYPED(Tuple, Dual, UInt16) size) {
-  if (!MODULE_ITYPE(Text, GridCharSizeValid)(size))
-    return false;
-  return size.col == 0U ? data == NULL : data != NULL;
-}
+    PREDICATE(Valid,
+              (const void *data, MODULE_TYPED(Tuple, Dual, UInt16) size), {
+      if (!MODULE_IFUNC(Text, Char, SizeValid)(size)) {
+        return false;
+      }
+      return size.col == 0U ? data == NULL : data != NULL;
+    }),
 
-static inline bool MODULE_ITYPE(Text, GridCharRegionValid)(
-    MODULE_TYPED(Tuple, Dual, UInt16) size, MODULE_TYPED(Tuple, Quad, UInt16) region) {
-  return region.left <= region.right && region.top <= region.bottom &&
-         region.right < size.col && region.bottom < size.row;
-}
+    PREDICATE(RegionValid,
+              (MODULE_TYPED(Tuple, Dual, UInt16) size,
+               MODULE_TYPED(Tuple, Quad, UInt16) region), {
+      return region.left <= region.right && region.top <= region.bottom &&
+             region.right < size.col && region.bottom < size.row;
+    }),
 
-static inline OPSTATUS MODULE_ITYPE(Text, GridCharCreate)(
-    void **data, MODULE_TYPED(Tuple, Dual, UInt16) *currentSize, MODULE_TYPED(Tuple, Dual, UInt16) size,
-    size_t elementSize) {
-  size_t count;
-  if (data == NULL || currentSize == NULL || *data != NULL ||
-      currentSize->col != 0U || currentSize->row != 0U ||
-      !MODULE_ITYPE(Text, GridCharSizeValid)(size))
-    return STATUS_CONST(INVALID_ARGUMENT);
-  if (size.col == 0U)
-    return STATUS_CONST(SUCCESS);
-  count = (size_t)size.col * size.row;
-  if (count > SIZE_MAX / elementSize)
-    return STATUS_CONST(ARITHMETIC_OVERFLOW);
-  {
-    void *allocated = NULL;
-    OPSTATUS status = MODULE_FUNC(Memory, Alloc, Array)(&allocated, count, elementSize);
-    if (status != STATUS_CONST(SUCCESS))
-      return status;
-    memset(allocated, 0, count * elementSize);
-    *data = allocated;
-  }
-  *currentSize = size;
-  return STATUS_CONST(SUCCESS);
-}
+    OPERATION(CreateRaw,
+              (void **data, MODULE_TYPED(Tuple, Dual, UInt16) *currentSize,
+               MODULE_TYPED(Tuple, Dual, UInt16) size, size_t elementSize), {
+      if (data == NULL || currentSize == NULL || *data != NULL ||
+          currentSize->col != 0U || currentSize->row != 0U ||
+          !MODULE_IFUNC(Text, Char, SizeValid)(size)) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      if (size.col == 0U) {
+        return STATUS_CONST(SUCCESS);
+      }
+      const size_t count = (size_t)size.col * size.row;
+      void *allocated = NULL;
+      const OPSTATUS status =
+          MODULE_FUNC(Memory, Alloc, ZeroArray)(&allocated, count, elementSize);
+      if (status != STATUS_CONST(SUCCESS)) {
+        return status;
+      }
+      *data = allocated;
+      *currentSize = size;
+      return STATUS_CONST(SUCCESS);
+    })
+  )
+);
 
-static inline OPSTATUS MODULE_ITYPE(Text, GridCharReadRegion)(
-    const void *source, MODULE_TYPED(Tuple, Dual, UInt16) sourceSize,
-    MODULE_TYPED(Tuple, Quad, UInt16) region, void **result, MODULE_TYPED(Tuple, Dual, UInt16) *resultSize,
-    size_t elementSize) {
-  uint32_t width, height, y;
-  OPSTATUS status;
-  if (!MODULE_ITYPE(Text, GridCharValid)(source, sourceSize))
-    return STATUS_CONST(INVALID_ARGUMENT);
-  if (region.left > region.right || region.top > region.bottom)
-    return STATUS_CONST(INVALID_ARGUMENT);
-  if (!MODULE_ITYPE(Text, GridCharRegionValid)(sourceSize, region))
-    return STATUS_CONST(OUT_OF_RANGE);
-  width = (uint32_t)region.right - region.left + 1U;
-  height = (uint32_t)region.bottom - region.top + 1U;
-  status = MODULE_ITYPE(Text, GridCharCreate)(
-      result, resultSize,
-      (MODULE_TYPED(Tuple, Dual, UInt16)){.col = (uint16_t)width, .row = (uint16_t)height},
-      elementSize);
-  if (status != STATUS_CONST(SUCCESS))
-    return status;
-  for (y = 0U; y < height; ++y)
-    memcpy((unsigned char *)*result + (size_t)y * width * elementSize,
-           (const unsigned char *)source +
-               ((size_t)(region.top + y) * sourceSize.col + region.left) *
-                   elementSize,
-           (size_t)width * elementSize);
-  return STATUS_CONST(SUCCESS);
-}
-
+/* EOF */

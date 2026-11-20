@@ -18,18 +18,18 @@
 /* ========================================================================== */
 
 #define COSMERON_MACRO_INTERNAL_TAGGED_UNION_FIELD(ROW)                        \
-  PRIMITIVE_TYPE_GET(TYPE, ROW) PRIMITIVE_TYPE_GET(NAME, ROW);
+  PRIMITIVE_TYPE_GET(C_TYPE, ROW) PRIMITIVE_TYPE_GET(NAME, ROW);
 
 #define COSMERON_MACRO_INTERNAL_TAGGED_UNION_PRIMITIVE_API(ROW)                \
   OPERATION(PP_OP_CAT2(Set_, PRIMITIVE_TYPE_GET(NAME, ROW)),                   \
             (MODULE_TYPE(Type, TaggedUnion) * self,                       \
-             PRIMITIVE_TYPE_GET(TYPE, ROW) value)),                            \
+             PRIMITIVE_TYPE_GET(C_TYPE, ROW) value)),                            \
   FUNCTION(MODULE_TYPE(Type, TaggedUnion),                                \
            PP_OP_CAT2(From_, PRIMITIVE_TYPE_GET(NAME, ROW)),                   \
-           (PRIMITIVE_TYPE_GET(TYPE, ROW) value)),                             \
+           (PRIMITIVE_TYPE_GET(C_TYPE, ROW) value)),                             \
   OPERATION(PP_OP_CAT2(Get_, PRIMITIVE_TYPE_GET(NAME, ROW)),                   \
             (const MODULE_TYPE(Type, TaggedUnion) * self,                 \
-             PRIMITIVE_TYPE_GET(TYPE, ROW) * outValue)),
+             PRIMITIVE_TYPE_GET(C_TYPE, ROW) * outValue)),
 
 MODULE(DOMAIN(Core), Type,
     /* 1.1 Closed Tag Enum */
@@ -96,21 +96,25 @@ MODULE(DOMAIN(Core), Type,
                    void **outValue)),
 
         /* Safe Numeric Coercions (Overflow-Checked) */
-        OPERATION(CoerceInt64, (const MODULE_TYPE(Type, TaggedUnion) * self,
-                                int64_t *outValue)),
-        OPERATION(CoerceUInt64, (const MODULE_TYPE(Type, TaggedUnion) * self,
-                                 uint64_t *outValue)),
-        OPERATION(CoerceFloat64, (const MODULE_TYPE(Type, TaggedUnion) * self,
-                                  double *outValue)),
+        VARIANT(Coerce,
+            OPERATION(Int64, (const MODULE_TYPE(Type, TaggedUnion) * self,
+                              int64_t *outValue)),
+            OPERATION(UInt64, (const MODULE_TYPE(Type, TaggedUnion) * self,
+                               uint64_t *outValue)),
+            OPERATION(Float64, (const MODULE_TYPE(Type, TaggedUnion) * self,
+                                double *outValue))
+        ),
 
         /* Introspection */
-        PREDICATE(IsEmpty, (const MODULE_TYPE(Type, TaggedUnion) * self)),
-        PREDICATE(IsTag, (const MODULE_TYPE(Type, TaggedUnion) * self,
-                          MODULE_ENUM(Type, Tag) tag)),
-        PREDICATE(IsNumeric, (const MODULE_TYPE(Type, TaggedUnion) * self)),
-        PREDICATE(IsInteger, (const MODULE_TYPE(Type, TaggedUnion) * self)),
-        PREDICATE(IsSigned, (const MODULE_TYPE(Type, TaggedUnion) * self)),
-        PREDICATE(IsFloat, (const MODULE_TYPE(Type, TaggedUnion) * self)),
+        VARIANT(Is,
+            PREDICATE(Empty, (const MODULE_TYPE(Type, TaggedUnion) * self)),
+            PREDICATE(Tag, (const MODULE_TYPE(Type, TaggedUnion) * self,
+                            MODULE_ENUM(Type, Tag) tag)),
+            PREDICATE(Numeric, (const MODULE_TYPE(Type, TaggedUnion) * self)),
+            PREDICATE(Integer, (const MODULE_TYPE(Type, TaggedUnion) * self)),
+            PREDICATE(Signed, (const MODULE_TYPE(Type, TaggedUnion) * self)),
+            PREDICATE(Float, (const MODULE_TYPE(Type, TaggedUnion) * self))
+        ),
         FUNCTION(const char *, TagName, (MODULE_ENUM(Type, Tag) tag)),
         FUNCTION(MODULE_ENUM(Type, Category), CategoryOf,
                  (const MODULE_TYPE(Type, TaggedUnion) * self)),

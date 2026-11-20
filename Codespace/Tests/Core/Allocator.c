@@ -32,7 +32,7 @@ static void MockArenaFree(void *context, void *ptr, size_t size) {
   arena->freeCount++;
 }
 
-static const MODULE_TYPE(Memory, AllocatorOps) MOCK_ARENA_OPS = {
+static const MODULE_TYPE(Memory, Allocator_Ops) MOCK_ARENA_OPS = {
     .Alloc = MockArenaAlloc,
     .Realloc = NULL, /* exercises fallback Alloc + memcpy + Free */
     .Free = MockArenaFree,

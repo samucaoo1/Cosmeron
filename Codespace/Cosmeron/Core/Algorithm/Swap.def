@@ -1,5 +1,7 @@
 /* Swap.def - Dual Mode Engine (Zero Duplication) */
 
+#include "../Memory/Impl/Common.inc"
+
 #ifndef TEMPLATE_Memory_Swap
 #define TEMPLATE_Memory_Swap(SUFFIX, TYPE)                                     \
   TEMPLATE_PACKAGE(Memory, Swap, SUFFIX,                                       \
@@ -13,9 +15,11 @@
 #endif
 
 /* Mode 2 (Direct Include): Auto-instantiates and cleans up environment */
-#if defined(SUFFIX) && defined(TYPE)
+#if (!defined(COSMERON_INTERNAL_NO_AUTO_INSTANTIATE) && !defined(COSMERON_INTERNAL_IN_COMMON_INC)) && defined(SUFFIX) && defined(TYPE)
   TEMPLATE_Memory_Swap(SUFFIX, TYPE);
   #undef SUFFIX
   #undef TYPE
 #endif
+
+/* EOF */
 

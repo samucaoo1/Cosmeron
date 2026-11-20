@@ -1,8 +1,8 @@
 #include "../../Cosmeron/Modules/Container/Bitset/DynamicBitset.h"
 
 int main(void) {
-  MODULE_TYPE(Container, DynamicBitset) bs = {0};
-  if (Container_DynamicBitset_Create(&bs, 100U) != STATUS_CONST(SUCCESS))
+  MODULE_TYPE(Bitset, Dynamic) bs = {0};
+  if (Bitset_Dynamic_Create(&bs, 100U) != STATUS_CONST(SUCCESS))
     return 1;
   if (OBJECT_CALL_0(&bs, Size) != 100U || !OBJECT_CALL_0(&bs, None))
     return 2;
@@ -36,7 +36,7 @@ int main(void) {
     return 12;
 
   /* Clone and Set relations */
-  MODULE_TYPE(Container, DynamicBitset) clone = {0};
+  MODULE_TYPE(Bitset, Dynamic) clone = {0};
   if (OBJECT_CALL(&bs, Clone, &clone) != STATUS_CONST(SUCCESS))
     return 13;
   if (!OBJECT_CALL(&bs, Equal, &clone) ||

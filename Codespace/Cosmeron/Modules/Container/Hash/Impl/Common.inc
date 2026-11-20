@@ -6,6 +6,11 @@
     !defined(COSMERON_DISABLE_FT_Container_Hash)
 #define COSMERON_DISABLE_FT_Container_Hash 1
 #endif
+#if (defined(CONTAINER_DISABLE_FUNCTION_TABLE) ||                               \
+     defined(HASH_DISABLE_FUNCTION_TABLE)) &&                                  \
+    !defined(COSMERON_DISABLE_FT_Hash)
+#define COSMERON_DISABLE_FT_Hash 1
+#endif
 
 #include "../../../../Core/Memory/Allocator.h"
 #include "../../../../Core/Module/Module.h"
@@ -13,7 +18,7 @@
 #include "../../../../Core/Preprocessor/Compiling.inc"
 #include "../../../../Core/Preprocessor/Operations.h"
 #include "../../../../Core/Types/Primitive.h"
-#include "../../Iterator/Iterator.h"
+#include "../../Impl/Common.inc"
 
 #include <stdbool.h>
 #include <stddef.h>

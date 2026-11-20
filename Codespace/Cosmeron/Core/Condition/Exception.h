@@ -12,8 +12,31 @@
 #include <stdint.h>
 
 /* ========================================================================== */
-/* 1. Declarative Module: Condition (ExceptionFrame Object & Exception Package)*/
+/* 1. Declarative Module: Condition (Exception_Frame Object & Exception Package)*/
 /* ========================================================================== */
+
+#if defined(CONDITION_DISABLE_FUNCTION_TABLE) &&                               \
+    !defined(COSMERON_DISABLE_FT_Condition)
+#define COSMERON_DISABLE_FT_Condition 1
+#endif
+#if defined(CONDITION_EXCEPTION_DISABLE_FUNCTION_TABLE) &&                     \
+    !defined(COSMERON_DISABLE_FT_Condition_Exception)
+#define COSMERON_DISABLE_FT_Condition_Exception 1
+#endif
+
+#define CONDITION_EXCEPTION_STEP_COL_NAME(NAME, VALUE) NAME
+#define CONDITION_EXCEPTION_STEP_COL_VALUE(NAME, VALUE) VALUE
+#define CONDITION_EXCEPTION_STEP_GET(FIELD, ROW)                               \
+  PP_OP_CAT2(CONDITION_EXCEPTION_STEP_COL_, FIELD) ROW
+
+#define CONDITION_EXCEPTION_STEP_TABLE(X)                                      \
+  X((STEP_TRY, 0))                                                             \
+  X((STEP_CATCH, 1))                                                           \
+  X((STEP_FINALLY, 2))                                                         \
+  X((STEP_DONE, 3))                                                            \
+  X((JMP_THROWN, 1))
+
+IENUM_DEF(Condition_Exception, Step, CONDITION_EXCEPTION_STEP_TABLE)
 
 static _Thread_local void *MODULE_IFUNC(Condition, Exception_DeferWatermark) = NULL;
 static _Thread_local void (*MODULE_IFUNC(Condition, Exception_DeferUnwind))(void *) = NULL;
@@ -22,10 +45,10 @@ MODULE(DOMAIN(Core), Condition,
     CLOSURE(
         PROCEDURE(ExceptionCleanup, ())
     ),
-    OBJECT(ExceptionFrame,
+    OBJECT(Exception_Frame,
         FIELDS(
             jmp_buf env;
-            struct MODULE_TYPE(Condition, ExceptionFrame) *previous;
+            struct MODULE_TYPE(Condition, Exception_Frame) *previous;
             void *deferWatermark;
             MODULE_TYPE(Condition, Error) error;
             int step;
@@ -50,7 +73,7 @@ MODULE(DOMAIN(Core), Condition,
         })
     ),
     PACKAGE(Exception,
-        PROCEDURE(PushFrame, (MODULE_TYPE(Condition, ExceptionFrame) *frame)),
+        PROCEDURE(PushFrame, (MODULE_TYPE(Condition, Exception_Frame) *frame)),
         PROCEDURE(PopFrame, ()),
         PROCEDURE(RegisterCleanup,
                   (MODULE_CLOSURE(Condition, ExceptionCleanup) cleanup)),
@@ -64,36 +87,37 @@ MODULE(DOMAIN(Core), Condition,
     ),
     INTERNAL_EX(Exception,
         FUNCTION_INLINE(int, Begin,
-                        (MODULE_TYPE(Condition, ExceptionFrame) *frame, int jumpResult), {
+                        (MODULE_TYPE(Condition, Exception_Frame) *frame, int jumpResult), {
           if (jumpResult == 0) {
             frame->previous = NULL;
             frame->deferWatermark = MODULE_IFUNC(Condition, Exception_DeferWatermark);
-            frame->step = 0;
+            frame->step = CNS(Condition, Exception, Internal, STEP_TRY);
             frame->threw = false;
             frame->caught = false;
             frame->rethrow = false;
             frame->cleanup.function = NULL;
             frame->cleanup.context = NULL;
             MODULE_FUNC(Condition, Exception, PushFrame)(frame);
-            return 0;
+            return CNS(Condition, Exception, Internal, STEP_TRY);
           } else {
             frame->threw = true;
-            return 1;
+            return CNS(Condition, Exception, Internal, STEP_CATCH);
           }
         }),
 
         FUNCTION_INLINE(int, NextStep,
-                        (MODULE_TYPE(Condition, ExceptionFrame) *frame, int currentStep), {
+                        (MODULE_TYPE(Condition, Exception_Frame) *frame, int currentStep), {
           (void)frame;
-          if (currentStep == 0 || currentStep == 1) {
-            return 2;
+          if (currentStep == CNS(Condition, Exception, Internal, STEP_TRY) ||
+              currentStep == CNS(Condition, Exception, Internal, STEP_CATCH)) {
+            return CNS(Condition, Exception, Internal, STEP_FINALLY);
           }
-          return 3;
+          return CNS(Condition, Exception, Internal, STEP_DONE);
         }),
 
         PROCEDURE_INLINE(Finish,
-                         (MODULE_TYPE(Condition, ExceptionFrame) *frame), {
-          frame->step = 1;
+                         (MODULE_TYPE(Condition, Exception_Frame) *frame), {
+          frame->step = CNS(Condition, Exception, Internal, STEP_CATCH);
           MODULE_FUNC(Condition, Exception, PopFrame)();
           if (frame->threw && (!frame->caught || frame->rethrow)) {
             MODULE_TYPE(Condition, Error) err = frame->error;
@@ -108,20 +132,23 @@ MODULE(DOMAIN(Core), Condition,
 /* ========================================================================== */
 
 #define TRY \
-  for (MODULE_TYPE(Condition, ExceptionFrame) _cosm_frame = {0}; \
-       _cosm_frame.step == 0; \
+  for (MODULE_TYPE(Condition, Exception_Frame) _cosm_frame = {0}; \
+       _cosm_frame.step == CNS(Condition, Exception, Internal, STEP_TRY); \
        MODULE_IFUNC(Condition, Exception, Finish)(&_cosm_frame)) \
     for (int _cosm_step = \
              MODULE_IFUNC(Condition, Exception, Begin)( \
                  &_cosm_frame, setjmp(_cosm_frame.env)); \
-         _cosm_step < 3; \
+         _cosm_step < CNS(Condition, Exception, Internal, STEP_DONE); \
          _cosm_step = MODULE_IFUNC(Condition, Exception, NextStep)( \
              &_cosm_frame, _cosm_step)) \
-      if (_cosm_step == 0)
+      if (_cosm_step == CNS(Condition, Exception, Internal, STEP_TRY))
 
-#define CATCH else if (_cosm_step == 1 && (_cosm_frame.caught = true))
+#define CATCH \
+  else if (_cosm_step == CNS(Condition, Exception, Internal, STEP_CATCH) && \
+           (_cosm_frame.caught = true))
 
-#define FINALLY else if (_cosm_step == 2)
+#define FINALLY \
+  else if (_cosm_step == CNS(Condition, Exception, Internal, STEP_FINALLY))
 
 #define THROW(ERROR_PTR) MODULE_FUNC(Condition, Exception, Throw)(ERROR_PTR)
 

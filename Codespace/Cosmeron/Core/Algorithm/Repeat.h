@@ -13,10 +13,19 @@
 /* 1. Module Declaration: Algorithm (Package Repeat + Template Package Repeat)*/
 /* ========================================================================== */
 
+#if defined(ALGORITHM_DISABLE_FUNCTION_TABLE) &&                               \
+    !defined(COSMERON_DISABLE_FT_Algorithm)
+#define COSMERON_DISABLE_FT_Algorithm 1
+#endif
+#if defined(ALGORITHM_REPEAT_DISABLE_FUNCTION_TABLE) &&                       \
+    !defined(COSMERON_DISABLE_FT_Algorithm_Repeat)
+#define COSMERON_DISABLE_FT_Algorithm_Repeat 1
+#endif
+
 #define COSMERON_MACRO_INTERNAL_REPEAT_PRIMITIVE_DECL(ROW)                     \
   OPERATION(PRIMITIVE_TYPE_GET(NAME, ROW),                                     \
-            (PRIMITIVE_TYPE_GET(TYPE, ROW) * destination,                      \
-             PRIMITIVE_TYPE_GET(TYPE, ROW) value, size_t count)),
+            (PRIMITIVE_TYPE_GET(C_TYPE, ROW) * destination,                      \
+             PRIMITIVE_TYPE_GET(C_TYPE, ROW) value, size_t count)),
 
 MODULE(DOMAIN(Core), Algorithm,
 

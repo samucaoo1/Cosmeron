@@ -7,41 +7,99 @@
 /* ========================================================================== */
 
 MODULE(DOMAIN(Core), Type,
-  INTERNAL_EX(Any,
-    OPERATION(SelfInit, (void *instance), {
-      if (!instance)
+  INTERNAL_EX(AnyConversion,
+    OPERATION(StoreRaw,
+              (const MODULE_TYPE(Type, Traits) **traitsSlot,
+               void **heapSlot, unsigned char *inlineBytes, size_t sboCapacity,
+               const MODULE_TYPE(Type, Traits) * traits,
+               void *sourceInstance, bool isMove), {
+      if (!traitsSlot || !heapSlot || !inlineBytes ||
+          !MODULE_FUNC(Type, Traits, IsValid)(traits) || !sourceInstance) {
         return STATUS_CONST(INVALID_ARGUMENT);
-      MODULE_FUNC(Type, Any, Init)((MODULE_TYPE(Type, Any) *)instance);
+      }
+
+      const void *currentPtr =
+          MODULE_FUNC(Type, AnyConversion, RawPointerOf)(
+              *traitsSlot, *heapSlot, inlineBytes, sboCapacity);
+      if (sourceInstance == currentPtr &&
+          MODULE_FUNC(Type, Traits, IsEqual)(*traitsSlot, traits)) {
+        return STATUS_CONST(SUCCESS);
+      }
+
+      void *buffer = NULL;
+      OPSTATUS status =
+          MODULE_FUNC(Memory, Alloc, ZeroBytes)(&buffer, traits->size);
+      if (status != STATUS_CONST(SUCCESS)) {
+        return status;
+      }
+
+      status = isMove ? MODULE_FUNC(Type, Traits, Move)(traits, buffer,
+                                                        sourceInstance)
+                      : MODULE_FUNC(Type, Traits, Copy)(traits, buffer,
+                                                        sourceInstance);
+      if (status != STATUS_CONST(SUCCESS)) {
+        MODULE_FUNC(Memory, Alloc, Free)(&buffer);
+        return status;
+      }
+
+      MODULE_FUNC(Type, AnyConversion, DisposeRaw)(
+          traitsSlot, heapSlot, inlineBytes, sboCapacity);
+      *traitsSlot = traits;
+
+      if (MODULE_FUNC(Type, AnyConversion, FitsInline)(traits, sboCapacity)) {
+        status = MODULE_FUNC(Type, Traits, Move)(traits, inlineBytes, buffer);
+        MODULE_FUNC(Memory, Alloc, Free)(&buffer);
+        if (status != STATUS_CONST(SUCCESS)) {
+          *traitsSlot = NULL;
+          memset(inlineBytes, 0, sboCapacity);
+          return status;
+        }
+        return STATUS_CONST(SUCCESS);
+      }
+
+      *heapSlot = buffer;
       return STATUS_CONST(SUCCESS);
-    }),
-
-    PROCEDURE(SelfDispose, (void *instance), {
-      MODULE_FUNC(Type, Any, Dispose)(
-          (MODULE_TYPE(Type, Any) *)instance);
-    }),
-
-    OPERATION(SelfCopy, (void *destination, const void *source), {
-      return MODULE_FUNC(Type, Any, Clone)(
-          (MODULE_TYPE(Type, Any) *)destination,
-          (const MODULE_TYPE(Type, Any) *)source);
-    }),
-
-    PROCEDURE(SelfMove, (void *destination, void *source), {
-      MODULE_FUNC(Type, Any, Move)(
-          (MODULE_TYPE(Type, Any) *)destination,
-          (MODULE_TYPE(Type, Any) *)source);
-    }),
-
-    COMPARISON(SelfCompare, (const void *left, const void *right), {
-      return MODULE_FUNC(Type, Any, Compare)(
-          (const MODULE_TYPE(Type, Any) *)left,
-          (const MODULE_TYPE(Type, Any) *)right);
-    }),
-
-    FUNCTION(size_t, SelfHash, (const void *instance), {
-      return MODULE_FUNC(Type, Any, Hash)(
-          (const MODULE_TYPE(Type, Any) *)instance);
     })
+  ),
+
+  INTERNAL_EX(Any,
+    VARIANT(Self,
+      OPERATION(Init, (void *instance), {
+        if (!instance) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+        MODULE_FUNC(Type, Any, Init)((MODULE_TYPE(Type, Any) *)instance);
+        return STATUS_CONST(SUCCESS);
+      }),
+
+      PROCEDURE(Dispose, (void *instance), {
+        MODULE_FUNC(Type, Any, Dispose)(
+            (MODULE_TYPE(Type, Any) *)instance);
+      }),
+
+      OPERATION(Copy, (void *destination, const void *source), {
+        return MODULE_FUNC(Type, Any, Clone)(
+            (MODULE_TYPE(Type, Any) *)destination,
+            (const MODULE_TYPE(Type, Any) *)source);
+      }),
+
+      PROCEDURE(Move, (void *destination, void *source), {
+        MODULE_FUNC(Type, Any, Move)(
+            (MODULE_TYPE(Type, Any) *)destination,
+            (MODULE_TYPE(Type, Any) *)source);
+      }),
+
+      COMPARISON(Compare, (const void *left, const void *right), {
+        return MODULE_FUNC(Type, Any, Compare)(
+            (const MODULE_TYPE(Type, Any) *)left,
+            (const MODULE_TYPE(Type, Any) *)right);
+      }),
+
+      FUNCTION(size_t, Hash, (const void *instance), {
+        return MODULE_FUNC(Type, Any, Hash)(
+            (const MODULE_TYPE(Type, Any) *)instance);
+      })
+    )
   )
 );
 
@@ -52,14 +110,14 @@ MODULE(DOMAIN(Core), Type,
 #define COSMERON_MACRO_INTERNAL_ANY_PRIMITIVE_IMPL(ROW)                        \
   OPERATION(PP_OP_CAT2(Set_, PRIMITIVE_TYPE_GET(NAME, ROW)),                   \
             (MODULE_TYPE(Type, Any) * self,                               \
-             PRIMITIVE_TYPE_GET(TYPE, ROW) value), {                           \
+             PRIMITIVE_TYPE_GET(C_TYPE, ROW) value), {                           \
     return MODULE_FUNC(Type, Any, Emplace)(                               \
         self, MODULE_FUNC(Type, Traits, PRIMITIVE_TYPE_GET(NAME, ROW))(), \
         &value);                                                               \
   }),                                                                          \
   OPERATION(PP_OP_CAT2(Get_, PRIMITIVE_TYPE_GET(NAME, ROW)),                   \
             (const MODULE_TYPE(Type, Any) * self,                         \
-             PRIMITIVE_TYPE_GET(TYPE, ROW) * outValue), {                      \
+             PRIMITIVE_TYPE_GET(C_TYPE, ROW) * outValue), {                      \
     return MODULE_FUNC(Type, Any, Get)(                                   \
         self, MODULE_FUNC(Type, Traits, PRIMITIVE_TYPE_GET(NAME, ROW))(), \
         outValue);                                                             \
@@ -71,7 +129,7 @@ MODULE(DOMAIN(Core), Type,
           MODULE_FUNC(Type, Traits, PRIMITIVE_TYPE_GET(NAME, ROW))())) {  \
     return MODULE_FUNC(Type, TaggedUnion,                                 \
                        PP_OP_CAT2(Set_, PRIMITIVE_TYPE_GET(NAME, ROW)))(       \
-        outUnion, *(const PRIMITIVE_TYPE_GET(TYPE, ROW) *)ptr);                \
+        outUnion, *(const PRIMITIVE_TYPE_GET(C_TYPE, ROW) *)ptr);                \
   }
 
 /* ========================================================================== */
@@ -138,64 +196,9 @@ MODULE_IMPLEMENT(DOMAIN(Core), Type,
                void **heapSlot, unsigned char *inlineBytes, size_t sboCapacity,
                const MODULE_TYPE(Type, Traits) * traits,
                const void *sourceInstance), {
-      if (!traitsSlot || !heapSlot || !inlineBytes ||
-          !MODULE_FUNC(Type, Traits, IsValid)(traits) || !sourceInstance)
-        return STATUS_CONST(INVALID_ARGUMENT);
-
-      const void *currentPtr =
-          MODULE_FUNC(Type, AnyConversion, RawPointerOf)(
-              *traitsSlot, *heapSlot, inlineBytes, sboCapacity);
-      if (sourceInstance == currentPtr &&
-          MODULE_FUNC(Type, Traits, IsEqual)(*traitsSlot, traits))
-        return STATUS_CONST(SUCCESS);
-
-      if (MODULE_FUNC(Type, AnyConversion, FitsInline)(traits,
-                                                            sboCapacity)) {
-        void *stagingHeap = NULL;
-        OPSTATUS status =
-            MODULE_FUNC(Memory, Alloc, ZeroBytes)(&stagingHeap, traits->size);
-        if (status != STATUS_CONST(SUCCESS))
-          return status;
-
-        status = MODULE_FUNC(Type, Traits, Copy)(traits, stagingHeap,
-                                                      sourceInstance);
-        if (status != STATUS_CONST(SUCCESS)) {
-          MODULE_FUNC(Memory, Alloc, Free)(&stagingHeap);
-          return status;
-        }
-
-        MODULE_FUNC(Type, AnyConversion, DisposeRaw)(
-            traitsSlot, heapSlot, inlineBytes, sboCapacity);
-        *traitsSlot = traits;
-        status = MODULE_FUNC(Type, Traits, Move)(traits, inlineBytes,
-                                                      stagingHeap);
-        MODULE_FUNC(Memory, Alloc, Free)(&stagingHeap);
-        if (status != STATUS_CONST(SUCCESS)) {
-          *traitsSlot = NULL;
-          memset(inlineBytes, 0, sboCapacity);
-          return status;
-        }
-        return STATUS_CONST(SUCCESS);
-      }
-
-      void *heapBuffer = NULL;
-      OPSTATUS status =
-          MODULE_FUNC(Memory, Alloc, ZeroBytes)(&heapBuffer, traits->size);
-      if (status != STATUS_CONST(SUCCESS))
-        return status;
-
-      status =
-          MODULE_FUNC(Type, Traits, Copy)(traits, heapBuffer, sourceInstance);
-      if (status != STATUS_CONST(SUCCESS)) {
-        MODULE_FUNC(Memory, Alloc, Free)(&heapBuffer);
-        return status;
-      }
-
-      MODULE_FUNC(Type, AnyConversion, DisposeRaw)(
-          traitsSlot, heapSlot, inlineBytes, sboCapacity);
-      *traitsSlot = traits;
-      *heapSlot = heapBuffer;
-      return STATUS_CONST(SUCCESS);
+      return MODULE_IFUNC(Type, AnyConversion, StoreRaw)(
+          traitsSlot, heapSlot, inlineBytes, sboCapacity, traits,
+          (void *)(uintptr_t)sourceInstance, false);
     }),
 
     OPERATION(MoveFromRaw,
@@ -203,64 +206,9 @@ MODULE_IMPLEMENT(DOMAIN(Core), Type,
                void **heapSlot, unsigned char *inlineBytes, size_t sboCapacity,
                const MODULE_TYPE(Type, Traits) * traits,
                void *sourceInstance), {
-      if (!traitsSlot || !heapSlot || !inlineBytes ||
-          !MODULE_FUNC(Type, Traits, IsValid)(traits) || !sourceInstance)
-        return STATUS_CONST(INVALID_ARGUMENT);
-
-      void *currentPtr =
-          MODULE_FUNC(Type, AnyConversion, MutableRawPointerOf)(
-              *traitsSlot, *heapSlot, inlineBytes, sboCapacity);
-      if (sourceInstance == currentPtr &&
-          MODULE_FUNC(Type, Traits, IsEqual)(*traitsSlot, traits))
-        return STATUS_CONST(SUCCESS);
-
-      if (MODULE_FUNC(Type, AnyConversion, FitsInline)(traits,
-                                                            sboCapacity)) {
-        void *stagingHeap = NULL;
-        OPSTATUS status =
-            MODULE_FUNC(Memory, Alloc, ZeroBytes)(&stagingHeap, traits->size);
-        if (status != STATUS_CONST(SUCCESS))
-          return status;
-
-        status = MODULE_FUNC(Type, Traits, Move)(traits, stagingHeap,
-                                                      sourceInstance);
-        if (status != STATUS_CONST(SUCCESS)) {
-          MODULE_FUNC(Memory, Alloc, Free)(&stagingHeap);
-          return status;
-        }
-
-        MODULE_FUNC(Type, AnyConversion, DisposeRaw)(
-            traitsSlot, heapSlot, inlineBytes, sboCapacity);
-        *traitsSlot = traits;
-        status = MODULE_FUNC(Type, Traits, Move)(traits, inlineBytes,
-                                                      stagingHeap);
-        MODULE_FUNC(Memory, Alloc, Free)(&stagingHeap);
-        if (status != STATUS_CONST(SUCCESS)) {
-          *traitsSlot = NULL;
-          memset(inlineBytes, 0, sboCapacity);
-          return status;
-        }
-        return STATUS_CONST(SUCCESS);
-      }
-
-      void *heapBuffer = NULL;
-      OPSTATUS status =
-          MODULE_FUNC(Memory, Alloc, ZeroBytes)(&heapBuffer, traits->size);
-      if (status != STATUS_CONST(SUCCESS))
-        return status;
-
-      status =
-          MODULE_FUNC(Type, Traits, Move)(traits, heapBuffer, sourceInstance);
-      if (status != STATUS_CONST(SUCCESS)) {
-        MODULE_FUNC(Memory, Alloc, Free)(&heapBuffer);
-        return status;
-      }
-
-      MODULE_FUNC(Type, AnyConversion, DisposeRaw)(
-          traitsSlot, heapSlot, inlineBytes, sboCapacity);
-      *traitsSlot = traits;
-      *heapSlot = heapBuffer;
-      return STATUS_CONST(SUCCESS);
+      return MODULE_IFUNC(Type, AnyConversion, StoreRaw)(
+          traitsSlot, heapSlot, inlineBytes, sboCapacity, traits,
+          sourceInstance, true);
     }),
 
     OPERATION(Clone,
@@ -379,7 +327,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Type,
       union {
         void *heapPointer;
         max_align_t alignDummy;
-        unsigned char inlineBytes[256];
+        unsigned char inlineBytes[MODULE_CONST(Type, Any, MAX_SBO_CAPACITY)];
       } tempStorage;
       memset(&tempStorage, 0, sizeof(tempStorage));
 
@@ -530,9 +478,12 @@ MODULE_IMPLEMENT(DOMAIN(Core), Type,
           MODULE_FUNC(Type, Traits, HashBytes)(&traits, sizeof(traits));
       const void *ptr = MODULE_FUNC(Type, AnyConversion, RawPointerOf)(
           traits, heapPointer, inlineBytes, sboCapacity);
-      size_t valHash = MODULE_FUNC(Type, Traits, Hash)(traits, ptr);
-      return traitsHash ^
-             (valHash + 0x9e3779b9U + (traitsHash << 6U) + (traitsHash >> 2U));
+      const size_t valHash = MODULE_FUNC(Type, Traits, Hash)(traits, ptr);
+      const size_t goldenRatio = 0x9e3779b9U;
+      const size_t mixShiftLeft = 6U;
+      const size_t mixShiftRight = 2U;
+      return traitsHash ^ (valHash + goldenRatio + (traitsHash << mixShiftLeft) +
+                           (traitsHash >> mixShiftRight));
     })
   ),
 
@@ -618,24 +569,28 @@ MODULE_IMPLEMENT(DOMAIN(Core), Type,
       return self != NULL && self->traits != NULL;
     }),
 
-    PREDICATE(IsEmpty, (const MODULE_TYPE(Type, Any) * self), {
-      return !MODULE_FUNC(Type, Any, HasValue)(self);
-    }),
+    VARIANT(Is,
+      PREDICATE(Empty, (const MODULE_TYPE(Type, Any) * self), {
+        return !MODULE_FUNC(Type, Any, HasValue)(self);
+      }),
 
-    PREDICATE(IsInline, (const MODULE_TYPE(Type, Any) * self), {
-      if (!MODULE_FUNC(Type, Any, HasValue)(self))
-        return false;
-      return MODULE_FUNC(Type, AnyConversion, FitsInline)(
-          self->traits, MODULE_CONST(Type, Any, SBO_CAPACITY));
-    }),
+      PREDICATE(Inline, (const MODULE_TYPE(Type, Any) * self), {
+        if (!MODULE_FUNC(Type, Any, HasValue)(self)) {
+          return false;
+        }
+        return MODULE_FUNC(Type, AnyConversion, FitsInline)(
+            self->traits, MODULE_CONST(Type, Any, SBO_CAPACITY));
+      }),
 
-    PREDICATE(IsType, (const MODULE_TYPE(Type, Any) * self,
+      PREDICATE(Type, (const MODULE_TYPE(Type, Any) * self,
                        const MODULE_TYPE(Type, Traits) * expectedTraits), {
-      if (!MODULE_FUNC(Type, Any, HasValue)(self))
-        return false;
-      return MODULE_FUNC(Type, Traits, IsEqual)(self->traits,
-                                                      expectedTraits);
-    }),
+        if (!MODULE_FUNC(Type, Any, HasValue)(self)) {
+          return false;
+        }
+        return MODULE_FUNC(Type, Traits, IsEqual)(self->traits,
+                                                  expectedTraits);
+      })
+    ),
 
     FUNCTION(const MODULE_TYPE(Type, Traits) *, TraitsOf,
              (const MODULE_TYPE(Type, Any) * self), {
@@ -677,28 +632,34 @@ MODULE_IMPLEMENT(DOMAIN(Core), Type,
       return MODULE_FUNC(Type, Traits, Copy)(self->traits, outValue, ptr);
     }),
 
-    OPERATION(Borrow, (const MODULE_TYPE(Type, Any) * self,
-                       const MODULE_TYPE(Type, Traits) * expectedTraits,
-                       const void **outPointer), {
-      if (!self || !expectedTraits || !outPointer)
-        return STATUS_CONST(INVALID_ARGUMENT);
-      if (!MODULE_FUNC(Type, Any, IsType)(self, expectedTraits))
-        return STATUS_CONST(INVALID_ARGUMENT);
-      *outPointer = MODULE_FUNC(Type, Any, RawPointer)(self);
-      return STATUS_CONST(SUCCESS);
-    }),
+    VARIANT(Borrow,
+      OPERATION((const MODULE_TYPE(Type, Any) * self,
+                 const MODULE_TYPE(Type, Traits) * expectedTraits,
+                 const void **outPointer), {
+        if (!self || !expectedTraits || !outPointer) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+        if (!MODULE_FUNC(Type, Any, IsType)(self, expectedTraits)) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+        *outPointer = MODULE_FUNC(Type, Any, RawPointer)(self);
+        return STATUS_CONST(SUCCESS);
+      }),
 
-    OPERATION(BorrowMutable,
-              (MODULE_TYPE(Type, Any) * self,
-               const MODULE_TYPE(Type, Traits) * expectedTraits,
-               void **outPointer), {
-      if (!self || !expectedTraits || !outPointer)
-        return STATUS_CONST(INVALID_ARGUMENT);
-      if (!MODULE_FUNC(Type, Any, IsType)(self, expectedTraits))
-        return STATUS_CONST(INVALID_ARGUMENT);
-      *outPointer = MODULE_FUNC(Type, Any, MutableRawPointer)(self);
-      return STATUS_CONST(SUCCESS);
-    }),
+      OPERATION(Mutable,
+                (MODULE_TYPE(Type, Any) * self,
+                 const MODULE_TYPE(Type, Traits) * expectedTraits,
+                 void **outPointer), {
+        if (!self || !expectedTraits || !outPointer) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+        if (!MODULE_FUNC(Type, Any, IsType)(self, expectedTraits)) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+        *outPointer = MODULE_FUNC(Type, Any, MutableRawPointer)(self);
+        return STATUS_CONST(SUCCESS);
+      })
+    ),
 
     PRIMITIVE_TYPE_TABLE(COSMERON_MACRO_INTERNAL_ANY_PRIMITIVE_IMPL)
 
@@ -761,7 +722,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Type,
 
     FUNCTION(const MODULE_TYPE(Type, Traits) *, Traits, (void), {
       static const MODULE_TYPE(Type, Traits) descriptor = {
-          .name = "Primitive_TAny",
+          .name = "Type_TAny",
           .size = sizeof(MODULE_TYPE(Type, Any)),
           .alignment = _Alignof(MODULE_TYPE(Type, Any)),
           .category = MODULE_CONST(Type, Category, OBJECT),

@@ -1,24 +1,12 @@
 #pragma once
 
-#include "../Condition/Status.h"
-#include "../Module/Callback/Callback.h"
-#include "../Module/Module.h"
-#include "../Preprocessor/Compiling.inc"
-
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <string.h>
+#include "../Module/Closure/Closure.h"
+#include "Impl/Common.inc"
 
 /* ========================================================================== */
-/* Type Module: Declarative Template Object Optional                       */
+/* Type Module: Declarative Template Object Optional                          */
 /* ========================================================================== */
-
-#ifndef TEMPLATE_Type
-#define TEMPLATE_Type(TARGET, ...) NS(TEMPLATE_Type, TARGET)(__VA_ARGS__)
-#endif
 
 #include "Optional.def"
 
 /* EOF */
-

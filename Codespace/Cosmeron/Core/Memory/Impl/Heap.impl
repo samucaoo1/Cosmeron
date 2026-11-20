@@ -3,6 +3,19 @@
 #include <stdint.h>
 #include <string.h>
 
+#define MEMORY_HEAP_INTERNAL_COL_NAME(NAME, VALUE) NAME
+#define MEMORY_HEAP_INTERNAL_COL_VALUE(NAME, VALUE) VALUE
+#define MEMORY_HEAP_INTERNAL_GET(FIELD, ROW)                                   \
+  PP_OP_CAT2(MEMORY_HEAP_INTERNAL_COL_, FIELD) ROW
+
+#define MEMORY_HEAP_INTERNAL_TABLE(X)                                          \
+  X((BITMAP_WORD_BITS, 64U))                                                   \
+  X((MAX_CELLS_PER_PAGE, 256U))                                                \
+  X((RADIX_HASH_SHIFT, 16U))                                                   \
+  X((RADIX_HASH_MULT, 0x45d9f3bU))
+
+IENUM_DEF(Memory_Heap, InternalConfig, MEMORY_HEAP_INTERNAL_TABLE)
+
 #define COSMERON_MACRO_INTERNAL_HEAP_SIZE_CLASS_TABLE(X)                       \
   X((16U))                                                                     \
   X((32U))                                                                     \
@@ -52,10 +65,46 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
     }),
 
     FUNCTION(uintptr_t, RadixHash, (uintptr_t key), {
-      key = (key ^ (key >> 16U)) * 0x45d9f3bU;
-      key = (key ^ (key >> 16U)) * 0x45d9f3bU;
-      key = key ^ (key >> 16U);
+      const uintptr_t shift =
+          (uintptr_t)CNS(Memory, Heap, Internal, RADIX_HASH_SHIFT);
+      const uintptr_t mult =
+          (uintptr_t)CNS(Memory, Heap, Internal, RADIX_HASH_MULT);
+      key = (key ^ (key >> shift)) * mult;
+      key = (key ^ (key >> shift)) * mult;
+      key = key ^ (key >> shift);
       return key % MODULE_CONST(MEMORY, HEAP, RADIX_BUCKETS_COUNT);
+    }),
+
+    PROCEDURE(FreePageList, (MODULE_ITYPE(Memory, HeapPageHeader) *head), {
+      while (head) {
+        MODULE_ITYPE(Memory, HeapPageHeader) *next = head->next;
+        void *raw = head->rawBlock;
+        MODULE_FUNC(Memory, Alloc, Free)(&raw);
+        head = next;
+      }
+    }),
+
+    PROCEDURE(UnlinkPage,
+              (MODULE_ITYPE(Memory, HeapPageHeader) **head,
+               MODULE_ITYPE(Memory, HeapPageHeader) *page), {
+      if (page->prev)
+        page->prev->next = page->next;
+      else
+        *head = page->next;
+      if (page->next)
+        page->next->prev = page->prev;
+      page->prev = NULL;
+      page->next = NULL;
+    }),
+
+    PROCEDURE(PrependPage,
+              (MODULE_ITYPE(Memory, HeapPageHeader) **head,
+               MODULE_ITYPE(Memory, HeapPageHeader) *page), {
+      page->next = *head;
+      if (*head)
+        (*head)->prev = page;
+      page->prev = NULL;
+      *head = page;
     }),
 
     FUNCTION(MODULE_ITYPE(Memory, HeapRadixLevel2) *, GetOrCreateRadixL2, (MODULE_TYPE(Memory, Heap) *self, uintptr_t l1Key), {
@@ -161,31 +210,13 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
         return STATUS_CONST(INVALID_ARGUMENT);
 
       for (size_t i = 0U; i < MODULE_CONST(MEMORY, HEAP, SIZE_CLASS_COUNT); ++i) {
-        MODULE_ITYPE(Memory, HeapPageHeader) *page = self->classes[i].activePages;
-        while (page) {
-          MODULE_ITYPE(Memory, HeapPageHeader) *next = page->next;
-          void *raw = page->rawBlock;
-          MODULE_FUNC(Memory, Alloc, Free)(&raw);
-          page = next;
-        }
-        page = self->classes[i].fullPages;
-        while (page) {
-          MODULE_ITYPE(Memory, HeapPageHeader) *next = page->next;
-          void *raw = page->rawBlock;
-          MODULE_FUNC(Memory, Alloc, Free)(&raw);
-          page = next;
-        }
+        MODULE_IFUNC(Memory, Heap, FreePageList)(self->classes[i].activePages);
+        MODULE_IFUNC(Memory, Heap, FreePageList)(self->classes[i].fullPages);
         self->classes[i].activePages = NULL;
         self->classes[i].fullPages = NULL;
       }
 
-      MODULE_ITYPE(Memory, HeapPageHeader) *freePage = self->freePages;
-      while (freePage) {
-        MODULE_ITYPE(Memory, HeapPageHeader) *next = freePage->next;
-        void *raw = freePage->rawBlock;
-        MODULE_FUNC(Memory, Alloc, Free)(&raw);
-        freePage = next;
-      }
+      MODULE_IFUNC(Memory, Heap, FreePageList)(self->freePages);
       self->freePages = NULL;
 
       MODULE_ITYPE(Memory, HeapSpan) *span = self->largeObjects;
@@ -269,8 +300,8 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
 
           size_t availableBytes = MODULE_CONST(MEMORY, HEAP, PAGE_SIZE) - MODULE_CONST(MEMORY, HEAP, PAGE_HEADER_SIZE);
           size_t cells = availableBytes / sc->elementSize;
-          if (cells > 256U)
-            cells = 256U;
+          if (cells > (size_t)CNS(Memory, Heap, Internal, MAX_CELLS_PER_PAGE))
+            cells = (size_t)CNS(Memory, Heap, Internal, MAX_CELLS_PER_PAGE);
 
           page->cellCount = (uint16_t)cells;
           page->freeCellCount = (uint16_t)cells;
@@ -290,21 +321,19 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
           if (endAddr > self->maxAddress)
             self->maxAddress = endAddr;
 
-          page->next = sc->activePages;
-          if (page->next)
-            page->next->prev = page;
-          page->prev = NULL;
-          sc->activePages = page;
+          MODULE_IFUNC(Memory, Heap, PrependPage)(&sc->activePages, page);
           self->pageCount++;
         }
 
         /* Find first free bit in allocBitmap */
         uint16_t cellIndex = 0U;
         bool found = false;
+        const uint8_t wordBits =
+            (uint8_t)CNS(Memory, Heap, Internal, BITMAP_WORD_BITS);
         for (size_t w = 0U; w < MODULE_CONST(MEMORY, HEAP, BITMAP_WORDS); ++w) {
           if (page->allocBitmap[w] != UINT64_MAX) {
-            for (uint8_t b = 0U; b < 64U; ++b) {
-              uint16_t idx = (uint16_t)((w * 64U) + b);
+            for (uint8_t b = 0U; b < wordBits; ++b) {
+              uint16_t idx = (uint16_t)((w * wordBits) + b);
               if (idx >= page->cellCount)
                 break;
               if ((page->allocBitmap[w] & (1ULL << b)) == 0ULL) {
@@ -325,19 +354,8 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
         page->freeCellCount--;
         if (page->freeCellCount == 0U) {
           page->state = MODULE_CONST(MEMORY, HEAP, PAGE_STATE, FULL);
-          /* Move to fullPages */
-          if (page->prev)
-            page->prev->next = page->next;
-          else
-            sc->activePages = page->next;
-          if (page->next)
-            page->next->prev = page->prev;
-
-          page->next = sc->fullPages;
-          if (page->next)
-            page->next->prev = page;
-          page->prev = NULL;
-          sc->fullPages = page;
+          MODULE_IFUNC(Memory, Heap, UnlinkPage)(&sc->activePages, page);
+          MODULE_IFUNC(Memory, Heap, PrependPage)(&sc->fullPages, page);
         }
 
         void *cellPtr = page->payload + ((size_t)cellIndex * sc->elementSize);
@@ -447,9 +465,11 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
       if (offset >= (size_t)page->cellCount * page->elementSize)
         return STATUS_CONST(INVALID_ARGUMENT);
 
+      const size_t wordBits =
+          (size_t)CNS(Memory, Heap, Internal, BITMAP_WORD_BITS);
       uint16_t cellIndex = (uint16_t)(offset / page->elementSize);
-      size_t w = cellIndex / 64U;
-      uint64_t mask = 1ULL << (cellIndex % 64U);
+      size_t w = cellIndex / wordBits;
+      uint64_t mask = 1ULL << (cellIndex % wordBits);
 
       if ((page->allocBitmap[w] & mask) == 0ULL)
         return STATUS_CONST(INVALID_ARGUMENT);
@@ -462,18 +482,8 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
       if (page->state == MODULE_CONST(MEMORY, HEAP, PAGE_STATE, FULL)) {
         /* Move back from fullPages to activePages */
         MODULE_ITYPE(Memory, HeapSizeClass) *sc = &self->classes[page->sizeClassIndex];
-        if (page->prev)
-          page->prev->next = page->next;
-        else
-          sc->fullPages = page->next;
-        if (page->next)
-          page->next->prev = page->prev;
-
-        page->next = sc->activePages;
-        if (page->next)
-          page->next->prev = page;
-        page->prev = NULL;
-        sc->activePages = page;
+        MODULE_IFUNC(Memory, Heap, UnlinkPage)(&sc->fullPages, page);
+        MODULE_IFUNC(Memory, Heap, PrependPage)(&sc->activePages, page);
         page->state = MODULE_CONST(MEMORY, HEAP, PAGE_STATE, ACTIVE);
       }
 
@@ -548,9 +558,11 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
       uintptr_t payloadEnd = payloadStart + ((size_t)page->cellCount * page->elementSize);
 
       if (addr >= payloadStart && addr < payloadEnd) {
+        const size_t wordBits =
+            (size_t)CNS(Memory, Heap, Internal, BITMAP_WORD_BITS);
         uint16_t cellIndex = (uint16_t)((addr - payloadStart) / page->elementSize);
-        size_t w = cellIndex / 64U;
-        uint64_t mask = 1ULL << (cellIndex % 64U);
+        size_t w = cellIndex / wordBits;
+        uint64_t mask = 1ULL << (cellIndex % wordBits);
 
         if ((page->allocBitmap[w] & mask) != 0ULL) {
           *outBasePtr = page->payload + ((size_t)cellIndex * page->elementSize);
@@ -573,16 +585,18 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
       uint16_t reclaimed = 0U;
       uint16_t totalActive = 0U;
 
+      const uint8_t wordBits =
+          (uint8_t)CNS(Memory, Heap, Internal, BITMAP_WORD_BITS);
       for (size_t w = 0U; w < MODULE_CONST(MEMORY, HEAP, BITMAP_WORDS); ++w) {
         uint64_t dead = page->allocBitmap[w] & ~page->markBitmap[w];
         if (dead != 0ULL) {
-          for (uint8_t b = 0U; b < 64U; ++b) {
+          for (uint8_t b = 0U; b < wordBits; ++b) {
             if ((dead & (1ULL << b)) != 0ULL)
               reclaimed++;
           }
           page->allocBitmap[w] &= page->markBitmap[w];
         }
-        for (uint8_t b = 0U; b < 64U; ++b) {
+        for (uint8_t b = 0U; b < wordBits; ++b) {
           if ((page->allocBitmap[w] & (1ULL << b)) != 0ULL)
             totalActive++;
         }
@@ -610,20 +624,8 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
         MODULE_FUNC(Memory, Heap, SweepPage)(self, page, &isEmpty);
 
         if (page->freeCellCount > 0U) {
-          /* Unlink from fullPages */
-          if (page->prev)
-            page->prev->next = page->next;
-          else
-            sc->fullPages = page->next;
-          if (page->next)
-            page->next->prev = page->prev;
-
-          /* Link into activePages */
-          page->next = sc->activePages;
-          if (page->next)
-            page->next->prev = page;
-          page->prev = NULL;
-          sc->activePages = page;
+          MODULE_IFUNC(Memory, Heap, UnlinkPage)(&sc->fullPages, page);
+          MODULE_IFUNC(Memory, Heap, PrependPage)(&sc->activePages, page);
           page->state = MODULE_CONST(MEMORY, HEAP, PAGE_STATE, ACTIVE);
         }
         page = next;
@@ -638,7 +640,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
     }),
 
     FUNCTION(MODULE_TYPE(Memory, Allocator), AsAllocator, (), {
-      static const MODULE_TYPE(Memory, AllocatorOps) ops = {
+      static const MODULE_TYPE(Memory, Allocator_Ops) ops = {
           .Alloc = MODULE_IFUNC(Memory, Heap, AllocatorAlloc),
           .Realloc = NULL,
           .Free = MODULE_IFUNC(Memory, Heap, AllocatorFree),

@@ -10,20 +10,20 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
 
   PACKAGE(String8,
     OPERATION(AppendCodepoint,
-              (MODULE_TYPED(Text, String, 8) *str,
+              (MODULE_TYPE(Text, String8) *str,
                MODULE_TYPE(Text, Char32) codepoint), {
       if (str == NULL) return STATUS_CONST(INVALID_ARGUMENT);
-      unsigned char encoded[4];
+      unsigned char encoded[CNS(Text, String, Internal, UTF8_MAX_BYTES)];
       size_t units = 0U;
       OPSTATUS status = MODULE_FUNC(Text, UTF8, Encode)(
           codepoint, encoded, sizeof(encoded), &units);
       if (status != STATUS_CONST(SUCCESS)) return status;
-      return MODULE_FUNC(Text, String, 8, AppendBuffer)(
+      return MODULE_FUNC(Text, String8, AppendBuffer)(
           str, (const char *)encoded, units);
     }),
 
     OPERATION(CountCodepoints,
-              (const MODULE_TYPED(Text, String, 8) *str, size_t *outCount), {
+              (const MODULE_TYPE(Text, String8) *str, size_t *outCount), {
       if (str == NULL || outCount == NULL) return STATUS_CONST(INVALID_ARGUMENT);
       if (str->size == 0U) {
         *outCount = 0U;
@@ -34,7 +34,7 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
                                             str->size, outCount, &units);
     }),
 
-    PREDICATE(Validate, (const MODULE_TYPED(Text, String, 8) *str), {
+    PREDICATE(Validate, (const MODULE_TYPE(Text, String8) *str), {
       if (str == NULL) return false;
       if (str->size == 0U) return true;
       return MODULE_FUNC(Text, UTF8, Validate)((const unsigned char *)str->data,
@@ -42,14 +42,14 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
     }),
 
     VARIANT(Trim,
-      OPERATION((MODULE_TYPED(Text, String, 8) *str), {
+      OPERATION((MODULE_TYPE(Text, String8) *str), {
         if (str == NULL) return STATUS_CONST(INVALID_ARGUMENT);
         OPSTATUS status = MODULE_FUNC(Text, String8, TrimRight)(str);
         if (status != STATUS_CONST(SUCCESS)) return status;
         return MODULE_FUNC(Text, String8, TrimLeft)(str);
       }),
 
-      OPERATION(Left, (MODULE_TYPED(Text, String, 8) *str), {
+      OPERATION(Left, (MODULE_TYPE(Text, String8) *str), {
         if (str == NULL) return STATUS_CONST(INVALID_ARGUMENT);
         size_t start = 0U;
         while (start < str->size &&
@@ -57,12 +57,12 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
           ++start;
         }
         if (start > 0U) {
-          return MODULE_FUNC(Text, String, 8, Erase)(str, 0U, start);
+          return MODULE_FUNC(Text, String8, Erase)(str, 0U, start);
         }
         return STATUS_CONST(SUCCESS);
       }),
 
-      OPERATION(Right, (MODULE_TYPED(Text, String, 8) *str), {
+      OPERATION(Right, (MODULE_TYPE(Text, String8) *str), {
         if (str == NULL) return STATUS_CONST(INVALID_ARGUMENT);
         size_t end = str->size;
         while (end > 0U &&
@@ -78,7 +78,7 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
     ),
 
     VARIANT(Format,
-      OPERATION((MODULE_TYPED(Text, String, 8) *str, const char *format, ...), {
+      OPERATION((MODULE_TYPE(Text, String8) *str, const char *format, ...), {
         OPSTATUS status;
         va_list args;
         va_start(args, format);
@@ -88,7 +88,7 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
       }),
 
       OPERATION(Variadic,
-                (MODULE_TYPED(Text, String, 8) *str, const char *format,
+                (MODULE_TYPE(Text, String8) *str, const char *format,
                  va_list arguments), {
         if (str == NULL || format == NULL) return STATUS_CONST(INVALID_ARGUMENT);
         va_list argsCopy;
@@ -99,7 +99,7 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
         va_end(argsCopy);
         if (status != STATUS_CONST(SUCCESS)) return status;
 
-        status = MODULE_FUNC(Text, String, 8, Reserve)(str, needed);
+        status = MODULE_FUNC(Text, String8, Reserve)(str, needed);
         if (status != STATUS_CONST(SUCCESS)) return status;
 
         size_t written = 0U;
@@ -114,7 +114,7 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
     ),
 
     VARIANT(AppendFormat,
-      OPERATION((MODULE_TYPED(Text, String, 8) *str, const char *format, ...), {
+      OPERATION((MODULE_TYPE(Text, String8) *str, const char *format, ...), {
         OPSTATUS status;
         va_list args;
         va_start(args, format);
@@ -124,7 +124,7 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
       }),
 
       OPERATION(Variadic,
-                (MODULE_TYPED(Text, String, 8) *str, const char *format,
+                (MODULE_TYPE(Text, String8) *str, const char *format,
                  va_list arguments), {
         if (str == NULL || format == NULL) return STATUS_CONST(INVALID_ARGUMENT);
         va_list argsCopy;
@@ -138,7 +138,7 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
         if (str->size > SIZE_MAX - needed) return STATUS_CONST(OUT_OF_RANGE);
         size_t total = str->size + needed;
 
-        status = MODULE_FUNC(Text, String, 8, Reserve)(str, total + 1U);
+        status = MODULE_FUNC(Text, String8, Reserve)(str, total + 1U);
         if (status != STATUS_CONST(SUCCESS)) return status;
 
         size_t written = 0U;
@@ -154,10 +154,10 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
     ),
 
     OPERATION(SliceCodepoints,
-              (const MODULE_TYPED(Text, String, 8) *str, size_t codepointStart,
-               size_t codepointCount, MODULE_TYPED(Text, View, 8) *outView), {
+              (const MODULE_TYPE(Text, String8) *str, size_t codepointStart,
+               size_t codepointCount, MODULE_TYPE(Text, View8) *outView), {
       if (str == NULL) return STATUS_CONST(INVALID_ARGUMENT);
-      MODULE_TYPE(Text, View, 8) view = MODULE_FUNC(Text, String, 8, View)(str);
+      MODULE_TYPE(Text, View8) view = MODULE_FUNC(Text, String8, View)(str);
       return MODULE_FUNC(Text, View8, SliceCodepoints)(view, codepointStart,
                                                        codepointCount, outView);
     })

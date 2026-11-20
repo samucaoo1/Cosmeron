@@ -55,8 +55,17 @@ CLOSURE_COMPARISON(Comparison, (const void *left, const void *right));
 
 #define COSMERON_MACRO_INTERNAL_COMPARISON_PRIMITIVE_DECL(ROW)                 \
   FUNCTION(CMPOUT, PRIMITIVE_TYPE_GET(NAME, ROW),                              \
-           (PRIMITIVE_TYPE_GET(TYPE, ROW) left,                                \
-            PRIMITIVE_TYPE_GET(TYPE, ROW) right)),
+           (PRIMITIVE_TYPE_GET(C_TYPE, ROW) left,                                \
+            PRIMITIVE_TYPE_GET(C_TYPE, ROW) right)),
+
+#if defined(ALGORITHM_DISABLE_FUNCTION_TABLE) &&                               \
+    !defined(COSMERON_DISABLE_FT_Algorithm)
+#define COSMERON_DISABLE_FT_Algorithm 1
+#endif
+#if defined(ALGORITHM_COMPARISON_DISABLE_FUNCTION_TABLE) &&                    \
+    !defined(COSMERON_DISABLE_FT_Algorithm_Comparison)
+#define COSMERON_DISABLE_FT_Algorithm_Comparison 1
+#endif
 
 MODULE(DOMAIN(Core), Algorithm,
        PACKAGE(Comparison,

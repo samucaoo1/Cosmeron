@@ -1,20 +1,14 @@
 #pragma once
 
-#include "../../Condition/Status.h"
-#include "../../Module/Module.h"
-#include "../Alloc.h"
-#include "../Impl/Common.inc"
-#include "Impl/Common.inc"
-
 /* ========================================================================== */
-/* Memory Smart Pointers Template Include & Forwarding Engines                */
+/* Memory Smart Pointers Template Headers                                     */
 /* ========================================================================== */
 
-#include "Unique.def"
-#include "Weak.def"
-#include "Shared.def"
-#include "AtomicWeak.def"
-#include "AtomicShared.def"
-#include "Intrusive.def"
+#include "Unique.h"
+#include "Weak.h"
+#include "Shared.h"
+#include "AtomicWeak.h"
+#include "AtomicShared.h"
+#include "Intrusive.h"
 
 /* EOF */

@@ -1,11 +1,11 @@
 #pragma once
 
-static _Thread_local MODULE_TYPE(Condition, ExceptionFrame) *
+static _Thread_local MODULE_TYPE(Condition, Exception_Frame) *
     MODULE_IFUNC(Condition, Exception_CurrentFrame) = NULL;
 
 MODULE_IMPLEMENT(DOMAIN(Core), Condition,
   PACKAGE(Exception,
-    PROCEDURE(PushFrame, (MODULE_TYPE(Condition, ExceptionFrame) *frame), {
+    PROCEDURE(PushFrame, (MODULE_TYPE(Condition, Exception_Frame) *frame), {
       if (!frame)
         return;
       frame->previous = MODULE_IFUNC(Condition, Exception_CurrentFrame);
@@ -27,7 +27,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Condition,
     }),
 
     PROCEDURE(Throw, (const MODULE_TYPE(Condition, Error) *error), {
-      MODULE_TYPE(Condition, ExceptionFrame) *frame =
+      MODULE_TYPE(Condition, Exception_Frame) *frame =
           MODULE_IFUNC(Condition, Exception_CurrentFrame);
       if (frame == NULL) {
         PANIC(error ? MODULE_FUNC(Condition, Error, Message)(error) : "Unhandled exception");
@@ -51,7 +51,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Condition,
             &frame->error, STATUS_CONST(GENERIC_ERROR), "Unknown exception");
       }
 
-      longjmp(frame->env, 1);
+      longjmp(frame->env, CNS(Condition, Exception, Internal, JMP_THROWN));
     }),
 
     PROCEDURE(ThrowStatus,

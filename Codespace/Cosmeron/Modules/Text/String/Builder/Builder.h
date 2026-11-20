@@ -14,9 +14,23 @@
 #include <stdint.h>
 #include <string.h>
 
+#if defined(TEXT_DISABLE_FUNCTION_TABLE) && !defined(COSMERON_DISABLE_FT_Text)
+#define COSMERON_DISABLE_FT_Text 1
+#endif
+#if defined(TEXT_BUILDER_DISABLE_FUNCTION_TABLE) &&                            \
+    !defined(COSMERON_DISABLE_FT_Text_Builder)
+#define COSMERON_DISABLE_FT_Text_Builder 1
+#endif
+
+#define TEXT_BUILDER_INTERNAL_COL_NAME(NAME, VALUE) NAME
+#define TEXT_BUILDER_INTERNAL_COL_VALUE(NAME, VALUE) VALUE
+#define TEXT_BUILDER_INTERNAL_GET(FIELD, ROW)                                  \
+  PP_OP_CAT2(TEXT_BUILDER_INTERNAL_COL_, FIELD) ROW
+
 #define TEXT_BUILDER_INTERNAL_TABLE(X)                                         \
   X((INITIAL_CAPACITY, 32U))                                                   \
-  X((GROWTH_FACTOR, 2U))
+  X((GROWTH_FACTOR, 2U))                                                       \
+  X((UTF8_MAX_BYTES, 4U))
 
 IENUM_DEF(Text_Builder, Config, TEXT_BUILDER_INTERNAL_TABLE)
 
@@ -30,15 +44,17 @@ MODULE(
            VARIANT(Append, OPERATION(Char, (char ch)),
                    OPERATION(CStr, (const char *cstr)),
                    OPERATION(Buffer, (const char *buffer, size_t length)),
-                   OPERATION(View, (MODULE_TYPED(Text, View, 8) view)),
+                   OPERATION(View, (MODULE_TYPE(Text, View8) view)),
                    OPERATION(Codepoint, (uint32_t codepoint)),
                    OPERATION(Format, (const char *format, ...)),
                    OPERATION(FormatVariadic,
                              (const char *format, va_list args))),
-           OPERATION(BuildString, (MODULE_TYPED(Text, String, 8) * outString)),
+           OPERATION(BuildString, (MODULE_TYPE(Text, String8) * outString)),
            CONST_FUNCTION(size_t, Length, ()),
            CONST_FUNCTION(size_t, Capacity, ()), CONST_PREDICATE(IsEmpty, ()),
            CONST_FUNCTION(const char *, CStr, ()),
-           CONST_FUNCTION(MODULE_TYPED(Text, View, 8), View, ())));
+           CONST_FUNCTION(MODULE_TYPE(Text, View8), View, ())));
 
 #include "Impl/Builder.impl"
+
+/* EOF */

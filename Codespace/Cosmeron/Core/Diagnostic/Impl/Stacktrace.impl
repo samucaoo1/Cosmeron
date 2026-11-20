@@ -10,29 +10,43 @@
   #include <execinfo.h>
 #endif
 
+#define DIAGNOSTIC_STACKTRACE_INTERNAL_COL_NAME(NAME, VALUE) NAME
+#define DIAGNOSTIC_STACKTRACE_INTERNAL_COL_VALUE(NAME, VALUE) VALUE
+#define DIAGNOSTIC_STACKTRACE_INTERNAL_GET(FIELD, ROW)                         \
+  PP_OP_CAT2(DIAGNOSTIC_STACKTRACE_INTERNAL_COL_, FIELD) ROW
+
+#define DIAGNOSTIC_STACKTRACE_INTERNAL_TABLE(X)                                \
+  X((CAPTURE_SLACK_FRAMES, 16U))                                               \
+  X((SELF_SKIP_FRAMES, 1U))                                                    \
+  X((FRAME_PAD_THRESHOLD, 10U))
+
+IENUM_DEF(Diagnostic_Stacktrace, InternalConfig,
+          DIAGNOSTIC_STACKTRACE_INTERNAL_TABLE)
+
 #if OS_WINDOWS
 static inline size_t MODULE_IFUNC(Diagnostic, Stacktrace_CaptureRaw)(
     void **frames, size_t limit, size_t skipFrames) {
-  void *tempFrames[MODULE_CONST(Diagnostic, Stacktrace, MAX_FRAMES) + 16U];
-  DWORD toCapture = (DWORD)(limit + skipFrames + 1U);
-  if (toCapture > (DWORD)(sizeof(tempFrames) / sizeof(tempFrames[0])))
-    toCapture = (DWORD)(sizeof(tempFrames) / sizeof(tempFrames[0]));
   USHORT captured = CaptureStackBackTrace(
-      (DWORD)(skipFrames + 1U), (DWORD)limit, frames, NULL);
+      (DWORD)(skipFrames +
+              CNS(Diagnostic, Stacktrace, Internal, SELF_SKIP_FRAMES)),
+      (DWORD)limit, frames, NULL);
   return (size_t)captured;
 }
 #elif (OS_LINUX && LIBC_GLIBC) || OS_MAC || OS_BSD
 static inline size_t MODULE_IFUNC(Diagnostic, Stacktrace_CaptureRaw)(
     void **frames, size_t limit, size_t skipFrames) {
-  void *tempFrames[MODULE_CONST(Diagnostic, Stacktrace, MAX_FRAMES) + 16U];
-  size_t totalToCapture = limit + skipFrames + 1U;
+  void *tempFrames[MODULE_CONST(Diagnostic, Stacktrace, MAX_FRAMES) +
+                   CNS(Diagnostic, Stacktrace, Internal, CAPTURE_SLACK_FRAMES)];
+  size_t selfSkip =
+      (size_t)CNS(Diagnostic, Stacktrace, Internal, SELF_SKIP_FRAMES);
+  size_t totalToCapture = limit + skipFrames + selfSkip;
   if (totalToCapture > sizeof(tempFrames) / sizeof(tempFrames[0]))
     totalToCapture = sizeof(tempFrames) / sizeof(tempFrames[0]);
   int captured = backtrace(tempFrames, (int)totalToCapture);
   if (captured <= 0)
     return 0U;
 
-  size_t startIndex = skipFrames + 1U;
+  size_t startIndex = skipFrames + selfSkip;
   size_t outIdx = 0U;
   for (size_t i = startIndex; i < (size_t)captured && outIdx < limit; ++i)
     frames[outIdx++] = tempFrames[i];
@@ -54,13 +68,10 @@ MODULE_IMPLEMENT(DOMAIN(Core), Diagnostic,
       if (!self)
         return STATUS_CONST(INVALID_ARGUMENT);
 
-      self->frameCount = 0U;
+      OBJECT_RESET_ZERO(Diagnostic, Stacktrace, self);
       size_t limit = MODULE_CONST(Diagnostic, Stacktrace, MAX_FRAMES);
       if (maxFrames > 0U && maxFrames < limit)
         limit = maxFrames;
-
-      for (size_t i = 0U; i < MODULE_CONST(Diagnostic, Stacktrace, MAX_FRAMES); ++i)
-        self->frames[i] = NULL;
 
       self->frameCount = MODULE_IFUNC(Diagnostic, Stacktrace_CaptureRaw)(
           self->frames, limit, skipFrames);
@@ -70,9 +81,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Diagnostic,
     PROCEDURE(Clear, (), {
       if (!self)
         return;
-      for (size_t i = 0U; i < MODULE_CONST(Diagnostic, Stacktrace, MAX_FRAMES); ++i)
-        self->frames[i] = NULL;
-      self->frameCount = 0U;
+      OBJECT_RESET_ZERO(Diagnostic, Stacktrace, self);
     }),
 
     CONST_OPERATION(FrameAt, (size_t index, void **outAddress), {
@@ -98,7 +107,8 @@ MODULE_IMPLEMENT(DOMAIN(Core), Diagnostic,
           if (i > 0U)
             MODULE_IFUNC(Diagnostic, FormatWriter_AppendChar)(&w, '\n');
           MODULE_IFUNC(Diagnostic, FormatWriter_AppendChar)(&w, '#');
-          if (i < 10U)
+          if (i < (size_t)CNS(Diagnostic, Stacktrace, Internal,
+                              FRAME_PAD_THRESHOLD))
             MODULE_IFUNC(Diagnostic, FormatWriter_AppendChar)(&w, '0');
           MODULE_IFUNC(Diagnostic, FormatWriter_AppendUint)(&w, i);
           MODULE_IFUNC(Diagnostic, FormatWriter_AppendStr)(&w, "  ");

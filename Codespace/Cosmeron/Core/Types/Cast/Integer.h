@@ -13,6 +13,14 @@
 /* Package Declaration: Cast_Integer                                          */
 /* ========================================================================== */
 
+#if defined(CAST_DISABLE_FUNCTION_TABLE) && !defined(COSMERON_DISABLE_FT_Cast)
+#define COSMERON_DISABLE_FT_Cast 1
+#endif
+#if defined(CAST_INTEGER_DISABLE_FUNCTION_TABLE) &&                            \
+    !defined(COSMERON_DISABLE_FT_Cast_Integer)
+#define COSMERON_DISABLE_FT_Cast_Integer 1
+#endif
+
 MODULE(DOMAIN(Core), Cast,
     PACKAGE(Integer,
         /* 1. Unsigned 64-bit conversions */

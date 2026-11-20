@@ -10,6 +10,19 @@
 /* Internal Diagnostic Shared Infrastructure: FormatWriter Buffer Helper      */
 /* ========================================================================== */
 
+#define DIAGNOSTIC_INTERNAL_COL_NAME(NAME, VALUE) NAME
+#define DIAGNOSTIC_INTERNAL_COL_VALUE(NAME, VALUE) VALUE
+#define DIAGNOSTIC_INTERNAL_GET(FIELD, ROW)                                    \
+  PP_OP_CAT2(DIAGNOSTIC_INTERNAL_COL_, FIELD) ROW
+
+#define DIAGNOSTIC_INTERNAL_TABLE(X)                                           \
+  X((DECIMAL_BASE, 10U))                                                       \
+  X((DECIMAL_BUF_SIZE, 32U))                                                   \
+  X((HEX_NIBBLE_MASK, 0xFU))                                                   \
+  X((HEX_NIBBLE_BITS, 4U))                                                     \
+  X((HEX_NIBBLES_PER_BYTE, 2U))                                                \
+  X((HEX_PREFIX_RESERVE, 3U))
+
 MODULE(DOMAIN(Core), Diagnostic,
     ISTRUCT(FormatWriter,
         FIELDS(
@@ -20,6 +33,8 @@ MODULE(DOMAIN(Core), Diagnostic,
         )
     ),
     INTERNAL(
+        ENUM(FormatConfig, DIAGNOSTIC_INTERNAL_TABLE),
+
         PROCEDURE_INLINE(FormatWriter_Init,
                          (MODULE_ITYPE(Diagnostic, FormatWriter) * w,
                           char *buffer, size_t capacity), {
@@ -57,15 +72,16 @@ MODULE(DOMAIN(Core), Diagnostic,
         PROCEDURE_INLINE(FormatWriter_AppendUint,
                          (MODULE_ITYPE(Diagnostic, FormatWriter) * w,
                           uint64_t val), {
-          char temp[32];
+          char temp[CNS(Diagnostic, Internal, DECIMAL_BUF_SIZE)];
           size_t idx = 0U;
           if (val == 0U) {
             MODULE_IFUNC(Diagnostic, FormatWriter_AppendChar)(w, '0');
             return;
           }
           while (val > 0U) {
-            temp[idx++] = (char)('0' + (val % 10U));
-            val /= 10U;
+            temp[idx++] =
+                (char)('0' + (val % CNS(Diagnostic, Internal, DECIMAL_BASE)));
+            val /= CNS(Diagnostic, Internal, DECIMAL_BASE);
           }
           while (idx > 0U) {
             MODULE_IFUNC(Diagnostic, FormatWriter_AppendChar)(w, temp[--idx]);
@@ -76,7 +92,9 @@ MODULE(DOMAIN(Core), Diagnostic,
                          (MODULE_ITYPE(Diagnostic, FormatWriter) * w,
                           uintptr_t val), {
           static const char hexChars[] = "0123456789abcdef";
-          char temp[sizeof(uintptr_t) * 2U + 3U];
+          char temp[sizeof(uintptr_t) *
+                        CNS(Diagnostic, Internal, HEX_NIBBLES_PER_BYTE) +
+                    CNS(Diagnostic, Internal, HEX_PREFIX_RESERVE)];
           size_t idx = 0U;
 
           MODULE_IFUNC(Diagnostic, FormatWriter_AppendStr)(w, "0x");
@@ -85,8 +103,9 @@ MODULE(DOMAIN(Core), Diagnostic,
             return;
           }
           while (val > 0U) {
-            temp[idx++] = hexChars[val & 0xFU];
-            val >>= 4;
+            temp[idx++] =
+                hexChars[val & CNS(Diagnostic, Internal, HEX_NIBBLE_MASK)];
+            val >>= CNS(Diagnostic, Internal, HEX_NIBBLE_BITS);
           }
           while (idx > 0U) {
             MODULE_IFUNC(Diagnostic, FormatWriter_AppendChar)(w, temp[--idx]);
