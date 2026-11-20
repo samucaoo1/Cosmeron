@@ -24,7 +24,7 @@ and portable systems programming—targeting native platforms
 **Overall Progress: 28.6% (6/21 modules)**
 
 ```text
-CORE
+MODULES
 ├── Core              [####################] 100%
 ├── Container         [####################] 100%
 ├── Math              [####################] 100%
