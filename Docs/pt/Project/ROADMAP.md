@@ -1,19 +1,19 @@
-# Roadmap de Pré-Lançamento do Cosmeron
+# Roadmap de pré-lançamento da Cosmeron
 
 > **Slogan:** *A universe belong*
 
-O Cosmeron está entrando em **pré-lançamento** com entregas menores e focadas. Todo o código refatorado vive em `Codespace/Cosmeron/`, enquanto os módulos que aguardam refatoração ficam em `Roadmap/Cosmeron/`.
+A Cosmeron está entrando na fase de **pré-lançamento**, com versões menores e focadas. Todo o código refatorado fica em `Codespace/Cosmeron/`, enquanto os módulos que aguardam refatoração ficam em `Roadmap/Cosmeron/`.
 
-## Módulos Refatorados (100%)
+## Módulos refatorados (100%)
 
-- `Core` — **100%** (Preprocessor, DSL, Memory, Outcome, Detect, Error, etc.)
+- `Core` — **100%** (Preprocessor, DSL, Memory, Outcome, Detect, Error etc.)
 - `Modules/Container` — **100%**
 - `Modules/Math` — **100%**
 - `Modules/Numeric` — **100%**
 - `Modules/Text` — **100%**
 - `Modules/Tuple` — **100%**
 
-## Aguardando Refatoração (`Roadmap/Cosmeron/Modules/`)
+## Refatorações pendentes (`Roadmap/Cosmeron/Modules/`)
 
 - `Audio`
 - `Chronometry`
@@ -31,7 +31,7 @@ O Cosmeron está entrando em **pré-lançamento** com entregas menores e focadas
 - `Security`
 - `Sort`
 
-## Metas de Plataforma e Arquitetura
+## Objetivos de plataforma e destino
 
-- **WebAssembly** (`WASI` / `Emscripten`) como alvo de primeira classe ao lado de Linux, BSD, macOS e Windows.
+- **WebAssembly** (`WASI` / `Emscripten`) como destino de primeira classe, junto com Linux, BSD, macOS e Windows.
 - **C11 sem dependências** com DSL declarativa (`MODULE`, `PACKAGE`, `OBJECT`, `STRUCT`, `TEMPLATE_*`, `ENUM`, `CALLBACK`, `EVENT_*`).

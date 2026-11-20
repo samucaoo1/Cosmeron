@@ -1,10 +1,10 @@
-# Hoja de Ruta de Prelanzamiento de Cosmeron
+# Hoja de ruta de pre-lanzamiento de Cosmeron
 
-> **Eslogan:** *A universe belong*
+> **Lema:** *A universe belong*
 
-Cosmeron está entrando en **prelanzamiento** con entregas más pequeñas y enfocadas. Todo el código refactorizado vive en `Codespace/Cosmeron/`, mientras que los módulos pendientes de refactorización están en `Roadmap/Cosmeron/`.
+Cosmeron está entrando en la fase de **pre-lanzamiento**, con versiones más pequeñas y enfocadas. Todo el código refactorizado se encuentra en `Codespace/Cosmeron/`, mientras que los módulos pendientes de refactorización están en `Roadmap/Cosmeron/`.
 
-## Módulos Refactorizados (100%)
+## Módulos refactorizados (100%)
 
 - `Core` — **100%** (Preprocessor, DSL, Memory, Outcome, Detect, Error, etc.)
 - `Modules/Container` — **100%**
@@ -13,7 +13,7 @@ Cosmeron está entrando en **prelanzamiento** con entregas más pequeñas y enfo
 - `Modules/Text` — **100%**
 - `Modules/Tuple` — **100%**
 
-## Pendientes de Refactorización (`Roadmap/Cosmeron/Modules/`)
+## Refactorizaciones pendientes (`Roadmap/Cosmeron/Modules/`)
 
 - `Audio`
 - `Chronometry`
@@ -31,7 +31,7 @@ Cosmeron está entrando en **prelanzamiento** con entregas más pequeñas y enfo
 - `Security`
 - `Sort`
 
-## Metas de Plataforma y Arquitectura
+## Objetivos de plataforma y destino
 
-- **WebAssembly** (`WASI` / `Emscripten`) como objetivo de primera clase junto con Linux, BSD, macOS y Windows.
-- **C11 sin dependencias** con DSL declarativa (`MODULE`, `PACKAGE`, `OBJECT`, `STRUCT`, `TEMPLATE_*`, `ENUM`, `CALLBACK`, `EVENT_*`).
+- **WebAssembly** (`WASI` / `Emscripten`) como destino de primera clase junto con Linux, BSD, macOS y Windows.
+- **C11 sin dependencias** con DSL declarativo (`MODULE`, `PACKAGE`, `OBJECT`, `STRUCT`, `TEMPLATE_*`, `ENUM`, `CALLBACK`, `EVENT_*`).
