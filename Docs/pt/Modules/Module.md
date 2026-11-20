@@ -1,6 +1,6 @@
 # Module
 
-O núcleo **Module** fornece o sistema declarativo de API em C de Cosmeron. Gera tipos com namespace, enums, constantes, structs, objetos, pacotes, callbacks, closures, templates y function tables opcionales a partir de declarações nos headers.
+O núcleo **Module** fornece o sistema declarativo de APIs em C do Cosmeron. A partir de declarações nos cabeçalhos, ele gera tipos com namespace, enums, constantes, structs, objetos, pacotes, callbacks, closures, templates e tabelas de funções opcionais.
 
 ## Cabeçalhos
 
@@ -8,56 +8,56 @@ O núcleo **Module** fornece o sistema declarativo de API em C de Cosmeron. Gera
 #include "Cosmeron/Core/Module/Module.h"
 ~~~
 
-O cabeçalho agregadorr inclui los mecanismos de namespace, declarações, objetos, pacotes, callbacks, closures, despacho, function tables, templates y escopos de implementação utilizedos por los cabeçalhos públicos de los módulos.
+O cabeçalho agregador inclui os mecanismos de namespace, declaração, objetos, pacotes, callbacks, closures, despacho, tabelas de funções, templates e escopos de implementação utilizados pelos cabeçalhos públicos dos módulos.
 
 ---
 
 # Visão geral
 
-## Modelo de declarações
+## Modelo de declaração
 
-O modelo de declarações está organizado assim:
+O modelo de declaração é organizado da seguinte forma:
 
 | Construção | Finalidade |
 | --- | --- |
-| `DOMAIN` | Separa áreas abrangentes de la biblioteca, como `Core` y `Modules`. |
-| `MODULE` | Agrupa uma família relacionada de declarações bajo un namespace público. |
-| `PACKAGE` | Agrupa funções livres que compartilham um nome de pacote. |
-| `OBJECT` | Declara um tipo com estado y métodos que reciben un receptor implícito do objeto. |
-| `STRUCT` | Declara um tipo de dados C simples sem receptor implícito de método. |
-| `ISTRUCT` | Declara uma estrutura simples interna al módulo. |
-| `VARIANT` | Agrupa operações relacionadas bajo una ruta anidada de método/função. |
-| `CALLBACK` | Declara a assinatura de um callback de ponteiro para função. |
-| `CLOSURE` | Declara uma assinatura invocável que carrega um ponteiro de contexto. |
+| `DOMAIN` | Separa áreas abrangentes da biblioteca, como `Core` e `Modules`. |
+| `MODULE` | Reúne uma família relacionada de declarações sob um namespace público. |
+| `PACKAGE` | Agrupa funções livres que compartilham o nome de um pacote. |
+| `OBJECT` | Declara um tipo com estado e métodos que recebem um receptor implícito do objeto. |
+| `STRUCT` | Declara um tipo de dados C simples, sem receptor implícito de método. |
+| `ISTRUCT` | Declara uma estrutura simples de uso interno do módulo. |
+| `VARIANT` | Agrupa operações relacionadas em um caminho aninhado de método ou função. |
+| `CALLBACK` | Declara a assinatura de um callback do tipo ponteiro para função. |
+| `CLOSURE` | Declara uma assinatura invocável que transporta um ponteiro de contexto. |
 
-Uma declaração não é un sistema de clases em tempo de execução. Los objetos y pacotes son structs, funções y macros C generados. A camada Module não fornece descubrimiento dinámico de tipos ni recolección automática de basura.
+Uma declaração não constitui um sistema de classes em tempo de execução. Objetos e pacotes são structs, funções e macros C gerados. A camada Module não fornece descoberta dinâmica de tipos nem coleta automática de lixo.
 
 ---
 
 # Referência da API
 
-## Namespace y nombres públicos
+## Namespace e nomes públicos
 
-### Acceso al namespace
+### Acesso ao namespace
 
-Cabeçalho: `Namespace.h` (incluido por `Module.h`).
+Cabeçalho: `Namespace.h` (incluído por `Module.h`).
 
-Utilize las macros semánticas de nombres em vez de construir identificadores públicos manualmente:
+Use as macros semânticas de nomenclatura em vez de construir identificadores públicos manualmente:
 
 | Macro | Finalidade |
 | --- | --- |
-| `MODULE_TYPE(Module, Type)` | Nomeia um tipo público no basado en template. |
-| `MODULE_TYPED(Module, Type, Suffix)` | Nomeia uma especialização tipada generada. |
-| `MODULE_ENUM(Module, Enum)` | Nomeia um enum del módulo. |
-| `MODULE_CONST(Module, Constant)` | Nomeia uma constante del módulo. |
-| `MODULE_FUNC(Module, Function)` | Nomeia uma função de pacote u objeto. |
-| `MODULE_FUNC(Module, Package, Function)` | Nomeia uma função de un pacote. |
-| `MODULE_CLOSURE(Module, Package, Name)` | Nomeia um tipo closure generado en un pacote. |
-| `MODULE_CALLBACK(Module, Name)` | Nomeia um tipo callback declarado por un módulo. |
-| `MODULE_NS(...)` | Forma uma sequência de tokens de namespace de módulo. |
-| `NS(...)` / `CNS(...)` | Forma tokens de namespace ordinarios o constantes. |
+| `MODULE_TYPE(Module, Type)` | Nomeia um tipo público não parametrizado por template. |
+| `MODULE_TYPED(Module, Type, Suffix)` | Nomeia uma especialização tipada gerada. |
+| `MODULE_ENUM(Module, Enum)` | Nomeia um enum do módulo. |
+| `MODULE_CONST(Module, Constant)` | Nomeia uma constante do módulo. |
+| `MODULE_FUNC(Module, Function)` | Nomeia uma função de pacote ou objeto. |
+| `MODULE_FUNC(Module, Package, Function)` | Nomeia uma função de um pacote. |
+| `MODULE_CLOSURE(Module, Package, Name)` | Nomeia um tipo de closure gerado em um pacote. |
+| `MODULE_CALLBACK(Module, Name)` | Nomeia um tipo de callback declarado por um módulo. |
+| `MODULE_NS(...)` | Forma uma sequência de tokens de namespace do módulo. |
+| `NS(...)` / `CNS(...)` | Forma tokens de namespace comuns ou constantes. |
 
-Por ejemplo:
+Por exemplo:
 
 ~~~c
 MODULE_TYPE(Type, Traits) descriptor;
@@ -65,19 +65,21 @@ MODULE_TYPED(Numeric, Rational, Int32) fraction;
 MODULE_ENUM(Algorithm, Comparison, Result) order;
 ~~~
 
-O identificador real é produzido por meio de el prefijo de biblioteca configurado y las reglas de namespace. O código da aplicação deve preferir estas macros de acceso em vez de nomes expandidos codificados manualmente.
+O identificador efetivo é produzido pelo prefixo de biblioteca configurado e pelas regras de namespace. O código da aplicação deve preferir essas macros de acesso a nomes expandidos codificados manualmente.
 
-### Configuración
+### Configuração
 
-El cabeçalho de namespace define as macros de prefijo y política de namespace utilizedas por el proyecto. Configure-as antes de incluir los cabeçalhos públicos de módulos. La política de function tables también es una elección de compilación; un módulo, pacote u objeto puede definir una opción de desactivación antes de incluir su cabeçalho.
+O cabeçalho de namespace define as macros de prefixo e as políticas de namespace utilizadas pelo projeto. Configure-as antes de incluir os cabeçalhos públicos dos módulos. A política das tabelas de funções também é uma escolha feita em tempo de compilação: um módulo, pacote ou objeto pode definir uma opção de desativação antes da inclusão de seu cabeçalho.
 
-Não altere la configuración de namespace o function tables entre unidades de traducción que intercambien los tipos afectados. Isso pode produzir nombres o layouts de objetos incompatíveis.
+Não altere a configuração de namespace ou de tabelas de funções entre unidades de tradução que compartilham os tipos afetados. Isso pode produzir nomes ou layouts de objetos incompatíveis.
 
-A configuração de namespace y las macros de acceso público se proporcionan en `Core/Module/Namespace.h`.
+A configuração de namespace e as macros de acesso público são fornecidas por `Core/Module/Namespace.h`.
 
-## Packages
+---
 
-Um pacote é a construção adequada para operaciones que não precisam un receptor de objeto.
+## Pacotes
+
+Um pacote é a construção adequada para operações que não precisam de um receptor de objeto.
 
 ### Declaração
 
@@ -90,37 +92,39 @@ MODULE(DOMAIN(Modules), Example,
 );
 ~~~
 
-La declaração de pacote gera funções con namespace y, quando habilitada, una function table tipada. A categoria da função determina su contrato:
+A declaração do pacote gera funções com namespace e, quando habilitada, uma tabela de funções tipada. A categoria da função determina seu contrato:
 
 | Declaração | Contrato de retorno |
 | --- | --- |
-| `PROCEDURE` | Sem valor de retorno; é utilizada para efectos secundarios. |
+| `PROCEDURE` | Não retorna valor; é usada para efeitos colaterais. |
 | `FUNCTION` | Retorna um valor diretamente. |
 | `PREDICATE` | Retorna `bool`. |
-| `OPERATION` | Retorna `OPSTATUS` y pode escrever parâmetros de salida. |
-| `COMPARISON` | Retorna el resultado de comparação de tres vías de la biblioteca. |
+| `OPERATION` | Retorna `OPSTATUS` e pode escrever em parâmetros de saída. |
+| `COMPARISON` | Retorna o resultado de comparação de três vias da biblioteca. |
 
-Utilize a categoria aplicable mais específica y mantenha o trabalho que puede fallar bajo `OPERATION`.
+Use a categoria mais específica aplicável e mantenha operações sujeitas a falhas sob `OPERATION`.
 
 ### Invocação
 
-La macro canónica de invocación de funções de pacote mediante function table es `PACKAGE_API`:
+A macro canônica para invocar funções de pacote por meio da tabela de funções é `PACKAGE_API`:
 
 ~~~c
 int sum = PACKAGE_API(Example_Math, Add, 10, 20);
 ~~~
 
-Para uma chamada direta con namespace que evita a function table, utilize `MODULE_FUNC`:
+Para uma chamada direta com namespace, sem utilizar a tabela de funções, use `MODULE_FUNC`:
 
 ~~~c
 int sum = MODULE_FUNC(Example, Math, Add)(10, 20);
 ~~~
 
-Las function tables de pacote son opcionales. Si están desabilitadas, utilize la forma directa em vez de intentar el despacho de pacote.
+As tabelas de funções dos pacotes são opcionais. Se estiverem desativadas, use a forma direta em vez de tentar realizar o despacho pelo pacote.
 
-## Objects
+---
 
-Un objeto combina un struct C con métodos que reciben un ponteiro a la instancia como primer parámetro receptor oculto.
+## Objetos
+
+Um objeto combina um struct C com métodos que recebem um ponteiro para a instância como primeiro parâmetro receptor, fornecido implicitamente.
 
 ### Declaração
 
@@ -137,11 +141,11 @@ MODULE(DOMAIN(Modules), Counter,
 );
 ~~~
 
-El receptor es proporcionado por la API de objeto generada. Un método declarado con `CONST_` es de solo lectura respecto a su contrato de receptor.
+A API de objeto gerada fornece o receptor. Um método declarado com `CONST_` é somente de leitura, de acordo com seu contrato de receptor.
 
 ### Invocação
 
-La macro canónica de despacho de objetos es `API`; `OBJECT_CALL` y `OBJECT_CALL_0` son alias de compatibilidad:
+A macro canônica de despacho de objetos é `API`; `OBJECT_CALL` e `OBJECT_CALL_0` são aliases de compatibilidade:
 
 ~~~c
 MODULE_TYPE(Counter, Counter) counter = {0};
@@ -151,108 +155,120 @@ OPSTATUS status = API(&counter, Add, 5);
 int value = API(&counter, Value);
 ~~~
 
-Para uma chamada direta sin despacho mediante function table de objeto, utilize el método generado con namespace:
+Para uma chamada direta, sem despacho pela tabela de funções do objeto, use o método gerado com namespace:
 
 ~~~c
 MODULE_FUNC(Counter, Counter, Add)(&counter, 5);
 ~~~
 
-Utilize `API` cuando el objeto tenga una function table válida y se pretenda despacho em tempo de execução. Utilize llamadas directas `MODULE_FUNC` cuando la configuración elimine las function tables o se desee despacho directo. Nunca invoques un método sobre un objeto sin inicializar o inválido.
+Use `API` quando o objeto possuir uma tabela de funções válida e o despacho em tempo de execução for desejado. Use chamadas diretas com `MODULE_FUNC` quando a configuração remover as tabelas de funções ou quando o despacho direto for preferível. Nunca chame um método em um objeto não inicializado ou inválido.
 
-### Herencia y extensiones
+### Herança e extensões
 
-La capa actual de declarações Object inclui `OBJECT_EXTENDS` y conversiones tipadas como `OBJECT_AS`. Son mecanismos de declaração/layout C en tiempo de compilación; no proporcionan herencia virtual ni gestión automática de tempo de vida. Utilízalos solo cuando el layout base/derivado y el contrato del receptor sean explícitos.
+A camada atual de declarações Object inclui `OBJECT_EXTENDS` e conversões tipadas, como `OBJECT_AS`. Esses recursos são mecanismos de declaração e layout C em tempo de compilação; não fornecem herança virtual nem gerenciamento automático de tempo de vida. Use-os somente quando o layout da estrutura base/derivada e o contrato do receptor forem explícitos.
 
-## Structs y datos internos
+---
 
-Utilize `STRUCT` para un tipo de datos POD público y `ISTRUCT` para un detalle de implementação. Un struct no tiene receptor generado ni obtiene despacho de métodos por el mero hecho de declararse dentro de un módulo.
+## Structs e dados internos
 
-Para tipos de valor de layout fijo, prefiere la inicialización directa de campos y la asignación ordinaria cuando el contrato de propriedade del tipo lo permita. Los tipos que requieran inicialización, clonación, movimiento o liberación personalizados deben utilizer las facilidades específicas de objetos o traits, em vez de tratarse como trivialmente copiables.
+Use `STRUCT` para um tipo de dados POD público e `ISTRUCT` para um detalhe de implementação. Um struct não possui receptor gerado e não ganha despacho de métodos apenas por ser declarado dentro de um módulo.
 
-## Callbacks y closures
+Para tipos de valor com layout fixo, prefira a inicialização direta dos campos e a atribuição comum quando o contrato de propriedade do tipo permitir. Tipos que exijam inicialização, clonagem, movimentação ou liberação personalizadas devem utilizar os recursos específicos de objetos ou traits, em vez de serem tratados como trivialmente copiáveis.
+
+---
+
+## Callbacks e closures
 
 ### Callback
 
-Un callback es un ponteiro para função con una firma declarada. No transporta estado por sí mismo.
+Um callback é um ponteiro para função com uma assinatura declarada. Por si só, ele não transporta estado.
 
-`Callback.h` proporciona `TCALLBACK(Name)` para el tipo generado, `CALLBACK_FUNC(Name)` para nombres auxiliares y `CALLBACK_EMPTY` como valor de callback nulo.
+`Callback.h` fornece `TCALLBACK(Name)` para o tipo gerado, `CALLBACK_FUNC(Name)` para os nomes auxiliares e `CALLBACK_EMPTY` como valor de callback nulo.
 
 ### Closure
 
-Una closure combina un ponteiro para função con un ponteiro de contexto. Es adecuada para callbacks que necesitan referirse a estado propriedade do chamador sin utilizer una variable global.
+Uma closure combina um ponteiro para função com um ponteiro de contexto. Ela é adequada para callbacks que precisam acessar um estado pertencente ao chamador sem recorrer a uma variável global.
 
-`Closure.h` proporciona `TCLOSURE(Name)` y `CLOSURE_FUNC(Name)`. Las macros comunes de llamada/validación son:
+`Closure.h` fornece `TCLOSURE(Name)` e `CLOSURE_FUNC(Name)`. As macros comuns de chamada e validação são:
 
 | Macro | Comportamento |
 | --- | --- |
-| `CLOSURE_IS_VALID(closure)` | Verifica si la closure tiene una função. |
-| `CLOSURE_CALL(closure, ...)` | Invoca la closure. |
-| `CLOSURE_EMPTY` | Valor de closure vacío. |
+| `CLOSURE_IS_VALID(closure)` | Verifica se a closure contém uma função. |
+| `CLOSURE_CALL(closure, ...)` | Invoca a closure. |
+| `CLOSURE_EMPTY` | Representa uma closure vazia. |
 
-Las declarações Closure especifican el contrato de retorno: `CLOSURE_FUNCTION`, `CLOSURE_PROCEDURE`, `CLOSURE_OPERATION`, `CLOSURE_PREDICATE` o `CLOSURE_COMPARISON`. El ponteiro de contexto de una closure es prestado; la capa Module no administra la tempo de vida del objeto apuntado.
+As declarações de closure especificam o contrato de retorno: `CLOSURE_FUNCTION`, `CLOSURE_PROCEDURE`, `CLOSURE_OPERATION`, `CLOSURE_PREDICATE` ou `CLOSURE_COMPARISON`. O ponteiro de contexto de uma closure é emprestado; a camada Module não gerencia o tempo de vida do objeto apontado.
+
+---
 
 ## Templates
 
-La implementação canónica de templates de módulos utilize un archivo `.def` de modo dual. Un template puede generar una especialización de struct, objeto o pacote. Debe incluirse desde su cabeçalho público y puede instanciarse explícitamente o a partir de una tabla de tipos X-macro.
+A implementação canônica de templates do módulo utiliza um arquivo `.def` de modo duplo. Um template pode gerar uma especialização de struct, objeto ou pacote. Ele deve ser incluído pelo cabeçalho público e pode ser instanciado explicitamente ou a partir de uma tabela de tipos X-macro.
 
-### Instanciar una especialización
+### Instanciação de uma especialização
 
-Los auxiliares comunes de templates son:
+Os auxiliares comuns de template são:
 
 | Macro | Finalidade |
 | --- | --- |
-| `TEMPLATE_INSTANTIATE(Name, args...)` | Instancia un template con nombre. |
-| `TEMPLATE_INSTANTIATE_TABLE(Name, Table)` | Instancia un template para cada fila devuelta por la tabla. |
-| `TEMPLATE_INSTANTIATE_TABLE(Module, Name, Table)` | Instancia un template cualificado por módulo para cada fila. |
+| `TEMPLATE_INSTANTIATE(Name, args...)` | Instancia um template nomeado. |
+| `TEMPLATE_INSTANTIATE_TABLE(Name, Table)` | Instancia um template para cada linha retornada pela tabela. |
+| `TEMPLATE_INSTANTIATE_TABLE(Module, Name, Table)` | Instancia um template qualificado pelo módulo para cada linha. |
 
 ~~~c
 TEMPLATE_INSTANTIATE_TABLE(Numeric, Rational, NUMERIC_RATIONAL_TYPE_TABLE);
 ~~~
 
-Una fila de tabla es una tupla de argumentos. Mantén su orden idéntico al orden de parámetros de la macro template correspondiente.
+Cada linha da tabela é uma tupla de argumentos. Mantenha a ordem dos elementos da linha igual à ordem dos parâmetros da macro de template correspondente.
 
-El motor de templates también expone auxiliares de declaração/implementação de nivel inferior, pero los cabeçalhos públicos de módulos deben encapsular esos detalles. Los consumidores deben utilizer los puntos de entrada de instanciación documentados por el módulo, em vez de invocar macros internas de implementação.
+O mecanismo de templates também expõe auxiliares de declaração e implementação de nível mais baixo, mas os cabeçalhos públicos dos módulos devem encapsular esses detalhes. Os consumidores devem utilizar os pontos de entrada de instanciação documentados pelo módulo, em vez de invocar macros internas de implementação.
 
-### Convención .def de modo dual
+### Convenção de arquivos .def de modo duplo
 
-El archivo `.def` de un template define la macro template y admite instanciación directa cuando se definen las macros de configuración esperadas. El cabeçalho público normalmente inclui definiciones internas compartidas, declara su pacote/objeto e inclui la definición del template. No incluyas archivos internos `Impl` o `Common.inc` directamente desde el código da aplicação.
+O arquivo `.def` de um template define a macro do template e oferece suporte à instanciação direta quando as macros de configuração esperadas estão definidas. Em geral, o cabeçalho público inclui as definições internas compartilhadas, declara seu pacote ou objeto e inclui a definição do template. Não inclua arquivos internos `Impl` ou `Common.inc` diretamente no código da aplicação.
 
-## Implementación y escopos
+---
 
-Las implementações no inline se emiten mediante declarações explícitas de implementação de módulo. El sistema de declarações actual proporciona `MODULE_IMPLEMENT`, `OBJECT_IMPLEMENT_EX` y `PACKAGE_IMPLEMENT_EX`. Los auxiliares de escopo como `MODULE_SCOPE`, `OBJECT_SCOPE` y `PACKAGE_SCOPE` organizan implementações relacionadas y terminan con su macro `*_SCOPE_END` correspondiente.
+## Implementação e escopos
 
-Un cabeçalho público generalmente contiene declarações e inclui su unidad de implementação. Mantén los cuerpos de função en los archivos de implementação proporcionados por el módulo; los consumidores solo deben incluir el cabeçalho público.
+Implementações não inline são emitidas por meio de declarações explícitas de implementação do módulo. O sistema atual de declarações fornece `MODULE_IMPLEMENT`, `OBJECT_IMPLEMENT_EX` e `PACKAGE_IMPLEMENT_EX`. Auxiliares de escopo, como `MODULE_SCOPE`, `OBJECT_SCOPE` e `PACKAGE_SCOPE`, organizam implementações relacionadas e são encerrados por suas macros correspondentes `*_SCOPE_END`.
 
-## Function tables
+Em geral, um cabeçalho público contém as declarações e inclui sua unidade de implementação. Mantenha os corpos das funções nos arquivos de implementação fornecidos pelo módulo; os consumidores devem incluir somente o cabeçalho público.
 
-Las function tables proporcionan una ruta de despacho tipada para pacotes y objetos. Son una salida opcional de compilación, no un runtime independiente de métodos virtuales.
+---
 
-- Utilize `PACKAGE_API` para despachar funções de pacote por meio de uma tabela de pacote.
-- Utilize `API` para despachar métodos de objeto mediante la tabla del objeto (`OBJECT_CALL` es un alias de compatibilidad).
-- Utilize `MODULE_FUNC` para invocación directa de símbolos.
-- Configura las opciones de desactivación pertinentes antes de incluir los cabeçalhos.
-- Mantén la misma configuración entre unidades de traducción que compartan las declarações.
+## Tabelas de funções
 
-Desabilitar una function table puede cambiar el layout del objeto generado. No mezcles objetos construidos con políticas de tabla diferentes.
+As tabelas de funções oferecem um caminho de despacho tipado para pacotes e objetos. São saídas opcionais de compilação, não um sistema independente de métodos virtuais em tempo de execução.
 
-## Guía práctica
+- Use `PACKAGE_API` para despachar funções de pacote por meio de uma tabela do pacote.
+- Use `API` para despachar métodos de objeto por meio da tabela da instância (`OBJECT_CALL` é um alias de compatibilidade).
+- Use `MODULE_FUNC` para invocar diretamente um símbolo.
+- Configure as opções de desativação relevantes antes de incluir os cabeçalhos.
+- Mantenha a mesma configuração entre unidades de tradução que compartilham as declarações.
 
-- Utilize `PACKAGE` para operaciones sin estado y `OBJECT` solo cuando el estado pertenezca a la instancia.
-- Utilize `STRUCT` para valores POD; no tiene receptor ni function table de objeto.
-- Utilize `OPERATION` sempre que una rutina pueda fallar y devolver `OPSTATUS`.
-- Utilize `FUNCTION` para resultados directos y `PREDICATE` para preguntas booleanas.
-- Utilize `CALLBACK` para ponteiros a função simples; utilize `CLOSURE` cuando el contexto deba acompañar al callable.
-- Mantén los detalles de templates en archivos `.def` y expón un cabeçalho público limpio.
-- Trata todos los ponteiros pasados como contexto, datos de callback o campos según su contrato de propriedade documentado; el sistema Module no los posee automáticamente.
+Desativar tabelas de funções pode alterar o layout gerado dos objetos. Não misture objetos compilados com políticas diferentes de tabelas.
+
+---
+
+## Orientações práticas
+
+- Use `PACKAGE` para operações sem estado e `OBJECT` somente quando o estado pertencer à instância.
+- Use `STRUCT` para valores POD; ele não possui receptor nem tabela de funções de objeto.
+- Use `OPERATION` sempre que uma rotina puder falhar e retornar `OPSTATUS`.
+- Use `FUNCTION` para resultados que retornam valores diretamente e `PREDICATE` para perguntas booleanas.
+- Use `CALLBACK` para ponteiros simples para funções; use `CLOSURE` quando o contexto precisar acompanhar a função invocável.
+- Mantenha os detalhes dos templates nos arquivos `.def` e exponha um cabeçalho público limpo.
+- Trate todos os ponteiros passados como contexto, dados de callback ou campos de acordo com o contrato de propriedade documentado; o sistema Module não assume sua propriedade automaticamente.
 
 ## Módulos relacionados
 
-- [Algorithm](Algorithm.md) — uso práctico de closures en repetición y comparación.
-- [Condition](Condition.md) — estados y resultados de operaciones que pueden fallar.
-- [Types](Types.md) — descriptores de tipos primitivos y traits.
-- [Preprocessor](Preprocessor.md) — auxiliares de tokens y tablas utilizedos por la capa declarativa.
+- [Algorithm](Algorithm.md) — uso prático de closures em repetição e comparação.
+- [Condition](Condition.md) — status e resultados de operações sujeitas a falhas.
+- [Types](Types.md) — descritores de tipos primitivos e traits.
+- [Preprocessor](Preprocessor.md) — auxiliares de tokens e tabelas utilizados pela camada declarativa.
 
-## Cabeçalhos de origen
+## Cabeçalhos de origem
 
 - `Codespace/Cosmeron/Core/Module/Module.h`
 - `Codespace/Cosmeron/Core/Module/Namespace.h`

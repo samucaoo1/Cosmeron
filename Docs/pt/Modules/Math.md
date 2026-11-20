@@ -1,6 +1,6 @@
 # Math
 
-O módulo **Math** fornece aritmética entera comprobada, aritmética limitada y saturada, auxiliares de rangos de valores, extremos y solucionadores de ecuaciones lineales/cuadráticas de valores reales. Sus declaraciones son templates C11 instanciados para los sufijos de tipo enumerados en las tablas de tipos del módulo.
+O módulo **Math** oferece operações aritméticas inteiras com verificação de limites, aritmética com restrição de faixa e saturação, auxiliares para intervalos de valores, funções de máximo e mínimo e solucionadores de equações lineares e quadráticas com valores reais. Suas declarações são templates C11 instanciados para os sufixos de tipo listados nas tabelas de tipos do módulo.
 
 ## Cabeçalhos
 
@@ -8,38 +8,38 @@ O módulo **Math** fornece aritmética entera comprobada, aritmética limitada y
 #include "Cosmeron/Modules/Math/Math.h"
 ~~~
 
-O cabeçalho agregador inclui los pacotes actuales:
+O cabeçalho agregador inclui todos os pacotes atuais:
 
-| Pacote | Encabezado público | Finalidade |
+| Pacote | Cabeçalho público | Finalidade |
 | --- | --- | --- |
-| Arithmetic | `Arithmetic/Basic.h` | Operaciones inteiras con y sem sinal comprobadas. |
-| ClampedArithmetic | `Arithmetic/Clamped.h` | Aritmética entera limitada y saturada. |
-| Between | `Value/Between.h` | Classificação y pertenencia a intervalos. |
-| Clamp | `Value/Clamp.h` | Limita un valor a un intervalo. |
-| MaxAndMin | `Value/MaxAndMin.h` | Mínimo y máximo binarios. |
-| LinearEquation | `Equation/Linear.h` | Resuelve una equação lineal. |
-| QuadraticEquation | `Equation/Quadratic.h` | Discriminante, auxiliar de raiz cuadrada y resolución cuadrática. |
+| Arithmetic | `Arithmetic/Basic.h` | Operações inteiras com e sem sinal verificadas. |
+| ClampedArithmetic | `Arithmetic/Clamped.h` | Aritmética inteira limitada e saturada. |
+| Between | `Value/Between.h` | Classificação e verificação de pertencimento a intervalos. |
+| Clamp | `Value/Clamp.h` | Restringe um valor a um intervalo. |
+| MaxAndMin | `Value/MaxAndMin.h` | Mínimo e máximo entre dois valores. |
+| LinearEquation | `Equation/Linear.h` | Resolve uma equação linear. |
+| QuadraticEquation | `Equation/Quadratic.h` | Discriminante, auxiliar de raiz quadrada e resolução de equações quadráticas. |
 
 ---
 
 # Visão geral
 
-## Especializaciones de tipos
+## Especializações de tipos
 
-Os sufixos públicos forman parte de los nombres generados. Utilize el sufijo exacto em vez de suponer un alias C.
+Os sufixos públicos fazem parte dos nomes gerados. Use o sufixo exato, em vez de presumir um alias de tipo C.
 
-| Sufijo | Tipo C | Pacotes disponibles |
+| Sufixo | Tipo C | Pacotes disponíveis |
 | --- | --- | --- |
 | `Bool` | `bool` | Value |
-| `Int8`, `Int16`, `Int32`, `Int64` | Entero com sinal de ancho fijo | Arithmetic, ClampedArithmetic, Value |
-| `UInt8`, `UInt16`, `UInt32`, `UInt64` | Entero sem sinal de ancho fijo | Arithmetic, ClampedArithmetic, Value |
+| `Int8`, `Int16`, `Int32`, `Int64` | Inteiros com sinal de largura fixa | Arithmetic, ClampedArithmetic, Value |
+| `UInt8`, `UInt16`, `UInt32`, `UInt64` | Inteiros sem sinal de largura fixa | Arithmetic, ClampedArithmetic, Value |
 | `Char` | `char` | Value |
 | `Float32` | `float` | Value, Equation |
 | `Float64` | `double` | Value, Equation |
 | `Float128` | `long double` | Value, Equation |
-| `Int`, `UInt`, `Size`, `PtrDiff`, `IntPtr`, `UIntPtr` | Tipos C de tamaño dependiente de la arquitectura | Value |
+| `Int`, `UInt`, `Size`, `PtrDiff`, `IntPtr`, `UIntPtr` | Tipos C cujo tamanho depende da arquitetura | Value |
 
-`Float128` es el sufijo para `long double` de C. No garantiza que todas las plataformas utilicen una representación real de 128 bits.
+`Float128` é o sufixo correspondente a `long double` em C. Ele não garante que todas as plataformas utilizem uma representação efetiva de 128 bits.
 
 ---
 
@@ -49,37 +49,38 @@ Os sufixos públicos forman parte de los nombres generados. Utilize el sufijo ex
 
 Cabeçalho: `Arithmetic/Basic.h`.
 
-Los pacotes con y sem sinal se nombran `MODULE_FUNC(Math, Arithmetic, <Suffix>, <Operation>)`.
+Os pacotes para tipos com e sem sinal são nomeados por `MODULE_FUNC(Math, Arithmetic, <Suffix>, <Operation>)`.
 
-| Função | Firma | Comportamento |
+| Função | Assinatura | Comportamento |
 | --- | --- | --- |
-| `Add` | `(TYPE a, TYPE b, TYPE *outResult)` | Suma comprobada. |
-| `Sub` | `(TYPE a, TYPE b, TYPE *outResult)` | Resta comprobada. |
-| `Mul` | `(TYPE a, TYPE b, TYPE *outResult)` | Multiplicación comprobada. |
-| `Div` | `(TYPE a, TYPE b, TYPE *outResult)` | División comprobada. |
-| `Mod` | `(TYPE a, TYPE b, TYPE *outResult)` | Resto comprobado. |
+| `Add` | `(TYPE a, TYPE b, TYPE *outResult)` | Adição com verificação de limites. |
+| `Sub` | `(TYPE a, TYPE b, TYPE *outResult)` | Subtração com verificação de limites. |
+| `Mul` | `(TYPE a, TYPE b, TYPE *outResult)` | Multiplicação com verificação de limites. |
+| `Div` | `(TYPE a, TYPE b, TYPE *outResult)` | Divisão com verificação de limites. |
+| `Mod` | `(TYPE a, TYPE b, TYPE *outResult)` | Resto com verificação de limites. |
 
 ~~~c
 int32_t sum = 0;
-OPSTATUS status = MODULE_FUNC(Math, Arithmetic, Int32, Add)(20, 22, &sum);
+OPSTATUS status = MODULE_FUNC(Math, Arithmetic, Int32, Add)(
+    20, 22, &sum);
 
 if (status == STATUS_CONST(SUCCESS)) {
     /* sum is 42 */
 }
 ~~~
 
-Todas as operações requieren un ponteiro de salida no nulo. El overflow y la aritmética inválida se informan mediante `OPSTATUS`; la salida solo é escrito cuando la operación tiene éxito. La división o el resto por cero son inválidos. El mínimo inteiro com sinal dividido por -1 se informa como fora da faixa.
+Todas as operações exigem um ponteiro de saída não nulo. Overflow e operações aritméticas inválidas são informados por meio de `OPSTATUS`; o valor de saída só é escrito quando a operação tem sucesso. Divisão ou resto por zero são inválidos. A divisão do menor inteiro com sinal por -1 é informada como valor fora da faixa representável.
 
 ## ClampedArithmetic
 
 Cabeçalho: `Arithmetic/Clamped.h`.
 
-Cada especialização con o sem sinal ofrece dos grupos:
+Cada especialização com ou sem sinal oferece dois grupos:
 
-| Variante | Métodos | Parámetros | Resultado |
+| Variante | Métodos | Parâmetros | Resultado |
 | --- | --- | --- | --- |
-| `Clamp` | `Add`, `Sub`, `Mul` | `a, b, minimum, maximum` | Retorna el resultado aritmético restringido al intervalo indicado. |
-| `Saturating` | `Add`, `Sub`, `Mul` | `a, b` | Retorna um valor saturado a los limites representables del tipo. |
+| `Clamp` | `Add`, `Sub`, `Mul` | `a, b, minimum, maximum` | Retorna o resultado aritmético restringido ao intervalo informado. |
+| `Saturating` | `Add`, `Sub`, `Mul` | `a, b` | Retorna um valor saturado nos limites representáveis do tipo. |
 
 ~~~c
 int32_t bounded = MODULE_FUNC(Math, ClampedArithmetic, Int32, Clamp, Add)(
@@ -89,7 +90,7 @@ int32_t saturated = MODULE_FUNC(Math, ClampedArithmetic, Int32, Saturating, Add)
     INT32_MAX, 10);
 ~~~
 
-A variante Clamp delega en aritmética comprobada. Si la operación intermedia desborda, elige el limite correspondiente; de lo contrario, limita el valor calculado. A variante Saturating utilize el mínimo/máximo integrado del tipo inteiro seleccionado. Estas funções retornam un valor diretamente, no un `OPSTATUS`.
+A variante `Clamp` utiliza aritmética verificada. Se a operação intermediária causar overflow, escolhe o limite correspondente fornecido; caso contrário, restringe o valor calculado ao intervalo. A variante `Saturating` utiliza os limites mínimo e máximo próprios do tipo inteiro selecionado. Essas funções retornam um valor diretamente, e não um `OPSTATUS`.
 
 ## Between
 
@@ -97,10 +98,10 @@ Cabeçalho: `Value/Between.h`.
 
 | Função | Descrição |
 | --- | --- |
-| `Classify(value, minimum, maximum)` | Retorna un `MODULE_ENUM(Math, RangeResult)` que indica abaixo, dentro, acima o intervalo inválido. |
-| `Is(value, minimum, maximum)` | Retorna true solo cuando el valor está dentro del intervalo inclusivo. |
+| `Classify(value, minimum, maximum)` | Retorna um `MODULE_ENUM(Math, RangeResult)` que indica se o valor está abaixo, dentro, acima ou diante de um intervalo inválido. |
+| `Is(value, minimum, maximum)` | Retorna verdadeiro somente quando o valor está dentro do intervalo inclusivo. |
 
-Os valores de `RangeResult` son `IN_RANGE`, `BELOW_RANGE`, `ABOVE_RANGE` y `INVALID_RANGE`. El intervalo inclui ambos extremos. Si `minimum > maximum`, `Classify` retorna `INVALID_RANGE` e `Is` retorna false.
+Os valores de `RangeResult` são `IN_RANGE`, `BELOW_RANGE`, `ABOVE_RANGE` e `INVALID_RANGE`. O intervalo inclui as duas extremidades. Se `minimum > maximum`, `Classify` retorna `INVALID_RANGE` e `Is` retorna falso.
 
 ~~~c
 MODULE_ENUM(Math, RangeResult) position =
@@ -113,45 +114,45 @@ bool accepted = MODULE_FUNC(Math, Between, Int32, Is)(value, 10, 20);
 
 Cabeçalho: `Value/Clamp.h`.
 
-`Apply(value, minimum, maximum)` retorna el valor restringido al intervalo inclusivo. Si los extremos están invertidos, la implementação los intercambia antes de limitar.
+`Apply(value, minimum, maximum)` retorna o valor restringido ao intervalo inclusivo. Se os extremos estiverem invertidos, a implementação os troca antes de limitar o valor.
 
 ~~~c
 int32_t bounded = MODULE_FUNC(Math, Clamp, Int32, Apply)(42, 0, 10);
 /* bounded is 10 */
 ~~~
 
-Es un auxiliar que retorna un valor y no informa de un intervalo inválido; los limites invertidos se normalizan.
+Este auxiliar retorna um valor e não informa intervalo inválido; limites invertidos são normalizados.
 
 ## MaxAndMin
 
 Cabeçalho: `Value/MaxAndMin.h`.
 
-O pacote solo proporciona las funções binarias `Max(a, b)` y `Min(a, b)` para cada especialización de tipo ordenado. Retornan directamente el valor seleccionado.
+O pacote oferece somente as funções binárias `Max(a, b)` e `Min(a, b)` para cada especialização de tipo ordenável. Elas retornam diretamente o valor selecionado.
 
 ~~~c
 int32_t maximum = MODULE_FUNC(Math, MaxAndMin, Int32, Max)(left, right);
 int32_t minimum = MODULE_FUNC(Math, MaxAndMin, Int32, Min)(left, right);
 ~~~
 
-La implementação actual no contiene APIs variádicas `Smallest` o `Biggest`.
+A implementação atual não oferece APIs variádicas `Smallest` ou `Biggest`.
 
 ## LinearEquation
 
 Cabeçalho: `Equation/Linear.h`.
 
-Resuelve la equação:
+Resolve a equação:
 
 \[
 a x + b = 0
 \]
 
-`Solve(a, b, outResult, outSolution)` retorna `OPSTATUS` y escribe la clasificación de la solución en `MODULE_ENUM(Math, Solution)`.
+`Solve(a, b, outResult, outSolution)` retorna `OPSTATUS` e escreve a classificação da solução em `MODULE_ENUM(Math, Solution)`.
 
-| Condição | Classificação | Resultado |
+| Condição | Classificação da solução | Resultado |
 | --- | --- | --- |
 | `a != 0` | `ONE` | `x = -b / a` |
-| `a == 0` y `b == 0` | `INFINITE` | No hay raiz única; el valor de salida se establece en cero. |
-| `a == 0` y `b != 0` | `NONE` | No hay raiz; el valor de salida se establece en cero. |
+| `a == 0` e `b == 0` | `INFINITE` | Não há raiz única; o valor de saída é definido como zero. |
+| `a == 0` e `b != 0` | `NONE` | Não há raiz; o valor de saída é definido como zero. |
 
 ~~~c
 double root = 0.0;
@@ -161,13 +162,13 @@ OPSTATUS status = MODULE_FUNC(Math, LinearEquation, Float64, Solve)(
     2.0, -8.0, &root, &count);
 ~~~
 
-Ambos os ponteiros de salida son obligatorios. Una llamada exitosa indica que la equação fue clasificada, pero no implica que exista una raiz única; inspecione `count`.
+Os dois ponteiros de saída são obrigatórios. Uma chamada bem-sucedida indica que a equação foi classificada, mas não significa que exista uma raiz única; verifique o valor de `count`.
 
 ## QuadraticEquation
 
 Cabeçalho: `Equation/Quadratic.h`.
 
-O pacote expone `Sqrt(x)`, `Discriminant(a, b, c)` y `Solve(a, b, c, outResult1, outResult2, outSolution)`.
+O pacote oferece `Sqrt(x)`, `Discriminant(a, b, c)` e `Solve(a, b, c, outResult1, outResult2, outSolution)`.
 
 Para:
 
@@ -175,18 +176,18 @@ Para:
 a x^2 + b x + c = 0
 \]
 
-el discriminante es:
+o discriminante é:
 
 \[
 \Delta = b^2 - 4ac
 \]
 
-| Condição | Classificação |
+| Condição | Classificação da solução |
 | --- | --- |
-| `a == 0` | Delega en el solucionador lineal. |
-| `Δ < 0` | `COMPLEX`; el solucionador real no retorna raízes complejas. |
-| `Δ == 0` | `ONE`; ambas salidas reciben la raiz repetida. |
-| `Δ > 0` | `TWO`; las salidas reciben las dos raízes reales. |
+| `a == 0` | Encaminha a resolução ao solucionador linear. |
+| `Δ < 0` | `COMPLEX`; o solucionador real não retorna raízes complexas. |
+| `Δ == 0` | `ONE`; os dois valores de saída recebem a raiz repetida. |
+| `Δ > 0` | `TWO`; os valores de saída recebem as duas raízes reais. |
 
 ~~~c
 double x1 = 0.0;
@@ -197,31 +198,31 @@ OPSTATUS status = MODULE_FUNC(Math, QuadraticEquation, Float64, Solve)(
     1.0, -3.0, 2.0, &x1, &x2, &count);
 ~~~
 
-Los ponteiros de salida y el ponteiro de solución son obligatorios. A API Quadratic actual clasifica un discriminante negativo como complejo, pero no expone un objeto de resultado de raízes complejas ni un solucionador complejo separado. `Sqrt` utilize un cálculo iterativo limitado; utilize entradas finitas normales y considera la precisión de ponto flutuante, el overflow y el underflow.
+Os ponteiros dos resultados e o ponteiro da classificação da solução são obrigatórios. A API atual de Quadratic classifica um discriminante negativo como complexo, mas não oferece um objeto de resultado para raízes complexas nem um solucionador complexo separado. `Sqrt` utiliza um cálculo iterativo limitado; use entradas finitas e considere a precisão de ponto flutuante, overflow e underflow.
 
 ---
 
-# Contratos y manejo de errores
+# Contratos e tratamento de erros
 
-- As operações `Arithmetic` retornam `OPSTATUS` y escriben mediante un ponteiro de salida solo cuando tienen éxito.
-- `ClampedArithmetic`, `Clamp`, `Between.Is` y `MaxAndMin` retornam valores o clasificaciones booleanas directamente.
-- `Between.Classify` es el único auxiliar de intervalo que distingue un intervalo inválido de un valor fora do intervalo ordinario.
-- `LinearEquation.Solve` y `QuadraticEquation.Solve` pueden tener éxito e informar `NONE`, `INFINITE` o `COMPLEX`. Inspecciona sempre el enum de solución.
-- El enum de solución es `MODULE_ENUM(Math, Solution)`; la clasificación de intervalo utilize `MODULE_ENUM(Math, RangeResult)`.
-- As operações inteiras están limitadas por su tipo C seleccionado. As operações de ponto flutuante heredan la precisión y el comportamento de valores excepcionais de C.
+- As operações de `Arithmetic` retornam `OPSTATUS` e escrevem no ponteiro de saída somente quando têm sucesso.
+- `ClampedArithmetic`, `Clamp`, `Between.Is` e `MaxAndMin` retornam valores ou classificações booleanas diretamente.
+- `Between.Classify` é o único auxiliar de intervalos que distingue um intervalo inválido de um valor simplesmente fora da faixa.
+- `LinearEquation.Solve` e `QuadraticEquation.Solve` podem ter sucesso e ainda informar `NONE`, `INFINITE` ou `COMPLEX`. Sempre verifique o enum da solução.
+- O enum de solução é `MODULE_ENUM(Math, Solution)`; a classificação de intervalos utiliza `MODULE_ENUM(Math, RangeResult)`.
+- As operações inteiras são limitadas pelo tipo C selecionado. As operações de ponto flutuante herdam a precisão e o comportamento de valores excepcionais definidos pela implementação de ponto flutuante de C.
 
-## Implementación y portabilidadee
+## Implementação e portabilidade
 
-Los templates y las tablas de instanciación están en los encabezados de cada pacote y en `Impl/Common.inc`. Incluye el encabezado público, no `Impl/*.impl` ni `.def`, desde el código consumidor. O cabeçalho agregador `Math.h` no depende de una biblioteca matemática separada para su implementação actual de ecuaciones.
+Os templates e as tabelas de instanciação estão nos cabeçalhos de cada pacote e em `Impl/Common.inc`. No código consumidor, inclua o cabeçalho público, não arquivos `Impl/*.impl` ou `.def`. O cabeçalho agregador `Math.h` não depende de uma biblioteca matemática separada para a implementação atual das equações.
 
 ## Módulos relacionados
 
-- [Numeric](Numeric.md) — valores de punto fijo, racionales y de múltiples limbs.
-- [Algorithm](Algorithm.md) — comparación y repetición genérica.
-- [Types](Types.md) — nombres de tipos primitivos y traits.
-- [Module](Module.md) — declaraciones de templates y acceso a funções con namespace.
+- [Numeric](Numeric.md) — valores de ponto fixo, racionais e de múltiplos limbs.
+- [Algorithm](Algorithm.md) — comparação e repetição genérica.
+- [Types](Types.md) — nomes de tipos primitivos e traits.
+- [Module](Module.md) — declarações de templates e acesso a funções com namespace.
 
-## Cabeçalhos de origen
+## Cabeçalhos de origem
 
 - `Codespace/Cosmeron/Modules/Math/Math.h`
 - `Codespace/Cosmeron/Modules/Math/Impl/Common.inc`
