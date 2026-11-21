@@ -247,6 +247,16 @@ Format é um formatador/parser com buffer limitado. Não aloca memória nem util
 
 O parsing consome toda a entrada. Espaços iniciais/finais, campos incompletos, datas/horas inválidas e caracteres excedentes são rejeitados. Datas civis ISO usam calendário gregoriano, independentemente de políticas históricas usadas em outras partes do módulo. O parser/formatador de datas aceita anos estendidos com sinal.
 
+### Resolução dos relógios e concorrência
+
+Os campos em nanossegundos são uma unidade de representação, não uma garantia de precisão de nanossegundos do relógio ou de agendamento. `Clock.Now` converte o contador da plataforma para nanossegundos: no Windows usa QueryPerformanceCounter e sua frequência informada; no macOS usa mach_absolute_time e a base de tempo do Mach; em plataformas POSIX usa clock_gettime(CLOCK_MONOTONIC). A resolução efetiva, a estabilidade e o custo de leitura dependem da plataforma e do ambiente de execução. Não deduza a resolução física do relógio a partir da unidade inteira utilizada.
+
+`Instant.Now` lê o relógio civil do sistema por meio de GetSystemTimeAsFileTime no Windows ou clock_gettime(CLOCK_REALTIME) em plataformas POSIX. Sua precisão fracionária também é limitada pelo relógio subjacente. Valores FILETIME do Windows usam unidades de 100 nanossegundos, mas essa unidade não garante precisão de 100 nanossegundos. Ajustes no relógio civil podem fazer leituras sucessivas avançarem ou retrocederem.
+
+`Clock.Sleep` e `FrameLimiter.Wait` solicitam um atraso mínimo, não uma garantia de prazo. Carga do escalonador, granularidade dos temporizadores e políticas do sistema operacional podem prolongar a espera real. Portanto, o limitador de quadros auxilia o controle de cadência, mas não é um escalonador de tempo real.
+
+Chronometry armazena o estado dos temporizadores em estruturas pertencentes ao chamador e suas tabelas de fuso horário incorporadas são dados estáticos. A API não fornece sincronização para uma estrutura modificada simultaneamente por várias threads: use uma instância própria de Timer, Delta ou FrameLimiter por thread, ou sincronize o acesso compartilhado. O uso somente de leitura de valores imutáveis e dos dados incorporados de consulta não exige inicialização gerenciada pela biblioteca. Consultas ao fuso horário do sistema seguem a configuração do host; alterações concorrentes nas configurações de fuso horário globais do processo estão fora do contrato de sincronização de Chronometry.
+
 ## Exemplos práticos
 
 ### Medir um intervalo
