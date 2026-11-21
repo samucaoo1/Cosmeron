@@ -415,20 +415,20 @@ static void TestCalendarDateTimeEpochTimezoneFormat(void) {
 
   /* Leap seconds & TAI <-> UTC */
   int32_t taiOffset = 0;
-  assert(MODULE_FUNC(Chronometry, Epoch, TaiMinusUtcSeconds)(
+  assert(MODULE_FUNC(Chronometry, Epoch, TAIMinusUtcSeconds)(
              (MODULE_TYPE(Chronometry, Instant)){0, 0}, &taiOffset) ==
          STATUS_CONST(OUT_OF_RANGE));
-  assert(MODULE_FUNC(Chronometry, Epoch, TaiMinusUtcSeconds)(
+  assert(MODULE_FUNC(Chronometry, Epoch, TAIMinusUtcSeconds)(
              (MODULE_TYPE(Chronometry, Instant)){63072000LL, 0}, &taiOffset) ==
          STATUS_CONST(SUCCESS));
   assert(taiOffset == 10);
   MODULE_TYPE(Chronometry, Instant) modernUtc = {1767225600LL, 123456789U};
   MODULE_TYPE(Chronometry, Instant) modernTai = {0};
   MODULE_TYPE(Chronometry, Instant) roundTripUtc = {0};
-  assert(MODULE_FUNC(Chronometry, Epoch, UtcToTai)(
+  assert(MODULE_FUNC(Chronometry, Epoch, TAIFromUtc)(
              modernUtc, &modernTai) == STATUS_CONST(SUCCESS));
   assert(modernTai.seconds == modernUtc.seconds + 37);
-  assert(MODULE_FUNC(Chronometry, Epoch, TaiToUtc)(
+  assert(MODULE_FUNC(Chronometry, Epoch, TAIToUtc)(
              modernTai, &roundTripUtc) == STATUS_CONST(SUCCESS));
   assert(MODULE_FUNC(Chronometry, Instant, Compare)(
              modernUtc, roundTripUtc) == COMPARISON_CONST(EQUAL));
@@ -488,12 +488,12 @@ static void TestCalendarDateTimeEpochTimezoneFormat(void) {
 
   /* ISO Instant & Duration Formatting/Parsing (Zero stdio.h) */
   char isoInstBuf[MODULE_CONST(Chronometry, Format, ISO_INSTANT_BUFFER_SIZE)];
-  assert(MODULE_FUNC(Chronometry, Format, ISO, Instant)(
+  assert(MODULE_FUNC(Chronometry, Format, ToISOInstant)(
              (MODULE_TYPE(Chronometry, Instant)){0, 500000000U}, isoInstBuf,
              sizeof(isoInstBuf)) == STATUS_CONST(SUCCESS));
   assert(strcmp(isoInstBuf, "1970-01-01T00:00:00.500Z") == 0);
   MODULE_TYPE(Chronometry, Instant) parsedInst = {0};
-  assert(MODULE_FUNC(Chronometry, Format, ISO, ParseInstant)(
+  assert(MODULE_FUNC(Chronometry, Format, FromISOInstant)(
              "1969-12-31T21:00:00.500-03:00", &parsedInst) ==
          STATUS_CONST(SUCCESS));
   assert(parsedInst.seconds == 0 && parsedInst.nanoseconds == 500000000U);
@@ -501,59 +501,59 @@ static void TestCalendarDateTimeEpochTimezoneFormat(void) {
   char isoDurBuf[MODULE_CONST(Chronometry, Format, ISO_DURATION_BUFFER_SIZE)];
   MODULE_TYPE(Chronometry, Duration) durSample =
       MODULE_FUNC(Chronometry, Duration, FromNanoseconds)(-5405250000000LL);
-  assert(MODULE_FUNC(Chronometry, Format, ISO, Duration)(
+  assert(MODULE_FUNC(Chronometry, Format, ToISODuration)(
              durSample, isoDurBuf, sizeof(isoDurBuf)) == STATUS_CONST(SUCCESS));
   assert(strcmp(isoDurBuf, "-PT1H30M5.25S") == 0);
   MODULE_TYPE(Chronometry, Duration) parsedDur = {0};
-  assert(MODULE_FUNC(Chronometry, Format, ISO, ParseDuration)(
+  assert(MODULE_FUNC(Chronometry, Format, FromISODuration)(
              isoDurBuf, &parsedDur) == STATUS_CONST(SUCCESS));
   assert(parsedDur.nanoseconds == durSample.nanoseconds);
-  assert(MODULE_FUNC(Chronometry, Format, ISO, ParseDuration)(
+  assert(MODULE_FUNC(Chronometry, Format, FromISODuration)(
              "P1DT2H", &parsedDur) == STATUS_CONST(SUCCESS));
   assert(parsedDur.nanoseconds ==
          93600LL * MODULE_CONST(Chronometry, Duration, NANOSECONDS_PER_SECOND));
 
   char isoDate[MODULE_CONST(Chronometry, Format, ISO_DATE_BUFFER_SIZE)];
-  assert(MODULE_CALL(Chronometry, Format, ISO, Date,
+  assert(MODULE_CALL(Chronometry, Format, ToISODate,
                      (unixEpoch, isoDate, sizeof(isoDate))) ==
          STATUS_CONST(SUCCESS));
   assert(strcmp(isoDate, "1970-01-01") == 0);
 
   MODULE_TYPE(Chronometry, Date) negativeYear = {-44, 3, 15};
-  assert(MODULE_FUNC(Chronometry, Format, ISO, Date)(
+  assert(MODULE_FUNC(Chronometry, Format, ToISODate)(
              negativeYear, isoDate, sizeof(isoDate)) == STATUS_CONST(SUCCESS));
   assert(strcmp(isoDate, "-0044-03-15") == 0);
 
   MODULE_TYPE(Chronometry, Date) parsedDate = {0};
-  assert(MODULE_FUNC(Chronometry, Format, ISO, ParseDate)(
+  assert(MODULE_FUNC(Chronometry, Format, FromISODate)(
              "1970-01-01", &parsedDate) == STATUS_CONST(SUCCESS));
   assert(MODULE_FUNC(Chronometry, Calendar, Date, Compare)(
              unixEpoch, parsedDate) == COMPARISON_CONST(EQUAL));
-  assert(MODULE_FUNC(Chronometry, Format, ISO, ParseDate)(
+  assert(MODULE_FUNC(Chronometry, Format, FromISODate)(
              "1970-1-1", &parsedDate) == STATUS_CONST(OUT_OF_RANGE));
-  assert(MODULE_FUNC(Chronometry, Format, ISO, ParseDate)(
+  assert(MODULE_FUNC(Chronometry, Format, FromISODate)(
              " 1970-01-01", &parsedDate) == STATUS_CONST(OUT_OF_RANGE));
 
   char isoTimestamp[MODULE_CONST(Chronometry, Format,
                                  ISO_TIMESTAMP_BUFFER_SIZE)];
-  assert(MODULE_FUNC(Chronometry, Format, ISO, Timestamp)(
+  assert(MODULE_FUNC(Chronometry, Format, ToISOTimestamp)(
              dt, isoTimestamp, sizeof(isoTimestamp)) == STATUS_CONST(SUCCESS));
   assert(strcmp(isoTimestamp, "1970-01-01T00:00:00.000") == 0);
 
   MODULE_TYPE(Chronometry, Timestamp) parsedDt = {0};
-  assert(MODULE_FUNC(Chronometry, Format, ISO, ParseTimestamp)(
+  assert(MODULE_FUNC(Chronometry, Format, FromISOTimestamp)(
              isoTimestamp, &parsedDt) == STATUS_CONST(SUCCESS));
   assert(MODULE_FUNC(Chronometry, Timestamp, Compare)(dt, parsedDt) ==
          COMPARISON_CONST(EQUAL));
 
   char isoOffset[MODULE_CONST(Chronometry, Format,
                               ISO_OFFSET_TIMESTAMP_BUFFER_SIZE)];
-  assert(MODULE_FUNC(Chronometry, Format, ISO, OffsetTimestamp)(
+  assert(MODULE_FUNC(Chronometry, Format, ToISOOffsetTimestamp)(
              odt, isoOffset, sizeof(isoOffset)) == STATUS_CONST(SUCCESS));
   assert(strcmp(isoOffset, "1969-12-31T21:00:00.000-03:00") == 0);
 
   MODULE_TYPE(Chronometry, OffsetTimestamp) parsedOdt = {0};
-  assert(MODULE_FUNC(Chronometry, Format, ISO, ParseOffsetTimestamp)(
+  assert(MODULE_FUNC(Chronometry, Format, FromISOOffsetTimestamp)(
              isoOffset, &parsedOdt) == STATUS_CONST(SUCCESS));
   assert(parsedOdt.offset.minutesEastOfUtc == -180);
   assert(MODULE_FUNC(Chronometry, Timestamp, Compare)(

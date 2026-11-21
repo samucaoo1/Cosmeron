@@ -7,6 +7,7 @@ Cosmeron is entering **pre-release** with smaller, focused releases. All refacto
 ## Refactored Modules (100%)
 
 - `Core` — **100%** (Preprocessor, DSL, Memory, Outcome, Detect, Error, etc.)
+- `Modules/Chronometry` — **100%**
 - `Modules/Container` — **100%**
 - `Modules/Math` — **100%**
 - `Modules/Numeric` — **100%**
@@ -16,7 +17,6 @@ Cosmeron is entering **pre-release** with smaller, focused releases. All refacto
 ## Pending Refactoring (`Roadmap/Cosmeron/Modules/`)
 
 - `Audio`
-- `Chronometry`
 - `CLI`
 - `Compression`
 - `Concurrency`

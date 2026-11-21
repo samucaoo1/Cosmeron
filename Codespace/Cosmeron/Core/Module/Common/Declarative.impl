@@ -614,11 +614,19 @@
     COSMERON_INTERNAL_EXPAND_ENUM(TARGET, NAME, DISP, TABLE)                   \
   } NS(TARGET, NAME);
 
+#define COSMERON_INTERNAL_EMIT_ENUM_DIRECT(TARGET, NAME, TABLE, ROW_MACRO)     \
+  typedef enum NS(TARGET, NAME) {                                              \
+    TABLE(ROW_MACRO)                                                           \
+  } NS(TARGET, NAME);
+
 #define ENUM_DEF(TARGET, NAME, TABLE)                                          \
   COSMERON_INTERNAL_EMIT_ENUM_DEF(TARGET, NAME, TABLE, PLAIN)
 
 #define ENUM_DEF_EX(TARGET, NAME, TABLE, DISP)                                 \
   COSMERON_INTERNAL_EMIT_ENUM_DEF(TARGET, NAME, TABLE, DISP)
+
+#define ENUM_DEF_DIRECT(TARGET, NAME, TABLE, ROW_MACRO)                        \
+  COSMERON_INTERNAL_EMIT_ENUM_DIRECT(TARGET, NAME, TABLE, ROW_MACRO)
 
 #define IENUM_DEF(TARGET, NAME, TABLE)                                         \
   COSMERON_INTERNAL_EMIT_ENUM_DEF(NS(TARGET, Internal), NAME, TABLE, PLAIN)

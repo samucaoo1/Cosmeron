@@ -16,6 +16,6 @@ Este diretório contém a documentação do projeto em português brasileiro.
 ## Documentação dos módulos
 
 - **Core**: [Algorithm](Modules/Algorithm.md) · [Bit](Modules/Bit.md) · [Cast](Modules/Cast.md) · [Condition](Modules/Condition.md) · [Diagnostic](Modules/Diagnostic.md) · [Memory](Modules/Memory.md) · [Module](Modules/Module.md) · [Preprocessor](Modules/Preprocessor.md) · [Types](Modules/Types.md)
-- **Modules**: [Container](Modules/Container.md) · [Math](Modules/Math.md) · [Numeric](Modules/Numeric.md) · [Text](Modules/Text.md) · [Tuple](Modules/Tuple.md)
+- **Modules**: [Chronometry](Modules/Chronometry.md) · [Container](Modules/Container.md) · [Math](Modules/Math.md) · [Numeric](Modules/Numeric.md) · [Text](Modules/Text.md) · [Tuple](Modules/Tuple.md)
 
 A documentação original em inglês está em [../en/README.md](../en/README.md). A versão em espanhol está em [../es/README.md](../es/README.md).

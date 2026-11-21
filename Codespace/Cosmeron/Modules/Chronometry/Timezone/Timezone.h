@@ -170,6 +170,10 @@
 #define COSMERON_MACRO_INTERNAL_CHRONOMETRY_DISAM_DISP(TARGET, ENUM_NAME, ROW) \
   CNS(TARGET, CHRONOMETRY_TIMEZONE_DISAMBIGUATION_GET(NAME, ROW)),
 
+#define COSMERON_MACRO_INTERNAL_CHRONOMETRY_ZONE_DISP(ROW)                     \
+  CNS(MODULE_NS(Chronometry, Timezone),                                        \
+      CHRONOMETRY_TIMEZONE_IANA_GET(ID, ROW)),
+
 ENUM_DEF_EX(MODULE_NS(Chronometry, Timezone), TransitionTimeBase,
             CHRONOMETRY_TIMEZONE_TIME_BASE_TABLE,
             COSMERON_MACRO_INTERNAL_CHRONOMETRY_TBASE_DISP)
@@ -179,7 +183,11 @@ ENUM_DEF_EX(MODULE_NS(Chronometry, Timezone), LocalTimeStatus,
 ENUM_DEF_EX(MODULE_NS(Chronometry, Timezone), Disambiguation,
             CHRONOMETRY_TIMEZONE_DISAMBIGUATION_TABLE,
             COSMERON_MACRO_INTERNAL_CHRONOMETRY_DISAM_DISP)
+ENUM_DEF_DIRECT(MODULE_NS(Chronometry, Timezone), ZoneId,
+                CHRONOMETRY_TIMEZONE_IANA_TABLE,
+                COSMERON_MACRO_INTERNAL_CHRONOMETRY_ZONE_DISP)
 
+#undef COSMERON_MACRO_INTERNAL_CHRONOMETRY_ZONE_DISP
 #undef COSMERON_MACRO_INTERNAL_CHRONOMETRY_DISAM_DISP
 #undef COSMERON_MACRO_INTERNAL_CHRONOMETRY_LSTAT_DISP
 #undef COSMERON_MACRO_INTERNAL_CHRONOMETRY_TBASE_DISP
@@ -187,17 +195,6 @@ ENUM_DEF_EX(MODULE_NS(Chronometry, Timezone), Disambiguation,
 /* ========================================================================== */
 /* 2. Declarative Structs & Timezone Package                                  */
 /* ========================================================================== */
-
-#define COSMERON_MACRO_INTERNAL_CHRONOMETRY_ZONE_DISP(ROW)                     \
-  CNS(MODULE_NS(Chronometry, Timezone),                                        \
-      CHRONOMETRY_TIMEZONE_IANA_GET(ID, ROW)),
-
-typedef enum {
-  CHRONOMETRY_TIMEZONE_IANA_TABLE(
-      COSMERON_MACRO_INTERNAL_CHRONOMETRY_ZONE_DISP)
-} MODULE_ENUM(Chronometry, Timezone, ZoneId);
-
-#undef COSMERON_MACRO_INTERNAL_CHRONOMETRY_ZONE_DISP
 
 MODULE(DOMAIN(Modules), Chronometry,
     STRUCT(UtcOffset,

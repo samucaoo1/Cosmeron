@@ -460,7 +460,7 @@ El patrón Row-Tuple permite extraer columnas de cada fila X-macro. Los presets 
 - `QUALIFIED_NAME`: emite el nombre cualificado, sin valor explícito.
 - Dispatch personalizado: recibe `DISPATCH(TARGET, ENUM_NAME, ROW)` y puede transformar la fila, por ejemplo en máscaras de bits.
 
-Las declaraciones fuera de `MODULE` utilizan `ENUM_DEF` o `ENUM_DEF_EX`, que reciben el namespace de destino, el nombre del enum, la tabla y, en la forma extendida, el preset de dispatch.
+Las declaraciones fuera de `MODULE` utilizan `ENUM_DEF`, `ENUM_DEF_EX` o `ENUM_DEF_DIRECT`, que reciben el namespace de destino, el nombre del enum, la tabla y, en la forma extendida, el preset de dispatch (o una macro `ROW_MACRO(ROW)` directa en $O(1)$ para tablas grandes sin límite de recursión del preprocesador).
 
 
 ### Ejemplos complementarios de referencia
@@ -517,4 +517,5 @@ MODULE(DOMAIN(Core), MyModule,
 ```c
 ENUM_DEF(MODULE_NS(File, Stream), Seek, SEEK_TABLE);
 ENUM_DEF_EX(MODULE_NS(File, Stream), Seek, SEEK_TABLE, QUALIFIED);
+ENUM_DEF_DIRECT(MODULE_NS(Chronometry, Timezone), ZoneId, LARGE_TABLE, ROW_DISP);
 ```

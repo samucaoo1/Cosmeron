@@ -393,103 +393,103 @@ MODULE(DOMAIN(Modules), Chronometry,
 
 MODULE_IMPLEMENT(DOMAIN(Modules), Chronometry,
     PACKAGE(Format,
-        SPACE(ISO,
-              OPERATION(Date,
-                        (MODULE_TYPE(Chronometry, Date) date, char *buffer,
-                         size_t capacity), {
-                if (buffer == NULL || capacity == 0U) {
-                  return STATUS_CONST(INVALID_ARGUMENT);
-                }
-                MODULE_TYPE(Chronometry, CalendarPolicy) gregorian =
-                    MODULE_FUNC(Chronometry, Calendar, GregorianPolicy)();
-                if (!MODULE_FUNC(Chronometry, Calendar, Date, IsValid)(
-                        &gregorian, date)) {
-                  return STATUS_CONST(OUT_OF_RANGE);
-                }
-                size_t offset = 0U;
-                if (!MODULE_IFUNC(Chronometry, Format, WriteDatePart)(
-                        buffer, capacity, &offset, date) ||
-                    !MODULE_IFUNC(Chronometry, Format, FinalizeBuffer)(
-                        buffer, capacity, offset)) {
-                  return STATUS_CONST(OUT_OF_RANGE);
-                }
-                return STATUS_CONST(SUCCESS);
-              }),
+        VARIANT(ToISO,
+            OPERATION(Date,
+                      (MODULE_TYPE(Chronometry, Date) date, char *buffer,
+                       size_t capacity), {
+              if (buffer == NULL || capacity == 0U) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              MODULE_TYPE(Chronometry, CalendarPolicy) gregorian =
+                  MODULE_FUNC(Chronometry, Calendar, GregorianPolicy)();
+              if (!MODULE_FUNC(Chronometry, Calendar, Date, IsValid)(
+                      &gregorian, date)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              size_t offset = 0U;
+              if (!MODULE_IFUNC(Chronometry, Format, WriteDatePart)(
+                      buffer, capacity, &offset, date) ||
+                  !MODULE_IFUNC(Chronometry, Format, FinalizeBuffer)(
+                      buffer, capacity, offset)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              return STATUS_CONST(SUCCESS);
+            }),
 
-              OPERATION(Timestamp,
-                        (MODULE_TYPE(Chronometry, Timestamp) value,
-                         char *buffer, size_t capacity), {
-                if (buffer == NULL || capacity == 0U) {
-                  return STATUS_CONST(INVALID_ARGUMENT);
-                }
-                MODULE_TYPE(Chronometry, CalendarPolicy) gregorian =
-                    MODULE_FUNC(Chronometry, Calendar, GregorianPolicy)();
-                if (!MODULE_FUNC(Chronometry, Timestamp, IsValid)(&gregorian,
-                                                                   value)) {
-                  return STATUS_CONST(OUT_OF_RANGE);
-                }
-                size_t offset = 0U;
-                if (!MODULE_IFUNC(Chronometry, Format, WriteDatePart)(
-                        buffer, capacity, &offset, value.date) ||
-                    !MODULE_IFUNC(Chronometry, Format, WriteChar)(
-                        buffer, capacity, &offset, 'T') ||
-                    !MODULE_IFUNC(Chronometry, Format, WriteTimePart)(
-                        buffer, capacity, &offset, value.time) ||
-                    !MODULE_IFUNC(Chronometry, Format, FinalizeBuffer)(
-                        buffer, capacity, offset)) {
-                  return STATUS_CONST(OUT_OF_RANGE);
-                }
-                return STATUS_CONST(SUCCESS);
-              }),
+            OPERATION(Timestamp,
+                      (MODULE_TYPE(Chronometry, Timestamp) value,
+                       char *buffer, size_t capacity), {
+              if (buffer == NULL || capacity == 0U) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              MODULE_TYPE(Chronometry, CalendarPolicy) gregorian =
+                  MODULE_FUNC(Chronometry, Calendar, GregorianPolicy)();
+              if (!MODULE_FUNC(Chronometry, Timestamp, IsValid)(&gregorian,
+                                                                 value)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              size_t offset = 0U;
+              if (!MODULE_IFUNC(Chronometry, Format, WriteDatePart)(
+                      buffer, capacity, &offset, value.date) ||
+                  !MODULE_IFUNC(Chronometry, Format, WriteChar)(
+                      buffer, capacity, &offset, 'T') ||
+                  !MODULE_IFUNC(Chronometry, Format, WriteTimePart)(
+                      buffer, capacity, &offset, value.time) ||
+                  !MODULE_IFUNC(Chronometry, Format, FinalizeBuffer)(
+                      buffer, capacity, offset)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              return STATUS_CONST(SUCCESS);
+            }),
 
-              OPERATION(OffsetTimestamp,
-                        (MODULE_TYPE(Chronometry, OffsetTimestamp) value,
-                         char *buffer, size_t capacity), {
-                if (buffer == NULL || capacity == 0U) {
-                  return STATUS_CONST(INVALID_ARGUMENT);
-                }
-                MODULE_TYPE(Chronometry, CalendarPolicy) gregorian =
-                    MODULE_FUNC(Chronometry, Calendar, GregorianPolicy)();
-                if (!MODULE_FUNC(Chronometry, Timestamp, IsValid)(
-                        &gregorian, value.local) ||
-                    !MODULE_FUNC(Chronometry, Timezone, Offset, IsValid)(
-                        value.offset)) {
-                  return STATUS_CONST(OUT_OF_RANGE);
-                }
-                size_t offset = 0U;
-                if (!MODULE_IFUNC(Chronometry, Format, WriteDatePart)(
-                        buffer, capacity, &offset, value.local.date) ||
-                    !MODULE_IFUNC(Chronometry, Format, WriteChar)(
-                        buffer, capacity, &offset, 'T') ||
-                    !MODULE_IFUNC(Chronometry, Format, WriteTimePart)(
-                        buffer, capacity, &offset, value.local.time) ||
-                    !MODULE_IFUNC(Chronometry, Format, WriteOffsetPart)(
-                        buffer, capacity, &offset, value.offset) ||
-                    !MODULE_IFUNC(Chronometry, Format, FinalizeBuffer)(
-                        buffer, capacity, offset)) {
-                  return STATUS_CONST(OUT_OF_RANGE);
-                }
-                return STATUS_CONST(SUCCESS);
-              }),
+            OPERATION(OffsetTimestamp,
+                      (MODULE_TYPE(Chronometry, OffsetTimestamp) value,
+                       char *buffer, size_t capacity), {
+              if (buffer == NULL || capacity == 0U) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              MODULE_TYPE(Chronometry, CalendarPolicy) gregorian =
+                  MODULE_FUNC(Chronometry, Calendar, GregorianPolicy)();
+              if (!MODULE_FUNC(Chronometry, Timestamp, IsValid)(
+                      &gregorian, value.local) ||
+                  !MODULE_FUNC(Chronometry, Timezone, Offset, IsValid)(
+                      value.offset)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              size_t offset = 0U;
+              if (!MODULE_IFUNC(Chronometry, Format, WriteDatePart)(
+                      buffer, capacity, &offset, value.local.date) ||
+                  !MODULE_IFUNC(Chronometry, Format, WriteChar)(
+                      buffer, capacity, &offset, 'T') ||
+                  !MODULE_IFUNC(Chronometry, Format, WriteTimePart)(
+                      buffer, capacity, &offset, value.local.time) ||
+                  !MODULE_IFUNC(Chronometry, Format, WriteOffsetPart)(
+                      buffer, capacity, &offset, value.offset) ||
+                  !MODULE_IFUNC(Chronometry, Format, FinalizeBuffer)(
+                      buffer, capacity, offset)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              return STATUS_CONST(SUCCESS);
+            }),
 
-              OPERATION(Instant,
-                        (MODULE_TYPE(Chronometry, Instant) value,
-                         char *buffer, size_t capacity), {
-                if (buffer == NULL || capacity == 0U) {
-                  return STATUS_CONST(INVALID_ARGUMENT);
-                }
-                if (!MODULE_FUNC(Chronometry, Instant, IsValid)(value)) {
-                  return STATUS_CONST(OUT_OF_RANGE);
-                }
-                MODULE_TYPE(Chronometry, OffsetTimestamp) utc = {0};
-                OPSTATUS status = MODULE_FUNC(Chronometry, Timezone, FromUTC)(
-                    value, (MODULE_TYPE(Chronometry, UtcOffset)){0}, &utc);
-                if (status != STATUS_CONST(SUCCESS)) {
-                  return status;
-                }
-                return MODULE_FUNC(Chronometry, Format, ISO, OffsetTimestamp)(
-                    utc, buffer, capacity);
-              }),
+            OPERATION(Instant,
+                      (MODULE_TYPE(Chronometry, Instant) value,
+                       char *buffer, size_t capacity), {
+              if (buffer == NULL || capacity == 0U) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              if (!MODULE_FUNC(Chronometry, Instant, IsValid)(value)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              MODULE_TYPE(Chronometry, OffsetTimestamp) utc = {0};
+              OPSTATUS status = MODULE_FUNC(Chronometry, Timezone, FromUTC)(
+                  value, (MODULE_TYPE(Chronometry, UtcOffset)){0}, &utc);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              return MODULE_FUNC(Chronometry, Format, ToISOOffsetTimestamp)(
+                  utc, buffer, capacity);
+            }),
 
               OPERATION(Duration,
                         (MODULE_TYPE(Chronometry, Duration) value,
@@ -587,118 +587,119 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Chronometry,
                   return STATUS_CONST(OUT_OF_RANGE);
                 }
                 return STATUS_CONST(SUCCESS);
-              }),
+              })
+        ),
 
-              OPERATION(ParseDate,
-                        (const char *text,
-                         MODULE_TYPE(Chronometry, Date) *date), {
-                if (text == NULL || date == NULL) {
-                  return STATUS_CONST(INVALID_ARGUMENT);
-                }
-                MODULE_TYPE(Chronometry, CalendarPolicy) gregorian =
-                    MODULE_FUNC(Chronometry, Calendar, GregorianPolicy)();
-                const char *cursor = text;
-                MODULE_TYPE(Chronometry, Date) parsed = {0};
-                OPSTATUS status = MODULE_IFUNC(
-                    Chronometry, Format, ParseDatePrefix)(&cursor, &gregorian,
-                                                          &parsed);
-                if (status != STATUS_CONST(SUCCESS)) {
-                  return status;
-                }
-                if (*cursor != '\0') {
-                  return STATUS_CONST(OUT_OF_RANGE);
-                }
-                *date = parsed;
-                return STATUS_CONST(SUCCESS);
-              }),
+        VARIANT(FromISO,
+            OPERATION(Date,
+                      (const char *text,
+                       MODULE_TYPE(Chronometry, Date) *date), {
+              if (text == NULL || date == NULL) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              MODULE_TYPE(Chronometry, CalendarPolicy) gregorian =
+                  MODULE_FUNC(Chronometry, Calendar, GregorianPolicy)();
+              const char *cursor = text;
+              MODULE_TYPE(Chronometry, Date) parsed = {0};
+              OPSTATUS status = MODULE_IFUNC(
+                  Chronometry, Format, ParseDatePrefix)(&cursor, &gregorian,
+                                                        &parsed);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              if (*cursor != '\0') {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              *date = parsed;
+              return STATUS_CONST(SUCCESS);
+            }),
 
-              OPERATION(ParseTimestamp,
-                        (const char *text,
-                         MODULE_TYPE(Chronometry, Timestamp) *value), {
-                if (text == NULL || value == NULL) {
-                  return STATUS_CONST(INVALID_ARGUMENT);
-                }
-                MODULE_TYPE(Chronometry, CalendarPolicy) gregorian =
-                    MODULE_FUNC(Chronometry, Calendar, GregorianPolicy)();
-                const char *cursor = text;
-                MODULE_TYPE(Chronometry, Timestamp) parsed = {0};
-                OPSTATUS status = MODULE_IFUNC(
-                    Chronometry, Format, ParseDatePrefix)(&cursor, &gregorian,
-                                                          &parsed.date);
-                if (status != STATUS_CONST(SUCCESS)) {
-                  return status;
-                }
-                if (*cursor != 'T') {
-                  return STATUS_CONST(OUT_OF_RANGE);
-                }
-                ++cursor;
-                status = MODULE_IFUNC(Chronometry, Format, ParseTimePrefix)(
-                    &cursor, &parsed.time);
-                if (status != STATUS_CONST(SUCCESS)) {
-                  return status;
-                }
-                if (*cursor != '\0') {
-                  return STATUS_CONST(OUT_OF_RANGE);
-                }
-                *value = parsed;
-                return STATUS_CONST(SUCCESS);
-              }),
+            OPERATION(Timestamp,
+                      (const char *text,
+                       MODULE_TYPE(Chronometry, Timestamp) *value), {
+              if (text == NULL || value == NULL) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              MODULE_TYPE(Chronometry, CalendarPolicy) gregorian =
+                  MODULE_FUNC(Chronometry, Calendar, GregorianPolicy)();
+              const char *cursor = text;
+              MODULE_TYPE(Chronometry, Timestamp) parsed = {0};
+              OPSTATUS status = MODULE_IFUNC(
+                  Chronometry, Format, ParseDatePrefix)(&cursor, &gregorian,
+                                                        &parsed.date);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              if (*cursor != 'T') {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              ++cursor;
+              status = MODULE_IFUNC(Chronometry, Format, ParseTimePrefix)(
+                  &cursor, &parsed.time);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              if (*cursor != '\0') {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              *value = parsed;
+              return STATUS_CONST(SUCCESS);
+            }),
 
-              OPERATION(ParseOffsetTimestamp,
-                        (const char *text,
-                         MODULE_TYPE(Chronometry, OffsetTimestamp) *value), {
-                if (text == NULL || value == NULL) {
-                  return STATUS_CONST(INVALID_ARGUMENT);
-                }
-                MODULE_TYPE(Chronometry, CalendarPolicy) gregorian =
-                    MODULE_FUNC(Chronometry, Calendar, GregorianPolicy)();
-                const char *cursor = text;
-                MODULE_TYPE(Chronometry, OffsetTimestamp) parsed = {0};
-                OPSTATUS status = MODULE_IFUNC(
-                    Chronometry, Format, ParseDatePrefix)(&cursor, &gregorian,
-                                                          &parsed.local.date);
-                if (status != STATUS_CONST(SUCCESS)) {
-                  return status;
-                }
-                if (*cursor != 'T') {
-                  return STATUS_CONST(OUT_OF_RANGE);
-                }
-                ++cursor;
-                status = MODULE_IFUNC(Chronometry, Format, ParseTimePrefix)(
-                    &cursor, &parsed.local.time);
-                if (status != STATUS_CONST(SUCCESS)) {
-                  return status;
-                }
-                status = MODULE_IFUNC(Chronometry, Format, ParseOffsetSuffix)(
-                    &cursor, &parsed.offset);
-                if (status != STATUS_CONST(SUCCESS)) {
-                  return status;
-                }
-                if (*cursor != '\0') {
-                  return STATUS_CONST(OUT_OF_RANGE);
-                }
-                parsed.daylightSavings = false;
-                *value = parsed;
-                return STATUS_CONST(SUCCESS);
-              }),
+            OPERATION(OffsetTimestamp,
+                      (const char *text,
+                       MODULE_TYPE(Chronometry, OffsetTimestamp) *value), {
+              if (text == NULL || value == NULL) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              MODULE_TYPE(Chronometry, CalendarPolicy) gregorian =
+                  MODULE_FUNC(Chronometry, Calendar, GregorianPolicy)();
+              const char *cursor = text;
+              MODULE_TYPE(Chronometry, OffsetTimestamp) parsed = {0};
+              OPSTATUS status = MODULE_IFUNC(
+                  Chronometry, Format, ParseDatePrefix)(&cursor, &gregorian,
+                                                        &parsed.local.date);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              if (*cursor != 'T') {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              ++cursor;
+              status = MODULE_IFUNC(Chronometry, Format, ParseTimePrefix)(
+                  &cursor, &parsed.local.time);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              status = MODULE_IFUNC(Chronometry, Format, ParseOffsetSuffix)(
+                  &cursor, &parsed.offset);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              if (*cursor != '\0') {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              parsed.daylightSavings = false;
+              *value = parsed;
+              return STATUS_CONST(SUCCESS);
+            }),
 
-              OPERATION(ParseInstant,
-                        (const char *text,
-                         MODULE_TYPE(Chronometry, Instant) *value), {
-                if (text == NULL || value == NULL) {
-                  return STATUS_CONST(INVALID_ARGUMENT);
-                }
-                MODULE_TYPE(Chronometry, OffsetTimestamp) parsed = {0};
-                OPSTATUS status = MODULE_FUNC(
-                    Chronometry, Format, ISO, ParseOffsetTimestamp)(text,
-                                                                    &parsed);
-                if (status != STATUS_CONST(SUCCESS)) {
-                  return status;
-                }
-                return MODULE_FUNC(Chronometry, Timezone, ToUTC)(parsed, value);
-              }),
+            OPERATION(Instant,
+                      (const char *text,
+                       MODULE_TYPE(Chronometry, Instant) *value), {
+              if (text == NULL || value == NULL) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              MODULE_TYPE(Chronometry, OffsetTimestamp) parsed = {0};
+              OPSTATUS status = MODULE_FUNC(
+                  Chronometry, Format, FromISOOffsetTimestamp)(text, &parsed);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              return MODULE_FUNC(Chronometry, Timezone, ToUTC)(parsed, value);
+            }),
 
-              OPERATION(ParseDuration,
+            OPERATION(Duration,
                         (const char *text,
                          MODULE_TYPE(Chronometry, Duration) *value), {
                 if (text == NULL || value == NULL) {
