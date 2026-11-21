@@ -22,11 +22,12 @@ and portable systems programming—targeting native platforms
 
 ## Development Progress
 
-**Overall Progress: 28.6% (6/21 modules)**
+**Overall Progress: 33.3% (7/21 modules)**
 
 ```text
 MODULES
 ├── Core              [####################] 100%
+├── Chronometry       [####################] 100%
 ├── Container         [####################] 100%
 ├── Math              [####################] 100%
 ├── Numeric           [####################] 100%
@@ -35,7 +36,6 @@ MODULES
 
 ROADMAP
 ├── Audio             [....................]   0%
-├── Chronometry       [....................]   0%
 ├── CLI               [....................]   0%
 ├── Compression       [....................]   0%
 ├── Concurrency       [....................]   0%
