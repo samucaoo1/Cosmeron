@@ -86,7 +86,7 @@ Sequence:
 2. Check all public headers using target Clang + OHOS sysroot; explicitly track
    `__OHOS__` and other predefined target macros from the **actual** compiler.
 3. Start with Core/Bit/Struct/Type/Math/Sort and pure memory/containers.
-4. Add POSIX compatibility probes for Chronometry, Random, File, Concurrency,
+4. Add POSIX compatibility probes for Chrono, Random, File, Concurrency,
    Network, and Terminal; write platform backends only when needed.
 5. Validate multi-translation-unit header-only inclusion and zero-extra-link
    contract, then execute on a representative OHOS standard-system target.

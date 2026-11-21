@@ -38,7 +38,7 @@ Cosmeron is the continuation of the project previously published as Congro;Libra
 
 ## Main domains
 
-Algorithm, Bit, Cast, Chronometry, Concurrency, Container, Error, Math, Memory, Namespace, Network, Preprocessor, Random, Struct, Text, Type.
+Algorithm, Bit, Cast, Chrono, Concurrency, Container, Error, Math, Memory, Namespace, Network, Preprocessor, Random, Struct, Text, Type.
 
 ## License
 

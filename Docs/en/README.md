@@ -39,7 +39,7 @@ Cross-project technical conventions.
 Reference documentation for the refactored C11 DSL modules in `Codespace/Cosmeron/`:
 
 - **Core**: [Algorithm](Modules/Algorithm.md) · [Bit](Modules/Bit.md) · [Condition](Modules/Condition.md) · [Diagnostic](Modules/Diagnostic.md) · [Memory](Modules/Memory.md) · [Module](Modules/Module.md) · [Preprocessor](Modules/Preprocessor.md) · [Types](Modules/Types.md) · [Cast](Modules/Cast.md)
-- **Modules**: [Chronometry](Modules/Chronometry.md) · [Container](Modules/Container.md) · [Math](Modules/Math.md) · [Numeric](Modules/Numeric.md) · [Text](Modules/Text.md) · [Tuple](Modules/Tuple.md)
+- **Modules**: [Chrono](Modules/Chrono.md) · [Container](Modules/Container.md) · [Math](Modules/Math.md) · [Numeric](Modules/Numeric.md) · [Text](Modules/Text.md) · [Tuple](Modules/Tuple.md)
 
 ### [Translations](Translations/)
 

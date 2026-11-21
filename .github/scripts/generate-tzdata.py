@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate Chronometry X-Macro tables from IANA tzdata text files."""
+"""Generate Chrono X-Macro tables from IANA tzdata text files."""
 
 from __future__ import annotations
 
@@ -367,9 +367,9 @@ def format_zones_inc(
         f"/* Auto-generated from IANA tzdata ({version}) by .github/scripts/generate-tzdata.py. */",
         "/* Sorted lexicographically by name/code for binary search. */",
         "",
-        f'#define CHRONOMETRY_TIMEZONE_TZDATA_VERSION "{version}"',
+        f'#define CHRONO_TIMEZONE_TZDATA_VERSION "{version}"',
         "",
-        "#define CHRONOMETRY_TIMEZONE_IANA_TABLE(X) \\",
+        "#define CHRONO_TIMEZONE_IANA_TABLE(X) \\",
     ]
     for i, e in enumerate(entries):
         suffix = " \\" if i + 1 < len(entries) else ""
@@ -383,20 +383,20 @@ def format_zones_inc(
         lines.append(row)
 
     lines.append("")
-    lines.append("#define CHRONOMETRY_TIMEZONE_LINK_TABLE(X) \\")
+    lines.append("#define CHRONO_TIMEZONE_LINK_TABLE(X) \\")
     for i, link in enumerate(links):
         suffix = " \\" if i + 1 < len(links) else ""
         lines.append(f'  X(("{link.alias_name}", {link.target_enum_id})){suffix}')
 
     lines.append("")
-    lines.append("#define CHRONOMETRY_TIMEZONE_COUNTRY_TABLE(X) \\")
+    lines.append("#define CHRONO_TIMEZONE_COUNTRY_TABLE(X) \\")
     for i, c in enumerate(countries):
         suffix = " \\" if i + 1 < len(countries) else ""
         escaped_name = c.name.replace("\\", "\\\\").replace('"', '\\"')
         lines.append(f'  X(("{c.code}", "{escaped_name}")){suffix}')
 
     lines.append("")
-    lines.append("#define CHRONOMETRY_TIMEZONE_COUNTRY_ZONE_TABLE(X) \\")
+    lines.append("#define CHRONO_TIMEZONE_COUNTRY_ZONE_TABLE(X) \\")
     for i, cz in enumerate(country_zones):
         suffix = " \\" if i + 1 < len(country_zones) else ""
         lines.append(f'  X(("{cz.code}", {cz.zone_enum_id})){suffix}')
@@ -413,7 +413,7 @@ def format_leapseconds_inc(version: str, leaps: list[LeapEntry]) -> str:
         "",
         f"/* Auto-generated from IANA tzdata ({version}) leapseconds by .github/scripts/generate-tzdata.py. */",
         "",
-        "#define CHRONOMETRY_EPOCH_LEAP_SECOND_TABLE(X) \\",
+        "#define CHRONO_CLOCK_LEAP_SECOND_TABLE(X) \\",
     ]
     for i, leap in enumerate(leaps):
         suffix = " \\" if i + 1 < len(leaps) else ""
@@ -433,12 +433,12 @@ def main() -> None:
     )
     parser.add_argument(
         "--zones-output",
-        default="Codespace/Cosmeron/Modules/Chronometry/Timezone/Impl/IanaZones.inc",
+        default="Codespace/Cosmeron/Modules/Chrono/Timezone/Impl/IanaZones.inc",
         help="Output .inc file path for zones and links",
     )
     parser.add_argument(
         "--leaps-output",
-        default="Codespace/Cosmeron/Modules/Chronometry/Epoch/Impl/LeapSeconds.inc",
+        default="Codespace/Cosmeron/Modules/Chrono/Clock/Impl/LeapSeconds.inc",
         help="Output .inc file path for leap seconds",
     )
     args = parser.parse_args()

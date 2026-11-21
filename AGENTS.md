@@ -55,16 +55,21 @@ Everything must live inside the library/module namespace whenever C allows it. E
 
 ## 2. Types & `T` Prefix Rule
 
-- Use `T` prefix **only** for types intended to be directly handled by the user (e.g., `TBit32`, `TVector_uint32`, `TText_Underline_Style`).
+- Use `T` prefix **only** for types intended to be directly handled by the user (e.g., `TBit32`, `TVector_uint32`, `TChrono_Date`, `Tree_TAVL_Set`).
+- **Canonical `T` Placement (`Namespace.h` Gold Standard):**
+  - `MODULE_TYPE(NAME)` $\to$ `TNAME`; `MODULE_TYPE(MOD, NAME)` $\to$ `TMOD_NAME`; `MODULE_TYPE(MOD, PKG, NAME)` $\to$ `TMOD_PKG_NAME` (`T` on the **1st token**).
+  - `MODULE_TYPED(...)` follows the same rule with `_SUFFIX` (e.g. `MODULE_TYPED(Container, Vector, uint32)` $\to$ `TContainer_Vector_uint32`).
+  - `MODULE_SUBTYPE(MOD, SUB, NAME)` $\to$ `MOD_TSUB_NAME` and `MODULE_SUBTYPED(MOD, SUB, NAME, SUFFIX)` $\to$ `MOD_TSUB_NAME_SUFFIX` (`T` on the **2nd token**, e.g. `Tree_TAVL_Set`).
+  - Always reference types via `MODULE_TYPE(...)` / `MODULE_TYPED(...)` / `MODULE_SUBTYPE(...)` rather than hardcoding expanded C names.
 - `*_TYPE(SUFFIX)`: Semantic suffix (e.g., `BIT_TYPE(32)` $\to$ `TBit32`).
 - `*_TYPED(TYPE)`: Specialization by another type (e.g., `VECTOR_TYPED(uint32)` $\to$ `TVector_uint32`).
 - Output enums or internal types do **not** use `T` (e.g., `ComparisonResult`, aliased to `CMPOUT`).
-- **Unambiguous naming policy:** Avoid overly generic names (such as `TPool`, `TNode`) that collide semantically across domains (e.g. Memory vs. Random vs. Concurrency). Always qualify the domain explicitly (e.g. `TMemoryPool`).
+- **Unambiguous naming policy:** Avoid overly generic names (such as `TPool`, `TNode`, `Delta`) that collide semantically across domains (e.g. Memory vs. Random vs. Concurrency vs. Chrono). Always qualify the domain/noun family explicitly (e.g. `MemoryPool`, `TimerDelta`, `TimerLimiter`, `DateIsoWeek`, `CivilOffset`, `TimezoneDstRule`).
 - **Strict alias policy:** Public aliases must be rare, deliberate, and highly specific. Do not create short ambiguous aliases.
 - **Prohibition of Global Unnamespaced Typedefs and Forwarding Wrappers:**
-  - Never emit global unnamespaced typedef shortcuts for types declared with `*_TYPE` (e.g. `typedef ERROR_TYPE(TError) TError;` is strictly prohibited).
-  - Never generate unnamespaced inline forwarding wrappers (e.g. `static inline ... TError_Init(...) { return Error_TError_Init(...); }`).
-  - Consumers must directly use the canonical namespaced types (`ERROR_TYPE(TError)` / `Error_TError`) and their emitted functions (`Error_TError_Init`) or declarative macros (`OBJECT_CALL`). Any exceptions require explicit user approval first.
+  - Never emit global unnamespaced typedef shortcuts for types declared with `MODULE_TYPE` / `*_TYPE` (e.g. `typedef MODULE_TYPE(Error, Error) Error;` is strictly prohibited).
+  - Never generate unnamespaced inline forwarding wrappers (e.g. `static inline ... Error_Init(...) { return Error_Error_Init(...); }`).
+  - Consumers must directly use the canonical namespaced types (`MODULE_TYPE(MOD, NAME)` / `TMOD_NAME`) and their emitted functions (`MOD_PKG_Func`) or declarative macros (`MODULE_CALL` / `OBJECT_CALL`). Any exceptions require explicit user approval first.
 
 ---
 
@@ -117,7 +122,7 @@ Everything must live inside the library/module namespace whenever C allows it. E
   - **Canonical Pure POD Rule (POD Puro Canônico é Regra Absoluta):** Structs are strictly Plain Old Data containers without methods, receiver `self`, `Create`, `Extract`, `Unpack`, `Cast_*`, or `FunctionTable` overhead.
   - Zero memory overhead: no `api` pointer, zero cache line pollution, exactly `sizeof(fields)`.
   - Fully C-ABI compliant: supports designated initializers (`.field = val`), direct register passing by value, `memcpy`, `memcmp`, and strict contiguity in arrays.
-  - Generates canonical namespaced types: `MODULE_TYPE(MOD, NAME)` $\to$ `MOD_TNAME` and `MODULE_TYPED(MOD, NAME, SUFFIX)` $\to$ `MOD_TNAME_SUFFIX`.
+  - Generates canonical namespaced types: `MODULE_TYPE(MOD, NAME)` $\to$ `TMOD_NAME`, `MODULE_TYPED(MOD, NAME, SUFFIX)` $\to$ `TMOD_NAME_SUFFIX`, and `MODULE_SUBTYPE(MOD, SUB, NAME)` $\to$ `MOD_TSUB_NAME`.
   - Usable inside `MODULE(...)` or standalone via `STRUCT(MOD, NAME, FIELDS(...))`.
   - Forward declarations: `FORWARD_STRUCT(MOD, NAME)` and `FORWARD_TEMPLATE_STRUCT(MOD, NAME, SUFFIX)`.
   - Never generate artificial constructors, destructors, extraction helpers, or FunctionTables around POD structs. Manipulation and instantiation rely 100% on native C11 constructs (designated initializers and direct field access).

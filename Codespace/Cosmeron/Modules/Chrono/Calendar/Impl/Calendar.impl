@@ -1,0 +1,1149 @@
+#pragma once
+
+#include <limits.h>
+
+/* ========================================================================== */
+/* 1. Internal Constants & JDN Helpers                                        */
+/* ========================================================================== */
+
+#define CHRONO_CALENDAR_INTERNAL_COL_NAME(NAME, VALUE) NAME
+#define CHRONO_CALENDAR_INTERNAL_COL_VALUE(NAME, VALUE) VALUE
+#define CHRONO_CALENDAR_INTERNAL_GET(FIELD, ROW)                               \
+  PP_OP_CAT2(CHRONO_CALENDAR_INTERNAL_COL_, FIELD) ROW
+
+#define CHRONO_CALENDAR_INTERNAL_TABLE(X)                                      \
+  X((MONTHS_PER_YEAR, 12))                                                     \
+  X((MONTHS_PER_QUARTER, 3))                                                   \
+  X((COMMON_YEAR_DAYS, 365))                                                   \
+  X((LEAP_YEAR_INTERVAL, 4))                                                   \
+  X((CENTURY_YEARS, 100))                                                      \
+  X((GREGORIAN_CYCLE_YEARS, 400))                                              \
+  X((JDN_MONTH_PIVOT, 14))                                                     \
+  X((JDN_YEAR_OFFSET, 4800))                                                   \
+  X((JDN_MONTH_MULTIPLIER, 153))                                               \
+  X((JDN_GREGORIAN_OFFSET, 32045))                                             \
+  X((JDN_JULIAN_OFFSET, 32083))                                                \
+  X((JDN_GREGORIAN_REVERSE_OFFSET, 32044))                                     \
+  X((JDN_JULIAN_REVERSE_OFFSET, 32082))                                        \
+  X((JDN_GREGORIAN_CYCLE_DAYS, 146097))                                        \
+  X((JDN_JULIAN_CYCLE_DAYS, 1461))                                             \
+  X((JDN_REVERSE_NUMERATOR_OFFSET, 3))                                         \
+  X((JDN_REVERSE_MONTH_MULTIPLIER, 5))                                         \
+  X((JDN_REVERSE_MONTH_OFFSET, 2))                                             \
+  X((JDN_REVERSE_MONTH_DIVISOR, 10))                                           \
+  X((JDN_DAY_DIVISOR, 5))                                                      \
+  X((JDN_MONTH_SHIFT, 3))                                                      \
+  X((RATA_DIE_JDN, 1721426))                                                   \
+  X((FIRST_DAY_OF_MONTH, 1))                                                   \
+  X((DAYS_PER_WEEK, 7))                                                        \
+  X((BUSINESS_DAYS_PER_WEEK, 5))                                               \
+  X((ISO_WEEK_THURSDAY_OFFSET, 4))                                             \
+  X((ISO_WEEK_JAN_PIVOT_DAY, 4))                                               \
+  X((ISO_WEEK_MAX, 53))                                                        \
+  X((MAX_SUPPORTED_YEAR, 4194303))
+
+MODULE(DOMAIN(Modules), Chrono,
+    INTERNAL_EX(Calendar,
+        ENUM(Const, CHRONO_CALENDAR_INTERNAL_TABLE),
+
+        FUNCTION_INLINE(MODULE_ENUM(Chrono, Calendar, System), SystemFor,
+                        (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chrono, Date) date), {
+          if (policy->kind == MODULE_CONST(Chrono, Calendar, PURE_SYSTEM)) {
+            return policy->system;
+          }
+          return MODULE_FUNC(Chrono, Calendar, Date, Compare)(
+                     date, policy->reform.firstAfter) !=
+                         COMPARISON_CONST(LOWER)
+                     ? policy->reform.after
+                     : policy->reform.before;
+        }),
+
+        FUNCTION_INLINE(int64_t, ToJdn,
+                        (MODULE_ENUM(Chrono, Calendar, System) system,
+                         MODULE_TYPE(Chrono, Date) date), {
+          int64_t a = MODULE_IFUNC(Chrono, FloorDiv)(
+              CNS(Chrono, Calendar, Internal, JDN_MONTH_PIVOT) - date.month,
+              CNS(Chrono, Calendar, Internal, MONTHS_PER_YEAR));
+          int64_t y = (int64_t)date.year +
+                      CNS(Chrono, Calendar, Internal, JDN_YEAR_OFFSET) - a;
+          int64_t m =
+              (int64_t)date.month +
+              CNS(Chrono, Calendar, Internal, MONTHS_PER_YEAR) * a -
+              CNS(Chrono, Calendar, Internal, JDN_MONTH_SHIFT);
+          int64_t value =
+              date.day +
+              (CNS(Chrono, Calendar, Internal, JDN_MONTH_MULTIPLIER) * m +
+               CNS(Chrono, Calendar, Internal, JDN_REVERSE_MONTH_OFFSET)) /
+                  CNS(Chrono, Calendar, Internal, JDN_DAY_DIVISOR) +
+              CNS(Chrono, Calendar, Internal, COMMON_YEAR_DAYS) * y +
+              y / CNS(Chrono, Calendar, Internal, LEAP_YEAR_INTERVAL);
+          return system == MODULE_CONST(Chrono, Calendar, GREGORIAN)
+                     ? value -
+                           y / CNS(Chrono, Calendar, Internal, CENTURY_YEARS) +
+                           y / CNS(Chrono, Calendar, Internal,
+                                   GREGORIAN_CYCLE_YEARS) -
+                           CNS(Chrono, Calendar, Internal,
+                               JDN_GREGORIAN_OFFSET)
+                     : value -
+                           CNS(Chrono, Calendar, Internal, JDN_JULIAN_OFFSET);
+        }),
+
+        FUNCTION(MODULE_TYPE(Chrono, Date), FromJdn,
+                 (MODULE_ENUM(Chrono, Calendar, System) system, int64_t jdn), {
+          int64_t b = 0;
+          int64_t c = 0;
+          if (system == MODULE_CONST(Chrono, Calendar, GREGORIAN)) {
+            int64_t a = jdn + CNS(Chrono, Calendar, Internal,
+                                  JDN_GREGORIAN_REVERSE_OFFSET);
+            b = (CNS(Chrono, Calendar, Internal, LEAP_YEAR_INTERVAL) * a +
+                 CNS(Chrono, Calendar, Internal,
+                     JDN_REVERSE_NUMERATOR_OFFSET)) /
+                CNS(Chrono, Calendar, Internal, JDN_GREGORIAN_CYCLE_DAYS);
+            c = a -
+                (CNS(Chrono, Calendar, Internal, JDN_GREGORIAN_CYCLE_DAYS) *
+                 b) /
+                    CNS(Chrono, Calendar, Internal, LEAP_YEAR_INTERVAL);
+          } else {
+            b = 0;
+            c = jdn +
+                CNS(Chrono, Calendar, Internal, JDN_JULIAN_REVERSE_OFFSET);
+          }
+          int64_t d =
+              (CNS(Chrono, Calendar, Internal, LEAP_YEAR_INTERVAL) * c +
+               CNS(Chrono, Calendar, Internal, JDN_REVERSE_NUMERATOR_OFFSET)) /
+              CNS(Chrono, Calendar, Internal, JDN_JULIAN_CYCLE_DAYS);
+          int64_t e =
+              c -
+              (CNS(Chrono, Calendar, Internal, JDN_JULIAN_CYCLE_DAYS) * d) /
+                  CNS(Chrono, Calendar, Internal, LEAP_YEAR_INTERVAL);
+          int64_t m =
+              (CNS(Chrono, Calendar, Internal, JDN_REVERSE_MONTH_MULTIPLIER) *
+                   e +
+               CNS(Chrono, Calendar, Internal, JDN_REVERSE_MONTH_OFFSET)) /
+              CNS(Chrono, Calendar, Internal, JDN_MONTH_MULTIPLIER);
+          return (MODULE_TYPE(Chrono, Date)){
+              (int32_t)(CNS(Chrono, Calendar, Internal, CENTURY_YEARS) * b + d -
+                        CNS(Chrono, Calendar, Internal, JDN_YEAR_OFFSET) +
+                        m / CNS(Chrono, Calendar, Internal,
+                                JDN_REVERSE_MONTH_DIVISOR)),
+              (uint8_t)(m +
+                        CNS(Chrono, Calendar, Internal,
+                            JDN_REVERSE_NUMERATOR_OFFSET) -
+                        CNS(Chrono, Calendar, Internal, MONTHS_PER_YEAR) *
+                            (m / CNS(Chrono, Calendar, Internal,
+                                     JDN_REVERSE_MONTH_DIVISOR))),
+              (uint8_t)(e -
+                        (CNS(Chrono, Calendar, Internal, JDN_MONTH_MULTIPLIER) *
+                             m +
+                         CNS(Chrono, Calendar, Internal,
+                             JDN_REVERSE_MONTH_OFFSET)) /
+                            CNS(Chrono, Calendar, Internal, JDN_DAY_DIVISOR) +
+                        CNS(Chrono, Calendar, Internal, FIRST_DAY_OF_MONTH))};
+        })
+    )
+);
+
+/* ========================================================================== */
+/* 2. X-Macro Code Generation Helpers                                         */
+/* ========================================================================== */
+
+#define COSMERON_MACRO_INTERNAL_CHRONO_REFORM_CASE(ROW)                        \
+  case MODULE_CONST(Chrono, Calendar,                                          \
+                    CHRONO_CALENDAR_REFORM_GET(NAME, ROW)):                    \
+    policy.reform.lastBefore = (MODULE_TYPE(Chrono, Date)){                    \
+        CHRONO_CALENDAR_REFORM_GET(BEFORE_YEAR, ROW),                          \
+        MODULE_CONST(Chrono, Calendar,                                         \
+                     CHRONO_CALENDAR_REFORM_GET(BEFORE_MONTH, ROW)),           \
+        CHRONO_CALENDAR_REFORM_GET(BEFORE_DAY, ROW)};                          \
+    policy.reform.firstAfter = (MODULE_TYPE(Chrono, Date)){                    \
+        CHRONO_CALENDAR_REFORM_GET(AFTER_YEAR, ROW),                           \
+        MODULE_CONST(Chrono, Calendar,                                         \
+                     CHRONO_CALENDAR_REFORM_GET(AFTER_MONTH, ROW)),            \
+        CHRONO_CALENDAR_REFORM_GET(AFTER_DAY, ROW)};                           \
+    policy.reform.suppressedDays = CHRONO_CALENDAR_REFORM_GET(SUPPRESSED, ROW);\
+    break;
+
+#define COSMERON_MACRO_INTERNAL_CHRONO_MONTH_ARRAY_ITEM(ROW)                   \
+  [CHRONO_CALENDAR_MONTH_GET(NUMBER, ROW)] =                                   \
+      MODULE_CONST(Chrono, Calendar,                                           \
+                   PP_OP_CAT2(DAYS_IN_, CHRONO_CALENDAR_MONTH_GET(NAME, ROW))),
+
+/* ========================================================================== */
+/* 3. Package Implementation: Chrono_Calendar                                 */
+/* ========================================================================== */
+
+MODULE_IMPLEMENT(DOMAIN(Modules), Chrono,
+    PACKAGE(Calendar,
+        FUNCTION(MODULE_TYPE(Chrono, CalendarPolicy), GregorianPolicy, (), {
+          return (MODULE_TYPE(Chrono, CalendarPolicy)){
+              MODULE_CONST(Chrono, Calendar, PURE_SYSTEM),
+              MODULE_CONST(Chrono, Calendar, GREGORIAN),
+              {0},
+          };
+        }),
+
+        OPERATION(SystemPolicy,
+                  (MODULE_ENUM(Chrono, Calendar, System) system,
+                   MODULE_TYPE(Chrono, CalendarPolicy) *outPolicy), {
+          if (outPolicy == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          if (system != MODULE_CONST(Chrono, Calendar, GREGORIAN) &&
+              system != MODULE_CONST(Chrono, Calendar, JULIAN)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          *outPolicy = (MODULE_TYPE(Chrono, CalendarPolicy)){
+              MODULE_CONST(Chrono, Calendar, PURE_SYSTEM),
+              system,
+              {0},
+          };
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(ReformPolicy,
+                  (MODULE_ENUM(Chrono, Calendar, ReformId) id,
+                   MODULE_TYPE(Chrono, CalendarPolicy) *outPolicy), {
+          if (outPolicy == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          MODULE_TYPE(Chrono, CalendarPolicy) policy = {
+              MODULE_CONST(Chrono, Calendar, HISTORICAL_REFORM),
+              MODULE_CONST(Chrono, Calendar, GREGORIAN),
+              {
+                  .before = MODULE_CONST(Chrono, Calendar, JULIAN),
+                  .after = MODULE_CONST(Chrono, Calendar, GREGORIAN),
+              },
+          };
+          switch (id) {
+            CHRONO_CALENDAR_REFORM_TABLE(
+                COSMERON_MACRO_INTERNAL_CHRONO_REFORM_CASE)
+          default:
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          *outPolicy = policy;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        PREDICATE(IsLeapYear,
+                  (MODULE_ENUM(Chrono, Calendar, System) system, int32_t year), {
+          const int32_t leapInterval =
+              CNS(Chrono, Calendar, Internal, LEAP_YEAR_INTERVAL);
+          if (system == MODULE_CONST(Chrono, Calendar, JULIAN)) {
+            return year % leapInterval == 0;
+          }
+          return year % leapInterval == 0 &&
+                 (year % CNS(Chrono, Calendar, Internal, CENTURY_YEARS) != 0 ||
+                  year % CNS(Chrono, Calendar, Internal,
+                             GREGORIAN_CYCLE_YEARS) == 0);
+        }),
+
+        OPERATION(DaysInMonth,
+                  (MODULE_ENUM(Chrono, Calendar, System) system, int32_t year,
+                   uint8_t month, uint8_t *outDays), {
+          static const uint8_t days[] = {
+              0,
+              CHRONO_CALENDAR_MONTH_TABLE(
+                  COSMERON_MACRO_INTERNAL_CHRONO_MONTH_ARRAY_ITEM)
+          };
+          if (outDays == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          if (month < MODULE_CONST(Chrono, Calendar, JANUARY) ||
+              month > MODULE_CONST(Chrono, Calendar, DECEMBER)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          *outDays = (uint8_t)(days[month] +
+                               (month ==
+                                    MODULE_CONST(Chrono, Calendar, FEBRUARY) &&
+                                MODULE_FUNC(Chrono, Calendar, IsLeapYear)(
+                                    system, year)));
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(DaysInYear,
+                  (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                   int32_t year, uint16_t *outDays), {
+          if (policy == NULL || outDays == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          MODULE_TYPE(Chrono, Date) jan1 = {
+              year, MODULE_CONST(Chrono, Calendar, JANUARY),
+              CNS(Chrono, Calendar, Internal, FIRST_DAY_OF_MONTH)};
+          MODULE_TYPE(Chrono, Date) dec31 = {
+              year, MODULE_CONST(Chrono, Calendar, DECEMBER),
+              MODULE_CONST(Chrono, Calendar, DAYS_IN_DECEMBER)};
+          int64_t diffDays = 0;
+          OPSTATUS status = MODULE_FUNC(Chrono, Calendar, Date, Difference)(
+              policy, jan1, dec31, &diffDays);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          *outDays = (uint16_t)(diffDays + 1);
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        VARIANT(DayOfYear,
+            OPERATION((const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                       MODULE_TYPE(Chrono, Date) date,
+                       uint16_t *outDayOfYear), {
+              if (outDayOfYear == NULL ||
+                  !MODULE_FUNC(Chrono, Calendar, Date, IsValid)(policy, date)) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              MODULE_ENUM(Chrono, Calendar, System) system =
+                  MODULE_IFUNC(Chrono, Calendar, SystemFor)(policy, date);
+              uint16_t value = 0U;
+              OPSTATUS status =
+                  MODULE_FUNC(Chrono, Calendar, DayOfYearCumulative)(
+                      system, date, &value);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              if (policy->kind ==
+                      MODULE_CONST(Chrono, Calendar, HISTORICAL_REFORM) &&
+                  date.year == policy->reform.firstAfter.year &&
+                  MODULE_FUNC(Chrono, Calendar, Date, Compare)(
+                      date, policy->reform.firstAfter) !=
+                      COMPARISON_CONST(LOWER)) {
+                value -= policy->reform.suppressedDays;
+              }
+              *outDayOfYear = value;
+              return STATUS_CONST(SUCCESS);
+            }),
+
+            OPERATION(Cumulative,
+                      (MODULE_ENUM(Chrono, Calendar, System) system,
+                       MODULE_TYPE(Chrono, Date) date,
+                       uint16_t *outDayOfYear), {
+              if (outDayOfYear == NULL) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              uint8_t maxDay = 0U;
+              OPSTATUS status =
+                  MODULE_FUNC(Chrono, Calendar, DaysInMonth)(
+                      system, date.year, date.month, &maxDay);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              if (date.day == 0U || date.day > maxDay) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              uint16_t value = date.day;
+              /* Intentional fallthrough: cumulative month day calculation. */
+              switch (date.month) {
+              case MODULE_CONST(Chrono, Calendar, DECEMBER):
+                value += MODULE_CONST(Chrono, Calendar, DAYS_IN_NOVEMBER);
+                /* fall through */
+              case MODULE_CONST(Chrono, Calendar, NOVEMBER):
+                value += MODULE_CONST(Chrono, Calendar, DAYS_IN_OCTOBER);
+                /* fall through */
+              case MODULE_CONST(Chrono, Calendar, OCTOBER):
+                value += MODULE_CONST(Chrono, Calendar, DAYS_IN_SEPTEMBER);
+                /* fall through */
+              case MODULE_CONST(Chrono, Calendar, SEPTEMBER):
+                value += MODULE_CONST(Chrono, Calendar, DAYS_IN_AUGUST);
+                /* fall through */
+              case MODULE_CONST(Chrono, Calendar, AUGUST):
+                value += MODULE_CONST(Chrono, Calendar, DAYS_IN_JULY);
+                /* fall through */
+              case MODULE_CONST(Chrono, Calendar, JULY):
+                value += MODULE_CONST(Chrono, Calendar, DAYS_IN_JUNE);
+                /* fall through */
+              case MODULE_CONST(Chrono, Calendar, JUNE):
+                value += MODULE_CONST(Chrono, Calendar, DAYS_IN_MAY);
+                /* fall through */
+              case MODULE_CONST(Chrono, Calendar, MAY):
+                value += MODULE_CONST(Chrono, Calendar, DAYS_IN_APRIL);
+                /* fall through */
+              case MODULE_CONST(Chrono, Calendar, APRIL):
+                value += MODULE_CONST(Chrono, Calendar, DAYS_IN_MARCH);
+                /* fall through */
+              case MODULE_CONST(Chrono, Calendar, MARCH):
+                value += (uint16_t)(MODULE_CONST(Chrono, Calendar,
+                                                 DAYS_IN_FEBRUARY) +
+                                    MODULE_FUNC(Chrono, Calendar, IsLeapYear)(
+                                        system, date.year));
+                /* fall through */
+              case MODULE_CONST(Chrono, Calendar, FEBRUARY):
+                value += MODULE_CONST(Chrono, Calendar, DAYS_IN_JANUARY);
+                /* fall through */
+              case MODULE_CONST(Chrono, Calendar, JANUARY):
+                break;
+              default:
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              *outDayOfYear = value;
+              return STATUS_CONST(SUCCESS);
+            })
+        ),
+
+        SPACE(Date,
+              COMPARISON(Compare,
+                         (MODULE_TYPE(Chrono, Date) left,
+                          MODULE_TYPE(Chrono, Date) right), {
+                if (left.year < right.year) {
+                  return COMPARISON_CONST(LOWER);
+                }
+                if (left.year > right.year) {
+                  return COMPARISON_CONST(HIGHER);
+                }
+                if (left.month < right.month) {
+                  return COMPARISON_CONST(LOWER);
+                }
+                if (left.month > right.month) {
+                  return COMPARISON_CONST(HIGHER);
+                }
+                if (left.day < right.day) {
+                  return COMPARISON_CONST(LOWER);
+                }
+                if (left.day > right.day) {
+                  return COMPARISON_CONST(HIGHER);
+                }
+                return COMPARISON_CONST(EQUAL);
+              }),
+
+              PREDICATE(IsValid,
+                        (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chrono, Date) date), {
+                if (policy == NULL ||
+                    date.year <=
+                        -CNS(Chrono, Calendar, Internal, JDN_YEAR_OFFSET)) {
+                  return false;
+                }
+                if (policy->kind ==
+                        MODULE_CONST(Chrono, Calendar, HISTORICAL_REFORM) &&
+                    MODULE_FUNC(Chrono, Calendar, Date, Compare)(
+                        date, policy->reform.lastBefore) ==
+                        COMPARISON_CONST(HIGHER) &&
+                    MODULE_FUNC(Chrono, Calendar, Date, Compare)(
+                        date, policy->reform.firstAfter) ==
+                        COMPARISON_CONST(LOWER)) {
+                  return false;
+                }
+                MODULE_ENUM(Chrono, Calendar, System) system =
+                    MODULE_IFUNC(Chrono, Calendar, SystemFor)(policy, date);
+                uint8_t maximum = 0U;
+                if (MODULE_FUNC(Chrono, Calendar, DaysInMonth)(
+                        system, date.year, date.month, &maximum) !=
+                    STATUS_CONST(SUCCESS)) {
+                  return false;
+                }
+                return date.day > 0U && date.day <= maximum;
+              }),
+
+              OPERATION(ToDayOfYear,
+                        (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chrono, Date) date,
+                         uint16_t *outDayOfYear), {
+                return MODULE_FUNC(Chrono, Calendar, DayOfYear)(
+                    policy, date, outDayOfYear);
+              }),
+
+              OPERATION(ToOrdinal,
+                        (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chrono, Date) date,
+                         int64_t *outOrdinal), {
+                if (outOrdinal == NULL ||
+                    !MODULE_FUNC(Chrono, Calendar, Date, IsValid)(policy,
+                                                                  date)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                *outOrdinal = MODULE_IFUNC(Chrono, Calendar, ToJdn)(
+                    MODULE_IFUNC(Chrono, Calendar, SystemFor)(policy, date),
+                    date);
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(FromOrdinal,
+                        (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                         int64_t ordinal, MODULE_TYPE(Chrono, Date) *outDate), {
+                if (policy == NULL || outDate == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                MODULE_ENUM(Chrono, Calendar, System) system =
+                    policy->kind ==
+                            MODULE_CONST(Chrono, Calendar, PURE_SYSTEM)
+                        ? policy->system
+                        : (ordinal >=
+                                   MODULE_IFUNC(Chrono, Calendar, ToJdn)(
+                                       policy->reform.after,
+                                       policy->reform.firstAfter)
+                               ? policy->reform.after
+                               : policy->reform.before);
+                MODULE_TYPE(Chrono, Date) minimumDate = {
+                    -(CNS(Chrono, Calendar, Internal, JDN_YEAR_OFFSET) -
+                      CNS(Chrono, Calendar, Internal, FIRST_DAY_OF_MONTH)),
+                    MODULE_CONST(Chrono, Calendar, JANUARY),
+                    CNS(Chrono, Calendar, Internal, FIRST_DAY_OF_MONTH)};
+                MODULE_TYPE(Chrono, Date) maximumDate = {
+                    CNS(Chrono, Calendar, Internal, MAX_SUPPORTED_YEAR),
+                    MODULE_CONST(Chrono, Calendar, DECEMBER),
+                    MODULE_CONST(Chrono, Calendar, DAYS_IN_DECEMBER)};
+                int64_t minimumOrdinal =
+                    MODULE_IFUNC(Chrono, Calendar, ToJdn)(system, minimumDate);
+                int64_t maximumOrdinal =
+                    MODULE_IFUNC(Chrono, Calendar, ToJdn)(system, maximumDate);
+                if (ordinal < minimumOrdinal || ordinal > maximumOrdinal) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                MODULE_TYPE(Chrono, Date) candidate =
+                    MODULE_IFUNC(Chrono, Calendar, FromJdn)(system, ordinal);
+                if (!MODULE_FUNC(Chrono, Calendar, Date, IsValid)(policy,
+                                                                  candidate)) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                *outDate = candidate;
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(ToJDN,
+                        (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chrono, Date) date, int64_t *outJdn), {
+                return MODULE_FUNC(Chrono, Calendar, Date, ToOrdinal)(
+                    policy, date, outJdn);
+              }),
+
+              OPERATION(FromJDN,
+                        (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                         int64_t jdn, MODULE_TYPE(Chrono, Date) *outDate), {
+                return MODULE_FUNC(Chrono, Calendar, Date, FromOrdinal)(
+                    policy, jdn, outDate);
+              }),
+
+              OPERATION(ToRataDie,
+                        (MODULE_TYPE(Chrono, Date) date, int64_t *outRataDie), {
+                if (outRataDie == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                MODULE_TYPE(Chrono, CalendarPolicy) gregorian =
+                    MODULE_FUNC(Chrono, Calendar, GregorianPolicy)();
+                int64_t jdn = 0;
+                if (MODULE_FUNC(Chrono, Calendar, Date, ToOrdinal)(
+                        &gregorian, date, &jdn) != STATUS_CONST(SUCCESS)) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                *outRataDie =
+                    jdn -
+                    (int64_t)CNS(Chrono, Calendar, Internal, RATA_DIE_JDN) + 1;
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(FromRataDie,
+                        (int64_t rataDie, MODULE_TYPE(Chrono, Date) *outDate), {
+                if (outDate == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                const int64_t offset =
+                    (int64_t)CNS(Chrono, Calendar, Internal, RATA_DIE_JDN) - 1;
+                if (rataDie > INT64_MAX - offset) {
+                  return STATUS_CONST(ARITHMETIC_OVERFLOW);
+                }
+                MODULE_TYPE(Chrono, CalendarPolicy) gregorian =
+                    MODULE_FUNC(Chrono, Calendar, GregorianPolicy)();
+                return MODULE_FUNC(Chrono, Calendar, Date, FromOrdinal)(
+                    &gregorian, rataDie + offset, outDate);
+              }),
+
+              OPERATION(Difference,
+                        (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chrono, Date) left,
+                         MODULE_TYPE(Chrono, Date) right, int64_t *outDays), {
+                if (outDays == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                int64_t leftOrdinal = 0;
+                int64_t rightOrdinal = 0;
+                if (MODULE_FUNC(Chrono, Calendar, Date, ToOrdinal)(
+                        policy, left, &leftOrdinal) != STATUS_CONST(SUCCESS) ||
+                    MODULE_FUNC(Chrono, Calendar, Date, ToOrdinal)(
+                        policy, right, &rightOrdinal) !=
+                        STATUS_CONST(SUCCESS)) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                *outDays = rightOrdinal - leftOrdinal;
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(DayOfWeek,
+                        (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chrono, Date) date,
+                         MODULE_ENUM(Chrono, Calendar, Weekday) *outWeekday), {
+                if (outWeekday == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                int64_t jdn = 0;
+                OPSTATUS status = MODULE_FUNC(Chrono, Calendar, Date, ToOrdinal)(
+                    policy, date, &jdn);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                const int64_t daysPerWeek =
+                    CNS(Chrono, Calendar, Internal, DAYS_PER_WEEK);
+                int64_t mod =
+                    jdn -
+                    MODULE_IFUNC(Chrono, FloorDiv)(jdn, daysPerWeek) *
+                        daysPerWeek;
+                *outWeekday = (MODULE_ENUM(Chrono, Calendar, Weekday))(
+                    mod + MODULE_CONST(Chrono, Calendar, MONDAY));
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(FromNthWeekday,
+                        (MODULE_ENUM(Chrono, Calendar, System) system,
+                         int32_t year, uint8_t month,
+                         MODULE_ENUM(Chrono, Calendar, WeekdayOccurrence)
+                             occurrence,
+                         MODULE_ENUM(Chrono, Calendar, Weekday) weekday,
+                         MODULE_TYPE(Chrono, Date) *outDate), {
+                if (outDate == NULL ||
+                    (system != MODULE_CONST(Chrono, Calendar, GREGORIAN) &&
+                     system != MODULE_CONST(Chrono, Calendar, JULIAN)) ||
+                    weekday < MODULE_CONST(Chrono, Calendar, MONDAY) ||
+                    weekday > MODULE_CONST(Chrono, Calendar, SUNDAY) ||
+                    occurrence <
+                        MODULE_CONST(Chrono, Calendar, FIRST_WEEKDAY) ||
+                    occurrence >
+                        MODULE_CONST(Chrono, Calendar, LAST_WEEKDAY)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                if (year <= -CNS(Chrono, Calendar, Internal, JDN_YEAR_OFFSET) ||
+                    year >
+                        CNS(Chrono, Calendar, Internal, MAX_SUPPORTED_YEAR)) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                uint8_t daysInMonth = 0U;
+                OPSTATUS status = MODULE_FUNC(Chrono, Calendar, DaysInMonth)(
+                    system, year, month, &daysInMonth);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                const int64_t daysPerWeek =
+                    CNS(Chrono, Calendar, Internal, DAYS_PER_WEEK);
+                int32_t targetDay = 0;
+                if (occurrence ==
+                    MODULE_CONST(Chrono, Calendar, LAST_WEEKDAY)) {
+                  MODULE_TYPE(Chrono, Date) lastDate = {
+                      year, month, daysInMonth};
+                  int64_t jdn =
+                      MODULE_IFUNC(Chrono, Calendar, ToJdn)(system, lastDate);
+                  int64_t mod =
+                      jdn -
+                      MODULE_IFUNC(Chrono, FloorDiv)(jdn, daysPerWeek) *
+                          daysPerWeek;
+                  int64_t lastWd =
+                      mod + MODULE_CONST(Chrono, Calendar, MONDAY);
+                  int64_t delta =
+                      (lastWd - (int64_t)weekday + daysPerWeek) % daysPerWeek;
+                  targetDay = (int32_t)daysInMonth - (int32_t)delta;
+                } else {
+                  MODULE_TYPE(Chrono, Date) firstDate = {
+                      year, month,
+                      CNS(Chrono, Calendar, Internal, FIRST_DAY_OF_MONTH)};
+                  int64_t jdn =
+                      MODULE_IFUNC(Chrono, Calendar, ToJdn)(system, firstDate);
+                  int64_t mod =
+                      jdn -
+                      MODULE_IFUNC(Chrono, FloorDiv)(jdn, daysPerWeek) *
+                          daysPerWeek;
+                  int64_t firstWd =
+                      mod + MODULE_CONST(Chrono, Calendar, MONDAY);
+                  int64_t delta =
+                      ((int64_t)weekday - firstWd + daysPerWeek) % daysPerWeek;
+                  targetDay =
+                      CNS(Chrono, Calendar, Internal, FIRST_DAY_OF_MONTH) +
+                      (int32_t)delta +
+                      ((int32_t)occurrence -
+                       MODULE_CONST(Chrono, Calendar, FIRST_WEEKDAY)) *
+                          (int32_t)daysPerWeek;
+                  if (targetDay > (int32_t)daysInMonth) {
+                    return STATUS_CONST(OUT_OF_RANGE);
+                  }
+                }
+                *outDate =
+                    (MODULE_TYPE(Chrono, Date)){year, month, (uint8_t)targetDay};
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(FromWeekdayAnchor,
+                        (MODULE_ENUM(Chrono, Calendar, System) system,
+                         int32_t year, uint8_t month,
+                         MODULE_ENUM(Chrono, Calendar, WeekdayAnchor)
+                             anchorKind,
+                         uint8_t anchorDay,
+                         MODULE_ENUM(Chrono, Calendar, Weekday) weekday,
+                         MODULE_TYPE(Chrono, Date) *outDate), {
+                if (outDate == NULL ||
+                    (system != MODULE_CONST(Chrono, Calendar, GREGORIAN) &&
+                     system != MODULE_CONST(Chrono, Calendar, JULIAN)) ||
+                    weekday < MODULE_CONST(Chrono, Calendar, MONDAY) ||
+                    weekday > MODULE_CONST(Chrono, Calendar, SUNDAY)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                if (year <= -CNS(Chrono, Calendar, Internal, JDN_YEAR_OFFSET) ||
+                    year >
+                        CNS(Chrono, Calendar, Internal, MAX_SUPPORTED_YEAR)) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                uint8_t daysInMonth = 0U;
+                OPSTATUS status = MODULE_FUNC(Chrono, Calendar, DaysInMonth)(
+                    system, year, month, &daysInMonth);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                if (anchorKind ==
+                    MODULE_CONST(Chrono, Calendar, WEEKDAY_LAST)) {
+                  return MODULE_FUNC(Chrono, Calendar, Date, FromNthWeekday)(
+                      system, year, month,
+                      MODULE_CONST(Chrono, Calendar, LAST_WEEKDAY), weekday,
+                      outDate);
+                }
+                if (anchorDay == 0U || anchorDay > daysInMonth) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                if (anchorKind ==
+                    MODULE_CONST(Chrono, Calendar, WEEKDAY_EXACT)) {
+                  *outDate =
+                      (MODULE_TYPE(Chrono, Date)){year, month, anchorDay};
+                  return STATUS_CONST(SUCCESS);
+                }
+                const int64_t daysPerWeek =
+                    CNS(Chrono, Calendar, Internal, DAYS_PER_WEEK);
+                MODULE_TYPE(Chrono, Date) anchorDate = {year, month, anchorDay};
+                int64_t jdn =
+                    MODULE_IFUNC(Chrono, Calendar, ToJdn)(system, anchorDate);
+                int64_t mod =
+                    jdn -
+                    MODULE_IFUNC(Chrono, FloorDiv)(jdn, daysPerWeek) *
+                        daysPerWeek;
+                int64_t anchorWd = mod + MODULE_CONST(Chrono, Calendar, MONDAY);
+                int32_t targetDay = 0;
+                if (anchorKind ==
+                    MODULE_CONST(Chrono, Calendar, WEEKDAY_ON_OR_AFTER)) {
+                  int64_t delta =
+                      ((int64_t)weekday - anchorWd + daysPerWeek) % daysPerWeek;
+                  targetDay = (int32_t)anchorDay + (int32_t)delta;
+                  if (targetDay > (int32_t)daysInMonth) {
+                    return STATUS_CONST(OUT_OF_RANGE);
+                  }
+                } else if (anchorKind ==
+                           MODULE_CONST(Chrono, Calendar,
+                                        WEEKDAY_ON_OR_BEFORE)) {
+                  int64_t delta =
+                      (anchorWd - (int64_t)weekday + daysPerWeek) % daysPerWeek;
+                  targetDay = (int32_t)anchorDay - (int32_t)delta;
+                  if (targetDay <
+                      CNS(Chrono, Calendar, Internal, FIRST_DAY_OF_MONTH)) {
+                    return STATUS_CONST(OUT_OF_RANGE);
+                  }
+                } else {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                *outDate = (MODULE_TYPE(Chrono, Date)){
+                    year, month, (uint8_t)targetDay};
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(AddDays,
+                        (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chrono, Date) date, int64_t days,
+                         MODULE_TYPE(Chrono, Date) *outDate), {
+                if (outDate == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                int64_t ordinal = 0;
+                OPSTATUS status = MODULE_FUNC(Chrono, Calendar, Date, ToOrdinal)(
+                    policy, date, &ordinal);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                if ((days > 0 && ordinal > INT64_MAX - days) ||
+                    (days < 0 && ordinal < INT64_MIN - days)) {
+                  return STATUS_CONST(ARITHMETIC_OVERFLOW);
+                }
+                return MODULE_FUNC(Chrono, Calendar, Date, FromOrdinal)(
+                    policy, ordinal + days, outDate);
+              }),
+
+              OPERATION(AddMonths,
+                        (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chrono, Date) date, int32_t months,
+                         MODULE_TYPE(Chrono, Date) *outDate), {
+                if (outDate == NULL ||
+                    !MODULE_FUNC(Chrono, Calendar, Date, IsValid)(policy,
+                                                                  date)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                const int64_t monthsPerYear =
+                    CNS(Chrono, Calendar, Internal, MONTHS_PER_YEAR);
+                int64_t totalMonths = (int64_t)date.year * monthsPerYear +
+                                      (int64_t)(date.month - 1) +
+                                      (int64_t)months;
+                int64_t targetYear =
+                    MODULE_IFUNC(Chrono, FloorDiv)(totalMonths, monthsPerYear);
+                uint8_t targetMonth = (uint8_t)(
+                    MODULE_IFUNC(Chrono, FloorMod)(totalMonths, monthsPerYear) +
+                    1);
+                if (targetYear <=
+                        -CNS(Chrono, Calendar, Internal, JDN_YEAR_OFFSET) ||
+                    targetYear >
+                        CNS(Chrono, Calendar, Internal, MAX_SUPPORTED_YEAR)) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                MODULE_TYPE(Chrono, Date) probe = {
+                    (int32_t)targetYear, targetMonth,
+                    CNS(Chrono, Calendar, Internal, FIRST_DAY_OF_MONTH)};
+                MODULE_ENUM(Chrono, Calendar, System) system =
+                    MODULE_IFUNC(Chrono, Calendar, SystemFor)(policy, probe);
+                uint8_t maxDays = 0U;
+                OPSTATUS status = MODULE_FUNC(Chrono, Calendar, DaysInMonth)(
+                    system, (int32_t)targetYear, targetMonth, &maxDays);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                uint8_t targetDay = date.day > maxDays ? maxDays : date.day;
+                MODULE_TYPE(Chrono, Date) candidate = {
+                    (int32_t)targetYear, targetMonth, targetDay};
+                if (!MODULE_FUNC(Chrono, Calendar, Date, IsValid)(policy,
+                                                                  candidate)) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                *outDate = candidate;
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(AddYears,
+                        (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chrono, Date) date, int32_t years,
+                         MODULE_TYPE(Chrono, Date) *outDate), {
+                if (outDate == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                const int64_t monthsPerYear =
+                    CNS(Chrono, Calendar, Internal, MONTHS_PER_YEAR);
+                int64_t months = (int64_t)years * monthsPerYear;
+                if (months < INT32_MIN || months > INT32_MAX) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                return MODULE_FUNC(Chrono, Calendar, Date, AddMonths)(
+                    policy, date, (int32_t)months, outDate);
+              }),
+
+              OPERATION(ToIsoWeek,
+                        (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chrono, Date) date,
+                         MODULE_TYPE(Chrono, DateIsoWeek) *outIsoWeek), {
+                if (outIsoWeek == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                int64_t ordinal = 0;
+                OPSTATUS status = MODULE_FUNC(Chrono, Calendar, Date, ToOrdinal)(
+                    policy, date, &ordinal);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                MODULE_ENUM(Chrono, Calendar, Weekday) weekday = 0;
+                status = MODULE_FUNC(Chrono, Calendar, Date, DayOfWeek)(
+                    policy, date, &weekday);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                int64_t thursdayOrdinal =
+                    ordinal +
+                    (CNS(Chrono, Calendar, Internal,
+                         ISO_WEEK_THURSDAY_OFFSET) -
+                     (int64_t)weekday);
+                MODULE_TYPE(Chrono, Date) thursdayDate = {0};
+                status = MODULE_FUNC(Chrono, Calendar, Date, FromOrdinal)(
+                    policy, thursdayOrdinal, &thursdayDate);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                MODULE_TYPE(Chrono, Date) jan1 = {
+                    thursdayDate.year, MODULE_CONST(Chrono, Calendar, JANUARY),
+                    CNS(Chrono, Calendar, Internal, FIRST_DAY_OF_MONTH)};
+                int64_t jan1Ordinal = 0;
+                status = MODULE_FUNC(Chrono, Calendar, Date, ToOrdinal)(
+                    policy, jan1, &jan1Ordinal);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                int64_t week =
+                    (thursdayOrdinal - jan1Ordinal) /
+                        CNS(Chrono, Calendar, Internal, DAYS_PER_WEEK) +
+                    1;
+                *outIsoWeek = (MODULE_TYPE(Chrono, DateIsoWeek)){
+                    .year = thursdayDate.year,
+                    .week = (uint8_t)week,
+                    .weekday = (uint8_t)weekday};
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(FromIsoWeek,
+                        (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chrono, DateIsoWeek) isoWeek,
+                         MODULE_TYPE(Chrono, Date) *outDate), {
+                if (policy == NULL || outDate == NULL || isoWeek.week == 0U ||
+                    isoWeek.week >
+                        CNS(Chrono, Calendar, Internal, ISO_WEEK_MAX) ||
+                    isoWeek.weekday < MODULE_CONST(Chrono, Calendar, MONDAY) ||
+                    isoWeek.weekday > MODULE_CONST(Chrono, Calendar, SUNDAY)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                MODULE_TYPE(Chrono, Date) jan4 = {
+                    isoWeek.year, MODULE_CONST(Chrono, Calendar, JANUARY),
+                    CNS(Chrono, Calendar, Internal, ISO_WEEK_JAN_PIVOT_DAY)};
+                int64_t jan4Ordinal = 0;
+                OPSTATUS status = MODULE_FUNC(Chrono, Calendar, Date, ToOrdinal)(
+                    policy, jan4, &jan4Ordinal);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                MODULE_ENUM(Chrono, Calendar, Weekday) jan4Weekday = 0;
+                status = MODULE_FUNC(Chrono, Calendar, Date, DayOfWeek)(
+                    policy, jan4, &jan4Weekday);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                int64_t week1Monday =
+                    jan4Ordinal - ((int64_t)jan4Weekday -
+                                   MODULE_CONST(Chrono, Calendar, MONDAY));
+                int64_t targetOrdinal =
+                    week1Monday +
+                    ((int64_t)isoWeek.week - 1) *
+                        CNS(Chrono, Calendar, Internal, DAYS_PER_WEEK) +
+                    ((int64_t)isoWeek.weekday -
+                     MODULE_CONST(Chrono, Calendar, MONDAY));
+                MODULE_TYPE(Chrono, Date) candidate = {0};
+                status = MODULE_FUNC(Chrono, Calendar, Date, FromOrdinal)(
+                    policy, targetOrdinal, &candidate);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                MODULE_TYPE(Chrono, DateIsoWeek) verify = {0};
+                status = MODULE_FUNC(Chrono, Calendar, Date, ToIsoWeek)(
+                    policy, candidate, &verify);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                if (verify.year != isoWeek.year ||
+                    verify.week != isoWeek.week) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                *outDate = candidate;
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(Quarter,
+                        (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chrono, Date) date, uint8_t *outQuarter), {
+                if (outQuarter == NULL ||
+                    !MODULE_FUNC(Chrono, Calendar, Date, IsValid)(policy,
+                                                                  date)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                *outQuarter = (uint8_t)(
+                    (date.month - 1U) /
+                        (uint8_t)CNS(Chrono, Calendar, Internal,
+                                     MONTHS_PER_QUARTER) +
+                    1U);
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(DaysRemainingInYear,
+                        (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chrono, Date) date, uint16_t *outDays), {
+                if (outDays == NULL ||
+                    !MODULE_FUNC(Chrono, Calendar, Date, IsValid)(policy,
+                                                                  date)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                MODULE_TYPE(Chrono, Date) yearEnd = {
+                    date.year, MODULE_CONST(Chrono, Calendar, DECEMBER),
+                    MODULE_CONST(Chrono, Calendar, DAYS_IN_DECEMBER)};
+                int64_t diff = 0;
+                OPSTATUS status = MODULE_FUNC(
+                    Chrono, Calendar, Date, Difference)(policy, date, yearEnd,
+                                                        &diff);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                *outDays = (uint16_t)diff;
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              PREDICATE(IsEndOfMonth,
+                        (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chrono, Date) date), {
+                if (!MODULE_FUNC(Chrono, Calendar, Date, IsValid)(policy,
+                                                                  date)) {
+                  return false;
+                }
+                MODULE_TYPE(Chrono, Date) nextDay = {0};
+                if (MODULE_FUNC(Chrono, Calendar, Date, AddDays)(
+                        policy, date, 1, &nextDay) == STATUS_CONST(SUCCESS)) {
+                  return nextDay.month != date.month ||
+                         nextDay.year != date.year;
+                }
+                MODULE_ENUM(Chrono, Calendar, System) system =
+                    MODULE_IFUNC(Chrono, Calendar, SystemFor)(policy, date);
+                uint8_t maxDay = 0U;
+                if (MODULE_FUNC(Chrono, Calendar, DaysInMonth)(
+                        system, date.year, date.month, &maxDay) !=
+                    STATUS_CONST(SUCCESS)) {
+                  return false;
+                }
+                return date.day == maxDay;
+              }),
+
+              PREDICATE(IsWeekend,
+                        (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chrono, Date) date), {
+                MODULE_ENUM(Chrono, Calendar, Weekday) weekday = 0;
+                if (MODULE_FUNC(Chrono, Calendar, Date, DayOfWeek)(
+                        policy, date, &weekday) != STATUS_CONST(SUCCESS)) {
+                  return false;
+                }
+                return weekday == MODULE_CONST(Chrono, Calendar, SATURDAY) ||
+                       weekday == MODULE_CONST(Chrono, Calendar, SUNDAY);
+              }),
+
+              OPERATION(NextBusinessDay,
+                        (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chrono, Date) date,
+                         MODULE_TYPE(Chrono, Date) *outDate), {
+                return MODULE_FUNC(Chrono, Calendar, Date, AddBusinessDays)(
+                    policy, date, 1, outDate);
+              }),
+
+              OPERATION(AddBusinessDays,
+                        (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chrono, Date) date, int64_t businessDays,
+                         MODULE_TYPE(Chrono, Date) *outDate), {
+                if (outDate == NULL ||
+                    !MODULE_FUNC(Chrono, Calendar, Date, IsValid)(policy,
+                                                                  date)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                if (businessDays == 0) {
+                  *outDate = date;
+                  return STATUS_CONST(SUCCESS);
+                }
+                int64_t ordinal = 0;
+                OPSTATUS status = MODULE_FUNC(Chrono, Calendar, Date, ToOrdinal)(
+                    policy, date, &ordinal);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                MODULE_ENUM(Chrono, Calendar, Weekday) weekday = 0;
+                status = MODULE_FUNC(Chrono, Calendar, Date, DayOfWeek)(
+                    policy, date, &weekday);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                const int64_t daysPerWeek =
+                    CNS(Chrono, Calendar, Internal, DAYS_PER_WEEK);
+                const int64_t bizPerWeek =
+                    CNS(Chrono, Calendar, Internal, BUSINESS_DAYS_PER_WEEK);
+                int64_t baseOrdinal = ordinal;
+                int64_t zeroWd =
+                    (int64_t)weekday - MODULE_CONST(Chrono, Calendar, MONDAY);
+                if (businessDays > 0) {
+                  if (weekday > MODULE_CONST(Chrono, Calendar, FRIDAY)) {
+                    int64_t snapBack =
+                        (int64_t)weekday -
+                        MODULE_CONST(Chrono, Calendar, FRIDAY);
+                    baseOrdinal -= snapBack;
+                    zeroWd = MODULE_CONST(Chrono, Calendar, FRIDAY) -
+                             MODULE_CONST(Chrono, Calendar, MONDAY);
+                  }
+                } else {
+                  if (weekday > MODULE_CONST(Chrono, Calendar, FRIDAY)) {
+                    int64_t snapForward = daysPerWeek - zeroWd;
+                    baseOrdinal += snapForward;
+                    zeroWd = 0;
+                  }
+                }
+                if ((businessDays > 0 && zeroWd > INT64_MAX - businessDays) ||
+                    (businessDays < 0 && zeroWd < INT64_MIN - businessDays)) {
+                  return STATUS_CONST(ARITHMETIC_OVERFLOW);
+                }
+                int64_t total = zeroWd + businessDays;
+                int64_t weeks =
+                    MODULE_IFUNC(Chrono, FloorDiv)(total, bizPerWeek);
+                int64_t rem =
+                    MODULE_IFUNC(Chrono, FloorMod)(total, bizPerWeek);
+                if (weeks > INT64_MAX / daysPerWeek ||
+                    weeks < INT64_MIN / daysPerWeek) {
+                  return STATUS_CONST(ARITHMETIC_OVERFLOW);
+                }
+                int64_t calDelta = weeks * daysPerWeek + rem - zeroWd;
+                if ((calDelta > 0 && baseOrdinal > INT64_MAX - calDelta) ||
+                    (calDelta < 0 && baseOrdinal < INT64_MIN - calDelta)) {
+                  return STATUS_CONST(ARITHMETIC_OVERFLOW);
+                }
+                return MODULE_FUNC(Chrono, Calendar, Date, FromOrdinal)(
+                    policy, baseOrdinal + calDelta, outDate);
+              }),
+
+              OPERATION(BusinessDaysBetween,
+                        (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chrono, Date) start,
+                         MODULE_TYPE(Chrono, Date) end, int64_t *outDays), {
+                if (outDays == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                int64_t startOrd = 0;
+                int64_t endOrd = 0;
+                if (MODULE_FUNC(Chrono, Calendar, Date, ToOrdinal)(
+                        policy, start, &startOrd) != STATUS_CONST(SUCCESS) ||
+                    MODULE_FUNC(Chrono, Calendar, Date, ToOrdinal)(
+                        policy, end, &endOrd) != STATUS_CONST(SUCCESS)) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                if (startOrd == endOrd) {
+                  *outDays = 0;
+                  return STATUS_CONST(SUCCESS);
+                }
+                int64_t sign = 1;
+                int64_t diff = endOrd - startOrd;
+                MODULE_TYPE(Chrono, Date) loDate = start;
+                if (diff < 0) {
+                  sign = -1;
+                  diff = startOrd - endOrd;
+                  loDate = end;
+                }
+                MODULE_ENUM(Chrono, Calendar, Weekday) startWd = 0;
+                OPSTATUS status = MODULE_FUNC(
+                    Chrono, Calendar, Date, DayOfWeek)(policy, loDate, &startWd);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                const int64_t daysPerWeek =
+                    CNS(Chrono, Calendar, Internal, DAYS_PER_WEEK);
+                const int64_t bizPerWeek =
+                    CNS(Chrono, Calendar, Internal, BUSINESS_DAYS_PER_WEEK);
+                int64_t fullWeeks = diff / daysPerWeek;
+                int64_t remDays = diff % daysPerWeek;
+                int64_t count = fullWeeks * bizPerWeek;
+                int64_t zeroWd =
+                    (int64_t)startWd - MODULE_CONST(Chrono, Calendar, MONDAY);
+                for (int64_t i = 0; i < remDays; ++i) {
+                  int64_t wd =
+                      (zeroWd + i) % daysPerWeek +
+                      MODULE_CONST(Chrono, Calendar, MONDAY);
+                  if (wd <= MODULE_CONST(Chrono, Calendar, FRIDAY)) {
+                    ++count;
+                  }
+                }
+                *outDays = sign * count;
+                return STATUS_CONST(SUCCESS);
+              })
+        )
+    )
+);
+
+#undef COSMERON_MACRO_INTERNAL_CHRONO_MONTH_ARRAY_ITEM
+#undef COSMERON_MACRO_INTERNAL_CHRONO_REFORM_CASE
+
+/* EOF */

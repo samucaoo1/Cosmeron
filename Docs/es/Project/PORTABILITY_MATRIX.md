@@ -56,7 +56,7 @@ Pasos:
 1. Obtener y fijar un SDK/toolchain nativo OpenHarmony de confianza.
 2. Comprobar todos los headers públicos con el Clang del objetivo y el sysroot OHOS; seguir explícitamente `__OHOS__` y otras macros predefinidas del objetivo emitidas por el compilador **real**.
 3. Empezar por Core/Bit/Struct/Type/Math/Sort y memoria/contenedores puros.
-4. Añadir pruebas de compatibilidad POSIX para Chronometry, Random, File, Concurrency, Network y Terminal; escribir backends de plataforma solo cuando sea necesario.
+4. Añadir pruebas de compatibilidad POSIX para Chrono, Random, File, Concurrency, Network y Terminal; escribir backends de plataforma solo cuando sea necesario.
 5. Validar la inclusión header-only en múltiples unidades de traducción y el contrato sin enlazado adicional; después ejecutar en un objetivo representativo del sistema estándar OHOS.
 6. Tratar los productos mínimos basados en LiteOS como un perfil distinto de OpenHarmony estándar; un build ARM64 de espacio de usuario exitoso no certifica microcontroladores pequeños.
 

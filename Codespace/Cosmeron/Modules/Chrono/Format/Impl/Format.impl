@@ -1,0 +1,1554 @@
+#pragma once
+
+#include <limits.h>
+#include <string.h>
+
+/* ========================================================================== */
+/* 1. Internal Format Constants, Tables & Freestanding Writers/Parsers        */
+/* ========================================================================== */
+
+#define CHRONO_FORMAT_INTERNAL_COL_NAME(NAME, VALUE) NAME
+#define CHRONO_FORMAT_INTERNAL_COL_VALUE(NAME, VALUE) VALUE
+#define CHRONO_FORMAT_INTERNAL_GET(FIELD, ROW)                                 \
+  PP_OP_CAT2(CHRONO_FORMAT_INTERNAL_COL_, FIELD) ROW
+
+#define CHRONO_FORMAT_INTERNAL_TABLE(X)                                        \
+  X((DATE_YEAR_MIN, -4194304))                                                 \
+  X((DATE_YEAR_MAX, 4194303))                                                  \
+  X((ISO_FOUR_DIGIT_YEAR_MAX, 9999))                                           \
+  X((YEAR_MIN_DIGITS, 4))                                                      \
+  X((TWO_DIGITS, 2))                                                           \
+  X((MILLIS_DIGITS, 3))                                                        \
+  X((NANOS_DIGITS, 9))                                                         \
+  X((UINT64_MAX_DIGITS, 24))                                                   \
+  X((DECIMAL_BASE, 10))                                                        \
+  X((TWELVE_HOUR_BASE, 12))                                                    \
+  X((TWO_DIGIT_YEAR_MOD, 100))
+
+static const char *const MODULE_IFUNC(Chrono, Format, WeekdayShortNames)[] = {
+    "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+
+static const char *const MODULE_IFUNC(Chrono, Format, MonthShortNames)[] = {
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+
+MODULE(DOMAIN(Modules), Chrono,
+    ISTRUCT(FormatSink,
+        FIELDS(
+            char *buffer;
+            size_t capacity;
+            size_t written;
+        )
+    ),
+
+    INTERNAL_EX(Format,
+        ENUM(Const, CHRONO_FORMAT_INTERNAL_TABLE),
+
+        PREDICATE(WriteChar,
+                  (char *buffer, size_t capacity, size_t *offset, char ch), {
+          if (*offset >= capacity) {
+            return false;
+          }
+          buffer[*offset] = ch;
+          ++(*offset);
+          return true;
+        }),
+
+        PREDICATE(WriteCString,
+                  (char *buffer, size_t capacity, size_t *offset,
+                   const char *str), {
+          while (*str != '\0') {
+            if (!MODULE_IFUNC(Chrono, Format, WriteChar)(buffer, capacity,
+                                                         offset, *str)) {
+              return false;
+            }
+            ++str;
+          }
+          return true;
+        }),
+
+        PREDICATE(WriteFixedDigits,
+                  (char *buffer, size_t capacity, size_t *offset,
+                   uint64_t value, size_t width), {
+          if (*offset + width > capacity) {
+            return false;
+          }
+          const uint64_t base =
+              (uint64_t)CNS(Chrono, Format, Internal, DECIMAL_BASE);
+          for (size_t i = width; i > 0U; --i) {
+            buffer[*offset + i - 1U] = (char)('0' + (char)(value % base));
+            value /= base;
+          }
+          *offset += width;
+          return true;
+        }),
+
+        PREDICATE(WriteUnsigned64,
+                  (char *buffer, size_t capacity, size_t *offset,
+                   uint64_t value), {
+          char digits[CNS(Chrono, Format, Internal, UINT64_MAX_DIGITS)];
+          size_t count = 0U;
+          const uint64_t base =
+              (uint64_t)CNS(Chrono, Format, Internal, DECIMAL_BASE);
+          do {
+            digits[count++] = (char)('0' + (char)(value % base));
+            value /= base;
+          } while (value > 0U);
+          if (*offset + count > capacity) {
+            return false;
+          }
+          for (size_t i = count; i > 0U; --i) {
+            buffer[*offset] = digits[i - 1U];
+            ++(*offset);
+          }
+          return true;
+        }),
+
+        PREDICATE(FinalizeBuffer,
+                  (char *buffer, size_t capacity, size_t offset), {
+          if (offset >= capacity) {
+            return false;
+          }
+          buffer[offset] = '\0';
+          return true;
+        }),
+
+        PREDICATE(WriteYear,
+                  (char *buffer, size_t capacity, size_t *offset,
+                   int32_t year), {
+          if (year < 0 ||
+              year > CNS(Chrono, Format, Internal, ISO_FOUR_DIGIT_YEAR_MAX)) {
+            char sign = year < 0 ? '-' : '+';
+            if (!MODULE_IFUNC(Chrono, Format, WriteChar)(buffer, capacity,
+                                                         offset, sign)) {
+              return false;
+            }
+          }
+          uint64_t mag =
+              year < 0 ? (uint64_t)(-(int64_t)year) : (uint64_t)year;
+          size_t width =
+              (size_t)CNS(Chrono, Format, Internal, YEAR_MIN_DIGITS);
+          if (mag >= 1000000ULL) {
+            width = 7U;
+          } else if (mag >= 100000ULL) {
+            width = 6U;
+          } else if (mag >= 10000ULL) {
+            width = 5U;
+          }
+          return MODULE_IFUNC(Chrono, Format, WriteFixedDigits)(
+              buffer, capacity, offset, mag, width);
+        }),
+
+        PREDICATE(WriteDatePart,
+                  (char *buffer, size_t capacity, size_t *offset,
+                   MODULE_TYPE(Chrono, Date) date), {
+          const size_t two =
+              (size_t)CNS(Chrono, Format, Internal, TWO_DIGITS);
+          return MODULE_IFUNC(Chrono, Format, WriteYear)(
+                     buffer, capacity, offset, date.year) &&
+                 MODULE_IFUNC(Chrono, Format, WriteChar)(
+                     buffer, capacity, offset, '-') &&
+                 MODULE_IFUNC(Chrono, Format, WriteFixedDigits)(
+                     buffer, capacity, offset, date.month, two) &&
+                 MODULE_IFUNC(Chrono, Format, WriteChar)(
+                     buffer, capacity, offset, '-') &&
+                 MODULE_IFUNC(Chrono, Format, WriteFixedDigits)(
+                     buffer, capacity, offset, date.day, two);
+        }),
+
+        PREDICATE(WriteHmsPart,
+                  (char *buffer, size_t capacity, size_t *offset,
+                   MODULE_TYPE(Chrono, TimeOfDay) time), {
+          const size_t two =
+              (size_t)CNS(Chrono, Format, Internal, TWO_DIGITS);
+          return MODULE_IFUNC(Chrono, Format, WriteFixedDigits)(
+                     buffer, capacity, offset, time.hour, two) &&
+                 MODULE_IFUNC(Chrono, Format, WriteChar)(
+                     buffer, capacity, offset, ':') &&
+                 MODULE_IFUNC(Chrono, Format, WriteFixedDigits)(
+                     buffer, capacity, offset, time.minute, two) &&
+                 MODULE_IFUNC(Chrono, Format, WriteChar)(
+                     buffer, capacity, offset, ':') &&
+                 MODULE_IFUNC(Chrono, Format, WriteFixedDigits)(
+                     buffer, capacity, offset, time.second, two);
+        }),
+
+        PREDICATE(WriteTimePart,
+                  (char *buffer, size_t capacity, size_t *offset,
+                   MODULE_TYPE(Chrono, TimeOfDay) time), {
+          const size_t three =
+              (size_t)CNS(Chrono, Format, Internal, MILLIS_DIGITS);
+          return MODULE_IFUNC(Chrono, Format, WriteHmsPart)(
+                     buffer, capacity, offset, time) &&
+                 MODULE_IFUNC(Chrono, Format, WriteChar)(
+                     buffer, capacity, offset, '.') &&
+                 MODULE_IFUNC(Chrono, Format, WriteFixedDigits)(
+                     buffer, capacity, offset, time.millisecond, three);
+        }),
+
+        PREDICATE(WriteOffsetPart,
+                  (char *buffer, size_t capacity, size_t *offset,
+                   MODULE_TYPE(Chrono, UtcOffset) tzOffset, bool colon,
+                   bool useZulu), {
+          if (useZulu && tzOffset.minutesEastOfUtc == 0) {
+            return MODULE_IFUNC(Chrono, Format, WriteChar)(
+                buffer, capacity, offset, 'Z');
+          }
+          char sign = tzOffset.minutesEastOfUtc < 0 ? '-' : '+';
+          uint64_t absMin =
+              (uint64_t)(tzOffset.minutesEastOfUtc < 0
+                             ? -tzOffset.minutesEastOfUtc
+                             : tzOffset.minutesEastOfUtc);
+          uint64_t minPerHour =
+              (uint64_t)MODULE_CONST(Chrono, Math, MINUTES_PER_HOUR);
+          const size_t two =
+              (size_t)CNS(Chrono, Format, Internal, TWO_DIGITS);
+          if (!MODULE_IFUNC(Chrono, Format, WriteChar)(buffer, capacity, offset,
+                                                       sign) ||
+              !MODULE_IFUNC(Chrono, Format, WriteFixedDigits)(
+                  buffer, capacity, offset, absMin / minPerHour, two)) {
+            return false;
+          }
+          if (colon && !MODULE_IFUNC(Chrono, Format, WriteChar)(
+                           buffer, capacity, offset, ':')) {
+            return false;
+          }
+          return MODULE_IFUNC(Chrono, Format, WriteFixedDigits)(
+              buffer, capacity, offset, absMin % minPerHour, two);
+        }),
+
+        PREDICATE(AppendHumanPart,
+                  (char *buffer, size_t capacity, size_t *offset, bool *hasPart,
+                   uint64_t value, const char *unit), {
+          if (*hasPart && !MODULE_IFUNC(Chrono, Format, WriteChar)(
+                              buffer, capacity, offset, ' ')) {
+            return false;
+          }
+          if (!MODULE_IFUNC(Chrono, Format, WriteUnsigned64)(
+                  buffer, capacity, offset, value) ||
+              !MODULE_IFUNC(Chrono, Format, WriteCString)(
+                  buffer, capacity, offset, unit)) {
+            return false;
+          }
+          *hasPart = true;
+          return true;
+        }),
+
+        PROCEDURE(SinkPutChar,
+                  (MODULE_ITYPE(Chrono, FormatSink) *sink, char ch), {
+          if (sink->buffer != NULL && sink->capacity > 0U &&
+              sink->written + 1U < sink->capacity) {
+            sink->buffer[sink->written] = ch;
+          }
+          sink->written++;
+        }),
+
+        PROCEDURE(SinkPutCString,
+                  (MODULE_ITYPE(Chrono, FormatSink) *sink, const char *str), {
+          while (*str != '\0') {
+            MODULE_IFUNC(Chrono, Format, SinkPutChar)(sink, *str);
+            ++str;
+          }
+        }),
+
+        PROCEDURE(SinkPutFixedDigits,
+                  (MODULE_ITYPE(Chrono, FormatSink) *sink, uint64_t value,
+                   size_t width), {
+          char digits[CNS(Chrono, Format, Internal, UINT64_MAX_DIGITS)];
+          const uint64_t base =
+              (uint64_t)CNS(Chrono, Format, Internal, DECIMAL_BASE);
+          for (size_t i = width; i > 0U; --i) {
+            digits[i - 1U] = (char)('0' + (char)(value % base));
+            value /= base;
+          }
+          for (size_t i = 0U; i < width; ++i) {
+            MODULE_IFUNC(Chrono, Format, SinkPutChar)(sink, digits[i]);
+          }
+        }),
+
+        PROCEDURE(SinkPutYear,
+                  (MODULE_ITYPE(Chrono, FormatSink) *sink, int32_t year), {
+          if (year < 0 ||
+              year > CNS(Chrono, Format, Internal, ISO_FOUR_DIGIT_YEAR_MAX)) {
+            MODULE_IFUNC(Chrono, Format, SinkPutChar)(
+                sink, year < 0 ? '-' : '+');
+          }
+          uint64_t mag =
+              year < 0 ? (uint64_t)(-(int64_t)year) : (uint64_t)year;
+          size_t width =
+              (size_t)CNS(Chrono, Format, Internal, YEAR_MIN_DIGITS);
+          if (mag >= 1000000ULL) {
+            width = 7U;
+          } else if (mag >= 100000ULL) {
+            width = 6U;
+          } else if (mag >= 10000ULL) {
+            width = 5U;
+          }
+          MODULE_IFUNC(Chrono, Format, SinkPutFixedDigits)(sink, mag, width);
+        }),
+
+        PROCEDURE(SinkPutOffset,
+                  (MODULE_ITYPE(Chrono, FormatSink) *sink,
+                   MODULE_TYPE(Chrono, UtcOffset) offset, bool colon,
+                   bool useZulu), {
+          if (useZulu && offset.minutesEastOfUtc == 0) {
+            MODULE_IFUNC(Chrono, Format, SinkPutChar)(sink, 'Z');
+            return;
+          }
+          char sign = offset.minutesEastOfUtc < 0 ? '-' : '+';
+          uint64_t absMin =
+              (uint64_t)(offset.minutesEastOfUtc < 0
+                             ? -offset.minutesEastOfUtc
+                             : offset.minutesEastOfUtc);
+          uint64_t minPerHour =
+              (uint64_t)MODULE_CONST(Chrono, Math, MINUTES_PER_HOUR);
+          const size_t two =
+              (size_t)CNS(Chrono, Format, Internal, TWO_DIGITS);
+          MODULE_IFUNC(Chrono, Format, SinkPutChar)(sink, sign);
+          MODULE_IFUNC(Chrono, Format, SinkPutFixedDigits)(
+              sink, absMin / minPerHour, two);
+          if (colon) {
+            MODULE_IFUNC(Chrono, Format, SinkPutChar)(sink, ':');
+          }
+          MODULE_IFUNC(Chrono, Format, SinkPutFixedDigits)(
+              sink, absMin % minPerHour, two);
+        }),
+
+        PROCEDURE(SinkFinish, (MODULE_ITYPE(Chrono, FormatSink) *sink), {
+          if (sink->buffer != NULL && sink->capacity > 0U) {
+            if (sink->written < sink->capacity) {
+              sink->buffer[sink->written] = '\0';
+            } else {
+              sink->buffer[sink->capacity - 1U] = '\0';
+            }
+          }
+        }),
+
+        PREDICATE(ParseFixedDigits,
+                  (const char **cursor, size_t count, int *outValue), {
+          const char *p = *cursor;
+          int value = 0;
+          const int base = CNS(Chrono, Format, Internal, DECIMAL_BASE);
+          for (size_t i = 0U; i < count; ++i) {
+            if (p[i] < '0' || p[i] > '9') {
+              return false;
+            }
+            value = value * base + (p[i] - '0');
+          }
+          *cursor = p + count;
+          *outValue = value;
+          return true;
+        }),
+
+        PREDICATE(ParseUnsigned64, (const char **cursor, uint64_t *outValue), {
+          const char *p = *cursor;
+          if (*p < '0' || *p > '9') {
+            return false;
+          }
+          uint64_t value = 0U;
+          const uint64_t base =
+              (uint64_t)CNS(Chrono, Format, Internal, DECIMAL_BASE);
+          while (*p >= '0' && *p <= '9') {
+            uint64_t digit = (uint64_t)(*p - '0');
+            if (value > (UINT64_MAX - digit) / base) {
+              return false;
+            }
+            value = value * base + digit;
+            ++p;
+          }
+          *cursor = p;
+          *outValue = value;
+          return true;
+        }),
+
+        PREDICATE(ParseSignedYear, (const char **cursor, int *outYear), {
+          const char *p = *cursor;
+          int sign = 1;
+          if (*p == '+' || *p == '-') {
+            sign = (*p == '-') ? -1 : 1;
+            ++p;
+          }
+          size_t digits = 0U;
+          int64_t magnitude = 0;
+          const int64_t base =
+              CNS(Chrono, Format, Internal, DECIMAL_BASE);
+          const int64_t maxAbs =
+              -CNS(Chrono, Format, Internal, DATE_YEAR_MIN);
+          while (*p >= '0' && *p <= '9') {
+            magnitude = magnitude * base + (*p - '0');
+            if (magnitude > maxAbs) {
+              return false;
+            }
+            ++digits;
+            ++p;
+          }
+          if (digits < (size_t)CNS(Chrono, Format, Internal,
+                                   YEAR_MIN_DIGITS)) {
+            return false;
+          }
+          int64_t signedYear = (int64_t)sign * magnitude;
+          if (signedYear < CNS(Chrono, Format, Internal, DATE_YEAR_MIN) ||
+              signedYear > CNS(Chrono, Format, Internal, DATE_YEAR_MAX)) {
+            return false;
+          }
+          *cursor = p;
+          *outYear = (int)signedYear;
+          return true;
+        }),
+
+        OPERATION(ParseDatePrefix,
+                  (const char **cursor,
+                   const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                   MODULE_TYPE(Chrono, Date) *outDate), {
+          int year = 0;
+          int month = 0;
+          int day = 0;
+          if (!MODULE_IFUNC(Chrono, Format, ParseSignedYear)(cursor, &year) ||
+              **cursor != '-') {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          ++(*cursor);
+          if (!MODULE_IFUNC(Chrono, Format, ParseFixedDigits)(
+                  cursor, CNS(Chrono, Format, Internal, TWO_DIGITS), &month) ||
+              **cursor != '-') {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          ++(*cursor);
+          if (!MODULE_IFUNC(Chrono, Format, ParseFixedDigits)(
+                  cursor, CNS(Chrono, Format, Internal, TWO_DIGITS), &day)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          if (month < MODULE_CONST(Chrono, Calendar, JANUARY) ||
+              month > MODULE_CONST(Chrono, Calendar, DECEMBER) || day <= 0 ||
+              day > MODULE_CONST(Chrono, Calendar, DAYS_IN_JANUARY)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          MODULE_TYPE(Chrono, Date) candidate = {
+              year, (uint8_t)month, (uint8_t)day};
+          if (!MODULE_FUNC(Chrono, Calendar, Date, IsValid)(policy,
+                                                            candidate)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          *outDate = candidate;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(ParseTimePrefix,
+                  (const char **cursor,
+                   MODULE_TYPE(Chrono, TimeOfDay) *outTime), {
+          int hour = 0;
+          int minute = 0;
+          int second = 0;
+          int millisecond = 0;
+          const size_t twoDigits =
+              CNS(Chrono, Format, Internal, TWO_DIGITS);
+          if (!MODULE_IFUNC(Chrono, Format, ParseFixedDigits)(
+                  cursor, twoDigits, &hour) ||
+              **cursor != ':') {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          ++(*cursor);
+          if (!MODULE_IFUNC(Chrono, Format, ParseFixedDigits)(
+                  cursor, twoDigits, &minute) ||
+              **cursor != ':') {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          ++(*cursor);
+          if (!MODULE_IFUNC(Chrono, Format, ParseFixedDigits)(
+                  cursor, twoDigits, &second) ||
+              **cursor != '.') {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          ++(*cursor);
+          if (!MODULE_IFUNC(Chrono, Format, ParseFixedDigits)(
+                  cursor, CNS(Chrono, Format, Internal, MILLIS_DIGITS),
+                  &millisecond)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          if (hour < 0 ||
+              hour >= MODULE_CONST(Chrono, Math, HOURS_PER_DAY) ||
+              minute < 0 ||
+              minute >= MODULE_CONST(Chrono, Math, MINUTES_PER_HOUR) ||
+              second < 0 ||
+              second >= MODULE_CONST(Chrono, Math, SECONDS_PER_MINUTE) ||
+              millisecond < 0 ||
+              millisecond >=
+                  MODULE_CONST(Chrono, Math, MILLISECONDS_PER_SECOND)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          *outTime = (MODULE_TYPE(Chrono, TimeOfDay)){
+              .millisecond = (uint16_t)millisecond,
+              .second = (uint8_t)second,
+              .minute = (uint8_t)minute,
+              .hour = (uint8_t)hour};
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(ParseOffsetSuffix,
+                  (const char **cursor,
+                   MODULE_TYPE(Chrono, UtcOffset) *outOffset), {
+          const char ch = **cursor;
+          if (ch == 'Z' || ch == 'z') {
+            ++(*cursor);
+            outOffset->minutesEastOfUtc = 0;
+            return STATUS_CONST(SUCCESS);
+          }
+          if (ch != '+' && ch != '-') {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          int sign = (ch == '-') ? -1 : 1;
+          ++(*cursor);
+          int hours = 0;
+          int minutes = 0;
+          const size_t twoDigits =
+              CNS(Chrono, Format, Internal, TWO_DIGITS);
+          if (!MODULE_IFUNC(Chrono, Format, ParseFixedDigits)(
+                  cursor, twoDigits, &hours) ||
+              **cursor != ':') {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          ++(*cursor);
+          if (!MODULE_IFUNC(Chrono, Format, ParseFixedDigits)(
+                  cursor, twoDigits, &minutes)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          if (hours >= MODULE_CONST(Chrono, Math, HOURS_PER_DAY) ||
+              minutes >= MODULE_CONST(Chrono, Math, MINUTES_PER_HOUR)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          MODULE_TYPE(Chrono, UtcOffset) candidate = {
+              (int16_t)(sign *
+                        (hours * MODULE_CONST(Chrono, Math, MINUTES_PER_HOUR) +
+                         minutes))};
+          if (!MODULE_FUNC(Chrono, Timezone, Offset, IsValid)(candidate)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          *outOffset = candidate;
+          return STATUS_CONST(SUCCESS);
+        })
+    )
+);
+
+/* ========================================================================== */
+/* 2. Package Implementation: Chrono_Format                                   */
+/* ========================================================================== */
+
+MODULE_IMPLEMENT(DOMAIN(Modules), Chrono,
+    PACKAGE(Format,
+        VARIANT(ToISO,
+            OPERATION(Date,
+                      (MODULE_TYPE(Chrono, Date) date, char *buffer,
+                       size_t capacity), {
+              if (buffer == NULL || capacity == 0U) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              MODULE_TYPE(Chrono, CalendarPolicy) gregorian =
+                  MODULE_FUNC(Chrono, Calendar, GregorianPolicy)();
+              if (!MODULE_FUNC(Chrono, Calendar, Date, IsValid)(&gregorian,
+                                                                date)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              size_t offset = 0U;
+              if (!MODULE_IFUNC(Chrono, Format, WriteDatePart)(
+                      buffer, capacity, &offset, date) ||
+                  !MODULE_IFUNC(Chrono, Format, FinalizeBuffer)(
+                      buffer, capacity, offset)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              return STATUS_CONST(SUCCESS);
+            }),
+
+            OPERATION(TimeOfDay,
+                      (MODULE_TYPE(Chrono, TimeOfDay) time, char *buffer,
+                       size_t capacity), {
+              if (buffer == NULL || capacity == 0U) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              if (!MODULE_FUNC(Chrono, Civil, Time, IsValid)(time)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              size_t offset = 0U;
+              if (!MODULE_IFUNC(Chrono, Format, WriteTimePart)(
+                      buffer, capacity, &offset, time) ||
+                  !MODULE_IFUNC(Chrono, Format, FinalizeBuffer)(
+                      buffer, capacity, offset)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              return STATUS_CONST(SUCCESS);
+            }),
+
+            OPERATION(DateIsoWeek,
+                      (MODULE_TYPE(Chrono, DateIsoWeek) isoWeek, char *buffer,
+                       size_t capacity), {
+              if (buffer == NULL || capacity == 0U) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              MODULE_TYPE(Chrono, CalendarPolicy) gregorian =
+                  MODULE_FUNC(Chrono, Calendar, GregorianPolicy)();
+              MODULE_TYPE(Chrono, Date) dummy = {0};
+              if (MODULE_FUNC(Chrono, Calendar, Date, FromIsoWeek)(
+                      &gregorian, isoWeek, &dummy) != STATUS_CONST(SUCCESS)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              size_t offset = 0U;
+              const size_t two =
+                  (size_t)CNS(Chrono, Format, Internal, TWO_DIGITS);
+              if (!MODULE_IFUNC(Chrono, Format, WriteYear)(
+                      buffer, capacity, &offset, isoWeek.year) ||
+                  !MODULE_IFUNC(Chrono, Format, WriteCString)(
+                      buffer, capacity, &offset, "-W") ||
+                  !MODULE_IFUNC(Chrono, Format, WriteFixedDigits)(
+                      buffer, capacity, &offset, isoWeek.week, two) ||
+                  !MODULE_IFUNC(Chrono, Format, WriteChar)(
+                      buffer, capacity, &offset, '-') ||
+                  !MODULE_IFUNC(Chrono, Format, WriteFixedDigits)(
+                      buffer, capacity, &offset, isoWeek.weekday, 1U) ||
+                  !MODULE_IFUNC(Chrono, Format, FinalizeBuffer)(
+                      buffer, capacity, offset)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              return STATUS_CONST(SUCCESS);
+            }),
+
+            OPERATION(CivilStamp,
+                      (MODULE_TYPE(Chrono, CivilStamp) value, char *buffer,
+                       size_t capacity), {
+              if (buffer == NULL || capacity == 0U) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              MODULE_TYPE(Chrono, CalendarPolicy) gregorian =
+                  MODULE_FUNC(Chrono, Calendar, GregorianPolicy)();
+              if (!MODULE_FUNC(Chrono, Civil, IsValid)(&gregorian, value)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              size_t offset = 0U;
+              if (!MODULE_IFUNC(Chrono, Format, WriteDatePart)(
+                      buffer, capacity, &offset, value.date) ||
+                  !MODULE_IFUNC(Chrono, Format, WriteChar)(
+                      buffer, capacity, &offset, 'T') ||
+                  !MODULE_IFUNC(Chrono, Format, WriteTimePart)(
+                      buffer, capacity, &offset, value.time) ||
+                  !MODULE_IFUNC(Chrono, Format, FinalizeBuffer)(
+                      buffer, capacity, offset)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              return STATUS_CONST(SUCCESS);
+            }),
+
+            OPERATION(CivilOffset,
+                      (MODULE_TYPE(Chrono, CivilOffset) value, char *buffer,
+                       size_t capacity), {
+              if (buffer == NULL || capacity == 0U) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              MODULE_TYPE(Chrono, CalendarPolicy) gregorian =
+                  MODULE_FUNC(Chrono, Calendar, GregorianPolicy)();
+              if (!MODULE_FUNC(Chrono, Civil, IsValid)(&gregorian,
+                                                       value.local) ||
+                  !MODULE_FUNC(Chrono, Timezone, Offset, IsValid)(
+                      value.offset)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              size_t offset = 0U;
+              if (!MODULE_IFUNC(Chrono, Format, WriteDatePart)(
+                      buffer, capacity, &offset, value.local.date) ||
+                  !MODULE_IFUNC(Chrono, Format, WriteChar)(
+                      buffer, capacity, &offset, 'T') ||
+                  !MODULE_IFUNC(Chrono, Format, WriteTimePart)(
+                      buffer, capacity, &offset, value.local.time) ||
+                  !MODULE_IFUNC(Chrono, Format, WriteOffsetPart)(
+                      buffer, capacity, &offset, value.offset, true, true) ||
+                  !MODULE_IFUNC(Chrono, Format, FinalizeBuffer)(
+                      buffer, capacity, offset)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              return STATUS_CONST(SUCCESS);
+            }),
+
+            OPERATION(Instant,
+                      (MODULE_TYPE(Chrono, Instant) value, char *buffer,
+                       size_t capacity), {
+              if (buffer == NULL || capacity == 0U) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              if (!MODULE_FUNC(Chrono, Clock, Instant, IsValid)(value)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              MODULE_TYPE(Chrono, CivilOffset) utc = {0};
+              OPSTATUS status = MODULE_FUNC(Chrono, Timezone, FromUTC)(
+                  value, (MODULE_TYPE(Chrono, UtcOffset)){0}, &utc);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              return MODULE_FUNC(Chrono, Format, ToISOCivilOffset)(
+                  utc, buffer, capacity);
+            }),
+
+            OPERATION(Span,
+                      (MODULE_TYPE(Chrono, Span) value, char *buffer,
+                       size_t capacity), {
+              if (buffer == NULL || capacity == 0U) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              size_t offset = 0U;
+              if (value.nanoseconds == 0) {
+                if (!MODULE_IFUNC(Chrono, Format, WriteCString)(
+                        buffer, capacity, &offset, "PT0S") ||
+                    !MODULE_IFUNC(Chrono, Format, FinalizeBuffer)(
+                        buffer, capacity, offset)) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                return STATUS_CONST(SUCCESS);
+              }
+              if (value.nanoseconds < 0 &&
+                  !MODULE_IFUNC(Chrono, Format, WriteChar)(buffer, capacity,
+                                                           &offset, '-')) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              uint64_t totalNs =
+                  value.nanoseconds < 0
+                      ? ((uint64_t)(-(value.nanoseconds + 1)) + 1ULL)
+                      : (uint64_t)value.nanoseconds;
+              const uint64_t nsPerSec = (uint64_t)MODULE_CONST(
+                  Chrono, Math, NANOSECONDS_PER_SECOND);
+              const uint64_t secPerMin =
+                  (uint64_t)MODULE_CONST(Chrono, Math, SECONDS_PER_MINUTE);
+              const uint64_t secPerHour =
+                  (uint64_t)MODULE_CONST(Chrono, Math, SECONDS_PER_HOUR);
+              uint64_t totalSec = totalNs / nsPerSec;
+              uint64_t remNs = totalNs % nsPerSec;
+              uint64_t hours = totalSec / secPerHour;
+              uint64_t minutes = (totalSec % secPerHour) / secPerMin;
+              uint64_t seconds = totalSec % secPerMin;
+              if (!MODULE_IFUNC(Chrono, Format, WriteCString)(
+                      buffer, capacity, &offset, "PT")) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              if (hours > 0U &&
+                  (!MODULE_IFUNC(Chrono, Format, WriteUnsigned64)(
+                       buffer, capacity, &offset, hours) ||
+                   !MODULE_IFUNC(Chrono, Format, WriteChar)(buffer, capacity,
+                                                            &offset, 'H'))) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              if (minutes > 0U &&
+                  (!MODULE_IFUNC(Chrono, Format, WriteUnsigned64)(
+                       buffer, capacity, &offset, minutes) ||
+                   !MODULE_IFUNC(Chrono, Format, WriteChar)(buffer, capacity,
+                                                            &offset, 'M'))) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              if (seconds > 0U || remNs > 0U ||
+                  (hours == 0U && minutes == 0U)) {
+                if (!MODULE_IFUNC(Chrono, Format, WriteUnsigned64)(
+                        buffer, capacity, &offset, seconds)) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                if (remNs > 0U) {
+                  if (!MODULE_IFUNC(Chrono, Format, WriteChar)(buffer, capacity,
+                                                               &offset, '.')) {
+                    return STATUS_CONST(OUT_OF_RANGE);
+                  }
+                  size_t width =
+                      (size_t)CNS(Chrono, Format, Internal, NANOS_DIGITS);
+                  const uint64_t base =
+                      (uint64_t)CNS(Chrono, Format, Internal, DECIMAL_BASE);
+                  while (remNs % base == 0U && width > 1U) {
+                    remNs /= base;
+                    --width;
+                  }
+                  if (!MODULE_IFUNC(Chrono, Format, WriteFixedDigits)(
+                          buffer, capacity, &offset, remNs, width)) {
+                    return STATUS_CONST(OUT_OF_RANGE);
+                  }
+                }
+                if (!MODULE_IFUNC(Chrono, Format, WriteChar)(buffer, capacity,
+                                                             &offset, 'S')) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+              }
+              if (!MODULE_IFUNC(Chrono, Format, FinalizeBuffer)(
+                      buffer, capacity, offset)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              return STATUS_CONST(SUCCESS);
+            })
+        ),
+
+        VARIANT(FromISO,
+            OPERATION(Date,
+                      (const char *text, MODULE_TYPE(Chrono, Date) *date), {
+              if (text == NULL || date == NULL) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              MODULE_TYPE(Chrono, CalendarPolicy) gregorian =
+                  MODULE_FUNC(Chrono, Calendar, GregorianPolicy)();
+              const char *cursor = text;
+              MODULE_TYPE(Chrono, Date) parsed = {0};
+              OPSTATUS status = MODULE_IFUNC(Chrono, Format, ParseDatePrefix)(
+                  &cursor, &gregorian, &parsed);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              if (*cursor != '\0') {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              *date = parsed;
+              return STATUS_CONST(SUCCESS);
+            }),
+
+            OPERATION(TimeOfDay,
+                      (const char *text,
+                       MODULE_TYPE(Chrono, TimeOfDay) *outTime), {
+              if (text == NULL || outTime == NULL) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              const char *cursor = text;
+              MODULE_TYPE(Chrono, TimeOfDay) parsed = {0};
+              OPSTATUS status = MODULE_IFUNC(Chrono, Format, ParseTimePrefix)(
+                  &cursor, &parsed);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              if (*cursor != '\0') {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              *outTime = parsed;
+              return STATUS_CONST(SUCCESS);
+            }),
+
+            OPERATION(DateIsoWeek,
+                      (const char *text,
+                       MODULE_TYPE(Chrono, DateIsoWeek) *outIsoWeek), {
+              if (text == NULL || outIsoWeek == NULL) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              const char *cursor = text;
+              int year = 0;
+              int week = 0;
+              int weekday = 0;
+              if (!MODULE_IFUNC(Chrono, Format, ParseSignedYear)(&cursor,
+                                                                 &year) ||
+                  cursor[0] != '-' || cursor[1] != 'W') {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              cursor += 2;
+              if (!MODULE_IFUNC(Chrono, Format, ParseFixedDigits)(
+                      &cursor, CNS(Chrono, Format, Internal, TWO_DIGITS),
+                      &week) ||
+                  *cursor != '-') {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              ++cursor;
+              if (!MODULE_IFUNC(Chrono, Format, ParseFixedDigits)(&cursor, 1U,
+                                                                  &weekday) ||
+                  *cursor != '\0') {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              if (week < 1 || weekday < MODULE_CONST(Chrono, Calendar, MONDAY) ||
+                  weekday > MODULE_CONST(Chrono, Calendar, SUNDAY)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              MODULE_TYPE(Chrono, DateIsoWeek) candidate = {
+                  .year = (int32_t)year,
+                  .week = (uint8_t)week,
+                  .weekday = (uint8_t)weekday};
+              MODULE_TYPE(Chrono, CalendarPolicy) gregorian =
+                  MODULE_FUNC(Chrono, Calendar, GregorianPolicy)();
+              MODULE_TYPE(Chrono, Date) dummy = {0};
+              if (MODULE_FUNC(Chrono, Calendar, Date, FromIsoWeek)(
+                      &gregorian, candidate, &dummy) != STATUS_CONST(SUCCESS)) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              *outIsoWeek = candidate;
+              return STATUS_CONST(SUCCESS);
+            }),
+
+            OPERATION(CivilStamp,
+                      (const char *text,
+                       MODULE_TYPE(Chrono, CivilStamp) *value), {
+              if (text == NULL || value == NULL) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              MODULE_TYPE(Chrono, CalendarPolicy) gregorian =
+                  MODULE_FUNC(Chrono, Calendar, GregorianPolicy)();
+              const char *cursor = text;
+              MODULE_TYPE(Chrono, CivilStamp) parsed = {0};
+              OPSTATUS status = MODULE_IFUNC(Chrono, Format, ParseDatePrefix)(
+                  &cursor, &gregorian, &parsed.date);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              if (*cursor != 'T') {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              ++cursor;
+              status = MODULE_IFUNC(Chrono, Format, ParseTimePrefix)(
+                  &cursor, &parsed.time);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              if (*cursor != '\0') {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              *value = parsed;
+              return STATUS_CONST(SUCCESS);
+            }),
+
+            OPERATION(CivilOffset,
+                      (const char *text,
+                       MODULE_TYPE(Chrono, CivilOffset) *value), {
+              if (text == NULL || value == NULL) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              MODULE_TYPE(Chrono, CalendarPolicy) gregorian =
+                  MODULE_FUNC(Chrono, Calendar, GregorianPolicy)();
+              const char *cursor = text;
+              MODULE_TYPE(Chrono, CivilOffset) parsed = {0};
+              OPSTATUS status = MODULE_IFUNC(Chrono, Format, ParseDatePrefix)(
+                  &cursor, &gregorian, &parsed.local.date);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              if (*cursor != 'T') {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              ++cursor;
+              status = MODULE_IFUNC(Chrono, Format, ParseTimePrefix)(
+                  &cursor, &parsed.local.time);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              status = MODULE_IFUNC(Chrono, Format, ParseOffsetSuffix)(
+                  &cursor, &parsed.offset);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              if (*cursor != '\0') {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              parsed.daylightSavings = false;
+              *value = parsed;
+              return STATUS_CONST(SUCCESS);
+            }),
+
+            OPERATION(Instant,
+                      (const char *text, MODULE_TYPE(Chrono, Instant) *value), {
+              if (text == NULL || value == NULL) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              MODULE_TYPE(Chrono, CivilOffset) parsed = {0};
+              OPSTATUS status = MODULE_FUNC(
+                  Chrono, Format, FromISOCivilOffset)(text, &parsed);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              return MODULE_FUNC(Chrono, Timezone, ToUTC)(parsed, value);
+            }),
+
+            OPERATION(Span,
+                      (const char *text, MODULE_TYPE(Chrono, Span) *value), {
+              if (text == NULL || value == NULL) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              const char *cursor = text;
+              bool negative = false;
+              if (*cursor == '-' || *cursor == '+') {
+                negative = (*cursor == '-');
+                ++cursor;
+              }
+              if (*cursor != 'P') {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              ++cursor;
+              bool hasComponent = false;
+              uint64_t totalNs = 0U;
+              const uint64_t nsPerSec = (uint64_t)MODULE_CONST(
+                  Chrono, Math, NANOSECONDS_PER_SECOND);
+              const uint64_t secPerDay =
+                  (uint64_t)MODULE_CONST(Chrono, Math, SECONDS_PER_DAY);
+              const uint64_t secPerHour =
+                  (uint64_t)MODULE_CONST(Chrono, Math, SECONDS_PER_HOUR);
+              const uint64_t secPerMin =
+                  (uint64_t)MODULE_CONST(Chrono, Math, SECONDS_PER_MINUTE);
+              if (*cursor >= '0' && *cursor <= '9') {
+                uint64_t days = 0U;
+                if (!MODULE_IFUNC(Chrono, Format, ParseUnsigned64)(&cursor,
+                                                                   &days) ||
+                    *cursor != 'D') {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                ++cursor;
+                if (days > UINT64_MAX / (secPerDay * nsPerSec)) {
+                  return STATUS_CONST(ARITHMETIC_OVERFLOW);
+                }
+                totalNs += days * secPerDay * nsPerSec;
+                hasComponent = true;
+              }
+              if (*cursor == 'T') {
+                ++cursor;
+                bool hasTimeComp = false;
+                while (*cursor >= '0' && *cursor <= '9') {
+                  uint64_t part = 0U;
+                  if (!MODULE_IFUNC(Chrono, Format, ParseUnsigned64)(&cursor,
+                                                                     &part)) {
+                    return STATUS_CONST(OUT_OF_RANGE);
+                  }
+                  if (*cursor == 'H') {
+                    ++cursor;
+                    uint64_t mult = secPerHour * nsPerSec;
+                    if (part > (UINT64_MAX - totalNs) / mult) {
+                      return STATUS_CONST(ARITHMETIC_OVERFLOW);
+                    }
+                    totalNs += part * mult;
+                    hasTimeComp = true;
+                  } else if (*cursor == 'M') {
+                    ++cursor;
+                    uint64_t mult = secPerMin * nsPerSec;
+                    if (part > (UINT64_MAX - totalNs) / mult) {
+                      return STATUS_CONST(ARITHMETIC_OVERFLOW);
+                    }
+                    totalNs += part * mult;
+                    hasTimeComp = true;
+                  } else if (*cursor == 'S' || *cursor == '.') {
+                    if (part > (UINT64_MAX - totalNs) / nsPerSec) {
+                      return STATUS_CONST(ARITHMETIC_OVERFLOW);
+                    }
+                    totalNs += part * nsPerSec;
+                    if (*cursor == '.') {
+                      ++cursor;
+                      if (*cursor < '0' || *cursor > '9') {
+                        return STATUS_CONST(OUT_OF_RANGE);
+                      }
+                      uint64_t fracNs = 0U;
+                      size_t fracDigits = 0U;
+                      const uint64_t base = (uint64_t)CNS(
+                          Chrono, Format, Internal, DECIMAL_BASE);
+                      const size_t maxDigits =
+                          (size_t)CNS(Chrono, Format, Internal, NANOS_DIGITS);
+                      while (*cursor >= '0' && *cursor <= '9') {
+                        if (fracDigits >= maxDigits) {
+                          return STATUS_CONST(OUT_OF_RANGE);
+                        }
+                        fracNs = fracNs * base + (uint64_t)(*cursor - '0');
+                        ++fracDigits;
+                        ++cursor;
+                      }
+                      for (size_t i = fracDigits; i < maxDigits; ++i) {
+                        fracNs *= base;
+                      }
+                      if (fracNs > UINT64_MAX - totalNs) {
+                        return STATUS_CONST(ARITHMETIC_OVERFLOW);
+                      }
+                      totalNs += fracNs;
+                    }
+                    if (*cursor != 'S') {
+                      return STATUS_CONST(OUT_OF_RANGE);
+                    }
+                    ++cursor;
+                    hasTimeComp = true;
+                    break;
+                  } else {
+                    return STATUS_CONST(OUT_OF_RANGE);
+                  }
+                }
+                if (!hasTimeComp) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                hasComponent = true;
+              }
+              if (!hasComponent || *cursor != '\0') {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              if (negative) {
+                if (totalNs > (uint64_t)INT64_MAX + 1ULL) {
+                  return STATUS_CONST(ARITHMETIC_OVERFLOW);
+                }
+                value->nanoseconds = totalNs == (uint64_t)INT64_MAX + 1ULL
+                                         ? INT64_MIN
+                                         : -(int64_t)totalNs;
+              } else {
+                if (totalNs > (uint64_t)INT64_MAX) {
+                  return STATUS_CONST(ARITHMETIC_OVERFLOW);
+                }
+                value->nanoseconds = (int64_t)totalNs;
+              }
+              return STATUS_CONST(SUCCESS);
+            })
+        ),
+
+        OPERATION(ToRFC3339,
+                  (MODULE_TYPE(Chrono, CivilOffset) value, char *buffer,
+                   size_t capacity), {
+          if (buffer == NULL || capacity == 0U) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          MODULE_TYPE(Chrono, CalendarPolicy) gregorian =
+              MODULE_FUNC(Chrono, Calendar, GregorianPolicy)();
+          if (!MODULE_FUNC(Chrono, Civil, IsValid)(&gregorian, value.local) ||
+              !MODULE_FUNC(Chrono, Timezone, Offset, IsValid)(value.offset) ||
+              value.local.date.year < 0 ||
+              value.local.date.year >
+                  CNS(Chrono, Format, Internal, ISO_FOUR_DIGIT_YEAR_MAX)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          size_t offset = 0U;
+          if (!MODULE_IFUNC(Chrono, Format, WriteDatePart)(
+                  buffer, capacity, &offset, value.local.date) ||
+              !MODULE_IFUNC(Chrono, Format, WriteChar)(buffer, capacity,
+                                                       &offset, 'T') ||
+              !MODULE_IFUNC(Chrono, Format, WriteHmsPart)(
+                  buffer, capacity, &offset, value.local.time)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          if (value.local.time.millisecond != 0U) {
+            const size_t three =
+                (size_t)CNS(Chrono, Format, Internal, MILLIS_DIGITS);
+            if (!MODULE_IFUNC(Chrono, Format, WriteChar)(buffer, capacity,
+                                                         &offset, '.') ||
+                !MODULE_IFUNC(Chrono, Format, WriteFixedDigits)(
+                    buffer, capacity, &offset, value.local.time.millisecond,
+                    three)) {
+              return STATUS_CONST(OUT_OF_RANGE);
+            }
+          }
+          if (!MODULE_IFUNC(Chrono, Format, WriteOffsetPart)(
+                  buffer, capacity, &offset, value.offset, true, true) ||
+              !MODULE_IFUNC(Chrono, Format, FinalizeBuffer)(buffer, capacity,
+                                                            offset)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(FromRFC3339,
+                  (const char *text,
+                   MODULE_TYPE(Chrono, CivilOffset) *outValue), {
+          if (text == NULL || outValue == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          const char *cursor = text;
+          int year = 0;
+          int month = 0;
+          int day = 0;
+          const size_t four =
+              (size_t)CNS(Chrono, Format, Internal, YEAR_MIN_DIGITS);
+          const size_t two = (size_t)CNS(Chrono, Format, Internal, TWO_DIGITS);
+          if (!MODULE_IFUNC(Chrono, Format, ParseFixedDigits)(&cursor, four,
+                                                              &year) ||
+              *cursor != '-') {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          ++cursor;
+          if (!MODULE_IFUNC(Chrono, Format, ParseFixedDigits)(&cursor, two,
+                                                              &month) ||
+              *cursor != '-') {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          ++cursor;
+          if (!MODULE_IFUNC(Chrono, Format, ParseFixedDigits)(&cursor, two,
+                                                              &day)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          MODULE_TYPE(Chrono, CalendarPolicy) gregorian =
+              MODULE_FUNC(Chrono, Calendar, GregorianPolicy)();
+          MODULE_TYPE(Chrono, Date) parsedDate = {
+              (int32_t)year, (uint8_t)month, (uint8_t)day};
+          if (!MODULE_FUNC(Chrono, Calendar, Date, IsValid)(&gregorian,
+                                                            parsedDate)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          if (*cursor != 'T' && *cursor != 't' && *cursor != ' ') {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          ++cursor;
+          int hour = 0;
+          int minute = 0;
+          int second = 0;
+          int millisecond = 0;
+          if (!MODULE_IFUNC(Chrono, Format, ParseFixedDigits)(&cursor, two,
+                                                              &hour) ||
+              *cursor != ':') {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          ++cursor;
+          if (!MODULE_IFUNC(Chrono, Format, ParseFixedDigits)(&cursor, two,
+                                                              &minute) ||
+              *cursor != ':') {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          ++cursor;
+          if (!MODULE_IFUNC(Chrono, Format, ParseFixedDigits)(&cursor, two,
+                                                              &second)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          if (*cursor == '.') {
+            ++cursor;
+            if (*cursor < '0' || *cursor > '9') {
+              return STATUS_CONST(OUT_OF_RANGE);
+            }
+            size_t digits = 0U;
+            const size_t millisWidth =
+                (size_t)CNS(Chrono, Format, Internal, MILLIS_DIGITS);
+            const size_t maxFrac =
+                (size_t)CNS(Chrono, Format, Internal, NANOS_DIGITS);
+            const int base = CNS(Chrono, Format, Internal, DECIMAL_BASE);
+            while (*cursor >= '0' && *cursor <= '9') {
+              if (digits >= maxFrac) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              if (digits < millisWidth) {
+                millisecond = millisecond * base + (*cursor - '0');
+              }
+              ++digits;
+              ++cursor;
+            }
+            for (size_t i = digits; i < millisWidth; ++i) {
+              millisecond *= base;
+            }
+          }
+          if (hour >= MODULE_CONST(Chrono, Math, HOURS_PER_DAY) ||
+              minute >= MODULE_CONST(Chrono, Math, MINUTES_PER_HOUR) ||
+              second >= MODULE_CONST(Chrono, Math, SECONDS_PER_MINUTE)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          MODULE_TYPE(Chrono, TimeOfDay) parsedTime = {
+              .millisecond = (uint16_t)millisecond,
+              .second = (uint8_t)second,
+              .minute = (uint8_t)minute,
+              .hour = (uint8_t)hour};
+          MODULE_TYPE(Chrono, UtcOffset) parsedOffset = {0};
+          OPSTATUS status = MODULE_IFUNC(Chrono, Format, ParseOffsetSuffix)(
+              &cursor, &parsedOffset);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          if (*cursor != '\0') {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          *outValue = (MODULE_TYPE(Chrono, CivilOffset)){
+              .local = {.date = parsedDate, .time = parsedTime},
+              .offset = parsedOffset,
+              .daylightSavings = false};
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(ToRFC2822,
+                  (MODULE_TYPE(Chrono, CivilOffset) value, char *buffer,
+                   size_t capacity), {
+          if (buffer == NULL || capacity == 0U) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          MODULE_TYPE(Chrono, CalendarPolicy) gregorian =
+              MODULE_FUNC(Chrono, Calendar, GregorianPolicy)();
+          if (!MODULE_FUNC(Chrono, Civil, IsValid)(&gregorian, value.local) ||
+              !MODULE_FUNC(Chrono, Timezone, Offset, IsValid)(value.offset) ||
+              value.local.date.year < 0 ||
+              value.local.date.year >
+                  CNS(Chrono, Format, Internal, ISO_FOUR_DIGIT_YEAR_MAX)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          MODULE_ENUM(Chrono, Calendar, Weekday) weekday = 0;
+          OPSTATUS status = MODULE_FUNC(Chrono, Calendar, Date, DayOfWeek)(
+              &gregorian, value.local.date, &weekday);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          size_t offset = 0U;
+          const size_t two = (size_t)CNS(Chrono, Format, Internal, TWO_DIGITS);
+          const size_t four =
+              (size_t)CNS(Chrono, Format, Internal, YEAR_MIN_DIGITS);
+          const char *wdStr = MODULE_IFUNC(
+              Chrono, Format,
+              WeekdayShortNames)[weekday -
+                                 MODULE_CONST(Chrono, Calendar, MONDAY)];
+          const char *moStr = MODULE_IFUNC(
+              Chrono, Format,
+              MonthShortNames)[value.local.date.month -
+                               MODULE_CONST(Chrono, Calendar, JANUARY)];
+          if (!MODULE_IFUNC(Chrono, Format, WriteCString)(buffer, capacity,
+                                                          &offset, wdStr) ||
+              !MODULE_IFUNC(Chrono, Format, WriteCString)(buffer, capacity,
+                                                          &offset, ", ") ||
+              !MODULE_IFUNC(Chrono, Format, WriteFixedDigits)(
+                  buffer, capacity, &offset, value.local.date.day, two) ||
+              !MODULE_IFUNC(Chrono, Format, WriteChar)(buffer, capacity,
+                                                       &offset, ' ') ||
+              !MODULE_IFUNC(Chrono, Format, WriteCString)(buffer, capacity,
+                                                          &offset, moStr) ||
+              !MODULE_IFUNC(Chrono, Format, WriteChar)(buffer, capacity,
+                                                       &offset, ' ') ||
+              !MODULE_IFUNC(Chrono, Format, WriteFixedDigits)(
+                  buffer, capacity, &offset, (uint64_t)value.local.date.year,
+                  four) ||
+              !MODULE_IFUNC(Chrono, Format, WriteChar)(buffer, capacity,
+                                                       &offset, ' ') ||
+              !MODULE_IFUNC(Chrono, Format, WriteHmsPart)(
+                  buffer, capacity, &offset, value.local.time) ||
+              !MODULE_IFUNC(Chrono, Format, WriteChar)(buffer, capacity,
+                                                       &offset, ' ') ||
+              !MODULE_IFUNC(Chrono, Format, WriteOffsetPart)(
+                  buffer, capacity, &offset, value.offset, false, false) ||
+              !MODULE_IFUNC(Chrono, Format, FinalizeBuffer)(buffer, capacity,
+                                                            offset)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(Pattern,
+                  (char *buffer, size_t capacity, size_t *outWritten,
+                   const char *pattern,
+                   MODULE_TYPE(Chrono, CivilOffset) value), {
+          if (pattern == NULL || (buffer == NULL && capacity > 0U)) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          MODULE_TYPE(Chrono, CalendarPolicy) gregorian =
+              MODULE_FUNC(Chrono, Calendar, GregorianPolicy)();
+          if (!MODULE_FUNC(Chrono, Civil, IsValid)(&gregorian, value.local) ||
+              !MODULE_FUNC(Chrono, Timezone, Offset, IsValid)(value.offset)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          MODULE_ENUM(Chrono, Calendar, Weekday) weekday = 0;
+          uint16_t dayOfYear = 0U;
+          OPSTATUS status = MODULE_FUNC(Chrono, Calendar, Date, DayOfWeek)(
+              &gregorian, value.local.date, &weekday);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          status = MODULE_FUNC(Chrono, Calendar, DayOfYear)(
+              &gregorian, value.local.date, &dayOfYear);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          const size_t two = (size_t)CNS(Chrono, Format, Internal, TWO_DIGITS);
+          const size_t three =
+              (size_t)CNS(Chrono, Format, Internal, MILLIS_DIGITS);
+          MODULE_ITYPE(Chrono, FormatSink) sink = {buffer, capacity, 0U};
+          const char *p = pattern;
+          while (*p != '\0') {
+            if (*p != '%') {
+              MODULE_IFUNC(Chrono, Format, SinkPutChar)(&sink, *p++);
+              continue;
+            }
+            ++p;
+            if (*p == '\0') {
+              MODULE_IFUNC(Chrono, Format, SinkPutChar)(&sink, '%');
+              break;
+            }
+            if (*p == ':' && p[1] == 'z') {
+              p += 2;
+              MODULE_IFUNC(Chrono, Format, SinkPutOffset)(
+                  &sink, value.offset, true, false);
+              continue;
+            }
+            char spec = *p++;
+            switch (spec) {
+            case '%':
+              MODULE_IFUNC(Chrono, Format, SinkPutChar)(&sink, '%');
+              break;
+            case 'Y':
+              MODULE_IFUNC(Chrono, Format, SinkPutYear)(&sink,
+                                                        value.local.date.year);
+              break;
+            case 'y': {
+              int32_t y = value.local.date.year;
+              uint64_t mag = y < 0 ? (uint64_t)(-(int64_t)y) : (uint64_t)y;
+              MODULE_IFUNC(Chrono, Format, SinkPutFixedDigits)(
+                  &sink,
+                  mag % (uint64_t)CNS(Chrono, Format, Internal,
+                                      TWO_DIGIT_YEAR_MOD),
+                  two);
+              break;
+            }
+            case 'm':
+              MODULE_IFUNC(Chrono, Format, SinkPutFixedDigits)(
+                  &sink, value.local.date.month, two);
+              break;
+            case 'd':
+              MODULE_IFUNC(Chrono, Format, SinkPutFixedDigits)(
+                  &sink, value.local.date.day, two);
+              break;
+            case 'j':
+              MODULE_IFUNC(Chrono, Format, SinkPutFixedDigits)(
+                  &sink, dayOfYear, three);
+              break;
+            case 'u':
+              MODULE_IFUNC(Chrono, Format, SinkPutFixedDigits)(
+                  &sink, (uint64_t)weekday, 1U);
+              break;
+            case 'a':
+              MODULE_IFUNC(Chrono, Format, SinkPutCString)(
+                  &sink,
+                  MODULE_IFUNC(Chrono, Format,
+                               WeekdayShortNames)[weekday -
+                                                  MODULE_CONST(Chrono, Calendar,
+                                                               MONDAY)]);
+              break;
+            case 'b':
+              MODULE_IFUNC(Chrono, Format, SinkPutCString)(
+                  &sink,
+                  MODULE_IFUNC(Chrono, Format,
+                               MonthShortNames)[value.local.date.month -
+                                                MODULE_CONST(Chrono, Calendar,
+                                                             JANUARY)]);
+              break;
+            case 'H':
+              MODULE_IFUNC(Chrono, Format, SinkPutFixedDigits)(
+                  &sink, value.local.time.hour, two);
+              break;
+            case 'I': {
+              uint8_t h12 = (uint8_t)(value.local.time.hour %
+                                      CNS(Chrono, Format, Internal,
+                                          TWELVE_HOUR_BASE));
+              if (h12 == 0U) {
+                h12 = (uint8_t)CNS(Chrono, Format, Internal, TWELVE_HOUR_BASE);
+              }
+              MODULE_IFUNC(Chrono, Format, SinkPutFixedDigits)(&sink, h12, two);
+              break;
+            }
+            case 'p':
+              MODULE_IFUNC(Chrono, Format, SinkPutCString)(
+                  &sink,
+                  value.local.time.hour <
+                          CNS(Chrono, Format, Internal, TWELVE_HOUR_BASE)
+                      ? "AM"
+                      : "PM");
+              break;
+            case 'M':
+              MODULE_IFUNC(Chrono, Format, SinkPutFixedDigits)(
+                  &sink, value.local.time.minute, two);
+              break;
+            case 'S':
+              MODULE_IFUNC(Chrono, Format, SinkPutFixedDigits)(
+                  &sink, value.local.time.second, two);
+              break;
+            case 'f':
+              MODULE_IFUNC(Chrono, Format, SinkPutFixedDigits)(
+                  &sink, value.local.time.millisecond, three);
+              break;
+            case 'z':
+              MODULE_IFUNC(Chrono, Format, SinkPutOffset)(
+                  &sink, value.offset, false, false);
+              break;
+            case 'Z':
+              MODULE_IFUNC(Chrono, Format, SinkPutOffset)(
+                  &sink, value.offset, true, true);
+              break;
+            default:
+              MODULE_IFUNC(Chrono, Format, SinkPutChar)(&sink, '%');
+              MODULE_IFUNC(Chrono, Format, SinkPutChar)(&sink, spec);
+              break;
+            }
+          }
+          MODULE_IFUNC(Chrono, Format, SinkFinish)(&sink);
+          if (outWritten != NULL) {
+            *outWritten = sink.written;
+          }
+          if (capacity > 0U && sink.written >= capacity) {
+            return STATUS_CONST(INSUFFICIENT_SPACE);
+          }
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(ToHumanSpan,
+                  (MODULE_TYPE(Chrono, Span) value, char *buffer,
+                   size_t capacity), {
+          if (buffer == NULL || capacity == 0U) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          size_t offset = 0U;
+          if (value.nanoseconds == 0) {
+            if (!MODULE_IFUNC(Chrono, Format, WriteCString)(
+                    buffer, capacity, &offset, "0ns") ||
+                !MODULE_IFUNC(Chrono, Format, FinalizeBuffer)(
+                    buffer, capacity, offset)) {
+              return STATUS_CONST(OUT_OF_RANGE);
+            }
+            return STATUS_CONST(SUCCESS);
+          }
+          if (value.nanoseconds < 0 &&
+              !MODULE_IFUNC(Chrono, Format, WriteChar)(buffer, capacity,
+                                                       &offset, '-')) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          uint64_t totalNs =
+              value.nanoseconds < 0
+                  ? ((uint64_t)(-(value.nanoseconds + 1)) + 1ULL)
+                  : (uint64_t)value.nanoseconds;
+          const uint64_t nsPerUs = (uint64_t)MODULE_CONST(
+              Chrono, Math, NANOSECONDS_PER_MICROSECOND);
+          const uint64_t nsPerMs = (uint64_t)MODULE_CONST(
+              Chrono, Math, NANOSECONDS_PER_MILLISECOND);
+          const uint64_t nsPerSec =
+              (uint64_t)MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND);
+          const uint64_t secPerMin =
+              (uint64_t)MODULE_CONST(Chrono, Math, SECONDS_PER_MINUTE);
+          const uint64_t secPerHour =
+              (uint64_t)MODULE_CONST(Chrono, Math, SECONDS_PER_HOUR);
+          const uint64_t secPerDay =
+              (uint64_t)MODULE_CONST(Chrono, Math, SECONDS_PER_DAY);
+
+          uint64_t totalSec = totalNs / nsPerSec;
+          uint64_t remNs = totalNs % nsPerSec;
+          uint64_t days = totalSec / secPerDay;
+          uint64_t remSec = totalSec % secPerDay;
+          uint64_t hours = remSec / secPerHour;
+          remSec %= secPerHour;
+          uint64_t minutes = remSec / secPerMin;
+          uint64_t seconds = remSec % secPerMin;
+          uint64_t millis = remNs / nsPerMs;
+          uint64_t micros = (remNs % nsPerMs) / nsPerUs;
+          uint64_t nanos = remNs % nsPerUs;
+
+          bool hasPart = false;
+          if (totalSec > 0U) {
+            if ((days > 0U &&
+                 !MODULE_IFUNC(Chrono, Format, AppendHumanPart)(
+                     buffer, capacity, &offset, &hasPart, days, "d")) ||
+                (hours > 0U &&
+                 !MODULE_IFUNC(Chrono, Format, AppendHumanPart)(
+                     buffer, capacity, &offset, &hasPart, hours, "h")) ||
+                (minutes > 0U &&
+                 !MODULE_IFUNC(Chrono, Format, AppendHumanPart)(
+                     buffer, capacity, &offset, &hasPart, minutes, "m")) ||
+                (seconds > 0U &&
+                 !MODULE_IFUNC(Chrono, Format, AppendHumanPart)(
+                     buffer, capacity, &offset, &hasPart, seconds, "s")) ||
+                (millis > 0U &&
+                 !MODULE_IFUNC(Chrono, Format, AppendHumanPart)(
+                     buffer, capacity, &offset, &hasPart, millis, "ms"))) {
+              return STATUS_CONST(OUT_OF_RANGE);
+            }
+          } else if (millis > 0U) {
+            if (!MODULE_IFUNC(Chrono, Format, AppendHumanPart)(
+                    buffer, capacity, &offset, &hasPart, millis, "ms") ||
+                (micros > 0U &&
+                 !MODULE_IFUNC(Chrono, Format, AppendHumanPart)(
+                     buffer, capacity, &offset, &hasPart, micros, "us"))) {
+              return STATUS_CONST(OUT_OF_RANGE);
+            }
+          } else if (micros > 0U) {
+            if (!MODULE_IFUNC(Chrono, Format, AppendHumanPart)(
+                    buffer, capacity, &offset, &hasPart, micros, "us") ||
+                (nanos > 0U &&
+                 !MODULE_IFUNC(Chrono, Format, AppendHumanPart)(
+                     buffer, capacity, &offset, &hasPart, nanos, "ns"))) {
+              return STATUS_CONST(OUT_OF_RANGE);
+            }
+          } else {
+            if (!MODULE_IFUNC(Chrono, Format, AppendHumanPart)(
+                    buffer, capacity, &offset, &hasPart, nanos, "ns")) {
+              return STATUS_CONST(OUT_OF_RANGE);
+            }
+          }
+          if (!MODULE_IFUNC(Chrono, Format, FinalizeBuffer)(buffer, capacity,
+                                                            offset)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          return STATUS_CONST(SUCCESS);
+        })
+    )
+);
+
+/* EOF */

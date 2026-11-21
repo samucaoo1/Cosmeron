@@ -1,0 +1,797 @@
+#pragma once
+
+#include "LeapSeconds.inc"
+#include <limits.h>
+
+#if OS_WINDOWS
+#include <windows.h>
+#elif OS_MAC
+#include <errno.h>
+#include <mach/mach_time.h>
+#include <time.h>
+#else
+#include <errno.h>
+#include <time.h>
+#endif
+
+/* ========================================================================== */
+/* 1. Internal Constants, Leap-Second Table & Platform Clock Backends         */
+/* ========================================================================== */
+
+#define CHRONO_CLOCK_INTERNAL_COL_NAME(NAME, VALUE) NAME
+#define CHRONO_CLOCK_INTERNAL_COL_VALUE(NAME, VALUE) VALUE
+#define CHRONO_CLOCK_INTERNAL_GET(FIELD, ROW)                                  \
+  PP_OP_CAT2(CHRONO_CLOCK_INTERNAL_COL_, FIELD) ROW
+
+#define CHRONO_CLOCK_INTERNAL_TABLE(X)                                         \
+  X((TAI_EPOCH_UNIX_SECONDS, 63072000))                                        \
+  X((TAI_INITIAL_OFFSET_SECONDS, 10))                                          \
+  X((FILETIME_EPOCH_DAYS, 134774))                                             \
+  X((FILETIME_TICKS_PER_SECOND, 10000000))                                     \
+  X((NANOSECONDS_PER_FILETIME_TICK, 100))
+
+#define CHRONO_CLOCK_LEAP_COL_UNIX(UNIX_SEC, TAI_MINUS_UTC) UNIX_SEC
+#define CHRONO_CLOCK_LEAP_COL_OFFSET(UNIX_SEC, TAI_MINUS_UTC) TAI_MINUS_UTC
+#define CHRONO_CLOCK_LEAP_GET(FIELD, ROW)                                      \
+  PP_OP_CAT2(CHRONO_CLOCK_LEAP_COL_, FIELD) ROW
+
+#define COSMERON_MACRO_INTERNAL_CHRONO_LEAP_ENTRY(ROW)                         \
+  {CHRONO_CLOCK_LEAP_GET(UNIX, ROW), CHRONO_CLOCK_LEAP_GET(OFFSET, ROW)},
+
+MODULE(DOMAIN(Modules), Chrono,
+    ISTRUCT(LeapSecondEntry,
+        FIELDS(
+            int64_t unixSeconds;
+            int32_t taiMinusUtc;
+        )
+    ),
+
+    INTERNAL_EX(Clock,
+        ENUM(Const, CHRONO_CLOCK_INTERNAL_TABLE),
+
+        OPERATION(MeasureAndAdvance,
+                  (MODULE_TYPE(Chrono, ClockPoint) *checkpoint,
+                   MODULE_TYPE(Chrono, Span) *outElapsed), {
+          if (outElapsed == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          MODULE_TYPE(Chrono, ClockPoint) now;
+          OPSTATUS status = MODULE_FUNC(Chrono, Clock, Now)(&now);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          status = MODULE_FUNC(Chrono, Clock, SpanBetween)(*checkpoint, now,
+                                                           outElapsed);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          *checkpoint = now;
+          return STATUS_CONST(SUCCESS);
+        })
+    )
+);
+
+static const MODULE_ITYPE(Chrono, LeapSecondEntry)
+    MODULE_IFUNC(Chrono, Clock, LeapSeconds)[] = {
+        CHRONO_CLOCK_LEAP_SECOND_TABLE(
+            COSMERON_MACRO_INTERNAL_CHRONO_LEAP_ENTRY)
+};
+
+#undef COSMERON_MACRO_INTERNAL_CHRONO_LEAP_ENTRY
+
+#if OS_WINDOWS
+MODULE(DOMAIN(Modules), Chrono,
+    INTERNAL_EX(Clock,
+        OPERATION(ReadMonotonic, (uint64_t *outNanoseconds), {
+          LARGE_INTEGER counter;
+          LARGE_INTEGER frequency;
+          if (!QueryPerformanceCounter(&counter) ||
+              !QueryPerformanceFrequency(&frequency) ||
+              frequency.QuadPart <= 0) {
+            return STATUS_CONST(GENERIC_ERROR);
+          }
+          const uint64_t nsPerSec = (uint64_t)MODULE_CONST(
+              Chrono, Math, NANOSECONDS_PER_SECOND);
+          uint64_t ticks = (uint64_t)counter.QuadPart;
+          uint64_t hz = (uint64_t)frequency.QuadPart;
+          *outNanoseconds =
+              (ticks / hz) * nsPerSec + ((ticks % hz) * nsPerSec) / hz;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(ReadResolution, (int64_t *outNanoseconds), {
+          LARGE_INTEGER frequency;
+          if (!QueryPerformanceFrequency(&frequency) ||
+              frequency.QuadPart <= 0) {
+            return STATUS_CONST(GENERIC_ERROR);
+          }
+          const int64_t nsPerSec =
+              MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND);
+          int64_t step = nsPerSec / (int64_t)frequency.QuadPart;
+          *outNanoseconds = step > 0 ? step : 1;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(SleepFor, (int64_t nanoseconds), {
+          const int64_t nsPerMs =
+              MODULE_CONST(Chrono, Math, NANOSECONDS_PER_MILLISECOND);
+          int64_t ms = nanoseconds / nsPerMs;
+          if (ms == 0 && nanoseconds > 0) {
+            ms = 1;
+          }
+          if (ms > (int64_t)UINT32_MAX) {
+            ms = (int64_t)UINT32_MAX;
+          }
+          Sleep((DWORD)ms);
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(ReadWallClock,
+                  (MODULE_TYPE(Chrono, Instant) *outResult), {
+          FILETIME ft;
+          GetSystemTimeAsFileTime(&ft);
+          uint64_t ticks =
+              ((uint64_t)ft.dwHighDateTime << 32U) | (uint64_t)ft.dwLowDateTime;
+          const uint64_t ticksPerSec = (uint64_t)CNS(
+              Chrono, Clock, Internal, FILETIME_TICKS_PER_SECOND);
+          const int64_t epochDelta =
+              (int64_t)CNS(Chrono, Clock, Internal, FILETIME_EPOCH_DAYS) *
+              (int64_t)MODULE_CONST(Chrono, Math, SECONDS_PER_DAY);
+          const uint64_t nsPerTick = (uint64_t)CNS(
+              Chrono, Clock, Internal, NANOSECONDS_PER_FILETIME_TICK);
+          outResult->seconds = (int64_t)(ticks / ticksPerSec) - epochDelta;
+          outResult->nanoseconds =
+              (uint32_t)((ticks % ticksPerSec) * nsPerTick);
+          return STATUS_CONST(SUCCESS);
+        })
+    )
+);
+#elif OS_MAC
+MODULE(DOMAIN(Modules), Chrono,
+    INTERNAL_EX(Clock,
+        OPERATION(ReadMonotonic, (uint64_t *outNanoseconds), {
+          mach_timebase_info_data_t timebase;
+          uint64_t ticks = mach_absolute_time();
+          if (mach_timebase_info(&timebase) != KERN_SUCCESS ||
+              timebase.denom == 0) {
+            return STATUS_CONST(GENERIC_ERROR);
+          }
+          *outNanoseconds =
+              (ticks / timebase.denom) * timebase.numer +
+              ((ticks % timebase.denom) * timebase.numer) / timebase.denom;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(ReadResolution, (int64_t *outNanoseconds), {
+          mach_timebase_info_data_t timebase;
+          if (mach_timebase_info(&timebase) != KERN_SUCCESS ||
+              timebase.denom == 0) {
+            return STATUS_CONST(GENERIC_ERROR);
+          }
+          int64_t step = (int64_t)(timebase.numer / timebase.denom);
+          *outNanoseconds = step > 0 ? step : 1;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(SleepFor, (int64_t nanoseconds), {
+          const int64_t nsPerSec =
+              MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND);
+          struct timespec req = {(time_t)(nanoseconds / nsPerSec),
+                                 (long)(nanoseconds % nsPerSec)};
+          struct timespec rem = {0, 0};
+          while (nanosleep(&req, &rem) != 0) {
+            if (errno != EINTR) {
+              return STATUS_CONST(GENERIC_ERROR);
+            }
+            req = rem;
+          }
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(ReadWallClock,
+                  (MODULE_TYPE(Chrono, Instant) *outResult), {
+          struct timespec value;
+          if (clock_gettime(CLOCK_REALTIME, &value) != 0) {
+            return STATUS_CONST(GENERIC_ERROR);
+          }
+          const int64_t nsPerSec =
+              MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND);
+          if (value.tv_nsec < 0 || value.tv_nsec >= nsPerSec) {
+            return STATUS_CONST(GENERIC_ERROR);
+          }
+          outResult->seconds = (int64_t)value.tv_sec;
+          outResult->nanoseconds = (uint32_t)value.tv_nsec;
+          return STATUS_CONST(SUCCESS);
+        })
+    )
+);
+#else
+MODULE(DOMAIN(Modules), Chrono,
+    INTERNAL_EX(Clock,
+        OPERATION(ReadMonotonic, (uint64_t *outNanoseconds), {
+          struct timespec value;
+          if (clock_gettime(CLOCK_MONOTONIC, &value) != 0) {
+            return STATUS_CONST(GENERIC_ERROR);
+          }
+          const uint64_t nsPerSec =
+              (uint64_t)MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND);
+          *outNanoseconds =
+              (uint64_t)value.tv_sec * nsPerSec + (uint64_t)value.tv_nsec;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(ReadResolution, (int64_t *outNanoseconds), {
+          struct timespec res;
+          if (clock_getres(CLOCK_MONOTONIC, &res) != 0) {
+            return STATUS_CONST(GENERIC_ERROR);
+          }
+          const int64_t nsPerSec =
+              MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND);
+          if (res.tv_sec > (INT64_MAX - res.tv_nsec) / nsPerSec) {
+            return STATUS_CONST(ARITHMETIC_OVERFLOW);
+          }
+          int64_t step = (int64_t)res.tv_sec * nsPerSec + (int64_t)res.tv_nsec;
+          *outNanoseconds = step > 0 ? step : 1;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(SleepFor, (int64_t nanoseconds), {
+          const int64_t nsPerSec =
+              MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND);
+          struct timespec req = {(time_t)(nanoseconds / nsPerSec),
+                                 (long)(nanoseconds % nsPerSec)};
+          struct timespec rem = {0, 0};
+          while (nanosleep(&req, &rem) != 0) {
+            if (errno != EINTR) {
+              return STATUS_CONST(GENERIC_ERROR);
+            }
+            req = rem;
+          }
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(ReadWallClock,
+                  (MODULE_TYPE(Chrono, Instant) *outResult), {
+          struct timespec value;
+          if (clock_gettime(CLOCK_REALTIME, &value) != 0) {
+            return STATUS_CONST(GENERIC_ERROR);
+          }
+          const int64_t nsPerSec =
+              MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND);
+          if (value.tv_nsec < 0 || value.tv_nsec >= nsPerSec) {
+            return STATUS_CONST(GENERIC_ERROR);
+          }
+          outResult->seconds = (int64_t)value.tv_sec;
+          outResult->nanoseconds = (uint32_t)value.tv_nsec;
+          return STATUS_CONST(SUCCESS);
+        })
+    )
+);
+#endif
+
+/* ========================================================================== */
+/* 2. Package Implementation: Chrono_Clock                                    */
+/* ========================================================================== */
+
+MODULE_IMPLEMENT(DOMAIN(Modules), Chrono,
+    PACKAGE(Clock,
+        OPERATION(Now, (MODULE_TYPE(Chrono, ClockPoint) *outResult), {
+          if (outResult == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          return MODULE_IFUNC(Chrono, Clock, ReadMonotonic)(
+              &outResult->nanoseconds);
+        }),
+
+        OPERATION(SpanBetween,
+                  (MODULE_TYPE(Chrono, ClockPoint) start,
+                   MODULE_TYPE(Chrono, ClockPoint) end,
+                   MODULE_TYPE(Chrono, Span) *outResult), {
+          if (outResult == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          bool negative = end.nanoseconds < start.nanoseconds;
+          uint64_t difference = negative
+                                    ? (start.nanoseconds - end.nanoseconds)
+                                    : (end.nanoseconds - start.nanoseconds);
+          if (difference > (uint64_t)INT64_MAX) {
+            return STATUS_CONST(ARITHMETIC_OVERFLOW);
+          }
+          outResult->nanoseconds =
+              negative ? -(int64_t)difference : (int64_t)difference;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(Sleep, (MODULE_TYPE(Chrono, Span) span), {
+          if (span.nanoseconds < 0) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          if (span.nanoseconds == 0) {
+            return STATUS_CONST(SUCCESS);
+          }
+          return MODULE_IFUNC(Chrono, Clock, SleepFor)(span.nanoseconds);
+        }),
+
+        OPERATION(SleepUntil, (MODULE_TYPE(Chrono, ClockPoint) target), {
+          MODULE_TYPE(Chrono, ClockPoint) now = {0};
+          OPSTATUS status = MODULE_FUNC(Chrono, Clock, Now)(&now);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          if (target.nanoseconds <= now.nanoseconds) {
+            return STATUS_CONST(SUCCESS);
+          }
+          MODULE_TYPE(Chrono, Span) remaining = {0};
+          status = MODULE_FUNC(Chrono, Clock, SpanBetween)(now, target,
+                                                           &remaining);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          return MODULE_FUNC(Chrono, Clock, Sleep)(remaining);
+        }),
+
+        OPERATION(Resolution, (MODULE_TYPE(Chrono, Span) *outResult), {
+          if (outResult == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          return MODULE_IFUNC(Chrono, Clock, ReadResolution)(
+              &outResult->nanoseconds);
+        }),
+
+        SPACE(Instant,
+              OPERATION(Now, (MODULE_TYPE(Chrono, Instant) *outResult), {
+                if (outResult == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                return MODULE_IFUNC(Chrono, Clock, ReadWallClock)(outResult);
+              }),
+
+              PREDICATE(IsValid, (MODULE_TYPE(Chrono, Instant) instant), {
+                return instant.nanoseconds <
+                       (uint32_t)MODULE_CONST(Chrono, Math,
+                                              NANOSECONDS_PER_SECOND);
+              }),
+
+              COMPARISON(Compare,
+                         (MODULE_TYPE(Chrono, Instant) left,
+                          MODULE_TYPE(Chrono, Instant) right), {
+                if (left.seconds < right.seconds) {
+                  return COMPARISON_CONST(LOWER);
+                }
+                if (left.seconds > right.seconds) {
+                  return COMPARISON_CONST(HIGHER);
+                }
+                if (left.nanoseconds < right.nanoseconds) {
+                  return COMPARISON_CONST(LOWER);
+                }
+                if (left.nanoseconds > right.nanoseconds) {
+                  return COMPARISON_CONST(HIGHER);
+                }
+                return COMPARISON_CONST(EQUAL);
+              }),
+
+              OPERATION(AddSpan,
+                        (MODULE_TYPE(Chrono, Instant) instant,
+                         MODULE_TYPE(Chrono, Span) span,
+                         MODULE_TYPE(Chrono, Instant) *outResult), {
+                if (outResult == NULL ||
+                    !MODULE_FUNC(Chrono, Clock, Instant, IsValid)(instant)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                const int64_t nsPerSec =
+                    MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND);
+                int64_t whole = span.nanoseconds / nsPerSec;
+                int64_t remainder = span.nanoseconds % nsPerSec;
+                if ((whole > 0 && instant.seconds > INT64_MAX - whole) ||
+                    (whole < 0 && instant.seconds < INT64_MIN - whole)) {
+                  return STATUS_CONST(ARITHMETIC_OVERFLOW);
+                }
+                int64_t seconds = instant.seconds + whole;
+                int64_t nanos = (int64_t)instant.nanoseconds + remainder;
+                if (nanos >= nsPerSec) {
+                  if (seconds == INT64_MAX) {
+                    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+                  }
+                  ++seconds;
+                  nanos -= nsPerSec;
+                } else if (nanos < 0) {
+                  if (seconds == INT64_MIN) {
+                    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+                  }
+                  --seconds;
+                  nanos += nsPerSec;
+                }
+                *outResult =
+                    (MODULE_TYPE(Chrono, Instant)){seconds, (uint32_t)nanos};
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(SpanBetween,
+                        (MODULE_TYPE(Chrono, Instant) start,
+                         MODULE_TYPE(Chrono, Instant) end,
+                         MODULE_TYPE(Chrono, Span) *outResult), {
+                if (outResult == NULL ||
+                    !MODULE_FUNC(Chrono, Clock, Instant, IsValid)(start) ||
+                    !MODULE_FUNC(Chrono, Clock, Instant, IsValid)(end)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                const int64_t nsPerSec =
+                    MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND);
+                if ((start.seconds < 0 &&
+                     end.seconds > INT64_MAX + start.seconds) ||
+                    (start.seconds > 0 &&
+                     end.seconds < INT64_MIN + start.seconds)) {
+                  return STATUS_CONST(ARITHMETIC_OVERFLOW);
+                }
+                int64_t seconds = end.seconds - start.seconds;
+                int64_t nanos =
+                    (int64_t)end.nanoseconds - (int64_t)start.nanoseconds;
+                if (nanos < 0) {
+                  if (seconds == INT64_MIN) {
+                    return STATUS_CONST(ARITHMETIC_OVERFLOW);
+                  }
+                  --seconds;
+                  nanos += nsPerSec;
+                }
+                if (seconds > INT64_MAX / nsPerSec ||
+                    seconds < INT64_MIN / nsPerSec ||
+                    (seconds == INT64_MAX / nsPerSec &&
+                     nanos > INT64_MAX % nsPerSec)) {
+                  return STATUS_CONST(ARITHMETIC_OVERFLOW);
+                }
+                outResult->nanoseconds = seconds * nsPerSec + nanos;
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              FUNCTION(int64_t, ToUnixSeconds,
+                       (MODULE_TYPE(Chrono, Instant) instant), {
+                return instant.seconds;
+              }),
+
+              FUNCTION(MODULE_TYPE(Chrono, Instant), FromUnixSeconds,
+                       (int64_t seconds), {
+                return (MODULE_TYPE(Chrono, Instant)){seconds, 0U};
+              }),
+
+              OPERATION(ToUnixMillis,
+                        (MODULE_TYPE(Chrono, Instant) instant,
+                         int64_t *outMillis), {
+                if (outMillis == NULL ||
+                    !MODULE_FUNC(Chrono, Clock, Instant, IsValid)(instant)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                const int64_t msPerSec =
+                    MODULE_CONST(Chrono, Math, MILLISECONDS_PER_SECOND);
+                const int64_t nsPerMs =
+                    MODULE_CONST(Chrono, Math, NANOSECONDS_PER_MILLISECOND);
+                if (instant.seconds > INT64_MAX / msPerSec ||
+                    instant.seconds < INT64_MIN / msPerSec) {
+                  return STATUS_CONST(ARITHMETIC_OVERFLOW);
+                }
+                int64_t baseMs = instant.seconds * msPerSec;
+                int64_t fracMs = (int64_t)instant.nanoseconds / nsPerMs;
+                if (baseMs > INT64_MAX - fracMs) {
+                  return STATUS_CONST(ARITHMETIC_OVERFLOW);
+                }
+                *outMillis = baseMs + fracMs;
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(FromUnixMillis,
+                        (int64_t millis,
+                         MODULE_TYPE(Chrono, Instant) *outResult), {
+                if (outResult == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                const int64_t msPerSec =
+                    MODULE_CONST(Chrono, Math, MILLISECONDS_PER_SECOND);
+                const int64_t nsPerMs =
+                    MODULE_CONST(Chrono, Math, NANOSECONDS_PER_MILLISECOND);
+                int64_t sec = MODULE_IFUNC(Chrono, FloorDiv)(millis, msPerSec);
+                int64_t remMs = MODULE_IFUNC(Chrono, FloorMod)(millis, msPerSec);
+                *outResult = (MODULE_TYPE(Chrono, Instant)){
+                    sec, (uint32_t)(remMs * nsPerMs)};
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(TaiMinusUtcSeconds,
+                        (MODULE_TYPE(Chrono, Instant) utc,
+                         int32_t *outSeconds), {
+                if (outSeconds == NULL ||
+                    !MODULE_FUNC(Chrono, Clock, Instant, IsValid)(utc)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                const int64_t taiStart = (int64_t)CNS(
+                    Chrono, Clock, Internal, TAI_EPOCH_UNIX_SECONDS);
+                if (utc.seconds < taiStart) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                int32_t offset = (int32_t)CNS(
+                    Chrono, Clock, Internal, TAI_INITIAL_OFFSET_SECONDS);
+                const size_t count =
+                    sizeof(MODULE_IFUNC(Chrono, Clock, LeapSeconds)) /
+                    sizeof(MODULE_IFUNC(Chrono, Clock, LeapSeconds)[0]);
+                for (size_t i = 0U; i < count; ++i) {
+                  if (utc.seconds <
+                      MODULE_IFUNC(Chrono, Clock, LeapSeconds)[i]
+                          .unixSeconds) {
+                    break;
+                  }
+                  offset =
+                      MODULE_IFUNC(Chrono, Clock, LeapSeconds)[i].taiMinusUtc;
+                }
+                *outSeconds = offset;
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(ToTAI,
+                        (MODULE_TYPE(Chrono, Instant) utc,
+                         MODULE_TYPE(Chrono, Instant) *outTai), {
+                if (outTai == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                int32_t offset = 0;
+                OPSTATUS status = MODULE_FUNC(
+                    Chrono, Clock, Instant, TaiMinusUtcSeconds)(utc, &offset);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                if (utc.seconds > INT64_MAX - offset) {
+                  return STATUS_CONST(ARITHMETIC_OVERFLOW);
+                }
+                *outTai = (MODULE_TYPE(Chrono, Instant)){
+                    utc.seconds + offset, utc.nanoseconds};
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(FromTAI,
+                        (MODULE_TYPE(Chrono, Instant) tai,
+                         MODULE_TYPE(Chrono, Instant) *outUtc), {
+                if (outUtc == NULL ||
+                    !MODULE_FUNC(Chrono, Clock, Instant, IsValid)(tai)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                const int64_t taiStart =
+                    (int64_t)CNS(Chrono, Clock, Internal,
+                                 TAI_EPOCH_UNIX_SECONDS) +
+                    (int64_t)CNS(Chrono, Clock, Internal,
+                                 TAI_INITIAL_OFFSET_SECONDS);
+                if (tai.seconds < taiStart) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                int32_t offset = (int32_t)CNS(
+                    Chrono, Clock, Internal, TAI_INITIAL_OFFSET_SECONDS);
+                const size_t count =
+                    sizeof(MODULE_IFUNC(Chrono, Clock, LeapSeconds)) /
+                    sizeof(MODULE_IFUNC(Chrono, Clock, LeapSeconds)[0]);
+                for (size_t i = 0U; i < count; ++i) {
+                  const int64_t transitionTai =
+                      MODULE_IFUNC(Chrono, Clock, LeapSeconds)[i].unixSeconds +
+                      MODULE_IFUNC(Chrono, Clock, LeapSeconds)[i].taiMinusUtc;
+                  if (tai.seconds < transitionTai) {
+                    break;
+                  }
+                  offset =
+                      MODULE_IFUNC(Chrono, Clock, LeapSeconds)[i].taiMinusUtc;
+                }
+                *outUtc = (MODULE_TYPE(Chrono, Instant)){
+                    tai.seconds - offset, tai.nanoseconds};
+                return STATUS_CONST(SUCCESS);
+              })
+        ),
+
+        SPACE(Timer,
+              OPERATION(Start, (MODULE_TYPE(Chrono, Timer) *timer), {
+                if (timer == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                OPSTATUS status = MODULE_FUNC(Chrono, Clock, Now)(&timer->start);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                timer->accumulated = (MODULE_TYPE(Chrono, Span)){0};
+                timer->running = true;
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(Pause, (MODULE_TYPE(Chrono, Timer) *timer), {
+                if (timer == NULL || !timer->running) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                MODULE_TYPE(Chrono, ClockPoint) now = {0};
+                OPSTATUS status = MODULE_FUNC(Chrono, Clock, Now)(&now);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                MODULE_TYPE(Chrono, Span) segment = {0};
+                status = MODULE_FUNC(Chrono, Clock, SpanBetween)(
+                    timer->start, now, &segment);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                MODULE_TYPE(Chrono, Span) total = {0};
+                status = MODULE_FUNC(Chrono, Math, Add)(
+                    timer->accumulated, segment, &total);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                timer->accumulated = total;
+                timer->running = false;
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(Resume, (MODULE_TYPE(Chrono, Timer) *timer), {
+                if (timer == NULL || timer->running) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                OPSTATUS status = MODULE_FUNC(Chrono, Clock, Now)(&timer->start);
+                if (status == STATUS_CONST(SUCCESS)) {
+                  timer->running = true;
+                }
+                return status;
+              }),
+
+              PREDICATE(IsRunning, (const MODULE_TYPE(Chrono, Timer) *timer), {
+                return timer != NULL && timer->running;
+              }),
+
+              OPERATION(Elapsed,
+                        (const MODULE_TYPE(Chrono, Timer) *timer,
+                         MODULE_TYPE(Chrono, Span) *outElapsed), {
+                if (timer == NULL || outElapsed == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                if (!timer->running) {
+                  *outElapsed = timer->accumulated;
+                  return STATUS_CONST(SUCCESS);
+                }
+                MODULE_TYPE(Chrono, ClockPoint) now = {0};
+                OPSTATUS status = MODULE_FUNC(Chrono, Clock, Now)(&now);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                MODULE_TYPE(Chrono, Span) segment = {0};
+                status = MODULE_FUNC(Chrono, Clock, SpanBetween)(
+                    timer->start, now, &segment);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                return MODULE_FUNC(Chrono, Math, Add)(
+                    timer->accumulated, segment, outElapsed);
+              }),
+
+              OPERATION(Restart,
+                        (MODULE_TYPE(Chrono, Timer) *timer,
+                         MODULE_TYPE(Chrono, Span) *outElapsed), {
+                if (timer == NULL || outElapsed == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                MODULE_TYPE(Chrono, ClockPoint) now = {0};
+                OPSTATUS status = MODULE_FUNC(Chrono, Clock, Now)(&now);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                if (timer->running) {
+                  MODULE_TYPE(Chrono, Span) segment = {0};
+                  status = MODULE_FUNC(Chrono, Clock, SpanBetween)(
+                      timer->start, now, &segment);
+                  if (status != STATUS_CONST(SUCCESS)) {
+                    return status;
+                  }
+                  status = MODULE_FUNC(Chrono, Math, Add)(
+                      timer->accumulated, segment, outElapsed);
+                  if (status != STATUS_CONST(SUCCESS)) {
+                    return status;
+                  }
+                } else {
+                  *outElapsed = timer->accumulated;
+                }
+                timer->start = now;
+                timer->accumulated = (MODULE_TYPE(Chrono, Span)){0};
+                timer->running = true;
+                return STATUS_CONST(SUCCESS);
+              })
+        ),
+
+        SPACE(Delta,
+              OPERATION(Start, (MODULE_TYPE(Chrono, TimerDelta) *delta), {
+                if (delta == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                return MODULE_FUNC(Chrono, Clock, Now)(&delta->previous);
+              }),
+
+              OPERATION(Update,
+                        (MODULE_TYPE(Chrono, TimerDelta) *delta,
+                         MODULE_TYPE(Chrono, Span) *outElapsed), {
+                if (delta == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                return MODULE_IFUNC(Chrono, Clock, MeasureAndAdvance)(
+                    &delta->previous, outElapsed);
+              })
+        ),
+
+        SPACE(Limiter,
+              OPERATION(Create,
+                        (MODULE_TYPE(Chrono, Span) target,
+                         MODULE_TYPE(Chrono, TimerLimiter) *outLimiter), {
+                if (outLimiter == NULL || target.nanoseconds <= 0) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                outLimiter->target = target;
+                outLimiter->frameStart.nanoseconds = 0U;
+                outLimiter->started = false;
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(FromHz,
+                        (uint32_t hz,
+                         MODULE_TYPE(Chrono, TimerLimiter) *outLimiter), {
+                if (outLimiter == NULL || hz == 0U) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                return MODULE_FUNC(Chrono, Clock, Limiter, Create)(
+                    MODULE_FUNC(Chrono, Math, FromNanoseconds)(
+                        MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND) /
+                        hz),
+                    outLimiter);
+              }),
+
+              OPERATION(Begin,
+                        (MODULE_TYPE(Chrono, TimerLimiter) *limiter), {
+                if (limiter == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                OPSTATUS status = MODULE_FUNC(Chrono, Clock, Now)(
+                    &limiter->frameStart);
+                if (status == STATUS_CONST(SUCCESS)) {
+                  limiter->started = true;
+                }
+                return status;
+              }),
+
+              OPERATION(Remaining,
+                        (const MODULE_TYPE(Chrono, TimerLimiter) *limiter,
+                         MODULE_TYPE(Chrono, Span) *outRemaining), {
+                if (limiter == NULL || outRemaining == NULL ||
+                    !limiter->started) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                MODULE_TYPE(Chrono, ClockPoint) now;
+                OPSTATUS status = MODULE_FUNC(Chrono, Clock, Now)(&now);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                MODULE_TYPE(Chrono, Span) elapsed;
+                status = MODULE_FUNC(Chrono, Clock, SpanBetween)(
+                    limiter->frameStart, now, &elapsed);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                outRemaining->nanoseconds =
+                    limiter->target.nanoseconds - elapsed.nanoseconds;
+                if (outRemaining->nanoseconds < 0) {
+                  outRemaining->nanoseconds = 0;
+                }
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(Wait,
+                        (const MODULE_TYPE(Chrono, TimerLimiter) *limiter), {
+                MODULE_TYPE(Chrono, Span) remaining = {0};
+                OPSTATUS status = MODULE_FUNC(
+                    Chrono, Clock, Limiter, Remaining)(limiter, &remaining);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                if (remaining.nanoseconds <= 0) {
+                  return STATUS_CONST(SUCCESS);
+                }
+                return MODULE_FUNC(Chrono, Clock, Sleep)(remaining);
+              })
+        )
+    )
+);
+
+/* EOF */

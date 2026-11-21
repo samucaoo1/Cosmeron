@@ -7,7 +7,7 @@ A Cosmeron está entrando na fase de **pré-lançamento**, com versões menores 
 ## Módulos refatorados (100%)
 
 - `Core` — **100%** (Preprocessor, DSL, Memory, Outcome, Detect, Error etc.)
-- `Modules/Chronometry` — **100%**
+- `Modules/Chrono` — **100%**
 - `Modules/Container` — **100%**
 - `Modules/Math` — **100%**
 - `Modules/Numeric` — **100%**

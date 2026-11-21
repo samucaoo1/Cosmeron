@@ -30,7 +30,7 @@ and portable systems programming—targeting native platforms
 ```text
 MODULES
 ├── Core              [####################] 100%
-├── Chronometry       [####################] 100%
+├── Chrono            [####################] 100%
 ├── Container         [####################] 100%
 ├── Math              [####################] 100%
 ├── Numeric           [####################] 100%

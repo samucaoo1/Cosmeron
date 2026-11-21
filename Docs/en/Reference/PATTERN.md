@@ -485,7 +485,7 @@ Standalone declarations outside `MODULE` (use `ENUM_DEF_DIRECT` for large X-Macr
 ```c
 ENUM_DEF(MODULE_NS(File, Stream), Seek, SEEK_TABLE);
 ENUM_DEF_EX(MODULE_NS(File, Stream), Seek, SEEK_TABLE, QUALIFIED);
-ENUM_DEF_DIRECT(MODULE_NS(Chronometry, Timezone), ZoneId, LARGE_TABLE, ROW_DISP);
+ENUM_DEF_DIRECT(MODULE_NS(Chrono, Timezone), ZoneId, LARGE_TABLE, ROW_DISP);
 ```
 
 ---
