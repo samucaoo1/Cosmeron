@@ -131,6 +131,56 @@ python3 .github/scripts/generate-tzdata.py
 - **`VARIANT(FromISO)`:** `FromISODate`, `FromISOTimestamp`, `FromISOOffsetTimestamp`, `FromISOInstant`, `FromISODuration`.
 - **ISO 8601 rules:** years in `[0000, 9999]` are formatted without a `+` sign; years outside that range emit an explicit sign (`-0044-03-15`, `+10000-01-01`). Parsing is strict (rejects whitespace and unpadded fields) and does not depend on `<stdio.h>`.
 
+
+## Semantics, boundaries and practical use
+
+### Choosing the correct time representation
+
+Chronometry deliberately separates elapsed-time measurement from civil time:
+
+- **ClockTimePoint / Clock:** a monotonic counter intended for measuring elapsed time. Its origin is unspecified; treat the value as opaque, do not serialize it as a calendar timestamp, and do not compare it with an Instant.
+- **Instant:** an absolute wall-clock point represented as Unix seconds plus nanoseconds. It is suitable for timestamps and interchange, but the system clock can be adjusted; do not use it as the source for measuring elapsed time.
+- **Duration:** a signed interval in nanoseconds. Use it for elapsed time, arithmetic, and delays.
+- **Timestamp:** a civil date and time with millisecond precision. It has no timezone or UTC offset by itself. A CalendarPolicy determines how its date is interpreted.
+- **OffsetTimestamp:** a local Timestamp paired with a numeric UTC offset and a daylight-saving flag. The offset is data; it is not a named timezone.
+
+Use Clock or Timer for frame timing, timeouts, and performance measurements. Use Instant, Timestamp, and Timezone for wall-clock dates, schedules, and conversion between local time and UTC.
+
+### Calendar policy
+
+A Date is not intrinsically Gregorian or Julian. Pass the same CalendarPolicy through validation, ordinal conversion, arithmetic, and timestamp operations whenever those values belong to a particular calendar system. GregorianPolicy() is the convenient default for modern civil dates. SystemPolicy() selects a pure Gregorian or Julian system; ReformPolicy() models one of the built-in historical transitions and its skipped civil dates.
+
+AddMonths() and AddYears() clamp the day when the destination month is shorter (for example, moving a date on the 31st into a 30-day month). Operations that cross a reform gap or leave the supported range report a status instead of silently inventing a date.
+
+### Timezones and daylight-saving transitions
+
+The timezone catalogue is generated from the repository's bundled IANA-derived data. A TimezoneRule is a compact rule profile: standard UTC offset, DST adjustment, and recurring start/end transition rules. It is not a full historical TZif database. Do not assume that this representation reproduces every historical political change or every past transition for a location.
+
+A local civil time can be:
+
+- LOCAL_TIME_UNIQUE: exactly one UTC instant corresponds to it.
+- LOCAL_TIME_AMBIGUOUS: the clock moved backward and the local time occurs twice.
+- LOCAL_TIME_NONEXISTENT: the clock moved forward and the local time was skipped.
+
+ClassifyLocal() reports the classification and candidate earlier/later offset timestamps. ResolveLocal() uses the compatible policy: it selects the earlier occurrence for an overlap and the later candidate for a gap. ResolveLocalWithPolicy() makes the choice explicit with DISAMBIGUATE_EARLIER, DISAMBIGUATE_LATER, or DISAMBIGUATE_REJECT; the reject policy returns OUT_OF_RANGE when the local time is not unique. Prefer explicit policy selection when processing user-entered schedules.
+
+FromUTC() with a numeric offset performs a fixed-offset conversion. FromUTCWithRule() and FromUTCWithZone() apply the selected rule profile. SystemOffsetAt() and SystemNow() query the host operating system's local timezone configuration; they do not change that configuration.
+
+### ISO 8601 input and output
+
+The Format package writes into caller-owned buffers and does not allocate memory or depend on <stdio.h>. The capacity constants include the terminating null character. Always pass the actual buffer capacity and check the returned OPSTATUS; insufficient capacity is reported as OUT_OF_RANGE.
+
+- A date is parsed using the Gregorian calendar.
+- A timestamp is a local date-time (date + T + time) and has no offset.
+- An offset timestamp includes Z or a numeric offset.
+- An instant is parsed through an offset timestamp and converted to UTC.
+- A duration uses the supported day/time components (D, H, M, S) and optional fractional seconds; calendar months and years are not fixed-length duration units.
+
+Parsing is strict: the entire input must match the expected form. Leading/trailing whitespace, unpadded fields, and trailing characters are rejected. FromISODate() and FromISOTimestamp() use the Gregorian policy; use the Calendar API directly when a historical or Julian calendar is required.
+
+### Error handling and ownership
+
+Operations that can fail return OPSTATUS and write results through output parameters. Check the status before consuming an output value. The module's public value types are POD structures: callers own their storage, and the core time values do not require heap allocation. Strings returned by timezone and country lookup functions refer to bundled static data; callers must not free them.
 ---
 
 # Portability
