@@ -221,6 +221,8 @@ AddMonths limita el día original al último día del mes de destino. AddYears u
 
 Las fechas de semana ISO utilizan el lunes como día 1 y el domingo como día 7. El año ISO puede diferir del año civil cerca de Año Nuevo. La política es necesaria para convertir entre fecha civil y fecha de semana ISO.
 
+La implementación admite años civiles desde -4799 hasta 4.194.303. Las operaciones de calendario rechazan valores fuera de este rango, aunque el campo de bits del año de Date puede codificar un rango con signo más amplio. Este límite es una frontera de la biblioteca, no una afirmación sobre la validez histórica de las fechas.
+
 ### Modelo de reglas de zona horaria
 
 UtcOffset.minutesEastOfUtc es el desplazamiento con signo en minutos al este de UTC: UTC−03:00 equivale a -180 y UTC+05:30 a 330. El rango aceptado es de -1439 a +1439 minutos. FromHoursMinutes recibe componentes de hora y minuto con signo; utilice el mismo signo para offsets negativos.
