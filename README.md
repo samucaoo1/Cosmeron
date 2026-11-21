@@ -6,13 +6,14 @@
   <strong>A Universe Beyond</strong><br>
   <sub> Version 1.0.0 · Nebula </sub>
 </p>
-
+<p align="center">
 ![C11](.github/badges/c11.svg)
 ![Platforms](.github/badges/platforms.svg)
 ![License](.github/badges/license.svg)
+</p> <p align="center">
 ![Entropy](.github/badges/entropy.svg)
 ![Lines of Code](.github/badges/loc.svg)
-
+</p>
 Cosmeron is a zero-dependency **C11** ecosystem and standard
 library built around of **Cosmic DSL** for safe, modular,
 and portable systems programming—targeting native platforms
