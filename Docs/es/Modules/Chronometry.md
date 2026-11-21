@@ -339,6 +339,6 @@ La prueba de integración está en Codespace/Tests/Chronometry/Chronometry.c. Co
 
 ## Módulos relacionados
 
-- [Module](../Modules/Module.md) — DSL declarativo (`MODULE`, `PACKAGE`, `VARIANT`, `STRUCT`, `ENUM_DEF_DIRECT`).
-- [Condition](../Modules/Condition.md) — contrato de retorno `OPSTATUS`.
-- [Algorithm](../Modules/Algorithm.md) — contrato `CMPOUT` de comparación.
+- [Module](Module.md) — DSL declarativo (`MODULE`, `PACKAGE`, `VARIANT`, `STRUCT`, `ENUM_DEF_DIRECT`).
+- [Condition](Condition.md) — contrato de retorno `OPSTATUS`.
+- [Algorithm](Algorithm.md) — contrato `CMPOUT` de comparación.
