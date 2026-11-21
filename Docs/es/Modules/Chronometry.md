@@ -131,6 +131,56 @@ python3 .github/scripts/generate-tzdata.py
 - **`VARIANT(FromISO)`:** `FromISODate`, `FromISOTimestamp`, `FromISOOffsetTimestamp`, `FromISOInstant`, `FromISODuration`.
 - **Reglas ISO 8601:** los años en `[0000, 9999]` se emiten sin signo `+`; los años fuera de ese rango emiten signo explícito (`-0044-03-15`, `+10000-01-01`). El parsing es estricto (rechaza espacios y campos sin ceros a la izquierda) y no depende de `<stdio.h>`.
 
+
+## Semántica, límites y uso práctico
+
+### Cómo elegir la representación temporal correcta
+
+Chronometry separa intencionalmente la medición de intervalos del tiempo civil:
+
+- **ClockTimePoint / Clock:** contador monotónico destinado a medir tiempo transcurrido. Su origen no está especificado; trate el valor como opaco, no lo serialice como una fecha de calendario y no lo compare con un Instant.
+- **Instant:** instante absoluto de reloj de pared, representado por segundos Unix y nanosegundos. Es adecuado para marcas de tiempo e intercambio, pero el reloj del sistema puede ajustarse; no lo utilice para medir intervalos.
+- **Duration:** intervalo con signo en nanosegundos. Úselo para tiempo transcurrido, operaciones aritméticas y esperas.
+- **Timestamp:** fecha y hora civil con precisión de milisegundos. No tiene zona horaria ni desplazamiento UTC por sí mismo. Una CalendarPolicy determina cómo se interpreta su fecha.
+- **OffsetTimestamp:** Timestamp local asociado a un desplazamiento UTC numérico y a un indicador de horario de verano. El desplazamiento es un dato, no una zona horaria con nombre.
+
+Utilice Clock o Timer para temporización de fotogramas, timeouts y mediciones de rendimiento. Utilice Instant, Timestamp y Timezone para fechas de reloj de pared, agendas y conversiones entre hora local y UTC.
+
+### Política de calendario
+
+Una Date no es intrínsecamente gregoriana ni juliana. Pase la misma CalendarPolicy a la validación, conversión ordinal, aritmética y operaciones con timestamps cuando esos valores pertenezcan a un sistema de calendario concreto. GregorianPolicy() es la opción práctica para fechas civiles modernas. SystemPolicy() selecciona un sistema gregoriano o juliano puro; ReformPolicy() modela una de las transiciones históricas integradas y sus fechas civiles suprimidas.
+
+AddMonths() y AddYears() ajustan el día cuando el mes de destino es más corto (por ejemplo, al mover una fecha del día 31 a un mes de 30 días). Las operaciones que atraviesan un salto de reforma o salen del rango admitido devuelven un estado en lugar de inventar silenciosamente una fecha.
+
+### Zonas horarias y transiciones de horario de verano
+
+El catálogo de zonas se genera a partir de los datos IANA incluidos en el repositorio. TimezoneRule es un perfil compacto de reglas: desplazamiento UTC estándar, ajuste DST y reglas recurrentes de inicio/fin de las transiciones. No es una base TZif histórica completa. No presuponga que esta representación reproduce todos los cambios políticos históricos ni todas las transiciones pasadas de una localidad.
+
+Una hora civil local puede ser:
+
+- LOCAL_TIME_UNIQUE: corresponde a exactamente un instante UTC.
+- LOCAL_TIME_AMBIGUOUS: el reloj se retrasó y esa hora local ocurrió dos veces.
+- LOCAL_TIME_NONEXISTENT: el reloj avanzó y esa hora fue omitida.
+
+ClassifyLocal() informa la clasificación y los candidatos anterior/posterior en OffsetTimestamp. ResolveLocal() utiliza la política compatible: selecciona la ocurrencia anterior en una superposición y el candidato posterior en un salto. ResolveLocalWithPolicy() permite elegir explícitamente DISAMBIGUATE_EARLIER, DISAMBIGUATE_LATER o DISAMBIGUATE_REJECT; la política de rechazo devuelve OUT_OF_RANGE cuando la hora local no es única. Prefiera una política explícita al procesar agendas introducidas por usuarios.
+
+FromUTC() con un desplazamiento numérico realiza una conversión de desplazamiento fijo. FromUTCWithRule() y FromUTCWithZone() aplican el perfil de reglas seleccionado. SystemOffsetAt() y SystemNow() consultan la configuración de zona horaria local del sistema operativo; no modifican esa configuración.
+
+### Entrada y salida ISO 8601
+
+El paquete Format escribe en buffers proporcionados por el llamador y no asigna memoria ni depende de <stdio.h>. Las constantes de capacidad incluyen el carácter nulo terminador. Pase siempre la capacidad real del buffer y compruebe el OPSTATUS devuelto; la capacidad insuficiente se informa como OUT_OF_RANGE.
+
+- Una fecha se interpreta usando el calendario gregoriano.
+- Un timestamp es una fecha-hora local (date + T + hora) y no tiene desplazamiento.
+- Un timestamp con desplazamiento incluye Z o un desplazamiento numérico.
+- Un instante se interpreta mediante un timestamp con desplazamiento y se convierte a UTC.
+- Una duración utiliza los componentes de día/tiempo admitidos (D, H, M, S) y segundos fraccionarios opcionales; los meses y años del calendario no son unidades de duración de longitud fija.
+
+El parsing es estricto: toda la entrada debe coincidir con el formato esperado. Se rechazan los espacios iniciales/finales, los campos sin padding y los caracteres sobrantes. FromISODate() y FromISOTimestamp() utilizan la política gregoriana; para calendarios históricos o julianos, utilice directamente la API Calendar.
+
+### Gestión de errores y propiedad
+
+Las operaciones que pueden fallar devuelven OPSTATUS y escriben los resultados mediante parámetros de salida. Compruebe el estado antes de consumir el valor de salida. Los tipos públicos del módulo son estructuras POD: el llamador controla su almacenamiento y los valores temporales centrales no requieren asignación dinámica. Las cadenas devueltas por las funciones de consulta de zonas y países hacen referencia a datos estáticos integrados; el llamador no debe liberarlas.
 ---
 
 # Portabilidad
