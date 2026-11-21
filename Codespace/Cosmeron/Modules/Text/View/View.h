@@ -4,8 +4,8 @@
 #include "../../../Core/Condition/Status.h"
 #include "../../../Core/Module/Module.h"
 #include "../Impl/Common.inc"
-#include "../Encoding/UTF8.h"
 #include "../Unicode/Codepoint.h"
+#include "../Unicode/UTF8.h"
 
 #include <stdbool.h>
 #include <stddef.h>

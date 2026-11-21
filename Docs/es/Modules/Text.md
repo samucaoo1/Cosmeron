@@ -1,6 +1,6 @@
 # Text
 
-El módulo **Text** proporciona clasificación y codificación Unicode, vistas sin ownership, strings mutables, utilidades para C strings, formato, texto con atributos y grids de caracteres respaldados por memoria. Es una API C11 organizada en packages, estructuras tipadas y objetos.
+El módulo **Text** proporciona clasificación y transcodificación Unicode, utilidades para C strings, vistas sin ownership, strings mutables con ownership, formato desacoplado por streaming y grids de caracteres y atributos respaldados por memoria. Es una API C11 organizada en packages, estructuras POD puras y objetos.
 
 ## Headers
 
@@ -13,21 +13,21 @@ El agregador incluye las siguientes áreas públicas:
 | Header | Funcionalidad |
 | --- | --- |
 | `Unicode/Codepoint.h` | Clasificación de puntos de código Unicode. |
-| `Encoding/UTF8.h`, `Encoding/UTF16.h` | Codificación, decodificación y validación UTF-8 y UTF-16. |
+| `Unicode/UTF8.h`, `Unicode/UTF16.h` | Codificación, decodificación, validación, conteo y transcodificación UTF-8 y UTF-16. |
 | `Unicode/Width.h` | Ancho aproximado en columnas de visualización. |
-| `View/View.h` | Vistas tipadas de strings sin ownership. |
-| `String/String.h` | Strings mutables con ownership y utilidades UTF-8. |
-| `String/CString/CString.h` | Operaciones con C strings. |
-| `String/Builder/Builder.h` | Construcción incremental de strings UTF-8. |
-| `Format/Format.h`, `Format/BytesHuman.h` | Formato acotado y conversión de tamaños en bytes a texto. |
-| `Grid/Attribute.h`, `Grid/Char.h`, `Grid/Grid.h` | Planos de atributos y grids de texto respaldados por memoria. |
-| `Attributed/Attributed.h` | Texto UTF-8 con tramos estilizados. |
+| `CString/CString.h` | Operaciones stateless con C strings terminadas en NUL. |
+| `View/View.h` | Vistas tipadas de strings sin ownership (`View8`, `View16`, `View32`). |
+| `String/String.h` | Strings mutables con ownership (`String8`, `String16`, `String32`) y utilidades UTF-8. |
+| `Format/Writer.h` | Sink de texto desacoplado (`Counter`, `ToBuffer`, `ToClosure`, `ToString`) y escritores tipados. |
+| `Format/Format.h` | Formato acotado seguro y basado en `Writer` con adaptadores `%!`. |
+| `Format/BytesHuman.h` | Formato y análisis de tamaños de bytes legibles para humanos. |
+| `Grid/Attribute.h`, `Grid/Char.h`, `Grid/Grid.h` | Planos de atributos, utilidades de color y grids de texto respaldados por memoria. |
 
 ---
 
 # Descripción general
 
-Text se divide en validación/codificación Unicode, vistas sin ownership, strings con ownership, builders incrementales, formato acotado, grids de caracteres/atributos en memoria y salida UTF-8 con atributos. Son primitivas de datos y formato; no proporcionan entrada de terminal ni un backend de renderizado.
+Text separa las primitivas de bajo nivel (Unicode y C strings) de las vistas sin ownership, strings mutables con ownership, formato desacoplado (`Writer` + `Format` + `BytesHuman`) y grids off-screen de caracteres y atributos. Ninguna de estas áreas realiza E/S de terminal ni acopla `Text` a módulos externos como `Tuple` o `Numeric` en el formateador.
 
 ---
 
@@ -39,25 +39,25 @@ Text se divide en validación/codificación Unicode, vistas sin ownership, strin
 
 Header: `Unicode/Codepoint.h`. Package: `Text_Codepoint`.
 
-El package expone predicados bajo `Is`:
+El package expone predicados bajo la familia `Is` (`VARIANT`):
 
 | Función | Significado |
 | --- | --- |
-| `Valid(codepoint)` | Comprueba si el valor está dentro de U+0000..U+10FFFF. |
-| `Scalar(codepoint)` | Comprueba si el valor es un escalar Unicode (no un surrogate). |
-| `ASCII(codepoint)` | Comprueba si el valor está dentro de U+0000..U+007F. |
-| `Control(codepoint)` | Comprueba los rangos de control C0 y C1. |
-| `Whitespace(codepoint)` | Comprueba los rangos de whitespace implementados explícitamente por el módulo. |
+| `IsValid(codepoint)` | Comprueba si el valor está dentro de U+0000..U+10FFFF. |
+| `IsScalar(codepoint)` | Comprueba si el valor es un escalar Unicode (no un surrogate). |
+| `IsAscii(codepoint)` | Comprueba si el valor está dentro de U+0000..U+007F. |
+| `IsControl(codepoint)` | Comprueba los rangos de control C0 y C1. |
+| `IsWhitespace(codepoint)` | Comprueba los rangos de whitespace Unicode implementados por el módulo. |
 
 ~~~c
-bool scalar = MODULE_FUNC(Text, Codepoint, Is, Scalar)(codepoint);
+bool scalar = MODULE_FUNC(Text, Codepoint, IsScalar)(codepoint);
 ~~~
 
-Usa `Scalar` antes de codificar. `Valid` por sí solo permite puntos de código surrogate, que no son valores escalares Unicode.
+Usa `IsScalar` antes de codificar. `IsValid` por sí solo permite puntos de código surrogate, que no son valores escalares Unicode.
 
 ### UTF8
 
-Header: `Encoding/UTF8.h`. Los buffers de entrada y salida utilizan bytes `unsigned char`.
+Header: `Unicode/UTF8.h`. Los buffers de entrada y salida utilizan bytes `unsigned char`.
 
 | Función | Contrato |
 | --- | --- |
@@ -76,11 +76,9 @@ OPSTATUS status = MODULE_FUNC(Text, UTF8, Encode)(
     encoded, sizeof(encoded), &written);
 ~~~
 
-La capacidad del buffer de salida se mide en bytes. La decodificación recibe la cantidad de bytes disponibles y escribe el punto de código decodificado y la cantidad de bytes consumidos mediante parámetros de salida. Comprueba cada status antes de leer los valores de salida.
-
 ### UTF16
 
-Header: `Encoding/UTF16.h`. La entrada y la salida utilizan unidades de código `MODULE_TYPE(Text, Char16)`.
+Header: `Unicode/UTF16.h`. La entrada y la salida utilizan unidades de código `MODULE_TYPE(Text, Char16)`.
 
 | Función | Contrato |
 | --- | --- |
@@ -88,8 +86,9 @@ Header: `Encoding/UTF16.h`. La entrada y la salida utilizan unidades de código 
 | `Encode(codepoint, output, capacity, outUnits)` | Codifica un escalar en un buffer UTF-16 proporcionado por el llamador. |
 | `Decode(input, size, outCodepoint, outUnits)` | Decodifica un punto de código e informa de las unidades consumidas. |
 | `Validate(input, size)` | Valida un intervalo completo de unidades de código UTF-16. |
-
-La capacidad UTF-16 y los valores de tamaño consumido se miden en unidades de código, no en bytes. Un escalar suplementario requiere un par surrogate.
+| `Count(input, size, outCodepoints, outUnits)` | Cuenta puntos de código e informa de las unidades consumidas. |
+| `FromUTF8(input, size, output, capacity, outUnits)` | Transcodifica bytes UTF-8 a unidades UTF-16 (pasa `NULL, 0U` para medir). |
+| `ToUTF8(input, size, output, capacity, outBytes)` | Transcodifica unidades UTF-16 a bytes UTF-8 (pasa `NULL, 0U` para medir). |
 
 ### Ancho de visualización
 
@@ -97,125 +96,92 @@ Header: `Unicode/Width.h`. Package: `Text_Width`.
 
 | Función | Contrato |
 | --- | --- |
-| `Codepoint(codepoint, outWidth)` | Informa del ancho de visualización de un punto de código. |
+| `Codepoint(codepoint, outWidth)` | Informa del ancho de visualización (`0`, `1` o `2`) de un punto de código. |
 | `UTF8(input, size, outColumns, outUnits)` | Mide las columnas de visualización de un intervalo UTF-8 e informa de los bytes consumidos. |
-
-El cálculo del ancho es una estimación orientada a la visualización, no un motor completo de composición tipográfica o diseño de terminal. Las marcas combinantes y los caracteres anchos pueden afectar al número de columnas de forma distinta al número de unidades de código codificadas.
 
 ---
 
-## Vistas y strings
+## C strings, Vistas y Strings
+
+### CString
+
+Header: `CString/CString.h`. Package: `Text_CString`.
+
+| Grupo | Métodos |
+| --- | --- |
+| Longitud | `Length`, `LengthBounded` |
+| Clasificación | `IsEmpty`, `IsAscii`, `IsAsciiBounded` |
+| Copia y concatenación | `Copy`, `CopyBounded`, `Concat`, `ConcatBounded` |
+| Comparación | `Compare`, `CompareBounded`, `CompareIgnoreCase`, `CompareIgnoreCaseBounded` |
+| Igualdad | `Equal`, `EqualBounded`, `EqualIgnoreCase`, `EqualIgnoreCaseBounded` |
+| Prefijo/sufijo | `StartsWith`, `StartsWithBounded`, `StartsWithIgnoreCase`, `EndsWith`, `EndsWithBounded`, `EndsWithIgnoreCase` |
+| Búsqueda | `FindChar`, `FindCharBounded`, `FindLastChar`, `FindLastCharBounded`, `FindCStr`, `FindCStrBounded` |
+| Span | `Span`, `ComplementSpan` |
+| Trim | `Trim`, `TrimLeft`, `TrimRight` |
+| Conteo/reemplazo | `CountChar`, `CountCharBounded`, `ReplaceChar`, `ReplaceCharBounded` |
+| Asignación | `Duplicate`, `DuplicateBounded`, `Free` |
+
+Prefiere las operaciones `*Bounded` siempre que se conozca la extensión disponible y la entrada pueda no contener un terminador dentro de ese intervalo.
 
 ### View
 
 Header: `View/View.h`.
 
-Los tipos no propietarios generados son `MODULE_TYPE(Text, View8)`, `View16` y `View32`. Apuntan a un almacenamiento existente y llevan una longitud explícita.
+Los tipos sin ownership generados son `MODULE_TYPE(Text, View8)`, `View16` y `View32`. Las longitudes y los índices están en unidades de código, salvo cuando se usan los helpers conscientes de puntos de código UTF-8 (`View8_*Codepoints`, `View8_Validate`, `View8_Trim*`).
 
 | Función | Descripción |
 | --- | --- |
-| `Create(data, length)` | Crea una vista sobre un puntero y una cantidad de unidades de código. |
-| `FromCStr(cstr)` | Crea una vista a partir de un string terminado. |
-| `Empty()` | Devuelve una vista vacía. |
-| `Length`, `IsEmpty`, `Data` | Inspeccionan la vista. |
-| `At(index, outValue)` | Lee una unidad de código con comprobación de límites. |
-| `Slice(start, count)`, `Prefix(count)`, `Suffix(count)` | Devuelven una subvista. |
-| `Compare(left, right)`, `Equal` | Comparan vistas. |
-| `Find` | Busca una unidad de código, otra vista o una C string. |
-| `StartsWith`, `EndsWith` | Comprueban un prefijo o sufijo. |
-
-Una vista no asigna memoria, no copia ni añade un terminador. Solo es válida mientras el almacenamiento subyacente siga siendo válido y no se mueva. Las longitudes y los índices son unidades de código, salvo cuando se utiliza una operación específicamente consciente de puntos de código.
+| `Create(data, length)`, `FromCStr(cstr)`, `Empty()` | Crean vistas sin asignación de memoria. |
+| `Length`, `IsEmpty`, `Data`, `At(index, outValue)` | Inspeccionan el contenido de la vista. |
+| `Slice(start, count)`, `Prefix(count)`, `Suffix(count)` | Devuelven subvistas. |
+| `Compare(left, right)`, `Equal`, `EqualCStr` | Comparan vistas. |
+| `Find`, `FindView`, `FindCStr`, `StartsWith*`, `EndsWith*` | Buscan y comprueban prefijos/sufijos. |
+| `View8_Validate`, `View8_CountCodepoints`, `View8_NextCodepoint`, `View8_Trim*`, `View8_SliceCodepoints` | Operaciones UTF-8 por puntos de código en `View8`. |
 
 ### Strings con ownership
 
-Header: `String/String.h`. El agregador genera `String8`, `String16` y `String32`. Los tres utilizan la misma API generada; el tipo del elemento es distinto:
-
-| Tipo | Tipo del elemento | Unidad de longitud |
-| --- | --- | --- |
-| `String8` | `Text_Char8` (`uint8_t`) | Bytes/unidades de código |
-| `String16` | `Text_Char16` (`uint16_t`) | Unidades de código de 16 bits |
-| `String32` | `Text_Char32` (`uint32_t`) | Unidades de código de 32 bits |
-
-Los métodos de objeto generados son:
-
-| Grupo | Métodos | Comportamiento |
-| --- | --- | --- |
-| Ciclo de vida | `Create(initialCapacity)`, `Destroy()`, `Clone(source)` | Crea, libera o clona el almacenamiento propio. |
-| Capacidad | `Reserve(requiredCapacity)`, `ShrinkToFit()` | Aumenta o reduce la capacidad. |
-| Construcción | `FromBuffer(buffer, count)`, `FromCStr(cstr)`, `FromView(view)` | Inicializa desde unidades de código, un string terminado o una vista. |
-| Mutación | `Clear()`, `AppendBuffer(buffer, count)`, `Append(cstr)`, `AppendString(other)`, `AppendView(view)`, `PushBack(value)`, `PopBack(outValue)`, `SetAt(index, value)`, `Insert(index, buffer, count)`, `InsertChar(index, value)`, `Erase(index, count)` | Actualiza la secuencia almacenada de unidades de código. |
-| Acceso | `Length()`, `Capacity()`, `IsEmpty()`, `CStr()`, `At(index, outValue)` | Lee tamaño, capacidad, estado vacío, datos o una unidad de código. |
-| Vistas y subcadenas | `View()`, `Slice(start, count)`, `Substr(start, count, outSubstr)` | Crea una vista prestada o una nueva subcadena con ownership. |
-| Comparación | `Compare(other)`, `Equal(other)`, `Equal.CStr(cstr)`, `Equal.View(view)`, `StartsWith(prefix)`, `EndsWith(suffix)` | Compara contenido o comprueba prefijos/sufijos. |
-| Búsqueda | `Find(needle, outIndex)`, `Find.Str(needle, outIndex)` | Encuentra una unidad de código o un string terminado. |
-
-`String` almacena una unidad de código cero al final, pero la longitud informada excluye ese terminador. Las longitudes y los índices son unidades de código, no recuentos de escalares Unicode. En `String8`, una unidad de código es un byte UTF-8; operaciones como `At`, `SetAt`, `Erase` y `Slice` no garantizan límites de puntos de código.
-
-~~~c
-MODULE_TYPE(Text, String8) text = {0};
-const MODULE_TYPE(Text, Char8) input[] = "Cosmeron";
-
-OPSTATUS status = OBJECT_CALL(&text, Create, 16U);
-if (status == STATUS_CONST(SUCCESS)) {
-    status = OBJECT_CALL(&text, Append, input);
-}
-if (status == STATUS_CONST(SUCCESS)) {
-    size_t length = OBJECT_CALL_0(&text, Length);
-    const MODULE_TYPE(Text, Char8) *data = OBJECT_CALL_0(&text, CStr);
-    (void)length;
-    (void)data;
-}
-(void)OBJECT_CALL_0(&text, Destroy);
-~~~
-
-El string es propietario de su asignación de respaldo. Un puntero devuelto por `CStr` es prestado y puede invalidarse por mutación, cambios de capacidad o destrucción. Usa `View`/`Slice` cuando sea suficiente un intervalo sin ownership y mantén vivo al propietario mientras se utilice la vista.
-
-### Utilidades de C strings
-
-Header: `String/CString/CString.h`. Package: `Text_CString`.
-
-El package proporciona:
+Header: `String/String.h`. Genera `String8` (`char`), `String16` (`Text_Char16`) y `String32` (`Text_Char32`).
 
 | Grupo | Métodos |
 | --- | --- |
-| Longitud | `Length`, `Length.Bounded` |
-| Clasificación | `IsEmpty`, `IsAscii`, `IsAscii.Bounded` |
-| Copia y concatenación | `Copy`, `Copy.Bounded`, `Concat`, `Concat.Bounded` |
-| Comparación | `Compare`, `Compare.Bounded`, `Compare.IgnoreCase`, `Compare.IgnoreCaseBounded` |
-| Igualdad | `Equal`, `Equal.Bounded`, `Equal.IgnoreCase`, `Equal.IgnoreCaseBounded` |
-| Prefijo/sufijo | `StartsWith`, `StartsWith.Bounded`, `StartsWith.IgnoreCase`, `EndsWith`, `EndsWith.Bounded`, `EndsWith.IgnoreCase` |
-| Búsqueda | `FindChar`, `FindLastChar`, `FindSubstring` y sus variantes acotadas |
-| Span | `Span`, `ComplementSpan` |
-| Trim | `Trim`, `Trim.Start`, `Trim.End` |
-| Conteo/reemplazo | `CountChar`, `CountChar.Bounded`, `ReplaceChar`, `ReplaceChar.Bounded` |
-| Asignación | `Duplicate`, `Duplicate.Bounded`, `Free` |
+| Ciclo de vida | `Create(initialCapacity)`, `Destroy()`, `Clone(src)` |
+| Capacidad | `Reserve(requiredCapacity)`, `ShrinkToFit()` |
+| Construcción | `FromBuffer(buffer, count)`, `FromCStr(cstr)`, `FromView(view)` |
+| Mutación | `Clear()`, `AppendBuffer(buffer, count)`, `AppendCStr(cstr)`, `AppendString(other)`, `AppendView(view)`, `PushBack(value)`, `PopBack(outChar)`, `SetAt(index, value)`, `Insert(index, buffer, count)`, `InsertChar(index, value)`, `Erase(index, count)` |
+| Acceso | `Length()`, `Capacity()`, `IsEmpty()`, `CStr()`, `At(index, outChar)` |
+| Vistas y subcadenas | `View()`, `Slice(start, count)`, `Substr(start, count, outSubstr)` |
+| Comparación | `Compare(other)`, `Equal(other)`, `EqualCStr(cstr)`, `EqualView(view)`, `StartsWith(prefix)`, `EndsWith(suffix)` |
+| Búsqueda | `Find(needle, outIndex)`, `FindCStr(needle, outIndex)` |
+| UTF-8 (`String8_*`) | `AppendCodepoint`, `CountCodepoints`, `Validate`, `Trim`, `TrimLeft`, `TrimRight`, `Format`, `FormatVariadic`, `AppendFormat`, `AppendFormatVariadic`, `SliceCodepoints` |
 
-Prefiere las operaciones acotadas siempre que se conozca la extensión disponible y la entrada pueda no contener un terminador dentro de ese intervalo. `Copy` y `Concat` reciben la capacidad del destino. `Duplicate` asigna un nuevo string; libéralo con `Free`.
+`String8` también expone `MODULE_FUNC(Text, Writer, ToString)(&str)` para que `Writer` y `Format` escriban directamente en una `String8` con crecimiento dinámico en una sola pasada.
 
-### String Builder
-
-Header: `String/Builder/Builder.h`. Tipo: `MODULE_TYPE(Text, Builder)`.
-
-Builder es un buffer UTF-8 de crecimiento dinámico diseñado para composición incremental.
-
-| Método | Descripción |
-| --- | --- |
-| `Create(initialCapacity)`, `Destroy` | Crea/libera la asignación de respaldo. |
-| `Clear`, `Reserve(newCapacity)`, `ShrinkToFit` | Controla el contenido y la capacidad. |
-| `Append.Char` | Añade un carácter de un byte. |
-| `Append.CStr` | Añade una C string. |
-| `Append.Buffer` | Añade un buffer de bytes de tamaño explícito. |
-| `Append.View` | Añade una vista UTF-8. |
-| `Append.Codepoint` | Añade un punto de código Unicode. |
-| `Append.Format`, `Append.FormatVariadic` | Añade salida formateada. |
-| `BuildString(outString)` | Materializa el contenido como un String8 con ownership. |
-| `Length`, `Capacity`, `IsEmpty`, `CStr`, `View` | Observa el contenido actual. |
-
-Builder es propietario de su buffer. `CStr` y `View` devuelven referencias prestadas y no deben conservarse entre operaciones que puedan realocar el buffer ni después de su destrucción.
+~~~c
+MODULE_TYPE(Text, String8) text = {0};
+if (MODULE_FUNC(Text, String8, Create)(&text, 16U) == STATUS_CONST(SUCCESS)) {
+    (void)MODULE_FUNC(Text, String8, Format)(&text, "Hello %s!", "Cosmeron");
+    (void)MODULE_FUNC(Text, String8, Destroy)(&text);
+}
+~~~
 
 ---
 
 ## Formato
+
+### Writer
+
+Header: `Format/Writer.h`. Tipo: `MODULE_TYPE(Text, Writer)`. Package: `Text_Writer`.
+
+`Writer` desacopla la generación de texto del destino de salida:
+
+| Constructor | Destino |
+| --- | --- |
+| `ToBuffer(buffer, capacity)` | Buffer `char` propiedad del llamador (siempre terminado en NUL; registra truncamiento). |
+| `Counter()` | Modo de solo medición (cuenta bytes sin almacenar). |
+| `ToClosure(sink)` | Cualquier destino `MODULE_CLOSURE(Text, WriterSink)`. |
+| `ToString(str)` | Declarado en `String/String.h`; añade directamente a una `String8`. |
+
+Primitivas tipadas: `WriteBuffer`, `WriteChar`, `WriteCodepoint`, `WriteRepeat`, `WriteCStr`, `WriteView`, `WriteBool`, `WriteInt`, `WriteUInt`, `WriteFloat`, `WriteHex`, `WriteEscaped`, además de inspección (`Written`, `IsTruncated`, `Status`) y `Finish`.
 
 ### Format
 
@@ -223,24 +189,25 @@ Header: `Format/Format.h`. Package: `Text_Format`.
 
 | Función | Contrato |
 | --- | --- |
-| `Variadic(buffer, capacity, outWritten, format, arguments)` | Formateador acotado que recibe una `va_list`. |
-| `Variadic.Unsafe(buffer, outWritten, format, arguments)` | Formateador sin límite; el llamador debe garantizar espacio suficiente. |
-| `Buffer(buffer, capacity, outWritten, format, ...)` | Wrapper variádico seguro y práctico. |
-| `Unsafe(buffer, outWritten, format, ...)` | Wrapper variádico inseguro y práctico. |
+| `To(writer, format, ...)` / `ToVariadic(writer, format, args)` | Escribe salida formateada en cualquier `Text_Writer`. |
+| `Buffer(buffer, capacity, outWritten, format, ...)` / `BufferVariadic(...)` | Formateador acotado seguro a buffer (`NULL, 0U` mide los bytes necesarios). |
 
-Prefiere `Buffer` o `Variadic`. Las formas inseguras omiten intencionadamente el argumento de capacidad de salida y solo deben utilizarse cuando el tamaño del destino esté garantizado.
+Admite especificadores estándar C11/C23 (`%d`/`%i`, `%u`, `%o`, `%x`/`%X`, `%b`/`%B`, `%f`/`%F`/`%e`/`%E`/`%g`/`%G`/`%a`/`%A`, `%c`/`%lc`, `%s`/`%ls`, `%p`, `%%`, ancho/precisión/`*`, `hh`/`h`/`l`/`ll`/`j`/`z`/`t`/`L`/`w8`/`w16`/`w32`/`w64`) y extensiones nativas de Cosmeron:
+- `%v`: `MODULE_TYPE(Text, View8)` por valor.
+- `%U`: `MODULE_TYPE(Text, Char32)` codificado en UTF-8.
+- `%t`: `bool` (`true` / `false`).
+- `%q` / `%#q`: C-string escapada (con o sin comillas).
+- `%!` / `%(spec)!`: par adaptador personalizado `(MODULE_CALLBACK(Text, Format, Adapter) adapter, const void *value)` para formatear tipos externos sin acoplar `Text` a otros módulos.
 
 ### Tamaños de bytes legibles para humanos
 
-Header: `Format/BytesHuman.h`. Package: `Text_BytesHuman`.
+Header: `Format/BytesHuman.h`. Package: `Text_BytesHuman`. Enum: `MODULE_ENUM(Text, BytesHuman, Unit)` (`IEC`, `SI`).
 
 | Función | Descripción |
 | --- | --- |
-| `Format(buffer, capacity, outWritten, bytes)` | Formatea una cantidad de bytes usando el estándar de unidades y la precisión predeterminados. |
-| `Format.Ex(buffer, capacity, outWritten, bytes, unitStandard, precision)` | Selecciona unidades IEC/SI y precisión. |
-| `Parse(text, outBytes)` | Analiza un valor textual de tamaño en bytes y lo convierte a `uint64_t`. |
-
-El enum de configuración define base IEC 1024, base SI 1000, precisión predeterminada 2 y precisión máxima 6. El formateador escribe en un buffer propiedad del llamador e informa de la cantidad de bytes escritos.
+| `Write(writer, bytes)` / `WriteEx(writer, bytes, unitStandard, precision)` | Escribe el tamaño formateado en un `Text_Writer`. |
+| `Format(buffer, capacity, outWritten, bytes)` / `FormatEx(...)` | Formato acotado a un buffer del llamador. |
+| `Parse(text, outBytes)` | Analiza un tamaño textual en bytes a `uint64_t` con protección contra overflow. |
 
 ---
 
@@ -248,86 +215,41 @@ El enum de configuración define base IEC 1024, base SI 1000, precisión predete
 
 ### Alcance y diseño
 
-Las operaciones de Grid trabajan con celdas respaldadas por memoria. El módulo **no** escribe en stdout, controla un terminal, lee stdin, llama a ncurses ni muestra un canvas. El renderizado y la entrada de terminal pertenecen a una capa de aplicación/backend.
+Las operaciones de Grid trabajan sobre celdas respaldadas por memoria off-screen (`MODULE_TYPED(Tuple, Dual, UInt16)` para dimensiones/posiciones y `MODULE_TYPED(Tuple, Quad, UInt16)` para regiones). No escriben en stdout ni controlan un terminal.
 
-Las variantes de caracteres utilizan `Char8`, `Char16` y `Char32`. Las dimensiones y posiciones del grid utilizan `MODULE_TYPED(Tuple, Dual, UInt16)`; las regiones rectangulares utilizan `MODULE_TYPED(Tuple, Quad, UInt16)`.
-
-### Grid solo de caracteres
-
-Header: `Grid/Char.h`. Los tipos de objeto generados siguen `MODULE_TYPED(Text, Char, Char8)`, `Char16` y `Char32`.
-
-El grid Char almacena únicamente caracteres. Sus métodos de objeto incluyen `Create(size)`, `Destroy`, `Resize(size)`, `Recreate(size)`, `Clone(source)`, `Clear`, `ReadCell(position, outCharacter)`, `WriteCell(position, character)`, `Fill(character)`, `FillRegion(region, character)`, `Read(region, destination)` y `Write`/`Write.Region`. `IsValid` comprueba el estado del objeto.
-
-### Grid de texto compuesto
-
-Header: `Grid/Grid.h`. Los tipos de objeto generados son `MODULE_TYPED(Text, Grid, Char8)`, `Char16` y `Char32`.
-
-Un grid compuesto almacena un plano de caracteres junto con un plano de atributos. Sus métodos incluyen `Create`, `Destroy`, `Resize`, `Recreate`, `Clone`, `Clear`, `Clear.With`, `ReadCell`, `WriteCell`, `Fill`, `FillRegion`, `Read`, `Write`, `WriteRegion` y `Blit`/`Blit.Region`.
-
-El grid es propietario de sus planos de respaldo. Una operación de resize/recreate/destroy puede invalidar punteros de celdas o datos previamente prestados. Utiliza el status devuelto por todas las operaciones mutables.
-
-### Plano de atributos y colores
-
-Header: `Grid/Attribute.h`.
-
-La API de atributos expone `MODULE_TYPE(Text, Attribute, Cell)` y `MODULE_TYPE(Text, Attribute, Grid)`. Los flags de atributo incluyen negrita, tenue, cursiva, blink, inverso, oculto, tachado, sobrelineado, fondo transparente, continuación de unidad de código y primer plano/fondo predeterminados.
-
-El package `Attribute` expone `Default`, `IsEmpty`, `IsValid`, `Create`, `Destroy`, `Resize`, `Recreate`, `Clone`, `Clear`, `Clear.With`, `Fill`, `ReadCell`, `WriteCell`, `FillRegion`, `Read`, `Write` y `Write.Region`.
-
-`Grid_Color` proporciona `RGB(red, green, blue)`, `Red(color)`, `Green(color)`, `Blue(color)` y `WindowsPalette()`. La paleta de Windows es una tabla estática de 16 colores; es una utilidad de color, no un backend de terminal.
-
----
-
-## Texto con atributos
-
-Header: `Attributed/Attributed.h`. Tipo: `MODULE_TYPE(Text, Attributed)`.
-
-El texto con atributos almacena contenido UTF-8 con tramos de atributos asociados.
-
-| Método | Descripción |
-| --- | --- |
-| `Create(initialCapacity)`, `Destroy` | Crea/libera el almacenamiento de texto y tramos. |
-| `Clear` | Limpia el texto y los tramos. |
-| `Clear.Spans` | Elimina los tramos de estilo y conserva el texto. |
-| `SetText(text, length)`, `AppendText(text, length)` | Sustituye o añade un intervalo de bytes UTF-8 de tamaño explícito. |
-| `AddSpan(start, length, attribute)` | Asocia una celda de atributo a un rango de texto. |
-| `GetAttributeAt(index, outAttribute)` | Obtiene el atributo en un índice de byte. |
-| `RenderAnsi(outBuffer, capacity, outWritten)` | Renderiza secuencias de escape ANSI en un buffer propiedad del llamador. |
-| `Text`, `Length`, `SpanCount`, `Spans` | Inspecciona el contenido actual. |
-
-`Attributed.h` desactiva la FunctionTable de objetos Text; llama a sus métodos directamente mediante `MODULE_FUNC(Text, Attributed, Method)` en lugar de usar `OBJECT_CALL`. Los arrays de texto y tramos son gestionados por el objeto Attributed. Los punteros de texto/tramos devueltos son prestados. `RenderAnsi` solo produce un string; no lo imprime ni configura el terminal.
+- `Grid/Attribute.h`: expone `MODULE_TYPE(Text, Attribute, Cell)`, `MODULE_TYPE(Text, Attribute, Grid)`, `MODULE_ENUM(Text, Attribute, Flag)`, `MODULE_ENUM(Text, Attribute, Underline)`, operaciones de plano `Attribute_*` y `Attribute_Color` (`SPACE(Color, ...)` con `RGB`, `Red`, `Green`, `Blue` y `WindowsPalette`).
+- `Grid/Char.h`: genera `MODULE_TYPED(Text, Char, Char8)`, `Char16` y `Char32`.
+- `Grid/Grid.h`: genera `MODULE_TYPED(Text, Grid, Char8)`, `Char16` y `Char32`, combinando planos de caracteres y atributos con `Blit` / `BlitRegion`.
 
 ---
 
 # Contratos y reglas de ownership
 
-- Los encoders, formateadores, operaciones de grid y operaciones de string que escriben en buffers devuelven `OPSTATUS`; compruébalo antes de leer las salidas.
-- Las longitudes UTF-8 son bytes; las longitudes UTF-16 son unidades de código; los recuentos de puntos de código son una unidad distinta.
-- Una View no es propietaria. String y Builder son propietarios de sus buffers.
-- Los objetos Grid y Attributed son propietarios de su almacenamiento de respaldo y deben destruirse.
-- Los punteros devueltos por `Data`, `CStr`, `Text` y `Spans` son prestados y pueden invalidarse por mutación o destrucción.
-- El grid es una estructura de memoria off-screen, no una UI de terminal, un renderizador ni un subsistema de entrada.
+- Los encoders, formateadores, operaciones de grid y operaciones de string que escriben en buffers devuelven `OPSTATUS`; compruébalo antes de leer salidas.
+- Las longitudes UTF-8 son bytes; las longitudes UTF-16 son unidades de código; los recuentos de puntos de código son recuentos de escalares Unicode.
+- `View` no tiene ownership; `String` y `Grid` son propietarios de sus asignaciones y deben destruirse.
+- Los punteros devueltos por `Data`, `CStr` y `WindowsPalette` son prestados.
 
 ## Módulos relacionados
 
 - [Tuple](Tuple.md) — dimensiones y regiones del grid.
 - [Memory](Memory.md) — asignación y operaciones con bytes.
-- [Algorithm](Algorithm.md) — resultados de comparación utilizados por las vistas de texto.
-- [Module](Module.md) — packages, objetos y especializaciones tipadas generadas.
+- [Algorithm](Algorithm.md) — resultados de comparación utilizados por vistas y C strings.
+- [Module](Module.md) — packages, objetos, closures y especializaciones tipadas.
 
 ## Headers de origen
 
 - `Codespace/Cosmeron/Modules/Text/Text.h`
 - `Codespace/Cosmeron/Modules/Text/Unicode/Codepoint.h`
+- `Codespace/Cosmeron/Modules/Text/Unicode/UTF8.h`
+- `Codespace/Cosmeron/Modules/Text/Unicode/UTF16.h`
 - `Codespace/Cosmeron/Modules/Text/Unicode/Width.h`
-- `Codespace/Cosmeron/Modules/Text/Encoding/UTF8.h`
-- `Codespace/Cosmeron/Modules/Text/Encoding/UTF16.h`
+- `Codespace/Cosmeron/Modules/Text/CString/CString.h`
 - `Codespace/Cosmeron/Modules/Text/View/View.def`
 - `Codespace/Cosmeron/Modules/Text/String/String.def`
-- `Codespace/Cosmeron/Modules/Text/String/CString/CString.h`
-- `Codespace/Cosmeron/Modules/Text/String/Builder/Builder.h`
+- `Codespace/Cosmeron/Modules/Text/Format/Writer.h`
 - `Codespace/Cosmeron/Modules/Text/Format/Format.h`
+- `Codespace/Cosmeron/Modules/Text/Format/BytesHuman.h`
 - `Codespace/Cosmeron/Modules/Text/Grid/Attribute.h`
 - `Codespace/Cosmeron/Modules/Text/Grid/Char.def`
 - `Codespace/Cosmeron/Modules/Text/Grid/Grid.def`
-- `Codespace/Cosmeron/Modules/Text/Attributed/Attributed.h`

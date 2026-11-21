@@ -45,11 +45,11 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
       }
 
       const uint_least32_t value = (uint_least32_t)codepoint;
-      if (value <= CNS(Text, UTF8, Internal, MAX_1BYTE)) {
+      if (value <= MODULE_IFUNC(Text, UTF8, MAX_1BYTE)) {
         *outUnits = 1U;
-      } else if (value <= CNS(Text, UTF8, Internal, MAX_2BYTE)) {
+      } else if (value <= MODULE_IFUNC(Text, UTF8, MAX_2BYTE)) {
         *outUnits = 2U;
-      } else if (value <= CNS(Text, UTF8, Internal, MAX_3BYTE)) {
+      } else if (value <= MODULE_IFUNC(Text, UTF8, MAX_3BYTE)) {
         *outUnits = 3U;
       } else {
         *outUnits = 4U;
@@ -80,16 +80,16 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
         output[0] = (unsigned char)value;
       } else {
         for (size_t i = length - 1U; i >= 1U; --i) {
-          output[i] = (unsigned char)(CNS(Text, UTF8, Internal, CONT_PREFIX) |
-                                      (value & CNS(Text, UTF8, Internal,
-                                                   CONT_DATA_MASK)));
-          value >>= CNS(Text, UTF8, Internal, CONT_BITS);
+          output[i] = (unsigned char)(MODULE_IFUNC(Text, UTF8, CONT_PREFIX) |
+                                      (value & MODULE_IFUNC(Text, UTF8,
+                                                            CONT_DATA_MASK)));
+          value >>= MODULE_IFUNC(Text, UTF8, CONT_BITS);
         }
         const uint_least32_t leadPrefix =
             (length == 2U)
-                ? CNS(Text, UTF8, Internal, LEAD_2_PREFIX)
-                : ((length == 3U) ? CNS(Text, UTF8, Internal, LEAD_3_PREFIX)
-                                  : CNS(Text, UTF8, Internal, LEAD_4_PREFIX));
+                ? MODULE_IFUNC(Text, UTF8, LEAD_2_PREFIX)
+                : ((length == 3U) ? MODULE_IFUNC(Text, UTF8, LEAD_3_PREFIX)
+                                  : MODULE_IFUNC(Text, UTF8, LEAD_4_PREFIX));
         output[0] = (unsigned char)(leadPrefix | value);
       }
 
@@ -107,7 +107,7 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
         return STATUS_CONST(INCOMPLETE_SEQUENCE);
       }
 
-      if (input[0] <= CNS(Text, UTF8, Internal, MAX_1BYTE)) {
+      if (input[0] <= MODULE_IFUNC(Text, UTF8, MAX_1BYTE)) {
         *outCodepoint = (MODULE_TYPE(Text, Char32))input[0];
         *outUnits = 1U;
         return STATUS_CONST(SUCCESS);
@@ -117,21 +117,21 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
       uint_least32_t minimum = 0U;
       size_t length = 0U;
 
-      if (input[0] >= CNS(Text, UTF8, Internal, LEAD_2_MIN) &&
-          input[0] <= CNS(Text, UTF8, Internal, LEAD_2_MAX)) {
-        value = input[0] & CNS(Text, UTF8, Internal, LEAD_2_MASK);
+      if (input[0] >= MODULE_IFUNC(Text, UTF8, LEAD_2_MIN) &&
+          input[0] <= MODULE_IFUNC(Text, UTF8, LEAD_2_MAX)) {
+        value = input[0] & MODULE_IFUNC(Text, UTF8, LEAD_2_MASK);
         length = 2U;
-        minimum = CNS(Text, UTF8, Internal, MIN_2BYTE);
-      } else if (input[0] >= CNS(Text, UTF8, Internal, LEAD_3_PREFIX) &&
-                 input[0] <= CNS(Text, UTF8, Internal, LEAD_3_MAX)) {
-        value = input[0] & CNS(Text, UTF8, Internal, LEAD_3_MASK);
+        minimum = MODULE_IFUNC(Text, UTF8, MIN_2BYTE);
+      } else if (input[0] >= MODULE_IFUNC(Text, UTF8, LEAD_3_PREFIX) &&
+                 input[0] <= MODULE_IFUNC(Text, UTF8, LEAD_3_MAX)) {
+        value = input[0] & MODULE_IFUNC(Text, UTF8, LEAD_3_MASK);
         length = 3U;
-        minimum = CNS(Text, UTF8, Internal, MIN_3BYTE);
-      } else if (input[0] >= CNS(Text, UTF8, Internal, LEAD_4_PREFIX) &&
-                 input[0] <= CNS(Text, UTF8, Internal, LEAD_4_MAX)) {
-        value = input[0] & CNS(Text, UTF8, Internal, LEAD_4_MASK);
+        minimum = MODULE_IFUNC(Text, UTF8, MIN_3BYTE);
+      } else if (input[0] >= MODULE_IFUNC(Text, UTF8, LEAD_4_PREFIX) &&
+                 input[0] <= MODULE_IFUNC(Text, UTF8, LEAD_4_MAX)) {
+        value = input[0] & MODULE_IFUNC(Text, UTF8, LEAD_4_MASK);
         length = 4U;
-        minimum = CNS(Text, UTF8, Internal, MIN_4BYTE);
+        minimum = MODULE_IFUNC(Text, UTF8, MIN_4BYTE);
       } else {
         return STATUS_CONST(INVALID_SEQUENCE);
       }
@@ -141,12 +141,12 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
       }
 
       for (size_t index = 1U; index < length; ++index) {
-        if ((input[index] & CNS(Text, UTF8, Internal, CONT_TYPE_MASK)) !=
-            CNS(Text, UTF8, Internal, CONT_PREFIX)) {
+        if ((input[index] & MODULE_IFUNC(Text, UTF8, CONT_TYPE_MASK)) !=
+            MODULE_IFUNC(Text, UTF8, CONT_PREFIX)) {
           return STATUS_CONST(INVALID_SEQUENCE);
         }
-        value = (value << CNS(Text, UTF8, Internal, CONT_BITS)) |
-                (input[index] & CNS(Text, UTF8, Internal, CONT_DATA_MASK));
+        value = (value << MODULE_IFUNC(Text, UTF8, CONT_BITS)) |
+                (input[index] & MODULE_IFUNC(Text, UTF8, CONT_DATA_MASK));
       }
 
       if (value < minimum ||

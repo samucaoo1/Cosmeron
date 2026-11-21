@@ -4,9 +4,8 @@
 #include "../../../Core/Algorithm/Comparison.h"
 #include "../../../Core/Memory/Alloc.h"
 #include "../../../Core/Module/Module.h"
-#include "../Encoding/UTF8.h"
-#include "../Format/Format.h"
 #include "../Impl/Common.inc"
+#include "../Unicode/UTF8.h"
 #include "../View/View.def"
 #undef COSMERON_INTERNAL_NO_AUTO_INSTANTIATE
 
@@ -18,7 +17,7 @@
 
 #ifndef TEMPLATE_Text_String
 #define TEMPLATE_Text_String(SUFFIX, TYPE)                                     \
-  TEMPLATE_WIDTH_OBJECT(Text, String, SUFFIX,                                        \
+  TEMPLATE_WIDTH_OBJECT(Text, String, SUFFIX,                                  \
       FIELDS(                                                                  \
           TYPE *data;                                                          \
           size_t size;                                                         \
@@ -33,15 +32,15 @@
         if (requiredCapacity <= self->capacity)                                \
           return STATUS_CONST(SUCCESS);                                        \
         newCapacity = self->capacity == 0U                                     \
-                          ? CNS(Text, String, Internal, INITIAL_CAPACITY)      \
+                          ? MODULE_IFUNC(Text, String, INITIAL_CAPACITY)       \
                           : self->capacity;                                    \
         while (newCapacity < requiredCapacity) {                               \
           if (newCapacity >                                                    \
-              SIZE_MAX / CNS(Text, String, Internal, GROWTH_FACTOR)) {         \
+              SIZE_MAX / MODULE_IFUNC(Text, String, GROWTH_FACTOR)) {          \
             newCapacity = requiredCapacity;                                    \
             break;                                                             \
           }                                                                    \
-          newCapacity *= CNS(Text, String, Internal, GROWTH_FACTOR);           \
+          newCapacity *= MODULE_IFUNC(Text, String, GROWTH_FACTOR);            \
         }                                                                      \
         if (self->data == NULL) {                                              \
           void *allocated = NULL;                                              \
@@ -71,7 +70,9 @@
         self->capacity = 0U;                                                   \
         if (initialCapacity == 0U)                                             \
           return STATUS_CONST(SUCCESS);                                        \
-        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Reserve)(                   \
+        if (initialCapacity == SIZE_MAX)                                       \
+          return STATUS_CONST(ARITHMETIC_OVERFLOW);                            \
+        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Reserve)(       \
             self, initialCapacity + 1U);                                       \
         if (status != STATUS_CONST(SUCCESS))                                   \
           return status;                                                       \
@@ -88,9 +89,9 @@
           return STATUS_CONST(SUCCESS);                                        \
         if (buffer == NULL)                                                    \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        if (self->size > SIZE_MAX - count - 1U)                                \
-          return STATUS_CONST(OUT_OF_RANGE);                                   \
-        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Reserve)(                   \
+        if (self->size >= SIZE_MAX || count > SIZE_MAX - self->size - 1U)      \
+          return STATUS_CONST(ARITHMETIC_OVERFLOW);                            \
+        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Reserve)(       \
             self, self->size + count + 1U);                                    \
         if (status != STATUS_CONST(SUCCESS))                                   \
           return status;                                                       \
@@ -105,11 +106,12 @@
         OPSTATUS status;                                                       \
         if (self == NULL || (count > 0U && buffer == NULL))                    \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Create)(self, count);       \
+        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Create)(self,   \
+                                                                       count); \
         if (status != STATUS_CONST(SUCCESS))                                   \
           return status;                                                       \
-        return MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), AppendBuffer)(self, buffer,   \
-                                                               count);         \
+        return MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), AppendBuffer)(    \
+            self, buffer, count);                                              \
       }),                                                                      \
                                                                                \
       OPERATION_INLINE(FromCStr, (const TYPE *cstr), {                         \
@@ -125,7 +127,8 @@
           return STATUS_CONST(SUCCESS);                                        \
         while (cstr[len] != (TYPE)0)                                           \
           len++;                                                               \
-        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Create)(self, len);         \
+        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Create)(self,   \
+                                                                       len);   \
         if (status != STATUS_CONST(SUCCESS))                                   \
           return status;                                                       \
         if (len > 0U) {                                                        \
@@ -136,11 +139,27 @@
         return STATUS_CONST(SUCCESS);                                          \
       }),                                                                      \
                                                                                \
-      OPERATION_INLINE(Clone, (const MODULE_TYPE(Text, PP_OP_CAT2(String, SUFFIX)) *src), { \
+      OPERATION_INLINE(FromView,                                               \
+                       (MODULE_TYPE(Text, PP_OP_CAT2(View, SUFFIX)) view), {   \
+        OPSTATUS status;                                                       \
+        if (self == NULL || (view.size > 0U && view.data == NULL))             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Create)(        \
+            self, view.size);                                                  \
+        if (status != STATUS_CONST(SUCCESS))                                   \
+          return status;                                                       \
+        return MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), AppendBuffer)(    \
+            self, view.data, view.size);                                       \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(Clone,                                                  \
+                       (const MODULE_TYPE(Text, PP_OP_CAT2(String, SUFFIX))    \
+                            *src), {                                           \
         OPSTATUS status;                                                       \
         if (self == NULL || src == NULL || self == src)                        \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Create)(self, src->size);   \
+        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Create)(        \
+            self, src->size);                                                  \
         if (status != STATUS_CONST(SUCCESS))                                   \
           return status;                                                       \
         if (src->size > 0U && src->data != NULL) {                             \
@@ -155,7 +174,7 @@
         if (self == NULL)                                                      \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
         if (self->data != NULL)                                                \
-          Memory_Free(self->data);                               \
+          Memory_Free(self->data);                                             \
         self->data = NULL;                                                     \
         self->size = 0U;                                                       \
         self->capacity = 0U;                                                   \
@@ -232,7 +251,7 @@
           return STATUS_CONST(INVALID_ARGUMENT);                               \
         if (self->size > SIZE_MAX - 2U)                                        \
           return STATUS_CONST(ARITHMETIC_OVERFLOW);                            \
-        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Reserve)(                   \
+        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Reserve)(       \
             self, self->size + 2U);                                            \
         if (status != STATUS_CONST(SUCCESS))                                   \
           return status;                                                       \
@@ -254,24 +273,33 @@
         return STATUS_CONST(SUCCESS);                                          \
       }),                                                                      \
                                                                                \
-      OPERATION_INLINE(Append, (const TYPE *cstr), {                           \
+      OPERATION_INLINE(AppendCStr, (const TYPE *cstr), {                       \
         size_t len = 0U;                                                       \
         if (self == NULL || cstr == NULL)                                      \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
         while (cstr[len] != (TYPE)0)                                           \
           len++;                                                               \
-        return MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), AppendBuffer)(self, cstr,     \
-                                                               len);           \
+        return MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), AppendBuffer)(    \
+            self, cstr, len);                                                  \
       }),                                                                      \
                                                                                \
       OPERATION_INLINE(AppendString,                                           \
-                       (const MODULE_TYPE(Text, PP_OP_CAT2(String, SUFFIX)) *other), {    \
+                       (const MODULE_TYPE(Text, PP_OP_CAT2(String, SUFFIX))    \
+                            *other), {                                         \
         if (self == NULL || other == NULL)                                     \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
         if (other->size == 0U)                                                 \
           return STATUS_CONST(SUCCESS);                                        \
-        return MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), AppendBuffer)(                \
+        return MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), AppendBuffer)(    \
             self, other->data, other->size);                                   \
+      }),                                                                      \
+                                                                               \
+      OPERATION_INLINE(AppendView,                                             \
+                       (MODULE_TYPE(Text, PP_OP_CAT2(View, SUFFIX)) view), {   \
+        if (self == NULL || (view.size > 0U && view.data == NULL))             \
+          return STATUS_CONST(INVALID_ARGUMENT);                               \
+        return MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), AppendBuffer)(    \
+            self, view.data, view.size);                                       \
       }),                                                                      \
                                                                                \
       OPERATION_INLINE(Insert,                                                 \
@@ -285,7 +313,7 @@
           return STATUS_CONST(SUCCESS);                                        \
         if (self->size >= SIZE_MAX || count > SIZE_MAX - self->size - 1U)      \
           return STATUS_CONST(ARITHMETIC_OVERFLOW);                            \
-        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Reserve)(                   \
+        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Reserve)(       \
             self, self->size + count + 1U);                                    \
         if (status != STATUS_CONST(SUCCESS))                                   \
           return status;                                                       \
@@ -297,8 +325,8 @@
       }),                                                                      \
                                                                                \
       OPERATION_INLINE(InsertChar, (size_t index, TYPE value), {               \
-        return MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Insert)(self, index, &value,  \
-                                                         1U);                  \
+        return MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Insert)(          \
+            self, index, &value, 1U);                                          \
       }),                                                                      \
                                                                                \
       OPERATION_INLINE(Erase, (size_t index, size_t count), {                  \
@@ -317,7 +345,8 @@
       }),                                                                      \
                                                                                \
       CONST_COMPARISON_INLINE(Compare,                                         \
-                              (const MODULE_TYPE(Text, PP_OP_CAT2(String, SUFFIX)) *other), { \
+                              (const MODULE_TYPE(Text, PP_OP_CAT2(String, SUFFIX)) \
+                                   *other), {                                  \
         size_t lenA = self != NULL ? self->size : 0U;                          \
         size_t lenB = other != NULL ? other->size : 0U;                        \
         size_t minLen = lenA < lenB ? lenA : lenB;                             \
@@ -336,7 +365,7 @@
                                                                                \
       VARIANT(Equal,                                                           \
         CONST_PREDICATE_INLINE(                                                \
-            (const MODULE_TYPE(Text, PP_OP_CAT2(String, SUFFIX)) *other), {               \
+            (const MODULE_TYPE(Text, PP_OP_CAT2(String, SUFFIX)) *other), {    \
           if (self == NULL || other == NULL)                                   \
             return self == other;                                              \
           if (self->size != other->size)                                       \
@@ -360,18 +389,21 @@
             return true;                                                       \
           return memcmp(self->data, cstr, len * sizeof(TYPE)) == 0;            \
         }),                                                                    \
-        CONST_PREDICATE_INLINE(View, (MODULE_TYPE(Text, PP_OP_CAT2(View, SUFFIX)) view), {\
+        CONST_PREDICATE_INLINE(                                                \
+            View, (MODULE_TYPE(Text, PP_OP_CAT2(View, SUFFIX)) view), {        \
           if (self == NULL)                                                    \
             return false;                                                      \
-          return MODULE_FUNC(Text, PP_OP_CAT2(View, SUFFIX), Equal)(                       \
-              MODULE_FUNC(Text, PP_OP_CAT2(View, SUFFIX), Create)(self->data, self->size), \
+          return MODULE_FUNC(Text, PP_OP_CAT2(View, SUFFIX), Equal)(           \
+              MODULE_FUNC(Text, PP_OP_CAT2(View, SUFFIX), Create)(self->data,  \
+                                                                  self->size), \
               view);                                                           \
         })                                                                     \
       ),                                                                       \
                                                                                \
       OPERATION_INLINE(Substr,                                                 \
                        (size_t start, size_t count,                            \
-                        MODULE_TYPE(Text, PP_OP_CAT2(String, SUFFIX)) *outSubstr), {      \
+                        MODULE_TYPE(Text, PP_OP_CAT2(String, SUFFIX))          \
+                            *outSubstr), {                                     \
         size_t actual;                                                         \
         OPSTATUS status;                                                       \
         if (self == NULL || outSubstr == NULL || self == outSubstr)            \
@@ -379,10 +411,13 @@
         if (start > self->size)                                                \
           return STATUS_CONST(OUT_OF_RANGE);                                   \
         actual = count < (self->size - start) ? count : (self->size - start);  \
-        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Create)(outSubstr, actual); \
+        status = MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), Create)(        \
+            outSubstr, actual);                                                \
         if (status != STATUS_CONST(SUCCESS))                                   \
           return status;                                                       \
-        return MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), AppendBuffer)(                \
+        if (actual == 0U)                                                      \
+          return STATUS_CONST(SUCCESS);                                        \
+        return MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), AppendBuffer)(    \
             outSubstr, self->data + start, actual);                            \
       }),                                                                      \
                                                                                \
@@ -398,7 +433,7 @@
           }                                                                    \
           return STATUS_CONST(NOT_FOUND);                                      \
         }),                                                                    \
-        OPERATION_INLINE(Str, (const TYPE *needle, size_t *outIndex), {        \
+        OPERATION_INLINE(CStr, (const TYPE *needle, size_t *outIndex), {       \
           size_t needleLen = 0U;                                               \
           size_t limit;                                                        \
           if (self == NULL || outIndex == NULL || needle == NULL)              \
@@ -449,32 +484,22 @@
                       suffixLen * sizeof(TYPE)) == 0;                          \
       }),                                                                      \
                                                                                \
-      CONST_FUNCTION_INLINE(MODULE_TYPE(Text, PP_OP_CAT2(View, SUFFIX)), View, (), {      \
+      CONST_FUNCTION_INLINE(MODULE_TYPE(Text, PP_OP_CAT2(View, SUFFIX)), View, \
+                            (), {                                              \
         if (self == NULL)                                                      \
-          return MODULE_FUNC(Text, PP_OP_CAT2(View, SUFFIX), Empty)();                     \
-        return MODULE_FUNC(Text, PP_OP_CAT2(View, SUFFIX), Create)(self->data,             \
-                                                       self->size);            \
+          return MODULE_FUNC(Text, PP_OP_CAT2(View, SUFFIX), Empty)();         \
+        return MODULE_FUNC(Text, PP_OP_CAT2(View, SUFFIX), Create)(self->data, \
+                                                                   self->size);\
       }),                                                                      \
                                                                                \
-      CONST_FUNCTION_INLINE(MODULE_TYPE(Text, PP_OP_CAT2(View, SUFFIX)), Slice,           \
+      CONST_FUNCTION_INLINE(MODULE_TYPE(Text, PP_OP_CAT2(View, SUFFIX)), Slice,\
                             (size_t start, size_t count), {                    \
         if (self == NULL)                                                      \
-          return MODULE_FUNC(Text, PP_OP_CAT2(View, SUFFIX), Empty)();                     \
-        return MODULE_FUNC(Text, PP_OP_CAT2(View, SUFFIX), Slice)(                         \
-            MODULE_FUNC(Text, PP_OP_CAT2(View, SUFFIX), Create)(self->data, self->size),   \
+          return MODULE_FUNC(Text, PP_OP_CAT2(View, SUFFIX), Empty)();         \
+        return MODULE_FUNC(Text, PP_OP_CAT2(View, SUFFIX), Slice)(             \
+            MODULE_FUNC(Text, PP_OP_CAT2(View, SUFFIX), Create)(self->data,    \
+                                                                self->size),   \
             start, count);                                                     \
-      }),                                                                      \
-                                                                               \
-      OPERATION_INLINE(FromView, (MODULE_TYPE(Text, PP_OP_CAT2(View, SUFFIX)) view), {    \
-        if (self == NULL)                                                      \
-          return STATUS_CONST(INVALID_ARGUMENT);                               \
-        return MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), AppendBuffer)(                \
-            self, view.data, view.size);                                       \
-      }),                                                                      \
-                                                                               \
-      OPERATION_INLINE(AppendView, (MODULE_TYPE(Text, PP_OP_CAT2(View, SUFFIX)) view), {  \
-        return MODULE_FUNC(Text, PP_OP_CAT2(String, SUFFIX), AppendBuffer)(                \
-            self, view.data, view.size);                                       \
       })                                                                       \
   )
 #endif

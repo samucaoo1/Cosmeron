@@ -5,6 +5,7 @@
 #include "../../../Core/Module/Module.h"
 #include "../../Tuple/Dual.h"
 #include "../../Tuple/Quad.h"
+#include "../Impl/Common.inc"
 
 #define TEXT_ATTRIBUTE_FLAGS_COL_NAME(NAME, VALUE) NAME
 #define TEXT_ATTRIBUTE_FLAGS_COL_VALUE(NAME, VALUE) VALUE
@@ -26,14 +27,14 @@
   X((DEFAULT_BACKGROUND, UINT16_C(1) << 11U))                                  \
   X((RESERVED, UINT16_C(1) << 12U))
 
-ENUM_DEF(Text_Attribute, Flag, TEXT_ATTRIBUTE_FLAGS_TABLE)
+ENUM_DEF(MODULE_NS(Text, Attribute), Flag, TEXT_ATTRIBUTE_FLAGS_TABLE)
 
-#define TEXT_GRID_UNDERLINE_COL_NAME(NAME, VALUE) NAME
-#define TEXT_GRID_UNDERLINE_COL_VALUE(NAME, VALUE) VALUE
-#define TEXT_GRID_UNDERLINE_GET(FIELD, ROW)                                    \
-  PP_OP_CAT2(TEXT_GRID_UNDERLINE_COL_, FIELD) ROW
+#define TEXT_ATTRIBUTE_UNDERLINE_COL_NAME(NAME, VALUE) NAME
+#define TEXT_ATTRIBUTE_UNDERLINE_COL_VALUE(NAME, VALUE) VALUE
+#define TEXT_ATTRIBUTE_UNDERLINE_GET(FIELD, ROW)                               \
+  PP_OP_CAT2(TEXT_ATTRIBUTE_UNDERLINE_COL_, FIELD) ROW
 
-#define TEXT_GRID_UNDERLINE_TABLE(X)                                           \
+#define TEXT_ATTRIBUTE_UNDERLINE_TABLE(X)                                      \
   X((NONE, 0))                                                                 \
   X((SINGLE, 1))                                                               \
   X((DOUBLE, 2))                                                               \
@@ -43,44 +44,29 @@ ENUM_DEF(Text_Attribute, Flag, TEXT_ATTRIBUTE_FLAGS_TABLE)
   X((RESERVED_1, 6))                                                           \
   X((RESERVED_2, 7))
 
-ENUM_DEF(Text_Grid_Underline, Styles, TEXT_GRID_UNDERLINE_TABLE)
+ENUM_DEF_EX(MODULE_NS(Text, Attribute), Underline,
+            TEXT_ATTRIBUTE_UNDERLINE_TABLE, QUALIFIED)
 
-MODULE(DOMAIN(Modules), Text,
-    STRUCT(Attribute_Cell,
-        FIELDS(
-            uint32_t foreground : 24;
-            uint32_t background : 24;
-            uint16_t flags : 13;
-            uint8_t underline : 3;
-        )
-    ),
-    STRUCT(Attribute_Grid,
-        FIELDS(
-            MODULE_TYPE(Text, Attribute, Cell) *data;
-            MODULE_TYPED(Tuple, Dual, UInt16) size;
-        )
-    )
-);
+#define TEXT_ATTRIBUTE_COLOR_MASK_COL_NAME(NAME, VALUE) NAME
+#define TEXT_ATTRIBUTE_COLOR_MASK_COL_VALUE(NAME, VALUE) VALUE
+#define TEXT_ATTRIBUTE_COLOR_MASK_GET(FIELD, ROW)                              \
+  PP_OP_CAT2(TEXT_ATTRIBUTE_COLOR_MASK_COL_, FIELD) ROW
 
-#define TEXT_GRID_COLOR_MASK_COL_NAME(NAME, VALUE) NAME
-#define TEXT_GRID_COLOR_MASK_COL_VALUE(NAME, VALUE) VALUE
-#define TEXT_GRID_COLOR_MASK_GET(FIELD, ROW)                                   \
-  PP_OP_CAT2(TEXT_GRID_COLOR_MASK_COL_, FIELD) ROW
-
-#define TEXT_GRID_COLOR_MASK_TABLE(X)                                          \
+#define TEXT_ATTRIBUTE_COLOR_MASK_TABLE(X)                                     \
   X((RGB_MASK, UINT32_C(0x00FFFFFF)))                                          \
   X((CHANNEL_MASK, UINT32_C(0xFF)))                                            \
   X((GREEN_SHIFT, 8U))                                                         \
   X((RED_SHIFT, 16U))
 
-ENUM_DEF(Text_Grid_Color, Mask, TEXT_GRID_COLOR_MASK_TABLE)
+IENUM_DEF(MODULE_NS(Text, Attribute, Color), Mask,
+          TEXT_ATTRIBUTE_COLOR_MASK_TABLE)
 
-#define TEXT_GRID_WINDOWS_COLOR_COL_NAME(NAME, VALUE) NAME
-#define TEXT_GRID_WINDOWS_COLOR_COL_VALUE(NAME, VALUE) VALUE
-#define TEXT_GRID_WINDOWS_COLOR_GET(FIELD, ROW)                                \
-  PP_OP_CAT2(TEXT_GRID_WINDOWS_COLOR_COL_, FIELD) ROW
+#define TEXT_ATTRIBUTE_WINDOWS_COLOR_COL_NAME(NAME, VALUE) NAME
+#define TEXT_ATTRIBUTE_WINDOWS_COLOR_COL_VALUE(NAME, VALUE) VALUE
+#define TEXT_ATTRIBUTE_WINDOWS_COLOR_GET(FIELD, ROW)                           \
+  PP_OP_CAT2(TEXT_ATTRIBUTE_WINDOWS_COLOR_COL_, FIELD) ROW
 
-#define TEXT_GRID_WINDOWS_COLOR_TABLE(X)                                       \
+#define TEXT_ATTRIBUTE_WINDOWS_COLOR_TABLE(X)                                  \
   X((BLACK, UINT32_C(0x0C0C0C)))                                               \
   X((DARK_BLUE, UINT32_C(0x0037DA)))                                           \
   X((DARK_GREEN, UINT32_C(0x13A10E)))                                          \
@@ -98,19 +84,35 @@ ENUM_DEF(Text_Grid_Color, Mask, TEXT_GRID_COLOR_MASK_TABLE)
   X((BRIGHT_YELLOW, UINT32_C(0xF9F1A5)))                                       \
   X((WHITE, UINT32_C(0xF2F2F2)))
 
-#define TEXT_GRID_WINDOWS_COUNT_COL_NAME(NAME, VALUE) NAME
-#define TEXT_GRID_WINDOWS_COUNT_COL_VALUE(NAME, VALUE) VALUE
-#define TEXT_GRID_WINDOWS_COUNT_GET(FIELD, ROW)                                \
-  PP_OP_CAT2(TEXT_GRID_WINDOWS_COUNT_COL_, FIELD) ROW
+#define TEXT_ATTRIBUTE_WINDOWS_COUNT_COL_NAME(NAME, VALUE) NAME
+#define TEXT_ATTRIBUTE_WINDOWS_COUNT_COL_VALUE(NAME, VALUE) VALUE
+#define TEXT_ATTRIBUTE_WINDOWS_COUNT_GET(FIELD, ROW)                           \
+  PP_OP_CAT2(TEXT_ATTRIBUTE_WINDOWS_COUNT_COL_, FIELD) ROW
 
-#define TEXT_GRID_WINDOWS_COUNT_TABLE(X) X((WINDOWS_COUNT, 16U))
+#define TEXT_ATTRIBUTE_WINDOWS_COUNT_TABLE(X) X((WINDOWS_COUNT, 16U))
 
-ENUM_DEF_EX(Text_Grid_Color, Windows, TEXT_GRID_WINDOWS_COLOR_TABLE, QUALIFIED)
-ENUM_DEF_EX(Text_Grid_Color, WindowsIndex, TEXT_GRID_WINDOWS_COLOR_TABLE,
-            QUALIFIED_NAME)
-ENUM_DEF(Text_Grid_Color, WindowsCount, TEXT_GRID_WINDOWS_COUNT_TABLE)
+ENUM_DEF_EX(MODULE_NS(Text, Attribute_Color), Windows,
+            TEXT_ATTRIBUTE_WINDOWS_COLOR_TABLE, QUALIFIED)
+ENUM_DEF_EX(MODULE_NS(Text, Attribute_Color), WindowsIndex,
+            TEXT_ATTRIBUTE_WINDOWS_COLOR_TABLE, QUALIFIED_NAME)
+ENUM_DEF(MODULE_NS(Text, Attribute_Color), WindowsCount,
+         TEXT_ATTRIBUTE_WINDOWS_COUNT_TABLE)
 
 MODULE(DOMAIN(Modules), Text,
+    STRUCT(Attribute_Cell,
+        FIELDS(
+            uint32_t foreground : 24;
+            uint32_t background : 24;
+            uint16_t flags : 13;
+            uint8_t underline : 3;
+        )
+    ),
+    STRUCT(Attribute_Grid,
+        FIELDS(
+            MODULE_TYPE(Text, Attribute, Cell) *data;
+            MODULE_TYPED(Tuple, Dual, UInt16) size;
+        )
+    ),
     PACKAGE(Attribute,
         FUNCTION(MODULE_TYPE(Text, Attribute, Cell), Default, ()),
         PREDICATE(IsEmpty, (const MODULE_TYPE(Text, Attribute, Grid) *grid)),
@@ -152,29 +154,15 @@ MODULE(DOMAIN(Modules), Text,
                            MODULE_TYPED(Tuple, Dual, UInt16) destinationPosition,
                            const MODULE_TYPE(Text, Attribute, Grid) *source,
                            MODULE_TYPED(Tuple, Quad, UInt16) sourceRegion))
+        ),
+        SPACE(Color,
+            FUNCTION(uint32_t, RGB,
+                     (uint8_t red, uint8_t green, uint8_t blue)),
+            FUNCTION(uint8_t, Red, (uint32_t color)),
+            FUNCTION(uint8_t, Green, (uint32_t color)),
+            FUNCTION(uint8_t, Blue, (uint32_t color)),
+            FUNCTION(const uint32_t *, WindowsPalette, ())
         )
-    ),
-    PACKAGE(Grid_Color,
-        FUNCTION_INLINE(uint32_t, RGB,
-                        (uint8_t red, uint8_t green, uint8_t blue), {
-          return (((uint32_t)red & CNS(Text, Grid_Color, CHANNEL_MASK))
-                  << CNS(Text, Grid_Color, RED_SHIFT)) |
-                 (((uint32_t)green & CNS(Text, Grid_Color, CHANNEL_MASK))
-                  << CNS(Text, Grid_Color, GREEN_SHIFT)) |
-                 ((uint32_t)blue & CNS(Text, Grid_Color, CHANNEL_MASK));
-        }),
-        FUNCTION_INLINE(uint8_t, Red, (uint32_t color), {
-          return (uint8_t)((color >> CNS(Text, Grid_Color, RED_SHIFT)) &
-                           CNS(Text, Grid_Color, CHANNEL_MASK));
-        }),
-        FUNCTION_INLINE(uint8_t, Green, (uint32_t color), {
-          return (uint8_t)((color >> CNS(Text, Grid_Color, GREEN_SHIFT)) &
-                           CNS(Text, Grid_Color, CHANNEL_MASK));
-        }),
-        FUNCTION_INLINE(uint8_t, Blue, (uint32_t color), {
-          return (uint8_t)(color & CNS(Text, Grid_Color, CHANNEL_MASK));
-        }),
-        FUNCTION(const uint32_t *, WindowsPalette, ())
     )
 );
 

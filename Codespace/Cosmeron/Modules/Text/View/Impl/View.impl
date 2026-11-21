@@ -83,10 +83,10 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
           size_t cpStart = end - 1U;
           while (cpStart > 0U &&
                  (bytes[cpStart] &
-                  (unsigned char)CNS(Text, View, Internal, UTF8_CONT_MASK)) ==
-                     (unsigned char)CNS(Text, View, Internal, UTF8_CONT_TAG) &&
+                  (unsigned char)MODULE_IFUNC(Text, View, UTF8_CONT_MASK)) ==
+                     (unsigned char)MODULE_IFUNC(Text, View, UTF8_CONT_TAG) &&
                  (end - cpStart) <
-                     (size_t)CNS(Text, View, Internal, UTF8_MAX_BYTES)) {
+                     (size_t)MODULE_IFUNC(Text, View, UTF8_MAX_BYTES)) {
             --cpStart;
           }
           MODULE_TYPE(Text, Char32) cp = 0U;

@@ -5,7 +5,8 @@
 #include "../../../Core/Memory/Alloc.h"
 #include "../../../Core/Module/Module.h"
 #include "../Impl/Common.inc"
-#include "../Encoding/UTF8.h"
+#include "../Unicode/UTF8.h"
+#include "../Format/Writer.h"
 #include "../Format/Format.h"
 #include "../View/View.h"
 
@@ -21,8 +22,14 @@ TEMPLATE_INSTANTIATE(Text, String, 8, char);
 TEMPLATE_INSTANTIATE(Text, String, 16, MODULE_TYPE(Text, Char16));
 TEMPLATE_INSTANTIATE(Text, String, 32, MODULE_TYPE(Text, Char32));
 
-/* UTF-8 specialized operations for TText_String8 */
+/* Writer target adapter and UTF-8 specialized operations for TText_String8 */
 MODULE(DOMAIN(Modules), Text,
+    PACKAGE(Writer,
+        NO_FUNCTION_TABLE,
+        FUNCTION(MODULE_TYPE(Text, Writer), ToString,
+                 (MODULE_TYPE(Text, String8) *str))
+    ),
+
     PACKAGE(String8,
         NO_FUNCTION_TABLE,
         OPERATION(AppendCodepoint,

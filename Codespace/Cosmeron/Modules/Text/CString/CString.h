@@ -1,21 +1,14 @@
 #pragma once
 
-#include "../../../../Core/Algorithm/Comparison.h"
-#include "../../../../Core/Condition/Status.h"
-#include "../../../../Core/Memory/Alloc.h"
-#include "../../../../Core/Module/Module.h"
+#include "../../../Core/Algorithm/Comparison.h"
+#include "../../../Core/Condition/Status.h"
+#include "../../../Core/Memory/Alloc.h"
+#include "../../../Core/Module/Module.h"
+#include "../Impl/Common.inc"
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-
-#if defined(TEXT_DISABLE_FUNCTION_TABLE) && !defined(COSMERON_DISABLE_FT_Text)
-#define COSMERON_DISABLE_FT_Text 1
-#endif
-#if defined(TEXT_CSTRING_DISABLE_FUNCTION_TABLE) &&                            \
-    !defined(COSMERON_DISABLE_FT_Text_CString)
-#define COSMERON_DISABLE_FT_Text_CString 1
-#endif
 
 MODULE(DOMAIN(Modules), Text,
     PACKAGE(CString,
@@ -82,7 +75,7 @@ MODULE(DOMAIN(Modules), Text,
                           (const char *str, size_t maxLen, char ch,
                            size_t *outIndex))
         ),
-        VARIANT(FindSubstring,
+        VARIANT(FindCStr,
                 OPERATION((const char *haystack, const char *needle,
                            size_t *outIndex)),
                 OPERATION(Bounded,
@@ -96,10 +89,10 @@ MODULE(DOMAIN(Modules), Text,
         VARIANT(Trim,
                 OPERATION((const char *str, const char *charsToTrim,
                            char *output, size_t capacity, size_t *outLength)),
-                OPERATION(Start,
+                OPERATION(Left,
                           (const char *str, const char *charsToTrim,
                            char *output, size_t capacity, size_t *outLength)),
-                OPERATION(End,
+                OPERATION(Right,
                           (const char *str, const char *charsToTrim,
                            char *output, size_t capacity, size_t *outLength))
         ),

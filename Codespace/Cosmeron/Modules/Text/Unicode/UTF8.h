@@ -2,7 +2,8 @@
 
 #include "../../../Core/Condition/Status.h"
 #include "../../../Core/Module/Module.h"
-#include "../Unicode/Codepoint.h"
+#include "../Impl/Common.inc"
+#include "Codepoint.h"
 
 MODULE(DOMAIN(Modules), Text,
     PACKAGE(UTF8,
