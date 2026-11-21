@@ -181,6 +181,155 @@ O parsing é estrito: toda a entrada deve corresponder ao formato esperado. Espa
 ### Tratamento de erros e propriedade
 
 Operações que podem falhar retornam OPSTATUS e escrevem os resultados por parâmetros de saída. Verifique o status antes de consumir o valor de saída. Os tipos públicos do módulo são estruturas POD: o chamador controla seu armazenamento e os valores temporais centrais não exigem alocação dinâmica. Strings retornadas pelas funções de consulta de fusos e países referenciam dados estáticos incorporados; não devem ser liberadas pelo chamador.
+
+
+## Contratos detalhados
+
+### Duration
+
+TDuration.nanoseconds é um int64_t com sinal. Os construtores de unidades validam os ponteiros de saída e detectam overflow de multiplicação; FromNanoseconds é um construtor direto. ToMicroseconds, ToMilliseconds e ToSeconds usam divisão inteira, descartam frações e truncam em direção a zero. Não arredondam. Absolute e Negate retornam ARITHMETIC_OVERFLOW para INT64_MIN. Add, Subtract e Scale também detectam overflow em vez de permitir wraparound.
+
+### Ciclo de vida de Clock e Timer
+
+Clock.Now retorna uma leitura monotônica em nanossegundos. Sua época é indefinida; leituras só fazem sentido quando comparadas dentro do mesmo domínio de relógio. DurationBetween é assinado e retorna valor negativo quando end antecede start.
+
+Clock.Sleep rejeita durações negativas com INVALID_ARGUMENT; zero é uma operação bem-sucedida sem espera. O sistema operacional pode retomar a thread depois do tempo solicitado; Sleep não é uma garantia de escalonamento em tempo real.
+
+Timer.Start estabelece o início. Elapsed consulta o intervalo sem alterá-lo; Restart retorna o intervalo e move o início para a nova leitura. Timer.Delta.Start estabelece a leitura anterior; Delta.Update retorna o intervalo desde a atualização anterior e avança essa leitura.
+
+Use o limitador de frames nesta ordem: Create ou FromFPS; Begin no início de cada frame; execute o trabalho; depois Wait ou Remaining. Wait não inicia automaticamente o próximo frame. Chame Begin novamente. Remaining e Wait retornam INVALID_ARGUMENT antes da primeira chamada bem-sucedida a Begin. FromFPS calcula nanossegundos inteiros por frame (1.000.000.000 / fps), portanto taxas que não dividem um bilhão usam intervalo truncado.
+
+### Instant e conversões de época
+
+Instant é normalizado como segundos mais nanossegundos no intervalo [0, 1.000.000.000). Instantes negativos usam a mesma representação; meio segundo antes da época Unix é {-1, 500000000}.
+
+Instant.Now lê o relógio de parede do sistema operacional, que pode ser ajustado por sincronização, alterações administrativas ou virtualização. DurationBetween calcula a diferença entre os instantes fornecidos; não garante progressão monotônica do relógio de parede.
+
+Epoch.TimestampToUnix interpreta Timestamp como data-hora civil UTC no calendário gregoriano. Timestamp não contém fuso horário: não use essa conversão para hora local sem convertê-la primeiro para UTC. TimestampFromUnix realiza a conversão inversa UTC/gregoriana.
+
+DateToJulianDayNumber e DateFromJulianDayNumber exigem política de calendário explícita. Rata Die utiliza a convenção gregoriana desta implementação e não recebe política.
+
+TAI utiliza a tabela incorporada de segundos intercalares. TAIMinusUtcSeconds retorna OUT_OF_RANGE antes do período coberto. A tabela não é obtida nem atualizada em tempo de execução. TAI usa o mesmo contêiner de segundos/nanossegundos de Instant, mas representa outra escala temporal; não trate TAI como timestamp Unix UTC.
+
+### Políticas de calendário e intervalo de datas
+
+CalendarPolicy é uma regra de interpretação, não metadado armazenado em Date. Mantenha a mesma política em operações relacionadas de validação, aritmética, ordinal e dia da semana. GregorianPolicy retorna a política gregoriana por valor; SystemPolicy cria uma política gregoriana ou juliana pura; ReformPolicy cria uma das reformas históricas predefinidas.
+
+As reformas representam uma descontinuidade entre a última data do sistema antigo e a primeira do novo. Datas no intervalo suprimido são inválidas nessa política. O modelo cobre apenas as três transições predefinidas, não um banco histórico de calendários por país.
+
+AddMonths limita o dia original ao último dia do mês de destino. AddYears usa aritmética de meses; mover 29 de fevereiro para um ano não bissexto resulta no último dia de fevereiro. FromNthWeekday oferece FIRST_WEEKDAY a FOURTH_WEEKDAY e LAST_WEEKDAY. FromWeekdayAnchor oferece correspondência exata, no dia ou após, no dia ou antes e última ocorrência relativa a um dia âncora.
+
+Datas de semana ISO usam segunda-feira como dia 1 e domingo como dia 7. O ano ISO pode diferir do ano civil próximo ao Ano-Novo. A política é necessária para converter entre data civil e data de semana ISO.
+
+### Modelo de regras de fuso horário
+
+UtcOffset.minutesEastOfUtc é o deslocamento assinado em minutos a leste de UTC: UTC−03:00 equivale a -180 e UTC+05:30 a 330. O intervalo aceito é de -1439 a +1439 minutos. FromHoursMinutes recebe componentes de hora e minuto com sinal; use sinais iguais para offsets negativos.
+
+TimezoneRule contém offset padrão, ajuste DST e duas regras recorrentes de transição. Cada regra registra mês, âncora de dia da semana, dia da semana, hora/minuto local e base temporal (TIME_BASE_WALL, TIME_BASE_STANDARD ou TIME_BASE_UTC). É um modelo compacto, não um histórico TZif completo. Não representa todas as mudanças históricas, alterações políticas não recorrentes ou sequências arbitrárias de transições.
+
+FromName resolve nomes IANA canônicos e aliases incorporados. FromId resolve o ZoneId gerado. ianaName aponta para armazenamento estático e não deve ser liberado. Consultas de país também retornam strings estáticas e registros de fusos incorporados. Códigos e índices inválidos retornam status de erro.
+
+FromUTC aplica offset numérico fixo. FromUTCWithRule e FromUTCWithZone aplicam um perfil a um instante absoluto. SystemOffsetAt consulta o offset local do sistema operacional no instante informado; SystemNow combina o instante atual com o offset local. Essas funções dependem da configuração de fusos do sistema, que pode diferir do catálogo incorporado.
+
+Para horário local inexistente, ClassifyLocal retorna candidatos dos dois lados da transição para frente. Para horário ambíguo, retorna as ocorrências anterior e posterior. Para horário único, ambas as saídas são iguais. ResolveLocalWithPolicy rejeita horários não únicos com DISAMBIGUATE_REJECT; EARLIER e LATER selecionam o candidato correspondente. COMPATIBLE escolhe a ocorrência anterior em sobreposição e o candidato posterior em lacuna.
+
+### Contratos ISO 8601
+
+Format é um formatador/parser com buffer limitado. Não aloca memória nem utiliza <stdio.h>. Funções de saída exigem buffer não nulo e capacidade diferente de zero; parsing exige entrada e ponteiros de saída não nulos. A capacidade deve incluir o byte nulo terminador. Buffer insuficiente retorna OUT_OF_RANGE.
+
+- ToISODate e FromISODate usam calendário gregoriano.
+- ToISOTimestamp e FromISOTimestamp operam sobre data-hora civil local sem offset.
+- ToISOOffsetTimestamp e FromISOOffsetTimestamp preservam offset UTC numérico. O indicador DST não é codificado no texto ISO.
+- ToISOInstant sempre formata UTC com Z. FromISOInstant aceita timestamp com offset e converte para UTC.
+- ToISODuration emite duração ISO assinada de dia/tempo. O formatador normaliza dias inteiros em horas; o parser aceita componentes de dia e tempo.
+
+O parsing consome toda a entrada. Espaços iniciais/finais, campos incompletos, datas/horas inválidas e caracteres excedentes são rejeitados. Datas civis ISO usam calendário gregoriano, independentemente de políticas históricas usadas em outras partes do módulo. O parser/formatador de datas aceita anos estendidos com sinal.
+
+## Exemplos práticos
+
+### Medir um intervalo
+
+~~~c
+#include "Cosmeron/Modules/Chronometry/Chronometry.h"
+
+MODULE_TYPE(Chronometry, Timer) timer = {0};
+MODULE_TYPE(Chronometry, Duration) elapsed = {0};
+
+if (MODULE_FUNC(Chronometry, Timer, Start)(&timer) != STATUS_CONST(SUCCESS)) {
+    return 1;
+}
+
+/* Execute aqui a operação que será medida. */
+
+if (MODULE_FUNC(Chronometry, Timer, Elapsed)(&timer, &elapsed) !=
+    STATUS_CONST(SUCCESS)) {
+    return 1;
+}
+~~~
+
+### Aritmética de calendário
+
+~~~c
+MODULE_TYPE(Chronometry, CalendarPolicy) gregorian =
+    MODULE_FUNC(Chronometry, Calendar, GregorianPolicy)();
+MODULE_TYPE(Chronometry, Date) nextMonth = {0};
+
+OPSTATUS status = MODULE_FUNC(Chronometry, Calendar, Date, AddMonths)(
+    &gregorian, (MODULE_TYPE(Chronometry, Date)){2024, 1, 31}, 1, &nextMonth);
+
+/* Em caso de sucesso, nextMonth será 2024-02-29. */
+~~~
+
+### Resolver sobreposição de horário de verão
+
+~~~c
+MODULE_TYPE(Chronometry, TimezoneRule) newYork = {0};
+MODULE_TYPE(Chronometry, Timestamp) local = {
+    .date = {2026, 11, 1},
+    .time = {.hour = 1, .minute = 30}
+};
+MODULE_TYPE(Chronometry, OffsetTimestamp) resolved = {0};
+
+OPSTATUS status = MODULE_FUNC(Chronometry, Timezone, Zone, FromName)(
+    "America/New_York", &newYork);
+
+if (status == STATUS_CONST(SUCCESS)) {
+    status = MODULE_FUNC(Chronometry, Timezone, Zone,
+                         ResolveLocalWithPolicy)(
+        &newYork, local,
+        MODULE_CONST(Chronometry, Timezone, DISAMBIGUATE_LATER),
+        &resolved);
+}
+~~~
+
+### Formatar instante
+
+~~~c
+MODULE_TYPE(Chronometry, Instant) instant = {0};
+char text[MODULE_CONST(Chronometry, Format, ISO_INSTANT_BUFFER_SIZE)];
+
+OPSTATUS status = MODULE_FUNC(Chronometry, Instant, Now)(&instant);
+if (status == STATUS_CONST(SUCCESS)) {
+    status = MODULE_FUNC(Chronometry, Format, ToISOInstant)(
+        instant, text, sizeof(text));
+}
+~~~
+
+## Cabeçalhos públicos e mapa da implementação
+
+| Subpacote | Cabeçalho público | Implementação |
+| --- | --- | --- |
+| Duration | Duration/Duration.h | Duration/Impl/Duration.impl |
+| Clock | Clock/Clock.h | Clock/Impl/Clock.impl |
+| Timer | Timer/Timer.h | Timer/Impl/Timer.impl |
+| Instant | Instant/Instant.h | Instant/Impl/Instant.impl |
+| Calendar | Calendar/Calendar.h | Calendar/Impl/Calendar.impl |
+| Timestamp | Timestamp/Timestamp.h | Timestamp/Impl/Timestamp.impl |
+| Epoch | Epoch/Epoch.h | Epoch/Impl/Epoch.impl e Epoch/Impl/LeapSeconds.inc |
+| Timezone | Timezone/Timezone.h | Timezone/Impl/Timezone.impl e Timezone/Impl/IanaZones.inc |
+| Format | Format/Format.h | Format/Impl/Format.impl |
+
+O teste de integração está em Codespace/Tests/Chronometry/Chronometry.c. Ele cobre conversões, reformas de calendário, semanas ISO, TAI/UTC, lacunas e sobreposições DST, aliases de fusos, consulta de países e formatação/parsing.
 ---
 
 # Portabilidade
