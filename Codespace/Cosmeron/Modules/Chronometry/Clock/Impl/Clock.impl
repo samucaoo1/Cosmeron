@@ -4,8 +4,11 @@
 #if OS_WINDOWS
 #include <windows.h>
 #elif OS_MAC
+#include <errno.h>
 #include <mach/mach_time.h>
+#include <time.h>
 #else
+#include <errno.h>
 #include <time.h>
 #endif
 
@@ -31,6 +34,20 @@ MODULE(DOMAIN(Modules), Chronometry,
           *outNanoseconds =
               (ticks / hz) * nsPerSec + ((ticks % hz) * nsPerSec) / hz;
           return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(SleepFor, (int64_t nanoseconds), {
+          const int64_t nsPerMs =
+              MODULE_CONST(Chronometry, Duration, NANOSECONDS_PER_MILLISECOND);
+          int64_t ms = nanoseconds / nsPerMs;
+          if (ms == 0 && nanoseconds > 0) {
+            ms = 1;
+          }
+          if (ms > (int64_t)UINT32_MAX) {
+            ms = (int64_t)UINT32_MAX;
+          }
+          Sleep((DWORD)ms);
+          return STATUS_CONST(SUCCESS);
         })
     )
 );
@@ -48,6 +65,21 @@ MODULE(DOMAIN(Modules), Chronometry,
               (ticks / timebase.denom) * timebase.numer +
               ((ticks % timebase.denom) * timebase.numer) / timebase.denom;
           return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(SleepFor, (int64_t nanoseconds), {
+          const int64_t nsPerSec =
+              MODULE_CONST(Chronometry, Duration, NANOSECONDS_PER_SECOND);
+          struct timespec req = {(time_t)(nanoseconds / nsPerSec),
+                                 (long)(nanoseconds % nsPerSec)};
+          struct timespec rem = {0, 0};
+          while (nanosleep(&req, &rem) != 0) {
+            if (errno != EINTR) {
+              return STATUS_CONST(GENERIC_ERROR);
+            }
+            req = rem;
+          }
+          return STATUS_CONST(SUCCESS);
         })
     )
 );
@@ -63,6 +95,21 @@ MODULE(DOMAIN(Modules), Chronometry,
               Chronometry, Duration, NANOSECONDS_PER_SECOND);
           *outNanoseconds =
               (uint64_t)value.tv_sec * nsPerSec + (uint64_t)value.tv_nsec;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(SleepFor, (int64_t nanoseconds), {
+          const int64_t nsPerSec =
+              MODULE_CONST(Chronometry, Duration, NANOSECONDS_PER_SECOND);
+          struct timespec req = {(time_t)(nanoseconds / nsPerSec),
+                                 (long)(nanoseconds % nsPerSec)};
+          struct timespec rem = {0, 0};
+          while (nanosleep(&req, &rem) != 0) {
+            if (errno != EINTR) {
+              return STATUS_CONST(GENERIC_ERROR);
+            }
+            req = rem;
+          }
           return STATUS_CONST(SUCCESS);
         })
     )
@@ -100,6 +147,17 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Chronometry,
           outResult->nanoseconds =
               negative ? -(int64_t)difference : (int64_t)difference;
           return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(Sleep, (MODULE_TYPE(Chronometry, Duration) duration), {
+          if (duration.nanoseconds < 0) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          if (duration.nanoseconds == 0) {
+            return STATUS_CONST(SUCCESS);
+          }
+          return MODULE_IFUNC(Chronometry, Clock, SleepFor)(
+              duration.nanoseconds);
         })
     )
 );

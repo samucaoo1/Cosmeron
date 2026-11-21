@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+
 #include <stdint.h>
 
 #include "../../../Core/Algorithm/Comparison.h"
@@ -57,6 +61,11 @@ MODULE(DOMAIN(Modules), Chronometry,
           int64_t quotient = value / divisor;
           int64_t remainder = value % divisor;
           return quotient - (remainder < 0);
+        }),
+
+        FUNCTION_INLINE(int64_t, FloorMod, (int64_t value, int64_t divisor), {
+          return value -
+                 MODULE_IFUNC(Chronometry, FloorDiv)(value, divisor) * divisor;
         })
     )
 );

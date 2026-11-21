@@ -23,6 +23,7 @@ MODULE(DOMAIN(Modules), Chronometry,
         FIELDS(
             MODULE_TYPE(Chronometry, Duration) target;
             MODULE_TYPE(Chronometry, ClockTimePoint) frameStart;
+            bool started;
         )
     ),
 
@@ -53,7 +54,9 @@ MODULE(DOMAIN(Modules), Chronometry,
                         (MODULE_TYPE(Chronometry, FrameLimiter) *limiter)),
               OPERATION(Remaining,
                         (const MODULE_TYPE(Chronometry, FrameLimiter) *limiter,
-                         MODULE_TYPE(Chronometry, Duration) *outRemaining))
+                         MODULE_TYPE(Chronometry, Duration) *outRemaining)),
+              OPERATION(Wait,
+                        (const MODULE_TYPE(Chronometry, FrameLimiter) *limiter))
         )
     )
 );

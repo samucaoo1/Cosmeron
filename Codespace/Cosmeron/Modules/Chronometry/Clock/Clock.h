@@ -19,7 +19,8 @@ MODULE(DOMAIN(Modules), Chronometry,
         OPERATION(DurationBetween,
                   (MODULE_TYPE(Chronometry, ClockTimePoint) start,
                    MODULE_TYPE(Chronometry, ClockTimePoint) end,
-                   MODULE_TYPE(Chronometry, Duration) *outResult))
+                   MODULE_TYPE(Chronometry, Duration) *outResult)),
+        OPERATION(Sleep, (MODULE_TYPE(Chronometry, Duration) duration))
     )
 );
 

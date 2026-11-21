@@ -93,6 +93,7 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Chronometry,
                 }
                 outLimiter->target = target;
                 outLimiter->frameStart.nanoseconds = 0U;
+                outLimiter->started = false;
                 return STATUS_CONST(SUCCESS);
               }),
 
@@ -115,15 +116,19 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Chronometry,
                 if (limiter == NULL) {
                   return STATUS_CONST(INVALID_ARGUMENT);
                 }
-                return MODULE_FUNC(Chronometry, Clock, Now)(
+                OPSTATUS status = MODULE_FUNC(Chronometry, Clock, Now)(
                     &limiter->frameStart);
+                if (status == STATUS_CONST(SUCCESS)) {
+                  limiter->started = true;
+                }
+                return status;
               }),
 
               OPERATION(Remaining,
                         (const MODULE_TYPE(Chronometry, FrameLimiter) *limiter,
                          MODULE_TYPE(Chronometry, Duration) *outRemaining), {
                 if (limiter == NULL || outRemaining == NULL ||
-                    limiter->frameStart.nanoseconds == 0U) {
+                    !limiter->started) {
                   return STATUS_CONST(INVALID_ARGUMENT);
                 }
                 MODULE_TYPE(Chronometry, ClockTimePoint) now;
@@ -143,6 +148,21 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Chronometry,
                   outRemaining->nanoseconds = 0;
                 }
                 return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(Wait,
+                        (const MODULE_TYPE(Chronometry, FrameLimiter) *limiter), {
+                MODULE_TYPE(Chronometry, Duration) remaining = {0};
+                OPSTATUS status = MODULE_FUNC(
+                    Chronometry, Timer, FrameLimiter, Remaining)(limiter,
+                                                                 &remaining);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                if (remaining.nanoseconds <= 0) {
+                  return STATUS_CONST(SUCCESS);
+                }
+                return MODULE_FUNC(Chronometry, Clock, Sleep)(remaining);
               })
         )
     )

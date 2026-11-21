@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../../../Core/Preprocessor/Detect/Detect.h"
 #include "../Duration/Duration.h"
 
 /* ========================================================================== */
@@ -15,6 +16,7 @@ MODULE(DOMAIN(Modules), Chronometry,
     ),
 
     PACKAGE(Instant,
+        OPERATION(Now, (MODULE_TYPE(Chronometry, Instant) *outResult)),
         PREDICATE(IsValid, (MODULE_TYPE(Chronometry, Instant) instant)),
         COMPARISON(Compare,
                    (MODULE_TYPE(Chronometry, Instant) left,

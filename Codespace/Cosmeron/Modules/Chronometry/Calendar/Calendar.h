@@ -87,6 +87,42 @@
   X((PURE_SYSTEM))                                                             \
   X((HISTORICAL_REFORM))
 
+#define CHRONOMETRY_CALENDAR_WEEKDAY_COL_NAME(NAME, ISO_NUMBER) NAME
+#define CHRONOMETRY_CALENDAR_WEEKDAY_COL_ISO_NUMBER(NAME, ISO_NUMBER) ISO_NUMBER
+#define CHRONOMETRY_CALENDAR_WEEKDAY_GET(FIELD, ROW)                           \
+  PP_OP_CAT2(CHRONOMETRY_CALENDAR_WEEKDAY_COL_, FIELD) ROW
+
+#define CHRONOMETRY_CALENDAR_WEEKDAY_TABLE(X)                                  \
+  X((MONDAY, 1))                                                               \
+  X((TUESDAY, 2))                                                              \
+  X((WEDNESDAY, 3))                                                            \
+  X((THURSDAY, 4))                                                             \
+  X((FRIDAY, 5))                                                               \
+  X((SATURDAY, 6))                                                             \
+  X((SUNDAY, 7))
+
+#define CHRONOMETRY_CALENDAR_WEEK_OCCURRENCE_COL_NAME(NAME, INDEX) NAME
+#define CHRONOMETRY_CALENDAR_WEEK_OCCURRENCE_COL_INDEX(NAME, INDEX) INDEX
+#define CHRONOMETRY_CALENDAR_WEEK_OCCURRENCE_GET(FIELD, ROW)                   \
+  PP_OP_CAT2(CHRONOMETRY_CALENDAR_WEEK_OCCURRENCE_COL_, FIELD) ROW
+
+#define CHRONOMETRY_CALENDAR_WEEK_OCCURRENCE_TABLE(X)                          \
+  X((FIRST_WEEKDAY, 1))                                                        \
+  X((SECOND_WEEKDAY, 2))                                                       \
+  X((THIRD_WEEKDAY, 3))                                                        \
+  X((FOURTH_WEEKDAY, 4))                                                       \
+  X((LAST_WEEKDAY, 5))
+
+#define CHRONOMETRY_CALENDAR_WEEKDAY_ANCHOR_COL_NAME(NAME) NAME
+#define CHRONOMETRY_CALENDAR_WEEKDAY_ANCHOR_GET(FIELD, ROW)                    \
+  PP_OP_CAT2(CHRONOMETRY_CALENDAR_WEEKDAY_ANCHOR_COL_, FIELD) ROW
+
+#define CHRONOMETRY_CALENDAR_WEEKDAY_ANCHOR_TABLE(X)                           \
+  X((WEEKDAY_EXACT))                                                           \
+  X((WEEKDAY_ON_OR_AFTER))                                                     \
+  X((WEEKDAY_ON_OR_BEFORE))                                                    \
+  X((WEEKDAY_LAST))
+
 /* ========================================================================== */
 /* 2. Core Calendar Enums (Typed Fields for Structs & Signatures)             */
 /* ========================================================================== */
@@ -97,13 +133,40 @@
 #define COSMERON_MACRO_INTERNAL_CHRONOMETRY_KIND_DISP(TARGET, ENUM_NAME, ROW)  \
   CNS(TARGET, CHRONOMETRY_CALENDAR_POLICY_KIND_GET(NAME, ROW)),
 
+#define COSMERON_MACRO_INTERNAL_CHRONOMETRY_WEEKDAY_DISP(TARGET, ENUM_NAME,    \
+                                                         ROW)                  \
+  CNS(TARGET, CHRONOMETRY_CALENDAR_WEEKDAY_GET(NAME, ROW)) =                   \
+      CHRONOMETRY_CALENDAR_WEEKDAY_GET(ISO_NUMBER, ROW),
+
+#define COSMERON_MACRO_INTERNAL_CHRONOMETRY_OCCURRENCE_DISP(TARGET, ENUM_NAME, \
+                                                            ROW)               \
+  CNS(TARGET, CHRONOMETRY_CALENDAR_WEEK_OCCURRENCE_GET(NAME, ROW)) =           \
+      CHRONOMETRY_CALENDAR_WEEK_OCCURRENCE_GET(INDEX, ROW),
+
+#define COSMERON_MACRO_INTERNAL_CHRONOMETRY_ANCHOR_DISP(TARGET, ENUM_NAME,     \
+                                                        ROW)                   \
+  CNS(TARGET, CHRONOMETRY_CALENDAR_WEEKDAY_ANCHOR_GET(NAME, ROW)),
+
 ENUM_DEF_EX(MODULE_NS(Chronometry, Calendar), System,
             CHRONOMETRY_CALENDAR_SYSTEM_TABLE,
             COSMERON_MACRO_INTERNAL_CHRONOMETRY_SYS_DISP)
 ENUM_DEF_EX(MODULE_NS(Chronometry, Calendar), PolicyKind,
             CHRONOMETRY_CALENDAR_POLICY_KIND_TABLE,
             COSMERON_MACRO_INTERNAL_CHRONOMETRY_KIND_DISP)
+ENUM_DEF_EX(MODULE_NS(Chronometry, Calendar), Weekday,
+            CHRONOMETRY_CALENDAR_WEEKDAY_TABLE,
+            COSMERON_MACRO_INTERNAL_CHRONOMETRY_WEEKDAY_DISP)
+ENUM_DEF_EX(MODULE_NS(Chronometry, Calendar), WeekdayOccurrence,
+            CHRONOMETRY_CALENDAR_WEEK_OCCURRENCE_TABLE,
+            COSMERON_MACRO_INTERNAL_CHRONOMETRY_OCCURRENCE_DISP)
+ENUM_DEF_EX(MODULE_NS(Chronometry, Calendar), WeekdayAnchor,
+            CHRONOMETRY_CALENDAR_WEEKDAY_ANCHOR_TABLE,
+            COSMERON_MACRO_INTERNAL_CHRONOMETRY_ANCHOR_DISP)
 
+#undef COSMERON_MACRO_INTERNAL_CHRONOMETRY_ANCHOR_DISP
+
+#undef COSMERON_MACRO_INTERNAL_CHRONOMETRY_OCCURRENCE_DISP
+#undef COSMERON_MACRO_INTERNAL_CHRONOMETRY_WEEKDAY_DISP
 #undef COSMERON_MACRO_INTERNAL_CHRONOMETRY_KIND_DISP
 #undef COSMERON_MACRO_INTERNAL_CHRONOMETRY_SYS_DISP
 
@@ -130,6 +193,9 @@ MODULE(
     STRUCT(Date,
            FIELDS(int32_t year : 23; uint8_t month : 4; uint8_t day : 5;)),
 
+    STRUCT(IsoWeekDate,
+           FIELDS(int32_t year; uint8_t week : 6; uint8_t weekday : 4;)),
+
     STRUCT(CalendarReform,
            FIELDS(MODULE_ENUM(Chronometry, Calendar, System) before;
                   MODULE_ENUM(Chronometry, Calendar, System) after;
@@ -151,6 +217,8 @@ MODULE(
         ENUM_EX(ReformId, CHRONOMETRY_CALENDAR_REFORM_TABLE,
                 COSMERON_MACRO_INTERNAL_CHRONOMETRY_REFORM_DISP),
 
+        FUNCTION(MODULE_TYPE(Chronometry, CalendarPolicy), GregorianPolicy,
+                 ()),
         OPERATION(SystemPolicy,
                   (MODULE_ENUM(Chronometry, Calendar, System) system,
                    MODULE_TYPE(Chronometry, CalendarPolicy) * outPolicy)),
@@ -196,7 +264,47 @@ MODULE(
                       (const MODULE_TYPE(Chronometry, CalendarPolicy) * policy,
                        MODULE_TYPE(Chronometry, Date) left,
                        MODULE_TYPE(Chronometry, Date) right,
-                       int64_t *outDays)))));
+                       int64_t *outDays)),
+            OPERATION(DayOfWeek,
+                      (const MODULE_TYPE(Chronometry, CalendarPolicy) * policy,
+                       MODULE_TYPE(Chronometry, Date) date,
+                       MODULE_ENUM(Chronometry, Calendar, Weekday) *
+                           outWeekday)),
+            OPERATION(FromNthWeekday,
+                      (MODULE_ENUM(Chronometry, Calendar, System) system,
+                       int32_t year, uint8_t month,
+                       MODULE_ENUM(Chronometry, Calendar, WeekdayOccurrence)
+                           occurrence,
+                       MODULE_ENUM(Chronometry, Calendar, Weekday) weekday,
+                       MODULE_TYPE(Chronometry, Date) * outDate)),
+            OPERATION(FromWeekdayAnchor,
+                      (MODULE_ENUM(Chronometry, Calendar, System) system,
+                       int32_t year, uint8_t month,
+                       MODULE_ENUM(Chronometry, Calendar, WeekdayAnchor)
+                           anchorKind,
+                       uint8_t anchorDay,
+                       MODULE_ENUM(Chronometry, Calendar, Weekday) weekday,
+                       MODULE_TYPE(Chronometry, Date) * outDate)),
+            OPERATION(AddDays,
+                      (const MODULE_TYPE(Chronometry, CalendarPolicy) * policy,
+                       MODULE_TYPE(Chronometry, Date) date, int64_t days,
+                       MODULE_TYPE(Chronometry, Date) * outDate)),
+            OPERATION(AddMonths,
+                      (const MODULE_TYPE(Chronometry, CalendarPolicy) * policy,
+                       MODULE_TYPE(Chronometry, Date) date, int32_t months,
+                       MODULE_TYPE(Chronometry, Date) * outDate)),
+            OPERATION(AddYears,
+                      (const MODULE_TYPE(Chronometry, CalendarPolicy) * policy,
+                       MODULE_TYPE(Chronometry, Date) date, int32_t years,
+                       MODULE_TYPE(Chronometry, Date) * outDate)),
+            OPERATION(ToIsoWeek,
+                      (const MODULE_TYPE(Chronometry, CalendarPolicy) * policy,
+                       MODULE_TYPE(Chronometry, Date) date,
+                       MODULE_TYPE(Chronometry, IsoWeekDate) * outIsoWeek)),
+            OPERATION(FromIsoWeek,
+                      (const MODULE_TYPE(Chronometry, CalendarPolicy) * policy,
+                       MODULE_TYPE(Chronometry, IsoWeekDate) isoWeek,
+                       MODULE_TYPE(Chronometry, Date) * outDate)))));
 
 #undef COSMERON_MACRO_INTERNAL_CHRONOMETRY_REFORM_DISP
 #undef COSMERON_MACRO_INTERNAL_CHRONOMETRY_MONTH_LEN_DISP

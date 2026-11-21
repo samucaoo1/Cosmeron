@@ -50,15 +50,15 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Chronometry,
     PACKAGE(Timestamp,
         PREDICATE(IsValid,
                   (const MODULE_TYPE(Chronometry, CalendarPolicy) *policy,
-                   MODULE_TYPE(Chronometry, TimeStamp) value), {
+                   MODULE_TYPE(Chronometry, Timestamp) value), {
           return MODULE_FUNC(Chronometry, Calendar, Date, IsValid)(
                      policy, value.date) &&
                  MODULE_FUNC(Chronometry, Timestamp, Time, IsValid)(value.time);
         }),
 
         COMPARISON(Compare,
-                   (MODULE_TYPE(Chronometry, TimeStamp) left,
-                    MODULE_TYPE(Chronometry, TimeStamp) right), {
+                   (MODULE_TYPE(Chronometry, Timestamp) left,
+                    MODULE_TYPE(Chronometry, Timestamp) right), {
           CMPOUT date = MODULE_FUNC(Chronometry, Calendar, Date, Compare)(
               left.date, right.date);
           if (date != COMPARISON_CONST(EQUAL)) {
@@ -70,9 +70,9 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Chronometry,
 
         OPERATION(AddDuration,
                   (const MODULE_TYPE(Chronometry, CalendarPolicy) *policy,
-                   MODULE_TYPE(Chronometry, TimeStamp) value,
+                   MODULE_TYPE(Chronometry, Timestamp) value,
                    MODULE_TYPE(Chronometry, Duration) duration,
-                   MODULE_TYPE(Chronometry, TimeStamp) *outResult), {
+                   MODULE_TYPE(Chronometry, Timestamp) *outResult), {
           if (outResult == NULL ||
               !MODULE_FUNC(Chronometry, Timestamp, IsValid)(policy, value)) {
             return STATUS_CONST(INVALID_ARGUMENT);
@@ -85,12 +85,17 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Chronometry,
           const int64_t msPerDay =
               (int64_t)MODULE_CONST(Chronometry, Duration, SECONDS_PER_DAY) *
               MODULE_CONST(Chronometry, Duration, MILLISECONDS_PER_SECOND);
-          int64_t milliseconds =
-              MODULE_IFUNC(Chronometry, Timestamp, MillisecondsOfDay)(
-                  value.time) +
-              duration.nanoseconds /
-                  MODULE_CONST(Chronometry, Duration,
-                               NANOSECONDS_PER_MILLISECOND);
+          const int64_t nsPerMs = MODULE_CONST(
+              Chronometry, Duration, NANOSECONDS_PER_MILLISECOND);
+          int64_t deltaMs =
+              MODULE_IFUNC(Chronometry, FloorDiv)(duration.nanoseconds, nsPerMs);
+          int64_t baseMs =
+              MODULE_IFUNC(Chronometry, Timestamp, MillisecondsOfDay)(value.time);
+          if ((deltaMs > 0 && baseMs > INT64_MAX - deltaMs) ||
+              (deltaMs < 0 && baseMs < INT64_MIN - deltaMs)) {
+            return STATUS_CONST(ARITHMETIC_OVERFLOW);
+          }
+          int64_t milliseconds = baseMs + deltaMs;
           int64_t dayDelta =
               MODULE_IFUNC(Chronometry, FloorDiv)(milliseconds, msPerDay);
           int64_t remainder = milliseconds - dayDelta * msPerDay;
@@ -110,8 +115,8 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Chronometry,
 
         OPERATION(Difference,
                   (const MODULE_TYPE(Chronometry, CalendarPolicy) *policy,
-                   MODULE_TYPE(Chronometry, TimeStamp) left,
-                   MODULE_TYPE(Chronometry, TimeStamp) right,
+                   MODULE_TYPE(Chronometry, Timestamp) left,
+                   MODULE_TYPE(Chronometry, Timestamp) right,
                    MODULE_TYPE(Chronometry, Duration) *outResult), {
           if (outResult == NULL ||
               !MODULE_FUNC(Chronometry, Timestamp, IsValid)(policy, left) ||

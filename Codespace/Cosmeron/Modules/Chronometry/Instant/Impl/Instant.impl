@@ -1,13 +1,80 @@
 #pragma once
 
 #include <limits.h>
+#if OS_WINDOWS
+#include <windows.h>
+#else
+#include <time.h>
+#endif
 
 /* ========================================================================== */
-/* Package Implementation: Chronometry_Instant                                */
+/* 1. Platform Wall-Clock Backend (Detect.h + INTERNAL_EX)                    */
+/* ========================================================================== */
+
+#if OS_WINDOWS
+#define CHRONOMETRY_INSTANT_INTERNAL_COL_NAME(NAME, VALUE) NAME
+#define CHRONOMETRY_INSTANT_INTERNAL_COL_VALUE(NAME, VALUE) VALUE
+#define CHRONOMETRY_INSTANT_INTERNAL_GET(FIELD, ROW)                           \
+  PP_OP_CAT2(CHRONOMETRY_INSTANT_INTERNAL_COL_, FIELD) ROW
+
+#define CHRONOMETRY_INSTANT_INTERNAL_TABLE(X)                                  \
+  X((FILETIME_UNIX_EPOCH_SECONDS, 11644473600LL))                              \
+  X((FILETIME_TICKS_PER_SECOND, 10000000LL))                                   \
+  X((NANOSECONDS_PER_FILETIME_TICK, 100LL))
+
+MODULE(DOMAIN(Modules), Chronometry,
+    INTERNAL_EX(Instant,
+        OPERATION(ReadWallClock,
+                  (MODULE_TYPE(Chronometry, Instant) *outResult), {
+          FILETIME ft;
+          GetSystemTimeAsFileTime(&ft);
+          uint64_t ticks =
+              ((uint64_t)ft.dwHighDateTime << 32U) | (uint64_t)ft.dwLowDateTime;
+          const uint64_t ticksPerSec = (uint64_t)10000000ULL;
+          const int64_t epochDelta = 11644473600LL;
+          const uint64_t nsPerTick = 100ULL;
+          outResult->seconds = (int64_t)(ticks / ticksPerSec) - epochDelta;
+          outResult->nanoseconds =
+              (uint32_t)((ticks % ticksPerSec) * nsPerTick);
+          return STATUS_CONST(SUCCESS);
+        })
+    )
+);
+#else
+MODULE(DOMAIN(Modules), Chronometry,
+    INTERNAL_EX(Instant,
+        OPERATION(ReadWallClock,
+                  (MODULE_TYPE(Chronometry, Instant) *outResult), {
+          struct timespec value;
+          if (clock_gettime(CLOCK_REALTIME, &value) != 0) {
+            return STATUS_CONST(GENERIC_ERROR);
+          }
+          const int64_t nsPerSec =
+              MODULE_CONST(Chronometry, Duration, NANOSECONDS_PER_SECOND);
+          if (value.tv_nsec < 0 || value.tv_nsec >= nsPerSec) {
+            return STATUS_CONST(GENERIC_ERROR);
+          }
+          outResult->seconds = (int64_t)value.tv_sec;
+          outResult->nanoseconds = (uint32_t)value.tv_nsec;
+          return STATUS_CONST(SUCCESS);
+        })
+    )
+);
+#endif
+
+/* ========================================================================== */
+/* 2. Package Implementation: Chronometry_Instant                             */
 /* ========================================================================== */
 
 MODULE_IMPLEMENT(DOMAIN(Modules), Chronometry,
     PACKAGE(Instant,
+        OPERATION(Now, (MODULE_TYPE(Chronometry, Instant) *outResult), {
+          if (outResult == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          return MODULE_IFUNC(Chronometry, Instant, ReadWallClock)(outResult);
+        }),
+
         PREDICATE(IsValid, (MODULE_TYPE(Chronometry, Instant) instant), {
           return instant.nanoseconds <
                  (uint32_t)MODULE_CONST(Chronometry, Duration,

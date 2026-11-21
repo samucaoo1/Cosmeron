@@ -18,10 +18,13 @@
   X((NANOSECONDS_PER_MICROSECOND, 1000))                                       \
   X((NANOSECONDS_PER_MILLISECOND, 1000000))                                    \
   X((NANOSECONDS_PER_SECOND, 1000000000))                                      \
+  X((MICROSECONDS_PER_MILLISECOND, 1000))                                      \
+  X((MICROSECONDS_PER_SECOND, 1000000))                                        \
   X((MILLISECONDS_PER_SECOND, 1000))                                           \
   X((SECONDS_PER_MINUTE, 60))                                                  \
   X((MINUTES_PER_HOUR, 60))                                                    \
   X((HOURS_PER_DAY, 24))                                                       \
+  X((MINUTES_PER_DAY, 1440))                                                   \
   X((SECONDS_PER_HOUR, 3600))                                                  \
   X((SECONDS_PER_DAY, 86400))
 
@@ -50,9 +53,31 @@ MODULE(DOMAIN(Modules), Chronometry,
                            MODULE_TYPE(Chronometry, Duration) *outResult)),
                 OPERATION(Seconds,
                           (int64_t seconds,
+                           MODULE_TYPE(Chronometry, Duration) *outResult)),
+                OPERATION(Minutes,
+                          (int64_t minutes,
+                           MODULE_TYPE(Chronometry, Duration) *outResult)),
+                OPERATION(Hours,
+                          (int64_t hours,
+                           MODULE_TYPE(Chronometry, Duration) *outResult)),
+                OPERATION(Days,
+                          (int64_t days,
                            MODULE_TYPE(Chronometry, Duration) *outResult))
         ),
 
+        VARIANT(To,
+                FUNCTION(int64_t, Nanoseconds,
+                         (MODULE_TYPE(Chronometry, Duration) value)),
+                FUNCTION(int64_t, Microseconds,
+                         (MODULE_TYPE(Chronometry, Duration) value)),
+                FUNCTION(int64_t, Milliseconds,
+                         (MODULE_TYPE(Chronometry, Duration) value)),
+                FUNCTION(int64_t, Seconds,
+                         (MODULE_TYPE(Chronometry, Duration) value))
+        ),
+
+        PREDICATE(IsZero, (MODULE_TYPE(Chronometry, Duration) value)),
+        PREDICATE(IsNegative, (MODULE_TYPE(Chronometry, Duration) value)),
         OPERATION(Add,
                   (MODULE_TYPE(Chronometry, Duration) left,
                    MODULE_TYPE(Chronometry, Duration) right,
@@ -66,6 +91,12 @@ MODULE(DOMAIN(Modules), Chronometry,
                     MODULE_TYPE(Chronometry, Duration) right)),
         OPERATION(Absolute,
                   (MODULE_TYPE(Chronometry, Duration) value,
+                   MODULE_TYPE(Chronometry, Duration) *outResult)),
+        OPERATION(Negate,
+                  (MODULE_TYPE(Chronometry, Duration) value,
+                   MODULE_TYPE(Chronometry, Duration) *outResult)),
+        OPERATION(Scale,
+                  (MODULE_TYPE(Chronometry, Duration) value, int64_t factor,
                    MODULE_TYPE(Chronometry, Duration) *outResult))
     )
 );
