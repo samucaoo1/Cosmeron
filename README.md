@@ -4,7 +4,7 @@
 
 <p align="center">
   <strong>A Universe Beyond</strong><br>
-  <sub> Version 1.0.0 · Nebula </sub>
+  <sub> Version 2.0.0 · Pulsar </sub>
 </p>
 <p align="center">
 ![C11](.github/badges/c11.svg)
