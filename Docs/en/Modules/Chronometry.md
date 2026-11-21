@@ -247,6 +247,16 @@ Format is a bounded-buffer formatter/parser. It does not allocate memory or use 
 
 Parsing consumes the entire input. Leading/trailing whitespace, incomplete fields, invalid calendar/time values and trailing characters are rejected. ISO civil date fields use the Gregorian calendar regardless of any historical CalendarPolicy used elsewhere in the module. Signed extended years are supported by the date formatter/parser.
 
+### Platform clock resolution and concurrency
+
+The nanosecond fields are a representation unit, not a guarantee of nanosecond clock accuracy or scheduling precision. `Clock.Now` converts the platform counter to nanoseconds: Windows uses QueryPerformanceCounter and its reported frequency; macOS uses mach_absolute_time and the Mach timebase; POSIX platforms use clock_gettime(CLOCK_MONOTONIC). The effective resolution, stability and read cost are platform- and runtime-dependent. Do not infer the physical clock resolution from the integer unit.
+
+`Instant.Now` reads the system wall clock through GetSystemTimeAsFileTime on Windows or clock_gettime(CLOCK_REALTIME) on POSIX platforms. Its fractional precision is likewise limited by the underlying clock. Windows FILETIME values have 100-nanosecond units, but that unit does not guarantee 100-nanosecond accuracy. Wall-clock adjustments can move successive readings backward or forward.
+
+`Clock.Sleep` and `FrameLimiter.Wait` request a minimum delay, not a deadline guarantee. Scheduler load, timer granularity and operating-system policy can make the actual wait longer. A frame limiter is therefore a pacing aid, not a real-time scheduler.
+
+Chronometry stores timer state in caller-owned structures and its bundled timezone tables are static data. The API does not provide synchronization for a structure that multiple threads mutate concurrently: give each thread its own mutable Timer, Delta or FrameLimiter, or synchronize shared access. Read-only use of immutable values and bundled lookup data does not require library-managed initialization. System timezone queries follow the host's timezone configuration; changing process-wide timezone settings concurrently is outside Chronometry's synchronization contract.
+
 ## Worked examples
 
 ### Measure an interval
