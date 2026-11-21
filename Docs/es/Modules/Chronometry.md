@@ -247,6 +247,16 @@ Format es un formateador/parser con buffers limitados. No asigna memoria ni util
 
 El parsing consume toda la entrada. Se rechazan espacios iniciales/finales, campos incompletos, fechas/horas inválidas y caracteres sobrantes. Las fechas civiles ISO utilizan el calendario gregoriano, independientemente de las políticas históricas usadas en otras partes del módulo. El parser/formateador de fechas admite años extendidos con signo.
 
+### Resolución de los relojes y concurrencia
+
+Los campos en nanosegundos son una unidad de representación, no una garantía de precisión de nanosegundos del reloj ni de planificación. `Clock.Now` convierte el contador de la plataforma a nanosegundos: en Windows utiliza QueryPerformanceCounter y su frecuencia informada; en macOS utiliza mach_absolute_time y la base de tiempo de Mach; en plataformas POSIX utiliza clock_gettime(CLOCK_MONOTONIC). La resolución efectiva, la estabilidad y el coste de lectura dependen de la plataforma y del entorno de ejecución. No deduzca la resolución física del reloj a partir de la unidad entera utilizada.
+
+`Instant.Now` lee el reloj civil del sistema mediante GetSystemTimeAsFileTime en Windows o clock_gettime(CLOCK_REALTIME) en plataformas POSIX. Su precisión fraccionaria también está limitada por el reloj subyacente. Los valores FILETIME de Windows utilizan unidades de 100 nanosegundos, pero esa unidad no garantiza una precisión de 100 nanosegundos. Los ajustes del reloj civil pueden hacer que las lecturas sucesivas avancen o retrocedan.
+
+`Clock.Sleep` y `FrameLimiter.Wait` solicitan un retraso mínimo, no una garantía de plazo. La carga del planificador, la granularidad de los temporizadores y las políticas del sistema operativo pueden prolongar la espera real. Por tanto, el limitador de fotogramas ayuda a controlar la cadencia, pero no es un planificador de tiempo real.
+
+Chronometry almacena el estado de los temporizadores en estructuras propiedad del llamador y sus tablas de zonas horarias integradas son datos estáticos. La API no proporciona sincronización para una estructura modificada simultáneamente por varios hilos: utilice una instancia propia de Timer, Delta o FrameLimiter por hilo, o sincronice el acceso compartido. El uso de solo lectura de valores inmutables y de los datos integrados de consulta no requiere inicialización gestionada por la biblioteca. Las consultas de zona horaria del sistema siguen la configuración del host; los cambios concurrentes en la configuración global de zona horaria del proceso quedan fuera del contrato de sincronización de Chronometry.
+
 ## Ejemplos prácticos
 
 ### Medir un intervalo
