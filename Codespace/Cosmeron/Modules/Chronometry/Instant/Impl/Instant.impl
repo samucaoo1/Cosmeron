@@ -1,0 +1,107 @@
+#pragma once
+
+#include <limits.h>
+
+/* ========================================================================== */
+/* Package Implementation: Chronometry_Instant                                */
+/* ========================================================================== */
+
+MODULE_IMPLEMENT(DOMAIN(Modules), Chronometry,
+    PACKAGE(Instant,
+        PREDICATE(IsValid, (MODULE_TYPE(Chronometry, Instant) instant), {
+          return instant.nanoseconds <
+                 (uint32_t)MODULE_CONST(Chronometry, Duration,
+                                        NANOSECONDS_PER_SECOND);
+        }),
+
+        COMPARISON(Compare,
+                   (MODULE_TYPE(Chronometry, Instant) left,
+                    MODULE_TYPE(Chronometry, Instant) right), {
+          if (left.seconds < right.seconds) {
+            return COMPARISON_CONST(LOWER);
+          }
+          if (left.seconds > right.seconds) {
+            return COMPARISON_CONST(HIGHER);
+          }
+          if (left.nanoseconds < right.nanoseconds) {
+            return COMPARISON_CONST(LOWER);
+          }
+          if (left.nanoseconds > right.nanoseconds) {
+            return COMPARISON_CONST(HIGHER);
+          }
+          return COMPARISON_CONST(EQUAL);
+        }),
+
+        OPERATION(AddDuration,
+                  (MODULE_TYPE(Chronometry, Instant) instant,
+                   MODULE_TYPE(Chronometry, Duration) duration,
+                   MODULE_TYPE(Chronometry, Instant) *outResult), {
+          if (outResult == NULL ||
+              !MODULE_FUNC(Chronometry, Instant, IsValid)(instant)) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          const int64_t nsPerSec =
+              MODULE_CONST(Chronometry, Duration, NANOSECONDS_PER_SECOND);
+          int64_t whole = duration.nanoseconds / nsPerSec;
+          int64_t remainder = duration.nanoseconds % nsPerSec;
+          if ((whole > 0 && instant.seconds > INT64_MAX - whole) ||
+              (whole < 0 && instant.seconds < INT64_MIN - whole)) {
+            return STATUS_CONST(ARITHMETIC_OVERFLOW);
+          }
+          int64_t seconds = instant.seconds + whole;
+          int64_t nanos = (int64_t)instant.nanoseconds + remainder;
+          if (nanos >= nsPerSec) {
+            if (seconds == INT64_MAX) {
+              return STATUS_CONST(ARITHMETIC_OVERFLOW);
+            }
+            ++seconds;
+            nanos -= nsPerSec;
+          } else if (nanos < 0) {
+            if (seconds == INT64_MIN) {
+              return STATUS_CONST(ARITHMETIC_OVERFLOW);
+            }
+            --seconds;
+            nanos += nsPerSec;
+          }
+          *outResult =
+              (MODULE_TYPE(Chronometry, Instant)){seconds, (uint32_t)nanos};
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(DurationBetween,
+                  (MODULE_TYPE(Chronometry, Instant) start,
+                   MODULE_TYPE(Chronometry, Instant) end,
+                   MODULE_TYPE(Chronometry, Duration) *outResult), {
+          if (outResult == NULL ||
+              !MODULE_FUNC(Chronometry, Instant, IsValid)(start) ||
+              !MODULE_FUNC(Chronometry, Instant, IsValid)(end)) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          const int64_t nsPerSec =
+              MODULE_CONST(Chronometry, Duration, NANOSECONDS_PER_SECOND);
+          if ((start.seconds < 0 && end.seconds > INT64_MAX + start.seconds) ||
+              (start.seconds > 0 && end.seconds < INT64_MIN + start.seconds)) {
+            return STATUS_CONST(ARITHMETIC_OVERFLOW);
+          }
+          int64_t seconds = end.seconds - start.seconds;
+          int64_t nanos = (int64_t)end.nanoseconds - (int64_t)start.nanoseconds;
+          if (nanos < 0) {
+            if (seconds == INT64_MIN) {
+              return STATUS_CONST(ARITHMETIC_OVERFLOW);
+            }
+            --seconds;
+            nanos += nsPerSec;
+          }
+          if (seconds > INT64_MAX / nsPerSec ||
+              seconds < INT64_MIN / nsPerSec ||
+              (seconds == INT64_MAX / nsPerSec &&
+               nanos > INT64_MAX % nsPerSec)) {
+            return STATUS_CONST(ARITHMETIC_OVERFLOW);
+          }
+          outResult->nanoseconds = seconds * nsPerSec + nanos;
+          return STATUS_CONST(SUCCESS);
+        })
+    )
+);
+
+/* EOF */

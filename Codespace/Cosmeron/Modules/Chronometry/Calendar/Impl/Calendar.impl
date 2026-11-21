@@ -1,0 +1,523 @@
+#pragma once
+
+/* ========================================================================== */
+/* 1. Internal Constants & JDN Helpers                                        */
+/* ========================================================================== */
+
+#define CHRONOMETRY_CALENDAR_INTERNAL_COL_NAME(NAME, VALUE) NAME
+#define CHRONOMETRY_CALENDAR_INTERNAL_COL_VALUE(NAME, VALUE) VALUE
+#define CHRONOMETRY_CALENDAR_INTERNAL_GET(FIELD, ROW)                          \
+  PP_OP_CAT2(CHRONOMETRY_CALENDAR_INTERNAL_COL_, FIELD) ROW
+
+#define CHRONOMETRY_CALENDAR_INTERNAL_TABLE(X)                                 \
+  X((MONTHS_PER_YEAR, 12))                                                     \
+  X((COMMON_YEAR_DAYS, 365))                                                   \
+  X((LEAP_YEAR_INTERVAL, 4))                                                   \
+  X((CENTURY_YEARS, 100))                                                      \
+  X((GREGORIAN_CYCLE_YEARS, 400))                                              \
+  X((JDN_MONTH_PIVOT, 14))                                                     \
+  X((JDN_YEAR_OFFSET, 4800))                                                   \
+  X((JDN_MONTH_MULTIPLIER, 153))                                               \
+  X((JDN_GREGORIAN_OFFSET, 32045))                                             \
+  X((JDN_JULIAN_OFFSET, 32083))                                                \
+  X((JDN_GREGORIAN_REVERSE_OFFSET, 32044))                                     \
+  X((JDN_JULIAN_REVERSE_OFFSET, 32082))                                        \
+  X((JDN_GREGORIAN_CYCLE_DAYS, 146097))                                        \
+  X((JDN_JULIAN_CYCLE_DAYS, 1461))                                             \
+  X((JDN_REVERSE_NUMERATOR_OFFSET, 3))                                         \
+  X((JDN_REVERSE_MONTH_MULTIPLIER, 5))                                         \
+  X((JDN_REVERSE_MONTH_OFFSET, 2))                                             \
+  X((JDN_REVERSE_MONTH_DIVISOR, 10))                                           \
+  X((JDN_DAY_DIVISOR, 5))                                                      \
+  X((JDN_MONTH_SHIFT, 3))                                                      \
+  X((FIRST_DAY_OF_MONTH, 1))                                                   \
+  X((MAX_SUPPORTED_YEAR, 4194303))
+
+MODULE(DOMAIN(Modules), Chronometry,
+    INTERNAL_EX(Calendar,
+        ENUM(Const, CHRONOMETRY_CALENDAR_INTERNAL_TABLE),
+
+        FUNCTION_INLINE(MODULE_ENUM(Chronometry, Calendar, System), SystemFor,
+                        (const MODULE_TYPE(Chronometry, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chronometry, Date) date), {
+          if (policy->kind ==
+              MODULE_CONST(Chronometry, Calendar, PURE_SYSTEM)) {
+            return policy->system;
+          }
+          return MODULE_FUNC(Chronometry, Calendar, Date, Compare)(
+                     date, policy->reform.firstAfter) !=
+                         COMPARISON_CONST(LOWER)
+                     ? policy->reform.after
+                     : policy->reform.before;
+        }),
+
+        FUNCTION_INLINE(int64_t, ToJdn,
+                        (MODULE_ENUM(Chronometry, Calendar, System) system,
+                         MODULE_TYPE(Chronometry, Date) date), {
+          int64_t a = MODULE_IFUNC(Chronometry, FloorDiv)(
+              CNS(Chronometry, Calendar, Internal, JDN_MONTH_PIVOT) -
+                  date.month,
+              CNS(Chronometry, Calendar, Internal, MONTHS_PER_YEAR));
+          int64_t y = (int64_t)date.year +
+                      CNS(Chronometry, Calendar, Internal, JDN_YEAR_OFFSET) - a;
+          int64_t m =
+              (int64_t)date.month +
+              CNS(Chronometry, Calendar, Internal, MONTHS_PER_YEAR) * a -
+              CNS(Chronometry, Calendar, Internal, JDN_MONTH_SHIFT);
+          int64_t value =
+              date.day +
+              (CNS(Chronometry, Calendar, Internal, JDN_MONTH_MULTIPLIER) * m +
+               CNS(Chronometry, Calendar, Internal, JDN_REVERSE_MONTH_OFFSET)) /
+                  CNS(Chronometry, Calendar, Internal, JDN_DAY_DIVISOR) +
+              CNS(Chronometry, Calendar, Internal, COMMON_YEAR_DAYS) * y +
+              y / CNS(Chronometry, Calendar, Internal, LEAP_YEAR_INTERVAL);
+          return system == MODULE_CONST(Chronometry, Calendar, GREGORIAN)
+                     ? value -
+                           y / CNS(Chronometry, Calendar, Internal,
+                                   CENTURY_YEARS) +
+                           y / CNS(Chronometry, Calendar, Internal,
+                                   GREGORIAN_CYCLE_YEARS) -
+                           CNS(Chronometry, Calendar, Internal,
+                               JDN_GREGORIAN_OFFSET)
+                     : value -
+                           CNS(Chronometry, Calendar, Internal,
+                               JDN_JULIAN_OFFSET);
+        }),
+
+        FUNCTION(MODULE_TYPE(Chronometry, Date), FromJdn,
+                 (MODULE_ENUM(Chronometry, Calendar, System) system,
+                  int64_t jdn), {
+          int64_t b = 0;
+          int64_t c = 0;
+          if (system == MODULE_CONST(Chronometry, Calendar, GREGORIAN)) {
+            int64_t a =
+                jdn + CNS(Chronometry, Calendar, Internal,
+                          JDN_GREGORIAN_REVERSE_OFFSET);
+            b = (CNS(Chronometry, Calendar, Internal, LEAP_YEAR_INTERVAL) * a +
+                 CNS(Chronometry, Calendar, Internal,
+                     JDN_REVERSE_NUMERATOR_OFFSET)) /
+                CNS(Chronometry, Calendar, Internal, JDN_GREGORIAN_CYCLE_DAYS);
+            c = a -
+                (CNS(Chronometry, Calendar, Internal,
+                     JDN_GREGORIAN_CYCLE_DAYS) *
+                 b) /
+                    CNS(Chronometry, Calendar, Internal, LEAP_YEAR_INTERVAL);
+          } else {
+            b = 0;
+            c = jdn +
+                CNS(Chronometry, Calendar, Internal, JDN_JULIAN_REVERSE_OFFSET);
+          }
+          int64_t d =
+              (CNS(Chronometry, Calendar, Internal, LEAP_YEAR_INTERVAL) * c +
+               CNS(Chronometry, Calendar, Internal,
+                   JDN_REVERSE_NUMERATOR_OFFSET)) /
+              CNS(Chronometry, Calendar, Internal, JDN_JULIAN_CYCLE_DAYS);
+          int64_t e =
+              c -
+              (CNS(Chronometry, Calendar, Internal, JDN_JULIAN_CYCLE_DAYS) *
+               d) /
+                  CNS(Chronometry, Calendar, Internal, LEAP_YEAR_INTERVAL);
+          int64_t m =
+              (CNS(Chronometry, Calendar, Internal,
+                   JDN_REVERSE_MONTH_MULTIPLIER) *
+                   e +
+               CNS(Chronometry, Calendar, Internal, JDN_REVERSE_MONTH_OFFSET)) /
+              CNS(Chronometry, Calendar, Internal, JDN_MONTH_MULTIPLIER);
+          return (MODULE_TYPE(Chronometry, Date)){
+              (int32_t)(CNS(Chronometry, Calendar, Internal, CENTURY_YEARS) *
+                            b +
+                        d -
+                        CNS(Chronometry, Calendar, Internal, JDN_YEAR_OFFSET) +
+                        m / CNS(Chronometry, Calendar, Internal,
+                                JDN_REVERSE_MONTH_DIVISOR)),
+              (uint8_t)(m +
+                        CNS(Chronometry, Calendar, Internal,
+                            JDN_REVERSE_NUMERATOR_OFFSET) -
+                        CNS(Chronometry, Calendar, Internal, MONTHS_PER_YEAR) *
+                            (m / CNS(Chronometry, Calendar, Internal,
+                                     JDN_REVERSE_MONTH_DIVISOR))),
+              (uint8_t)(e -
+                        (CNS(Chronometry, Calendar, Internal,
+                             JDN_MONTH_MULTIPLIER) *
+                             m +
+                         CNS(Chronometry, Calendar, Internal,
+                             JDN_REVERSE_MONTH_OFFSET)) /
+                            CNS(Chronometry, Calendar, Internal,
+                                JDN_DAY_DIVISOR) +
+                        CNS(Chronometry, Calendar, Internal,
+                            FIRST_DAY_OF_MONTH))};
+        })
+    )
+);
+
+/* ========================================================================== */
+/* 2. X-Macro Code Generation Helpers                                         */
+/* ========================================================================== */
+
+#define COSMERON_MACRO_INTERNAL_CHRONOMETRY_REFORM_CASE(ROW)                   \
+  case MODULE_CONST(Chronometry, Calendar,                                     \
+                    CHRONOMETRY_CALENDAR_REFORM_GET(NAME, ROW)):               \
+    policy.reform.lastBefore = (MODULE_TYPE(Chronometry, Date)){               \
+        CHRONOMETRY_CALENDAR_REFORM_GET(BEFORE_YEAR, ROW),                     \
+        MODULE_CONST(Chronometry, Calendar,                                    \
+                     CHRONOMETRY_CALENDAR_REFORM_GET(BEFORE_MONTH, ROW)),      \
+        CHRONOMETRY_CALENDAR_REFORM_GET(BEFORE_DAY, ROW)};                     \
+    policy.reform.firstAfter = (MODULE_TYPE(Chronometry, Date)){               \
+        CHRONOMETRY_CALENDAR_REFORM_GET(AFTER_YEAR, ROW),                      \
+        MODULE_CONST(Chronometry, Calendar,                                    \
+                     CHRONOMETRY_CALENDAR_REFORM_GET(AFTER_MONTH, ROW)),       \
+        CHRONOMETRY_CALENDAR_REFORM_GET(AFTER_DAY, ROW)};                      \
+    policy.reform.suppressedDays =                                             \
+        CHRONOMETRY_CALENDAR_REFORM_GET(SUPPRESSED, ROW);                      \
+    break;
+
+#define COSMERON_MACRO_INTERNAL_CHRONOMETRY_MONTH_ARRAY_ITEM(ROW)              \
+  [CHRONOMETRY_CALENDAR_MONTH_GET(NUMBER, ROW)] =                              \
+      MODULE_CONST(Chronometry, Calendar,                                      \
+                   PP_OP_CAT2(DAYS_IN_,                                        \
+                              CHRONOMETRY_CALENDAR_MONTH_GET(NAME, ROW))),
+
+#define COSMERON_MACRO_INTERNAL_CHRONOMETRY_DAYS_BEFORE_ITEM(ROW)              \
+  [CHRONOMETRY_CALENDAR_MONTH_GET(NUMBER, ROW)] =                              \
+      CHRONOMETRY_CALENDAR_MONTH_GET(BEFORE, ROW),
+
+/* ========================================================================== */
+/* 3. Package Implementation: Chronometry_Calendar                            */
+/* ========================================================================== */
+
+MODULE_IMPLEMENT(DOMAIN(Modules), Chronometry,
+    PACKAGE(Calendar,
+        OPERATION(SystemPolicy,
+                  (MODULE_ENUM(Chronometry, Calendar, System) system,
+                   MODULE_TYPE(Chronometry, CalendarPolicy) *outPolicy), {
+          if (outPolicy == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          if (system != MODULE_CONST(Chronometry, Calendar, GREGORIAN) &&
+              system != MODULE_CONST(Chronometry, Calendar, JULIAN)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          *outPolicy = (MODULE_TYPE(Chronometry, CalendarPolicy)){
+              MODULE_CONST(Chronometry, Calendar, PURE_SYSTEM),
+              system,
+              {0},
+          };
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(ReformPolicy,
+                  (MODULE_ENUM(Chronometry, Calendar, ReformId) id,
+                   MODULE_TYPE(Chronometry, CalendarPolicy) *outPolicy), {
+          if (outPolicy == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          MODULE_TYPE(Chronometry, CalendarPolicy) policy = {
+              MODULE_CONST(Chronometry, Calendar, HISTORICAL_REFORM),
+              MODULE_CONST(Chronometry, Calendar, GREGORIAN),
+              {
+                  .before = MODULE_CONST(Chronometry, Calendar, JULIAN),
+                  .after = MODULE_CONST(Chronometry, Calendar, GREGORIAN),
+              },
+          };
+          switch (id) {
+            CHRONOMETRY_CALENDAR_REFORM_TABLE(
+                COSMERON_MACRO_INTERNAL_CHRONOMETRY_REFORM_CASE)
+          default:
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          *outPolicy = policy;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        PREDICATE(IsLeapYear,
+                  (MODULE_ENUM(Chronometry, Calendar, System) system,
+                   int32_t year), {
+          const int32_t leapInterval =
+              CNS(Chronometry, Calendar, Internal, LEAP_YEAR_INTERVAL);
+          if (system == MODULE_CONST(Chronometry, Calendar, JULIAN)) {
+            return year % leapInterval == 0;
+          }
+          return year % leapInterval == 0 &&
+                 (year % CNS(Chronometry, Calendar, Internal, CENTURY_YEARS) !=
+                      0 ||
+                  year % CNS(Chronometry, Calendar, Internal,
+                             GREGORIAN_CYCLE_YEARS) == 0);
+        }),
+
+        OPERATION(DaysInMonth,
+                  (MODULE_ENUM(Chronometry, Calendar, System) system,
+                   int32_t year, uint8_t month, uint8_t *outDays), {
+          static const uint8_t days[] = {
+              0,
+              CHRONOMETRY_CALENDAR_MONTH_TABLE(
+                  COSMERON_MACRO_INTERNAL_CHRONOMETRY_MONTH_ARRAY_ITEM)
+          };
+          if (outDays == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          if (month < MODULE_CONST(Chronometry, Calendar, JANUARY) ||
+              month > MODULE_CONST(Chronometry, Calendar, DECEMBER)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          *outDays = (uint8_t)(days[month] +
+                               (month ==
+                                    MODULE_CONST(Chronometry, Calendar,
+                                                 FEBRUARY) &&
+                                MODULE_FUNC(Chronometry, Calendar,
+                                            IsLeapYear)(system, year)));
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        VARIANT(DayOfYear,
+            OPERATION((const MODULE_TYPE(Chronometry, CalendarPolicy) *policy,
+                       MODULE_TYPE(Chronometry, Date) date,
+                       uint16_t *outDayOfYear), {
+              if (outDayOfYear == NULL ||
+                  !MODULE_FUNC(Chronometry, Calendar, Date, IsValid)(policy,
+                                                                     date)) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              MODULE_ENUM(Chronometry, Calendar, System) system =
+                  MODULE_IFUNC(Chronometry, Calendar, SystemFor)(policy, date);
+              uint16_t value = 0U;
+              OPSTATUS status =
+                  MODULE_FUNC(Chronometry, Calendar, DayOfYearCumulative)(
+                      system, date, &value);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              if (policy->kind ==
+                      MODULE_CONST(Chronometry, Calendar, HISTORICAL_REFORM) &&
+                  date.year == policy->reform.firstAfter.year &&
+                  MODULE_FUNC(Chronometry, Calendar, Date, Compare)(
+                      date, policy->reform.firstAfter) !=
+                      COMPARISON_CONST(LOWER)) {
+                value -= policy->reform.suppressedDays;
+              }
+              *outDayOfYear = value;
+              return STATUS_CONST(SUCCESS);
+            }),
+
+            OPERATION(Cumulative,
+                      (MODULE_ENUM(Chronometry, Calendar, System) system,
+                       MODULE_TYPE(Chronometry, Date) date,
+                       uint16_t *outDayOfYear), {
+              if (outDayOfYear == NULL) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              uint8_t maxDay = 0U;
+              OPSTATUS status =
+                  MODULE_FUNC(Chronometry, Calendar, DaysInMonth)(
+                      system, date.year, date.month, &maxDay);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              if (date.day == 0U || date.day > maxDay) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              uint16_t value = date.day;
+              /* Intentional fallthrough: cumulative month day calculation. */
+              switch (date.month) {
+              case MODULE_CONST(Chronometry, Calendar, DECEMBER):
+                value += MODULE_CONST(Chronometry, Calendar, DAYS_IN_NOVEMBER);
+                /* fall through */
+              case MODULE_CONST(Chronometry, Calendar, NOVEMBER):
+                value += MODULE_CONST(Chronometry, Calendar, DAYS_IN_OCTOBER);
+                /* fall through */
+              case MODULE_CONST(Chronometry, Calendar, OCTOBER):
+                value += MODULE_CONST(Chronometry, Calendar, DAYS_IN_SEPTEMBER);
+                /* fall through */
+              case MODULE_CONST(Chronometry, Calendar, SEPTEMBER):
+                value += MODULE_CONST(Chronometry, Calendar, DAYS_IN_AUGUST);
+                /* fall through */
+              case MODULE_CONST(Chronometry, Calendar, AUGUST):
+                value += MODULE_CONST(Chronometry, Calendar, DAYS_IN_JULY);
+                /* fall through */
+              case MODULE_CONST(Chronometry, Calendar, JULY):
+                value += MODULE_CONST(Chronometry, Calendar, DAYS_IN_JUNE);
+                /* fall through */
+              case MODULE_CONST(Chronometry, Calendar, JUNE):
+                value += MODULE_CONST(Chronometry, Calendar, DAYS_IN_MAY);
+                /* fall through */
+              case MODULE_CONST(Chronometry, Calendar, MAY):
+                value += MODULE_CONST(Chronometry, Calendar, DAYS_IN_APRIL);
+                /* fall through */
+              case MODULE_CONST(Chronometry, Calendar, APRIL):
+                value += MODULE_CONST(Chronometry, Calendar, DAYS_IN_MARCH);
+                /* fall through */
+              case MODULE_CONST(Chronometry, Calendar, MARCH):
+                value += (uint16_t)(MODULE_CONST(Chronometry, Calendar,
+                                                 DAYS_IN_FEBRUARY) +
+                                    MODULE_FUNC(Chronometry, Calendar,
+                                                IsLeapYear)(system, date.year));
+                /* fall through */
+              case MODULE_CONST(Chronometry, Calendar, FEBRUARY):
+                value += MODULE_CONST(Chronometry, Calendar, DAYS_IN_JANUARY);
+                /* fall through */
+              case MODULE_CONST(Chronometry, Calendar, JANUARY):
+                break;
+              default:
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              *outDayOfYear = value;
+              return STATUS_CONST(SUCCESS);
+            })
+        ),
+
+        SPACE(Date,
+              COMPARISON(Compare,
+                         (MODULE_TYPE(Chronometry, Date) left,
+                          MODULE_TYPE(Chronometry, Date) right), {
+                if (left.year < right.year) {
+                  return COMPARISON_CONST(LOWER);
+                }
+                if (left.year > right.year) {
+                  return COMPARISON_CONST(HIGHER);
+                }
+                if (left.month < right.month) {
+                  return COMPARISON_CONST(LOWER);
+                }
+                if (left.month > right.month) {
+                  return COMPARISON_CONST(HIGHER);
+                }
+                if (left.day < right.day) {
+                  return COMPARISON_CONST(LOWER);
+                }
+                if (left.day > right.day) {
+                  return COMPARISON_CONST(HIGHER);
+                }
+                return COMPARISON_CONST(EQUAL);
+              }),
+
+              PREDICATE(IsValid,
+                        (const MODULE_TYPE(Chronometry, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chronometry, Date) date), {
+                if (policy == NULL ||
+                    date.year <=
+                        -CNS(Chronometry, Calendar, Internal,
+                             JDN_YEAR_OFFSET)) {
+                  return false;
+                }
+                if (policy->kind ==
+                        MODULE_CONST(Chronometry, Calendar,
+                                     HISTORICAL_REFORM) &&
+                    MODULE_FUNC(Chronometry, Calendar, Date, Compare)(
+                        date, policy->reform.lastBefore) ==
+                        COMPARISON_CONST(HIGHER) &&
+                    MODULE_FUNC(Chronometry, Calendar, Date, Compare)(
+                        date, policy->reform.firstAfter) ==
+                        COMPARISON_CONST(LOWER)) {
+                  return false;
+                }
+                MODULE_ENUM(Chronometry, Calendar, System) system =
+                    MODULE_IFUNC(Chronometry, Calendar, SystemFor)(policy,
+                                                                   date);
+                uint8_t maximum = 0U;
+                if (MODULE_FUNC(Chronometry, Calendar, DaysInMonth)(
+                        system, date.year, date.month, &maximum) !=
+                    STATUS_CONST(SUCCESS)) {
+                  return false;
+                }
+                return date.day > 0U && date.day <= maximum;
+              }),
+
+              OPERATION(ToDayOfYear,
+                        (const MODULE_TYPE(Chronometry, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chronometry, Date) date,
+                         uint16_t *outDayOfYear), {
+                return MODULE_FUNC(Chronometry, Calendar, DayOfYear)(
+                    policy, date, outDayOfYear);
+              }),
+
+              OPERATION(ToOrdinal,
+                        (const MODULE_TYPE(Chronometry, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chronometry, Date) date,
+                         int64_t *outOrdinal), {
+                if (outOrdinal == NULL ||
+                    !MODULE_FUNC(Chronometry, Calendar, Date, IsValid)(policy,
+                                                                       date)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                *outOrdinal = MODULE_IFUNC(Chronometry, Calendar, ToJdn)(
+                    MODULE_IFUNC(Chronometry, Calendar, SystemFor)(policy,
+                                                                   date),
+                    date);
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(FromOrdinal,
+                        (const MODULE_TYPE(Chronometry, CalendarPolicy) *policy,
+                         int64_t ordinal,
+                         MODULE_TYPE(Chronometry, Date) *outDate), {
+                if (policy == NULL || outDate == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                MODULE_ENUM(Chronometry, Calendar, System) system =
+                    policy->kind ==
+                            MODULE_CONST(Chronometry, Calendar, PURE_SYSTEM)
+                        ? policy->system
+                        : (ordinal >=
+                                   MODULE_IFUNC(Chronometry, Calendar, ToJdn)(
+                                       policy->reform.after,
+                                       policy->reform.firstAfter)
+                               ? policy->reform.after
+                               : policy->reform.before);
+                MODULE_TYPE(Chronometry, Date) minimumDate = {
+                    -(CNS(Chronometry, Calendar, Internal, JDN_YEAR_OFFSET) -
+                      CNS(Chronometry, Calendar, Internal,
+                          FIRST_DAY_OF_MONTH)),
+                    MODULE_CONST(Chronometry, Calendar, JANUARY),
+                    CNS(Chronometry, Calendar, Internal, FIRST_DAY_OF_MONTH)};
+                MODULE_TYPE(Chronometry, Date) maximumDate = {
+                    CNS(Chronometry, Calendar, Internal, MAX_SUPPORTED_YEAR),
+                    MODULE_CONST(Chronometry, Calendar, DECEMBER),
+                    MODULE_CONST(Chronometry, Calendar, DAYS_IN_DECEMBER)};
+                int64_t minimumOrdinal =
+                    MODULE_IFUNC(Chronometry, Calendar, ToJdn)(system,
+                                                               minimumDate);
+                int64_t maximumOrdinal =
+                    MODULE_IFUNC(Chronometry, Calendar, ToJdn)(system,
+                                                               maximumDate);
+                if (ordinal < minimumOrdinal || ordinal > maximumOrdinal) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                MODULE_TYPE(Chronometry, Date) candidate =
+                    MODULE_IFUNC(Chronometry, Calendar, FromJdn)(system,
+                                                                 ordinal);
+                if (!MODULE_FUNC(Chronometry, Calendar, Date, IsValid)(
+                        policy, candidate)) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                *outDate = candidate;
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(Difference,
+                        (const MODULE_TYPE(Chronometry, CalendarPolicy) *policy,
+                         MODULE_TYPE(Chronometry, Date) left,
+                         MODULE_TYPE(Chronometry, Date) right,
+                         int64_t *outDays), {
+                if (outDays == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                int64_t leftOrdinal = 0;
+                int64_t rightOrdinal = 0;
+                if (MODULE_FUNC(Chronometry, Calendar, Date, ToOrdinal)(
+                        policy, left, &leftOrdinal) != STATUS_CONST(SUCCESS) ||
+                    MODULE_FUNC(Chronometry, Calendar, Date, ToOrdinal)(
+                        policy, right, &rightOrdinal) !=
+                        STATUS_CONST(SUCCESS)) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                *outDays = rightOrdinal - leftOrdinal;
+                return STATUS_CONST(SUCCESS);
+              })
+        )
+    )
+);
+
+#undef COSMERON_MACRO_INTERNAL_CHRONOMETRY_DAYS_BEFORE_ITEM
+#undef COSMERON_MACRO_INTERNAL_CHRONOMETRY_MONTH_ARRAY_ITEM
+#undef COSMERON_MACRO_INTERNAL_CHRONOMETRY_REFORM_CASE
+
+/* EOF */

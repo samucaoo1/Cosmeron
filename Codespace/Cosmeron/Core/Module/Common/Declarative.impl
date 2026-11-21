@@ -154,7 +154,11 @@
 #define INTERNAL_EX(NAME, ...)                                                 \
   (COSMERON_DECL_TAG_INTERNAL, 1, NAME, (__VA_ARGS__))
 
-/* --- Variant Descriptors --- */
+/* --- Space & Variant Descriptors --- */
+
+#undef SPACE
+#define SPACE(SUBSPACE, ...)                                                   \
+  (COSMERON_DECL_TAG_SPACE, SUBSPACE, (__VA_ARGS__))
 
 #define VARIANT(FAMILY, ...)                                                   \
   (COSMERON_DECL_TAG_VARIANT, FAMILY, (__VA_ARGS__))
@@ -1508,9 +1512,16 @@
 #define COSMERON_INTERNAL_PKG_IMPL_TAG_3(PKG, ...)
 #define COSMERON_INTERNAL_PKG_IMPL_TAG_4(PKG, ...)
 #define COSMERON_INTERNAL_PKG_IMPL_TAG_103(PKG, ...)
+#define COSMERON_INTERNAL_PKG_SPACE_IMPL_I(PKG, C, I, R, N, P, ...)            \
+  PP_OP_CAT2(COSMERON_INTERNAL_PKG_IMPL_BODY_, I)(PKG, R, N, P, __VA_ARGS__)
+
+#define COSMERON_INTERNAL_PKG_SPACE_IMPL(PKG, M)                               \
+  COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \
+      COSMERON_INTERNAL_PKG_SPACE_IMPL_I, PKG, M)
+
 #define COSMERON_INTERNAL_PKG_IMPL_TAG_107(PKG, TAG, SPACE_NAME, METHODS)     \
-  PP_FOREACH_D2_CTX(COSMERON_INTERNAL_PKG_IMPL_MEMBER,                        \
-                    NS(PKG, SPACE_NAME), PP_UNWRAP METHODS)
+  COSMERON_EXPAND_INNER_MEMBERS(COSMERON_INTERNAL_PKG_SPACE_IMPL,              \
+                                NS(PKG, SPACE_NAME), PP_UNWRAP METHODS)
 
 #define COSMERON_INTERNAL_PKG_VAR_IMPL(CTX, M)                                \
   COSMERON_MACRO_INTERNAL_UNWRAP_MEMBER(                                       \

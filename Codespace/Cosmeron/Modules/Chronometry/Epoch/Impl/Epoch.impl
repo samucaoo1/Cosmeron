@@ -1,0 +1,152 @@
+#pragma once
+
+/* ========================================================================== */
+/* 1. Internal Epoch Constants & Policy Helper (Row-Tuple Pattern)            */
+/* ========================================================================== */
+
+#define CHRONOMETRY_EPOCH_INTERNAL_COL_NAME(NAME, VALUE) NAME
+#define CHRONOMETRY_EPOCH_INTERNAL_COL_VALUE(NAME, VALUE) VALUE
+#define CHRONOMETRY_EPOCH_INTERNAL_GET(FIELD, ROW)                             \
+  PP_OP_CAT2(CHRONOMETRY_EPOCH_INTERNAL_COL_, FIELD) ROW
+
+#define CHRONOMETRY_EPOCH_INTERNAL_TABLE(X)                                    \
+  X((UNIX_EPOCH_JDN, 2440588))                                                 \
+  X((RATA_DIE_JDN, 1721426))
+
+MODULE(DOMAIN(Modules), Chronometry,
+    INTERNAL_EX(Epoch,
+        ENUM(Const, CHRONOMETRY_EPOCH_INTERNAL_TABLE),
+
+        OPERATION(GregorianPolicy,
+                  (MODULE_TYPE(Chronometry, CalendarPolicy) *outPolicy), {
+          return MODULE_FUNC(Chronometry, Calendar, SystemPolicy)(
+              MODULE_CONST(Chronometry, Calendar, GREGORIAN), outPolicy);
+        })
+    )
+);
+
+/* ========================================================================== */
+/* 2. Package Implementation: Chronometry_Epoch                               */
+/* ========================================================================== */
+
+MODULE_IMPLEMENT(DOMAIN(Modules), Chronometry,
+    PACKAGE(Epoch,
+        OPERATION(DateToJulianDayNumber,
+                  (const MODULE_TYPE(Chronometry, CalendarPolicy) *policy,
+                   MODULE_TYPE(Chronometry, Date) date,
+                   int64_t *julianDayNumber), {
+          return MODULE_FUNC(Chronometry, Calendar, Date, ToOrdinal)(
+              policy, date, julianDayNumber);
+        }),
+
+        OPERATION(DateFromJulianDayNumber,
+                  (const MODULE_TYPE(Chronometry, CalendarPolicy) *policy,
+                   int64_t julianDayNumber,
+                   MODULE_TYPE(Chronometry, Date) *date), {
+          return MODULE_FUNC(Chronometry, Calendar, Date, FromOrdinal)(
+              policy, julianDayNumber, date);
+        }),
+
+        OPERATION(DateToRataDie,
+                  (MODULE_TYPE(Chronometry, Date) date, int64_t *rataDie), {
+          if (rataDie == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          MODULE_TYPE(Chronometry, CalendarPolicy) gregorian;
+          OPSTATUS status =
+              MODULE_IFUNC(Chronometry, Epoch, GregorianPolicy)(&gregorian);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          int64_t jdn = 0;
+          if (MODULE_FUNC(Chronometry, Calendar, Date, ToOrdinal)(
+                  &gregorian, date, &jdn) != STATUS_CONST(SUCCESS)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          *rataDie =
+              jdn -
+              (int64_t)CNS(Chronometry, Epoch, Internal, RATA_DIE_JDN) + 1;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(DateTimeToUnix,
+                  (MODULE_TYPE(Chronometry, TimeStamp) value,
+                   MODULE_TYPE(Chronometry, Instant) *instant), {
+          if (instant == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          MODULE_TYPE(Chronometry, CalendarPolicy) gregorian;
+          OPSTATUS status =
+              MODULE_IFUNC(Chronometry, Epoch, GregorianPolicy)(&gregorian);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          if (!MODULE_FUNC(Chronometry, Timestamp, IsValid)(&gregorian, value)) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          int64_t jdn = 0;
+          if (MODULE_FUNC(Chronometry, Calendar, Date, ToOrdinal)(
+                  &gregorian, value.date, &jdn) != STATUS_CONST(SUCCESS)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          int64_t days =
+              jdn - (int64_t)CNS(Chronometry, Epoch, Internal, UNIX_EPOCH_JDN);
+          int64_t seconds =
+              days * MODULE_CONST(Chronometry, Duration, SECONDS_PER_DAY) +
+              (int64_t)value.time.hour *
+                  MODULE_CONST(Chronometry, Duration, SECONDS_PER_HOUR) +
+              (int64_t)value.time.minute *
+                  MODULE_CONST(Chronometry, Duration, SECONDS_PER_MINUTE) +
+              (int64_t)value.time.second;
+          instant->seconds = seconds;
+          instant->nanoseconds =
+              (uint32_t)value.time.millisecond *
+              (uint32_t)MODULE_CONST(Chronometry, Duration,
+                                     NANOSECONDS_PER_MILLISECOND);
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(DateTimeFromUnix,
+                  (MODULE_TYPE(Chronometry, Instant) instant,
+                   MODULE_TYPE(Chronometry, TimeStamp) *value), {
+          if (value == NULL ||
+              instant.nanoseconds >=
+                  (uint32_t)MODULE_CONST(Chronometry, Duration,
+                                         NANOSECONDS_PER_SECOND)) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          MODULE_TYPE(Chronometry, CalendarPolicy) gregorian;
+          OPSTATUS status =
+              MODULE_IFUNC(Chronometry, Epoch, GregorianPolicy)(&gregorian);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          const int64_t secPerDay =
+              MODULE_CONST(Chronometry, Duration, SECONDS_PER_DAY);
+          int64_t days =
+              MODULE_IFUNC(Chronometry, FloorDiv)(instant.seconds, secPerDay);
+          int64_t seconds = instant.seconds - days * secPerDay;
+          if (MODULE_FUNC(Chronometry, Calendar, Date, FromOrdinal)(
+                  &gregorian,
+                  (int64_t)CNS(Chronometry, Epoch, Internal, UNIX_EPOCH_JDN) +
+                      days,
+                  &value->date) != STATUS_CONST(SUCCESS)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          const int64_t secPerHour =
+              MODULE_CONST(Chronometry, Duration, SECONDS_PER_HOUR);
+          const int64_t secPerMin =
+              MODULE_CONST(Chronometry, Duration, SECONDS_PER_MINUTE);
+          value->time.hour = (uint8_t)(seconds / secPerHour);
+          seconds %= secPerHour;
+          value->time.minute = (uint8_t)(seconds / secPerMin);
+          value->time.second = (uint8_t)(seconds % secPerMin);
+          value->time.millisecond = (uint16_t)(instant.nanoseconds /
+              (uint32_t)MODULE_CONST(Chronometry, Duration,
+                                     NANOSECONDS_PER_MILLISECOND));
+          return STATUS_CONST(SUCCESS);
+        })
+    )
+);
+
+/* EOF */

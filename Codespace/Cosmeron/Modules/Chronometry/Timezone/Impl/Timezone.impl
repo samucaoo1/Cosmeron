@@ -1,0 +1,100 @@
+#pragma once
+
+/* ========================================================================== */
+/* 1. Internal Timezone Constants & Offset Helper (Row-Tuple Pattern)         */
+/* ========================================================================== */
+
+#define CHRONOMETRY_TIMEZONE_INTERNAL_COL_NAME(NAME, VALUE) NAME
+#define CHRONOMETRY_TIMEZONE_INTERNAL_COL_VALUE(NAME, VALUE) VALUE
+#define CHRONOMETRY_TIMEZONE_INTERNAL_GET(FIELD, ROW)                          \
+  PP_OP_CAT2(CHRONOMETRY_TIMEZONE_INTERNAL_COL_, FIELD) ROW
+
+#define CHRONOMETRY_TIMEZONE_INTERNAL_TABLE(X)                                 \
+  X((MAX_OFFSET_MINUTES, 1439))
+
+MODULE(DOMAIN(Modules), Chronometry,
+    INTERNAL_EX(Timezone,
+        ENUM(Const, CHRONOMETRY_TIMEZONE_INTERNAL_TABLE),
+
+        OPERATION(OffsetDuration,
+                  (MODULE_TYPE(Chronometry, UtcOffset) offset, int64_t sign,
+                   MODULE_TYPE(Chronometry, Duration) *outDuration), {
+          return MODULE_FUNC(Chronometry, Duration, FromSeconds)(
+              sign * (int64_t)offset.minutesEastOfUtc *
+                  MODULE_CONST(Chronometry, Duration, SECONDS_PER_MINUTE),
+              outDuration);
+        })
+    )
+);
+
+/* ========================================================================== */
+/* 2. Package Implementation: Chronometry_Timezone                            */
+/* ========================================================================== */
+
+MODULE_IMPLEMENT(DOMAIN(Modules), Chronometry,
+    PACKAGE(Timezone,
+        OPERATION(ToUTC,
+                  (MODULE_TYPE(Chronometry, OffsetDateTime) value,
+                   MODULE_TYPE(Chronometry, Instant) *instant), {
+          if (instant == NULL ||
+              !MODULE_FUNC(Chronometry, Timezone, Offset, IsValid)(
+                  value.offset)) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          MODULE_TYPE(Chronometry, Instant) local;
+          OPSTATUS status =
+              MODULE_FUNC(Chronometry, Epoch, DateTimeToUnix)(value.local,
+                                                              &local);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          MODULE_TYPE(Chronometry, Duration) offset;
+          status = MODULE_IFUNC(Chronometry, Timezone, OffsetDuration)(
+              value.offset, -1, &offset);
+          return status == STATUS_CONST(SUCCESS)
+                     ? MODULE_FUNC(Chronometry, Instant, AddDuration)(
+                           local, offset, instant)
+                     : status;
+        }),
+
+        OPERATION(FromUTC,
+                  (MODULE_TYPE(Chronometry, Instant) instant,
+                   MODULE_TYPE(Chronometry, UtcOffset) offset,
+                   MODULE_TYPE(Chronometry, OffsetDateTime) *value), {
+          if (value == NULL ||
+              !MODULE_FUNC(Chronometry, Timezone, Offset, IsValid)(offset)) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          MODULE_TYPE(Chronometry, Duration) duration;
+          OPSTATUS status = MODULE_IFUNC(Chronometry, Timezone, OffsetDuration)(
+              offset, 1, &duration);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          MODULE_TYPE(Chronometry, Instant) local;
+          status = MODULE_FUNC(Chronometry, Instant, AddDuration)(
+              instant, duration, &local);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          status = MODULE_FUNC(Chronometry, Epoch, DateTimeFromUnix)(
+              local, &value->local);
+          if (status == STATUS_CONST(SUCCESS)) {
+            value->offset = offset;
+            value->daylightSavings = false;
+          }
+          return status;
+        }),
+
+        SPACE(Offset,
+              PREDICATE(IsValid, (MODULE_TYPE(Chronometry, UtcOffset) offset), {
+                const int16_t maxOffset = (int16_t)CNS(
+                    Chronometry, Timezone, Internal, MAX_OFFSET_MINUTES);
+                return offset.minutesEastOfUtc >= -maxOffset &&
+                       offset.minutesEastOfUtc <= maxOffset;
+              })
+        )
+    )
+);
+
+/* EOF */

@@ -1,0 +1,131 @@
+#pragma once
+
+#include <limits.h>
+
+/* ========================================================================== */
+/* 1. Internal Checked Unit Scaling Helper                                    */
+/* ========================================================================== */
+
+MODULE(DOMAIN(Modules), Chronometry,
+    INTERNAL_EX(Duration,
+        OPERATION(FromUnit,
+                  (int64_t value, int64_t multiplier,
+                   MODULE_TYPE(Chronometry, Duration) *outResult), {
+          if (outResult == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          if (value > INT64_MAX / multiplier ||
+              value < INT64_MIN / multiplier) {
+            return STATUS_CONST(ARITHMETIC_OVERFLOW);
+          }
+          outResult->nanoseconds = value * multiplier;
+          return STATUS_CONST(SUCCESS);
+        })
+    )
+);
+
+/* ========================================================================== */
+/* 2. Package Implementation: Chronometry_Duration                            */
+/* ========================================================================== */
+
+MODULE_IMPLEMENT(DOMAIN(Modules), Chronometry,
+    PACKAGE(Duration,
+        VARIANT(From,
+            FUNCTION(MODULE_TYPE(Chronometry, Duration), Nanoseconds,
+                     (int64_t nanoseconds), {
+              return (MODULE_TYPE(Chronometry, Duration)){nanoseconds};
+            }),
+
+            OPERATION(Microseconds,
+                      (int64_t microseconds,
+                       MODULE_TYPE(Chronometry, Duration) *outResult), {
+              return MODULE_IFUNC(Chronometry, Duration, FromUnit)(
+                  microseconds,
+                  MODULE_CONST(Chronometry, Duration,
+                               NANOSECONDS_PER_MICROSECOND),
+                  outResult);
+            }),
+
+            OPERATION(Milliseconds,
+                      (int64_t milliseconds,
+                       MODULE_TYPE(Chronometry, Duration) *outResult), {
+              return MODULE_IFUNC(Chronometry, Duration, FromUnit)(
+                  milliseconds,
+                  MODULE_CONST(Chronometry, Duration,
+                               NANOSECONDS_PER_MILLISECOND),
+                  outResult);
+            }),
+
+            OPERATION(Seconds,
+                      (int64_t seconds,
+                       MODULE_TYPE(Chronometry, Duration) *outResult), {
+              return MODULE_IFUNC(Chronometry, Duration, FromUnit)(
+                  seconds,
+                  MODULE_CONST(Chronometry, Duration, NANOSECONDS_PER_SECOND),
+                  outResult);
+            })
+        ),
+
+        OPERATION(Add,
+                  (MODULE_TYPE(Chronometry, Duration) left,
+                   MODULE_TYPE(Chronometry, Duration) right,
+                   MODULE_TYPE(Chronometry, Duration) *outResult), {
+          if (outResult == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          if ((right.nanoseconds > 0 &&
+               left.nanoseconds > INT64_MAX - right.nanoseconds) ||
+              (right.nanoseconds < 0 &&
+               left.nanoseconds < INT64_MIN - right.nanoseconds)) {
+            return STATUS_CONST(ARITHMETIC_OVERFLOW);
+          }
+          outResult->nanoseconds = left.nanoseconds + right.nanoseconds;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(Subtract,
+                  (MODULE_TYPE(Chronometry, Duration) left,
+                   MODULE_TYPE(Chronometry, Duration) right,
+                   MODULE_TYPE(Chronometry, Duration) *outResult), {
+          if (outResult == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          if ((right.nanoseconds < 0 &&
+               left.nanoseconds > INT64_MAX + right.nanoseconds) ||
+              (right.nanoseconds > 0 &&
+               left.nanoseconds < INT64_MIN + right.nanoseconds)) {
+            return STATUS_CONST(ARITHMETIC_OVERFLOW);
+          }
+          outResult->nanoseconds = left.nanoseconds - right.nanoseconds;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        COMPARISON(Compare,
+                   (MODULE_TYPE(Chronometry, Duration) left,
+                    MODULE_TYPE(Chronometry, Duration) right), {
+          if (left.nanoseconds < right.nanoseconds) {
+            return COMPARISON_CONST(LOWER);
+          }
+          if (left.nanoseconds > right.nanoseconds) {
+            return COMPARISON_CONST(HIGHER);
+          }
+          return COMPARISON_CONST(EQUAL);
+        }),
+
+        OPERATION(Absolute,
+                  (MODULE_TYPE(Chronometry, Duration) value,
+                   MODULE_TYPE(Chronometry, Duration) *outResult), {
+          if (outResult == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          if (value.nanoseconds == INT64_MIN) {
+            return STATUS_CONST(ARITHMETIC_OVERFLOW);
+          }
+          outResult->nanoseconds =
+              value.nanoseconds < 0 ? -value.nanoseconds : value.nanoseconds;
+          return STATUS_CONST(SUCCESS);
+        })
+    )
+);
+
+/* EOF */
