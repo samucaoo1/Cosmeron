@@ -221,6 +221,8 @@ AddMonths clamps the original day to the final day of the destination month. Add
 
 ISO week dates use Monday as weekday 1 and Sunday as weekday 7. The ISO week-year can differ from the calendar year near New Year. The calendar policy is required when converting between a date and an ISO week date.
 
+The implementation supports civil years from -4799 through 4,194,303. Values outside this range are rejected by calendar operations even though the Date year bit-field can encode a wider signed range. This implementation range is a library boundary, not a claim about the historical validity of dates.
+
 ### Timezone rule model
 
 UtcOffset.minutesEastOfUtc is signed minutes east of UTC: UTC−03:00 is -180 and UTC+05:30 is 330. The accepted range is -1439 through +1439 minutes. FromHoursMinutes takes signed hour and minute components; use components with matching signs for a negative offset.
