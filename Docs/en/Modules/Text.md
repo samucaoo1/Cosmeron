@@ -18,7 +18,7 @@ The aggregate includes the following public areas:
 | `CString/CString.h` | Stateless NUL-terminated C-string operations. |
 | `View/View.h` | Non-owning typed string views (`View8`, `View16`, `View32`). |
 | `String/String.h` | Owned mutable strings (`String8`, `String16`, `String32`) and UTF-8 helpers. |
-| `Format/Writer.h` | Decoupled text sink (`Counter`, `ToBuffer`, `ToClosure`, `ToString`) and typed writers. |
+| `Format/Writer.h` | Decoupled text sink (`Counter`, `ToBuffer`, `ToDelegate`, `ToString`) and typed writers. |
 | `Format/Format.h` | Safe bounded and writer-based formatting with custom `%!` adapters. |
 | `Format/BytesHuman.h` | Human-readable byte size formatting and parsing. |
 | `Grid/Attribute.h`, `Grid/Char.h`, `Grid/Grid.h` | Attribute planes, color helpers, and memory-backed text grids. |
@@ -178,7 +178,7 @@ Header: `Format/Writer.h`. Type: `MODULE_TYPE(Text, Writer)`. Package: `Text_Wri
 | --- | --- |
 | `ToBuffer(buffer, capacity)` | Caller-owned `char` buffer (always NUL-terminated; tracks truncation). |
 | `Counter()` | Measurement-only mode (counts written bytes without storing). |
-| `ToClosure(sink)` | Any `MODULE_CLOSURE(Text, WriterSink)` target. |
+| `ToDelegate(sink)` | Any `MODULE_DELEGATE(Text, WriterSink)` target. |
 | `ToString(str)` | Declared in `String/String.h`; appends directly into a `String8`. |
 
 Typed write primitives: `WriteBuffer`, `WriteChar`, `WriteCodepoint`, `WriteRepeat`, `WriteCStr`, `WriteView`, `WriteBool`, `WriteInt`, `WriteUInt`, `WriteFloat`, `WriteHex`, `WriteEscaped`, plus inspection (`Written`, `IsTruncated`, `Status`) and `Finish`.
@@ -197,7 +197,7 @@ Supported specifiers include standard C11/C23 specifiers (`%d`/`%i`, `%u`, `%o`,
 - `%U`: `MODULE_TYPE(Text, Char32)` encoded as UTF-8.
 - `%t`: `bool` (`true` / `false`).
 - `%q` / `%#q`: escaped C-string (quoted or unquoted).
-- `%!` / `%(spec)!`: custom adapter pair `(MODULE_CALLBACK(Text, Format, Adapter) adapter, const void *value)` so external types format cleanly without coupling `Text` to other modules.
+- `%!` / `%(spec)!`: custom adapter pair `(MODULE_CALLABLE(Text, Format, Adapter) adapter, const void *value)` so external types format cleanly without coupling `Text` to other modules.
 
 ### Human-readable byte sizes
 
@@ -235,7 +235,7 @@ Grid operations work on off-screen memory-backed cells (`MODULE_TYPED(Tuple, Dua
 - [Tuple](Tuple.md) — grid dimensions and regions.
 - [Memory](Memory.md) — allocation and byte operations.
 - [Algorithm](Algorithm.md) — comparison results used by text views and C strings.
-- [Module](Module.md) — packages, objects, closures, and typed specializations.
+- [Module](Module.md) — packages, objects, callables, delegates, and typed specializations.
 
 ## Source headers
 

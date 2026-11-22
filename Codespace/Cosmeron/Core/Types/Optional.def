@@ -1,6 +1,6 @@
 /* Optional.def - Dual Mode Engine (Zero Duplication) */
 
-#include "../Module/Closure/Closure.h"
+#include "../Module/Delegate/Delegate.h"
 #include "Impl/Common.inc"
 
 #ifndef TEMPLATE_Optional
@@ -11,12 +11,12 @@
           TYPE value;                                                          \
       ),                                                                       \
                                                                                \
-      CLOSURE(                                                                 \
+      DELEGATE(                                                                \
           FUNCTION(TYPE, MapFunction, (TYPE value)),                           \
           OPERATION(                                                           \
               BindFunction,                                                    \
               (TYPE value,                                                     \
-               struct MODULE_TYPED(Optional, SUFFIX) * outOptional)),    \
+               struct MODULE_TYPED(Optional, SUFFIX) * outOptional)),          \
           PREDICATE(FilterPredicate, (TYPE value))),                           \
                                                                                \
       PROCEDURE_INLINE(Clear, (), {                                            \
@@ -92,44 +92,44 @@
                                                                                \
       CONST_OPERATION_INLINE(                                                  \
           Map,                                                                 \
-          (MODULE_CLOSURE(Optional, SUFFIX, MapFunction) mapper,         \
-           struct MODULE_TYPED(Optional, SUFFIX) * outOptional),         \
+          (MODULE_DELEGATE(Optional, SUFFIX, MapFunction) mapper,              \
+           struct MODULE_TYPED(Optional, SUFFIX) * outOptional),               \
           {                                                                    \
-            if (!self || !outOptional || !CLOSURE_IS_VALID(mapper)) {          \
+            if (!self || !outOptional || !DELEGATE_IS_VALID(mapper)) {         \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             }                                                                  \
             if (!self->hasValue) {                                             \
               return MODULE_FUNC(Optional, SUFFIX, None)(outOptional);   \
             }                                                                  \
-            const TYPE mapped = CLOSURE_CALL(mapper, self->value);             \
+            const TYPE mapped = DELEGATE_CALL(mapper, self->value);            \
             return MODULE_FUNC(Optional, SUFFIX, Some)(outOptional,      \
                                                              mapped);          \
           }),                                                                  \
                                                                                \
       CONST_OPERATION_INLINE(                                                  \
           AndThen,                                                             \
-          (MODULE_CLOSURE(Optional, SUFFIX, BindFunction) binder,        \
-           struct MODULE_TYPED(Optional, SUFFIX) * outOptional),         \
+          (MODULE_DELEGATE(Optional, SUFFIX, BindFunction) binder,             \
+           struct MODULE_TYPED(Optional, SUFFIX) * outOptional),               \
           {                                                                    \
-            if (!self || !outOptional || !CLOSURE_IS_VALID(binder)) {          \
+            if (!self || !outOptional || !DELEGATE_IS_VALID(binder)) {         \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             }                                                                  \
             if (!self->hasValue) {                                             \
               return MODULE_FUNC(Optional, SUFFIX, None)(outOptional);   \
             }                                                                  \
             MODULE_FUNC(Optional, SUFFIX, Init)(outOptional);            \
-            return CLOSURE_CALL(binder, self->value, outOptional);             \
+            return DELEGATE_CALL(binder, self->value, outOptional);            \
           }),                                                                  \
                                                                                \
       CONST_OPERATION_INLINE(                                                  \
           Filter,                                                              \
-          (MODULE_CLOSURE(Optional, SUFFIX, FilterPredicate) predicate,  \
-           struct MODULE_TYPED(Optional, SUFFIX) * outOptional),         \
+          (MODULE_DELEGATE(Optional, SUFFIX, FilterPredicate) predicate,       \
+           struct MODULE_TYPED(Optional, SUFFIX) * outOptional),               \
           {                                                                    \
-            if (!self || !outOptional || !CLOSURE_IS_VALID(predicate)) {       \
+            if (!self || !outOptional || !DELEGATE_IS_VALID(predicate)) {      \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             }                                                                  \
-            if (!self->hasValue || !CLOSURE_CALL(predicate, self->value)) {    \
+            if (!self->hasValue || !DELEGATE_CALL(predicate, self->value)) {   \
               return MODULE_FUNC(Optional, SUFFIX, None)(outOptional);   \
             }                                                                  \
             return MODULE_FUNC(Optional, SUFFIX, Some)(outOptional,      \

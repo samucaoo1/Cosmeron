@@ -1,6 +1,6 @@
 # Module
 
-The **Module** core provides Cosmeron's declarative C API system. It generates namespaced types, enums, constants, structs, objects, packages, callbacks, closures, templates and optional function tables from declarations in the headers.
+The **Module** core provides Cosmeron's declarative C API system. It generates namespaced types, enums, constants, structs, objects, packages, callables, delegates, templates and optional function tables from declarations in the headers.
 
 ## Headers
 
@@ -8,7 +8,7 @@ The **Module** core provides Cosmeron's declarative C API system. It generates n
 #include "Cosmeron/Core/Module/Module.h"
 ~~~
 
-The aggregate header includes the namespace, declaration, object, package, callback, closure, dispatch, function-table, template and implementation-scope machinery used by the public module headers.
+The aggregate header includes the namespace, declaration, object, package, callable, delegate, dispatch, function-table, template and implementation-scope machinery used by the public module headers.
 
 ---
 
@@ -27,8 +27,8 @@ The declaration model is organized as:
 | `STRUCT` | Declares a plain C data type with no implicit method receiver. |
 | `ISTRUCT` | Declares a module-internal plain structure. |
 | `VARIANT` | Groups related operations under a nested method/function path. |
-| `CALLBACK` | Declares a function-pointer callback signature. |
-| `CLOSURE` | Declares a callable signature that carries a context pointer. |
+| `CALLABLE` | Declares a stateless function-pointer callable signature. |
+| `DELEGATE` | Declares a dual-mode callable signature that optionally carries a context pointer. |
 
 A declaration is not a runtime class system. Objects and packages are generated C structs, functions and macros. There is no dynamic type discovery or automatic garbage collection supplied by the Module layer.
 
@@ -52,8 +52,8 @@ Use the semantic naming macros rather than constructing public identifiers manua
 | `MODULE_CONST(Module, Constant)` | Names a module constant. |
 | `MODULE_FUNC(Module, Function)` | Names a package or object function. |
 | `MODULE_FUNC(Module, Package, Function)` | Names a function in a package. |
-| `MODULE_CLOSURE(Module, Package, Name)` | Names a closure type generated in a package. |
-| `MODULE_CALLBACK(Module, Name)` | Names a callback type declared by a module. |
+| `MODULE_DELEGATE(Module, Package, Name)` | Names a delegate type generated in a package. |
+| `MODULE_CALLABLE(Module, Name)` | Names a callable type declared by a module. |
 | `MODULE_NS(...)` | Forms a module namespace token sequence. |
 | `NS(...)` / `CNS(...)` | Forms ordinary or constant namespace tokens. |
 
@@ -177,27 +177,27 @@ For fixed-layout value types, prefer direct field initialization and ordinary as
 
 ---
 
-## Callbacks and closures
+## Callables and delegates
 
-### Callback
+### Callable
 
-A callback is a function pointer with a declared signature. It does not inherently carry state.
+A callable is a stateless function pointer with a declared signature. It does not inherently carry state.
 
-`Callback.h` provides `TCALLBACK(Name)` for the generated type, `CALLBACK_FUNC(Name)` for helper names and `CALLBACK_EMPTY` as the null callback value.
+`Callable.h` provides `TCALLABLE(Name)` for the generated type, `CALLABLE_FUNC(Name)` for helper names, `CALLABLE_CALL`/`CALLABLE_INVOKE` for invocation, `CALLABLE_IS_VALID` for checks, and `CALLABLE_EMPTY` (`NULL`) as the null callable value.
 
-### Closure
+### Delegate
 
-A closure pairs a function pointer with a context pointer. It is suitable for callbacks that need to refer to caller-owned state without a global variable.
+A delegate pairs a function pointer with an optional context pointer in a dual-mode POD structure. It supports both stateless callables (`FromCallable`) and stateful callbacks bound to caller-owned context (`Bind`) without a global variable.
 
-`Closure.h` provides `TCLOSURE(Name)` and `CLOSURE_FUNC(Name)`. The common call/validation macros are:
+`Delegate.h` provides `TDELEGATE(Name)` and `DELEGATE_FUNC(Name)`. The common call/validation macros are:
 
 | Macro | Behavior |
 | --- | --- |
-| `CLOSURE_IS_VALID(closure)` | Tests whether the closure has a function. |
-| `CLOSURE_CALL(closure, ...)` | Invokes the closure. |
-| `CLOSURE_EMPTY` | Empty closure value. |
+| `DELEGATE_IS_VALID(delegate)` | Tests whether the delegate has a function. |
+| `DELEGATE_CALL(delegate, ...)` | Invokes the delegate. |
+| `DELEGATE_EMPTY` | Empty delegate value. |
 
-Closure declarations specify the return contract: `CLOSURE_FUNCTION`, `CLOSURE_PROCEDURE`, `CLOSURE_OPERATION`, `CLOSURE_PREDICATE` or `CLOSURE_COMPARISON`. A closure's context pointer is borrowed; the Module layer does not manage the pointed-to object's lifetime.
+Delegate declarations specify the return contract: `DELEGATE_FUNCTION`, `DELEGATE_PROCEDURE`, `DELEGATE_OPERATION`, `DELEGATE_PREDICATE` or `DELEGATE_COMPARISON`. A delegate's context pointer is borrowed; the Module layer does not manage the pointed-to object's lifetime.
 
 ---
 
@@ -257,13 +257,13 @@ Function-table disabling may change generated object layout. Do not mix objects 
 - Use `STRUCT` for POD values; it has no receiver or object function table.
 - Use `OPERATION` whenever a routine can fail and return an `OPSTATUS`.
 - Use `FUNCTION` for direct value results and `PREDICATE` for Boolean questions.
-- Use `CALLBACK` for plain function pointers; use `CLOSURE` when context must travel with the callable.
+- Use `CALLABLE` for plain stateless function pointers; use `DELEGATE` when optional context travels with the callable.
 - Keep template details in `.def` files and expose a clean public header.
-- Treat all pointers passed as context, callback data or fields according to their documented ownership; the Module system does not automatically own them.
+- Treat all pointers passed as context, delegate data or fields according to their documented ownership; the Module system does not automatically own them.
 
 ## Related modules
 
-- [Algorithm](Algorithm.md) — practical closure usage in repetition and comparison.
+- [Algorithm](Algorithm.md) — practical delegate usage in repetition and comparison.
 - [Condition](Condition.md) — statuses and fallible operation results.
 - [Types](Types.md) — primitive and traits descriptors.
 - [Preprocessor](Preprocessor.md) — token and table helpers used by the declarative layer.
@@ -274,7 +274,7 @@ Function-table disabling may change generated object layout. Do not mix objects 
 - `Codespace/Cosmeron/Core/Module/Namespace.h`
 - `Codespace/Cosmeron/Core/Module/Object.h`
 - `Codespace/Cosmeron/Core/Module/Package.h`
-- `Codespace/Cosmeron/Core/Module/Callback/Callback.h`
-- `Codespace/Cosmeron/Core/Module/Closure/Closure.h`
+- `Codespace/Cosmeron/Core/Module/Callable/Callable.h`
+- `Codespace/Cosmeron/Core/Module/Delegate/Delegate.h`
 - `Codespace/Cosmeron/Core/Module/Common/Template.impl`
 - `Codespace/Cosmeron/Core/Module/Common/Declarative.impl`

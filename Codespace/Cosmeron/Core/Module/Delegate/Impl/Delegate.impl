@@ -1,0 +1,310 @@
+#pragma once
+
+#include "../../../Preprocessor/Arguments.h"
+#include "../../../Preprocessor/Boolean.h"
+#include "../../../Preprocessor/Detect/Detect.h"
+#include "../../../Preprocessor/Operations.h"
+#include "../../Namespace.h"
+#include "../../Callable/Impl/Callable.impl"
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#ifndef COSMERON_MAYBE_UNUSED
+#if COMPILER_GCC || COMPILER_CLANG
+#define COSMERON_MAYBE_UNUSED __attribute__((unused))
+#else
+#define COSMERON_MAYBE_UNUSED
+#endif
+#endif
+
+/* ========================================================================== */
+/* 1. Universal Delegate Invocation & Validation Engine (16 Bytes Dual-Mode)  */
+/* ========================================================================== */
+
+static const int _cosmeron_delegate_null_ctx_sentinel = 0;
+#define COSMERON_DELEGATE_NULL_CONTEXT                                         \
+  ((void *)&_cosmeron_delegate_null_ctx_sentinel)
+
+#define COSMERON_MACRO_INTERNAL_DELEGATE_RESOLVE_CTX(ctx)                      \
+  ((ctx) == COSMERON_DELEGATE_NULL_CONTEXT ? NULL : (ctx))
+
+#define COSMERON_MACRO_INTERNAL_DELEGATE_INVOKE_0(dl)                          \
+  (((dl).context != NULL)                                                      \
+       ? (dl).function(                                                        \
+             COSMERON_MACRO_INTERNAL_DELEGATE_RESOLVE_CTX((dl).context))       \
+       : (dl).callable())
+
+#define COSMERON_MACRO_INTERNAL_DELEGATE_INVOKE_1(dl, ...)                     \
+  (((dl).context != NULL)                                                      \
+       ? (dl).function(__VA_ARGS__,                                            \
+                       COSMERON_MACRO_INTERNAL_DELEGATE_RESOLVE_CTX(           \
+                           (dl).context))                                      \
+       : (dl).callable(__VA_ARGS__))
+
+#define DELEGATE_INVOKE(...)                                                   \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_DELEGATE_INVOKE_,                         \
+             PP_HAS_COMMA(__VA_ARGS__))(__VA_ARGS__)
+
+#define DELEGATE_CALL(...) DELEGATE_INVOKE(__VA_ARGS__)
+
+#define DELEGATE_IS_VALID(dl) ((dl).function != NULL)
+
+#define DELEGATE_EMPTY { .function = NULL, .context = NULL }
+
+/* ========================================================================== */
+/* 2. Parameter Emission Helpers for Delegates                                */
+/* ========================================================================== */
+
+#define COSMERON_MACRO_INTERNAL_DELEGATE_PARAM_1(PARAMS) (void *context)
+#define COSMERON_MACRO_INTERNAL_DELEGATE_PARAM_0(PARAMS)                       \
+  (PP_UNWRAP PARAMS, void *context)
+
+#define COSMERON_MACRO_INTERNAL_DELEGATE_PARAMS(PARAMS)                        \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_DELEGATE_PARAM_,                          \
+             PP_IS_EMPTY_PARAMS(PARAMS))(PARAMS)
+
+/* ========================================================================== */
+/* 3. Core Scoped Delegate Generation Templates                               */
+/* ========================================================================== */
+
+#define COSMERON_MACRO_INTERNAL_DELEGATE_SCOPED_BASE(SCOPE, NAME, RET, PARAMS) \
+  typedef RET (*NS_JOIN(SCOPE, TCallable, NAME))                               \
+      COSMERON_MACRO_INTERNAL_CALLABLE_PARAMS(PARAMS);                         \
+  typedef RET (*NS_JOIN(SCOPE, Delegate, NAME, Function))                      \
+      COSMERON_MACRO_INTERNAL_DELEGATE_PARAMS(PARAMS);                         \
+  typedef struct NS_JOIN(SCOPE, TDelegate, NAME) {                             \
+    union {                                                                    \
+      NS_JOIN(SCOPE, TCallable, NAME) callable;                                \
+      NS_JOIN(SCOPE, Delegate, NAME, Function) function;                       \
+    };                                                                         \
+    void *context;                                                             \
+  } NS_JOIN(SCOPE, TDelegate, NAME);                                           \
+  static inline COSMERON_MAYBE_UNUSED NS_JOIN(SCOPE, TDelegate, NAME)          \
+      NS_JOIN(SCOPE, Delegate, NAME, Bind)(                                    \
+          NS_JOIN(SCOPE, Delegate, NAME, Function) function,                   \
+          void *context) {                                                     \
+    NS_JOIN(SCOPE, TDelegate, NAME) dl;                                        \
+    dl.function = function;                                                    \
+    dl.context = (context != NULL) ? context : COSMERON_DELEGATE_NULL_CONTEXT; \
+    return dl;                                                                 \
+  }                                                                            \
+  static inline COSMERON_MAYBE_UNUSED NS_JOIN(SCOPE, TDelegate, NAME)          \
+      NS_JOIN(SCOPE, Delegate, NAME, FromCallable)(                            \
+          NS_JOIN(SCOPE, TCallable, NAME) callable) {                          \
+    NS_JOIN(SCOPE, TDelegate, NAME) dl;                                        \
+    dl.callable = callable;                                                    \
+    dl.context = NULL;                                                         \
+    return dl;                                                                 \
+  }                                                                            \
+  static inline COSMERON_MAYBE_UNUSED NS_JOIN(SCOPE, TDelegate, NAME)          \
+      NS_JOIN(SCOPE, Delegate, NAME, Empty)(void) {                            \
+    NS_JOIN(SCOPE, TDelegate, NAME) dl;                                        \
+    dl.function = NULL;                                                        \
+    dl.context = NULL;                                                         \
+    return dl;                                                                 \
+  }                                                                            \
+  static inline COSMERON_MAYBE_UNUSED bool NS_JOIN(                            \
+      SCOPE, Delegate, NAME, IsValid)(                                         \
+      NS_JOIN(SCOPE, TDelegate, NAME) delegate) {                              \
+    return delegate.function != NULL;                                          \
+  }
+
+#define COSMERON_MACRO_INTERNAL_DELEGATE_SCOPED_NULLARY_VAL_0(SCOPE, NAME, RET)
+#define COSMERON_MACRO_INTERNAL_DELEGATE_SCOPED_NULLARY_VAL_1(SCOPE, NAME,     \
+                                                              RET)             \
+  static inline COSMERON_MAYBE_UNUSED RET NS_JOIN(                             \
+      SCOPE, Delegate, NAME, Invoke)(                                          \
+      NS_JOIN(SCOPE, TDelegate, NAME) delegate) {                              \
+    return DELEGATE_INVOKE(delegate);                                          \
+  }
+
+#define COSMERON_MACRO_INTERNAL_DELEGATE_SCOPED_NULLARY_VOID_0(SCOPE, NAME)
+#define COSMERON_MACRO_INTERNAL_DELEGATE_SCOPED_NULLARY_VOID_1(SCOPE, NAME)    \
+  static inline COSMERON_MAYBE_UNUSED void NS_JOIN(                            \
+      SCOPE, Delegate, NAME, Invoke)(                                          \
+      NS_JOIN(SCOPE, TDelegate, NAME) delegate) {                              \
+    DELEGATE_INVOKE(delegate);                                                 \
+  }
+
+#define COSMERON_MACRO_INTERNAL_DELEGATE_SCOPED_GEN_0(SCOPE, NAME, RET,        \
+                                                      PARAMS)                  \
+  COSMERON_MACRO_INTERNAL_DELEGATE_SCOPED_BASE(SCOPE, NAME, RET, PARAMS)       \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_DELEGATE_SCOPED_NULLARY_VAL_,             \
+             PP_IS_EMPTY_PARAMS(PARAMS))(SCOPE, NAME, RET)                     \
+  typedef int NS(_cosmeron_delegate_scoped_semi, SCOPE, NAME, __LINE__);
+
+#define COSMERON_MACRO_INTERNAL_DELEGATE_SCOPED_GEN_1(SCOPE, NAME, RET,        \
+                                                      PARAMS)                  \
+  COSMERON_MACRO_INTERNAL_DELEGATE_SCOPED_BASE(SCOPE, NAME, void, PARAMS)      \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_DELEGATE_SCOPED_NULLARY_VOID_,            \
+             PP_IS_EMPTY_PARAMS(PARAMS))(SCOPE, NAME)                          \
+  typedef int NS(_cosmeron_delegate_scoped_semi, SCOPE, NAME, __LINE__);
+
+#define COSMERON_MACRO_INTERNAL_DELEGATE_SCOPED_GEN(SCOPE, NAME, RET, PARAMS)  \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_DELEGATE_SCOPED_GEN_,                     \
+             COSMERON_MACRO_INTERNAL_CALLABLE_IS_VOID(RET))(SCOPE, NAME, RET,  \
+                                                            PARAMS)
+
+/* ========================================================================== */
+/* 4. Standalone Root-Level Delegate Generation Templates                     */
+/* ========================================================================== */
+
+#define COSMERON_MACRO_INTERNAL_DELEGATE_ROOT_BASE(NAME, RET, PARAMS)          \
+  typedef RET (*TCALLABLE(NAME))                                               \
+      COSMERON_MACRO_INTERNAL_CALLABLE_PARAMS(PARAMS);                         \
+  typedef RET (*NS_JOIN(DELEGATE_FUNC(NAME), Function))                        \
+      COSMERON_MACRO_INTERNAL_DELEGATE_PARAMS(PARAMS);                         \
+  typedef struct TDELEGATE(NAME) {                                             \
+    union {                                                                    \
+      TCALLABLE(NAME) callable;                                                \
+      NS_JOIN(DELEGATE_FUNC(NAME), Function) function;                         \
+    };                                                                         \
+    void *context;                                                             \
+  } TDELEGATE(NAME);                                                           \
+  static inline COSMERON_MAYBE_UNUSED TDELEGATE(NAME)                          \
+      NS_JOIN(DELEGATE_FUNC(NAME), Bind)(                                      \
+          NS_JOIN(DELEGATE_FUNC(NAME), Function) function, void *context) {    \
+    TDELEGATE(NAME) dl;                                                        \
+    dl.function = function;                                                    \
+    dl.context = (context != NULL) ? context : COSMERON_DELEGATE_NULL_CONTEXT; \
+    return dl;                                                                 \
+  }                                                                            \
+  static inline COSMERON_MAYBE_UNUSED TDELEGATE(NAME)                          \
+      NS_JOIN(DELEGATE_FUNC(NAME), FromCallable)(TCALLABLE(NAME) callable) {   \
+    TDELEGATE(NAME) dl;                                                        \
+    dl.callable = callable;                                                    \
+    dl.context = NULL;                                                         \
+    return dl;                                                                 \
+  }                                                                            \
+  static inline COSMERON_MAYBE_UNUSED TDELEGATE(NAME)                          \
+      NS_JOIN(DELEGATE_FUNC(NAME), Empty)(void) {                              \
+    TDELEGATE(NAME) dl;                                                        \
+    dl.function = NULL;                                                        \
+    dl.context = NULL;                                                         \
+    return dl;                                                                 \
+  }                                                                            \
+  static inline COSMERON_MAYBE_UNUSED bool NS_JOIN(                            \
+      DELEGATE_FUNC(NAME), IsValid)(TDELEGATE(NAME) delegate) {                \
+    return delegate.function != NULL;                                          \
+  }
+
+#define COSMERON_MACRO_INTERNAL_DELEGATE_ROOT_NULLARY_VAL_0(NAME, RET)
+#define COSMERON_MACRO_INTERNAL_DELEGATE_ROOT_NULLARY_VAL_1(NAME, RET)         \
+  static inline COSMERON_MAYBE_UNUSED RET NS_JOIN(                             \
+      DELEGATE_FUNC(NAME), Invoke)(TDELEGATE(NAME) delegate) {                 \
+    return DELEGATE_INVOKE(delegate);                                          \
+  }
+
+#define COSMERON_MACRO_INTERNAL_DELEGATE_ROOT_NULLARY_VOID_0(NAME)
+#define COSMERON_MACRO_INTERNAL_DELEGATE_ROOT_NULLARY_VOID_1(NAME)             \
+  static inline COSMERON_MAYBE_UNUSED void NS_JOIN(                            \
+      DELEGATE_FUNC(NAME), Invoke)(TDELEGATE(NAME) delegate) {                 \
+    DELEGATE_INVOKE(delegate);                                                 \
+  }
+
+#define COSMERON_MACRO_INTERNAL_DELEGATE_GEN_VALUE(NAME, RET, PARAMS)          \
+  COSMERON_MACRO_INTERNAL_DELEGATE_ROOT_BASE(NAME, RET, PARAMS)                \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_DELEGATE_ROOT_NULLARY_VAL_,               \
+             PP_IS_EMPTY_PARAMS(PARAMS))(NAME, RET)                            \
+  typedef int NS(_cosmeron_delegate_semi, NAME, __LINE__)
+
+#define COSMERON_MACRO_INTERNAL_DELEGATE_GEN_VOID(NAME, PARAMS)                \
+  COSMERON_MACRO_INTERNAL_DELEGATE_ROOT_BASE(NAME, void, PARAMS)               \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_DELEGATE_ROOT_NULLARY_VOID_,              \
+             PP_IS_EMPTY_PARAMS(PARAMS))(NAME)                                 \
+  typedef int NS(_cosmeron_delegate_semi, NAME, __LINE__)
+
+#define COSMERON_MACRO_INTERNAL_DELEGATE_GEN_DISPATCH_0(NAME, RET, PARAMS)     \
+  COSMERON_MACRO_INTERNAL_DELEGATE_GEN_VALUE(NAME, RET, PARAMS)
+
+#define COSMERON_MACRO_INTERNAL_DELEGATE_GEN_DISPATCH_1(NAME, RET, PARAMS)     \
+  COSMERON_MACRO_INTERNAL_DELEGATE_GEN_VOID(NAME, PARAMS)
+
+#define COSMERON_MACRO_INTERNAL_DELEGATE_GEN(NAME, RET, PARAMS)                \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_DELEGATE_GEN_DISPATCH_,                   \
+             COSMERON_MACRO_INTERNAL_CALLABLE_IS_VOID(RET))(NAME, RET, PARAMS)
+
+/* ========================================================================== */
+/* 5. Public Standalone Delegate Descriptors                                  */
+/* ========================================================================== */
+
+#define DELEGATE_FUNCTION(RET, NAME, PARAMS)                                   \
+  COSMERON_MACRO_INTERNAL_DELEGATE_GEN(NAME, RET, PARAMS)
+
+#define DELEGATE_PROCEDURE(NAME, PARAMS)                                       \
+  COSMERON_MACRO_INTERNAL_DELEGATE_GEN_VOID(NAME, PARAMS)
+
+#define DELEGATE_OPERATION(NAME, PARAMS)                                       \
+  COSMERON_MACRO_INTERNAL_DELEGATE_GEN_VALUE(NAME, OPSTATUS, PARAMS)
+
+#define DELEGATE_PREDICATE(NAME, PARAMS)                                       \
+  COSMERON_MACRO_INTERNAL_DELEGATE_GEN_VALUE(NAME, bool, PARAMS)
+
+#define DELEGATE_COMPARISON(NAME, PARAMS)                                      \
+  COSMERON_MACRO_INTERNAL_DELEGATE_GEN_VALUE(NAME, CMPOUT, PARAMS)
+
+/* Scoped Delegate Descriptors (for explicit Target/Module qualification) */
+#define DELEGATE_SCOPED_FUNCTION(SCOPE, RET, NAME, PARAMS)                     \
+  COSMERON_MACRO_INTERNAL_DELEGATE_SCOPED_GEN(SCOPE, NAME, RET, PARAMS)
+
+#define DELEGATE_SCOPED_PROCEDURE(SCOPE, NAME, PARAMS)                         \
+  COSMERON_MACRO_INTERNAL_DELEGATE_SCOPED_GEN(SCOPE, NAME, void, PARAMS)
+
+#define DELEGATE_SCOPED_OPERATION(SCOPE, NAME, PARAMS)                         \
+  COSMERON_MACRO_INTERNAL_DELEGATE_SCOPED_GEN(SCOPE, NAME, OPSTATUS, PARAMS)
+
+#define DELEGATE_SCOPED_PREDICATE(SCOPE, NAME, PARAMS)                         \
+  COSMERON_MACRO_INTERNAL_DELEGATE_SCOPED_GEN(SCOPE, NAME, bool, PARAMS)
+
+#define DELEGATE_SCOPED_COMPARISON(SCOPE, NAME, PARAMS)                        \
+  COSMERON_MACRO_INTERNAL_DELEGATE_SCOPED_GEN(SCOPE, NAME, CMPOUT, PARAMS)
+
+/* ========================================================================== */
+/* 6. Object Method Adapters (On-Demand Method Binding)                       */
+/* Generates an inline adapter bridging (CLASS *self, ...) to (..., void *ctx)*/
+/* ========================================================================== */
+
+#define COSMERON_INTERNAL_DELEGATE_ADAPT_BODY_0(RET, CLASS_TYPE, FUNC, ARGS)   \
+  return FUNC((CLASS_TYPE *)context, PP_UNWRAP ARGS);
+#define COSMERON_INTERNAL_DELEGATE_ADAPT_BODY_1(RET, CLASS_TYPE, FUNC, ARGS)   \
+  FUNC((CLASS_TYPE *)context, PP_UNWRAP ARGS);
+
+#define DELEGATE_ADAPT_OBJECT_METHOD_NULLARY(DELEGATE_TYPE, CLASS_TYPE,        \
+                                             METHOD_FUNC, RET)                 \
+  static inline RET NS_JOIN(METHOD_FUNC, DelegateAdapter)(void *context) {     \
+    PP_OP_CAT2(COSMERON_INTERNAL_DELEGATE_ADAPT_BODY_,                         \
+               COSMERON_MACRO_INTERNAL_CALLABLE_IS_VOID(RET))(                 \
+        RET, CLASS_TYPE, METHOD_FUNC, ())                                      \
+  }                                                                            \
+  static inline DELEGATE_TYPE NS_JOIN(METHOD_FUNC,                             \
+                                      AsDelegate)(CLASS_TYPE * self) {         \
+    DELEGATE_TYPE dl;                                                          \
+    dl.function = NS_JOIN(METHOD_FUNC, DelegateAdapter);                       \
+    dl.context = (void *)self;                                                 \
+    return dl;                                                                 \
+  }
+
+#define DELEGATE_ADAPT_OBJECT_METHOD(DELEGATE_TYPE, CLASS_TYPE, METHOD_FUNC,   \
+                                     RET, PARAMS, ARGS)                        \
+  static inline RET NS_JOIN(METHOD_FUNC, DelegateAdapter)(                     \
+      PP_UNWRAP PARAMS, void *context) {                                       \
+    PP_OP_CAT2(COSMERON_INTERNAL_DELEGATE_ADAPT_BODY_,                         \
+               COSMERON_MACRO_INTERNAL_CALLABLE_IS_VOID(RET))(                 \
+        RET, CLASS_TYPE, METHOD_FUNC, ARGS)                                    \
+  }                                                                            \
+  static inline DELEGATE_TYPE NS_JOIN(METHOD_FUNC,                             \
+                                      AsDelegate)(CLASS_TYPE * self) {         \
+    DELEGATE_TYPE dl;                                                          \
+    dl.function = NS_JOIN(METHOD_FUNC, DelegateAdapter);                       \
+    dl.context = (void *)self;                                                 \
+    return dl;                                                                 \
+  }
+
+#define DELEGATE_ADAPTED_METHOD(METHOD_FUNC)                                   \
+  NS_JOIN(METHOD_FUNC, DelegateAdapter)
+#define DELEGATE_AS_DELEGATE(METHOD_FUNC, SELF)                                \
+  NS_JOIN(METHOD_FUNC, AsDelegate)(SELF)
+
+/* EOF */

@@ -35,7 +35,7 @@ static void AllocateDeadNode(TGarbageCollector *collector) {
   temp->value = 555;
   temp->next = NULL;
 
-  TCALLBACK(GARBAGE_COLLECTOR_INS(FinalizerFunction)) finCb =
+  TDELEGATE(GARBAGE_COLLECTOR_INS(FinalizerFunction)) finCb =
       GARBAGE_COLLECTOR_FINALIZER_BIND(OnNodeFinalize, NULL);
   assert(GARBAGE_COLLECTOR_FUNC(SetFinalizer)(collector, temp, finCb) == STATUS_CONST(SUCCESS));
 }

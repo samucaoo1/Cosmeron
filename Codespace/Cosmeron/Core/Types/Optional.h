@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Module/Closure/Closure.h"
+#include "../Module/Delegate/Delegate.h"
 #include "Impl/Common.inc"
 
 /* ========================================================================== */

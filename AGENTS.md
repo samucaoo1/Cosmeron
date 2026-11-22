@@ -49,7 +49,7 @@ Everything must live inside the library/module namespace whenever C allows it. E
 - **Strict Prohibition of Unnamespaced Internals:**
   - Absolutely no C identifier (structs, unions, typedefs, static inline helpers, internal functions, internal enums) may ever exist in the raw global namespace without namespace macros.
   - All internal structs, helpers, static inline functions, and private types **MUST** be wrapped with `NS(...)` or `MODULE_SCOPE`.
-  - Callbacks and internal types must also live within the module namespace.
+  - Callables, delegates, and internal types must also live within the module namespace.
 
 ---
 
@@ -136,23 +136,23 @@ Everything must live inside the library/module namespace whenever C allows it. E
   - Comparison extensions generate specialized comparisons directly inside objects:
     - `COMPARISON_EX(TYPE, NAME, FIELD)`
     - Shortcuts: `COMPARISON_NUMERIC(NAME, FIELD)`, `COMPARISON_STRING(NAME, FIELD)`, `COMPARISON_BYTES(NAME, FIELD)`.
-  - Declarative callbacks can be declared inside `OBJECT` or `PACKAGE` via the `CALLBACK(...)` capsule:
-    - `CALLBACK(OPERATION(Name, (params)))`, `CALLBACK(PREDICATE(Name, (params)))`, etc.
-  - Automatic `TCALLBACK(Comparison)` adapter generation for object methods returning `CMPOUT`:
-    - Generates `<CLASS>_<Method>_ComparatorAdapter(const void *left, const void *right, void *context)` and `<CLASS>_<Method>_AsComparator()` which produces a ready-to-use `TCALLBACK(Comparison)`.
+  - Declarative callables and delegates can be declared inside `OBJECT` or `PACKAGE` via `CALLABLE(...)` and `DELEGATE(...)`:
+    - `CALLABLE(OPERATION(Name, (params)), ...)` and `DELEGATE(PREDICATE(Name, (params)), ...)`
+  - Automatic `TDELEGATE(Comparison)` adapter generation for object methods returning `CMPOUT`:
+    - Generates `<CLASS>_<Method>_ComparatorAdapter(const void *left, const void *right, void *context)` and `<CLASS>_<Method>_AsComparator()` which produces a ready-to-use `TDELEGATE(Comparison)`.
   - Member fields are declared cleanly within `FIELDS(...)`.
   - Casting: `OBJECT_AS(OBJ, TARGET_TYPE)`.
   - Invocation: `OBJECT_CALL(obj, MethodName, args...)` or `OBJECT_CALL_0(obj, MethodName)`.
-- **Declarative Callbacks System:**
+- **Declarative Callables (`TCALLABLE`, 8-byte stateless) & Delegates (`TDELEGATE`, 16-byte dual-mode):**
   - Standalone declarations use category descriptors:
-    - `CALLBACK_FUNCTION(RET, NAME, (params))`
-    - `CALLBACK_PROCEDURE(NAME, (params))`
-    - `CALLBACK_OPERATION(NAME, (params))`
-    - `CALLBACK_PREDICATE(NAME, (params))`
-    - `CALLBACK_COMPARISON(NAME, (params))`
-  - Universal invocation: `CALLBACK_CALL(callback, args...)` or `CALLBACK_INVOKE(callback, args...)` (supports arbitrary arity).
-  - Validity checking: `CALLBACK_IS_VALID(callback)` or `callback.IsValid(&callback)`.
-  - Binding: `callback.Bind(&callback, func, ctx)` or `CALLBACK_FUNC(NAME, Bind)(func, ctx)`.
+    - `CALLABLE_FUNCTION(RET, NAME, (params))` / `DELEGATE_FUNCTION(RET, NAME, (params))`
+    - `CALLABLE_PROCEDURE(NAME, (params))` / `DELEGATE_PROCEDURE(NAME, (params))`
+    - `CALLABLE_OPERATION(NAME, (params))` / `DELEGATE_OPERATION(NAME, (params))`
+    - `CALLABLE_PREDICATE(NAME, (params))` / `DELEGATE_PREDICATE(NAME, (params))`
+    - `CALLABLE_COMPARISON(NAME, (params))` / `DELEGATE_COMPARISON(NAME, (params))`
+  - Universal invocation: `CALLABLE_CALL(cb, args...)` / `DELEGATE_CALL(dl, args...)` (and `CALLABLE_INVOKE` / `DELEGATE_INVOKE`).
+  - Validity & empty sentinel: `CALLABLE_IS_VALID(cb)` / `CALLABLE_EMPTY` (`NULL`), and `DELEGATE_IS_VALID(dl)` / `DELEGATE_EMPTY`.
+  - Binding: `DELEGATE_FUNC(NAME_Bind)(func, ctx)` and `DELEGATE_FUNC(NAME_FromCallable)(cb)` (or scoped `NS(MODULE_DELEGATE_FUNC(MOD, NAME), Bind)(func, ctx)`).
 - **Declarative Packages:** Use `PACKAGE(PKG, ...)`.
   - Invocation: `PACKAGE_CALL(PKG, FuncName, args...)` or direct calls `PKG_FuncName(...)`.
 - **Declarative Internal Scopes (`INTERNAL` / `INTERNAL_EX`):** Use `INTERNAL(...)` or `INTERNAL_EX(PKG, ...)`.
@@ -216,7 +216,7 @@ Everything must live inside the library/module namespace whenever C allows it. E
     - Custom dispatch macro: user passes `DISPATCH(TARGET, ENUM_NAME, ROW)` for specialized row transformations (e.g., bitshifts `1U << VALUE`, custom prefixes).
 - Enums exist for named constant domains and function signatures. Never use raw integers for categorical states.
 - Output enums: use short `*OUT` alias in signatures (e.g., `CMPOUT`).
-- Public constants: `*_CONST(NAME)` (e.g., `STATUS_CONST(SUCCESS)`).
+- Public constants: `*_CONST(NAME)` (e.g., `STATUS_CONST(SUCCESS)` -> `OPSTATUS_SUCCESS`, keeping Cosmeron `OPSTATUS_*` distinct from Win32 `STATUS_*`).
 - **Prohibit magic numbers**: Always use named constants unless defining raw representations (bit flags, protocols, ABI, file format definitions).
 
 ---

@@ -87,8 +87,8 @@ static void NS(ArrayTest, VectorAndSpan)(void) {
 
   /* Vector ForEach */
   int32_t offset = 5;
-  MODULE_CLOSURE(Array, Vector, Int32, Visitor) visitor =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Array, Vector, Int32, Visitor), Bind)(
+  MODULE_DELEGATE(Array, Vector, Int32, Visitor) visitor =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Array, Vector, Int32, Visitor), Bind)(
           MODULE_IFUNC(ArrayTest, AddOffset), &offset);
   assert(OBJECT_CALL(&vec, ForEach, visitor) == STATUS_CONST(SUCCESS));
 
@@ -248,10 +248,10 @@ static void NS(ArrayTest, HeapPriorityQueue)(void) {
          topVal == 15);
   assert(OBJECT_CALL_0(&maxHeap, Dispose) == STATUS_CONST(SUCCESS));
 
-  /* Custom Comparator Closure Heap (by absolute value ascending) */
+  /* Custom Comparator Delegate Heap (by absolute value ascending) */
   MODULE_TYPED(Array, Heap, Int32) absHeap;
-  MODULE_CLOSURE(Array, Heap, Int32, Comparator) absCmp =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Array, Heap, Int32, Comparator), Bind)(
+  MODULE_DELEGATE(Array, Heap, Int32, Comparator) absCmp =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Array, Heap, Int32, Comparator), Bind)(
           MODULE_IFUNC(ArrayTest, CompareAbsAsc), NULL);
   assert(MODULE_FUNC(Array, Heap, Int32, CreateWithComparator)(
              &absHeap, 4U, absCmp) == STATUS_CONST(SUCCESS));

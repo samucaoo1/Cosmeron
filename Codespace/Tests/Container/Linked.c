@@ -83,8 +83,8 @@ static void NS(LinkedTest, ForwardListNodeAndIter)(void) {
   MODULE_TYPED(Iterator, Stream, Int32) stream;
   assert(OBJECT_CALL(&it, ToStream, &stream) == STATUS_CONST(SUCCESS));
   int64_t sum = 0;
-  MODULE_CLOSURE(Iterator, Stream, Int32, Visitor) acc =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Iterator, Stream, Int32, Visitor), Bind)(
+  MODULE_DELEGATE(Iterator, Stream, Int32, Visitor) acc =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Iterator, Stream, Int32, Visitor), Bind)(
           MODULE_IFUNC(LinkedTest, Accumulate), &sum);
   assert(OBJECT_CALL(&stream, ForEach, acc) == STATUS_CONST(SUCCESS));
   assert(sum == (5 + 20 + 30));
@@ -153,8 +153,8 @@ static void NS(LinkedTest, DoublyLinkedListNodeAndIter)(void) {
          curVal == 5);
 
   /* ForEach */
-  MODULE_CLOSURE(Linked, List, Int32, Visitor) addTen =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Linked, List, Int32, Visitor), Bind)(
+  MODULE_DELEGATE(Linked, List, Int32, Visitor) addTen =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Linked, List, Int32, Visitor), Bind)(
           MODULE_IFUNC(LinkedTest, AddTen), NULL);
   assert(OBJECT_CALL(&list, ForEach, addTen) == STATUS_CONST(SUCCESS));
   int32_t *frontPtr = NULL;

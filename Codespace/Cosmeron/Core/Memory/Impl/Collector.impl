@@ -390,8 +390,8 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
     ),
 
     OPERATION(SetFinalizer,
-              (const void *ptr, MEMORY_COLLECTOR_FINALIZER_CALLBACK finalizer), {
-      if (!self || !ptr || !CLOSURE_IS_VALID(finalizer)) {
+              (const void *ptr, MEMORY_COLLECTOR_FINALIZER_DELEGATE finalizer), {
+      if (!self || !ptr || !DELEGATE_IS_VALID(finalizer)) {
         return STATUS_CONST(INVALID_ARGUMENT);
       }
 
@@ -405,7 +405,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
       MODULE_ITYPE(Memory, CollectorFinalizerEntry) *entry =
           (MODULE_ITYPE(Memory, CollectorFinalizerEntry) *)raw;
       entry->object = (void *)(uintptr_t)ptr;
-      entry->callback = finalizer;
+      entry->finalizer = finalizer;
       entry->next = self->finalizers;
       self->finalizers = entry;
 
@@ -591,7 +591,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
         MODULE_ITYPE(Memory, CollectorFinalizerEntry) *f =
             self->pendingFinalizers;
         self->pendingFinalizers = f->next;
-        CLOSURE_CALL(f->callback, f->object);
+        DELEGATE_CALL(f->finalizer, f->object);
         void *raw = (void *)f;
         MODULE_FUNC(Memory, Alloc, Free)(&raw);
       }
@@ -695,7 +695,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Memory,
     ),
 
     OPERATION(SetFinalizer,
-              (const void *ptr, MEMORY_COLLECTOR_FINALIZER_CALLBACK finalizer), {
+              (const void *ptr, MEMORY_COLLECTOR_FINALIZER_DELEGATE finalizer), {
       MODULE_TYPE(Memory, Collector) *collector =
           MODULE_FUNC(Memory, GlobalCollector, DefaultCollector)();
       return MODULE_FUNC(Memory, Collector, SetFinalizer)(collector, ptr,

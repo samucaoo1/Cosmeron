@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Module/Closure/Closure.h"
+#include "../Module/Delegate/Delegate.h"
 #include "../Module/Module.h"
 #include "../Preprocessor/Detect/Detect.h"
 #include "../Preprocessor/Operations.h"
@@ -24,10 +24,10 @@
 #endif
 
 MODULE(
-    DOMAIN(Core), Condition, CLOSURE(PROCEDURE(DeferAction, ())),
+    DOMAIN(Core), Condition, DELEGATE(PROCEDURE(DeferAction, ())),
 
     ISTRUCT(DeferNode,
-            FIELDS(MODULE_CLOSURE(Condition, DeferAction) action;
+            FIELDS(MODULE_DELEGATE(Condition, DeferAction) action;
                    struct MODULE_ITYPE(Condition, DeferNode) * previous;
                    bool active;)),
 

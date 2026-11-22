@@ -31,7 +31,7 @@ MODULE(DOMAIN(Core), Algorithm,
 
     /* 1.1 Stateless Package: Algorithm_Repeat */
     PACKAGE(Repeat,
-        CLOSURE(
+        DELEGATE(
             PROCEDURE(Procedure, ()),
             PROCEDURE(ProcedureIndexed, (size_t index)),
             OPERATION(Operation, ()),
@@ -42,26 +42,26 @@ MODULE(DOMAIN(Core), Algorithm,
 
         VARIANT(Procedure,
             PROCEDURE((size_t count,
-                       MODULE_CLOSURE(Algorithm, Repeat, Procedure) action)),
+                       MODULE_DELEGATE(Algorithm, Repeat, Procedure) action)),
             PROCEDURE(Indexed,
                        (size_t count,
-                        MODULE_CLOSURE(Algorithm, Repeat, ProcedureIndexed) action))
+                        MODULE_DELEGATE(Algorithm, Repeat, ProcedureIndexed) action))
         ),
 
         VARIANT(Operation,
             OPERATION((size_t count,
-                       MODULE_CLOSURE(Algorithm, Repeat, Operation) operation)),
+                       MODULE_DELEGATE(Algorithm, Repeat, Operation) operation)),
             OPERATION(Indexed,
                        (size_t count,
-                        MODULE_CLOSURE(Algorithm, Repeat, OperationIndexed) operation))
+                        MODULE_DELEGATE(Algorithm, Repeat, OperationIndexed) operation))
         ),
 
         VARIANT(Predicate,
             PREDICATE((size_t count,
-                       MODULE_CLOSURE(Algorithm, Repeat, Predicate) predicate)),
+                       MODULE_DELEGATE(Algorithm, Repeat, Predicate) predicate)),
             PREDICATE(Indexed,
                        (size_t count,
-                        MODULE_CLOSURE(Algorithm, Repeat, PredicateIndexed) predicate))
+                        MODULE_DELEGATE(Algorithm, Repeat, PredicateIndexed) predicate))
         ),
 
         OPERATION(Bytes, (void *destination, const void *pattern,

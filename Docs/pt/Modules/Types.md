@@ -226,7 +226,7 @@ O objeto gerado armazena `hasValue` e um `value` inline.
 | `AndThen(binder, outOptional)` | Invoca um binder que grava um Optional de saída. |
 | `Filter(predicate, outOptional)` | Preserva o valor somente quando o predicado retorna true. |
 
-`Map`, `AndThen` e `Filter` usam closures geradas. Exigem objetos de entrada/saída válidos e closures válidas. Optional não aloca memória para o valor armazenado.
+`Map`, `AndThen` e `Filter` usam delegates gerados. Exigem objetos de entrada/saída válidos e delegates válidos. Optional não aloca memória para o valor armazenado.
 
 ---
 

@@ -4,9 +4,9 @@
 
 #ifndef TEMPLATE_Array_Heap
 #define TEMPLATE_Array_Heap(SUFFIX, TYPE)                                      \
-  CLOSURE_SCOPED_COMPARISON(NS(LIB_PREFIX(Array), Heap, SUFFIX), Comparator,   \
+  DELEGATE_SCOPED_COMPARISON(NS(LIB_PREFIX(Array), Heap, SUFFIX), Comparator,   \
                             (TYPE left, TYPE right))                           \
-  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Array), Heap, SUFFIX), Visitor,       \
+  DELEGATE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Array), Heap, SUFFIX), Visitor,       \
                            (TYPE *element))                                    \
   INTERNAL_DEF_EX(                                                             \
       Array, NS(Heap, SUFFIX),                                                 \
@@ -29,7 +29,7 @@
           TYPE *data;                                                          \
           size_t size;                                                         \
           size_t capacity;                                                     \
-          MODULE_CLOSURE(Array, Heap, SUFFIX, Comparator) compare;             \
+          MODULE_DELEGATE(Array, Heap, SUFFIX, Comparator) compare;             \
       ),                                                                       \
                                                                                \
       CONST_COMPARISON_INLINE(DefaultMinCompare, (TYPE left, TYPE right), {    \
@@ -45,12 +45,12 @@
       }),                                                                      \
                                                                                \
       PROCEDURE_INLINE(SiftUp, (size_t index), {                               \
-        if (!self || !self->data || !CLOSURE_IS_VALID(self->compare))          \
+        if (!self || !self->data || !DELEGATE_IS_VALID(self->compare))          \
           return;                                                              \
         size_t child = index;                                                  \
         while (child > 0U) {                                                   \
           size_t parent = (child - 1U) / 2U;                                   \
-          if (CLOSURE_CALL(self->compare, self->data[parent],                  \
+          if (DELEGATE_CALL(self->compare, self->data[parent],                  \
                            self->data[child]) <= COMPARISON_CONST(EQUAL)) {    \
             break;                                                             \
           }                                                                    \
@@ -62,7 +62,7 @@
       }),                                                                      \
                                                                                \
       PROCEDURE_INLINE(SiftDown, (size_t index), {                             \
-        if (!self || !self->data || !CLOSURE_IS_VALID(self->compare))          \
+        if (!self || !self->data || !DELEGATE_IS_VALID(self->compare))          \
           return;                                                              \
         size_t parent = index;                                                 \
         while (true) {                                                         \
@@ -70,12 +70,12 @@
           size_t right = 2U * parent + 2U;                                     \
           size_t best = parent;                                                \
           if (left < self->size &&                                             \
-              CLOSURE_CALL(self->compare, self->data[left],                    \
+              DELEGATE_CALL(self->compare, self->data[left],                    \
                            self->data[best]) < COMPARISON_CONST(EQUAL)) {      \
             best = left;                                                       \
           }                                                                    \
           if (right < self->size &&                                            \
-              CLOSURE_CALL(self->compare, self->data[right],                   \
+              DELEGATE_CALL(self->compare, self->data[right],                   \
                            self->data[best]) < COMPARISON_CONST(EQUAL)) {      \
             best = right;                                                      \
           }                                                                    \
@@ -91,9 +91,9 @@
       OPERATION_INLINE(                                                        \
           CreateWithComparator,                                                \
           (size_t initialCapacity,                                             \
-           MODULE_CLOSURE(Array, Heap, SUFFIX, Comparator) comparator),        \
+           MODULE_DELEGATE(Array, Heap, SUFFIX, Comparator) comparator),        \
           {                                                                    \
-            if (!self || !CLOSURE_IS_VALID(comparator))                        \
+            if (!self || !DELEGATE_IS_VALID(comparator))                        \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             MODULE_FUNC(Array, Heap, SUFFIX, Init)(self);                      \
             self->data = NULL;                                                 \
@@ -110,8 +110,8 @@
       OPERATION_INLINE(CreateMin, (size_t initialCapacity), {                  \
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        MODULE_CLOSURE(Array, Heap, SUFFIX, Comparator) cmp =                  \
-            NS_JOIN(MODULE_CLOSURE_FUNC(Array, Heap, SUFFIX, Comparator),      \
+        MODULE_DELEGATE(Array, Heap, SUFFIX, Comparator) cmp =                  \
+            NS_JOIN(MODULE_DELEGATE_FUNC(Array, Heap, SUFFIX, Comparator),      \
                     Bind)(                                                     \
                 MODULE_IFUNC(Array, NS(Heap, SUFFIX), DefaultMinCompare),      \
                 NULL);                                                         \
@@ -122,8 +122,8 @@
       OPERATION_INLINE(CreateMax, (size_t initialCapacity), {                  \
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        MODULE_CLOSURE(Array, Heap, SUFFIX, Comparator) cmp =                  \
-            NS_JOIN(MODULE_CLOSURE_FUNC(Array, Heap, SUFFIX, Comparator),      \
+        MODULE_DELEGATE(Array, Heap, SUFFIX, Comparator) cmp =                  \
+            NS_JOIN(MODULE_DELEGATE_FUNC(Array, Heap, SUFFIX, Comparator),      \
                     Bind)(                                                     \
                 MODULE_IFUNC(Array, NS(Heap, SUFFIX), DefaultMaxCompare),      \
                 NULL);                                                         \
@@ -166,9 +166,9 @@
       OPERATION_INLINE(Heapify, (), {                                          \
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        if (!CLOSURE_IS_VALID(self->compare)) {                                \
+        if (!DELEGATE_IS_VALID(self->compare)) {                                \
           self->compare =                                                      \
-              NS_JOIN(MODULE_CLOSURE_FUNC(Array, Heap, SUFFIX, Comparator),    \
+              NS_JOIN(MODULE_DELEGATE_FUNC(Array, Heap, SUFFIX, Comparator),    \
                       Bind)(                                                   \
                   MODULE_IFUNC(Array, NS(Heap, SUFFIX), DefaultMinCompare),    \
                   NULL);                                                       \
@@ -198,9 +198,9 @@
       OPERATION_INLINE(Push, (TYPE value), {                                   \
         if (!self)                                                             \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
-        if (!CLOSURE_IS_VALID(self->compare)) {                                \
+        if (!DELEGATE_IS_VALID(self->compare)) {                                \
           self->compare =                                                      \
-              NS_JOIN(MODULE_CLOSURE_FUNC(Array, Heap, SUFFIX, Comparator),    \
+              NS_JOIN(MODULE_DELEGATE_FUNC(Array, Heap, SUFFIX, Comparator),    \
                       Bind)(                                                   \
                   MODULE_IFUNC(Array, NS(Heap, SUFFIX), DefaultMinCompare),    \
                   NULL);                                                       \
@@ -216,7 +216,7 @@
       }),                                                                      \
                                                                                \
       OPERATION_INLINE(Pop, (TYPE *outValue), {                                \
-        if (!self || !outValue || !CLOSURE_IS_VALID(self->compare))            \
+        if (!self || !outValue || !DELEGATE_IS_VALID(self->compare))            \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
         if (self->size == 0U)                                                  \
           return STATUS_CONST(OUT_OF_RANGE);                                   \
@@ -248,7 +248,7 @@
       }),                                                                      \
                                                                                \
       OPERATION_INLINE(Replace, (TYPE inValue, TYPE *outValue), {              \
-        if (!self || !outValue || !CLOSURE_IS_VALID(self->compare))            \
+        if (!self || !outValue || !DELEGATE_IS_VALID(self->compare))            \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
         if (self->size == 0U)                                                  \
           return STATUS_CONST(OUT_OF_RANGE);                                   \
@@ -259,10 +259,10 @@
       }),                                                                      \
                                                                                \
       OPERATION_INLINE(PushPop, (TYPE inValue, TYPE *outValue), {              \
-        if (!self || !outValue || !CLOSURE_IS_VALID(self->compare))            \
+        if (!self || !outValue || !DELEGATE_IS_VALID(self->compare))            \
           return STATUS_CONST(INVALID_ARGUMENT);                               \
         if (self->size == 0U ||                                                \
-            CLOSURE_CALL(self->compare, inValue, self->data[0U]) <=            \
+            DELEGATE_CALL(self->compare, inValue, self->data[0U]) <=            \
                 COMPARISON_CONST(EQUAL)) {                                     \
           *outValue = inValue;                                                 \
           return STATUS_CONST(SUCCESS);                                        \

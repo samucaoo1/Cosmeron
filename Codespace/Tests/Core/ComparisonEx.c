@@ -149,21 +149,21 @@ int main(void) {
   assert(PACKAGE_CALL(MathCmp, CompareInt, 30, 20) == COMPARISON_CONST(HIGHER));
   assert(PACKAGE_CALL(MathCmp, CompareInt, 15, 15) == COMPARISON_CONST(EQUAL));
 
-  /* 9. Automatic ComparatorAdapter and AsComparator integration with TCALLBACK(Comparison) */
+  /* 9. Automatic ComparatorAdapter and AsComparator integration with TDELEGATE(Comparison) */
   p1.age = 20;
   p2.age = 25;
-  TCALLBACK(Comparison) cbAge = Person_CompareAge_AsComparator();
-  assert(CALLBACK_IS_VALID(cbAge));
-  assert(CALLBACK_INVOKE(cbAge, &p1, &p2) == COMPARISON_CONST(LOWER));
-  assert(CALLBACK_INVOKE(cbAge, &p2, &p1) == COMPARISON_CONST(HIGHER));
-  assert(CALLBACK_INVOKE(cbAge, &p1, &p1) == COMPARISON_CONST(EQUAL));
+  TDELEGATE(Comparison) cbAge = Person_CompareAge_AsComparator();
+  assert(DELEGATE_IS_VALID(cbAge));
+  assert(DELEGATE_INVOKE(cbAge, &p1, &p2) == COMPARISON_CONST(LOWER));
+  assert(DELEGATE_INVOKE(cbAge, &p2, &p1) == COMPARISON_CONST(HIGHER));
+  assert(DELEGATE_INVOKE(cbAge, &p1, &p1) == COMPARISON_CONST(EQUAL));
 
   p1.name = "Alice";
   p2.name = "Bob";
-  TCALLBACK(Comparison) cbName = Person_CompareName_AsComparator();
-  assert(CALLBACK_IS_VALID(cbName));
-  assert(CALLBACK_INVOKE(cbName, &p1, &p2) == COMPARISON_CONST(LOWER));
-  assert(CALLBACK_INVOKE(cbName, &p2, &p1) == COMPARISON_CONST(HIGHER));
+  TDELEGATE(Comparison) cbName = Person_CompareName_AsComparator();
+  assert(DELEGATE_IS_VALID(cbName));
+  assert(DELEGATE_INVOKE(cbName, &p1, &p2) == COMPARISON_CONST(LOWER));
+  assert(DELEGATE_INVOKE(cbName, &p2, &p1) == COMPARISON_CONST(HIGHER));
 
   return 0;
 }

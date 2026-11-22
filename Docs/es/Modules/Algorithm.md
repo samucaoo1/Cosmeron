@@ -29,9 +29,9 @@ El paquete también expone `ToString`, comparaciones de tipos primitivos ordenad
 
 ## Repeat
 
-El paquete `Repeat` ejecuta un callback una cantidad fija de veces, opcionalmente pasando un índice que comienza en cero. Admite procedimientos, operaciones que pueden fallar y predicados, así como patrones de bytes repetidos, valores primitivos y punteros a cadenas C.
+El paquete `Repeat` ejecuta un delegate una cantidad fija de veces, opcionalmente pasando un índice que comienza en cero. Admite procedimientos, operaciones que pueden fallar y predicados, así como patrones de bytes repetidos, valores primitivos y punteros a cadenas C.
 
-El template tipado añade generación de valores para un tipo C elegido. Es útil cuando el valor repetido debe producirse mediante un callback en lugar de copiar una constante.
+El template tipado añade generación de valores para un tipo C elegido. Es útil cuando el valor repetido debe producirse mediante un delegate en lugar de copiar una constante.
 
 ---
 
@@ -94,11 +94,11 @@ Encabezado: `Cosmeron/Core/Algorithm/Repeat.h`.
 | Funciones de tipos primitivos | Rellena un array con un valor primitivo; los nombres siguen `PRIMITIVE_TYPE_TABLE`. |
 | `CString` | Rellena un array de posiciones `const char *` con el mismo puntero. |
 
-### Firmas de callbacks
+### Firmas de delegates
 
-Los tipos de callback son closures generadas por el paquete:
+Los tipos invocables son delegates generados por el paquete:
 
-| Closure | Firma | Uso |
+| Delegate | Firma | Uso |
 | --- | --- | --- |
 | `Procedure` | `void (void)` | Efecto secundario sin resultado. |
 | `ProcedureIndexed` | `void (size_t index)` | Efecto secundario que depende de la iteración. |
@@ -107,7 +107,7 @@ Los tipos de callback son closures generadas por el paquete:
 | `Predicate` | `bool (void)` | Condición que debe seguir siendo verdadera. |
 | `PredicateIndexed` | `bool (size_t index)` | Condición indexada. |
 
-Una closure almacena una función y un puntero de contexto. `CLOSURE_IS_VALID` comprueba si la función está presente y `CLOSURE_CALL` la invoca. Utiliza los auxiliares de enlace generados para el tipo de closure declarado en el paquete.
+Un delegate almacena una función y un puntero de contexto opcional. `DELEGATE_IS_VALID` comprueba si la función está presente y `DELEGATE_CALL` la invoca. Utiliza los auxiliares de enlace o promoción generados para el tipo de delegate declarado en el paquete.
 
 ### Repetición que puede fallar
 
@@ -115,7 +115,7 @@ Una closure almacena una función y un puntero de contexto. `CLOSURE_IS_VALID` c
 OPSTATUS status = MODULE_FUNC(Algorithm, Repeat, Operation)(count, operation);
 ~~~
 
-Para un recuento distinto de cero, una closure de operación inválida devuelve `INVALID_ARGUMENT`. El primer estado distinto de `SUCCESS` se devuelve inmediatamente; las iteraciones posteriores no se ejecutan. Un recuento cero tiene éxito sin invocar la closure.
+Para un recuento distinto de cero, un delegate de operación inválido devuelve `INVALID_ARGUMENT`. El primer estado distinto de `SUCCESS` se devuelve inmediatamente; las iteraciones posteriores no se ejecutan. Un recuento cero tiene éxito sin invocar el delegate.
 
 ### Repetición de bytes
 
@@ -161,7 +161,7 @@ Solo se copian los punteros; la cadena apuntada no se duplica y sigue pertenecie
 | `Generate` | Rellena un array invocando un generador de valores sin argumentos. |
 | `Generate.Indexed` | Rellena un array invocando un generador con el índice del elemento. |
 
-Las firmas de las closures generadas son `TYPE (void)` y `TYPE (size_t index)`. Cada generador debe ser válido cuando el recuento sea distinto de cero. Las operaciones devuelven `OPSTATUS` y comprueban la validez del destino y la aritmética de tamaños antes de escribir.
+Las firmas de los delegates generados son `TYPE (void)` y `TYPE (size_t index)`. Cada generador debe ser válido cuando el recuento sea distinto de cero. Las operaciones devuelven `OPSTATUS` y comprueban la validez del destino y la aritmética de tamaños antes de escribir.
 
 Instancia el template mediante el motor común:
 
@@ -169,16 +169,16 @@ Instancia el template mediante el motor común:
 TEMPLATE_INSTANTIATE(Algorithm_Repeat, Point, Point);
 ~~~
 
-Los nombres del tipo público y de las funciones de la especialización generada utilizan el sufijo proporcionado. Define el tipo del template y las implementaciones de callbacks antes de utilizar el paquete generado.
+Los nombres del tipo público y de las funciones de la especialización generada utilizan el sufijo proporcionado. Define el tipo del template y las implementaciones de delegates antes de utilizar el paquete generado.
 
 ---
 
 # Contratos y comportamiento
 
 - Las funciones `OPERATION` devuelven `OPSTATUS`; comprueba `STATUS_CONST(SUCCESS)` antes de asumir que se escribieron los búferes de salida.
-- Las funciones `PROCEDURE` no devuelven estado. Una closure de procedimiento inválida se trata como una operación sin efecto.
+- Las funciones `PROCEDURE` no devuelven estado. Un delegate de procedimiento inválido se trata como una operación sin efecto.
 - Las funciones `PREDICATE` devuelven `bool`; un recuento de repetición cero es verdadero por vacuidad.
-- Los callbacks indexados reciben índices que comienzan en cero.
+- Los delegates indexados reciben índices que comienzan en cero.
 - La repetición es síncrona. El paquete no crea hilos ni programa trabajo en segundo plano.
 - `CString` repite valores de puntero, no el contenido de las cadenas.
 - `Bytes` rechaza tramos de origen y destino solapados; no es una operación general de movimiento con solapamiento.
@@ -198,7 +198,7 @@ OPSTATUS status = MODULE_FUNC(Algorithm, Repeat, Operation)(count, operation);
 
 - [Bit](Bit.md) — primitivas de bits y bitsets.
 - [Memory](Memory.md) — operaciones de bytes, intercambio y asignación.
-- [Module](Module.md) — declaraciones de paquetes, closures e invocación.
+- [Module](Module.md) — declaraciones de paquetes, callables, delegates e invocación.
 - [Preprocessor](Preprocessor.md) — mecanismos de templates y macros.
 
 ## Encabezados de origen

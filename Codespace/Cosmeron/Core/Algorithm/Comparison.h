@@ -2,8 +2,8 @@
 
 #include "../Module/Module.h"
 #include "../Module/Namespace.h"
-#include "../Module/Callback/Callback.h"
-#include "../Module/Closure/Closure.h"
+#include "../Module/Callable/Callable.h"
+#include "../Module/Delegate/Delegate.h"
 #include "../Preprocessor/Compiling.inc"
 #include "../Preprocessor/Operations.h"
 #include "../Types/Primitive.h"
@@ -40,10 +40,10 @@ ENUM_DEF_EX(MODULE_NS(Algorithm, Comparison), Result, COMPARISON_TABLE,
 typedef MODULE_ENUM(Algorithm, Comparison, Result) CMPOUT;
 
 /* ========================================================================== */
-/* 2. First-Class System Comparator Callable (Callback & Closure)             */
+/* 2. First-Class System Comparator Callable (Callable & Delegate)            */
 /* ========================================================================== */
 
-CLOSURE_COMPARISON(Comparison, (const void *left, const void *right));
+DELEGATE_COMPARISON(Comparison, (const void *left, const void *right));
 
 /* ========================================================================== */
 /* 3. Package Declaration: Algorithm_Comparison                               */

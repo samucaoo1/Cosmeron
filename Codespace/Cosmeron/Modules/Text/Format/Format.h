@@ -14,7 +14,7 @@
 
 MODULE(DOMAIN(Modules), Text,
     PACKAGE(Format,
-        CALLBACK(
+        CALLABLE(
             OPERATION(Adapter,
                       (MODULE_TYPE(Text, Writer) *writer,
                        const void *value,

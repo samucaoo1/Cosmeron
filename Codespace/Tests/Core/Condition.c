@@ -185,7 +185,7 @@ int main(void) {
   assert(strcmp(MODULE_FUNC(Condition, Panic, KindName)(MODULE_CONST(Condition, UNREACHABLE)), "UNREACHABLE") == 0);
 
   TestPanicState panicState = {false, MODULE_CONST(Condition, PANIC), {0}, {0}};
-  TCALLBACK(MODULE_NS(Condition, Panic, Handler)) panicCb = {
+  MODULE_DELEGATE(Condition, Panic, Handler) panicCb = {
       .function = test_panic_handler,
       .context = &panicState
   };
@@ -278,7 +278,7 @@ int main(void) {
 
   TRY {
     tryRan = true;
-    TCALLBACK(MODULE_NS(Condition, Exception_Frame, Cleanup)) cleanupCb = {
+    MODULE_DELEGATE(Condition, ExceptionCleanup) cleanupCb = {
         .function = test_cleanup_handler,
         .context = &cleanupRan
     };

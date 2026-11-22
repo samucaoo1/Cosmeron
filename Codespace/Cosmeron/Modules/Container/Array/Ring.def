@@ -14,7 +14,7 @@
           bool ownsBuffer;                                                     \
       ),                                                                       \
                                                                                \
-      CLOSURE(                                                                 \
+      DELEGATE(                                                                 \
           PROCEDURE(Visitor, (TYPE *element)),                                 \
           PREDICATE(Predicate, (const TYPE *element))),                        \
                                                                                \
@@ -413,12 +413,12 @@
                                                                                \
       OPERATION_INLINE(                                                        \
           ForEach,                                                             \
-          (MODULE_CLOSURE(Array, Ring, SUFFIX, Visitor) visitor), {            \
-            if (!self || !CLOSURE_IS_VALID(visitor))                           \
+          (MODULE_DELEGATE(Array, Ring, SUFFIX, Visitor) visitor), {            \
+            if (!self || !DELEGATE_IS_VALID(visitor))                           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             for (size_t i = 0U; i < self->size; ++i) {                         \
               size_t physical = (self->head + i) % self->capacity;             \
-              CLOSURE_CALL(visitor, &self->data[physical]);                    \
+              DELEGATE_CALL(visitor, &self->data[physical]);                    \
             }                                                                  \
             return STATUS_CONST(SUCCESS);                                      \
           })                                                                   \

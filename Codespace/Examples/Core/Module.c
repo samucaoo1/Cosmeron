@@ -47,8 +47,8 @@ int main(void) {
   (void)Counter_Init(&counter);
 
   int notifications = 0;
-  TCLOSURE(Counter_Changed) onChanged = NS_JOIN(
-      CLOSURE_FUNC(Counter_Changed), Bind)(ExampleApp_OnChanged, &notifications);
+  TDELEGATE(Counter_Changed) onChanged = NS_JOIN(
+      DELEGATE_FUNC(Counter_Changed), Bind)(ExampleApp_OnChanged, &notifications);
   (void)OBJECT_CALL(&counter, Changed_Subscribe, onChanged);
 
   (void)OBJECT_CALL(&counter, SetValue, 10);

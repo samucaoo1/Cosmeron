@@ -89,9 +89,9 @@ int main(void) {
       COMPARISON_CONST(LOWER))
     return 6;
 
-  TCLOSURE(Comparison) comparison =
-      CLOSURE_FUNC(Comparison_Bind)(compare_int_pointer, NULL);
-  if (CLOSURE_INVOKE(comparison, &left, &right) !=
+  TDELEGATE(Comparison) comparison =
+      DELEGATE_FUNC(Comparison_Bind)(compare_int_pointer, NULL);
+  if (DELEGATE_INVOKE(comparison, &left, &right) !=
       COMPARISON_CONST(LOWER))
     return 7;
 
@@ -104,15 +104,15 @@ int main(void) {
     return 9;
 
   /* ======================================================================== */
-  /* Test Algorithm_Repeat: Closures                                          */
+  /* Test Algorithm_Repeat: Delegates                                         */
   /* ======================================================================== */
 
   int counter = 0;
-  MODULE_CLOSURE(Algorithm, Repeat, Procedure) proc =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Algorithm, Repeat, Procedure), Bind)(
+  MODULE_DELEGATE(Algorithm, Repeat, Procedure) proc =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Algorithm, Repeat, Procedure), Bind)(
           increment_counter, &counter);
-  MODULE_CLOSURE(Algorithm, Repeat, Procedure) invalidProc =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Algorithm, Repeat, Procedure), Bind)(NULL, NULL);
+  MODULE_DELEGATE(Algorithm, Repeat, Procedure) invalidProc =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Algorithm, Repeat, Procedure), Bind)(NULL, NULL);
 
   Algorithm_Repeat_Procedure(5U, proc);
   if (counter != 5)
@@ -128,19 +128,19 @@ int main(void) {
     return 11;
 
   size_t indexSum = 0U;
-  MODULE_CLOSURE(Algorithm, Repeat, ProcedureIndexed) indexedProc =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Algorithm, Repeat, ProcedureIndexed), Bind)(
+  MODULE_DELEGATE(Algorithm, Repeat, ProcedureIndexed) indexedProc =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Algorithm, Repeat, ProcedureIndexed), Bind)(
           add_index_to_counter, &indexSum);
   Algorithm_Repeat_ProcedureIndexed(4U, indexedProc);
   if (indexSum != 6U) /* 0 + 1 + 2 + 3 */
     return 12;
 
   int opRemaining = 3;
-  MODULE_CLOSURE(Algorithm, Repeat, Operation) op =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Algorithm, Repeat, Operation), Bind)(
+  MODULE_DELEGATE(Algorithm, Repeat, Operation) op =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Algorithm, Repeat, Operation), Bind)(
           step_with_limit, &opRemaining);
-  MODULE_CLOSURE(Algorithm, Repeat, Operation) invalidOp =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Algorithm, Repeat, Operation), Bind)(NULL, NULL);
+  MODULE_DELEGATE(Algorithm, Repeat, Operation) invalidOp =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Algorithm, Repeat, Operation), Bind)(NULL, NULL);
 
   if (Algorithm_Repeat_Operation(0U, invalidOp) != STATUS_CONST(SUCCESS))
     return 13;
@@ -154,8 +154,8 @@ int main(void) {
     return 16;
 
   size_t stopAt = 2U;
-  MODULE_CLOSURE(Algorithm, Repeat, OperationIndexed) indexedOp =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Algorithm, Repeat, OperationIndexed), Bind)(
+  MODULE_DELEGATE(Algorithm, Repeat, OperationIndexed) indexedOp =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Algorithm, Repeat, OperationIndexed), Bind)(
           indexed_step_with_limit, &stopAt);
   if (Algorithm_Repeat_OperationIndexed(2U, indexedOp) != STATUS_CONST(SUCCESS))
     return 17;
@@ -164,11 +164,11 @@ int main(void) {
     return 18;
 
   int predRemaining = 2;
-  MODULE_CLOSURE(Algorithm, Repeat, Predicate) pred =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Algorithm, Repeat, Predicate), Bind)(
+  MODULE_DELEGATE(Algorithm, Repeat, Predicate) pred =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Algorithm, Repeat, Predicate), Bind)(
           countdown_predicate, &predRemaining);
-  MODULE_CLOSURE(Algorithm, Repeat, Predicate) invalidPred =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Algorithm, Repeat, Predicate), Bind)(NULL, NULL);
+  MODULE_DELEGATE(Algorithm, Repeat, Predicate) invalidPred =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Algorithm, Repeat, Predicate), Bind)(NULL, NULL);
 
   if (!Algorithm_Repeat_Predicate(0U, invalidPred))
     return 19;
@@ -180,8 +180,8 @@ int main(void) {
     return 22;
 
   size_t threshold = 3U;
-  MODULE_CLOSURE(Algorithm, Repeat, PredicateIndexed) indexedPred =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Algorithm, Repeat, PredicateIndexed), Bind)(
+  MODULE_DELEGATE(Algorithm, Repeat, PredicateIndexed) indexedPred =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Algorithm, Repeat, PredicateIndexed), Bind)(
           indexed_below_threshold, &threshold);
   if (!Algorithm_Repeat_PredicateIndexed(3U, indexedPred))
     return 23;
@@ -255,8 +255,8 @@ int main(void) {
     return 37;
 
   int baseVal = 5;
-  MODULE_CLOSURE(Algorithm, Repeat, Point, Generator) gen =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Algorithm, Repeat, Point, Generator), Bind)(
+  MODULE_DELEGATE(Algorithm, Repeat, Point, Generator) gen =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Algorithm, Repeat, Point, Generator), Bind)(
           generate_constant_point, &baseVal);
   if (Algorithm_Repeat_Point_Generate(points, 3U, gen) != STATUS_CONST(SUCCESS))
     return 38;
@@ -266,8 +266,8 @@ int main(void) {
   }
 
   int offsetVal = 100;
-  MODULE_CLOSURE(Algorithm, Repeat, Point, GeneratorIndexed) indexedGen =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Algorithm, Repeat, Point, GeneratorIndexed), Bind)(
+  MODULE_DELEGATE(Algorithm, Repeat, Point, GeneratorIndexed) indexedGen =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Algorithm, Repeat, Point, GeneratorIndexed), Bind)(
           generate_indexed_point, &offsetVal);
   if (Algorithm_Repeat_Point_GenerateIndexed(points, 3U, indexedGen) !=
       STATUS_CONST(SUCCESS))

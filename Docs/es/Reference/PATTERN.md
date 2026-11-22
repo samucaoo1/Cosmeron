@@ -103,7 +103,7 @@ Todo en Cosmeron debe permanecer dentro del namespace del módulo/package siempr
 
 Los símbolos de Cosmeron pueden recibir una marca o configurarse globalmente mediante `LIBRARY_NAMESPACE_CONFIG` o flags del compilador (`-DCOSMERON_NAMESPACE=...`, `-DCOSMERON_NAMESPACE_MODE=...`):
 
-- `BARE`: `Text_TString`, `Text_String_Init`, `Status_SUCCESS` (sin prefijo de biblioteca).
+- `BARE`: `Text_TString`, `Text_String_Init`, `OPSTATUS_SUCCESS` (sin prefijo de biblioteca).
 - `SHORT`: `Cos_Text_TString`, `Cos_Text_String_Init`.
 - `STANDARD`: `Cosmeron_Text_TString`, `Cosmeron_Text_String_Init` (predeterminado).
 - `FULL`: `Cosmeron_Core_Text_TString` (incluye el dominio en el símbolo).
@@ -269,38 +269,38 @@ OBJECT_PREDICATE_IMPLEMENT_EX(StreamBuffer_Buffer, IsEmpty, ()) {
 OBJECT_SCOPE_END()
 ```
 
-## 7. Callbacks, closures y eventos declarativos
+## 7. Callables, delegates y eventos declarativos
 
-### 7.1 Callbacks puros (TCALLBACK)
+### 7.1 Callables puros (`TCALLABLE`)
 
-Los callbacks son punteros de función puros y sin estado, sin coste adicional: ocupan exactamente `sizeof(void *)`. Pueden declararse de forma independiente o en bloques variádicos dentro de MODULE, PACKAGE u OBJECT.
+Los callables son punteros de función puros y sin estado, sin coste adicional: ocupan exactamente `sizeof(void *)`. Pueden declararse de forma independiente o en bloques variádicos dentro de `MODULE`, `PACKAGE` u `OBJECT`.
 
-Declaraciones disponibles: `CALLBACK_OPERATION`, `CALLBACK_PREDICATE`, `CALLBACK_FUNCTION`, `CALLBACK_PROCEDURE` y `CALLBACK_COMPARISON`.
+Declaraciones disponibles: `CALLABLE_OPERATION`, `CALLABLE_PREDICATE`, `CALLABLE_FUNCTION`, `CALLABLE_PROCEDURE` y `CALLABLE_COMPARISON`.
 
 ```c
 MODULE(DOMAIN(Core), MyModule,
-    CALLBACK(
+    CALLABLE(
         FUNCTION(int, Transform, (int x)),
         PROCEDURE(Log, (int code))
     )
 );
 ```
 
-Utiliza `CALLBACK_CALL` o `CALLBACK_INVOKE` para invocar, `CALLBACK_IS_VALID` para validar y `CALLBACK_EMPTY` para representar ausencia (`NULL`).
+Utiliza `CALLABLE_CALL` o `CALLABLE_INVOKE` para invocar, `CALLABLE_IS_VALID` para validar y `CALLABLE_EMPTY` para representar ausencia (`NULL`).
 
-### 7.2 Closures contextuales (TCLOSURE)
+### 7.2 Delegates contextuales (`TDELEGATE`)
 
-Las closures combinan un puntero de función y un contexto prestado opcional en una estructura POD de dos punteros. Hay declaraciones correspondientes a operación, predicado, función, procedimiento y comparación.
+Los delegates combinan un puntero de función y un contexto prestado opcional en una estructura POD dual-mode de dos punteros. Hay declaraciones correspondientes a operación, predicado, función, procedimiento y comparación (`DELEGATE_OPERATION`, `DELEGATE_PREDICATE`, `DELEGATE_FUNCTION`, `DELEGATE_PROCEDURE` y `DELEGATE_COMPARISON`).
 
-- `CLOSURE_FUNC(Name_Bind)(fn, ctx)` vincula un destino con estado que recibe `void *context` al final.
-- `CLOSURE_FUNC(Name_FromCallback)(cb)` promueve un callback puro sin wrapper.
-- `CLOSURE_CALL` selecciona la llamada directa cuando el contexto es nulo o la llamada contextual cuando no lo es.
-- `CLOSURE_ADAPT_OBJECT_METHOD` adapta métodos con receptor a firmas de closure.
-- `CLOSURE_AS_CLOSURE` crea una closure a partir de una instancia de objeto.
+- `DELEGATE_FUNC(Name_Bind)(fn, ctx)` vincula un destino con estado que recibe `void *context` al final.
+- `DELEGATE_FUNC(Name_FromCallable)(cb)` promueve un callable puro sin wrapper.
+- `DELEGATE_CALL` selecciona la llamada directa cuando el contexto es nulo o la llamada contextual cuando no lo es.
+- `DELEGATE_ADAPT_OBJECT_METHOD` adapta métodos con receptor a firmas de delegate.
+- `DELEGATE_AS_DELEGATE` crea un delegate a partir de una instancia de objeto.
 
 ### 7.3 Eventos
 
-`EVENT_PROCEDURE` y `EVENT_OPERATION` ofrecen notificación observador 1-a-N sin asignación, utilizando TCLOSURE. Los slots están integrados en estructuras o packages. La emisión crea un snapshot local de los listeners activos, haciendo que la iteración sea segura frente a la reentrancia. `OBJECT_MUTATE` actualiza un campo y emite el evento cuando cambia.
+`EVENT_PROCEDURE` y `EVENT_OPERATION` ofrecen notificación observador 1-a-N sin asignación, utilizando `TDELEGATE`. Los slots están integrados en estructuras o packages. La emisión crea un snapshot local de los listeners activos, haciendo que la iteración sea segura frente a la reentrancia. `OBJECT_MUTATE` actualiza un campo y emite el evento cuando cambia.
 
 ## 8. FunctionTables y desactivación en compilación
 
@@ -394,7 +394,7 @@ Todo código dependiente del entorno debe incluir `Core/Preprocessor/Detect.h` o
 
 ---
 
-## Complemento de especificación: detalles de templates, closures y enums
+## Complemento de especificación: detalles de templates, callables, delegates y enums
 
 ### Archivos de definición de templates en modo dual
 
@@ -436,19 +436,19 @@ Cuando un template de módulo genera packages u objects parametrizados directame
 3. Declara las constantes numéricas internas mediante una tabla X-macro y `ENUM`; evita los `#define` numéricos sin nombre y los números mágicos. Las máscaras de 64 bits deben ser constantes con nombre dentro de los auxiliares `INTERNAL`.
 4. Agrupa familias relacionadas en bloques `VARIANT`, por ejemplo operaciones de máscara, recuento de bits, logaritmo, índice y rotación.
 
-### Layout y despacho de closures
+### Layout y despacho de delegates
 
-Una closure contextual combina un puntero a función y un contexto prestado opcional en una estructura POD de dos punteros (`sizeof == 2 * sizeof(void *)`). El miembro de función puede compartir una unión con el callback puro correspondiente.
+Un delegate contextual combina un puntero a función y un contexto prestado opcional en una estructura POD dual-mode de dos punteros (`sizeof == 2 * sizeof(void *)`). El miembro de función comparte una unión con el callable puro correspondiente.
 
-- `CLOSURE_FUNC(Name_Bind)(fn, ctx)` vincula una función que recibe `void *context` como último argumento.
-- `CLOSURE_FUNC(Name_FromCallback)(cb)` convierte un callback puro sin crear un wrapper.
-- `CLOSURE_CALL(cl, args...)` comprueba el contexto: si es nulo, invoca directamente el callback; en caso contrario, elimina el centinela de contexto nulo e invoca la función contextual con el contexto al final de los argumentos.
-- `CLOSURE_ADAPT_OBJECT_METHOD` adapta un método que recibe `CLASS *self` a la firma de closure.
-- `CLOSURE_AS_CLOSURE(METHOD_FUNC, self)` crea una closure lista para usar a partir de una instancia de object.
+- `DELEGATE_FUNC(Name_Bind)(fn, ctx)` vincula una función que recibe `void *context` como último argumento.
+- `DELEGATE_FUNC(Name_FromCallable)(cb)` promueve un callable puro sin crear un wrapper.
+- `DELEGATE_CALL(dl, args...)` comprueba el contexto: si es nulo, invoca directamente el callable; en caso contrario, resuelve `COSMERON_DELEGATE_NULL_CONTEXT` a `NULL` e invoca la función contextual con el contexto al final de los argumentos.
+- `DELEGATE_ADAPT_OBJECT_METHOD` adapta un método que recibe `CLASS *self` a la firma de delegate.
+- `DELEGATE_AS_DELEGATE(METHOD_FUNC, self)` crea un delegate listo para usar a partir de una instancia de object.
 
 ### Eventos declarativos
 
-`EVENT_PROCEDURE` y `EVENT_OPERATION` implementan notificaciones observador de uno a muchos sin asignación dinámica, mediante `TCLOSURE`. Los slots están integrados en structs o packages. La emisión crea una copia local (snapshot) de los listeners activos antes de invocarlos, protegiendo la iteración frente a la reentrancia. `OBJECT_MUTATE(self, ClassName, fieldName, newValue, EventName)` actualiza un campo y emite el evento cuando el valor realmente cambia.
+`EVENT_PROCEDURE` y `EVENT_OPERATION` implementan notificaciones observador de uno a muchos sin asignación dinámica, mediante `TDELEGATE`. Los slots están integrados en structs o packages. La emisión crea una copia local (snapshot) de los listeners activos antes de invocarlos, protegiendo la iteración frente a la reentrancia. `OBJECT_MUTATE(self, ClassName, fieldName, newValue, EventName)` actualiza un campo y emite el evento cuando el valor realmente cambia.
 
 ### Despacho de enums
 
@@ -476,36 +476,36 @@ Las declaraciones fuera de `MODULE` utilizan `ENUM_DEF`, `ENUM_DEF_EX` o `ENUM_D
 
 Cada fila proporciona el sufijo y el tipo C correspondiente. El desempaquetado debe seguir siendo compatible con `PP_UNWRAP ROW`.
 
-#### Estructura POD de closure
+#### Estructura POD de delegate
 
 ```c
-typedef struct TClosure_Name {
+typedef struct TDelegate_Name {
   union {
-    TCallback_Name callback;
-    Name_Function function;
+    TCallable_Name callable;
+    Delegate_Name_Function function;
   };
   void *context;
-} TClosure_Name;
+} TDelegate_Name;
 ```
 
-El puntero de contexto es prestado: la closure no adquiere la propiedad del objeto apuntado.
+El puntero de contexto es prestado: el delegate no adquiere la propiedad del objeto apuntado.
 
-#### Declaración variádica de callbacks
+#### Declaración variádica de callables
 
 ```c
 MODULE(DOMAIN(Core), MyModule,
-  CALLBACK(
+  CALLABLE(
     FUNCTION(int, Transform, (int x)),
     PROCEDURE(Log, (int code))
   )
 );
 ```
 
-#### Declaración variádica de closures
+#### Declaración variádica de delegates
 
 ```c
 MODULE(DOMAIN(Core), MyModule,
-  CLOSURE(
+  DELEGATE(
     FUNCTION(int, Compute, (int x)),
     PREDICATE(Validate, (int x))
   )

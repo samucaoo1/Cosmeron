@@ -22,16 +22,16 @@
 #define TEXT_WRITER_MODE_TABLE(X)                                              \
   X((COUNTER, 0U))                                                             \
   X((BUFFER, 1U))                                                              \
-  X((CLOSURE, 2U))
+  X((DELEGATE, 2U))
 
 ENUM_DEF_EX(MODULE_NS(Text, Writer), Mode, TEXT_WRITER_MODE_TABLE, QUALIFIED)
 
 /* ========================================================================== */
-/* Declarative Writer Sink Closure, Struct & Package                          */
+/* Declarative Writer Sink Delegate, Struct & Package                         */
 /* ========================================================================== */
 
 MODULE(DOMAIN(Modules), Text,
-    CLOSURE(
+    DELEGATE(
         OPERATION(WriterSink, (const char *data, size_t length))
     ),
 
@@ -43,7 +43,7 @@ MODULE(DOMAIN(Modules), Text,
             size_t written;
             bool truncated;
             OPSTATUS status;
-            MODULE_CLOSURE(Text, WriterSink) sink;
+            MODULE_DELEGATE(Text, WriterSink) sink;
         )
     ),
 
@@ -51,8 +51,8 @@ MODULE(DOMAIN(Modules), Text,
         FUNCTION(MODULE_TYPE(Text, Writer), ToBuffer,
                  (char *buffer, size_t capacity)),
         FUNCTION(MODULE_TYPE(Text, Writer), Counter, ()),
-        FUNCTION(MODULE_TYPE(Text, Writer), ToClosure,
-                 (MODULE_CLOSURE(Text, WriterSink) sink)),
+        FUNCTION(MODULE_TYPE(Text, Writer), ToDelegate,
+                 (MODULE_DELEGATE(Text, WriterSink) sink)),
 
         FUNCTION(size_t, Written,
                  (const MODULE_TYPE(Text, Writer) *writer)),

@@ -11,16 +11,16 @@
           struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX) *right;               \
           KEY_TYPE key;                                                        \
       ));                                                                      \
-  CLOSURE_SCOPED_COMPARISON(NS(LIB_PREFIX(Tree), BST_Set, SUFFIX), Comparator,  \
+  DELEGATE_SCOPED_COMPARISON(NS(LIB_PREFIX(Tree), BST_Set, SUFFIX), Comparator,  \
                             (KEY_TYPE left, KEY_TYPE right))                   \
-  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Tree), BST_Set, SUFFIX), Visitor,      \
+  DELEGATE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Tree), BST_Set, SUFFIX), Visitor,      \
                            (const KEY_TYPE *key))                              \
   COSMERON_MACRO_INTERNAL_TREE_BIN_HELPERS(                                    \
       BST_Set, SUFFIX, struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX),          \
-      KEY_TYPE, MODULE_CLOSURE(Tree, BST_Set, SUFFIX, Comparator))              \
+      KEY_TYPE, MODULE_DELEGATE(Tree, BST_Set, SUFFIX, Comparator))              \
   COSMERON_MACRO_INTERNAL_TREE_BIN_SET_TRAVERSE(                               \
       BST_Set, SUFFIX, struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX),          \
-      MODULE_CLOSURE(Tree, BST_Set, SUFFIX, Visitor))                           \
+      MODULE_DELEGATE(Tree, BST_Set, SUFFIX, Visitor))                           \
   INTERNAL_DEF_EX(                                                             \
       Tree, NS(BST_Set, Algo, SUFFIX),                                          \
       FUNCTION(struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX) *, CreateNode,   \
@@ -44,7 +44,7 @@
       OPERATION(InsertSet,                                                     \
                 (struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX) **root,        \
                  size_t *size,                                                 \
-                 MODULE_CLOSURE(Tree, BST_Set, SUFFIX, Comparator) cmp,         \
+                 MODULE_DELEGATE(Tree, BST_Set, SUFFIX, Comparator) cmp,         \
                  KEY_TYPE key),                                                \
                 {                                                              \
                   struct MODULE_ITYPED(Tree, BST_SetNode, SUFFIX) *cur = *root; \
@@ -52,7 +52,7 @@
                   CMPOUT lastCmp = COMPARISON_CONST(EQUAL);                    \
                   while (cur != NULL) {                                        \
                     par = cur;                                                 \
-                    lastCmp = CLOSURE_CALL(cmp, key, cur->key);                \
+                    lastCmp = DELEGATE_CALL(cmp, key, cur->key);                \
                     if (lastCmp < COMPARISON_CONST(EQUAL))                     \
                       cur = cur->left;                                         \
                     else if (lastCmp > COMPARISON_CONST(EQUAL))                \
@@ -130,16 +130,16 @@
           KEY_TYPE key;                                                        \
           VALUE_TYPE value;                                                    \
       ));                                                                      \
-  CLOSURE_SCOPED_COMPARISON(NS(LIB_PREFIX(Tree), BST_Map, SUFFIX), Comparator,  \
+  DELEGATE_SCOPED_COMPARISON(NS(LIB_PREFIX(Tree), BST_Map, SUFFIX), Comparator,  \
                             (KEY_TYPE left, KEY_TYPE right))                   \
-  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Tree), BST_Map, SUFFIX), Visitor,      \
+  DELEGATE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Tree), BST_Map, SUFFIX), Visitor,      \
                            (KEY_TYPE key, VALUE_TYPE *value))                  \
   COSMERON_MACRO_INTERNAL_TREE_BIN_HELPERS(                                    \
       BST_Map, SUFFIX, struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX),          \
-      KEY_TYPE, MODULE_CLOSURE(Tree, BST_Map, SUFFIX, Comparator))              \
+      KEY_TYPE, MODULE_DELEGATE(Tree, BST_Map, SUFFIX, Comparator))              \
   COSMERON_MACRO_INTERNAL_TREE_BIN_MAP_TRAVERSE(                               \
       BST_Map, SUFFIX, struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX),          \
-      MODULE_CLOSURE(Tree, BST_Map, SUFFIX, Visitor))                           \
+      MODULE_DELEGATE(Tree, BST_Map, SUFFIX, Visitor))                           \
   INTERNAL_DEF_EX(                                                             \
       Tree, NS(BST_Map, Algo, SUFFIX),                                          \
       FUNCTION(struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX) *, CreateNode,   \
@@ -164,7 +164,7 @@
       OPERATION(InsertMap,                                                     \
                 (struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX) **root,        \
                  size_t *size,                                                 \
-                 MODULE_CLOSURE(Tree, BST_Map, SUFFIX, Comparator) cmp,         \
+                 MODULE_DELEGATE(Tree, BST_Map, SUFFIX, Comparator) cmp,         \
                  KEY_TYPE key, VALUE_TYPE value, bool allowUpdate),            \
                 {                                                              \
                   struct MODULE_ITYPED(Tree, BST_MapNode, SUFFIX) *cur = *root; \
@@ -172,7 +172,7 @@
                   CMPOUT lastCmp = COMPARISON_CONST(EQUAL);                    \
                   while (cur != NULL) {                                        \
                     par = cur;                                                 \
-                    lastCmp = CLOSURE_CALL(cmp, key, cur->key);                \
+                    lastCmp = DELEGATE_CALL(cmp, key, cur->key);                \
                     if (lastCmp < COMPARISON_CONST(EQUAL))                     \
                       cur = cur->left;                                         \
                     else if (lastCmp > COMPARISON_CONST(EQUAL))                \

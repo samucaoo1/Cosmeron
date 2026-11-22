@@ -73,7 +73,7 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
       writer.capacity = capacity;
       writer.written = 0U;
       writer.truncated = false;
-      writer.sink = NS_JOIN(MODULE_CLOSURE_FUNC(Text, WriterSink), Empty)();
+      writer.sink = NS_JOIN(MODULE_DELEGATE_FUNC(Text, WriterSink), Empty)();
       if (buffer == NULL && capacity > 0U) {
         writer.status = STATUS_CONST(INVALID_ARGUMENT);
       } else {
@@ -93,21 +93,21 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
       writer.written = 0U;
       writer.truncated = false;
       writer.status = STATUS_CONST(SUCCESS);
-      writer.sink = NS_JOIN(MODULE_CLOSURE_FUNC(Text, WriterSink), Empty)();
+      writer.sink = NS_JOIN(MODULE_DELEGATE_FUNC(Text, WriterSink), Empty)();
       return writer;
     }),
 
-    FUNCTION(MODULE_TYPE(Text, Writer), ToClosure,
-             (MODULE_CLOSURE(Text, WriterSink) sink), {
+    FUNCTION(MODULE_TYPE(Text, Writer), ToDelegate,
+             (MODULE_DELEGATE(Text, WriterSink) sink), {
       MODULE_TYPE(Text, Writer) writer;
-      writer.mode = MODULE_NS(Text, Writer, Mode, CLOSURE);
+      writer.mode = MODULE_NS(Text, Writer, Mode, DELEGATE);
       writer.buffer = NULL;
       writer.capacity = 0U;
       writer.written = 0U;
       writer.truncated = false;
       writer.sink = sink;
-      writer.status = CLOSURE_IS_VALID(sink) ? STATUS_CONST(SUCCESS)
-                                             : STATUS_CONST(INVALID_ARGUMENT);
+      writer.status = DELEGATE_IS_VALID(sink) ? STATUS_CONST(SUCCESS)
+                                              : STATUS_CONST(INVALID_ARGUMENT);
       return writer;
     }),
 
@@ -170,12 +170,12 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
         return STATUS_CONST(SUCCESS);
       }
 
-      if (writer->mode == MODULE_NS(Text, Writer, Mode, CLOSURE)) {
-        if (!CLOSURE_IS_VALID(writer->sink)) {
+      if (writer->mode == MODULE_NS(Text, Writer, Mode, DELEGATE)) {
+        if (!DELEGATE_IS_VALID(writer->sink)) {
           return MODULE_IFUNC(Text, Writer, Fail)(
               writer, STATUS_CONST(INVALID_ARGUMENT));
         }
-        const OPSTATUS status = CLOSURE_CALL(writer->sink, data, length);
+        const OPSTATUS status = DELEGATE_CALL(writer->sink, data, length);
         if (status != STATUS_CONST(SUCCESS)) {
           return MODULE_IFUNC(Text, Writer, Fail)(writer, status);
         }

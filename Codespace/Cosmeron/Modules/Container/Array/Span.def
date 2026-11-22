@@ -13,7 +13,7 @@
           size_t size;                                                         \
       ),                                                                       \
                                                                                \
-      CLOSURE(                                                                 \
+      DELEGATE(                                                                 \
           PROCEDURE(Visitor, (TYPE *element)),                                 \
           PREDICATE(Predicate, (const TYPE *element))),                        \
                                                                                \
@@ -217,11 +217,11 @@
                                                                                \
       OPERATION_INLINE(                                                        \
           ForEach,                                                             \
-          (MODULE_CLOSURE(Array, Span, SUFFIX, Visitor) visitor), {            \
-            if (!self || !CLOSURE_IS_VALID(visitor))                           \
+          (MODULE_DELEGATE(Array, Span, SUFFIX, Visitor) visitor), {            \
+            if (!self || !DELEGATE_IS_VALID(visitor))                           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             for (size_t i = 0U; i < self->size; ++i) {                         \
-              CLOSURE_CALL(visitor, &self->data[i]);                           \
+              DELEGATE_CALL(visitor, &self->data[i]);                           \
             }                                                                  \
             return STATUS_CONST(SUCCESS);                                      \
           })                                                                   \

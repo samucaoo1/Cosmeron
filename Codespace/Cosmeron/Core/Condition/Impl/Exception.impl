@@ -20,7 +20,7 @@ MODULE_IMPLEMENT(DOMAIN(Core), Condition,
     }),
 
     PROCEDURE(RegisterCleanup,
-              (MODULE_CLOSURE(Condition, ExceptionCleanup) cleanup), {
+              (MODULE_DELEGATE(Condition, ExceptionCleanup) cleanup), {
       if (MODULE_IFUNC(Condition, Exception_CurrentFrame) != NULL) {
         MODULE_IFUNC(Condition, Exception_CurrentFrame)->cleanup = cleanup;
       }
@@ -38,8 +38,8 @@ MODULE_IMPLEMENT(DOMAIN(Core), Condition,
         MODULE_IFUNC(Condition, Exception_DeferUnwind)(frame->deferWatermark);
       }
 
-      if (CLOSURE_IS_VALID(frame->cleanup)) {
-        CLOSURE_CALL(frame->cleanup);
+      if (DELEGATE_IS_VALID(frame->cleanup)) {
+        DELEGATE_CALL(frame->cleanup);
         frame->cleanup.function = NULL;
         frame->cleanup.context = NULL;
       }

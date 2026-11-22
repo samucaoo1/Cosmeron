@@ -12,7 +12,7 @@
           OPSTATUS (*resetFn)(void *state);                                    \
       ),                                                                       \
                                                                                \
-      CLOSURE(                                                                 \
+      DELEGATE(                                                                 \
           PROCEDURE(Visitor, (TYPE value)),                                    \
           PROCEDURE(IndexedVisitor, (size_t index, TYPE value)),               \
           PREDICATE(Predicate, (TYPE value)),                                  \
@@ -88,25 +88,25 @@
                                                                                \
       OPERATION_INLINE(                                                        \
           ForEach,                                                             \
-          (MODULE_CLOSURE(Iterator, Stream, SUFFIX, Visitor) visitor), {       \
-            if (!self || !self->nextFn || !CLOSURE_IS_VALID(visitor))          \
+          (MODULE_DELEGATE(Iterator, Stream, SUFFIX, Visitor) visitor), {       \
+            if (!self || !self->nextFn || !DELEGATE_IS_VALID(visitor))          \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             TYPE item;                                                         \
             while (self->nextFn(self->state, &item) == STATUS_CONST(SUCCESS)) {\
-              CLOSURE_CALL(visitor, item);                                     \
+              DELEGATE_CALL(visitor, item);                                     \
             }                                                                  \
             return STATUS_CONST(SUCCESS);                                      \
           }),                                                                  \
                                                                                \
       OPERATION_INLINE(                                                        \
           ForEachIndexed,                                                      \
-          (MODULE_CLOSURE(Iterator, Stream, SUFFIX, IndexedVisitor) visitor), {\
-            if (!self || !self->nextFn || !CLOSURE_IS_VALID(visitor))          \
+          (MODULE_DELEGATE(Iterator, Stream, SUFFIX, IndexedVisitor) visitor), {\
+            if (!self || !self->nextFn || !DELEGATE_IS_VALID(visitor))          \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             TYPE item;                                                         \
             size_t index = 0U;                                                 \
             while (self->nextFn(self->state, &item) == STATUS_CONST(SUCCESS)) {\
-              CLOSURE_CALL(visitor, index, item);                              \
+              DELEGATE_CALL(visitor, index, item);                              \
               index++;                                                         \
             }                                                                  \
             return STATUS_CONST(SUCCESS);                                      \
@@ -114,15 +114,15 @@
                                                                                \
       OPERATION_INLINE(                                                        \
           FindIf,                                                              \
-          (MODULE_CLOSURE(Iterator, Stream, SUFFIX, Predicate) predicate,      \
+          (MODULE_DELEGATE(Iterator, Stream, SUFFIX, Predicate) predicate,      \
            TYPE *outValue),                                                    \
           {                                                                    \
             if (!self || !self->nextFn || !outValue ||                         \
-                !CLOSURE_IS_VALID(predicate))                                  \
+                !DELEGATE_IS_VALID(predicate))                                  \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             TYPE item;                                                         \
             while (self->nextFn(self->state, &item) == STATUS_CONST(SUCCESS)) {\
-              if (CLOSURE_CALL(predicate, item)) {                             \
+              if (DELEGATE_CALL(predicate, item)) {                             \
                 *outValue = item;                                              \
                 return STATUS_CONST(SUCCESS);                                  \
               }                                                                \
@@ -132,12 +132,12 @@
                                                                                \
       PREDICATE_INLINE(                                                        \
           Any,                                                                 \
-          (MODULE_CLOSURE(Iterator, Stream, SUFFIX, Predicate) predicate), {   \
-            if (!self || !self->nextFn || !CLOSURE_IS_VALID(predicate))        \
+          (MODULE_DELEGATE(Iterator, Stream, SUFFIX, Predicate) predicate), {   \
+            if (!self || !self->nextFn || !DELEGATE_IS_VALID(predicate))        \
               return false;                                                    \
             TYPE item;                                                         \
             while (self->nextFn(self->state, &item) == STATUS_CONST(SUCCESS)) {\
-              if (CLOSURE_CALL(predicate, item))                               \
+              if (DELEGATE_CALL(predicate, item))                               \
                 return true;                                                   \
             }                                                                  \
             return false;                                                      \
@@ -145,12 +145,12 @@
                                                                                \
       PREDICATE_INLINE(                                                        \
           All,                                                                 \
-          (MODULE_CLOSURE(Iterator, Stream, SUFFIX, Predicate) predicate), {   \
-            if (!self || !self->nextFn || !CLOSURE_IS_VALID(predicate))        \
+          (MODULE_DELEGATE(Iterator, Stream, SUFFIX, Predicate) predicate), {   \
+            if (!self || !self->nextFn || !DELEGATE_IS_VALID(predicate))        \
               return false;                                                    \
             TYPE item;                                                         \
             while (self->nextFn(self->state, &item) == STATUS_CONST(SUCCESS)) {\
-              if (!CLOSURE_CALL(predicate, item))                              \
+              if (!DELEGATE_CALL(predicate, item))                              \
                 return false;                                                  \
             }                                                                  \
             return true;                                                       \
@@ -158,7 +158,7 @@
                                                                                \
       PREDICATE_INLINE(                                                        \
           None,                                                                \
-          (MODULE_CLOSURE(Iterator, Stream, SUFFIX, Predicate) predicate), {   \
+          (MODULE_DELEGATE(Iterator, Stream, SUFFIX, Predicate) predicate), {   \
             return !MODULE_FUNC(Iterator, Stream, SUFFIX, Any)(self,           \
                                                                predicate);     \
           }),                                                                  \

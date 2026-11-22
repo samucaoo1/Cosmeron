@@ -185,7 +185,7 @@ Um `longjmp` não desenrola objetos arbitrários da pilha C nem executa destruto
 
 - [Diagnostic](Diagnostic.md) — contexto de origem e formatação de erros.
 - [Types](Types.md) — operações de ciclo de vida baseadas em traits.
-- [Module](Module.md) — declarações geradas de objetos, pacotes e closures.
+- [Module](Module.md) — declarações geradas de objetos, pacotes e delegates.
 
 ## Cabeçalhos de origem
 

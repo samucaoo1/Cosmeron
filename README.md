@@ -4,7 +4,7 @@
 
 <p align="center">
   <strong>A Universe Beyond</strong><br>
-  <sub> Version 2.0.0 · Pulsar </sub>
+  <sub> Version 2.6.1 · Pulsar </sub>
 </p>
 <p align="center">
   <img src=".github/badges/c11.svg" alt="C11">
@@ -92,8 +92,8 @@ type-safe declarative DSL in pure C11:
   and `COMPARISON`.
 - **Dual-Mode Templates**:
   `TEMPLATE_OBJECT`, `TEMPLATE_PACKAGE`, `TEMPLATE_STRUCT`.
-- **X-Macro Enums, Callbacks & Events**:
-  Zero-heap-allocation reactive events and type-safe callbacks.
+- **X-Macro Enums, Callables, Delegates & Events**:
+  Zero-heap-allocation reactive events, stateless callables, and stateful delegates.
 
 ---
 

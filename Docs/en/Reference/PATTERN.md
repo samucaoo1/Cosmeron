@@ -94,7 +94,7 @@ Everything in Cosmeron must reside inside the module/package namespace whenever 
 
 ### 2.5 Library Namespace Configuration (`LIBRARY_NAMESPACE_CONFIG`)
 Cosmeron symbols can be branded or configured globally via `LIBRARY_NAMESPACE_CONFIG` or compiler flags (`-DCOSMERON_NAMESPACE=...`, `-DCOSMERON_NAMESPACE_MODE=...`):
-- `BARE`: `Text_TString`, `Text_String_Init`, `Status_SUCCESS` (zero library prefix).
+- `BARE`: `Text_TString`, `Text_String_Init`, `OPSTATUS_SUCCESS` (zero library prefix).
 - `SHORT`: `Cos_Text_TString`, `Cos_Text_String_Init`.
 - `STANDARD`: `Cosmeron_Text_TString`, `Cosmeron_Text_String_Init` (default).
 - `FULL`: `Cosmeron_Core_Text_TString` (includes domain in symbol).
@@ -340,72 +340,72 @@ OBJECT_SCOPE_END()
 
 ---
 
-## 7. Declarative Callbacks, Closures & Events
+## 7. Declarative Callables, Delegates & Events
 
-### 7.1 First-Class Pure Callbacks (`TCALLBACK`)
-Callbacks represent pure, stateless function pointers with zero overhead (exactly `sizeof(void *)`, 8 bytes on 64-bit platforms). They are declared standalone or in variadic blocks across `MODULE`, `PACKAGE`, or `OBJECT`:
+### 7.1 First-Class Pure Callables (`TCALLABLE`)
+Callables represent pure, stateless function pointers with zero overhead (exactly `sizeof(void *)`, 8 bytes on 64-bit platforms). They are declared standalone or in variadic blocks across `MODULE`, `PACKAGE`, or `OBJECT`:
 
 - Declarations:
-  - `CALLBACK_OPERATION(Name, (params))`
-  - `CALLBACK_PREDICATE(Name, (params))`
-  - `CALLBACK_FUNCTION(Ret, Name, (params))`
-  - `CALLBACK_PROCEDURE(Name, (params))`
-  - `CALLBACK_COMPARISON(Name, (params))`
+  - `CALLABLE_OPERATION(Name, (params))`
+  - `CALLABLE_PREDICATE(Name, (params))`
+  - `CALLABLE_FUNCTION(Ret, Name, (params))`
+  - `CALLABLE_PROCEDURE(Name, (params))`
+  - `CALLABLE_COMPARISON(Name, (params))`
 - Variadic block syntax:
   ```c
   MODULE(DOMAIN(Core), MyModule,
-    CALLBACK(
+    CALLABLE(
       FUNCTION(int, Transform, (int x)),
       PROCEDURE(Log, (int code))
     )
   );
   ```
 - Universal invocation & validation:
-  - Invocation: `CALLBACK_CALL(cb, args...)` or `CALLBACK_INVOKE(cb, args...)`
-  - Validation: `CALLBACK_IS_VALID(cb)`
-  - Empty: `CALLBACK_EMPTY` (`NULL`)
+  - Invocation: `CALLABLE_CALL(cb, args...)` or `CALLABLE_INVOKE(cb, args...)`
+  - Validation: `CALLABLE_IS_VALID(cb)`
+  - Empty: `CALLABLE_EMPTY` (`NULL`)
 
-### 7.2 Contextual Fat Closures (`TCLOSURE`)
-Closures represent contextual callables combining a function pointer and an optional borrowed context in a 16-byte Pure POD structure (`sizeof == 2 * sizeof(void *)`):
+### 7.2 Contextual Fat Delegates (`TDELEGATE`)
+Delegates represent dual-mode callables combining a function pointer and an optional borrowed context in a 16-byte Pure POD structure (`sizeof == 2 * sizeof(void *)`):
 
 ```c
-typedef struct TClosure_Name {
+typedef struct TDelegate_Name {
   union {
-    TCallback_Name callback;
-    Name_Function function;
+    TCallable_Name callable;
+    Delegate_Name_Function function;
   };
   void *context;
-} TClosure_Name;
+} TDelegate_Name;
 ```
 
 - Declarations:
-  - `CLOSURE_OPERATION(Name, (params))`
-  - `CLOSURE_PREDICATE(Name, (params))`
-  - `CLOSURE_FUNCTION(Ret, Name, (params))`
-  - `CLOSURE_PROCEDURE(Name, (params))`
-  - `CLOSURE_COMPARISON(Name, (params))`
+  - `DELEGATE_OPERATION(Name, (params))`
+  - `DELEGATE_PREDICATE(Name, (params))`
+  - `DELEGATE_FUNCTION(Ret, Name, (params))`
+  - `DELEGATE_PROCEDURE(Name, (params))`
+  - `DELEGATE_COMPARISON(Name, (params))`
 - Variadic block syntax:
   ```c
   MODULE(DOMAIN(Core), MyModule,
-    CLOSURE(
+    DELEGATE(
       FUNCTION(int, Compute, (int x)),
       PREDICATE(Validate, (int x))
     )
   );
   ```
 - Construction & Binding:
-  - `CLOSURE_FUNC(Name_Bind)(fn, ctx)`: Binds a stateful target taking trailing `void *context`.
-  - `CLOSURE_FUNC(Name_FromCallback)(cb)`: Promotes a pure stateless callback without wrappers.
+  - `DELEGATE_FUNC(Name_Bind)(fn, ctx)`: Binds a stateful target taking trailing `void *context`.
+  - `DELEGATE_FUNC(Name_FromCallable)(cb)`: Promotes a pure stateless callable without wrappers.
 - Sentinel Dual-Dispatch:
-  - `CLOSURE_CALL(cl, args...)` dynamically checks `cl.context == NULL`. If null, invokes `cl.callback(args...)` directly. If non-null, unwraps the sentinel `(context == (void *)1 ? NULL : context)` and invokes `cl.function(args..., ctx)`.
+  - `DELEGATE_CALL(dl, args...)` dynamically checks `dl.context == NULL`. If null, invokes `dl.callable(args...)` directly. If non-null, unwraps the sentinel (`context == COSMERON_DELEGATE_NULL_CONTEXT ? NULL : context`) and invokes `dl.function(args..., ctx)`.
 - Method Adapter:
-  - `CLOSURE_ADAPT_OBJECT_METHOD(CLOSURE_TYPE, CLASS_TYPE, METHOD_FUNC, RET, PARAMS, ARGS)` bridges object receiver methods `(CLASS *self, ...)` to closure signatures `(..., void *context)`.
-  - `CLOSURE_AS_CLOSURE(METHOD_FUNC, self)` creates a ready-to-use closure from an object instance.
+  - `DELEGATE_ADAPT_OBJECT_METHOD(DELEGATE_TYPE, CLASS_TYPE, METHOD_FUNC, RET, PARAMS, ARGS)` bridges object receiver methods `(CLASS *self, ...)` to delegate signatures `(..., void *context)`.
+  - `DELEGATE_AS_DELEGATE(METHOD_FUNC, self)` creates a ready-to-use delegate from an object instance.
 
 ### 7.3 Declarative Events (`EVENT_PROCEDURE` & `EVENT_OPERATION`)
-- Zero-allocation 1-to-N observer notification powered natively by `TCLOSURE`.
+- Zero-allocation 1-to-N observer notification powered natively by `TDELEGATE`.
 - Static slots embedded in struct or package scope with automatic cache-line decay (4, 8, 12, or 16 slots).
-- Supports subscribing both stateful closures (`Bind`) and pure callbacks (`FromCallback`).
+- Supports subscribing both stateful delegates (`Bind`) and pure callables (`FromCallable`).
 - Re-entrancy safe: `Emit` takes a stack snapshot of active listeners before dispatching.
 - Reactive field mutation: `OBJECT_MUTATE(self, ClassName, fieldName, newValue, EventName)` updates state and emits on change.
 

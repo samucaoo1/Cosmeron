@@ -162,8 +162,8 @@ int main(void) {
   assert(OBJECT_CALL_0(&statusRes, IsOk) == true);
 
   /* Map: on Ok */
-  MODULE_CLOSURE(Result, int32, MapFunction) mapCb =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Result, int32, MapFunction), Bind)(double_val, NULL);
+  MODULE_DELEGATE(Result, int32, MapFunction) mapCb =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Result, int32, MapFunction), Bind)(double_val, NULL);
 
   MODULE_TYPED(Result, int32) mappedRes;
   assert(MODULE_FUNC(Result, int32, Init)(&mappedRes) == STATUS_CONST(SUCCESS));
@@ -180,8 +180,8 @@ int main(void) {
   assert(OBJECT_CALL_0(&extractedErr, Code) == STATUS_CONST(OUT_OF_MEMORY));
 
   /* AndThen: on Ok -> Ok */
-  MODULE_CLOSURE(Result, int32, BindFunction) bindCb =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Result, int32, BindFunction), Bind)(check_positive, NULL);
+  MODULE_DELEGATE(Result, int32, BindFunction) bindCb =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Result, int32, BindFunction), Bind)(check_positive, NULL);
 
   MODULE_TYPED(Result, int32) boundRes;
   assert(MODULE_FUNC(Result, int32, Init)(&boundRes) == STATUS_CONST(SUCCESS));
@@ -254,8 +254,8 @@ int main(void) {
 
   /* Map: on Some */
   assert(OBJECT_CALL(&opt, Some, 25) == STATUS_CONST(SUCCESS));
-  MODULE_CLOSURE(Optional, int32, MapFunction) optMapCb =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Optional, int32, MapFunction), Bind)(double_val, NULL);
+  MODULE_DELEGATE(Optional, int32, MapFunction) optMapCb =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Optional, int32, MapFunction), Bind)(double_val, NULL);
   MODULE_TYPED(Optional, int32) mappedOpt;
   assert(MODULE_FUNC(Optional, int32, Init)(&mappedOpt) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&opt, Map, optMapCb, &mappedOpt) == STATUS_CONST(SUCCESS));
@@ -269,8 +269,8 @@ int main(void) {
 
   /* AndThen: on Some -> Some */
   assert(OBJECT_CALL(&opt, Some, 5) == STATUS_CONST(SUCCESS));
-  MODULE_CLOSURE(Optional, int32, BindFunction) optBindCb =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Optional, int32, BindFunction), Bind)(check_positive_opt, NULL);
+  MODULE_DELEGATE(Optional, int32, BindFunction) optBindCb =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Optional, int32, BindFunction), Bind)(check_positive_opt, NULL);
   MODULE_TYPED(Optional, int32) boundOpt;
   assert(MODULE_FUNC(Optional, int32, Init)(&boundOpt) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&opt, AndThen, optBindCb, &boundOpt) == STATUS_CONST(SUCCESS));
@@ -288,8 +288,8 @@ int main(void) {
   assert(OBJECT_CALL_0(&boundOpt, IsNone) == true);
 
   /* Filter: with predicate */
-  MODULE_CLOSURE(Optional, int32, FilterPredicate) filterCb =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Optional, int32, FilterPredicate), Bind)(is_even, NULL);
+  MODULE_DELEGATE(Optional, int32, FilterPredicate) filterCb =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Optional, int32, FilterPredicate), Bind)(is_even, NULL);
   MODULE_TYPED(Optional, int32) filteredOpt;
   assert(MODULE_FUNC(Optional, int32, Init)(&filteredOpt) == STATUS_CONST(SUCCESS));
 

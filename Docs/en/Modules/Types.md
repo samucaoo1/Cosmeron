@@ -226,7 +226,7 @@ The generated object stores `hasValue` plus an inline `value`.
 | `AndThen(binder, outOptional)` | Invokes a binder that writes an output Optional. |
 | `Filter(predicate, outOptional)` | Preserves the value only when the predicate returns true. |
 
-`Map`, `AndThen` and `Filter` use generated closures. They require valid input/output objects and valid closures. Optional does not allocate memory for its stored value.
+`Map`, `AndThen` and `Filter` use generated delegates. They require valid input/output objects and valid delegates. Optional does not allocate memory for its stored value.
 
 ---
 

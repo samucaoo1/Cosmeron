@@ -18,7 +18,7 @@ El agregador incluye las siguientes áreas públicas:
 | `CString/CString.h` | Operaciones stateless con C strings terminadas en NUL. |
 | `View/View.h` | Vistas tipadas de strings sin ownership (`View8`, `View16`, `View32`). |
 | `String/String.h` | Strings mutables con ownership (`String8`, `String16`, `String32`) y utilidades UTF-8. |
-| `Format/Writer.h` | Sink de texto desacoplado (`Counter`, `ToBuffer`, `ToClosure`, `ToString`) y escritores tipados. |
+| `Format/Writer.h` | Sink de texto desacoplado (`Counter`, `ToBuffer`, `ToDelegate`, `ToString`) y escritores tipados. |
 | `Format/Format.h` | Formato acotado seguro y basado en `Writer` con adaptadores `%!`. |
 | `Format/BytesHuman.h` | Formato y análisis de tamaños de bytes legibles para humanos. |
 | `Grid/Attribute.h`, `Grid/Char.h`, `Grid/Grid.h` | Planos de atributos, utilidades de color y grids de texto respaldados por memoria. |
@@ -178,7 +178,7 @@ Header: `Format/Writer.h`. Tipo: `MODULE_TYPE(Text, Writer)`. Package: `Text_Wri
 | --- | --- |
 | `ToBuffer(buffer, capacity)` | Buffer `char` propiedad del llamador (siempre terminado en NUL; registra truncamiento). |
 | `Counter()` | Modo de solo medición (cuenta bytes sin almacenar). |
-| `ToClosure(sink)` | Cualquier destino `MODULE_CLOSURE(Text, WriterSink)`. |
+| `ToDelegate(sink)` | Cualquier destino `MODULE_DELEGATE(Text, WriterSink)`. |
 | `ToString(str)` | Declarado en `String/String.h`; añade directamente a una `String8`. |
 
 Primitivas tipadas: `WriteBuffer`, `WriteChar`, `WriteCodepoint`, `WriteRepeat`, `WriteCStr`, `WriteView`, `WriteBool`, `WriteInt`, `WriteUInt`, `WriteFloat`, `WriteHex`, `WriteEscaped`, además de inspección (`Written`, `IsTruncated`, `Status`) y `Finish`.
@@ -197,7 +197,7 @@ Admite especificadores estándar C11/C23 (`%d`/`%i`, `%u`, `%o`, `%x`/`%X`, `%b`
 - `%U`: `MODULE_TYPE(Text, Char32)` codificado en UTF-8.
 - `%t`: `bool` (`true` / `false`).
 - `%q` / `%#q`: C-string escapada (con o sin comillas).
-- `%!` / `%(spec)!`: par adaptador personalizado `(MODULE_CALLBACK(Text, Format, Adapter) adapter, const void *value)` para formatear tipos externos sin acoplar `Text` a otros módulos.
+- `%!` / `%(spec)!`: par adaptador personalizado `(MODULE_CALLABLE(Text, Format, Adapter) adapter, const void *value)` para formatear tipos externos sin acoplar `Text` a otros módulos.
 
 ### Tamaños de bytes legibles para humanos
 
@@ -235,7 +235,7 @@ Las operaciones de Grid trabajan sobre celdas respaldadas por memoria off-screen
 - [Tuple](Tuple.md) — dimensiones y regiones del grid.
 - [Memory](Memory.md) — asignación y operaciones con bytes.
 - [Algorithm](Algorithm.md) — resultados de comparación utilizados por vistas y C strings.
-- [Module](Module.md) — packages, objetos, closures y especializaciones tipadas.
+- [Module](Module.md) — packages, objetos, callables, delegates y especializaciones tipadas.
 
 ## Headers de origen
 

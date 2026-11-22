@@ -34,4 +34,4 @@ Cosmeron is entering **pre-release** with smaller, focused releases. All refacto
 ## Platform & Target Goals
 
 - **WebAssembly** (`WASI` / `Emscripten`) as a first-class target alongside Linux, BSD, macOS, and Windows.
-- **Zero-dependency C11** with declarative DSL (`MODULE`, `PACKAGE`, `OBJECT`, `STRUCT`, `TEMPLATE_*`, `ENUM`, `CALLBACK`, `EVENT_*`).
+- **Zero-dependency C11** with declarative DSL (`MODULE`, `PACKAGE`, `OBJECT`, `STRUCT`, `TEMPLATE_*`, `ENUM`, `CALLABLE`, `DELEGATE`, `EVENT_*`).

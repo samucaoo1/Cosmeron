@@ -13,11 +13,11 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
     FUNCTION(MODULE_TYPE(Text, Writer), ToString,
              (MODULE_TYPE(Text, String8) *str), {
       if (str == NULL) {
-        return MODULE_FUNC(Text, Writer, ToClosure)(
-            NS_JOIN(MODULE_CLOSURE_FUNC(Text, WriterSink), Empty)());
+        return MODULE_FUNC(Text, Writer, ToDelegate)(
+            NS_JOIN(MODULE_DELEGATE_FUNC(Text, WriterSink), Empty)());
       }
-      return MODULE_FUNC(Text, Writer, ToClosure)(
-          NS_JOIN(MODULE_CLOSURE_FUNC(Text, WriterSink), Bind)(
+      return MODULE_FUNC(Text, Writer, ToDelegate)(
+          NS_JOIN(MODULE_DELEGATE_FUNC(Text, WriterSink), Bind)(
               MODULE_IFUNC(Text, String8, WriterSink), str));
     })
   ),

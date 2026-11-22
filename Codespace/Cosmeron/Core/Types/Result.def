@@ -1,7 +1,7 @@
 /* Result.def - Dual Mode Engine (Zero Duplication) */
 
 #include "../Condition/Error.h"
-#include "../Module/Closure/Closure.h"
+#include "../Module/Delegate/Delegate.h"
 #include "Impl/Common.inc"
 
 #ifndef TEMPLATE_Result
@@ -15,12 +15,12 @@
           } storage;                                                           \
       ),                                                                       \
                                                                                \
-      CLOSURE(                                                                 \
+      DELEGATE(                                                                \
           FUNCTION(TYPE, MapFunction, (TYPE value)),                           \
           OPERATION(                                                           \
               BindFunction,                                                    \
               (TYPE value,                                                     \
-               struct MODULE_TYPED(Result, SUFFIX) * outResult))),       \
+               struct MODULE_TYPED(Result, SUFFIX) * outResult))),             \
                                                                                \
       OPERATION_INLINE(Ok, (TYPE value), {                                     \
         if (!self) {                                                           \
@@ -92,26 +92,26 @@
                                                                                \
       CONST_OPERATION_INLINE(                                                  \
           Map,                                                                 \
-          (MODULE_CLOSURE(Result, SUFFIX, MapFunction) mapper,           \
-           struct MODULE_TYPED(Result, SUFFIX) * outResult),             \
+          (MODULE_DELEGATE(Result, SUFFIX, MapFunction) mapper,                \
+           struct MODULE_TYPED(Result, SUFFIX) * outResult),                   \
           {                                                                    \
-            if (!self || !outResult || !CLOSURE_IS_VALID(mapper)) {            \
+            if (!self || !outResult || !DELEGATE_IS_VALID(mapper)) {           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             }                                                                  \
             if (!self->isOk) {                                                 \
               return MODULE_FUNC(Result, SUFFIX, Err)(                   \
                   outResult, &self->storage.error);                            \
             }                                                                  \
-            const TYPE mapped = CLOSURE_CALL(mapper, self->storage.value);     \
+            const TYPE mapped = DELEGATE_CALL(mapper, self->storage.value);    \
             return MODULE_FUNC(Result, SUFFIX, Ok)(outResult, mapped);   \
           }),                                                                  \
                                                                                \
       CONST_OPERATION_INLINE(                                                  \
           AndThen,                                                             \
-          (MODULE_CLOSURE(Result, SUFFIX, BindFunction) binder,          \
-           struct MODULE_TYPED(Result, SUFFIX) * outResult),             \
+          (MODULE_DELEGATE(Result, SUFFIX, BindFunction) binder,               \
+           struct MODULE_TYPED(Result, SUFFIX) * outResult),                   \
           {                                                                    \
-            if (!self || !outResult || !CLOSURE_IS_VALID(binder)) {            \
+            if (!self || !outResult || !DELEGATE_IS_VALID(binder)) {           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             }                                                                  \
             if (!self->isOk) {                                                 \
@@ -119,7 +119,7 @@
                   outResult, &self->storage.error);                            \
             }                                                                  \
             MODULE_FUNC(Result, SUFFIX, Init)(outResult);                \
-            return CLOSURE_CALL(binder, self->storage.value, outResult);       \
+            return DELEGATE_CALL(binder, self->storage.value, outResult);      \
           })                                                                   \
   )
 #endif

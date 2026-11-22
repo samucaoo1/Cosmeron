@@ -34,4 +34,4 @@ A Cosmeron está entrando na fase de **pré-lançamento**, com versões menores 
 ## Objetivos de plataforma e destino
 
 - **WebAssembly** (`WASI` / `Emscripten`) como destino de primeira classe, junto com Linux, BSD, macOS e Windows.
-- **C11 sem dependências** com DSL declarativa (`MODULE`, `PACKAGE`, `OBJECT`, `STRUCT`, `TEMPLATE_*`, `ENUM`, `CALLBACK`, `EVENT_*`).
+- **C11 sem dependências** com DSL declarativa (`MODULE`, `PACKAGE`, `OBJECT`, `STRUCT`, `TEMPLATE_*`, `ENUM`, `CALLABLE`, `DELEGATE`, `EVENT_*`).

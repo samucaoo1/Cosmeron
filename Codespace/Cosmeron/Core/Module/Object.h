@@ -4,7 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "Callback/Callback.h"
+#include "Callable/Callable.h"
+#include "Delegate/Delegate.h"
 #include "Common/ComparisonEx.impl"
 #include "Common/Dispatch.impl"
 #include "Common/FunctionTable.impl"
@@ -60,14 +61,14 @@
       COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(CLASS, 1, P);
 
 #define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_C_2(CLASS, R, N, P)           \
-  CALLBACK_FUNCTION(R, NS(CLASS, N), P);
+  CALLABLE_FUNCTION(R, NS(CLASS, N), P);
 
 #define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_C_3(CLASS, R, N, P)           \
-  CLOSURE_PROCEDURE(NS(CLASS, N), P);                                          \
+  DELEGATE_PROCEDURE(NS(CLASS, N), P);                                         \
   static inline OPSTATUS NS(CLASS, N, Subscribe)(                              \
-      CLASS * self, TCLOSURE(NS(CLASS, N)) listener);                          \
+      CLASS * self, TDELEGATE(NS(CLASS, N)) listener);                         \
   static inline OPSTATUS NS(CLASS, N, Unsubscribe)(                            \
-      CLASS * self, TCLOSURE(NS(CLASS, N)) listener);                          \
+      CLASS * self, TDELEGATE(NS(CLASS, N)) listener);                         \
   static inline void NS(CLASS, N, Emit)                                        \
       COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(CLASS, 0, P);                    \
   static inline OPSTATUS NS(CLASS, N, Clear)(CLASS * self);                    \
@@ -75,11 +76,11 @@
   static inline uint8_t NS(CLASS, N, Capacity)(const CLASS *self);
 
 #define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_C_4(CLASS, R, N, P)           \
-  CLOSURE_OPERATION(NS(CLASS, N), P);                                          \
+  DELEGATE_OPERATION(NS(CLASS, N), P);                                         \
   static inline OPSTATUS NS(CLASS, N, Subscribe)(                              \
-      CLASS * self, TCLOSURE(NS(CLASS, N)) listener);                          \
+      CLASS * self, TDELEGATE(NS(CLASS, N)) listener);                         \
   static inline OPSTATUS NS(CLASS, N, Unsubscribe)(                            \
-      CLASS * self, TCLOSURE(NS(CLASS, N)) listener);                          \
+      CLASS * self, TDELEGATE(NS(CLASS, N)) listener);                         \
   static inline OPSTATUS NS(CLASS, N, Emit)                                    \
       COSMERON_MACRO_INTERNAL_OBJ_EMIT_PARAMS(CLASS, 0, P);                    \
   static inline OPSTATUS NS(CLASS, N, Clear)(CLASS * self);                    \
@@ -110,11 +111,11 @@
 #define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_113(CLASS, M)
 #define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_114(CLASS, M)
 #define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_115(CLASS, M)             \
-  PP_FOREACH_D2_CTX(COSMERON_INTERNAL_SCOPE_CB_MEMBER, LIB_PREFIX(CLASS),      \
-                    PP_UNWRAP PP_SEQ_GET_2 M)
+  PP_FOREACH_D2_CTX(COSMERON_INTERNAL_SCOPE_CALLABLE_MEMBER,                   \
+                    LIB_PREFIX(CLASS), PP_UNWRAP PP_SEQ_GET_2 M)
 #define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_116(CLASS, M)             \
-  PP_FOREACH_D2_CTX(COSMERON_INTERNAL_SCOPE_CL_MEMBER, LIB_PREFIX(CLASS),      \
-                    PP_UNWRAP PP_SEQ_GET_2 M)
+  PP_FOREACH_D2_CTX(COSMERON_INTERNAL_SCOPE_DELEGATE_MEMBER,                   \
+                    LIB_PREFIX(CLASS), PP_UNWRAP PP_SEQ_GET_2 M)
 #define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO_TAG_117(CLASS, M)
 
 #define COSMERON_MACRO_INTERNAL_OBJECT_GEN_PROTO(CLASS, M)                     \
@@ -128,7 +129,7 @@
   _Static_assert((I) <= 16, "Cosmeron Event capacity cannot exceed 16 slots"); \
   struct {                                                                     \
     uint8_t count;                                                             \
-    TCLOSURE(NS(CLASS, N)) listeners[COSMERON_EVENT_NORMALIZE_CAPACITY(I)];    \
+    TDELEGATE(NS(CLASS, N)) listeners[COSMERON_EVENT_NORMALIZE_CAPACITY(I)];   \
   } NS(event, N);
 #define COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_C_4(CLASS, I, N)               \
   COSMERON_MACRO_INTERNAL_OBJ_EVENT_FIELD_C_3(CLASS, I, N)
@@ -210,8 +211,8 @@
       return COMPARISON_CONST(HIGHER);                                         \
     return NS(CLASS, N)((const CLASS *)left, (const CLASS *)right);            \
   }                                                                            \
-  static inline TCLOSURE(Comparison) NS(CLASS, N, AsComparator)(void) {        \
-    return NS(CLOSURE_FUNC(Comparison),                                        \
+  static inline TDELEGATE(Comparison) NS(CLASS, N, AsComparator)(void) {       \
+    return NS(DELEGATE_FUNC(Comparison),                                       \
               Bind)(NS(CLASS, N, ComparatorAdapter), NULL);                    \
   }
 
@@ -219,10 +220,10 @@
 
 #define COSMERON_MACRO_INTERNAL_OBJ_EVENT_INLINE_PROC(CLASS, CAP, N, P, ARGS)  \
   static inline OPSTATUS NS(CLASS, N, Subscribe)(                              \
-      CLASS * self, TCLOSURE(NS(CLASS, N)) listener) {                         \
+      CLASS * self, TDELEGATE(NS(CLASS, N)) listener) {                        \
     if (!self)                                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    if (!CLOSURE_IS_VALID(listener))                                           \
+    if (!DELEGATE_IS_VALID(listener))                                          \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (self->NS(event, N).count >= COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)) {  \
       return STATUS_CONST(OUT_OF_RANGE);                                       \
@@ -231,7 +232,7 @@
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
   static inline OPSTATUS NS(CLASS, N, Unsubscribe)(                            \
-      CLASS * self, TCLOSURE(NS(CLASS, N)) listener) {                         \
+      CLASS * self, TDELEGATE(NS(CLASS, N)) listener) {                        \
     if (!self)                                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     for (uint8_t i = 0; i < self->NS(event, N).count; ++i) {                   \
@@ -252,7 +253,7 @@
     if (!self || self->NS(event, N).count == 0)                                \
       return;                                                                  \
     uint8_t activeCount = self->NS(event, N).count;                            \
-    TCLOSURE(NS(CLASS, N)) snapshot[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];   \
+    TDELEGATE(NS(CLASS, N)) snapshot[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];  \
     for (uint8_t i = 0; i < activeCount; ++i) {                                \
       snapshot[i] = self->NS(event, N).listeners[i];                           \
     }                                                                          \
@@ -276,10 +277,10 @@
 
 #define COSMERON_MACRO_INTERNAL_OBJ_EVENT_INLINE_OP(CLASS, CAP, N, P, ARGS)    \
   static inline OPSTATUS NS(CLASS, N, Subscribe)(                              \
-      CLASS * self, TCLOSURE(NS(CLASS, N)) listener) {                         \
+      CLASS * self, TDELEGATE(NS(CLASS, N)) listener) {                        \
     if (!self)                                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
-    if (!CLOSURE_IS_VALID(listener))                                           \
+    if (!DELEGATE_IS_VALID(listener))                                          \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (self->NS(event, N).count >= COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)) {  \
       return STATUS_CONST(OUT_OF_RANGE);                                       \
@@ -288,7 +289,7 @@
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
   static inline OPSTATUS NS(CLASS, N, Unsubscribe)(                            \
-      CLASS * self, TCLOSURE(NS(CLASS, N)) listener) {                         \
+      CLASS * self, TDELEGATE(NS(CLASS, N)) listener) {                        \
     if (!self)                                                                 \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     for (uint8_t i = 0; i < self->NS(event, N).count; ++i) {                   \
@@ -311,7 +312,7 @@
     if (self->NS(event, N).count == 0)                                         \
       return STATUS_CONST(SUCCESS);                                            \
     uint8_t activeCount = self->NS(event, N).count;                            \
-    TCLOSURE(NS(CLASS, N)) snapshot[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];   \
+    TDELEGATE(NS(CLASS, N)) snapshot[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];  \
     for (uint8_t i = 0; i < activeCount; ++i) {                                \
       snapshot[i] = self->NS(event, N).listeners[i];                           \
     }                                                                          \

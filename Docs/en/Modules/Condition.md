@@ -185,7 +185,7 @@ A `longjmp` does not unwind arbitrary C stack objects or run C++-style destructo
 
 - [Diagnostic](Diagnostic.md) — source context and error formatting.
 - [Types](Types.md) — traits-based lifecycle operations.
-- [Module](Module.md) — generated object, package and closure declarations.
+- [Module](Module.md) — generated object, package and delegate declarations.
 
 ## Source headers
 

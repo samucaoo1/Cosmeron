@@ -844,10 +844,10 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
           }
 
           case '!': {
-            const MODULE_CALLBACK(Text, Format, Adapter) adapter =
-                va_arg(arguments, MODULE_CALLBACK(Text, Format, Adapter));
+            const MODULE_CALLABLE(Text, Format, Adapter) adapter =
+                va_arg(arguments, MODULE_CALLABLE(Text, Format, Adapter));
             const void *value = va_arg(arguments, const void *);
-            if (!CALLBACK_IS_VALID(adapter)) {
+            if (!CALLABLE_IS_VALID(adapter)) {
               status = STATUS_CONST(INVALID_ARGUMENT);
             } else {
               const MODULE_TYPE(Text, View8) specView =
@@ -856,11 +856,11 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
                                                          subFormatLen)
                       : MODULE_FUNC(Text, View8, Empty)();
               if (width == 0U) {
-                status = CALLBACK_CALL(adapter, writer, value, specView);
+                status = CALLABLE_CALL(adapter, writer, value, specView);
               } else {
                 MODULE_TYPE(Text, Writer) counter =
                     MODULE_FUNC(Text, Writer, Counter)();
-                status = CALLBACK_CALL(adapter, &counter, value, specView);
+                status = CALLABLE_CALL(adapter, &counter, value, specView);
                 if (status == STATUS_CONST(SUCCESS)) {
                   const size_t renderedLen =
                       MODULE_FUNC(Text, Writer, Written)(&counter);
@@ -871,7 +871,7 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
                         writer, ' ', pad);
                   }
                   if (status == STATUS_CONST(SUCCESS)) {
-                    status = CALLBACK_CALL(adapter, writer, value, specView);
+                    status = CALLABLE_CALL(adapter, writer, value, specView);
                   }
                   if (status == STATUS_CONST(SUCCESS) && flagMinus &&
                       pad > 0U) {

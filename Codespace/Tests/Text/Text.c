@@ -32,8 +32,8 @@ typedef struct TestSinkBuf {
   bool failNext;
 } TestSinkBuf;
 
-static OPSTATUS TestClosureSink(const char *data, size_t length,
-                                void *context) {
+static OPSTATUS TestDelegateSink(const char *data, size_t length,
+                                 void *context) {
   TestSinkBuf *buf = (TestSinkBuf *)context;
   if (buf->failNext) {
     return STATUS_CONST(GENERIC_ERROR);
@@ -334,11 +334,11 @@ static void TestWriterAndFormat(void) {
          STATUS_CONST(INSUFFICIENT_SPACE));
   assert(strcmp(small, "Cosmero") == 0);
 
-  /* Closure sink */
+  /* Delegate sink */
   TestSinkBuf sinkBuf = {{0}, 0U, false};
-  MODULE_TYPE(Text, Writer) cw = MODULE_FUNC(Text, Writer, ToClosure)(
-      NS_JOIN(MODULE_CLOSURE_FUNC(Text, WriterSink), Bind)(TestClosureSink,
-                                                           &sinkBuf));
+  MODULE_TYPE(Text, Writer) cw = MODULE_FUNC(Text, Writer, ToDelegate)(
+      NS_JOIN(MODULE_DELEGATE_FUNC(Text, WriterSink), Bind)(TestDelegateSink,
+                                                            &sinkBuf));
   assert(MODULE_FUNC(Text, Format, To)(&cw, "%s:%U:%t", "hi",
                                        (MODULE_TYPE(Text, Char32))0x1F642U,
                                        false) == STATUS_CONST(SUCCESS));
