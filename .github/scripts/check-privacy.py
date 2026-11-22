@@ -19,17 +19,21 @@ EXCLUDED_PREFIXES = (
     # Vendored SQLite amalgamation: upstream docs use /home/fred-style examples.
     "Codespace/Cosmeron/Modules/Database/SQLite/Internal/",
     "Roadmap/Cosmeron/Modules/Database/SQLite/Internal/",
+    # Vendored upstream IANA tzdata: historical citation URLs and comments.
+    "Codespace/Cosmeron/Asset/TimeZone/",
 )
 SELF_PATH = ".github/scripts/check-privacy.py"
 ALLOW_MARKER = "privacy-scan: allow"
 BINARY_PROBE_BYTES = 8192
 
+WEB_URL_PATTERN = re.compile(r"https?://[^\s\"'<>`)\]]+", re.I)
+
 PATTERNS = (
-    ("removable-media mount", re.compile(r"/run/media/[^/\s]+/")),
-    ("Linux home directory", re.compile(r"/home/[^/\s\"'<>`]+/")),
-    ("macOS home directory", re.compile(r"/Users/[^/\s\"'<>`]+/")),
-    ("Windows user profile", re.compile(r"[A-Za-z]:[\\/]+Users[\\/]+", re.I)),
-    ("local file:/// link", re.compile(r"file:///")),
+    ("removable-media mount", re.compile(r"/run/media/[^/\s]+/"), True),
+    ("Linux home directory", re.compile(r"/home/[^/\s\"'<>`]+/"), True),
+    ("macOS home directory", re.compile(r"/Users/[^/\s\"'<>`]+/"), True),
+    ("Windows user profile", re.compile(r"[A-Za-z]:[\\/]+Users[\\/]+", re.I), True),
+    ("local file:/// link", re.compile(r"file:///"), False),
 )
 
 
@@ -61,8 +65,10 @@ def scan(repo: Path) -> list[str]:
         for number, line in enumerate(text.splitlines(), start=1):
             if ALLOW_MARKER in line:
                 continue
-            for description, pattern in PATTERNS:
-                if pattern.search(line):
+            path_text = WEB_URL_PATTERN.sub("", line)
+            for description, pattern, strip_web_urls in PATTERNS:
+                target = path_text if strip_web_urls else line
+                if pattern.search(target):
                     findings.append(f"{name}:{number}: {description}")
     return findings
 
