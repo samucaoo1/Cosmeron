@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../Condition/Error.h"
-#include "../Module/Closure/Closure.h"
+#include "../Module/Delegate/Delegate.h"
 #include "Impl/Common.inc"
 
 /* ========================================================================== */

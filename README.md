@@ -1,17 +1,21 @@
 <p align="center">
-  <img src="Docs/Assets/Brand/Cosmeron_1.0_Nebula.jpg" alt="Cosmeron — A Universe Beyond" width="100%">
+  <img src="Docs/Assets/Brand/Cosmeron_2.0_Pulsar.jpg" alt="Cosmeron — A Universe Beyond" width="100%">
 </p>
 
 <p align="center">
   <strong>A Universe Beyond</strong><br>
-  <sub> Version 1.0.0 · Nebula </sub>
+  <sub> Version 2.6.1 · Pulsar </sub>
+</p>
+<p align="center">
+  <img src=".github/badges/c11.svg" alt="C11">
+  <img src=".github/badges/platforms.svg" alt="Platforms">
+  <img src=".github/badges/license.svg" alt="License">
 </p>
 
-![C11](.github/badges/c11.svg)
-![Platforms](.github/badges/platforms.svg)
-![License](.github/badges/license.svg)
-![Entropy](.github/badges/entropy.svg)
-![Lines of Code](.github/badges/loc.svg)
+<p align="center">
+  <img src=".github/badges/entropy.svg" alt="Entropy">
+  <img src=".github/badges/loc.svg" alt="Lines of Code">
+</p>
 
 Cosmeron is a zero-dependency **C11** ecosystem and standard
 library built around of **Cosmic DSL** for safe, modular,
@@ -21,11 +25,12 @@ and portable systems programming—targeting native platforms
 
 ## Development Progress
 
-**Overall Progress: 28.6% (6/21 modules)**
+**Overall Progress: 33.3% (7/21 modules)**
 
 ```text
 MODULES
 ├── Core              [####################] 100%
+├── Chrono            [####################] 100%
 ├── Container         [####################] 100%
 ├── Math              [####################] 100%
 ├── Numeric           [####################] 100%
@@ -34,7 +39,6 @@ MODULES
 
 ROADMAP
 ├── Audio             [....................]   0%
-├── Chronometry       [....................]   0%
 ├── CLI               [....................]   0%
 ├── Compression       [....................]   0%
 ├── Concurrency       [....................]   0%
@@ -88,8 +92,8 @@ type-safe declarative DSL in pure C11:
   and `COMPARISON`.
 - **Dual-Mode Templates**:
   `TEMPLATE_OBJECT`, `TEMPLATE_PACKAGE`, `TEMPLATE_STRUCT`.
-- **X-Macro Enums, Callbacks & Events**:
-  Zero-heap-allocation reactive events and type-safe callbacks.
+- **X-Macro Enums, Callables, Delegates & Events**:
+  Zero-heap-allocation reactive events, stateless callables, and stateful delegates.
 
 ---
 

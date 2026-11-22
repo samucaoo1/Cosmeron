@@ -1,0 +1,377 @@
+#pragma once
+
+#include <limits.h>
+
+/* ========================================================================== */
+/* 1. Internal Civil Constants & Time-of-Day Helpers                          */
+/* ========================================================================== */
+
+#define CHRONO_CIVIL_INTERNAL_COL_NAME(NAME, VALUE) NAME
+#define CHRONO_CIVIL_INTERNAL_COL_VALUE(NAME, VALUE) VALUE
+#define CHRONO_CIVIL_INTERNAL_GET(FIELD, ROW)                                  \
+  PP_OP_CAT2(CHRONO_CIVIL_INTERNAL_COL_, FIELD) ROW
+
+#define CHRONO_CIVIL_INTERNAL_TABLE(X)                                         \
+  X((UNIX_EPOCH_JDN, 2440588))                                                 \
+  X((MIDDAY_HOUR, 12))                                                         \
+  X((LAST_HOUR_OF_DAY, 23))                                                    \
+  X((LAST_MINUTE_OR_SECOND, 59))                                               \
+  X((LAST_MILLISECOND, 999))
+
+MODULE(DOMAIN(Modules), Chrono,
+    INTERNAL_EX(Civil,
+        ENUM(Const, CHRONO_CIVIL_INTERNAL_TABLE),
+
+        FUNCTION(int64_t, MillisecondsOfDay,
+                 (MODULE_TYPE(Chrono, TimeOfDay) time), {
+          return (((int64_t)time.hour *
+                       MODULE_CONST(Chrono, Math, MINUTES_PER_HOUR) +
+                   time.minute) *
+                      MODULE_CONST(Chrono, Math, SECONDS_PER_MINUTE) +
+                  time.second) *
+                     MODULE_CONST(Chrono, Math, MILLISECONDS_PER_SECOND) +
+                 time.millisecond;
+        }),
+
+        FUNCTION(MODULE_TYPE(Chrono, TimeOfDay), TimeFromMilliseconds,
+                 (int64_t milliseconds), {
+          const int64_t msPerSec =
+              MODULE_CONST(Chrono, Math, MILLISECONDS_PER_SECOND);
+          const int64_t msPerMin =
+              (int64_t)MODULE_CONST(Chrono, Math, SECONDS_PER_MINUTE) *
+              msPerSec;
+          const int64_t msPerHour =
+              (int64_t)MODULE_CONST(Chrono, Math, SECONDS_PER_HOUR) * msPerSec;
+          MODULE_TYPE(Chrono, TimeOfDay) result = {0};
+          result.hour = (uint8_t)(milliseconds / msPerHour);
+          milliseconds %= msPerHour;
+          result.minute = (uint8_t)(milliseconds / msPerMin);
+          milliseconds %= msPerMin;
+          result.second = (uint8_t)(milliseconds / msPerSec);
+          result.millisecond = (uint16_t)(milliseconds % msPerSec);
+          return result;
+        })
+    )
+);
+
+/* ========================================================================== */
+/* 2. Package Implementation: Chrono_Civil                                    */
+/* ========================================================================== */
+
+MODULE_IMPLEMENT(DOMAIN(Modules), Chrono,
+    PACKAGE(Civil,
+        PREDICATE(IsValid,
+                  (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                   MODULE_TYPE(Chrono, CivilStamp) value), {
+          return MODULE_FUNC(Chrono, Calendar, Date, IsValid)(policy,
+                                                              value.date) &&
+                 MODULE_FUNC(Chrono, Civil, Time, IsValid)(value.time);
+        }),
+
+        COMPARISON(Compare,
+                   (MODULE_TYPE(Chrono, CivilStamp) left,
+                    MODULE_TYPE(Chrono, CivilStamp) right), {
+          CMPOUT date = MODULE_FUNC(Chrono, Calendar, Date, Compare)(
+              left.date, right.date);
+          if (date != COMPARISON_CONST(EQUAL)) {
+            return date;
+          }
+          return MODULE_FUNC(Chrono, Civil, Time, Compare)(left.time,
+                                                           right.time);
+        }),
+
+        OPERATION(AddSpan,
+                  (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                   MODULE_TYPE(Chrono, CivilStamp) value,
+                   MODULE_TYPE(Chrono, Span) span,
+                   MODULE_TYPE(Chrono, CivilStamp) *outResult), {
+          if (outResult == NULL ||
+              !MODULE_FUNC(Chrono, Civil, IsValid)(policy, value)) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          int64_t ordinal = 0;
+          if (MODULE_FUNC(Chrono, Calendar, Date, ToOrdinal)(
+                  policy, value.date, &ordinal) != STATUS_CONST(SUCCESS)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          const int64_t msPerDay =
+              (int64_t)MODULE_CONST(Chrono, Math, SECONDS_PER_DAY) *
+              MODULE_CONST(Chrono, Math, MILLISECONDS_PER_SECOND);
+          const int64_t nsPerMs =
+              MODULE_CONST(Chrono, Math, NANOSECONDS_PER_MILLISECOND);
+          int64_t deltaMs =
+              MODULE_IFUNC(Chrono, FloorDiv)(span.nanoseconds, nsPerMs);
+          int64_t baseMs =
+              MODULE_IFUNC(Chrono, Civil, MillisecondsOfDay)(value.time);
+          if ((deltaMs > 0 && baseMs > INT64_MAX - deltaMs) ||
+              (deltaMs < 0 && baseMs < INT64_MIN - deltaMs)) {
+            return STATUS_CONST(ARITHMETIC_OVERFLOW);
+          }
+          int64_t milliseconds = baseMs + deltaMs;
+          int64_t dayDelta =
+              MODULE_IFUNC(Chrono, FloorDiv)(milliseconds, msPerDay);
+          int64_t remainder = milliseconds - dayDelta * msPerDay;
+          if ((dayDelta > 0 && ordinal > INT64_MAX - dayDelta) ||
+              (dayDelta < 0 && ordinal < INT64_MIN - dayDelta)) {
+            return STATUS_CONST(ARITHMETIC_OVERFLOW);
+          }
+          if (MODULE_FUNC(Chrono, Calendar, Date, FromOrdinal)(
+                  policy, ordinal + dayDelta, &outResult->date) !=
+              STATUS_CONST(SUCCESS)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          outResult->time =
+              MODULE_IFUNC(Chrono, Civil, TimeFromMilliseconds)(remainder);
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(Difference,
+                  (const MODULE_TYPE(Chrono, CalendarPolicy) *policy,
+                   MODULE_TYPE(Chrono, CivilStamp) left,
+                   MODULE_TYPE(Chrono, CivilStamp) right,
+                   MODULE_TYPE(Chrono, Span) *outResult), {
+          if (outResult == NULL ||
+              !MODULE_FUNC(Chrono, Civil, IsValid)(policy, left) ||
+              !MODULE_FUNC(Chrono, Civil, IsValid)(policy, right)) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          int64_t days = 0;
+          if (MODULE_FUNC(Chrono, Calendar, Date, Difference)(
+                  policy, left.date, right.date, &days) !=
+              STATUS_CONST(SUCCESS)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          const int64_t msPerDay =
+              (int64_t)MODULE_CONST(Chrono, Math, SECONDS_PER_DAY) *
+              MODULE_CONST(Chrono, Math, MILLISECONDS_PER_SECOND);
+          if (days > INT64_MAX / msPerDay || days < INT64_MIN / msPerDay) {
+            return STATUS_CONST(ARITHMETIC_OVERFLOW);
+          }
+          int64_t milliseconds =
+              days * msPerDay +
+              MODULE_IFUNC(Chrono, Civil, MillisecondsOfDay)(right.time) -
+              MODULE_IFUNC(Chrono, Civil, MillisecondsOfDay)(left.time);
+          const int64_t nsPerMs =
+              MODULE_CONST(Chrono, Math, NANOSECONDS_PER_MILLISECOND);
+          if (milliseconds > INT64_MAX / nsPerMs ||
+              milliseconds < INT64_MIN / nsPerMs) {
+            return STATUS_CONST(ARITHMETIC_OVERFLOW);
+          }
+          outResult->nanoseconds = milliseconds * nsPerMs;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(ToInstantUTC,
+                  (MODULE_TYPE(Chrono, CivilStamp) value,
+                   MODULE_TYPE(Chrono, Instant) *outInstant), {
+          if (outInstant == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          MODULE_TYPE(Chrono, CalendarPolicy) gregorian =
+              MODULE_FUNC(Chrono, Calendar, GregorianPolicy)();
+          if (!MODULE_FUNC(Chrono, Civil, IsValid)(&gregorian, value)) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          int64_t jdn = 0;
+          if (MODULE_FUNC(Chrono, Calendar, Date, ToOrdinal)(
+                  &gregorian, value.date, &jdn) != STATUS_CONST(SUCCESS)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          int64_t days =
+              jdn - (int64_t)CNS(Chrono, Civil, Internal, UNIX_EPOCH_JDN);
+          int64_t seconds =
+              days * MODULE_CONST(Chrono, Math, SECONDS_PER_DAY) +
+              (int64_t)value.time.hour *
+                  MODULE_CONST(Chrono, Math, SECONDS_PER_HOUR) +
+              (int64_t)value.time.minute *
+                  MODULE_CONST(Chrono, Math, SECONDS_PER_MINUTE) +
+              (int64_t)value.time.second;
+          outInstant->seconds = seconds;
+          outInstant->nanoseconds =
+              (uint32_t)value.time.millisecond *
+              (uint32_t)MODULE_CONST(Chrono, Math, NANOSECONDS_PER_MILLISECOND);
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(FromInstantUTC,
+                  (MODULE_TYPE(Chrono, Instant) instant,
+                   MODULE_TYPE(Chrono, CivilStamp) *outValue), {
+          if (outValue == NULL ||
+              !MODULE_FUNC(Chrono, Clock, Instant, IsValid)(instant)) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          MODULE_TYPE(Chrono, CalendarPolicy) gregorian =
+              MODULE_FUNC(Chrono, Calendar, GregorianPolicy)();
+          const int64_t secPerDay =
+              MODULE_CONST(Chrono, Math, SECONDS_PER_DAY);
+          int64_t days =
+              MODULE_IFUNC(Chrono, FloorDiv)(instant.seconds, secPerDay);
+          int64_t seconds = instant.seconds - days * secPerDay;
+          if (MODULE_FUNC(Chrono, Calendar, Date, FromOrdinal)(
+                  &gregorian,
+                  (int64_t)CNS(Chrono, Civil, Internal, UNIX_EPOCH_JDN) + days,
+                  &outValue->date) != STATUS_CONST(SUCCESS)) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          const int64_t secPerHour =
+              MODULE_CONST(Chrono, Math, SECONDS_PER_HOUR);
+          const int64_t secPerMin =
+              MODULE_CONST(Chrono, Math, SECONDS_PER_MINUTE);
+          outValue->time.hour = (uint8_t)(seconds / secPerHour);
+          seconds %= secPerHour;
+          outValue->time.minute = (uint8_t)(seconds / secPerMin);
+          outValue->time.second = (uint8_t)(seconds % secPerMin);
+          outValue->time.millisecond =
+              (uint16_t)(instant.nanoseconds /
+                         (uint32_t)MODULE_CONST(Chrono, Math,
+                                                NANOSECONDS_PER_MILLISECOND));
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        FUNCTION(MODULE_TYPE(Chrono, CivilStamp), StartOfDay,
+                 (MODULE_TYPE(Chrono, Date) date), {
+          return (MODULE_TYPE(Chrono, CivilStamp)){
+              .date = date,
+              .time = {0U, 0U, 0U, 0U},
+          };
+        }),
+
+        FUNCTION(MODULE_TYPE(Chrono, CivilStamp), Midday,
+                 (MODULE_TYPE(Chrono, Date) date), {
+          return (MODULE_TYPE(Chrono, CivilStamp)){
+              .date = date,
+              .time = {.millisecond = 0U,
+                       .second = 0U,
+                       .minute = 0U,
+                       .hour = (uint8_t)CNS(Chrono, Civil, Internal,
+                                            MIDDAY_HOUR)},
+          };
+        }),
+
+        FUNCTION(MODULE_TYPE(Chrono, CivilStamp), EndOfDay,
+                 (MODULE_TYPE(Chrono, Date) date), {
+          return (MODULE_TYPE(Chrono, CivilStamp)){
+              .date = date,
+              .time = {.millisecond = (uint16_t)CNS(Chrono, Civil, Internal,
+                                                    LAST_MILLISECOND),
+                       .second = (uint8_t)CNS(Chrono, Civil, Internal,
+                                              LAST_MINUTE_OR_SECOND),
+                       .minute = (uint8_t)CNS(Chrono, Civil, Internal,
+                                              LAST_MINUTE_OR_SECOND),
+                       .hour = (uint8_t)CNS(Chrono, Civil, Internal,
+                                            LAST_HOUR_OF_DAY)},
+          };
+        }),
+
+        FUNCTION(MODULE_TYPE(Chrono, CivilStamp), TruncateToHour,
+                 (MODULE_TYPE(Chrono, CivilStamp) value), {
+          value.time.minute = 0U;
+          value.time.second = 0U;
+          value.time.millisecond = 0U;
+          return value;
+        }),
+
+        FUNCTION(MODULE_TYPE(Chrono, CivilStamp), TruncateToMinute,
+                 (MODULE_TYPE(Chrono, CivilStamp) value), {
+          value.time.second = 0U;
+          value.time.millisecond = 0U;
+          return value;
+        }),
+
+        FUNCTION(MODULE_TYPE(Chrono, CivilStamp), TruncateToSecond,
+                 (MODULE_TYPE(Chrono, CivilStamp) value), {
+          value.time.millisecond = 0U;
+          return value;
+        }),
+
+        SPACE(Time,
+              PREDICATE(IsValid, (MODULE_TYPE(Chrono, TimeOfDay) time), {
+                return time.hour <
+                           MODULE_CONST(Chrono, Math, HOURS_PER_DAY) &&
+                       time.minute <
+                           MODULE_CONST(Chrono, Math, MINUTES_PER_HOUR) &&
+                       time.second <
+                           MODULE_CONST(Chrono, Math, SECONDS_PER_MINUTE) &&
+                       time.millisecond <
+                           MODULE_CONST(Chrono, Math, MILLISECONDS_PER_SECOND);
+              }),
+
+              COMPARISON(Compare,
+                         (MODULE_TYPE(Chrono, TimeOfDay) left,
+                          MODULE_TYPE(Chrono, TimeOfDay) right), {
+                int64_t leftMs =
+                    MODULE_IFUNC(Chrono, Civil, MillisecondsOfDay)(left);
+                int64_t rightMs =
+                    MODULE_IFUNC(Chrono, Civil, MillisecondsOfDay)(right);
+                if (leftMs < rightMs) {
+                  return COMPARISON_CONST(LOWER);
+                }
+                if (leftMs > rightMs) {
+                  return COMPARISON_CONST(HIGHER);
+                }
+                return COMPARISON_CONST(EQUAL);
+              }),
+
+              OPERATION(ToMilliseconds,
+                        (MODULE_TYPE(Chrono, TimeOfDay) time,
+                         int64_t *outMillis), {
+                if (outMillis == NULL ||
+                    !MODULE_FUNC(Chrono, Civil, Time, IsValid)(time)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                *outMillis =
+                    MODULE_IFUNC(Chrono, Civil, MillisecondsOfDay)(time);
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(FromMilliseconds,
+                        (int64_t millis,
+                         MODULE_TYPE(Chrono, TimeOfDay) *outTime), {
+                if (outTime == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                const int64_t msPerDay =
+                    (int64_t)MODULE_CONST(Chrono, Math, SECONDS_PER_DAY) *
+                    MODULE_CONST(Chrono, Math, MILLISECONDS_PER_SECOND);
+                if (millis < 0 || millis >= msPerDay) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                *outTime =
+                    MODULE_IFUNC(Chrono, Civil, TimeFromMilliseconds)(millis);
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(AddSpan,
+                        (MODULE_TYPE(Chrono, TimeOfDay) time,
+                         MODULE_TYPE(Chrono, Span) span,
+                         MODULE_TYPE(Chrono, TimeOfDay) *outTime,
+                         int64_t *outDayCarry), {
+                if (outTime == NULL ||
+                    !MODULE_FUNC(Chrono, Civil, Time, IsValid)(time)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                const int64_t msPerDay =
+                    (int64_t)MODULE_CONST(Chrono, Math, SECONDS_PER_DAY) *
+                    MODULE_CONST(Chrono, Math, MILLISECONDS_PER_SECOND);
+                const int64_t nsPerMs =
+                    MODULE_CONST(Chrono, Math, NANOSECONDS_PER_MILLISECOND);
+                int64_t deltaMs =
+                    MODULE_IFUNC(Chrono, FloorDiv)(span.nanoseconds, nsPerMs);
+                int64_t baseMs =
+                    MODULE_IFUNC(Chrono, Civil, MillisecondsOfDay)(time);
+                int64_t totalMs = baseMs + deltaMs;
+                int64_t carry =
+                    MODULE_IFUNC(Chrono, FloorDiv)(totalMs, msPerDay);
+                int64_t remMs = totalMs - carry * msPerDay;
+                *outTime =
+                    MODULE_IFUNC(Chrono, Civil, TimeFromMilliseconds)(remMs);
+                if (outDayCarry != NULL) {
+                  *outDayCarry = carry;
+                }
+                return STATUS_CONST(SUCCESS);
+              })
+        )
+    )
+);
+
+/* EOF */

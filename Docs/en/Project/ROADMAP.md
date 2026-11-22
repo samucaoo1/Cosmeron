@@ -7,6 +7,7 @@ Cosmeron is entering **pre-release** with smaller, focused releases. All refacto
 ## Refactored Modules (100%)
 
 - `Core` — **100%** (Preprocessor, DSL, Memory, Outcome, Detect, Error, etc.)
+- `Modules/Chrono` — **100%**
 - `Modules/Container` — **100%**
 - `Modules/Math` — **100%**
 - `Modules/Numeric` — **100%**
@@ -16,7 +17,6 @@ Cosmeron is entering **pre-release** with smaller, focused releases. All refacto
 ## Pending Refactoring (`Roadmap/Cosmeron/Modules/`)
 
 - `Audio`
-- `Chronometry`
 - `CLI`
 - `Compression`
 - `Concurrency`
@@ -34,4 +34,4 @@ Cosmeron is entering **pre-release** with smaller, focused releases. All refacto
 ## Platform & Target Goals
 
 - **WebAssembly** (`WASI` / `Emscripten`) as a first-class target alongside Linux, BSD, macOS, and Windows.
-- **Zero-dependency C11** with declarative DSL (`MODULE`, `PACKAGE`, `OBJECT`, `STRUCT`, `TEMPLATE_*`, `ENUM`, `CALLBACK`, `EVENT_*`).
+- **Zero-dependency C11** with declarative DSL (`MODULE`, `PACKAGE`, `OBJECT`, `STRUCT`, `TEMPLATE_*`, `ENUM`, `CALLABLE`, `DELEGATE`, `EVENT_*`).

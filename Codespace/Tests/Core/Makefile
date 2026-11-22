@@ -1,8 +1,8 @@
 CC ?= cc
-CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L
+CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -Werror -D_POSIX_C_SOURCE=200809L -I../..
 BUILD ?= .build
 
-TESTS := Namespace Cast Bit Primitive Preprocessor Detect Outcome Condition Defer Diagnostic Error Memory MemoryOperations MemoryUtilities Stream Algorithm Callback ComparisonEx Event Object ObjectEx ObjectNoFunctionTable Package PackageNoFunctionTable Pool PoolNoFunctionTable Heap GarbageCollector Calculator CalculatorNoFunctionTable ModuleEngine IncludeAll SmartPointer
+TESTS := Namespace Cast Bit Primitive Preprocessor Detect Outcome Condition Defer Diagnostic Error Memory MemoryOperations MemoryUtilities Stream Algorithm Callable Delegate ComparisonEx Event Object ObjectEx ObjectNoFunctionTable Package PackageNoFunctionTable Pool PoolNoFunctionTable Heap GarbageCollector Calculator CalculatorNoFunctionTable ModuleEngine IncludeAll SmartPointer
 
 all: run
 

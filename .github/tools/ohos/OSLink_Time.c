@@ -1,5 +1,5 @@
-#include "Cosmeron/Modules/Chronometry/Clock/Clock.h"
+#include "Cosmeron/Modules/Chrono/Clock/Clock.h"
 OPSTATUS CosmeronOHOS_Clock(void) {
-  CHRONOMETRY_TYPE(ClockTimePoint) point = {0};
-  return CLOCK_FUNC(Now)(&point);
+  MODULE_TYPE(Chrono, ClockPoint) point = {0};
+  return MODULE_FUNC(Chrono, Clock, Now)(&point);
 }

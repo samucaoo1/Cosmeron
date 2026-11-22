@@ -89,7 +89,7 @@ MODULE(DOMAIN(Container), Tree,
  * ========================================================================== */
 
 #define COSMERON_MACRO_INTERNAL_TREE_BIN_HELPERS(TARGET, SUFFIX, NODE_TYPE,    \
-                                                 KEY_TYPE, COMP_CLOSURE_TYPE)  \
+                                                 KEY_TYPE, COMP_DELEGATE_TYPE)  \
   INTERNAL_DEF_EX(                                                             \
       Tree, NS(TARGET, SUFFIX),                                                \
       COMPARISON(DefaultCompare,                                               \
@@ -176,10 +176,10 @@ MODULE(DOMAIN(Container), Tree,
                 }),                                                            \
                                                                                \
       FUNCTION(NODE_TYPE *, FindNode,                                          \
-               (NODE_TYPE * root, COMP_CLOSURE_TYPE cmp, KEY_TYPE key), {      \
+               (NODE_TYPE * root, COMP_DELEGATE_TYPE cmp, KEY_TYPE key), {      \
                  NODE_TYPE *current = root;                                    \
                  while (current != NULL) {                                     \
-                   CMPOUT r = CLOSURE_CALL(cmp, key, current->key);            \
+                   CMPOUT r = DELEGATE_CALL(cmp, key, current->key);            \
                    if (r < COMPARISON_CONST(EQUAL))                            \
                      current = current->left;                                  \
                    else if (r > COMPARISON_CONST(EQUAL))                       \
@@ -191,11 +191,11 @@ MODULE(DOMAIN(Container), Tree,
                }),                                                             \
                                                                                \
       FUNCTION(NODE_TYPE *, LowerBoundNode,                                    \
-               (NODE_TYPE * root, COMP_CLOSURE_TYPE cmp, KEY_TYPE key), {      \
+               (NODE_TYPE * root, COMP_DELEGATE_TYPE cmp, KEY_TYPE key), {      \
                  NODE_TYPE *current = root;                                    \
                  NODE_TYPE *candidate = NULL;                                  \
                  while (current != NULL) {                                     \
-                   CMPOUT r = CLOSURE_CALL(cmp, current->key, key);            \
+                   CMPOUT r = DELEGATE_CALL(cmp, current->key, key);            \
                    if (r >= COMPARISON_CONST(EQUAL)) {                         \
                      candidate = current;                                      \
                      current = current->left;                                  \
@@ -207,11 +207,11 @@ MODULE(DOMAIN(Container), Tree,
                }),                                                             \
                                                                                \
       FUNCTION(NODE_TYPE *, UpperBoundNode,                                    \
-               (NODE_TYPE * root, COMP_CLOSURE_TYPE cmp, KEY_TYPE key), {      \
+               (NODE_TYPE * root, COMP_DELEGATE_TYPE cmp, KEY_TYPE key), {      \
                  NODE_TYPE *current = root;                                    \
                  NODE_TYPE *candidate = NULL;                                  \
                  while (current != NULL) {                                     \
-                   CMPOUT r = CLOSURE_CALL(cmp, current->key, key);            \
+                   CMPOUT r = DELEGATE_CALL(cmp, current->key, key);            \
                    if (r > COMPARISON_CONST(EQUAL)) {                          \
                      candidate = current;                                      \
                      current = current->left;                                  \
@@ -231,7 +231,7 @@ MODULE(DOMAIN(Container), Tree,
           bool reverse;                                                        \
       ),                                                                       \
                                                                                \
-      CLOSURE(PROCEDURE(Visitor, (const KEY_TYPE *key))),                      \
+      DELEGATE(PROCEDURE(Visitor, (const KEY_TYPE *key))),                      \
                                                                                \
       OPERATION_INLINE(                                                        \
           FromNode, (NODE_TYPE *root, NODE_TYPE *current, bool reverse), {     \
@@ -382,11 +382,11 @@ MODULE(DOMAIN(Container), Tree,
                                                                                \
       OPERATION_INLINE(                                                        \
           ForEach,                                                             \
-          (MODULE_CLOSURE(Tree, ITER_TARGET, SUFFIX, Visitor) visitor), {      \
-            if (!self || !CLOSURE_IS_VALID(visitor))                           \
+          (MODULE_DELEGATE(Tree, ITER_TARGET, SUFFIX, Visitor) visitor), {      \
+            if (!self || !DELEGATE_IS_VALID(visitor))                           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             while (self->current != NULL) {                                    \
-              CLOSURE_CALL(visitor, &self->current->key);                      \
+              DELEGATE_CALL(visitor, &self->current->key);                      \
               self->current =                                                  \
                   self->reverse                                                \
                       ? MODULE_IFUNC(Tree, NS(TREE_TARGET, SUFFIX),            \
@@ -408,7 +408,7 @@ MODULE(DOMAIN(Container), Tree,
           bool reverse;                                                        \
       ),                                                                       \
                                                                                \
-      CLOSURE(PROCEDURE(Visitor, (KEY_TYPE key, VALUE_TYPE *value))),          \
+      DELEGATE(PROCEDURE(Visitor, (KEY_TYPE key, VALUE_TYPE *value))),          \
                                                                                \
       OPERATION_INLINE(                                                        \
           FromNode, (NODE_TYPE *root, NODE_TYPE *current, bool reverse), {     \
@@ -569,11 +569,11 @@ MODULE(DOMAIN(Container), Tree,
                                                                                \
       OPERATION_INLINE(                                                        \
           ForEach,                                                             \
-          (MODULE_CLOSURE(Tree, ITER_TARGET, SUFFIX, Visitor) visitor), {      \
-            if (!self || !CLOSURE_IS_VALID(visitor))                           \
+          (MODULE_DELEGATE(Tree, ITER_TARGET, SUFFIX, Visitor) visitor), {      \
+            if (!self || !DELEGATE_IS_VALID(visitor))                           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             while (self->current != NULL) {                                    \
-              CLOSURE_CALL(visitor, self->current->key, &self->current->value);\
+              DELEGATE_CALL(visitor, self->current->key, &self->current->value);\
               self->current =                                                  \
                   self->reverse                                                \
                       ? MODULE_IFUNC(Tree, NS(TREE_TARGET, SUFFIX),            \
@@ -591,68 +591,68 @@ MODULE(DOMAIN(Container), Tree,
 
 #define COSMERON_MACRO_INTERNAL_TREE_BIN_SET_TRAVERSE(TARGET, SUFFIX,          \
                                                       NODE_TYPE,               \
-                                                      VISITOR_CLOSURE_TYPE)    \
+                                                      VISITOR_DELEGATE_TYPE)    \
   INTERNAL_DEF_EX(                                                             \
       Tree, NS(TARGET, Traverse, SUFFIX),                                      \
-      PROCEDURE(PreOrder, (NODE_TYPE *node, VISITOR_CLOSURE_TYPE visitor), {   \
+      PROCEDURE(PreOrder, (NODE_TYPE *node, VISITOR_DELEGATE_TYPE visitor), {   \
         if (!node)                                                             \
           return;                                                              \
-        CLOSURE_CALL(visitor, &node->key);                                     \
+        DELEGATE_CALL(visitor, &node->key);                                     \
         MODULE_IFUNC(Tree, NS(TARGET, Traverse, SUFFIX), PreOrder)(            \
             node->left, visitor);                                              \
         MODULE_IFUNC(Tree, NS(TARGET, Traverse, SUFFIX), PreOrder)(            \
             node->right, visitor);                                             \
       }),                                                                      \
-      PROCEDURE(InOrder, (NODE_TYPE *node, VISITOR_CLOSURE_TYPE visitor), {    \
+      PROCEDURE(InOrder, (NODE_TYPE *node, VISITOR_DELEGATE_TYPE visitor), {    \
         if (!node)                                                             \
           return;                                                              \
         MODULE_IFUNC(Tree, NS(TARGET, Traverse, SUFFIX), InOrder)(             \
             node->left, visitor);                                              \
-        CLOSURE_CALL(visitor, &node->key);                                     \
+        DELEGATE_CALL(visitor, &node->key);                                     \
         MODULE_IFUNC(Tree, NS(TARGET, Traverse, SUFFIX), InOrder)(             \
             node->right, visitor);                                             \
       }),                                                                      \
-      PROCEDURE(PostOrder, (NODE_TYPE *node, VISITOR_CLOSURE_TYPE visitor), {  \
+      PROCEDURE(PostOrder, (NODE_TYPE *node, VISITOR_DELEGATE_TYPE visitor), {  \
         if (!node)                                                             \
           return;                                                              \
         MODULE_IFUNC(Tree, NS(TARGET, Traverse, SUFFIX), PostOrder)(           \
             node->left, visitor);                                              \
         MODULE_IFUNC(Tree, NS(TARGET, Traverse, SUFFIX), PostOrder)(           \
             node->right, visitor);                                             \
-        CLOSURE_CALL(visitor, &node->key);                                     \
+        DELEGATE_CALL(visitor, &node->key);                                     \
       }))
 
 #define COSMERON_MACRO_INTERNAL_TREE_BIN_MAP_TRAVERSE(TARGET, SUFFIX,          \
                                                       NODE_TYPE,               \
-                                                      VISITOR_CLOSURE_TYPE)    \
+                                                      VISITOR_DELEGATE_TYPE)    \
   INTERNAL_DEF_EX(                                                             \
       Tree, NS(TARGET, Traverse, SUFFIX),                                      \
-      PROCEDURE(PreOrder, (NODE_TYPE *node, VISITOR_CLOSURE_TYPE visitor), {   \
+      PROCEDURE(PreOrder, (NODE_TYPE *node, VISITOR_DELEGATE_TYPE visitor), {   \
         if (!node)                                                             \
           return;                                                              \
-        CLOSURE_CALL(visitor, node->key, &node->value);                        \
+        DELEGATE_CALL(visitor, node->key, &node->value);                        \
         MODULE_IFUNC(Tree, NS(TARGET, Traverse, SUFFIX), PreOrder)(            \
             node->left, visitor);                                              \
         MODULE_IFUNC(Tree, NS(TARGET, Traverse, SUFFIX), PreOrder)(            \
             node->right, visitor);                                             \
       }),                                                                      \
-      PROCEDURE(InOrder, (NODE_TYPE *node, VISITOR_CLOSURE_TYPE visitor), {    \
+      PROCEDURE(InOrder, (NODE_TYPE *node, VISITOR_DELEGATE_TYPE visitor), {    \
         if (!node)                                                             \
           return;                                                              \
         MODULE_IFUNC(Tree, NS(TARGET, Traverse, SUFFIX), InOrder)(             \
             node->left, visitor);                                              \
-        CLOSURE_CALL(visitor, node->key, &node->value);                        \
+        DELEGATE_CALL(visitor, node->key, &node->value);                        \
         MODULE_IFUNC(Tree, NS(TARGET, Traverse, SUFFIX), InOrder)(             \
             node->right, visitor);                                             \
       }),                                                                      \
-      PROCEDURE(PostOrder, (NODE_TYPE *node, VISITOR_CLOSURE_TYPE visitor), {  \
+      PROCEDURE(PostOrder, (NODE_TYPE *node, VISITOR_DELEGATE_TYPE visitor), {  \
         if (!node)                                                             \
           return;                                                              \
         MODULE_IFUNC(Tree, NS(TARGET, Traverse, SUFFIX), PostOrder)(           \
             node->left, visitor);                                              \
         MODULE_IFUNC(Tree, NS(TARGET, Traverse, SUFFIX), PostOrder)(           \
             node->right, visitor);                                             \
-        CLOSURE_CALL(visitor, node->key, &node->value);                        \
+        DELEGATE_CALL(visitor, node->key, &node->value);                        \
       }))
 
 #define COSMERON_MACRO_INTERNAL_TREE_BIN_SET_OBJECT(TARGET, ITER_TARGET,       \
@@ -662,7 +662,7 @@ MODULE(DOMAIN(Container), Tree,
       FIELDS(                                                                  \
           NODE_TYPE *root;                                                     \
           size_t size;                                                         \
-          MODULE_CLOSURE(Tree, TARGET, SUFFIX, Comparator) compare;            \
+          MODULE_DELEGATE(Tree, TARGET, SUFFIX, Comparator) compare;            \
       ),                                                                       \
                                                                                \
       OPERATION_INLINE(                                                        \
@@ -677,11 +677,11 @@ MODULE(DOMAIN(Container), Tree,
             self->size = 0U;                                                   \
             if (compareFn) {                                                   \
               self->compare = NS_JOIN(                                         \
-                  MODULE_CLOSURE_FUNC(Tree, TARGET, SUFFIX, Comparator),       \
+                  MODULE_DELEGATE_FUNC(Tree, TARGET, SUFFIX, Comparator),       \
                   Bind)(compareFn, context);                                   \
             } else {                                                           \
               self->compare = NS_JOIN(                                         \
-                  MODULE_CLOSURE_FUNC(Tree, TARGET, SUFFIX, Comparator),       \
+                  MODULE_DELEGATE_FUNC(Tree, TARGET, SUFFIX, Comparator),       \
                   Bind)(                                                       \
                   MODULE_IFUNC(Tree, NS(TARGET, SUFFIX), DefaultCompare),      \
                   NULL);                                                       \
@@ -897,9 +897,9 @@ MODULE(DOMAIN(Container), Tree,
       CONST_OPERATION_INLINE(                                                  \
           ForEach,                                                             \
           (MODULE_ENUM(Tree, Traversal) order,                                 \
-           MODULE_CLOSURE(Tree, TARGET, SUFFIX, Visitor) visitor),             \
+           MODULE_DELEGATE(Tree, TARGET, SUFFIX, Visitor) visitor),             \
           {                                                                    \
-            if (!self || !CLOSURE_IS_VALID(visitor))                           \
+            if (!self || !DELEGATE_IS_VALID(visitor))                           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             switch (order) {                                                   \
             case Tree_Traversal_IN_ORDER:                                      \
@@ -927,7 +927,7 @@ MODULE(DOMAIN(Container), Tree,
       FIELDS(                                                                  \
           NODE_TYPE *root;                                                     \
           size_t size;                                                         \
-          MODULE_CLOSURE(Tree, TARGET, SUFFIX, Comparator) compare;            \
+          MODULE_DELEGATE(Tree, TARGET, SUFFIX, Comparator) compare;            \
       ),                                                                       \
                                                                                \
       OPERATION_INLINE(                                                        \
@@ -942,11 +942,11 @@ MODULE(DOMAIN(Container), Tree,
             self->size = 0U;                                                   \
             if (compareFn) {                                                   \
               self->compare = NS_JOIN(                                         \
-                  MODULE_CLOSURE_FUNC(Tree, TARGET, SUFFIX, Comparator),       \
+                  MODULE_DELEGATE_FUNC(Tree, TARGET, SUFFIX, Comparator),       \
                   Bind)(compareFn, context);                                   \
             } else {                                                           \
               self->compare = NS_JOIN(                                         \
-                  MODULE_CLOSURE_FUNC(Tree, TARGET, SUFFIX, Comparator),       \
+                  MODULE_DELEGATE_FUNC(Tree, TARGET, SUFFIX, Comparator),       \
                   Bind)(                                                       \
                   MODULE_IFUNC(Tree, NS(TARGET, SUFFIX), DefaultCompare),      \
                   NULL);                                                       \
@@ -1182,9 +1182,9 @@ MODULE(DOMAIN(Container), Tree,
       OPERATION_INLINE(                                                        \
           ForEach,                                                             \
           (MODULE_ENUM(Tree, Traversal) order,                                 \
-           MODULE_CLOSURE(Tree, TARGET, SUFFIX, Visitor) visitor),             \
+           MODULE_DELEGATE(Tree, TARGET, SUFFIX, Visitor) visitor),             \
           {                                                                    \
-            if (!self || !CLOSURE_IS_VALID(visitor))                           \
+            if (!self || !DELEGATE_IS_VALID(visitor))                           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             switch (order) {                                                   \
             case Tree_Traversal_IN_ORDER:                                      \

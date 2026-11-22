@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../Condition/Status.h"
-#include "../Module/Closure/Closure.h"
+#include "../Module/Delegate/Delegate.h"
 #include "../Module/Module.h"
 #include "../Preprocessor/Compiling.inc"
 #include "Alloc.h"
@@ -35,16 +35,16 @@
   X((MAX_ROOTS, 128U))                                                         \
   X((WORKLIST_CHUNK_CAPACITY, 512U))
 
-CLOSURE_PROCEDURE(
+DELEGATE_PROCEDURE(
     MODULE_INS(Memory, CollectorFinalizer),
     (void *ptr)
 );
 
-#define MEMORY_COLLECTOR_FINALIZER_CALLBACK                                    \
-  TCLOSURE(MODULE_INS(Memory, CollectorFinalizer))
+#define MEMORY_COLLECTOR_FINALIZER_DELEGATE                                    \
+  TDELEGATE(MODULE_INS(Memory, CollectorFinalizer))
 
 #define MEMORY_COLLECTOR_FINALIZER_BIND(FN, CTX)                               \
-  NS(CLOSURE_FUNC(MODULE_INS(Memory, CollectorFinalizer)), Bind)((FN), (CTX))
+  NS(DELEGATE_FUNC(MODULE_INS(Memory, CollectorFinalizer)), Bind)((FN), (CTX))
 
 #define MEMORY_COLLECTOR_FIELD_BIT(TYPE, FIELD)                                \
   (1ULL << (offsetof(TYPE, FIELD) / sizeof(void *)))
@@ -85,7 +85,7 @@ MODULE(DOMAIN(Core), Memory,
     ISTRUCT(CollectorFinalizerEntry,
         FIELDS(
             void *object;
-            MEMORY_COLLECTOR_FINALIZER_CALLBACK callback;
+            MEMORY_COLLECTOR_FINALIZER_DELEGATE finalizer;
             struct MODULE_ITYPE(Memory, CollectorFinalizerEntry) *next;
         )
     ),
@@ -117,7 +117,7 @@ MODULE(DOMAIN(Core), Memory,
             OPERATION(Typed, (void *outPointerObject, const MODULE_TYPE(Memory, Collector_Descriptor) *descriptor)),
             OPERATION(Atomic, (void *outPointerObject, size_t size))
         ),
-        OPERATION(SetFinalizer, (const void *ptr, MEMORY_COLLECTOR_FINALIZER_CALLBACK finalizer)),
+        OPERATION(SetFinalizer, (const void *ptr, MEMORY_COLLECTOR_FINALIZER_DELEGATE finalizer)),
         OPERATION(PinRoot, (const void *rootPointerAddress)),
         OPERATION(UnpinRoot, (const void *rootPointerAddress)),
         OPERATION(Collect, ()),
@@ -138,7 +138,7 @@ MODULE(DOMAIN(Core), Memory,
             OPERATION(Typed, (void *outPointerObject, const MODULE_TYPE(Memory, Collector_Descriptor) *descriptor)),
             OPERATION(Atomic, (void *outPointerObject, size_t size))
         ),
-        OPERATION(SetFinalizer, (const void *ptr, MEMORY_COLLECTOR_FINALIZER_CALLBACK finalizer)),
+        OPERATION(SetFinalizer, (const void *ptr, MEMORY_COLLECTOR_FINALIZER_DELEGATE finalizer)),
         OPERATION(PinRoot, (const void *rootPointerAddress)),
         OPERATION(UnpinRoot, (const void *rootPointerAddress)),
         OPERATION(Collect, ()),

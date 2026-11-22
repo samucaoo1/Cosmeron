@@ -75,8 +75,8 @@ static void NS(HashTest, SetAndIter)(void) {
   assert(count == 48U);
 
   int64_t forEachSum = 0;
-  MODULE_CLOSURE(Hash, Set, Int32, Visitor) visitor =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Hash, Set, Int32, Visitor), Bind)(
+  MODULE_DELEGATE(Hash, Set, Int32, Visitor) visitor =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Hash, Set, Int32, Visitor), Bind)(
           MODULE_IFUNC(HashTest, SumSet), &forEachSum);
   assert(OBJECT_CALL(&set, ForEach, visitor) == STATUS_CONST(SUCCESS));
   assert(forEachSum == iterSum);
@@ -100,8 +100,8 @@ static void NS(HashTest, MapAndCustomHash)(void) {
   assert(OBJECT_CALL(&map, Find, 1, &val) == STATUS_CONST(SUCCESS));
   assert(*val == 20);
 
-  MODULE_CLOSURE(Hash, Map, Int32_Int32, Visitor) mv =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Hash, Map, Int32_Int32, Visitor), Bind)(
+  MODULE_DELEGATE(Hash, Map, Int32_Int32, Visitor) mv =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Hash, Map, Int32_Int32, Visitor), Bind)(
           MODULE_IFUNC(HashTest, AddOneMap), NULL);
   assert(OBJECT_CALL(&map, ForEach, mv) == STATUS_CONST(SUCCESS));
   assert(*val == 21);

@@ -1,0 +1,1140 @@
+#pragma once
+
+#include <string.h>
+#if OS_WINDOWS
+#include <windows.h>
+#else
+#include <time.h>
+#endif
+
+/* ========================================================================== */
+/* 1. Internal Timezone Constants & Helpers (Row-Tuple Pattern)               */
+/* ========================================================================== */
+
+#define CHRONO_TIMEZONE_INTERNAL_COL_NAME(NAME, VALUE) NAME
+#define CHRONO_TIMEZONE_INTERNAL_COL_VALUE(NAME, VALUE) VALUE
+#define CHRONO_TIMEZONE_INTERNAL_GET(FIELD, ROW)                               \
+  PP_OP_CAT2(CHRONO_TIMEZONE_INTERNAL_COL_, FIELD) ROW
+
+#define CHRONO_TIMEZONE_INTERNAL_TABLE(X)                                      \
+  X((MAX_OFFSET_MINUTES, 1439))                                                \
+  X((MAX_DST_SAVINGS_MINUTES, 180))                                            \
+  X((TM_YEAR_BASE, 1900))                                                      \
+  X((TM_MONTH_BASE, 1))
+
+MODULE(DOMAIN(Modules), Chrono,
+    ISTRUCT(ZoneNameEntry,
+        FIELDS(
+            const char *ianaName;
+            MODULE_ENUM(Chrono, Timezone, ZoneId) zoneId;
+        )
+    ),
+
+    ISTRUCT(CountryEntry,
+        FIELDS(
+            const char *code;
+            const char *name;
+        )
+    ),
+
+    ISTRUCT(CountryZoneEntry,
+        FIELDS(
+            const char *code;
+            MODULE_ENUM(Chrono, Timezone, ZoneId) zoneId;
+        )
+    ),
+
+    INTERNAL_EX(Timezone,
+        ENUM(Const, CHRONO_TIMEZONE_INTERNAL_TABLE),
+
+        OPERATION(OffsetSpan,
+                  (MODULE_TYPE(Chrono, UtcOffset) offset, int64_t sign,
+                   MODULE_TYPE(Chrono, Span) *outSpan), {
+          return MODULE_FUNC(Chrono, Math, FromSeconds)(
+              sign * (int64_t)offset.minutesEastOfUtc *
+                  MODULE_CONST(Chrono, Math, SECONDS_PER_MINUTE),
+              outSpan);
+        }),
+
+        PREDICATE(IsTransitionRuleValid,
+                  (MODULE_TYPE(Chrono, TimezoneDstRule) rule), {
+          return rule.month >= MODULE_CONST(Chrono, Calendar, JANUARY) &&
+                 rule.month <= MODULE_CONST(Chrono, Calendar, DECEMBER) &&
+                 rule.anchorKind >=
+                     MODULE_CONST(Chrono, Calendar, WEEKDAY_EXACT) &&
+                 rule.anchorKind <=
+                     MODULE_CONST(Chrono, Calendar, WEEKDAY_LAST) &&
+                 rule.weekday >= MODULE_CONST(Chrono, Calendar, MONDAY) &&
+                 rule.weekday <= MODULE_CONST(Chrono, Calendar, SUNDAY) &&
+                 rule.localHour <= MODULE_CONST(Chrono, Math, HOURS_PER_DAY) &&
+                 (rule.localHour < MODULE_CONST(Chrono, Math, HOURS_PER_DAY) ||
+                  rule.localMinute == 0U) &&
+                 rule.localMinute <
+                     MODULE_CONST(Chrono, Math, MINUTES_PER_HOUR) &&
+                 rule.timeBase >=
+                     MODULE_CONST(Chrono, Timezone, TIME_BASE_WALL) &&
+                 rule.timeBase <= MODULE_CONST(Chrono, Timezone, TIME_BASE_UTC);
+        }),
+
+        OPERATION(TransitionStampForYear,
+                  (int32_t year, MODULE_TYPE(Chrono, TimezoneDstRule) rule,
+                   MODULE_TYPE(Chrono, CivilStamp) *outStamp), {
+          MODULE_TYPE(Chrono, Date) date = {0};
+          OPSTATUS status = MODULE_FUNC(Chrono, Calendar, Date, FromWeekdayAnchor)(
+              MODULE_CONST(Chrono, Calendar, GREGORIAN), year, rule.month,
+              rule.anchorKind, rule.anchorDay, rule.weekday, &date);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          uint8_t hour = rule.localHour;
+          if (hour == MODULE_CONST(Chrono, Math, HOURS_PER_DAY)) {
+            MODULE_TYPE(Chrono, CalendarPolicy) gregorian =
+                MODULE_FUNC(Chrono, Calendar, GregorianPolicy)();
+            int64_t ordinal = 0;
+            status = MODULE_FUNC(Chrono, Calendar, Date, ToOrdinal)(
+                &gregorian, date, &ordinal);
+            if (status != STATUS_CONST(SUCCESS)) {
+              return status;
+            }
+            status = MODULE_FUNC(Chrono, Calendar, Date, FromOrdinal)(
+                &gregorian, ordinal + 1, &date);
+            if (status != STATUS_CONST(SUCCESS)) {
+              return status;
+            }
+            hour = 0U;
+          }
+          *outStamp = (MODULE_TYPE(Chrono, CivilStamp)){
+              .date = date,
+              .time = {.millisecond = 0U,
+                       .second = 0U,
+                       .minute = rule.localMinute,
+                       .hour = hour}};
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(TransitionInstantForYear,
+                  (int32_t year, MODULE_TYPE(Chrono, TimezoneDstRule) rule,
+                   MODULE_TYPE(Chrono, UtcOffset) standardOffset,
+                   MODULE_TYPE(Chrono, UtcOffset) wallOffset,
+                   MODULE_TYPE(Chrono, Instant) *outInstant), {
+          MODULE_TYPE(Chrono, CivilStamp) ts = {0};
+          OPSTATUS status = MODULE_IFUNC(
+              Chrono, Timezone, TransitionStampForYear)(year, rule, &ts);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          MODULE_TYPE(Chrono, UtcOffset) baseOffset = {0};
+          if (rule.timeBase ==
+              MODULE_CONST(Chrono, Timezone, TIME_BASE_STANDARD)) {
+            baseOffset = standardOffset;
+          } else if (rule.timeBase ==
+                     MODULE_CONST(Chrono, Timezone, TIME_BASE_WALL)) {
+            baseOffset = wallOffset;
+          }
+          MODULE_TYPE(Chrono, CivilOffset) ots = {
+              .local = ts, .offset = baseOffset, .daylightSavings = false};
+          return MODULE_FUNC(Chrono, Timezone, ToUTC)(ots, outInstant);
+        }),
+
+        OPERATION(FindTransition,
+                  (const MODULE_TYPE(Chrono, TimezoneRule) *rule,
+                   MODULE_TYPE(Chrono, Instant) instant, bool forward,
+                   MODULE_TYPE(Chrono, Instant) *outTransition,
+                   MODULE_TYPE(Chrono, UtcOffset) *outNewOffset), {
+          if (rule == NULL || outTransition == NULL ||
+              !MODULE_FUNC(Chrono, Timezone, Zone, IsRuleValid)(rule) ||
+              !MODULE_FUNC(Chrono, Clock, Instant, IsValid)(instant)) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          if (rule->dstSavingsMinutes == 0) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          MODULE_TYPE(Chrono, CivilStamp) utcCivil = {0};
+          OPSTATUS status =
+              MODULE_FUNC(Chrono, Civil, FromInstantUTC)(instant, &utcCivil);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          MODULE_TYPE(Chrono, UtcOffset) dstOffset = {
+              (int16_t)(rule->standardOffset.minutesEastOfUtc +
+                        rule->dstSavingsMinutes)};
+          bool found = false;
+          MODULE_TYPE(Chrono, Instant) best = {0};
+          MODULE_TYPE(Chrono, UtcOffset) bestOffset = {0};
+          for (int32_t dy = -1; dy <= 1; ++dy) {
+            int32_t y = utcCivil.date.year + dy;
+            MODULE_TYPE(Chrono, Instant) candidates[2] = {{0}, {0}};
+            MODULE_TYPE(Chrono, UtcOffset) candOffsets[2] = {
+                dstOffset, rule->standardOffset};
+            if (MODULE_IFUNC(Chrono, Timezone, TransitionInstantForYear)(
+                    y, rule->start, rule->standardOffset, rule->standardOffset,
+                    &candidates[0]) == STATUS_CONST(SUCCESS) &&
+                MODULE_IFUNC(Chrono, Timezone, TransitionInstantForYear)(
+                    y, rule->end, rule->standardOffset, dstOffset,
+                    &candidates[1]) == STATUS_CONST(SUCCESS)) {
+              for (size_t i = 0U; i < 2U; ++i) {
+                CMPOUT vsInst = MODULE_FUNC(Chrono, Clock, Instant, Compare)(
+                    candidates[i], instant);
+                bool matches = forward ? (vsInst == COMPARISON_CONST(HIGHER))
+                                       : (vsInst != COMPARISON_CONST(HIGHER));
+                if (!matches) {
+                  continue;
+                }
+                if (!found ||
+                    (forward &&
+                     MODULE_FUNC(Chrono, Clock, Instant, Compare)(
+                         candidates[i], best) == COMPARISON_CONST(LOWER)) ||
+                    (!forward &&
+                     MODULE_FUNC(Chrono, Clock, Instant, Compare)(
+                         candidates[i], best) == COMPARISON_CONST(HIGHER))) {
+                  found = true;
+                  best = candidates[i];
+                  bestOffset = candOffsets[i];
+                }
+              }
+            }
+          }
+          if (!found) {
+            return STATUS_CONST(OUT_OF_RANGE);
+          }
+          *outTransition = best;
+          if (outNewOffset != NULL) {
+            *outNewOffset = bestOffset;
+          }
+          return STATUS_CONST(SUCCESS);
+        })
+    )
+);
+
+#if OS_WINDOWS
+MODULE(DOMAIN(Modules), Chrono,
+    INTERNAL_EX(Timezone,
+        OPERATION(ReadSystemOffset,
+                  (MODULE_TYPE(Chrono, Instant) instant,
+                   MODULE_TYPE(Chrono, UtcOffset) *outOffset,
+                   bool *outIsDst), {
+          (void)instant;
+          TIME_ZONE_INFORMATION tzi;
+          DWORD mode = GetTimeZoneInformation(&tzi);
+          if (mode == TIME_ZONE_ID_INVALID) {
+            return STATUS_CONST(GENERIC_ERROR);
+          }
+          LONG bias = tzi.Bias;
+          bool isDst = (mode == TIME_ZONE_ID_DAYLIGHT);
+          bias += isDst ? tzi.DaylightBias : tzi.StandardBias;
+          outOffset->minutesEastOfUtc = (int16_t)(-bias);
+          if (outIsDst != NULL) {
+            *outIsDst = isDst;
+          }
+          return STATUS_CONST(SUCCESS);
+        })
+    )
+);
+#else
+MODULE(DOMAIN(Modules), Chrono,
+    INTERNAL_EX(Timezone,
+        OPERATION(ReadSystemOffset,
+                  (MODULE_TYPE(Chrono, Instant) instant,
+                   MODULE_TYPE(Chrono, UtcOffset) *outOffset,
+                   bool *outIsDst), {
+          time_t sec = (time_t)instant.seconds;
+          struct tm localTm;
+          struct tm utcTm;
+          if (localtime_r(&sec, &localTm) == NULL ||
+              gmtime_r(&sec, &utcTm) == NULL) {
+            return STATUS_CONST(GENERIC_ERROR);
+          }
+          const int32_t yearBase =
+              CNS(Chrono, Timezone, Internal, TM_YEAR_BASE);
+          const int32_t monthBase =
+              CNS(Chrono, Timezone, Internal, TM_MONTH_BASE);
+          MODULE_TYPE(Chrono, CivilStamp) localTs = {
+              .date = {(int32_t)localTm.tm_year + yearBase,
+                       (uint8_t)(localTm.tm_mon + monthBase),
+                       (uint8_t)localTm.tm_mday},
+              .time = {.millisecond = 0U,
+                       .second = (uint8_t)localTm.tm_sec,
+                       .minute = (uint8_t)localTm.tm_min,
+                       .hour = (uint8_t)localTm.tm_hour}};
+          MODULE_TYPE(Chrono, CivilStamp) utcTs = {
+              .date = {(int32_t)utcTm.tm_year + yearBase,
+                       (uint8_t)(utcTm.tm_mon + monthBase),
+                       (uint8_t)utcTm.tm_mday},
+              .time = {.millisecond = 0U,
+                       .second = (uint8_t)utcTm.tm_sec,
+                       .minute = (uint8_t)utcTm.tm_min,
+                       .hour = (uint8_t)utcTm.tm_hour}};
+          MODULE_TYPE(Chrono, CalendarPolicy) gregorian =
+              MODULE_FUNC(Chrono, Calendar, GregorianPolicy)();
+          MODULE_TYPE(Chrono, Span) diff = {0};
+          OPSTATUS status = MODULE_FUNC(Chrono, Civil, Difference)(
+              &gregorian, utcTs, localTs, &diff);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          int64_t minutes =
+              diff.nanoseconds /
+              ((int64_t)MODULE_CONST(Chrono, Math, SECONDS_PER_MINUTE) *
+               MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND));
+          outOffset->minutesEastOfUtc = (int16_t)minutes;
+          if (outIsDst != NULL) {
+            *outIsDst = localTm.tm_isdst > 0;
+          }
+          return STATUS_CONST(SUCCESS);
+        })
+    )
+);
+#endif
+
+/* ========================================================================== */
+/* 2. X-Macro Zone & Country Lookup Tables                                    */
+/* ========================================================================== */
+
+#define COSMERON_MACRO_INTERNAL_CHRONO_BUILD_RULE(ROW)                         \
+  (MODULE_TYPE(Chrono, TimezoneRule)) {                                        \
+    .ianaName = CHRONO_TIMEZONE_IANA_GET(IANA_NAME, ROW),                      \
+    .standardOffset = {CHRONO_TIMEZONE_IANA_GET(STD_OFFSET_MIN, ROW)},         \
+    .dstSavingsMinutes = CHRONO_TIMEZONE_IANA_GET(DST_SAVINGS_MIN, ROW),       \
+    .start =                                                                   \
+        {                                                                      \
+            .month = MODULE_CONST(                                             \
+                Chrono, Calendar, CHRONO_TIMEZONE_IANA_GET(START_MONTH, ROW)), \
+            .anchorKind = MODULE_CONST(                                        \
+                Chrono, Calendar,                                              \
+                CHRONO_TIMEZONE_IANA_GET(START_ANCHOR_KIND, ROW)),             \
+            .anchorDay = CHRONO_TIMEZONE_IANA_GET(START_ANCHOR_DAY, ROW),      \
+            .weekday = MODULE_CONST(                                           \
+                Chrono, Calendar,                                              \
+                CHRONO_TIMEZONE_IANA_GET(START_WEEKDAY, ROW)),                 \
+            .localHour = CHRONO_TIMEZONE_IANA_GET(START_HOUR, ROW),            \
+            .localMinute = CHRONO_TIMEZONE_IANA_GET(START_MINUTE, ROW),        \
+            .timeBase = MODULE_CONST(                                          \
+                Chrono, Timezone, CHRONO_TIMEZONE_IANA_GET(START_BASE, ROW)),  \
+        },                                                                     \
+    .end = {                                                                   \
+        .month = MODULE_CONST(                                                 \
+            Chrono, Calendar, CHRONO_TIMEZONE_IANA_GET(END_MONTH, ROW)),       \
+        .anchorKind = MODULE_CONST(                                            \
+            Chrono, Calendar, CHRONO_TIMEZONE_IANA_GET(END_ANCHOR_KIND, ROW)), \
+        .anchorDay = CHRONO_TIMEZONE_IANA_GET(END_ANCHOR_DAY, ROW),            \
+        .weekday = MODULE_CONST(                                               \
+            Chrono, Calendar, CHRONO_TIMEZONE_IANA_GET(END_WEEKDAY, ROW)),     \
+        .localHour = CHRONO_TIMEZONE_IANA_GET(END_HOUR, ROW),                  \
+        .localMinute = CHRONO_TIMEZONE_IANA_GET(END_MINUTE, ROW),              \
+        .timeBase = MODULE_CONST(                                              \
+            Chrono, Timezone, CHRONO_TIMEZONE_IANA_GET(END_BASE, ROW)),        \
+    },                                                                         \
+  }
+
+#define COSMERON_MACRO_INTERNAL_CHRONO_ZONE_ID_CASE(ROW)                       \
+  case MODULE_CONST(Chrono, Timezone, CHRONO_TIMEZONE_IANA_GET(ID, ROW)):      \
+    *outRule = COSMERON_MACRO_INTERNAL_CHRONO_BUILD_RULE(ROW);                 \
+    return STATUS_CONST(SUCCESS);
+
+#define COSMERON_MACRO_INTERNAL_CHRONO_ZONE_NAME_ENTRY(ROW)                    \
+  {CHRONO_TIMEZONE_IANA_GET(IANA_NAME, ROW),                                   \
+   MODULE_CONST(Chrono, Timezone, CHRONO_TIMEZONE_IANA_GET(ID, ROW))},
+
+#define COSMERON_MACRO_INTERNAL_CHRONO_ZONE_LINK_ENTRY(ROW)                    \
+  {CHRONO_TIMEZONE_LINK_GET(ALIAS, ROW),                                       \
+   MODULE_CONST(Chrono, Timezone, CHRONO_TIMEZONE_LINK_GET(TARGET, ROW))},
+
+#define COSMERON_MACRO_INTERNAL_CHRONO_COUNTRY_ENTRY(ROW)                      \
+  {CHRONO_TIMEZONE_COUNTRY_GET(CODE, ROW),                                     \
+   CHRONO_TIMEZONE_COUNTRY_GET(NAME, ROW)},
+
+#define COSMERON_MACRO_INTERNAL_CHRONO_COUNTRY_ZONE_ENTRY(ROW)                 \
+  {CHRONO_TIMEZONE_COUNTRY_ZONE_GET(CODE, ROW),                                \
+   MODULE_CONST(Chrono, Timezone,                                              \
+                CHRONO_TIMEZONE_COUNTRY_ZONE_GET(ZONE_ID, ROW))},
+
+static const MODULE_ITYPE(Chrono, ZoneNameEntry)
+    MODULE_IFUNC(Chrono, Timezone, ZoneNameEntries)[] = {
+        CHRONO_TIMEZONE_IANA_TABLE(
+            COSMERON_MACRO_INTERNAL_CHRONO_ZONE_NAME_ENTRY)
+};
+
+static const MODULE_ITYPE(Chrono, ZoneNameEntry)
+    MODULE_IFUNC(Chrono, Timezone, ZoneLinkEntries)[] = {
+        CHRONO_TIMEZONE_LINK_TABLE(
+            COSMERON_MACRO_INTERNAL_CHRONO_ZONE_LINK_ENTRY)
+};
+
+static const MODULE_ITYPE(Chrono, CountryEntry)
+    MODULE_IFUNC(Chrono, Timezone, CountryEntries)[] = {
+        CHRONO_TIMEZONE_COUNTRY_TABLE(
+            COSMERON_MACRO_INTERNAL_CHRONO_COUNTRY_ENTRY)
+};
+
+static const MODULE_ITYPE(Chrono, CountryZoneEntry)
+    MODULE_IFUNC(Chrono, Timezone, CountryZoneEntries)[] = {
+        CHRONO_TIMEZONE_COUNTRY_ZONE_TABLE(
+            COSMERON_MACRO_INTERNAL_CHRONO_COUNTRY_ZONE_ENTRY)
+};
+
+static inline OPSTATUS MODULE_IFUNC(Chrono, Timezone, RuleById)(
+    MODULE_ENUM(Chrono, Timezone, ZoneId) zoneId,
+    MODULE_TYPE(Chrono, TimezoneRule) *outRule) {
+  switch (zoneId) {
+    CHRONO_TIMEZONE_IANA_TABLE(COSMERON_MACRO_INTERNAL_CHRONO_ZONE_ID_CASE)
+  default:
+    return STATUS_CONST(OUT_OF_RANGE);
+  }
+}
+
+static inline bool MODULE_IFUNC(Chrono, Timezone, CountryRange)(
+    const char *countryCode, size_t *outStart, size_t *outCount) {
+  const size_t total =
+      sizeof(MODULE_IFUNC(Chrono, Timezone, CountryZoneEntries)) /
+      sizeof(MODULE_IFUNC(Chrono, Timezone, CountryZoneEntries)[0]);
+  size_t low = 0U;
+  size_t high = total;
+  while (low < high) {
+    size_t mid = low + (high - low) / 2U;
+    int cmp = strcmp(
+        MODULE_IFUNC(Chrono, Timezone, CountryZoneEntries)[mid].code,
+        countryCode);
+    if (cmp < 0) {
+      low = mid + 1U;
+    } else {
+      high = mid;
+    }
+  }
+  if (low >= total ||
+      strcmp(MODULE_IFUNC(Chrono, Timezone, CountryZoneEntries)[low].code,
+             countryCode) != 0) {
+    return false;
+  }
+  size_t end = low + 1U;
+  while (end < total &&
+         strcmp(MODULE_IFUNC(Chrono, Timezone, CountryZoneEntries)[end].code,
+                countryCode) == 0) {
+    ++end;
+  }
+  *outStart = low;
+  *outCount = end - low;
+  return true;
+}
+
+/* ========================================================================== */
+/* 3. Package Implementation: Chrono_Timezone                                 */
+/* ========================================================================== */
+
+MODULE_IMPLEMENT(DOMAIN(Modules), Chrono,
+    PACKAGE(Timezone,
+        OPERATION(ToUTC,
+                  (MODULE_TYPE(Chrono, CivilOffset) value,
+                   MODULE_TYPE(Chrono, Instant) *instant), {
+          if (instant == NULL ||
+              !MODULE_FUNC(Chrono, Timezone, Offset, IsValid)(value.offset)) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          MODULE_TYPE(Chrono, Instant) local;
+          OPSTATUS status =
+              MODULE_FUNC(Chrono, Civil, ToInstantUTC)(value.local, &local);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          MODULE_TYPE(Chrono, Span) offset;
+          status = MODULE_IFUNC(Chrono, Timezone, OffsetSpan)(value.offset, -1,
+                                                              &offset);
+          return status == STATUS_CONST(SUCCESS)
+                     ? MODULE_FUNC(Chrono, Clock, Instant, AddSpan)(
+                           local, offset, instant)
+                     : status;
+        }),
+
+        VARIANT(FromUTC,
+            OPERATION((MODULE_TYPE(Chrono, Instant) instant,
+                       MODULE_TYPE(Chrono, UtcOffset) offset,
+                       MODULE_TYPE(Chrono, CivilOffset) *value), {
+              if (value == NULL ||
+                  !MODULE_FUNC(Chrono, Timezone, Offset, IsValid)(offset)) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              MODULE_TYPE(Chrono, Span) span;
+              OPSTATUS status = MODULE_IFUNC(Chrono, Timezone, OffsetSpan)(
+                  offset, 1, &span);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              MODULE_TYPE(Chrono, Instant) local;
+              status = MODULE_FUNC(Chrono, Clock, Instant, AddSpan)(
+                  instant, span, &local);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              status = MODULE_FUNC(Chrono, Civil, FromInstantUTC)(
+                  local, &value->local);
+              if (status == STATUS_CONST(SUCCESS)) {
+                value->offset = offset;
+                value->daylightSavings = false;
+              }
+              return status;
+            }),
+
+            OPERATION(WithRule,
+                      (MODULE_TYPE(Chrono, Instant) instant,
+                       const MODULE_TYPE(Chrono, TimezoneRule) *rule,
+                       MODULE_TYPE(Chrono, CivilOffset) *value), {
+              if (rule == NULL || value == NULL ||
+                  !MODULE_FUNC(Chrono, Timezone, Zone, IsRuleValid)(rule)) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              if (rule->dstSavingsMinutes == 0) {
+                return MODULE_FUNC(Chrono, Timezone, FromUTC)(
+                    instant, rule->standardOffset, value);
+              }
+              MODULE_TYPE(Chrono, CivilOffset) stdLocal = {0};
+              OPSTATUS status = MODULE_FUNC(Chrono, Timezone, FromUTC)(
+                  instant, rule->standardOffset, &stdLocal);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              MODULE_TYPE(Chrono, UtcOffset) dstOffset = {
+                  (int16_t)(rule->standardOffset.minutesEastOfUtc +
+                            rule->dstSavingsMinutes)};
+              MODULE_TYPE(Chrono, Instant) startUtc = {0};
+              MODULE_TYPE(Chrono, Instant) endUtc = {0};
+              status = MODULE_IFUNC(
+                  Chrono, Timezone, TransitionInstantForYear)(
+                  stdLocal.local.date.year, rule->start, rule->standardOffset,
+                  rule->standardOffset, &startUtc);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              status = MODULE_IFUNC(
+                  Chrono, Timezone, TransitionInstantForYear)(
+                  stdLocal.local.date.year, rule->end, rule->standardOffset,
+                  dstOffset, &endUtc);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              bool isDst = false;
+              if (MODULE_FUNC(Chrono, Clock, Instant, Compare)(
+                      startUtc, endUtc) == COMPARISON_CONST(LOWER)) {
+                isDst = MODULE_FUNC(Chrono, Clock, Instant, Compare)(
+                            instant, startUtc) != COMPARISON_CONST(LOWER) &&
+                        MODULE_FUNC(Chrono, Clock, Instant, Compare)(
+                            instant, endUtc) == COMPARISON_CONST(LOWER);
+              } else {
+                isDst = MODULE_FUNC(Chrono, Clock, Instant, Compare)(
+                            instant, startUtc) != COMPARISON_CONST(LOWER) ||
+                        MODULE_FUNC(Chrono, Clock, Instant, Compare)(
+                            instant, endUtc) == COMPARISON_CONST(LOWER);
+              }
+              MODULE_TYPE(Chrono, UtcOffset) effectiveOffset =
+                  isDst ? dstOffset : rule->standardOffset;
+              status = MODULE_FUNC(Chrono, Timezone, FromUTC)(
+                  instant, effectiveOffset, value);
+              if (status == STATUS_CONST(SUCCESS)) {
+                value->daylightSavings = isDst;
+              }
+              return status;
+            }),
+
+            OPERATION(WithZone,
+                      (MODULE_TYPE(Chrono, Instant) instant,
+                       MODULE_ENUM(Chrono, Timezone, ZoneId) zoneId,
+                       MODULE_TYPE(Chrono, CivilOffset) *value), {
+              MODULE_TYPE(Chrono, TimezoneRule) rule = {0};
+              OPSTATUS status = MODULE_FUNC(Chrono, Timezone, Zone, FromId)(
+                  zoneId, &rule);
+              if (status != STATUS_CONST(SUCCESS)) {
+                return status;
+              }
+              return MODULE_FUNC(Chrono, Timezone, FromUTCWithRule)(
+                  instant, &rule, value);
+            })
+        ),
+
+        OPERATION(ConvertRule,
+                  (MODULE_TYPE(Chrono, CivilOffset) value,
+                   const MODULE_TYPE(Chrono, TimezoneRule) *targetRule,
+                   MODULE_TYPE(Chrono, CivilOffset) *outConverted), {
+          if (targetRule == NULL || outConverted == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          MODULE_TYPE(Chrono, Instant) utc = {0};
+          OPSTATUS status = MODULE_FUNC(Chrono, Timezone, ToUTC)(value, &utc);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          return MODULE_FUNC(Chrono, Timezone, FromUTCWithRule)(
+              utc, targetRule, outConverted);
+        }),
+
+        OPERATION(ConvertZone,
+                  (MODULE_TYPE(Chrono, CivilOffset) value,
+                   MODULE_ENUM(Chrono, Timezone, ZoneId) targetZone,
+                   MODULE_TYPE(Chrono, CivilOffset) *outConverted), {
+          if (outConverted == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          MODULE_TYPE(Chrono, Instant) utc = {0};
+          OPSTATUS status = MODULE_FUNC(Chrono, Timezone, ToUTC)(value, &utc);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          return MODULE_FUNC(Chrono, Timezone, FromUTCWithZone)(
+              utc, targetZone, outConverted);
+        }),
+
+        OPERATION(SystemOffsetAt,
+                  (MODULE_TYPE(Chrono, Instant) instant,
+                   MODULE_TYPE(Chrono, UtcOffset) *outOffset,
+                   bool *outIsDst), {
+          if (outOffset == NULL ||
+              !MODULE_FUNC(Chrono, Clock, Instant, IsValid)(instant)) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          return MODULE_IFUNC(Chrono, Timezone, ReadSystemOffset)(
+              instant, outOffset, outIsDst);
+        }),
+
+        OPERATION(SystemNow,
+                  (MODULE_TYPE(Chrono, CivilOffset) *outValue), {
+          if (outValue == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          MODULE_TYPE(Chrono, Instant) now = {0};
+          OPSTATUS status = MODULE_FUNC(Chrono, Clock, Instant, Now)(&now);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          MODULE_TYPE(Chrono, UtcOffset) offset = {0};
+          bool isDst = false;
+          status = MODULE_FUNC(Chrono, Timezone, SystemOffsetAt)(now, &offset,
+                                                                 &isDst);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          status = MODULE_FUNC(Chrono, Timezone, FromUTC)(now, offset,
+                                                          outValue);
+          if (status == STATUS_CONST(SUCCESS)) {
+            outValue->daylightSavings = isDst;
+          }
+          return status;
+        }),
+
+        SPACE(Offset,
+              PREDICATE(IsValid, (MODULE_TYPE(Chrono, UtcOffset) offset), {
+                const int16_t maxOffset = (int16_t)CNS(
+                    Chrono, Timezone, Internal, MAX_OFFSET_MINUTES);
+                return offset.minutesEastOfUtc >= -maxOffset &&
+                       offset.minutesEastOfUtc <= maxOffset;
+              }),
+
+              OPERATION(FromHoursMinutes,
+                        (int8_t hours, int8_t minutes,
+                         MODULE_TYPE(Chrono, UtcOffset) *outOffset), {
+                if (outOffset == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                const int8_t minPerHour =
+                    (int8_t)MODULE_CONST(Chrono, Math, MINUTES_PER_HOUR);
+                if (minutes <= -minPerHour || minutes >= minPerHour ||
+                    (hours > 0 && minutes < 0) || (hours < 0 && minutes > 0)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                int32_t total = (int32_t)hours * minPerHour + (int32_t)minutes;
+                const int32_t maxOffset = (int32_t)CNS(
+                    Chrono, Timezone, Internal, MAX_OFFSET_MINUTES);
+                if (total < -maxOffset || total > maxOffset) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                outOffset->minutesEastOfUtc = (int16_t)total;
+                return STATUS_CONST(SUCCESS);
+              })
+        ),
+
+        SPACE(Zone,
+              FUNCTION(const char *, DataVersion, (), {
+                return CHRONO_TIMEZONE_TZDATA_VERSION;
+              }),
+
+              OPERATION(FromId,
+                        (MODULE_ENUM(Chrono, Timezone, ZoneId) zoneId,
+                         MODULE_TYPE(Chrono, TimezoneRule) *outRule), {
+                if (outRule == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                return MODULE_IFUNC(Chrono, Timezone, RuleById)(zoneId,
+                                                                outRule);
+              }),
+
+              OPERATION(FromName,
+                        (const char *ianaName,
+                         MODULE_TYPE(Chrono, TimezoneRule) *outRule), {
+                if (ianaName == NULL || outRule == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                size_t low = 0U;
+                size_t high =
+                    sizeof(MODULE_IFUNC(Chrono, Timezone, ZoneNameEntries)) /
+                    sizeof(MODULE_IFUNC(Chrono, Timezone, ZoneNameEntries)[0]);
+                while (low < high) {
+                  size_t mid = low + (high - low) / 2U;
+                  int cmp = strcmp(
+                      ianaName,
+                      MODULE_IFUNC(Chrono, Timezone, ZoneNameEntries)[mid]
+                          .ianaName);
+                  if (cmp == 0) {
+                    return MODULE_FUNC(Chrono, Timezone, Zone, FromId)(
+                        MODULE_IFUNC(Chrono, Timezone, ZoneNameEntries)[mid]
+                            .zoneId,
+                        outRule);
+                  }
+                  if (cmp < 0) {
+                    high = mid;
+                  } else {
+                    low = mid + 1U;
+                  }
+                }
+                low = 0U;
+                high =
+                    sizeof(MODULE_IFUNC(Chrono, Timezone, ZoneLinkEntries)) /
+                    sizeof(MODULE_IFUNC(Chrono, Timezone, ZoneLinkEntries)[0]);
+                while (low < high) {
+                  size_t mid = low + (high - low) / 2U;
+                  int cmp = strcmp(
+                      ianaName,
+                      MODULE_IFUNC(Chrono, Timezone, ZoneLinkEntries)[mid]
+                          .ianaName);
+                  if (cmp == 0) {
+                    return MODULE_FUNC(Chrono, Timezone, Zone, FromId)(
+                        MODULE_IFUNC(Chrono, Timezone, ZoneLinkEntries)[mid]
+                            .zoneId,
+                        outRule);
+                  }
+                  if (cmp < 0) {
+                    high = mid;
+                  } else {
+                    low = mid + 1U;
+                  }
+                }
+                return STATUS_CONST(OUT_OF_RANGE);
+              }),
+
+              PREDICATE(IsRuleValid,
+                        (const MODULE_TYPE(Chrono, TimezoneRule) *rule), {
+                if (rule == NULL ||
+                    !MODULE_FUNC(Chrono, Timezone, Offset, IsValid)(
+                        rule->standardOffset) ||
+                    rule->dstSavingsMinutes < 0 ||
+                    rule->dstSavingsMinutes >
+                        CNS(Chrono, Timezone, Internal,
+                            MAX_DST_SAVINGS_MINUTES)) {
+                  return false;
+                }
+                MODULE_TYPE(Chrono, UtcOffset) combined = {
+                    (int16_t)(rule->standardOffset.minutesEastOfUtc +
+                              rule->dstSavingsMinutes)};
+                if (!MODULE_FUNC(Chrono, Timezone, Offset, IsValid)(combined)) {
+                  return false;
+                }
+                if (rule->dstSavingsMinutes == 0) {
+                  return true;
+                }
+                return MODULE_IFUNC(Chrono, Timezone, IsTransitionRuleValid)(
+                           rule->start) &&
+                       MODULE_IFUNC(Chrono, Timezone, IsTransitionRuleValid)(
+                           rule->end);
+              }),
+
+              OPERATION(OffsetAt,
+                        (const MODULE_TYPE(Chrono, TimezoneRule) *rule,
+                         MODULE_TYPE(Chrono, Instant) instant,
+                         MODULE_TYPE(Chrono, UtcOffset) *outOffset,
+                         bool *outIsDst), {
+                if (rule == NULL || outOffset == NULL ||
+                    !MODULE_FUNC(Chrono, Clock, Instant, IsValid)(instant)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                MODULE_TYPE(Chrono, CivilOffset) resolved = {0};
+                OPSTATUS status = MODULE_FUNC(
+                    Chrono, Timezone, FromUTCWithRule)(instant, rule, &resolved);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                *outOffset = resolved.offset;
+                if (outIsDst != NULL) {
+                  *outIsDst = resolved.daylightSavings;
+                }
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(NextTransition,
+                        (const MODULE_TYPE(Chrono, TimezoneRule) *rule,
+                         MODULE_TYPE(Chrono, Instant) instant,
+                         MODULE_TYPE(Chrono, Instant) *outTransition,
+                         MODULE_TYPE(Chrono, UtcOffset) *outNewOffset), {
+                return MODULE_IFUNC(Chrono, Timezone, FindTransition)(
+                    rule, instant, true, outTransition, outNewOffset);
+              }),
+
+              OPERATION(PreviousTransition,
+                        (const MODULE_TYPE(Chrono, TimezoneRule) *rule,
+                         MODULE_TYPE(Chrono, Instant) instant,
+                         MODULE_TYPE(Chrono, Instant) *outTransition,
+                         MODULE_TYPE(Chrono, UtcOffset) *outNewOffset), {
+                return MODULE_IFUNC(Chrono, Timezone, FindTransition)(
+                    rule, instant, false, outTransition, outNewOffset);
+              }),
+
+              OPERATION(IsDstAtLocal,
+                        (const MODULE_TYPE(Chrono, TimezoneRule) *rule,
+                         MODULE_TYPE(Chrono, CivilStamp) local,
+                         bool *outIsDst), {
+                if (rule == NULL || outIsDst == NULL ||
+                    !MODULE_FUNC(Chrono, Timezone, Zone, IsRuleValid)(rule)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                MODULE_TYPE(Chrono, CalendarPolicy) gregorian =
+                    MODULE_FUNC(Chrono, Calendar, GregorianPolicy)();
+                if (!MODULE_FUNC(Chrono, Civil, IsValid)(&gregorian, local)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                if (rule->dstSavingsMinutes == 0) {
+                  *outIsDst = false;
+                  return STATUS_CONST(SUCCESS);
+                }
+                MODULE_TYPE(Chrono, CivilStamp) startTs = {0};
+                MODULE_TYPE(Chrono, CivilStamp) endTs = {0};
+                OPSTATUS status = MODULE_IFUNC(
+                    Chrono, Timezone, TransitionStampForYear)(
+                    local.date.year, rule->start, &startTs);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                status = MODULE_IFUNC(
+                    Chrono, Timezone, TransitionStampForYear)(
+                    local.date.year, rule->end, &endTs);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                if (MODULE_FUNC(Chrono, Civil, Compare)(startTs, endTs) ==
+                    COMPARISON_CONST(LOWER)) {
+                  *outIsDst = MODULE_FUNC(Chrono, Civil, Compare)(
+                                  local, startTs) != COMPARISON_CONST(LOWER) &&
+                              MODULE_FUNC(Chrono, Civil, Compare)(
+                                  local, endTs) == COMPARISON_CONST(LOWER);
+                } else {
+                  *outIsDst = MODULE_FUNC(Chrono, Civil, Compare)(
+                                  local, startTs) != COMPARISON_CONST(LOWER) ||
+                              MODULE_FUNC(Chrono, Civil, Compare)(
+                                  local, endTs) == COMPARISON_CONST(LOWER);
+                }
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(ClassifyLocal,
+                        (const MODULE_TYPE(Chrono, TimezoneRule) *rule,
+                         MODULE_TYPE(Chrono, CivilStamp) local,
+                         MODULE_ENUM(Chrono, Timezone, LocalTimeStatus)
+                             *outStatus,
+                         MODULE_TYPE(Chrono, CivilOffset) *outEarlier,
+                         MODULE_TYPE(Chrono, CivilOffset) *outLater), {
+                if (rule == NULL || outStatus == NULL || outEarlier == NULL ||
+                    outLater == NULL ||
+                    !MODULE_FUNC(Chrono, Timezone, Zone, IsRuleValid)(rule)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                MODULE_TYPE(Chrono, CalendarPolicy) gregorian =
+                    MODULE_FUNC(Chrono, Calendar, GregorianPolicy)();
+                if (!MODULE_FUNC(Chrono, Civil, IsValid)(&gregorian, local)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                if (rule->dstSavingsMinutes == 0) {
+                  MODULE_TYPE(Chrono, CivilOffset) unique = {
+                      .local = local,
+                      .offset = rule->standardOffset,
+                      .daylightSavings = false};
+                  *outStatus =
+                      MODULE_CONST(Chrono, Timezone, LOCAL_TIME_UNIQUE);
+                  *outEarlier = unique;
+                  *outLater = unique;
+                  return STATUS_CONST(SUCCESS);
+                }
+                MODULE_TYPE(Chrono, UtcOffset) dstOffset = {
+                    (int16_t)(rule->standardOffset.minutesEastOfUtc +
+                              rule->dstSavingsMinutes)};
+                MODULE_TYPE(Chrono, Instant) startUtc = {0};
+                MODULE_TYPE(Chrono, Instant) endUtc = {0};
+                OPSTATUS status = MODULE_IFUNC(
+                    Chrono, Timezone, TransitionInstantForYear)(
+                    local.date.year, rule->start, rule->standardOffset,
+                    rule->standardOffset, &startUtc);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                status = MODULE_IFUNC(
+                    Chrono, Timezone, TransitionInstantForYear)(
+                    local.date.year, rule->end, rule->standardOffset, dstOffset,
+                    &endUtc);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                MODULE_TYPE(Chrono, CivilOffset) startWallStd = {0};
+                MODULE_TYPE(Chrono, CivilOffset) endWallDst = {0};
+                status = MODULE_FUNC(Chrono, Timezone, FromUTC)(
+                    startUtc, rule->standardOffset, &startWallStd);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                status = MODULE_FUNC(Chrono, Timezone, FromUTC)(
+                    endUtc, dstOffset, &endWallDst);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                MODULE_TYPE(Chrono, Span) savings = {0};
+                status = MODULE_FUNC(Chrono, Math, FromMinutes)(
+                    rule->dstSavingsMinutes, &savings);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                MODULE_TYPE(Chrono, CivilStamp) gapEnd = {0};
+                status = MODULE_FUNC(Chrono, Civil, AddSpan)(
+                    &gregorian, startWallStd.local, savings, &gapEnd);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                if (MODULE_FUNC(Chrono, Civil, Compare)(
+                        local, startWallStd.local) != COMPARISON_CONST(LOWER) &&
+                    MODULE_FUNC(Chrono, Civil, Compare)(local, gapEnd) ==
+                        COMPARISON_CONST(LOWER)) {
+                  MODULE_TYPE(Chrono, Span) negSavings = {0};
+                  status = MODULE_FUNC(Chrono, Math, Negate)(savings,
+                                                             &negSavings);
+                  if (status != STATUS_CONST(SUCCESS)) {
+                    return status;
+                  }
+                  MODULE_TYPE(Chrono, CivilStamp) shiftedBack = {0};
+                  MODULE_TYPE(Chrono, CivilStamp) shiftedForward = {0};
+                  status = MODULE_FUNC(Chrono, Civil, AddSpan)(
+                      &gregorian, local, negSavings, &shiftedBack);
+                  if (status != STATUS_CONST(SUCCESS)) {
+                    return status;
+                  }
+                  status = MODULE_FUNC(Chrono, Civil, AddSpan)(
+                      &gregorian, local, savings, &shiftedForward);
+                  if (status != STATUS_CONST(SUCCESS)) {
+                    return status;
+                  }
+                  *outStatus =
+                      MODULE_CONST(Chrono, Timezone, LOCAL_TIME_NONEXISTENT);
+                  *outEarlier = (MODULE_TYPE(Chrono, CivilOffset)){
+                      .local = shiftedBack,
+                      .offset = rule->standardOffset,
+                      .daylightSavings = false};
+                  *outLater = (MODULE_TYPE(Chrono, CivilOffset)){
+                      .local = shiftedForward,
+                      .offset = dstOffset,
+                      .daylightSavings = true};
+                  return STATUS_CONST(SUCCESS);
+                }
+                MODULE_TYPE(Chrono, Span) negSavings = {0};
+                status =
+                    MODULE_FUNC(Chrono, Math, Negate)(savings, &negSavings);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                MODULE_TYPE(Chrono, CivilStamp) overlapStart = {0};
+                status = MODULE_FUNC(Chrono, Civil, AddSpan)(
+                    &gregorian, endWallDst.local, negSavings, &overlapStart);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                if (MODULE_FUNC(Chrono, Civil, Compare)(local, overlapStart) !=
+                        COMPARISON_CONST(LOWER) &&
+                    MODULE_FUNC(Chrono, Civil, Compare)(
+                        local, endWallDst.local) == COMPARISON_CONST(LOWER)) {
+                  *outStatus =
+                      MODULE_CONST(Chrono, Timezone, LOCAL_TIME_AMBIGUOUS);
+                  *outEarlier = (MODULE_TYPE(Chrono, CivilOffset)){
+                      .local = local,
+                      .offset = dstOffset,
+                      .daylightSavings = true};
+                  *outLater = (MODULE_TYPE(Chrono, CivilOffset)){
+                      .local = local,
+                      .offset = rule->standardOffset,
+                      .daylightSavings = false};
+                  return STATUS_CONST(SUCCESS);
+                }
+                bool isDst = false;
+                if (MODULE_FUNC(Chrono, Civil, Compare)(
+                        startWallStd.local, endWallDst.local) ==
+                    COMPARISON_CONST(LOWER)) {
+                  isDst = MODULE_FUNC(Chrono, Civil, Compare)(local, gapEnd) !=
+                              COMPARISON_CONST(LOWER) &&
+                          MODULE_FUNC(Chrono, Civil, Compare)(
+                              local, overlapStart) == COMPARISON_CONST(LOWER);
+                } else {
+                  isDst = MODULE_FUNC(Chrono, Civil, Compare)(local, gapEnd) !=
+                              COMPARISON_CONST(LOWER) ||
+                          MODULE_FUNC(Chrono, Civil, Compare)(
+                              local, overlapStart) == COMPARISON_CONST(LOWER);
+                }
+                MODULE_TYPE(Chrono, CivilOffset) unique = {
+                    .local = local,
+                    .offset = isDst ? dstOffset : rule->standardOffset,
+                    .daylightSavings = isDst};
+                *outStatus =
+                    MODULE_CONST(Chrono, Timezone, LOCAL_TIME_UNIQUE);
+                *outEarlier = unique;
+                *outLater = unique;
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(ResolveLocal,
+                        (const MODULE_TYPE(Chrono, TimezoneRule) *rule,
+                         MODULE_TYPE(Chrono, CivilStamp) local,
+                         MODULE_TYPE(Chrono, CivilOffset) *outResolved), {
+                return MODULE_FUNC(
+                    Chrono, Timezone, Zone, ResolveLocalWithPolicy)(
+                    rule, local,
+                    MODULE_CONST(Chrono, Timezone, DISAMBIGUATE_COMPATIBLE),
+                    outResolved);
+              }),
+
+              OPERATION(ResolveLocalWithPolicy,
+                        (const MODULE_TYPE(Chrono, TimezoneRule) *rule,
+                         MODULE_TYPE(Chrono, CivilStamp) local,
+                         MODULE_ENUM(Chrono, Timezone, Disambiguation) policy,
+                         MODULE_TYPE(Chrono, CivilOffset) *outResolved), {
+                if (outResolved == NULL ||
+                    policy < MODULE_CONST(Chrono, Timezone,
+                                          DISAMBIGUATE_COMPATIBLE) ||
+                    policy > MODULE_CONST(Chrono, Timezone,
+                                          DISAMBIGUATE_REJECT)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                MODULE_ENUM(Chrono, Timezone, LocalTimeStatus)
+                statusKind = 0;
+                MODULE_TYPE(Chrono, CivilOffset) earlier = {0};
+                MODULE_TYPE(Chrono, CivilOffset) later = {0};
+                OPSTATUS status = MODULE_FUNC(
+                    Chrono, Timezone, Zone, ClassifyLocal)(
+                    rule, local, &statusKind, &earlier, &later);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                if (statusKind ==
+                    MODULE_CONST(Chrono, Timezone, LOCAL_TIME_UNIQUE)) {
+                  *outResolved = earlier;
+                  return STATUS_CONST(SUCCESS);
+                }
+                if (policy ==
+                    MODULE_CONST(Chrono, Timezone, DISAMBIGUATE_REJECT)) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                if (policy ==
+                    MODULE_CONST(Chrono, Timezone, DISAMBIGUATE_EARLIER)) {
+                  *outResolved = earlier;
+                  return STATUS_CONST(SUCCESS);
+                }
+                if (policy ==
+                    MODULE_CONST(Chrono, Timezone, DISAMBIGUATE_LATER)) {
+                  *outResolved = later;
+                  return STATUS_CONST(SUCCESS);
+                }
+                *outResolved =
+                    (statusKind ==
+                     MODULE_CONST(Chrono, Timezone, LOCAL_TIME_AMBIGUOUS))
+                        ? earlier
+                        : later;
+                return STATUS_CONST(SUCCESS);
+              })
+        ),
+
+        SPACE(Country,
+              OPERATION(NameFromCode,
+                        (const char *countryCode,
+                         const char **outCountryName), {
+                if (countryCode == NULL || outCountryName == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                size_t low = 0U;
+                size_t high =
+                    sizeof(MODULE_IFUNC(Chrono, Timezone, CountryEntries)) /
+                    sizeof(MODULE_IFUNC(Chrono, Timezone, CountryEntries)[0]);
+                while (low < high) {
+                  size_t mid = low + (high - low) / 2U;
+                  int cmp = strcmp(
+                      countryCode,
+                      MODULE_IFUNC(Chrono, Timezone, CountryEntries)[mid].code);
+                  if (cmp == 0) {
+                    *outCountryName =
+                        MODULE_IFUNC(Chrono, Timezone, CountryEntries)[mid]
+                            .name;
+                    return STATUS_CONST(SUCCESS);
+                  }
+                  if (cmp < 0) {
+                    high = mid;
+                  } else {
+                    low = mid + 1U;
+                  }
+                }
+                return STATUS_CONST(OUT_OF_RANGE);
+              }),
+
+              OPERATION(ZoneCount,
+                        (const char *countryCode, size_t *outCount), {
+                if (countryCode == NULL || outCount == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                size_t start = 0U;
+                size_t count = 0U;
+                if (!MODULE_IFUNC(Chrono, Timezone, CountryRange)(
+                        countryCode, &start, &count)) {
+                  *outCount = 0U;
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                *outCount = count;
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(ZoneIdAt,
+                        (const char *countryCode, size_t index,
+                         MODULE_ENUM(Chrono, Timezone, ZoneId) *outZoneId), {
+                if (countryCode == NULL || outZoneId == NULL) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                size_t start = 0U;
+                size_t count = 0U;
+                if (!MODULE_IFUNC(Chrono, Timezone, CountryRange)(
+                        countryCode, &start, &count) ||
+                    index >= count) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                *outZoneId = MODULE_IFUNC(Chrono, Timezone,
+                                          CountryZoneEntries)[start + index]
+                                 .zoneId;
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(ZoneRuleAt,
+                        (const char *countryCode, size_t index,
+                         MODULE_TYPE(Chrono, TimezoneRule) *outRule), {
+                MODULE_ENUM(Chrono, Timezone, ZoneId) zoneId = 0;
+                OPSTATUS status = MODULE_FUNC(
+                    Chrono, Timezone, Country, ZoneIdAt)(countryCode, index,
+                                                         &zoneId);
+                if (status != STATUS_CONST(SUCCESS)) {
+                  return status;
+                }
+                return MODULE_FUNC(Chrono, Timezone, Zone, FromId)(zoneId,
+                                                                   outRule);
+              })
+        )
+    )
+);
+
+#undef COSMERON_MACRO_INTERNAL_CHRONO_COUNTRY_ZONE_ENTRY
+#undef COSMERON_MACRO_INTERNAL_CHRONO_COUNTRY_ENTRY
+#undef COSMERON_MACRO_INTERNAL_CHRONO_ZONE_LINK_ENTRY
+#undef COSMERON_MACRO_INTERNAL_CHRONO_ZONE_NAME_ENTRY
+#undef COSMERON_MACRO_INTERNAL_CHRONO_ZONE_ID_CASE
+#undef COSMERON_MACRO_INTERNAL_CHRONO_BUILD_RULE
+
+/* EOF */

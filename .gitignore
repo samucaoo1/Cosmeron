@@ -84,3 +84,7 @@ compile_commands.json
 .DS_Store
 Thumbs.db
 /.build-portable
+
+# Python bytecode cache
+__pycache__/
+*.py[cod]

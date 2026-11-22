@@ -102,16 +102,16 @@
   (0, 1, CMPOUT, NAME, PARAMS, BODY)
 
 /* ------------------------------------------------------------
- * 6. Declarative Callbacks and Closures in Modules
+ * 6. Declarative Callables and Delegates in Modules
  * ------------------------------------------------------------ */
-#define COSMERON_DECL_TAG_CALLBACK 115
-#define COSMERON_DECL_TAG_CLOSURE  116
+#define COSMERON_DECL_TAG_CALLABLE 115
+#define COSMERON_DECL_TAG_DELEGATE 116
 
-#undef CALLBACK
-#define CALLBACK(...) (COSMERON_DECL_TAG_CALLBACK, (__VA_ARGS__))
+#undef CALLABLE
+#define CALLABLE(...) (COSMERON_DECL_TAG_CALLABLE, (__VA_ARGS__))
 
-#undef CLOSURE
-#define CLOSURE(...)  (COSMERON_DECL_TAG_CLOSURE, (__VA_ARGS__))
+#undef DELEGATE
+#define DELEGATE(...) (COSMERON_DECL_TAG_DELEGATE, (__VA_ARGS__))
 
 /* ------------------------------------------------------------
  * 7. Declarative Events in Modules
@@ -131,9 +131,9 @@
   ((CAP) <= 4 ? 4 : ((CAP) <= 8 ? 8 : ((CAP) <= 12 ? 12 : 16)))
 
 #define COSMERON_MACRO_INTERNAL_EV_INVOKE_EMPTY_1(CL, ARGS)                    \
-  CLOSURE_CALL(CL)
+  DELEGATE_CALL(CL)
 #define COSMERON_MACRO_INTERNAL_EV_INVOKE_EMPTY_0(CL, ARGS)                    \
-  CLOSURE_CALL(CL, PP_UNWRAP ARGS)
+  DELEGATE_CALL(CL, PP_UNWRAP ARGS)
 #define COSMERON_MACRO_INTERNAL_EV_INVOKE(CL, ARGS)                            \
   PP_OP_CAT2(COSMERON_MACRO_INTERNAL_EV_INVOKE_EMPTY_,                         \
              PP_IS_EMPTY_PARAMS(ARGS))(CL, ARGS)

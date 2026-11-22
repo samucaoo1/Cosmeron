@@ -10,7 +10,7 @@
   X((NARROW, 1))                                                               \
   X((WIDE, 2))
 
-IENUM_DEF(Text_Width, Value, TEXT_WIDTH_INTERNAL_TABLE)
+IENUM_DEF(MODULE_NS(Text, Width), Value, TEXT_WIDTH_INTERNAL_TABLE)
 
 ISTRUCT(Text_Width, Interval,
         FIELDS(uint_least32_t first; uint_least32_t last;));
@@ -80,15 +80,15 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
       if (value == 0U ||
           MODULE_IFUNC(Text, Width, InIntervals)(
               value, zeroWidth, sizeof(zeroWidth) / sizeof(zeroWidth[0]))) {
-        *outWidth = (int)CNS(Text, Width, Internal, ZERO);
+        *outWidth = (int)MODULE_IFUNC(Text, Width, ZERO);
         return STATUS_CONST(SUCCESS);
       }
 
       *outWidth =
           MODULE_IFUNC(Text, Width, InIntervals)(
               value, wide, sizeof(wide) / sizeof(wide[0]))
-              ? (int)CNS(Text, Width, Internal, WIDE)
-              : (int)CNS(Text, Width, Internal, NARROW);
+              ? (int)MODULE_IFUNC(Text, Width, WIDE)
+              : (int)MODULE_IFUNC(Text, Width, NARROW);
       return STATUS_CONST(SUCCESS);
     }),
 
@@ -127,4 +127,5 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
     })
   )
 );
+
 /* EOF */

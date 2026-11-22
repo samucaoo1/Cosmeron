@@ -1,0 +1,533 @@
+#pragma once
+
+#include <limits.h>
+
+/* ========================================================================== */
+/* 1. Internal Checked Unit Scaling & Granularity Helpers                     */
+/* ========================================================================== */
+
+MODULE(DOMAIN(Modules), Chrono,
+    INTERNAL_EX(Math,
+        OPERATION(FromUnit,
+                  (int64_t value, int64_t multiplier,
+                   MODULE_TYPE(Chrono, Span) *outResult), {
+          if (outResult == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          if (value > INT64_MAX / multiplier ||
+              value < INT64_MIN / multiplier) {
+            return STATUS_CONST(ARITHMETIC_OVERFLOW);
+          }
+          outResult->nanoseconds = value * multiplier;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(GranularityStep,
+                  (MODULE_ENUM(Chrono, Math, Granularity) unit,
+                   int64_t *outStep), {
+          switch (unit) {
+          case MODULE_CONST(Chrono, Math, GRANULARITY_NANOSECOND):
+            *outStep = 1;
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Chrono, Math, GRANULARITY_MICROSECOND):
+            *outStep =
+                MODULE_CONST(Chrono, Math, NANOSECONDS_PER_MICROSECOND);
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Chrono, Math, GRANULARITY_MILLISECOND):
+            *outStep =
+                MODULE_CONST(Chrono, Math, NANOSECONDS_PER_MILLISECOND);
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Chrono, Math, GRANULARITY_SECOND):
+            *outStep = MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND);
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Chrono, Math, GRANULARITY_MINUTE):
+            *outStep =
+                (int64_t)MODULE_CONST(Chrono, Math, SECONDS_PER_MINUTE) *
+                MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND);
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Chrono, Math, GRANULARITY_HOUR):
+            *outStep =
+                (int64_t)MODULE_CONST(Chrono, Math, SECONDS_PER_HOUR) *
+                MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND);
+            return STATUS_CONST(SUCCESS);
+          case MODULE_CONST(Chrono, Math, GRANULARITY_DAY):
+            *outStep =
+                (int64_t)MODULE_CONST(Chrono, Math, SECONDS_PER_DAY) *
+                MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND);
+            return STATUS_CONST(SUCCESS);
+          default:
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+        })
+    )
+);
+
+/* ========================================================================== */
+/* 2. Package Implementation: Chrono_Math                                     */
+/* ========================================================================== */
+
+MODULE_IMPLEMENT(DOMAIN(Modules), Chrono,
+    PACKAGE(Math,
+        VARIANT(From,
+            FUNCTION(MODULE_TYPE(Chrono, Span), Nanoseconds,
+                     (int64_t nanoseconds), {
+              return (MODULE_TYPE(Chrono, Span)){nanoseconds};
+            }),
+
+            OPERATION(Microseconds,
+                      (int64_t microseconds,
+                       MODULE_TYPE(Chrono, Span) *outResult), {
+              return MODULE_IFUNC(Chrono, Math, FromUnit)(
+                  microseconds,
+                  MODULE_CONST(Chrono, Math, NANOSECONDS_PER_MICROSECOND),
+                  outResult);
+            }),
+
+            OPERATION(Milliseconds,
+                      (int64_t milliseconds,
+                       MODULE_TYPE(Chrono, Span) *outResult), {
+              return MODULE_IFUNC(Chrono, Math, FromUnit)(
+                  milliseconds,
+                  MODULE_CONST(Chrono, Math, NANOSECONDS_PER_MILLISECOND),
+                  outResult);
+            }),
+
+            OPERATION(Seconds,
+                      (int64_t seconds,
+                       MODULE_TYPE(Chrono, Span) *outResult), {
+              return MODULE_IFUNC(Chrono, Math, FromUnit)(
+                  seconds,
+                  MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND),
+                  outResult);
+            }),
+
+            OPERATION(Minutes,
+                      (int64_t minutes,
+                       MODULE_TYPE(Chrono, Span) *outResult), {
+              return MODULE_IFUNC(Chrono, Math, FromUnit)(
+                  minutes,
+                  (int64_t)MODULE_CONST(Chrono, Math, SECONDS_PER_MINUTE) *
+                      MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND),
+                  outResult);
+            }),
+
+            OPERATION(Hours,
+                      (int64_t hours,
+                       MODULE_TYPE(Chrono, Span) *outResult), {
+              return MODULE_IFUNC(Chrono, Math, FromUnit)(
+                  hours,
+                  (int64_t)MODULE_CONST(Chrono, Math, SECONDS_PER_HOUR) *
+                      MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND),
+                  outResult);
+            }),
+
+            OPERATION(Days,
+                      (int64_t days,
+                       MODULE_TYPE(Chrono, Span) *outResult), {
+              return MODULE_IFUNC(Chrono, Math, FromUnit)(
+                  days,
+                  (int64_t)MODULE_CONST(Chrono, Math, SECONDS_PER_DAY) *
+                      MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND),
+                  outResult);
+            }),
+
+            OPERATION(Hz,
+                      (double hz, MODULE_TYPE(Chrono, Span) *outResult), {
+              if (outResult == NULL || (hz - hz) != 0.0 || !(hz > 0.0)) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              const double nsPerSec =
+                  (double)MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND);
+              if (hz > nsPerSec) {
+                return STATUS_CONST(OUT_OF_RANGE);
+              }
+              double period = nsPerSec / hz;
+              if (period + 0.5 >= (double)INT64_MAX) {
+                return STATUS_CONST(ARITHMETIC_OVERFLOW);
+              }
+              outResult->nanoseconds = (int64_t)(period + 0.5);
+              return STATUS_CONST(SUCCESS);
+            })
+        ),
+
+        VARIANT(To,
+            FUNCTION(int64_t, Nanoseconds,
+                     (MODULE_TYPE(Chrono, Span) value), {
+              return value.nanoseconds;
+            }),
+
+            FUNCTION(int64_t, Microseconds,
+                     (MODULE_TYPE(Chrono, Span) value), {
+              return value.nanoseconds /
+                     MODULE_CONST(Chrono, Math, NANOSECONDS_PER_MICROSECOND);
+            }),
+
+            FUNCTION(int64_t, Milliseconds,
+                     (MODULE_TYPE(Chrono, Span) value), {
+              return value.nanoseconds /
+                     MODULE_CONST(Chrono, Math, NANOSECONDS_PER_MILLISECOND);
+            }),
+
+            FUNCTION(int64_t, Seconds,
+                     (MODULE_TYPE(Chrono, Span) value), {
+              return value.nanoseconds /
+                     MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND);
+            }),
+
+            OPERATION(Hz,
+                      (MODULE_TYPE(Chrono, Span) value, double *outHz), {
+              if (outHz == NULL || value.nanoseconds <= 0) {
+                return STATUS_CONST(INVALID_ARGUMENT);
+              }
+              *outHz =
+                  (double)MODULE_CONST(Chrono, Math, NANOSECONDS_PER_SECOND) /
+                  (double)value.nanoseconds;
+              return STATUS_CONST(SUCCESS);
+            })
+        ),
+
+        PREDICATE(IsZero, (MODULE_TYPE(Chrono, Span) value), {
+          return value.nanoseconds == 0;
+        }),
+
+        PREDICATE(IsNegative, (MODULE_TYPE(Chrono, Span) value), {
+          return value.nanoseconds < 0;
+        }),
+
+        COMPARISON(Compare,
+                   (MODULE_TYPE(Chrono, Span) left,
+                    MODULE_TYPE(Chrono, Span) right), {
+          if (left.nanoseconds < right.nanoseconds) {
+            return COMPARISON_CONST(LOWER);
+          }
+          if (left.nanoseconds > right.nanoseconds) {
+            return COMPARISON_CONST(HIGHER);
+          }
+          return COMPARISON_CONST(EQUAL);
+        }),
+
+        OPERATION(Add,
+                  (MODULE_TYPE(Chrono, Span) left,
+                   MODULE_TYPE(Chrono, Span) right,
+                   MODULE_TYPE(Chrono, Span) *outResult), {
+          if (outResult == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          if ((right.nanoseconds > 0 &&
+               left.nanoseconds > INT64_MAX - right.nanoseconds) ||
+              (right.nanoseconds < 0 &&
+               left.nanoseconds < INT64_MIN - right.nanoseconds)) {
+            return STATUS_CONST(ARITHMETIC_OVERFLOW);
+          }
+          outResult->nanoseconds = left.nanoseconds + right.nanoseconds;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(Subtract,
+                  (MODULE_TYPE(Chrono, Span) left,
+                   MODULE_TYPE(Chrono, Span) right,
+                   MODULE_TYPE(Chrono, Span) *outResult), {
+          if (outResult == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          if ((right.nanoseconds < 0 &&
+               left.nanoseconds > INT64_MAX + right.nanoseconds) ||
+              (right.nanoseconds > 0 &&
+               left.nanoseconds < INT64_MIN + right.nanoseconds)) {
+            return STATUS_CONST(ARITHMETIC_OVERFLOW);
+          }
+          outResult->nanoseconds = left.nanoseconds - right.nanoseconds;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(Absolute,
+                  (MODULE_TYPE(Chrono, Span) value,
+                   MODULE_TYPE(Chrono, Span) *outResult), {
+          if (outResult == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          if (value.nanoseconds == INT64_MIN) {
+            return STATUS_CONST(ARITHMETIC_OVERFLOW);
+          }
+          outResult->nanoseconds =
+              value.nanoseconds < 0 ? -value.nanoseconds : value.nanoseconds;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(Negate,
+                  (MODULE_TYPE(Chrono, Span) value,
+                   MODULE_TYPE(Chrono, Span) *outResult), {
+          if (outResult == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          if (value.nanoseconds == INT64_MIN) {
+            return STATUS_CONST(ARITHMETIC_OVERFLOW);
+          }
+          outResult->nanoseconds = -value.nanoseconds;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(Scale,
+                  (MODULE_TYPE(Chrono, Span) value, int64_t factor,
+                   MODULE_TYPE(Chrono, Span) *outResult), {
+          if (outResult == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          if (value.nanoseconds == 0 || factor == 0) {
+            outResult->nanoseconds = 0;
+            return STATUS_CONST(SUCCESS);
+          }
+          if (value.nanoseconds > 0) {
+            if (factor > 0) {
+              if (value.nanoseconds > INT64_MAX / factor) {
+                return STATUS_CONST(ARITHMETIC_OVERFLOW);
+              }
+            } else {
+              if (factor < INT64_MIN / value.nanoseconds) {
+                return STATUS_CONST(ARITHMETIC_OVERFLOW);
+              }
+            }
+          } else {
+            if (factor > 0) {
+              if (value.nanoseconds < INT64_MIN / factor) {
+                return STATUS_CONST(ARITHMETIC_OVERFLOW);
+              }
+            } else {
+              if (value.nanoseconds < INT64_MAX / factor) {
+                return STATUS_CONST(ARITHMETIC_OVERFLOW);
+              }
+            }
+          }
+          outResult->nanoseconds = value.nanoseconds * factor;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(Divide,
+                  (MODULE_TYPE(Chrono, Span) value, int64_t divisor,
+                   MODULE_TYPE(Chrono, Span) *outResult), {
+          if (outResult == NULL || divisor == 0) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          if (value.nanoseconds == INT64_MIN && divisor == -1) {
+            return STATUS_CONST(ARITHMETIC_OVERFLOW);
+          }
+          outResult->nanoseconds = value.nanoseconds / divisor;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(Remainder,
+                  (MODULE_TYPE(Chrono, Span) value,
+                   MODULE_TYPE(Chrono, Span) divisor,
+                   MODULE_TYPE(Chrono, Span) *outResult), {
+          if (outResult == NULL || divisor.nanoseconds == 0) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          if (value.nanoseconds == INT64_MIN && divisor.nanoseconds == -1) {
+            return STATUS_CONST(ARITHMETIC_OVERFLOW);
+          }
+          outResult->nanoseconds = value.nanoseconds % divisor.nanoseconds;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(Ratio,
+                  (MODULE_TYPE(Chrono, Span) numerator,
+                   MODULE_TYPE(Chrono, Span) denominator, double *outRatio), {
+          if (outRatio == NULL || denominator.nanoseconds == 0) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          *outRatio =
+              (double)numerator.nanoseconds / (double)denominator.nanoseconds;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        FUNCTION(MODULE_TYPE(Chrono, Span), AddSaturating,
+                 (MODULE_TYPE(Chrono, Span) left,
+                  MODULE_TYPE(Chrono, Span) right), {
+          if (right.nanoseconds > 0 &&
+              left.nanoseconds > INT64_MAX - right.nanoseconds) {
+            return (MODULE_TYPE(Chrono, Span)){INT64_MAX};
+          }
+          if (right.nanoseconds < 0 &&
+              left.nanoseconds < INT64_MIN - right.nanoseconds) {
+            return (MODULE_TYPE(Chrono, Span)){INT64_MIN};
+          }
+          return (MODULE_TYPE(Chrono, Span)){
+              left.nanoseconds + right.nanoseconds};
+        }),
+
+        FUNCTION(MODULE_TYPE(Chrono, Span), SubtractSaturating,
+                 (MODULE_TYPE(Chrono, Span) left,
+                  MODULE_TYPE(Chrono, Span) right), {
+          if (right.nanoseconds < 0 &&
+              left.nanoseconds > INT64_MAX + right.nanoseconds) {
+            return (MODULE_TYPE(Chrono, Span)){INT64_MAX};
+          }
+          if (right.nanoseconds > 0 &&
+              left.nanoseconds < INT64_MIN + right.nanoseconds) {
+            return (MODULE_TYPE(Chrono, Span)){INT64_MIN};
+          }
+          return (MODULE_TYPE(Chrono, Span)){
+              left.nanoseconds - right.nanoseconds};
+        }),
+
+        FUNCTION(MODULE_TYPE(Chrono, Span), Min,
+                 (MODULE_TYPE(Chrono, Span) left,
+                  MODULE_TYPE(Chrono, Span) right), {
+          return left.nanoseconds <= right.nanoseconds ? left : right;
+        }),
+
+        FUNCTION(MODULE_TYPE(Chrono, Span), Max,
+                 (MODULE_TYPE(Chrono, Span) left,
+                  MODULE_TYPE(Chrono, Span) right), {
+          return left.nanoseconds >= right.nanoseconds ? left : right;
+        }),
+
+        OPERATION(Clamp,
+                  (MODULE_TYPE(Chrono, Span) value,
+                   MODULE_TYPE(Chrono, Span) minValue,
+                   MODULE_TYPE(Chrono, Span) maxValue,
+                   MODULE_TYPE(Chrono, Span) *outResult), {
+          if (outResult == NULL ||
+              minValue.nanoseconds > maxValue.nanoseconds) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          if (value.nanoseconds < minValue.nanoseconds) {
+            *outResult = minValue;
+          } else if (value.nanoseconds > maxValue.nanoseconds) {
+            *outResult = maxValue;
+          } else {
+            *outResult = value;
+          }
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(Truncate,
+                  (MODULE_TYPE(Chrono, Span) value,
+                   MODULE_ENUM(Chrono, Math, Granularity) unit,
+                   MODULE_TYPE(Chrono, Span) *outResult), {
+          if (outResult == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          int64_t step = 0;
+          OPSTATUS status =
+              MODULE_IFUNC(Chrono, Math, GranularityStep)(unit, &step);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          outResult->nanoseconds = (value.nanoseconds / step) * step;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        OPERATION(Round,
+                  (MODULE_TYPE(Chrono, Span) value,
+                   MODULE_ENUM(Chrono, Math, Granularity) unit,
+                   MODULE_TYPE(Chrono, Span) *outResult), {
+          if (outResult == NULL) {
+            return STATUS_CONST(INVALID_ARGUMENT);
+          }
+          int64_t step = 0;
+          OPSTATUS status =
+              MODULE_IFUNC(Chrono, Math, GranularityStep)(unit, &step);
+          if (status != STATUS_CONST(SUCCESS)) {
+            return status;
+          }
+          if (step == 1) {
+            *outResult = value;
+            return STATUS_CONST(SUCCESS);
+          }
+          bool negative = value.nanoseconds < 0;
+          uint64_t mag = negative
+                             ? ((uint64_t)(-(value.nanoseconds + 1)) + 1ULL)
+                             : (uint64_t)value.nanoseconds;
+          uint64_t uStep = (uint64_t)step;
+          uint64_t quotient = mag / uStep;
+          uint64_t remainder = mag % uStep;
+          if (remainder >= uStep / 2ULL) {
+            ++quotient;
+          }
+          uint64_t maxMag =
+              negative ? ((uint64_t)INT64_MAX + 1ULL) : (uint64_t)INT64_MAX;
+          if (quotient > maxMag / uStep) {
+            return STATUS_CONST(ARITHMETIC_OVERFLOW);
+          }
+          uint64_t roundedMag = quotient * uStep;
+          outResult->nanoseconds =
+              negative ? (roundedMag == (uint64_t)INT64_MAX + 1ULL
+                              ? INT64_MIN
+                              : -(int64_t)roundedMag)
+                       : (int64_t)roundedMag;
+          return STATUS_CONST(SUCCESS);
+        }),
+
+        SPACE(Interval,
+              PREDICATE(IsValid, (MODULE_TYPE(Chrono, Interval) interval), {
+                return interval.start.nanoseconds <= interval.end.nanoseconds;
+              }),
+
+              OPERATION(Length,
+                        (MODULE_TYPE(Chrono, Interval) interval,
+                         MODULE_TYPE(Chrono, Span) *outSpan), {
+                if (outSpan == NULL ||
+                    !MODULE_FUNC(Chrono, Math, Interval, IsValid)(interval)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                return MODULE_FUNC(Chrono, Math, Subtract)(
+                    interval.end, interval.start, outSpan);
+              }),
+
+              PREDICATE(Contains,
+                        (MODULE_TYPE(Chrono, Interval) interval,
+                         MODULE_TYPE(Chrono, Span) point), {
+                return MODULE_FUNC(Chrono, Math, Interval, IsValid)(interval) &&
+                       point.nanoseconds >= interval.start.nanoseconds &&
+                       point.nanoseconds < interval.end.nanoseconds;
+              }),
+
+              PREDICATE(Overlaps,
+                        (MODULE_TYPE(Chrono, Interval) left,
+                         MODULE_TYPE(Chrono, Interval) right), {
+                return MODULE_FUNC(Chrono, Math, Interval, IsValid)(left) &&
+                       MODULE_FUNC(Chrono, Math, Interval, IsValid)(right) &&
+                       left.start.nanoseconds < right.end.nanoseconds &&
+                       right.start.nanoseconds < left.end.nanoseconds;
+              }),
+
+              OPERATION(Intersection,
+                        (MODULE_TYPE(Chrono, Interval) left,
+                         MODULE_TYPE(Chrono, Interval) right,
+                         MODULE_TYPE(Chrono, Interval) *outResult), {
+                if (outResult == NULL ||
+                    !MODULE_FUNC(Chrono, Math, Interval, IsValid)(left) ||
+                    !MODULE_FUNC(Chrono, Math, Interval, IsValid)(right)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                MODULE_TYPE(Chrono, Span) maxStart =
+                    MODULE_FUNC(Chrono, Math, Max)(left.start, right.start);
+                MODULE_TYPE(Chrono, Span) minEnd =
+                    MODULE_FUNC(Chrono, Math, Min)(left.end, right.end);
+                if (maxStart.nanoseconds >= minEnd.nanoseconds) {
+                  return STATUS_CONST(OUT_OF_RANGE);
+                }
+                *outResult = (MODULE_TYPE(Chrono, Interval)){maxStart, minEnd};
+                return STATUS_CONST(SUCCESS);
+              }),
+
+              OPERATION(Union,
+                        (MODULE_TYPE(Chrono, Interval) left,
+                         MODULE_TYPE(Chrono, Interval) right,
+                         MODULE_TYPE(Chrono, Interval) *outResult), {
+                if (outResult == NULL ||
+                    !MODULE_FUNC(Chrono, Math, Interval, IsValid)(left) ||
+                    !MODULE_FUNC(Chrono, Math, Interval, IsValid)(right)) {
+                  return STATUS_CONST(INVALID_ARGUMENT);
+                }
+                *outResult = (MODULE_TYPE(Chrono, Interval)){
+                    MODULE_FUNC(Chrono, Math, Min)(left.start, right.start),
+                    MODULE_FUNC(Chrono, Math, Max)(left.end, right.end)};
+                return STATUS_CONST(SUCCESS);
+              })
+        )
+    )
+);
+
+/* EOF */

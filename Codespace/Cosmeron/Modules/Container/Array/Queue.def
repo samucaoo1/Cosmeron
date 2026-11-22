@@ -12,7 +12,7 @@
           size_t head;                                                         \
       ),                                                                       \
                                                                                \
-      CLOSURE(                                                                 \
+      DELEGATE(                                                                 \
           PROCEDURE(Visitor, (TYPE *element)),                                 \
           PREDICATE(Predicate, (const TYPE *element))),                        \
                                                                                \

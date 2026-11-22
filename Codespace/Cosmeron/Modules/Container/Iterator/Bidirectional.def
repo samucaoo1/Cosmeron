@@ -19,7 +19,7 @@
           bool reverse;                                                        \
       ),                                                                       \
                                                                                \
-      CLOSURE(                                                                 \
+      DELEGATE(                                                                 \
           PROCEDURE(Visitor, (TYPE *element)),                                 \
           PROCEDURE(ConstVisitor, (const TYPE *element)),                      \
           PREDICATE(Predicate, (const TYPE *element))),                        \
@@ -166,12 +166,12 @@
                                                                                \
       OPERATION_INLINE(                                                        \
           ForEach,                                                             \
-          (MODULE_CLOSURE(Iterator, Bidirectional, SUFFIX, Visitor) visitor),  \
+          (MODULE_DELEGATE(Iterator, Bidirectional, SUFFIX, Visitor) visitor),  \
           {                                                                    \
-            if (!self || !CLOSURE_IS_VALID(visitor))                           \
+            if (!self || !DELEGATE_IS_VALID(visitor))                           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             while (self->current != NULL) {                                    \
-              CLOSURE_CALL(visitor, &self->current->value);                    \
+              DELEGATE_CALL(visitor, &self->current->value);                    \
               self->last = self->current;                                      \
               self->current =                                                  \
                   self->reverse ? self->current->prev : self->current->next;   \

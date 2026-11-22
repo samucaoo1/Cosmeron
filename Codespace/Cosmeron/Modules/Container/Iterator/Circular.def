@@ -20,7 +20,7 @@
           bool reverse;                                                        \
       ),                                                                       \
                                                                                \
-      CLOSURE(                                                                 \
+      DELEGATE(                                                                 \
           PROCEDURE(Visitor, (TYPE *element)),                                 \
           PREDICATE(Predicate, (const TYPE *element))),                        \
                                                                                \
@@ -222,15 +222,15 @@
                                                                                \
       OPERATION_INLINE(                                                        \
           ForEach,                                                             \
-          (MODULE_CLOSURE(Iterator, Circular, SUFFIX, Visitor) visitor), {     \
-            if (!self || !CLOSURE_IS_VALID(visitor))                           \
+          (MODULE_DELEGATE(Iterator, Circular, SUFFIX, Visitor) visitor), {     \
+            if (!self || !DELEGATE_IS_VALID(visitor))                           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             while (self->step < self->count) {                                 \
               size_t logical = self->reverse                                   \
                                    ? (self->count - 1U - self->step)           \
                                    : self->step;                               \
               size_t physical = (self->head + logical) % self->capacity;       \
-              CLOSURE_CALL(visitor, &self->base[physical]);                    \
+              DELEGATE_CALL(visitor, &self->base[physical]);                    \
               self->step++;                                                    \
             }                                                                  \
             return STATUS_CONST(SUCCESS);                                      \

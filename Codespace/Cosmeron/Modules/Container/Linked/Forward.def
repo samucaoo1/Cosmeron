@@ -11,7 +11,7 @@
           size_t size;                                                         \
       ),                                                                       \
                                                                                \
-      CLOSURE(PROCEDURE(Visitor, (TYPE *element))),                            \
+      DELEGATE(PROCEDURE(Visitor, (TYPE *element))),                            \
                                                                                \
       OPERATION_INLINE(Create, (), {                                           \
         if (!self)                                                             \
@@ -250,13 +250,13 @@
                                                                                \
       OPERATION_INLINE(                                                        \
           ForEach,                                                             \
-          (MODULE_CLOSURE(Linked, Forward, SUFFIX, Visitor) visitor), {        \
-            if (!self || !CLOSURE_IS_VALID(visitor))                           \
+          (MODULE_DELEGATE(Linked, Forward, SUFFIX, Visitor) visitor), {        \
+            if (!self || !DELEGATE_IS_VALID(visitor))                           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             struct MODULE_TYPED(Linked, SingleNode, SUFFIX) *curr =            \
                 self->head;                                                    \
             while (curr != NULL) {                                             \
-              CLOSURE_CALL(visitor, &curr->value);                             \
+              DELEGATE_CALL(visitor, &curr->value);                             \
               curr = curr->next;                                               \
             }                                                                  \
             return STATUS_CONST(SUCCESS);                                      \

@@ -1,0 +1,540 @@
+#pragma once
+
+#include <limits.h>
+#include <stdio.h>
+#include <string.h>
+
+#define TEXT_WRITER_INTERNAL_COL_NAME(NAME, VALUE) NAME
+#define TEXT_WRITER_INTERNAL_COL_VALUE(NAME, VALUE) VALUE
+#define TEXT_WRITER_INTERNAL_GET(FIELD, ROW)                                   \
+  PP_OP_CAT2(TEXT_WRITER_INTERNAL_COL_, FIELD) ROW
+
+#define TEXT_WRITER_INTERNAL_TABLE(X)                                          \
+  X((BASE_MIN, 2U))                                                            \
+  X((BASE_DECIMAL, 10U))                                                       \
+  X((BASE_HEX, 16U))                                                           \
+  X((BASE_MAX, 36U))                                                           \
+  X((CHUNK_SIZE, 64U))                                                         \
+  X((INT_BUFFER_SIZE, 128U))                                                   \
+  X((FLOAT_BUFFER_SIZE, 1024U))                                                \
+  X((UTF8_MAX_BYTES, 4U))                                                      \
+  X((HEX_NIBBLE_SHIFT, 4U))                                                    \
+  X((HEX_NIBBLE_MASK, 0x0FU))                                                  \
+  X((ASCII_PRINTABLE_MIN, 0x20U))                                              \
+  X((ASCII_PRINTABLE_MAX, 0x7EU))
+
+IENUM_DEF(MODULE_NS(Text, Writer), Config, TEXT_WRITER_INTERNAL_TABLE)
+
+MODULE_IMPLEMENT(DOMAIN(Modules), Text,
+  INTERNAL_EX(Writer,
+    FUNCTION(const char *, FloatSpecFormat,
+             (char specifier, bool hasPrecision), {
+      if (hasPrecision) {
+        switch (specifier) {
+          case 'f': return "%.*f";
+          case 'F': return "%.*F";
+          case 'e': return "%.*e";
+          case 'E': return "%.*E";
+          case 'g': return "%.*g";
+          case 'G': return "%.*G";
+          case 'a': return "%.*a";
+          case 'A': return "%.*A";
+          default: return NULL;
+        }
+      }
+      switch (specifier) {
+        case 'f': return "%f";
+        case 'F': return "%F";
+        case 'e': return "%e";
+        case 'E': return "%E";
+        case 'g': return "%g";
+        case 'G': return "%G";
+        case 'a': return "%a";
+        case 'A': return "%A";
+        default: return NULL;
+      }
+    }),
+
+    OPERATION(Fail,
+              (MODULE_TYPE(Text, Writer) *writer, OPSTATUS status), {
+      if (writer->status == STATUS_CONST(SUCCESS)) {
+        writer->status = status;
+      }
+      return writer->status;
+    })
+  ),
+
+  PACKAGE(Writer,
+    FUNCTION(MODULE_TYPE(Text, Writer), ToBuffer,
+             (char *buffer, size_t capacity), {
+      MODULE_TYPE(Text, Writer) writer;
+      writer.mode = MODULE_NS(Text, Writer, Mode, BUFFER);
+      writer.buffer = buffer;
+      writer.capacity = capacity;
+      writer.written = 0U;
+      writer.truncated = false;
+      writer.sink = NS_JOIN(MODULE_DELEGATE_FUNC(Text, WriterSink), Empty)();
+      if (buffer == NULL && capacity > 0U) {
+        writer.status = STATUS_CONST(INVALID_ARGUMENT);
+      } else {
+        writer.status = STATUS_CONST(SUCCESS);
+        if (buffer != NULL && capacity > 0U) {
+          buffer[0] = '\0';
+        }
+      }
+      return writer;
+    }),
+
+    FUNCTION(MODULE_TYPE(Text, Writer), Counter, (), {
+      MODULE_TYPE(Text, Writer) writer;
+      writer.mode = MODULE_NS(Text, Writer, Mode, COUNTER);
+      writer.buffer = NULL;
+      writer.capacity = 0U;
+      writer.written = 0U;
+      writer.truncated = false;
+      writer.status = STATUS_CONST(SUCCESS);
+      writer.sink = NS_JOIN(MODULE_DELEGATE_FUNC(Text, WriterSink), Empty)();
+      return writer;
+    }),
+
+    FUNCTION(MODULE_TYPE(Text, Writer), ToDelegate,
+             (MODULE_DELEGATE(Text, WriterSink) sink), {
+      MODULE_TYPE(Text, Writer) writer;
+      writer.mode = MODULE_NS(Text, Writer, Mode, DELEGATE);
+      writer.buffer = NULL;
+      writer.capacity = 0U;
+      writer.written = 0U;
+      writer.truncated = false;
+      writer.sink = sink;
+      writer.status = DELEGATE_IS_VALID(sink) ? STATUS_CONST(SUCCESS)
+                                              : STATUS_CONST(INVALID_ARGUMENT);
+      return writer;
+    }),
+
+    FUNCTION(size_t, Written, (const MODULE_TYPE(Text, Writer) *writer), {
+      return writer != NULL ? writer->written : 0U;
+    }),
+
+    PREDICATE(IsTruncated, (const MODULE_TYPE(Text, Writer) *writer), {
+      return writer != NULL && writer->truncated;
+    }),
+
+    FUNCTION(OPSTATUS, Status, (const MODULE_TYPE(Text, Writer) *writer), {
+      return writer != NULL ? writer->status : STATUS_CONST(INVALID_ARGUMENT);
+    }),
+
+    OPERATION(WriteBuffer,
+              (MODULE_TYPE(Text, Writer) *writer, const char *data,
+               size_t length), {
+      if (writer == NULL) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      if (writer->status != STATUS_CONST(SUCCESS)) {
+        return writer->status;
+      }
+      if (data == NULL && length > 0U) {
+        return MODULE_IFUNC(Text, Writer, Fail)(
+            writer, STATUS_CONST(INVALID_ARGUMENT));
+      }
+      if (length == 0U) {
+        return STATUS_CONST(SUCCESS);
+      }
+      if (length > SIZE_MAX - writer->written) {
+        return MODULE_IFUNC(Text, Writer, Fail)(
+            writer, STATUS_CONST(ARITHMETIC_OVERFLOW));
+      }
+
+      if (writer->mode == MODULE_NS(Text, Writer, Mode, COUNTER)) {
+        writer->written += length;
+        return STATUS_CONST(SUCCESS);
+      }
+
+      if (writer->mode == MODULE_NS(Text, Writer, Mode, BUFFER)) {
+        if (writer->buffer != NULL && writer->capacity > 0U) {
+          const size_t usable = writer->capacity - 1U;
+          if (writer->written < usable) {
+            const size_t available = usable - writer->written;
+            const size_t toCopy = length < available ? length : available;
+            memcpy(writer->buffer + writer->written, data, toCopy);
+            writer->buffer[writer->written + toCopy] = '\0';
+            if (toCopy < length) {
+              writer->truncated = true;
+            }
+          } else {
+            writer->truncated = true;
+          }
+        } else if (writer->buffer != NULL && writer->capacity == 0U) {
+          writer->truncated = true;
+        }
+        writer->written += length;
+        return STATUS_CONST(SUCCESS);
+      }
+
+      if (writer->mode == MODULE_NS(Text, Writer, Mode, DELEGATE)) {
+        if (!DELEGATE_IS_VALID(writer->sink)) {
+          return MODULE_IFUNC(Text, Writer, Fail)(
+              writer, STATUS_CONST(INVALID_ARGUMENT));
+        }
+        const OPSTATUS status = DELEGATE_CALL(writer->sink, data, length);
+        if (status != STATUS_CONST(SUCCESS)) {
+          return MODULE_IFUNC(Text, Writer, Fail)(writer, status);
+        }
+        writer->written += length;
+        return STATUS_CONST(SUCCESS);
+      }
+
+      return MODULE_IFUNC(Text, Writer, Fail)(
+          writer, STATUS_CONST(INVALID_ARGUMENT));
+    }),
+
+    OPERATION(WriteChar, (MODULE_TYPE(Text, Writer) *writer, char ch), {
+      return MODULE_FUNC(Text, Writer, WriteBuffer)(writer, &ch, 1U);
+    }),
+
+    OPERATION(WriteCodepoint,
+              (MODULE_TYPE(Text, Writer) *writer,
+               MODULE_TYPE(Text, Char32) codepoint), {
+      if (writer == NULL) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      if (writer->status != STATUS_CONST(SUCCESS)) {
+        return writer->status;
+      }
+      unsigned char encoded[MODULE_IFUNC(Text, Writer, UTF8_MAX_BYTES)];
+      size_t units = 0U;
+      const OPSTATUS status = MODULE_FUNC(Text, UTF8, Encode)(
+          codepoint, encoded, sizeof(encoded), &units);
+      if (status != STATUS_CONST(SUCCESS)) {
+        return MODULE_IFUNC(Text, Writer, Fail)(writer, status);
+      }
+      return MODULE_FUNC(Text, Writer, WriteBuffer)(
+          writer, (const char *)encoded, units);
+    }),
+
+    OPERATION(WriteRepeat,
+              (MODULE_TYPE(Text, Writer) *writer, char ch, size_t count), {
+      if (writer == NULL) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      if (writer->status != STATUS_CONST(SUCCESS)) {
+        return writer->status;
+      }
+      if (count == 0U) {
+        return STATUS_CONST(SUCCESS);
+      }
+      if (writer->mode == MODULE_NS(Text, Writer, Mode, COUNTER)) {
+        if (count > SIZE_MAX - writer->written) {
+          return MODULE_IFUNC(Text, Writer, Fail)(
+              writer, STATUS_CONST(ARITHMETIC_OVERFLOW));
+        }
+        writer->written += count;
+        return STATUS_CONST(SUCCESS);
+      }
+      char chunk[MODULE_IFUNC(Text, Writer, CHUNK_SIZE)];
+      const size_t fillLen =
+          count < sizeof(chunk) ? count : sizeof(chunk);
+      memset(chunk, (unsigned char)ch, fillLen);
+      size_t remaining = count;
+      while (remaining > 0U) {
+        const size_t step =
+            remaining < sizeof(chunk) ? remaining : sizeof(chunk);
+        const OPSTATUS status =
+            MODULE_FUNC(Text, Writer, WriteBuffer)(writer, chunk, step);
+        if (status != STATUS_CONST(SUCCESS)) {
+          return status;
+        }
+        remaining -= step;
+      }
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(WriteCStr,
+              (MODULE_TYPE(Text, Writer) *writer, const char *str), {
+      if (writer == NULL) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      if (writer->status != STATUS_CONST(SUCCESS)) {
+        return writer->status;
+      }
+      if (str == NULL) {
+        return MODULE_IFUNC(Text, Writer, Fail)(
+            writer, STATUS_CONST(INVALID_ARGUMENT));
+      }
+      return MODULE_FUNC(Text, Writer, WriteBuffer)(writer, str, strlen(str));
+    }),
+
+    OPERATION(WriteView,
+              (MODULE_TYPE(Text, Writer) *writer,
+               MODULE_TYPE(Text, View8) view), {
+      if (writer == NULL) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      if (writer->status != STATUS_CONST(SUCCESS)) {
+        return writer->status;
+      }
+      if (view.size == 0U) {
+        return STATUS_CONST(SUCCESS);
+      }
+      if (view.data == NULL) {
+        return MODULE_IFUNC(Text, Writer, Fail)(
+            writer, STATUS_CONST(INVALID_ARGUMENT));
+      }
+      return MODULE_FUNC(Text, Writer, WriteBuffer)(
+          writer, view.data, view.size);
+    }),
+
+    OPERATION(WriteBool,
+              (MODULE_TYPE(Text, Writer) *writer, bool value), {
+      return value ? MODULE_FUNC(Text, Writer, WriteBuffer)(writer, "true", 4U)
+                   : MODULE_FUNC(Text, Writer, WriteBuffer)(writer, "false", 5U);
+    }),
+
+    OPERATION(WriteUInt,
+              (MODULE_TYPE(Text, Writer) *writer, uintmax_t value,
+               unsigned base, bool uppercase), {
+      if (writer == NULL) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      if (writer->status != STATUS_CONST(SUCCESS)) {
+        return writer->status;
+      }
+      if (base < MODULE_IFUNC(Text, Writer, BASE_MIN) ||
+          base > MODULE_IFUNC(Text, Writer, BASE_MAX)) {
+        return MODULE_IFUNC(Text, Writer, Fail)(
+            writer, STATUS_CONST(INVALID_ARGUMENT));
+      }
+      static const char lowerDigits[] = "0123456789abcdefghijklmnopqrstuvwxyz";
+      static const char upperDigits[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      const char *digits = uppercase ? upperDigits : lowerDigits;
+      char reversed[MODULE_IFUNC(Text, Writer, INT_BUFFER_SIZE)];
+      char ordered[MODULE_IFUNC(Text, Writer, INT_BUFFER_SIZE)];
+      size_t count = 0U;
+      if (value == 0U) {
+        ordered[0] = '0';
+        count = 1U;
+      } else {
+        uintmax_t temp = value;
+        while (temp > 0U && count < sizeof(reversed)) {
+          reversed[count++] = digits[temp % (uintmax_t)base];
+          temp /= (uintmax_t)base;
+        }
+        for (size_t i = 0U; i < count; ++i) {
+          ordered[i] = reversed[count - 1U - i];
+        }
+      }
+      return MODULE_FUNC(Text, Writer, WriteBuffer)(writer, ordered, count);
+    }),
+
+    OPERATION(WriteInt,
+              (MODULE_TYPE(Text, Writer) *writer, intmax_t value,
+               unsigned base, bool uppercase), {
+      if (writer == NULL) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      if (writer->status != STATUS_CONST(SUCCESS)) {
+        return writer->status;
+      }
+      if (base < MODULE_IFUNC(Text, Writer, BASE_MIN) ||
+          base > MODULE_IFUNC(Text, Writer, BASE_MAX)) {
+        return MODULE_IFUNC(Text, Writer, Fail)(
+            writer, STATUS_CONST(INVALID_ARGUMENT));
+      }
+      if (value < 0) {
+        const OPSTATUS signStatus =
+            MODULE_FUNC(Text, Writer, WriteChar)(writer, '-');
+        if (signStatus != STATUS_CONST(SUCCESS)) {
+          return signStatus;
+        }
+        const uintmax_t mag = (uintmax_t)(-(value + 1)) + 1U;
+        return MODULE_FUNC(Text, Writer, WriteUInt)(
+            writer, mag, base, uppercase);
+      }
+      return MODULE_FUNC(Text, Writer, WriteUInt)(
+          writer, (uintmax_t)value, base, uppercase);
+    }),
+
+    OPERATION(WriteFloat,
+              (MODULE_TYPE(Text, Writer) *writer, double value,
+               char specifier, bool hasPrecision, size_t precision), {
+      if (writer == NULL) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      if (writer->status != STATUS_CONST(SUCCESS)) {
+        return writer->status;
+      }
+      const char *fmt =
+          MODULE_IFUNC(Text, Writer, FloatSpecFormat)(specifier, hasPrecision);
+      if (fmt == NULL) {
+        return MODULE_IFUNC(Text, Writer, Fail)(
+            writer, STATUS_CONST(INVALID_ARGUMENT));
+      }
+      char temp[MODULE_IFUNC(Text, Writer, FLOAT_BUFFER_SIZE)];
+      int n = 0;
+      if (hasPrecision) {
+        const int prec =
+            precision > (size_t)INT_MAX ? INT_MAX : (int)precision;
+        n = snprintf(temp, sizeof(temp), fmt, prec, value);
+      } else {
+        n = snprintf(temp, sizeof(temp), fmt, value);
+      }
+      if (n < 0) {
+        return MODULE_IFUNC(Text, Writer, Fail)(
+            writer, STATUS_CONST(INVALID_ARGUMENT));
+      }
+      if ((size_t)n >= sizeof(temp)) {
+        return MODULE_IFUNC(Text, Writer, Fail)(
+            writer, STATUS_CONST(INSUFFICIENT_SPACE));
+      }
+      return MODULE_FUNC(Text, Writer, WriteBuffer)(writer, temp, (size_t)n);
+    }),
+
+    OPERATION(WriteHex,
+              (MODULE_TYPE(Text, Writer) *writer, const void *bytes,
+               size_t size, bool uppercase), {
+      if (writer == NULL) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      if (writer->status != STATUS_CONST(SUCCESS)) {
+        return writer->status;
+      }
+      if (bytes == NULL && size > 0U) {
+        return MODULE_IFUNC(Text, Writer, Fail)(
+            writer, STATUS_CONST(INVALID_ARGUMENT));
+      }
+      if (size == 0U) {
+        return STATUS_CONST(SUCCESS);
+      }
+      static const char lowerHex[] = "0123456789abcdef";
+      static const char upperHex[] = "0123456789ABCDEF";
+      const char *digits = uppercase ? upperHex : lowerHex;
+      const unsigned char *in = (const unsigned char *)bytes;
+      char outChunk[MODULE_IFUNC(Text, Writer, CHUNK_SIZE)];
+      const size_t maxBytesPerChunk = sizeof(outChunk) / 2U;
+      size_t offset = 0U;
+      while (offset < size) {
+        const size_t remaining = size - offset;
+        const size_t count =
+            remaining < maxBytesPerChunk ? remaining : maxBytesPerChunk;
+        for (size_t i = 0U; i < count; ++i) {
+          const unsigned char byte = in[offset + i];
+          outChunk[i * 2U] =
+              digits[(byte >> MODULE_IFUNC(Text, Writer, HEX_NIBBLE_SHIFT)) &
+                     MODULE_IFUNC(Text, Writer, HEX_NIBBLE_MASK)];
+          outChunk[i * 2U + 1U] =
+              digits[byte & MODULE_IFUNC(Text, Writer, HEX_NIBBLE_MASK)];
+        }
+        const OPSTATUS status = MODULE_FUNC(Text, Writer, WriteBuffer)(
+            writer, outChunk, count * 2U);
+        if (status != STATUS_CONST(SUCCESS)) {
+          return status;
+        }
+        offset += count;
+      }
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(WriteEscaped,
+              (MODULE_TYPE(Text, Writer) *writer, const char *data,
+               size_t length, bool quote), {
+      if (writer == NULL) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      if (writer->status != STATUS_CONST(SUCCESS)) {
+        return writer->status;
+      }
+      if (data == NULL && length > 0U) {
+        return MODULE_IFUNC(Text, Writer, Fail)(
+            writer, STATUS_CONST(INVALID_ARGUMENT));
+      }
+      if (quote) {
+        const OPSTATUS qStatus =
+            MODULE_FUNC(Text, Writer, WriteChar)(writer, '"');
+        if (qStatus != STATUS_CONST(SUCCESS)) {
+          return qStatus;
+        }
+      }
+
+      static const char lowerHex[] = "0123456789abcdef";
+      size_t runStart = 0U;
+      for (size_t i = 0U; i < length; ++i) {
+        const unsigned char ch = (unsigned char)data[i];
+        const bool isPlain =
+            ch >= MODULE_IFUNC(Text, Writer, ASCII_PRINTABLE_MIN) &&
+            ch <= MODULE_IFUNC(Text, Writer, ASCII_PRINTABLE_MAX) &&
+            ch != '\\' && ch != '"';
+        if (isPlain) {
+          continue;
+        }
+        if (i > runStart) {
+          const OPSTATUS runStatus = MODULE_FUNC(Text, Writer, WriteBuffer)(
+              writer, data + runStart, i - runStart);
+          if (runStatus != STATUS_CONST(SUCCESS)) {
+            return runStatus;
+          }
+        }
+        OPSTATUS escStatus = STATUS_CONST(SUCCESS);
+        if (ch == '\\') {
+          escStatus = MODULE_FUNC(Text, Writer, WriteBuffer)(writer, "\\\\", 2U);
+        } else if (ch == '"') {
+          escStatus = MODULE_FUNC(Text, Writer, WriteBuffer)(writer, "\\\"", 2U);
+        } else if (ch == '\n') {
+          escStatus = MODULE_FUNC(Text, Writer, WriteBuffer)(writer, "\\n", 2U);
+        } else if (ch == '\r') {
+          escStatus = MODULE_FUNC(Text, Writer, WriteBuffer)(writer, "\\r", 2U);
+        } else if (ch == '\t') {
+          escStatus = MODULE_FUNC(Text, Writer, WriteBuffer)(writer, "\\t", 2U);
+        } else {
+          char hexEsc[4];
+          hexEsc[0] = '\\';
+          hexEsc[1] = 'x';
+          hexEsc[2] =
+              lowerHex[(ch >> MODULE_IFUNC(Text, Writer, HEX_NIBBLE_SHIFT)) &
+                       MODULE_IFUNC(Text, Writer, HEX_NIBBLE_MASK)];
+          hexEsc[3] =
+              lowerHex[ch & MODULE_IFUNC(Text, Writer, HEX_NIBBLE_MASK)];
+          escStatus = MODULE_FUNC(Text, Writer, WriteBuffer)(writer, hexEsc, 4U);
+        }
+        if (escStatus != STATUS_CONST(SUCCESS)) {
+          return escStatus;
+        }
+        runStart = i + 1U;
+      }
+
+      if (length > runStart) {
+        const OPSTATUS tailStatus = MODULE_FUNC(Text, Writer, WriteBuffer)(
+            writer, data + runStart, length - runStart);
+        if (tailStatus != STATUS_CONST(SUCCESS)) {
+          return tailStatus;
+        }
+      }
+
+      if (quote) {
+        return MODULE_FUNC(Text, Writer, WriteChar)(writer, '"');
+      }
+      return STATUS_CONST(SUCCESS);
+    }),
+
+    OPERATION(Finish, (MODULE_TYPE(Text, Writer) *writer), {
+      if (writer == NULL) {
+        return STATUS_CONST(INVALID_ARGUMENT);
+      }
+      if (writer->status != STATUS_CONST(SUCCESS)) {
+        return writer->status;
+      }
+      if (writer->mode == MODULE_NS(Text, Writer, Mode, BUFFER)) {
+        if (writer->buffer != NULL && writer->capacity > 0U) {
+          const size_t term = writer->written < writer->capacity
+                                  ? writer->written
+                                  : (writer->capacity - 1U);
+          writer->buffer[term] = '\0';
+        }
+        if (writer->truncated) {
+          return STATUS_CONST(INSUFFICIENT_SPACE);
+        }
+      }
+      return STATUS_CONST(SUCCESS);
+    })
+  )
+);
+
+/* EOF */

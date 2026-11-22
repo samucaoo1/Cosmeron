@@ -114,7 +114,7 @@ Cabeçalho: `Array/Heap.h`.
 
 Este é um heap binário de prioridade, distinto de `Core/Memory/Heap.h`. Ele oferece construção de min-heap e max-heap por meio de `CreateMin` e `CreateMax`, além de `FromBuffer`, `Dispose`, `Destroy`, `Clear`, `Reserve`, `ShrinkToFit`, `Heapify`, `Push`, `Pop`, `Peek`, `Top`, `Replace`, `PushPop`, `Size`, `Count` e `Capacity`.
 
-Utilize-o para filas de prioridade e seleção repetida do item de maior ou menor prioridade. Sua closure de comparação determina a ordenação; utilize o tipo de comparator gerado esperado pelo template, em vez de converter um ponteiro de função não relacionado.
+Utilize-o para filas de prioridade e seleção repetida do item de maior ou menor prioridade. Sua delegate de comparação determina a ordenação; utilize o tipo de comparator gerado esperado pelo template, em vez de converter um ponteiro de função não relacionado.
 
 ---
 
@@ -131,7 +131,7 @@ O agregado Linked é `Linked/Linked.h`. Os contêineres encadeados utilizam nós
 | `Linked/Stack.h` | Pilha LIFO encadeada | `Create`, `Clear`, `Push`, `Pop`, `Peek`, `Top`, `Size`, `Count`, `IsEmpty` |
 | `Linked/Ring.h` | Estrutura circular encadeada | Operações de criação, inserção/remoção e travessia definidas pelo template Ring |
 
-Os templates encadeados também fornecem acesso orientado a nós e closures visitor. Utilize o tipo de closure `Visitor` declarado pelo template correspondente ao percorrer elementos. Nós e ponteiros de elementos são gerenciados pelo contêiner; não libere manualmente um nó retornado por um acessor.
+Os templates encadeados também fornecem acesso orientado a nós e delegates visitor. Utilize o tipo de delegate `Visitor` declarado pelo template correspondente ao percorrer elementos. Nós e ponteiros de elementos são gerenciados pelo contêiner; não libere manualmente um nó retornado por um acessor.
 
 As estruturas encadeadas seguem a mesma convenção de ciclo de vida dos contêineres de array: crie ou inicialize antes de usar e depois chame `Dispose` ou `Destroy`. `Clear` remove os elementos e mantém o objeto contêiner utilizável.
 
@@ -259,7 +259,7 @@ if (status == STATUS_CONST(SUCCESS)) {
 
 ## Módulos relacionados
 
-- [Algorithm](Algorithm.md) — closures de comparação usadas por filas de prioridade e contêineres associativos.
+- [Algorithm](Algorithm.md) — delegates de comparação usados por filas de prioridade e contêineres associativos.
 - [Bit](Bit.md) — operações de bits escalares e de tamanho fixo.
 - [Memory](Memory.md) — alocadores utilizados por contêineres dinâmicos e bitsets.
 - [Module](Module.md) — modelo de declaração de objetos e pacotes tipados.

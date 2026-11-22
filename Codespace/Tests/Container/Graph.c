@@ -69,8 +69,8 @@ static void NS(GraphTest, BasicAndTraversals)(void) {
 
   /* BFS & DFS */
   NS(GraphTest, VisitLog) bfsLog = {{0}, 0U};
-  MODULE_CLOSURE(Graph, Int32_Int32, Visitor) bfsVisitor =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Graph, Int32_Int32, Visitor), Bind)(
+  MODULE_DELEGATE(Graph, Int32_Int32, Visitor) bfsVisitor =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Graph, Int32_Int32, Visitor), Bind)(
           MODULE_IFUNC(GraphTest, RecordVisit), &bfsLog);
   assert(OBJECT_CALL(&g, BFS, v0, bfsVisitor) == STATUS_CONST(SUCCESS));
   assert(bfsLog.count == 4U);
@@ -78,8 +78,8 @@ static void NS(GraphTest, BasicAndTraversals)(void) {
          bfsLog.order[2] == 300 && bfsLog.order[3] == 400);
 
   NS(GraphTest, VisitLog) dfsLog = {{0}, 0U};
-  MODULE_CLOSURE(Graph, Int32_Int32, Visitor) dfsVisitor =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Graph, Int32_Int32, Visitor), Bind)(
+  MODULE_DELEGATE(Graph, Int32_Int32, Visitor) dfsVisitor =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Graph, Int32_Int32, Visitor), Bind)(
           MODULE_IFUNC(GraphTest, RecordVisit), &dfsLog);
   assert(OBJECT_CALL(&g, DFS, v0, dfsVisitor) == STATUS_CONST(SUCCESS));
   assert(dfsLog.count == 4U);

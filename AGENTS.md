@@ -49,22 +49,27 @@ Everything must live inside the library/module namespace whenever C allows it. E
 - **Strict Prohibition of Unnamespaced Internals:**
   - Absolutely no C identifier (structs, unions, typedefs, static inline helpers, internal functions, internal enums) may ever exist in the raw global namespace without namespace macros.
   - All internal structs, helpers, static inline functions, and private types **MUST** be wrapped with `NS(...)` or `MODULE_SCOPE`.
-  - Callbacks and internal types must also live within the module namespace.
+  - Callables, delegates, and internal types must also live within the module namespace.
 
 ---
 
 ## 2. Types & `T` Prefix Rule
 
-- Use `T` prefix **only** for types intended to be directly handled by the user (e.g., `TBit32`, `TVector_uint32`, `TText_Underline_Style`).
+- Use `T` prefix **only** for types intended to be directly handled by the user (e.g., `TBit32`, `TVector_uint32`, `TChrono_Date`, `Tree_TAVL_Set`).
+- **Canonical `T` Placement (`Namespace.h` Gold Standard):**
+  - `MODULE_TYPE(NAME)` $\to$ `TNAME`; `MODULE_TYPE(MOD, NAME)` $\to$ `TMOD_NAME`; `MODULE_TYPE(MOD, PKG, NAME)` $\to$ `TMOD_PKG_NAME` (`T` on the **1st token**).
+  - `MODULE_TYPED(...)` follows the same rule with `_SUFFIX` (e.g. `MODULE_TYPED(Container, Vector, uint32)` $\to$ `TContainer_Vector_uint32`).
+  - `MODULE_SUBTYPE(MOD, SUB, NAME)` $\to$ `MOD_TSUB_NAME` and `MODULE_SUBTYPED(MOD, SUB, NAME, SUFFIX)` $\to$ `MOD_TSUB_NAME_SUFFIX` (`T` on the **2nd token**, e.g. `Tree_TAVL_Set`).
+  - Always reference types via `MODULE_TYPE(...)` / `MODULE_TYPED(...)` / `MODULE_SUBTYPE(...)` rather than hardcoding expanded C names.
 - `*_TYPE(SUFFIX)`: Semantic suffix (e.g., `BIT_TYPE(32)` $\to$ `TBit32`).
 - `*_TYPED(TYPE)`: Specialization by another type (e.g., `VECTOR_TYPED(uint32)` $\to$ `TVector_uint32`).
 - Output enums or internal types do **not** use `T` (e.g., `ComparisonResult`, aliased to `CMPOUT`).
-- **Unambiguous naming policy:** Avoid overly generic names (such as `TPool`, `TNode`) that collide semantically across domains (e.g. Memory vs. Random vs. Concurrency). Always qualify the domain explicitly (e.g. `TMemoryPool`).
+- **Unambiguous naming policy:** Avoid overly generic names (such as `TPool`, `TNode`, `Delta`) that collide semantically across domains (e.g. Memory vs. Random vs. Concurrency vs. Chrono). Always qualify the domain/noun family explicitly (e.g. `MemoryPool`, `TimerDelta`, `TimerLimiter`, `DateIsoWeek`, `CivilOffset`, `TimezoneDstRule`).
 - **Strict alias policy:** Public aliases must be rare, deliberate, and highly specific. Do not create short ambiguous aliases.
 - **Prohibition of Global Unnamespaced Typedefs and Forwarding Wrappers:**
-  - Never emit global unnamespaced typedef shortcuts for types declared with `*_TYPE` (e.g. `typedef ERROR_TYPE(TError) TError;` is strictly prohibited).
-  - Never generate unnamespaced inline forwarding wrappers (e.g. `static inline ... TError_Init(...) { return Error_TError_Init(...); }`).
-  - Consumers must directly use the canonical namespaced types (`ERROR_TYPE(TError)` / `Error_TError`) and their emitted functions (`Error_TError_Init`) or declarative macros (`OBJECT_CALL`). Any exceptions require explicit user approval first.
+  - Never emit global unnamespaced typedef shortcuts for types declared with `MODULE_TYPE` / `*_TYPE` (e.g. `typedef MODULE_TYPE(Error, Error) Error;` is strictly prohibited).
+  - Never generate unnamespaced inline forwarding wrappers (e.g. `static inline ... Error_Init(...) { return Error_Error_Init(...); }`).
+  - Consumers must directly use the canonical namespaced types (`MODULE_TYPE(MOD, NAME)` / `TMOD_NAME`) and their emitted functions (`MOD_PKG_Func`) or declarative macros (`MODULE_CALL` / `OBJECT_CALL`). Any exceptions require explicit user approval first.
 
 ---
 
@@ -117,7 +122,7 @@ Everything must live inside the library/module namespace whenever C allows it. E
   - **Canonical Pure POD Rule (POD Puro Canônico é Regra Absoluta):** Structs are strictly Plain Old Data containers without methods, receiver `self`, `Create`, `Extract`, `Unpack`, `Cast_*`, or `FunctionTable` overhead.
   - Zero memory overhead: no `api` pointer, zero cache line pollution, exactly `sizeof(fields)`.
   - Fully C-ABI compliant: supports designated initializers (`.field = val`), direct register passing by value, `memcpy`, `memcmp`, and strict contiguity in arrays.
-  - Generates canonical namespaced types: `MODULE_TYPE(MOD, NAME)` $\to$ `MOD_TNAME` and `MODULE_TYPED(MOD, NAME, SUFFIX)` $\to$ `MOD_TNAME_SUFFIX`.
+  - Generates canonical namespaced types: `MODULE_TYPE(MOD, NAME)` $\to$ `TMOD_NAME`, `MODULE_TYPED(MOD, NAME, SUFFIX)` $\to$ `TMOD_NAME_SUFFIX`, and `MODULE_SUBTYPE(MOD, SUB, NAME)` $\to$ `MOD_TSUB_NAME`.
   - Usable inside `MODULE(...)` or standalone via `STRUCT(MOD, NAME, FIELDS(...))`.
   - Forward declarations: `FORWARD_STRUCT(MOD, NAME)` and `FORWARD_TEMPLATE_STRUCT(MOD, NAME, SUFFIX)`.
   - Never generate artificial constructors, destructors, extraction helpers, or FunctionTables around POD structs. Manipulation and instantiation rely 100% on native C11 constructs (designated initializers and direct field access).
@@ -131,23 +136,23 @@ Everything must live inside the library/module namespace whenever C allows it. E
   - Comparison extensions generate specialized comparisons directly inside objects:
     - `COMPARISON_EX(TYPE, NAME, FIELD)`
     - Shortcuts: `COMPARISON_NUMERIC(NAME, FIELD)`, `COMPARISON_STRING(NAME, FIELD)`, `COMPARISON_BYTES(NAME, FIELD)`.
-  - Declarative callbacks can be declared inside `OBJECT` or `PACKAGE` via the `CALLBACK(...)` capsule:
-    - `CALLBACK(OPERATION(Name, (params)))`, `CALLBACK(PREDICATE(Name, (params)))`, etc.
-  - Automatic `TCALLBACK(Comparison)` adapter generation for object methods returning `CMPOUT`:
-    - Generates `<CLASS>_<Method>_ComparatorAdapter(const void *left, const void *right, void *context)` and `<CLASS>_<Method>_AsComparator()` which produces a ready-to-use `TCALLBACK(Comparison)`.
+  - Declarative callables and delegates can be declared inside `OBJECT` or `PACKAGE` via `CALLABLE(...)` and `DELEGATE(...)`:
+    - `CALLABLE(OPERATION(Name, (params)), ...)` and `DELEGATE(PREDICATE(Name, (params)), ...)`
+  - Automatic `TDELEGATE(Comparison)` adapter generation for object methods returning `CMPOUT`:
+    - Generates `<CLASS>_<Method>_ComparatorAdapter(const void *left, const void *right, void *context)` and `<CLASS>_<Method>_AsComparator()` which produces a ready-to-use `TDELEGATE(Comparison)`.
   - Member fields are declared cleanly within `FIELDS(...)`.
   - Casting: `OBJECT_AS(OBJ, TARGET_TYPE)`.
   - Invocation: `OBJECT_CALL(obj, MethodName, args...)` or `OBJECT_CALL_0(obj, MethodName)`.
-- **Declarative Callbacks System:**
+- **Declarative Callables (`TCALLABLE`, 8-byte stateless) & Delegates (`TDELEGATE`, 16-byte dual-mode):**
   - Standalone declarations use category descriptors:
-    - `CALLBACK_FUNCTION(RET, NAME, (params))`
-    - `CALLBACK_PROCEDURE(NAME, (params))`
-    - `CALLBACK_OPERATION(NAME, (params))`
-    - `CALLBACK_PREDICATE(NAME, (params))`
-    - `CALLBACK_COMPARISON(NAME, (params))`
-  - Universal invocation: `CALLBACK_CALL(callback, args...)` or `CALLBACK_INVOKE(callback, args...)` (supports arbitrary arity).
-  - Validity checking: `CALLBACK_IS_VALID(callback)` or `callback.IsValid(&callback)`.
-  - Binding: `callback.Bind(&callback, func, ctx)` or `CALLBACK_FUNC(NAME, Bind)(func, ctx)`.
+    - `CALLABLE_FUNCTION(RET, NAME, (params))` / `DELEGATE_FUNCTION(RET, NAME, (params))`
+    - `CALLABLE_PROCEDURE(NAME, (params))` / `DELEGATE_PROCEDURE(NAME, (params))`
+    - `CALLABLE_OPERATION(NAME, (params))` / `DELEGATE_OPERATION(NAME, (params))`
+    - `CALLABLE_PREDICATE(NAME, (params))` / `DELEGATE_PREDICATE(NAME, (params))`
+    - `CALLABLE_COMPARISON(NAME, (params))` / `DELEGATE_COMPARISON(NAME, (params))`
+  - Universal invocation: `CALLABLE_CALL(cb, args...)` / `DELEGATE_CALL(dl, args...)` (and `CALLABLE_INVOKE` / `DELEGATE_INVOKE`).
+  - Validity & empty sentinel: `CALLABLE_IS_VALID(cb)` / `CALLABLE_EMPTY` (`NULL`), and `DELEGATE_IS_VALID(dl)` / `DELEGATE_EMPTY`.
+  - Binding: `DELEGATE_FUNC(NAME_Bind)(func, ctx)` and `DELEGATE_FUNC(NAME_FromCallable)(cb)` (or scoped `NS(MODULE_DELEGATE_FUNC(MOD, NAME), Bind)(func, ctx)`).
 - **Declarative Packages:** Use `PACKAGE(PKG, ...)`.
   - Invocation: `PACKAGE_CALL(PKG, FuncName, args...)` or direct calls `PKG_FuncName(...)`.
 - **Declarative Internal Scopes (`INTERNAL` / `INTERNAL_EX`):** Use `INTERNAL(...)` or `INTERNAL_EX(PKG, ...)`.
@@ -211,7 +216,7 @@ Everything must live inside the library/module namespace whenever C allows it. E
     - Custom dispatch macro: user passes `DISPATCH(TARGET, ENUM_NAME, ROW)` for specialized row transformations (e.g., bitshifts `1U << VALUE`, custom prefixes).
 - Enums exist for named constant domains and function signatures. Never use raw integers for categorical states.
 - Output enums: use short `*OUT` alias in signatures (e.g., `CMPOUT`).
-- Public constants: `*_CONST(NAME)` (e.g., `STATUS_CONST(SUCCESS)`).
+- Public constants: `*_CONST(NAME)` (e.g., `STATUS_CONST(SUCCESS)` -> `OPSTATUS_SUCCESS`, keeping Cosmeron `OPSTATUS_*` distinct from Win32 `STATUS_*`).
 - **Prohibit magic numbers**: Always use named constants unless defining raw representations (bit flags, protocols, ABI, file format definitions).
 
 ---

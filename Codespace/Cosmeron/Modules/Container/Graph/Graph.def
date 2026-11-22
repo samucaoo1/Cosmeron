@@ -16,7 +16,7 @@
           size_t edgeCount;                                                    \
           size_t edgeCapacity;                                                 \
       ));                                                                      \
-  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Graph), SUFFIX), Visitor,      \
+  DELEGATE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Graph), SUFFIX), Visitor,      \
                            (size_t vertexIndex, VERTEX_TYPE *data))            \
                                                                                \
   TEMPLATE_OBJECT(Graph, VertexIter, SUFFIX,                              \
@@ -480,9 +480,9 @@
       OPERATION_INLINE(                                                        \
           BFS,                                                                 \
           (size_t start,                                                       \
-           MODULE_CLOSURE(Graph, SUFFIX, Visitor) visitor),                    \
+           MODULE_DELEGATE(Graph, SUFFIX, Visitor) visitor),                    \
           {                                                                    \
-            if (!self || !CLOSURE_IS_VALID(visitor))                           \
+            if (!self || !DELEGATE_IS_VALID(visitor))                           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             if (start >= self->vertexCount)                                    \
               return STATUS_CONST(OUT_OF_RANGE);                               \
@@ -498,7 +498,7 @@
             queue[tail++] = start;                                             \
             while (head < tail) {                                              \
               size_t curr = queue[head++];                                     \
-              CLOSURE_CALL(visitor, curr, &self->vertices[curr].data);         \
+              DELEGATE_CALL(visitor, curr, &self->vertices[curr].data);         \
               const struct MODULE_ITYPED(Graph, Vertex, SUFFIX) *v =           \
                   &self->vertices[curr];                                       \
               for (size_t i = 0U; i < v->edgeCount; i++) {                     \
@@ -516,9 +516,9 @@
       OPERATION_INLINE(                                                        \
           DFS,                                                                 \
           (size_t start,                                                       \
-           MODULE_CLOSURE(Graph, SUFFIX, Visitor) visitor),                    \
+           MODULE_DELEGATE(Graph, SUFFIX, Visitor) visitor),                    \
           {                                                                    \
-            if (!self || !CLOSURE_IS_VALID(visitor))                           \
+            if (!self || !DELEGATE_IS_VALID(visitor))                           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             if (start >= self->vertexCount)                                    \
               return STATUS_CONST(OUT_OF_RANGE);                               \
@@ -535,7 +535,7 @@
               if (visited[curr])                                               \
                 continue;                                                      \
               visited[curr] = true;                                            \
-              CLOSURE_CALL(visitor, curr, &self->vertices[curr].data);         \
+              DELEGATE_CALL(visitor, curr, &self->vertices[curr].data);         \
               const struct MODULE_ITYPED(Graph, Vertex, SUFFIX) *v =           \
                   &self->vertices[curr];                                       \
               for (size_t i = v->edgeCount; i > 0U; i--) {                     \

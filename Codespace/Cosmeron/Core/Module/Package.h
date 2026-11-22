@@ -3,7 +3,8 @@
 #include "Namespace.h"
 #include "Common/Tuple.impl"
 #include "Common/ComparisonEx.impl"
-#include "Callback/Callback.h"
+#include "Callable/Callable.h"
+#include "Delegate/Delegate.h"
 #include "Common/FunctionTable.impl"
 #include "Common/Dispatch.impl"
 #include "Common/Template.impl"
@@ -51,26 +52,26 @@
   COSMERON_MACRO_INTERNAL_PACKAGE_PROTO_C_0(PKG, R, N, P)
 
 #define COSMERON_MACRO_INTERNAL_PACKAGE_PROTO_C_2(PKG, R, N, P)                \
-  CALLBACK_FUNCTION(R, NS(PKG, N), P);
+  CALLABLE_FUNCTION(R, NS(PKG, N), P);
 
 #define COSMERON_MACRO_INTERNAL_PACKAGE_PROTO_C_3(PKG, R, N, P)                \
-  CLOSURE_PROCEDURE(NS(PKG, N), P);                                           \
+  DELEGATE_PROCEDURE(NS(PKG, N), P);                                           \
   static inline OPSTATUS NS(PKG, N, Subscribe)(                                \
-      TCLOSURE(NS(PKG, N)) listener);                                         \
+      TDELEGATE(NS(PKG, N)) listener);                                         \
   static inline OPSTATUS NS(PKG, N, Unsubscribe)(                              \
-      TCLOSURE(NS(PKG, N)) listener);                                         \
-  static inline void NS(PKG, N, Emit)                                         \
+      TDELEGATE(NS(PKG, N)) listener);                                         \
+  static inline void NS(PKG, N, Emit)                                          \
       COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P);                              \
   static inline OPSTATUS NS(PKG, N, Clear)(void);                              \
   static inline uint8_t NS(PKG, N, Count)(void);                               \
   static inline uint8_t NS(PKG, N, Capacity)(void);
 
 #define COSMERON_MACRO_INTERNAL_PACKAGE_PROTO_C_4(PKG, R, N, P)                \
-  CLOSURE_OPERATION(NS(PKG, N), P);                                           \
+  DELEGATE_OPERATION(NS(PKG, N), P);                                           \
   static inline OPSTATUS NS(PKG, N, Subscribe)(                                \
-      TCLOSURE(NS(PKG, N)) listener);                                         \
+      TDELEGATE(NS(PKG, N)) listener);                                         \
   static inline OPSTATUS NS(PKG, N, Unsubscribe)(                              \
-      TCLOSURE(NS(PKG, N)) listener);                                         \
+      TDELEGATE(NS(PKG, N)) listener);                                         \
   static inline OPSTATUS NS(PKG, N, Emit)                                      \
       COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P);                              \
   static inline OPSTATUS NS(PKG, N, Clear)(void);                              \
@@ -101,10 +102,10 @@
 #define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_113(PKG, M)
 #define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_114(PKG, M)
 #define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_115(PKG, M)             \
-  PP_FOREACH_D2_CTX(COSMERON_INTERNAL_SCOPE_CB_MEMBER, LIB_PREFIX(PKG),        \
+  PP_FOREACH_D2_CTX(COSMERON_INTERNAL_SCOPE_CALLABLE_MEMBER, LIB_PREFIX(PKG),  \
                     PP_UNWRAP PP_SEQ_GET_2 M)
 #define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_116(PKG, M)             \
-  PP_FOREACH_D2_CTX(COSMERON_INTERNAL_SCOPE_CL_MEMBER, LIB_PREFIX(PKG),        \
+  PP_FOREACH_D2_CTX(COSMERON_INTERNAL_SCOPE_DELEGATE_MEMBER, LIB_PREFIX(PKG),  \
                     PP_UNWRAP PP_SEQ_GET_2 M)
 #define COSMERON_MACRO_INTERNAL_PACKAGE_GEN_PROTO_TAG_117(PKG, M)
 
@@ -115,11 +116,11 @@
   _Static_assert((CAP) <= 16, "Cosmeron Event capacity cannot exceed 16 slots");\
   static COSMERON_MAYBE_UNUSED struct {                                         \
     uint8_t count;                                                             \
-    TCLOSURE(NS(PKG, N)) listeners[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];   \
+    TDELEGATE(NS(PKG, N)) listeners[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];   \
   } NS(PKG, event, N);                                                         \
   static inline OPSTATUS NS(PKG, N, Subscribe)(                                \
-      TCLOSURE(NS(PKG, N)) listener) {                                        \
-    if (!CLOSURE_IS_VALID(listener))                                          \
+      TDELEGATE(NS(PKG, N)) listener) {                                        \
+    if (!DELEGATE_IS_VALID(listener))                                          \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (NS(PKG, event, N).count >= COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)) {   \
       return STATUS_CONST(OUT_OF_RANGE);                                       \
@@ -128,7 +129,7 @@
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
   static inline OPSTATUS NS(PKG, N, Unsubscribe)(                              \
-      TCLOSURE(NS(PKG, N)) listener) {                                        \
+      TDELEGATE(NS(PKG, N)) listener) {                                        \
     for (uint8_t i = 0; i < NS(PKG, event, N).count; ++i) {                   \
       if (NS(PKG, event, N).listeners[i].function == listener.function &&      \
           NS(PKG, event, N).listeners[i].context == listener.context) {        \
@@ -141,13 +142,13 @@
     }                                                                          \
     return STATUS_CONST(NOT_FOUND);                                            \
   }                                                                            \
-  static inline void NS(PKG, N, Emit)                                         \
+  static inline void NS(PKG, N, Emit)                                          \
       COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P) {                             \
     if (NS(PKG, event, N).count == 0) return;                                  \
     uint8_t activeCount = NS(PKG, event, N).count;                             \
-    TCLOSURE(NS(PKG, N)) snapshot[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];    \
+    TDELEGATE(NS(PKG, N)) snapshot[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];    \
     for (uint8_t i = 0; i < activeCount; ++i) {                                \
-      snapshot[i] = NS(PKG, event, N).listeners[i];                           \
+      snapshot[i] = NS(PKG, event, N).listeners[i];                            \
     }                                                                          \
     for (uint8_t i = 0; i < activeCount; ++i) {                                \
       COSMERON_MACRO_INTERNAL_EV_INVOKE(snapshot[i], ARGS);                    \
@@ -168,11 +169,11 @@
   _Static_assert((CAP) <= 16, "Cosmeron Event capacity cannot exceed 16 slots");\
   static COSMERON_MAYBE_UNUSED struct {                                         \
     uint8_t count;                                                             \
-    TCLOSURE(NS(PKG, N)) listeners[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];   \
+    TDELEGATE(NS(PKG, N)) listeners[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];   \
   } NS(PKG, event, N);                                                         \
   static inline OPSTATUS NS(PKG, N, Subscribe)(                                \
-      TCLOSURE(NS(PKG, N)) listener) {                                        \
-    if (!CLOSURE_IS_VALID(listener))                                          \
+      TDELEGATE(NS(PKG, N)) listener) {                                        \
+    if (!DELEGATE_IS_VALID(listener))                                          \
       return STATUS_CONST(INVALID_ARGUMENT);                                   \
     if (NS(PKG, event, N).count >= COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)) {   \
       return STATUS_CONST(OUT_OF_RANGE);                                       \
@@ -181,7 +182,7 @@
     return STATUS_CONST(SUCCESS);                                              \
   }                                                                            \
   static inline OPSTATUS NS(PKG, N, Unsubscribe)(                              \
-      TCLOSURE(NS(PKG, N)) listener) {                                        \
+      TDELEGATE(NS(PKG, N)) listener) {                                        \
     for (uint8_t i = 0; i < NS(PKG, event, N).count; ++i) {                   \
       if (NS(PKG, event, N).listeners[i].function == listener.function &&      \
           NS(PKG, event, N).listeners[i].context == listener.context) {        \
@@ -198,7 +199,7 @@
       COSMERON_MACRO_INTERNAL_PKG_EMIT_PARAMS(P) {                             \
     if (NS(PKG, event, N).count == 0) return STATUS_CONST(SUCCESS);            \
     uint8_t activeCount = NS(PKG, event, N).count;                             \
-    TCLOSURE(NS(PKG, N)) snapshot[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];    \
+    TDELEGATE(NS(PKG, N)) snapshot[COSMERON_EVENT_NORMALIZE_CAPACITY(CAP)];    \
     for (uint8_t i = 0; i < activeCount; ++i) {                                \
       snapshot[i] = NS(PKG, event, N).listeners[i];                           \
     }                                                                          \

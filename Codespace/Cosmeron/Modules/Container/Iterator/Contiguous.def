@@ -18,7 +18,7 @@
           bool reverse;                                                        \
       ),                                                                       \
                                                                                \
-      CLOSURE(                                                                 \
+      DELEGATE(                                                                 \
           PROCEDURE(Visitor, (TYPE *element)),                                 \
           PROCEDURE(ConstVisitor, (const TYPE *element)),                      \
           PROCEDURE(IndexedVisitor, (size_t index, TYPE *element)),            \
@@ -211,13 +211,13 @@
                                                                                \
       OPERATION_INLINE(                                                        \
           ForEach,                                                             \
-          (MODULE_CLOSURE(Iterator, Contiguous, SUFFIX, Visitor) visitor), {   \
-            if (!self || !CLOSURE_IS_VALID(visitor))                           \
+          (MODULE_DELEGATE(Iterator, Contiguous, SUFFIX, Visitor) visitor), {   \
+            if (!self || !DELEGATE_IS_VALID(visitor))                           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             while (self->index < self->count) {                                \
               size_t pos = self->reverse ? (self->count - 1U - self->index)    \
                                          : self->index;                        \
-              CLOSURE_CALL(visitor, &self->base[pos]);                         \
+              DELEGATE_CALL(visitor, &self->base[pos]);                         \
               self->index++;                                                   \
             }                                                                  \
             return STATUS_CONST(SUCCESS);                                      \

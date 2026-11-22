@@ -226,7 +226,7 @@ Tipo: `MODULE_TYPE(Memory, Collector)`.
 | --- | --- |
 | `Create(initialHeapPages, stackBottom)` / `Destroy()` | Inicializa o destruye un collector independiente. |
 | `Alloc`, `Alloc.Typed`, `Alloc.Atomic` | Asigna almacenamiento sin tipo, consciente de descriptores o atómico. |
-| `SetFinalizer(pointer, finalizer)` | Asocia un callback finalizador a una asignación. |
+| `SetFinalizer(pointer, finalizer)` | Asocia un delegate finalizador a una asignación. |
 | `PinRoot(rootPointerAddress)` / `UnpinRoot(rootPointerAddress)` | Registra o elimina el registro de la dirección de una ranura de puntero raíz. |
 | `Collect()` | Ejecuta un ciclo de recolección. |
 | `Pause()` / `Resume()` | Suspende o reanuda temporalmente la recolección. |

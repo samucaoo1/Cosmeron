@@ -114,7 +114,7 @@ Header: `Array/Heap.h`.
 
 This is a binary priority heap, distinct from `Core/Memory/Heap.h`. It supports min-heap and max-heap construction through `CreateMin` and `CreateMax`, plus `FromBuffer`, `Dispose`, `Destroy`, `Clear`, `Reserve`, `ShrinkToFit`, `Heapify`, `Push`, `Pop`, `Peek`, `Top`, `Replace`, `PushPop`, `Size`, `Count` and `Capacity`.
 
-Use it for priority queues and repeated selection of the highest- or lowest-priority item. Its comparison closure determines ordering; use the generated comparator type expected by the template rather than casting an unrelated function pointer.
+Use it for priority queues and repeated selection of the highest- or lowest-priority item. Its comparison delegate determines ordering; use the generated comparator type expected by the template rather than casting an unrelated function pointer.
 
 ---
 
@@ -131,7 +131,7 @@ The Linked aggregate is `Linked/Linked.h`. Linked containers use separately allo
 | `Linked/Stack.h` | Linked LIFO stack | `Create`, `Clear`, `Push`, `Pop`, `Peek`, `Top`, `Size`, `Count`, `IsEmpty` |
 | `Linked/Ring.h` | Linked circular structure | Creation, insertion/removal and traversal operations defined by the Ring template |
 
-The linked templates also provide node-oriented access and visitor closures. Use the `Visitor` closure type declared by the relevant template when visiting elements. Nodes and element pointers are container-managed; do not manually free a node returned by an accessor.
+The linked templates also provide node-oriented access and visitor delegates. Use the `Visitor` delegate type declared by the relevant template when visiting elements. Nodes and element pointers are container-managed; do not manually free a node returned by an accessor.
 
 The linked structures have the same lifecycle convention as array containers: create or initialize before use, then call `Dispose` or `Destroy`. `Clear` removes elements while retaining a usable container object.
 
@@ -260,7 +260,7 @@ if (status == STATUS_CONST(SUCCESS)) {
 
 ## Related modules
 
-- [Algorithm](Algorithm.md) — comparison closures used by priority queues and associative containers.
+- [Algorithm](Algorithm.md) — comparison delegates used by priority queues and associative containers.
 - [Bit](Bit.md) — scalar and fixed-size bit operations.
 - [Memory](Memory.md) — allocators used by dynamic containers and bitsets.
 - [Module](Module.md) — typed object and package declaration model.

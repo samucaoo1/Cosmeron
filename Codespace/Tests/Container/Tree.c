@@ -97,8 +97,8 @@ static void NS(TreeTest, BSTSetAndIter)(void) {
 
   /* ForEach PreOrder & InOrder */
   int64_t total = 0;
-  MODULE_CLOSURE(Tree, BST_Set, Int32, Visitor) visitor =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Tree, BST_Set, Int32, Visitor), Bind)(
+  MODULE_DELEGATE(Tree, BST_Set, Int32, Visitor) visitor =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Tree, BST_Set, Int32, Visitor), Bind)(
           MODULE_IFUNC(TreeTest, SumSetKey), &total);
   assert(OBJECT_CALL(&set, ForEach, Tree_Traversal_IN_ORDER, visitor) ==
          STATUS_CONST(SUCCESS));
@@ -144,8 +144,8 @@ static void NS(TreeTest, AVLBalanceAndMap)(void) {
   assert(OBJECT_CALL(&mit, Key, &firstKey) == STATUS_CONST(SUCCESS));
   assert(*firstKey == 2); /* Descending order */
 
-  MODULE_CLOSURE(Tree, AVL_Map, Int32_Int32, Visitor) mv =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Tree, AVL_Map, Int32_Int32, Visitor), Bind)(
+  MODULE_DELEGATE(Tree, AVL_Map, Int32_Int32, Visitor) mv =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Tree, AVL_Map, Int32_Int32, Visitor), Bind)(
           MODULE_IFUNC(TreeTest, DoubleMapVal), NULL);
   assert(OBJECT_CALL(&map, ForEach, Tree_Traversal_IN_ORDER, mv) ==
          STATUS_CONST(SUCCESS));

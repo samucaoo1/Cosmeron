@@ -1,0 +1,197 @@
+#pragma once
+
+#include "../../../Preprocessor/Arguments.h"
+#include "../../../Preprocessor/Boolean.h"
+#include "../../../Preprocessor/Detect/Detect.h"
+#include "../../../Preprocessor/Operations.h"
+#include "../../Namespace.h"
+
+#include <stdbool.h>
+#include <stddef.h>
+
+#ifndef COSMERON_MAYBE_UNUSED
+#if COMPILER_GCC || COMPILER_CLANG
+#define COSMERON_MAYBE_UNUSED __attribute__((unused))
+#else
+#define COSMERON_MAYBE_UNUSED
+#endif
+#endif
+
+/* ========================================================================== */
+/* 1. Pure Stateless Callable Invocation & Validation Engine (8 Bytes)        */
+/* ========================================================================== */
+
+#define COSMERON_MACRO_INTERNAL_CALLABLE_INVOKE_0(cb) ((cb)())
+#define COSMERON_MACRO_INTERNAL_CALLABLE_INVOKE_1(cb, ...) ((cb)(__VA_ARGS__))
+
+#define CALLABLE_INVOKE(...)                                                   \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CALLABLE_INVOKE_,                         \
+             PP_HAS_COMMA(__VA_ARGS__))(__VA_ARGS__)
+
+#define CALLABLE_CALL(...) CALLABLE_INVOKE(__VA_ARGS__)
+
+#define CALLABLE_IS_VALID(CB) ((CB) != NULL)
+
+/* ========================================================================== */
+/* 2. Parameter Emission Helpers for Stateless Callables                      */
+/* ========================================================================== */
+
+#define COSMERON_MACRO_INTERNAL_CALLABLE_PARAM_1(PARAMS) (void)
+#define COSMERON_MACRO_INTERNAL_CALLABLE_PARAM_0(PARAMS) PARAMS
+
+#define COSMERON_MACRO_INTERNAL_CALLABLE_PARAMS(PARAMS)                        \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CALLABLE_PARAM_,                          \
+             PP_IS_EMPTY_PARAMS(PARAMS))(PARAMS)
+
+/* ========================================================================== */
+/* 3. Core Callable Generation Templates (Scoped & Standalone)                */
+/* ========================================================================== */
+
+#define COSMERON_MACRO_INTERNAL_CALLABLE_SCOPED_BASE(SCOPE, NAME, RET, PARAMS) \
+  typedef RET (*NS_JOIN(SCOPE, TCallable, NAME))                               \
+      COSMERON_MACRO_INTERNAL_CALLABLE_PARAMS(PARAMS);                         \
+  static inline COSMERON_MAYBE_UNUSED NS_JOIN(SCOPE, TCallable, NAME)          \
+      NS_JOIN(SCOPE, Callable, NAME, Bind)(                                    \
+          NS_JOIN(SCOPE, TCallable, NAME) function) {                          \
+    return function;                                                           \
+  }                                                                            \
+  static inline COSMERON_MAYBE_UNUSED NS_JOIN(SCOPE, TCallable, NAME)          \
+      NS_JOIN(SCOPE, Callable, NAME, Empty)(void) {                            \
+    return NULL;                                                               \
+  }                                                                            \
+  static inline COSMERON_MAYBE_UNUSED bool NS_JOIN(                            \
+      SCOPE, Callable, NAME, IsValid)(                                         \
+      NS_JOIN(SCOPE, TCallable, NAME) callable) {                              \
+    return callable != NULL;                                                   \
+  }
+
+#define COSMERON_MACRO_INTERNAL_CALLABLE_SCOPED_NULLARY_VAL_0(SCOPE, NAME, RET)
+#define COSMERON_MACRO_INTERNAL_CALLABLE_SCOPED_NULLARY_VAL_1(SCOPE, NAME,     \
+                                                              RET)             \
+  static inline COSMERON_MAYBE_UNUSED RET NS_JOIN(                             \
+      SCOPE, Callable, NAME, Invoke)(                                          \
+      NS_JOIN(SCOPE, TCallable, NAME) callable) {                              \
+    return callable();                                                         \
+  }
+
+#define COSMERON_MACRO_INTERNAL_CALLABLE_SCOPED_NULLARY_VOID_0(SCOPE, NAME)
+#define COSMERON_MACRO_INTERNAL_CALLABLE_SCOPED_NULLARY_VOID_1(SCOPE, NAME)    \
+  static inline COSMERON_MAYBE_UNUSED void NS_JOIN(                            \
+      SCOPE, Callable, NAME, Invoke)(                                          \
+      NS_JOIN(SCOPE, TCallable, NAME) callable) {                              \
+    callable();                                                                \
+  }
+
+#define COSMERON_MACRO_INTERNAL_PROBE_VOID_void ,
+#define COSMERON_MACRO_INTERNAL_CALLABLE_IS_VOID(r)                            \
+  PP_HAS_COMMA(PP_OP_CAT2(COSMERON_MACRO_INTERNAL_PROBE_VOID_, r))
+
+#define COSMERON_MACRO_INTERNAL_CALLABLE_SCOPED_GEN_0(SCOPE, NAME, RET,        \
+                                                      PARAMS)                  \
+  COSMERON_MACRO_INTERNAL_CALLABLE_SCOPED_BASE(SCOPE, NAME, RET, PARAMS)       \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CALLABLE_SCOPED_NULLARY_VAL_,             \
+             PP_IS_EMPTY_PARAMS(PARAMS))(SCOPE, NAME, RET)                     \
+  typedef int NS(_cosmeron_callable_scoped_semi, SCOPE, NAME, __LINE__);
+
+#define COSMERON_MACRO_INTERNAL_CALLABLE_SCOPED_GEN_1(SCOPE, NAME, RET,        \
+                                                      PARAMS)                  \
+  COSMERON_MACRO_INTERNAL_CALLABLE_SCOPED_BASE(SCOPE, NAME, void, PARAMS)      \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CALLABLE_SCOPED_NULLARY_VOID_,            \
+             PP_IS_EMPTY_PARAMS(PARAMS))(SCOPE, NAME)                          \
+  typedef int NS(_cosmeron_callable_scoped_semi, SCOPE, NAME, __LINE__);
+
+#define COSMERON_MACRO_INTERNAL_CALLABLE_SCOPED_GEN(SCOPE, NAME, RET, PARAMS)  \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CALLABLE_SCOPED_GEN_,                     \
+             COSMERON_MACRO_INTERNAL_CALLABLE_IS_VOID(RET))(SCOPE, NAME, RET,  \
+                                                            PARAMS)
+
+/* --- Standalone Root-Level Callable Generators --- */
+
+#define COSMERON_MACRO_INTERNAL_CALLABLE_ROOT_BASE(NAME, RET, PARAMS)          \
+  typedef RET (*TCALLABLE(NAME))                                               \
+      COSMERON_MACRO_INTERNAL_CALLABLE_PARAMS(PARAMS);                         \
+  static inline COSMERON_MAYBE_UNUSED TCALLABLE(NAME)                          \
+      NS_JOIN(CALLABLE_FUNC(NAME), Bind)(TCALLABLE(NAME) function) {           \
+    return function;                                                           \
+  }                                                                            \
+  static inline COSMERON_MAYBE_UNUSED TCALLABLE(NAME)                          \
+      NS_JOIN(CALLABLE_FUNC(NAME), Empty)(void) {                              \
+    return NULL;                                                               \
+  }                                                                            \
+  static inline COSMERON_MAYBE_UNUSED bool NS_JOIN(                            \
+      CALLABLE_FUNC(NAME), IsValid)(TCALLABLE(NAME) callable) {                \
+    return callable != NULL;                                                   \
+  }
+
+#define COSMERON_MACRO_INTERNAL_CALLABLE_ROOT_NULLARY_VAL_0(NAME, RET)
+#define COSMERON_MACRO_INTERNAL_CALLABLE_ROOT_NULLARY_VAL_1(NAME, RET)         \
+  static inline COSMERON_MAYBE_UNUSED RET NS_JOIN(                             \
+      CALLABLE_FUNC(NAME), Invoke)(TCALLABLE(NAME) callable) {                 \
+    return callable();                                                         \
+  }
+
+#define COSMERON_MACRO_INTERNAL_CALLABLE_ROOT_NULLARY_VOID_0(NAME)
+#define COSMERON_MACRO_INTERNAL_CALLABLE_ROOT_NULLARY_VOID_1(NAME)             \
+  static inline COSMERON_MAYBE_UNUSED void NS_JOIN(                            \
+      CALLABLE_FUNC(NAME), Invoke)(TCALLABLE(NAME) callable) {                 \
+    callable();                                                                \
+  }
+
+#define COSMERON_MACRO_INTERNAL_CALLABLE_GEN_VALUE(NAME, RET, PARAMS)          \
+  COSMERON_MACRO_INTERNAL_CALLABLE_ROOT_BASE(NAME, RET, PARAMS)                \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CALLABLE_ROOT_NULLARY_VAL_,               \
+             PP_IS_EMPTY_PARAMS(PARAMS))(NAME, RET)                            \
+  typedef int NS(_cosmeron_callable_semi, NAME, __LINE__)
+
+#define COSMERON_MACRO_INTERNAL_CALLABLE_GEN_VOID(NAME, PARAMS)                \
+  COSMERON_MACRO_INTERNAL_CALLABLE_ROOT_BASE(NAME, void, PARAMS)               \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CALLABLE_ROOT_NULLARY_VOID_,              \
+             PP_IS_EMPTY_PARAMS(PARAMS))(NAME)                                 \
+  typedef int NS(_cosmeron_callable_semi, NAME, __LINE__)
+
+#define COSMERON_MACRO_INTERNAL_CALLABLE_GEN_DISPATCH_0(NAME, RET, PARAMS)     \
+  COSMERON_MACRO_INTERNAL_CALLABLE_GEN_VALUE(NAME, RET, PARAMS)
+
+#define COSMERON_MACRO_INTERNAL_CALLABLE_GEN_DISPATCH_1(NAME, RET, PARAMS)     \
+  COSMERON_MACRO_INTERNAL_CALLABLE_GEN_VOID(NAME, PARAMS)
+
+#define COSMERON_MACRO_INTERNAL_CALLABLE_GEN(NAME, RET, PARAMS)                \
+  PP_OP_CAT2(COSMERON_MACRO_INTERNAL_CALLABLE_GEN_DISPATCH_,                   \
+             COSMERON_MACRO_INTERNAL_CALLABLE_IS_VOID(RET))(NAME, RET, PARAMS)
+
+/* ========================================================================== */
+/* 4. Public Standalone Callable Descriptors                                  */
+/* ========================================================================== */
+
+#define CALLABLE_FUNCTION(RET, NAME, PARAMS)                                   \
+  COSMERON_MACRO_INTERNAL_CALLABLE_GEN(NAME, RET, PARAMS)
+
+#define CALLABLE_PROCEDURE(NAME, PARAMS)                                       \
+  COSMERON_MACRO_INTERNAL_CALLABLE_GEN_VOID(NAME, PARAMS)
+
+#define CALLABLE_OPERATION(NAME, PARAMS)                                       \
+  COSMERON_MACRO_INTERNAL_CALLABLE_GEN_VALUE(NAME, OPSTATUS, PARAMS)
+
+#define CALLABLE_PREDICATE(NAME, PARAMS)                                       \
+  COSMERON_MACRO_INTERNAL_CALLABLE_GEN_VALUE(NAME, bool, PARAMS)
+
+#define CALLABLE_COMPARISON(NAME, PARAMS)                                      \
+  COSMERON_MACRO_INTERNAL_CALLABLE_GEN_VALUE(NAME, CMPOUT, PARAMS)
+
+/* Scoped Callable Descriptors (for explicit Target/Module qualification) */
+#define CALLABLE_SCOPED_FUNCTION(SCOPE, RET, NAME, PARAMS)                     \
+  COSMERON_MACRO_INTERNAL_CALLABLE_SCOPED_GEN(SCOPE, NAME, RET, PARAMS)
+
+#define CALLABLE_SCOPED_PROCEDURE(SCOPE, NAME, PARAMS)                         \
+  COSMERON_MACRO_INTERNAL_CALLABLE_SCOPED_GEN(SCOPE, NAME, void, PARAMS)
+
+#define CALLABLE_SCOPED_OPERATION(SCOPE, NAME, PARAMS)                         \
+  COSMERON_MACRO_INTERNAL_CALLABLE_SCOPED_GEN(SCOPE, NAME, OPSTATUS, PARAMS)
+
+#define CALLABLE_SCOPED_PREDICATE(SCOPE, NAME, PARAMS)                         \
+  COSMERON_MACRO_INTERNAL_CALLABLE_SCOPED_GEN(SCOPE, NAME, bool, PARAMS)
+
+#define CALLABLE_SCOPED_COMPARISON(SCOPE, NAME, PARAMS)                        \
+  COSMERON_MACRO_INTERNAL_CALLABLE_SCOPED_GEN(SCOPE, NAME, CMPOUT, PARAMS)
+
+/* EOF */

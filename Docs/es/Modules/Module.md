@@ -1,6 +1,6 @@
 # Module
 
-El núcleo **Module** proporciona el sistema declarativo de API C de Cosmeron. Genera tipos con namespace, enums, constantes, structs, objetos, paquetes, callbacks, closures, templates y function tables opcionales a partir de declaraciones en los encabezados.
+El núcleo **Module** proporciona el sistema declarativo de API C de Cosmeron. Genera tipos con namespace, enums, constantes, structs, objetos, paquetes, callables, delegates, templates y function tables opcionales a partir de declaraciones en los encabezados.
 
 ## Encabezados
 
@@ -8,7 +8,7 @@ El núcleo **Module** proporciona el sistema declarativo de API C de Cosmeron. G
 #include "Cosmeron/Core/Module/Module.h"
 ~~~
 
-El encabezado agregado incluye los mecanismos de namespace, declaraciones, objetos, paquetes, callbacks, closures, despacho, function tables, templates y ámbitos de implementación utilizados por los encabezados públicos de los módulos.
+El encabezado agregado incluye los mecanismos de namespace, declaraciones, objetos, paquetes, callables, delegates, despacho, function tables, templates y ámbitos de implementación utilizados por los encabezados públicos de los módulos.
 
 ---
 
@@ -27,8 +27,8 @@ El modelo de declaraciones se organiza así:
 | `STRUCT` | Declara un tipo de datos C simple sin receptor de método implícito. |
 | `ISTRUCT` | Declara una estructura simple interna al módulo. |
 | `VARIANT` | Agrupa operaciones relacionadas bajo una ruta anidada de método/función. |
-| `CALLBACK` | Declara la firma de un callback de puntero a función. |
-| `CLOSURE` | Declara una firma invocable que transporta un puntero de contexto. |
+| `CALLABLE` | Declara la firma de un callable de puntero a función sin estado. |
+| `DELEGATE` | Declara una firma invocable dual-mode que opcionalmente transporta un puntero de contexto. |
 
 Una declaración no es un sistema de clases en tiempo de ejecución. Los objetos y paquetes son structs, funciones y macros C generados. La capa Module no proporciona descubrimiento dinámico de tipos ni recolección automática de basura.
 
@@ -52,8 +52,8 @@ Utiliza las macros semánticas de nombres en lugar de construir identificadores 
 | `MODULE_CONST(Module, Constant)` | Nombra una constante del módulo. |
 | `MODULE_FUNC(Module, Function)` | Nombra una función de paquete u objeto. |
 | `MODULE_FUNC(Module, Package, Function)` | Nombra una función de un paquete. |
-| `MODULE_CLOSURE(Module, Package, Name)` | Nombra un tipo closure generado en un paquete. |
-| `MODULE_CALLBACK(Module, Name)` | Nombra un tipo callback declarado por un módulo. |
+| `MODULE_DELEGATE(Module, Package, Name)` | Nombra un tipo delegate generado en un paquete. |
+| `MODULE_CALLABLE(Module, Name)` | Nombra un tipo callable declarado por un módulo. |
 | `MODULE_NS(...)` | Forma una secuencia de tokens de namespace de módulo. |
 | `NS(...)` / `CNS(...)` | Forma tokens de namespace ordinarios o constantes. |
 
@@ -169,27 +169,27 @@ Utiliza `STRUCT` para un tipo de datos POD público y `ISTRUCT` para un detalle 
 
 Para tipos de valor de layout fijo, prefiere la inicialización directa de campos y la asignación ordinaria cuando el contrato de propiedad del tipo lo permita. Los tipos que requieran inicialización, clonación, movimiento o liberación personalizados deben utilizar las facilidades específicas de objetos o traits, en lugar de tratarse como trivialmente copiables.
 
-## Callbacks y closures
+## Callables y delegates
 
-### Callback
+### Callable
 
-Un callback es un puntero a función con una firma declarada. No transporta estado por sí mismo.
+Un callable es un puntero a función sin estado con una firma declarada. No transporta estado por sí mismo.
 
-`Callback.h` proporciona `TCALLBACK(Name)` para el tipo generado, `CALLBACK_FUNC(Name)` para nombres auxiliares y `CALLBACK_EMPTY` como valor de callback nulo.
+`Callable.h` proporciona `TCALLABLE(Name)` para el tipo generado, `CALLABLE_FUNC(Name)` para nombres auxiliares, `CALLABLE_CALL`/`CALLABLE_INVOKE` para invocación, `CALLABLE_IS_VALID` para comprobación y `CALLABLE_EMPTY` (`NULL`) como valor nulo.
 
-### Closure
+### Delegate
 
-Una closure combina un puntero a función con un puntero de contexto. Es adecuada para callbacks que necesitan referirse a estado propiedad del llamador sin utilizar una variable global.
+Un delegate combina un puntero a función con un puntero de contexto opcional en una estructura POD dual-mode. Admite tanto callables sin estado (`FromCallable`) como destinos con estado vinculado al llamador (`Bind`) sin utilizar variables globales.
 
-`Closure.h` proporciona `TCLOSURE(Name)` y `CLOSURE_FUNC(Name)`. Las macros comunes de llamada/validación son:
+`Delegate.h` proporciona `TDELEGATE(Name)` y `DELEGATE_FUNC(Name)`. Las macros comunes de llamada/validación son:
 
 | Macro | Comportamiento |
 | --- | --- |
-| `CLOSURE_IS_VALID(closure)` | Comprueba si la closure tiene una función. |
-| `CLOSURE_CALL(closure, ...)` | Invoca la closure. |
-| `CLOSURE_EMPTY` | Valor de closure vacío. |
+| `DELEGATE_IS_VALID(delegate)` | Comprueba si el delegate tiene una función. |
+| `DELEGATE_CALL(delegate, ...)` | Invoca el delegate. |
+| `DELEGATE_EMPTY` | Valor de delegate vacío. |
 
-Las declaraciones Closure especifican el contrato de retorno: `CLOSURE_FUNCTION`, `CLOSURE_PROCEDURE`, `CLOSURE_OPERATION`, `CLOSURE_PREDICATE` o `CLOSURE_COMPARISON`. El puntero de contexto de una closure es prestado; la capa Module no administra la vida útil del objeto apuntado.
+Las declaraciones Delegate especifican el contrato de retorno: `DELEGATE_FUNCTION`, `DELEGATE_PROCEDURE`, `DELEGATE_OPERATION`, `DELEGATE_PREDICATE` o `DELEGATE_COMPARISON`. El puntero de contexto de un delegate es prestado; la capa Module no administra la vida útil del objeto apuntado.
 
 ## Templates
 
@@ -241,13 +241,13 @@ Deshabilitar una function table puede cambiar el layout del objeto generado. No 
 - Utiliza `STRUCT` para valores POD; no tiene receptor ni function table de objeto.
 - Utiliza `OPERATION` siempre que una rutina pueda fallar y devolver `OPSTATUS`.
 - Utiliza `FUNCTION` para resultados directos y `PREDICATE` para preguntas booleanas.
-- Utiliza `CALLBACK` para punteros a función simples; utiliza `CLOSURE` cuando el contexto deba acompañar al callable.
+- Utiliza `CALLABLE` para punteros a función simples sin estado; utiliza `DELEGATE` cuando un contexto opcional deba acompañar al callable.
 - Mantén los detalles de templates en archivos `.def` y expón un encabezado público limpio.
-- Trata todos los punteros pasados como contexto, datos de callback o campos según su contrato de propiedad documentado; el sistema Module no los posee automáticamente.
+- Trata todos los punteros pasados como contexto, datos de delegate o campos según su contrato de propiedad documentado; el sistema Module no los posee automáticamente.
 
 ## Módulos relacionados
 
-- [Algorithm](Algorithm.md) — uso práctico de closures en repetición y comparación.
+- [Algorithm](Algorithm.md) — uso práctico de delegates en repetición y comparación.
 - [Condition](Condition.md) — estados y resultados de operaciones que pueden fallar.
 - [Types](Types.md) — descriptores de tipos primitivos y traits.
 - [Preprocessor](Preprocessor.md) — auxiliares de tokens y tablas utilizados por la capa declarativa.
@@ -258,7 +258,7 @@ Deshabilitar una function table puede cambiar el layout del objeto generado. No 
 - `Codespace/Cosmeron/Core/Module/Namespace.h`
 - `Codespace/Cosmeron/Core/Module/Object.h`
 - `Codespace/Cosmeron/Core/Module/Package.h`
-- `Codespace/Cosmeron/Core/Module/Callback/Callback.h`
-- `Codespace/Cosmeron/Core/Module/Closure/Closure.h`
+- `Codespace/Cosmeron/Core/Module/Callable/Callable.h`
+- `Codespace/Cosmeron/Core/Module/Delegate/Delegate.h`
 - `Codespace/Cosmeron/Core/Module/Common/Template.impl`
 - `Codespace/Cosmeron/Core/Module/Common/Declarative.impl`

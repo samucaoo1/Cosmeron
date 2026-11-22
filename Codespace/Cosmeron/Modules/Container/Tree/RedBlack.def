@@ -224,16 +224,16 @@
           MODULE_ENUM(Tree, RBColor) color;                                    \
           KEY_TYPE key;                                                        \
       ));                                                                      \
-  CLOSURE_SCOPED_COMPARISON(NS(LIB_PREFIX(Tree), RedBlack_Set, SUFFIX), Comparator,   \
+  DELEGATE_SCOPED_COMPARISON(NS(LIB_PREFIX(Tree), RedBlack_Set, SUFFIX), Comparator,   \
                             (KEY_TYPE left, KEY_TYPE right))                   \
-  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Tree), RedBlack_Set, SUFFIX), Visitor,       \
+  DELEGATE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Tree), RedBlack_Set, SUFFIX), Visitor,       \
                            (const KEY_TYPE *key))                              \
   COSMERON_MACRO_INTERNAL_TREE_BIN_HELPERS(                                    \
       RedBlack_Set, SUFFIX, struct MODULE_ITYPED(Tree, RedBlack_SetNode, SUFFIX), KEY_TYPE,  \
-      MODULE_CLOSURE(Tree, RedBlack_Set, SUFFIX, Comparator))                         \
+      MODULE_DELEGATE(Tree, RedBlack_Set, SUFFIX, Comparator))                         \
   COSMERON_MACRO_INTERNAL_TREE_BIN_SET_TRAVERSE(                               \
       RedBlack_Set, SUFFIX, struct MODULE_ITYPED(Tree, RedBlack_SetNode, SUFFIX),            \
-      MODULE_CLOSURE(Tree, RedBlack_Set, SUFFIX, Visitor))                            \
+      MODULE_DELEGATE(Tree, RedBlack_Set, SUFFIX, Visitor))                            \
   INTERNAL_DEF_EX(                                                             \
       Tree, NS(RedBlack_Set, Algo, SUFFIX),                                           \
       COSMERON_MACRO_INTERNAL_TREE_RB_CORE(                                    \
@@ -261,7 +261,7 @@
       OPERATION(InsertSet,                                                     \
                 (struct MODULE_ITYPED(Tree, RedBlack_SetNode, SUFFIX) **root,         \
                  size_t *size,                                                 \
-                 MODULE_CLOSURE(Tree, RedBlack_Set, SUFFIX, Comparator) cmp,          \
+                 MODULE_DELEGATE(Tree, RedBlack_Set, SUFFIX, Comparator) cmp,          \
                  KEY_TYPE key),                                                \
                 {                                                              \
                   struct MODULE_ITYPED(Tree, RedBlack_SetNode, SUFFIX) *cur = *root;  \
@@ -269,7 +269,7 @@
                   CMPOUT lastCmp = COMPARISON_CONST(EQUAL);                    \
                   while (cur != NULL) {                                        \
                     par = cur;                                                 \
-                    lastCmp = CLOSURE_CALL(cmp, key, cur->key);                \
+                    lastCmp = DELEGATE_CALL(cmp, key, cur->key);                \
                     if (lastCmp < COMPARISON_CONST(EQUAL))                     \
                       cur = cur->left;                                         \
                     else if (lastCmp > COMPARISON_CONST(EQUAL))                \
@@ -313,16 +313,16 @@
           KEY_TYPE key;                                                        \
           VALUE_TYPE value;                                                    \
       ));                                                                      \
-  CLOSURE_SCOPED_COMPARISON(NS(LIB_PREFIX(Tree), RedBlack_Map, SUFFIX), Comparator,   \
+  DELEGATE_SCOPED_COMPARISON(NS(LIB_PREFIX(Tree), RedBlack_Map, SUFFIX), Comparator,   \
                             (KEY_TYPE left, KEY_TYPE right))                   \
-  CLOSURE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Tree), RedBlack_Map, SUFFIX), Visitor,       \
+  DELEGATE_SCOPED_PROCEDURE(NS(LIB_PREFIX(Tree), RedBlack_Map, SUFFIX), Visitor,       \
                            (KEY_TYPE key, VALUE_TYPE *value))                  \
   COSMERON_MACRO_INTERNAL_TREE_BIN_HELPERS(                                    \
       RedBlack_Map, SUFFIX, struct MODULE_ITYPED(Tree, RedBlack_MapNode, SUFFIX), KEY_TYPE,  \
-      MODULE_CLOSURE(Tree, RedBlack_Map, SUFFIX, Comparator))                         \
+      MODULE_DELEGATE(Tree, RedBlack_Map, SUFFIX, Comparator))                         \
   COSMERON_MACRO_INTERNAL_TREE_BIN_MAP_TRAVERSE(                               \
       RedBlack_Map, SUFFIX, struct MODULE_ITYPED(Tree, RedBlack_MapNode, SUFFIX),            \
-      MODULE_CLOSURE(Tree, RedBlack_Map, SUFFIX, Visitor))                            \
+      MODULE_DELEGATE(Tree, RedBlack_Map, SUFFIX, Visitor))                            \
   INTERNAL_DEF_EX(                                                             \
       Tree, NS(RedBlack_Map, Algo, SUFFIX),                                           \
       COSMERON_MACRO_INTERNAL_TREE_RB_CORE(                                    \
@@ -351,7 +351,7 @@
       OPERATION(InsertMap,                                                     \
                 (struct MODULE_ITYPED(Tree, RedBlack_MapNode, SUFFIX) **root,         \
                  size_t *size,                                                 \
-                 MODULE_CLOSURE(Tree, RedBlack_Map, SUFFIX, Comparator) cmp,          \
+                 MODULE_DELEGATE(Tree, RedBlack_Map, SUFFIX, Comparator) cmp,          \
                  KEY_TYPE key, VALUE_TYPE value, bool allowUpdate),            \
                 {                                                              \
                   struct MODULE_ITYPED(Tree, RedBlack_MapNode, SUFFIX) *cur = *root;  \
@@ -359,7 +359,7 @@
                   CMPOUT lastCmp = COMPARISON_CONST(EQUAL);                    \
                   while (cur != NULL) {                                        \
                     par = cur;                                                 \
-                    lastCmp = CLOSURE_CALL(cmp, key, cur->key);                \
+                    lastCmp = DELEGATE_CALL(cmp, key, cur->key);                \
                     if (lastCmp < COMPARISON_CONST(EQUAL))                     \
                       cur = cur->left;                                         \
                     else if (lastCmp > COMPARISON_CONST(EQUAL))                \

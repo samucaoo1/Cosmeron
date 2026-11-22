@@ -7,6 +7,7 @@ A Cosmeron está entrando na fase de **pré-lançamento**, com versões menores 
 ## Módulos refatorados (100%)
 
 - `Core` — **100%** (Preprocessor, DSL, Memory, Outcome, Detect, Error etc.)
+- `Modules/Chrono` — **100%**
 - `Modules/Container` — **100%**
 - `Modules/Math` — **100%**
 - `Modules/Numeric` — **100%**
@@ -16,7 +17,6 @@ A Cosmeron está entrando na fase de **pré-lançamento**, com versões menores 
 ## Refatorações pendentes (`Roadmap/Cosmeron/Modules/`)
 
 - `Audio`
-- `Chronometry`
 - `CLI`
 - `Compression`
 - `Concurrency`
@@ -34,4 +34,4 @@ A Cosmeron está entrando na fase de **pré-lançamento**, com versões menores 
 ## Objetivos de plataforma e destino
 
 - **WebAssembly** (`WASI` / `Emscripten`) como destino de primeira classe, junto com Linux, BSD, macOS e Windows.
-- **C11 sem dependências** com DSL declarativa (`MODULE`, `PACKAGE`, `OBJECT`, `STRUCT`, `TEMPLATE_*`, `ENUM`, `CALLBACK`, `EVENT_*`).
+- **C11 sem dependências** com DSL declarativa (`MODULE`, `PACKAGE`, `OBJECT`, `STRUCT`, `TEMPLATE_*`, `ENUM`, `CALLABLE`, `DELEGATE`, `EVENT_*`).

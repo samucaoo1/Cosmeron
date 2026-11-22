@@ -24,7 +24,7 @@
 #define TYPE_TRAIT_CONFIG_TABLE(X) X((SWAP_BUFFER_SIZE, 64U))
 
 /* ========================================================================== */
-/* 2. Declarative Module: Type (TraitFlag, Callbacks, TTraits, Package)       */
+/* 2. Declarative Module: Type (TraitFlag, Callables, TTraits, Package)       */
 /* ========================================================================== */
 
 #define COSMERON_MACRO_INTERNAL_TYPE_TRAITS_PRIMITIVE_GETTER_DECL(ROW)         \
@@ -37,8 +37,8 @@ MODULE(
     /* 2.1 Trait Behavioral Flags Enum */
     ENUM_EX(TraitFlag, TYPE_TRAIT_FLAG_TABLE, QUALIFIED),
 
-    /* 2.2 Trait Lifecycle & Operation Callbacks */
-    CALLBACK(
+    /* 2.2 Trait Lifecycle & Operation Callables */
+    CALLABLE(
         OPERATION(TraitInit, (void *instance)),
         PROCEDURE(TraitDispose, (void *instance)),
         OPERATION(TraitCopy, (void *destination, const void *source)),
@@ -55,12 +55,12 @@ MODULE(
             size_t alignment;
             MODULE_ENUM(Type, Category) category;
             uint32_t flags;
-            MODULE_CALLBACK(Type, TraitInit) init;
-            MODULE_CALLBACK(Type, TraitDispose) dispose;
-            MODULE_CALLBACK(Type, TraitCopy) copy;
-            MODULE_CALLBACK(Type, TraitMove) move;
-            MODULE_CALLBACK(Type, TraitCompare) compare;
-            MODULE_CALLBACK(Type, TraitHash) hash;
+            MODULE_CALLABLE(Type, TraitInit) init;
+            MODULE_CALLABLE(Type, TraitDispose) dispose;
+            MODULE_CALLABLE(Type, TraitCopy) copy;
+            MODULE_CALLABLE(Type, TraitMove) move;
+            MODULE_CALLABLE(Type, TraitCompare) compare;
+            MODULE_CALLABLE(Type, TraitHash) hash;
         )
     ),
 

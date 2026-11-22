@@ -27,60 +27,60 @@
   X((WS_MMSP, 0x205F))                                                         \
   X((WS_IDEOGRAPHIC, 0x3000))
 
-IENUM_DEF(Text_Codepoint, Bounds, TEXT_CODEPOINT_INTERNAL_TABLE)
+IENUM_DEF(MODULE_NS(Text, Codepoint), Bounds, TEXT_CODEPOINT_INTERNAL_TABLE)
 
 MODULE_IMPLEMENT(DOMAIN(Modules), Text,
   PACKAGE(Codepoint,
     VARIANT(Is,
       PREDICATE(Valid, (MODULE_TYPE(Text, Char32) codepoint), {
         return (uint_least32_t)codepoint <=
-               (uint_least32_t)CNS(Text, Codepoint, Internal, MAX_VALID);
+               (uint_least32_t)MODULE_IFUNC(Text, Codepoint, MAX_VALID);
       }),
 
       PREDICATE(Scalar, (MODULE_TYPE(Text, Char32) codepoint), {
         uint_least32_t value = (uint_least32_t)codepoint;
-        return value <= (uint_least32_t)CNS(Text, Codepoint, Internal, MAX_VALID) &&
-               !(value >= (uint_least32_t)CNS(Text, Codepoint, Internal,
-                                              SURROGATE_MIN) &&
-                 value <= (uint_least32_t)CNS(Text, Codepoint, Internal,
-                                              SURROGATE_MAX));
+        return value <= (uint_least32_t)MODULE_IFUNC(Text, Codepoint, MAX_VALID) &&
+               !(value >= (uint_least32_t)MODULE_IFUNC(Text, Codepoint,
+                                                       SURROGATE_MIN) &&
+                 value <= (uint_least32_t)MODULE_IFUNC(Text, Codepoint,
+                                                       SURROGATE_MAX));
       }),
 
-      PREDICATE(ASCII, (MODULE_TYPE(Text, Char32) codepoint), {
+      PREDICATE(Ascii, (MODULE_TYPE(Text, Char32) codepoint), {
         return (uint_least32_t)codepoint <=
-               (uint_least32_t)CNS(Text, Codepoint, Internal, ASCII_MAX);
+               (uint_least32_t)MODULE_IFUNC(Text, Codepoint, ASCII_MAX);
       }),
 
       PREDICATE(Control, (MODULE_TYPE(Text, Char32) codepoint), {
         uint_least32_t value = (uint_least32_t)codepoint;
         return value <=
-                   (uint_least32_t)CNS(Text, Codepoint, Internal, C0_CONTROL_MAX) ||
+                   (uint_least32_t)MODULE_IFUNC(Text, Codepoint, C0_CONTROL_MAX) ||
                (value >=
-                    (uint_least32_t)CNS(Text, Codepoint, Internal, C1_CONTROL_MIN) &&
+                    (uint_least32_t)MODULE_IFUNC(Text, Codepoint, C1_CONTROL_MIN) &&
                 value <=
-                    (uint_least32_t)CNS(Text, Codepoint, Internal, C1_CONTROL_MAX));
+                    (uint_least32_t)MODULE_IFUNC(Text, Codepoint, C1_CONTROL_MAX));
       }),
 
       PREDICATE(Whitespace, (MODULE_TYPE(Text, Char32) codepoint), {
         uint_least32_t value = (uint_least32_t)codepoint;
-        return (value >= (uint_least32_t)CNS(Text, Codepoint, Internal, WS_TAB) &&
-                value <= (uint_least32_t)CNS(Text, Codepoint, Internal, WS_CR)) ||
-               value == (uint_least32_t)CNS(Text, Codepoint, Internal, WS_SPACE) ||
-               value == (uint_least32_t)CNS(Text, Codepoint, Internal, WS_NEL) ||
-               value == (uint_least32_t)CNS(Text, Codepoint, Internal, WS_NBSP) ||
-               value == (uint_least32_t)CNS(Text, Codepoint, Internal, WS_OGHAM) ||
+        return (value >= (uint_least32_t)MODULE_IFUNC(Text, Codepoint, WS_TAB) &&
+                value <= (uint_least32_t)MODULE_IFUNC(Text, Codepoint, WS_CR)) ||
+               value == (uint_least32_t)MODULE_IFUNC(Text, Codepoint, WS_SPACE) ||
+               value == (uint_least32_t)MODULE_IFUNC(Text, Codepoint, WS_NEL) ||
+               value == (uint_least32_t)MODULE_IFUNC(Text, Codepoint, WS_NBSP) ||
+               value == (uint_least32_t)MODULE_IFUNC(Text, Codepoint, WS_OGHAM) ||
                (value >=
-                    (uint_least32_t)CNS(Text, Codepoint, Internal, WS_EN_QUAD) &&
+                    (uint_least32_t)MODULE_IFUNC(Text, Codepoint, WS_EN_QUAD) &&
                 value <=
-                    (uint_least32_t)CNS(Text, Codepoint, Internal, WS_HAIR_SPACE)) ||
+                    (uint_least32_t)MODULE_IFUNC(Text, Codepoint, WS_HAIR_SPACE)) ||
                value ==
-                   (uint_least32_t)CNS(Text, Codepoint, Internal, WS_LINE_SEP) ||
+                   (uint_least32_t)MODULE_IFUNC(Text, Codepoint, WS_LINE_SEP) ||
                value ==
-                   (uint_least32_t)CNS(Text, Codepoint, Internal, WS_PARA_SEP) ||
-               value == (uint_least32_t)CNS(Text, Codepoint, Internal, WS_NNBSP) ||
-               value == (uint_least32_t)CNS(Text, Codepoint, Internal, WS_MMSP) ||
+                   (uint_least32_t)MODULE_IFUNC(Text, Codepoint, WS_PARA_SEP) ||
+               value == (uint_least32_t)MODULE_IFUNC(Text, Codepoint, WS_NNBSP) ||
+               value == (uint_least32_t)MODULE_IFUNC(Text, Codepoint, WS_MMSP) ||
                value ==
-                   (uint_least32_t)CNS(Text, Codepoint, Internal, WS_IDEOGRAPHIC);
+                   (uint_least32_t)MODULE_IFUNC(Text, Codepoint, WS_IDEOGRAPHIC);
       })
     )
   )

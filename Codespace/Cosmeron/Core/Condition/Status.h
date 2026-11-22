@@ -10,7 +10,7 @@
 /* ========================================================================== */
 
 #ifndef STATUS_CATEGORY_CONST
-#define STATUS_CATEGORY_CONST(NAME) MODULE_CONST(STATUS, CATEGORY, NAME)
+#define STATUS_CATEGORY_CONST(NAME) MODULE_CONST(OPSTATUS, CATEGORY, NAME)
 #endif
 
 #ifndef STATUS_CONST

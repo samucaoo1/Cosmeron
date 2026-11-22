@@ -1,22 +1,23 @@
 #pragma once
 
 #include <ctype.h>
-#include <inttypes.h>
-#include <math.h>
-#include <stdio.h>
 #include <string.h>
 
-#define TEXT_FORMAT_BYTES_HUMAN_INTERNAL_COL_NAME(NAME, VALUE) NAME
-#define TEXT_FORMAT_BYTES_HUMAN_INTERNAL_COL_VALUE(NAME, VALUE) VALUE
-#define TEXT_FORMAT_BYTES_HUMAN_INTERNAL_GET(FIELD, ROW)                       \
-  PP_OP_CAT2(TEXT_FORMAT_BYTES_HUMAN_INTERNAL_COL_, FIELD) ROW
+#define TEXT_BYTES_HUMAN_INTERNAL_COL_NAME(NAME, VALUE) NAME
+#define TEXT_BYTES_HUMAN_INTERNAL_COL_VALUE(NAME, VALUE) VALUE
+#define TEXT_BYTES_HUMAN_INTERNAL_GET(FIELD, ROW)                              \
+  PP_OP_CAT2(TEXT_BYTES_HUMAN_INTERNAL_COL_, FIELD) ROW
 
-#define TEXT_FORMAT_BYTES_HUMAN_INTERNAL_TABLE(X)                              \
+#define TEXT_BYTES_HUMAN_INTERNAL_TABLE(X)                                     \
+  X((DEFAULT_PRECISION, 2U))                                                   \
+  X((MAX_PRECISION, 6U))                                                       \
+  X((IEC_BASE, 1024U))                                                         \
+  X((SI_BASE, 1000U))                                                          \
   X((UNIT_COUNT, 7U))                                                          \
   X((MAX_FRAC_DIGITS, 9U))                                                     \
   X((DECIMAL_BASE, 10U))
 
-IENUM_DEF(Text_Format, BytesHumanConfig, TEXT_FORMAT_BYTES_HUMAN_INTERNAL_TABLE)
+IENUM_DEF(MODULE_NS(Text, BytesHuman), Config, TEXT_BYTES_HUMAN_INTERNAL_TABLE)
 
 MODULE_IMPLEMENT(DOMAIN(Modules), Text,
   INTERNAL_EX(BytesHuman,
@@ -27,23 +28,25 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
         return STATUS_CONST(SUCCESS);
       }
 
-      static const char *const iecNames[CNS(Text, Format, Internal, UNIT_COUNT)] = {
-          "b", "kib", "mib", "gib", "tib", "pib", "eib"
-      };
-      static const char *const siNames[CNS(Text, Format, Internal, UNIT_COUNT)] = {
-          "b", "kb", "mb", "gb", "tb", "pb", "eb"
-      };
-      static const char shortLetters[CNS(Text, Format, Internal, UNIT_COUNT)] = {
-          'b', 'k', 'm', 'g', 't', 'p', 'e'
-      };
+      static const char *const
+          iecNames[MODULE_IFUNC(Text, BytesHuman, UNIT_COUNT)] = {
+              "b", "kib", "mib", "gib", "tib", "pib", "eib"};
+      static const char *const
+          siNames[MODULE_IFUNC(Text, BytesHuman, UNIT_COUNT)] = {
+              "b", "kb", "mb", "gb", "tb", "pb", "eb"};
+      static const char
+          shortLetters[MODULE_IFUNC(Text, BytesHuman, UNIT_COUNT)] = {
+              'b', 'k', 'm', 'g', 't', 'p', 'e'};
 
       uint64_t iecMul = 1ULL;
       uint64_t siMul = 1ULL;
-      const uint64_t iecBase = (uint64_t)CNS(Text, Format, BYTES_IEC_BASE);
-      const uint64_t siBase = (uint64_t)CNS(Text, Format, BYTES_SI_BASE);
+      const uint64_t iecBase =
+          (uint64_t)MODULE_IFUNC(Text, BytesHuman, IEC_BASE);
+      const uint64_t siBase =
+          (uint64_t)MODULE_IFUNC(Text, BytesHuman, SI_BASE);
 
-      for (size_t i = 1U; i < (size_t)CNS(Text, Format, Internal, UNIT_COUNT);
-           ++i) {
+      for (size_t i = 1U;
+           i < (size_t)MODULE_IFUNC(Text, BytesHuman, UNIT_COUNT); ++i) {
         iecMul *= iecBase;
         siMul *= siBase;
         if ((unitLen == 1U && unitBuf[0] == shortLetters[i]) ||
@@ -62,67 +65,105 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
   ),
 
   PACKAGE(BytesHuman,
+    VARIANT(Write,
+      OPERATION((MODULE_TYPE(Text, Writer) *writer, uint64_t bytes), {
+        return MODULE_FUNC(Text, BytesHuman, WriteEx)(
+            writer, bytes, MODULE_NS(Text, BytesHuman, Unit, IEC),
+            MODULE_IFUNC(Text, BytesHuman, DEFAULT_PRECISION));
+      }),
+
+      OPERATION(Ex,
+                (MODULE_TYPE(Text, Writer) *writer, uint64_t bytes,
+                 MODULE_ENUM(Text, BytesHuman, Unit) unitStandard,
+                 unsigned precision), {
+        if (writer == NULL) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+        if (unitStandard != MODULE_NS(Text, BytesHuman, Unit, IEC) &&
+            unitStandard != MODULE_NS(Text, BytesHuman, Unit, SI)) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
+
+        static const char *const
+            iecUnits[MODULE_IFUNC(Text, BytesHuman, UNIT_COUNT)] = {
+                "B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"};
+        static const char *const
+            siUnits[MODULE_IFUNC(Text, BytesHuman, UNIT_COUNT)] = {
+                "B", "KB", "MB", "GB", "TB", "PB", "EB"};
+
+        const bool isIec =
+            (unitStandard == MODULE_NS(Text, BytesHuman, Unit, IEC));
+        const char *const *units = isIec ? iecUnits : siUnits;
+        const uint64_t intBase =
+            isIec ? (uint64_t)MODULE_IFUNC(Text, BytesHuman, IEC_BASE)
+                  : (uint64_t)MODULE_IFUNC(Text, BytesHuman, SI_BASE);
+        const double base = (double)intBase;
+
+        if (precision > MODULE_IFUNC(Text, BytesHuman, MAX_PRECISION)) {
+          precision = MODULE_IFUNC(Text, BytesHuman, MAX_PRECISION);
+        }
+
+        OPSTATUS status = STATUS_CONST(SUCCESS);
+        size_t unitIndex = 0U;
+
+        if (bytes < intBase) {
+          status = MODULE_FUNC(Text, Writer, WriteUInt)(
+              writer, bytes, MODULE_IFUNC(Text, BytesHuman, DECIMAL_BASE),
+              false);
+        } else {
+          double value = (double)bytes;
+          while (value >= base &&
+                 unitIndex + 1U <
+                     (size_t)MODULE_IFUNC(Text, BytesHuman, UNIT_COUNT)) {
+            value /= base;
+            unitIndex++;
+          }
+          status = MODULE_FUNC(Text, Writer, WriteFloat)(
+              writer, value, 'f', true, (size_t)precision);
+        }
+
+        if (status != STATUS_CONST(SUCCESS)) {
+          return status;
+        }
+        status = MODULE_FUNC(Text, Writer, WriteChar)(writer, ' ');
+        if (status != STATUS_CONST(SUCCESS)) {
+          return status;
+        }
+        return MODULE_FUNC(Text, Writer, WriteCStr)(writer, units[unitIndex]);
+      })
+    ),
+
     VARIANT(Format,
       OPERATION((char *buffer, size_t capacity, size_t *outWritten,
                  uint64_t bytes), {
         return MODULE_FUNC(Text, BytesHuman, FormatEx)(
             buffer, capacity, outWritten, bytes,
-            CNS(Text, Format, BYTE_UNIT_IEC),
-            CNS(Text, Format, BYTES_DEFAULT_PRECISION));
+            MODULE_NS(Text, BytesHuman, Unit, IEC),
+            MODULE_IFUNC(Text, BytesHuman, DEFAULT_PRECISION));
       }),
 
       OPERATION(Ex,
                 (char *buffer, size_t capacity, size_t *outWritten,
-                 uint64_t bytes, unsigned unitStandard, unsigned precision), {
+                 uint64_t bytes,
+                 MODULE_ENUM(Text, BytesHuman, Unit) unitStandard,
+                 unsigned precision), {
         if (buffer == NULL || capacity == 0U) {
           return STATUS_CONST(INVALID_ARGUMENT);
         }
-        if (unitStandard != CNS(Text, Format, BYTE_UNIT_IEC) &&
-            unitStandard != CNS(Text, Format, BYTE_UNIT_SI)) {
-          return STATUS_CONST(INVALID_ARGUMENT);
+
+        MODULE_TYPE(Text, Writer) writer =
+            MODULE_FUNC(Text, Writer, ToBuffer)(buffer, capacity);
+        OPSTATUS status = MODULE_FUNC(Text, BytesHuman, WriteEx)(
+            &writer, bytes, unitStandard, precision);
+        if (status == STATUS_CONST(SUCCESS)) {
+          status = MODULE_FUNC(Text, Writer, Finish)(&writer);
         }
-
-        static const char *const iecUnits[CNS(Text, Format, Internal, UNIT_COUNT)] = {
-            "B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"
-        };
-        static const char *const siUnits[CNS(Text, Format, Internal, UNIT_COUNT)] = {
-            "B", "KB", "MB", "GB", "TB", "PB", "EB"
-        };
-
-        const bool isIec = (unitStandard == CNS(Text, Format, BYTE_UNIT_IEC));
-        const char *const *units = isIec ? iecUnits : siUnits;
-        const double base =
-            isIec ? (double)CNS(Text, Format, BYTES_IEC_BASE)
-                  : (double)CNS(Text, Format, BYTES_SI_BASE);
-
-        if (precision > CNS(Text, Format, BYTES_MAX_PRECISION)) {
-          precision = CNS(Text, Format, BYTES_MAX_PRECISION);
+        if (outWritten != NULL &&
+            (status == STATUS_CONST(SUCCESS) ||
+             status == STATUS_CONST(INSUFFICIENT_SPACE))) {
+          *outWritten = MODULE_FUNC(Text, Writer, Written)(&writer);
         }
-
-        int written = 0;
-        if (bytes < (uint64_t)base) {
-          written = snprintf(buffer, capacity, "%" PRIu64 " %s", bytes, units[0]);
-        } else {
-          double value = (double)bytes;
-          size_t unitIndex = 0U;
-          while (value >= base &&
-                 unitIndex + 1U < (size_t)CNS(Text, Format, Internal, UNIT_COUNT)) {
-            value /= base;
-            unitIndex++;
-          }
-          written = snprintf(buffer, capacity, "%.*f %s", (int)precision, value,
-                             units[unitIndex]);
-        }
-
-        if (written < 0 || (size_t)written >= capacity) {
-          buffer[capacity - 1U] = '\0';
-          return STATUS_CONST(INSUFFICIENT_SPACE);
-        }
-
-        if (outWritten != NULL) {
-          *outWritten = (size_t)written;
-        }
-        return STATUS_CONST(SUCCESS);
+        return status;
       })
     ),
 
@@ -141,7 +182,7 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
       }
 
       const uint64_t decBase =
-          (uint64_t)CNS(Text, Format, Internal, DECIMAL_BASE);
+          (uint64_t)MODULE_IFUNC(Text, BytesHuman, DECIMAL_BASE);
       uint64_t intPart = 0U;
       while (*p != '\0' && isdigit((unsigned char)*p)) {
         const uint64_t digit = (uint64_t)(*p - '0');
@@ -156,9 +197,13 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
       uint64_t fracScale = 1U;
       if (*p == '.' || *p == ',') {
         p++;
+        if (!isdigit((unsigned char)*p)) {
+          return STATUS_CONST(INVALID_ARGUMENT);
+        }
         size_t fracDigits = 0U;
         while (*p != '\0' && isdigit((unsigned char)*p)) {
-          if (fracDigits < (size_t)CNS(Text, Format, Internal, MAX_FRAC_DIGITS)) {
+          if (fracDigits <
+              (size_t)MODULE_IFUNC(Text, BytesHuman, MAX_FRAC_DIGITS)) {
             const uint64_t digit = (uint64_t)(*p - '0');
             fracPart = fracPart * decBase + digit;
             fracScale *= decBase;
@@ -204,7 +249,9 @@ MODULE_IMPLEMENT(DOMAIN(Modules), Text,
       uint64_t total = intPart * multiplier;
 
       if (fracScale > 1ULL) {
-        const uint64_t fracBytes = (fracPart * multiplier) / fracScale;
+        const uint64_t q = multiplier / fracScale;
+        const uint64_t r = multiplier % fracScale;
+        const uint64_t fracBytes = fracPart * q + (fracPart * r) / fracScale;
         if (total > UINT64_MAX - fracBytes) {
           return STATUS_CONST(ARITHMETIC_OVERFLOW);
         }

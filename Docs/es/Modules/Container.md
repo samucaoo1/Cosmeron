@@ -114,7 +114,7 @@ Encabezado: `Array/Heap.h`.
 
 Este es un heap binario de prioridad, distinto de `Core/Memory/Heap.h`. Admite la construcción de min-heap y max-heap mediante `CreateMin` y `CreateMax`, además de `FromBuffer`, `Dispose`, `Destroy`, `Clear`, `Reserve`, `ShrinkToFit`, `Heapify`, `Push`, `Pop`, `Peek`, `Top`, `Replace`, `PushPop`, `Size`, `Count` y `Capacity`.
 
-Utilízalo para colas de prioridad y selección repetida del elemento de mayor o menor prioridad. Su closure de comparación determina el orden; utiliza el tipo de comparador generado que espera el template en lugar de convertir un puntero a función no relacionado.
+Utilízalo para colas de prioridad y selección repetida del elemento de mayor o menor prioridad. Su delegate de comparación determina el orden; utiliza el tipo de comparador generado que espera el template en lugar de convertir un puntero a función no relacionado.
 
 ---
 
@@ -131,7 +131,7 @@ El agregado Linked es `Linked/Linked.h`. Los contenedores enlazados utilizan nod
 | `Linked/Stack.h` | Pila LIFO enlazada | `Create`, `Clear`, `Push`, `Pop`, `Peek`, `Top`, `Size`, `Count`, `IsEmpty` |
 | `Linked/Ring.h` | Estructura circular enlazada | Operaciones de creación, inserción/eliminación y recorrido definidas por el template Ring |
 
-Los templates enlazados también proporcionan acceso orientado a nodos y closures visitor. Utiliza el tipo de closure `Visitor` declarado por el template correspondiente al recorrer elementos. Los nodos y punteros a elementos son administrados por el contenedor; no liberes manualmente un nodo devuelto por un accesor.
+Los templates enlazados también proporcionan acceso orientado a nodos y delegates visitor. Utiliza el tipo de delegate `Visitor` declarado por el template correspondiente al recorrer elementos. Los nodos y punteros a elementos son administrados por el contenedor; no liberes manualmente un nodo devuelto por un accesor.
 
 Las estructuras enlazadas siguen la misma convención de ciclo de vida que los contenedores de array: crea o inicializa antes de usar y después llama a `Dispose` o `Destroy`. `Clear` elimina los elementos y mantiene utilizable el objeto contenedor.
 
@@ -259,7 +259,7 @@ if (status == STATUS_CONST(SUCCESS)) {
 
 ## Módulos relacionados
 
-- [Algorithm](Algorithm.md) — closures de comparación utilizados por colas de prioridad y contenedores asociativos.
+- [Algorithm](Algorithm.md) — delegates de comparación utilizados por colas de prioridad y contenedores asociativos.
 - [Bit](Bit.md) — operaciones de bits escalares y de tamaño fijo.
 - [Memory](Memory.md) — asignadores utilizados por contenedores dinámicos y bitsets.
 - [Module](Module.md) — modelo de declaración de objetos y paquetes tipados.

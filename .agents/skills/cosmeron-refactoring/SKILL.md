@@ -264,13 +264,14 @@ MODULE_CALL(Text, CString, Transform, ToUpper, (dest, src));
 
 ---
 
-## 7. Callbacks de Primeira Classe (`TCALLBACK`)
+## 7. Callables & Delegates de Primeira Classe (`TCALLABLE` / `TDELEGATE`)
 
-- Callbacks tipados via `CALLBACK_OPERATION`, `CALLBACK_PREDICATE`, `CALLBACK_FUNCTION`, `CALLBACK_PROCEDURE`, `CALLBACK_COMPARISON`.
-- Sem variantes `WithContext`. Unicamente `TCALLBACK(Name)`.
-- Invocação: `CALLBACK_CALL(cb, args...)` ou `CALLBACK_INVOKE(cb, args...)`.
-- Validação: `CALLBACK_IS_VALID(cb)`.
-- Comparador Canônico: `TCALLBACK(Comparison)`.
+- Callables puros (8 bytes, sem contexto) via `CALLABLE_OPERATION`, `CALLABLE_PREDICATE`, `CALLABLE_FUNCTION`, `CALLABLE_PROCEDURE`, `CALLABLE_COMPARISON` ou bloco `CALLABLE(...)`.
+  - Invocação e validação: `CALLABLE_CALL(cb, args...)` / `CALLABLE_INVOKE(cb, args...)`, `CALLABLE_IS_VALID(cb)`, `CALLABLE_EMPTY`.
+- Delegates contextuais (16 bytes dual-mode POD) via `DELEGATE_OPERATION`, `DELEGATE_PREDICATE`, `DELEGATE_FUNCTION`, `DELEGATE_PROCEDURE`, `DELEGATE_COMPARISON` ou bloco `DELEGATE(...)`.
+  - Sem variantes `*WithContext`. Unicamente `TDELEGATE(Name)` (suporta `Bind` e `FromCallable`).
+  - Invocação e validação: `DELEGATE_CALL(dl, args...)` / `DELEGATE_INVOKE(dl, args...)`, `DELEGATE_IS_VALID(dl)`, `DELEGATE_EMPTY`.
+  - Comparador Canônico: `TDELEGATE(Comparison)`.
 
 ---
 
@@ -283,6 +284,6 @@ Ao refatorar qualquer módulo:
 3. **Crie `Common.inc` apenas se houver infraestrutura interna comum a ser compartilhada** entre os pacotes do módulo (não crie `Types.h`).
 4. **Declare o módulo com `MODULE(...)`** agrupando seus `OBJECT`, `PACKAGE`, `ENUM`, `SPACE`, `VARIANT` ou `TEMPLATE_*`.
 5. **Implemente no `.impl` usando `MODULE_SCOPE`**, sem adicionar finalizadores `PACKAGE_IMPLEMENT`/`OBJECT_IMPLEMENT`.
-6. **Substitua comparadores e callbacks brutos por `TCALLBACK(...)`**.
+6. **Substitua comparadores e callbacks brutos por `TCALLABLE(...)` (stateless) ou `TDELEGATE(...)` (com contexto)**.
 8. **Substitua qualquer checagem direta de SO, compilador ou arquitetura por `Detect.h`**: Proibido `#ifdef _WIN32`, `#ifdef __linux__`, `#if defined(__clang__)`, etc. Toda detecção é centralizada via `Codespace/Cosmeron/Core/Preprocessor/Detect.h`.
 9. **Atualize e valide os testes correspondentes em `Codespace/Tests/`** (`-Wall -Wextra -Wpedantic -Werror`).

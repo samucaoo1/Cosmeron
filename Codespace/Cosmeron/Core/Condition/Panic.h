@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../Diagnostic/Stacktrace.h"
-#include "../Module/Callback/Callback.h"
+#include "../Module/Delegate/Delegate.h"
 #include "../Module/Module.h"
 #include "../Condition/Status.h"
 #include "../Preprocessor/Compiling.inc"
@@ -52,11 +52,11 @@ MODULE(DOMAIN(Core), Condition,
         )
     ),
     PACKAGE(Panic,
-        CLOSURE(
+        DELEGATE(
             PROCEDURE(Handler, (const MODULE_TYPE(Condition, Panic_Info) *info))
         ),
-        PROCEDURE(SetHandler, (MODULE_CLOSURE(Condition, Panic, Handler) handler)),
-        FUNCTION(MODULE_CLOSURE(Condition, Panic, Handler), GetHandler, ()),
+        PROCEDURE(SetHandler, (MODULE_DELEGATE(Condition, Panic, Handler) handler)),
+        FUNCTION(MODULE_DELEGATE(Condition, Panic, Handler), GetHandler, ()),
         PROCEDURE(ResetHandler, ()),
         FUNCTION(const char *, KindName, (MODULE_ENUM(Condition, PanicKind) kind)),
         PROCEDURE(Trigger, (MODULE_ENUM(Condition, PanicKind) kind, const char *message,

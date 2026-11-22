@@ -116,8 +116,8 @@ static void NS(IteratorTest, ContiguousForEachAndStream)(void) {
              &iter, data, 4U, 0U, false) == STATUS_CONST(SUCCESS));
 
   int32_t callCount = 0;
-  MODULE_CLOSURE(Iterator, Contiguous, Int32, Visitor) visitor =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Iterator, Contiguous, Int32, Visitor), Bind)(
+  MODULE_DELEGATE(Iterator, Contiguous, Int32, Visitor) visitor =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Iterator, Contiguous, Int32, Visitor), Bind)(
           MODULE_IFUNC(IteratorTest, DoubleElement), &callCount);
 
   assert(OBJECT_CALL(&iter, ForEach, visitor) == STATUS_CONST(SUCCESS));
@@ -132,8 +132,8 @@ static void NS(IteratorTest, ContiguousForEachAndStream)(void) {
   assert(OBJECT_CALL_0(&stream, HasNext));
 
   int64_t sum = 0;
-  MODULE_CLOSURE(Iterator, Stream, Int32, Visitor) sumVisitor =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Iterator, Stream, Int32, Visitor), Bind)(
+  MODULE_DELEGATE(Iterator, Stream, Int32, Visitor) sumVisitor =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Iterator, Stream, Int32, Visitor), Bind)(
           MODULE_IFUNC(IteratorTest, SumElement), &sum);
   assert(OBJECT_CALL(&stream, ForEach, sumVisitor) == STATUS_CONST(SUCCESS));
   assert(sum == (2 + 4 + 6 + 8));
@@ -142,8 +142,8 @@ static void NS(IteratorTest, ContiguousForEachAndStream)(void) {
   /* Stream Reset, FindIf, Any, All, None, CollectToBuffer */
   assert(OBJECT_CALL_0(&stream, Reset) == STATUS_CONST(SUCCESS));
   int32_t threshold = 5;
-  MODULE_CLOSURE(Iterator, Stream, Int32, Predicate) gtPred =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Iterator, Stream, Int32, Predicate), Bind)(
+  MODULE_DELEGATE(Iterator, Stream, Int32, Predicate) gtPred =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Iterator, Stream, Int32, Predicate), Bind)(
           MODULE_IFUNC(IteratorTest, IsGreaterThanThreshold), &threshold);
 
   int32_t found = 0;
@@ -156,15 +156,15 @@ static void NS(IteratorTest, ContiguousForEachAndStream)(void) {
   assert(OBJECT_CALL_0(&stream, Reset) == STATUS_CONST(SUCCESS));
   assert(!OBJECT_CALL(&stream, All, gtPred));
 
-  MODULE_CLOSURE(Iterator, Stream, Int32, Predicate) evenPred =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Iterator, Stream, Int32, Predicate), Bind)(
+  MODULE_DELEGATE(Iterator, Stream, Int32, Predicate) evenPred =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Iterator, Stream, Int32, Predicate), Bind)(
           MODULE_IFUNC(IteratorTest, IsEven), NULL);
   assert(OBJECT_CALL_0(&stream, Reset) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&stream, All, evenPred));
 
   int32_t highThreshold = 100;
-  MODULE_CLOSURE(Iterator, Stream, Int32, Predicate) gt100Pred =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Iterator, Stream, Int32, Predicate), Bind)(
+  MODULE_DELEGATE(Iterator, Stream, Int32, Predicate) gt100Pred =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Iterator, Stream, Int32, Predicate), Bind)(
           MODULE_IFUNC(IteratorTest, IsGreaterThanThreshold), &highThreshold);
   assert(OBJECT_CALL_0(&stream, Reset) == STATUS_CONST(SUCCESS));
   assert(OBJECT_CALL(&stream, None, gt100Pred));
@@ -172,8 +172,8 @@ static void NS(IteratorTest, ContiguousForEachAndStream)(void) {
   /* ForEachIndexed */
   assert(OBJECT_CALL_0(&stream, Reset) == STATUS_CONST(SUCCESS));
   int64_t weightedSum = 0;
-  MODULE_CLOSURE(Iterator, Stream, Int32, IndexedVisitor) idxVisitor =
-      NS_JOIN(MODULE_CLOSURE_FUNC(Iterator, Stream, Int32, IndexedVisitor),
+  MODULE_DELEGATE(Iterator, Stream, Int32, IndexedVisitor) idxVisitor =
+      NS_JOIN(MODULE_DELEGATE_FUNC(Iterator, Stream, Int32, IndexedVisitor),
               Bind)(MODULE_IFUNC(IteratorTest, SumIndexedElement),
                     &weightedSum);
   assert(OBJECT_CALL(&stream, ForEachIndexed, idxVisitor) ==

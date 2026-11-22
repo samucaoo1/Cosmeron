@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Module/Callback/Callback.h"
+#include "../Module/Delegate/Delegate.h"
 #include "../Module/Module.h"
 #include "../Condition/Status.h"
 #include "Error.h"
@@ -42,7 +42,7 @@ static _Thread_local void *MODULE_IFUNC(Condition, Exception_DeferWatermark) = N
 static _Thread_local void (*MODULE_IFUNC(Condition, Exception_DeferUnwind))(void *) = NULL;
 
 MODULE(DOMAIN(Core), Condition,
-    CLOSURE(
+    DELEGATE(
         PROCEDURE(ExceptionCleanup, ())
     ),
     OBJECT(Exception_Frame,
@@ -55,7 +55,7 @@ MODULE(DOMAIN(Core), Condition,
             bool threw;
             bool caught;
             bool rethrow;
-            MODULE_CLOSURE(Condition, ExceptionCleanup) cleanup;
+            MODULE_DELEGATE(Condition, ExceptionCleanup) cleanup;
         ),
         CONST_FUNCTION_INLINE(const MODULE_TYPE(Condition, Error) *, Error, (), {
           return self ? &self->error : NULL;
@@ -67,7 +67,7 @@ MODULE(DOMAIN(Core), Condition,
           return self ? self->caught : false;
         }),
         PROCEDURE_INLINE(SetCleanup,
-                         (MODULE_CLOSURE(Condition, ExceptionCleanup) cleanup), {
+                         (MODULE_DELEGATE(Condition, ExceptionCleanup) cleanup), {
           if (self)
             self->cleanup = cleanup;
         })
@@ -76,7 +76,7 @@ MODULE(DOMAIN(Core), Condition,
         PROCEDURE(PushFrame, (MODULE_TYPE(Condition, Exception_Frame) *frame)),
         PROCEDURE(PopFrame, ()),
         PROCEDURE(RegisterCleanup,
-                  (MODULE_CLOSURE(Condition, ExceptionCleanup) cleanup)),
+                  (MODULE_DELEGATE(Condition, ExceptionCleanup) cleanup)),
         PROCEDURE(Throw, (const MODULE_TYPE(Condition, Error) *error)),
         PROCEDURE(ThrowStatus,
                   (OPSTATUS status, const char *message, const char *file,

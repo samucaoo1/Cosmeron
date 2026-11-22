@@ -19,7 +19,7 @@
           size_t remaining;                                                    \
       ),                                                                       \
                                                                                \
-      CLOSURE(                                                                 \
+      DELEGATE(                                                                 \
           PROCEDURE(Visitor, (TYPE *element)),                                 \
           PROCEDURE(ConstVisitor, (const TYPE *element)),                      \
           PREDICATE(Predicate, (const TYPE *element))),                        \
@@ -148,11 +148,11 @@
                                                                                \
       OPERATION_INLINE(                                                        \
           ForEach,                                                             \
-          (MODULE_CLOSURE(Iterator, Forward, SUFFIX, Visitor) visitor), {      \
-            if (!self || !CLOSURE_IS_VALID(visitor))                           \
+          (MODULE_DELEGATE(Iterator, Forward, SUFFIX, Visitor) visitor), {      \
+            if (!self || !DELEGATE_IS_VALID(visitor))                           \
               return STATUS_CONST(INVALID_ARGUMENT);                           \
             while (self->current != NULL && self->remaining > 0U) {            \
-              CLOSURE_CALL(visitor, &self->current->value);                    \
+              DELEGATE_CALL(visitor, &self->current->value);                    \
               self->current = self->current->next;                             \
               if (self->remaining != SIZE_MAX)                                 \
                 self->remaining--;                                             \
