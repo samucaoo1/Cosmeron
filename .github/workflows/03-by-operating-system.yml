@@ -146,7 +146,7 @@ jobs:
     timeout-minutes: 85
     steps:
       - uses: actions/checkout@v7
-      - uses: vmactions/dragonflybsd-vm@4ab776fa9f914fbea72f13715b451e77e7ef5c41
+      - uses: vmactions/dragonflybsd-vm@84881684c8771163f1dd37820a358aa3cd8bc2f2
         with:
           usesh: true
           run: |
